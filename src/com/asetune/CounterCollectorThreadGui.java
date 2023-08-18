@@ -475,6 +475,7 @@ extends CounterCollectorThreadAbstract
 						if ( ! getCounterController().isMonConnected() ) // Do not continue in here if we have hit disconnect button
 							break; // no need to sleep if not connected...
 
+
 					} // end: sleep loop
 				}
 				firstLoopAfterConnect = false;

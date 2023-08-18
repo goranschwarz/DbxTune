@@ -38,6 +38,8 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
+import com.asetune.alarm.events.sqlserver.AlarmEventLowOnWorkerThreads;
+import com.asetune.alarm.events.sqlserver.AlarmEventOutOfWorkerThreads;
 import com.asetune.alarm.events.sqlserver.AlarmEventSuspectPages;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -91,7 +93,8 @@ extends CountersModel
 		"pack_received", "pack_sent", "packet_errors", "total_errors",
 		"ms_ticks", "process_kernel_time_ms", "process_user_time_ms",
 		"tempdbUsageMbAll", "tempdbUsageMbUser", "tempdbUsageMbInternal",
-		"databaseCacheMemoryMb", "grantedWorkspaceMemoryMb", "stolenServerMemoryMb"
+		"databaseCacheMemoryMb", "grantedWorkspaceMemoryMb", "stolenServerMemoryMb",
+		"usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers"
 	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -166,6 +169,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_MEMORY_UTILAZATION_PCT   = "MemUtilizationPct";
 	public static final String GRAPH_NAME_OS_MEMORY_FREE_MB        = "OsMemoryFreeMb";
 	public static final String GRAPH_NAME_PERFMON_MEMORY           = "PerfMonMem";
+	public static final String GRAPH_NAME_WORKER_THREAD_USAGE      = "WorkersThreadUsage";
 
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
@@ -354,6 +358,17 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_WORKER_THREAD_USAGE,
+			"SQL Server Worker Threads Usage", // Menu CheckBox text
+			"SQL Server Worker Threads Usage ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false,  // is Percent Graph
+			true,   // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 		}
 
 	@Override
@@ -528,6 +543,13 @@ extends CountersModel
 			    "declare @databaseCacheMemoryMb               numeric(12,1) \n" +
 			    "declare @grantedWorkspaceMemoryMb            numeric(12,1) \n" +
 			    "declare @stolenServerMemoryMb                numeric(12,1) \n" +
+			    " \n" +
+	    	    "declare @max_workers_count                   int = (SELECT max_workers_count FROM sys.dm_os_sys_info) \n" +
+	    	    "declare @wt_usedThreads                      int \n" +
+	    	    "declare @wt_availableThreads                 int \n" +
+	    	    "declare @wt_workersWaitingForCPU             int \n" +
+	    	    "declare @wt_requestsWaitingForThreads        bigint \n" +
+	    	    "declare @wt_allocatedWorkers                 int \n" +
 			    "\n" +
 				listenerInfo +
 				"\n" +
@@ -568,6 +590,16 @@ extends CountersModel
 			    "      ,@stolenServerMemoryMb     = CASE WHEN counter_name = 'Stolen Server Memory (KB)'     THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @stolenServerMemoryMb     END \n" +
 			    "from sys.dm_os_performance_counters \n" +
 			    "where counter_name in ('Stolen Server Memory (KB)', 'Database Cache Memory (KB)', 'Granted Workspace Memory (KB)') \n" +
+			    " \n" +
+			    "/*------- WorkerThreads -- dm_os_schedulers -------*/ \n" +
+			    "select \n" +
+			    "     @wt_usedThreads               = SUM(active_workers_count) \n" +
+			    "    ,@wt_availableThreads          = @max_workers_count - SUM(active_workers_count) \n" +
+			    "    ,@wt_workersWaitingForCPU      = SUM(runnable_tasks_count) \n" +
+			    "    ,@wt_requestsWaitingForThreads = SUM(work_queue_count) \n" +
+			    "    ,@wt_allocatedWorkers          = SUM(current_workers_count) \n" +
+			    "from sys.dm_os_schedulers \n" +
+			    "where status = 'VISIBLE ONLINE' \n" +
 			    " \n" +
 				"/*------- Get info about Open Transactions -------*/\n" +
 				"select @oldestOpenTranBeginTime = min(database_transaction_begin_time) \n" +
@@ -696,6 +728,14 @@ extends CountersModel
 				"    , databaseCacheMemoryMb               = @databaseCacheMemoryMb \n" +
 				"    , grantedWorkspaceMemoryMb            = @grantedWorkspaceMemoryMb \n" +
 				"    , stolenServerMemoryMb                = @stolenServerMemoryMb \n" +
+
+				// Worker Threads...
+			    "    , maxWorkers                          = @max_workers_count \n" +
+			    "    , usedWorkers                         = @wt_usedThreads \n" +
+			    "    , availableWorkers                    = @wt_availableThreads \n" +
+			    "    , workersWaitingForCPU                = @wt_workersWaitingForCPU \n" +
+			    "    , requestsWaitingForWorkers           = @wt_requestsWaitingForThreads \n" +
+			    "    , allocatedWorkers                    = @wt_allocatedWorkers \n" +
 				"";
 
 		return sql;
@@ -1151,6 +1191,26 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_WORKER_THREAD_USAGE.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[6];
+
+			arr[0] = this.getAbsValueAsDouble(0, "maxWorkers"               , true, 0d);
+			arr[1] = this.getAbsValueAsDouble(0, "usedWorkers"              , true, 0d);
+			arr[2] = this.getAbsValueAsDouble(0, "availableWorkers"         , true, 0d);
+			arr[3] = this.getAbsValueAsDouble(0, "workersWaitingForCPU"     , true, 0d);
+			arr[4] = this.getAbsValueAsDouble(0, "requestsWaitingForWorkers", true, 0d);
+			arr[5] = this.getAbsValueAsDouble(0, "allocatedWorkers"         , true, 0d);
+
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): maxWorkers='" + arr[0] + "', usedWorkers='" + arr[1] + "', availableWorkers='" + arr[2] + "', workersWaitingForCPU='" + arr[3] + "', requestsWaitingForWorkers='" + arr[4] + "', allocatedWorkers='" + arr[5] + "'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 	
 	@Override
@@ -1319,6 +1379,51 @@ extends CountersModel
 				} // end: above threshold
 			} // end: suspectPageCount above threshold
 		} // end: suspectPageCount
+
+		//-------------------------------------------------------
+		// requestsWaitingForWorkers
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("requestsWaitingForWorkers"))
+		{
+			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_requestsWaitingForWorkers, DEFAULT_alarm_requestsWaitingForWorkers);
+
+			long requestsWaitingForWorkers  = cm.getAbsValueAsLong(0, "requestsWaitingForWorkers", false, -1L);
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", requestsWaitingForWorkers="+requestsWaitingForWorkers+".");
+
+			if (requestsWaitingForWorkers > threshold)
+			{
+				AlarmEvent ae = new AlarmEventOutOfWorkerThreads(cm, threshold, requestsWaitingForWorkers);
+				
+				alarmHandler.addAlarm( ae );
+			}
+			// TODO: Implement This
+		}
+
+		//-------------------------------------------------------
+		// availableWorkers
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("availableWorkers"))
+		{
+			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_availableWorkers, DEFAULT_alarm_availableWorkers);
+
+			int availableWorkers  = cm.getAbsValueAsInteger(0, "availableWorkers", false, -1);
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", availableWorkers="+availableWorkers+".");
+
+			if (availableWorkers <= threshold)
+			{
+				int maxWorkers       = cm.getAbsValueAsInteger(0, "maxWorkers"      , false, -1);
+				int allocatedWorkers = cm.getAbsValueAsInteger(0, "allocatedWorkers", false, -1);
+
+				AlarmEvent ae = new AlarmEventLowOnWorkerThreads(cm, threshold, availableWorkers, maxWorkers, allocatedWorkers);
+				
+				alarmHandler.addAlarm( ae );
+			}
+			// TODO: Implement This
+		}
 	}
 
 	public static final String  PROPKEY_alarm_LockWaits                       = CM_NAME + ".alarm.system.if.LockWaits.gt";
@@ -1351,6 +1456,12 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_suspectPageCount                = CM_NAME + ".alarm.system.if.suspectPageCount.gt";
 	public static final int     DEFAULT_alarm_suspectPageCount                = 0;
 
+	public static final String  PROPKEY_alarm_requestsWaitingForWorkers       = CM_NAME + ".alarm.system.if.requestsWaitingForWorkers.gt";
+	public static final int     DEFAULT_alarm_requestsWaitingForWorkers       = 0;
+
+	public static final String  PROPKEY_alarm_availableWorkers                = CM_NAME + ".alarm.system.if.availableWorkers.lt";
+	public static final int     DEFAULT_alarm_availableWorkers                = 25;
+
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1370,6 +1481,8 @@ extends CountersModel
 		list.add(new CmSettingsHelper("oldestOpenTranInSec WaitType",                    PROPKEY_alarm_oldestOpenTranInSecSkipWaitType , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipWaitType , DEFAULT_alarm_oldestOpenTranInSecSkipWaitType), DEFAULT_alarm_oldestOpenTranInSecSkipWaitType, "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (waitType.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 //		list.add(new CmSettingsHelper("fullTranslogCount",                isAlarmSwitch, PROPKEY_alarm_fullTranslogCount               , Integer.class, conf.getIntProperty   (PROPKEY_alarm_fullTranslogCount               , DEFAULT_alarm_fullTranslogCount              ), DEFAULT_alarm_fullTranslogCount              , "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
 		list.add(new CmSettingsHelper("suspectPageCount",                 isAlarmSwitch, PROPKEY_alarm_suspectPageCount                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_suspectPageCount                , DEFAULT_alarm_suspectPageCount               ), DEFAULT_alarm_suspectPageCount               , "If 'suspectPageCount' (number of records in 'msdb.dbo.suspect_pages') is greater than ## then send 'AlarmEventSuspectPages'." ));
+		list.add(new CmSettingsHelper("requestsWaitingForWorkers",        isAlarmSwitch, PROPKEY_alarm_requestsWaitingForWorkers       , Integer.class, conf.getIntProperty   (PROPKEY_alarm_requestsWaitingForWorkers       , DEFAULT_alarm_requestsWaitingForWorkers      ), DEFAULT_alarm_requestsWaitingForWorkers      , "If 'requestsWaitingForWorkers' is greater than ## then send 'AlarmEventOutOfWorkerThreads'." ));
+		list.add(new CmSettingsHelper("availableWorkers",                 isAlarmSwitch, PROPKEY_alarm_availableWorkers                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_availableWorkers                , DEFAULT_alarm_availableWorkers               ), DEFAULT_alarm_availableWorkers               , "If 'availableWorkers' is LESS than ## then send 'AlarmEventLowOnWorkerThreads'." ));
 
 		return list;
 	}

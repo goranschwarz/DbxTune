@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPoolMap;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
@@ -194,7 +195,8 @@ public abstract class PostgresConfigText
 		Map<Long, String> _dbNameMap = new LinkedHashMap<>();
 
 		@Override
-		protected String doOnlineRefresh(DbxConnection templateConn, String sql)
+//		protected String doOnlineRefresh(DbxConnection templateConn, String sql, HostMonitorConnection hostMonConn, String osCmd)
+		protected String doOnlineRefresh(DbxConnection templateConn, HostMonitorConnection hostMonConn)
 		{
 			// Get a list of databases
 			refreshDatabases(templateConn);
@@ -239,7 +241,8 @@ public abstract class PostgresConfigText
 					try
 					{
 						// Use "super" to execute the SQL in this database 
-						String result = super.doOnlineRefresh(dbConn, sql);
+//						String result = super.doOnlineRefresh(dbConn, sql, hostMonConn, osCmd);
+						String result = super.doOnlineRefresh(dbConn, hostMonConn);
 
 						// Add to "all" results
 						resultsForAllDbs += result;

@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 
 
@@ -88,14 +89,15 @@ public abstract class DbmsConfigTextManager
 	/**
 	 * Initialize 
 	 * @param conn
+	 * @param hostMonConn 
 	 */
-	public static void initializeAll(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts)
+	public static void initializeAll(DbxConnection conn, HostMonitorConnection hostMonConn, boolean hasGui, boolean offline, Timestamp ts)
 	throws SQLException
 	{
 		for (IDbmsConfigText entry : _instances.values())
 		{
 			if ( ! entry.isInitialized() )
-				entry.initialize(conn, hasGui, offline, ts);
+				entry.initialize(conn, hostMonConn, hasGui, offline, ts);
 		}
 	}
 

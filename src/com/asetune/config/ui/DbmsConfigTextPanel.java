@@ -27,8 +27,10 @@ import javax.swing.JPanel;
 
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -82,6 +84,7 @@ extends JPanel
 		boolean       hasGui    = DbxTune.hasGui();
 		boolean       isOffline = false;
 		DbxConnection conn      = null;
+		HostMonitorConnection hostMonConn = null;
 
 //		if (GetCounters.getInstance().isMonConnected())
 //		{
@@ -95,7 +98,10 @@ extends JPanel
 //			isOffline = true;
 //			conn      = PersistReader.getInstance().getConnection();
 //		}
+
 		conn = _connProvider.getConnection();
+		if (CounterController.hasInstance())
+			hostMonConn = CounterController.getInstance().getHostMonConnection(); 
 
 		if (PersistReader.hasInstance())
 		{
@@ -109,7 +115,7 @@ extends JPanel
 //		AseConfigText aseConfigText = AseConfigText.getInstance(_type);
 ////		aseConfigText.refresh(conn, ts);
 //		aseConfigText.initialize(conn, hasGui, isOffline, ts);
-		_dbmsConfigText.initialize(conn, hasGui, isOffline, ts);
+		_dbmsConfigText.initialize(conn, hostMonConn, hasGui, isOffline, ts);
 
 		// refresh when the configuration was taken.
 //		_textConfig.setText( aseConfigText.getConfig() );

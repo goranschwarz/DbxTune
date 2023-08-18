@@ -1669,7 +1669,7 @@ implements ICounterController
 	 * The last status should be maintained everytime a physical check is done via isMonConnected().<br>
 	 * On SQLExceptions, we should check if the database connection is still open/valid.
 	 * <p>
-	 * This is probably called from GUI places where we dont want a fast answer.
+	 * This is probably called from GUI places where we want a fast answer.
 	 * @return true or false
 	 */
 	@Override
@@ -1760,6 +1760,8 @@ implements ICounterController
 	}
 	// Simulate the _conn.isClosed() functionality, but add a query timeout...
 	// it looks like jConnect isClosed() could hang if you call many simultaneously
+	private boolean _isClosed_lastReturnVal = true;
+	private String  _isClosed_inUseByThread = null;
 	protected boolean isClosed(DbxConnection conn)
 	throws SQLException
 	{
@@ -1768,8 +1770,15 @@ implements ICounterController
 //		Statement stmnt   = null;
 //		ResultSet rs      = null;
 
+		if (_isClosed_inUseByThread != null)
+		{
+			_logger.warn("isClosed(conn) is already in use and called by thread '" + _isClosed_inUseByThread + "'. Returning last known state. _isClosed_lastReturnVal=" + _isClosed_lastReturnVal);
+			return _isClosed_lastReturnVal;
+		}
+		
 		try ( Statement stmnt = conn.createStatement() )
 		{
+			_isClosed_inUseByThread = Thread.currentThread().getName();
 //System.out.println("isClosed(): autoCommit="+conn.getAutoCommit()+", sql="+sql);
 			
 			if (_logger.isDebugEnabled())
@@ -1797,7 +1806,9 @@ implements ICounterController
 //			}
 
 			// false = connection is alive, NOT Closed
-			return false;
+			_isClosed_lastReturnVal = false;
+			return _isClosed_lastReturnVal;
+			//return false;
 		}
 		catch (SQLException ex)
 		{
@@ -1820,7 +1831,13 @@ implements ICounterController
 		catch(RuntimeException ex)
 		{
 			_logger.error("Problem in method: isClosed(), returning true and continuing. Caught: "+ex+".", ex);
-			return true;
+			_isClosed_lastReturnVal = true;
+			return _isClosed_lastReturnVal;
+			//return true;
+		}
+		finally
+		{
+			_isClosed_inUseByThread = null;
 		}
 //		finally
 //		{

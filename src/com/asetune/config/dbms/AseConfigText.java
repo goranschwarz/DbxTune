@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.AseTraceFlagsDictionary;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.AseConnectionUtils;
@@ -504,10 +505,10 @@ public abstract class AseConfigText
 		}
 
 		@Override
-		public void refresh(DbxConnection conn, Timestamp ts)
+		public void refresh(DbxConnection conn, HostMonitorConnection hostMonConn, Timestamp ts)
 		throws SQLException
 		{
-			super.refresh(conn, ts);
+			super.refresh(conn, hostMonConn, ts);
 
 			String configStr = getConfig();
 			if (configStr != null)
@@ -633,7 +634,7 @@ public abstract class AseConfigText
 		}
 		
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havnt got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
@@ -803,7 +804,7 @@ public abstract class AseConfigText
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpdevice"; }
 		
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havnt got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
@@ -928,10 +929,10 @@ public abstract class AseConfigText
 		}
 		
 		@Override
-		public void refresh(DbxConnection conn, Timestamp ts)
+		public void refresh(DbxConnection conn, HostMonitorConnection hostMonConn, Timestamp ts)
 		throws SQLException
 		{
-			super.refresh(conn, ts);
+			super.refresh(conn, hostMonConn, ts);
 
 			String configStr = getConfig();
 			
@@ -1044,7 +1045,7 @@ public abstract class AseConfigText
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_shmdumpconfig"; }
 
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// TODO: Check that at least 1 shmem dump without data is configured for signal 11 or timeslice
 			// http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.39996_1250/html/svrtsg/svrtsg178.htm
@@ -1240,7 +1241,7 @@ public abstract class AseConfigText
 			return list;
 		}
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havnt got an instance
 			if ( ! DbmsConfigManager.hasInstance() )

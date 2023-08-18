@@ -225,6 +225,7 @@ import com.asetune.gui.swing.RXTextUtilities;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.parser.ParserProperties;
 import com.asetune.sql.CommonEedInfo;
 import com.asetune.sql.JdbcUrlParser;
@@ -5649,7 +5650,8 @@ public class QueryWindow
 				{
 					if (DbmsConfigManager.hasInstance())
 					{
-						getWaitDialog().setState("Getting sp_configure settings");
+//						getWaitDialog().setState("Getting sp_configure settings");
+						getWaitDialog().setState("Getting DBMS Configuration Settings");
 						IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
 						if ( ! dbmsCfg.isInitialized() )
 							dbmsCfg.initialize(getConnection(), true, false, null);
@@ -5660,8 +5662,12 @@ public class QueryWindow
 						{
 							if ( ! t.isInitialized() )
 							{
-								getWaitDialog().setState("Getting '"+t.getTabLabel()+"' settings");
-								t.initialize(getConnection(), true, false, null);
+								// FIXME: Get a HostMonConnection (if we got one)
+							//	HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(sshConn);
+								HostMonitorConnection hostMonConn = null;
+
+								getWaitDialog().setState("Getting '" + t.getTabLabel() + "' settings");
+								t.initialize(getConnection(), hostMonConn, true, false, null);
 							}
 						}
 					}

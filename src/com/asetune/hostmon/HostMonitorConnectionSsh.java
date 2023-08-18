@@ -112,6 +112,9 @@ extends HostMonitorConnection
 	public boolean isConnected()
 	{
 //System.out.println(this.getClass().getSimpleName()+".isConnected()");
+		if (_sshConn == null)
+			return false;
+
 		return _sshConn.isConnected();
 	}
 

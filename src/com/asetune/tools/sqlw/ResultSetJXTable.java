@@ -1004,6 +1004,18 @@ implements ToolTipHyperlinkResolver
 				}
 			}
 
+			//------------------------------------------------------------------------
+			// Special... for Brent Ozar, sp_blitz *** procedures
+			//------------------------------------------------------------------------
+			if (cellStr.startsWith("<?ClickToSee"))
+			{
+				return    "<html>"
+						+ "<pre><code>"
+						+ cellStr.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+						+ "</code></pre>"
+						+ "</html>"
+						;
+			}
 			
 			//------------------------------------------------------------------------
 			// XML that do NOT start with '<?xml ' isn't picked up by the ContentInfoUtil, so lets dig into the String and check if it *might* be a XML content...

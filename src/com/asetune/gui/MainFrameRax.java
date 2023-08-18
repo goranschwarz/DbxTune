@@ -34,6 +34,7 @@ import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.SwingUtils;
 
@@ -99,7 +100,7 @@ extends MainFrame
 			}
 			
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
-			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws SQLException
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) throws SQLException
 			{
 				if (DbmsConfigManager.hasInstance())
 				{
@@ -116,7 +117,7 @@ extends MainFrame
 						if ( ! t.isInitialized() )
 						{
 							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
-							t.initialize(conn, true, false, null);
+							t.initialize(conn, hostMonConn, true, false, null);
 						}
 					}
 

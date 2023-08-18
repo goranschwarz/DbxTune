@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.config.dbms;
 
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -37,13 +38,17 @@ import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.SqlServerTraceFlagsDictionary;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public abstract class SqlServerConfigText
 {
@@ -66,6 +71,8 @@ public abstract class SqlServerConfigText
 		,SqlServerServerRegistry
 		,SqlServerClusterNodes
 		,SqlServerAgentJobs
+		,SqlServerWindowsPowerPlan
+		,SqlServerSpBlitz
 		};
 
 	/** Log4j logging. */
@@ -89,6 +96,8 @@ public abstract class SqlServerConfigText
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ServerRegistry());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.ClusterNodes());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.AgentJobs());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.WindowsPowerPlan());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SpBlitz());
 	}
 
 	/*-----------------------------------------------------------
@@ -108,7 +117,7 @@ public abstract class SqlServerConfigText
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_helpdb"; }
 		
 		@Override
-		public String checkRequirements(DbxConnection conn)
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 
@@ -116,12 +125,12 @@ public abstract class SqlServerConfigText
 			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 				return "sp_helpdb: is NOT supported in Azure SQL Database.";
 
-			return super.checkRequirements(conn);
+			return super.checkRequirements(conn, hostMonConn);
 		}
 		
 		/** Check 'compatibility_level' for all databases */
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
@@ -267,6 +276,120 @@ public abstract class SqlServerConfigText
 			     + "\ngo\n"
 			     ;
 		}
+		@Override
+		protected String getOsCurrentConfig(DbmsVersionInfo versionInfo, String osName)
+		{
+			if (StringUtil.hasValue(osName) && osName.startsWith("Windows"))
+				return "powershell \"Get-Volume | Select-Object DriveLetter, AllocationUnitSize, FileSystemType, FileSystemLabel | ConvertTo-Json\"";
+			
+			return "echo 'Windows-Powershell: Get-Volume, is not supported on OS Name: " + osName + "'";
+		}
+		/** 
+		 * Check for 'AllocationUnitSize' below 64K 
+		 */
+		@Override
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			// no nothing, if we havn't got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			// First get used drive letters (for Windows)
+			String sql = "select distinct substring(physical_name, 1, 1) from sys.master_files where physical_name like '[A-Za-z]:%'";
+			
+			List<String> usedDriveLetterList  = new ArrayList<>();
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					usedDriveLetterList.add( rs.getString(1) );
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems getting SQL-Server 'Used Windows Drive Letters', using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+
+			
+			// Now check what the 'OS Command' has produced AND CHECK for AllocationUnitSize below 64K
+			String configStr = getConfig();
+
+			if (StringUtil.hasValue(configStr) && configStr.contains(DbmsConfigTextAbstract.OS_COMMAND_OUTPUT_SEPARATOR))
+			{
+				// get OS Output (which is JSON) and read it
+				int startPos = configStr.indexOf(DbmsConfigTextAbstract.OS_COMMAND_OUTPUT_SEPARATOR) + DbmsConfigTextAbstract.OS_COMMAND_OUTPUT_SEPARATOR.length();
+				String jsonStr = "";
+				boolean inJson = false;
+				for (String row : configStr.substring(startPos).split("\\R"))
+				{
+					if (row.trim().equals("["))
+						inJson = true;
+					
+					if (inJson)
+						jsonStr += row + "\n";
+
+					if (row.trim().equals("]"))
+						inJson = false;
+				}
+				
+//System.out.println("DEBUG: jsonStr=|" + jsonStr + "|");
+
+				if (StringUtil.hasValue(jsonStr))
+				{
+					try 
+					{
+						// Parse the JSON String
+						ObjectMapper mapper = new ObjectMapper();
+						JsonNode jsonRootNode = mapper.readTree(jsonStr);
+
+						// Loop the "usedDriveLetterList" and check for AllocationUnitSize below 64K
+						for (String usedDriveLetter : usedDriveLetterList)
+						{
+							int allocationUnitSize = getAllocationUnitSizeForDrive(usedDriveLetter, jsonRootNode);
+							if (allocationUnitSize > 0 && allocationUnitSize < 64*1024)
+							{
+								String key = "DbmsConfigIssue." + srvName + ".windows_disk_allocation_unit_size." + usedDriveLetter;
+
+								DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "windows_disk_allocation_unit_size", Severity.INFO, 
+										"Windows Disk AllocationUnitSize is smaller than 64K, this can lead to lower performance. AllocationUnitSize for drive '" + usedDriveLetter + "' is " + allocationUnitSize, 
+										"https://www.arcticdba.se/sql-server-disk-settings/");
+//										"https://www.mssqltips.com/sqlservertip/2119/partition-offset-and-allocation-unit-size-of-a-disk-for-sql-server/");
+
+								DbmsConfigManager.getInstance().addConfigIssue(issue);
+							}
+						}
+					}
+					catch (IOException ex)
+					{
+						_logger.error("Problems parsing JSON String, for 'Windows Disk AllocationUnitSize'. JsonStr=|" + jsonStr + "|." + ex, ex);
+					}
+				}
+			}
+		}
+		private int getAllocationUnitSizeForDrive(String searchForDriveName, JsonNode jsonRootNode)
+		{
+			if (jsonRootNode.isArray())
+			{
+				for (JsonNode jsonNode : jsonRootNode) 
+				{
+					String driveLetter     = jsonNode.get("DriveLetter")       .asText("");
+					int allocationUnitSize = jsonNode.get("AllocationUnitSize").asInt(-1);
+
+//System.out.println("DEBUG: searchForDriveName='" + driveName + "': JSON: DriveLetter='" + driveLetter + "', AllocationUnitSize=" + allocationUnitSize);
+
+					if (searchForDriveName.equalsIgnoreCase(driveLetter))
+					{
+						return allocationUnitSize;
+					}
+				}
+			}
+			return -1;
+		}
 	}
 
 	public static class Tempdb extends DbmsConfigTextAbstract
@@ -411,7 +534,7 @@ public abstract class SqlServerConfigText
 		 *  - Trace flags: 1117, 1118 (if version is below 2019) 
 		 * */
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
@@ -608,12 +731,12 @@ public abstract class SqlServerConfigText
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "DBCC TRACESTATUS(-1) WITH NO_INFOMSGS"; }
 
 		@Override
-		public void refresh(DbxConnection conn, Timestamp ts)
+		public void refresh(DbxConnection conn, HostMonitorConnection hostMonConn, Timestamp ts)
 		throws SQLException
 		{
 			if ( isOffline() )
 			{
-				super.refresh(conn, ts);
+				super.refresh(conn, hostMonConn, ts);
 				return;
 			}
 			
@@ -623,7 +746,7 @@ public abstract class SqlServerConfigText
 
 			StringBuilder sb = new StringBuilder();
 
-			super.refresh(conn, ts);
+			super.refresh(conn, hostMonConn, ts);
 			
 			String superConfigStr = getConfig(); 
 
@@ -707,7 +830,7 @@ public abstract class SqlServerConfigText
 //		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "exec sp_linkedservers"; }
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "exec sp_linkedservers"; }
 		@Override
-		public String checkRequirements(DbxConnection conn)
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 
@@ -715,7 +838,7 @@ public abstract class SqlServerConfigText
 			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 				return "sp_linkedservers: is NOT supported in Azure SQL Database.";
 
-			return super.checkRequirements(conn);
+			return super.checkRequirements(conn, hostMonConn);
 		}
 	}
 
@@ -737,7 +860,7 @@ public abstract class SqlServerConfigText
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_host_info"; }
 		@Override public    long       needVersion()                          { return Ver.ver(2017); }
 		@Override
-		public String checkRequirements(DbxConnection conn)
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 
@@ -745,7 +868,7 @@ public abstract class SqlServerConfigText
 			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 				return "sys.dm_os_host_info: is NOT supported in Azure SQL Database.";
 
-			return super.checkRequirements(conn);
+			return super.checkRequirements(conn, hostMonConn);
 		}
 	}
 
@@ -769,7 +892,7 @@ public abstract class SqlServerConfigText
 		 * Check for 'suspect pages' 
 		 */
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
@@ -833,7 +956,7 @@ public abstract class SqlServerConfigText
 		 * Check for 'soon to be expired certificates' 
 		 */
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
@@ -904,7 +1027,7 @@ public abstract class SqlServerConfigText
 		 * Check for 'instant file initialization' 
 		 */
 		@Override
-		public void checkConfig(DbxConnection conn)
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			// no nothing, if we havn't got an instance
 			if ( ! DbmsConfigManager.hasInstance() )
@@ -1013,7 +1136,7 @@ public abstract class SqlServerConfigText
 			return sql; 
 		}
 		@Override
-		public String checkRequirements(DbxConnection conn)
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 
@@ -1021,7 +1144,7 @@ public abstract class SqlServerConfigText
 			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 				return "sys.dm_server_registry: is NOT supported in Azure SQL Database.";
 
-			return super.checkRequirements(conn);
+			return super.checkRequirements(conn, hostMonConn);
 		}
 	}
 
@@ -1033,7 +1156,7 @@ public abstract class SqlServerConfigText
 //		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_os_cluster_nodes"; }
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_cluster_nodes"; }
 		@Override
-		public String checkRequirements(DbxConnection conn)
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 
@@ -1041,7 +1164,7 @@ public abstract class SqlServerConfigText
 			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 				return "sys.dm_os_cluster_nodes: is NOT supported in Azure SQL Database.";
 
-			return super.checkRequirements(conn);
+			return super.checkRequirements(conn, hostMonConn);
 		}
 	}
 
@@ -1051,7 +1174,7 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                              { return ConfigType.SqlServerAgentJobs.toString(); }
 		@Override public    String     getConfigType()                        { return getName(); }
 		@Override
-		public String checkRequirements(DbxConnection conn)
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
 			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 
@@ -1075,7 +1198,7 @@ public abstract class SqlServerConfigText
 						+ "Possible fix: USE msdb; CREATE USER " + username + " FOR LOGIN " + username + "; ALTER ROLE db_datareader ADD MEMBER " + username + "; \n"
 						+ "This configuation will NOT be extracted.";
 			
-			return super.checkRequirements(conn);
+			return super.checkRequirements(conn, hostMonConn);
 		}
 		@Override protected String getSqlCurrentConfig(DbmsVersionInfo v) 
 		{ 
@@ -1142,6 +1265,261 @@ public abstract class SqlServerConfigText
 				    + "";
 
 			return sql; 
+		}
+	}
+
+	public static class WindowsPowerPlan extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                          { return "Windows Power Plan"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerWindowsPowerPlan.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return ""; } // Only done with OS Command
+		@Override protected String     getOsCurrentConfig(DbmsVersionInfo v, String osName)  
+		{
+			if (StringUtil.hasValue(osName) && osName.startsWith("Windows"))
+				return "powercfg /list";
+			
+			return "echo 'Windows-Power-Plan Options, is not supported on OS Name: " + osName + "'";
+		}
+		@Override
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "OS Commands: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn, hostMonConn);
+		}
+
+		/** 
+		 * Check for 'High performance' Power Plan 
+		 */
+		@Override
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			// no nothing, if we havn't got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			String configStr = getConfig();
+
+			if (StringUtil.hasValue(configStr) && configStr.contains("Power Scheme GUID: "))
+			{
+				if ( ! configStr.contains("(High performance) *") )
+				{
+					String currentPowerPlanSetting = "-unknown-";
+					for (String row : configStr.split("\\R"))
+					{
+						if (row.trim().endsWith(") *"))
+							currentPowerPlanSetting = StringUtil.substringBetweenTwoChars(row, "(", ")");
+					} 
+					String key = "DbmsConfigIssue." + srvName + ".windows_power_plan";
+
+					DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "windows_power_plan", Severity.INFO, 
+							"Windows Power Plan is NOT set to 'High performance', this can lead to lower performance. Current setting is '" + currentPowerPlanSetting + "'.", 
+							"https://learn.microsoft.com/en-us/troubleshoot/windows-server/performance/slow-performance-when-using-power-plan");
+
+					DbmsConfigManager.getInstance().addConfigIssue(issue);
+				}
+			}
+		}
+	}
+
+	public static class SpBlitz extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                          { return "sp_blitz"; }
+		@Override public    String     getName()                              { return ConfigType.SqlServerSpBlitz.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
+		{
+			int    checkUserDatabaseObjects = Configuration.getCombinedConfiguration().getIntProperty("DbmsConfig.SpBlitz.param.CheckUserDatabaseObjects", 0);
+			int    checkServerInfo          = Configuration.getCombinedConfiguration().getIntProperty("DbmsConfig.SpBlitz.param.checkServerInfo"         , 1);
+
+			String procName = "sp_blitz";
+			
+//			String sql = ""
+//				    + "if (object_id('" + procName + "') is not null) \n"
+//				    + "begin \n"
+//				    + "    exec " + procName + " @CheckUserDatabaseObjects = " + checkUserDatabaseObjects + "\n"
+//				    + "end \n"
+//				    + "else \n"
+//				    + "begin \n"
+//				    + "    select * from (values \n"
+//				    + "         ('ERROR', 'The procedure ''" + procName + "'' is not installed.') \n"
+//				    + "        ,('INFO' , 'For more info see: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit') \n"
+//				    + "        ,('INFO' , 'This procedure does various ''healthchecks'' in any SQL Server.') \n"
+//				    + "    ) info(Severity, Description) \n"
+//				    + "end \n"
+//				    + "";
+
+			// Check ALL databases for the procedure 'sp_blitz' (in reversed database order, so we get 'master' last)
+			// The "last" database we see the procedure in, we will use
+			// if NO procedure was found, print a info message
+			String sql = ""
+				    + "DECLARE @dbname NVARCHAR(128)  = NULL; \n"
+				    + "DECLARE @dblist NVARCHAR(2000) = NULL; \n"
+				    + "DECLARE @sql    NVARCHAR(MAX)  = ''; \n"
+				    + " \n"
+				    + "/* Check if it exists in: master */ \n"
+				    + "IF EXISTS (select 1 from master.sys.all_objects where type = 'P' and name = 'sp_blitz') \n"
+				    + "    set @dbname = 'master' \n"
+				    + " \n"
+				    + "/* Check if it exists in: 'any other database' */ \n"
+				    + "IF (@dbname IS NULL) \n"
+				    + "BEGIN \n"
+				    + "    SELECT @sql = @sql + 'if exists(select 1 from ' + QUOTENAME(name) + '.sys.all_objects where type = ''P'' and name = ''" + procName + "'') set @dbname='''+name+'''' + char(10) \n"
+				    + "          ,@dblist = COALESCE(@dblist + ', ', '') + name \n"
+				    + "    FROM sys.databases \n"
+				    + "    WHERE state = 0 \n"              // Only databases in ONLINE mode
+				    + "      AND HAS_DBACCESS(name) = 1 \n" // Skips database that we do NOT have access to...
+				    + "    ORDER BY database_id DESC \n"    // Check master database last...
+				    + "     \n"
+				    + "    EXEC SP_EXECUTESQL \n"
+				    + "            @Query  = @sql \n"
+				    + "          , @Params = N'@dbname NVARCHAR(128) OUTPUT' \n"
+				    + "          , @dbname = @dbname OUTPUT \n"
+				    + "     \n"
+				    + "    END \n"
+				    + " \n"
+				    + "/* if NOT found anywhere... print some info */ \n"
+				    + "IF (@dbname is NULL) \n"
+				    + "BEGIN \n"
+				    + "    select * from (values \n"
+				    + "         ('ERROR', 'The procedure ''" + procName + "'' is not installed.') \n"
+				    + "        ,('INFO' , 'Searched the following databases: ' + @dblist) \n"
+				    + "        ,('INFO' , 'For more info see: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit') \n"
+				    + "        ,('INFO' , 'If you are not using a ''sysadmin'' login to monitor, you need to follow ''https://www.brentozar.com/askbrent/'' look for ''How to Grant Permissions to Non-DBAs''.') \n"
+				    + "        ,('INFO' , 'This procedure does various ''healthchecks'' in any SQL Server.') \n"
+				    + "    ) info(Severity, Description) \n"
+				    + "END \n"
+				    + "ELSE \n"
+				    + "BEGIN \n"
+				    + "    SET @sql = QUOTENAME(@dbname) + '.dbo." + procName + " @CheckUserDatabaseObjects = " + checkUserDatabaseObjects + ", @CheckServerInfo = " + checkServerInfo + "' \n"
+				    + "    SELECT executing_sql = @sql \n"
+				    + "    EXEC SP_EXECUTESQL @sql \n"
+				    + "END \n"
+				    + "go \n"
+				    + " \n"
+
+				    + "/* ---- Write some extra info if we are not part of 'sysadmin' role ---- */ \n"
+				    + "IF (IS_SRVROLEMEMBER('sysadmin') = 0) \n"
+				    + "BEGIN \n"
+				    + "    select * from (values \n"
+				    + "         ('INFO' , 'You are not part of ''sysadmin'' role') \n"
+				    + "        ,('INFO' , 'To execute the procedure ''" + procName + "'' you will PROBABLY need ''sysadmin'' role...') \n"
+				    + "    ) info(Severity, Description) \n"
+				    + "END \n"
+				    + "go \n"
+				    + "";
+
+			return sql;
+		}
+		
+		@Override
+		protected List<String> getDiscardDbmsErrorText()
+		{
+			// sp_blitz generates message: "Warning: Null value is eliminated by an aggregate or other SET operation."
+			List<String> list = new ArrayList<>(1);
+			list.add("Warning: Null value is eliminated by an aggregate or other SET operation.");
+			return list;
+		}
+
+		@Override
+		protected void setConfig(String configStr)
+		{
+			// replace "'" with Unicode Character 'RIGHT SINGLE QUOTATION MARK' (U+2019) in the output... 
+			// Otherwise RSyntarTextAre will be "ugly" formated
+			if (configStr != null)
+			{
+				configStr = configStr.replace("'", "\u2019");
+			}
+			super.setConfig(configStr);
+		}
+
+		/** 
+		 * Check for 'issues' 
+		 */
+		@Override
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			// no nothing, if we havn't got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			// Get the config, transform the text into "ResultSetTableModel" and check for issues...
+			String configStr = getConfig();
+			
+			List<ResultSetTableModel> rstmList = ResultSetTableModel.parseTextTables(configStr);
+
+			// Get ResultSet from sp_blitz
+			ResultSetTableModel rstm = ResultSetTableModel.getTableWithColumnNames(rstmList, true, "Priority", "FindingsGroup", "Finding");
+			if (rstm != null && !rstm.isEmpty())
+			{
+//				int skipPriorityAbove = 200;
+				String PROPKEY_skipPriorityAbove = "DbmsConfigIssue.mssql.sp_blitz.skip.priority.above";
+				int    DEFAULT_skipPriorityAbove = 200;
+
+				int skipPriorityAbove = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_skipPriorityAbove, DEFAULT_skipPriorityAbove);
+
+				// RS> Col# Label             JDBC Type Name              Guessed DBMS type Source Table
+				// RS> ---- ----------------- --------------------------- ----------------- ------------
+				// RS> 1    Priority          java.sql.Types.TINYINT      tinyint           -none-      
+				// RS> 2    FindingsGroup     java.sql.Types.VARCHAR      varchar(50)       -none-      
+				// RS> 3    Finding           java.sql.Types.VARCHAR      varchar(200)      -none-      
+				// RS> 4    DatabaseName      java.sql.Types.NVARCHAR     nvarchar(128)     -none-      
+				// RS> 5    URL               java.sql.Types.VARCHAR      varchar(200)      -none-      
+				// RS> 6    Details           java.sql.Types.NVARCHAR     nvarchar(4000)    -none-      
+				// RS> 7    QueryPlan         java.sql.Types.LONGNVARCHAR xml               -none-      
+				// RS> 8    QueryPlanFiltered java.sql.Types.NVARCHAR     nvarchar(max)     -none-      
+				// RS> 9    CheckID           java.sql.Types.INTEGER      int               -none-      
+				for (int r=0; r<rstm.getRowCount(); r++)
+				{
+					int    priority          = rstm.getValueAsInteger(r, "Priority"         , false, 0);
+					String findingsGroup     = rstm.getValueAsString (r, "FindingsGroup"    , false, "");
+					String finding           = rstm.getValueAsString (r, "Finding"          , false, "");
+					String databaseName      = rstm.getValueAsString (r, "DatabaseName"     , false, "");
+					String url               = rstm.getValueAsString (r, "URL"              , false, "");
+					String details           = rstm.getValueAsString (r, "Details"          , false, "");
+//					String queryPlan         = rstm.getValueAsString (r, "QueryPlan"        , false, "");
+//					String queryPlanFiltered = rstm.getValueAsString (r, "QueryPlanFiltered", false, "");
+//					int    checkID           = rstm.getValueAsInteger(r, "CheckID"          , false, -1);
+					
+					// Skip some severities
+					if (priority <= 0  ) continue;
+					if (priority >= skipPriorityAbove) continue; // Default 200
+
+					String keyDbname = StringUtil.hasValue(databaseName) ? databaseName : "-srv-level-";
+					String key = "DbmsConfigIssue." + srvName + ".sp_blitz." + findingsGroup.toLowerCase() + "." + keyDbname + "." + finding.replace(' ', '-');
+
+					// Create a "config issue" description
+					String description = "Priority=" + priority + ", FindingsGroup='" + findingsGroup + "', Finding='" + finding + "', DatabaseName='" + databaseName + "', Details='" + details + "'";
+
+					// What severity should the "config issue" have?
+					Severity severity             = Severity.ERROR;   // severity = 1
+					if (priority > 1)    severity = Severity.WARNING; // between: 2 and 99  
+					if (priority >= 100) severity = Severity.INFO;    // between: 100 and above
+
+					// Finally create the "config issue" and add it...
+					DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "sp_blitz", severity, 
+							description, 
+							url);
+
+					DbmsConfigManager.getInstance().addConfigIssue(issue);
+					
+				}
+			}
 		}
 	}
 

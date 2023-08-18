@@ -47,6 +47,8 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
+import com.microsoft.sqlserver.jdbc.SQLServerError;
+import com.microsoft.sqlserver.jdbc.SQLServerException;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
@@ -68,7 +70,8 @@ implements SybMessageHandler, AutoCloseable
 	private String             _msgPrefix                  = "";
 	private int                _queryTimeout               = 0;
 	private boolean            _rememberStates             = true;
-	private List<Integer>      _discardDbmsErrorList       = null;
+	private List<Integer>      _discardDbmsErrorNumList    = null;
+	private List<String>       _discardDbmsErrorTextList   = null; // NOTE: Not yet implemented *everywhere*
 	private boolean            _sybMessageNumberDebug      = false;
 	private boolean            _useGlobalMsgHandler        = false;
 	private boolean            _printSqlInGlobalMsgHandler = true;
@@ -79,6 +82,9 @@ implements SybMessageHandler, AutoCloseable
 	public boolean       getRsAsAsciiTable()          { return _rsAsciiTable; }
 	public AseSqlScript  setRsAsAsciiTable(boolean b) { _rsAsciiTable = b; return this; }
 
+	public AseSqlScript  setDiscardDbmsErrorNumbers(List<Integer> list) { _discardDbmsErrorNumList  = list; return this; }
+	public AseSqlScript  setDiscardDbmsErrorText   (List<String> list)  { _discardDbmsErrorTextList = list; return this; }
+	
 	/** 
 	 * On open current database and message handler are saved, which is restored by close()
 	 * @param conn The Connection 
@@ -105,7 +111,7 @@ implements SybMessageHandler, AutoCloseable
 		_conn = conn;
 		_queryTimeout = queryTimeout;
 		_rememberStates = rememberStates;
-		_discardDbmsErrorList = discardDbmsErrorList;
+		_discardDbmsErrorNumList = discardDbmsErrorList;
 		
 		// Get DBMS Product Name
 		try { _dbmsProductName = _conn.getMetaData().getDatabaseProductName(); }
@@ -494,12 +500,20 @@ implements SybMessageHandler, AutoCloseable
 
 				if (_sybMessageNumberDebug)
 				{
-                    System.out.println("DISCARD(errorCode="+errorCode+"): discardList="+StringUtil.toCommaStr(_discardDbmsErrorList));
+                    System.out.println("DISCARD(errorCode="+errorCode+"): discardList="+StringUtil.toCommaStr(_discardDbmsErrorNumList));
                     System.out.println("SQLEX: "+sqe);
                     //new Exception("Dummy Trace Message to locate from WHERE this was called.").printStackTrace();
 				}
 
-				if (_discardDbmsErrorList != null && _discardDbmsErrorList.contains(errorCode))
+				if (_discardDbmsErrorNumList != null && _discardDbmsErrorNumList.contains(errorCode))
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+errorCode+". Msg='"+sqe.getMessage()+"'.");
+
+					return null;
+				}
+
+				if (_discardDbmsErrorTextList != null && _discardDbmsErrorTextList.contains(sqe.getMessage()))
 				{
 					if (_logger.isDebugEnabled())
 						_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+errorCode+". Msg='"+sqe.getMessage()+"'.");
@@ -541,77 +555,98 @@ implements SybMessageHandler, AutoCloseable
 				if ( StringUtil.isNullOrBlank(sqlChunc) )
 					continue;
 
-				Statement stmnt  = _conn.createStatement();
-				ResultSet  rs    = null;
-				int rowsAffected = 0;
-
-				if (_queryTimeout > 0)
-					stmnt.setQueryTimeout(_queryTimeout);
-
-				sql = sqlChunc;
-				_currentSqlStatement = sql;
-				if (_logger.isDebugEnabled()) 
-					_logger.debug("EXECUTING: "+sql);
-
-				boolean hasRs = stmnt.execute(sql);
-
-				// iterate through each result set
-				do
+				// Foreach "go" (SQL Batch), do it in a TRY, so we can continue with next batch on exceptions
+				try
 				{
+					Statement stmnt  = _conn.createStatement();
+					ResultSet  rs    = null;
+					int rowsAffected = 0;
+
+					if (_queryTimeout > 0)
+						stmnt.setQueryTimeout(_queryTimeout);
+
+					sql = sqlChunc;
+					_currentSqlStatement = sql;
+					if (_logger.isDebugEnabled()) 
+						_logger.debug("EXECUTING: "+sql);
+
+					boolean hasRs = stmnt.execute(sql);
+
+					// iterate through each result set
+					do
+					{
+						// Append, messages and Warnings to output, if any
+						sb.append(getSqlWarningMsgs(stmnt, true));
+
+						if(hasRs)
+						{
+							// Get next result set to work with
+							rs = stmnt.getResultSet();
+
+							// Append, messages and Warnings to output, if any
+							sb.append(getSqlWarningMsgs(stmnt, true));
+
+							// Convert the ResultSet into a TableModel, which fits on a JTable
+							ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
+
+							// Write ResultSet Content as a "string table"
+							if (_rsAsciiTable)
+								sb.append(tm.toAsciiTableString());
+							else
+								sb.append(tm.toTableString());
+
+							// Append, messages and Warnings to output, if any
+							sb.append(getSqlWarningMsgs(stmnt, true));
+
+							// Close it
+							rs.close();
+						}
+						else
+						{
+	    					// Treat update/row count(s)
+	    					rowsAffected = stmnt.getUpdateCount();
+	    					if (rowsAffected >= 0)
+	    					{
+	    					//	sb.append("("+rowsAffected+" row affected)\n");
+	    					}
+						}
+
+						// Check if we have more result sets
+						hasRs = stmnt.getMoreResults(); 
+
+						_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+					}
+					while (hasRs || rowsAffected != -1);
+
 					// Append, messages and Warnings to output, if any
 					sb.append(getSqlWarningMsgs(stmnt, true));
 
-					if(hasRs)
+					// Close the statement
+					stmnt.close();
+				}
+				catch (SQLException ex)
+				{
+					if (aseExceptionsToWarnings)
 					{
-						// Get next result set to work with
-						rs = stmnt.getResultSet();
-
-						// Append, messages and Warnings to output, if any
-						sb.append(getSqlWarningMsgs(stmnt, true));
-
-						// Convert the ResultSet into a TableModel, which fits on a JTable
-						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
-
-						// Write ResultSet Content as a "string table"
-						if (_rsAsciiTable)
-							sb.append(tm.toAsciiTableString());
-						else
-							sb.append(tm.toTableString());
-
-						// Append, messages and Warnings to output, if any
-						sb.append(getSqlWarningMsgs(stmnt, true));
-
-						// Close it
-						rs.close();
+						String msg = getSqlWarningMsgs(ex);
+						if (StringUtil.hasValue(msg))
+						{
+							sb.append("\n");
+							sb.append(msg);
+							sb.append("\n");
+						}
 					}
 					else
 					{
-    					// Treat update/row count(s)
-    					rowsAffected = stmnt.getUpdateCount();
-    					if (rowsAffected >= 0)
-    					{
-    					//	sb.append("("+rowsAffected+" row affected)\n");
-    					}
+						throw ex;
 					}
-
-					// Check if we have more result sets
-					hasRs = stmnt.getMoreResults(); 
-
-					_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
 				}
-				while (hasRs || rowsAffected != -1);
-
-				// Append, messages and Warnings to output, if any
-				sb.append(getSqlWarningMsgs(stmnt, true));
-
-				// Close the statement
-				stmnt.close();
 			}
 		}
-		catch(SQLWarning w)
-		{
-			_logger.warn("Problems when executing sql: "+sql, w);
-		}
+//		catch(SQLWarning w)
+//		{
+//			_logger.warn("Problems when executing sql: "+sql, w);
+//		}
 		finally
 		{
 			if (_conn instanceof SybConnection)
@@ -630,7 +665,7 @@ implements SybMessageHandler, AutoCloseable
 		}
 		return sb.toString();
 	}
-
+	
 	private String getSqlWarningMsgs(Statement stmnt, boolean clearWawnings)
 	{
 		try
@@ -650,6 +685,25 @@ implements SybMessageHandler, AutoCloseable
 		StringBuilder sb = new StringBuilder();
 		while (sqe != null)
 		{
+			if (_discardDbmsErrorTextList != null && _discardDbmsErrorTextList.contains(sqe.getMessage()))
+			{
+				sqe = sqe.getNextException();
+				continue;
+			}
+			
+			// If we want to do regex instead... we might use the below (TODO: instead use "find"... so we do not have to care about start/end strings, hence ".*" + xxx + ".*")
+//			if (_discardDbmsErrorTextList != null)
+//			{
+//				for (String txt : _discardDbmsErrorTextList)
+//				{
+//					if (sqe.getMessage().matches(".*" + txt + ".*"))
+//					{
+//						sqe = sqe.getNextException();
+//						continue;
+//					}
+//				}
+//			}
+			
 			if(sqe instanceof EedInfo)
 			{
 				// Error is using the addtional TDS error data.
@@ -685,16 +739,50 @@ implements SybMessageHandler, AutoCloseable
 			}
 			else
 			{
-				if (sqe instanceof SQLWarning && DbUtils.isProductName(_dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
+				// MS SQL Server...
+				if ((sqe instanceof SQLWarning || sqe instanceof SQLServerException) && DbUtils.isProductName(_dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
 				{
 					String msg = sqe.getMessage();
-					if (_logger.isDebugEnabled())
+
+					if (sqe instanceof SQLWarning && _logger.isDebugEnabled())
 						msg = sqe.getMessage() + "  [ErrorCode=" + sqe.getErrorCode() + ", SQLState=" + sqe.getSQLState() + "]";
+					
+					if (sqe instanceof SQLServerException)
+					{
+						// Get specialized message (just like Sybase EedInfo)
+						SQLServerError msErr = ((SQLServerException) sqe).getSQLServerError();
+
+						if (msErr.getErrorSeverity() > 10) // This is probably not needed as "Severity <= 10" comes as 'SQLWarning'
+						{
+							boolean firstOnLine = true;
+							sb.append("Msg " + msErr.getErrorNumber() +
+									", Level " + msErr.getErrorSeverity() + ", State " +
+									msErr.getErrorState() + ":\n");
+
+							if(StringUtil.hasValue(msErr.getServerName()))
+							{
+								sb.append("Server '" + msErr.getServerName() + "'");
+								firstOnLine = false;
+							}
+							if(StringUtil.hasValue(msErr.getProcedureName()))
+		                    {
+								sb.append( (firstOnLine ? "" : ", ") +
+										"Procedure '" + msErr.getProcedureName() + "'");
+								firstOnLine = false;
+		                    }
+							sb.append( (firstOnLine ? "" : ", ") +
+									"Line " + msErr.getLineNumber() +
+//									", Status " + msErr.getStatus() + 
+//									", TranState " + msErr.getTranState() + 
+									":\n");
+						}
+					}
 
 					sb.append(msg);
-					sb.append("\n");
+					if ( ! msg.endsWith("\n") )
+						sb.append("\n");
 				}
-				else
+				else // Everything else
 				{
 					// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
 					if ( ! "010P4".equals(sqe.getSQLState()) )
@@ -917,7 +1005,7 @@ implements SybMessageHandler, AutoCloseable
 		int msgNumber = sqe.getErrorCode();
 		
 		// Discard some messages
-		if (_discardDbmsErrorList != null && _discardDbmsErrorList.contains(msgNumber))
+		if (_discardDbmsErrorNumList != null && _discardDbmsErrorNumList.contains(msgNumber))
 		{
 			if (_logger.isDebugEnabled())
 				_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+msgNumber+". Msg='"+sqe.getMessage()+"'.");

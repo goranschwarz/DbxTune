@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.gui;
 
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 
 public interface ConnectionProgressExtraActions
@@ -64,12 +65,13 @@ public interface ConnectionProgressExtraActions
 	/**
 	 * Initialize the Servers Configuration Dictionary
 	 * 
-	 * @param conn The Connection 
+	 * @param conn         The JDBC Connection 
+	 * @param hostMonConn  The HostMonitor Connection if any
 	 * @param cpd The ConnectionProgressDialog object
 	 * @return true on success, false on failure (and the connection sequence will be aborted)
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
-	public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
+	public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) throws Exception;
 	/** If this part should be executed */
 	public boolean doInitDbServerConfigDictionary();
 	

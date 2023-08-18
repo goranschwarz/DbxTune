@@ -30,8 +30,14 @@ import java.util.Set;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.sqlserver.AlarmEventToxicWait;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -48,6 +54,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MathUtils;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -56,7 +63,7 @@ import com.asetune.utils.StringUtil;
 public class CmWaitStats
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmServiceMemory.class);
+	private static Logger        _logger          = Logger.getLogger(CmWaitStats.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmWaitStats.class.getSimpleName();
@@ -146,6 +153,25 @@ extends CountersModel
 
 	public static final String  PROPKEY_sqlSkipFilterEnabled         = CM_NAME + ".sql.skip.filter.enabled";
 	public static final boolean DEFAULT_sqlSkipFilterEnabled         = true;
+
+	// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
+	private static final String[] TOXIC_WAIT_TYPES = new String[] {
+		  "CMEMTHREAD"                          // we’ve been seeing a lot of this in servers with a lot of CPU cores that still have their parallelism settings set at their defaults. To fix this issue: * Read my post about setting Cost Threshold for Parallelism and MAXDOP at reasonable defaults – which typically end up at Cost Threshold for Parallelism at 50, and then MAXDOP at around 8 or less depending on your hardware config.   * Look for queries reading a lot of data – run sp_BlitzCache @SortOrder = ‘reads’, and you’re probably going to find queries going parallel to read a lot of data that’s cached in RAM. Try tuning those queries, or tuning the indexes they use.   * After that, if you’re still having the problem, see Microsoft’s blog post on running SQL Servers with >8 cores per NUMA node. If you suspect that CMEMTHREAD is your server’s largest problem, and you meet the symptoms described in that KB article, open up a support ticket with Microsoft to be safe rather than just enabling this trace flag. It’s only $500, and they can give you a double check confirmation that this trace flag makes sense for you
+		, "IO_QUEUE_LIMIT"                      // occurs when your database has too many asynchronous IOs pending. (in Azure SQL DB, this means your database is getting throttled)
+		, "IO_RETRY"                            // a read or write failed due to insufficient resources, and we’re waiting for a retry
+		, "LOG_RATE_GOVERNOR"                   // in Azure SQL DB, this means your database is getting throttled. Your delete/update/insert work simply can’t go any faster due to the limits on your instance size. Before you spend more on a larger instance, read this post: https://www.brentozar.com/archive/2019/02/theres-a-bottleneck-in-azure-sql-db-storage-throughput/
+		, "POOL_LOG_RATE_GOVERNOR"              // see LOG_RATE_GOVERNOR
+		, "PREEMPTIVE_DEBUG"                    // someone probably accidentally hit the DEBUG button in SSMS rather than Execute
+		, "RESMGR_THROTTLED"                    // in Azure SQL DB, this means a new request has come in, but it’s throttled based on the GROUP_MAX_REQUESTS setting
+		, "RESOURCE_SEMAPHORE"                  // means SQL Server ran out of available memory to run queries, and queries had to wait on available memory before they could even start. You can learn more about this in Query Plans: Memory Grants and High Row Estimates [https://www.brentozar.com/archive/2013/08/query-plans-what-happens-when-row-estimates-get-high/], and the RESOURCE_SEMAPHORE training video [https://www.brentozar.com/training/diagnosing-slow-sql-servers-wait-stats/wait-types-resource_semaphore-33m/]
+		, "RESOURCE_SEMAPHORE_QUERY_COMPILE"    // is a lot like RESOURCE_SEMAPHORE, but it means SQL Server didn’t even have enough memory to compile a query plan. This is usually only seen in two situations: "Underpowered servers: think 8-16GB RAM for heavy production workloads, or", "Really complex queries with dozens or hundreds of joins, like I describe in this post about ugly queries and this post as well – and you can hit these even on powerful servers, like 256GB+ memory. Finding the queries causing this is spectacularly hard, though – SQL Server doesn’t make it easy to analyze queries en masse looking for the highest compilation times. Solving it is usually more of a strategic thing: can we simplify our queries overall?"
+		, "SE_REPL_CATCHUP_THROTTLE"            // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+		, "SE_REPL_COMMIT_ACK"                  // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+		, "SE_REPL_COMMIT_TURN"                 // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+		, "SE_REPL_ROLLBACK_ACK"                // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+		, "SE_REPL_SLOW_SECONDARY_THROTTLE"     // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+		, "THREADPOOL"                          // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
+		};
 
 	
 	@Override
@@ -704,6 +730,9 @@ extends CountersModel
 	public static final String   GRAPH_NAME_KNOWN_TOP_10_TIME  = "KnownTop10Time";
 	public static final String   GRAPH_NAME_KNOWN_TOP_10_COUNT = "KnownTop10Count";
 	
+	public static final String   GRAPH_NAME_TOXIC_TIME         = "ToxicTime";
+	public static final String   GRAPH_NAME_TOXIC_COUNT        = "ToxicCount";
+	public static final String   GRAPH_NAME_TOXIC_TPW          = "ToxicTpw"; // Time Per Wait
 
 	private void addTrendGraphs()
 	{
@@ -753,6 +782,43 @@ extends CountersModel
 			false, // visible at start
 			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
 			0);  // minimum height
+
+//FIXME; // test/check the below. Also if we should have Alarms on "some" of the Toxic
+		addTrendGraph(GRAPH_NAME_TOXIC_TIME,
+			"Server Toxic Wait Types, by 'wait_time_ms'", 	                   // Menu CheckBox text
+			"Server Toxic Wait Types, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TOXIC_WAIT_TYPES,
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_TOXIC_COUNT,
+			"Server Toxic Wait Types, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
+			"Server Toxic Wait Types, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TOXIC_WAIT_TYPES,
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_TOXIC_TPW,
+			"Server Toxic Wait Types, by 'WaitTimePerCount'", 	                   // Menu CheckBox text
+			"Server Toxic Wait Types, by 'WaitTimePerCount' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TOXIC_WAIT_TYPES,
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
 	}
 	
 	@Override
@@ -843,5 +909,167 @@ extends CountersModel
 
 			tgdp.setDataPoint(this.getTimestamp(), dArray);
 		}
+
+		// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
+		if (GRAPH_NAME_TOXIC_TIME.equals(graphName))
+		{
+			Double[] dArray = new Double[TOXIC_WAIT_TYPES.length];
+			
+			for (int i=0; i<TOXIC_WAIT_TYPES.length; i++)
+			{
+				dArray[i] = this.getDiffValueAsDouble(TOXIC_WAIT_TYPES[i], "wait_time_ms");
+			}
+			
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
+		}
+
+		// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
+		if (GRAPH_NAME_TOXIC_COUNT.equals(graphName))
+		{
+			Double[] dArray = new Double[TOXIC_WAIT_TYPES.length];
+			
+			for (int i=0; i<TOXIC_WAIT_TYPES.length; i++)
+			{
+				dArray[i] = this.getDiffValueAsDouble(TOXIC_WAIT_TYPES[i], "waiting_tasks_count");
+			}
+			
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
+		}
+
+		// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
+		if (GRAPH_NAME_TOXIC_TPW.equals(graphName))
+		{
+			Double[] dArray = new Double[TOXIC_WAIT_TYPES.length];
+			
+			for (int i=0; i<TOXIC_WAIT_TYPES.length; i++)
+			{
+				dArray[i] = this.getDiffValueAsDouble(TOXIC_WAIT_TYPES[i], "WaitTimePerCount");
+			}
+			
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
+		}
+	}
+
+	//--------------------------------------------------------------------------------------
+	//--------------------------------------------------------------------------------------
+	//-- Alarm Handling
+	//--------------------------------------------------------------------------------------
+	//--------------------------------------------------------------------------------------
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		
+		//-------------------------------------------------------
+		// WaitTime_RESOURCE_SEMAPHORE   (waiting for "memory_grants" / "workspace memory")
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("WaitTime_RESOURCE_SEMAPHORE"))
+		{
+			String wait_type = "RESOURCE_SEMAPHORE";
+			int wait_time_ms = cm.getDiffValueAsInteger(wait_type, "wait_time_ms", -1);
+			int threshold    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE, DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE);
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", wait_type='" + wait_type + "', wait_time_ms='" + wait_time_ms);
+
+			if (wait_time_ms > threshold)
+			{
+				int    rowId               = cm.getDiffRowIdForPkValue(wait_type);
+				int    waiting_tasks_count = cm.getDiffValueAsInteger(rowId, "waiting_tasks_count", -1);
+				double waitTimePerCount    = cm.getDiffValueAsDouble (rowId, "WaitTimePerCount"   , -1d);
+				
+				// Round to 1 decimal point
+				waitTimePerCount = MathUtils.round(waitTimePerCount, 1);
+
+				String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+				String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+
+				//TODO: ??? Should this be INFO or WARNING, OR: Should we have different both INFO and WARNING with different thresholds ???
+
+				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.UP, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
+
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				
+				alarmHandler.addAlarm( ae );
+			}
+		}
+		
+		//-------------------------------------------------------
+		// WaitTime_THREADPOOL 
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("WaitTime_THREADPOOL"))
+		{
+			String wait_type = "THREADPOOL";
+			int wait_time_ms = cm.getDiffValueAsInteger(wait_type, "wait_time_ms", -1);
+			int threshold    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_WaitTime_THREADPOOL, DEFAULT_alarm_WaitTime_THREADPOOL);
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", wait_type='" + wait_type + "', wait_time_ms='" + wait_time_ms);
+
+			if (wait_time_ms > threshold)
+			{
+				int    rowId               = cm.getDiffRowIdForPkValue(wait_type);
+				int    waiting_tasks_count = cm.getDiffValueAsInteger(rowId, "waiting_tasks_count", -1);
+				double waitTimePerCount    = cm.getDiffValueAsDouble (rowId, "WaitTimePerCount"   , -1d);
+
+				// Round to 1 decimal point
+				waitTimePerCount = MathUtils.round(waitTimePerCount, 1);
+
+				String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+				String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+
+				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.AFFECTED, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
+
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				
+				alarmHandler.addAlarm( ae );
+			}
+		}
+	}
+//	  "CMEMTHREAD"                          // we’ve been seeing a lot of this in servers with a lot of CPU cores that still have their parallelism settings set at their defaults. To fix this issue: * Read my post about setting Cost Threshold for Parallelism and MAXDOP at reasonable defaults – which typically end up at Cost Threshold for Parallelism at 50, and then MAXDOP at around 8 or less depending on your hardware config.   * Look for queries reading a lot of data – run sp_BlitzCache @SortOrder = ‘reads’, and you’re probably going to find queries going parallel to read a lot of data that’s cached in RAM. Try tuning those queries, or tuning the indexes they use.   * After that, if you’re still having the problem, see Microsoft’s blog post on running SQL Servers with >8 cores per NUMA node. If you suspect that CMEMTHREAD is your server’s largest problem, and you meet the symptoms described in that KB article, open up a support ticket with Microsoft to be safe rather than just enabling this trace flag. It’s only $500, and they can give you a double check confirmation that this trace flag makes sense for you
+//	, "IO_QUEUE_LIMIT"                      // occurs when your database has too many asynchronous IOs pending. (in Azure SQL DB, this means your database is getting throttled)
+//	, "IO_RETRY"                            // a read or write failed due to insufficient resources, and we’re waiting for a retry
+//	, "LOG_RATE_GOVERNOR"                   // in Azure SQL DB, this means your database is getting throttled. Your delete/update/insert work simply can’t go any faster due to the limits on your instance size. Before you spend more on a larger instance, read this post: https://www.brentozar.com/archive/2019/02/theres-a-bottleneck-in-azure-sql-db-storage-throughput/
+//	, "POOL_LOG_RATE_GOVERNOR"              // see LOG_RATE_GOVERNOR
+//	, "PREEMPTIVE_DEBUG"                    // someone probably accidentally hit the DEBUG button in SSMS rather than Execute
+//	, "RESMGR_THROTTLED"                    // in Azure SQL DB, this means a new request has come in, but it’s throttled based on the GROUP_MAX_REQUESTS setting
+//	, "RESOURCE_SEMAPHORE"                  // means SQL Server ran out of available memory to run queries, and queries had to wait on available memory before they could even start. You can learn more about this in Query Plans: Memory Grants and High Row Estimates [https://www.brentozar.com/archive/2013/08/query-plans-what-happens-when-row-estimates-get-high/], and the RESOURCE_SEMAPHORE training video [https://www.brentozar.com/training/diagnosing-slow-sql-servers-wait-stats/wait-types-resource_semaphore-33m/]
+//	, "RESOURCE_SEMAPHORE_QUERY_COMPILE"    // is a lot like RESOURCE_SEMAPHORE, but it means SQL Server didn’t even have enough memory to compile a query plan. This is usually only seen in two situations: "Underpowered servers: think 8-16GB RAM for heavy production workloads, or", "Really complex queries with dozens or hundreds of joins, like I describe in this post about ugly queries and this post as well – and you can hit these even on powerful servers, like 256GB+ memory. Finding the queries causing this is spectacularly hard, though – SQL Server doesn’t make it easy to analyze queries en masse looking for the highest compilation times. Solving it is usually more of a strategic thing: can we simplify our queries overall?"
+//	, "SE_REPL_CATCHUP_THROTTLE"            // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//	, "SE_REPL_COMMIT_ACK"                  // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//	, "SE_REPL_COMMIT_TURN"                 // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//	, "SE_REPL_ROLLBACK_ACK"                // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//	, "SE_REPL_SLOW_SECONDARY_THROTTLE"     // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//	, "THREADPOOL"                          // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
+
+	public static final String  PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE  = CM_NAME + ".alarm.system.if.wait_time_ms.RESOURCE_SEMAPHORE.gt";
+	public static final int     DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE  = 10_000; // 10 seconds
+
+	public static final String  PROPKEY_alarm_WaitTime_THREADPOOL          = CM_NAME + ".alarm.system.if.wait_time_ms.THREADPOOL.gt";
+	public static final int     DEFAULT_alarm_WaitTime_THREADPOOL          = 10_000; // 10 seconds
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("WaitTime_RESOURCE_SEMAPHORE", isAlarmSwitch, PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE, Integer.class, conf.getIntProperty(PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE, DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE), DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE, "If 'wait_time_ms' for 'RESOURCE_SEMAPHORE' is greater than ## then send 'AlarmEventFIXME'." ));
+		list.add(new CmSettingsHelper("WaitTime_THREADPOOL"        , isAlarmSwitch, PROPKEY_alarm_WaitTime_THREADPOOL        , Integer.class, conf.getIntProperty(PROPKEY_alarm_WaitTime_THREADPOOL        , DEFAULT_alarm_WaitTime_THREADPOOL        ), DEFAULT_alarm_WaitTime_THREADPOOL        , "If 'wait_time_ms' for 'THREADPOOL' is greater than ## then send 'AlarmEventFIXME'." ));
+
+		return list;
 	}
 }

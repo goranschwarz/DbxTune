@@ -364,6 +364,10 @@ for example: http://dbxtune.acme.com:8080/
 	use master;
 	CREATE USER [dbxtune] FOR LOGIN [dbxtune];
 	GRANT EXEC ON xp_readerrorlog TO [dbxtune];
+	
+	## Note: If you want to execute 'sp_blitz' and are using a non 'sysadmin' account (like we do above with the login 'dbxtune')
+	## you need to follow 'https://www.brentozar.com/askbrent/', look for 'How to Grant Permissions to Non-DBAs'
+	## The 'sp_blitz' may be used to do all sorts of 'healthchecks' every time you connect to the monitored server.
 
 	## Test that we can login to SQL Server with the 'dbxtune' user
 	sqlcmd -Ssrvname -Udbxtune -Pthe_long_and_arbitrary_password

@@ -631,7 +631,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 				DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
 			if (DbmsConfigTextManager.hasInstances())
-				DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+				DbmsConfigTextManager.initializeAll(reader.getConnection(), null, true, true, sl.getPeriodStartTime());
 		}
 		catch(SQLException ex) 
 		{
@@ -748,7 +748,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 					DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
 				if (DbmsConfigTextManager.hasInstances())
-					DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+					DbmsConfigTextManager.initializeAll(reader.getConnection(), null, true, true, sl.getPeriodStartTime());
 			}
 			catch(SQLException ex) 
 			{

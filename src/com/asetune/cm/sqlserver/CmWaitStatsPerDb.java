@@ -90,7 +90,7 @@ extends CountersModel
 		"wait_time_ms", 
 //		"max_wait_time_ms", 
 		"signal_wait_time_ms",
-		"record_count"
+		"record_count_diff"
 	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -231,6 +231,7 @@ extends CountersModel
 			    + "    ,ws.wait_type \n"
 			    + "    ,WaitClass           = CONVERT(varchar(30), null) \n"
 			    + "    ,record_count        = COUNT(*) \n"
+			    + "    ,record_count_diff   = COUNT(*) \n"
 			    + "    ,waiting_tasks_count = SUM(ws.waiting_tasks_count) \n"
 			    + "    ,wait_time_ms        = SUM(ws.wait_time_ms) \n"
 			    + "    ,max_wait_time_ms    = MAX(ws.max_wait_time_ms) \n"
