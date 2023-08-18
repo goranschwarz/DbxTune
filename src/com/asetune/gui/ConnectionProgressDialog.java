@@ -72,6 +72,8 @@ import org.jdesktop.swingx.table.TableColumnExt;
 import com.asetune.Version;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.swing.GLabel;
+import com.asetune.hostmon.HostMonitorConnection;
+import com.asetune.hostmon.HostMonitorConnectionSsh;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
@@ -1464,7 +1466,9 @@ finally
 						//---- DO 'Init ASE Configuration Dictionary' (EXTRA_TASK_INIT_DBMS_CONFIG_DICT)
 						//-------------------------
 						setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-						if ( _extraTasks.initDbServerConfigDictionary(conn, ConnectionProgressDialog.this) )
+						HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(_sshConnection);
+
+						if ( _extraTasks.initDbServerConfigDictionary(conn, hostMonConn, ConnectionProgressDialog.this) )
 							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 						else
 						{

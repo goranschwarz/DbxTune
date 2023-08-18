@@ -41,7 +41,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>The above two switches also have corresponding fields in the Connection Dialog</LI>
 		<LI>For all collectors, Created a new Writer class PersistWriterToDbxCentral, as a complement to PersistWriterToHttpJson so we can controll it a bit better</LI>
 		<LI>Configuration (Properties), enhancement to USE_DEFAULT value (really an internal thing, but now you can use config value 'USE_DEFAULT' in more places.</LI>
-		<LI></LI>
+		<LI>For DBMS Configuration, it's now possible to execute OS Commands (if we have a OsMonConnection)</LI>
 		<LI></LI>
 		<LI></LI>
 		<LI>DbxCentral - Local Metrics (os monitoring on DbxCentral host), property: <code>DbxTuneCentral.start.localMetricsCollector=*true*|false</code></LI>
@@ -205,9 +205,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>SqlServerTune - Microsoft SQL-Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>xxx</LI>
+		<LI>setNetworkTimeout to default value of 60 seconds. (this can be changed with property 'SqlServerTune.onConnect.setNetworkTimeout.ms' <br>
+		This will help when the server is "unresponsive", so we can disconnect ant try to make a new connection... and hope for the best...</LI>
 
 		<LI>Added Alarm: <b>AlarmEventMemoryGrantWait   </b> -- Used by CM 'CmMemoryGrantsSum' to alarm if we have anyone waiting to grab a memory grant.</LI>
+		<LI>Added Alarm: <b>AlarmEventLowOnWorkerThreads</b> -- which will be raised when we have 20 or less "worker threads" available (called from CmSummary)</LI>
+		<LI>Added Alarm: <b>AlarmEventOutOfWorkerThreads</b> -- which will be raised when we have no more "worker threads" available (called from CmSummary)</LI>
+		<LI>Added Alarm: <b>AlarmEventToxicWait         </b> -- which will be raised when checking "Server Wait Time", wait events (called from CmWaitStats)</LI>
 
 		<LI>Added CM: <b>CmExecQueryStatPerDb </b> - Activity Grouped by Database -- Information is fetched from dm_exec_query_stats</LI>
 
@@ -217,6 +221,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 		<LI><b>DBMS Configuration </b> - if Linux also grab file content of '/var/opt/mssql/mssql.conf' in tab 'Server Registry' note: this needs permission 'ADMINISTER DATABASE BULK OPERATIONS'</LI>
+		<LI><b>DBMS Configuration </b> - (if windows) Check: Windows Power Plan (this is done via OS Command 'powercfg /list')</LI>
+		<LI><b>DBMS Configuration </b> - (if windows) Check if AllocationUnitSize is smaller than 64K (this is done via OS Command 'powershell "Get-Volume | Select-Object DriveLetter, AllocationUnitSize, FileSystemType, FileSystemLabel | ConvertTo-Json"')</LI>
+		<LI><b>DBMS Configuration </b> - Added 'sp_blitz' -- which is a Stored Proc from Brent Ozar that does various "healthchecks" on the server. (it's only executed if it's installed in the SQL Server)</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>
@@ -236,8 +243,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmSummary            </b> - added column 'databaseCacheMemoryMb', 'grantedWorkspaceMemoryMb', 'stolenServerMemoryMb' (grabbed from dm_os_performance_counters)</LI>
 		<LI><b>CmSummary            </b> - added Chart 'PerfMon: SQL Server Memory Usage'</LI>
+		<LI><b>CmSummary            </b> - added columns "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" </LI>
+		<LI><b>CmSummary            </b> - added Chart "WorkersThreadUsage" -- to see the behaviour of Worker Thread Usage</LI>
 
 		<LI><b>CmTempdbSpidUsage    </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+
+		<LI><b>CmWaitStats          </b> - Added Charts "ToxicTime", "ToxicCount", "ToxicTpw" (TPW=Time Per Wait) -- to see the Toxic wait event (if they are happening)</LI>
+		<LI><b>CmWaitStats          </b> - Raising Alarm on Toxic Wait types "RESOURCE_SEMAPHORE", "THREADPOOL" if there has been more wait time than 10 seconds (can be changed with Properties 'CmWaitStats.alarm.system.if.wait_time_ms.RESOURCE_SEMAPHORE.gt', 'CmWaitStats.alarm.system.if.wait_time_ms.THREADPOOL.gt')</LI>
 
 		<LI><b>CmWaitingTasks       </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 

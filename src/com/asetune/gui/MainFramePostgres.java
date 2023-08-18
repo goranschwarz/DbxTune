@@ -40,6 +40,7 @@ import com.asetune.config.dict.MonTablesDictionaryPostgres;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.SwingUtils;
 
@@ -144,7 +145,7 @@ extends MainFrame
 			}
 			
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
-			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) throws Exception
 			{
 				if (DbmsConfigManager.hasInstance())
 				{
@@ -161,7 +162,7 @@ extends MainFrame
 						if ( ! t.isInitialized() )
 						{
 							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
-							t.initialize(conn, true, false, null);
+							t.initialize(conn, hostMonConn, true, false, null);
 						}
 					}
 

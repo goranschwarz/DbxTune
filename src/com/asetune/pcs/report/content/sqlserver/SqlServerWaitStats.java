@@ -66,6 +66,8 @@ extends SqlServerAbstract
 //		writeMessageText(w);
 //	}
 
+//TODO; // to htmlTable, add: sum(WaitCount) and avg(WaitTimePerCount) (Avg ms per Wait), "Per Core Per Hour (Look at Brent Ozar how he calculates that)"
+
 	@Override
 	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException

@@ -871,6 +871,7 @@ extends DbmsConfigAbstract
 		map.put("remote data archive",                0);
 		map.put("allow polybase export",              0);
 
+		// SQL-Server 2019 (probably earlier as well)
 		map.put("column encryption enclave type",     0);
 		map.put("tempdb metadata memory-optimized",   0);
 		map.put("ADR cleaner retry timeout (min)",    0);
@@ -888,6 +889,12 @@ extends DbmsConfigAbstract
 		map.put("suppress recovery model errors",     0);
 		map.put("openrowset auto_create_statistics",  1);
 
+		// SQL-Server 2022
+		map.put("hardware offload enabled",           0);
+		map.put("hardware offload config",            0);
+		map.put("hardware offload mode",              0);
+		map.put("backup compression algorithm",       0);
+		
 		return map;
 	}
 //	-- Server Configuration (find any non-standard settings)
@@ -1103,6 +1110,12 @@ extends DbmsConfigAbstract
 		map.put("suppress recovery model errors",     SECTION_UNSPECIFIED);
 		map.put("openrowset auto_create_statistics",  SECTION_UNSPECIFIED);
 
+		// SQL-Server 2022
+		map.put("hardware offload enabled",           SECTION_UNSPECIFIED);
+		map.put("hardware offload config",            SECTION_UNSPECIFIED);
+		map.put("hardware offload mode",              SECTION_UNSPECIFIED);
+		map.put("backup compression algorithm",       SECTION_UNSPECIFIED);
+		
 		return map;
 	}
 	public static final String  SECTION_UNSPECIFIED          = "Unspecified";
@@ -1236,6 +1249,12 @@ extends DbmsConfigAbstract
 		map.put("suppress recovery model errors",     NO_COMMENT);
 		map.put("openrowset auto_create_statistics",  NO_COMMENT);
 
+		// SQL-Server 2022
+		map.put("hardware offload enabled",           NO_COMMENT);
+		map.put("hardware offload config",            NO_COMMENT);
+		map.put("hardware offload mode",              NO_COMMENT);
+		map.put("backup compression algorithm",       NO_COMMENT);
+		
 		return map;
 	}
 	public static final String  NO_COMMENT = "";

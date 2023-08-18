@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.RepServerUtils;
@@ -70,12 +71,12 @@ public abstract class RsConfigText
 	public static class RsConfigAsText extends DbmsConfigTextAbstract
 	{
 		@Override
-		public void refresh(DbxConnection conn, Timestamp ts)
+		public void refresh(DbxConnection conn, HostMonitorConnection hostMonConn, Timestamp ts)
 		throws SQLException
 		{
 			if (isOffline())
 			{
-				super.refresh(conn, ts);
+				super.refresh(conn, hostMonConn, ts);
 			}
 			else
 			{
@@ -96,12 +97,12 @@ public abstract class RsConfigText
 	public static class RsConfigAsTextNonDefault extends DbmsConfigTextAbstract
 	{
 		@Override
-		public void refresh(DbxConnection conn, Timestamp ts)
+		public void refresh(DbxConnection conn, HostMonitorConnection hostMonConn, Timestamp ts)
 		throws SQLException
 		{
 			if (isOffline())
 			{
-				super.refresh(conn, ts);
+				super.refresh(conn, hostMonConn, ts);
 			}
 			else
 			{

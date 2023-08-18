@@ -233,6 +233,31 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _memStolenServerMemoryMb_abs_txt           = new JTextField();
 	private JTextField       _memStolenServerMemoryMb_diff_txt          = new JTextField();
 
+	// Worker Threads
+	private JLabel           _wt_maxWorkers_lbl                         = new JLabel();
+	private JTextField       _wt_maxWorkers_abs_txt                     = new JTextField();
+
+	private JLabel           _wt_usedWorkers_lbl                        = new JLabel();
+	private JTextField       _wt_usedWorkers_abs_txt                    = new JTextField();
+	private JTextField       _wt_usedWorkers_diff_txt                   = new JTextField();
+
+	private JLabel           _wt_availableWorkers_lbl                   = new JLabel();
+	private JTextField       _wt_availableWorkers_abs_txt               = new JTextField();
+	private JTextField       _wt_availableWorkers_diff_txt              = new JTextField();
+
+	private JLabel           _wt_workersWaitingForCPU_lbl               = new JLabel();
+	private JTextField       _wt_workersWaitingForCPU_abs_txt           = new JTextField();
+	private JTextField       _wt_workersWaitingForCPU_diff_txt          = new JTextField();
+
+	private JLabel           _wt_requestsWaitingForWorkers_lbl          = new JLabel();
+	private JTextField       _wt_requestsWaitingForWorkers_abs_txt      = new JTextField();
+	private JTextField       _wt_requestsWaitingForWorkers_diff_txt     = new JTextField();
+
+	private JLabel           _wt_allocatedWorkers_lbl                   = new JLabel();
+	private JTextField       _wt_allocatedWorkers_abs_txt               = new JTextField();
+	private JTextField       _wt_allocatedWorkers_diff_txt              = new JTextField();
+
+	// CPU... (@@variables)
 	private JLabel           _cpuTime_lbl                               = new JLabel();
 	private JTextField       _cpuTime_txt                               = new JTextField();
 	private JLabel           _cpuUser_lbl                               = new JLabel();
@@ -746,6 +771,63 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_memStolenServerMemoryMb_diff_txt .setForeground(Color.BLUE);
 
 
+		// Worker Threads
+		tooltip = "Max Worker Threads that this SQL Server can use/schedule.";
+		_wt_maxWorkers_lbl                     .setText("Max Worker Threads");
+		_wt_maxWorkers_lbl                     .setToolTipText(tooltip);
+		_wt_maxWorkers_abs_txt                 .setToolTipText(tooltip);
+		_wt_maxWorkers_abs_txt                 .setEditable(false);
+
+		tooltip = "Currently Used Worker threads";
+		_wt_usedWorkers_lbl                    .setText("Used Workers");
+		_wt_usedWorkers_lbl                    .setToolTipText(tooltip);
+		_wt_usedWorkers_abs_txt                .setToolTipText(tooltip);
+		_wt_usedWorkers_abs_txt                .setEditable(false);
+		_wt_usedWorkers_diff_txt               .setEditable(false);
+		_wt_usedWorkers_diff_txt               .setToolTipText(tooltip);
+		_wt_usedWorkers_diff_txt               .setForeground(Color.BLUE);
+
+		tooltip = "Available Worker Threads. If this is LOW we will be in trouble... If zero then the Server will have serious issues sceduling ANY work.";
+		_wt_availableWorkers_lbl               .setText("Available Workers");
+		_wt_availableWorkers_lbl               .setToolTipText(tooltip);
+		_wt_availableWorkers_abs_txt           .setToolTipText(tooltip);
+		_wt_availableWorkers_abs_txt           .setEditable(false);
+		_wt_availableWorkers_diff_txt          .setEditable(false);
+		_wt_availableWorkers_diff_txt          .setToolTipText(tooltip);
+		_wt_availableWorkers_diff_txt          .setForeground(Color.BLUE);
+
+		tooltip = "Number of Workers that wait for CPU resources (waiting the be scheduled, in status 'runnable')";
+		_wt_workersWaitingForCPU_lbl           .setText("Workers Waiting for CPU");
+//		_wt_workersWaitingForCPU_lbl           .setText("Workers Waits for CPU");
+		_wt_workersWaitingForCPU_lbl           .setToolTipText(tooltip);
+		_wt_workersWaitingForCPU_abs_txt       .setToolTipText(tooltip);
+		_wt_workersWaitingForCPU_abs_txt       .setEditable(false);
+		_wt_workersWaitingForCPU_diff_txt      .setEditable(false);
+		_wt_workersWaitingForCPU_diff_txt      .setToolTipText(tooltip);
+		_wt_workersWaitingForCPU_diff_txt      .setForeground(Color.BLUE);
+
+		tooltip = "Tasks/Requests that are waiting for any worker to be available (Meaning: Thread Pool Starvation... wait_type 'THREADPOOL')";
+//		_wt_requestsWaitingForWorkers_lbl      .setText("Requests Waiting For Workers");
+		_wt_requestsWaitingForWorkers_lbl      .setText("Tasks Waiting for Worker");
+		_wt_requestsWaitingForWorkers_lbl      .setToolTipText(tooltip);
+		_wt_requestsWaitingForWorkers_abs_txt  .setToolTipText(tooltip);
+		_wt_requestsWaitingForWorkers_abs_txt  .setEditable(false);
+		_wt_requestsWaitingForWorkers_diff_txt .setEditable(false);
+		_wt_requestsWaitingForWorkers_diff_txt .setToolTipText(tooltip);
+		_wt_requestsWaitingForWorkers_diff_txt .setForeground(Color.BLUE);
+
+		tooltip = "How many of the Worker Threads has been allocated and assigned to any scheduler. If this is lower than 'Max Worker Threads', it only means that the server has not yet allocated a OS Thread for that Worker...";
+		_wt_allocatedWorkers_lbl               .setText("Allocated Workers");
+		_wt_allocatedWorkers_lbl               .setToolTipText(tooltip);
+		_wt_allocatedWorkers_abs_txt           .setToolTipText(tooltip);
+		_wt_allocatedWorkers_abs_txt           .setEditable(false);
+		_wt_allocatedWorkers_diff_txt          .setEditable(false);
+		_wt_allocatedWorkers_diff_txt          .setToolTipText(tooltip);
+		_wt_allocatedWorkers_diff_txt          .setForeground(Color.BLUE);
+
+		
+
+		// CPU...
 		tooltip = "CPU Time. Global variable @@cpu_busy + @@io_busy.";
 //		_cpuTime_lbl      .setText("CPU Usage");
 		_cpuTime_lbl      .setText("CPU Time/User/Sys");
@@ -981,6 +1063,32 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_memStolenServerMemoryMb_diff_txt,          "growx, gapright 2, wrap 20");
 
 
+		// Worker Threads
+		panel.add(_wt_maxWorkers_lbl,                         "");
+		panel.add(_wt_maxWorkers_abs_txt,                     "growx, wrap");
+
+		panel.add(_wt_usedWorkers_lbl,                        "");
+		panel.add(_wt_usedWorkers_abs_txt,                    "growx, gapright 2, split");
+		panel.add(_wt_usedWorkers_diff_txt,                   "growx, gapright 2, wrap");
+
+		panel.add(_wt_availableWorkers_lbl,                   "");
+		panel.add(_wt_availableWorkers_abs_txt,               "growx, gapright 2, split");
+		panel.add(_wt_availableWorkers_diff_txt,              "growx, gapright 2, wrap");
+
+		panel.add(_wt_workersWaitingForCPU_lbl,               "");
+		panel.add(_wt_workersWaitingForCPU_abs_txt,           "growx, gapright 2, split");
+		panel.add(_wt_workersWaitingForCPU_diff_txt,          "growx, gapright 2, wrap");
+
+		panel.add(_wt_requestsWaitingForWorkers_lbl,          "");
+		panel.add(_wt_requestsWaitingForWorkers_abs_txt,      "growx, gapright 2, split");
+		panel.add(_wt_requestsWaitingForWorkers_diff_txt,     "growx, gapright 2, wrap");
+
+		panel.add(_wt_allocatedWorkers_lbl,                   "");
+		panel.add(_wt_allocatedWorkers_abs_txt,               "growx, gapright 2, split");
+		panel.add(_wt_allocatedWorkers_diff_txt,              "growx, gapright 2, wrap 20");
+
+
+		// CPU...
 		panel.add(_cpuTime_lbl,                               "");
 		panel.add(_cpuTime_txt,                               "growx, gapright 2, split");
 		panel.add(_cpuUser_txt,                               "growx, gapright 2");
@@ -1208,8 +1316,27 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		
 		_memStolenServerMemoryMb_abs_txt          .setText(cm.getAbsString (0, "stolenServerMemoryMb"));
 		_memStolenServerMemoryMb_diff_txt         .setText(cm.getDiffString(0, "stolenServerMemoryMb"));
-		
 
+		// Workers
+		_wt_maxWorkers_abs_txt                    .setText(cm.getAbsString (0, "maxWorkers"));
+
+		_wt_usedWorkers_abs_txt                   .setText(cm.getAbsString (0, "usedWorkers"));
+		_wt_usedWorkers_diff_txt                  .setText(cm.getDiffString(0, "usedWorkers"));
+
+		_wt_availableWorkers_abs_txt              .setText(cm.getAbsString (0, "availableWorkers"));
+		_wt_availableWorkers_diff_txt             .setText(cm.getDiffString(0, "availableWorkers"));
+
+		_wt_workersWaitingForCPU_abs_txt          .setText(cm.getAbsString (0, "workersWaitingForCPU"));
+		_wt_workersWaitingForCPU_diff_txt         .setText(cm.getDiffString(0, "workersWaitingForCPU"));
+
+		_wt_requestsWaitingForWorkers_abs_txt     .setText(cm.getAbsString (0, "requestsWaitingForWorkers"));
+		_wt_requestsWaitingForWorkers_diff_txt    .setText(cm.getDiffString(0, "requestsWaitingForWorkers"));
+
+		_wt_allocatedWorkers_abs_txt              .setText(cm.getAbsString (0, "allocatedWorkers"));
+		_wt_allocatedWorkers_diff_txt             .setText(cm.getDiffString(0, "allocatedWorkers"));
+
+
+		// CPU...
 		_ioTotalRead_txt      .setText(cm.getAbsString (0, "io_total_read"));
 		_ioTotalReadDiff_txt  .setText(cm.getRateString(0, "io_total_read"));
 		_ioTotalWrite_txt     .setText(cm.getAbsString (0, "io_total_write"));
@@ -1494,7 +1621,21 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_memGrantedWorkspaceMemoryMb_diff_txt     .setText("");
 		_memStolenServerMemoryMb_abs_txt          .setText("");
 		_memStolenServerMemoryMb_diff_txt         .setText("");
+
+		// Worker Threads
+		_wt_maxWorkers_abs_txt                    .setText("");
+		_wt_usedWorkers_abs_txt                   .setText("");
+		_wt_usedWorkers_diff_txt                  .setText("");
+		_wt_availableWorkers_abs_txt              .setText("");
+		_wt_availableWorkers_diff_txt             .setText("");
+		_wt_workersWaitingForCPU_abs_txt          .setText("");
+		_wt_workersWaitingForCPU_diff_txt         .setText("");
+		_wt_requestsWaitingForWorkers_abs_txt     .setText("");
+		_wt_requestsWaitingForWorkers_diff_txt    .setText("");
+		_wt_allocatedWorkers_abs_txt              .setText("");
+		_wt_allocatedWorkers_diff_txt             .setText("");
 		
+		// CPU...
 		_cpuTime_txt                              .setText("");
 		_cpuUser_txt                              .setText("");
 		_cpuSystem_txt                            .setText("");

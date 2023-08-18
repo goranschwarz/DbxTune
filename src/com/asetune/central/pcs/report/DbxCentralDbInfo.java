@@ -31,13 +31,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.ServletException;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.central.DbxTuneCentral;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralH2Defrag.H2StorageInfo;
+import com.asetune.central.cleanup.CentralPcsJdbcCleaner;
 import com.asetune.central.controllers.OverviewServlet;
 import com.asetune.central.controllers.OverviewServlet.H2DbFileType;
 import com.asetune.central.pcs.H2WriterStat;
@@ -213,6 +212,8 @@ extends ReportEntryAbstract
 		// Print some content of the Central Database
 		if (true)
 		{
+			int keepDays = Configuration.getCombinedConfiguration().getIntProperty(CentralPcsJdbcCleaner.PROPKEY_keepDays, CentralPcsJdbcCleaner.DEFAULT_keepDays);
+
 			String sql = ""
 					+ "select \n"
 					+ "	   [ServerName]            AS [Server Name], \n"
@@ -222,6 +223,7 @@ extends ReportEntryAbstract
 					+ "	   max([LastSampleTime])   AS [Last Sample], \n"
 					+ "	   datediff(day, max([LastSampleTime]),   CURRENT_TIMESTAMP    ) AS [Last Sample Age In Days], \n"
 					+ "	   datediff(day, min([SessionStartTime]), max([LastSampleTime])) AS [Num Of Days Sampled] \n"
+					+ "	   " + keepDays + "        AS [Retention Days] \n"
 					+ "from [DbxCentralSessions] \n"
 					+ "group by [ServerName], [OnHostname], [ProductString] \n"
 					+ "order by 1 \n"

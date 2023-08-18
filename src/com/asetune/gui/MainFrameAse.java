@@ -65,6 +65,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.AseAppTraceDialog;
@@ -157,7 +158,7 @@ extends MainFrame
 			}
 			
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
-			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) 
 			throws SQLException
 			{
 //				IDbmsConfig aseCfg = AseConfig.getInstance();
@@ -169,7 +170,8 @@ extends MainFrame
 
 				if (DbmsConfigManager.hasInstance())
 				{
-					cpd.setStatus("Getting sp_configure settings");
+//					cpd.setStatus("Getting sp_configure settings");
+					cpd.setStatus("Getting DBMS Configuration Settings");
 					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
 					if ( ! dbmsCfg.isInitialized() )
 						dbmsCfg.initialize(conn, true, false, null);
@@ -181,8 +183,8 @@ extends MainFrame
 					{
 						if ( ! t.isInitialized() )
 						{
-							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
-							t.initialize(conn, true, false, null);
+							cpd.setStatus("Getting '" + t.getTabLabel() + "' settings");
+							t.initialize(conn, hostMonConn, true, false, null);
 						}
 					}
 
@@ -321,7 +323,7 @@ extends MainFrame
 					dbmsCfg.initialize(getOfflineConnection(), true, true, null);
 			}
 			if (DbmsConfigTextManager.hasInstances())
-				DbmsConfigTextManager.initializeAll(getOfflineConnection(), true, true, null);
+				DbmsConfigTextManager.initializeAll(getOfflineConnection(), null, true, true, null);
 		}
 		catch(SQLException ex) 
 		{

@@ -1184,6 +1184,7 @@ implements Memory.MemoryListener
 			HeartbeatMonitor.doHeartbeat();
 			
 			// CONNECT (initial or reconnect)
+			boolean madeNewMonConnection = false;
 			if ( ! getCounterController().isMonConnected(true, true))
 			{
 				_logger.info("-----------------------------------------------------------------------------------------");
@@ -1200,16 +1201,18 @@ implements Memory.MemoryListener
 //					if ( DbxConnection.hasDefaultConnProp() )
 //					{
 //					}
-						
+
 					if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
 						System.out.println("#### DEBUG ####: Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
 
 					// Make a connection using any specific implementation for the installed counter controller
 					DbxConnection conn = getCounterController().noGuiConnect(_dbmsUsername, _dbmsPassword, _dbmsServer, _dbmsHostPortStr, _jdbcUrlOptions);
-					
+
 					// Set the connection to be used
 					//getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
 					getCounterController().setMonConnection(conn);
+					
+					madeNewMonConnection = true;
 
 					// Check "stuff"
 					if ( ! DbxConnection.hasDefaultConnProp() )
@@ -1288,52 +1291,6 @@ implements Memory.MemoryListener
 					// START AT THE TOP AGAIN
 					continue;
 				}
-				
-				// initialize Mon Table Dictionary
-				mtd = MonTablesDictionaryManager.getInstance();
-				if ( ! mtd.isInitialized() )
-				{
-					mtd.initialize(getCounterController().getMonConnection(), false);
-				}
-				
-				try
-				{
-					// initialize DBMS Config Dictionary
-					if (DbmsConfigManager.hasInstance())
-					{
-						IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
-						if ( ! dbmsCfg.isInitialized() )
-							dbmsCfg.initialize(getCounterController().getMonConnection(), false, false, null);
-					}
-					
-					// initialize DBMS Config Text Dictionary
-					if (DbmsConfigTextManager.hasInstances())
-						DbmsConfigTextManager.initializeAll(getCounterController().getMonConnection(), false, false, null);
-				}
-				catch(SQLException ex) 
-				{
-					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
-				}
-
-				// for ASE only
-				// Check if we have License issues... send alarm...
-				DbxConnection conn = getCounterController().getMonConnection();
-				if (conn != null && conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
-				{
-//					String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(conn);
-					String gracePeriodWarning   = AseLicensInfo.getAseGracePeriodWarning(conn);
-					if (StringUtil.hasValue(gracePeriodWarning))
-					{
-						_logger.warn(gracePeriodWarning);
-						
-						if (AlarmHandler.hasInstance())
-						{
-							AlarmEvent alarmEvent = new AlarmEventAseLicensExpiration(conn.getDbmsServerNameNoThrow(), gracePeriodWarning);
-							AlarmHandler.getInstance().addAlarm(alarmEvent);
-						}
-					}
-				}
-				
 			} // end: not connected
 
 			// HOST Monitoring connection
@@ -1386,6 +1343,55 @@ implements Memory.MemoryListener
 						catch (Exception e)
 						{
 							_logger.error("Host Monitoring: Failed to connect to SSH hostname='"+_sshHostname+"', user='"+_sshUsername+"'.", e);
+						}
+					}
+				}
+			}
+
+			// If we made a new Connection... Do some extra things
+			if (madeNewMonConnection)
+			{
+				// initialize Mon Table Dictionary
+				mtd = MonTablesDictionaryManager.getInstance();
+				if ( ! mtd.isInitialized() )
+				{
+					mtd.initialize(getCounterController().getMonConnection(), false);
+				}
+				
+				try
+				{
+					// initialize DBMS Config Dictionary
+					if (DbmsConfigManager.hasInstance())
+					{
+						IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+						if ( ! dbmsCfg.isInitialized() )
+							dbmsCfg.initialize(getCounterController().getMonConnection(), false, false, null);
+					}
+					
+					// initialize DBMS Config Text Dictionary
+					if (DbmsConfigTextManager.hasInstances())
+						DbmsConfigTextManager.initializeAll(getCounterController().getMonConnection(), getCounterController().getHostMonConnection(), false, false, null);
+				}
+				catch(SQLException ex) 
+				{
+					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+				}
+
+				// for ASE only
+				// Check if we have License issues... send alarm...
+				DbxConnection conn = getCounterController().getMonConnection();
+				if (conn != null && conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+				{
+//					String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(conn);
+					String gracePeriodWarning   = AseLicensInfo.getAseGracePeriodWarning(conn);
+					if (StringUtil.hasValue(gracePeriodWarning))
+					{
+						_logger.warn(gracePeriodWarning);
+						
+						if (AlarmHandler.hasInstance())
+						{
+							AlarmEvent alarmEvent = new AlarmEventAseLicensExpiration(conn.getDbmsServerNameNoThrow(), gracePeriodWarning);
+							AlarmHandler.getInstance().addAlarm(alarmEvent);
 						}
 					}
 				}

@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Executors;
 import java.util.regex.PatternSyntaxException;
 
 import javax.swing.JOptionPane;
@@ -151,6 +152,9 @@ extends CounterControllerAbstract
 	public static final String  PROPKEY_NoGui_onConnectEnableConnProp_trustServerCertificate = "SqlServerTune.nogui.onConnect.enable.conn.prop.trustServerCertificate";
 	public static final boolean DEFAULT_NoGui_onConnectEnableConnProp_trustServerCertificate = true;
 
+	public static final String  PROPKEY_onConnect_setNetworkTimeout_ms = "SqlServerTune.onConnect.setNetworkTimeout.ms";
+	public static final int     DEFAULT_onConnect_setNetworkTimeout_ms = 60_000;
+	
 	/**
 	 * The default constructor
 	 * @param hasGui should we create a GUI or NoGUI collection thread
@@ -788,6 +792,26 @@ extends CounterControllerAbstract
 	@Override
 	public void onMonConnect(DbxConnection conn)
 	{
+		//------------------------------------------------
+		// Set: NetworkTimeout
+		try
+		{
+		//	int newNwTimeout = 60_000;
+			int newNwTimeout = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_onConnect_setNetworkTimeout_ms, DEFAULT_onConnect_setNetworkTimeout_ms);
+			
+			if (newNwTimeout > 0)
+			{
+				int curNwTimeout = conn.getNetworkTimeout();
+
+				_logger.info("Setting JDBC Connection NetworkTimeout to " + newNwTimeout + " ms. (current value was " + curNwTimeout + ")");
+				conn.setNetworkTimeout(Executors.newSingleThreadExecutor(), newNwTimeout);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems in onMonConnect(): When setting NetworkTimeout. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
+		}
+
 		//------------------------------------------------
 		// Set some options
 		//   -- set deadlock priority LOW or similar... (SET DEADLOCK_PRIORITY LOW)

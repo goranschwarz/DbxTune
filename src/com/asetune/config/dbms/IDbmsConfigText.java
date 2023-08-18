@@ -24,6 +24,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
 
 public interface IDbmsConfigText
@@ -63,17 +64,19 @@ public interface IDbmsConfigText
 	/**
 	 * Initialize 
 	 * @param conn
+	 * @param hostMonConn 
 	 * @throws Exception when severe errors like Not Connected anymore, so we can stop initializing...
 	 */
-	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts) 
+	public void initialize(DbxConnection conn, HostMonitorConnection hostMonConn, boolean hasGui, boolean offline, Timestamp ts) 
 	throws SQLException;
 
 	/**
 	 * refresh 
 	 * @param conn
+	 * @param hostMonConn 
 	 * @throws Exception when severe errors like Not Connected anymore, so we can stop refreshing...
 	 */
-	public void refresh(DbxConnection conn, Timestamp ts) 
+	public void refresh(DbxConnection conn, HostMonitorConnection hostMonConn, Timestamp ts) 
 	throws SQLException;
 
 	/**
@@ -86,7 +89,7 @@ public interface IDbmsConfigText
 	/**
 	 * Check the configuration collected in refresh() and add/create a issue/anomaly if anything strange was found. 
 	 */
-	public void checkConfig(DbxConnection conn);
+	public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn);
 
 	/**
 	 * What server version do we need to get this information.
@@ -177,5 +180,5 @@ public interface IDbmsConfigText
 	 * @param conn
 	 * @return null or empty string if we should proceed, otherwise a message why this configuration check can't be checked.
 	 */
-	String checkRequirements(DbxConnection conn);
+	String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn);
 }

@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import com.asetune.Version;
+import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
@@ -56,7 +57,8 @@ implements IDbmsConfigText
 	/** The configuration is kept in a String */
 	private String _configStr = null;
 	
-	
+	public static final String OS_COMMAND_OUTPUT_SEPARATOR = "---------- Below is output from Operating System Command ----------\n";
+
 	// ------------------------------------------
 	// ---- LOCAL METHODS -----------------------
 	// ---- probably TO BE overridden by implementors
@@ -92,6 +94,7 @@ implements IDbmsConfigText
 	/** What type is this specific Configuration of */
 	abstract public String getConfigType();
 	
+
 //	/** get SQL statement to be executed to GET current configuration string 
 //	 * @param srvVersion */
 //	abstract protected String getSqlCurrentConfig(long srvVersion);
@@ -106,6 +109,12 @@ implements IDbmsConfigText
 	 * @param versionInfo */
 	abstract protected String getSqlCurrentConfig(DbmsVersionInfo versionInfo);
 
+	/** get Operating System Command to be executed to GET current configuration string */
+	protected String getOsCurrentConfig(DbmsVersionInfo versionInfo, String osName)
+	{
+		return null;
+	}
+	
 	/**
 	 * get SQL Statement used to get information from the offline storage
 	 * @param ts What Session timestamp are we looking for, null = last Session timestamp
@@ -193,12 +202,12 @@ implements IDbmsConfigText
 	 * @param conn
 	 */
 	@Override
-	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts)
+	public void initialize(DbxConnection conn, HostMonitorConnection hostMonConn, boolean hasGui, boolean offline, Timestamp ts)
 	throws SQLException
 	{
 		_hasGui  = hasGui;
 		_offline = offline;
-		refresh(conn, ts);
+		refresh(conn, hostMonConn, ts);
 	}
 
 	/**
@@ -281,10 +290,11 @@ implements IDbmsConfigText
 	 * Override this if you have special needs...
 	 * 
 	 * @param conn
+	 * @param hostMonConn 
 	 * @return null or empty string if we should proceed, otherwise a message why this configuration check can't be checked.
 	 */
 	@Override
-	public String checkRequirements(DbxConnection conn)
+	public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 	{
 //		DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
 
@@ -373,9 +383,10 @@ implements IDbmsConfigText
 	/**
 	 * refresh 
 	 * @param conn
+	 * @param hostMonConn 
 	 */
 	@Override
-	public void refresh(DbxConnection conn, Timestamp ts)
+	public void refresh(DbxConnection conn, HostMonitorConnection hostMonConn, Timestamp ts)
 	throws SQLException
 	{
 		if (conn == null)
@@ -385,7 +396,7 @@ implements IDbmsConfigText
 
 		if ( ! _offline )
 		{
-			DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
+//			DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
 			
 			// Check if it's enabled, or should we go ahead and try to get the configuration
 			if ( ! isEnabled() )
@@ -404,7 +415,7 @@ implements IDbmsConfigText
 			}
 
 			// Check if we meet all the requirements
-			String requirements  = checkRequirements(conn); // return null/empty-string on OK, otherwise a message why we didn't meet the requirements 
+			String requirements  = checkRequirements(conn, hostMonConn); // return null/empty-string on OK, otherwise a message why we didn't meet the requirements 
 			if (StringUtil.hasValue(requirements))
 			{
 				setConfig(requirements);
@@ -413,15 +424,17 @@ implements IDbmsConfigText
 
 			// Get the SQL to execute.
 //			String sql = getSqlCurrentConfig(srvVersion);
-			String sql = getSqlCurrentConfig(dbmsVersionInfo);
+//			String sql   = getSqlCurrentConfig(dbmsVersionInfo);
+//			String osCmd = getOsCurrentConfig(dbmsVersionInfo);
 			
 			// Fetch/Execute the SQL Statement in the online DBMS
-			String result = doOnlineRefresh(conn, sql);
+//			String result = doOnlineRefresh(conn, sql, hostMonConn, osCmd);
+			String result = doOnlineRefresh(conn, hostMonConn);
 			setConfig(result);
 			
 			// Check if we got any strange in the configuration
 			// in case it does: report that...
-			checkConfig(conn);
+			checkConfig(conn, hostMonConn);
 		}
 		else 
 		{
@@ -465,9 +478,155 @@ implements IDbmsConfigText
 	 * Responsible for executing the SQL Statement and return a proper "configuration" string set as the value to show 
 	 * @param conn
 	 * @param sql
+	 * @param hostMonConn 
+	 * @param osCmd
 	 * @return
 	 */
-	protected String doOnlineRefresh(DbxConnection conn, String sql)
+//	protected String doOnlineRefresh(DbxConnection conn, String sql, HostMonitorConnection hostMonConn, String osCmd)
+//	{
+//		AseSqlScript script = null;
+//		try
+//		{
+//			 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
+//			script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
+//			script.setRsAsAsciiTable(true);
+//
+//			return script.executeSqlStr(sql, true);
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.error("DbmsConfigText:initialize:sql='"+sql+"'", ex);
+//			if (_hasGui)
+//				SwingUtils.showErrorMessage("DbmsConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+////			setConfig(null);
+//			String errorMsg = "SQL Exception: "+ex.getMessage();
+//
+//			// JZ0C0: Connection is already closed.
+//			// JZ006: Caught IOException: com.sybase.jdbc4.jdbc.SybConnectionDeadException: JZ0C0: Connection is already closed.
+//			if ( "JZ0C0".equals(ex.getSQLState()) || "JZ006".equals(ex.getSQLState()) )
+//			{
+//				try
+//				{
+//					_logger.info("DbmsConfigText:initialize(): lost connection... try to reconnect...");
+//					conn.reConnect(null);
+//					_logger.info("DbmsConfigText:initialize(): Reconnect succeeded, but the configuration will not be visible");
+//				}
+//				catch(Exception reconnectEx)
+//				{
+//					_logger.warn("DbmsConfigText:initialize(): reconnect failed due to: "+reconnectEx);
+////					throw ex; // Note throw the original exception and not reconnectEx
+//					return ex + "";
+//				}
+//			}
+//
+//			return errorMsg;
+//		}
+//		finally
+//		{
+//			if (script != null)
+//				script.close();
+//		}
+//	}
+
+	/**
+	 * Responsible for executing the SQL Statement and or OS Command, then return a proper "configuration" string set as the value to show 
+	 * @param conn
+	 * @param hostMonConn 
+	 * @return
+	 */
+	protected String doOnlineRefresh(DbxConnection conn, HostMonitorConnection hostMonConn)
+	{
+		String result = ""; // This will be the OUTPUT
+
+		DbmsVersionInfo dbmsVersionInfo = conn.getDbmsVersionInfo();
+
+		String sql   = getSqlCurrentConfig(dbmsVersionInfo);
+		String osCmd = "";
+
+		// Get OS Command, depending of what OS Name we are connected to.
+		if (hostMonConn != null && hostMonConn.isConnected())
+		{
+			String osName = hostMonConn.getOsName();
+			if (StringUtil.hasValue(osName))
+			{
+				osCmd = getOsCurrentConfig(dbmsVersionInfo, osName);
+			}
+		}
+
+		if (StringUtil.isNullOrBlank(sql) && StringUtil.isNullOrBlank(osCmd))
+			return "No SQL or OS Command was specified. sql='" + sql + "', osCmd='" + osCmd + "'"
+					+ ", hostMonConn.isConnected=" + (hostMonConn != null ? hostMonConn.isConnected() : "'No HostMonConn is available'");
+		
+		// Execute SQL Command
+		if (StringUtil.hasValue(sql))
+		{
+			String output = doOnlineRefresh(conn, sql);
+			if (StringUtil.hasValue(output))
+			{
+				result += output;
+			}
+		}
+
+		// Execute OS Command
+		if (StringUtil.hasValue(osCmd))
+		{
+			String output = doOnlineRefresh(hostMonConn, osCmd);
+			if (StringUtil.hasValue(output))
+			{
+				// Add some newlines if we already have SQL Output
+				if (StringUtil.hasValue(result))
+				{
+					result += "\n\n";
+					result += OS_COMMAND_OUTPUT_SEPARATOR;
+				}
+
+				result += output;
+			}
+		}
+
+		return result;
+	}
+
+//	protected String doOnlineRefresh(DbxConnection conn, String sql, HostMonitorConnection hostMonConn, String osCmd)
+//	{
+//		String result = "";
+//
+//		if (StringUtil.isNullOrBlank(sql) && StringUtil.isNullOrBlank(osCmd))
+//			return "No SQL or OS Command was passed. sql='" + sql + "', osCmd='" + osCmd + "'.";
+//		
+//		// Execute SQL Command
+//		if (StringUtil.hasValue(sql))
+//		{
+//			String tmp = doOnlineRefresh(conn, sql);
+//			if (StringUtil.hasValue(tmp))
+//			{
+//				result += tmp;
+//			}
+//		}
+//
+//		// Execute OS Command
+//		if (StringUtil.hasValue(osCmd))
+//		{
+//			String tmp = doOnlineRefresh(hostMonConn, osCmd);
+//			if (StringUtil.hasValue(tmp))
+//			{
+//				// Add some newlines if we already have SQL Output
+//				if (StringUtil.hasValue(result))
+//					result += "\n\n";
+//
+//				result += tmp;
+//			}
+//		}
+//
+//		return result;
+//	}
+
+	protected List<String> getDiscardDbmsErrorText()
+	{
+		return null;
+	}
+
+	private String doOnlineRefresh(DbxConnection conn, String sql)
 	{
 		AseSqlScript script = null;
 		try
@@ -475,6 +634,7 @@ implements IDbmsConfigText
 			 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
 			script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
 			script.setRsAsAsciiTable(true);
+			script.setDiscardDbmsErrorText( getDiscardDbmsErrorText() );
 
 			return script.executeSqlStr(sql, true);
 		}
@@ -513,8 +673,46 @@ implements IDbmsConfigText
 		}
 	}
 
+	private String doOnlineRefresh(HostMonitorConnection hostMonConn, String osCmd)
+	{
+		if (StringUtil.isNullOrBlank(osCmd))
+			return "WARNING: No 'OS Command' was provided.";
+
+		if (hostMonConn == null)
+			return "WARNING: No 'hostMonConn' was provided.";
+
+		if ( ! hostMonConn.isConnected() )
+			return "WARNING: The provided 'hostMonConn' was NOT Connected, cant execute OS Command '" + osCmd + "'.";
+
+		String osName = hostMonConn.getOsName();
+//System.out.println("-------- hostMonConn='" + hostMonConn + "'.");
+//System.out.println("-------- getOsName        ='" + hostMonConn.getOsName() + "'.");
+//System.out.println("-------- getHostname      ='" + hostMonConn.getHostname() + "'.");
+//System.out.println("-------- getOsCharset     ='" + hostMonConn.getOsCharset() + "'.");
+//System.out.println("-------- getConnectionType='" + hostMonConn.getConnectionType() + "'.");
+
+		try
+		{
+			String tmp = hostMonConn.execCommandOutputAsStr(osCmd);
+//			return tmp;
+//System.out.println("-------- execCommandOutputAsStr=|" + tmp + "|.");
+			return "" 
+				+ "DEBUG: osName=|" + osName + "|\n" 
+				+ "DEBUG: osCmd=|"  + osCmd  + "|\n" 
+				+ tmp;
+		}
+		catch (Exception ex)
+		{
+			if (_hasGui)
+				SwingUtils.showErrorMessage("DbmsConfigText - Initialize - OSCommand", "Exception: " + ex.getMessage() + "\n\nThis was found when executing Operating System Command:\n\n" + osCmd, ex);
+
+			return "ERROR: " + ex;
+		}
+	}
+
+
 	@Override
-	public void checkConfig(DbxConnection conn)
+	public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
 	{
 	}
 }
