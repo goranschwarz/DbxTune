@@ -30,6 +30,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventOsSwapThrashing;
 import com.asetune.alarm.events.AlarmEventOsSwapping;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -561,13 +562,68 @@ extends CounterModelHostMonitor
 				alarmHandler.addAlarm( alarm );
 			}
 		}
+
+		//-------------------------------------------------------
+		// SwapThrashing -- Windows Only (both Page In AND Page Out at the same time)
+		//-------------------------------------------------------
+		if (isConnectedToVendor(OsVendor.Windows) && isSystemAlarmsForColumnEnabledAndInTimeRange("SwapThrashing"))
+		{
+			int    threshold        = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_swap_thrashing, DEFAULT_alarm_swap_thrashing);
+			double maxCapMultiplier = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_swap_thrashing_maxCap_multiplier, DEFAULT_alarm_swap_thrashing_maxCap_multiplier);
+			double maxCap = threshold * maxCapMultiplier; // default: 150 * 2.0
+
+			// Get data
+			Double swapIn_tmp  = this.getAbsValueAsDouble(0, "Pages Input/sec");
+			Double swapOut_tmp = this.getAbsValueAsDouble(0, "Pages Output/sec");
+
+			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
+			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
+
+			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).add(swapIn) .getAvg(0, true, maxCap);
+			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).add(swapOut).getAvg(0, true, maxCap);
+
+			// Add to 60m since this is what we use as a Graph in the Alarm (but we don't care/use the result calculation)
+			MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
+			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
+			
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): SwapThrashing: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
+
+			// BOTH swap 'in' AND 'out' 
+			if (swapIn_5mAvg > threshold && swapOut_5mAvg > threshold)
+			{
+				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakTimestamp();
+				double    swapIn_peakNumber  = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakNumber();
+				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakTimestamp();
+				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakNumber();
+
+				// Create a small chart, that can be used in emails etc.
+				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
+						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
+						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
+
+				AlarmEventOsSwapThrashing alarm = new AlarmEventOsSwapThrashing(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
+						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
+						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);
+				
+				alarm.setExtendedDescription(null, htmlChartImage);
+
+				alarmHandler.addAlarm( alarm );
+			}
+		}
 	}
 
-	public static final String  PROPKEY_alarm_swap = CM_NAME + ".alarm.system.if.swap.gt";
-	public static final int     DEFAULT_alarm_swap = 1000;
+	public static final String  PROPKEY_alarm_swap                             = CM_NAME + ".alarm.system.if.swap.gt"; // Pages in OR out
+	public static final int     DEFAULT_alarm_swap                             = 1000;
+                                                                               
+	public static final String  PROPKEY_alarm_swap_thrashing                   = CM_NAME + ".alarm.system.if.swap.thrashing.gt"; // Pages in AND out
+	public static final int     DEFAULT_alarm_swap_thrashing                   = 150;
+                                                                               
+	public static final String  PROPKEY_alarm_swap_maxCap_multiplier           = CM_NAME + ".alarm.system.swap.maxCap.multiplier";
+	public static final double  DEFAULT_alarm_swap_maxCap_multiplier           = 1.5d;
 
-	public static final String  PROPKEY_alarm_swap_maxCap_multiplier = CM_NAME + ".alarm.system.swap.maxCap.multiplier";
-	public static final double  DEFAULT_alarm_swap_maxCap_multiplier = 1.5d;
+	public static final String  PROPKEY_alarm_swap_thrashing_maxCap_multiplier = CM_NAME + ".alarm.system.swap.thrashing.maxCap.multiplier";
+	public static final double  DEFAULT_alarm_swap_thrashing_maxCap_multiplier = 2.0d;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -575,7 +631,8 @@ extends CounterModelHostMonitor
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("Swapping", PROPKEY_alarm_swap , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap , DEFAULT_alarm_swap), DEFAULT_alarm_swap, "If 'Pages Input/sec' or 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+		list.add(new CmSettingsHelper("Swapping"     , PROPKEY_alarm_swap           , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap           , DEFAULT_alarm_swap          ), DEFAULT_alarm_swap          , "If 'Pages Input/sec' or 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+		list.add(new CmSettingsHelper("SwapThrashing", PROPKEY_alarm_swap_thrashing , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap_thrashing , DEFAULT_alarm_swap_thrashing), DEFAULT_alarm_swap_thrashing, "If 'Pages Input/sec' AND 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
 
 		return list;
 	}

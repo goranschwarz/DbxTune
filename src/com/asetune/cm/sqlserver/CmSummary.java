@@ -155,21 +155,23 @@ extends CountersModel
 	public static final String  PROPKEY_sample_tempdbSpidUsage = "CmSummary.sample.tempdb.spid.usage";
 	public static final boolean DEFAULT_sample_tempdbSpidUsage = true;
 	
-	public static final String GRAPH_NAME_AA_CPU                   = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
-//	public static final String GRAPH_NAME_SYS_INFO_CPU             = "sysInfoCpuGraph";
-	public static final String GRAPH_NAME_BLOCKING_LOCKS           = "BlockingLocksGraph";
-	public static final String GRAPH_NAME_CONNECTION               = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
-	public static final String GRAPH_NAME_CONNECTION_RATE          = "ConnRateGraph";
-	public static final String GRAPH_NAME_AA_DISK_READ_WRITE       = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
-	public static final String GRAPH_NAME_AA_NW_PACKET             = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
-	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC       = "OldestTranInSecGraph";
-	public static final String GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC = "MaxSqlExecTimeInSec";
-	public static final String GRAPH_NAME_TEMPDB_SPID_USAGE        = "TempdbSpidUsage";
-	public static final String GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB  = "TargetAndTotalMemMb";
-	public static final String GRAPH_NAME_MEMORY_UTILAZATION_PCT   = "MemUtilizationPct";
-	public static final String GRAPH_NAME_OS_MEMORY_FREE_MB        = "OsMemoryFreeMb";
-	public static final String GRAPH_NAME_PERFMON_MEMORY           = "PerfMonMem";
-	public static final String GRAPH_NAME_WORKER_THREAD_USAGE      = "WorkersThreadUsage";
+	public static final String GRAPH_NAME_AA_CPU                    = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
+//	public static final String GRAPH_NAME_SYS_INFO_CPU              = "sysInfoCpuGraph";
+	public static final String GRAPH_NAME_BLOCKING_LOCKS            = "BlockingLocksGraph";
+	public static final String GRAPH_NAME_CONNECTION                = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
+	public static final String GRAPH_NAME_CONNECTION_RATE           = "ConnRateGraph";
+	public static final String GRAPH_NAME_AA_DISK_READ_WRITE        = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
+	public static final String GRAPH_NAME_AA_NW_PACKET              = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
+	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC        = "OldestTranInSecGraph";
+	public static final String GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC  = "MaxSqlExecTimeInSec";
+	public static final String GRAPH_NAME_TEMPDB_SPID_USAGE         = "TempdbSpidUsage";
+	public static final String GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB   = "TargetAndTotalMemMb";
+	public static final String GRAPH_NAME_MEMORY_UTILAZATION_PCT    = "MemUtilizationPct";
+	public static final String GRAPH_NAME_OS_MEMORY_FREE_MB         = "OsMemoryFreeMb";
+	public static final String GRAPH_NAME_PERFMON_MEMORY            = "PerfMonMem";
+	public static final String GRAPH_NAME_WORKER_THREAD_USAGE       = "WorkersThreadUsage";
+	public static final String GRAPH_NAME_WT_WAITING_FOR_CPU        = "WtWaitingForCpu";
+	public static final String GRAPH_NAME_TASKS_WAITING_FOR_WORKERS = "TasksWaitForWorkers";
 
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
@@ -364,12 +366,36 @@ extends CountersModel
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" },
 			LabelType.Static,
-			TrendGraphDataPoint.Category.MEMORY,
+			TrendGraphDataPoint.Category.OTHER,
 			false,  // is Percent Graph
 			true,   // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-		}
+
+		addTrendGraph(GRAPH_NAME_WT_WAITING_FOR_CPU,
+			"SQL Server Worker That are Waiting for CPU to be Scheduled", // Menu CheckBox text
+			"SQL Server Worker That are Waiting for CPU to be Scheduled ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "workersWaitingForCPU" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			false,  // is Percent Graph
+			false,  // visible at start
+			0,      // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS,
+			"Tasks/Requests that are Waiting for Available Worker Threads", // Menu CheckBox text
+			"Tasks/Requests that are Waiting for Available Worker Threads ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			new String[] { "requestsWaitingForWorkers" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OTHER,
+			false,  // is Percent Graph
+			false,  // visible at start
+			0,      // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);    // minimum height
+	}
 
 	@Override
 	protected JPanel createGui()
@@ -1211,21 +1237,53 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_WT_WAITING_FOR_CPU.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble(0, "workersWaitingForCPU", true, 0d);
+
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): workersWaitingForCPU='" + arr[0] + "'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_TASKS_WAITING_FOR_WORKERS.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble(0, "requestsWaitingForWorkers", true, 0d);
+
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): requestsWaitingForWorkers='" + arr[0] + "'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 	
 	@Override
 	public boolean isGraphDataHistoryEnabled(String name)
 	{
 		// ENABLED for the following graphs
-//		if (GRAPH_NAME_AA_CPU                  .equals(name)) return true;
-//		if (GRAPH_NAME_BLOCKING_LOCKS          .equals(name)) return true;
-//		if (GRAPH_NAME_CONNECTION              .equals(name)) return true;
-//		if (GRAPH_NAME_CONNECTION_RATE         .equals(name)) return true;
-//		if (GRAPH_NAME_AA_DISK_READ_WRITE      .equals(name)) return true;
-//		if (GRAPH_NAME_AA_NW_PACKET            .equals(name)) return true;
-//		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC      .equals(name)) return true;
-//		if (GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC.equals(name)) return true;
-		if (GRAPH_NAME_TEMPDB_SPID_USAGE       .equals(name)) return true;  // Used by CmTempdbSpidUsage
+//		if (GRAPH_NAME_AA_CPU                   .equals(name)) return true;
+//		if (GRAPH_NAME_BLOCKING_LOCKS           .equals(name)) return true;
+//		if (GRAPH_NAME_CONNECTION               .equals(name)) return true;
+//		if (GRAPH_NAME_CONNECTION_RATE          .equals(name)) return true;
+//		if (GRAPH_NAME_AA_DISK_READ_WRITE       .equals(name)) return true;
+//		if (GRAPH_NAME_AA_NW_PACKET             .equals(name)) return true;
+//		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC       .equals(name)) return true;
+//		if (GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC .equals(name)) return true;
+		if (GRAPH_NAME_TEMPDB_SPID_USAGE        .equals(name)) return true;  // Used by CmTempdbSpidUsage
+		if (GRAPH_NAME_WORKER_THREAD_USAGE      .equals(name)) return true;  // Used locally
+		if (GRAPH_NAME_TASKS_WAITING_FOR_WORKERS.equals(name)) return true;  // Used locally
 
 		// default: DISABLED
 		return false;
@@ -1394,11 +1452,15 @@ extends CountersModel
 
 			if (requestsWaitingForWorkers > threshold)
 			{
+				String extendedDescText = "";
+				String extendedDescHtml = getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS);
+				
 				AlarmEvent ae = new AlarmEventOutOfWorkerThreads(cm, threshold, requestsWaitingForWorkers);
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
 				alarmHandler.addAlarm( ae );
 			}
-			// TODO: Implement This
 		}
 
 		//-------------------------------------------------------
@@ -1418,11 +1480,14 @@ extends CountersModel
 				int maxWorkers       = cm.getAbsValueAsInteger(0, "maxWorkers"      , false, -1);
 				int allocatedWorkers = cm.getAbsValueAsInteger(0, "allocatedWorkers", false, -1);
 
+				String extendedDescText = "";
+				String extendedDescHtml = getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
+
 				AlarmEvent ae = new AlarmEventLowOnWorkerThreads(cm, threshold, availableWorkers, maxWorkers, allocatedWorkers);
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
 				alarmHandler.addAlarm( ae );
 			}
-			// TODO: Implement This
 		}
 	}
 

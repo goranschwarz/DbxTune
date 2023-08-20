@@ -25,12 +25,12 @@ import java.sql.Timestamp;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 
-public class AlarmEventOsSwapping
+public class AlarmEventOsSwapThrashing
 extends AlarmEvent 
 {
 	private static final long serialVersionUID = 1L;
 
-//	public AlarmEventOsSwapping(CountersModel cm, int threshold, double maxCap, String hostname, String note, int swapIn_avg, int swapOut_avg)
+//	public AlarmEventOsSwapThrashing(CountersModel cm, int threshold, double maxCap, String hostname, String note, int swapIn_avg, int swapOut_avg)
 //	{
 //		super(
 //				Version.getAppName(), // serviceType
@@ -38,7 +38,7 @@ extends AlarmEvent
 //				cm.getName(),         // serviceInfo
 //				null,                 // extraInfo
 //				AlarmEvent.Category.OTHER,
-//				AlarmEvent.Severity.INFO, 
+//				AlarmEvent.Severity.WARNING, 
 //				AlarmEvent.ServiceState.UP, 
 //				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapInAvg=" + swapIn_avg + ", swapOutAvg=" + swapOut_avg + ". (threshold="+threshold+")",
 //				threshold);
@@ -50,7 +50,7 @@ extends AlarmEvent
 //		setData("swapInAvg=" + swapIn_avg + ", swapOutAvg=" + swapOut_avg);
 //	}
 
-	public AlarmEventOsSwapping(CountersModel cm, int threshold, double maxCap, String hostname, String note, int swapIn_avg, Timestamp swapIn_peakTimestamp, double swapIn_peakVal, int swapOut_avg, Timestamp swapOut_peakTimestamp, double swapOut_peakVal)
+	public AlarmEventOsSwapThrashing(CountersModel cm, int threshold, double maxCap, String hostname, String note, int swapIn_avg, Timestamp swapIn_peakTimestamp, double swapIn_peakVal, int swapOut_avg, Timestamp swapOut_peakTimestamp, double swapOut_peakVal)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -58,9 +58,9 @@ extends AlarmEvent
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
 				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.INFO, 
+				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold="+threshold+")",
+				"Extensive Usage of OS Swapping (both 'in' and 'out'), which may Thrash the performance on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
