@@ -47,12 +47,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DbxCentral - Local Metrics (os monitoring on DbxCentral host), property: <code>DbxTuneCentral.start.localMetricsCollector=*true*|false</code></LI>
 		<LI>DbxCentral - Possibly start the Local PCS Directory Receiver (to not send JSON from any collector to DbxCentral) property: <code>CentralPcsDirectoryReceiver.storage.dir=${tmpDir}/DbxTune/DbxCentral/file_receiver</code></LI>
 		<LI>When sending information to HTTP/DbxCentral -- Turn off 'Meta Data' information by default</LI>
-		
+
+		<LI>CmOsVmstat:  for Linux:   Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
+		<LI>CmOsMeminfo: for Windows: Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
+
 		<LI><b>Alarms Handling:</b>
 			<UL>
-				<LI>New: AlarmEventXxx           -- xxx</LI>
+				<LI>New: AlarmEventOsSwapThrashing -- When we are swapping both in and out at the same time... Linux(vmstat, column 'pi' and 'po'), Windows(column 'Pages Input/sec' AND 'Pages Output/sec')</LI>
 				
-				<LI>Changed: AlarmEventXxx       -- xxx</LI>
+				<LI>Changed: AlarmEventOsSwapping  -- From Severity 'WARNING' to 'INFO'</LI>
 
 				<LI>Bugfix: xxx</LI>
 			</UL>
@@ -244,7 +247,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary            </b> - added column 'databaseCacheMemoryMb', 'grantedWorkspaceMemoryMb', 'stolenServerMemoryMb' (grabbed from dm_os_performance_counters)</LI>
 		<LI><b>CmSummary            </b> - added Chart 'PerfMon: SQL Server Memory Usage'</LI>
 		<LI><b>CmSummary            </b> - added columns "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" </LI>
-		<LI><b>CmSummary            </b> - added Chart "WorkersThreadUsage" -- to see the behaviour of Worker Thread Usage</LI>
+		<LI><b>CmSummary            </b> - added Chart "WorkersThreadUsage"  -- to see the behaviour of Worker Thread Usage</LI>
+		<LI><b>CmSummary            </b> - added Chart "WtWaitingForCpu"     -- SQL Server Worker That are Waiting for CPU to be Scheduled</LI>
+		<LI><b>CmSummary            </b> - added Chart "TasksWaitForWorkers" -- Tasks/Requests that are Waiting for Available Worker Threads</LI>
 
 		<LI><b>CmTempdbSpidUsage    </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
