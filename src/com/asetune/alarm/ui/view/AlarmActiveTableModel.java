@@ -26,6 +26,7 @@ import javax.swing.table.AbstractTableModel;
 
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.utils.StringUtil;
 
 public class AlarmActiveTableModel
 extends AbstractTableModel
@@ -125,11 +126,24 @@ extends AbstractTableModel
 			case TAB_POS_LAST_DATA                 : return ae.getReRaiseData();
 			case TAB_POS_DESCRIPTION               : return ae.getDescription();
 			case TAB_POS_LAST_DESCRIPTION          : return ae.getReRaiseDescription();
-			case TAB_POS_EXTENDED_DESCRIPTION      : return ae.getExtendedDescription();
-			case TAB_POS_LAST_EXTENDED_DESCRIPTION : return ae.getReRaiseExtendedDescription();
+//			case TAB_POS_EXTENDED_DESCRIPTION      : return ae.getExtendedDescription();
+//			case TAB_POS_LAST_EXTENDED_DESCRIPTION : return ae.getReRaiseExtendedDescription();
+			case TAB_POS_EXTENDED_DESCRIPTION      : return addOuterHtmlTag(ae.getExtendedDescriptionHtml());
+			case TAB_POS_LAST_EXTENDED_DESCRIPTION : return addOuterHtmlTag(ae.getReRaiseExtendedDescriptionHtml());
 			}
 		}
 		return null;
+	}
+
+	private static String addOuterHtmlTag(String str)
+	{
+		if (StringUtil.isNullOrBlank(str))
+			return str;
+		
+		if ( ! StringUtil.startsWithIgnoreBlankIgnoreCase(str, "<html") )
+			str = "<html>" + str + "</html>";
+		
+		return str;
 	}
 
 	@Override

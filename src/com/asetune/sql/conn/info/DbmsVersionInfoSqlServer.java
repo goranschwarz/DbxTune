@@ -105,6 +105,9 @@ extends DbmsVersionInfo
 	public void    setAzureManagedInstance (Boolean b) { _isAzureManagedInstance  = b; }
 
 
+	public boolean  isOnPrem()                { return ! isAnyAzure(); }
+	public boolean  isAnyAzure()              { return (isAzureDb() || isAzureManagedInstance() || isAzureSynapseAnalytics()); }
+
 	public boolean  isAzureDb()               { return _isAzureDb               != null ? _isAzureDb               : isAzureDb              (_conn.getDbmsVersionNumber()); }
 	public boolean  isAzureSynapseAnalytics() { return _isAzureSynapseAnalytics != null ? _isAzureSynapseAnalytics : isAzureSynapseAnalytics(_conn.getDbmsVersionNumber()); }
 	public boolean  isAzureManagedInstance()  { return _isAzureManagedInstance  != null ? _isAzureManagedInstance  : isAzureManagedInstance (_conn.getDbmsVersionNumber()); }

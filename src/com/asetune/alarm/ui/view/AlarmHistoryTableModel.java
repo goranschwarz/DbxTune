@@ -28,6 +28,7 @@ import javax.swing.table.AbstractTableModel;
 
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.writers.AlarmWriterAbstract;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -240,12 +241,25 @@ extends AbstractTableModel
 		case TAB_POS_LAST_DATA                 : return entry._alarmEvent.getReRaiseData();
 		case TAB_POS_DESCRIPTION               : return entry._alarmEvent.getDescription();
 		case TAB_POS_LAST_DESCRIPTION          : return entry._alarmEvent.getReRaiseDescription();
-		case TAB_POS_EXTENDED_DESCRIPTION      : return entry._alarmEvent.getExtendedDescription();
-		case TAB_POS_LAST_EXTENDED_DESCRIPTION : return entry._alarmEvent.getReRaiseExtendedDescription();
+//		case TAB_POS_EXTENDED_DESCRIPTION      : return entry._alarmEvent.getExtendedDescription();
+//		case TAB_POS_LAST_EXTENDED_DESCRIPTION : return entry._alarmEvent.getReRaiseExtendedDescription();
+		case TAB_POS_EXTENDED_DESCRIPTION      : return addOuterHtmlTag(entry._alarmEvent.getExtendedDescriptionHtml());
+		case TAB_POS_LAST_EXTENDED_DESCRIPTION : return addOuterHtmlTag(entry._alarmEvent.getReRaiseExtendedDescriptionHtml());
 		}
 		return null;
 	}
 
+	private static String addOuterHtmlTag(String str)
+	{
+		if (StringUtil.isNullOrBlank(str))
+			return str;
+		
+		if ( ! StringUtil.startsWithIgnoreBlankIgnoreCase(str, "<html") )
+			str = "<html>" + str + "</html>";
+		
+		return str;
+	}
+	
 	@Override
 	public Class<?> getColumnClass(int column)
 	{

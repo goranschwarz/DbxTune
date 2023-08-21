@@ -154,24 +154,27 @@ extends CountersModel
 	public static final String  PROPKEY_sqlSkipFilterEnabled         = CM_NAME + ".sql.skip.filter.enabled";
 	public static final boolean DEFAULT_sqlSkipFilterEnabled         = true;
 
-	// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
-	private static final String[] TOXIC_WAIT_TYPES = new String[] {
-		  "CMEMTHREAD"                          // we’ve been seeing a lot of this in servers with a lot of CPU cores that still have their parallelism settings set at their defaults. To fix this issue: * Read my post about setting Cost Threshold for Parallelism and MAXDOP at reasonable defaults – which typically end up at Cost Threshold for Parallelism at 50, and then MAXDOP at around 8 or less depending on your hardware config.   * Look for queries reading a lot of data – run sp_BlitzCache @SortOrder = ‘reads’, and you’re probably going to find queries going parallel to read a lot of data that’s cached in RAM. Try tuning those queries, or tuning the indexes they use.   * After that, if you’re still having the problem, see Microsoft’s blog post on running SQL Servers with >8 cores per NUMA node. If you suspect that CMEMTHREAD is your server’s largest problem, and you meet the symptoms described in that KB article, open up a support ticket with Microsoft to be safe rather than just enabling this trace flag. It’s only $500, and they can give you a double check confirmation that this trace flag makes sense for you
-		, "IO_QUEUE_LIMIT"                      // occurs when your database has too many asynchronous IOs pending. (in Azure SQL DB, this means your database is getting throttled)
-		, "IO_RETRY"                            // a read or write failed due to insufficient resources, and we’re waiting for a retry
-		, "LOG_RATE_GOVERNOR"                   // in Azure SQL DB, this means your database is getting throttled. Your delete/update/insert work simply can’t go any faster due to the limits on your instance size. Before you spend more on a larger instance, read this post: https://www.brentozar.com/archive/2019/02/theres-a-bottleneck-in-azure-sql-db-storage-throughput/
-		, "POOL_LOG_RATE_GOVERNOR"              // see LOG_RATE_GOVERNOR
-		, "PREEMPTIVE_DEBUG"                    // someone probably accidentally hit the DEBUG button in SSMS rather than Execute
-		, "RESMGR_THROTTLED"                    // in Azure SQL DB, this means a new request has come in, but it’s throttled based on the GROUP_MAX_REQUESTS setting
-		, "RESOURCE_SEMAPHORE"                  // means SQL Server ran out of available memory to run queries, and queries had to wait on available memory before they could even start. You can learn more about this in Query Plans: Memory Grants and High Row Estimates [https://www.brentozar.com/archive/2013/08/query-plans-what-happens-when-row-estimates-get-high/], and the RESOURCE_SEMAPHORE training video [https://www.brentozar.com/training/diagnosing-slow-sql-servers-wait-stats/wait-types-resource_semaphore-33m/]
-		, "RESOURCE_SEMAPHORE_QUERY_COMPILE"    // is a lot like RESOURCE_SEMAPHORE, but it means SQL Server didn’t even have enough memory to compile a query plan. This is usually only seen in two situations: "Underpowered servers: think 8-16GB RAM for heavy production workloads, or", "Really complex queries with dozens or hundreds of joins, like I describe in this post about ugly queries and this post as well – and you can hit these even on powerful servers, like 256GB+ memory. Finding the queries causing this is spectacularly hard, though – SQL Server doesn’t make it easy to analyze queries en masse looking for the highest compilation times. Solving it is usually more of a strategic thing: can we simplify our queries overall?"
-		, "SE_REPL_CATCHUP_THROTTLE"            // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
-		, "SE_REPL_COMMIT_ACK"                  // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
-		, "SE_REPL_COMMIT_TURN"                 // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
-		, "SE_REPL_ROLLBACK_ACK"                // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
-		, "SE_REPL_SLOW_SECONDARY_THROTTLE"     // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
-		, "THREADPOOL"                          // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
-		};
+//	// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
+//	private static final String[] TOXIC_WAIT_TYPES = new String[] {
+//			  "THREADPOOL"                          // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
+//			, "RESOURCE_SEMAPHORE"                  // means SQL Server ran out of available memory to run queries, and queries had to wait on available memory before they could even start. You can learn more about this in Query Plans: Memory Grants and High Row Estimates [https://www.brentozar.com/archive/2013/08/query-plans-what-happens-when-row-estimates-get-high/], and the RESOURCE_SEMAPHORE training video [https://www.brentozar.com/training/diagnosing-slow-sql-servers-wait-stats/wait-types-resource_semaphore-33m/]
+//			, "RESOURCE_SEMAPHORE_QUERY_COMPILE"    // is a lot like RESOURCE_SEMAPHORE, but it means SQL Server didn’t even have enough memory to compile a query plan. This is usually only seen in two situations: "Underpowered servers: think 8-16GB RAM for heavy production workloads, or", "Really complex queries with dozens or hundreds of joins, like I describe in this post about ugly queries and this post as well – and you can hit these even on powerful servers, like 256GB+ memory. Finding the queries causing this is spectacularly hard, though – SQL Server doesn’t make it easy to analyze queries en masse looking for the highest compilation times. Solving it is usually more of a strategic thing: can we simplify our queries overall?"
+//			, "CMEMTHREAD"                          // we’ve been seeing a lot of this in servers with a lot of CPU cores that still have their parallelism settings set at their defaults. To fix this issue: * Read my post about setting Cost Threshold for Parallelism and MAXDOP at reasonable defaults – which typically end up at Cost Threshold for Parallelism at 50, and then MAXDOP at around 8 or less depending on your hardware config.   * Look for queries reading a lot of data – run sp_BlitzCache @SortOrder = ‘reads’, and you’re probably going to find queries going parallel to read a lot of data that’s cached in RAM. Try tuning those queries, or tuning the indexes they use.   * After that, if you’re still having the problem, see Microsoft’s blog post on running SQL Servers with >8 cores per NUMA node. If you suspect that CMEMTHREAD is your server’s largest problem, and you meet the symptoms described in that KB article, open up a support ticket with Microsoft to be safe rather than just enabling this trace flag. It’s only $500, and they can give you a double check confirmation that this trace flag makes sense for you
+//			, "IO_QUEUE_LIMIT"                      // occurs when your database has too many asynchronous IOs pending. (in Azure SQL DB, this means your database is getting throttled)
+//			, "IO_RETRY"                            // a read or write failed due to insufficient resources, and we’re waiting for a retry
+//			, "LOG_RATE_GOVERNOR"                   // in Azure SQL DB, this means your database is getting throttled. Your delete/update/insert work simply can’t go any faster due to the limits on your instance size. Before you spend more on a larger instance, read this post: https://www.brentozar.com/archive/2019/02/theres-a-bottleneck-in-azure-sql-db-storage-throughput/
+//			, "POOL_LOG_RATE_GOVERNOR"              // see LOG_RATE_GOVERNOR
+//			, "PREEMPTIVE_DEBUG"                    // someone probably accidentally hit the DEBUG button in SSMS rather than Execute
+//			, "RESMGR_THROTTLED"                    // in Azure SQL DB, this means a new request has come in, but it’s throttled based on the GROUP_MAX_REQUESTS setting
+//			, "SE_REPL_CATCHUP_THROTTLE"            // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//			, "SE_REPL_COMMIT_ACK"                  // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//			, "SE_REPL_COMMIT_TURN"                 // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//			, "SE_REPL_ROLLBACK_ACK"                // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//			, "SE_REPL_SLOW_SECONDARY_THROTTLE"     // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+//			};
+
+	// Toxic Wait Types are initialized later on, when we know what TYPE of SQL Server we are connecting to. (OnPrem or some Azure variant)
+	private List<String> _toxicWaitTypes;
 
 	
 	@Override
@@ -215,7 +218,30 @@ extends CountersModel
 		String skipWaitTypes = "";
 		if (skipList.size() > 0 && Configuration.getCombinedConfiguration().getBooleanProperty(CmWaitStats.PROPKEY_sqlSkipFilterEnabled, CmWaitStats.DEFAULT_sqlSkipFilterEnabled))
 			skipWaitTypes = "  and wait_type NOT IN (" + StringUtil.toCommaStrQuoted("'", skipList) + ")";
-			
+
+		// Initialize Toxic Wait types based on the Edition we are connecting to.
+		// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
+		_toxicWaitTypes = new ArrayList<>();
+		_toxicWaitTypes.add("THREADPOOL"                      );    // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
+		_toxicWaitTypes.add("RESOURCE_SEMAPHORE"              );    // means SQL Server ran out of available memory to run queries, and queries had to wait on available memory before they could even start. You can learn more about this in Query Plans: Memory Grants and High Row Estimates [https://www.brentozar.com/archive/2013/08/query-plans-what-happens-when-row-estimates-get-high/], and the RESOURCE_SEMAPHORE training video [https://www.brentozar.com/training/diagnosing-slow-sql-servers-wait-stats/wait-types-resource_semaphore-33m/]
+		_toxicWaitTypes.add("RESOURCE_SEMAPHORE_QUERY_COMPILE");    // is a lot like RESOURCE_SEMAPHORE, but it means SQL Server didn’t even have enough memory to compile a query plan. This is usually only seen in two situations: "Underpowered servers: think 8-16GB RAM for heavy production workloads, or", "Really complex queries with dozens or hundreds of joins, like I describe in this post about ugly queries and this post as well – and you can hit these even on powerful servers, like 256GB+ memory. Finding the queries causing this is spectacularly hard, though – SQL Server doesn’t make it easy to analyze queries en masse looking for the highest compilation times. Solving it is usually more of a strategic thing: can we simplify our queries overall?"
+		_toxicWaitTypes.add("CMEMTHREAD"                      );    // we’ve been seeing a lot of this in servers with a lot of CPU cores that still have their parallelism settings set at their defaults. To fix this issue: * Read my post about setting Cost Threshold for Parallelism and MAXDOP at reasonable defaults – which typically end up at Cost Threshold for Parallelism at 50, and then MAXDOP at around 8 or less depending on your hardware config.   * Look for queries reading a lot of data – run sp_BlitzCache @SortOrder = ‘reads’, and you’re probably going to find queries going parallel to read a lot of data that’s cached in RAM. Try tuning those queries, or tuning the indexes they use.   * After that, if you’re still having the problem, see Microsoft’s blog post on running SQL Servers with >8 cores per NUMA node. If you suspect that CMEMTHREAD is your server’s largest problem, and you meet the symptoms described in that KB article, open up a support ticket with Microsoft to be safe rather than just enabling this trace flag. It’s only $500, and they can give you a double check confirmation that this trace flag makes sense for you
+		_toxicWaitTypes.add("IO_RETRY"                        );    // a read or write failed due to insufficient resources, and we’re waiting for a retry
+		_toxicWaitTypes.add("PREEMPTIVE_DEBUG"                );    // someone probably accidentally hit the DEBUG button in SSMS rather than Execute
+
+		if (ssVersionInfo.isAnyAzure())
+		{
+			_toxicWaitTypes.add("IO_QUEUE_LIMIT"                  );    // occurs when your database has too many asynchronous IOs pending. (in Azure SQL DB, this means your database is getting throttled)
+			_toxicWaitTypes.add("LOG_RATE_GOVERNOR"               );    // in Azure SQL DB, this means your database is getting throttled. Your delete/update/insert work simply can’t go any faster due to the limits on your instance size. Before you spend more on a larger instance, read this post: https://www.brentozar.com/archive/2019/02/theres-a-bottleneck-in-azure-sql-db-storage-throughput/
+			_toxicWaitTypes.add("POOL_LOG_RATE_GOVERNOR"          );    // see LOG_RATE_GOVERNOR
+			_toxicWaitTypes.add("RESMGR_THROTTLED"                );    // in Azure SQL DB, this means a new request has come in, but it’s throttled based on the GROUP_MAX_REQUESTS setting
+			_toxicWaitTypes.add("SE_REPL_CATCHUP_THROTTLE"        );    // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+			_toxicWaitTypes.add("SE_REPL_COMMIT_ACK"              );    // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+			_toxicWaitTypes.add("SE_REPL_COMMIT_TURN"             );    // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+			_toxicWaitTypes.add("SE_REPL_ROLLBACK_ACK"            );    // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+			_toxicWaitTypes.add("SE_REPL_SLOW_SECONDARY_THROTTLE" );    // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
+		}
+
 		// ---------------------------------------------------------------------------------------
 		// NOTE: If you change the below column order UPDATE THE ABOVE POS_* columns
 		// ---------------------------------------------------------------------------------------
@@ -788,8 +814,8 @@ extends CountersModel
 			"Server Toxic Wait Types, by 'wait_time_ms'", 	                   // Menu CheckBox text
 			"Server Toxic Wait Types, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
-			TOXIC_WAIT_TYPES,
-			LabelType.Static,
+			null,
+			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
 			false, // is Percent Graph
 			true,  // visible at start
@@ -800,8 +826,8 @@ extends CountersModel
 			"Server Toxic Wait Types, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
 			"Server Toxic Wait Types, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
-			TOXIC_WAIT_TYPES,
-			LabelType.Static,
+			null,
+			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
 			false, // is Percent Graph
 			false, // visible at start
@@ -812,8 +838,8 @@ extends CountersModel
 			"Server Toxic Wait Types, by 'WaitTimePerCount'", 	                   // Menu CheckBox text
 			"Server Toxic Wait Types, by 'WaitTimePerCount' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
-			TOXIC_WAIT_TYPES,
-			LabelType.Static,
+			null,
+			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
 			false, // is Percent Graph
 			false, // visible at start
@@ -911,43 +937,73 @@ extends CountersModel
 		}
 
 		// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
-		if (GRAPH_NAME_TOXIC_TIME.equals(graphName))
+		if (GRAPH_NAME_TOXIC_TIME.equals(graphName) && _toxicWaitTypes != null && !_toxicWaitTypes.isEmpty())
 		{
-			Double[] dArray = new Double[TOXIC_WAIT_TYPES.length];
+			Double[] dArray = new Double[_toxicWaitTypes.size()];
+			String[] lArray = new String[dArray.length];
 			
-			for (int i=0; i<TOXIC_WAIT_TYPES.length; i++)
+			for (int i=0; i<_toxicWaitTypes.size(); i++)
 			{
-				dArray[i] = this.getDiffValueAsDouble(TOXIC_WAIT_TYPES[i], "wait_time_ms");
+				String waitType = _toxicWaitTypes.get(i);
+
+				dArray[i] = this.getDiffValueAsDouble(waitType, "wait_time_ms");
+				lArray[i] = waitType;
 			}
 			
-			tgdp.setDataPoint(this.getTimestamp(), dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
-		if (GRAPH_NAME_TOXIC_COUNT.equals(graphName))
+		if (GRAPH_NAME_TOXIC_COUNT.equals(graphName) && _toxicWaitTypes != null && !_toxicWaitTypes.isEmpty())
 		{
-			Double[] dArray = new Double[TOXIC_WAIT_TYPES.length];
+			Double[] dArray = new Double[_toxicWaitTypes.size()];
+			String[] lArray = new String[dArray.length];
 			
-			for (int i=0; i<TOXIC_WAIT_TYPES.length; i++)
+			for (int i=0; i<_toxicWaitTypes.size(); i++)
 			{
-				dArray[i] = this.getDiffValueAsDouble(TOXIC_WAIT_TYPES[i], "waiting_tasks_count");
+				String waitType = _toxicWaitTypes.get(i);
+
+				dArray[i] = this.getDiffValueAsDouble(waitType, "waiting_tasks_count");
+				lArray[i] = waitType;
 			}
 			
-			tgdp.setDataPoint(this.getTimestamp(), dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		// ---- TOXIC -- Wait types is from: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzFirst.sql, row: 2972
-		if (GRAPH_NAME_TOXIC_TPW.equals(graphName))
+		if (GRAPH_NAME_TOXIC_TPW.equals(graphName) && _toxicWaitTypes != null && !_toxicWaitTypes.isEmpty())
 		{
-			Double[] dArray = new Double[TOXIC_WAIT_TYPES.length];
+			Double[] dArray = new Double[_toxicWaitTypes.size()];
+			String[] lArray = new String[dArray.length];
 			
-			for (int i=0; i<TOXIC_WAIT_TYPES.length; i++)
+			for (int i=0; i<_toxicWaitTypes.size(); i++)
 			{
-				dArray[i] = this.getDiffValueAsDouble(TOXIC_WAIT_TYPES[i], "WaitTimePerCount");
+				String waitType = _toxicWaitTypes.get(i);
+
+				dArray[i] = this.getDiffValueAsDouble(waitType, "WaitTimePerCount");
+				lArray[i] = waitType;
 			}
 			
-			tgdp.setDataPoint(this.getTimestamp(), dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
+	}
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_TOXIC_TIME .equals(name)) return true;  // Used locally
+		if (GRAPH_NAME_TOXIC_COUNT.equals(name)) return true;  // Used locally
+		if (GRAPH_NAME_TOXIC_TPW  .equals(name)) return true;  // Used locally
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
 	}
 
 	//--------------------------------------------------------------------------------------
@@ -997,6 +1053,12 @@ extends CountersModel
 				String extendedDescHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
 				                        + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
 
+				// Get a small graph about the usage for the last hour
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TIME);
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
+
+				// Create the alarm
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.UP, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
@@ -1031,6 +1093,12 @@ extends CountersModel
 				String extendedDescHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
 				                        + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
 
+				// Get a small graph about the usage for the last hour
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TIME);
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
+
+				// Create the alarm
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.AFFECTED, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
@@ -1039,21 +1107,22 @@ extends CountersModel
 			}
 		}
 	}
-//	  "CMEMTHREAD"                          // we’ve been seeing a lot of this in servers with a lot of CPU cores that still have their parallelism settings set at their defaults. To fix this issue: * Read my post about setting Cost Threshold for Parallelism and MAXDOP at reasonable defaults – which typically end up at Cost Threshold for Parallelism at 50, and then MAXDOP at around 8 or less depending on your hardware config.   * Look for queries reading a lot of data – run sp_BlitzCache @SortOrder = ‘reads’, and you’re probably going to find queries going parallel to read a lot of data that’s cached in RAM. Try tuning those queries, or tuning the indexes they use.   * After that, if you’re still having the problem, see Microsoft’s blog post on running SQL Servers with >8 cores per NUMA node. If you suspect that CMEMTHREAD is your server’s largest problem, and you meet the symptoms described in that KB article, open up a support ticket with Microsoft to be safe rather than just enabling this trace flag. It’s only $500, and they can give you a double check confirmation that this trace flag makes sense for you
+//	  "THREADPOOL"                          // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
+//	, "RESOURCE_SEMAPHORE"                  // means SQL Server ran out of available memory to run queries, and queries had to wait on available memory before they could even start. You can learn more about this in Query Plans: Memory Grants and High Row Estimates [https://www.brentozar.com/archive/2013/08/query-plans-what-happens-when-row-estimates-get-high/], and the RESOURCE_SEMAPHORE training video [https://www.brentozar.com/training/diagnosing-slow-sql-servers-wait-stats/wait-types-resource_semaphore-33m/]
+//	, "RESOURCE_SEMAPHORE_QUERY_COMPILE"    // is a lot like RESOURCE_SEMAPHORE, but it means SQL Server didn’t even have enough memory to compile a query plan. This is usually only seen in two situations: "Underpowered servers: think 8-16GB RAM for heavy production workloads, or", "Really complex queries with dozens or hundreds of joins, like I describe in this post about ugly queries and this post as well – and you can hit these even on powerful servers, like 256GB+ memory. Finding the queries causing this is spectacularly hard, though – SQL Server doesn’t make it easy to analyze queries en masse looking for the highest compilation times. Solving it is usually more of a strategic thing: can we simplify our queries overall?"
+//	, "CMEMTHREAD"                          // we’ve been seeing a lot of this in servers with a lot of CPU cores that still have their parallelism settings set at their defaults. To fix this issue: * Read my post about setting Cost Threshold for Parallelism and MAXDOP at reasonable defaults – which typically end up at Cost Threshold for Parallelism at 50, and then MAXDOP at around 8 or less depending on your hardware config.   * Look for queries reading a lot of data – run sp_BlitzCache @SortOrder = ‘reads’, and you’re probably going to find queries going parallel to read a lot of data that’s cached in RAM. Try tuning those queries, or tuning the indexes they use.   * After that, if you’re still having the problem, see Microsoft’s blog post on running SQL Servers with >8 cores per NUMA node. If you suspect that CMEMTHREAD is your server’s largest problem, and you meet the symptoms described in that KB article, open up a support ticket with Microsoft to be safe rather than just enabling this trace flag. It’s only $500, and they can give you a double check confirmation that this trace flag makes sense for you
 //	, "IO_QUEUE_LIMIT"                      // occurs when your database has too many asynchronous IOs pending. (in Azure SQL DB, this means your database is getting throttled)
 //	, "IO_RETRY"                            // a read or write failed due to insufficient resources, and we’re waiting for a retry
 //	, "LOG_RATE_GOVERNOR"                   // in Azure SQL DB, this means your database is getting throttled. Your delete/update/insert work simply can’t go any faster due to the limits on your instance size. Before you spend more on a larger instance, read this post: https://www.brentozar.com/archive/2019/02/theres-a-bottleneck-in-azure-sql-db-storage-throughput/
 //	, "POOL_LOG_RATE_GOVERNOR"              // see LOG_RATE_GOVERNOR
 //	, "PREEMPTIVE_DEBUG"                    // someone probably accidentally hit the DEBUG button in SSMS rather than Execute
 //	, "RESMGR_THROTTLED"                    // in Azure SQL DB, this means a new request has come in, but it’s throttled based on the GROUP_MAX_REQUESTS setting
-//	, "RESOURCE_SEMAPHORE"                  // means SQL Server ran out of available memory to run queries, and queries had to wait on available memory before they could even start. You can learn more about this in Query Plans: Memory Grants and High Row Estimates [https://www.brentozar.com/archive/2013/08/query-plans-what-happens-when-row-estimates-get-high/], and the RESOURCE_SEMAPHORE training video [https://www.brentozar.com/training/diagnosing-slow-sql-servers-wait-stats/wait-types-resource_semaphore-33m/]
-//	, "RESOURCE_SEMAPHORE_QUERY_COMPILE"    // is a lot like RESOURCE_SEMAPHORE, but it means SQL Server didn’t even have enough memory to compile a query plan. This is usually only seen in two situations: "Underpowered servers: think 8-16GB RAM for heavy production workloads, or", "Really complex queries with dozens or hundreds of joins, like I describe in this post about ugly queries and this post as well – and you can hit these even on powerful servers, like 256GB+ memory. Finding the queries causing this is spectacularly hard, though – SQL Server doesn’t make it easy to analyze queries en masse looking for the highest compilation times. Solving it is usually more of a strategic thing: can we simplify our queries overall?"
 //	, "SE_REPL_CATCHUP_THROTTLE"            // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
 //	, "SE_REPL_COMMIT_ACK"                  // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
 //	, "SE_REPL_COMMIT_TURN"                 // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
 //	, "SE_REPL_ROLLBACK_ACK"                // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
 //	, "SE_REPL_SLOW_SECONDARY_THROTTLE"     // in Azure SQL DB, we’re waiting for the secondary replicas to catch up
-//	, "THREADPOOL"                          // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
+//	};
 
 	public static final String  PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE  = CM_NAME + ".alarm.system.if.wait_time_ms.RESOURCE_SEMAPHORE.gt";
 	public static final int     DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE  = 20_000; // 20 seconds
