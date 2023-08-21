@@ -992,10 +992,10 @@ extends CountersModel
 				// Round to 1 decimal point
 				waitTimePerCount = MathUtils.round(waitTimePerCount, 1);
 
-				String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
-				String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
-
-				//TODO: ??? Should this be INFO or WARNING, OR: Should we have different both INFO and WARNING with different thresholds ???
+				String extendedDescText = "DIFF Counters: \n"          + cm.toTextTableString(DATA_DIFF, rowId) + "\n\n"
+				                        + "ABS Counters: \n"           + cm.toTextTableString(DATA_ABS , rowId);
+				String extendedDescHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
+				                        + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
 
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.UP, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
@@ -1026,8 +1026,10 @@ extends CountersModel
 				// Round to 1 decimal point
 				waitTimePerCount = MathUtils.round(waitTimePerCount, 1);
 
-				String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
-				String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+				String extendedDescText = "DIFF Counters: \n"          + cm.toTextTableString(DATA_DIFF, rowId) + "\n\n"
+				                        + "ABS Counters: \n"           + cm.toTextTableString(DATA_ABS , rowId);
+				String extendedDescHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
+				                        + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
 
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.AFFECTED, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
@@ -1054,10 +1056,10 @@ extends CountersModel
 //	, "THREADPOOL"                          // means SQL Server ran out of worker threads, and new queries thought the SQL Server was frozen solid. During any occurrence of THREADPOOL, your SQL Server will feel like it’s locked up solid – although trickily, your CPU usage might be near zero. You can learn more about this in the THREADPOOL training video [https://training.brentozar.com/courses/1338135/lectures/30707006] (or here if your subscription started 2020 or before. [https://www.brentozar.com/training/mastering-server-tuning-wait-stats-live-3-days-recording/2-2-cpu-waits-threadpool/])
 
 	public static final String  PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE  = CM_NAME + ".alarm.system.if.wait_time_ms.RESOURCE_SEMAPHORE.gt";
-	public static final int     DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE  = 10_000; // 10 seconds
+	public static final int     DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE  = 20_000; // 20 seconds
 
 	public static final String  PROPKEY_alarm_WaitTime_THREADPOOL          = CM_NAME + ".alarm.system.if.wait_time_ms.THREADPOOL.gt";
-	public static final int     DEFAULT_alarm_WaitTime_THREADPOOL          = 10_000; // 10 seconds
+	public static final int     DEFAULT_alarm_WaitTime_THREADPOOL          = 20_000; // 20 seconds
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
