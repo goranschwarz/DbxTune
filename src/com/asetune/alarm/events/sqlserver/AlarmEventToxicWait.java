@@ -44,7 +44,7 @@ extends AlarmEvent
 		Version.getAppName(), // serviceType
 		cm.getServerName(),   // serviceName
 		cm.getName(),         // serviceInfo
-		null,                 // extraInfo
+		waitType,             // extraInfo
 		AlarmEvent.Category.OTHER,
 		severity, 
 		serviceState, // AlarmEvent.ServiceState.UP, 

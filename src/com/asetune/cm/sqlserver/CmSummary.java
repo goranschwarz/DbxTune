@@ -55,6 +55,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
@@ -363,7 +364,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WORKER_THREAD_USAGE,
 			"SQL Server Worker Threads Usage", // Menu CheckBox text
 			"SQL Server Worker Threads Usage ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -373,10 +374,10 @@ extends CountersModel
 			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_WT_WAITING_FOR_CPU,
-			"SQL Server Worker That are Waiting for CPU to be Scheduled", // Menu CheckBox text
-			"SQL Server Worker That are Waiting for CPU to be Scheduled ("+SHORT_NAME+")", // Label 
+			"SQL Server Workers That are Waiting for CPU to be Scheduled", // Menu CheckBox text
+			"SQL Server Workers That are Waiting for CPU to be Scheduled ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
-			new String[] { "workersWaitingForCPU" },
+			new String[] { "workersWaitingForCPU", "workersWaitingForCPU_perScheduler" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
 			false,  // is Percent Graph
@@ -387,7 +388,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS,
 			"Tasks/Requests that are Waiting for Available Worker Threads", // Menu CheckBox text
 			"Tasks/Requests that are Waiting for Available Worker Threads ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "requestsWaitingForWorkers" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -618,7 +619,7 @@ extends CountersModel
 			    "where counter_name in ('Stolen Server Memory (KB)', 'Database Cache Memory (KB)', 'Granted Workspace Memory (KB)') \n" +
 			    " \n" +
 			    "/*------- WorkerThreads -- dm_os_schedulers -------*/ \n" +
-			    "select \n" +
+			    "select \n" + 
 			    "     @wt_usedThreads               = SUM(active_workers_count) \n" +
 			    "    ,@wt_availableThreads          = @max_workers_count - SUM(active_workers_count) \n" +
 			    "    ,@wt_workersWaitingForCPU      = SUM(runnable_tasks_count) \n" +
@@ -1243,11 +1244,12 @@ extends CountersModel
 		//---------------------------------
 		if (GRAPH_NAME_WT_WAITING_FOR_CPU.equals(tgdp.getName()))
 		{	
-			Double[] arr = new Double[1];
+			Double[] arr = new Double[2];
 
 			arr[0] = this.getAbsValueAsDouble(0, "workersWaitingForCPU", true, 0d);
+			arr[1] = NumberUtils.round(arr[0] / this.getAbsValueAsDouble(0, "scheduler_count", true, 1d), 2);
 
-			_logger.debug("updateGraphData(" + tgdp.getName() + "): workersWaitingForCPU='" + arr[0] + "'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): workersWaitingForCPU='" + arr[0] + "', workersWaitingForCPU_perScheduler='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
