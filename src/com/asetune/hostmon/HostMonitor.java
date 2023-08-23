@@ -1273,9 +1273,9 @@ implements Runnable
 		}
 		catch (Exception ignore) { /* ignore */ }
 
-		_logger.info("Closing Streaming SSH Session for '" + getModuleName() + "' with command '" + getCommand() + "'.");
+		_logger.info("Closing Streaming HostMon Session for '" + getModuleName() + "' with command '" + getCommand() + "' using Execution Wrapper '" + execWrapper.getClass().getSimpleName() + "'.");
 		execWrapper.close();
-		
+
 		_running = false;
 		printStopMessage();
 	}
