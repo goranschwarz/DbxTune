@@ -365,8 +365,16 @@ extends CounterCollectorThreadAbstract
 			// Sleep / wait for next sample
 			waitForNextSample(sleepTime * 1000);
 
-
 		} // END: while(_running)
+
+		// closing the CM's
+		for (CountersModel cm : getCounterController().getCmList())
+		{
+			_logger.info("DbxCentral Local Metrics - about to stop, closing CM '" + cm.getName() + "'.");
+			cm.close();
+		}
+
+		_logger.info("Stopped DbxCentral Local Metrics collector thread.");
 	}
 
 	private void sendDummyAlarmIfFileExists()

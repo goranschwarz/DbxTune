@@ -411,7 +411,16 @@ extends HostMonitorConnection
 
 			// Kill the process if it's still there
 			if (_proc.isAlive())
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("HostMonitorConnectionLocalOsCmd: Killing subprocess... _pb.commad()=" + _pb.command() + ", cmd=[" + _name + "].");
 				_proc.destroy();
+			}
+			else
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("HostMonitorConnectionLocalOsCmd: No need to kill subprocess... _proc.isAlive()=false.");
+			}
 
 //			_pb.close();
 		}
