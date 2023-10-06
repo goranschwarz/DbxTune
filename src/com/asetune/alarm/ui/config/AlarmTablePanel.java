@@ -32,6 +32,7 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTableFilter;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -146,8 +147,10 @@ implements TableModelListener
 			{
 				// <CMNAME>.alarm.enabled
 				// <CMNAME>.alarm.system.enabled
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),       ae._isEnabled);
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsEnabled), ae._isSystemEnabled);
+//				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),       ae._isEnabled);
+//				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsEnabled), ae._isSystemEnabled);
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),       ae._isEnabled       == CountersModel.DEFAULT_ALARM_isAlarmsEnabled       ? Configuration.USE_DEFAULT_PREFIX + ae._isEnabled       : ae._isEnabled+"");
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsEnabled), ae._isSystemEnabled == CountersModel.DEFAULT_ALARM_isSystemAlarmsEnabled ? Configuration.USE_DEFAULT_PREFIX + ae._isSystemEnabled : ae._isSystemEnabled+"");
 
 //				// Write for all system settings
 //				for (AlarmSettingsEntry ase : ae._settings)
@@ -167,12 +170,12 @@ implements TableModelListener
 					// Only for names that do not contin ' ' spaces... FIXME: This is UGGLY, create a type/property which describes if we should write the '*.enable.*' property or not...
 //					if ( ase.getName().indexOf(' ') == -1)
 					if (ase.isAlarmSwitch())
-						conf.setProperty(CountersModel.replaceCmAndColName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, ase.getName()), ase.isSelected());
+						conf.setProperty(CountersModel.replaceCmAndColName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, ase.getName()), ase.isDefaultValue() ? Configuration.USE_DEFAULT_PREFIX + ase.isSelected() : ase.isSelected()+"");
 
 					// Various properties defined by the CounterModel
 					// probably looks like: <CMNAME>.alarm.system.if.<COLNAME>.gt
 //					if (ase._enabled)
-						conf.setProperty(ase.getPropName(), ase.getStringValue());
+						conf.setProperty(ase.getPropName(), ase.isDefaultValue() ? Configuration.USE_DEFAULT_PREFIX + ase.getStringValue() : ase.getStringValue());
 				}
 			}
 
@@ -182,12 +185,34 @@ implements TableModelListener
 				// <CMNAME>.alarm.enabled
 				// <CMNAME>.alarm.userdefined.enabled
 				// <CMNAME>.alarm.userdefined.source.filename
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),            ae._isEnabled);
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isUserdefinedAlarmsEnabled), ae._isUserDefinedEnabled);
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),            ae._isEnabled            == CountersModel.DEFAULT_ALARM_isAlarmsEnabled            ? Configuration.USE_DEFAULT_PREFIX + ae._isEnabled            : ae._isEnabled+"");
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isUserdefinedAlarmsEnabled), ae._isUserDefinedEnabled == CountersModel.DEFAULT_ALARM_isUserdefinedAlarmsEnabled ? Configuration.USE_DEFAULT_PREFIX + ae._isUserDefinedEnabled : ae._isUserDefinedEnabled+"");
 				//conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_userdefinedSourceFilename),  ae._sourceFilename); // Maby in the future... if we want to specify the source file...
 			}
 		}
 		
 		return conf;
+	}
+
+	public void setSelectedCmName(String cmName)
+	{
+		if (StringUtil.isNullOrBlank(cmName))
+			return;
+
+		// Set config for WRITERS SETTINGS
+		for (int mr=0; mr<_alarmTableModel.getRowCount(); mr++)
+		{
+			AlarmEntry ae = _alarmTableModel.getAlarmForRow(mr);
+			if (cmName.equals(ae._cmName))
+			{
+				int vr = _alarmTable.convertRowIndexToView(mr);
+
+				// Only position if it's visible
+				if (vr != -1)
+					_alarmTable.setRowSelectionInterval(vr, vr);
+
+				break;
+			}
+		}
 	}
 }

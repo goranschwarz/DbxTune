@@ -30,7 +30,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.CmPgIndexes;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -56,7 +55,23 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Sample System Tables", PROPKEY_sample_systemTables , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemTables  , DEFAULT_sample_systemTables  ), DEFAULT_sample_systemTables, "Sample System Tables" ));
+
+				l_sampleSystemTables_chk.setSelected(conf.getBooleanProperty(CmPgIndexes.PROPKEY_sample_systemTables, CmPgIndexes.DEFAULT_sample_systemTables));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

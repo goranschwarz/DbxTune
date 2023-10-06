@@ -49,6 +49,9 @@ public class SparklineHelper
 {
 	private static Logger _logger = Logger.getLogger(SparklineHelper.class);
 
+	public static final String PROPKEY_getSparclineData_timeout = "SparklineHelper.getSparclineData.timeout";
+	public static final int    DEFAULT_getSparclineData_timeout = 600;
+	
 //	/**
 //	 */
 //	public enum ColumnNameType
@@ -884,69 +887,94 @@ public class SparklineHelper
 		SimpleDateFormat sdf_HM  = new SimpleDateFormat("HH:mm");
 		SimpleDateFormat sdf_YMD = new SimpleDateFormat("yyyy-MM-dd");
 	
-		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(sql)))
+		long startTime  = System.currentTimeMillis();
+		int  sqlTimeout = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_getSparclineData_timeout, DEFAULT_getSparclineData_timeout); // DEFAULT 10 minutes
+		int  rowCount   = 0;
+
+		try (Statement stmnt = conn.createStatement())
 		{
-			ResultSetMetaData rsmd = rs.getMetaData();
-//			int btsDt = rsmd.getColumnType(1); // for column 1 -- Begin Time
-			int valDt = rsmd.getColumnType(3); // for column 3 -- the aggregated column
+			// Set timeout to 10 minutes
+			stmnt.setQueryTimeout(sqlTimeout);
 
-			while(rs.next())
+			try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(sql)))
 			{
-				Timestamp bts = rs.getTimestamp(1);
-				Timestamp ets = rs.getTimestamp(2);
-//				int       val = rs.getInt      (3);
-//				Number    val = rs.getInt      (3);
-				Number    val = null;
+				ResultSetMetaData rsmd = rs.getMetaData();
+//				int btsDt = rsmd.getColumnType(1); // for column 1 -- Begin Time
+				int valDt = rsmd.getColumnType(3); // for column 3 -- the aggregated column
 
-//				// Convert to LOCAL Time
-//				if (btsDt == Types.TIMESTAMP_WITH_TIMEZONE)
-//				{
-//					System.out.println("BTS---TIMESTAMP_WITH_TIMEZONE: to local ts: |"+bts+"| ->>> |"+bts.toLocalDateTime()+"|   ("+Timestamp.valueOf(bts.toLocalDateTime())+").");
-//					bts = Timestamp.valueOf(bts.toLocalDateTime());
-//					ets = Timestamp.valueOf(ets.toLocalDateTime());
-//				}
-				
-				switch (valDt)
+				while(rs.next())
 				{
-				case Types.TINYINT:
-				case Types.SMALLINT:
-				case Types.INTEGER:
-					val = rs.getInt(3);
-					break;
+					rowCount++;
 
-				case Types.BIGINT:
-					val = rs.getLong(3);
-					break;
+					Timestamp bts = rs.getTimestamp(1);
+					Timestamp ets = rs.getTimestamp(2);
+//					int       val = rs.getInt      (3);
+//					Number    val = rs.getInt      (3);
+					Number    val = null;
 
-				case Types.REAL:
-				case Types.FLOAT:
-				case Types.DOUBLE:
-				case Types.DECIMAL:
-				case Types.NUMERIC:
-					BigDecimal bdVal = rs.getBigDecimal(3);
-					if (bdVal != null)
+//					// Convert to LOCAL Time
+//					if (btsDt == Types.TIMESTAMP_WITH_TIMEZONE)
+//					{
+//						System.out.println("BTS---TIMESTAMP_WITH_TIMEZONE: to local ts: |"+bts+"| ->>> |"+bts.toLocalDateTime()+"|   ("+Timestamp.valueOf(bts.toLocalDateTime())+").");
+//						bts = Timestamp.valueOf(bts.toLocalDateTime());
+//						ets = Timestamp.valueOf(ets.toLocalDateTime());
+//					}
+					
+					switch (valDt)
 					{
-						if (decimalScale >= 0)
-							bdVal = bdVal.setScale(decimalScale, RoundingMode.HALF_UP); // HALF_UP is better than HALF_EVEN 
+					case Types.TINYINT:
+					case Types.SMALLINT:
+					case Types.INTEGER:
+						val = rs.getInt(3);
+						break;
+
+					case Types.BIGINT:
+						val = rs.getLong(3);
+						break;
+
+					case Types.REAL:
+					case Types.FLOAT:
+					case Types.DOUBLE:
+					case Types.DECIMAL:
+					case Types.NUMERIC:
+						BigDecimal bdVal = rs.getBigDecimal(3);
+						if (bdVal != null)
+						{
+							if (decimalScale >= 0)
+								bdVal = bdVal.setScale(decimalScale, RoundingMode.HALF_UP); // HALF_UP is better than HALF_EVEN 
+						}
+						val = bdVal;
+						break;
+
+					default:
+						throw new RuntimeException("Unhandled datatype=" + valDt + ", '" + ResultSetTableModel.getColumnJavaSqlTypeName(valDt)+ "' when reading aggreate column for 'sparkline' chart. SQL=|" + sql + "|");
 					}
-					val = bdVal;
-					break;
+					
 
-				default:
-					throw new RuntimeException("Unhandled datatype=" + valDt + ", '" + ResultSetTableModel.getColumnJavaSqlTypeName(valDt)+ "' when reading aggreate column for 'sparkline' chart. SQL=|" + sql + "|");
+					String tooltip = sdf_HM.format(bts) + " - " + sdf_HM.format(ets) + " @ [" + sdf_YMD.format(bts) + "]";
+
+	//if (DataSource.QueryStore.equals(dataSource))
+	//{
+//		System.out.println("---- DATA: bts=|"+bts+"|, val=|"+val+"|, tooltip=|"+tooltip+"|.");
+	//}
+					res.values  .add(val);
+					res.tooltips.add(tooltip);
+					res.beginTs .add(bts);
 				}
-				
-
-				String tooltip = sdf_HM.format(bts) + " - " + sdf_HM.format(ets) + " @ [" + sdf_YMD.format(bts) + "]";
-
-//if (DataSource.QueryStore.equals(dataSource))
-//{
-//	System.out.println("---- DATA: bts=|"+bts+"|, val=|"+val+"|, tooltip=|"+tooltip+"|.");
-//}
-				res.values  .add(val);
-				res.tooltips.add(tooltip);
-				res.beginTs .add(bts);
 			}
+		}
+		catch (SQLException ex)
+		{
+			long execTime = TimeUtils.msDiffNow(startTime);
+			long sqlTimeoutMs = sqlTimeout * 1000;
+			
+			// If it looks like a timeout... (add 500ms to execTime) (there is no DBMS Generic Exception to identify a timeout)
+			if ((execTime + 500) >= sqlTimeoutMs)
+			{
+				_logger.warn("SQL Timeout in getSparclineData(): ExecutionTime='" + TimeUtils.msToTimeStrShort(execTime) + "' (" + execTime + " ms). rowCount=" + rowCount + ", SQL=|" + sql + "|", ex);
+			}
+			
+			throw ex;
 		}
 
 //System.out.println("getSparclineData(): <<<<< " + res.values);

@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.alarm.events;
 
+import java.sql.Timestamp;
+
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.AseErrorMessageDictionary;
@@ -33,9 +35,10 @@ extends AlarmEvent
 	 * Alarm for full transaction log for a specific database.
 	 * @param cm
 	 * @param errorNumber 
+	 * @param errorlogTs 
 	 * @param dbname
 	 */
-	public AlarmEventProcessStackTrace(CountersModel cm, int spid, int kpid, int suid, String errorlogMsg, int errorNumber)
+	public AlarmEventProcessStackTrace(CountersModel cm, int spid, int kpid, int suid, String errorlogMsg, int errorNumber, Timestamp errorlogTs)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -45,7 +48,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Stacktrace for SPID=" + spid + ", KPID=" + kpid + ", SUID=" + suid + ", found in '" + cm.getServerName() + "'. ErrorNumber=" + errorNumber + ", desc='" + AseErrorMessageDictionary.getInstance().getDescription(errorNumber) + "'",
+				"Stacktrace for SPID=" + spid + ", KPID=" + kpid + ", SUID=" + suid + ", found in '" + cm.getServerName() + "', at '" + errorlogTs + "'. ErrorNumber=" + errorNumber + ", desc='" + AseErrorMessageDictionary.getInstance().getDescription(errorNumber) + "'",
 				null);
 
 		// Set: Time To Live if postpone is enabled

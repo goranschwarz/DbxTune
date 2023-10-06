@@ -328,9 +328,12 @@ implements Connection, AutoCloseable
 			// Microsoft SQL-Server
 			if (url.startsWith("jdbc:sqlserver:"))
 			{
-				if (StringUtil.hasValue(appname) &&  ! props.containsKey("applicationName") )
+//System.out.println("DEBUG: DbxConnection.connect(): MS-SQL: localVar.appname=|"+appname+"|, props.applicationName=|"+props.getProperty("applicationName")+"|)");
+//				if (StringUtil.hasValue(appname) &&  ! props.containsKey("applicationName") )
+				if (StringUtil.hasValue(appname))
 				{
 					props .put("applicationName", appname);
+//System.out.println("DEBUG: DbxConnection.connect(): MS-SQL: props.put('applicationName', '"+appname+"')");
 				}
 
 				if ( ! props.containsKey("trustServerCertificate") )
@@ -388,6 +391,10 @@ implements Connection, AutoCloseable
 				if (System.getProperty("DbxConnection.connect.nogui.print", "false").equalsIgnoreCase("true"))
 					System.out.println("#### DEBUG ####: no-gui: DbxConnection.connect(): url='" + url + "', props[" + StringUtil.toCommaStr(props) + "], connProp=[" + connProp + "].");
 				
+//System.out.println("DEBUG: DbxConnection.connect(): props="+props);
+//(new Exception("DEBUG: DbxConnection.connect(): props="+props)).printStackTrace();
+
+				// Make the connection
 				conn = DriverManager.getConnection(url, props);
 			}
 			else

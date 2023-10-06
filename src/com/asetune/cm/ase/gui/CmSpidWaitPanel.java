@@ -716,35 +716,71 @@ extends TabularCntrPanel
 		updateExtendedInfoPanel();
 	}
 
+	private JCheckBox l_includeWaitId250_chk;
+	private JCheckBox l_includeSystemThreads_chk;
+	private JCheckBox l_generateEvent_chk;
+	private JCheckBox l_generateEventWaitTime_chk;
+	private JCheckBox l_generateEventWaits_chk;
+	private JCheckBox l_generateEventWaitTimePerWait_chk;
+	private JCheckBox l_generateClass_chk;
+	private JCheckBox l_generateClassWaitTime_chk;
+	private JCheckBox l_generateClassWaits_chk;
+	private JCheckBox l_generateClassWaitTimePerWait_chk;
+	
+	private JCheckBox l_enableGraph_chk;
+	private JCheckBox l_showLegend_chk;
+
+	private JLabel            l_graphType_lbl;
+	private JComboBox<String> l_graphType_cbx;
+
+	private RSyntaxTextAreaX  l_extraWhereClause_txt;
+	private JButton           l_extraWhereClause_but;
+
+	private JButton           l_trendGraph_settings_but;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				
+				l_extraWhereClause_txt.setText(conf.getProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, CmSpidWait.DEFAULT_sample_extraWhereClause));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 //		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 		panel.setLayout(new MigLayout("flowy, ins 0, gap 0", "", "0[0]0"));
 
-		final JCheckBox includeWaitId250_chk             = new JCheckBox("Include '[250] waiting for incoming network data' in graphs.");
-		final JCheckBox includeSystemThreads_chk         = new JCheckBox("Include System SPID's in graphs.");
-		final JCheckBox generateEvent_chk                = new JCheckBox("Genereate Graphs for Events");
-		final JCheckBox generateEventWaitTime_chk        = new JCheckBox("WaitTime");
-		final JCheckBox generateEventWaits_chk           = new JCheckBox("Waits");
-		final JCheckBox generateEventWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
-		final JCheckBox generateClass_chk                = new JCheckBox("Genereate Graphs for Classes");
-		final JCheckBox generateClassWaitTime_chk        = new JCheckBox("WaitTime");
-		final JCheckBox generateClassWaits_chk           = new JCheckBox("Waits");
-		final JCheckBox generateClassWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
+		l_includeWaitId250_chk             = new JCheckBox("Include '[250] waiting for incoming network data' in graphs.");
+		l_includeSystemThreads_chk         = new JCheckBox("Include System SPID's in graphs.");
+		l_generateEvent_chk                = new JCheckBox("Genereate Graphs for Events");
+		l_generateEventWaitTime_chk        = new JCheckBox("WaitTime");
+		l_generateEventWaits_chk           = new JCheckBox("Waits");
+		l_generateEventWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
+		l_generateClass_chk                = new JCheckBox("Genereate Graphs for Classes");
+		l_generateClassWaitTime_chk        = new JCheckBox("WaitTime");
+		l_generateClassWaits_chk           = new JCheckBox("Waits");
+		l_generateClassWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
 
-		final JCheckBox enableGraph_chk = new JCheckBox("Show Graph");
-		final JCheckBox showLegend_chk  = new JCheckBox("Show Legend");
+		l_enableGraph_chk         = new JCheckBox("Show Graph");
+		l_showLegend_chk          = new JCheckBox("Show Legend");
 
 		String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
-		final JLabel            graphType_lbl    = new JLabel("Type");
-		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
+		l_graphType_lbl           = new JLabel("Type");
+		l_graphType_cbx           = new JComboBox<String>(graphTypeArr);
 
-		final RSyntaxTextAreaX extraWhereClause_txt = new RSyntaxTextAreaX();
-		final JButton          extraWhereClause_but = new JButton("Apply Extra Where Clause");
+		l_extraWhereClause_txt    = new RSyntaxTextAreaX();
+		l_extraWhereClause_but    = new JButton("Apply Extra Where Clause");
 
-		final JButton         trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
+		l_trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
 
 		String tooltip;
 		tooltip = 
@@ -754,8 +790,8 @@ extends TabularCntrPanel
 			"</html>";
 		panel.setToolTipText(tooltip);
 
-		enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
-		showLegend_chk.setToolTipText("Show Legend, which describes all data value types");
+		l_enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
+		l_showLegend_chk.setToolTipText("Show Legend, which describes all data value types");
 
 		tooltip = 
 			"<html>" +
@@ -764,7 +800,7 @@ extends TabularCntrPanel
 			"Another way to include/exclude event types in the graphs, is to use the 'filters' panel.<br>" +
 			"The Graph is based on what is visible in the Table..." +
 			"</html>";
-		includeWaitId250_chk.setToolTipText(tooltip);
+		l_includeWaitId250_chk.setToolTipText(tooltip);
 
 		tooltip = 
 			"<html>" +
@@ -774,20 +810,20 @@ extends TabularCntrPanel
 			"Another way to include/exclude event types in the graphs, is to use the 'filters' panel.<br>" +
 			"The Graph is based on what is visible in the Table..." +
 			"</html>";
-		includeSystemThreads_chk.setToolTipText(tooltip);
+		l_includeSystemThreads_chk.setToolTipText(tooltip);
 
 		tooltip = "<html>Do you want the Graph to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
-		graphType_lbl.setToolTipText(tooltip);
-		graphType_cbx.setToolTipText(tooltip);
+		l_graphType_lbl.setToolTipText(tooltip);
+		l_graphType_cbx.setToolTipText(tooltip);
 
-		generateEvent_chk.setToolTipText("<html>Include 'Events' data in the Graph.</html>");
-		generateClass_chk.setToolTipText("<html>Include 'Classes' data in the Graph.</html>");
+		l_generateEvent_chk.setToolTipText("<html>Include 'Events' data in the Graph.</html>");
+		l_generateClass_chk.setToolTipText("<html>Include 'Classes' data in the Graph.</html>");
 
-		extraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);
-		extraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
+		l_extraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);
+		l_extraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
 
 		tooltip = TOOLTIP_trendGraph_skipWaitIdList.replace("THE_SKIP_LIST_GOES_HERE", Configuration.getCombinedConfiguration().getProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitIdList, CmSpidWait.DEFAULT_trendGraph_skipWaitIdList));
-		trendGraph_settings_but.setToolTipText(tooltip);
+		l_trendGraph_settings_but.setToolTipText(tooltip);
 
 		// SET INITIAL VALUES for components
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -795,34 +831,34 @@ extends TabularCntrPanel
 		String orientation = graphTypeArr[0]; // set as default
 		if (orientationStr.equals(VALUE_graphType_PIE)) orientation = graphTypeArr[0];
 		if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
-		graphType_cbx.setSelectedItem(orientation);
+		l_graphType_cbx.setSelectedItem(orientation);
 
-		includeWaitId250_chk            .setSelected(conf.getBooleanProperty(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250));
-		includeSystemThreads_chk        .setSelected(conf.getBooleanProperty(PROPKEY_includeSystemThreads,         DEFAULT_includeSystemThreads));
-		generateEvent_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateEvent,                DEFAULT_generateEvent));
-		generateEventWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime));
-		generateEventWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits));
-		generateEventWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTimePerWait));
-		generateClass_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateClass,                DEFAULT_generateClass));
-		generateClassWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime));
-		generateClassWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits));
-		generateClassWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTimePerWait));
+		l_includeWaitId250_chk            .setSelected(conf.getBooleanProperty(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250));
+		l_includeSystemThreads_chk        .setSelected(conf.getBooleanProperty(PROPKEY_includeSystemThreads,         DEFAULT_includeSystemThreads));
+		l_generateEvent_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateEvent,                DEFAULT_generateEvent));
+		l_generateEventWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime));
+		l_generateEventWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits));
+		l_generateEventWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTimePerWait));
+		l_generateClass_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateClass,                DEFAULT_generateClass));
+		l_generateClassWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime));
+		l_generateClassWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits));
+		l_generateClassWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTimePerWait));
 
-		enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
-		showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
+		l_enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
+		l_showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
 
 
 //		Configuration conf = Configuration.getCombinedConfiguration();
 		String extraWhereClause = (conf == null ? CmSpidWait.DEFAULT_sample_extraWhereClause : conf.getProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, CmSpidWait.DEFAULT_sample_extraWhereClause));
 
-		extraWhereClause_txt.setText(extraWhereClause);
-		extraWhereClause_txt.setHighlightCurrentLine(false);
-		extraWhereClause_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
-		extraWhereClause_txt.setName(CmSpidWait.PROPKEY_sample_extraWhereClause);
+		l_extraWhereClause_txt.setText(extraWhereClause);
+		l_extraWhereClause_txt.setHighlightCurrentLine(false);
+		l_extraWhereClause_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		l_extraWhereClause_txt.setName(CmSpidWait.PROPKEY_sample_extraWhereClause);
 
 		
 		// ACTION LISTENERS
-		includeWaitId250_chk.addActionListener(new ActionListener()
+		l_includeWaitId250_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -831,7 +867,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		includeSystemThreads_chk.addActionListener(new ActionListener()
+		l_includeSystemThreads_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -841,7 +877,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		enableGraph_chk.addActionListener(new ActionListener()
+		l_enableGraph_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -852,7 +888,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		graphType_cbx.addActionListener(new ActionListener()
+		l_graphType_cbx.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -861,7 +897,7 @@ extends TabularCntrPanel
 				if (conf == null)
 					return;
 				
-				String type = graphType_cbx.getSelectedItem().toString();
+				String type = l_graphType_cbx.getSelectedItem().toString();
 				if (type.equals("Pie Chart")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_PIE);
 				if (type.equals("Bar Graph")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_BAR);
 				conf.save();
@@ -870,7 +906,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		showLegend_chk.addActionListener(new ActionListener()
+		l_showLegend_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -879,19 +915,19 @@ extends TabularCntrPanel
 			}
 		});
 
-		generateEvent_chk.addActionListener(new ActionListener()
+		l_generateEvent_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				boolean b = ((JCheckBox)e.getSource()).isSelected();
 				helperActionSave(PROPKEY_generateEvent, ((JCheckBox)e.getSource()).isSelected());
-				generateEventWaitTime_chk       .setEnabled(b);
-				generateEventWaits_chk          .setEnabled(b);
-				generateEventWaitTimePerWait_chk.setEnabled(b);
+				l_generateEventWaitTime_chk       .setEnabled(b);
+				l_generateEventWaits_chk          .setEnabled(b);
+				l_generateEventWaitTimePerWait_chk.setEnabled(b);
 			}
 		});
-		generateEventWaitTime_chk.addActionListener(new ActionListener()
+		l_generateEventWaitTime_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -899,7 +935,7 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateEventWaitTime, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
-		generateEventWaits_chk.addActionListener(new ActionListener()
+		l_generateEventWaits_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -907,7 +943,7 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateEventWaits, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
-		generateEventWaitTimePerWait_chk.addActionListener(new ActionListener()
+		l_generateEventWaitTimePerWait_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -918,19 +954,19 @@ extends TabularCntrPanel
 
 
 
-		generateClass_chk.addActionListener(new ActionListener()
+		l_generateClass_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				boolean b = ((JCheckBox)e.getSource()).isSelected();
 				helperActionSave(PROPKEY_generateClass, b);
-				generateClassWaitTime_chk       .setEnabled(b);
-				generateClassWaits_chk          .setEnabled(b);
-				generateClassWaitTimePerWait_chk.setEnabled(b);
+				l_generateClassWaitTime_chk       .setEnabled(b);
+				l_generateClassWaits_chk          .setEnabled(b);
+				l_generateClassWaitTimePerWait_chk.setEnabled(b);
 			}
 		});
-		generateClassWaitTime_chk.addActionListener(new ActionListener()
+		l_generateClassWaitTime_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -938,7 +974,7 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateClassWaitTime, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
-		generateClassWaits_chk.addActionListener(new ActionListener()
+		l_generateClassWaits_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -946,7 +982,7 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateClassWaits, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
-		generateClassWaitTimePerWait_chk.addActionListener(new ActionListener()
+		l_generateClassWaitTimePerWait_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -955,7 +991,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		extraWhereClause_but.addActionListener(new ActionListener()
+		l_extraWhereClause_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -963,7 +999,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, extraWhereClause_txt.getText().trim());
+				conf.setProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, l_extraWhereClause_txt.getText().trim());
 				conf.save();
 				
 				// ReInitialize the SQL
@@ -971,7 +1007,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		trendGraph_settings_but.addActionListener(new ActionListener()
+		l_trendGraph_settings_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -979,7 +1015,7 @@ extends TabularCntrPanel
 				openPropertiesEditor();
 
 				// Update the tooltip text
-				trendGraph_settings_but.setToolTipText( TOOLTIP_trendGraph_skipWaitIdList.replace("THE_SKIP_LIST_GOES_HERE", Configuration.getCombinedConfiguration().getProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitIdList, CmSpidWait.DEFAULT_trendGraph_skipWaitIdList)) );
+				l_trendGraph_settings_but.setToolTipText( TOOLTIP_trendGraph_skipWaitIdList.replace("THE_SKIP_LIST_GOES_HERE", Configuration.getCombinedConfiguration().getProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitIdList, CmSpidWait.DEFAULT_trendGraph_skipWaitIdList)) );
 			}
 		});
 
@@ -993,42 +1029,42 @@ extends TabularCntrPanel
 
 		// ADD to panel
 //		panelL.add(includeWaitId250_chk,             "wrap");
-		panelL.add(enableGraph_chk,                  "split");
-		panelL.add(graphType_lbl,                    "");
-		panelL.add(graphType_cbx,                    "");
-		panelL.add(includeSystemThreads_chk,         "wrap");
+		panelL.add(l_enableGraph_chk,                  "split");
+		panelL.add(l_graphType_lbl,                    "");
+		panelL.add(l_graphType_cbx,                    "");
+		panelL.add(l_includeSystemThreads_chk,         "wrap");
 
-		panelL.add(generateEvent_chk,                "split");
-		panelL.add(generateEventWaitTime_chk,        "");
-		panelL.add(generateEventWaits_chk,           "");
-		panelL.add(generateEventWaitTimePerWait_chk, "wrap");
+		panelL.add(l_generateEvent_chk,                "split");
+		panelL.add(l_generateEventWaitTime_chk,        "");
+		panelL.add(l_generateEventWaits_chk,           "");
+		panelL.add(l_generateEventWaitTimePerWait_chk, "wrap");
 
-		panelL.add(generateClass_chk,                "split");
-		panelL.add(generateClassWaitTime_chk,        "");
-		panelL.add(generateClassWaits_chk,           "");
-		panelL.add(generateClassWaitTimePerWait_chk, "wrap");
+		panelL.add(l_generateClass_chk,                "split");
+		panelL.add(l_generateClassWaitTime_chk,        "");
+		panelL.add(l_generateClassWaits_chk,           "");
+		panelL.add(l_generateClassWaitTimePerWait_chk, "wrap");
 
-		panelL.add(showLegend_chk,                   "split");
-		panelL.add(includeWaitId250_chk,             "wrap");
+		panelL.add(l_showLegend_chk,                   "split");
+		panelL.add(l_includeWaitId250_chk,             "wrap");
 
-		panelR.add(extraWhereClause_txt,             "push, grow, wrap");
-		panelR.add(extraWhereClause_but,             "wrap");
-		panelR.add(trendGraph_settings_but,        "wrap");
+		panelR.add(l_extraWhereClause_txt,             "push, grow, wrap");
+		panelR.add(l_extraWhereClause_but,             "wrap");
+		panelR.add(l_trendGraph_settings_but,          "wrap");
 
 
 		// enable disable all subcomponents in panel
-		SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
+		SwingUtils.setEnabled(panel, l_enableGraph_chk.isSelected(), l_enableGraph_chk);
 
-		if (enableGraph_chk.isSelected())
+		if (l_enableGraph_chk.isSelected())
 		{
 			// initial enabled or not
-			generateEventWaitTime_chk       .setEnabled(generateEvent_chk.isSelected());
-			generateEventWaits_chk          .setEnabled(generateEvent_chk.isSelected());
-			generateEventWaitTimePerWait_chk.setEnabled(generateEvent_chk.isSelected());
+			l_generateEventWaitTime_chk       .setEnabled(l_generateEvent_chk.isSelected());
+			l_generateEventWaits_chk          .setEnabled(l_generateEvent_chk.isSelected());
+			l_generateEventWaitTimePerWait_chk.setEnabled(l_generateEvent_chk.isSelected());
 
-			generateClassWaitTime_chk       .setEnabled(generateClass_chk.isSelected());
-			generateClassWaits_chk          .setEnabled(generateClass_chk.isSelected());
-			generateClassWaitTimePerWait_chk.setEnabled(generateClass_chk.isSelected());
+			l_generateClassWaitTime_chk       .setEnabled(l_generateClass_chk.isSelected());
+			l_generateClassWaits_chk          .setEnabled(l_generateClass_chk.isSelected());
+			l_generateClassWaitTimePerWait_chk.setEnabled(l_generateClass_chk.isSelected());
 		}
 
 		return panel;

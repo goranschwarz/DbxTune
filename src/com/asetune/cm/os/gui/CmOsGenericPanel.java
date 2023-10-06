@@ -70,7 +70,15 @@ extends CmOsAbstractPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Host Monitor", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Host Monitor", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Host Monitor", true);
 		panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
 		panel.setToolTipText(
 			"<html>" +

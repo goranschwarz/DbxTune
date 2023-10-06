@@ -24,9 +24,13 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 
 import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -107,32 +111,61 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 	}
 
+	private JCheckBox  l_sampleSystemThreads_chk;
+	private JCheckBox  l_sampleSqlText_chk;
+	private JLabel     l_sampleTotalUsageMbMin_lbl;
+	private JTextField l_sampleTotalUsageMbMin_txt;
+//	private JCheckBox  l_sampleIntObj_chk;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Sample System Threads"                     , PROPKEY_sample_systemThreads                      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads                      , DEFAULT_sample_systemThreads                      ), DEFAULT_sample_systemThreads                      , CmTempdbSpidUsagePanel.TOOLTIP_sample_systemThreads ));
+//				list.add(new CmSettingsHelper("Sample SQL Text"                           , PROPKEY_sample_sqlText                            , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText                            , DEFAULT_sample_sqlText                            ), DEFAULT_sample_sqlText                            , CmTempdbSpidUsagePanel.TOOLTIP_sample_sqlText ));
+//				list.add(new CmSettingsHelper("Total Usage Mb Min Value"                  , PROPKEY_sample_TotalUsageMb_min                   , Double .class, conf.getDoubleProperty (PROPKEY_sample_TotalUsageMb_min                   , DEFAULT_sample_TotalUsageMb_min                   ), DEFAULT_sample_TotalUsageMb_min                   , CmTempdbSpidUsagePanel.TOOLTIP_sample_TotalUsageMb_min ));
+
+				l_sampleSystemThreads_chk  .setSelected(conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_systemThreads   , CmTempdbSpidUsage.DEFAULT_sample_systemThreads));
+				l_sampleSqlText_chk        .setSelected(conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText         , CmTempdbSpidUsage.DEFAULT_sample_sqlText));      
+				l_sampleTotalUsageMbMin_txt.setText(""+ conf.getDoubleProperty (CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min, CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes",                                 conf == null ? CmTempdbSpidUsage.DEFAULT_sample_systemThreads                       : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_systemThreads                      , CmTempdbSpidUsage.DEFAULT_sample_systemThreads));
-		JCheckBox sampleSqlText_chk       = new JCheckBox("Sample Last Executed SQL Text",                         conf == null ? CmTempdbSpidUsage.DEFAULT_sample_sqlText                             : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText                            , CmTempdbSpidUsage.DEFAULT_sample_sqlText));
-//		JCheckBox sampleIntObj_chk        = new JCheckBox("Include 'Sess/TaskInternalObjectMb' in 'TotalUsageMb'", conf == null ? CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects, CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects));
+		l_sampleSystemThreads_chk   = new JCheckBox ("Show system processes",                                 conf == null ? CmTempdbSpidUsage.DEFAULT_sample_systemThreads                       : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_systemThreads                      , CmTempdbSpidUsage.DEFAULT_sample_systemThreads));
+		l_sampleSqlText_chk         = new JCheckBox ("Sample Last Executed SQL Text",                         conf == null ? CmTempdbSpidUsage.DEFAULT_sample_sqlText                             : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText                            , CmTempdbSpidUsage.DEFAULT_sample_sqlText));
+		l_sampleTotalUsageMbMin_lbl = new JLabel    ("Total Usage Mb Min Value");
+		l_sampleTotalUsageMbMin_txt = new JTextField(""+(                                                     conf == null ? CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min                    : conf.getDoubleProperty (CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min                   , CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min)), 5);
+//		l_sampleIntObj_chk          = new JCheckBox ("Include 'Sess/TaskInternalObjectMb' in 'TotalUsageMb'", conf == null ? CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects, CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects));
 
-		sampleSystemThreads_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_systemThreads);
-		sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
+		l_sampleSystemThreads_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_systemThreads);
+		l_sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
 
-		sampleSqlText_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_sqlText);
-		sampleSqlText_chk.setToolTipText(TOOLTIP_sample_sqlText);
+		l_sampleSqlText_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_sqlText);
+		l_sampleSqlText_chk.setToolTipText(TOOLTIP_sample_sqlText);
 
-//		sampleIntObj_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects);
-//		sampleIntObj_chk.setToolTipText(TOOLTIP_sample_TotalUsageMb_includeInternalObjects);
+//		l_sampleIntObj_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects);
+//		l_sampleIntObj_chk.setToolTipText(TOOLTIP_sample_TotalUsageMb_includeInternalObjects);
 
-		panel.add(sampleSystemThreads_chk, "wrap");
-		panel.add(sampleSqlText_chk      , "wrap");
-//		panel.add(sampleIntObj_chk       , "wrap");
+		panel.add(l_sampleSystemThreads_chk  , "wrap");
+		panel.add(l_sampleSqlText_chk        , "wrap");
+//		panel.add(l_sampleIntObj_chk         , "wrap");
+		panel.add(l_sampleTotalUsageMbMin_lbl, "wrap");
+		panel.add(l_sampleTotalUsageMbMin_txt, "wrap");
 
-		sampleSystemThreads_chk.addActionListener(new ActionListener()
+		l_sampleSystemThreads_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -148,7 +181,7 @@ extends TabularCntrPanel
 			}
 		});
 		
-		sampleSqlText_chk.addActionListener(new ActionListener()
+		l_sampleSqlText_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -164,7 +197,7 @@ extends TabularCntrPanel
 			}
 		});
 		
-//		sampleIntObj_chk.addActionListener(new ActionListener()
+//		l_sampleIntObj_chk.addActionListener(new ActionListener()
 //		{
 //			@Override
 //			public void actionPerformed(ActionEvent e)
@@ -179,6 +212,48 @@ extends TabularCntrPanel
 //				getCm().setSql(null);
 //			}
 //		});
+		
+//		l_sampleTotalUsageMbMin_txt.addActionListener(new ActionListener()
+		final ActionListener sampleTotalUsageMbMin_action = new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				
+				String strVal = l_sampleTotalUsageMbMin_txt.getText();
+				double dblVal = CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min;
+				try { dblVal = Double.parseDouble(strVal);}
+				catch (NumberFormatException nfe)
+				{
+					dblVal = CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min;
+					SwingUtils.showWarnMessage(CmTempdbSpidUsagePanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+dblVal+"'.</html>", nfe);
+					l_sampleTotalUsageMbMin_txt.setText(dblVal+"");
+				}
+				conf.setProperty(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min, dblVal);
+				conf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+				if (cm != null)
+					cm.setSql(null);
+			}
+		};
+		l_sampleTotalUsageMbMin_txt.addActionListener(sampleTotalUsageMbMin_action);
+		l_sampleTotalUsageMbMin_txt.addFocusListener(new FocusListener()
+		{
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				// Just call the "action" on sampleTopRowsCount_txt, so we don't have to duplicate code.
+				sampleTotalUsageMbMin_action.actionPerformed(null);
+			}
+			
+			@Override public void focusGained(FocusEvent e) {}
+		});
+		
 		
 		return panel;
 	}

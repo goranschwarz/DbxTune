@@ -1871,7 +1871,7 @@ extends CountersModel
 						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, dbname);
 						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
 
-						AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, dbname);
+						AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, dbname, null);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 						alarmHandler.addAlarm( ae );

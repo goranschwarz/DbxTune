@@ -54,6 +54,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -390,20 +391,36 @@ implements ActionListener, TableModelListener
 				rows++;
 			}
 			
+			CountersModel cm = CounterController.getInstance().getCmByName(cmName);
+
+			String p_timeout   = (cm.getDefaultQueryTimeout()                 == timeout  ) ? Configuration.USE_DEFAULT_PREFIX + timeout   : "" + timeout;
+			String p_postpone  = (cm.getDefaultPostponeTime()                 == postpone ) ? Configuration.USE_DEFAULT_PREFIX + postpone  : "" + postpone;
+			String p_storePcs  = (cm.getDefaultIsPersistCountersEnabled()     == storePcs ) ? Configuration.USE_DEFAULT_PREFIX + storePcs  : "" + storePcs;
+			String p_storeAbs  = (cm.getDefaultIsPersistCountersAbsEnabled()  == storeAbs ) ? Configuration.USE_DEFAULT_PREFIX + storeAbs  : "" + storeAbs;
+			String p_storeDiff = (cm.getDefaultIsPersistCountersDiffEnabled() == storeDiff) ? Configuration.USE_DEFAULT_PREFIX + storeDiff : "" + storeDiff;
+			String p_storeRate = (cm.getDefaultIsPersistCountersRateEnabled() == storeRate) ? Configuration.USE_DEFAULT_PREFIX + storeRate : "" + storeRate;
+			
+			
 			// This line is picked up by WizardOffline.finish(), which produces the out file.
 			// and will be used for User Defined Counter checking...
 			putWizardData( "to-be-discarded" + ".udc." + cmName, cmName);
 
-			putWizardData( cmName+"."+CountersModel.PROPKEY_queryTimeout,         timeout.toString());
-			putWizardData( cmName+"."+CountersModel.PROPKEY_postponeTime,         postpone.toString());
+//			putWizardData( cmName+"."+CountersModel.PROPKEY_queryTimeout,         timeout.toString());
+//			putWizardData( cmName+"."+CountersModel.PROPKEY_postponeTime,         postpone.toString());
+//
+//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters,      storePcs  +"");
+//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  storeAbs  +"");
+//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, storeDiff +"");
+//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, storeRate +"");
 
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters,      storePcs  +"");
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  storeAbs  +"");
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, storeDiff +"");
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, storeRate +"");
+			putWizardData( cmName+"."+CountersModel.PROPKEY_queryTimeout,         p_timeout);
+			putWizardData( cmName+"."+CountersModel.PROPKEY_postponeTime,         p_postpone);
 
-//			CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
-			CountersModel cm = CounterController.getInstance().getCmByName(cmName);
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters,      p_storePcs );
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  p_storeAbs );
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, p_storeDiff);
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, p_storeRate);
+			
 			if (cm != null)
 			{
 				if (cm instanceof CounterModelHostMonitor && storePcs)

@@ -29,21 +29,23 @@ function printUsage
 	echo "usage: $progname toolset [cmdLineSwitches]"
 	echo ""
 	echo "Available toolset is:"
-	echo " ase        - Sybase/SAP Adaptive Server Enterprise"
-	echo " iq         - Sybase/SAP IQ - The Column Store DB"
-	echo " rs         - Sybase/SAP Replication Server"
-	echo " rax        - Sybase/SAP Replication Agent for X"
-	echo " hana       - Sybase/SAP HANA in-memory Column Store DB"
-	echo " sqlserver  - Microsoft SQL-Server"
-	echo " oracle     - Oracle"
-	echo " postgres   - Postgres"
-	echo " mysql      - MySQL"
-	echo " db2        - DB2 LUW (Linux Unix Windows)"
-	echo ""
-	echo " sqlw       - SQL Window a JDBC Query Tool"
-	echo " central    - A Component for multiple instances"
-	echo "              If you want some central Web based view"
-	echo " dbxcdbcopy - Copy a DBX Cental DB to a new destination (used to migrate to a new DBMS)"
+	echo " ase         - Sybase/SAP Adaptive Server Enterprise"
+	echo " iq          - Sybase/SAP IQ - The Column Store DB"
+	echo " rs          - Sybase/SAP Replication Server"
+	echo " rax         - Sybase/SAP Replication Agent for X"
+	echo " hana        - Sybase/SAP HANA in-memory Column Store DB"
+	echo " sqlserver   - Microsoft SQL-Server"
+	echo " oracle      - Oracle"
+	echo " postgres    - Postgres"
+	echo " mysql       - MySQL"
+	echo " db2         - DB2 LUW (Linux Unix Windows)"
+	echo ""            
+	echo " sqlw        - SQL Window a JDBC Query Tool"
+	echo " central     - A Component for multiple instances"
+	echo "               If you want some central Web based view"
+	echo " dbxcdbcopy  - Copy a DBX Cental DB to a new destination (used to migrate to a new DBMS)"
+	echo " dbxPassword - Manage Encrypted Passwords"
+	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
 	echo ""
 
 	exit 1
@@ -191,6 +193,24 @@ case "${toolset}" in
 		javaMainParams=""
 		javaSplashScreen=""
 		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
+		;;
+
+	dbxpassword|dbxPassword)
+		shortAppName="dbxPassword"
+		longAppName="dbxPassword"
+		javaMainClass="com.asetune.utils.DbxPassword"
+		javaMainParams=""
+		javaSplashScreen=""
+#		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
+		;;
+
+	dbxpasswordupgrade|dbxPasswordUpgrade)
+		shortAppName="dbxPasswordUpgrade"
+		longAppName="dbxPasswordUpgrade"
+		javaMainClass="com.asetune.utils.DbxPasswordUpgrade"
+		javaMainParams=""
+		javaSplashScreen=""
+#		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
 		;;
 
 	h2srv)

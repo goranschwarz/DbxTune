@@ -291,7 +291,7 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Extra Where Caluse",     PROPKEY_sample_extraWhereClause      , String.class,  conf.getProperty       (PROPKEY_sample_extraWhereClause      , DEFAULT_sample_extraWhereClause      ), DEFAULT_sample_extraWhereClause     , CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause                     ));
+		list.add(new CmSettingsHelper("Extra Where Clause",     PROPKEY_sample_extraWhereClause      , String.class,  conf.getProperty       (PROPKEY_sample_extraWhereClause      , DEFAULT_sample_extraWhereClause      ), DEFAULT_sample_extraWhereClause     , CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause                     ));
 		list.add(new CmSettingsHelper("Skip Wait ID List",      PROPKEY_trendGraph_skipWaitIdList    , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipWaitIdList    , DEFAULT_trendGraph_skipWaitIdList    ), DEFAULT_trendGraph_skipWaitIdList   , "Skip specific WaitEventID's from beeing in ThrendGraph"            ));
 		list.add(new CmSettingsHelper("Skip Wait Class List",   PROPKEY_trendGraph_skipWaitClassList , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipWaitClassList , DEFAULT_trendGraph_skipWaitClassList ), DEFAULT_trendGraph_skipWaitClassList, "Skip specific Event Clases from beeing in ThrendGraph"             ));
 		list.add(new CmSettingsHelper("Skip Username List",     PROPKEY_trendGraph_skipUserNameList  , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipUserNameList  , DEFAULT_trendGraph_skipUserNameList  ), DEFAULT_trendGraph_skipUserNameList , "Skip specific users from beeing in ThrendGraph"                    ));

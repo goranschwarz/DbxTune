@@ -74,9 +74,18 @@ extends CountersModel
 	public static final String   CM_NAME          = CmActiveStatements.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Active Statements";
 	public static final String   HTML_DESC        = 
-		"<html>" +
-		"<p>FIXME</p>" +
-		"</html>";
+			"<html>" +
+			"<p>Statemenets that are currently executing in the SQL Server.</p>" +
+			"<br><br>" +
+			"Table Background colors:" +
+			"<ul>" +
+			"    <li>ORANGE     - SPID was visible in previous sample as well.</li>" +
+			"    <li>LIGHT_BLUE - SPID is waiting for a memory grant.</li>" +
+			"    <li>PINK       - SPID is Blocked by another SPID from running, this SPID is the Victim of a Blocking Lock, which is showned in RED.</li>" +
+			"    <li>RED        - SPID is Blocking other SPID's from running, this SPID is Responslibe or the Root Cause of a Blocking Lock.</li>" +
+			"    <li>YELLOW     - SPID is a system process.</li>" +
+			"</ul>" +
+			"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
@@ -88,7 +97,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] { "percent_complete" };
+	public static final String[] PCT_COLUMNS      = new String[] { "used_memory_pct", "percent_complete" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"exec_cpu_time",
 		"exec_reads",
@@ -223,6 +232,13 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMb",              "Number of MB this Statement is using in tempdb (for both 'user objects' and 'internal objects'.");
 		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMbUser",          "Number of MB this Statement is using in tempdb (for user objects, probably temp tables).");
 		setLocalToolTipTextOnTableColumnHeader("TempdbUsageMbInternal",      "Number of MB this Statement is using in tempdb (for internal objects, probably worker tables, etc).");
+
+		setLocalToolTipTextOnTableColumnHeader("memory_grant_requested",      "If the SPID has requested any memory grant. (has row in sys.dm_exec_query_memory_grants)");
+		setLocalToolTipTextOnTableColumnHeader("memory_grant_wait_time_ms",   "Wait time in milliseconds, if we are waiting for other memory grants to be released.");
+		setLocalToolTipTextOnTableColumnHeader("requested_memory_kb",         "Total requested amount of memory in kilobytes.");
+		setLocalToolTipTextOnTableColumnHeader("granted_memory_kb",           "Total amount of memory actually granted in kilobytes. Can be NULL if the memory is not granted yet. For a typical situation, this value should be the same as 'requested_memory_kb'. For index creation, the server may allow additional on-demand memory beyond initially granted memory");
+		setLocalToolTipTextOnTableColumnHeader("used_memory_kb",              "Physical memory used at this moment in kilobytes");
+		setLocalToolTipTextOnTableColumnHeader("used_memory_pct",             "Percent calculation of 'granted_memory_kb' and 'used_memory_kb'.");
 	}
 
 	@Override
@@ -269,11 +285,12 @@ extends CountersModel
 
 		boolean showHoldingLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_holdingLocks, DEFAULT_sample_holdingLocks);
 
-		String dm_exec_sessions    = "dm_exec_sessions";
-		String dm_exec_requests    = "dm_exec_requests";
-//		String dm_exec_connections = "dm_exec_connections";
-		String dm_exec_sql_text    = "dm_exec_sql_text";
-		String dm_exec_query_plan  = "dm_exec_query_plan";
+		String dm_exec_sessions            = "dm_exec_sessions";
+		String dm_exec_requests            = "dm_exec_requests";
+//		String dm_exec_connections         = "dm_exec_connections";
+		String dm_exec_sql_text            = "dm_exec_sql_text";
+		String dm_exec_query_plan          = "dm_exec_query_plan";
+		String dm_exec_query_memory_grants = "dm_exec_query_memory_grants";
 
 		// get Actual-Query-Plan instead of Estimated-QueryPlan
 		if (isDbmsOptionEnabled(DbmsOption.SQL_SERVER__LAST_QUERY_PLAN_STATS))
@@ -283,11 +300,12 @@ extends CountersModel
 
 		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
-			dm_exec_sessions    = "dm_pdw_nodes_exec_sessions";
-			dm_exec_requests    = "dm_exec_requests";            // SAME NAME IN AZURE ????
-//			dm_exec_connections = "dm_pdw_exec_connections";
-			dm_exec_sql_text    = "dm_exec_sql_text";            // SAME NAME IN AZURE ????
-			dm_exec_query_plan  = "dm_exec_query_plan";            // SAME NAME IN AZURE ????
+			dm_exec_sessions            = "dm_pdw_nodes_exec_sessions";
+			dm_exec_requests            = "dm_exec_requests";            // SAME NAME IN AZURE ????
+//			dm_exec_connections         = "dm_pdw_exec_connections";
+			dm_exec_sql_text            = "dm_exec_sql_text";            // SAME NAME IN AZURE ????
+			dm_exec_query_plan          = "dm_exec_query_plan";            // SAME NAME IN AZURE ????
+			dm_exec_query_memory_grants = "dm_exec_query_memory_grants"; // SAME NAME IN AZURE ????
 		}
 
 //		String LiveQueryPlanActive  = "";
@@ -385,6 +403,12 @@ extends CountersModel
 			"    ,sess_reads          = des.reads \n" +
 			"    ,sess_logical_reads  = des.logical_reads \n" +
 			"    ,sess_writes         = des.writes \n" +
+			"    ,memory_grant_requested    = CASE WHEN dem.session_id IS NULL THEN convert(bit,0) ELSE convert(bit,1) END \n" +
+			"    ,memory_grant_wait_time_ms = dem.wait_time_ms \n" +
+			"    ,requested_memory_kb       = dem.requested_memory_kb \n" +
+			"    ,granted_memory_kb         = dem.granted_memory_kb \n" +
+			"    ,used_memory_kb            = dem.used_memory_kb \n" +
+			"    ,used_memory_pct           = convert(numeric(9,1), (dem.used_memory_kb*1.0) / (dem.granted_memory_kb*1.0) * 100.0) \n" +
 //			"    ,dec.last_write \n" +
 			"    ,der.start_time \n" +
 			"    ,ExecTimeInMs        = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
@@ -423,6 +447,7 @@ extends CountersModel
 			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
 			"JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
+			"LEFT JOIN sys." + dm_exec_query_memory_grants + " dem ON des.session_id = dem.session_id \n" +
 //			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
 			"OUTER APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
 			"OUTER APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +
@@ -475,6 +500,12 @@ extends CountersModel
 			"    ,0                                            --des.reads   \n" +
 			"    ,0                                            --des.logical_reads   \n" +
 			"    ,0                                            --des.writes   \n" +
+			"    ,memory_grant_requested    = convert(bit,0) \n" +
+			"    ,memory_grant_wait_time_ms = -1 \n" +
+			"    ,requested_memory_kb       = -1 \n" +
+			"    ,granted_memory_kb         = -1 \n" +
+			"    ,used_memory_kb            = -1 \n" +
+			"    ,used_memory_pct           = convert(numeric(9,1), 0) \n" +
 			"    ,p1.last_batch                                --der.start_time  \n" +
 			"    ,ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END  \n" +
 			"    ,UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END  \n" +

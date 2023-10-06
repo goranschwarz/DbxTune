@@ -1375,6 +1375,8 @@ extends ReportEntryAbstract
 			return;
 		}
 		
+		// NOTE: INDEXES for below is created in: each ReportEntry.getReportingIndexes()
+		
 		String sql = ""
 			    + "WITH diff as \n"
 			    + "( \n"
@@ -1481,7 +1483,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+			_logger.warn("Problems getting INDEX Information at 'getPgIndexes()', for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
 		}
 	}
 	
@@ -1504,6 +1506,8 @@ extends ReportEntryAbstract
 			_logger.warn("Table 'CmPgIndexesIo_abs' did not exists, skip this.");
 			return;
 		}
+		
+		// NOTE: INDEXES for below is created in: each ReportEntry.getReportingIndexes()
 		
 		String sql = ""
 			    + "WITH diff as \n"
@@ -1603,7 +1607,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+			_logger.warn("Problems getting INDEX Information at 'getPgIndexesIo()', for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
 		}
 	}
 	
@@ -1648,6 +1652,8 @@ extends ReportEntryAbstract
 		}
 
 
+		// NOTE: INDEXES for below is created in: each ReportEntry.getReportingIndexes()
+		
 		String sql = ""
 			    + "WITH diff as \n"
 			    + "( \n"
@@ -1873,7 +1879,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+			_logger.warn("Problems getting INDEX Information at 'getPgTables()', for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
 		}
 	}
 	
@@ -1896,6 +1902,8 @@ extends ReportEntryAbstract
 			_logger.warn("Table 'CmPgTablesIo_abs' did not exists, skip this.");
 			return;
 		}
+		
+		// NOTE: INDEXES for below is created in: each ReportEntry.getReportingIndexes()
 		
 		String sql = ""
 			    + "WITH diff as \n"
@@ -2055,7 +2063,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+			_logger.warn("Problems getting INDEX Information at 'getPgTablesIo()', for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
 		}
 	}
 

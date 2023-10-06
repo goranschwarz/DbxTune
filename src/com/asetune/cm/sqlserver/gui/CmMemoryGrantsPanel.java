@@ -64,23 +64,6 @@ extends TabularCntrPanel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
 
-		// Mark the row as ORANGE if "waiting" for memory grant
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.waiting");
-		addHighlighter( new ColorHighlighter(new HighlightPredicate()
-		{
-			@Override
-			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
-			{
-				Object queueId = adapter.getValue(adapter.getColumnIndex("queue_id"));
-				if (queueId != null && queueId instanceof Number)
-				{
-					if (((Number)queueId).intValue() > 0)
-						return true;
-				}
-				return false;
-			}
-		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
-
 		// Mark the row as PINK if granted < requested
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.granted-lt-requested");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
@@ -98,12 +81,49 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
+
+		// Mark the row as ORANGE if "waiting" for memory grant
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.waiting");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Object queueId = adapter.getValue(adapter.getColumnIndex("queue_id"));
+				if (queueId != null && queueId instanceof Number)
+				{
+					if (((Number)queueId).intValue() > 0)
+						return true;
+				}
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 	}
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Get SQL Text",         PROPKEY_sample_sqlText      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText      , DEFAULT_sample_sqlText      ), true, "Also get SQL Text"  ));
+//				list.add(new CmSettingsHelper("Get Query Plan",       PROPKEY_sample_queryPlan    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_queryPlan    , DEFAULT_sample_queryPlan    ), true, "Also get queryplan" ));
+//				list.add(new CmSettingsHelper("Get Live Query Plan",  PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), true, "Also get LIVE queryplan" ));
+
+				l_sampleMonSqltext_chk    .setSelected(conf.getBooleanProperty(CmMemoryGrants.PROPKEY_sample_sqlText,       CmMemoryGrants.DEFAULT_sample_sqlText));      
+				l_sampleShowplan_chk      .setSelected(conf.getBooleanProperty(CmMemoryGrants.PROPKEY_sample_queryPlan,     CmMemoryGrants.DEFAULT_sample_queryPlan));    
+				l_sampleLiveQueryPlan_chk .setSelected(conf.getBooleanProperty(CmMemoryGrants.PROPKEY_sample_liveQueryPlan, CmMemoryGrants.DEFAULT_sample_liveQueryPlan));
+
+				// ReInitialize the SQL
+				//getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 		panel.setToolTipText(
 			"<html>" +

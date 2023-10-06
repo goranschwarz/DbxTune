@@ -1142,23 +1142,7 @@ extends ReportEntryAbstract
 			return;
 		}
 		
-		// TODO: Possibly create an index...
-//		// As the index 'ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName' exists, this is a pretty cheap operation (if NOT exists, should we create one?)
-//		if ( ! DbUtils.checkIfIndexExists(conn, null, null, "CmObjectActivity_diff", "ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName") )
-//		{
-//			sql = conn.quotifySqlString("create index [ix_DSR_CmObjectActivity_diff_DBName_ObjectName_IndexName] on [CmObjectActivity_diff] ([DBName], [ObjectName], [IndexName])");
-//
-//			long startTime = System.currentTimeMillis();
-//			try (Statement stmnt = conn.createStatement())
-//			{
-//				stmnt.executeUpdate(sql);
-//				_logger.info("ReportEntry '" + this.getClass().getSimpleName() + "'. Created helper index to support Daily Summary Report. SQL='" + sql + "' ExecTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
-//			}
-//			catch (SQLException ex)
-//			{
-//				_logger.warn("Problems index to help ReportEntry '" + this.getClass().getSimpleName() + "'. SQL='" + sql + "'. Continuing without the index. Caught: " + ex);
-//			}
-//		}
+		// NOTE: INDEXES for below is created in: each ReportEntry.getReportingIndexes()
 		
 		// get optimizer info: CmIndexUsage  -- sys.dm_db_index_usage_stats          (user_seeks, user_scans, user_lookups, user_updates)
 		String sql = ""
@@ -1283,7 +1267,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+			_logger.warn("Problems getting INDEX Information at 'getOptimizerCounterInfo()', for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
 		}
 	}
 
@@ -1305,6 +1289,8 @@ extends ReportEntryAbstract
 			_logger.warn("Table 'CmIndexOpStat_abs' did not exists, skip reading 'execution information'.");
 			return;
 		}
+
+		// NOTE: INDEXES for below is created in: each ReportEntry.getReportingIndexes()
 		
 		// get optimizer info: CmIndexUsage  -- sys.dm_db_index_usage_stats          (user_seeks, user_scans, user_lookups, user_updates)
 		String sql = ""
@@ -1550,7 +1536,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting INDEX Information for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
+			_logger.warn("Problems getting INDEX Information at 'getExecutionCounterInfo()', for dbname='" + dbname + "', schema='" + schemaName + "', table='" + tableName + "'. Skipping and continuing.", ex);
 		}
 	}
 

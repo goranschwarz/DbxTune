@@ -173,29 +173,37 @@ public class DbxTuneSample
 	public static class MetaDataEntry
 	{
 		String  _columnName;
+		boolean _hasJdbcInfo; // true if the 3 below field is valid
 		String  _jdbcTypeName;
 		int     _jdbcType;
 		String  _javaClassName;
 		String  _guessedDbmsType;
+		boolean _hasCmInfo; // true if the 2 below field is valid
 		boolean _isDiffColumn;
 		boolean _isPctColumn;
 
-		public MetaDataEntry(String columnName, String jdbcTypeName, String javaClassName, String guessedDbmsType, boolean isDiffColumn, boolean isPctColumn)
+		public MetaDataEntry(String columnName, boolean hasJdbcInfo, String jdbcTypeName, String javaClassName, String guessedDbmsType, boolean hasCmInfo, boolean isDiffColumn, boolean isPctColumn)
 		{
 			_columnName      = columnName; 
+			_hasJdbcInfo     = hasJdbcInfo;
 			_jdbcTypeName    = jdbcTypeName;
 			_jdbcType        = ResultSetTableModel.getColumnJavaSqlTypeNameToInt(jdbcTypeName);
 			_javaClassName   = javaClassName;
 			_guessedDbmsType = guessedDbmsType; 
+			_hasCmInfo       = hasCmInfo;
 			_isDiffColumn    = isDiffColumn; 
 			_isPctColumn     = isPctColumn; 
 		}
 		
 		public String  getColumnName()      { return _columnName; }
+
+		public boolean hasJdbcInfo()        { return _hasJdbcInfo; }
 		public String  getJdbcTypeName()    { return _jdbcTypeName; }
 		public int     getJdbcType()        { return _jdbcType; }
 		public String  getJavaClassName()   { return _javaClassName; }
 		public String  getGuessedDbmsType() { return _guessedDbmsType; }
+
+		public boolean hasCmInfo()          { return _hasCmInfo; }
 		public boolean isDiffColumn()       { return _isDiffColumn; }
 		public boolean isPctColumn()        { return _isPctColumn; }
 	}
@@ -388,12 +396,23 @@ public class DbxTuneSample
 					MetaDataEntry mde = getMetaData().get(c);
 					
 					gen.writeStartObject();
-					gen.writeStringField ("columnName"     , mde.getColumnName());
-					gen.writeStringField ("jdbcTypeName"   , mde.getJdbcTypeName());
-					gen.writeStringField ("javaClassName"  , mde.getJavaClassName());
-					gen.writeStringField ("guessedDbmsType", mde.getGuessedDbmsType());
-					gen.writeBooleanField("isDiffColumn"   , mde.isDiffColumn()); // column pos starts at 0 in the CM
-					gen.writeBooleanField("isPctColumn"    , mde.isPctColumn());  // column pos starts at 0 in the CM
+					
+					// Always
+					gen.writeStringField ("columnName", mde.getColumnName());
+
+					if (mde.hasJdbcInfo())
+					{
+						gen.writeStringField ("jdbcTypeName"   , mde.getJdbcTypeName());
+						gen.writeStringField ("javaClassName"  , mde.getJavaClassName());
+						gen.writeStringField ("guessedDbmsType", mde.getGuessedDbmsType());
+					}
+					
+					if (mde.hasCmInfo())
+					{
+						gen.writeBooleanField("isDiffColumn"   , mde.isDiffColumn()); // column pos starts at 0 in the CM
+						gen.writeBooleanField("isPctColumn"    , mde.isPctColumn());  // column pos starts at 0 in the CM
+					}
+
 					gen.writeEndObject();
 				}
 				gen.writeEndArray(); 
@@ -772,6 +791,22 @@ public class DbxTuneSample
 		if (n == null)
 			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n;
+	}
+
+	/**
+	 * Check if the field Exists.
+	 * @param node
+	 * @param fieldName  name of the field(s) you checking for... It may be more than one
+	 * @return 
+	 */
+	private static boolean doFieldExist(JsonNode node, String... fieldNames)
+	{
+		for (String fieldName : fieldNames)
+		{
+			if (node.get(fieldName) == null)
+				return false;
+		}
+		return true;
 	}
 
 	/**
@@ -1395,14 +1430,19 @@ public class DbxTuneSample
 
 						for (JsonNode metaData : metaDataNode)
 						{
-							String  columnName       = getString (metaData, "columnName");
-							String  jdbcTypeName     = getString (metaData, "jdbcTypeName");
-							String  javaClassName    = getString (metaData, "javaClassName");
-							String  guessedDbmsType  = getString (metaData, "guessedDbmsType");
-							boolean isDiffColumn     = getBoolean(metaData, "isDiffColumn");
-							boolean isPctColumn      = getBoolean(metaData, "isPctColumn");
+//FIXME; // Check how 'MetaDataEntry' is used...
+							String  columnName       = getString (metaData, "columnName");    // Mandatory
 							
-							MetaDataEntry mde = new MetaDataEntry(columnName, jdbcTypeName, javaClassName, guessedDbmsType, isDiffColumn, isPctColumn);
+							boolean hasJdbcInfo      = doFieldExist(metaData, "jdbcTypeName", "javaClassName", "guessedDbmsType");
+							String  jdbcTypeName     = getString (metaData, "jdbcTypeName",    null);
+							String  javaClassName    = getString (metaData, "javaClassName",   null);
+							String  guessedDbmsType  = getString (metaData, "guessedDbmsType", null);
+
+							boolean hasCmInfo        = doFieldExist(metaData, "isDiffColumn", "isPctColumn");
+							boolean isDiffColumn     = getBoolean(metaData, "isDiffColumn",    false);
+							boolean isPctColumn      = getBoolean(metaData, "isPctColumn",     false);
+							
+							MetaDataEntry mde = new MetaDataEntry(columnName, hasJdbcInfo, jdbcTypeName, javaClassName, guessedDbmsType, hasCmInfo, isDiffColumn, isPctColumn);
 							cmEntry.addMetaData(mde);
 						}
 					}

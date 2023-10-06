@@ -23,8 +23,10 @@ package com.asetune.cm.sqlserver;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JPanel;
 
@@ -56,6 +58,7 @@ import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.NumberUtils;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
@@ -147,14 +150,19 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	boolean getRootBlockerSpids = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_rootBlockerSpids, DEFAULT_sample_rootBlockerSpids);
+
+	public static final String  PROPKEY_sample_rootBlockerSpids       = "CmSummary.sample.rootBlockerSpids";
+	public static final boolean DEFAULT_sample_rootBlockerSpids       = true;
+
 	public static final String  PROPKEY_oldestOpenTran_discard_tempdb = "CmSummary.oldestOpenTran.discard.tempdb";
 	public static final boolean DEFAULT_oldestOpenTran_discard_tempdb = false;
 
-	public static final String  PROPKEY_suspectPageCount_isEnabled = "CmSummary.suspectPageCount.enabled";
-	public static final boolean DEFAULT_suspectPageCount_isEnabled = true;
+	public static final String  PROPKEY_suspectPageCount_isEnabled    = "CmSummary.suspectPageCount.enabled";
+	public static final boolean DEFAULT_suspectPageCount_isEnabled    = true;
 	
-	public static final String  PROPKEY_sample_tempdbSpidUsage = "CmSummary.sample.tempdb.spid.usage";
-	public static final boolean DEFAULT_sample_tempdbSpidUsage = true;
+	public static final String  PROPKEY_sample_tempdbSpidUsage        = "CmSummary.sample.tempdb.spid.usage";
+	public static final boolean DEFAULT_sample_tempdbSpidUsage        = true;
 	
 	public static final String GRAPH_NAME_AA_CPU                    = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
 //	public static final String GRAPH_NAME_SYS_INFO_CPU              = "sysInfoCpuGraph";
@@ -176,6 +184,7 @@ extends CountersModel
 
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
+	private List<Integer>       _lastRootBlockersList = null;
 
 	
 	private long _lastTargetServerMemoryMb = -1;
@@ -697,6 +706,7 @@ extends CountersModel
 				"    , srvPageSize                         = convert(int, 8196)--@@maxpagesize  \n" +
 				"    , LockWaits                           = @LockWaits                    \n" +
 				"    , LockWaitThreshold                   = @LockWaitThreshold            \n" +
+				"    , RootBlockerSpids                    = convert(varchar(128), '')     \n" +
 				"    , cpu_busy                            = @@cpu_busy                    \n" +
 				"    , cpu_io                              = @@io_busy                     \n" +
 				"    , cpu_idle                            = @@idle                        \n" +
@@ -777,6 +787,27 @@ extends CountersModel
 
 		// Reset last suspect RSTM
 		_lastSuspectPage_rstm = null;
+		_lastRootBlockersList = null;
+
+		// Root Blockers
+		boolean getRootBlockerSpids = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_rootBlockerSpids, DEFAULT_sample_rootBlockerSpids);
+		if (getRootBlockerSpids)
+		{
+			Integer LockWaits = getAbsValueAsInteger(0, "LockWaits");
+			if (LockWaits != null && LockWaits > 0)
+			{
+				long startTime = System.currentTimeMillis();
+
+				// Get data
+				_lastRootBlockersList = SqlServerUtils.getRootBlockerList(conn);
+
+				long refreshTime = TimeUtils.msDiffNow(startTime);
+				if (refreshTime > 1_000) // more than 1 seconds... write warning
+				{
+					_logger.warn("Refreshing 'Root Blockers' took " + refreshTime + " ms. This is a bit long, the threshold for this message is 1 seconds.");
+				}
+			}
+		}
 
 		// Get Suspect count...
 		Integer suspectPageCount = getAbsValueAsInteger(0, "suspectPageCount");
@@ -816,6 +847,11 @@ extends CountersModel
 	public ResultSetTableModel get_lastSuspectPage_rstm()
 	{
 		return _lastSuspectPage_rstm;
+	}
+
+	public List<Integer> get_lastRootBlockersList()
+	{
+		return _lastRootBlockersList;
 	}
 
 	public static String getSql_suspectPageInfo(DbmsVersionInfo versionInfo)
@@ -928,6 +964,17 @@ extends CountersModel
 						newSample.setValueAt(spaceInfo.getInternalObjectSpaceUsedInMb(), 0, "oldestOpenTranTempdbUsageMbInternal");
 					}
 				}
+			}
+		}
+		
+		// Root Blocker SPIDs
+		if (_lastRootBlockersList != null && !_lastRootBlockersList.isEmpty())
+		{
+			// set ...
+			if (newSample.findColumn("RootBlockerSpids") != -1)
+			{
+				String rootBlockersCsv = StringUtil.toCommaStr(_lastRootBlockersList);
+				newSample.setValueAt(rootBlockersCsv, 0, "RootBlockerSpids");
 			}
 		}
 	}
@@ -1275,7 +1322,7 @@ extends CountersModel
 	public boolean isGraphDataHistoryEnabled(String name)
 	{
 		// ENABLED for the following graphs
-//		if (GRAPH_NAME_AA_CPU                   .equals(name)) return true;
+		if (GRAPH_NAME_AA_CPU                   .equals(name)) return true; // Used by CmWaitStat
 //		if (GRAPH_NAME_BLOCKING_LOCKS           .equals(name)) return true;
 //		if (GRAPH_NAME_CONNECTION               .equals(name)) return true;
 //		if (GRAPH_NAME_CONNECTION_RATE          .equals(name)) return true;
@@ -1284,8 +1331,9 @@ extends CountersModel
 //		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC       .equals(name)) return true;
 //		if (GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC .equals(name)) return true;
 		if (GRAPH_NAME_TEMPDB_SPID_USAGE        .equals(name)) return true;  // Used by CmTempdbSpidUsage
-		if (GRAPH_NAME_WORKER_THREAD_USAGE      .equals(name)) return true;  // Used locally
+		if (GRAPH_NAME_WORKER_THREAD_USAGE      .equals(name)) return true;  // Used locally, CmWaitStat
 		if (GRAPH_NAME_TASKS_WAITING_FOR_WORKERS.equals(name)) return true;  // Used locally
+//		if (GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB  .equals(name)) return true;  // Used by CmWaitStat
 
 		// default: DISABLED
 		return false;
@@ -1330,7 +1378,127 @@ extends CountersModel
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", LockWaits='"+LockWaits+"'.");
 
 				if (LockWaits.intValue() > threshold)
-					alarmHandler.addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits) );
+				{
+					String rootBlockerSpids                    = cm.getAbsString(0, "RootBlockerSpids");
+
+					String oldestOpenTranBeginTime             = cm.getAbsString(0, "oldestOpenTranBeginTime");
+					String oldestOpenTranId                    = cm.getAbsString(0, "oldestOpenTranId");
+					String oldestOpenTranSpid                  = cm.getAbsString(0, "oldestOpenTranSpid");
+					String oldestOpenTranDbname                = cm.getAbsString(0, "oldestOpenTranDbname");
+					String oldestOpenTranName                  = cm.getAbsString(0, "oldestOpenTranName");
+					String oldestOpenTranWaitType              = cm.getAbsString(0, "oldestOpenTranWaitType");
+					String oldestOpenTranCmd                   = cm.getAbsString(0, "oldestOpenTranCmd");
+					String oldestOpenTranLoginName             = cm.getAbsString(0, "oldestOpenTranLoginName");
+					String oldestOpenTranTempdbUsageMbAll      = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbAll");
+					String oldestOpenTranTempdbUsageMbUser     = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbUser");
+					String oldestOpenTranTempdbUsageMbInternal = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbInternal");
+					String oldestOpenTranInSec                 = cm.getAbsString(0, "oldestOpenTranInSec");
+//					String oldestOpenTranInSecThreshold        = cm.getAbsString(0, "oldestOpenTranInSecThreshold");
+
+					// Possibly get more information about that SPID (rootBlockerSpids)
+					// - get info from CmProcesses about the SPID's
+					String rootBlockerSpids_Sessions_htmlTable = "";
+					if (StringUtil.hasValue(rootBlockerSpids))
+					{
+						List<String> rootBlockerSpidsList = StringUtil.parseCommaStrToList(rootBlockerSpids);
+						CountersModel cmSessions = getCounterController().getCmByName(CmSessions.CM_NAME);
+
+						for (String rootBlockerSpid : rootBlockerSpidsList)
+						{
+							int rootBlockerSpid_int = StringUtil.parseInt(rootBlockerSpid, -1);
+							if (rootBlockerSpid_int != -1 && cmSessions != null)
+							{
+								Map<String, Object> whereMap = new HashMap<>();
+								whereMap.put("session_id", rootBlockerSpid_int);
+								List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
+								for (Integer pkRowId : rowIdList)
+								{
+									rootBlockerSpids_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+								}
+							}
+						}
+					}
+
+					// Possibly get more information about that SPID (oldestOpenTranSpid)
+					// - print "open" trans info
+					// - get info from CmProcesses about the oldest open tran
+					String oldestOpenTranSpid_Sessions_htmlTable = "";
+					if (StringUtil.hasValue(oldestOpenTranSpid))
+					{
+						CountersModel cmSessions = getCounterController().getCmByName(CmSessions.CM_NAME);
+						int oldestOpenTranSpid_int = StringUtil.parseInt(oldestOpenTranSpid, -1);
+						if (oldestOpenTranSpid_int != -1 && cmSessions != null)
+						{
+							Map<String, Object> whereMap = new HashMap<>();
+							whereMap.put("session_id", oldestOpenTranSpid_int);
+							List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
+							for (Integer pkRowId : rowIdList)
+							{
+								oldestOpenTranSpid_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+							}
+						}
+					}
+					
+					String extendedDescText = "" 
+							+   "NumberOfWaitingLocks"                + "="  + LockWaits                           + ""
+							+ ", RootBlockerSpids"                    + "='" + rootBlockerSpids                    + "'"
+							+ ", OldestOpenTranBeginTime"             + "='" + oldestOpenTranBeginTime             + "'"
+							+ ", OldestOpenTranId"                    + "="  + oldestOpenTranId                    + ""
+							+ ", OldestOpenTranSpid"                  + "="  + oldestOpenTranSpid                  + ""
+							+ ", OldestOpenTranDbname"                + "='" + oldestOpenTranDbname                + "'"
+							+ ", OldestOpenTranName"                  + "='" + oldestOpenTranName                  + "'"
+							+ ", OldestOpenTranWaitType"              + "='" + oldestOpenTranWaitType              + "'"
+							+ ", OldestOpenTranCmd"                   + "='" + oldestOpenTranCmd                   + "'"
+							+ ", OldestOpenTranLoginName"             + "='" + oldestOpenTranLoginName             + "'"
+							+ ", OldestOpenTranTempdbUsageMbAll"      + "="  + oldestOpenTranTempdbUsageMbAll      + ""
+							+ ", OldestOpenTranTempdbUsageMbUser"     + "="  + oldestOpenTranTempdbUsageMbUser     + ""
+							+ ", OldestOpenTranTempdbUsageMbInternal" + "="  + oldestOpenTranTempdbUsageMbInternal + ""
+							+ ", OldestOpenTranInSec"                 + "="  + oldestOpenTranInSec                 + ""
+//							+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
+							;
+					String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
+							+ "<table> \n"
+							+ "    <tr> <td><b>Number of Waiting Locks               </b></td> <td>" + LockWaits                            + "</td> </tr> \n"
+							+ "    <tr> <td><b>Root Blocker Spids (CSV)              </b></td> <td>" + rootBlockerSpids                     + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran Id                   </b></td> <td>" + oldestOpenTranId                     + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran Spid                 </b></td> <td>" + oldestOpenTranSpid                   + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran Dbname               </b></td> <td>" + oldestOpenTranDbname                 + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran Name                 </b></td> <td>" + oldestOpenTranName                   + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran WaitType             </b></td> <td>" + oldestOpenTranWaitType               + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran Cmd                  </b></td> <td>" + oldestOpenTranCmd                    + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran LoginName            </b></td> <td>" + oldestOpenTranLoginName              + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbAll     </b></td> <td>" + oldestOpenTranTempdbUsageMbAll       + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbUser    </b></td> <td>" + oldestOpenTranTempdbUsageMbUser      + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbInternal</b></td> <td>" + oldestOpenTranTempdbUsageMbInternal  + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran InSec                </b></td> <td>" + oldestOpenTranInSec                  + "</td> </tr> \n"
+//							+ "    <tr> <td><b>Oldest Open Tran InSecThreshold       </b></td> <td>" + oldestOpenTranInSecThreshold         + "</td> </tr> \n"
+							+ "</table> \n"
+							;
+
+					if (StringUtil.hasValue(rootBlockerSpids_Sessions_htmlTable))
+					{
+						extendedDescHtml += ""
+								+ "<br>"
+								+ "Sessions information for 'Root Blocker SPID's: " + rootBlockerSpids + "'"
+								+ rootBlockerSpids_Sessions_htmlTable
+								;
+					}
+					
+					if (StringUtil.hasValue(oldestOpenTranSpid_Sessions_htmlTable))
+					{
+						extendedDescHtml += ""
+								+ "<br>"
+								+ "Sessions information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
+								+ oldestOpenTranSpid_Sessions_htmlTable
+								;
+					}
+					
+					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+					alarmHandler.addAlarm( ae );
+				}
 			}
 		}
 
@@ -1340,18 +1508,18 @@ extends CountersModel
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("oldestOpenTranInSec"))
 		{
-			Double oldestOpenTranInSec = cm.getAbsValueAsDouble(0, "oldestOpenTranInSec");
-			Double oldestOpenTranSpid  = cm.getAbsValueAsDouble(0, "oldestOpenTranSpid", 0d);
+			Integer oldestOpenTranInSec = cm.getAbsValueAsInteger(0, "oldestOpenTranInSec", -1);
+			Integer oldestOpenTranSpid  = cm.getAbsValueAsInteger(0, "oldestOpenTranSpid" , -1);
 
 			// Only continue if 'oldestOpenTranSpid' HAS a value... otherwise it's probably a internal transaction, which MAY not have an impact
-			if (oldestOpenTranInSec != null && oldestOpenTranSpid.intValue() != 0 )
+			if (oldestOpenTranInSec != -1 && oldestOpenTranSpid != -1 )
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
 
-				if (oldestOpenTranInSec.intValue() > threshold)
+				if (oldestOpenTranInSec > threshold)
 				{
 					// Get config 'skip some known values'
 					String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipDbname,   DEFAULT_alarm_oldestOpenTranInSecSkipDbname);
@@ -1360,13 +1528,18 @@ extends CountersModel
 					String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
 					String skipWaitTypeRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipWaitType, DEFAULT_alarm_oldestOpenTranInSecSkipWaitType);
 
-					String oldestOpenTranDbname           = cm.getAbsString       (0, "oldestOpenTranDbname");
-					String oldestOpenTranLoginName        = cm.getAbsString       (0, "oldestOpenTranLoginName");
-					String oldestOpenTranCmd              = cm.getAbsString       (0, "oldestOpenTranCmd");
-					String oldestOpenTranName             = cm.getAbsString       (0, "oldestOpenTranName");
-					String oldestOpenTranWaitType         = cm.getAbsString       (0, "oldestOpenTranWaitType");
-//					Double oldestOpenTranTempdbUsageMb    = cm.getAbsValueAsDouble(0, "oldestOpenTranTempdbUsageMb");
-					Double oldestOpenTranTempdbUsageMbAll = cm.getAbsValueAsDouble(0, "oldestOpenTranTempdbUsageMbAll");
+					String oldestOpenTranBeginTime             = cm.getAbsString       (0, "oldestOpenTranBeginTime");
+					String oldestOpenTranId                    = cm.getAbsString       (0, "oldestOpenTranId");
+//					String oldestOpenTranSpid                  = cm.getAbsString       (0, "oldestOpenTranSpid");
+					String oldestOpenTranDbname                = cm.getAbsString       (0, "oldestOpenTranDbname");
+					String oldestOpenTranName                  = cm.getAbsString       (0, "oldestOpenTranName");
+					String oldestOpenTranWaitType              = cm.getAbsString       (0, "oldestOpenTranWaitType");
+					String oldestOpenTranCmd                   = cm.getAbsString       (0, "oldestOpenTranCmd");
+					String oldestOpenTranLoginName             = cm.getAbsString       (0, "oldestOpenTranLoginName");
+					Double oldestOpenTranTempdbUsageMbAll      = cm.getAbsValueAsDouble(0, "oldestOpenTranTempdbUsageMbAll");
+					String oldestOpenTranTempdbUsageMbUser     = cm.getAbsString       (0, "oldestOpenTranTempdbUsageMbUser");
+					String oldestOpenTranTempdbUsageMbInternal = cm.getAbsString       (0, "oldestOpenTranTempdbUsageMbInternal");
+//					String oldestOpenTranInSec                 = cm.getAbsString       (0, "oldestOpenTranInSec");
 					
 					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 					boolean doAlarm = true;
@@ -1382,7 +1555,69 @@ extends CountersModel
 					// NO match in the SKIP regEx
 					if (doAlarm)
 					{
+						// Possibly get more information about that SPID (oldestOpenTranSpid)
+						// - print "open" trans info
+						// - get info from CmProcesses about the oldest open tran
+						String oldestOpenTranSpid_Sessions_htmlTable = "";
+						if (oldestOpenTranSpid != -1)
+						{
+							CountersModel cmSessions = getCounterController().getCmByName(CmSessions.CM_NAME);
+							if (cmSessions != null)
+							{
+								Map<String, Object> whereMap = new HashMap<>();
+								whereMap.put("session_id", oldestOpenTranSpid);
+								List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
+								for (Integer pkRowId : rowIdList)
+								{
+									oldestOpenTranSpid_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+								}
+							}
+						}
+						
+						String extendedDescText = "" 
+								+   "OldestOpenTranBeginTime"             + "='" + oldestOpenTranBeginTime             + "'"
+								+ ", OldestOpenTranId"                    + "="  + oldestOpenTranId                    + ""
+								+ ", OldestOpenTranSpid"                  + "="  + oldestOpenTranSpid                  + ""
+								+ ", OldestOpenTranDbname"                + "='" + oldestOpenTranDbname                + "'"
+								+ ", OldestOpenTranName"                  + "='" + oldestOpenTranName                  + "'"
+								+ ", OldestOpenTranWaitType"              + "='" + oldestOpenTranWaitType              + "'"
+								+ ", OldestOpenTranCmd"                   + "='" + oldestOpenTranCmd                   + "'"
+								+ ", OldestOpenTranLoginName"             + "='" + oldestOpenTranLoginName             + "'"
+								+ ", OldestOpenTranTempdbUsageMbAll"      + "="  + oldestOpenTranTempdbUsageMbAll      + ""
+								+ ", OldestOpenTranTempdbUsageMbUser"     + "="  + oldestOpenTranTempdbUsageMbUser     + ""
+								+ ", OldestOpenTranTempdbUsageMbInternal" + "="  + oldestOpenTranTempdbUsageMbInternal + ""
+								+ ", OldestOpenTranInSec"                 + "="  + oldestOpenTranInSec                 + ""
+//								+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
+								;
+						String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
+								+ "<table> \n"
+								+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran Id                   </b></td> <td>" + oldestOpenTranId                     + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran Spid                 </b></td> <td>" + oldestOpenTranSpid                   + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran Dbname               </b></td> <td>" + oldestOpenTranDbname                 + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran Name                 </b></td> <td>" + oldestOpenTranName                   + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran WaitType             </b></td> <td>" + oldestOpenTranWaitType               + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran Cmd                  </b></td> <td>" + oldestOpenTranCmd                    + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran LoginName            </b></td> <td>" + oldestOpenTranLoginName              + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbAll     </b></td> <td>" + oldestOpenTranTempdbUsageMbAll       + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbUser    </b></td> <td>" + oldestOpenTranTempdbUsageMbUser      + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbInternal</b></td> <td>" + oldestOpenTranTempdbUsageMbInternal  + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran InSec                </b></td> <td>" + oldestOpenTranInSec                  + "</td> </tr> \n"
+//								+ "    <tr> <td><b>Oldest Open Tran InSecThreshold       </b></td> <td>" + oldestOpenTranInSecThreshold         + "</td> </tr> \n"
+								+ "</table> \n"
+								;
+
+						if (StringUtil.hasValue(oldestOpenTranSpid_Sessions_htmlTable))
+						{
+							extendedDescHtml += ""
+									+ "<br>"
+									+ "Sessions information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
+									+ oldestOpenTranSpid_Sessions_htmlTable
+									;
+						}
+
 						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec, oldestOpenTranSpid.intValue(), oldestOpenTranDbname, oldestOpenTranName, oldestOpenTranCmd, oldestOpenTranWaitType, oldestOpenTranLoginName, oldestOpenTranTempdbUsageMbAll);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 						alarmHandler.addAlarm( ae );
 					}

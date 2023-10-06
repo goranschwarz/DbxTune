@@ -14,6 +14,13 @@ listPasswdFile=1
 
 export OPENSSL_CONF=${OPENSSL_CONF:-/dev/null}
 
+## Get Version of openssl
+## - In Version '102' use:          echo "secretPasswordToEncrypt" | openssl enc -aes-128-cbc -a -salt -pass pass:sybase
+## - In Version '111' or above use: echo "secretPasswordToEncrypt" | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k sybase
+openSslVersionNum=$(openssl version | awk '{print $2}' | tr -d -c 0-9)
+openSslVersionStr=$(openssl version | awk '{print $2}')
+
+
 #========================================
 # BEGIN COMMAND LINE PARSING
 #----------------------------------------
@@ -152,9 +159,9 @@ function addToSybasePasswordFile
 		## copy all records except the '${pUsername}' user to a new file... then move that file to the origin...
 		if [ -z "${pSrvname}" ]
 		then
-			grep -v "^${pUsername}: U2FsdGVkX1" ${passwdFile} > ${HOME}/.passwd.enc.new
+			egrep -v "^${pUsername}:[[:space:]]*(v2;)?U2FsdGVkX1" ${passwdFile} > ${HOME}/.passwd.enc.new
 		else
-			grep -v "^${pUsername}: ${pSrvname}: U2FsdGVkX1" ${passwdFile} > ${HOME}/.passwd.enc.new
+			egrep -v "^${pUsername}:[[:space:]]*${pSrvname}:[[:space:]]*(v2;)?U2FsdGVkX1" ${passwdFile} > ${HOME}/.passwd.enc.new
 		fi
 		mv -f ${HOME}/.passwd.enc.new ${passwdFile}
 	else
@@ -165,12 +172,21 @@ function addToSybasePasswordFile
 	fi
 	## Append the '${pUsername}' user with the encrypted password AND change it to readonly
 #	encPasswd=$(echo "${pPassword}" | openssl enc -aes-128-cbc -a -salt -pass pass:${USER})
-	encPasswd=$(echo "${pPassword}" | openssl enc -aes-128-cbc -a -salt -pass pass:${keyPassPhrase})
+	encPrefix=""
+	encPasswd=""
+	if [ ${openSslVersionNum} -lt 111 ]
+	then
+		encPasswd=$(echo "${pPassword}" | openssl enc -aes-128-cbc -a -salt -pass pass:${keyPassPhrase})
+	else
+		encPrefix="v2;"
+		encPasswd=$(echo "${pPassword}" | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k ${keyPassPhrase})
+	fi
+
 	if [ -z "${pSrvname}" ]
 	then
-		echo "${pUsername}: ${encPasswd}" >> ${passwdFile}
+		echo "${pUsername}: ${encPrefix}${encPasswd}" >> ${passwdFile}
 	else
-		echo "${pUsername}: ${pSrvname}: ${encPasswd}" >> ${passwdFile}
+		echo "${pUsername}: ${pSrvname}: ${encPrefix}${encPasswd}" >> ${passwdFile}
 	fi
 	chmod 400 ${passwdFile}
 }
@@ -248,8 +264,67 @@ then
 		) >&2 ## to stderr
 		exit 1
 	else
-		passwdStr=$(echo "${encPasswdStr}" | openssl enc -aes-128-cbc -a -d -salt -pass pass:${keyPassPhrase})
-		if [ $? -eq 0 ]
+		encPasswdStrPrefix=$(echo "${encPasswdStr}" | cut -c1-3)
+		if [ "${encPasswdStrPrefix}" = "v2;" ]
+		then
+			if [ ${openSslVersionNum} -lt 111 ]
+			then
+				(
+					echo ""
+					echo "##########################################"
+					echo "ERROR: Decrypting of password version 2 is not supported by openssl version '${openSslVersionStr}'."
+					echo "ERROR: Please use an older version of 'openssl'. (version 1.1.0 or lower is supported)"
+					echo "ERROR: ---------"
+					if [ -z "${srvName}" ]
+					then
+						echo "ERROR: or simply set a new password using: dbxPassword.sh set -U${userName} -PthePassword"
+					else
+						echo "ERROR: or simply set a new password using: dbxPassword.sh set -U${userName} -S${srvName} -PthePassword"
+					fi
+					echo "ERROR: ---------"
+					echo "ERROR: encrypted password entry '${encPasswdStr}'."
+					echo "##########################################"
+					echo ""
+				) >&2 ## to stderr
+				exit 1
+			fi
+
+			## Remove the prefix before decrypting
+			encPasswdStr=$(echo "${encPasswdStr}" | cut -c4-)
+
+			## Decrypt
+			passwdStr=$(echo "${encPasswdStr}" | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k ${keyPassPhrase} -d)
+			osRc=$?
+		else
+			if [ ${openSslVersionNum} -ge 111 ]
+			then
+				(
+					echo ""
+					echo "##########################################"
+					echo "ERROR: Decrypting of password version 1 is not supported by openssl version '${openSslVersionStr}'."
+					echo "ERROR: You need to upgrade the password file '${passwdFile}'."
+					echo "ERROR: ---------"
+					echo "ERROR: This can be done with: dbxtune.sh dbxPasswordUpgrade [${passwdFile}]"
+					if [ -z "${srvName}" ]
+					then
+						echo "ERROR: or simply set a new password using: dbxPassword.sh set -U${userName} -PthePassword"
+					else
+						echo "ERROR: or simply set a new password using: dbxPassword.sh set -U${userName} -S${srvName} -PthePassword"
+					fi
+					echo "ERROR: ---------"
+					echo "ERROR: encrypted password entry '${encPasswdStr}'."
+					echo "##########################################"
+					echo ""
+				) >&2 ## to stderr
+				exit 1
+			fi
+
+			## Decrypt
+			passwdStr=$(echo "${encPasswdStr}" | openssl enc -aes-128-cbc -a -d -salt -pass pass:${keyPassPhrase})
+			osRc=$?
+		fi
+
+		if [ ${osRc} -eq 0 ]
 		then
 			echo ${passwdStr}
 		else
@@ -265,7 +340,7 @@ then
 		fi
 	fi
 ################################################
-## SET
+## UNKNOWN Operation
 ################################################
 else
 	(

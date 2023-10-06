@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.alarm.events;
 
+import java.sql.Timestamp;
+
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 
@@ -28,7 +30,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventConfigResourceIsUsedUp(CountersModel cm, String cfgName, int errorNumber, String errorMessage)
+	public AlarmEventConfigResourceIsUsedUp(CountersModel cm, String cfgName, int errorNumber, String errorMessage, Timestamp errorlogTs)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -42,7 +44,7 @@ extends AlarmEvent
 				null);
 
 		String errorNumStr = errorNumber <= 0 ? "" : "Error Number = " + errorNumber + ", ";
-		String desc = "Configuration resource '"+cfgName+"' is used up in server '" + cm.getServerName() + "'. " + errorNumStr + "Error Message: " + errorMessage.trim();
+		String desc = "Configuration resource '"+cfgName+"' is used up in server '" + cm.getServerName() + "', at '" + errorlogTs + "'. " + errorNumStr + "Error Message: " + errorMessage.trim();
 		setDescription(desc);
 		
 		// Set: Time To Live if postpone is enabled

@@ -108,6 +108,16 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	set SPLASH=
 	set DBXTUNE_JVM_MEMORY_PARAMS=-Xmx4096m -Xms64m
 
+) ELSE IF /I "%APP_NAME%" == "dbxPassword" (
+	set JAVA_START_CLASS=com.asetune.utils.DbxPassword
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
+) ELSE IF /I "%APP_NAME%" == "dbxPasswordUpgrade" (
+	set JAVA_START_CLASS=com.asetune.utils.DbxPasswordUpgrade
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME%" == "h2srv" (
 	set JAVA_START_CLASS=org.h2.tools.Server
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
@@ -147,21 +157,23 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	echo "usage: dbxtune toolset [cmdLineSwitches]"
 	echo ""
 	echo "Available toolset is:"
-	echo " ase        - Sybase/SAP Adaptive Server Enterprise"
-	echo " iq         - Sybase/SAP IQ - The Column Store DB"
-	echo " rs         - Sybase/SAP Replication Server"
-	echo " rax        - Sybase/SAP Replication Agent for X"
-	echo " hana       - Sybase/SAP HANA in-memory Column Store DB"
-	echo " sqlserver  - Microsoft SQL-Server"
-	echo " oracle     - Oracle"
-	echo " postgres   - Postgres"
-	echo " mysql      - MySQL"
-	echo " db2        - DB2 LUW (Linux Unix Windows)"
-	echo ""
-	echo " sqlw       - SQL Window a JDBC Query Tool"
-	echo " central    - A Component for multiple instances"
-	echo "              If you want some central Web based view"
-	echo " dbxcdbcopy - Copy a DBX Cental db to a new destination (used to migrate to a new DBMS)"
+	echo " ase         - Sybase/SAP Adaptive Server Enterprise"
+	echo " iq          - Sybase/SAP IQ - The Column Store DB"
+	echo " rs          - Sybase/SAP Replication Server"
+	echo " rax         - Sybase/SAP Replication Agent for X"
+	echo " hana        - Sybase/SAP HANA in-memory Column Store DB"
+	echo " sqlserver   - Microsoft SQL-Server"
+	echo " oracle      - Oracle"
+	echo " postgres    - Postgres"
+	echo " mysql       - MySQL"
+	echo " db2         - DB2 LUW (Linux Unix Windows)"
+	echo ""            
+	echo " sqlw        - SQL Window a JDBC Query Tool"
+	echo " central     - A Component for multiple instances"
+	echo "               If you want some central Web based view"
+	echo " dbxcdbcopy  - Copy a DBX Cental db to a new destination (used to migrate to a new DBMS)"
+	echo " dbxPassword - Manage Encrypted Passwords"
+	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
 	echo ""
 
 	pause

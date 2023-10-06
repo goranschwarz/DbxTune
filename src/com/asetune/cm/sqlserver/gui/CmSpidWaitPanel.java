@@ -570,10 +570,30 @@ extends TabularCntrPanel
 		updateExtendedInfoPanel();
 	}
 
+	private RSyntaxTextAreaX l_extraWhereClause_txt;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Extra Where Clause",     PROPKEY_sample_extraWhereClause      , String.class,  conf.getProperty       (PROPKEY_sample_extraWhereClause      , DEFAULT_sample_extraWhereClause      ), DEFAULT_sample_extraWhereClause     , CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause                     ));
+//				list.add(new CmSettingsHelper("Skip wait_type List",    PROPKEY_trendGraph_skipWaitTypeList  , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipWaitTypeList  , DEFAULT_trendGraph_skipWaitTypeList  ), DEFAULT_trendGraph_skipWaitTypeList , "Skip specific 'wait_type' from beeing in ThrendGraph"              ));
+
+				l_extraWhereClause_txt.setText(conf.getProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, CmSpidWait.DEFAULT_sample_extraWhereClause));
+				//NOTE: PROPKEY_trendGraph_skipWaitTypeList -- is set in dialog, so no need to refresh
+				
+				// ReInitialize the SQL
+				//getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 //		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 		panel.setLayout(new MigLayout("flowy, ins 0, gap 0", "", "0[0]0"));
 
@@ -591,7 +611,8 @@ extends TabularCntrPanel
 		final JLabel            graphType_lbl    = new JLabel("Type");
 		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
-		final RSyntaxTextAreaX extraWhereClause_txt = new RSyntaxTextAreaX();
+//		final RSyntaxTextAreaX extraWhereClause_txt = new RSyntaxTextAreaX();
+		                     l_extraWhereClause_txt = new RSyntaxTextAreaX();
 		final JButton          extraWhereClause_but = new JButton("Apply Extra Where Clause");
 
 		final JButton         trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
@@ -634,7 +655,7 @@ extends TabularCntrPanel
 //		generateClass_chk.setToolTipText("<html>Include 'Classes' data in the Graph.</html>");
 
 		extraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);
-		extraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
+		l_extraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
 
 		tooltip = TOOLTIP_trendGraph_skipWaitTypeList.replace("THE_SKIP_LIST_GOES_HERE", Configuration.getCombinedConfiguration().getProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitTypeList, CmSpidWait.DEFAULT_trendGraph_skipWaitTypeList));
 		trendGraph_settings_but.setToolTipText(tooltip);
@@ -662,10 +683,10 @@ extends TabularCntrPanel
 //		Configuration conf = Configuration.getCombinedConfiguration();
 		String extraWhereClause = (conf == null ? CmSpidWait.DEFAULT_sample_extraWhereClause : conf.getProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, CmSpidWait.DEFAULT_sample_extraWhereClause));
 
-		extraWhereClause_txt.setText(extraWhereClause);
-		extraWhereClause_txt.setHighlightCurrentLine(false);
-		extraWhereClause_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
-		extraWhereClause_txt.setName(CmSpidWait.PROPKEY_sample_extraWhereClause);
+		l_extraWhereClause_txt.setText(extraWhereClause);
+		l_extraWhereClause_txt.setHighlightCurrentLine(false);
+		l_extraWhereClause_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		l_extraWhereClause_txt.setName(CmSpidWait.PROPKEY_sample_extraWhereClause);
 
 		
 		// ACTION LISTENERS
@@ -773,7 +794,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, extraWhereClause_txt.getText().trim());
+				conf.setProperty(CmSpidWait.PROPKEY_sample_extraWhereClause, l_extraWhereClause_txt.getText().trim());
 				conf.save();
 				
 				// ReInitialize the SQL
@@ -816,7 +837,7 @@ extends TabularCntrPanel
 		panelL.add(showLegend_chk,                    "wrap");
 //		panelL.add(includeWaitId250_chk,              "wrap");
 
-		panelR.add(extraWhereClause_txt,              "push, grow, wrap");
+		panelR.add(l_extraWhereClause_txt,            "push, grow, wrap");
 		panelR.add(extraWhereClause_but,              "wrap");
 		panelR.add(trendGraph_settings_but,           "wrap");
 

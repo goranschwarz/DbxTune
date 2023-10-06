@@ -24,6 +24,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.IUserDefinedAlarmInterrogator;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cm.CountersModel;
@@ -74,7 +75,8 @@ implements IUserDefinedAlarmInterrogator
 					// If it's a DUMP DATABASE or DUMP TRANSACTION, do not alarm...
 					if (OldestTranName != null && !OldestTranName.startsWith("DUMP "))
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
+						AlarmEvent alarm = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
+						AlarmHandler.getInstance().addAlarm(alarm);
 					}
 				}
 			}
@@ -85,12 +87,12 @@ implements IUserDefinedAlarmInterrogator
 			Double TransactionLogFull = cm.getRateValueAsDouble(r, "TransactionLogFull");
 			if (TransactionLogFull != null)
 			{
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', TransactionLogFull='"+TransactionLogFull+"'.");
+				_logger.debug("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', TransactionLogFull='"+TransactionLogFull+"'.");
 				if (AlarmHandler.hasInstance())
 				{
 					int threshold = 0;
 					if (TransactionLogFull.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, dbname) );
+						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, dbname, null) );
 				}
 			}
 		}

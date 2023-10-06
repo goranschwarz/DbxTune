@@ -331,9 +331,16 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch(SQLException e)
 			{
-				String msg = "Problems getting text from sys.dm_exec_query_plan, about '" + objectName + "'. Msg=" + e.getErrorCode() + ", Text='" + e.getMessage() + "'. Caught: " + e;
+				String msg = "Problems getting text from sys.dm_exec_query_plan, about '" + objectName + "'. Msg=" + e.getErrorCode() + ", SQLState='" + e.getSQLState() + "', Text='" + e.getMessage() + "'. Caught: " + e;
 				_logger.warn(msg); 
 				storeEntry.setObjectText( msg );
+				
+				if (e.getMessage().contains("The connection is broken and recovery is not possible"))
+				{
+					// Should we try to close the connection here???
+					conn.closeNoThrow();
+					_logger.warn("Closing the connection... Since it was broken. A new will be attempted on next attempt!");
+				}
 			}
 
 			// Return the list of objects to be STORED in DDL Storage
@@ -970,7 +977,15 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Caught: " + e);
+			_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Msg=" + e.getErrorCode() + ", SQLState='" + e.getSQLState() + "', Text='" + e.getMessage() + "'. Caught: " + e);
+
+			if (e.getMessage().contains("The connection is broken and recovery is not possible"))
+			{
+				// Should we try to close the connection here???
+				conn.closeNoThrow();
+				_logger.warn("Closing the connection... Since it was broken. A new will be attempted on next attempt!");
+			}
+			
 			return Collections.emptyList();
 			//return null;
 		}

@@ -658,10 +658,12 @@ public class PersistContainer
 			writeOptions.writeCounters      = sendCounters.isEnabled(shortCmName);
 			if (writeOptions.writeCounters)
 			{
-				writeOptions.writeMetaData      = sendCounters.isMetaDataEnabled(shortCmName);
-				writeOptions.writeCounters_abs  = sendCounters.isAbsEnabled     (shortCmName);
-				writeOptions.writeCounters_diff = sendCounters.isDiffEnabled    (shortCmName);
-				writeOptions.writeCounters_rate = sendCounters.isRateEnabled    (shortCmName);
+				writeOptions.writeMetaData      = sendCounters.isMetaDataEnabled    (shortCmName);
+				writeOptions.writeMetaData_jdbc = sendCounters.isMetaDataJdbcEnabled(shortCmName);
+				writeOptions.writeMetaData_cm   = sendCounters.isMetaDataCmEnabled  (shortCmName);
+				writeOptions.writeCounters_abs  = sendCounters.isAbsEnabled         (shortCmName);
+				writeOptions.writeCounters_diff = sendCounters.isDiffEnabled        (shortCmName);
+				writeOptions.writeCounters_rate = sendCounters.isRateEnabled        (shortCmName);
 			}
 
 			writeOptions.writeGraphs = sendGraphs.isEnabled(shortCmName);

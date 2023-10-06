@@ -61,9 +61,11 @@ extends HostMonitor
 					+ ", @{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}"
 					+ ", @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}}"
 					+ ", @{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}"
-//					+ ", VolumeName"
-					+ ", DeviceId" // use DeviceId both as 'FileSystem' and 'MountedOn'
+//					+ ", DeviceId" // use DeviceId both as 'FileSystem' and 'MountedOn'
+					+ ", @{n='MountedOn'; e={($_.DeviceId+' ['+$_.VolumeName+']').Replace('[]','').Replace(' ','&nbsp;')}}" // MountedOn == Can be used to get: "D: [Disk Label]"
 					+ "\" ";
+			
+			// NOTE: the reader splits on "whitespace", so simulate spaces with "&nbsp;", which will be translated back again in parseRow() method 
 		}
 		else
 		{
@@ -132,11 +134,20 @@ extends HostMonitor
 			return null;
 
 		// Strip off *trailing* '%' characters in 'UsedPct' fields
-		int usedPct_pos = 4;
+		int usedPct_pos = 4; // 5-1
 		if (usedPct_pos < data.length)
 		{
 			if (data[usedPct_pos].endsWith("%"))
 				data[usedPct_pos] = data[usedPct_pos].substring(0, data[usedPct_pos].length()-1);
+		}
+
+		// in Windows for column 'MountedOn' we use '&nbsp;' to simulate spaces... since we split on spaces 
+		// Change them back to normal spaces 
+		int mountPoint_pos = 5; // 6-1
+		if (mountPoint_pos < data.length)
+		{
+			if (data[mountPoint_pos].contains("&nbsp;"))
+				data[mountPoint_pos] = data[mountPoint_pos].replace("&nbsp;", " ").trim();
 		}
 
 		return data;

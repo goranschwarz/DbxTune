@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.alarm.events;
 
+import java.sql.Timestamp;
+
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 
@@ -31,9 +33,10 @@ extends AlarmEvent
 	/**
 	 * Alarm for full transaction log for a specific database.
 	 * @param cm
+	 * @param errorlogTs 
 	 * @param dbname
 	 */
-	public AlarmEventConfigChanges(CountersModel cm, String configName, String errorlogMsg)
+	public AlarmEventConfigChanges(CountersModel cm, String configName, String errorlogMsg, Timestamp errorlogTs)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -43,7 +46,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SRV_CONFIG,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				errorlogMsg,
+				"ErrorlogTs='" + errorlogTs + "', " + errorlogMsg,
 				null);
 
 		// Set: Time To Live if postpone is enabled

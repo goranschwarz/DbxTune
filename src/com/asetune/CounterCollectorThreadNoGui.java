@@ -1599,6 +1599,29 @@ implements Memory.MemoryListener
 				}
 
 				
+				//---------------------------------------------------
+				// POSTPROCESSING -  Alarm handling
+				//---------------------------------------------------
+				// TODO: Do this here so Alarms can reference data in CM's that has been refreshed later than the current CM (so we can include data in the Extended descriptions)
+				_logger.debug("---- Do Alarm handling...");
+				for (CountersModel cm : refreshedCms.values())
+				{
+					cm.wrapperFor_sendAlarmRequest();
+				}
+
+				
+				//---------------------------------------------------
+				// POSTPROCESSING - setFirstSample(false)
+				//---------------------------------------------------
+				_logger.debug("---- Do -end-first-time-sample- handling...");
+				for (CountersModel cm : refreshedCms.values())
+				{
+					// This was previously done "near end" CountersModel.refreshGetData(DbxConnection)
+					// But some alarms needs to be aware if it's the first sample or not, so I moved it here instead.
+					cm.setFirstTimeSample(false);
+				}
+
+				
 				//-----------------
 				// AlarmHandler: end-of-scan: Cancel any alarms that has not been repeated
 				//-----------------

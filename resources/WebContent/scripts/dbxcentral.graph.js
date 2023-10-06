@@ -1472,7 +1472,7 @@ function dbxTuneGraphSubscribe()
 			else // I guss this must be a NUMBER
 			{
 				// check if this is a DIFF/RATE or PCT column
-				if (metaData.isDiffColumn === true) 
+				if (metaData !== undefined && metaData.hasOwnProperty('isDiffColumn') && metaData.isDiffColumn === true) 
 				{
 					if (selectedCounterType === 'abs') 
 					{
@@ -1501,7 +1501,7 @@ function dbxTuneGraphSubscribe()
 							td.style.fontWeight = "bold";
 					}
 				}
-				else if (metaData.isPctColumn === true) 
+				else if (metaData !== undefined && metaData.hasOwnProperty('isPctColumn') && metaData.isPctColumn === true) 
 				{
 					if (cellContent !== null)
 						td.innerHTML = cellContent.toLocaleString(undefined);
@@ -1519,79 +1519,34 @@ function dbxTuneGraphSubscribe()
 			}
 			
 			// Possibly fill in Tooltop for SQL Text etc
-			if ("AseTune" === appName)
+			if (metaData !== undefined && metaData.hasOwnProperty('columnName'))
 			{
-				if (metaData.columnName === "HasMonSqlText" && rowData.hasOwnProperty('MonSqlText') && cellContent === true)
+				if ("AseTune" === appName)
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.MonSqlText, 'tsql') );
+					if (metaData.columnName === "HasMonSqlText"       && rowData.hasOwnProperty('MonSqlText')       && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.MonSqlText,      'tsql') ); }
+					if (metaData.columnName === "HasDbccSqlText"      && rowData.hasOwnProperty('DbccSqlText')      && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.DbccSqlText,     'tsql') ); }
+					if (metaData.columnName === "HasProcCallStack"    && rowData.hasOwnProperty('ProcCallStack')    && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ProcCallStack,   'text') ); }
+					if (metaData.columnName === "HasShowPlan"         && rowData.hasOwnProperty('ShowPlanText')     && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ShowPlanText,    'text') ); }
+					if (metaData.columnName === "HasStackTrace"       && rowData.hasOwnProperty('DbccStacktrace')   && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.DbccStacktrace,  'text') ); }
+					if (metaData.columnName === "HasCachedPlanInXml"  && rowData.hasOwnProperty('CachedPlanInXml')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml, 'xml' ) ); }
+					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SpidLocks              ) ); }
+					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSpidsInfo       ) ); }
 				}
-				if (metaData.columnName === "HasDbccSqlText" && rowData.hasOwnProperty('DbccSqlText') && cellContent === true)
+				else if ("SqlServerTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccSqlText, 'tsql') );
+					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('lastKnownSql')     && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(   rowData.lastKnownSql, 'tsql') ); }
+					if (metaData.columnName === "HasQueryplan"        && rowData.hasOwnProperty('query_plan')       && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan          ) ); }
+					if (metaData.columnName === "HasLiveQueryplan"    && rowData.hasOwnProperty('LiveQueryPlan')    && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan       ) ); }
+					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidLocks           ) ); }
+					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.BlockedSpidsInfo    ) ); }
 				}
-				if (metaData.columnName === "HasProcCallStack" && rowData.hasOwnProperty('ProcCallStack') && cellContent === true)
+				else if ("PostgresTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.ProcCallStack, 'text') );
+					if (metaData.columnName === "has_sql_text"          && rowData.hasOwnProperty('last_known_sql_statement') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.last_known_sql_statement, 'postgresql') ); }
+					if (metaData.columnName === "has_pid_lock_info"     && rowData.hasOwnProperty('pid_lock_info')            && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) ); }
+					if (metaData.columnName === "has_blocked_pids_info"                                                       && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) ); }
 				}
-				if (metaData.columnName === "HasShowPlan" && rowData.hasOwnProperty('ShowPlanText') && cellContent === true)
-				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.ShowPlanText, 'text') );
-				}
-				if (metaData.columnName === "HasStackTrace" && rowData.hasOwnProperty('DbccStacktrace') && cellContent === true)
-				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.DbccStacktrace, 'text') );
-				}
-				if (metaData.columnName === "HasCachedPlanInXml" && rowData.hasOwnProperty('CachedPlanInXml') && cellContent === true)
-				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml, 'xml') );
-				}
-				if (metaData.columnName === "HasSpidLocks" && rowData.hasOwnProperty('SpidLocks') && cellContent === true)
-				{
-					td.appendChild( createLockTableToolTipDiv(rowData.SpidLocks) );
-				}
-				if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true)
-				{
-					td.appendChild( createLockTableToolTipDiv(rowData.BlockedSpidsInfo) );
-				}
-			}
-			else if ("SqlServerTune" === appName)
-			{
-				if (metaData.columnName === "HasSqlText" && rowData.hasOwnProperty('lastKnownSql') && cellContent === true)
-				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.lastKnownSql, 'tsql') );
-				}
-				if (metaData.columnName === "HasQueryplan" && rowData.hasOwnProperty('query_plan') && cellContent === true)
-				{
-					td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan) );
-				}
-				if (metaData.columnName === "HasLiveQueryplan" && rowData.hasOwnProperty('LiveQueryPlan') && cellContent === true)
-				{
-					td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan) );
-				}
-				if (metaData.columnName === "HasSpidLocks" && rowData.hasOwnProperty('SpidLocks') && cellContent === true)
-				{
-					td.appendChild( createLockTableToolTipDiv(rowData.SpidLocks) );
-				}
-				if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true)
-				{
-					td.appendChild( createLockTableToolTipDiv(rowData.BlockedSpidsInfo) );
-				}
-			}
-			else if ("PostgresTune" === appName)
-			{
-				if (metaData.columnName === "has_sql_text" && rowData.hasOwnProperty('last_known_sql_statement') && cellContent === true)
-				{
-					td.appendChild( createActiveStatementToolTipDiv(rowData.last_known_sql_statement, 'postgresql') );
-				}
-				if (metaData.columnName === "has_pid_lock_info" && rowData.hasOwnProperty('pid_lock_info') && cellContent === true)
-				{
-					td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) );
-				}
-				if (metaData.columnName === "has_blocked_pids_info" && cellContent === true)
-				{
-					td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) );
-				}
-			}
+			} // end: metaData && columnName
 		};
 
 		// Create a CALLBACK function to set TableRow Colors
@@ -1639,6 +1594,10 @@ function dbxTuneGraphSubscribe()
 				if (row.hasOwnProperty('multiSampled') && row.multiSampled !== '')
 					tr.className = "active-statement-row-multi-sampled";
 
+				// Waiting-MemoryGrant
+				if (row.hasOwnProperty('memory_grant_wait_time_ms') && row.memory_grant_wait_time_ms !== 0)
+					tr.className = "active-statement-row-waiting-for-memory-grant";
+				
 				// HOLDING-LOCKS
 				if (row.hasOwnProperty('monSource') && row.monSource === 'HOLDING-LOCKS')
 					tr.className = "active-statement-row-holding-locks-while-idle";
@@ -1655,10 +1614,11 @@ function dbxTuneGraphSubscribe()
 				}
 			};
 			tooltip = "Background colors: \n"
-			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
-			        + " * YELLOW: Holding locks, while client has control (poor transaction control) \n"
-			        + " * PINK:   Blocked by some other SPID \n"
-			        + " * RED:    BLOCKING other spid's from working.\n"
+			        + " * ORANGE:     Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * LIGHT_BLUE: Waiting for a memory grant \n"
+			        + " * YELLOW:     Holding locks, while client has control (poor transaction control) \n"
+			        + " * PINK:       Blocked by some other SPID \n"
+			        + " * RED:        BLOCKING other spid's from working.\n"
 					+ "";
 		}
 		else if ("PostgresTune" === appName)

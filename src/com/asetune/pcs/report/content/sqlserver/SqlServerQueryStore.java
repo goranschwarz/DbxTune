@@ -217,6 +217,20 @@ extends SqlServerAbstract
 	}
 
 
+	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		List<ReportingIndexEntry> list = new ArrayList<>();
+		
+		list.add(new ReportingIndexEntry("CmIndexUsage_diff", "DbName", "SchemaName", "TableName", "IndexName"));
+		list.add(new ReportingIndexEntry("CmIndexUsage_abs" , "DbName", "SchemaName", "TableName", "IndexName", "SessionSampleTime"));
+
+		list.add(new ReportingIndexEntry("CmIndexOpStat_diff", "DbName", "SchemaName", "TableName", "IndexName"));
+		list.add(new ReportingIndexEntry("CmIndexOpStat_abs" , "DbName", "SchemaName", "TableName", "IndexName", "SessionSampleTime"));
+		
+		return list;
+	}
+
 //	@Override
 //	public String[] getMandatoryTables()
 //	{
@@ -822,6 +836,9 @@ extends SqlServerAbstract
 			String total_query_wait_time_paralell_ms       = "";
 			String   avg_query_wait_time_paralell_ms       = "";
 
+			
+//			TODO; // add cpu_efficiency_pct = total_worker_time / total_dop / total_elapsed_time * 100.0
+			
 			if (hasTable_query_store_wait_stats)
 			{
 				  avg_query_wait_time_ms_chart          = "    ,''                                                         as [avg_query_wait_time_ms__chart] \n";

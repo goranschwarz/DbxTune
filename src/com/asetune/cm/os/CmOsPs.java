@@ -30,7 +30,7 @@ import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.os.gui.CmOsDiskSpacePanel;
+import com.asetune.cm.os.gui.CmOsPsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -112,7 +112,7 @@ extends CounterModelHostMonitor
 	@Override
 	protected TabularCntrPanel createGui()
 	{
-		return new CmOsDiskSpacePanel(this);
+		return new CmOsPsPanel(this);
 	}
 
 	//------------------------------------------------------------

@@ -117,33 +117,58 @@ extends TabularCntrPanel
 //		
 //		return panel;
 //	}
+
+	private JLabel            l_sampleMode_lbl;
+	private JComboBox<String> l_sampleMode_cbx;
+
+	private JLabel            l_sampleMinPageCount_lbl;
+	private JTextField        l_sampleMinPageCount_txt;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Detail Level", PROPKEY_sample_mode         , String .class, conf.getProperty(   PROPKEY_sample_mode         , DEFAULT_sample_mode         ), DEFAULT_sample_mode        , "Parameter 5 to the function 'dm_db_index_physical_stats' (valid values are DEFAULT, 'LIMITED', 'SAMPLED' or 'DETAILED')." ));
+//				list.add(new CmSettingsHelper("Table Size",   PROPKEY_sample_minPageCount , Integer.class, conf.getIntProperty(PROPKEY_sample_minPageCount , DEFAULT_sample_minPageCount ), DEFAULT_sample_minPageCount, "How many data pages should the table have to be included." ));
+
+				l_sampleMode_cbx.setSelectedItem(    conf.getProperty   (CmIndexPhysical.PROPKEY_sample_mode        , CmIndexPhysical.DEFAULT_sample_mode));
+				l_sampleMinPageCount_txt.setText(""+ conf.getIntProperty(CmIndexPhysical.PROPKEY_sample_minPageCount, CmIndexPhysical.DEFAULT_sample_minPageCount));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
-		JLabel            sampleMode_lbl = new JLabel("Mode");
-		JComboBox<String> sampleMode_cbx = new JComboBox<String>(new String[] {"DEFAULT", "'LIMITED'", "'SAMPLED'", "'DETAILED'"});
+		l_sampleMode_lbl = new JLabel("Mode");
+		l_sampleMode_cbx = new JComboBox<String>(new String[] {"DEFAULT", "'LIMITED'", "'SAMPLED'", "'DETAILED'"});
 
-		JLabel            sampleMinPageCount_lbl = new JLabel("Min Page Count");
-		JTextField        sampleMinPageCount_txt = new JTextField(5);
+		l_sampleMinPageCount_lbl = new JLabel("Min Page Count");
+		l_sampleMinPageCount_txt = new JTextField(5);
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String defaultMode = conf.getProperty(CmIndexPhysical.PROPKEY_sample_mode, CmIndexPhysical.DEFAULT_sample_mode);
-		sampleMode_cbx.setSelectedItem(defaultMode);
+		l_sampleMode_cbx.setSelectedItem(defaultMode);
 
 		String defaultCount = "" + conf.getIntProperty(CmIndexPhysical.PROPKEY_sample_minPageCount, CmIndexPhysical.DEFAULT_sample_minPageCount);
-		sampleMinPageCount_txt.setText(defaultCount);
+		l_sampleMinPageCount_txt.setText(defaultCount);
 		
-		panel.add(sampleMode_lbl,         "");
-		panel.add(sampleMode_cbx,         "span 2, wrap");
+		panel.add(l_sampleMode_lbl,         "");
+		panel.add(l_sampleMode_cbx,         "span 2, wrap");
 
-		panel.add(sampleMinPageCount_lbl, "");
-		panel.add(sampleMinPageCount_txt, "growx, pushx, wrap");
+		panel.add(l_sampleMinPageCount_lbl, "");
+		panel.add(l_sampleMinPageCount_txt, "growx, pushx, wrap");
 
 		
-		sampleMode_cbx.addActionListener(new ActionListener()
+		l_sampleMode_cbx.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -151,7 +176,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(CmIndexPhysical.PROPKEY_sample_mode, sampleMode_cbx.getSelectedItem().toString());
+				conf.setProperty(CmIndexPhysical.PROPKEY_sample_mode, l_sampleMode_cbx.getSelectedItem().toString());
 				conf.save();
 				
 				// ReInitialize the SQL
@@ -168,14 +193,14 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				
-				String strVal = sampleMinPageCount_txt.getText();
+				String strVal = l_sampleMinPageCount_txt.getText();
 				int    intVal = CmIndexPhysical.DEFAULT_sample_minPageCount;
 				try { intVal = Integer.parseInt(strVal);}
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmIndexPhysical.DEFAULT_sample_minPageCount;
 					SwingUtils.showWarnMessage(CmIndexPhysicalPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					sampleMinPageCount_txt.setText(intVal+"");
+					l_sampleMinPageCount_txt.setText(intVal+"");
 				}
 				conf.setProperty(CmIndexPhysical.PROPKEY_sample_minPageCount, intVal);
 				conf.save();
@@ -186,8 +211,8 @@ extends TabularCntrPanel
 					cm.setSql(null);
 			}
 		};
-		sampleMinPageCount_txt.addActionListener(sampleMinPageCount_action);
-		sampleMinPageCount_txt.addFocusListener(new FocusListener()
+		l_sampleMinPageCount_txt.addActionListener(sampleMinPageCount_action);
+		l_sampleMinPageCount_txt.addFocusListener(new FocusListener()
 		{
 			@Override
 			public void focusLost(FocusEvent e)

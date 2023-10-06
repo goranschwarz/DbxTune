@@ -2108,6 +2108,40 @@ public class StringUtil
 	}
 
 	/**
+	 * Check if a String is "true" or "1"
+	 * 
+	 * @param str       String to check
+	 * @return boolean
+	 */
+	public static boolean parseBoolean(String str)
+	{
+		return parseBoolean(str, false);
+	}
+
+	/**
+	 * Check if a String is "true" or "1"
+	 * 
+	 * @param str
+	 * @param defaultValue   if the string is NOT a boolean return this value
+	 * @return
+	 */
+	public static boolean parseBoolean(String str, boolean defaultValue)
+	{
+		if (str == null)
+			return false;
+
+		str = str.trim();
+
+		if (str.equalsIgnoreCase("true"))
+			return true;
+
+		if (str.equalsIgnoreCase("1"))
+			return true;
+
+		return defaultValue;
+	}
+	
+	/**
 	 * returns a "safe" SQL String for column or table names
 	 * <p>
 	 * This is simple for the moment, and will just do [colname]

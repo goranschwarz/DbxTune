@@ -342,9 +342,11 @@ extends CounterModelHostMonitor
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
-						String extendedDescText = "";
-						String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
-						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
+						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
+
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
 
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
@@ -370,9 +372,11 @@ extends CounterModelHostMonitor
 				{
 					if (usedPct > threshold.doubleValue())
 					{
-						String extendedDescText = "";
-						String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
-						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
+						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
+						       
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
 
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);

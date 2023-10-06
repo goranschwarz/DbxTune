@@ -166,7 +166,22 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				l_sample_statementCacheObjects_chk.setSelected(conf.getBooleanProperty(CmCachedProcs.PROPKEY_sample_statementCacheObjects, CmCachedProcs.DEFAULT_sample_statementCacheObjects));
+				l_sample_dynamicSqlObjects_chk    .setSelected(conf.getBooleanProperty(CmCachedProcs.PROPKEY_sample_dynamicSqlObjects,     CmCachedProcs.DEFAULT_sample_dynamicSqlObjects));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

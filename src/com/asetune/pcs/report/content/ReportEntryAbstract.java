@@ -1451,7 +1451,10 @@ implements IReportEntry
 		{
 			// Check if the table exists
 			if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, ie.getTableName()) )
+			{
+				_logger.warn("createReportingIndexes(): The table '" + ie.getTableName() + "' does not exists.");
 				continue;
+			}
 
 			String indexDdl  = "";
 			try

@@ -94,10 +94,29 @@ extends CmOsGenericPanel
 	}
 	
 
-
 	@Override
 	protected JPanel configLocalOptionsPanel(JPanel panel)
 	{
+		if (panel instanceof LocalOptionsConfigPanel)
+		{
+			((LocalOptionsConfigPanel)panel).setLocalOptionsConfigChanges(new LocalOptionsConfigChanges()
+			{
+				@Override
+				public void configWasChanged(String propName, String propVal)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					
+//					list.add(new CmSettingsHelper("Exclude some devices",           PROPKEY_excludeDevices      , Boolean.class, conf.getBooleanProperty(PROPKEY_excludeDevices      , DEFAULT_excludeDevices      ), DEFAULT_excludeDevices      , "Enable/Disable: Exclude devices by name" ));
+//					list.add(new CmSettingsHelper("Exclude some devices RegExp",    PROPKEY_excludeDevicesRegExp, String .class, conf.getProperty       (PROPKEY_excludeDevicesRegExp, DEFAULT_excludeDevicesRegExp), DEFAULT_excludeDevicesRegExp, "If Exclude is enabled (true), this is the regular expression to use when testing device names." ));
+//					list.add(new CmSettingsHelper("iostat switch: -N (Linux Only)", PROPKEY_linux_opt_N         , Boolean.class, conf.getBooleanProperty(PROPKEY_linux_opt_N         , DEFAULT_linux_opt_N         ), DEFAULT_linux_opt_N         , "Add Switch -N to iostat 'Display the registered device mapper names for any device mapper devices'. NOTE: Linux Only" ));
+
+					_opt_N_chk               .setSelected(conf.getBooleanProperty(CmOsIostat.PROPKEY_linux_opt_N,          CmOsIostat.DEFAULT_linux_opt_N));
+					_excludeDevices_chk      .setSelected(conf.getBooleanProperty(CmOsIostat.PROPKEY_excludeDevices,       CmOsIostat.DEFAULT_excludeDevices));
+					_excludeDevicesRegExp_txt.setText(    conf.getProperty       (CmOsIostat.PROPKEY_excludeDevicesRegExp, CmOsIostat.DEFAULT_excludeDevicesRegExp));
+				}
+			});
+		}
+
 		_opt_N_chk                   = new JCheckBox("Use Device Mapper Name", CmOsIostat.DEFAULT_linux_opt_N);
 		_excludeDevices_chk          = new JCheckBox("Exclude devices", CmOsIostat.DEFAULT_excludeDevices);
 		_excludeDevicesRegExp_txt    = new JTextField(CmOsIostat.DEFAULT_excludeDevicesRegExp, 10);

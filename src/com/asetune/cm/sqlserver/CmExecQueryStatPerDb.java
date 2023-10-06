@@ -23,13 +23,17 @@ package com.asetune.cm.sqlserver;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import javax.naming.NameNotFoundException;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -55,6 +59,7 @@ import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
 /**
@@ -145,7 +150,8 @@ extends CountersModel
 	public static final boolean  IS_SYSTEM_CM                   = true;
 //	public static final int      DEFAULT_POSTPONE_TIME          = 60; // every 1 minute
 	public static final int      DEFAULT_POSTPONE_TIME          = 300; // every 5 minute
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+//	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 20;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -1173,4 +1179,95 @@ extends CountersModel
 		
 		return sql;
 	}
+
+
+
+
+
+	public static final String  PROPKEY_disable_cm_onTimeout          = PROP_PREFIX + ".disable.cm.onTimeoutException";
+	public static final boolean DEFAULT_disable_cm_onTimeout          = true;
+
+	public static final String  PROPKEY_disable_cm_onTimeout_gt_count = PROP_PREFIX + ".disable.cm.onTimeoutException.gt.count";
+	public static final int     DEFAULT_disable_cm_onTimeout_gt_count = 10;
+	
+//	public static final String  PROPKEY_disable_cm_timestamp = PROP_PREFIX + ".disable.cm.timestamp"; // When we do PROPKEY_disable_cm_onTimeout, then save the time we last did it.
+//	public static final String  DEFAULT_disable_cm_timestamp = "";
+	
+	private boolean _hasBeenDisabledBy_timeoutExceptions = false;
+
+	/**
+	 * Called when a timeout has been found in the refreshGetData() method
+	 */
+	@Override
+	public void handleTimeoutException()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// FIRST try to reset timeout if it's below the default
+		if (getQueryTimeout() < getDefaultQueryTimeout())
+		{
+			setQueryTimeout(getDefaultQueryTimeout(), true);
+			_logger.warn("CM='" + getName() + "'. Setting Query Timeout to default of '" + getDefaultQueryTimeout() + "', from method handelTimeoutException().");
+			return;
+		}
+
+		// SECONDARY Disable the CM after it has reached X number of timeouts (in sequence)
+		if (conf.getBooleanProperty(PROPKEY_disable_cm_onTimeout, DEFAULT_disable_cm_onTimeout))
+		{
+			boolean doDisable = false;
+
+			// Get number of sequentail timeouts
+			int timeoutExceptionCount = getSequentialTimeoutExceptionCount();
+			
+			long oldestTimeoutExceptionTime      = getOldestTimeoutExceptionTime();
+			long oldestTimeoutExceptionTimeInSec = TimeUtils.secondsDiffNow(oldestTimeoutExceptionTime);
+
+			int threshold = conf.getIntProperty(PROPKEY_disable_cm_onTimeout_gt_count, DEFAULT_disable_cm_onTimeout_gt_count);
+			if (timeoutExceptionCount > threshold)
+				doDisable = true;
+
+			if (doDisable)
+			{
+				_logger.warn("CM='" + getName() + "'. DISABLE this CM due to: Multiple Timeouts (" + timeoutExceptionCount + " in sequence, oldestTimeoutExceptionTimeInSec=" + oldestTimeoutExceptionTimeInSec + "). This can be changed with Configuration '" + PROPKEY_disable_cm_onTimeout_gt_count + " = ##'.");
+
+				setActive(false, "This has been disabled due to: Multiple Timeouts (" + timeoutExceptionCount + " in sequence).");
+				_hasBeenDisabledBy_timeoutExceptions = true;
+
+				// Show a popup, what we did if we are in GUI mode
+				if (getGuiController() != null && getGuiController().hasGUI())
+				{
+					String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
+
+					JOptionPane optionPane = new JOptionPane(
+							"<html>" +
+							"The query for CM '" + getName() + "' took to long... and received " + timeoutExceptionCount + " timeouts in sequence.<br>" +
+							"</html>",
+							JOptionPane.INFORMATION_MESSAGE);
+					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled CM '" + getName() + "' @ "+dateStr);
+					dialog.setModal(false);
+					dialog.setVisible(true);
+				}
+			}
+		}
+	}
+	/**
+	 * Lets reset some "timeout" options so that it will start from "scratch" again!
+	 */
+	@Override
+	public void prepareForPcsDatabaseRollover()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// If "disable" on timeout is enabled
+		if (conf.getBooleanProperty(PROPKEY_disable_cm_onTimeout, DEFAULT_disable_cm_onTimeout))
+		{
+			if ( ! isActive() && _hasBeenDisabledBy_timeoutExceptions == true)
+			{
+				setActive(true, "Re-enable CM due to 'prepareForPcsDatabaseRollover'.");
+
+				_logger.info("CM='" + getName() + "'. Re-enable this CM due to 'prepareForPcsDatabaseRollover'.");
+			}
+		}
+	}
+
 }

@@ -298,7 +298,7 @@ extends CountersModelAppend
 		if (lastRefreshRows.size() == 0)
 			return;
 
-//		int col_LogDate_pos     = findColumn("LogDate");
+		int col_LogDate_pos     = findColumn("LogDate");
 //		int col_ProcessInfo_pos = findColumn("ProcessInfo");
 		int col_Text_pos        = findColumn("Text");
 
@@ -307,6 +307,11 @@ extends CountersModelAppend
 //			_logger.error("When checking for alarms, could not find all columns. skipping this. [ErrorNumber_pos="+col_ErrorNumber_pos+", Severity_pos="+col_Severity_pos+", ErrorMessage_pos="+col_ErrorMessage_pos+"]");
 //			return;
 //		}
+		if (col_LogDate_pos < 0)
+		{
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [LogDate_pos="+col_LogDate_pos+"]");
+			return;
+		}
 		if (col_Text_pos < 0)
 		{
 			_logger.error("When checking for alarms, could not find all columns. skipping this. [Text_pos="+col_Text_pos+"]");
@@ -328,9 +333,17 @@ extends CountersModelAppend
 				continue;
 			}
 
-			String errorTxt = (String) o_Text;
-			int    errorNum = -1;
-			int    severity = -1;
+			Object o_LogDate = row.get(col_LogDate_pos);
+			if (o_LogDate == null || !(o_LogDate instanceof Timestamp) )
+			{
+				_logger.error("When checking for alarms, the column 'LogDate' is NOT an Timestamp, skipping this row.");
+				continue;
+			}
+
+			Timestamp errorlogTs = (Timestamp) o_LogDate;
+			String    errorTxt   = (String)    o_Text;
+			int       errorNum   = -1;
+			int       severity   = -1;
 
 			// Error: 911, Severity: 16, State: 1.
 			if (errorTxt.startsWith("Error: "))
@@ -392,7 +405,7 @@ extends CountersModelAppend
 								configName = errorTxt.substring(startPos, endPos);
 						}
 						
-						AlarmEvent ae = new AlarmEventConfigChanges(this, configName, errorTxt);
+						AlarmEvent ae = new AlarmEventConfigChanges(this, configName, errorTxt, errorlogTs);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 						alarmHandler.addAlarm( ae );
@@ -450,7 +463,7 @@ extends CountersModelAppend
 							dbname = errorTxt.substring(startPos, endPos);
 					}
 					
-					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname);
+					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 					alarmHandler.addAlarm( ae );
@@ -471,7 +484,7 @@ extends CountersModelAppend
 						
 					AlarmEvent.Severity alarmSeverity = AlarmEvent.Severity.WARNING;
 					
-					AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNum, severity, errorTxt, -1);
+					AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNum, severity, errorTxt, errorlogTs, -1);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 					alarmHandler.addAlarm( ae );
@@ -492,7 +505,7 @@ extends CountersModelAppend
 					String extendedDescText = errorTxt;
 					String extendedDescHtml = errorTxt;
 
-					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "user connections", errorNum, errorTxt);
+					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "user connections", errorNum, errorTxt, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 					alarmHandler.addAlarm( ae );
@@ -566,7 +579,7 @@ extends CountersModelAppend
 						if (severity > 17)
 							alarmSeverity = AlarmEvent.Severity.ERROR;
 						
-						AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNum, severity, errorTxt, threshold);
+						AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNum, severity, errorTxt, errorlogTs, threshold);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 						alarmHandler.addAlarm( ae );

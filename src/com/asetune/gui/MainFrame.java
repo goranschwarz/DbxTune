@@ -3896,7 +3896,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 		// Open config. 
 		//    CANCEL null will be returned.
-		//    OK     a Configuration object widh all settings will be returned.
+		//    OK     a Configuration object with all settings will be returned.
 		Configuration alarmConf = AlarmConfigDialog.showDialog(this);
 		
 		// dialog returned some config... lets save it and reload the config

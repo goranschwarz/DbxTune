@@ -22,15 +22,24 @@ package com.asetune.cm.sqlserver.gui;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
 
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.CmActiveStatements;
+import com.asetune.cm.sqlserver.CmOpenTransactions;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmOpenTransactionsPanel
 extends TabularCntrPanel
@@ -78,5 +87,61 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+	}
+	
+
+	private JCheckBox l_sampleLocksForSpid_chk;
+
+	@Override
+	protected JPanel createLocalOptionsPanel()
+	{
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+
+				l_sampleLocksForSpid_chk.setSelected(conf.getBooleanProperty(CmOpenTransactions.PROPKEY_sample_spidLocks, CmOpenTransactions.DEFAULT_sample_spidLocks));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+		panel.setToolTipText(
+			"<html>" +
+			"</html>");
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		l_sampleLocksForSpid_chk   = new JCheckBox("Get Locks for SPID",       conf == null ? CmActiveStatements.DEFAULT_sample_spidLocks     : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks    , CmActiveStatements.DEFAULT_sample_spidLocks));
+
+		l_sampleLocksForSpid_chk  .setName(CmActiveStatements.PROPKEY_sample_spidLocks);
+
+		l_sampleLocksForSpid_chk  .setToolTipText("<html>Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking.</html>");
+
+		panel.add(l_sampleLocksForSpid_chk,   "wrap");
+
+		l_sampleLocksForSpid_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmOpenTransactions.PROPKEY_sample_spidLocks, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		
+		return panel;
 	}
 }

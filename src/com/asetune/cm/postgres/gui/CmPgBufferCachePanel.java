@@ -85,10 +85,33 @@ extends TabularCntrPanel
 //		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_DATATYPE_BLOB), null));
 	}
 
+	private JCheckBox  l_sampleTopRows_chk;
+	private JTextField l_sampleTopRowsCount_txt;
+
+	private JButton l_filterOutSystemTables_but;
+	
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Limit num of rows",     PROPKEY_sample_topRows      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_topRows      , DEFAULT_sample_topRows      ), DEFAULT_sample_topRows     , "Get only first # rows (select top # ...) true or false"   ));
+//				list.add(new CmSettingsHelper("Limit num of rowcount", PROPKEY_sample_topRowsCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRowsCount , DEFAULT_sample_topRowsCount ), DEFAULT_sample_topRowsCount, "Get only first # rows (select top # ...), number of rows" ));
+
+				l_sampleTopRows_chk      .setSelected(conf.getBooleanProperty(CmPgBufferCache.PROPKEY_sample_topRows,      CmPgBufferCache.DEFAULT_sample_topRows));
+				l_sampleTopRowsCount_txt .setText(""+ conf.getIntProperty    (CmPgBufferCache.PROPKEY_sample_topRowsCount, CmPgBufferCache.DEFAULT_sample_topRowsCount));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -98,20 +121,20 @@ extends TabularCntrPanel
 		// Top Rows (top #)
 		defaultOpt    = conf == null ? CmPgBufferCache.DEFAULT_sample_topRows      : conf.getBooleanProperty(CmPgBufferCache.PROPKEY_sample_topRows,      CmPgBufferCache.DEFAULT_sample_topRows);
 		defaultIntOpt = conf == null ? CmPgBufferCache.DEFAULT_sample_topRowsCount : conf.getIntProperty    (CmPgBufferCache.PROPKEY_sample_topRowsCount, CmPgBufferCache.DEFAULT_sample_topRowsCount);
-		final JCheckBox  sampleTopRows_chk      = new JCheckBox("Limit number of rows (top #)", defaultOpt);
-		final JTextField sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
+		l_sampleTopRows_chk      = new JCheckBox("Limit number of rows (top #)", defaultOpt);
+		l_sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
 
-		final JButton filterOutSystemTables_but = new JButton("Set 'filter', remove system tables");
+		l_filterOutSystemTables_but = new JButton("Set 'filter', remove system tables");
 		
-		sampleTopRows_chk.setName(CmPgBufferCache.PROPKEY_sample_topRows);
-		sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCache.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRows_chk.setName(CmPgBufferCache.PROPKEY_sample_topRows);
+		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCache.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
-		sampleTopRowsCount_txt.setName(CmPgBufferCache.PROPKEY_sample_topRowsCount);
-		sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCache.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRowsCount_txt.setName(CmPgBufferCache.PROPKEY_sample_topRowsCount);
+		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCache.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
-		filterOutSystemTables_but.setToolTipText("<html>The will just set the free text filter to discard schema names 'pg_*' and 'information_schema' </html>");
+		l_filterOutSystemTables_but.setToolTipText("<html>The will just set the free text filter to discard schema names 'pg_*' and 'information_schema' </html>");
 		
-		sampleTopRows_chk.addActionListener(new ActionListener()
+		l_sampleTopRows_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -138,14 +161,14 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				
-				String strVal = sampleTopRowsCount_txt.getText();
+				String strVal = l_sampleTopRowsCount_txt.getText();
 				int    intVal = CmPgBufferCache.DEFAULT_sample_topRowsCount;
 				try { intVal = Integer.parseInt(strVal);}
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmPgBufferCache.DEFAULT_sample_topRowsCount;
 					SwingUtils.showWarnMessage(CmPgBufferCachePanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					sampleTopRowsCount_txt.setText(intVal+"");
+					l_sampleTopRowsCount_txt.setText(intVal+"");
 				}
 				conf.setProperty(CmPgBufferCache.PROPKEY_sample_topRowsCount, intVal);
 				conf.save();
@@ -156,8 +179,8 @@ extends TabularCntrPanel
 					cm.setSql(null);
 			}
 		};
-		sampleTopRowsCount_txt.addActionListener(sampleTopRowsCount_action);
-		sampleTopRowsCount_txt.addFocusListener(new FocusListener()
+		l_sampleTopRowsCount_txt.addActionListener(sampleTopRowsCount_action);
+		l_sampleTopRowsCount_txt.addFocusListener(new FocusListener()
 		{
 			@Override
 			public void focusLost(FocusEvent e)
@@ -171,7 +194,7 @@ extends TabularCntrPanel
 		
 		
 		// SET FILTER TEXT
-		filterOutSystemTables_but.addActionListener(new ActionListener()
+		l_filterOutSystemTables_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -185,10 +208,10 @@ extends TabularCntrPanel
 		});
 		
 		// LAYOUT
-		panel.add(sampleTopRows_chk,         "split");
-		panel.add(sampleTopRowsCount_txt,    "wrap");
+		panel.add(l_sampleTopRows_chk,         "split");
+		panel.add(l_sampleTopRowsCount_txt,    "wrap");
 
-		panel.add(filterOutSystemTables_but, "wrap");
+		panel.add(l_filterOutSystemTables_but, "wrap");
 		
 		return panel;
 	}

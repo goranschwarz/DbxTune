@@ -43,6 +43,7 @@ import org.netbeans.spi.wizard.WizardPanelNavResult;
 import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -287,28 +288,43 @@ implements ActionListener
 		updateEnabledForPcsDdlLookupAndSqlCapture();
 	}
 
+	private void putWizardData_withDefaults(String propKey, Object defVal, Object inputVal)
+	{
+		String defValStr = defVal   + "";
+		String inpValStr = inputVal + "";
+
+		String setVal    = inpValStr;
+
+		if (defValStr.equals(inpValStr))
+		{
+			setVal = Configuration.USE_DEFAULT_PREFIX + setVal;
+		}
+
+		putWizardData(propKey, setVal);
+	}
+
 	private void saveWizardData()
 	{
 		if ("AseTune".equals(Version.getAppName()) || "SqlServerTune".equals(Version.getAppName()))
 		{
-			putWizardData(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore                 , _pcsDdl_doDdlLookupAndStore_chk             .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_ddl_enabledForDatabaseObjects           , _pcsDdl_enabledForDatabaseObjects_chk       .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_ddl_enabledForStatementCache            , _pcsDdl_enabledForStatementCache_chk        .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs         , _pcsDdl_afterDdlLookupSleepTimeInMs_txt     .getText()    +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue     , _pcsDdl_addDependantObjectsToDdlInQueue_chk .isSelected() +"");
-
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , _pcsCapSql_sleepTimeInMs_txt                .getText()    +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , _pcsCapSql_doSqlText_chk                    .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , _pcsCapSql_doStatementInfo_chk              .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , _pcsCapSql_doPlanText_chk                   .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime        , _pcsCapSql_saveStatement_execTime_txt       .getText()    +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads    , _pcsCapSql_saveStatement_logicalRead_txt    .getText()    +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads   , _pcsCapSql_saveStatement_physicalRead_txt   .getText()    +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , _pcsCapSql_sendDdlForLookup_chk             .isSelected() +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , _pcsCapSql_sendDdlForLookup_execTime_txt    .getText()    +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText()    +"");
-			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText()    +"");
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore                 , PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore                 , _pcsDdl_doDdlLookupAndStore_chk             .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_ddl_enabledForDatabaseObjects           , PersistentCounterHandler.DEFAULT_ddl_enabledForDatabaseObjects           , _pcsDdl_enabledForDatabaseObjects_chk       .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_ddl_enabledForStatementCache            , PersistentCounterHandler.DEFAULT_ddl_enabledForStatementCache            , _pcsDdl_enabledForStatementCache_chk        .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs         , PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs         , _pcsDdl_afterDdlLookupSleepTimeInMs_txt     .getText()    );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue     , PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue     , _pcsDdl_addDependantObjectsToDdlInQueue_chk .isSelected() );
+                                                                                                           
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , PersistentCounterHandler.DEFAULT_sqlCap_doSqlCaptureAndStore             , _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs                    , _pcsCapSql_sleepTimeInMs_txt                .getText()    );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , PersistentCounterHandler.DEFAULT_sqlCap_doSqlText                        , _pcsCapSql_doSqlText_chk                    .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo                  , _pcsCapSql_doStatementInfo_chk              .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , PersistentCounterHandler.DEFAULT_sqlCap_doPlanText                       , _pcsCapSql_doPlanText_chk                   .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime        , PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime        , _pcsCapSql_saveStatement_execTime_txt       .getText()    );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads    , PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads    , _pcsCapSql_saveStatement_logicalRead_txt    .getText()    );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads   , PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads   , _pcsCapSql_saveStatement_physicalRead_txt   .getText()    );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup                 , _pcsCapSql_sendDdlForLookup_chk             .isSelected() );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime     , _pcsCapSql_sendDdlForLookup_execTime_txt    .getText()    );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads , _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText()    );
+			putWizardData_withDefaults(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads, _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText()    );
 		}
 		else
 		{

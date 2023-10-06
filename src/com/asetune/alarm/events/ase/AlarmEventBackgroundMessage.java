@@ -21,6 +21,8 @@
  ******************************************************************************/
 package com.asetune.alarm.events.ase;
 
+import java.sql.Timestamp;
+
 import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.cm.CountersModel;
@@ -34,8 +36,9 @@ extends AlarmEvent
 	 * 
 	 * @param cmErrorLog
 	 * @param errorMessage
+	 * @param errorlogTs 
 	 */
-	public AlarmEventBackgroundMessage(CountersModel cm, String errorMessage)
+	public AlarmEventBackgroundMessage(CountersModel cm, String errorMessage, Timestamp errorlogTs)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -45,7 +48,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Errorlog background message (probably from a threshold action), found in '" + cm.getServerName() + "'. Message='" + errorMessage + "'.",
+				"Errorlog background message (probably from a threshold action), found in '" + cm.getServerName() + "', at '" + errorlogTs + "'. Message='" + errorMessage + "'.",
 				null);
 
 		// Set: Time To Live if postpone is enabled

@@ -22,6 +22,11 @@ package com.asetune.cm.postgres.gui;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
 
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -29,10 +34,13 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jfree.chart.ChartColor;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.postgres.CmActiveStatements;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmActiveStatementsPanel
 extends TabularCntrPanel
@@ -169,6 +177,65 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, ChartColor.VERY_LIGHT_BLUE), null));
+	}
+
+
+
+
+	private JCheckBox l_sampleLocksForSpid_chk;
+	
+	@Override
+	protected JPanel createLocalOptionsPanel()
+	{
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Get PID's Locks"           , PROPKEY_sample_pidLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_pidLocks    , DEFAULT_sample_pidLocks    ), DEFAULT_sample_pidLocks    , "Do 'select <i>someCols</i> from pg_locks where pid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+
+				l_sampleLocksForSpid_chk  .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_pidLocks    , CmActiveStatements.DEFAULT_sample_pidLocks));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+		panel.setToolTipText(
+			"<html>" +
+			"</html>");
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		l_sampleLocksForSpid_chk   = new JCheckBox("Get Locks for PID's",       conf == null ? CmActiveStatements.DEFAULT_sample_pidLocks     : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_pidLocks    , CmActiveStatements.DEFAULT_sample_pidLocks));
+
+		l_sampleLocksForSpid_chk  .setName(CmActiveStatements.PROPKEY_sample_pidLocks);
+		
+		l_sampleLocksForSpid_chk  .setToolTipText("<html>Do 'select <i>someCols</i> from pg_locks where pid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking.</html>");
+
+		panel.add(l_sampleLocksForSpid_chk,   "wrap");
+
+		
+		l_sampleLocksForSpid_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_pidLocks, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		
+		return panel;
 	}
 
 }

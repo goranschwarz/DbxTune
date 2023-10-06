@@ -1058,6 +1058,38 @@ extends CountersModel
 				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
 				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
 
+				// And CPU and Memory Usage (from CmSummary)
+				CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+				extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_AA_CPU);
+//				extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB);
+
+				// and some info from CmMemoryGrantsSum
+				CountersModel cmMemoryGrantsSum = getCounterController().getCmByName(CmMemoryGrantsSum.CM_NAME);
+				extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTED_MEMORY_SUM);
+				extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTEE_WAITER_COUNT);
+				extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTED_MEMORY_PCT);
+
+				// Possibly getting info from CmMemoryGrants
+				// This can help to show what SQL Statement(s) are involved 
+				CountersModel cmMemoryGrants = getCounterController().getCmByName(CmMemoryGrants.CM_NAME);
+				if (cmMemoryGrants.hasAbsData())
+				{
+					int rowc = cmMemoryGrants.getAbsRowCount();
+					extendedDescHtml += "<br><br><b>Current Memory Grants: (" + rowc + " records, one table for each record)</b><br>";
+					for (int r=0; r<rowc; r++)
+					{
+						extendedDescHtml += "<span style='background-color: yellow'>Row " + (r+1) + " of " + rowc + "</span> <br>" 
+						                 + cmMemoryGrants.toHtmlTableString(DATA_ABS , r, true, false, false) + "<br>";
+					}
+				}
+				else
+				{
+					if (cmMemoryGrants.isActive())
+						extendedDescHtml += "<br><br><b>Current Memory Grants: (CmMemoryGrants does NOT contain any data)</b><br>";
+					else
+						extendedDescHtml += "<br><br><b>Current Memory Grants: (CmMemoryGrants is NOT enabled)</b><br>";
+				}
+
 				// Create the alarm
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.UP, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
@@ -1097,6 +1129,12 @@ extends CountersModel
 				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TIME);
 				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
 				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
+
+				// And CPU and WorkerThreadsUsage (from CmSummary)
+				CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+				extendedDescHtml = "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_AA_CPU);
+				extendedDescHtml = "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_WORKER_THREAD_USAGE);
+
 
 				// Create the alarm
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.AFFECTED, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
