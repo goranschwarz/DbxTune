@@ -194,15 +194,17 @@ implements TableModelListener
 				{
 					if (awse.isSelected())
 					{
-						String key   = awse.getPropName();
-						String value = awse.getStringValue();
+						String  key       = awse.getPropName();
+						String  value     = awse.getStringValue();
+						boolean isDefault = awse.isDefaultValue();
 
 						// encrypt fields with password
 						boolean doEncrypt = false;
 						if (awse.getName() != null && awse.getName().toLowerCase().indexOf("password") != -1)
 							doEncrypt = true;
 
-						conf.setProperty(key, value, doEncrypt);
+//						conf.setProperty(key, value, doEncrypt);
+						conf.setProperty(key, isDefault ? Configuration.USE_DEFAULT_PREFIX + value : value, doEncrypt);
 					}
 				}
 			}
@@ -218,15 +220,17 @@ implements TableModelListener
 				{
 					if (awse.isSelected())
 					{
-						String key   = awse.getPropName();
-						String value = awse.getStringValue();
+						String  key       = awse.getPropName();
+						String  value     = awse.getStringValue();
+						boolean isDefault = awse.isDefaultValue();
 
 						// encrypt fields with password
 						boolean doEncrypt = false;
 						if (awse.getName() != null && awse.getName().toLowerCase().indexOf("password") != -1)
 							doEncrypt = true;
 
-						conf.setProperty(key, value, doEncrypt);
+//						conf.setProperty(key, value, doEncrypt);
+						conf.setProperty(key, isDefault ? Configuration.USE_DEFAULT_PREFIX + value : value, doEncrypt);
 					}
 				}
 			}

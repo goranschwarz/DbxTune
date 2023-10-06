@@ -313,6 +313,17 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	}
 
 	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		List<ReportingIndexEntry> list = new ArrayList<>();
+		
+		list.add(new ReportingIndexEntry("CmObjectActivity_diff", "DBName", "ObjectName", "IndexName"));
+		list.add(new ReportingIndexEntry("CmObjectActivity_abs" , "DBName", "ObjectName", "IndexName", "SessionSampleTime"));
+
+		return list;
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int topRows = getTopRows();

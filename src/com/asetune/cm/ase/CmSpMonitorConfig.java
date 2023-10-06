@@ -671,7 +671,7 @@ extends CountersModel
 				if ("procedure cache size".equals(cfgName))
 				{
 					// EMULATE: Error=701, Severity=17, Text=There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.");
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.", null);
 
 					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
 					AlarmHandler.getInstance().addAlarm(alarm);
@@ -679,7 +679,7 @@ extends CountersModel
 				}
 				else if ("number of open objects".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
 					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
 					AlarmHandler.getInstance().addAlarm(alarm);
@@ -687,7 +687,7 @@ extends CountersModel
 				}
 				else if ("number of open partitions".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
 					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
 					AlarmHandler.getInstance().addAlarm(alarm);
@@ -695,7 +695,7 @@ extends CountersModel
 				}
 				else if ("number of open indexes".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
 					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
 					AlarmHandler.getInstance().addAlarm(alarm);
@@ -703,7 +703,7 @@ extends CountersModel
 				}
 				else if ("number of open databases".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.");
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
 					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
 					AlarmHandler.getInstance().addAlarm(alarm);
@@ -712,7 +712,7 @@ extends CountersModel
 				else if ("number of locks".equals(cfgName))
 				{
 					// EMULATE: Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.");
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.", null);
 
 					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
 					AlarmHandler.getInstance().addAlarm(alarm);
@@ -721,7 +721,7 @@ extends CountersModel
 				else if ("number of user connections".equals(cfgName))
 				{
 					// EMULATE: Error=1601, Severity=21, Text=There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.");
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.", null);
 
 					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
 					AlarmHandler.getInstance().addAlarm(alarm);

@@ -55,7 +55,12 @@ public class SendCountersConfig
 	
 	public enum FilterType 
 	{
-		ABS, DIFF, RATE, META_DATA
+		ABS, 
+		DIFF, 
+		RATE, 
+//		META_DATA, 
+		META_DATA_JDBC, 
+		META_DATA_CM
 	};
 
 	public SendCountersConfig(boolean sendAll)
@@ -110,7 +115,7 @@ conf = Configuration.getCombinedConfiguration();
 					}
 
 					if ("true".equalsIgnoreCase(val))
-						val = "adr";
+						val = "adrc"; // By default do not send type 'j' jdbcMetaData
 
 					if ("false".equalsIgnoreCase(val))
 						exlusionEntry = true;
@@ -134,10 +139,13 @@ conf = Configuration.getCombinedConfiguration();
 					}
 					else
 					{
-						// Do only allow 'adr' chars... 
+						// Do only allow 'adrjc' chars... 
 						// * a=AbsCounters
 						// * d=DiffCounters
 						// * r=RateCounters 
+						// -old-* m=JdbcMetaData 
+						// * j=JdbcMetaData 
+						// * c=CounterModelMetaData 
 						String addType = "";
 						if (StringUtil.hasValue(val))
 						{
@@ -145,14 +153,19 @@ conf = Configuration.getCombinedConfiguration();
 							for (int i=0; i<val.length(); i++)
 							{
 								char ch = val.charAt(i);
-								if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R')
+								if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R' || ch == 'j' || ch == 'J' || ch == 'c' || ch == 'C')
 								{
 									addType += Character.toLowerCase(ch);
+								}
+								else if (ch == 'm' || ch == 'M') // for backward compatibility ('m' is no more supported, and you should use 'j' or 'c')
+								{
+									_logger.warn("JSON-SendCountersConfig: Depricated value for property '" + key + "'. Found depricated char(s) 'm'. Plase use: 'j'=jdbcMetaData and/or 'c'=counterModelMetaData. For now 'm' is translated into 'c' as backward compatibility.");
+									addType += 'c'; // if 'm' (metadata) is specified, change it into the new part 'c' (CounterModelMetaData), but leave exclude 'j' (JdbcMetaData)
 								}
 								else
 								{
 									unsupportedChar += ch;
-									_logger.error("JSON-SendCountersConfig: Inproper value for property '" + propName + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters");
+									_logger.error("JSON-SendCountersConfig: Inproper value for property '" + key + "'. Found unsupported char(s) '" + unsupportedChar + "', which simply will be skipped. Accepted values are 'adrjc' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters, 'j'=jdbcMetaData, 'c'=counterModelMetaData");
 								}
 							}
 						}
@@ -205,7 +218,7 @@ conf = Configuration.getCombinedConfiguration();
 						boolean exlusionEntry = false;
 
 						if ("true".equalsIgnoreCase(val))
-							val = "adr"; // By default do not send type 'm' jdbcMetaData
+							val = "adrc"; // By default do not send type 'j' jdbcMetaData
 
 						if ("false".equalsIgnoreCase(val))
 							exlusionEntry = true;
@@ -223,7 +236,9 @@ conf = Configuration.getCombinedConfiguration();
 							// * a=AbsCounters
 							// * d=DiffCounters
 							// * r=RateCounters 
-							// * m=JdbcMetaData 
+							// -old-* m=JdbcMetaData 
+							// * j=JdbcMetaData 
+							// * c=CounterModelMetaData 
 							String addType = "";
 							if (StringUtil.hasValue(val))
 							{
@@ -231,14 +246,19 @@ conf = Configuration.getCombinedConfiguration();
 								for (int i=0; i<val.length(); i++)
 								{
 									char ch = val.charAt(i);
-									if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R' || ch == 'm' || ch == 'M')
+									if (ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' || ch == 'r' || ch == 'R' || ch == 'j' || ch == 'J' || ch == 'c' || ch == 'C')
 									{
 										addType += Character.toLowerCase(ch);
+									}
+									else if (ch == 'm' || ch == 'M') // for backward compatibility ('m' is no more supported, and you should use 'j' or 'c')
+									{
+										_logger.warn("JSON-SendCountersConfig: Depricated value for property '" + key + "'. Found depricated char(s) 'm'. Plase use: 'j'=jdbcMetaData and/or 'c'=counterModelMetaData. For now 'm' is translated into 'c' as backward compatibility.");
+										addType += 'c'; // if 'm' (metadata) is specified, change it into the new part 'c' (CounterModelMetaData), but leave exclude 'j' (JdbcMetaData)
 									}
 									else
 									{
 										unsupportedChar += ch;
-										_logger.error("JSON-SendCountersConfig: Inproper value for property '" + key + "'. Found unsupported char(s) '" + unsupportedChar + "', accepted values are 'adr' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters, 'm'=jdbcMetaData");
+										_logger.error("JSON-SendCountersConfig: Inproper value for property '" + key + "'. Found unsupported char(s) '" + unsupportedChar + "', which simply will be skipped. Accepted values are 'adrjc' where: 'a'=AbsoluteCounters, 'd'=DiffCounters, 'r'=RateCounters, 'j'=jdbcMetaData, 'c'=counterModelMetaData");
 									}
 								}
 							}
@@ -262,11 +282,14 @@ conf = Configuration.getCombinedConfiguration();
 		return _sendAll; 
 	}
 
-	public boolean isEnabled        (String name) { return isEnabled(name, null); }
-	public boolean isMetaDataEnabled(String name) { return isEnabled(name, FilterType.META_DATA); }
-	public boolean isAbsEnabled     (String name) { return isEnabled(name, FilterType.ABS); }
-	public boolean isDiffEnabled    (String name) { return isEnabled(name, FilterType.DIFF); }
-	public boolean isRateEnabled    (String name) { return isEnabled(name, FilterType.RATE); }
+	public boolean isEnabled            (String name) { return isEnabled(name, null); }
+//	public boolean isMetaDataEnabled    (String name) { return isEnabled(name, FilterType.META_DATA); }
+	public boolean isMetaDataEnabled    (String name) { return isMetaDataJdbcEnabled(name) || isMetaDataCmEnabled(name); }
+	public boolean isMetaDataJdbcEnabled(String name) { return isEnabled(name, FilterType.META_DATA_JDBC); }
+	public boolean isMetaDataCmEnabled  (String name) { return isEnabled(name, FilterType.META_DATA_CM); }
+	public boolean isAbsEnabled         (String name) { return isEnabled(name, FilterType.ABS); }
+	public boolean isDiffEnabled        (String name) { return isEnabled(name, FilterType.DIFF); }
+	public boolean isRateEnabled        (String name) { return isEnabled(name, FilterType.RATE); }
 
 	private boolean isEnabled(String name, FilterType type) 
 	{
@@ -293,10 +316,12 @@ conf = Configuration.getCombinedConfiguration();
 				return true;
 				
 			String typeStr = "";
-			if (FilterType.ABS      .equals(type)) typeStr = "a";
-			if (FilterType.DIFF     .equals(type)) typeStr = "d";
-			if (FilterType.RATE     .equals(type)) typeStr = "r";
-			if (FilterType.META_DATA.equals(type)) typeStr = "m";
+			if (FilterType.ABS           .equals(type)) typeStr = "a";
+			if (FilterType.DIFF          .equals(type)) typeStr = "d";
+			if (FilterType.RATE          .equals(type)) typeStr = "r";
+//			if (FilterType.META_DATA     .equals(type)) typeStr = "m";
+			if (FilterType.META_DATA_JDBC.equals(type)) typeStr = "j";
+			if (FilterType.META_DATA_CM  .equals(type)) typeStr = "c";
 
 			return adr.contains(typeStr);
 		}

@@ -227,11 +227,11 @@ extends CountersModel
 
 
 
-	@Override
-	protected TabularCntrPanel createGui()
-	{
-		return new CmTempdbSpidUsagePanel(this);
-	}
+//	@Override
+//	protected TabularCntrPanel createGui()
+//	{
+//		return new CmTempdbUsagePanel(this);
+//	}
 
 	@Override
 	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)

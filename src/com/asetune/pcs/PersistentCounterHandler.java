@@ -1475,7 +1475,7 @@ implements Runnable
 
 					if (ddlDetails.isEmpty())
 					{
-						_logger.info("Skipping DDL Storage, it seems to be 'empty'. ddlDetails=" + ddlDetails);
+						_logger.info("Skipping DDL Storage, it seems to be 'empty' (nothing to store). ddlDetails=" + ddlDetails);
 						continue;
 					}
 					

@@ -21,20 +21,30 @@
 package com.asetune.config.ui;
 
 import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.sql.Timestamp;
+import java.util.List;
 
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.gui.ModelMissmatchException;
+import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.TableModelViewDialog;
 import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 
 public class DbmsConfigTextPanel
@@ -126,6 +136,93 @@ extends JPanel
 		_textConfig.setCaretPosition(0);
 	}
 
+	/**
+	 * Translate the selected text into GUI Tables
+	 * <p>
+	 * If there are more than one table. The one with the most columns and rows will be choosen!
+	 * <p>
+	 * If there are many table (with the same column names), All will be "merged" into a single table.
+	 * 
+	 * @param guessDataTypes If we want to parse the input to find numbers.
+	 */
+	private void textToJTable(boolean guessDataTypes)
+	{
+		String selectedText = _textConfig.getSelectedText();
+		if (StringUtil.isNullOrBlank(selectedText))
+		{
+			SwingUtils.showInfoMessage(_textConfig, "No Input", "Select some text that you want to translate into a GUI Table.");
+			return;
+		}
+		else
+		{
+			List<ResultSetTableModel> rstmList = ResultSetTableModel.parseTextTables(selectedText);
+			if (rstmList.isEmpty())
+			{
+				SwingUtils.showInfoMessage(_textConfig, "No Input", "The selected text did not look like a 'text table'.");
+				return;
+			}
+			else
+			{
+				ResultSetTableModel choosenRstm = rstmList.get(0);
+				
+				// If there are several tables in the selected text... choose the one with most COLUMNS * ROWS
+				if (rstmList.size() > 1)
+				{
+					boolean isMergable = true;
+					
+					for (ResultSetTableModel rstm : rstmList)
+					{
+						// If all columns are the *same*, then we might be able to "merge" all tables into 1
+						if ( ! choosenRstm.getColumnNames().equals(rstm.getColumnNames()) )
+							isMergable = false;
+
+						int choosenWaight = choosenRstm.getColumnCount() * choosenRstm.getRowCount();
+						int thisWaight    = rstm       .getColumnCount() * rstm       .getRowCount();
+						if (thisWaight > choosenWaight)
+							choosenRstm = rstm;
+					}
+					
+					if (isMergable)
+					{
+						// Copy all columns, but no rows
+						choosenRstm = new ResultSetTableModel(choosenRstm, "Merged Table", false);
+						
+						// Copy data
+						for (ResultSetTableModel rstm : rstmList)
+						{
+							try 
+							{
+								choosenRstm.add(rstm);
+							} 
+							catch (ModelMissmatchException ex) 
+							{
+								ex.printStackTrace();
+							}
+						}
+					}
+				}
+
+				// The below do NOT seems to work, we get class cast exception from the JTable when sorting...
+				// So I need to work on this
+				// Transform Columns with Numbers to REAL Numbers
+				if (guessDataTypes)
+				{
+					try 
+					{
+						choosenRstm.guessDatatypes();
+					} 
+					catch (Exception ignore) 
+					{
+						ignore.printStackTrace();
+					}
+				}
+				
+				// Show a Table Viewer
+				TableModelViewDialog.showDialog(_textConfig, choosenRstm);
+			}
+		}
+	}
+
 	private void init()
 	{
 //		AseConfigText aseConfigText = AseConfigText.getInstance(_type);
@@ -136,6 +233,37 @@ extends JPanel
 //			// and set input to "top" so it's a bit more readable if it's a long text
 //			_textConfig.setCaretPosition(0);
 //		}
+
+		// Add menu entry "Selected text to JTable"
+		final JMenuItem toJTableNumbers_mi = new JMenuItem("Selected text to JTable - Guess Types");
+		toJTableNumbers_mi.setToolTipText("<html>This tries to parse the strings to find numbers, so that sorting is better.<br>But in some cases the <i>Guess</i> is not correct.<br>Then use the 'All Strings' option instead.</html>");
+		toJTableNumbers_mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				textToJTable(true);
+			}
+		});
+		
+		// Add menu entry "Selected text to JTable"
+		final JMenuItem toJTableStrings_mi = new JMenuItem("Selected text to JTable - All Strings");
+		toJTableStrings_mi.setToolTipText("<html>All fields will be treated as strings...<br>This means that sorting the columns might not be what you want...<br>The sorting is done on strings, hence not correct for number columns.</html>");
+		toJTableStrings_mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				textToJTable(false);
+			}
+		});
+
+		JPopupMenu popupMenu = _textConfig.getPopupMenu();
+		popupMenu.addSeparator();
+		popupMenu.add(toJTableNumbers_mi);
+		popupMenu.add(toJTableStrings_mi);
+		
+
 		if ( _dbmsConfigText.isInitialized() )
 		{
 			_textConfig.setSyntaxEditingStyle(_dbmsConfigText.getSyntaxEditingStyle());

@@ -272,16 +272,6 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
-	@Override
-	public List<ReportingIndexEntry> getReportingIndexes()
-	{
-		List<ReportingIndexEntry> list = new ArrayList<>();
-		
-		list.add(new ReportingIndexEntry("MonSqlCapStatements", "SPID", "KPID", "BatchID"));
-		
-		return list;
-	}
-
 	/**
 	 * Set descriptions for the table, and the columns
 	 */
@@ -344,6 +334,19 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		rstm.setColumnDescription("RowsAffected__sum"          , "How many RowsAffected did did this Statement do during the report period");
 
 		rstm.setColumnDescription("LogicalReadsPerRowsAffected", "How Many LogicalReads per RowsAffected did this Statement do during the report period (Algorithm: sumLogicalReads/sumRowsAffected)");
+	}
+
+	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		List<ReportingIndexEntry> list = new ArrayList<>();
+		
+		list.add(new ReportingIndexEntry("MonSqlCapStatements", "SPID", "KPID", "BatchID"));
+
+		list.add(new ReportingIndexEntry("CmObjectActivity_diff", "DBName", "ObjectName", "IndexName"));
+		list.add(new ReportingIndexEntry("CmObjectActivity_abs" , "DBName", "ObjectName", "IndexName", "SessionSampleTime"));
+
+		return list;
 	}
 
 	@Override

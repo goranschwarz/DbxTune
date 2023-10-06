@@ -81,6 +81,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportFactory;
+import com.asetune.pcs.report.DsrPriority;
 import com.asetune.pcs.report.IDailySummaryReport;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
@@ -5204,6 +5205,16 @@ public class PersistWriterJdbc
 			return;
 		}
 
+		// If all collectors are running on the same machine
+		// Then we want to wait for others to finish before we start
+		// DsrPriority.waitforOtherDsr() -- will "queue" up the report creations based on the order of server names in the file: ${HOME}/.dbxtune/dbxc/conf/SERVER_LIST 
+		boolean isDsrPriorityEnabled = DsrPriority.isEnabled(serverName);
+		if (isDsrPriorityEnabled)
+		{
+			DsrPriority.waitforOtherDsr(serverName);
+		}
+		
+		// Create the Daily Summary Report
 		report.setConnection(conn);
 		report.setServerName(serverName);
 		try
@@ -5233,6 +5244,13 @@ public class PersistWriterJdbc
 		{
 			_logger.error("Problems Sending Daily Summary Report. Caught: " + ex, ex);
 		}
+
+		// Notify the DSR Priority that we are finished, so other DSR in other collectors/processes can be started! 
+		if (isDsrPriorityEnabled)
+		{
+			DsrPriority.setStateFinnished(serverName);
+		}
+		
 	}
 	//---------------------------------------------
 	// END: Daily Summary Report

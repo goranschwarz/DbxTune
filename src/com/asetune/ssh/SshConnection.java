@@ -136,6 +136,13 @@ public class SshConnection
 	public static final String  PROPKEY_ENABLE_OLD_SSH_RSA_ALGORITHM = "SshConnection.enable.old.ssh-rsa.algorithm";
 	public static final boolean DEFAULT_ENABLE_OLD_SSH_RSA_ALGORITHM = true;
 
+	public static final String  PROPKEY_CONNECT_TIMEOUT_SEC = "SshConnection.connection.timout.seconds";
+	public static final int     DEFAULT_CONNECT_TIMEOUT_SEC = 10;
+
+	public static final String  PROPKEY_NOGUI_trust_DbxUserInfo_object = "SshConnection.trust.DbxUserInfo.object";
+//	public static final boolean DEFAULT_NOGUI_trust_DbxUserInfo_object = true;
+	public static final boolean DEFAULT_NOGUI_trust_DbxUserInfo_object = false;
+
 	public static String getRsaKeyFilename()
 	{
 		return _idRSAPath;
@@ -352,8 +359,16 @@ public class SshConnection
 		// If no GUI, allow "unknown" hosts...
 		if (GraphicsEnvironment.isHeadless() || !_defaultOpenSshKkownHostsFileExists) 
 		{
-			_logger.info("Can't find GUI, setting SSH Option 'StrictHostKeyChecking=no'.");
-			_conn.setConfig("StrictHostKeyChecking", "no");
+			if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NOGUI_trust_DbxUserInfo_object, DEFAULT_NOGUI_trust_DbxUserInfo_object))
+			{
+				_logger.info("Can't find GUI, lets trust the 'DbxUserInfo' object to answer any questions. (info about questions will be printed)");
+			}
+			else
+			{
+				// This is the DEFAULT
+				_logger.info("Can't find GUI, setting SSH Option 'StrictHostKeyChecking=no'.");
+				_conn.setConfig("StrictHostKeyChecking", "no");
+			}
 		}
 
 		// Workaround to connect to "older" SSH Servers
@@ -373,6 +388,21 @@ public class SshConnection
 
 		try
 		{
+			int connTimeoutInSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_CONNECT_TIMEOUT_SEC, DEFAULT_CONNECT_TIMEOUT_SEC);
+			int connTimeoutInMs = connTimeoutInSec * 1000;
+			try 
+			{
+				if (connTimeoutInMs > 0)
+				{
+					_logger.info("SSH Connect, setting timeout to " + connTimeoutInMs + " ms. This can be changed with '" + PROPKEY_CONNECT_TIMEOUT_SEC + " = ####'.");
+					_conn.setTimeout(connTimeoutInMs);
+				}
+			} 
+			catch (JSchException jschEx) 
+			{
+				_logger.warn("Problems when setting Connection Timeout to " + connTimeoutInMs + " ms, continuing anyway...", jschEx);
+			}
+
 			_logger.debug(">>> SSH Connect");
 			_conn.connect();
 
@@ -1825,6 +1855,7 @@ public class SshConnection
 			// If we can't provide a GUI simply say NO
 			if (GraphicsEnvironment.isHeadless()) 
 			{
+				_logger.info("promptPassword(): isHeadless(), so I will reply='NO' to all questions. message=|" + message + "|.");
 				return false;
 			}
 						
@@ -1865,6 +1896,7 @@ public class SshConnection
 			// If we can't provide a GUI simply say NO
 			if (GraphicsEnvironment.isHeadless()) 
 			{
+				_logger.info("promptPassphrase(): isHeadless(), so I will reply='NO' to all questions. message=|" + message + "|.");
 				return false;
 			}
 
@@ -1907,6 +1939,7 @@ public class SshConnection
 			// If we can't provide a GUI simply say NO
 			if (GraphicsEnvironment.isHeadless()) 
 			{
+				_logger.info("promptYesNo(): isHeadless(), so I will reply='YES' to all questions. message=|" + message + "|.");
 				return true; // return YES to any questions
 			}
 			

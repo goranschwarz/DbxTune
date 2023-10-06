@@ -68,10 +68,32 @@ extends TabularCntrPanel
 	{
 	}
 
+	private JButton    l_drop_but;
+	private JButton    l_flush_but;
+	private JCheckBox  l_flush_chk;
+	private GLabel     l_filter_lbl;
+	private GTextField l_filter_txt;
+	private JButton    l_aseCfg_but;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("QP Metrics", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("QP Metrics", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				l_flush_chk.setSelected(conf.getBooleanProperty(CmQpMetrics.PROPKEY_onSample_flush, CmQpMetrics.DEFAULT_onSample_flush));
+				l_filter_txt.setText(""+conf.getProperty       (CmQpMetrics.PROPKEY_sample_filter , CmQpMetrics.DEFAULT_sample_filter));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("QP Metrics", true);
 		panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
 		panel.setToolTipText(
 			"<html>" +
@@ -80,35 +102,35 @@ extends TabularCntrPanel
 
 		String filterStr = Configuration.getCombinedConfiguration().getProperty(CmQpMetrics.PROPKEY_sample_filter, CmQpMetrics.DEFAULT_sample_filter);
 		
-		final JButton    drop_but   = new JButton("Reset QP Metrics");
-		final JButton    flush_but  = new JButton("Flush QP Metrics Now");
-		final JCheckBox  flush_chk  = new JCheckBox("Flush QP Metrics on every refresh", CmQpMetrics.DEFAULT_onSample_flush);
-		final GLabel     filter_lbl = new GLabel("Filter:");
-		final GTextField filter_txt = new GTextField(filterStr);
-		final JButton    aseCfg_but = new JButton("Server Config");
+		l_drop_but   = new JButton("Reset QP Metrics");
+		l_flush_but  = new JButton("Flush QP Metrics Now");
+		l_flush_chk  = new JCheckBox("Flush QP Metrics on every refresh", CmQpMetrics.DEFAULT_onSample_flush);
+		l_filter_lbl = new GLabel("Filter:");
+		l_filter_txt = new GTextField(filterStr);
+		l_aseCfg_but = new JButton("Server Config");
 
-		drop_but   .setToolTipText("<html>This will drop/purge all sampled Query Plan Metrics in all databases<br>execute <code>sp_metrics 'drop', '1'</code> in every database</html>");
-		flush_but  .setToolTipText("<html>This will flush all 'in-memory' Query Plan Metrics <br>execute <code>sp_metrics 'flush'</code></html>");
-		flush_chk  .setToolTipText("<html>Before we get data, on every sample. Flush all 'in-memory' Query Plan Metrics<br>execute <code>sp_metrics 'flush'</code></html>");
-		filter_lbl.setToolTipText("<html>Just get some row...<br>This is simply a WHERE Clause to the select...<br>Note: ASE will still write statements below these limits to the system tables, see button 'Server Config' to change capture level at the Server side.<br><b>Example:</b> <code>lio_avg > 100 and elap_max > 10</code><br><br><b>Note:</b> Press &lt;ENTER&gt; in the filter textfield to apply this filter <br><b>Tip:</b> To check what filter is active check the SQL executed: Right click on the 'QP Metrics' tab, and choose 'Properties...'.</html>");
-		filter_txt.setToolTipText("<html>Just get some row...<br>This is simply a WHERE Clause to the select...<br>Note: ASE will still write statements below these limits to the system tables, see button 'Server Config' to change capture level at the Server side.<br><b>Example:</b> <code>lio_avg > 100 and elap_max > 10</code><br><br><b>Note:</b> Press &lt;ENTER&gt; in the filter textfield to apply this filter <br><b>Tip:</b> To check what filter is active check the SQL executed: Right click on the 'QP Metrics' tab, and choose 'Properties...'.</html>");
-		aseCfg_but.setToolTipText("<html>Set filter in the ASE Server...<br>This means the ASE does <b>not</b> store/writes unnececary statemenst <br>to the system tables, avoiding excessive catalog writes for simple queries.<br><br>Simply open the Ase Configure dialog.</html>");
+		l_drop_but   .setToolTipText("<html>This will drop/purge all sampled Query Plan Metrics in all databases<br>execute <code>sp_metrics 'drop', '1'</code> in every database</html>");
+		l_flush_but  .setToolTipText("<html>This will flush all 'in-memory' Query Plan Metrics <br>execute <code>sp_metrics 'flush'</code></html>");
+		l_flush_chk  .setToolTipText("<html>Before we get data, on every sample. Flush all 'in-memory' Query Plan Metrics<br>execute <code>sp_metrics 'flush'</code></html>");
+		l_filter_lbl.setToolTipText("<html>Just get some row...<br>This is simply a WHERE Clause to the select...<br>Note: ASE will still write statements below these limits to the system tables, see button 'Server Config' to change capture level at the Server side.<br><b>Example:</b> <code>lio_avg > 100 and elap_max > 10</code><br><br><b>Note:</b> Press &lt;ENTER&gt; in the filter textfield to apply this filter <br><b>Tip:</b> To check what filter is active check the SQL executed: Right click on the 'QP Metrics' tab, and choose 'Properties...'.</html>");
+		l_filter_txt.setToolTipText("<html>Just get some row...<br>This is simply a WHERE Clause to the select...<br>Note: ASE will still write statements below these limits to the system tables, see button 'Server Config' to change capture level at the Server side.<br><b>Example:</b> <code>lio_avg > 100 and elap_max > 10</code><br><br><b>Note:</b> Press &lt;ENTER&gt; in the filter textfield to apply this filter <br><b>Tip:</b> To check what filter is active check the SQL executed: Right click on the 'QP Metrics' tab, and choose 'Properties...'.</html>");
+		l_aseCfg_but.setToolTipText("<html>Set filter in the ASE Server...<br>This means the ASE does <b>not</b> store/writes unnececary statemenst <br>to the system tables, avoiding excessive catalog writes for simple queries.<br><br>Simply open the Ase Configure dialog.</html>");
 
-		panel.add( drop_but,   "wrap");
+		panel.add( l_drop_but,   "wrap");
 		
-		panel.add( flush_chk,  "split");
-		panel.add( flush_but,  "wrap 5");
+		panel.add( l_flush_chk,  "split");
+		panel.add( l_flush_but,  "wrap 5");
 		
-		panel.add( filter_lbl, "split");
-		panel.add( filter_txt, "growx, pushx, wrap 5");
+		panel.add( l_filter_lbl, "split");
+		panel.add( l_filter_txt, "growx, pushx, wrap 5");
 		
-		panel.add( aseCfg_but, "wrap");
+		panel.add( l_aseCfg_but, "wrap");
 
 		
 		Configuration conf = Configuration.getCombinedConfiguration();
-		flush_chk.setSelected(conf.getBooleanProperty(CmQpMetrics.PROPKEY_onSample_flush, CmQpMetrics.DEFAULT_onSample_flush));
+		l_flush_chk.setSelected(conf.getBooleanProperty(CmQpMetrics.PROPKEY_onSample_flush, CmQpMetrics.DEFAULT_onSample_flush));
 
-		drop_but.addActionListener(new ActionListener()
+		l_drop_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -153,7 +175,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		flush_but.addActionListener(new ActionListener()
+		l_flush_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -197,7 +219,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		flush_chk.addActionListener(new ActionListener()
+		l_flush_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -214,7 +236,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		filter_txt.addActionListener(new ActionListener()
+		l_filter_txt.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -223,7 +245,7 @@ extends TabularCntrPanel
 				if (conf == null)
 					return;
 
-				String str = filter_txt.getText().trim();
+				String str = l_filter_txt.getText().trim();
 
 				conf.setProperty(CmQpMetrics.PROPKEY_sample_filter, str);
 				conf.save();
@@ -231,7 +253,7 @@ extends TabularCntrPanel
 			}
 		});
 
-		aseCfg_but.addActionListener(new ActionListener()
+		l_aseCfg_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)

@@ -175,7 +175,29 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				_sampleMonSqltext_chk    .setSelected(conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_monSqlText,       CmSpidCpuWait.DEFAULT_sample_monSqlText    ));
+				_sampleDbccSqltext_chk   .setSelected(conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_dbccSqlText,      CmSpidCpuWait.DEFAULT_sample_dbccSqlText   ));
+				_sampleProcCallStack_chk .setSelected(conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_procCallStack,    CmSpidCpuWait.DEFAULT_sample_procCallStack ));
+				_sampleShowplan_chk      .setSelected(conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_showplan,         CmSpidCpuWait.DEFAULT_sample_showplan      ));
+				_sampleDbccStacktrace_chk.setSelected(conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_dbccStacktrace,   CmSpidCpuWait.DEFAULT_sample_dbccStacktrace));
+				_sampleFreezeMda_chk     .setSelected(conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_freezeMda,        CmSpidCpuWait.DEFAULT_sample_freezeMda     ));
+				_sampleSystemSpids_chk   .setSelected(conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_systemSpids,      CmSpidCpuWait.DEFAULT_sample_systemSpids   ));
+				
+				_sampleExtraWhereClause_txt.setText(  conf.getProperty       (CmSpidCpuWait.PROPKEY_sample_extraWhereClause, CmSpidCpuWait.DEFAULT_sample_extraWhereClause));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("flowy, ins 0, gap 0", "", "0[0]0"));
 		panel.setToolTipText(
 			"<html>" +

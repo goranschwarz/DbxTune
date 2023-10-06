@@ -157,6 +157,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _lockWaits_txt                             = new JTextField();
 	private JTextField       _lockWaitsDiff_txt                         = new JTextField();
 	private JLabel           _lockWaits_lbl                             = new JLabel();
+	private JTextField       _rootBlockerSpids_txt                      = new JTextField();
+	private JLabel           _rootBlockerSpids_lbl                      = new JLabel();
 	private JLabel           _fullTranslog_lbl                          = new JLabel();
 	private JTextField       _fullTranslog_txt                          = new JTextField();
 	                                                                    
@@ -541,6 +543,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lockWaitsDiff_txt    .setEditable(false);
 		_lockWaitsDiff_txt    .setToolTipText("The difference since previous sample.");
 		_lockWaitsDiff_txt.setForeground(Color.BLUE);
+		
+		tooltip = "SPID's that are 'root blocker'... SPID's that are BLOCKING other SPID's, but at the same time not blocked by any other SPID.";
+		_rootBlockerSpids_lbl.setText("Root Blockers");
+		_rootBlockerSpids_lbl.setToolTipText(tooltip);
+		_rootBlockerSpids_txt.setToolTipText(tooltip);
+		_rootBlockerSpids_txt.setEditable(false);
 
 
 		//-----------------------------------------------------------------------------------
@@ -972,6 +980,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_lockWaits_txt,                             "growx, split");
 		panel.add(_lockWaitsDiff_txt,                         "growx, wrap");
 		                                                      
+		panel.add(_rootBlockerSpids_lbl,                      "");
+		panel.add(_rootBlockerSpids_txt,                      "growx, wrap");
+                                                              
 		panel.add(_fullTranslog_lbl,                          "");
 		panel.add(_fullTranslog_txt,                          "growx, wrap");
                                                               
@@ -1224,24 +1235,25 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		}
 //
 //		_localServerName_txt  .setText();
-		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
-		_listeners_txt         .setText(cm.getAbsString (0, "NetworkAddressInfo")); _listeners_txt.setCaretPosition(0);
-		_onHostName_txt        .setText(cm.getAbsString (0, "OnHostName"));
-		_srvVersion_txt        .setText(cm.getAbsString (0, "srvVersion").replaceFirst("Microsoft SQL Server ", "")); _srvVersion_txt.setCaretPosition(0);
-		_asePageSize_txt       .setText(cm.getAbsString (0, "srvPageSize"));
-		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
-		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");
+		_atAtServerName_txt                     .setText(cm.getAbsString (0, "atAtServerName"));
+		_listeners_txt                          .setText(cm.getAbsString (0, "NetworkAddressInfo")); _listeners_txt.setCaretPosition(0);
+		_onHostName_txt                         .setText(cm.getAbsString (0, "OnHostName"));
+		_srvVersion_txt                         .setText(cm.getAbsString (0, "srvVersion").replaceFirst("Microsoft SQL Server ", "")); _srvVersion_txt.setCaretPosition(0);
+		_asePageSize_txt                        .setText(cm.getAbsString (0, "srvPageSize"));
+		_lastSampleTime_txt                     .setText(cm.getAbsString (0, "timeIsNow"));
+		_utcTimeDiff_txt                        .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");
 
-		_startDate_txt         .setText(cm.getAbsString (0, "StartDate"));
-		_daysRunning_txt       .setText(cm.getAbsString (0, "DaysRunning"));
+		_startDate_txt                          .setText(cm.getAbsString (0, "StartDate"));
+		_daysRunning_txt                        .setText(cm.getAbsString (0, "DaysRunning"));
 
-		_connections_txt       .setText(cm.getAbsString (0, "Connections"));
-		_connectionsDiff_txt   .setText(cm.getDiffString(0, "Connections"));
-		_distinctLoginsAbs_txt .setText(cm.getAbsString (0, "distinctLogins"));
-		_distinctLoginsDiff_txt.setText(cm.getDiffString(0, "distinctLogins"));
-		_lockWaitThreshold_txt .setText(cm.getAbsString (0, "LockWaitThreshold"));
-		_lockWaits_txt         .setText(cm.getAbsString (0, "LockWaits"));
-		_lockWaitsDiff_txt     .setText(cm.getDiffString(0, "LockWaits"));
+		_connections_txt                        .setText(cm.getAbsString (0, "Connections"));
+		_connectionsDiff_txt                    .setText(cm.getDiffString(0, "Connections"));
+		_distinctLoginsAbs_txt                  .setText(cm.getAbsString (0, "distinctLogins"));
+		_distinctLoginsDiff_txt                 .setText(cm.getDiffString(0, "distinctLogins"));
+		_lockWaitThreshold_txt                  .setText(cm.getAbsString (0, "LockWaitThreshold"));
+		_lockWaits_txt                          .setText(cm.getAbsString (0, "LockWaits"));
+		_lockWaitsDiff_txt                      .setText(cm.getDiffString(0, "LockWaits"));
+		_rootBlockerSpids_txt                   .setText(cm.getAbsString (0, "RootBlockerSpids"));  _rootBlockerSpids_txt.setCaretPosition(0);
 		_fullTranslog_txt                       .setText(cm.getAbsString (0, "fullTranslogCount"));
 		
 		_tempdbUsageMbAllAbs_txt		        .setText(cm.getAbsString (0, "tempdbUsageMbAll"));
@@ -1454,8 +1466,9 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_logger.debug("LOCK-WAITS="+lockWaits+", TEXT='"+_lockWaits_txt.getText()+"'.");
 		if (lockWaits > 0)
 		{
-			_lockWaits_txt    .setBackground(Color.RED);
-			_lockWaitsDiff_txt.setBackground(Color.RED);
+			_lockWaits_txt       .setBackground(Color.RED);
+			_lockWaitsDiff_txt   .setBackground(Color.RED);
+			_rootBlockerSpids_txt.setBackground(Color.RED);
 
 			boolean isVisibleInPrevSample = MainFrame.getInstance().hasBlockingLocks();
 			MainFrame.getInstance().setBlockingLocks(true, lockWaits);
@@ -1469,8 +1482,9 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		}
 		else
 		{
-			_lockWaits_txt    .setBackground(_atAtServerName_txt.getBackground());
-			_lockWaitsDiff_txt.setBackground(_atAtServerName_txt.getBackground());
+			_lockWaits_txt       .setBackground(_atAtServerName_txt.getBackground());
+			_lockWaitsDiff_txt   .setBackground(_atAtServerName_txt.getBackground());
+			_rootBlockerSpids_txt.setBackground(_atAtServerName_txt.getBackground());
 
 			MainFrame.getInstance().setBlockingLocks(false, 0);
 		}
@@ -1574,6 +1588,7 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_lockWaitThreshold_txt                    .setText("");
 		_lockWaits_txt                            .setText("");
 		_lockWaitsDiff_txt                        .setText("");
+		_rootBlockerSpids_txt                     .setText("");
 		_fullTranslog_txt                         .setText("");
                                                   
 		_tempdbUsageMbAllAbs_txt                  .setText("");

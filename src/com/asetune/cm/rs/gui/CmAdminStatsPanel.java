@@ -30,7 +30,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.rs.CmAdminStats;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -64,7 +63,23 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Clear Counters", PROPKEY_sample_resetAfter , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_resetAfter  , DEFAULT_sample_resetAfter  ), DEFAULT_sample_resetAfter, CmAdminStatsPanel.TOOLTIP_sample_resetAfter ));
+				
+				_sample_resetAfter_chk.setSelected(conf.getBooleanProperty(CmAdminStats.PROPKEY_sample_resetAfter,  CmAdminStats.DEFAULT_sample_resetAfter));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

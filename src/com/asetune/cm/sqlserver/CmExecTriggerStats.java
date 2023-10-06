@@ -20,20 +20,27 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.gui.CmExecTriggerStatsPanel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -131,7 +138,8 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 0;
+	public static final int      DEFAULT_POSTPONE_TIME          = 300; // every 5 minute
+//	public static final int      DEFAULT_POSTPONE_TIME          = 600; // every 10 minute
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
@@ -177,16 +185,58 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                      = CM_NAME;
+
+	public static final String  PROPKEY_sample_extraWhereClause   = PROP_PREFIX + ".sample.extraWhereClause";
+//	public static final String  DEFAULT_sample_extraWhereClause   = "qs.last_logical_reads > 100";
+	public static final String  DEFAULT_sample_extraWhereClause   = "";
+
+	public static final String  PROPKEY_sample_afterPrevSample    = PROP_PREFIX + ".sample.afterPrevSample";
+	public static final boolean DEFAULT_sample_afterPrevSample    = false;
+
+	public static final String  PROPKEY_sample_lastXminutes       = PROP_PREFIX + ".sample.lastXminutes";
+	public static final boolean DEFAULT_sample_lastXminutes       = true;
+
+	public static final String  PROPKEY_sample_lastXminutesTime   = PROP_PREFIX + ".sample.lastXminutes.time";
+	public static final int     DEFAULT_sample_lastXminutesTime   = 30;
 	
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
+		Configuration.registerDefaultValue(PROPKEY_sample_afterPrevSample,  DEFAULT_sample_afterPrevSample);
+		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes);
+		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime);
+	}
+
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Extra Where Clause",                           PROPKEY_sample_extraWhereClause , String .class, conf.getProperty       (PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause ), DEFAULT_sample_extraWhereClause, CmExecTriggerStatsPanel.TOOLTIP_sample_extraWhereClause ));
+		list.add(new CmSettingsHelper("Show only SQL exected since last sample time", PROPKEY_sample_afterPrevSample  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_afterPrevSample  , DEFAULT_sample_afterPrevSample  ), DEFAULT_sample_afterPrevSample , CmExecTriggerStatsPanel.TOOLTIP_sample_afterPrevSample  ));
+		list.add(new CmSettingsHelper("Show only SQL exected last 10 minutes",        PROPKEY_sample_lastXminutes     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastXminutes     , DEFAULT_sample_lastXminutes     ), DEFAULT_sample_lastXminutes    , CmExecTriggerStatsPanel.TOOLTIP_sample_lastXminutes     ));
+		list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmExecTriggerStatsPanel.TOOLTIP_sample_lastXminutesTime ));
+
+		return list;
+	}
+
+
 	private void addTrendGraphs()
 	{
 	}
 
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmRaSysmonPanel(this);
-//	}
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmExecTriggerStatsPanel(this);
+	}
 
 	@Override
 	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
@@ -227,6 +277,33 @@ extends CountersModel
 			dm_exec_trigger_stats = "dm_exec_trigger_stats";   // IS THIS THE SAME NAME IN AZURE ?????
 
 
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String  sample_extraWhereClause = conf.getProperty(       PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
+		boolean sample_lastXminutes     = conf.getBooleanProperty(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes);
+		int     sample_lastXminutesTime = conf.getIntProperty(    PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime);
+
+		// Do we have extra where clauses
+		String sql_sample_extraWhereClause = "  -- Extra where clauses will go here. (it will look like: AND the_extra_where_clause) \n";
+		if ( ! StringUtil.isNullOrBlank(sample_extraWhereClause) )
+			sql_sample_extraWhereClause = "  AND " + sample_extraWhereClause + "\n";
+
+		String sql_sample_lastXminutes = "";
+		if (sample_lastXminutes)
+		{
+			// The below Wont work correctly (Check the below Note)
+			//sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
+			//
+			// Note:
+			//  - statements are added to 'dm_exec_query_stats' when they are FINNISHED (at end of execution)
+			//  - The 'last_execution_time' is when the statement was last STARTED
+			// Which means that if we have 'lastXMinutes' to 10 minutes (as an example) and the execution takes 11 minutes it wont be captured :(
+			// So we need to **add** 'last_elapsed_time' to the 'last_execution_time' to get a Statement END/COMPLETION time!
+			// hence: dateadd(ms, (last_elapsed_time/1000), last_execution_time) > #numberOfMinutesToSave#
+			//                     ^^^^^^^^^^^^^^^^^ ^^^^
+			//                     in-microseconds   to-milliseconds
+			sql_sample_lastXminutes = "  AND dateadd(ms, (last_elapsed_time/1000), last_execution_time) > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
+		}
+
 //		String sql = 
 //			"select \n"
 //			+ "    DbName     = db_name(database_id), \n"
@@ -244,9 +321,37 @@ extends CountersModel
 			    + "    * \n"
 			    + "from sys." + dm_exec_trigger_stats + " BASE \n"
 			    + "where BASE.database_id = db_id() \n"
-			    + "";
+				+ sql_sample_extraWhereClause
+				+ sql_sample_lastXminutes
+				;
 
 		return sql;
+	}
+
+	@Override
+	public String getSql()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sample_afterPrevSample = conf.getBooleanProperty(PROPKEY_sample_afterPrevSample, DEFAULT_sample_afterPrevSample);
+
+		if (sample_afterPrevSample)
+		{
+    		Timestamp prevSample = getPreviousSampleTime();
+    		if (prevSample == null)
+    		{
+    			setSqlWhere("AND 1=0"); // do not get any rows for the first sample...
+    		}
+    		else
+    		{
+//    			setSqlWhere("AND last_execution_time > '"+prevSample+"' "); 
+    			setSqlWhere("AND dateadd(ms, (last_elapsed_time/1000), last_execution_time) > '"+prevSample+"' "); 
+    		}
+		}
+		else
+			setSqlWhere("");
+
+		// Now get the SQL from super method...
+		return super.getSql();
 	}
 
 

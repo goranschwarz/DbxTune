@@ -22,7 +22,6 @@ package com.asetune.cm.sqlserver;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,6 +39,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmSpidWaitPanel;
+import com.asetune.cm.sqlserver.gui.CmWaitStatsPerDbPanel;
 import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
@@ -146,8 +146,8 @@ extends CountersModel
 	public static final String  PROPKEY_sample_extraWhereClause      = PROP_PREFIX + ".sample.extraWhereClause";
 	public static final String  DEFAULT_sample_extraWhereClause      = "";
 
-	public static final String  PROPKEY_trendGraph_skipWaitTypeList    = PROP_PREFIX + ".trendGraph.skipWaitTypeList";
-	public static final String  DEFAULT_trendGraph_skipWaitTypeList    = "";
+//	public static final String  PROPKEY_trendGraph_skipWaitTypeList    = PROP_PREFIX + ".trendGraph.skipWaitTypeList";
+//	public static final String  DEFAULT_trendGraph_skipWaitTypeList    = "";
 
 	@Override
 	protected void registerDefaultValues()
@@ -155,14 +155,14 @@ extends CountersModel
 		super.registerDefaultValues();
 
 		Configuration.registerDefaultValue(PROPKEY_sample_extraWhereClause,      DEFAULT_sample_extraWhereClause);
-		Configuration.registerDefaultValue(PROPKEY_trendGraph_skipWaitTypeList,  DEFAULT_trendGraph_skipWaitTypeList);
+//		Configuration.registerDefaultValue(PROPKEY_trendGraph_skipWaitTypeList,  DEFAULT_trendGraph_skipWaitTypeList);
 	}
 	
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmSpidWaitPanel(this);
-//	}
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmWaitStatsPerDbPanel(this);
+	}
 
 	@Override
 	public boolean checkDependsOnVersion(DbxConnection conn)
@@ -258,8 +258,8 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Extra Where Caluse",     PROPKEY_sample_extraWhereClause      , String.class,  conf.getProperty       (PROPKEY_sample_extraWhereClause      , DEFAULT_sample_extraWhereClause      ), DEFAULT_sample_extraWhereClause     , CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause                     ));
-		list.add(new CmSettingsHelper("Skip wait_type List",    PROPKEY_trendGraph_skipWaitTypeList  , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipWaitTypeList  , DEFAULT_trendGraph_skipWaitTypeList  ), DEFAULT_trendGraph_skipWaitTypeList , "Skip specific 'wait_type' from beeing in ThrendGraph"              ));
+		list.add(new CmSettingsHelper("Extra Where Clause",     PROPKEY_sample_extraWhereClause      , String.class,  conf.getProperty       (PROPKEY_sample_extraWhereClause      , DEFAULT_sample_extraWhereClause      ), DEFAULT_sample_extraWhereClause     , CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause                     ));
+//		list.add(new CmSettingsHelper("Skip wait_type List",    PROPKEY_trendGraph_skipWaitTypeList  , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipWaitTypeList  , DEFAULT_trendGraph_skipWaitTypeList  ), DEFAULT_trendGraph_skipWaitTypeList , "Skip specific 'wait_type' from beeing in ThrendGraph"              ));
 
 		return list;
 	}

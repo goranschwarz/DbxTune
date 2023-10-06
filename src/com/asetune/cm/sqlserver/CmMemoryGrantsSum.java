@@ -347,7 +347,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_GRANTED_MEMORY_SUM,
 				"Memory Grant Summary in MB",        // Menu CheckBox text
 				"Memory Grant Summary in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 				new String[] {"granted_memory_mb", "used_memory_mb"}, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.MEMORY,
@@ -379,7 +379,7 @@ extends CountersModel
 			int aggRowId = getAggregatedRowId();
 			
 			arr[0] = this.getAbsValueAsDouble(aggRowId, "grantee_count");
-			arr[0] = this.getAbsValueAsDouble(aggRowId, "waiter_count");
+			arr[1] = this.getAbsValueAsDouble(aggRowId, "waiter_count");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -410,6 +410,24 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+	}
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_GRANTED_MEMORY_SUM  .equals(name)) return true; // Used by CmWaitStat
+		if (GRAPH_NAME_GRANTEE_WAITER_COUNT.equals(name)) return true; // Used by CmWaitStat
+		if (GRAPH_NAME_GRANTED_MEMORY_PCT  .equals(name)) return true; // Used by CmWaitStat
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
 	}
 
 	
@@ -453,6 +471,26 @@ extends CountersModel
 				String extendedDescText = cm.toTextTableString(DATA_RATE, aggRowId);
 				String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, aggRowId, true, false, false);
 
+				// Possibly getting info from CmMemoryGrants
+				// This can help to show what SQL Statement(s) are involved 
+				CountersModel cmMemoryGrants = getCounterController().getCmByName(CmMemoryGrants.CM_NAME);
+				if (cmMemoryGrants.hasAbsData())
+				{
+					extendedDescHtml = "<b>Current Memory Grants: (" + cmMemoryGrants.getAbsRowCount() + " records, one table for each record)</b><br>";
+					for (int r=0; r<cmMemoryGrants.getAbsRowCount(); r++)
+					{
+						extendedDescHtml += cmMemoryGrants.toHtmlTableString(DATA_ABS , r, true, false, false) + "<br>";
+					}
+				}
+				else
+				{
+					if (cmMemoryGrants.isActive())
+						extendedDescHtml = "<b>Current Memory Grants: (CmMemoryGrants does NOT contain any data)</b><br>";
+					else
+						extendedDescHtml = "<b>Current Memory Grants: (CmMemoryGrants is NOT enabled)</b><br>";
+				}
+
+				// Create the alarm
 				AlarmEvent ae = new AlarmEventMemoryGrantWait(cm, threshold, waiter_count);
 
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);

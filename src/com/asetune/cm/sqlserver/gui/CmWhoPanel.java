@@ -203,7 +203,26 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Sample System Threads", PROPKEY_sample_systemThreads , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads  , DEFAULT_sample_systemThreads  ), DEFAULT_sample_systemThreads, CmWhoPanel.TOOLTIP_sample_systemThreads ));
+
+				l_sampleSystemThreads_chk.setSelected(conf.getBooleanProperty(CmWho.PROPKEY_sample_systemThreads, CmWho.DEFAULT_sample_systemThreads));
+
+				// If the 'l_sampleSystemThreads_chk' the table needs to be updated... so that filters are applied
+				getCm().fireTableDataChanged();
+
+				// ReInitialize the SQL
+				//getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

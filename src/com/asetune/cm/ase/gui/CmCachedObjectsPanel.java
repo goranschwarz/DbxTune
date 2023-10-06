@@ -95,10 +95,28 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_DATATYPE_BLOB), null));
 	}
 
+	private JCheckBox  l_sampleTopRows_chk;
+	private JTextField l_sampleTopRowsCount_txt;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				l_sampleTopRows_chk      .setSelected(conf.getBooleanProperty(CmCachedObjects.PROPKEY_sample_topRows,      CmCachedObjects.DEFAULT_sample_topRows));
+				l_sampleTopRowsCount_txt .setText(""+ conf.getIntProperty    (CmCachedObjects.PROPKEY_sample_topRowsCount, CmCachedObjects.DEFAULT_sample_topRowsCount));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -108,16 +126,16 @@ extends TabularCntrPanel
 		// Top Rows (top #)
 		defaultOpt    = conf == null ? CmCachedObjects.DEFAULT_sample_topRows      : conf.getBooleanProperty(CmCachedObjects.PROPKEY_sample_topRows,      CmCachedObjects.DEFAULT_sample_topRows);
 		defaultIntOpt = conf == null ? CmCachedObjects.DEFAULT_sample_topRowsCount : conf.getIntProperty    (CmCachedObjects.PROPKEY_sample_topRowsCount, CmCachedObjects.DEFAULT_sample_topRowsCount);
-		final JCheckBox  sampleTopRows_chk      = new JCheckBox("Limit number of rows (top #)", defaultOpt);
-		final JTextField sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
+		l_sampleTopRows_chk      = new JCheckBox("Limit number of rows (top #)", defaultOpt);
+		l_sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
 
-		sampleTopRows_chk.setName(CmCachedObjects.PROPKEY_sample_topRows);
-		sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRows_chk.setName(CmCachedObjects.PROPKEY_sample_topRows);
+		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
-		sampleTopRowsCount_txt.setName(CmCachedObjects.PROPKEY_sample_topRowsCount);
-		sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRowsCount_txt.setName(CmCachedObjects.PROPKEY_sample_topRowsCount);
+		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
-		sampleTopRows_chk.addActionListener(new ActionListener()
+		l_sampleTopRows_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -144,14 +162,14 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				
-				String strVal = sampleTopRowsCount_txt.getText();
+				String strVal = l_sampleTopRowsCount_txt.getText();
 				int    intVal = CmCachedObjects.DEFAULT_sample_topRowsCount;
 				try { intVal = Integer.parseInt(strVal);}
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmCachedObjects.DEFAULT_sample_topRowsCount;
 					SwingUtils.showWarnMessage(CmCachedObjectsPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					sampleTopRowsCount_txt.setText(intVal+"");
+					l_sampleTopRowsCount_txt.setText(intVal+"");
 				}
 				conf.setProperty(CmCachedObjects.PROPKEY_sample_topRowsCount, intVal);
 				conf.save();
@@ -162,8 +180,8 @@ extends TabularCntrPanel
 					cm.setSql(null);
 			}
 		};
-		sampleTopRowsCount_txt.addActionListener(sampleTopRowsCount_action);
-		sampleTopRowsCount_txt.addFocusListener(new FocusListener()
+		l_sampleTopRowsCount_txt.addActionListener(sampleTopRowsCount_action);
+		l_sampleTopRowsCount_txt.addFocusListener(new FocusListener()
 		{
 			@Override
 			public void focusLost(FocusEvent e)
@@ -177,8 +195,8 @@ extends TabularCntrPanel
 		
 		
 		// LAYOUT
-		panel.add(sampleTopRows_chk,      "split");
-		panel.add(sampleTopRowsCount_txt, "wrap");
+		panel.add(l_sampleTopRows_chk,      "split");
+		panel.add(l_sampleTopRowsCount_txt, "wrap");
 
 		return panel;
 	}

@@ -50,6 +50,7 @@ import com.asetune.Version;
 import com.asetune.gui.TextDialog;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -125,8 +126,14 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 	
 	public static Configuration showDialog(Window owner)
 	{
+		return showDialog(owner, null);
+	}
+
+	public static Configuration showDialog(Window owner, String cmName)
+	{
 		AlarmConfigDialog dialog = new AlarmConfigDialog(owner);
 		dialog.setLocationRelativeTo(owner);
+		dialog.setSelectedCmName(cmName);
 		dialog.setVisible(true);
 		dialog.dispose();
 //		return dialog._madeChanges;
@@ -406,6 +413,14 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 	** END: Action Listeners
 	**---------------------------------------------------
 	*/
+
+	private void setSelectedCmName(String cmName)
+	{
+		if (StringUtil.isNullOrBlank(cmName))
+			return;
+
+		_alarmPanel.setSelectedCmName(cmName);
+	}
 
 	private void previewConfig()
 	{

@@ -64,6 +64,7 @@ public class MailHelper
 		System.out.println("test.1: " + list);
 		System.out.println( list.equals(Arrays.asList(new String[]{"test1@acme.com"})) ? "OK" : "---- FAIL ----");
 
+		
 		// test-2
 		System.setProperty("xxx.test.2", ("[ "
 				+ "{#serverName#:#srv1#, #to#:#test2.srv1@json.acme.com#}, "
@@ -73,6 +74,7 @@ public class MailHelper
 		System.out.println("test.2: " + list);
 		System.out.println( list.equals(Arrays.asList(new String[]{"test2.srv1@json.acme.com"})) ? "OK" : "---- FAIL ----");
 
+		
 		// test-3
 		AlarmEvent ae = new AlarmEventDummy("test", "test", "test", AlarmEvent.Category.OTHER, AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, 0, null, null, null, 0);
 		System.setProperty("xxx.test.3", ("[ "
@@ -83,6 +85,7 @@ public class MailHelper
 		System.out.println("test.3: " + list);
 		System.out.println( list.equals(Arrays.asList(new String[]{"test3.onlyDummyAlarm.srv1@json.acme.com", "test3.allAlarms.srv1@json.acme.com"})) ? "OK" : "---- FAIL ----");
 
+		
 		// test-4 (regex)
 		ae = new AlarmEventDummy("test", "test", "test", AlarmEvent.Category.OTHER, AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, 0, null, null, null, 0);
 		System.setProperty("xxx.test.4", ("[ "
@@ -93,6 +96,28 @@ public class MailHelper
 		list = getMailToAddressForServerNameAsList("srv1", ae, "xxx.test.4", "test4");
 		System.out.println("test.4: " + list);
 		System.out.println( list.equals(Arrays.asList(new String[]{"test4.onlyDummyAlarm.srv1@json.acme.com", "test4.allAlarms.srv1@json.acme.com"})) ? "OK" : "---- FAIL ----");
+
+		
+		// test-5 -- FALLBACK
+		System.setProperty("xxx.test.5", ("[ "
+				+ "{#serverName#:#srv1#, #to#:#test5.srv1@json.acme.com#}, "
+				+ "{#serverName#:#srv2#, #to#:#test5.srv2@json.acme.com#}, "
+				+ "{#fallback#:true, #to#:#test5.srvFallback1@json.acme.com, test5.srvFallback2@json.acme.com#} "
+				+ "]").replace('#', '"'));
+		list = getMailToAddressForServerNameAsList("unknownSrv", null, "xxx.test.5", "test5");
+		System.out.println("test.5: " + list);
+		System.out.println( list.equals(Arrays.asList(new String[]{"test5.srvFallback1@json.acme.com", "test5.srvFallback2@json.acme.com"})) ? "OK" : "---- FAIL ----");
+
+
+		// test-6 -- simple but with 2 mail addresses (and a 'fallback', which should NOT be used)
+		System.setProperty("xxx.test.6", ("[ "
+				+ "{#serverName#:#srv1#, #to#:#test6.srv1.m1@json.acme.com, test6.srv1.m2@json.acme.com#}, "
+				+ "{#serverName#:#srv2#, #to#:#test6.srv2@json.acme.com#}, "
+				+ "{#fallback#:true, #to#:#test6.srvFallback1@json.acme.com#} "
+				+ "]").replace('#', '"'));
+		list = getMailToAddressForServerNameAsList("srv1", null, "xxx.test.6", "test6");
+		System.out.println("test.6: " + list);
+		System.out.println( list.equals(Arrays.asList(new String[]{"test6.srv1.m1@json.acme.com", "test6.srv1.m2@json.acme.com"})) ? "OK" : "---- FAIL ----");
 	}
 
 	/**
@@ -141,6 +166,7 @@ public class MailHelper
 		if (JsonUtils.isJsonValid(toStr))
 		{
 			Set<String> returnSet = new LinkedHashSet<>();
+			Set<String> fallbackSet = new LinkedHashSet<>();
 			String jsonStr = toStr;
 			int jsonArrayLoopCount = 0;
 			
@@ -202,7 +228,7 @@ public class MailHelper
 									if (_logger.isDebugEnabled())
 										_logger.debug("json[" + jsonArrayLoopCount + "] MATCH-end: using mail address to='" + entryTo + "' for serverName='" + serverName + "', alarmName='" + alarmName + "'.");
 
-									returnSet.add(entryTo);
+									returnSet.addAll( StringUtil.parseCommaStrToSet(entryTo) );
 								}
 								else
 								{
@@ -212,11 +238,32 @@ public class MailHelper
 							}
 						}
 					}
+					else if (jsonObj.has("fallback") && jsonObj.has("to")) // NOTE: This section is new 2023-09-20 and has NOT YET been tested
+					{
+						String entryFallback   = jsonObj.get("fallback").getAsString();
+						String entryTo         = jsonObj.get("to"      ).getAsString();
+
+						if ("true".equalsIgnoreCase(entryFallback))
+						{
+							if (StringUtil.hasValue(entryTo))
+							{
+								if (_logger.isDebugEnabled())
+									_logger.debug("json[" + jsonArrayLoopCount + "] FALLBACK entry found: adding mail address to='" + entryTo + "'.");
+
+								fallbackSet.addAll( StringUtil.parseCommaStrToSet(entryTo) );
+							}
+						}
+						else
+						{
+							_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('"+serverName+"'): Skipping 'fallback' entry, since it contains '" + entryFallback + "', which is considdered as 'false'.");
+						}
+					}
 					else
 					{
-						_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('"+serverName+"'): Skipping JSON entry '" + jsonObj + "', it dosn't contain members: 'serverName' and 'to'.");
+						_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('"+serverName+"'): Skipping JSON entry '" + jsonObj + "', it dosn't contain members: ('serverName' and 'to') or ('fallback' and 'to').");
 					}
-				}
+				} // end: JSON loop objects
+
 				if (jsonArrayLoopCount == 0)
 				{
 					_logger.warn("getMailToAddressForServerName('"+serverName+"'): NO JSON Array was found in JSON String '" + jsonStr + "', Skipping this and returning ''. for property '" + propKeyTo + "'.");
@@ -225,6 +272,11 @@ public class MailHelper
 				else if ( ! returnSet.isEmpty() )
 				{
 					return StringUtil.toCommaStr(returnSet);
+				}
+				else if ( ! fallbackSet.isEmpty() )
+				{
+					_logger.info("getMailToAddressForServerName('"+serverName+"'): No matching 'serverName' entry was found for serverName '" + serverName + "' but a 'fallback' entry was found and used. to=" + fallbackSet);
+					return StringUtil.toCommaStr(fallbackSet);
 				}
 
 				_logger.info("getMailToAddressForServerName('"+serverName+"'): No matching entry was found for serverName '" + serverName + "' in JSON '" + jsonStr + "' using propert '" + propKeyTo + "'. Returning ''(blank) as the email recipiant.");

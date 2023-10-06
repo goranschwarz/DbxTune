@@ -68,7 +68,21 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				_sampleSpinlockSlotID_chk.setSelected(conf.getBooleanProperty(CmSpinlockActivity.PROPKEY_sample_SpinlockSlotID,  CmSpinlockActivity.DEFAULT_sample_SpinlockSlotID));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

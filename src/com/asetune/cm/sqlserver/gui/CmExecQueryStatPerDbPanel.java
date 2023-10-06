@@ -30,7 +30,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmExecQueryStatPerDb;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -49,21 +48,39 @@ extends TabularCntrPanel
 //		init();
 	}
 	
+	private JCheckBox l_sampleMsResourceDb_chk;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Sample MS Resource DB", PROPKEY_sample_MsResourceDb, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_MsResourceDb, DEFAULT_sample_MsResourceDb), DEFAULT_ALARM_isAlarmsEnabled, CmExecQueryStatPerDbPanel.TOOLTIP_sample_resourcedb));
+				
+				l_sampleMsResourceDb_chk.setSelected(conf.getBooleanProperty(CmExecQueryStatPerDb.PROPKEY_sample_MsResourceDb, CmExecQueryStatPerDb.DEFAULT_sample_MsResourceDb));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		JCheckBox sampleMsResourceDb_chk = new JCheckBox("Sample MS Resource DB", conf == null ? CmExecQueryStatPerDb.DEFAULT_sample_MsResourceDb : conf.getBooleanProperty(CmExecQueryStatPerDb.PROPKEY_sample_MsResourceDb, CmExecQueryStatPerDb.DEFAULT_sample_MsResourceDb));
+		l_sampleMsResourceDb_chk = new JCheckBox("Sample MS Resource DB", conf == null ? CmExecQueryStatPerDb.DEFAULT_sample_MsResourceDb : conf.getBooleanProperty(CmExecQueryStatPerDb.PROPKEY_sample_MsResourceDb, CmExecQueryStatPerDb.DEFAULT_sample_MsResourceDb));
 
-		sampleMsResourceDb_chk.setName(CmExecQueryStatPerDb.PROPKEY_sample_MsResourceDb);
-		sampleMsResourceDb_chk.setToolTipText(TOOLTIP_sample_resourcedb);
+		l_sampleMsResourceDb_chk.setName(CmExecQueryStatPerDb.PROPKEY_sample_MsResourceDb);
+		l_sampleMsResourceDb_chk.setToolTipText(TOOLTIP_sample_resourcedb);
 
-		panel.add(sampleMsResourceDb_chk, "wrap");
+		panel.add(l_sampleMsResourceDb_chk, "wrap");
 
-		sampleMsResourceDb_chk.addActionListener(new ActionListener()
+		l_sampleMsResourceDb_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)

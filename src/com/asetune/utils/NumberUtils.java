@@ -81,15 +81,19 @@ public class NumberUtils
 		}
 	}
 
-	public static boolean isNumeric(String strNum, boolean allowCommas)
+	public static boolean isNumeric(String strNum, boolean stripCommas, boolean stripSpaces)
 	{
 		if (strNum == null)
 			return false;
 
 		// Number Input string is formated with "," on every thousand for readability... so remove that
-		if (allowCommas)
+		if (stripCommas)
 			strNum = strNum.replace(",", "").trim();
 
+		// Number Input string is formated with " " on every thousand for readability... so remove that
+		if (stripSpaces)
+			strNum = strNum.replace(" ", "").trim();
+		
 		try 
 		{
 			Double.parseDouble(strNum);

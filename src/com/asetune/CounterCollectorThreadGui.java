@@ -753,6 +753,30 @@ extends CounterCollectorThreadAbstract
 				}
 
 				
+				//---------------------------------------------------
+				// POSTPROCESSING -  Alarm handling
+				//---------------------------------------------------
+				_logger.debug("---- Do Alarm handling...");
+				for (CountersModel cm : refreshedCms.values())
+				{
+					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Alarm Handling... "+cm.getDisplayName());
+
+					cm.wrapperFor_sendAlarmRequest();
+				}
+
+
+				//---------------------------------------------------
+				// POSTPROCESSING - setFirstSample(false)
+				//---------------------------------------------------
+				_logger.debug("---- Do -end-first-time-sample- handling...");
+				for (CountersModel cm : refreshedCms.values())
+				{
+					// This was previously done "near end" CountersModel.refreshGetData(DbxConnection)
+					// But some alarms needs to be aware if it's the first sample or not, so I moved it here instead.
+					cm.setFirstTimeSample(false);
+				}
+
+				
 				//-----------------
 				// Update SUMMARY GRAPHS
 				//-----------------

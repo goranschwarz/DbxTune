@@ -123,10 +123,10 @@
 	<classpathentry kind="lib" path="lib/sql-formatter-2.0.3.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1645375698757/source/sql-formatter-2.0.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/h2-2.1.214.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
-	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-11.2.1.jre8.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-0.2.7.jar" sourcepath="3pp/jsch-0.2.7-sources.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.72.jar" sourcepath="3pp/bcprov-jdk18on-1.72-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.51.v20230217-uber.jar"/>
+	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-12.4.1.jre8.jar" sourcepath="3pp/mssql-jdbc-12.4.1.jre8-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

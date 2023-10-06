@@ -525,7 +525,24 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				sampleSpaceusage_chk.setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_spaceusage, CmOpenDatabases.DEFAULT_sample_spaceusage));
+				sampleShowplan_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_showplan  , CmOpenDatabases.DEFAULT_sample_showplan));
+				sampleMonSqlText_chk.setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_monSqlText, CmOpenDatabases.DEFAULT_sample_monSqlText));
+				sampleLocks_chk     .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_locks,      CmOpenDatabases.DEFAULT_sample_locks));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 //		final JCheckBox sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage");;

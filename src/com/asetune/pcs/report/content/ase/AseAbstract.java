@@ -892,6 +892,7 @@ extends ReportEntryAbstract
 			_logger.warn("Problems checking if index exists to help ReportEntry '" + this.getClass().getSimpleName() + "'. Continuing without the index. Caught: " + ex);
 		}
 
+		// NOTE: INDEXES for below is created in: each ReportEntry.getReportingIndexes()
 		
 		// just to get Column names
 		String dummySql = "select * from [CmObjectActivity_diff] where 1 = 2";
@@ -1215,7 +1216,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting INDEX Information for dbname='" + ti._dbName + "', owner='" + ti._schemaName + "', table='" + ti._tableName + "'.", ex);
+			_logger.warn("Problems getting INDEX Information at 'getTableAndIndexInfo()', for dbname='" + ti._dbName + "', owner='" + ti._schemaName + "', table='" + ti._tableName + "'.", ex);
 			//throw ex;
 		}
 		

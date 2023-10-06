@@ -296,13 +296,14 @@ extends CountersModelAppend
 		if (lastRefreshRows.size() == 0)
 			return;
 
+		int col_Time_pos         = findColumn("Time");
 		int col_ErrorNumber_pos  = findColumn("ErrorNumber");
 		int col_Severity_pos     = findColumn("Severity");
 		int col_ErrorMessage_pos = findColumn("ErrorMessage");
 
-		if (col_ErrorNumber_pos < 0 || col_Severity_pos < 0 || col_ErrorMessage_pos < 0)
+		if (col_Time_pos < 0 || col_ErrorNumber_pos < 0 || col_Severity_pos < 0 || col_ErrorMessage_pos < 0)
 		{
-			_logger.error("When checking for alarms, could not find all columns. skipping this. [ErrorNumber_pos="+col_ErrorNumber_pos+", Severity_pos="+col_Severity_pos+", ErrorMessage_pos="+col_ErrorMessage_pos+"]");
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [col_Time_pos=["+col_Time_pos+"], ErrorNumber_pos="+col_ErrorNumber_pos+", Severity_pos="+col_Severity_pos+", ErrorMessage_pos="+col_ErrorMessage_pos+"]");
 			return;
 		}
 		
@@ -314,10 +315,16 @@ extends CountersModelAppend
 		{
 			List<Object> row = lastRefreshRows.get(r);
 
+			Object o_Time         = row.get(col_Time_pos);
 			Object o_errorNumber  = row.get(col_ErrorNumber_pos);
 			Object o_severity     = row.get(col_Severity_pos);
 			Object o_ErrorMessage = row.get(col_ErrorMessage_pos);
 
+			if (o_Time == null || !(o_Time instanceof Timestamp) )
+			{
+				_logger.error("When checking for alarms, the column 'Time' is NOT an Timestamp, skipping this row. [Time="+o_Time+"]");
+				continue;
+			}
 			if (o_errorNumber == null || !(o_errorNumber instanceof Integer) )
 			{
 				_logger.error("When checking for alarms, the column 'ErrorNumber' is NOT an integer, skipping this row. [ErrorNumber="+o_errorNumber+"]");
@@ -329,9 +336,10 @@ extends CountersModelAppend
 				continue;
 			}
 
-			int    errorNumber  = (Integer) o_errorNumber;
-			int    severity     = (Integer) o_severity;
-			String ErrorMessage = o_ErrorMessage == null ? "" : o_ErrorMessage.toString();
+			Timestamp errorlogTs   = (Timestamp) o_Time;
+			int       errorNumber  = (Integer)   o_errorNumber;
+			int       severity     = (Integer)   o_severity;
+			String    ErrorMessage = o_ErrorMessage == null ? "" : o_ErrorMessage.toString();
 
 			//-------------------------------------------------------
 			// There are not enough 'user connections' available to start a new process
@@ -349,7 +357,7 @@ extends CountersModelAppend
 					extendedDescHtml += "<br><br>" + cmSpMonitorConfig.getGraphDataHistoryAsHtmlImage(CmSpMonitorConfig.GRAPH_NAME_METADATA_ACTIVE   , resourceName);
 					extendedDescHtml += "<br><br>" + cmSpMonitorConfig.getGraphDataHistoryAsHtmlImage(CmSpMonitorConfig.GRAPH_NAME_METADATA_PCT_USAGE, resourceName);
 
-					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, resourceName, 1601, ErrorMessage);
+					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, resourceName, 1601, ErrorMessage, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 					alarmHandler.addAlarm( ae );
@@ -384,7 +392,7 @@ extends CountersModelAppend
 					extendedDescHtml += "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_LEFT_MB,  dbname);
 					extendedDescHtml += "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
 
-					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname);
+					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 					alarmHandler.addAlarm( ae );
@@ -484,7 +492,7 @@ extends CountersModelAppend
 						if (severity > 17)
 							alarmSeverity = AlarmEvent.Severity.ERROR;
 						
-						AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNumber, severity, ErrorMessage, threshold);
+						AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNumber, severity, ErrorMessage, errorlogTs, threshold);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 						alarmHandler.addAlarm( ae );
@@ -516,7 +524,7 @@ extends CountersModelAppend
 							configName = ErrorMessage.substring(startPos, endPos);
 					}
 					
-					AlarmEvent ae = new AlarmEventConfigChanges(this, configName, ErrorMessage);
+					AlarmEvent ae = new AlarmEventConfigChanges(this, configName, ErrorMessage, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
 					alarmHandler.addAlarm( ae );
@@ -630,7 +638,7 @@ extends CountersModelAppend
 
 					if (processInfected)
 					{
-						AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage);
+						AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage, errorlogTs);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 						alarmHandler.addAlarm( ae );
@@ -638,7 +646,7 @@ extends CountersModelAppend
 
 					if (timesliceError)
 					{
-						AlarmEvent ae = new AlarmEventProcessTimeSliceError(this, fullErrorMessage);
+						AlarmEvent ae = new AlarmEventProcessTimeSliceError(this, fullErrorMessage, errorlogTs);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
 						alarmHandler.addAlarm( ae );
@@ -670,7 +678,7 @@ extends CountersModelAppend
 					String extendedDescText = fullErrorMessage;
 					String extendedDescHtml = "<pre>\n" + fullErrorMessage + "\n</pre>";
 
-					AlarmEvent ae = new AlarmEventProcessStackTrace(this, msgSpid, msgKpid, msgSuid, fullErrorMessage, errorNumber);
+					AlarmEvent ae = new AlarmEventProcessStackTrace(this, msgSpid, msgKpid, msgSuid, fullErrorMessage, errorNumber, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 					alarmHandler.addAlarm( ae );
@@ -689,7 +697,7 @@ extends CountersModelAppend
 					String extendedDescText = ErrorMessage;
 					String extendedDescHtml = "<pre>\n" + ErrorMessage + "\n</pre>";
 
-					AlarmEvent ae = new AlarmEventBackgroundMessage(this, ErrorMessage);
+					AlarmEvent ae = new AlarmEventBackgroundMessage(this, ErrorMessage, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 					alarmHandler.addAlarm( ae );

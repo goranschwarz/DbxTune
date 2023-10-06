@@ -2059,6 +2059,28 @@ public class SwingUtils
 		ActionMap aMap = window.getRootPane().getActionMap();
 		aMap.put("escape", escAction); 
 	}
+	/**
+	 * When pressing ESCAPE, what button should we press
+	 */
+	public static void installEscapeButton(JFrame window, final JButton pressThisOnEscape)
+	{
+		@SuppressWarnings("serial")
+		AbstractAction escAction = new AbstractAction() 
+		{
+			@Override
+			public void actionPerformed(ActionEvent evt) 
+			{
+				if (pressThisOnEscape != null) 
+					pressThisOnEscape.doClick(20);
+	        }
+		};
+
+		InputMap iMap = window.getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+		iMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "escape");
+
+		ActionMap aMap = window.getRootPane().getActionMap();
+		aMap.put("escape", escAction); 
+	}
 
 
 	/**

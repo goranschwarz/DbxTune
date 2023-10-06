@@ -129,18 +129,26 @@ extends SqlServerAbstract
 			return;
 		}
 
+		// DO NOT TRUST: new data that hasn't yet been DIFF Calculated (it only has 1 sample, so it's probably Asolute values, which are *to high*)
+		// If we would trust the above values, it will/may create statistical problems (showing to high values in specific periods)
+		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", true);
+
 		//  SQL for: only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse)
 		String sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; // This is the "old" way... and used for backward compatibility
 //		String sql_and_onlyNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 1 \n"; // This is the "old" way... and used for backward compatibility
+//		String col_newDiffRow_sum            = " ,sum([CmNewDiffRateRow])     as [newDiffRow_sum] \n";
 		if (dummyRstm.hasColumn("CmRowState")) // New column name for 'CmNewDiffRateRow' (which is a bitwise state column)
 		{
 			// the below will produce for H2:     and  BITAND([CmRowState], 1) = ???   
 			//                        for OTHERS: and  ([CmRowState] & 1) = ???
 			sql_and_skipNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = 0 \n";
 //			sql_and_onlyNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = " + CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW + " \n";
+//			col_newDiffRow_sum = " ,sum(" + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + ")     as [newDiffRow_sum] \n";
 		}
 //FIXME; double check the code for "CmNewDiffRateRow and CmRowState"
 
+		// Used by "sparkline" charts to filter out "new diff/rate" rows
+		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : sql_and_skipNewOrDiffRateRows;
 		
 //		RS> Col# Label                JDBC Type Name           Guessed DBMS type Source Table
 //		RS> ---- -------------------- ------------------------ ----------------- ------------
@@ -305,10 +313,11 @@ extends SqlServerAbstract
 			    
 			    + "    ,max([plan_handle])                     as [plan_handle] \n"
 			    
-			    + "    ,count(*)                               as [samples__count] \n"
+				+ "    ,count(*)                               as [samples__count] \n"
 			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
 			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
 			    + "    ,cast('' as varchar(30))                as [Duration] \n"
+//				+ col_newDiffRow_sum
 //			    + "    ,sum([CmSampleMs])                      as [CmSampleMs__sum] \n"
 
 //			    + "    ,max([SqlText])                         as [SqlText] \n"
@@ -371,6 +380,7 @@ extends SqlServerAbstract
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 					.setDbmsDataValueColumnName  ("execution_count")
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 					.setSparklineTooltipPostfix  ("Total 'execution_count' in below period")
 					.validate()));
 
@@ -385,6 +395,7 @@ extends SqlServerAbstract
 //					.setDbmsDataValueColumnName  ("total_elapsed_time")   
 					.setDbmsDataValueColumnName  ("sum([total_elapsed_time]/1000.0) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1) // MS
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 					.setSparklineTooltipPostfix  ("Average 'elapsed_time' in in milliseconds for below period")
 					.validate()));
 			}
@@ -400,6 +411,7 @@ extends SqlServerAbstract
 //					.setDbmsDataValueColumnName  ("total_worker_time")   
 					.setDbmsDataValueColumnName  ("sum([total_worker_time]/1000.0) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1) // MS
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 					.setSparklineTooltipPostfix  ("Average 'worker_time' in in milliseconds for below period")
 					.validate()));
 			}
@@ -415,6 +427,7 @@ extends SqlServerAbstract
 //					.setDbmsDataValueColumnName  ("total_physical_reads")
 					.setDbmsDataValueColumnName  ("sum(1.0*[total_physical_reads]) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 					.setSparklineTooltipPostfix  ("Average of 'physical_reads' in below period")
 					.validate()));
 			}
@@ -430,6 +443,7 @@ extends SqlServerAbstract
 //					.setDbmsDataValueColumnName  ("total_logical_reads")
 					.setDbmsDataValueColumnName  ("sum(1.0*[total_logical_reads]) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 					.setSparklineTooltipPostfix  ("Average of 'logical_reads' in below period")
 					.validate()));
 			}
@@ -444,6 +458,7 @@ extends SqlServerAbstract
 //					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 //					.setDbmsDataValueColumnName  ("CASE WHEN sum([execution_count]) = 0 THEN 0.0 ELSE sum([total_dop]*1.0)/sum([execution_count]*1.0) END").setGroupDataAggregationType(AggType.USER_PROVIDED)
 //					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 //					.setSparklineTooltipPostfix  ("MAX 'DOP - Degree Of Paralism' in below period")
 //					.validate()));
 //			}
@@ -458,6 +473,7 @@ extends SqlServerAbstract
 //					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 //					.setDbmsDataValueColumnName  ("CASE WHEN sum([execution_count]) = 0 THEN 0.0 ELSE sum([total_grant_kb]*1.0)/sum([execution_count]*1.0) END").setGroupDataAggregationType(AggType.USER_PROVIDED)
 //					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 //					.setSparklineTooltipPostfix  ("MAX 'grant_kb' in below period")
 //					.validate()));
 //			}
@@ -473,6 +489,7 @@ extends SqlServerAbstract
 //					.setDbmsDataValueColumnName  ("total_spills")
 //					.setDbmsDataValueColumnName  ("sum(1.0*[total_spills]) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
 //					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 //					.setSparklineTooltipPostfix  ("Average of 'spills' in below period")
 //					.validate()));
 //			}

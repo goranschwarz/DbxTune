@@ -301,6 +301,26 @@ extends PostgresAbstract
 	}
 
 	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		List<ReportingIndexEntry> list = new ArrayList<>();
+		
+		list.add(new ReportingIndexEntry("CmPgIndexes_diff"  , "dbname", "schemaname", "relname", "indexrelname"));
+		list.add(new ReportingIndexEntry("CmPgIndexes_abs"   , "dbname", "schemaname", "relname", "indexrelname", "SessionSampleTime"));
+
+		list.add(new ReportingIndexEntry("CmPgIndexesIo_diff", "dbname", "schemaname", "relname", "indexrelname"));
+		list.add(new ReportingIndexEntry("CmPgIndexesIo_abs" , "dbname", "schemaname", "relname", "indexrelname", "SessionSampleTime"));
+
+		list.add(new ReportingIndexEntry("CmPgTables_diff"   , "dbname", "schemaname", "relname"));
+		list.add(new ReportingIndexEntry("CmPgTables_abs"    , "dbname", "schemaname", "relname", "SessionSampleTime"));
+
+		list.add(new ReportingIndexEntry("CmPgTablesIo_diff" , "dbname", "schemaname", "relname"));
+		list.add(new ReportingIndexEntry("CmPgTablesIo_abs"  , "dbname", "schemaname", "relname", "SessionSampleTime"));
+
+		return list;
+	}
+
+	@Override
 	public String[] getMandatoryTables()
 	{
 		return new String[] { "CmPgStatements_diff" };

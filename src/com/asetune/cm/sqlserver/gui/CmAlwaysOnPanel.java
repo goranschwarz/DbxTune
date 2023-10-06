@@ -267,7 +267,32 @@ extends TabularCntrPanel
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Update Primary DB",                     PROPKEY_update_primary              , Boolean.class, conf.getBooleanProperty(PROPKEY_update_primary               , DEFAULT_update_primary               ), DEFAULT_update_primary              , "Update Active DB" ));
+//				list.add(new CmSettingsHelper("Update Primary DB Interval",            PROPKEY_update_primaryIntervalInSec , Long   .class, conf.getLongProperty   (PROPKEY_update_primaryIntervalInSec  , DEFAULT_update_primaryIntervalInSec  ), DEFAULT_update_primaryIntervalInSec , "Update Active DB, Every X second." ));
+//
+//				list.add(new CmSettingsHelper("Sample Live Remote Data",               PROPKEY_sample_liveRemoteData       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveRemoteData        , DEFAULT_sample_liveRemoteData        ), DEFAULT_sample_liveRemoteData       , "Fetch Live Data from SECONDARY Server, so we can check for 'SPLIT-BRAIN' (role PRIMARY in more than one instance) or similar issues." ));
+//				list.add(new CmSettingsHelper("Sample Live Remote Data Perf Counters", PROPKEY_sample_liveRemoteData       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveRemoteDataPerfCnt , DEFAULT_sample_liveRemoteDataPerfCnt ), DEFAULT_sample_liveRemoteDataPerfCnt, "Fetch Live Data (PerfCounters) from SECONDARY Server, so we evaluate Remote Performance Counters on the local server side. NOTE: This also needs 'Sample Live Remote Data'." ));
+
+				l_updateActive_chk        .setSelected(conf.getBooleanProperty(CmAlwaysOn.PROPKEY_update_primary             , CmAlwaysOn.DEFAULT_update_primary));
+				l_updateActiveInterval_txt.setText(""+ conf.getLongProperty   (CmAlwaysOn.PROPKEY_update_primaryIntervalInSec, CmAlwaysOn.DEFAULT_update_primaryIntervalInSec));
+
+				l_showRemoteRows_chk      .setSelected(conf.getBooleanProperty(CmAlwaysOn.PROPKEY_show_RemoteRows      , CmAlwaysOn.DEFAULT_show_RemoteRows));
+				l_sampleLiveRemoteData_chk.setSelected(conf.getBooleanProperty(CmAlwaysOn.PROPKEY_sample_liveRemoteData, CmAlwaysOn.DEFAULT_sample_liveRemoteData));
+				l_showLiveRemoteData_chk  .setSelected(conf.getBooleanProperty(CmAlwaysOn.PROPKEY_show_liveRemoteData  , CmAlwaysOn.DEFAULT_show_liveRemoteData));
+
+				// ReInitialize the SQL
+				//getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		JLabel  getAlwaysOnHealth_lbl     = new JLabel ("<html>Get Extended Events Data for <b>AlwaysOn_health</b></html>");

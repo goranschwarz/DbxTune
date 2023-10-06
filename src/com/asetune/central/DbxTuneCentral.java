@@ -66,6 +66,7 @@ import com.asetune.central.cleanup.CentralDailyReportSender;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralPcsJdbcCleaner;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
+import com.asetune.central.cleanup.DsrPriorityFileWriter;
 import com.asetune.central.lmetrics.LocalMetricsCollectorThread;
 import com.asetune.central.lmetrics.LocalMetricsCounterController;
 import com.asetune.central.pcs.CentralPcsDirectoryReceiver;
@@ -1428,6 +1429,48 @@ public class DbxTuneCentral
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_cron,  CentralDailyReportSender.DEFAULT_cron);
 			_logger.info("Adding 'Central Daily Summary Report' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
 			_scheduler.schedule(cron, new CentralDailyReportSender());
+		}
+		
+		
+		//--------------------------------------------
+		// Daily Summary Report File Writer
+		//--------------------------------------------
+		boolean dsrPriorityFileWriterStart = Configuration.getCombinedConfiguration().getBooleanProperty(DsrPriorityFileWriter.PROPKEY_start, DsrPriorityFileWriter.DEFAULT_start);
+		if (dsrPriorityFileWriterStart)
+		{
+//			File logFile = Logging.getBaseLogFile("_" + DsrPriorityFileWriter.class.getSimpleName() + ".log");
+//			if (logFile != null)
+//			{
+//				String pattern = Configuration.getCombinedConfiguration().getProperty(DsrPriorityFileWriter.PROPKEY_LOG_FILE_PATTERN, DsrPriorityFileWriter.DEFAULT_LOG_FILE_PATTERN);
+//				PatternLayout layout = new PatternLayout(pattern);
+//				_logger.info("Adding separate log file for '"+DsrPriorityFileWriter.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+//				
+//				// Create a Rolling Log File
+//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+//				appender.setMaxFileSize("10MB");
+//				appender.setMaxBackupIndex(3);
+//				appender.setName(DsrPriorityFileWriter.EXTRA_LOG_NAME);
+//
+//				// Only log messages from 'DsrPriorityFileWriter' in this appender
+//				appender.addFilter(new Filter()
+//				{
+//					@Override
+//					public int decide(LoggingEvent event)
+//					{
+//						if (event.getLogger().getName().equals(DsrPriorityFileWriter.class.getName()))
+//							return Filter.NEUTRAL;
+//
+//						return Filter.DENY;
+//					}
+//				});
+//
+//				// Add the appender
+//				Logger.getRootLogger().addAppender(appender);
+//			}
+
+			String cron  = Configuration.getCombinedConfiguration().getProperty(DsrPriorityFileWriter.PROPKEY_cron,  DsrPriorityFileWriter.DEFAULT_cron);
+			_logger.info("Adding 'Daily Summary Report File Writer' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_scheduler.schedule(cron, new DsrPriorityFileWriter());
 		}
 		
 		

@@ -351,11 +351,13 @@ extends TabularCntrPanel
 
 		if (dataTable != null)
 		{
+			int LogOsDiskLabel_pos      = dataTable.findViewColumn("LogOsDiskLabel");
 			int LogOsDisk_pos           = dataTable.findViewColumn("LogOsDisk");
 			int LogOsFileName_pos       = dataTable.findViewColumn("LogOsFileName");
 			int LogOsDiskFreeMb_pos     = dataTable.findViewColumn("LogOsDiskFreeMb");
 			int LogOsDiskUsedPct_pos    = dataTable.findViewColumn("LogOsDiskUsedPct");
 			
+			int DataOsDiskLabel_pos     = dataTable.findViewColumn("DataOsDiskLabel");
 			int DataOsDisk_pos          = dataTable.findViewColumn("DataOsDisk");
 			int DataOsFileName_pos      = dataTable.findViewColumn("DataOsFileName");
 			int DataOsDiskFreeMb_pos    = dataTable.findViewColumn("DataOsDiskFreeMb");
@@ -373,22 +375,26 @@ extends TabularCntrPanel
 				
 				for(int r=0; r<dataTable.getRowCount(); r++)
 				{
-					String LogOsDisk           = (String)dataTable.getValueAt(r, LogOsDisk_pos);
-					String LogOsFileName       = (String)dataTable.getValueAt(r, LogOsFileName_pos);
-					Number LogOsDiskFreeMb     = (Number)dataTable.getValueAt(r, LogOsDiskFreeMb_pos);
-					Number LogOsDiskUsedPct    = (Number)dataTable.getValueAt(r, LogOsDiskUsedPct_pos);
+					String LogOsDiskLabel      = (String) ((LogOsDiskLabel_pos == -1) ? "" : dataTable.getValueAt(r, LogOsDiskLabel_pos));
+					String LogOsDisk           = (String) dataTable.getValueAt(r, LogOsDisk_pos);
+					String LogOsFileName       = (String) dataTable.getValueAt(r, LogOsFileName_pos);
+					Number LogOsDiskFreeMb     = (Number) dataTable.getValueAt(r, LogOsDiskFreeMb_pos);
+					Number LogOsDiskUsedPct    = (Number) dataTable.getValueAt(r, LogOsDiskUsedPct_pos);
 					
-					String DataOsDisk          = (String)dataTable.getValueAt(r, DataOsDisk_pos);
-					String DataOsFileName      = (String)dataTable.getValueAt(r, DataOsFileName_pos);
-					Number DataOsDiskFreeMb    = (Number)dataTable.getValueAt(r, DataOsDiskFreeMb_pos);
-					Number DataOsDiskUsedPct   = (Number)dataTable.getValueAt(r, DataOsDiskUsedPct_pos);
+					String DataOsDiskLabel     = (String) ((DataOsDiskLabel_pos == -1) ? "" : dataTable.getValueAt(r, DataOsDiskLabel_pos));
+					String DataOsDisk          = (String) dataTable.getValueAt(r, DataOsDisk_pos);
+					String DataOsFileName      = (String) dataTable.getValueAt(r, DataOsFileName_pos);
+					Number DataOsDiskFreeMb    = (Number) dataTable.getValueAt(r, DataOsDiskFreeMb_pos);
+					Number DataOsDiskUsedPct   = (Number) dataTable.getValueAt(r, DataOsDiskUsedPct_pos);
 					
 					if (_logger.isDebugEnabled())
 						_logger.debug("createDataset():GRAPH-OS-DISK: "+getName()+": "
+								+ "LogOsDiskLabel("    + LogOsDiskLabel_pos    + ")='" + LogOsDiskLabel    + "', "
 								+ "LogOsDisk("         + LogOsDisk_pos         + ")='" + LogOsDisk         + "', "
 								+ "LogOsFileName("     + LogOsFileName_pos     + ")='" + LogOsFileName     + "', "
 								+ "LogOsDiskFreeMb("   + LogOsDiskFreeMb_pos   + ")='" + LogOsDiskFreeMb   + "', "
 								+ "LogOsDiskUsedPct("  + LogOsDiskUsedPct_pos  + ")='" + LogOsDiskUsedPct  + "', "
+								+ "DataOsDiskLabel("   + DataOsDiskLabel_pos   + ")='" + DataOsDiskLabel   + "', "
 								+ "DataOsDisk("        + DataOsDisk_pos        + ")='" + DataOsDisk        + "', "
 								+ "DataOsFileName("    + DataOsFileName_pos    + ")='" + DataOsFileName    + "', "
 								+ "DataOsDiskFreeMb("  + DataOsDiskFreeMb_pos  + ")='" + DataOsDiskFreeMb  + "', "
@@ -397,12 +403,12 @@ extends TabularCntrPanel
 					String logOsName  = LogOsDisk;
 					String dataOsName = DataOsDisk;
 					
-					if (StringUtil.isNullOrBlank(logOsName))
-						logOsName = CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName);
+					if (StringUtil.isNullOrBlank(logOsName))  logOsName  = CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName);
+					if (StringUtil.isNullOrBlank(dataOsName)) dataOsName = CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName);
 
-					if (StringUtil.isNullOrBlank(dataOsName))
-						dataOsName = CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName);
-					
+					if (StringUtil.hasValue(LogOsDiskLabel))  logOsName  += " [" + LogOsDiskLabel  + "]";
+					if (StringUtil.hasValue(DataOsDiskLabel)) dataOsName += " [" + DataOsDiskLabel + "]";
+
 					DiskOsEntry logEntry  = diskMap.get(logOsName);
 					DiskOsEntry dataEntry = diskMap.get(dataOsName);
 
@@ -660,7 +666,26 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Sample Showplan on Open Trans", PROPKEY_sample_showplan   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan   , DEFAULT_sample_showplan   ), DEFAULT_sample_showplan  , "Get sp_showplan on on SPID's that has an open transaction." ));
+//				list.add(new CmSettingsHelper("Sample SQL Text on Open Trans", PROPKEY_sample_monSqlText , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText , DEFAULT_sample_monSqlText ), DEFAULT_sample_monSqlText, "Get SQL Text (from monProcessSQLText) on on SPID's that has an open transaction" ));
+
+				sampleShowplan_chk   .setSelected(conf.getBooleanProperty(CmDatabases.PROPKEY_sample_showplan  , CmDatabases.DEFAULT_sample_showplan));
+				sampleMonSqlText_chk .setSelected(conf.getBooleanProperty(CmDatabases.PROPKEY_sample_monSqlText, CmDatabases.DEFAULT_sample_monSqlText));
+				// NOTE: The 2 above fields are not added to the GUI, but lets do this anyway
+
+				// ReInitialize the SQL
+				//getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 //		final JCheckBox sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage");;

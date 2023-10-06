@@ -50,6 +50,7 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.utils.Configuration;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -263,9 +264,10 @@ implements ActionListener, TableModelListener
 			String  optionType    = (String)  tm.getValueAt(r, TAB_POS_OPTION_DTYPE);
 
 			// set the isDefault
+			boolean isDefault = false;
 			if (optionStrVal != null)
 			{
-				boolean isDefault = optionStrVal.equals(optionDefVal);
+				isDefault = optionStrVal.equals(optionDefVal);
 				//tm.setValueAt(isDefault, r, TAB_POS_OPTION_IS_DEFAULT); // You can not use setValue() is fill fire this again and we circular call
 				((Vector)tm.getDataVector().get(r)).set(TAB_POS_OPTION_IS_DEFAULT, isDefault);
 			}
@@ -298,7 +300,7 @@ implements ActionListener, TableModelListener
 			}
 
 			// Now write the info...
-			putWizardData( option, optionStrVal);
+			putWizardData( option, isDefault ? Configuration.USE_DEFAULT_PREFIX + optionStrVal : optionStrVal);
 		}
 		return null;
 	}

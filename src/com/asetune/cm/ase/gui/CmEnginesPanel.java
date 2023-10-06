@@ -35,7 +35,6 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GCheckBox;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
 
 import net.miginfocom.swing.MigLayout;
@@ -153,7 +152,25 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				_collapse_IoCpuTime_to_IdleCpuTime_chk .setSelected(conf.getBooleanProperty(CmEngines.PROPKEY_collapse_IoCpuTime_to_IdleCpuTime,  CmEngines.DEFAULT_collapse_IoCpuTime_to_IdleCpuTime));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+
+				// Reset attached graphs (this will reinitialize, graph series since they will change)
+				for (TrendGraph tg : getCm().getTrendGraphs().values())
+					tg.resetGraph();
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

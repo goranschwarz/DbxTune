@@ -93,7 +93,27 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Update Active DB",                 PROPKEY_update_active              , Boolean.class, conf.getBooleanProperty(PROPKEY_update_active               , DEFAULT_update_active               ), DEFAULT_update_active,              "Update Active DB" ));
+//				list.add(new CmSettingsHelper("Update Active DB Interval",        PROPKEY_update_activeIntervalInSec , Long   .class, conf.getLongProperty   (PROPKEY_update_activeIntervalInSec  , DEFAULT_update_activeIntervalInSec  ), DEFAULT_update_activeIntervalInSec, "Update Active DB, Every X second." ));
+//				list.add(new CmSettingsHelper("Sleep Time Between Update/Select", PROPKEY_update_maxWaitTimeMs       , Long   .class, conf.getLongProperty   (PROPKEY_update_maxWaitTimeMs        , DEFAULT_update_maxWaitTimeMs        ), DEFAULT_update_maxWaitTimeMs,       "Sleep X milliseconds between the update and the select (so data have time to replicate)" ));
+
+				l_updateActive_chk        .setSelected(conf.getBooleanProperty(CmWsRepLatency.PROPKEY_update_active             , CmWsRepLatency.DEFAULT_update_active));
+				l_updateActiveInterval_txt.setText(""+ conf.getLongProperty   (CmWsRepLatency.PROPKEY_update_activeIntervalInSec, CmWsRepLatency.DEFAULT_update_activeIntervalInSec));
+				//FIXME: no GUI field for: PROPKEY_update_maxWaitTimeMs
+				
+				// ReInitialize the SQL
+				//getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

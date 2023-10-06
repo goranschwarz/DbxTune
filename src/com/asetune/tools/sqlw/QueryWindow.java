@@ -2171,6 +2171,35 @@ public class QueryWindow
 				
 				// Check if it's cmd: '\connect' or '\disconnect' then allow it (and let the "execution" handle the connect request) 
 				String curCmd = _query_txt.getSelectedText();
+
+//----------------------------------------------------
+// Doing the: '\connect' when NOT connected in a MULTI BATCH doesnt work
+//  * This probably need MAJOR rewrite
+//    - Possibly do 'AseSqlScriptReader', remove '\connect' from ScriptReader, then send the ScriptReader on for Execution...
+//    - as you see this is MAJOR rewrite
+//----------------------------------------------------
+//try
+//{
+//	// treat each 'go' rows as a individual execution
+//	// readCommand(), does the job
+//	String sqlBatchTerminator = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sqlBatchTerminator, DEFAULT_sqlBatchTerminator);
+//					
+//	AseSqlScriptReader sr = new AseSqlScriptReader(curCmd, true, sqlBatchTerminator, /*ConnectionProvider*/null);
+//	if (_useSemicolonHack_chk.isSelected())
+//		sr.setSemiColonHack(true);
+//	for (String tmpSql = sr.getSqlBatchString(); tmpSql != null; tmpSql = sr.getSqlBatchString())
+//	{
+//		// This can't be part of the for loop, then it just stops if empty row
+//		if ( StringUtil.isNullOrBlank(tmpSql) )
+//			continue;
+//		System.out.println("------------tmpSql=|"+tmpSql+"|.");
+//	}
+//}
+//catch (Exception ex)
+//{
+//	ex.printStackTrace();
+//}
+
 				if (StringUtil.hasValue(curCmd) && curCmd.startsWith("\\connect"))
 				{
 					// - button '_exec_but' is disabled, so we can't click it  
@@ -2182,6 +2211,10 @@ public class QueryWindow
 					params = params.replaceFirst("(?i)^go", "");
 
 					String[] args = StringUtil.translateCommandline(params, false);
+//for (int i = 0; i < args.length; i++)
+//{
+//	System.out.println("___________ACTION_EXECUTE[\\connect]_____________translateCommandline(): args["+i+"]=|"+args[i]+"|.");
+//}
 
 					if (args.length >= 1)
 					{

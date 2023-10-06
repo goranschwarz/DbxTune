@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.alarm.events;
 
+import java.sql.Timestamp;
+
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.utils.Configuration;
@@ -39,9 +41,10 @@ extends AlarmEvent
 	 * @param errorNumber
 	 * @param errorSeverity
 	 * @param errorMessage
+	 * @param errorlogTs 
 	 * @param threshold
 	 */
-	public AlarmEventErrorLogEntry(CountersModel cm, Severity alarmSeverity, int errorNumber, int errorSeverity, String errorMessage, int severityThreshold)
+	public AlarmEventErrorLogEntry(CountersModel cm, Severity alarmSeverity, int errorNumber, int errorSeverity, String errorMessage, Timestamp errorlogTs, int severityThreshold)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -64,7 +67,7 @@ extends AlarmEvent
 		setData("Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim());
 
 		// Set the description 
-		setDescription("Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim()+ ", ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
+		setDescription("ErrorlogTs='" + errorlogTs + "', Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim()+ ", ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
 	}
 
 	/**

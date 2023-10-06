@@ -71,6 +71,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
@@ -88,6 +89,7 @@ import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
+import javax.swing.border.Border;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.event.RowSorterEvent;
@@ -110,7 +112,10 @@ import org.jdesktop.swingx.renderer.PainterAware;
 import org.jdesktop.swingx.table.ColumnControlButton;
 
 import com.asetune.CounterController;
+import com.asetune.ICounterController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.ui.config.AlarmConfigDialog;
 import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
@@ -1199,7 +1204,155 @@ implements
 		panel.add(_tabDockUndockButton,    "top, right, push, wrap");
 		panel.add(_tableRowFilterFreeText, "gapleft 10, dock south"); // gap left [right] [top] [bottom]
 
+		// Create a popup menu in this panel
+		createPopupMenu_resetCmSettings(panel, getCm());
+		
 		return panel;
+	}
+
+	/**
+	 * Create a popup menu with "Reset all Settings to defaults..."
+	 * @param panel
+	 * @param cm
+	 */
+	public static void createPopupMenu_resetCmSettings(JPanel panel, CountersModel cm)
+	{
+		if (panel == null) throw new RuntimeException("createTopPanelPopupMenu(JPanel panel, CountersModel cm): cant pass NULL for 'panel'");
+		if (cm    == null) throw new RuntimeException("createTopPanelPopupMenu(JPanel panel, CountersModel cm): cant pass NULL for 'cm'");
+
+		final Window window = SwingUtilities.getWindowAncestor(panel);
+		
+		JPopupMenu popup = panel.getComponentPopupMenu();
+		if (popup == null)
+		{
+			popup = new JPopupMenu();
+		}
+
+		JMenuItem menuItem = null;
+		JMenu     menu     = null;
+
+		// ----------------------------------------
+		// Reset Local Option MENU
+		// ----------------------------------------
+		menu = new JMenu("<html>Reset all <b>Local Options</b> to Defaults</html>");
+		// Add to POPUP-Menu
+		popup.add(menu);
+		
+		// ----------------------------------------
+		// Reset Settings for THIS Tabs
+		// ----------------------------------------
+		menuItem = new JMenuItem("<html>For <b>this</b> Counter Tab</html>");
+
+		// Add to SUB-MENU
+		menu.add(menuItem);
+
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				cm.resetCounterOptionsToDefaults();
+			}
+		});
+
+
+		// ----------------------------------------
+		// Reset Settings for ALL Tabs
+		// ----------------------------------------
+		menuItem = new JMenuItem("<html>For <b>all</b> Counter Tabs</html>");
+
+		// Add to SUB-MENU
+		menu.add(menuItem);
+
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				ICounterController counterController = CounterController.getInstance();
+				List<CountersModel> cmList = counterController.getCmList();
+				
+				for (CountersModel cm : cmList)
+				{
+					cm.resetCounterOptionsToDefaults();
+				}
+			}
+		});
+		
+		// ----------------------------------------
+		// Alarm Settings
+		// ----------------------------------------
+		menuItem = new JMenuItem("<html>Open <b>Alarm Options</b> for this Counter Tab...</html>");
+
+		// Add to POPUP-Menu
+		popup.add(menuItem);
+
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String cmName = cm.getName();
+
+				if (cm.getLocalAlarmSettings().isEmpty())
+				{
+					String msg = "<html>This Counter Collector do <b>not</b> have any Alarms.<br>"
+							+ "Do you still want to view Alarms for other Counter Collectors?<html>";
+					
+					int answer = JOptionPane.showConfirmDialog(panel, msg, "Open Alarm Settings", JOptionPane.YES_NO_OPTION);
+					if (answer == JOptionPane.YES_OPTION)
+					{
+						cmName = null;
+					}
+					else
+					{
+						return;
+					}
+				}
+				
+				// Open config. 
+				//    CANCEL null will be returned.
+				//    OK     a Configuration object with all settings will be returned.
+				Configuration alarmConf = AlarmConfigDialog.showDialog(window, cmName);
+				
+				// dialog returned some config... lets save it and reload the config
+				if (alarmConf != null)
+				{
+					Configuration userTmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (userTmpConf != null)
+					{
+						userTmpConf.add(alarmConf);
+						userTmpConf.save();
+						
+						// Remove/install writers to current AlarmHandler
+						if (AlarmHandler.hasInstance())
+						{
+							try
+							{
+								AlarmHandler.getInstance().reloadConfig();
+							}
+							catch(Exception ex)
+							{
+								SwingUtils.showErrorMessage(window, "Problems adding an alarm handler", "Problems adding an alarm handler", ex);
+								return;
+							}
+						}
+					}
+					
+					// Re-initialize the alarms
+					if (CounterController.hasInstance())
+					{
+						for (CountersModel cm : CounterController.getInstance().getCmList())
+						{
+							cm.initAlarms();
+						}
+					}
+				}
+				
+			}
+		});
+		
+		panel.setComponentPopupMenu(popup);
 	}
 
 	/*---------------------------------------------------
@@ -2532,9 +2685,66 @@ implements
 		return null;
 	}
 
-	protected JPanel getLocalOptionsPanel()
+	public JPanel getLocalOptionsPanel()
 	{
 		return _localOptionsPanel;
+	}
+
+	public void refreshLocalOptionsPanel(String propName, String propVal)
+	{
+		JPanel localOptionsPanel = getLocalOptionsPanel();
+		if (localOptionsPanel != null && localOptionsPanel instanceof LocalOptionsConfigPanel)
+		{
+			((LocalOptionsConfigPanel)localOptionsPanel).configWasChanged(propName, propVal);
+		}
+	}
+	
+	/**
+	 * Interface implemented for JPanels holding Local Configurations and needs to refresh it's GUI component when underlying Configuration was changed.
+	 */
+	public interface LocalOptionsConfigChanges
+	{
+		/**
+		 * Called from CounterModelresetCounterOptionsToDefaults() so that the GUI can update it's values
+		 * @param propName  The property name  (OR NULL if it's called only once for ALL changes) 
+		 * @param propVal   The property value (OR NULL if it's called only once for ALL changes)
+		 */
+		void configWasChanged(String propName, String propVal);
+	}
+	
+	public static class LocalOptionsConfigPanel
+	extends JPanel
+	{
+		private static final long serialVersionUID = 1L;
+		private LocalOptionsConfigChanges _localOptionsConfigChanges;
+
+		public LocalOptionsConfigPanel(String title, LocalOptionsConfigChanges localOptionsConfigChanges)
+		{
+			this(title, true, localOptionsConfigChanges);
+		}
+		public LocalOptionsConfigPanel(String title, boolean createBorder, LocalOptionsConfigChanges localOptionsConfigChanges)
+		{
+			_localOptionsConfigChanges = localOptionsConfigChanges;
+
+			if (createBorder)
+			{
+				Border border = BorderFactory.createTitledBorder(title);
+				setBorder(border);
+			}
+		}
+		
+		public void setLocalOptionsConfigChanges(LocalOptionsConfigChanges localOptionsConfigChanges)
+		{
+			_localOptionsConfigChanges = localOptionsConfigChanges;
+		}
+
+		public void configWasChanged(String propName, String propVal)
+		{
+			if (_localOptionsConfigChanges != null)
+			{
+				_localOptionsConfigChanges.configWasChanged(propName, propVal);
+			}
+		}
 	}
 
 

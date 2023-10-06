@@ -35,6 +35,7 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -1380,6 +1381,12 @@ public class ResultSetTableModel
 	 */
 	public static int getColumnJavaSqlTypeNameToInt(String name)
 	{
+		if (StringUtil.isNullOrBlank(name))
+		{
+			_logger.debug("getColumnJavaSqlTypeNameToInt(name='" + name + "'): name can't be null ocr blank... Returning a dummy value: Integer.MIN_VALUE");
+			return Integer.MIN_VALUE;
+		}
+
 		if ("java.sql.Types.BIT"           .equals(name)) return java.sql.Types.BIT;
 		if ("java.sql.Types.TINYINT"       .equals(name)) return java.sql.Types.TINYINT;
 		if ("java.sql.Types.SMALLINT"      .equals(name)) return java.sql.Types.SMALLINT;
@@ -1794,6 +1801,7 @@ public class ResultSetTableModel
 		Class<?> clazz = _classType[colid+1];
 		if (clazz == null)
 			clazz = Object.class;
+//System.out.println("-------------- getColumnClass(colid="+colid+"): <<<< " + clazz.getSimpleName());
 		return clazz;
 
 //		if (_rsmdColumnType.get(colid) == Types.TIMESTAMP)
@@ -2656,7 +2664,7 @@ public class ResultSetTableModel
 	/** Implementation of HOW to highlight any sorted column */
 	public static String renderHighlightSortColumnForHtml(String colName, String strVal)
 	{
-		if (NumberUtils.isNumeric(strVal, true))
+		if (NumberUtils.isNumeric(strVal, true, true))
 			return "<span style='background-color: yellow'><b>" + strVal + "</b></span>";
 
 		return "<b>" + strVal + "</b>";
@@ -4052,6 +4060,127 @@ public class ResultSetTableModel
 	//------------------------------------------------------------
 
 
+	/**
+	 * For a table which may be parsed using parseTextTable(s), all columns will be Strings<br>
+	 * So lets check each column for Numbers and translate columns which only holds numbers to "native numbers" so sorting will be better/easier 
+	 * <p>
+	 * NOTE: This needs enhancements to work in a better way<br>
+	 * It do not handle numbers with spaces, commas etc...
+	 */
+	public void guessDatatypes()
+	{
+		NumberFormat numFmt  = NumberFormat.getInstance();
+		DateFormat   dateFmt = DateFormat.getDateTimeInstance(); 
+
+		for (int c=0; c<getColumnCount(); c++)
+		{
+			boolean isColumnNumber = true;
+			
+			for (int r=0; r<getRowCount(); r++)
+			{
+//System.out.println("----: guessDatatypes(): c="+c+", r="+r);
+				Object colObject = getValueAt(r, c);
+				if (colObject == null)
+					continue;
+				
+				if (NULL_REPLACE.equals(colObject))
+					continue;
+					
+				
+//				try 
+//				{
+//					// NOTE: This is *very* inefficient way... maybe something better here...
+//					NumberUtils.toNumber(colObject); 
+//				}
+//				catch (NumberFormatException ignore) 
+//				{
+//					isColumnNumber = false;
+////System.out.println("CHECK: guessDatatypes(): c="+c+", r="+r+", value='"+colObject+"' is NOT A NUMBER");
+//					break;
+//				}
+
+				try
+				{
+					if (colObject instanceof String)
+						numFmt.parse((String)colObject);
+					else
+						numFmt.parse(colObject + "");
+					
+					// Ok the Number Parser said OK
+					// But a Date look like a number so ...
+					try
+					{
+						// Test for Timestamp
+						Timestamp.valueOf(colObject.toString());
+						
+						// If we parsed OK, then it must be a date and not a number
+						isColumnNumber = false;
+					}
+					catch (IllegalArgumentException eTs)
+					{
+						try
+						{
+							// Test for Localized DateTime
+							dateFmt.parse(colObject.toString());
+
+							// If we parsed OK, then it must be a date and not a number
+							isColumnNumber = false;
+						}
+						catch (ParseException eDate)
+						{
+						}
+					}
+				}
+				catch (ParseException eNum)
+				{
+					isColumnNumber = false;
+//System.out.println("CHECK: guessDatatypes(): c="+c+", r="+r+", value='"+colObject+"' is NOT A NUMBER");
+					break;
+				}
+			}
+			
+			if (isColumnNumber)
+			{
+//System.out.println("IS NUMBER COLUMN: guessDatatypes(): c="+c);
+				for (int r=0; r<getRowCount(); r++)
+				{
+					Object colObject = getValueAt(r, c);
+					if (colObject == null)
+						continue;
+					
+					if (NULL_REPLACE.equals(colObject))
+						continue;
+						
+//					try 
+//					{ 
+//						Number val = NumberUtils.toNumber(colObject);
+//						setValueAtWithOverride(val, r, c);
+//						_classType[c+1] = val.getClass(); // Could we use Number.class here instead
+////System.out.println("ASSIGN: guessDatatypes(): c="+c+", r="+r+", value='"+colObject+"' is " + val.getClass().getSimpleName());
+//					}
+//					catch (NumberFormatException ignore) 
+//					{
+//					}
+
+					try
+					{
+						Number val = null;
+						if (colObject instanceof String)
+							val = numFmt.parse((String)colObject);
+						else
+							val = numFmt.parse(colObject + "");
+
+						setValueAtWithOverride(val, r, c);
+						_classType[c+1] = val.getClass(); // Could we use Number.class here instead
+					}
+					catch (ParseException e)
+					{
+					}
+				}
+			}
+		}
+	}
+	
 	/**
 	 * Check all columns and rows, and truncate "cells" that are above #KB
 	 * @param overKb

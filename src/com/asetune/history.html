@@ -47,6 +47,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DbxCentral - Local Metrics (os monitoring on DbxCentral host), property: <code>DbxTuneCentral.start.localMetricsCollector=*true*|false</code></LI>
 		<LI>DbxCentral - Possibly start the Local PCS Directory Receiver (to not send JSON from any collector to DbxCentral) property: <code>CentralPcsDirectoryReceiver.storage.dir=${tmpDir}/DbxTune/DbxCentral/file_receiver</code></LI>
 		<LI>When sending information to HTTP/DbxCentral -- Turn off 'Meta Data' information by default</LI>
+		<LI>Reset to DEFAULT settings on all GUI Counter Tabs (right click on background pane and choose: Reset all Local Options to defaults, For this or all)</LI>
+		<LI>Open ALARM settings on all GUI Counter Tabs (right click on background pane and choose: Open Alarm Options)</LI>
+		<LI>DBMS Config: In Text Panels, transform Ascii Tables to GUI Tables, using: "select text", right-click and choose "Selected text to JTable"</LI>
+		<LI>Wizard "Create Offline" or "Record Session", write properties with "USE_DEFAULT:xxx" for values that are defaults instead of hard values (which may or may not be default values)</LI>
+		<LI>PersistWriterToHttpJson: Changed send counter for 'CmActiveStatements' to include MetaData for CounterInfo(is diff/rate/pct), but exclude JDBC Datatypes.</LI>
+		<LI>Send mail: the JSON was extended with a "fallback entry", example: [ {"serverName":"srv1", "to":"xxx@acme.com", "alarmName":"(Dummy1|Dummy2|Dummy)"}, {"serverName":"srv2", "to":"yyy@acme.com"}, {"fallback":true, "to":"zzz@acme.com"} ]</LI>
+		<LI>openssl en/de-crypting passwords for RHEL 8 when using algorithm "openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000" instead of "openssl enc -aes-128-cbc -a -salt"</LI>
+		<LI>cmd line util to upgrade the ${HOME}/.passwd.enc file from version 1 to v2 (bin/dbxtune.sh dbxPasswordUpgrade)</LI>
+		<LI>cmd line util for dbxPassword. (bin/dbxtune.sh dbxPassword)</LI>
 
 		<LI>CmOsVmstat:  for Linux:   Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
 		<LI>CmOsMeminfo: for Windows: Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
@@ -55,7 +64,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<UL>
 				<LI>New: AlarmEventOsSwapThrashing -- When we are swapping both in and out at the same time... Linux(vmstat, column 'pi' and 'po'), Windows(column 'Pages Input/sec' AND 'Pages Output/sec')</LI>
 				
-				<LI>Changed: AlarmEventOsSwapping  -- From Severity 'WARNING' to 'INFO'</LI>
+				<LI>Changed: AlarmEventOsSwapping             -- From Severity 'WARNING' to 'INFO'</LI>
+				<LI>Changed: AlarmEventConfigChanges          -- small change to include log timestamp in alarm message</LI>
+				<LI>Changed: AlarmEventConfigResourceIsUsedUp -- small change to include log timestamp in alarm message</LI>
+				<LI>Changed: AlarmEventErrorLogEntry          -- small change to include log timestamp in alarm message</LI>
+				<LI>Changed: AlarmEventFullTranLog            -- small change to include log timestamp in alarm message</LI>
+				<LI>Changed: AlarmEventProcessInfected        -- small change to include log timestamp in alarm message</LI>
+				<LI>Changed: AlarmEventProcessStackTrace      -- small change to include log timestamp in alarm message</LI>
+				<LI>Changed: AlarmEventProcessTimeSliceError  -- small change to include log timestamp in alarm message</LI>
+				<LI>Changed: AlarmEventBackgroundMessage      -- small change to include log timestamp in alarm message</LI>
 
 				<LI>Bugfix: xxx</LI>
 			</UL>
@@ -71,6 +88,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Some Graphs are now sorted (series with high overall values are first). If it's sorted a "info note" will say no.</LI>
 				<LI>OsIoStatOverview on some platforms it didn't work good (for column 'await' depending on what iostat version we were using)</LI>
 				<LI>In the Recording Information section Write what Java version we used.</LI>
+				<LI>Introduced a "priority queue", so that not to many DbxTune collectors does DSR at the same time, which causes extensive CPU usage and possibly memory issues</LI>
+				<LI>When generating SparcLines, introduced a timeout of 10 minutes... and prints SQL for easier debugging.</LI>
 			</UL>
 		</LI>
 
@@ -79,6 +98,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<ul>
 	 			<li>To version 2.1.214        Component: H2 Database</li>
 	 			<li>To version 9.4.51         Component: Jetty Webserver</li>
+	 			<li>To version 12.4.1         Component: MS SQL Server JDBC Driver</li>
 
 	 			<li>To version 0.2.7          Component: Jsch (replacing ganymed-ssh2)</li>
 
@@ -119,6 +139,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Created a: Web Access/Request log (can be turned off with config: DbxTuneCentral.web.createRequestLog = false</LI>
 		<LI>'Show Local DbxCentral (OS) Metrics' has been added as a "Profile" so it can easily be accessed at the start page</LI>
 		<LI>In 'Overview', added links to 'Show Local DbxCentral (OS) Metrics'</LI>
+		<LI>Local Metrics: After startup, some alarms are diabled for 5 minutes (during restart, there will be "heavy load" due to all DbxTune collectors starts at the same time.</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -126,6 +147,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<li>xxx</li>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmSummary - tab: Summary</b><br>
+		<ul>
+			<li>AlarmEventBlockingLockAlarm, attaches information from 'CmProcessActivity' about "oldestOpenTranSpid"</li>
+			<li>AlarmEventLongRunningTransaction, attaches information from 'CmProcessActivity' about "oldestOpenTranSpid"</li>
+		</ul>
+		</LI>
+
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -232,10 +263,22 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>
 		<LI><b>CmActiveStatements   </b> - Rewrote a sub select into a join (for better performance)</LI>
 		<LI><b>CmActiveStatements   </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+		<LI><b>CmActiveStatements   </b> - added new columns 'memory_grant_requested', 'memory_grant_wait_time_ms', 'requested_memory_kb', 'granted_memory_kb', 'used_memory_kb', 'used_memory_pct'</LI>
 		
 		<LI><b>CmAlwaysOn           </b> - Performance enhancement</LI>
 
 		<LI><b>CmDatabases          </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+		<LI><b>CmDatabases          </b> - added new columns 'DataOsDiskLabel', 'LogOsDiskLabel' (this so we in Graphs and alarms can say "E: [SQL Data]"</LI>
+
+		<LI><b>CmExecFunctionStats  </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
+
+		<LI><b>CmExecProcedureStats </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
+
+		<LI><b>CmExecTriggerStats   </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
+
+		<LI><b>CmExecQueryStatPerDb </b> - If we get 10 sequential "timeouts" when getting data, then disable this CM, until a new recording period starts</LI>
+
+		<LI><b>CmMemoryGrantsSum    </b> - For alarm AlarmEventMemoryGrantWait, attach details from CmMemoryGrants</LI>
 
 		<LI><b>CmOpenTransactions   </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
@@ -250,11 +293,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary            </b> - added Chart "WorkersThreadUsage"  -- to see the behaviour of Worker Thread Usage</LI>
 		<LI><b>CmSummary            </b> - added Chart "WtWaitingForCpu"     -- SQL Server Worker That are Waiting for CPU to be Scheduled</LI>
 		<LI><b>CmSummary            </b> - added Chart "TasksWaitForWorkers" -- Tasks/Requests that are Waiting for Available Worker Threads</LI>
+		<LI><b>CmSummary            </b> - new columns: RootBlockerSpids</LI>
+		<LI><b>CmSummary            </b> - alarm 'AlarmEventBlockingLockAlarm', attach info from "CmSessions" about "RootBlockerSpids" and "oldestOpenTranSpid"</LI>
+		<LI><b>CmSummary            </b> - alarm 'AlarmEventLongRunningTransaction', attach info from "CmSessions" about "oldestOpenTranSpid"</LI>
 
 		<LI><b>CmTempdbSpidUsage    </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
 		<LI><b>CmWaitStats          </b> - Added Charts "ToxicTime", "ToxicCount", "ToxicTpw" (TPW=Time Per Wait) -- to see the Toxic wait event (if they are happening)</LI>
 		<LI><b>CmWaitStats          </b> - Raising Alarm on Toxic Wait types "RESOURCE_SEMAPHORE", "THREADPOOL" if there has been more wait time than 10 seconds (can be changed with Properties 'CmWaitStats.alarm.system.if.wait_time_ms.RESOURCE_SEMAPHORE.gt', 'CmWaitStats.alarm.system.if.wait_time_ms.THREADPOOL.gt')</LI>
+		<LI><b>CmWaitStats          </b> - alarm 'AlarmEventToxicWait', attach info from "CmMemoryGrants" about "Current Memory Grants, per SPID"</LI>
 
 		<LI><b>CmWaitingTasks       </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 

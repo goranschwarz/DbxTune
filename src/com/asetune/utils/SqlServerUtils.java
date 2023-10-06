@@ -28,6 +28,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1118,4 +1119,58 @@ public class SqlServerUtils
 //		return objName;
 //	}
 
+	/**
+	 * Getting all ROOT Blockers (yes many records can be returned)
+	 * @param conn
+	 * @return A List of SPID's. Empty List if none was found.
+	 */
+	public static List<Integer> getRootBlockerList(DbxConnection conn)
+	{
+		if (conn == null)
+			return Collections.emptyList();
+
+		// Basic sql from: https://www.sqlshack.com/resolve-and-troubleshoot-sql-blocking-chain-with-root-session/
+		// But with some changes
+		String sql = ""
+				+ ";WITH root_blocker \n"
+				+ "AS \n"
+				+ "( \n"
+				+ "    SELECT  \n"
+				+ "         session_id \n"
+				+ "        ,blocking_session_id \n"
+				+ "    FROM sys.dm_exec_requests \n"
+				+ "    WHERE session_id > 49  \n"
+				+ "      AND blocking_session_id != 0 \n"
+				+ "\n"
+				+ "    UNION ALL \n"
+				+ "\n"
+				+ "    SELECT  \n"
+				+ "         X.blocking_session_id            AS session_id \n"
+				+ "        ,ISNULL(Y.blocking_session_id, 0) AS blocking_session_id \n"
+				+ "    FROM root_blocker X \n"
+				+ "    OUTER APPLY (SELECT blocking_session_id FROM sys.dm_exec_requests WHERE session_id = X.blocking_session_id) as Y \n"
+				+ "    WHERE X.blocking_session_id != 0 \n"
+				+ ") \n"
+				+ "SELECT DISTINCT session_id as root_blockers \n"
+				+ "FROM root_blocker rb \n"
+				+ "WHERE rb.blocking_session_id = 0 \n"
+				;
+		
+		List<Integer> rootBlockers = new ArrayList<>();
+		
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				rootBlockers.add(rs.getInt(1));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems getting root blockers. ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Text='" + ex.getMessage()+ "'. SQL=|" + sql + "|, Caught: " + ex);
+		}
+		
+		return rootBlockers;
+	}
+	
 }

@@ -796,6 +796,19 @@ public class TimeUtils
 		return sdf.format( ts );
 	}
 
+	/**
+	 * Format a Timestamp to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm:ss"<br>
+	 * Example output: "2018-01-08 09:56:53"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmdHms(long ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return sdf.format( ts );
+	}
+
 	//--------------------------------------------------------------------------------
 	/**
 	 * in format 'yyyy-MM-dd_HHmmss'

@@ -154,10 +154,13 @@ public abstract class DbmsObjectIdCache
 			size += 4 + 36 + (_objectName == null ? 0 : _objectName.length() * 2); 
 
 			// Index info
-			for (Entry<Long, String> entry : _indexNames.entrySet())
+			if (_indexNames != null)
 			{
-				size += 4; // index id
-				size += entry.getValue().length() * 2; // index name
+				for (Entry<Long, String> entry : _indexNames.entrySet())
+				{
+					size += 4; // index id
+					size += entry.getValue().length() * 2; // index name
+				}
 			}
 			
 			size += _partitionIds == null ? 0 : _partitionIds.size() * 8;

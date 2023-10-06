@@ -51,10 +51,6 @@ extends TabularCntrPanel
 
 //	private static final String  PROP_PREFIX           = CmTableStatisticsPanel.CM_NAME;
 
-	private JCheckBox l_sampleSpaceUsage_chk;
-	private JCheckBox l_sampleSystemTables_chk;
-	private JCheckBox l_samplePartitions_chk;
-
 	public CmTableStatisticsPanel(CountersModel cm)
 	{
 		super(cm);
@@ -142,10 +138,42 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 	}
 
+	private JCheckBox  l_sampleSpaceUsage_chk;
+	private JCheckBox  l_sampleSystemTables_chk;
+	private JCheckBox  l_samplePartitions_chk;
+
+	private JCheckBox  l_sampleMinPageLimit_chk;
+	private JTextField l_sampleMinPageLimitCount_txt;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Sample Space Usage",            PROPKEY_sample_spaceUsage        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spaceUsage        , DEFAULT_sample_spaceUsage        ), DEFAULT_sample_spaceUsage       , "Sample Table Space Usage with ASE functions data_pages() and reserved_pages()" ));
+//				list.add(new CmSettingsHelper("Minimum Number of Pages",       PROPKEY_sample_minPageLimit      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_minPageLimit      , DEFAULT_sample_minPageLimit      ), DEFAULT_sample_minPageLimit     , "Sample table that has X number of pages or more"                               ));
+//				list.add(new CmSettingsHelper("Minimum Number of Pages Count", PROPKEY_sample_minPageLimitCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_minPageLimitCount , DEFAULT_sample_minPageLimitCount ), DEFAULT_sample_minPageLimitCount, "Table must have more pages than this to be included"                           ));
+//				list.add(new CmSettingsHelper("Include System Tables",         PROPKEY_sample_systemTables      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemTables      , DEFAULT_sample_systemTables      ), DEFAULT_sample_systemTables     , "Include ASE System Tables."                                                    ));
+//				list.add(new CmSettingsHelper("Stats at Partition Level",      PROPKEY_sample_partitions        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_partitions        , DEFAULT_sample_partitions        ), DEFAULT_sample_partitions       , "Sample statistics on a partition level, not summarized at the table level"     ));
+				
+				l_sampleSpaceUsage_chk       .setSelected(conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_spaceUsage       , CmTableStatistics.DEFAULT_sample_spaceUsage));
+				l_sampleSystemTables_chk     .setSelected(conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_systemTables     , CmTableStatistics.DEFAULT_sample_systemTables));
+				l_samplePartitions_chk       .setSelected(conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_partitions       , CmTableStatistics.DEFAULT_sample_partitions));
+				
+				l_sampleMinPageLimit_chk     .setSelected(conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_minPageLimit     , CmTableStatistics.DEFAULT_sample_minPageLimit));
+				l_sampleMinPageLimitCount_txt.setText(""+ conf.getIntProperty    (CmTableStatistics.PROPKEY_sample_minPageLimitCount, CmTableStatistics.DEFAULT_sample_minPageLimitCount));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -153,7 +181,7 @@ extends TabularCntrPanel
 		int     defaultIntOpt;
 
 		//-----------------------------------------
-		// RowCount
+		// Sample Space Usage
 		//-----------------------------------------
 		defaultBolOpt = conf == null ? CmTableStatistics.DEFAULT_sample_spaceUsage : conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_spaceUsage, CmTableStatistics.DEFAULT_sample_spaceUsage);
 		l_sampleSpaceUsage_chk = new JCheckBox("Sample Space Usage", defaultBolOpt);
@@ -187,16 +215,16 @@ extends TabularCntrPanel
 		//-----------------------------------------
 		defaultBolOpt = conf == null ? CmTableStatistics.DEFAULT_sample_minPageLimit      : conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_minPageLimit,      CmTableStatistics.DEFAULT_sample_minPageLimit);
 		defaultIntOpt = conf == null ? CmTableStatistics.DEFAULT_sample_minPageLimitCount : conf.getIntProperty    (CmTableStatistics.PROPKEY_sample_minPageLimitCount, CmTableStatistics.DEFAULT_sample_minPageLimitCount);
-		final JCheckBox  sampleMinPageLimit_chk      = new JCheckBox("Minimum Number of Pages", defaultBolOpt);
-		final JTextField sampleMinPageLimitCount_txt = new JTextField(Integer.toString(defaultIntOpt), 6);
+		l_sampleMinPageLimit_chk      = new JCheckBox("Minimum Number of Pages", defaultBolOpt);
+		l_sampleMinPageLimitCount_txt = new JTextField(Integer.toString(defaultIntOpt), 6);
 
-		sampleMinPageLimit_chk.setName(CmTableStatistics.PROPKEY_sample_minPageLimit);
-		sampleMinPageLimit_chk.setToolTipText("<html>Only fetch Table Information for Tables that has more than "+CmTableStatistics.DEFAULT_sample_minPageLimitCount+" Pages. So Skip <i>smaller</i> tables.<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
+		l_sampleMinPageLimit_chk.setName(CmTableStatistics.PROPKEY_sample_minPageLimit);
+		l_sampleMinPageLimit_chk.setToolTipText("<html>Only fetch Table Information for Tables that has more than "+CmTableStatistics.DEFAULT_sample_minPageLimitCount+" Pages. So Skip <i>smaller</i> tables.<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
 
-		sampleMinPageLimitCount_txt.setName(CmTableStatistics.PROPKEY_sample_minPageLimitCount);
-		sampleMinPageLimitCount_txt.setToolTipText("<html>Only fetch Table Information for Tables that has more than "+CmTableStatistics.DEFAULT_sample_minPageLimitCount+" Pages. So Skip <i>smaller</i> tables<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
+		l_sampleMinPageLimitCount_txt.setName(CmTableStatistics.PROPKEY_sample_minPageLimitCount);
+		l_sampleMinPageLimitCount_txt.setToolTipText("<html>Only fetch Table Information for Tables that has more than "+CmTableStatistics.DEFAULT_sample_minPageLimitCount+" Pages. So Skip <i>smaller</i> tables<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
 
-		sampleMinPageLimit_chk.addActionListener(new ActionListener()
+		l_sampleMinPageLimit_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -223,14 +251,14 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				
-				String strVal = sampleMinPageLimitCount_txt.getText();
+				String strVal = l_sampleMinPageLimitCount_txt.getText();
 				int    intVal = CmTableStatistics.DEFAULT_sample_minPageLimitCount;
 				try { intVal = Integer.parseInt(strVal);}
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmTableStatistics.DEFAULT_sample_minPageLimitCount;
 					SwingUtils.showWarnMessage(CmTableStatisticsPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					sampleMinPageLimitCount_txt.setText(intVal+"");
+					l_sampleMinPageLimitCount_txt.setText(intVal+"");
 				}
 				conf.setProperty(CmTableStatistics.PROPKEY_sample_minPageLimitCount, intVal);
 				conf.save();
@@ -241,8 +269,8 @@ extends TabularCntrPanel
 					cm.setSql(null);
 			}
 		};
-		sampleMinPageLimitCount_txt.addActionListener(sampleMinPageLimitCount_action);
-		sampleMinPageLimitCount_txt.addFocusListener(new FocusListener()
+		l_sampleMinPageLimitCount_txt.addActionListener(sampleMinPageLimitCount_action);
+		l_sampleMinPageLimitCount_txt.addFocusListener(new FocusListener()
 		{
 			@Override
 			public void focusLost(FocusEvent e)
@@ -283,7 +311,7 @@ extends TabularCntrPanel
 		});
 		
 		//-----------------------------------------
-		// sample system tables
+		// sample partitions
 		//-----------------------------------------
 		defaultBolOpt = conf == null ? CmTableStatistics.DEFAULT_sample_partitions : conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_partitions, CmTableStatistics.DEFAULT_sample_partitions);
 		l_samplePartitions_chk = new JCheckBox("Stats at Partition Level", defaultBolOpt);
@@ -312,14 +340,14 @@ extends TabularCntrPanel
 		//-----------------------------------------
 		// LAYOUT
 		//-----------------------------------------
-		panel.add(l_sampleSpaceUsage_chk,      "wrap");
+		panel.add(l_sampleSpaceUsage_chk,        "wrap");
 		
-		panel.add(sampleMinPageLimit_chk,      "split");
-		panel.add(sampleMinPageLimitCount_txt, "wrap");
+		panel.add(l_sampleMinPageLimit_chk,      "split");
+		panel.add(l_sampleMinPageLimitCount_txt, "wrap");
 
-		panel.add(l_sampleSystemTables_chk,    "wrap");
+		panel.add(l_sampleSystemTables_chk,      "wrap");
 
-		panel.add(l_samplePartitions_chk,      "wrap");
+		panel.add(l_samplePartitions_chk,        "wrap");
 
 		return panel;
 	}

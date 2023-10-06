@@ -330,7 +330,7 @@ extends ReportEntryAbstract
 		// Start/end time for the recording
 		//-----------------------------------------
 		sql = "select min([SessionSampleTime]), max([SessionSampleTime]) \n" +
-		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_SAMPLES, null, false) + " \n";
+		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_SAMPLES, null, true) + " \n";
 
 		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement() )

@@ -364,10 +364,17 @@ for example: http://dbxtune.acme.com:8080/
 	use master;
 	CREATE USER [dbxtune] FOR LOGIN [dbxtune];
 	GRANT EXEC ON xp_readerrorlog TO [dbxtune];
-	
+
+	## Note: If you want to inspect 'Job Scheduler', dbxtune needs access to database 'msdb' 
+	USE msdb;
+	CREATE USER dbxtune FOR LOGIN dbxtune;
+	ALTER ROLE db_datareader ADD MEMBER dbxtune;
+
 	## Note: If you want to execute 'sp_blitz' and are using a non 'sysadmin' account (like we do above with the login 'dbxtune')
 	## you need to follow 'https://www.brentozar.com/askbrent/', look for 'How to Grant Permissions to Non-DBAs'
 	## The 'sp_blitz' may be used to do all sorts of 'healthchecks' every time you connect to the monitored server.
+	use master;
+	GRANT EXEC ON sp_blitz TO [dbxtune];
 
 	## Test that we can login to SQL Server with the 'dbxtune' user
 	sqlcmd -Ssrvname -Udbxtune -Pthe_long_and_arbitrary_password
@@ -384,11 +391,16 @@ for example: http://dbxtune.acme.com:8080/
 	## Add Local or ActiveDirictory account
 	net user /add dbxtune long_and_arbitrary_password
 
-	## Allow user to get perf counters (from DOS), and to get "disk space used" on local drives
+	## Allow user to get perf counters by issuing 'typeperf ...'
 	net localgroup "Performance Log Users" dbxtune /add
+	
+	## Allow user to get "disk space used" on local drives, by issuing 'powershell gwmi win32_logicaldisk' over the SSH Connection
 	net localgroup administrators dbxtune /add
-	# The last 'local admin' is to get disk space usage (which needs admin authority): powershell gwmi win32_logicaldisk
-	# NOTE: Let me know if you have a **better** command that does NOT require "local admin" authority :)
+	# Instead of the 'administrator' thing above, you can do the following:
+	#   WMI Needs "Remote Enable" for the user to allow 'gwmi win32_logicaldisk', and SSH is considered to be a "Remote Operation"
+	#   Look at https://github.com/microsoft/vscode-remote-release/issues/2648#issuecomment-1646047396
+	#   That worked for me... Then the command didn't need 'administrator' role...
+	#   NOTE: There might be other solutions as well, let me know your best solution for this (hopefully command line instructions instead of GUI clicking)
 
 
 ##--------------------------------------

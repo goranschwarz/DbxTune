@@ -95,6 +95,7 @@ extends SqlServerAbstract
 		_CmMemoryClerks_MemoryClerksTop .writeHtmlContent(w, null, null);
 		_CmMemoryClerks_TTMemVsAllClerks.writeHtmlContent(w, null, null);
 		_CmMemoryGrantsSum_GrantedMemSum.writeHtmlContent(w, null, null);
+		_CmMemoryGrantsSum_GrantWaitCnt .writeHtmlContent(w, null, null);
 		_CmSummary_OsMemoryFreeMb       .writeHtmlContent(w, null, null);
 		_CmPerfCounters_SqlBatch        .writeHtmlContent(w, null, null);
 		_CmPerfCounters_TransWriteSec   .writeHtmlContent(w, null, null);
@@ -153,6 +154,7 @@ extends SqlServerAbstract
 		_CmMemoryClerks_MemoryClerksTop  = createTsLineChart(conn, schema, "CmMemoryClerks",    "MemoryClerksTop",  -1,       true , null,    "Top ## Memory Clerks, in MB (Server->Memory)");
 		_CmMemoryClerks_TTMemVsAllClerks = createTsLineChart(conn, schema, "CmMemoryClerks",    "TTMemVsAllClerks", -1,       false, null,    "All Memory Clerks vs Target & Total Memory, in MB (Server->Memory)");
 		_CmMemoryGrantsSum_GrantedMemSum = createTsLineChart(conn, schema, "CmMemoryGrantsSum", "GrantedMemSum",    -1,       false, null,    "Memory Grant Summary in MB (Server->Memory Grants Sum)");
+		_CmMemoryGrantsSum_GrantWaitCnt  = createTsLineChart(conn, schema, "CmMemoryGrantsSum", "GrantWaitCnt",     -1,       false, null,    "Memory Grants and Wait Count (Server->Memory Grants Sum)");
 		_CmSummary_OsMemoryFreeMb        = createTsLineChart(conn, schema, "CmSummary",         "OsMemoryFreeMb",   -1,       false, null,    "OS Free/Available Memory in MB (Summary)");
 		_CmPerfCounters_SqlBatch         = createTsLineChart(conn, schema, "CmPerfCounters",    "SqlBatch",         -1,       false, null,    "SQL Batches Received per Sec (Server->Perf Counters)");
 		_CmPerfCounters_TransWriteSec    = createTsLineChart(conn, schema, "CmPerfCounters",    "TransWriteSec",    -1,       true , null,    "Write Transactions per Sec (Server->Perf Counters)");
@@ -172,6 +174,7 @@ extends SqlServerAbstract
 	private IReportChart _CmMemoryClerks_MemoryClerksTop;
 	private IReportChart _CmMemoryClerks_TTMemVsAllClerks;
 	private IReportChart _CmMemoryGrantsSum_GrantedMemSum;
+	private IReportChart _CmMemoryGrantsSum_GrantWaitCnt;
 	private IReportChart _CmSummary_OsMemoryFreeMb;
 	private IReportChart _CmPerfCounters_SqlBatch;
 	private IReportChart _CmPerfCounters_TransWriteSec;

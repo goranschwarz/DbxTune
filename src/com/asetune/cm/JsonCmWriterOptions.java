@@ -24,8 +24,11 @@ package com.asetune.cm;
 public class JsonCmWriterOptions
 {
 	public boolean throwOnMissingMandatoryParams = false;
-	public boolean writeStats = true;
-	public boolean writeMetaData = true;
+	public boolean writeStats         = true;
+
+	public boolean writeMetaData      = true;
+	public boolean writeMetaData_jdbc = false;
+	public boolean writeMetaData_cm   = true;
 	
 	public boolean writeCounters      = false;
 	public boolean writeCounters_abs  = true;

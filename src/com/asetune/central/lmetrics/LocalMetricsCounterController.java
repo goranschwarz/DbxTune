@@ -45,6 +45,9 @@ public class LocalMetricsCounterController extends CounterControllerAbstract
 {
 	private static Logger _logger = Logger.getLogger(LocalMetricsCounterController.class);
 
+	public static final String PROPKEY_cmOsUptime_alarmDisabledAtStartupForXMinutes = "DbxCentralLocalMetrics.CmOsUptime.alarm.disabled.at.startup.for.x.minutes";
+	public static final int    DEFAULT_cmOsUptime_alarmDisabledAtStartupForXMinutes = 5;
+
 	/**
 	 * The default constructor
 	 * @param hasGui should we create a GUI or NoGUI collection thread
@@ -172,6 +175,15 @@ public class LocalMetricsCounterController extends CounterControllerAbstract
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModelHostMonitors(counterController, guiController);
+
+		// During startup, of ALL Collectors on DbxCentral the server WILL have a high "load average"... 
+		// So disable it for a couple of minutes during startup. 
+		CountersModel cmOsUptime = getCmByName(CmOsUptime.CM_NAME);
+		if (cmOsUptime != null)
+		{
+			int disableMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmOsUptime_alarmDisabledAtStartupForXMinutes, DEFAULT_cmOsUptime_alarmDisabledAtStartupForXMinutes);
+			cmOsUptime.setDisableAlarmsForXMinutes(disableMinutes);
+		}
 
 		// done
 		setCountersIsCreated(true);

@@ -43,7 +43,7 @@ import com.asetune.utils.Ver;
 import net.miginfocom.swing.MigLayout;
 
 public class CmActiveStatementsPanel 
-extends TabularCntrPanel
+extends TabularCntrPanel 
 {
 	private static final long serialVersionUID = 1L;
 
@@ -141,7 +141,28 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				l_sampleShowplan_chk        .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_showplan        , CmActiveStatements.DEFAULT_sample_showplan       ));
+				l_sampleMonSqltext_chk      .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText      , CmActiveStatements.DEFAULT_sample_monSqlText     ));
+				l_sampleDbccSqltext_chk     .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_dbccSqlText     , CmActiveStatements.DEFAULT_sample_dbccSqlText    ));
+				l_sampleProcCallStack_chk   .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_procCallStack   , CmActiveStatements.DEFAULT_sample_procCallStack  ));
+				l_sampleDbccStacktrace_chk  .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_dbccStacktrace  , CmActiveStatements.DEFAULT_sample_dbccStacktrace ));
+				l_sampleCachedPlanInXml_chk .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_cachedPlanInXml , CmActiveStatements.DEFAULT_sample_cachedPlanInXml));
+				l_sampleHoldingLocks_chk    .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks    , CmActiveStatements.DEFAULT_sample_holdingLocks   ));
+				l_sampleSpidLocks_chk       .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks       , CmActiveStatements.DEFAULT_sample_spidLocks      ));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 		panel.setToolTipText(
 			"<html>" +
@@ -151,15 +172,7 @@ extends TabularCntrPanel
 				"NOTE: So if you check all the options, the time to do refresh on this tab will <b>increase</b>." +
 			"</html>");
 
-//		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
-//		l_sampleMonSqltext_chk      = new JCheckBox("Get Monitored SQL Text",    conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",      true));
-//		l_sampleDbccSqltext_chk     = new JCheckBox("Get DBCC SQL Text",         conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",     false));
-//		l_sampleProcCallStack_chk   = new JCheckBox("Get Procedure Call Stack",  conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",   true));
-//		l_sampleShowplan_chk        = new JCheckBox("Get Showplan",              conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",        true));
-//		l_sampleDbccStacktrace_chk  = new JCheckBox("Get ASE Stacktrace",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace",  false));
-//		l_sampleCachedPlanInXml_chk = new JCheckBox("Show Cached Plan in XML",   conf == null ? true : conf.getBooleanProperty(getName()+".sample.cachedPlanInXml", false));
-//		l_sampleHoldingLocks_chk    = new JCheckBox("Show SPID's holding locks", conf == null ? true : conf.getBooleanProperty(getName()+".sample.holdingLocks",    false));
 		l_sampleShowplan_chk        = new JCheckBox("Get Showplan",              conf == null ? CmActiveStatements.DEFAULT_sample_showplan        : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_showplan        , CmActiveStatements.DEFAULT_sample_showplan       ));
 		l_sampleMonSqltext_chk      = new JCheckBox("Get Monitored SQL Text",    conf == null ? CmActiveStatements.DEFAULT_sample_monSqlText      : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText      , CmActiveStatements.DEFAULT_sample_monSqlText     ));
 		l_sampleDbccSqltext_chk     = new JCheckBox("Get DBCC SQL Text",         conf == null ? CmActiveStatements.DEFAULT_sample_dbccSqlText     : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_dbccSqlText     , CmActiveStatements.DEFAULT_sample_dbccSqlText    ));

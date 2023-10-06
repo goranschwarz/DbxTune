@@ -1636,7 +1636,7 @@ extends Properties
 //			}
 
 	/** prefix for DEFAULT vales */
-	private static final String USE_DEFAULT_PREFIX = "USE_DEFAULT:";
+	public  static final String USE_DEFAULT_PREFIX = "USE_DEFAULT:";
 	private static final String USE_DEFAULT        = "USE_DEFAULT";
 	/** What are the default vales for: each registered property name */
 

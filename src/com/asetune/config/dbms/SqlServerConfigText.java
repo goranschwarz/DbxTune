@@ -1337,6 +1337,8 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                          { return "sp_blitz"; }
 		@Override public    String     getName()                              { return ConfigType.SqlServerSpBlitz.toString(); }
 		@Override public    String     getConfigType()                        { return getName(); }
+		@Override public    int        getSqlTimeout()                        { return 45; }
+
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
 		{
 			int    checkUserDatabaseObjects = Configuration.getCombinedConfiguration().getIntProperty("DbmsConfig.SpBlitz.param.CheckUserDatabaseObjects", 0);

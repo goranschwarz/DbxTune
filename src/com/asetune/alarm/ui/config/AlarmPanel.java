@@ -30,6 +30,7 @@ import javax.swing.JSplitPane;
 
 import com.asetune.Version;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class AlarmPanel
@@ -106,5 +107,13 @@ implements PropertyChangeListener
 			return true;
 		
 		return false;
+	}
+
+	public void setSelectedCmName(String cmName)
+	{
+		if (StringUtil.isNullOrBlank(cmName))
+			return;
+
+		_alarmTablePanel.setSelectedCmName(cmName);
 	}
 }

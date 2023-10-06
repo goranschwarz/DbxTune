@@ -97,7 +97,22 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+				_onZeroLogicalReads_chk.setSelected(conf.getBooleanProperty(CmCachePools.PROPKEY_CacheHitRateTo100PctOnZeroReads, CmCachePools.DEFAULT_CacheHitRateTo100PctOnZeroReads));
+				_slideWindowTime_txt   .setText(""+ conf.getIntProperty    (CmCachePools.PROPKEY_CacheSlideTimeInSec            , CmCachePools.DEFAULT_CacheSlideTimeInSec));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();

@@ -168,7 +168,29 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Extra Where Clause",                           PROPKEY_sample_extraWhereClause , String .class, conf.getProperty       (PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause ), DEFAULT_sample_extraWhereClause, CmExecQueryStatsPanel.TOOLTIP_sample_extraWhereClause ));
+//				list.add(new CmSettingsHelper("Show only SQL exected since last sample time", PROPKEY_sample_afterPrevSample  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_afterPrevSample  , DEFAULT_sample_afterPrevSample  ), DEFAULT_sample_afterPrevSample , CmExecQueryStatsPanel.TOOLTIP_sample_afterPrevSample  ));
+//				list.add(new CmSettingsHelper("Show only SQL exected last 30 minutes",        PROPKEY_sample_lastXminutes     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastXminutes     , DEFAULT_sample_lastXminutes     ), DEFAULT_sample_lastXminutes    , CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutes     ));
+//				list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutesTime ));
+
+				_sampleLastXminutes_chk     .setSelected(conf.getBooleanProperty(CmSqlStats.PROPKEY_sample_lastXminutes,     CmSqlStats.DEFAULT_sample_lastXminutes));        
+				_sampleLastXminutes_txt     .setText(""+ conf.getIntProperty    (CmSqlStats.PROPKEY_sample_lastXminutesTime, CmSqlStats.DEFAULT_sample_lastXminutesTime));
+				_sampleAfterPrevSample_chk  .setSelected(conf.getBooleanProperty(CmSqlStats.PROPKEY_sample_afterPrevSample,  CmSqlStats.DEFAULT_sample_afterPrevSample));
+				_sampleExtraWhereClause_txt .setText    (conf.getProperty       (CmSqlStats.PROPKEY_sample_extraWhereClause, CmSqlStats.DEFAULT_sample_extraWhereClause));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
+//		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 //		panel.setToolTipText(
 //			"<html>" +

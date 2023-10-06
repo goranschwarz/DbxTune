@@ -23,8 +23,10 @@ package com.asetune.cm.ase;
 import java.awt.Component;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
@@ -1511,6 +1513,8 @@ extends CountersModel
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
 		CountersModel cm = this;
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
@@ -1556,7 +1560,7 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
-						AlarmHandler.getInstance().addAlarm(ae);
+						alarmHandler.addAlarm(ae);
 					}
 				}
 
@@ -1575,7 +1579,7 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
-						AlarmHandler.getInstance().addAlarm(ae);
+						alarmHandler.addAlarm(ae);
 					}
 				}
 
@@ -1594,7 +1598,7 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
-						AlarmHandler.getInstance().addAlarm(ae);
+						alarmHandler.addAlarm(ae);
 					}
 				}
 			}
@@ -1616,7 +1620,60 @@ extends CountersModel
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", LockWaits='"+LockWaits+"'.");
 
 				if (LockWaits.intValue() > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits) );
+				{
+					String oldestOpenTranInSec  = cm.getAbsString(0, "oldestOpenTranInSec");
+					String oldestOpenTranName   = cm.getAbsString(0, "oldestOpenTranName");
+					String oldestOpenTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
+					String oldestOpenTranSpid   = cm.getAbsString(0, "oldestOpenTranSpid");
+
+					// Possibly get more information about that SPID (oldestOpenTranSpid)
+					String oldestOpenTranSpid_ProcessActivity_htmlTable = "";
+					if (StringUtil.hasValue(oldestOpenTranSpid))
+					{
+						CountersModel cmProcessActivity = getCounterController().getCmByName(CmProcessActivity.CM_NAME);
+						int oldestOpenTranSpid_int = StringUtil.parseInt(oldestOpenTranSpid, -1);
+						if (oldestOpenTranSpid_int != -1 && cmProcessActivity != null)
+						{
+							Map<String, Object> whereMap = new HashMap<>();
+							whereMap.put("SPID", oldestOpenTranSpid_int);
+							List<Integer> rowIdList = cmProcessActivity.getRateRowIdsWhere(whereMap);
+							for (Integer pkRowId : rowIdList)
+							{
+								oldestOpenTranSpid_ProcessActivity_htmlTable += cmProcessActivity.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+							}
+						}
+					}
+					
+					String extendedDescText = "" 
+							+   "NumberOfWaitingLocks" + "="  + LockWaits            + ""
+							+ ", OldestOpenTranInSec"  + "="  + oldestOpenTranInSec  + ""
+							+ ", OldestOpenTranName"   + "='" + oldestOpenTranName   + "'"
+							+ ", OldestOpenTranDbName" + "='" + oldestOpenTranDbName + "'"
+							+ ", OldestOpenTranSpid"   + "="  + oldestOpenTranSpid   + ""
+							;
+					String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
+							+ "<table> \n"
+							+ "    <tr> <td><b>Number of Waiting Locks</b></td> <td>" + LockWaits            + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran InSec </b></td> <td>" + oldestOpenTranInSec  + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran Name  </b></td> <td>" + oldestOpenTranName   + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran DbName</b></td> <td>" + oldestOpenTranDbName + "</td> </tr> \n"
+							+ "    <tr> <td><b>Oldest Open Tran Spid  </b></td> <td>" + oldestOpenTranSpid   + "</td> </tr> \n"
+							+ "</table> \n"
+							;
+					if (StringUtil.hasValue(oldestOpenTranSpid_ProcessActivity_htmlTable))
+					{
+						extendedDescHtml += ""
+								+ "<br>"
+								+ "Process Activity information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
+								+ oldestOpenTranSpid_ProcessActivity_htmlTable
+								;
+					}
+					
+					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+					alarmHandler.addAlarm( ae );
+				}
 			}
 		}
 
@@ -1637,24 +1694,68 @@ extends CountersModel
 				if (oldestOpenTranInSec.intValue() > threshold)
 				{
 					// Get OldestTranName
-					String OldestTranName   = cm.getAbsString(0, "oldestOpenTranName");
-					String OldestTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
+					String oldestOpenTranName   = cm.getAbsString(0, "oldestOpenTranName");
+					String oldestOpenTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
+					String oldestOpenTranSpid   = cm.getAbsString(0, "oldestOpenTranSpid");
 					
 					// Get config 'skip some transaction names'
 					String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
+//					String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipDbname  , DEFAULT_alarm_oldestOpenTranInSecSkipDbname);
 
-					// send alarm, if...
-					if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
+					boolean doAlarm = true;
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! oldestOpenTranName  .matches(skipTranNameRegExp)));
+				//	doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp  ) || ! oldestOpenTranDbName.matches(skipDbnameRegExp  )));
+				//	doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipXxxxxxxxRegExp) || ! colNameXxxxxxxxxxx  .matches(skipXxxxxxxxRegExp)));
+
+					if (doAlarm)
 					{
-						if ( ! OldestTranName.matches(skipTranNameRegExp) )
-							AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
+						String extendedDescText = "" 
+								+ ", OldestOpenTranInSec"  + "="  + oldestOpenTranInSec  + ""
+								+ ", OldestOpenTranName"   + "='" + oldestOpenTranName   + "'"
+								+ ", OldestOpenTranDbName" + "='" + oldestOpenTranDbName + "'"
+								+ ", OldestOpenTranSpid"   + "="  + oldestOpenTranSpid   + ""
+								;
+						String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
+								+ "<table> \n"
+								+ "    <tr> <td><b>Oldest Open Tran InSec </b></td> <td>" + oldestOpenTranInSec  + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran Name  </b></td> <td>" + oldestOpenTranName   + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran DbName</b></td> <td>" + oldestOpenTranDbName + "</td> </tr> \n"
+								+ "    <tr> <td><b>Oldest Open Tran Spid  </b></td> <td>" + oldestOpenTranSpid   + "</td> </tr> \n"
+								+ "</table> \n"
+								;
+
+						// Possibly get more information about that SPID (oldestOpenTranSpid)
+						String oldestOpenTranSpid_ProcessActivity_htmlTable = "";
+						if (StringUtil.hasValue(oldestOpenTranSpid))
+						{
+							CountersModel cmProcessActivity = getCounterController().getCmByName(CmProcessActivity.CM_NAME);
+							int oldestOpenTranSpid_int = StringUtil.parseInt(oldestOpenTranSpid, -1);
+							if (oldestOpenTranSpid_int != -1 && cmProcessActivity != null)
+							{
+								Map<String, Object> whereMap = new HashMap<>();
+								whereMap.put("SPID", oldestOpenTranSpid_int);
+								List<Integer> rowIdList = cmProcessActivity.getRateRowIdsWhere(whereMap);
+								for (Integer pkRowId : rowIdList)
+								{
+									oldestOpenTranSpid_ProcessActivity_htmlTable += cmProcessActivity.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+								}
+							}
+						}
+						if (StringUtil.hasValue(oldestOpenTranSpid_ProcessActivity_htmlTable))
+						{
+							extendedDescHtml += ""
+									+ "<br>"
+									+ "Process Activity information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
+									+ oldestOpenTranSpid_ProcessActivity_htmlTable
+									;
+						}
+						
+						
+						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranDbName, oldestOpenTranInSec, oldestOpenTranName);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
 					}
-					else
-					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
-					}
-					
-					//AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, oldestOpenTranInSec) );
 				}
 			}
 		}

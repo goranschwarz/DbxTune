@@ -1848,6 +1848,7 @@ extends CountersModel
 			    + "\n"
 			    + "";
 		String osvDataColumns = " \n"
+			    + "    ,DataOsDiskLabel          = osvData.logical_volume_name \n"
 			    + "    ,DataOsDisk               = osvData.volume_mount_point \n"
 			    + "    ,DataOsDiskUsedPct        = osvData.osUsedPct \n"
 			    + "    ,DataOsDiskFreePct        = osvData.osFreePct \n"
@@ -1903,6 +1904,7 @@ extends CountersModel
 			    + "\n"
 			    + "";
 		String osvLogColumns = " \n"
+			    + "    ,LogOsDiskLabel           = osvLog.logical_volume_name \n"
 			    + "    ,LogOsDisk                = osvLog.volume_mount_point \n"
 			    + "    ,LogOsDiskUsedPct         = osvLog.osUsedPct \n"
 			    + "    ,LogOsDiskFreePct         = osvLog.osFreePct \n"
@@ -2371,10 +2373,12 @@ extends CountersModel
 	{
 		Map<String, Double> diskMap = new LinkedHashMap<>();
 		
+		int LogOsDiskLabel_pos      = this.findColumn("LogOsDiskLabel");
 		int LogOsDisk_pos           = this.findColumn("LogOsDisk");
 		int LogOsFileName_pos       = this.findColumn("LogOsFileName");
 		int LogColName_pos          = this.findColumn(logColName);
 		
+		int DataOsDiskLabel_pos     = this.findColumn("DataOsDiskLabel");
 		int DataOsDisk_pos          = this.findColumn("DataOsDisk");
 		int DataOsFileName_pos      = this.findColumn("DataOsFileName");
 		int DataColName_pos         = this.findColumn(dataColName);
@@ -2388,10 +2392,12 @@ extends CountersModel
 		// Loop all rows and store values (duplicates will be discarded) in a MAP
 		for (int r=0; r<this.size(); r++)
 		{
+			String LogOsDiskLabel      = ((LogOsDiskLabel_pos == -1) ? "" : this.getAbsString(r, LogOsDiskLabel_pos));
 			String LogOsDisk           = this.getAbsString(r, LogOsDisk_pos);
 			String LogOsFileName       = this.getAbsString(r, LogOsFileName_pos);
 			Double LogColValue         = this.getAbsValueAsDouble(r, LogColName_pos);
 			
+			String DataOsDiskLabel     = ((DataOsDiskLabel_pos == -1) ? "" : this.getAbsString(r, DataOsDiskLabel_pos));
 			String DataOsDisk          = this.getAbsString(r, DataOsDisk_pos);
 			String DataOsFileName      = this.getAbsString(r, DataOsFileName_pos);
 			Double DataColValue        = this.getAbsValueAsDouble(r, DataColName_pos);
@@ -2410,12 +2416,12 @@ extends CountersModel
 			String logOsName  = LogOsDisk;
 			String dataOsName = DataOsDisk;
 			
-			if (StringUtil.isNullOrBlank(logOsName))
-				logOsName = CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName);
-
-			if (StringUtil.isNullOrBlank(dataOsName))
-				dataOsName = CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName);
+			if (StringUtil.isNullOrBlank(logOsName))  logOsName  = CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName);
+			if (StringUtil.isNullOrBlank(dataOsName)) dataOsName = CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName);
 			
+			if (StringUtil.hasValue(LogOsDiskLabel))  logOsName  += " [" + LogOsDiskLabel  + "]";
+			if (StringUtil.hasValue(DataOsDiskLabel)) dataOsName += " [" + DataOsDiskLabel + "]";
+
 			diskMap.put(logOsName,  LogColValue);
 			diskMap.put(dataOsName, DataColValue);
 		}
@@ -3107,14 +3113,22 @@ extends CountersModel
 
 						if (freeMb.equals(logFreeMb))
 						{
+							String lbl  = cm.getAbsString(r, "LogOsDiskLabel");
 							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
+
+							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+								osVolume += " [" + lbl + "]";
 						}
 
 						if (freeMb.equals(dataFreeMb))
 						{
+							String lbl  = cm.getAbsString(r, "DataOsDiskLabel");
 							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
+
+							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+								osVolume += " [" + lbl + "]";
 						}
 						
 						// If 'osVolume' is empty... try to get the File directory...
@@ -3179,13 +3193,21 @@ extends CountersModel
 						String osFileName = "";
 						if (usedPct.equals(logUsedPct))
 						{
+							String lbl  = cm.getAbsString(r, "LogOsDiskLabel");
 							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
+
+							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+								osVolume += " [" + lbl + "]";
 						}
 						if (usedPct.equals(dataUsedPct))
 						{
+							String lbl  = cm.getAbsString(r, "DataOsDiskLabel");
 							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
+
+							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+								osVolume += " [" + lbl + "]";
 						}
 
 						// If 'osVolume' is empty... try to get the File directory...

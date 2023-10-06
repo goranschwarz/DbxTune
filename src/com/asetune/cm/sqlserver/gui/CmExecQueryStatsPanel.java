@@ -66,7 +66,7 @@ extends TabularCntrPanel
 			
 	public static final String  TOOLTIP_sample_lastXminutesTime = 
 			"<html>"
-			+ "Number of minutes to show if this is enabled (default is 10 minutes).<br>"
+			+ "Number of minutes to show if this is enabled (default is 30 minutes).<br>"
 			+ "</html>";
 				
 	public static final String  TOOLTIP_sample_extraWhereClause = 
@@ -171,7 +171,27 @@ extends TabularCntrPanel
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Local Options", true);
+		LocalOptionsConfigPanel panel = new LocalOptionsConfigPanel("Local Options", new LocalOptionsConfigChanges()
+		{
+			@Override
+			public void configWasChanged(String propName, String propVal)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+
+//				list.add(new CmSettingsHelper("Extra Where Clause",                           PROPKEY_sample_extraWhereClause , String .class, conf.getProperty       (PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause ), DEFAULT_sample_extraWhereClause, CmExecFunctionStatsPanel.TOOLTIP_sample_extraWhereClause ));
+//				list.add(new CmSettingsHelper("Show only SQL exected since last sample time", PROPKEY_sample_afterPrevSample  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_afterPrevSample  , DEFAULT_sample_afterPrevSample  ), DEFAULT_sample_afterPrevSample , CmExecFunctionStatsPanel.TOOLTIP_sample_afterPrevSample  ));
+//				list.add(new CmSettingsHelper("Show only SQL exected last 10 minutes",        PROPKEY_sample_lastXminutes     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastXminutes     , DEFAULT_sample_lastXminutes     ), DEFAULT_sample_lastXminutes    , CmExecFunctionStatsPanel.TOOLTIP_sample_lastXminutes     ));
+//				list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmExecFunctionStatsPanel.TOOLTIP_sample_lastXminutesTime ));
+
+				_sampleLastXminutes_chk     .setSelected(conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes,     CmExecQueryStats.DEFAULT_sample_lastXminutes));
+				_sampleLastXminutes_txt     .setText(""+ conf.getIntProperty    (CmExecQueryStats.PROPKEY_sample_lastXminutesTime, CmExecQueryStats.DEFAULT_sample_lastXminutesTime));
+				_sampleAfterPrevSample_chk  .setSelected(conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_afterPrevSample,  CmExecQueryStats.DEFAULT_sample_afterPrevSample));
+				_sampleExtraWhereClause_txt .setText(    conf.getProperty       (CmExecQueryStats.PROPKEY_sample_extraWhereClause, CmExecQueryStats.DEFAULT_sample_extraWhereClause));
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 //		panel.setToolTipText(
 //			"<html>" +

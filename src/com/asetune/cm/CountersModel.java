@@ -315,6 +315,13 @@ implements Cloneable, ITableTooltip
 	public static final int ROW_STATE__IS_DIFF_OR_RATE_ROW = 1; 
 	public static final int ROW_STATE__IS_AGGREGATED_ROW = 2; 
 
+	// How many times have we got a timeoutException. This is set to 0 each time we succeed  
+	private int  _sequentialTimeoutExceptionCount = 0;
+	// At what time was the oldest timeoutException. This is set to -1 each time we succeed  
+	private long _oldestTimeoutExceptionTime = -1;
+
+	// If this is set Alarms is DISABLED until we have passed this time... Compared to: System.currentTimeMillis()  
+	private long _alarmsIsDisabledUntilTs = -1;
 	
 	
 	//-------------------------------------------------------
@@ -3081,7 +3088,7 @@ implements Cloneable, ITableTooltip
 	 * @param pk
 	 * @return
 	 */
-	public String createPkStr(String... pk)
+	public static String createPkStr(String... pk)
 	{
 		return CounterSample.createPkStr(pk);
 	}
@@ -3533,16 +3540,26 @@ implements Cloneable, ITableTooltip
 	{
 		return _isActive;
 	}
-	public void setActive(boolean state, String problemDescription)
+	public void setActive(boolean enable, String problemDescription)
 	{
-		_isActive    = state;
+		_isActive    = enable;
 		_problemDesc = problemDescription;
 		if (_problemDesc == null)
 			_problemDesc = "";
 		
 		if (_tabPanel != null)
 		{
-			_tabPanel.setEnabled(state);
+			_tabPanel.setEnabled(enable);
+		}
+
+		// Reset some counters when we enable
+		if (enable)
+		{
+			// How many times have we got a timeoutException. This is set to 0 each time we succeed  
+			_sequentialTimeoutExceptionCount = 0;
+
+			// At what time was the oldest timeoutException. This is set to -1 each time we succeed  
+			_oldestTimeoutExceptionTime = -1;
 		}
 	}
 	/** */
@@ -5077,6 +5094,9 @@ implements Cloneable, ITableTooltip
     			if ("CmProcessActivity".equals(getName()))
     				throw new SQLException("dummy test of '2714'...", "XXXX", 2714);
 			}
+			
+			_sequentialTimeoutExceptionCount = 0;
+			_oldestTimeoutExceptionTime = -1;
 		}
 		catch (NoValidRowsInSample e)
 		{
@@ -5248,7 +5268,7 @@ implements Cloneable, ITableTooltip
 			// Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
 			if (errorCode == 1204 && AlarmHandler.hasInstance())
 			{
-				AlarmHandler.getInstance().addAlarm( new AlarmEventConfigResourceIsUsedUp(this, "number of locks", errorCode, errorMsg) );				
+				AlarmHandler.getInstance().addAlarm( new AlarmEventConfigResourceIsUsedUp(this, "number of locks", errorCode, errorMsg, null) );				
 			}
 			
 			
@@ -5281,8 +5301,34 @@ implements Cloneable, ITableTooltip
 						isTimeoutException = true;
 				}
 			}
+			if ("HY008".equals(e.getSQLState())) // MS SQL Server
+			{
+				// ErrorCode=0, SqlState=HY008, Message=|The query has timed out.|. execTimeInMs=10002, SQL: ...
+				//    com.microsoft.sqlserver.jdbc.SQLServerException: The query has timed out.
+				//            at com.microsoft.sqlserver.jdbc.TDSCommand.checkForInterrupt(IOBuffer.java:7819)
+				//            at com.microsoft.sqlserver.jdbc.TDSParser.parse(tdsparser.java:98)
+				//            at com.microsoft.sqlserver.jdbc.TDSParser.parse(tdsparser.java:37)
+				//            at com.microsoft.sqlserver.jdbc.SQLServerResultSet$FetchBuffer.nextRow(SQLServerResultSet.java:5473)
+				//            at com.microsoft.sqlserver.jdbc.SQLServerResultSet.fetchBufferNext(SQLServerResultSet.java:1790)
+				//            at com.microsoft.sqlserver.jdbc.SQLServerResultSet.next(SQLServerResultSet.java:1048)
+				//            at com.asetune.cm.CounterSample.getSample(CounterSample.java:1117)
+				//            at com.asetune.cm.CountersModel.refreshGetData(CountersModel.java:5069)
+				//            at com.asetune.cm.CountersModel.refresh(CountersModel.java:4901)
+				//            at com.asetune.cm.CountersModel.refresh(CountersModel.java:4837)
+				//            at com.asetune.CounterCollectorThreadNoGui.run(CounterCollectorThreadNoGui.java:1525)
+				isTimeoutException = true;
+			}
 			if (isTimeoutException)
 			{
+				// Simply increment the counter (which is set to 0 on every success... or 'no-timeout')
+				_sequentialTimeoutExceptionCount++;
+
+				// Remember when when the first/oldest Timeout Exception happened.
+				if (_oldestTimeoutExceptionTime < 0)
+					_oldestTimeoutExceptionTime = System.currentTimeMillis();
+
+				// If we want to disable "any" CM due to TimeoutExceptions... 
+				// see: CmExecQueryStatPerDb.handleTimeoutException() as a "base code" that can be "moved" in here... 
 				handleTimeoutException();
 			}
 
@@ -5586,13 +5632,16 @@ implements Cloneable, ITableTooltip
 		hookInNearEndOfRefreshGetData();
 		
 		// Do we want to send an Alarm somewhere, every CM's has to implement this.
-		wrapperFor_sendAlarmRequest();
+		// NOTE: This is now called from CounterCollectorThreadGui/CounterCollectorThreadNoGui
+		//       This so the Alarm "creation" can include/reference data from CM's that has been refreshed later than the current CM (so we can include data in the Extended descriptions)
+//		wrapperFor_sendAlarmRequest();
 		
 		// Remember "first time sample" for the "doWork" object 
 		final boolean localFirstTimeSample = isFirstTimeSample();
 
 		// first sample is DONE
-		setFirstTimeSample(false);
+		// This is MOVED "outside" of this method -- "at the end" of CounterCollectorThread{Gui|NoGui}  (after check alarms)
+//		setFirstTimeSample(false);
 
 		// If we have a GUI we need to do some extra stuff
 		// let the GUI know that we have new data, done via fire*
@@ -5670,6 +5719,26 @@ implements Cloneable, ITableTooltip
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
 	}
 
+	/**
+	 * How many times have we got a "TimeoutException" when executing SQL <br>
+	 * Note: This counter is set to 0 every time we executed the CM's SQL successfully.
+	 * @return
+	 */
+	public int getSequentialTimeoutExceptionCount()
+	{
+		return _sequentialTimeoutExceptionCount;
+	}
+
+	/**
+	 * get when was the first/oldest Timeout Exception happened.
+	 * Note: This counter is set to 0 every time we executed the CM's SQL successfully.
+	 * 
+	 * @return -1 of no Timeout Exception happened, otherwise the value of 'System.currentTimeMillis()' when it happened
+	 */
+	public long getOldestTimeoutExceptionTime()
+	{
+		return _oldestTimeoutExceptionTime;
+	}
 
 	/**
 	 * If you want the CounterSample to be locally sorted...
@@ -6502,13 +6571,16 @@ implements Cloneable, ITableTooltip
 	
 	
 	/**
-	 * PRIVATE/LOCAL wrapper of sendAlarmRequest(...) so we can detemine what to do...
+	 * PRIVATE/LOCAL wrapper of sendAlarmRequest(...) so we can determine what to do...
 	 */
 //	protected void wrapperFor_sendAlarmRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
-	protected void wrapperFor_sendAlarmRequest()
+	public void wrapperFor_sendAlarmRequest()
 	{
 //		System.out.println("################################## wrapperFor_sendAlarmRequest(): cm='"+getName()+"'.");
 		if ( ! isAlarmEnabled() )
+			return;
+		
+		if (isAlarmsTemporaryDisabled())
 			return;
 
 		// Add a "message" to the AlarmHandler saying that THIS CM have undergone Alarm detection
@@ -6735,12 +6807,72 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
-	 * If alarm handeling is enabled or disabled for this specific cm<br>
+	 * If alarm handling is enabled or disabled for this specific cm<br>
 	 * The idea is that Alarms could be enabled/disabled for specific cm's temporary during runtime (by the gui) 
 	 */
 	public boolean isAlarmEnabled()
 	{
 		return Configuration.getCombinedConfiguration().getBooleanProperty(replaceCmName(PROPKEY_ALARM_isAlarmsEnabled), DEFAULT_ALARM_isAlarmsEnabled);
+	}
+
+	/**
+	 * For various reasons alarms can be temporarily disabled, until a specific time
+	 */
+	public boolean isAlarmsTemporaryDisabled()
+	{
+		// Negate this at the end (return) for easier logic
+		boolean isAlarmEnabled = true;
+
+		// Check if the alarm has been "temporarily" disabled
+		if (_alarmsIsDisabledUntilTs > 0)
+		{
+			long timeDiffMs = TimeUtils.msDiffNow(_alarmsIsDisabledUntilTs);
+			if (timeDiffMs >= 0)
+			{
+				_logger.info("For CM '" + getName() + "' the temporary Alarm Check Inhibition Time has passed. ENABLING the Alarm Checks again. (diabled-until-time was '" + TimeUtils.toStringYmdHms(_alarmsIsDisabledUntilTs) + "', which passed " + (timeDiffMs/1000) + " seconds ago)");
+				_alarmsIsDisabledUntilTs = 0;
+			}
+			else
+			{
+				long timeDiffMsPos = timeDiffMs * -1;
+				_logger.info("For CM '" + getName() + "' ALL Alarm Checks has been temporary disabled for " + TimeUtils.msToTimeStrDHMS(timeDiffMsPos) + " (HH:MM:SS), alarms will be re-enabled at '" + TimeUtils.toStringYmdHms(_alarmsIsDisabledUntilTs) + "'.");
+				
+				isAlarmEnabled = false;
+			}
+		}
+		
+		return ! isAlarmEnabled;
+	}
+
+	/**
+	 * Sometimes you may want to disable alarms for X minutes (maybe at startup or similar)
+	 * @param minutes
+	 */
+	public void setDisableAlarmsForXMinutes(int minutes)
+	{
+		setDisableAlarmsForXSeconds(minutes * 60);
+	}
+
+	/**
+	 * Sometimes you may want to disable alarms for X seconds (maybe at startup or similar)
+	 * @param minutes
+	 */
+	public void setDisableAlarmsForXSeconds(int seconds)
+	{
+		_alarmsIsDisabledUntilTs = System.currentTimeMillis() + (seconds * 1000);
+	}
+	/**
+	 * Get the Time since epoch (in ms) until alarms for this CM is temporary disabled.
+	 * @return 
+	 * <ul>
+	 *    <li> -1 == If it never has been set</li>
+	 *    <li> 0  == Time has passed and was reset to 0 by isAlarmsTemporaryDisabled()</li>
+	 *    <li> ## == The time (epoch in ms) until the "disable"/inhibition expires </li>
+	 * </ul>
+	 */
+	public long getDisableAlarmsReEnableTime()
+	{
+		return _alarmsIsDisabledUntilTs;
 	}
 
 	/** Tells weather this CM has any SYSTEM Alarms defined */
@@ -6854,6 +6986,7 @@ implements Cloneable, ITableTooltip
 	}
 
 
+
 	/**
 	 * FIXME: Describe what this is used for
 	 */
@@ -6919,6 +7052,89 @@ implements Cloneable, ITableTooltip
 //		_sumRowCountRate = 0;
 	}
 	
+
+	/**
+	 * Reset all Counter "sampling" options that can be changed by this CM
+	 * <p>
+	 * If you want to change "specific" variables etc in the implementing CM, 
+	 * then implement this method in that CM, but make sure you call <code>super.resetCounterOptionsToDefaults()</code>
+	 */
+	public void resetCounterOptionsToDefaults()
+	{
+		boolean save = true;
+
+// Below is from: loadProps()
+//---------------------------------------
+//		setQueryTimeout(                     tempProps.getIntProperty(    base + PROPKEY_queryTimeout,                   getDefaultQueryTimeout()) );
+//        
+//		setDataSource(                       tempProps.getIntProperty(    base + PROPKEY_currentDataSource,              getDefaultDataSource())                         ,false);
+//                                                                                                                                                                         
+//		setFilterAllZero(                    tempProps.getBooleanProperty(base + PROPKEY_filterAllZeroDiffCounters,      getDefaultIsFilterAllZero())                    ,false);
+//		setPauseDataPolling(                 tempProps.getBooleanProperty(base + PROPKEY_sampleDataIsPaused,             getDefaultIsDataPollingPaused())                ,false);
+//		setBackgroundDataPollingEnabled(     tempProps.getBooleanProperty(base + PROPKEY_sampleDataInBackground,         getDefaultIsBackgroundDataPollingEnabled())     ,false);
+//		setNegativeDiffCountersToZero(       tempProps.getBooleanProperty(base + PROPKEY_negativeDiffCountersToZero,     getDefaultIsNegativeDiffCountersToZero())       ,false);
+//		setPersistCounters(                  tempProps.getBooleanProperty(base + PROPKEY_persistCounters,                getDefaultIsPersistCountersEnabled())           ,false);
+//		setPersistCountersAbs(               tempProps.getBooleanProperty(base + PROPKEY_persistCounters_abs,            getDefaultIsPersistCountersAbsEnabled())        ,false);
+//		setPersistCountersDiff(              tempProps.getBooleanProperty(base + PROPKEY_persistCounters_diff,           getDefaultIsPersistCountersDiffEnabled())       ,false);
+//		setPersistCountersRate(              tempProps.getBooleanProperty(base + PROPKEY_persistCounters_rate,           getDefaultIsPersistCountersRateEnabled())       ,false);
+//		setNonConfiguredMonitoringAllowed(   tempProps.getBooleanProperty(base + PROPKEY_nonConfiguredMonitoringAllowed, getDefaultIsNonConfiguredMonitoringAllowed())   ,false);
+//		setNewDeltaOrRateRowHighlightEnabled(tempProps.getBooleanProperty(base + PROPKEY_highlightNewDateOrRateRows,     getDefaultIsNewDeltaOrRateRowHighlightEnabled()),false);
+//
+//		setPostponeTime(                     tempProps.getIntProperty    (base + PROPKEY_postponeTime,                   getDefaultPostponeTime())                       ,false);
+//---------------------------------------
+
+		setQueryTimeout(                      getDefaultQueryTimeout()                       , save);
+
+		setDataSource(                        getDefaultDataSource()                         , save);
+
+		setFilterAllZero(                     getDefaultIsFilterAllZero()                    , save);
+		setPauseDataPolling(                  getDefaultIsDataPollingPaused()                , save);
+		setBackgroundDataPollingEnabled(      getDefaultIsBackgroundDataPollingEnabled()     , save);
+		setNegativeDiffCountersToZero(        getDefaultIsNegativeDiffCountersToZero()       , save);
+		setPersistCounters(                   getDefaultIsPersistCountersEnabled()           , save);
+		setPersistCountersAbs(                getDefaultIsPersistCountersAbsEnabled()        , save);
+		setPersistCountersDiff(               getDefaultIsPersistCountersDiffEnabled()       , save);
+		setPersistCountersRate(               getDefaultIsPersistCountersRateEnabled()       , save);
+		setNonConfiguredMonitoringAllowed(    getDefaultIsNonConfiguredMonitoringAllowed()   , save);
+		setNewDeltaOrRateRowHighlightEnabled( getDefaultIsNewDeltaOrRateRowHighlightEnabled(), save);
+		
+		setPostponeTime(                      getDefaultPostponeTime()                       , save);
+		setPostponeIsEnabled(                 getDefaultPostponeIsEnabled()                  , save);
+
+		
+		// All Local options
+		List<CmSettingsHelper> localSettings = getLocalSettings();
+		if (localSettings != null)
+		{
+			Configuration readConf  = Configuration.getCombinedConfiguration();
+			Configuration writeConf = Configuration.getInstance(Configuration.USER_TEMP);
+
+			for (CmSettingsHelper cmSettingsHelper : localSettings)
+			{
+				String propName = cmSettingsHelper.getPropName();
+				String defVal   = cmSettingsHelper.getDefaultValue();
+				
+				if (readConf.hasProperty(propName))
+				{
+					// If we DO NOT have the default value
+					String currentValue = readConf.getProperty(propName, defVal);
+					if ( ! currentValue.equals(defVal) )
+					{
+						String propVal = Configuration.USE_DEFAULT_PREFIX + defVal;
+						writeConf.setProperty(propName, propVal);
+System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + propName + "', to: " + propVal);
+
+						// We need to update CmPanel to refresh it's GUI components
+						TabularCntrPanel tabPanel = getTabPanel();
+						if (tabPanel != null)
+						{
+							tabPanel.refreshLocalOptionsPanel(propName, propVal);
+						}
+					}
+				}
+			}
+		}
+	}
 
 
 	/**
@@ -9163,12 +9379,24 @@ implements Cloneable, ITableTooltip
 					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
 					{
 						gen.writeStartObject();
+						
+						// Always Write Column Name
 						gen.writeStringField ("columnName"     , rsmd.getColumnLabel(c));
-						gen.writeStringField ("jdbcTypeName"   , ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
-						gen.writeStringField ("javaClassName"  , rsmd.getColumnClassName(c));
-						gen.writeStringField ("guessedDbmsType", ResultSetTableModel.getColumnTypeName(rsmd, c));
-						gen.writeBooleanField("isDiffColumn"   , isDiffColumn(c-1)); // column pos starts at 0 in the CM
-						gen.writeBooleanField("isPctColumn"    , isPctColumn(c-1));  // column pos starts at 0 in the CM
+
+						// Write JDBC info
+						if (writerOptions.writeMetaData_jdbc)
+						{
+							gen.writeStringField ("jdbcTypeName"   , ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
+							gen.writeStringField ("javaClassName"  , rsmd.getColumnClassName(c));
+							gen.writeStringField ("guessedDbmsType", ResultSetTableModel.getColumnTypeName(rsmd, c));
+						}
+
+						// Write Counter Model info
+						if (writerOptions.writeMetaData_cm)
+						{
+							gen.writeBooleanField("isDiffColumn"   , isDiffColumn(c-1)); // column pos starts at 0 in the CM
+							gen.writeBooleanField("isPctColumn"    , isPctColumn(c-1));  // column pos starts at 0 in the CM
+						}
 						gen.writeEndObject();
 					}
 					gen.writeEndArray(); 
