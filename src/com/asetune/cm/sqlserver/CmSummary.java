@@ -39,6 +39,7 @@ import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.asetune.alarm.events.AlarmEventDeadlock;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.alarm.events.sqlserver.AlarmEventLowOnWorkerThreads;
 import com.asetune.alarm.events.sqlserver.AlarmEventOutOfWorkerThreads;
@@ -57,6 +58,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MovingAverageCounterManager;
 import com.asetune.utils.NumberUtils;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
@@ -97,7 +99,7 @@ extends CountersModel
 		"pack_received", "pack_sent", "packet_errors", "total_errors",
 		"ms_ticks", "process_kernel_time_ms", "process_user_time_ms",
 		"tempdbUsageMbAll", "tempdbUsageMbUser", "tempdbUsageMbInternal",
-		"databaseCacheMemoryMb", "grantedWorkspaceMemoryMb", "stolenServerMemoryMb",
+		"databaseCacheMemoryMb", "grantedWorkspaceMemoryMb", "stolenServerMemoryMb", "deadlockCount",
 		"usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers"
 	};
 
@@ -152,6 +154,9 @@ extends CountersModel
 	//------------------------------------------------------------
 	boolean getRootBlockerSpids = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_rootBlockerSpids, DEFAULT_sample_rootBlockerSpids);
 
+	// Below is used when setting "CLIENT PROPERTY" get/setClientProperty(PROPKEY_deadlockCountOverRecordingPeriod, deadlockCount)
+	public static final String  PROPKEY_clientProp_deadlockCountOverRecordingPeriod = "CmSummary.clientProp.deadlockCountOverRecordingPeriod";
+	
 	public static final String  PROPKEY_sample_rootBlockerSpids       = "CmSummary.sample.rootBlockerSpids";
 	public static final boolean DEFAULT_sample_rootBlockerSpids       = true;
 
@@ -181,7 +186,8 @@ extends CountersModel
 	public static final String GRAPH_NAME_WORKER_THREAD_USAGE       = "WorkersThreadUsage";
 	public static final String GRAPH_NAME_WT_WAITING_FOR_CPU        = "WtWaitingForCpu";
 	public static final String GRAPH_NAME_TASKS_WAITING_FOR_WORKERS = "TasksWaitForWorkers";
-
+	public static final String GRAPH_NAME_DEADLOCK_COUNT_SUM        = "DeadlockCountSum";
+	
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
 	private List<Integer>       _lastRootBlockersList = null;
@@ -405,6 +411,18 @@ extends CountersModel
 			false,  // visible at start
 			0,      // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_DEADLOCK_COUNT_SUM,
+			"Deadlock Count", // Menu CheckBox text
+			"Deadlock Count ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { "Deadlock Count" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.LOCK,
+			false,  // is Percent Graph
+			false,  // visible at start
+			0,      // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);    // minimum height
 	}
 
 	@Override
@@ -579,6 +597,7 @@ extends CountersModel
 			    "declare @databaseCacheMemoryMb               numeric(12,1) \n" +
 			    "declare @grantedWorkspaceMemoryMb            numeric(12,1) \n" +
 			    "declare @stolenServerMemoryMb                numeric(12,1) \n" +
+			    "declare @deadlockCount                       int      = -1 \n" +
 			    " \n" +
 	    	    "declare @max_workers_count                   int = (SELECT max_workers_count FROM sys.dm_os_sys_info) \n" +
 	    	    "declare @wt_usedThreads                      int \n" +
@@ -624,8 +643,11 @@ extends CountersModel
 			    "       @databaseCacheMemoryMb    = CASE WHEN counter_name = 'Database Cache Memory (KB)'    THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @databaseCacheMemoryMb    END \n" +
 			    "      ,@grantedWorkspaceMemoryMb = CASE WHEN counter_name = 'Granted Workspace Memory (KB)' THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @grantedWorkspaceMemoryMb END \n" +
 			    "      ,@stolenServerMemoryMb     = CASE WHEN counter_name = 'Stolen Server Memory (KB)'     THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @stolenServerMemoryMb     END \n" +
+			    "      ,@deadlockCount            = CASE WHEN counter_name = 'Number of Deadlocks/sec'       THEN      cntr_value                          ELSE @deadlockCount            END \n" +
 			    "from sys.dm_os_performance_counters \n" +
-			    "where counter_name in ('Stolen Server Memory (KB)', 'Database Cache Memory (KB)', 'Granted Workspace Memory (KB)') \n" +
+			    "where counter_name in ('Stolen Server Memory (KB)', 'Database Cache Memory (KB)', 'Granted Workspace Memory (KB)', 'Number of Deadlocks/sec') \n" +
+			    "  and instance_name in ('', '_Total') \n" +
+
 			    " \n" +
 			    "/*------- WorkerThreads -- dm_os_schedulers -------*/ \n" +
 			    "select \n" + 
@@ -765,6 +787,7 @@ extends CountersModel
 				"    , databaseCacheMemoryMb               = @databaseCacheMemoryMb \n" +
 				"    , grantedWorkspaceMemoryMb            = @grantedWorkspaceMemoryMb \n" +
 				"    , stolenServerMemoryMb                = @stolenServerMemoryMb \n" +
+				"    , deadlockCount                       = @deadlockCount \n" +
 
 				// Worker Threads...
 			    "    , maxWorkers                          = @max_workers_count \n" +
@@ -1316,6 +1339,21 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_DEADLOCK_COUNT_SUM.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getDiffValueAsDouble(0, "deadlockCount", true, 0d);
+
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): deadlockCount='" + arr[0] + "'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 	
 	@Override
@@ -1334,6 +1372,7 @@ extends CountersModel
 		if (GRAPH_NAME_WORKER_THREAD_USAGE      .equals(name)) return true;  // Used locally, CmWaitStat
 		if (GRAPH_NAME_TASKS_WAITING_FOR_WORKERS.equals(name)) return true;  // Used locally
 //		if (GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB  .equals(name)) return true;  // Used by CmWaitStat
+		if (GRAPH_NAME_DEADLOCK_COUNT_SUM       .equals(name)) return true;  // Used locally
 
 		// default: DISABLED
 		return false;
@@ -1343,6 +1382,55 @@ extends CountersModel
 	{
 		// Keep interval: default is 60 minutes
 		return super.getGraphDataHistoryTimeInterval(name);
+	}
+	
+	@Override
+	public void reset()
+	{
+		// deadlocks
+		if (true)
+		{
+			int movingAverageInMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DeadlockCountMovingAverageMinutes, DEFAULT_alarm_DeadlockCountMovingAverageMinutes);
+
+			if (movingAverageInMinutes > 0)
+				MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).reset();
+			
+			setClientProperty(PROPKEY_clientProp_deadlockCountOverRecordingPeriod, 0);
+		}
+		
+		super.reset();
+	}
+	
+	@Override
+	public void prepareForPcsDatabaseRollover()
+	{
+		setClientProperty(PROPKEY_clientProp_deadlockCountOverRecordingPeriod, 0);
+
+		super.prepareForPcsDatabaseRollover();
+	}
+	
+	@Override
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	{
+		if (diffData != null)
+		{
+			// Set GLOBAL property which can be extracted later
+			// This one is used for: doLastRecordingActionBeforeDatabaseRollover()
+			// So we can extract "extra information" about "todays" DEADLOCKS (the plan is to use: sp_blitzLock)
+			// This so we can use that in the Daily Summary Report 
+			int deadlockCount = diffData.getValueAsInteger(0, "deadlockCount", true, -1);
+
+			// Get previous value and add it to deadlockCount
+			Object o_deadlockCountOverRecordingPeriod = getClientProperty(PROPKEY_clientProp_deadlockCountOverRecordingPeriod);
+			if (o_deadlockCountOverRecordingPeriod != null && o_deadlockCountOverRecordingPeriod instanceof Number)
+			{
+				int current_deadlockCountOverRecordingPeriod = ((Number)o_deadlockCountOverRecordingPeriod).intValue();
+//System.out.println(">>>>>>>>>>>>>>>> PROPKEY_clientProp_deadlockCountOverRecordingPeriod: current_deadlockCountOverRecordingPeriod="+current_deadlockCountOverRecordingPeriod+", thisSampleDeadlockCount="+deadlockCount+", setNewValue="+(deadlockCount + current_deadlockCountOverRecordingPeriod));
+				deadlockCount += current_deadlockCountOverRecordingPeriod;
+			}
+
+			setClientProperty(PROPKEY_clientProp_deadlockCountOverRecordingPeriod, deadlockCount);
+		}
 	}
 	
 	//--------------------------------------------------------------------
@@ -1726,43 +1814,88 @@ extends CountersModel
 				alarmHandler.addAlarm( ae );
 			}
 		}
+
+		//-------------------------------------------------------
+		// deadlockCount
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("DeadlockCount"))
+		{
+			double threshold              = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_DeadlockCount                    , DEFAULT_alarm_DeadlockCount);
+			int    movingAverageInMinutes = Configuration.getCombinedConfiguration().getIntProperty   (PROPKEY_alarm_DeadlockCountMovingAverageMinutes, DEFAULT_alarm_DeadlockCountMovingAverageMinutes);
+
+			int deadlockCount  = cm.getDiffValueAsInteger(0, "deadlockCount", false, -1);
+
+			double movingAvgDeadlockCount = -1;
+			if (movingAverageInMinutes > 0)
+				movingAvgDeadlockCount = MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).add(deadlockCount).getAvg(-1, true);
+
+			double dataVal = deadlockCount;
+			if (movingAverageInMinutes > 0)
+				dataVal = movingAvgDeadlockCount;
+			
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", dataVal=" + dataVal + ", deadlockCount=" + deadlockCount + ", movingAvgDeadlockCount=" + movingAvgDeadlockCount + ", movingAverageInMinutes=" + movingAverageInMinutes + ".");
+
+			if (dataVal > threshold)
+			{
+				String extendedDescText = "";
+				String extendedDescHtml = getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DEADLOCK_COUNT_SUM);
+
+				CountersModel cmPerfCounters = getCounterController().getCmByName(CmPerfCounters.CM_NAME);
+				if (cmPerfCounters != null)
+				{
+					extendedDescHtml = "<br><br>" + cmPerfCounters.getGraphDataHistoryAsHtmlImage(CmPerfCounters.GRAPH_NAME_DEADLOCK_DETAILS);
+				}
+				
+				AlarmEvent ae = new AlarmEventDeadlock(cm, threshold, movingAverageInMinutes, deadlockCount, movingAvgDeadlockCount);
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				
+				alarmHandler.addAlarm( ae );
+			}
+		}
 	}
 
-	public static final String  PROPKEY_alarm_LockWaits                       = CM_NAME + ".alarm.system.if.LockWaits.gt";
-	public static final int     DEFAULT_alarm_LockWaits                       = 5;
-	                                                                          
-	public static final String  PROPKEY_alarm_LockWaitsThresholdSec           = CM_NAME + ".alarm.system.if.LockWaits.threshold.seconds";
-	public static final int     DEFAULT_alarm_LockWaitsThresholdSec           = 30;
+	public static final String  PROPKEY_alarm_LockWaits                         = CM_NAME + ".alarm.system.if.LockWaits.gt";
+	public static final int     DEFAULT_alarm_LockWaits                         = 5;
 
-	public static final String  PROPKEY_alarm_oldestOpenTranInSec             = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
-	public static final int     DEFAULT_alarm_oldestOpenTranInSec             = 60;
-	
-	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipTranName = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.tranName";
-	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipTranName = "";
-	
-	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipDbname   = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.dbname";
-	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipDbname   = "";
+	public static final String  PROPKEY_alarm_LockWaitsThresholdSec             = CM_NAME + ".alarm.system.if.LockWaits.threshold.seconds";
+	public static final int     DEFAULT_alarm_LockWaitsThresholdSec             = 30;
 
-	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipLogin    = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.login";
-	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipLogin    = "";
+	public static final String  PROPKEY_alarm_DeadlockCount                     = CM_NAME + ".alarm.system.if.deadlockCount.gt";
+	public static final double  DEFAULT_alarm_DeadlockCount                     = 0D;
 
-	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipCmd      = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.cmd";
-	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipCmd      = "";
+	public static final String  PROPKEY_alarm_DeadlockCountMovingAverageMinutes = CM_NAME + ".alarm.system.if.deadlockCount.movingAverageInMinutes";
+	public static final int     DEFAULT_alarm_DeadlockCountMovingAverageMinutes = 10;
 
-	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipWaitType = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.waitType";
-	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipWaitType = "(BROKER_RECEIVE_WAITFOR)";
+	public static final String  PROPKEY_alarm_oldestOpenTranInSec               = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
+	public static final int     DEFAULT_alarm_oldestOpenTranInSec               = 60;
 
-//	public static final String  PROPKEY_alarm_fullTranslogCount               = CM_NAME + ".alarm.system.if.fullTranslogCount.gt";
-//	public static final int     DEFAULT_alarm_fullTranslogCount               = 0;
+	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipTranName   = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.tranName";
+	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipTranName   = "";
 
-	public static final String  PROPKEY_alarm_suspectPageCount                = CM_NAME + ".alarm.system.if.suspectPageCount.gt";
-	public static final int     DEFAULT_alarm_suspectPageCount                = 0;
+	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipDbname     = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipDbname     = "";
 
-	public static final String  PROPKEY_alarm_requestsWaitingForWorkers       = CM_NAME + ".alarm.system.if.requestsWaitingForWorkers.gt";
-	public static final int     DEFAULT_alarm_requestsWaitingForWorkers       = 0;
+	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipLogin      = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.login";
+	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipLogin      = "";
 
-	public static final String  PROPKEY_alarm_availableWorkers                = CM_NAME + ".alarm.system.if.availableWorkers.lt";
-	public static final int     DEFAULT_alarm_availableWorkers                = 25;
+	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipCmd        = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.cmd";
+	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipCmd        = "";
+
+	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipWaitType   = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.waitType";
+	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipWaitType   = "(BROKER_RECEIVE_WAITFOR)";
+
+//	public static final String  PROPKEY_alarm_fullTranslogCount                 = CM_NAME + ".alarm.system.if.fullTranslogCount.gt";
+//	public static final int     DEFAULT_alarm_fullTranslogCount                 = 0;
+
+	public static final String  PROPKEY_alarm_suspectPageCount                  = CM_NAME + ".alarm.system.if.suspectPageCount.gt";
+	public static final int     DEFAULT_alarm_suspectPageCount                  = 0;
+
+	public static final String  PROPKEY_alarm_requestsWaitingForWorkers         = CM_NAME + ".alarm.system.if.requestsWaitingForWorkers.gt";
+	public static final int     DEFAULT_alarm_requestsWaitingForWorkers         = 0;
+
+	public static final String  PROPKEY_alarm_availableWorkers                  = CM_NAME + ".alarm.system.if.availableWorkers.lt";
+	public static final int     DEFAULT_alarm_availableWorkers                  = 25;
 
 	
 	@Override
@@ -1773,18 +1906,20 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
-		list.add(new CmSettingsHelper("LockWaits",                        isAlarmSwitch, PROPKEY_alarm_LockWaits                       , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaits                       , DEFAULT_alarm_LockWaits                      ), DEFAULT_alarm_LockWaits                      , "If 'LockWaits' (number of spid's that has waited more than the threshold) is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
-		list.add(new CmSettingsHelper("LockWaits TimeThreshold",                         PROPKEY_alarm_LockWaitsThresholdSec           , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaitsThresholdSec           , DEFAULT_alarm_LockWaitsThresholdSec          ), DEFAULT_alarm_LockWaitsThresholdSec          , "Number of seconds before we start to count 'LockWaits', which makes it a threshold input to when 'LockWaits' will fire." ));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec",              isAlarmSwitch, PROPKEY_alarm_oldestOpenTranInSec             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_oldestOpenTranInSec             , DEFAULT_alarm_oldestOpenTranInSec            ), DEFAULT_alarm_oldestOpenTranInSec            , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipTranName",                PROPKEY_alarm_oldestOpenTranInSecSkipTranName , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipTranName , DEFAULT_alarm_oldestOpenTranInSecSkipTranName), DEFAULT_alarm_oldestOpenTranInSecSkipTranName, "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipDbname",                  PROPKEY_alarm_oldestOpenTranInSecSkipDbname   , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipDbname   , DEFAULT_alarm_oldestOpenTranInSecSkipDbname  ), DEFAULT_alarm_oldestOpenTranInSecSkipDbname  , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (dbname.matches('regexp'))...   This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipLogin",                   PROPKEY_alarm_oldestOpenTranInSecSkipLogin    , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipLogin    , DEFAULT_alarm_oldestOpenTranInSecSkipLogin   ), DEFAULT_alarm_oldestOpenTranInSecSkipLogin   , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (login.matches('regexp'))...    This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipCmd",                     PROPKEY_alarm_oldestOpenTranInSecSkipCmd      , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipCmd      , DEFAULT_alarm_oldestOpenTranInSecSkipCmd     ), DEFAULT_alarm_oldestOpenTranInSecSkipCmd     , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (cmd.matches('regexp'))...      This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec WaitType",                    PROPKEY_alarm_oldestOpenTranInSecSkipWaitType , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipWaitType , DEFAULT_alarm_oldestOpenTranInSecSkipWaitType), DEFAULT_alarm_oldestOpenTranInSecSkipWaitType, "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (waitType.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-//		list.add(new CmSettingsHelper("fullTranslogCount",                isAlarmSwitch, PROPKEY_alarm_fullTranslogCount               , Integer.class, conf.getIntProperty   (PROPKEY_alarm_fullTranslogCount               , DEFAULT_alarm_fullTranslogCount              ), DEFAULT_alarm_fullTranslogCount              , "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
-		list.add(new CmSettingsHelper("suspectPageCount",                 isAlarmSwitch, PROPKEY_alarm_suspectPageCount                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_suspectPageCount                , DEFAULT_alarm_suspectPageCount               ), DEFAULT_alarm_suspectPageCount               , "If 'suspectPageCount' (number of records in 'msdb.dbo.suspect_pages') is greater than ## then send 'AlarmEventSuspectPages'." ));
-		list.add(new CmSettingsHelper("requestsWaitingForWorkers",        isAlarmSwitch, PROPKEY_alarm_requestsWaitingForWorkers       , Integer.class, conf.getIntProperty   (PROPKEY_alarm_requestsWaitingForWorkers       , DEFAULT_alarm_requestsWaitingForWorkers      ), DEFAULT_alarm_requestsWaitingForWorkers      , "If 'requestsWaitingForWorkers' is greater than ## then send 'AlarmEventOutOfWorkerThreads'." ));
-		list.add(new CmSettingsHelper("availableWorkers",                 isAlarmSwitch, PROPKEY_alarm_availableWorkers                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_availableWorkers                , DEFAULT_alarm_availableWorkers               ), DEFAULT_alarm_availableWorkers               , "If 'availableWorkers' is LESS than ## then send 'AlarmEventLowOnWorkerThreads'." ));
+		list.add(new CmSettingsHelper("LockWaits",                        isAlarmSwitch, PROPKEY_alarm_LockWaits                        , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaits                        , DEFAULT_alarm_LockWaits                        ), DEFAULT_alarm_LockWaits                        , "If 'LockWaits' (number of spid's that has waited more than the threshold) is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("LockWaits TimeThreshold",                         PROPKEY_alarm_LockWaitsThresholdSec            , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaitsThresholdSec            , DEFAULT_alarm_LockWaitsThresholdSec            ), DEFAULT_alarm_LockWaitsThresholdSec            , "Number of seconds before we start to count 'LockWaits', which makes it a threshold input to when 'LockWaits' will fire." ));
+		list.add(new CmSettingsHelper("DeadlockCount",                    isAlarmSwitch, PROPKEY_alarm_DeadlockCount                    , Double .class, conf.getDoubleProperty(PROPKEY_alarm_DeadlockCount                    , DEFAULT_alarm_DeadlockCount                    ), DEFAULT_alarm_DeadlockCount                    , "If 'DeadlockCount' (Number of Deadlocks in last sample) is greater than ## then send 'AlarmEventDeadlockAlarm'." ));
+		list.add(new CmSettingsHelper("DeadlockCount MovingAverageInMinutes",            PROPKEY_alarm_DeadlockCountMovingAverageMinutes, Integer.class, conf.getIntProperty   (PROPKEY_alarm_DeadlockCountMovingAverageMinutes, DEFAULT_alarm_DeadlockCountMovingAverageMinutes), DEFAULT_alarm_DeadlockCountMovingAverageMinutes, "Number of minutes for a Moving Average, when calculating above 'DeadlockCount'. 0=No-Moving-Average (just use the last sampled counter value" ));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec",              isAlarmSwitch, PROPKEY_alarm_oldestOpenTranInSec              , Integer.class, conf.getIntProperty   (PROPKEY_alarm_oldestOpenTranInSec              , DEFAULT_alarm_oldestOpenTranInSec              ), DEFAULT_alarm_oldestOpenTranInSec              , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipTranName",                PROPKEY_alarm_oldestOpenTranInSecSkipTranName  , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipTranName  , DEFAULT_alarm_oldestOpenTranInSecSkipTranName  ), DEFAULT_alarm_oldestOpenTranInSecSkipTranName  , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipDbname",                  PROPKEY_alarm_oldestOpenTranInSecSkipDbname    , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipDbname    , DEFAULT_alarm_oldestOpenTranInSecSkipDbname    ), DEFAULT_alarm_oldestOpenTranInSecSkipDbname    , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (dbname.matches('regexp'))...   This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipLogin",                   PROPKEY_alarm_oldestOpenTranInSecSkipLogin     , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipLogin     , DEFAULT_alarm_oldestOpenTranInSecSkipLogin     ), DEFAULT_alarm_oldestOpenTranInSecSkipLogin     , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (login.matches('regexp'))...    This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipCmd",                     PROPKEY_alarm_oldestOpenTranInSecSkipCmd       , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipCmd       , DEFAULT_alarm_oldestOpenTranInSecSkipCmd       ), DEFAULT_alarm_oldestOpenTranInSecSkipCmd       , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (cmd.matches('regexp'))...      This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec WaitType",                    PROPKEY_alarm_oldestOpenTranInSecSkipWaitType  , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipWaitType  , DEFAULT_alarm_oldestOpenTranInSecSkipWaitType  ), DEFAULT_alarm_oldestOpenTranInSecSkipWaitType  , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (waitType.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+//		list.add(new CmSettingsHelper("fullTranslogCount",                isAlarmSwitch, PROPKEY_alarm_fullTranslogCount                , Integer.class, conf.getIntProperty   (PROPKEY_alarm_fullTranslogCount                , DEFAULT_alarm_fullTranslogCount                ), DEFAULT_alarm_fullTranslogCount                , "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("suspectPageCount",                 isAlarmSwitch, PROPKEY_alarm_suspectPageCount                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_suspectPageCount                 , DEFAULT_alarm_suspectPageCount                 ), DEFAULT_alarm_suspectPageCount                 , "If 'suspectPageCount' (number of records in 'msdb.dbo.suspect_pages') is greater than ## then send 'AlarmEventSuspectPages'." ));
+		list.add(new CmSettingsHelper("requestsWaitingForWorkers",        isAlarmSwitch, PROPKEY_alarm_requestsWaitingForWorkers        , Integer.class, conf.getIntProperty   (PROPKEY_alarm_requestsWaitingForWorkers        , DEFAULT_alarm_requestsWaitingForWorkers        ), DEFAULT_alarm_requestsWaitingForWorkers        , "If 'requestsWaitingForWorkers' is greater than ## then send 'AlarmEventOutOfWorkerThreads'." ));
+		list.add(new CmSettingsHelper("availableWorkers",                 isAlarmSwitch, PROPKEY_alarm_availableWorkers                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_availableWorkers                 , DEFAULT_alarm_availableWorkers                 ), DEFAULT_alarm_availableWorkers                 , "If 'availableWorkers' is LESS than ## then send 'AlarmEventLowOnWorkerThreads'." ));
 
 		return list;
 	}

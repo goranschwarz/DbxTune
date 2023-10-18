@@ -25,6 +25,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -97,12 +99,14 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.SqlServerQueryStoreDdlExtractor;
 import com.asetune.pcs.SqlServerQueryStoreExtractor;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.CronUtils;
@@ -154,6 +158,12 @@ extends CounterControllerAbstract
 
 	public static final String  PROPKEY_onConnect_setNetworkTimeout_ms = "SqlServerTune.onConnect.setNetworkTimeout.ms";
 	public static final int     DEFAULT_onConnect_setNetworkTimeout_ms = 60_000;
+
+	
+	
+	public static final String  PCS_KEY_VALUE_deadlockCountOverRecordingPeriod = "deadlock.count.over.recording.period";
+	public static final String  PCS_KEY_VALUE_deadlockReport_blitzLock         = "deadlock.report.blitzLock";
+	public static final String  PCS_KEY_VALUE_deadlockReport_xxx               = "deadlock.report.xxx";
 	
 	/**
 	 * The default constructor
@@ -994,6 +1004,31 @@ extends CounterControllerAbstract
 	@Override
 	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection pcsConn)
 	{
+		String srvName = getMonConnection().getDbmsServerNameNoThrow();
+
+		// Query Store
+		queryStoreExtractor(pcsConn, srvName);
+
+
+		// Deadlock Extraction
+		deadlockExtractor(pcsConn, srvName);
+
+
+		//---------------------------------------------------------
+		// BEGIN: DbxTune - Specific Extended Event Sessions
+		//---------------------------------------------------------
+		//>>>> In the future we will possibly have Extended Events that we want to "pull" data from at the -end-of-day- so we can include them in some DSR Section
+		//>>>> So this would be a GOOD place to do that!
+		//---------------------------------------------------------
+		// END: DbxTune - Specific Extended Event Sessions
+		//---------------------------------------------------------
+	}
+	
+	//------------------------------------------------------------------
+	// Query Store - Extractor
+	//------------------------------------------------------------------
+	private void queryStoreExtractor(DbxConnection pcsConn, String srvName)
+	{
 		int daysToCopy = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_onPcsDatabaseRollover_captureQueryStore_daysToCopy, DEFAULT_onPcsDatabaseRollover_captureQueryStore_daysToCopy);
 		
 		// Check if Capture Query Store is DISABLED 
@@ -1005,7 +1040,6 @@ extends CounterControllerAbstract
 		}
 		
 		// Check if Capture Query Store is DISABLED for a specific server 
-		String srvName = getMonConnection().getDbmsServerNameNoThrow();
 		String captureQueryStoreSkipServer = Configuration.getCombinedConfiguration().getProperty(PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer, DEFAULT_onPcsDatabaseRollover_captureQueryStore_skipServer);
 		if (StringUtil.hasValue(captureQueryStoreSkipServer) && StringUtil.hasValue(srvName))
 		{
@@ -1077,14 +1111,159 @@ extends CounterControllerAbstract
 				}
 			}
 		}
-
+		
 		// Close
 		if (conn != null)
 		{
-			_logger.info("On PCS Database Rollover: Closing connection to server '" + srvName + "'..");
+			_logger.info("On PCS Database Rollover: Query Store Extractor - Closing connection to server '" + srvName + "'..");
 			conn.closeNoThrow();
 		}
 	}
+
+	//------------------------------------------------------------------
+	// Deadlock - Extractor
+	//------------------------------------------------------------------
+	private void deadlockExtractor(DbxConnection pcsConn, String srvName)
+	{
+		CountersModel cmSummary = CounterController.getInstance().getCmByName(CmSummary.CM_NAME);
+		if (cmSummary != null)
+		{
+			Object o_deadlockCountOverRecordingPeriod = cmSummary.getClientProperty(CmSummary.PROPKEY_clientProp_deadlockCountOverRecordingPeriod);
+			if (o_deadlockCountOverRecordingPeriod != null && o_deadlockCountOverRecordingPeriod instanceof Number)
+			{
+				int deadlockCountOverRecordingPeriod = ((Number)o_deadlockCountOverRecordingPeriod).intValue();
+				
+				//TODO: Possibly use 'CmSummary_DeadlockCountSum' to get Deadlock Count instead of the PCS Key Value Store
+				// deadlock count from the "chart/graph" table
+//				String sqlGetDeadlockCount = conn.quotifySqlString("select sum([Deadlock Count]) from [CmSummary_DeadlockCountSum]"); // NEW Style
+				String sqlGetDeadlockCount = pcsConn.quotifySqlString("select sum([data_0]) from [CmSummary_DeadlockCountSum] where [label_0] = 'Deadlock Count'"); // OLD Style
+				try (Statement stmnt = pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sqlGetDeadlockCount))
+				{
+					int deadlockCount = -1;
+					while(rs.next())
+						deadlockCount = rs.getInt(1);
+
+//System.out.println("deadlockCountOverRecordingPeriod[KeyValStore]=" + deadlockCountOverRecordingPeriod + ", deadlockCount[CmSummary_DeadlockCountSum]=" + deadlockCount);
+					deadlockCountOverRecordingPeriod = deadlockCount;
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn("Problems getting Deadlock Count from 'CmSummary_DeadlockCountSum' using SQL=|" + sqlGetDeadlockCount + "|, continuing anyway.", ex);
+				}
+
+				// Save Number of deadlocks
+				try
+				{
+					Timestamp sessionStartTime = null;
+					String    keyName          = PCS_KEY_VALUE_deadlockCountOverRecordingPeriod;
+					PersistWriterJdbc.saveKeyValueStore(pcsConn, sessionStartTime, keyName, deadlockCountOverRecordingPeriod, PersistWriterJdbc.PcsKeyValueStoreType.NUMBER);
+				}
+				catch (SQLException ex)
+				{
+					_logger.error("Problems saving 'Deadlock Count Over Recording Period', continuing anyway...", ex);
+				}
+				
+				// Create some kind of report
+				if (deadlockCountOverRecordingPeriod > 0)
+				{
+					_logger.info("On PCS Database Rollover: Found " + deadlockCountOverRecordingPeriod + " DEADLOCKS was found in the period on server '" + srvName + "'. I will try to get more information about those DEADLOCKS using procedure 'sp_blitzLock'.");
+					// Get DEADLOCK info using: sp_blitzLock
+
+					// Open a new connection to the monitored server
+					ConnectionProp connProp = getMonConnection().getConnPropOrDefault();
+					DbxConnection conn = null;
+					try
+					{
+						_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName + "' for extracting 'DEADLOCKS'.");
+						conn = DbxConnection.connect(null, connProp);
+					}
+					catch (Exception ex)
+					{
+						_logger.error("On PCS Database Rollover: Failed to establish a new connection to server '" + srvName + "'. SKIPPING ' Extracting DEADLOCKS'.", ex);
+						return;
+					}
+
+					boolean tryBlitzLock = true;
+					if (tryBlitzLock)
+					{
+						// sp_blitzLock has 3 ResultSets... How do we store that?
+						//
+						//  * as a ResultSetTableModel (table or JSON) output
+						//       - THEN: we still need a "storage" table for it that holds a "CLOB"
+						//
+						//  * as REAL tables (like we do in SqlServerQueryStoreExtractor)
+						//       - THEN: we still need a "storage schema" like "deadlock:"
+						//
+						// Find the proc in "any" database. (first: 'master', then all databases in descending database_id order)
+						String inDbname  = SqlServerUtils.findProcNameInAnyDatabases(conn, "sp_BlitzLock", "master", true);
+
+						// get Start/end of the "previous day"
+						LocalDateTime startTimeLdt = LocalDateTime.now().minusHours(4).withHour(0).withMinute(0).withSecond(0).withNano(0);
+//						LocalDateTime endTimeLdt   = startTimeLdt.plusHours(24);
+
+						String startTimeStr = startTimeLdt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+//						String endTimeStr   = endTimeLdt  .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+						String sql           = "exec " + inDbname + ".dbo.sp_BlitzLock @StartDate='" + startTimeStr + "'";
+//						String sql           = "exec " + inDbname + ".dbo.sp_BlitzLock @StartDate='" + startTimeStr + "', @EndDate='" + endTimeStr + "'";
+//						String sql           = "exec " + inDbname + ".dbo.sp_BlitzLock";
+						String reportContent = "";
+
+						_logger.info("Extracting DEADLOCK information on '" + srvName + "' by executing SQL=|" + sql + "|.");
+						try (AseSqlScript sqlScript = new AseSqlScript(conn, 0))
+						{
+							//sqlScript.setRsAsAsciiTable(true);
+							sqlScript.setRsAsJson(true);
+
+							reportContent = sqlScript.executeSqlStr(sql, true);
+						}
+						catch (SQLException ex)
+						{
+							reportContent = "ERROR: ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", Msg=|" + ex.getMessage() + "|."; 
+							_logger.error("Problems executing '" + sql + "'. (" + reportContent + "), continuing anyway...", ex);
+						}
+						
+						// Save deadlocks report
+						try
+						{
+							_logger.info("Saving 'Deadlock Report - sp_BlitzLock'.");
+
+							Timestamp sessionStartTime = null;
+    						String    keyName          = PCS_KEY_VALUE_deadlockReport_blitzLock;
+    						PersistWriterJdbc.saveKeyValueStore(pcsConn, sessionStartTime, keyName, reportContent, PersistWriterJdbc.PcsKeyValueStoreType.LONG_STR);
+						}
+						catch (SQLException ex)
+						{
+							_logger.error("Problems saving 'Deadlock Report - sp_BlitzLock', continuing anyway...", ex);
+						}
+					}
+
+					boolean tryXxx = true;
+					if (tryXxx)
+					{
+						// Implement some "other" report
+						// Possibly if the above fails...
+					}
+					
+					// Close
+					if (conn != null)
+					{
+						_logger.info("On PCS Database Rollover: DEADLOCK Extractor - Closing connection to server '" + srvName + "'..");
+						conn.closeNoThrow();
+					}
+				}
+				else
+				{
+					_logger.info("On PCS Database Rollover: No DEADLOCKS was found in the period on server '" + srvName + "'. Skipping this.");
+				}
+			}
+			else
+			{
+				_logger.info("On PCS Database Rollover: Cant find client property '" + CmSummary.PROPKEY_clientProp_deadlockCountOverRecordingPeriod + "' in CmSummary. Skipping DEADLOCK extractions.");
+			}
+		}
+	}
+
 
 	//==================================================================
 	// BEGIN: NO-GUI methods

@@ -28,7 +28,6 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.IReportChart;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.StringUtil;
 
 public class SqlServerCpuUsageOverview 
 extends SqlServerAbstract
@@ -99,6 +98,7 @@ extends SqlServerAbstract
 		_CmSummary_OsMemoryFreeMb       .writeHtmlContent(w, null, null);
 		_CmPerfCounters_SqlBatch        .writeHtmlContent(w, null, null);
 		_CmPerfCounters_TransWriteSec   .writeHtmlContent(w, null, null);
+
 		if (isFullMessageType())
 		{
 			_CmSchedulers_RunQLengthSum   .writeHtmlContent(w, null, null);
@@ -161,7 +161,7 @@ extends SqlServerAbstract
 		_CmSchedulers_RunQLengthSum      = createTsLineChart(conn, schema, "CmSchedulers",      "RunQLengthSum",    -1,       false, null,    "Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)");
 		_CmSchedulers_RunQLengthEng      = createTsLineChart(conn, schema, "CmSchedulers",      "RunQLengthEng",    -1,       false, null,    "Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)");
 	}
-
+	
 	private IReportChart _CmSummary_aaCpuGraph;
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmSummary_aaReadWriteGraph;

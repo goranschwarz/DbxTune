@@ -278,21 +278,7 @@ extends SqlServerAbstract
 		}
 	}
 
-//	/**
-//	 * Set descriptions for the table, and the columns
-//	 */
-//	private void setSectionDescription(ResultSetTableModel rstm)
-//	{
-//		if (rstm == null)
-//			return;
-//		
-//		// Section description
-//		rstm.setDescription(
-//				"Information from last collector sample from the table <code>CmIndexMissing_abs</code><br>" +
-//				"");
-//	}
 
-	
 	//----------------------------------------------------------------------------------------------
 	//-- CLASS: QsExecutionPlanCollection
 	//----------------------------------------------------------------------------------------------
@@ -867,7 +853,8 @@ extends SqlServerAbstract
 				    + "    ,max([execution_type_desc])                                                 as [execution_type_desc] \n"
 				    + "    ,min([first_execution_time])                                                as [first_execution_time] \n"
 				    + "    ,max([last_execution_time])                                                 as [last_execution_time] \n"
-                                                                                                       
+
+				    + "    ,cast( (sum([avg_cpu_time])*1.0) / (avg([avg_dop])*1.0) / (sum([avg_duration])*1.0) * 100.0 as numeric(9,1)) as [efficiency_pct] \n"
 				    + "    ,''                                                                         as [count_executions__chart] \n"
 				    + "    ,sum([count_executions])                                                    as [count_executions__sum] \n"
 
@@ -1550,8 +1537,160 @@ extends SqlServerAbstract
 		}
 		
 
+//		/**
+//		 * Set CPU column descriptions
+//		 */
+//		protected void setCpuSectionDescription(ResultSetTableModel rstm)
+//		{
+//			if (rstm == null)
+//				return;
+//			
+//			// Section description
+//			rstm.setDescription("<b>&bull; Top CPU</b> (ordered by: total_cpu_time)");
+//
+//			// Columns description
+//			rstm.setColumnDescription("runtime_stats_id"                 , "Identifier of the row representing runtime execution statistics for the plan_id, execution_type and runtime_stats_interval_id. It is unique only for the past runtime statistics intervals. For currently active interval there may be multiple rows representing runtime statistics for the plan referenced by plan_id, with the execution type represented by execution_type. Typically, one row represents runtime statistics that are flushed to disk, while other(s) represent in-memory state. Hence, to get actual state for every interval you need to aggregate metrics, grouping by plan_id, execution_type and runtime_stats_interval_id.");
+//			rstm.setColumnDescription("plan_id"                          , "Foreign key. Joins to sys.query_store_plan (Transact-SQL).");
+//			rstm.setColumnDescription("runtime_stats_interval_id"        , "Foreign key. Joins to sys.query_store_runtime_stats_interval (Transact-SQL).");
+//			rstm.setColumnDescription("execution_type"                   , "Determines type of query execution: 0 - Regular execution (successfully finished); 3 - Client initiated aborted execution; 4 - Exception aborted execution;");
+//			rstm.setColumnDescription("execution_type_desc"              , "Textual description of the execution type field: 0 - Regular; 3 - Aborted; 4 - Exception;");
+//			rstm.setColumnDescription("first_execution_time"             , "First execution time for the query plan within the aggregation interval. This refers to the end time of the query execution.");
+//			rstm.setColumnDescription("last_execution_time"              , "Last execution time for the query plan within the aggregation interval. This refers to the end time of the query execution.");
+//			
+//			rstm.setColumnDescription("count_executions"                 , "Total count of executions for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("count_executions__sum"            , "Summary of: Total count of executions for the query plan within the recording period (usually 24 hours).");
+//			rstm.setColumnDescription("count_executions__chart"          , "Chart of:   Total count of executions for the query plan within the aggregation interval.");
+//                                                                         
+//			rstm.setColumnDescription("avg_duration_ms__sum"             , "Summary of: Average duration for the query plan within the recording period (usually 24 hours) (reported in milliseconds) .");
+//			rstm.setColumnDescription("avg_duration__sum"                , "Summary of: Average duration for the query plan within the recording period (usually 24 hours) (reported in microseconds) .");
+//			rstm.setColumnDescription("avg_duration__chart"              , "Chart of:   Average duration for the query plan within the aggregation interval (reported in microseconds) .");
+//			rstm.setColumnDescription("avg_duration"                     , "Average duration for the query plan within the aggregation interval (reported in microseconds) .");
+//			rstm.setColumnDescription("last_duration"                    , "Last duration for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("min_duration"                     , "Minimum duration for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("max_duration"                     , "Maximum duration for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("stdev_duration"                   , "Duration standard deviation for the query plan within the aggregation interval (reported in microseconds).");
+//                                                                         
+//			rstm.setColumnDescription("avg_cpu_time_ms__sum"             , "Summary of: Average CPU time for the query plan within the recording period (usually 24 hours) (reported in milliseconds).");
+//			rstm.setColumnDescription("avg_cpu_time__sum"                , "Summary of: Average CPU time for the query plan within the recording period (usually 24 hours) (reported in microseconds).");
+//			rstm.setColumnDescription("avg_cpu_time__chart"              , "Chart of:   Average CPU time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("avg_cpu_time"                     , "Average CPU time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("last_cpu_time"                    , "Last CPU time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("min_cpu_time"                     , "Minimum CPU time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("max_cpu_time"                     , "Maximum CPU time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("stdev_cpu_time"                   , "CPU time standard deviation for the query plan within the aggregation interval (reported in microseconds).");
+//                                                                         
+//			rstm.setColumnDescription("avg_logical_io_reads__sum"        , "Summary of: Average number of logical I/O reads for the query plan within the recording period (usually 24 hours). (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_logical_io_reads__chart"      , "Chart of:   Average number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_logical_io_reads"             , "Average number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("last_logical_io_reads"            , "Last number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("min_logical_io_reads"             , "Minimum number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("max_logical_io_reads"             , "Maximum number of logical I/O reads for the query plan within the aggregation interval.(expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("stdev_logical_io_reads"           , "Number of logical I/O reads standard deviation for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
+//			                                                             
+//			rstm.setColumnDescription("avg_logical_io_writes__sum"       , "Summary of: Average number of logical I/O writes for the query plan within the recording period (usually 24 hours).");
+//			rstm.setColumnDescription("avg_logical_io_writes__chart"     , "Chart of:   Average number of logical I/O writes for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("avg_logical_io_writes"            , "Average number of logical I/O writes for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("last_logical_io_writes"           , "Last number of logical I/O writes for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("min_logical_io_writes"            , "Minimum number of logical I/O writes for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("max_logical_io_writes"            , "Maximum number of logical I/O writes for the query plan within the aggregation interval");
+//			rstm.setColumnDescription("stdev_logical_io_writes"          , "Number of logical I/O writes standard deviation for the query plan within the aggregation interval.");
+//			                                                             
+//			rstm.setColumnDescription("avg_physical_io_reads__sum"       , "Summary of: Average number of physical I/O reads for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_physical_io_reads__chart"     , "Chart of:   Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_physical_io_reads"            , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("last_physical_io_reads"           , "Last number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("min_physical_io_reads"            , "Minimum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("max_physical_io_reads"            , "Maximum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("stdev_physical_io_reads"          , "Number of physical I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			                                                             
+//			rstm.setColumnDescription("avg_clr_time_ms__sum"             , "Summary of: Average CLR time for the query plan within the recording period (usually 24 hours) (reported in milliseconds).");
+//			rstm.setColumnDescription("avg_clr_time__sum"                , "Summary of: Average CLR time for the query plan within the recording period (usually 24 hours) (reported in microseconds).");
+//			rstm.setColumnDescription("avg_clr_time__chart"              , "Chart of:   Average CLR time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("avg_clr_time"                     , "Average CLR time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("last_clr_time"                    , "Last CLR time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("min_clr_time"                     , "Minimum CLR time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("max_clr_time"                     , "Maximum CLR time for the query plan within the aggregation interval (reported in microseconds).");
+//			rstm.setColumnDescription("stdev_clr_time"                   , "CLR time standard deviation for the query plan within the aggregation interval (reported in microseconds).");
+//			                                                             
+//			rstm.setColumnDescription("avg_dop__avg"                     , "Average of: Average DOP (degree of parallelism) for the query plan within the recording period (usually 24 hours).");
+//			rstm.setColumnDescription("avg_dop__sum"                     , "Summary of: Average DOP (degree of parallelism) for the query plan within the recording period (usually 24 hours).");
+//			rstm.setColumnDescription("avg_dop__chart"                   , "Chart of:   Average DOP (degree of parallelism) for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("avg_dop"                          , "Average DOP (degree of parallelism) for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("last_dop"                         , "Last DOP (degree of parallelism) for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("min_dop"                          , "Minimum DOP (degree of parallelism) for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("max_dop"                          , "Maximum DOP (degree of parallelism) for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("stdev_dop"                        , "DOP (degree of parallelism) standard deviation for the query plan within the aggregation interval.");
+//			
+//			rstm.setColumnDescription("avg_query_max_used_memory__sum"   , "Summary of: Average memory grant (reported as the number of 8 KB pages) for the query plan within the recording period (usually 24 hours). Always 0 for queries using natively compiled memory optimized procedures.");
+//			rstm.setColumnDescription("avg_query_max_used_memory__chart" , "Chart of:   Average memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+//			rstm.setColumnDescription("avg_query_max_used_memory"        , "Average memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+//			rstm.setColumnDescription("last_query_max_used_memory"       , "Last memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+//			rstm.setColumnDescription("min_query_max_used_memory"        , "Minimum memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+//			rstm.setColumnDescription("max_query_max_used_memory"        , "Maximum memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+//			rstm.setColumnDescription("stdev_query_max_used_memory"      , "Memory grant standard deviation (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+//			
+//			rstm.setColumnDescription("avg_rowcount__sum"                , "Summary of: Average number of returned rows for the query plan within the recording period (usually 24 hours).");
+//			rstm.setColumnDescription("avg_rowcount__chart"              , "Chart of:   Average number of returned rows for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("avg_rowcount"                     , "Average number of returned rows for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("last_rowcount"                    , "Number of returned rows by the last execution of the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("min_rowcount"                     , "Minimum number of returned rows for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("max_rowcount"                     , "Maximum number of returned rows for the query plan within the aggregation interval.");
+//			rstm.setColumnDescription("stdev_rowcount"                   , "Number of returned rows standard deviation for the query plan within the aggregation interval.");
+//			
+//			rstm.setColumnDescription("avg_num_physical_io_reads__sum"   , "Summary of: Average number of physical I/O reads for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_num_physical_io_reads__chart" , "Chart of:   Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_num_physical_io_reads"        , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("last_num_physical_io_reads"       , "Last number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("min_num_physical_io_reads"        , "Minimum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("max_num_physical_io_reads"        , "Maximum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("stdev_num_physical_io_reads"      , "Number of physical I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			
+//			rstm.setColumnDescription("avg_log_bytes_used__sum"          , "Summary of: Average number of bytes in the database log used by the query plan, wirecording period interval (usually 24 hours).");
+//			rstm.setColumnDescription("avg_log_bytes_used__chart"        , "Chart of:   Average number of bytes in the database log used by the query plan, within the aggregation interval.");
+//			rstm.setColumnDescription("avg_log_bytes_used"               , "Average number of bytes in the database log used by the query plan, within the aggregation interval.");
+//			rstm.setColumnDescription("last_log_bytes_used"              , "Number of bytes in the database log used by the last execution of the query plan, within the aggregation interval.");
+//			rstm.setColumnDescription("min_log_bytes_used"               , "Minimum number of bytes in the database log used by the query plan, within the aggregation interval.");
+//			rstm.setColumnDescription("max_log_bytes_used"               , "Maximum number of bytes in the database log used by the query plan, within the aggregation interval.");
+//			rstm.setColumnDescription("stdev_log_bytes_used"             , "Standard deviation of the number of bytes in the database log used by a query plan, within the aggregation interval.");
+//			
+//			rstm.setColumnDescription("avg_tempdb_space_used__sum"       , "Summary of: Average number of pages used in tempdb for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages).");
+//			rstm.setColumnDescription("avg_tempdb_space_used__chart"     , "Chart of:   Average number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
+//			rstm.setColumnDescription("avg_tempdb_space_used"            , "Average number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
+//			rstm.setColumnDescription("last_tempdb_space_used"           , "Last number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
+//			rstm.setColumnDescription("min_tempdb_space_used"            , "Minimum number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
+//			rstm.setColumnDescription("max_tempdb_space_used"            , "Maximum number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
+//			rstm.setColumnDescription("stdev_tempdb_space_used"          , "Number of pages used in tempdb standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
+//			
+//			rstm.setColumnDescription("avg_page_server_io_reads__sum"    , "Summary of: Average number of page server I/O reads for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_page_server_io_reads__chart"  , "Chart of:   Average number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("avg_page_server_io_reads"         , "Average number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("last_page_server_io_reads"        , "Last number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("min_page_server_io_reads"         , "Minimum number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("max_page_server_io_reads"         , "Maximum number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("stdev_page_server_io_reads"       , "Number of page server I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
+//			
+//
+//			rstm.setColumnDescription("total_duration_ms__sum"           , "Total duration for the query plan (reported in milliseconds).");
+//			rstm.setColumnDescription("total_duration__sum"              , "Total duration for the query plan (reported in microseconds).");
+//			rstm.setColumnDescription("total_cpu_time_ms__sum"           , "Total CPU time for the query plan (reported in milliseconds).");
+//			rstm.setColumnDescription("total_cpu_time__sum"              , "Total CPU time for the query plan (reported in microseconds).");
+//			rstm.setColumnDescription("total_logical_io_reads__sum"      , "Total number of logical I/O reads for the query plan. (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("total_logical_io_writes__sum"     , "Total number of logical I/O writes for the query plan.");
+//			rstm.setColumnDescription("total_physical_io_reads__sum"     , "Total number of physical I/O reads for the query plan (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("total_clr_time_ms__sum"           , "Total CLR time for the query plan (reported in milliseconds).");
+//			rstm.setColumnDescription("total_clr_time__sum"              , "Total CLR time for the query plan (reported in microseconds).");
+//			rstm.setColumnDescription("total_dop__sum"                   , "Total DOP (degree of parallelism) for the query plan.");
+//			rstm.setColumnDescription("total_query_max_used_memory__sum" , "Total memory grant (reported as the number of 8 KB pages) for the query plan. Always 0 for queries using natively compiled memory optimized procedures.");
+//			rstm.setColumnDescription("total_rowcount__sum"              , "Total number of returned rows for the query plan.");
+//			rstm.setColumnDescription("total_num_physical_io_reads__sum" , "Total number of physical I/O reads for the query plan (expressed as a number of 8KB pages read).");
+//			rstm.setColumnDescription("total_log_bytes_used__sum"        , "Total number of bytes in the database log used by the query plan.");
+//			rstm.setColumnDescription("total_tempdb_space_used__sum"     , "Total number of pages used in tempdb for the query plan (expressed as a number of 8KB pages).");
+//			rstm.setColumnDescription("total_page_server_io_reads__sum"  , "Total number of page server I/O reads for the query plan (expressed as a number of 8KB pages read).");
+//		
+//		}
+
 		/**
-		 * Set CPU column descriptions
+		 * Set descriptions for the table, and the columns
 		 */
 		protected void setCpuSectionDescription(ResultSetTableModel rstm)
 		{
@@ -1559,149 +1698,109 @@ extends SqlServerAbstract
 				return;
 			
 			// Section description
-			rstm.setDescription("<b>&bull; Top CPU</b> (ordered by: total_cpu_time)");
-
+			rstm.setDescription(
+					"Information from the Query Store table <code>query_store_runtime_stats</code> and for wait columns table <code>query_store_wait_stats</code><br>" +
+					"");
+			
 			// Columns description
-			rstm.setColumnDescription("runtime_stats_id"                 , "Identifier of the row representing runtime execution statistics for the plan_id, execution_type and runtime_stats_interval_id. It is unique only for the past runtime statistics intervals. For currently active interval there may be multiple rows representing runtime statistics for the plan referenced by plan_id, with the execution type represented by execution_type. Typically, one row represents runtime statistics that are flushed to disk, while other(s) represent in-memory state. Hence, to get actual state for every interval you need to aggregate metrics, grouping by plan_id, execution_type and runtime_stats_interval_id.");
-			rstm.setColumnDescription("plan_id"                          , "Foreign key. Joins to sys.query_store_plan (Transact-SQL).");
-			rstm.setColumnDescription("runtime_stats_interval_id"        , "Foreign key. Joins to sys.query_store_runtime_stats_interval (Transact-SQL).");
-			rstm.setColumnDescription("execution_type"                   , "Determines type of query execution: 0 - Regular execution (successfully finished); 3 - Client initiated aborted execution; 4 - Exception aborted execution;");
-			rstm.setColumnDescription("execution_type_desc"              , "Textual description of the execution type field: 0 - Regular; 3 - Aborted; 4 - Exception;");
-			rstm.setColumnDescription("first_execution_time"             , "First execution time for the query plan within the aggregation interval. This refers to the end time of the query execution.");
-			rstm.setColumnDescription("last_execution_time"              , "Last execution time for the query plan within the aggregation interval. This refers to the end time of the query execution.");
-			
-			rstm.setColumnDescription("count_executions"                 , "Total count of executions for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("count_executions__sum"            , "Summary of: Total count of executions for the query plan within the recording period (usually 24 hours).");
-			rstm.setColumnDescription("count_executions__chart"          , "Chart of:   Total count of executions for the query plan within the aggregation interval.");
-                                                                         
-			rstm.setColumnDescription("avg_duration_ms__sum"             , "Summary of: Average duration for the query plan within the recording period (usually 24 hours) (reported in milliseconds) .");
-			rstm.setColumnDescription("avg_duration__sum"                , "Summary of: Average duration for the query plan within the recording period (usually 24 hours) (reported in microseconds) .");
-			rstm.setColumnDescription("avg_duration__chart"              , "Chart of:   Average duration for the query plan within the aggregation interval (reported in microseconds) .");
-			rstm.setColumnDescription("avg_duration"                     , "Average duration for the query plan within the aggregation interval (reported in microseconds) .");
-			rstm.setColumnDescription("last_duration"                    , "Last duration for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("min_duration"                     , "Minimum duration for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("max_duration"                     , "Maximum duration for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("stdev_duration"                   , "Duration standard deviation for the query plan within the aggregation interval (reported in microseconds).");
-                                                                         
-			rstm.setColumnDescription("avg_cpu_time_ms__sum"             , "Summary of: Average CPU time for the query plan within the recording period (usually 24 hours) (reported in milliseconds).");
-			rstm.setColumnDescription("avg_cpu_time__sum"                , "Summary of: Average CPU time for the query plan within the recording period (usually 24 hours) (reported in microseconds).");
-			rstm.setColumnDescription("avg_cpu_time__chart"              , "Chart of:   Average CPU time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("avg_cpu_time"                     , "Average CPU time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("last_cpu_time"                    , "Last CPU time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("min_cpu_time"                     , "Minimum CPU time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("max_cpu_time"                     , "Maximum CPU time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("stdev_cpu_time"                   , "CPU time standard deviation for the query plan within the aggregation interval (reported in microseconds).");
-                                                                         
-			rstm.setColumnDescription("avg_logical_io_reads__sum"        , "Summary of: Average number of logical I/O reads for the query plan within the recording period (usually 24 hours). (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_logical_io_reads__chart"      , "Chart of:   Average number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_logical_io_reads"             , "Average number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("last_logical_io_reads"            , "Last number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("min_logical_io_reads"             , "Minimum number of logical I/O reads for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("max_logical_io_reads"             , "Maximum number of logical I/O reads for the query plan within the aggregation interval.(expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("stdev_logical_io_reads"           , "Number of logical I/O reads standard deviation for the query plan within the aggregation interval. (expressed as a number of 8KB pages read).");
-			                                                             
-			rstm.setColumnDescription("avg_logical_io_writes__sum"       , "Summary of: Average number of logical I/O writes for the query plan within the recording period (usually 24 hours).");
-			rstm.setColumnDescription("avg_logical_io_writes__chart"     , "Chart of:   Average number of logical I/O writes for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("avg_logical_io_writes"            , "Average number of logical I/O writes for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("last_logical_io_writes"           , "Last number of logical I/O writes for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("min_logical_io_writes"            , "Minimum number of logical I/O writes for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("max_logical_io_writes"            , "Maximum number of logical I/O writes for the query plan within the aggregation interval");
-			rstm.setColumnDescription("stdev_logical_io_writes"          , "Number of logical I/O writes standard deviation for the query plan within the aggregation interval.");
-			                                                             
-			rstm.setColumnDescription("avg_physical_io_reads__sum"       , "Summary of: Average number of physical I/O reads for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_physical_io_reads__chart"     , "Chart of:   Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_physical_io_reads"            , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("last_physical_io_reads"           , "Last number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("min_physical_io_reads"            , "Minimum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("max_physical_io_reads"            , "Maximum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("stdev_physical_io_reads"          , "Number of physical I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			                                                             
-			rstm.setColumnDescription("avg_clr_time_ms__sum"             , "Summary of: Average CLR time for the query plan within the recording period (usually 24 hours) (reported in milliseconds).");
-			rstm.setColumnDescription("avg_clr_time__sum"                , "Summary of: Average CLR time for the query plan within the recording period (usually 24 hours) (reported in microseconds).");
-			rstm.setColumnDescription("avg_clr_time__chart"              , "Chart of:   Average CLR time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("avg_clr_time"                     , "Average CLR time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("last_clr_time"                    , "Last CLR time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("min_clr_time"                     , "Minimum CLR time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("max_clr_time"                     , "Maximum CLR time for the query plan within the aggregation interval (reported in microseconds).");
-			rstm.setColumnDescription("stdev_clr_time"                   , "CLR time standard deviation for the query plan within the aggregation interval (reported in microseconds).");
-			                                                             
-			rstm.setColumnDescription("avg_dop__avg"                     , "Average of: Average DOP (degree of parallelism) for the query plan within the recording period (usually 24 hours).");
-			rstm.setColumnDescription("avg_dop__sum"                     , "Summary of: Average DOP (degree of parallelism) for the query plan within the recording period (usually 24 hours).");
-			rstm.setColumnDescription("avg_dop__chart"                   , "Chart of:   Average DOP (degree of parallelism) for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("avg_dop"                          , "Average DOP (degree of parallelism) for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("last_dop"                         , "Last DOP (degree of parallelism) for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("min_dop"                          , "Minimum DOP (degree of parallelism) for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("max_dop"                          , "Maximum DOP (degree of parallelism) for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("stdev_dop"                        , "DOP (degree of parallelism) standard deviation for the query plan within the aggregation interval.");
-			
-			rstm.setColumnDescription("avg_query_max_used_memory__sum"   , "Summary of: Average memory grant (reported as the number of 8 KB pages) for the query plan within the recording period (usually 24 hours). Always 0 for queries using natively compiled memory optimized procedures.");
-			rstm.setColumnDescription("avg_query_max_used_memory__chart" , "Chart of:   Average memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
-			rstm.setColumnDescription("avg_query_max_used_memory"        , "Average memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
-			rstm.setColumnDescription("last_query_max_used_memory"       , "Last memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
-			rstm.setColumnDescription("min_query_max_used_memory"        , "Minimum memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
-			rstm.setColumnDescription("max_query_max_used_memory"        , "Maximum memory grant (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
-			rstm.setColumnDescription("stdev_query_max_used_memory"      , "Memory grant standard deviation (reported as the number of 8 KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
-			
-			rstm.setColumnDescription("avg_rowcount__sum"                , "Summary of: Average number of returned rows for the query plan within the recording period (usually 24 hours).");
-			rstm.setColumnDescription("avg_rowcount__chart"              , "Chart of:   Average number of returned rows for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("avg_rowcount"                     , "Average number of returned rows for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("last_rowcount"                    , "Number of returned rows by the last execution of the query plan within the aggregation interval.");
-			rstm.setColumnDescription("min_rowcount"                     , "Minimum number of returned rows for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("max_rowcount"                     , "Maximum number of returned rows for the query plan within the aggregation interval.");
-			rstm.setColumnDescription("stdev_rowcount"                   , "Number of returned rows standard deviation for the query plan within the aggregation interval.");
-			
-			rstm.setColumnDescription("avg_num_physical_io_reads__sum"   , "Summary of: Average number of physical I/O reads for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_num_physical_io_reads__chart" , "Chart of:   Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_num_physical_io_reads"        , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("last_num_physical_io_reads"       , "Last number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("min_num_physical_io_reads"        , "Minimum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("max_num_physical_io_reads"        , "Maximum number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("stdev_num_physical_io_reads"      , "Number of physical I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			
-			rstm.setColumnDescription("avg_log_bytes_used__sum"          , "Summary of: Average number of bytes in the database log used by the query plan, wirecording period interval (usually 24 hours).");
-			rstm.setColumnDescription("avg_log_bytes_used__chart"        , "Chart of:   Average number of bytes in the database log used by the query plan, within the aggregation interval.");
-			rstm.setColumnDescription("avg_log_bytes_used"               , "Average number of bytes in the database log used by the query plan, within the aggregation interval.");
-			rstm.setColumnDescription("last_log_bytes_used"              , "Number of bytes in the database log used by the last execution of the query plan, within the aggregation interval.");
-			rstm.setColumnDescription("min_log_bytes_used"               , "Minimum number of bytes in the database log used by the query plan, within the aggregation interval.");
-			rstm.setColumnDescription("max_log_bytes_used"               , "Maximum number of bytes in the database log used by the query plan, within the aggregation interval.");
-			rstm.setColumnDescription("stdev_log_bytes_used"             , "Standard deviation of the number of bytes in the database log used by a query plan, within the aggregation interval.");
-			
-			rstm.setColumnDescription("avg_tempdb_space_used__sum"       , "Summary of: Average number of pages used in tempdb for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages).");
-			rstm.setColumnDescription("avg_tempdb_space_used__chart"     , "Chart of:   Average number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
-			rstm.setColumnDescription("avg_tempdb_space_used"            , "Average number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
-			rstm.setColumnDescription("last_tempdb_space_used"           , "Last number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
-			rstm.setColumnDescription("min_tempdb_space_used"            , "Minimum number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
-			rstm.setColumnDescription("max_tempdb_space_used"            , "Maximum number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
-			rstm.setColumnDescription("stdev_tempdb_space_used"          , "Number of pages used in tempdb standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages).");
-			
-			rstm.setColumnDescription("avg_page_server_io_reads__sum"    , "Summary of: Average number of page server I/O reads for the query plan within the recording period (usually 24 hours) (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_page_server_io_reads__chart"  , "Chart of:   Average number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("avg_page_server_io_reads"         , "Average number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("last_page_server_io_reads"        , "Last number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("min_page_server_io_reads"         , "Minimum number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("max_page_server_io_reads"         , "Maximum number of page server I/O reads for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("stdev_page_server_io_reads"       , "Number of page server I/O reads standard deviation for the query plan within the aggregation interval (expressed as a number of 8KB pages read).");
-			
+			rstm.setColumnDescription("dbname"                                , "Name of the database");
+			rstm.setColumnDescription("plan_id"                               , "Foreign key. Joins to sys.query_store_plan");
+			rstm.setColumnDescription("plan_text"                             , "Click on the below number to show the query plan.");
+			rstm.setColumnDescription("txt"                                   , "SQL Text (hover over the icon or click it)");
+			rstm.setColumnDescription("wait"                                  , "Wait Information (hover over the icon or click it)");
+			rstm.setColumnDescription("execution_type"                        , "Determines type of query execution: \n" + 
+			                                                                    "0 - Regular execution (successfully finished) \n" +
+			                                                                    "3 - Client initiated aborted execution \n" +
+			                                                                    "4 - Exception aborted execution \n");
+			rstm.setColumnDescription("execution_type_desc"                   , "Textual description of the execution type field: \n" +
+			                                                                    "0 - Regular \n" +
+			                                                                    "3 - Aborted \n" + 
+			                                                                    "4 - Exception \n");
+			rstm.setColumnDescription("first_execution_time"                  , "First execution time for the query plan within the aggregation interval. This is the end time of the query execution.");
+			rstm.setColumnDescription("last_execution_time"                   , "Last execution time for the query plan within the aggregation interval. This is the end time of the query execution.");
+			rstm.setColumnDescription("efficiency_pct"                        , "How efficient is the statement. \n" +
+			                                                                    "This is a percentage calculation of how well we have used the CPU for this statement... or more precise: 'sum(avg_cpu_time)' / 'avg(avg_dop)' / 'sum(avg_duration)' * 100.0 \n" +
+			                                                                    "The lower percentage, the more 'waitTime' we have. (it can be physical IO, blocking locks, Waiting to be sceduled or similar) \n" + 
+			                                                                    "And if it's a parallel query, where the DOP might be skewed (work is not evenly distributed over the worker threads), the percent will be 'lower'...");
 
-			rstm.setColumnDescription("total_duration_ms__sum"           , "Total duration for the query plan (reported in milliseconds).");
-			rstm.setColumnDescription("total_duration__sum"              , "Total duration for the query plan (reported in microseconds).");
-			rstm.setColumnDescription("total_cpu_time_ms__sum"           , "Total CPU time for the query plan (reported in milliseconds).");
-			rstm.setColumnDescription("total_cpu_time__sum"              , "Total CPU time for the query plan (reported in microseconds).");
-			rstm.setColumnDescription("total_logical_io_reads__sum"      , "Total number of logical I/O reads for the query plan. (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("total_logical_io_writes__sum"     , "Total number of logical I/O writes for the query plan.");
-			rstm.setColumnDescription("total_physical_io_reads__sum"     , "Total number of physical I/O reads for the query plan (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("total_clr_time_ms__sum"           , "Total CLR time for the query plan (reported in milliseconds).");
-			rstm.setColumnDescription("total_clr_time__sum"              , "Total CLR time for the query plan (reported in microseconds).");
-			rstm.setColumnDescription("total_dop__sum"                   , "Total DOP (degree of parallelism) for the query plan.");
-			rstm.setColumnDescription("total_query_max_used_memory__sum" , "Total memory grant (reported as the number of 8 KB pages) for the query plan. Always 0 for queries using natively compiled memory optimized procedures.");
-			rstm.setColumnDescription("total_rowcount__sum"              , "Total number of returned rows for the query plan.");
-			rstm.setColumnDescription("total_num_physical_io_reads__sum" , "Total number of physical I/O reads for the query plan (expressed as a number of 8KB pages read).");
-			rstm.setColumnDescription("total_log_bytes_used__sum"        , "Total number of bytes in the database log used by the query plan.");
-			rstm.setColumnDescription("total_tempdb_space_used__sum"     , "Total number of pages used in tempdb for the query plan (expressed as a number of 8KB pages).");
-			rstm.setColumnDescription("total_page_server_io_reads__sum"  , "Total number of page server I/O reads for the query plan (expressed as a number of 8KB pages read).");
-		
+			rstm.setColumnDescription("count_executions__chart"               , "Chart showing 'execution count' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("count_executions__sum"                 , "Total count of executions for the query plan within the aggregation interval.");
+
+			rstm.setColumnDescription("avg_duration__chart"                   , "Chart showing 'avg_duration' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_duration_ms__sum"                , "Total duration for the query plan within the aggregation interval");
+			rstm.setColumnDescription("avg_duration_ms__sum"                  , "Average duration for the query plan within the aggregation interval");
+
+			rstm.setColumnDescription("avg_cpu_time__chart"                   , "Chart showing 'avg_cpu_time_ms' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_cpu_time_ms__sum"                , "Total CPU time for the query plan within the aggregation interval");
+			rstm.setColumnDescription("avg_cpu_time_ms__sum"                  , "Average CPU time for the query plan within the aggregation interval");
+			
+			rstm.setColumnDescription("avg_query_wait_time_ms__chart"         , "Chart showing 'avg_query_wait_time_ms' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_query_wait_time_ms__sum"         , "Total   wait time for the query plan within the aggregation interval and wait category (reported in milliseconds)");
+			rstm.setColumnDescription("avg_query_wait_time_ms__sum"           , "Average wait duration for the query plan per execution within the aggregation interval and wait category (reported in milliseconds).");
+			
+			rstm.setColumnDescription("avg_query_wait_time_other_ms__chart"   , "Chart showing 'avg_query_wait_time_other_ms' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_query_wait_time_other_ms__sum"   , "Total   OTHER (everything but parallel) wait time for the query plan within the aggregation interval and wait category (reported in milliseconds)");
+			rstm.setColumnDescription("avg_query_wait_time_other_ms__sum"     , "Average OTHER (everything but parallel) wait duration for the query plan per execution within the aggregation interval and wait category (reported in milliseconds).");
+			
+			rstm.setColumnDescription("avg_query_wait_time_paralell_ms__chart", "Chart showing 'avg_query_wait_time_paralell_ms' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_query_wait_time_paralell_ms__sum", "Total   PARALLEL wait time for the query plan within the aggregation interval and wait category (reported in milliseconds)");
+			rstm.setColumnDescription("avg_query_wait_time_paralell_ms__sum"  , "Average PARALLEL wait duration for the query plan per execution within the aggregation interval and wait category (reported in milliseconds).");
+			
+			rstm.setColumnDescription("avg_logical_io_reads__chart"           , "Chart showing 'avg_logical_io_reads' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_logical_io_reads__sum"           , "Total number of logical I/O reads for the query plan within the aggregation interval (expressed as a number of 8-KB pages read).");
+			rstm.setColumnDescription("avg_logical_io_reads__sum"             , "Average number of logical I/O reads for the query plan within the aggregation interval (expressed as a number of 8-KB pages read).");
+			
+			rstm.setColumnDescription("avg_logical_io_reads_mb__chart"        , "Chart showing 'avg_logical_io_reads_mb' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_logical_io_reads_mb__sum"        , "Total number of logical I/O reads for the query plan within the aggregation interval (expressed as a MB or number of 8-KB pages / 128.0 read).");
+			rstm.setColumnDescription("avg_logical_io_reads_mb__sum"          , "Average number of logical I/O reads for the query plan within the aggregation interval (expressed as MB or a number of 8-KB pages / 128.0 read).");
+			
+			rstm.setColumnDescription("avg_logical_io_writes__chart"          , "Chart showing 'avg_logical_io_writes' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_logical_io_writes__sum"          , "Total number of logical I/O writes for the query plan within the aggregation interval (expressed as a number of 8-KB pages written)");
+			rstm.setColumnDescription("avg_logical_io_writes__sum"            , "Average number of logical I/O writes for the query plan within the aggregation interval (expressed as a number of 8-KB pages written)");
+			
+			rstm.setColumnDescription("avg_physical_io_reads__chart"          , "Chart showing 'avg_physical_io_reads' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_physical_io_reads__sum"          , "Total number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8-KB pages read).");
+			rstm.setColumnDescription("avg_physical_io_reads__sum"            , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8-KB pages read).");
+			
+			rstm.setColumnDescription("avg_clr_time__chart"                   , "Chart showing 'avg_clr_time_ms' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_clr_time_ms__sum"                , "Total CLR time for the query plan within the aggregation interval");
+			rstm.setColumnDescription("avg_clr_time_ms__sum"                  , "Average CLR time for the query plan within the aggregation interval");
+			
+			rstm.setColumnDescription("avg_dop__chart"                        , "Chart showing 'avg_dop' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("avg_dop__avg"                          , "Average DOP (degree of parallelism) for the query plan within the aggregation interval.");
+			
+			rstm.setColumnDescription("avg_query_max_used_memory__chart"      , "Chart showing 'avg_query_max_used_memory' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_query_max_used_memory__sum"      , "Total   memory grant (reported as the number of 8-KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+			rstm.setColumnDescription("total_query_max_used_memory_mb__sum"   , "Total   memory grant (reported as MB                      ) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+			rstm.setColumnDescription("avg_query_max_used_memory__sum"        , "Average memory grant (reported as the number of 8-KB pages) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+			rstm.setColumnDescription("avg_query_max_used_memory_mb__sum"     , "Average memory grant (reported as MB                      ) for the query plan within the aggregation interval. Always 0 for queries using natively compiled memory optimized procedures.");
+			
+			rstm.setColumnDescription("avg_rowcount__chart"                   , "Chart showing 'avg_rowcount' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_rowcount__sum"                   , "Total number of returned rows for the query plan within the aggregation interval");
+			rstm.setColumnDescription("avg_rowcount__sum"                     , "Average number of returned rows for the query plan within the aggregation interval");
+			
+			rstm.setColumnDescription("avg_num_physical_io_reads__chart"      , "Chart showing 'avg_num_physical_io_reads' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_num_physical_io_reads__sum"      , "Total number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of read I/O operations).");
+			rstm.setColumnDescription("avg_num_physical_io_reads__sum"        , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of read I/O operations).");
+			
+			rstm.setColumnDescription("avg_log_bytes_used__chart"             , "Chart showing 'avg_log_bytes_used' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_log_bytes_used__sum"             , "Total   number of bytes in the database log used by the query plan, within the aggregation interval.");
+			rstm.setColumnDescription("total_log_bytes_used_kb__sum"          , "Total   number of KB    in the database log used by the query plan, within the aggregation interval.");
+			rstm.setColumnDescription("total_log_bytes_used_mb__sum"          , "Total   number of MB    in the database log used by the query plan, within the aggregation interval.");
+			rstm.setColumnDescription("avg_log_bytes_used__sum"               , "Average number of bytes in the database log used by the query plan, within the aggregation interval.");
+			rstm.setColumnDescription("avg_log_bytes_used_kb__sum"            , "Average number of KB    in the database log used by the query plan, within the aggregation interval.");
+			rstm.setColumnDescription("avg_log_bytes_used_mb__sum"            , "Average number of MB    in the database log used by the query plan, within the aggregation interval.");
+			
+			rstm.setColumnDescription("avg_tempdb_space_used__char"           , "Chart showing 'avg_tempdb_space_used' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_tempdb_space_used__sum"          , "Total   number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8-KB pages).");
+			rstm.setColumnDescription("total_tempdb_space_used_kb__sum"       , "Total   number of KB    used in tempdb for the query plan within the aggregation interval (expressed as KB).");
+			rstm.setColumnDescription("total_tempdb_space_used_mb__sum"       , "Total   number of MB    used in tempdb for the query plan within the aggregation interval (expressed as MB).");
+			rstm.setColumnDescription("avg_tempdb_space_used__sum"            , "Average number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8-KB pages).");
+			rstm.setColumnDescription("avg_tempdb_space_used_kb__sum"         , "Average number of KB    used in tempdb for the query plan within the aggregation interval (expressed as KB).");
+			rstm.setColumnDescription("avg_tempdb_space_used_mb__sum"         , "Average number of MB    used in tempdb for the query plan within the aggregation interval (expressed as MB).");
 		}
 
+		
 		/**
 		 * Set WAIT column descriptions
 		 */

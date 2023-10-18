@@ -10991,6 +10991,9 @@ checkPanelSize(_resPanel, comp);
 	public final static String  PROPKEY_COPY_RESULTS_CSV             = PROPKEY_APP_PREFIX + "results.copy.as.csv";
 	public final static boolean DEFAULT_COPY_RESULTS_CSV             = false;
 
+	public final static String  PROPKEY_COPY_RESULTS_JSON            = PROPKEY_APP_PREFIX + "results.copy.as.json";
+	public final static boolean DEFAULT_COPY_RESULTS_JSON            = false;
+	
 	
 	public final static String  PROPKEY_COPY_RESULTS_CSV_RFC_4180    = PROPKEY_APP_PREFIX + "results.copy.as.csv.rfc.4180";
 	public final static boolean DEFAULT_COPY_RESULTS_CSV_RFC_4180    = true;
@@ -11015,6 +11018,20 @@ checkPanelSize(_resPanel, comp);
 	public final static boolean DEFAULT_COPY_RESULTS_EXCEL           = false;
 
 
+	public final static String  PROPKEY_COPY_RESULTS_JSON_ONLY_RS        = PROPKEY_APP_PREFIX + "results.copy.as.json.only.rs";
+	public final static boolean DEFAULT_COPY_RESULTS_JSON_ONLY_RS        = true;
+
+	public final static String  PROPKEY_COPY_RESULTS_JSON_METADATA       = PROPKEY_APP_PREFIX + "results.copy.as.json.metadata";
+	public final static boolean DEFAULT_COPY_RESULTS_JSON_METADATA       = true;
+
+	public final static String  PROPKEY_COPY_RESULTS_JSON_PRETTY_PRINT   = PROPKEY_APP_PREFIX + "results.copy.as.json.prettyPrint";
+	public final static boolean DEFAULT_COPY_RESULTS_JSON_PRETTY_PRINT   = true;
+
+	public final static String  PROPKEY_COPY_RESULTS_JSON_TS_AS_ISO_8601 = PROPKEY_APP_PREFIX + "results.copy.as.json.ts.iso_8601";
+	public final static boolean DEFAULT_COPY_RESULTS_JSON_TS_AS_ISO_8601 = true;
+
+
+
 	private JPopupMenu createCopyResultsPopupMenu(final JButton button)
 	{
 		// Do PopupMenu
@@ -11031,17 +11048,21 @@ checkPanelSize(_resPanel, comp);
 				// remove all old items (if any)
 				popupMenu.removeAll();
 
-				final JMenuItem ascii_mi  = new JRadioButtonMenuItem("<html><b>ASCII</b>          - <i><font color='green'>Tables will be copied into ascii format         </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_ASCII, DEFAULT_COPY_RESULTS_ASCII));
-				final JMenuItem html_mi   = new JRadioButtonMenuItem("<html><b>HTML</b>           - <i><font color='green'>Copy as HTML Tags                               </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_HTML,  DEFAULT_COPY_RESULTS_HTML));
-				final JMenuItem excel_mi  = new JRadioButtonMenuItem("<html><b>Excel</b>          - <i><font color='green'>Write to a Excel file                           </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_EXCEL, DEFAULT_COPY_RESULTS_EXCEL));
-				final JMenuItem csv_mi    = new JRadioButtonMenuItem("<html><b>CSV</b>            - <i><font color='green'>Commas Separated Values Format                  </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_CSV,   DEFAULT_COPY_RESULTS_CSV));
-				final JMenuItem csvCfg_mi = new JMenuItem           ("<html><b>CSV, Config...</b> - <i><font color='green'>Opens a Dialog, where you can set separators etc</font></i></html>");
+				final JMenuItem ascii_mi   = new JRadioButtonMenuItem("<html><b>ASCII</b>           - <i><font color='green'>Tables will be copied into ascii format         </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_ASCII, DEFAULT_COPY_RESULTS_ASCII));
+				final JMenuItem html_mi    = new JRadioButtonMenuItem("<html><b>HTML</b>            - <i><font color='green'>Copy as HTML Tags                               </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_HTML,  DEFAULT_COPY_RESULTS_HTML));
+				final JMenuItem excel_mi   = new JRadioButtonMenuItem("<html><b>Excel</b>           - <i><font color='green'>Write to a Excel file                           </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_EXCEL, DEFAULT_COPY_RESULTS_EXCEL));
+				final JMenuItem csv_mi     = new JRadioButtonMenuItem("<html><b>CSV</b>             - <i><font color='green'>Commas Separated Values Format                  </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_CSV,   DEFAULT_COPY_RESULTS_CSV));
+				final JMenuItem csvCfg_mi  = new JMenuItem           ("<html><b>CSV, Config...</b>  - <i><font color='green'>Opens a Dialog, where you can set separators etc</font></i></html>");
+				final JMenuItem json_mi    = new JRadioButtonMenuItem("<html><b>JSON</b>            - <i><font color='green'>Tables will be copied in JSON format            </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_JSON,  DEFAULT_COPY_RESULTS_JSON));
+				final JMenuItem jsonCfg_mi = new JMenuItem           ("<html><b>JSON, Config...</b> - <i><font color='green'>Opens a Dialog, where you can set separators etc</font></i></html>");
 
 				ButtonGroup group = new ButtonGroup();
 				group.add(ascii_mi);
 				group.add(html_mi);
 				group.add(excel_mi);
 				group.add(csv_mi);
+				group.add(json_mi);
+				group.add(jsonCfg_mi);
 
 				// Actions
 				ActionListener groupActionListener = new ActionListener()
@@ -11053,6 +11074,7 @@ checkPanelSize(_resPanel, comp);
 						tmpConf.setProperty(PROPKEY_COPY_RESULTS_HTML,  html_mi .isSelected());
 						tmpConf.setProperty(PROPKEY_COPY_RESULTS_EXCEL, excel_mi.isSelected());
 						tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV,   csv_mi  .isSelected());
+						tmpConf.setProperty(PROPKEY_COPY_RESULTS_JSON,  json_mi .isSelected());
 						saveProps();
 						
 						button.doClick();
@@ -11062,6 +11084,7 @@ checkPanelSize(_resPanel, comp);
 				html_mi  .addActionListener(groupActionListener);
 				excel_mi .addActionListener(groupActionListener);
 				csv_mi   .addActionListener(groupActionListener);
+				json_mi  .addActionListener(groupActionListener);
 
 				// Action for CSV Config
 				csvCfg_mi.addActionListener(new ActionListener()
@@ -11070,34 +11093,16 @@ checkPanelSize(_resPanel, comp);
 					public void actionPerformed(ActionEvent e)
 					{
 						CsvConfigDialog.showDialog(_window);
-//						String key0 = "<html>Use RFC 4180<br>http://tools.ietf.org/html/rfc4180</html>";
-//						String key1 = "Column Separator";
-//						String key2 = "Row Separator";
-//						String key3 = "NULL Value Replacement";
-//						String key4 = "Copy Headers";
-//						String key5 = "Copy Messages, etc";
-//
-//						LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
-//						in.put(key0, Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV_RFC_4180,    DEFAULT_COPY_RESULTS_CSV_RFC_4180) + "");
-//						in.put(key1, Configuration.getCombinedConfiguration().getPropertyRawVal( PROPKEY_COPY_RESULTS_CSV_COL_SEP,     DEFAULT_COPY_RESULTS_CSV_COL_SEP));
-//						in.put(key2, Configuration.getCombinedConfiguration().getPropertyRawVal( PROPKEY_COPY_RESULTS_CSV_ROW_SEP,     DEFAULT_COPY_RESULTS_CSV_ROW_SEP));
-//						in.put(key3, Configuration.getCombinedConfiguration().getProperty(       PROPKEY_COPY_RESULTS_CSV_NULL_OUTPUT, DEFAULT_COPY_RESULTS_CSV_NULL_OUTPUT));
-//						in.put(key4, Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV_HEADERS,     DEFAULT_COPY_RESULTS_CSV_HEADERS)  + "");
-//						in.put(key5, Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV_MESSAGES,    DEFAULT_COPY_RESULTS_CSV_MESSAGES) + "");
-//
-//						Map<String,String> results = ParameterDialog.showParameterDialog(_window, "CSV Separators", in, false);
-//
-//						if (results != null)
-//						{
-//							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_RFC_4180,    results.get(key0));
-//							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_COL_SEP,     results.get(key1));
-//							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_ROW_SEP,     results.get(key2));
-//							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_NULL_OUTPUT, results.get(key3));
-//							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_HEADERS,     results.get(key4));
-//							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_MESSAGES,    results.get(key5));
-//							
-//							saveProps();
-//						}
+					}
+				});
+
+				// Action for JSON Config
+				jsonCfg_mi.addActionListener(new ActionListener()
+				{
+					@Override
+					public void actionPerformed(ActionEvent e)
+					{
+						JsonConfigDialog.showDialog(_window);
 					}
 				});
 
@@ -11107,6 +11112,8 @@ checkPanelSize(_resPanel, comp);
 				popupMenu.add(excel_mi);
 				popupMenu.add(csv_mi);
 				popupMenu.add(csvCfg_mi);
+				popupMenu.add(json_mi);
+				popupMenu.add(jsonCfg_mi);
 			}
 			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
 			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
@@ -11146,6 +11153,7 @@ checkPanelSize(_resPanel, comp);
 				boolean asHtml  = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_HTML,  DEFAULT_COPY_RESULTS_HTML);
 				boolean asExcel = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_EXCEL, DEFAULT_COPY_RESULTS_EXCEL);
 				boolean asCsv   = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV,   DEFAULT_COPY_RESULTS_CSV);
+				boolean asJson  = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_JSON,  DEFAULT_COPY_RESULTS_JSON);
 
 				// Check what type we should copy (ASCII is the default)
 				StringBuilder sb;
@@ -11153,6 +11161,7 @@ checkPanelSize(_resPanel, comp);
 				else if (asHtml)  sb = getResultPanelAsHtml (_resPanel);
 				else if (asExcel) sb = getResultPanelAsExcel(_resPanel);
 				else if (asCsv)   sb = getResultPanelAsCsv  (_resPanel);
+				else if (asJson)  sb = getResultPanelAsJson (_resPanel);
 				else              sb = getResultPanelAsAscii(_resPanel);
 
 				if (sb != null)
@@ -11474,6 +11483,139 @@ checkPanelSize(_resPanel, comp);
 						sb.append("\n");
 					//sb.append(terminatorStr);
 				}
+			}
+		}
+		return sb;
+	}
+	private StringBuilder getResultPanelAsJson(JComponent panel)
+	{
+		boolean copyOnlyRs    = Configuration.getCombinedConfiguration().getBooleanProperty(QueryWindow.PROPKEY_COPY_RESULTS_JSON_ONLY_RS       , QueryWindow.DEFAULT_COPY_RESULTS_JSON_ONLY_RS);
+		boolean copyMetaData  = Configuration.getCombinedConfiguration().getBooleanProperty(QueryWindow.PROPKEY_COPY_RESULTS_JSON_METADATA      , QueryWindow.DEFAULT_COPY_RESULTS_JSON_METADATA);
+		boolean doPrettyPrint = Configuration.getCombinedConfiguration().getBooleanProperty(QueryWindow.PROPKEY_COPY_RESULTS_JSON_PRETTY_PRINT  , QueryWindow.DEFAULT_COPY_RESULTS_JSON_PRETTY_PRINT);
+		boolean tsAsIso_8601  = Configuration.getCombinedConfiguration().getBooleanProperty(QueryWindow.PROPKEY_COPY_RESULTS_JSON_TS_AS_ISO_8601, QueryWindow.DEFAULT_COPY_RESULTS_JSON_TS_AS_ISO_8601);
+
+		StringBuilder sb = new StringBuilder();
+//		String terminatorStr = "\n";
+//		String terminatorStr = "----------------------------------------------------------------------------\n";
+
+		for (int i=0; i<panel.getComponentCount(); i++)
+		{
+			Component comp = (Component) panel.getComponent(i);
+			if (comp instanceof JPanel)
+			{
+				if (comp instanceof GTableFilter)
+				{
+					if (copyOnlyRs)
+						continue;
+
+					GTableFilter filter = (GTableFilter)comp;
+					if (filter.hasFilterInfo())
+					{
+						String str = filter.getFilterInfo();
+						sb.append( str );
+						if ( ! str.endsWith("\n") )
+							sb.append("\n");
+					}
+				}
+				else
+				{
+					sb.append( getResultPanelAsJson( (JPanel)comp ) );
+				}
+			}
+			else if (comp instanceof JTabbedPane)
+			{
+				JTabbedPane tp = (JTabbedPane) comp;
+				for (int t=0; t<tp.getTabCount(); t++)
+				{
+					Component tabComp = tp.getComponentAt(t);
+					if (tabComp instanceof JComponent)
+						sb.append( getResultPanelAsJson((JComponent)tabComp) );
+				}
+			}
+			else if (comp instanceof JTable)
+			{
+				JTable table = (JTable)comp;
+//				String textTable = SwingUtils.tableToString(table);
+				TableModel tm = table.getModel();
+				String textTable = "";
+				if (tm instanceof ResultSetTableModel)
+				{
+					ResultSetTableModel rstm = (ResultSetTableModel) tm;
+					try 
+					{
+						textTable = rstm.toJson(copyMetaData, doPrettyPrint, tsAsIso_8601);
+					}
+					catch (IOException ex) 
+					{
+						textTable = StringUtil.exceptionToString(ex);
+					}
+				}
+				else
+				{
+					sb.append("############################################################################### \n");
+					sb.append("## The table model in NOT supported. tm='" + tm.getClass().getName() + "' \n");
+					sb.append("## Printing a ASCII Table instead. \n");
+					sb.append("############################################################################### \n");
+					textTable = SwingUtils.tableToString(table);
+				}
+				sb.append( textTable );
+				if ( ! textTable.endsWith("\n") )
+					sb.append("\n");
+				sb.append("\n");
+				//sb.append(terminatorStr);
+			}
+			else if (comp instanceof JEditorPane)
+			{
+				if (copyOnlyRs)
+					continue;
+
+				JEditorPane text = (JEditorPane)comp;
+//				sb.append( StringUtil.stripHtml(text.getText()) );
+
+				// text.getText(), will get the actual HTML content and we just want the text
+				// so lets copy the stuff into the clipboard and get it from there :)
+				// Striping the HTML is an alternative, but that lead to other problems
+				text.selectAll();
+				text.copy();
+				text.select(0, 0);
+
+				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+				Transferable clipData = clipboard.getContents(this);
+				String strFromClipboard;
+				try { strFromClipboard = (String) clipData.getTransferData(DataFlavor.stringFlavor); } 
+				catch (Exception ee) { strFromClipboard = ee.toString(); }
+
+				sb.append( strFromClipboard );
+				if ( ! strFromClipboard.endsWith("\n") )
+					sb.append("\n");
+				//sb.append(terminatorStr);
+			}
+			else if (comp instanceof JTextArea)  // JAseMessage extends JTextArea
+			{
+				if (copyOnlyRs)
+					continue;
+
+				JTextArea text = (JTextArea)comp;
+				String str = text.getText();
+				sb.append( str );
+				if ( ! str.endsWith("\n") )
+					sb.append("\n");
+				//sb.append(terminatorStr);
+			}
+			else if (comp instanceof JTableHeader)
+			{
+				// discard the table header, we get that info in JTable
+			}
+			else
+			{
+				if (copyOnlyRs)
+					continue;
+
+				String str = comp.toString();
+				sb.append( str );
+				if ( ! str.endsWith("\n") )
+					sb.append("\n");
+				//sb.append(terminatorStr);
 			}
 		}
 		return sb;

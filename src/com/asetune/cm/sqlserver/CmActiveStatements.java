@@ -1494,6 +1494,17 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 						boolean onlySendAlarmForExclusiveLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX);
 
+						// TODO; // Possibly add "skip" on below column names
+						// +---------------+----------------+
+						// |Column Name    |Ex Column Value |
+						// +---------------+----------------+
+						// |tran_name      |user_transaction|
+						// |ProcName       |WriteLockSession|
+						// |HOST_NAME      |MM-OP-SSRS      |
+						// |database_name  |ReportServer    |
+						// |program_name   |Report Server   |
+						// +---------------+----------------+
+						
 						if ( (onlySendAlarmForExclusiveLocks && hasExlusiveLocks) || onlySendAlarmForExclusiveLocks == false )
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);

@@ -77,10 +77,14 @@ implements SybMessageHandler, AutoCloseable
 	private boolean            _printSqlInGlobalMsgHandler = true;
 	
 	private String             _currentSqlStatement        = null;
-	private boolean            _rsAsciiTable               = false;
+	private boolean            _rsAsAsciiTable             = false;
+	private boolean            _rsAsJson                   = false;
 
-	public boolean       getRsAsAsciiTable()          { return _rsAsciiTable; }
-	public AseSqlScript  setRsAsAsciiTable(boolean b) { _rsAsciiTable = b; return this; }
+	public boolean       getRsAsAsciiTable()          { return _rsAsAsciiTable; }
+	public AseSqlScript  setRsAsAsciiTable(boolean b) { _rsAsAsciiTable = b; return this; }
+
+	public boolean       getRsAsJson()                { return _rsAsJson; }
+	public AseSqlScript  setRsAsJson(boolean b)       { _rsAsJson = b; return this; }
 
 	public AseSqlScript  setDiscardDbmsErrorNumbers(List<Integer> list) { _discardDbmsErrorNumList  = list; return this; }
 	public AseSqlScript  setDiscardDbmsErrorText   (List<String> list)  { _discardDbmsErrorTextList = list; return this; }
@@ -590,10 +594,9 @@ implements SybMessageHandler, AutoCloseable
 							ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
 
 							// Write ResultSet Content as a "string table"
-							if (_rsAsciiTable)
-								sb.append(tm.toAsciiTableString());
-							else
-								sb.append(tm.toTableString());
+							if      (_rsAsAsciiTable) sb.append(tm.toAsciiTableString());
+							else if (_rsAsJson)       sb.append(tm.toJson());
+							else                      sb.append(tm.toTableString());
 
 							// Append, messages and Warnings to output, if any
 							sb.append(getSqlWarningMsgs(stmnt, true));

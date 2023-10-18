@@ -24,6 +24,8 @@
  */
 package com.asetune.gui;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
@@ -61,6 +63,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.h2.tools.SimpleResultSet;
 import org.jdesktop.swingx.decorator.Highlighter;
 
 import com.asetune.cm.ResultSetTableComparator;
@@ -77,9 +80,18 @@ import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.JsonUtils;
+import com.asetune.utils.JsonUtils.MissingFieldException;
 import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.TimeUtils;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 /**
@@ -161,6 +173,8 @@ public class ResultSetTableModel
 	private ArrayList<String>            _rsmdColumnTypeName    = new ArrayList<String>();  // rsmd.getColumnTypeName(c);
 	private ArrayList<String>            _rsmdColumnTypeNameStr = new ArrayList<String>();  // kind of 'SQL' datatype: this.getColumnTypeName(rsmd, c);
 	private ArrayList<String>            _rsmdColumnClassName   = new ArrayList<String>();  // rsmd.getColumnClassName(c);
+	private ArrayList<Integer>           _rsmdColumnPrecision   = new ArrayList<Integer>(); // rsmd.getPrecision(c);
+	private ArrayList<Integer>           _rsmdColumnScale       = new ArrayList<Integer>(); // rsmd.getScale(c);
 	private ArrayList<Integer>           _displaySize           = new ArrayList<Integer>(); // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
 	private Class[]          _classType             = null; // first found class of value, which wasn't null
 	private ArrayList<ArrayList<Object>> _rows                  = new ArrayList<ArrayList<Object>>();
@@ -319,7 +333,9 @@ public class ResultSetTableModel
 			_rsmdColumnClassName  .add("java.lang.Integer");
 			_rsmdColumnTypeName   .add("int");
 			_rsmdColumnTypeNameStr.add("int");
-			_displaySize          .add(new Integer(10));
+			_rsmdColumnPrecision  .add(10);
+			_rsmdColumnScale      .add(0);
+			_displaySize          .add(10);
 			_rsmdRefTableName     .add("-none-");
 			_classType[0]         = Integer.class;
 		}
@@ -379,6 +395,8 @@ public class ResultSetTableModel
 			_rsmdColumnClassName  .add(columnClassName);
 			_rsmdColumnTypeName   .add(columnTypeNameRaw);
 			_rsmdColumnTypeNameStr.add(columnTypeNameGen);
+			_rsmdColumnPrecision  .add(rsmd.getPrecision(c));
+			_rsmdColumnScale      .add(rsmd.getScale(c));
 			_displaySize          .add(new Integer(columnDisplaySize));
 			_rsmdRefTableName     .add(fullRefTableName);
 			
@@ -613,6 +631,8 @@ public class ResultSetTableModel
 		_rsmdColumnTypeName    = new ArrayList<String> (rstm._rsmdColumnTypeName   );  // rsmd.getColumnTypeName(c);
 		_rsmdColumnTypeNameStr = new ArrayList<String> (rstm._rsmdColumnTypeNameStr);  // kind of 'SQL' datatype: this.getColumnTypeName(rsmd, c);
 		_rsmdColumnClassName   = new ArrayList<String> (rstm._rsmdColumnClassName  );  // rsmd.getColumnClassName(c);
+		_rsmdColumnPrecision   = new ArrayList<Integer>(rstm._rsmdColumnPrecision  );
+		_rsmdColumnScale       = new ArrayList<Integer>(rstm._rsmdColumnScale      );
 		_displaySize           = new ArrayList<Integer>(rstm._displaySize          ); // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
 		_classType             = rstm._classType; // first found class of value, which wasn't null
 		_rows                  = new ArrayList<ArrayList<Object>>();
@@ -3177,6 +3197,8 @@ public class ResultSetTableModel
 			_rsmdColumnTypeName   .remove(colIndex);
 			_rsmdColumnTypeNameStr.remove(colIndex);
 			_rsmdColumnClassName  .remove(colIndex);
+			_rsmdColumnPrecision  .remove(colIndex);
+			_rsmdColumnScale      .remove(colIndex);
 			_displaySize          .remove(colIndex);
 			
 			_classType = ArrayUtils.remove(_classType, colIndex);
@@ -3218,6 +3240,8 @@ public class ResultSetTableModel
 			_rsmdColumnTypeName   .add(pos, sqlTypeShort);
 			_rsmdColumnTypeNameStr.add(pos, sqlTypeLong);
 			_rsmdColumnClassName  .add(pos, clazz.getName());
+			_rsmdColumnPrecision  .add(pos, length);
+			_rsmdColumnScale      .add(pos, scale);
 			_displaySize          .add(pos, (length > 0) ? length : 12);
 			
 			_classType = ArrayUtils.insert(pos+1, _classType, clazz);
@@ -4805,8 +4829,473 @@ public class ResultSetTableModel
 	//-------------------------------------------------------------------------------------------------------------
 	// END: Parse text table (produced by method xxx) and create a ResultSetTableModel (without data types)
 	//-------------------------------------------------------------------------------------------------------------
+
+
+
+	//-------------------------------------------------------------------------------------------------------------
+	// BEGIN: JSON methods
+	//-------------------------------------------------------------------------------------------------------------
+	public static final int JSON_MESSAGE_VERSION = 1;
+
+	/**
+	 * Get a JSON String from the object
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	public String toJson()
+	throws IOException
+	{
+		return toJson(true, true, true);
+	}
+
+	/**
+	 * Get a JSON String from the object
+	 * <p>
+	 * if printMetaData == true
+	 * <pre>
+	 * {                                                                                                            
+	 *   "head" : {                                                                                                 
+	 *     "type" : "ResultSetTableModel",                                                                          
+	 *     "messageVersion" : 1,                                                                                    
+	 *     "name" : "select name, database_id, create_date from sys.databases",
+	 *     "columnCount" : 3,                                                                                       
+	 *     "rowCount" : 3                                                                                          
+	 *   },                                                                                                         
+	 *   "metaData" : [ {                                                                                           
+	 *     "columnName" : "name",                                                                                   
+	 *     "jdbcTypeName" : "java.sql.Types.NVARCHAR",                                                              
+	 *     "jdbcTypeLength" : 128,                                                                                  
+	 *     "guessedDbmsType" : "nvarchar(128)"                                                                      
+	 *   }, {                                                                                                       
+	 *     "columnName" : "database_id",                                                                            
+	 *     "jdbcTypeName" : "java.sql.Types.INTEGER",                                                               
+	 *     "jdbcTypeLength" : 11,                                                                                   
+	 *     "guessedDbmsType" : "int"                                                                                
+	 *   }, {                                                                                                       
+	 *     "columnName" : "create_date",                                                                            
+	 *     "jdbcTypeName" : "java.sql.Types.TIMESTAMP",                                                             
+	 *     "jdbcTypeLength" : 23,                                                                                   
+	 *     "guessedDbmsType" : "datetime"                                                                           
+	 *   } ],                                                                                                       
+	 *   "rows" : [ {                                                                                               
+	 *     "name" : "master",                                                                                       
+	 *     "database_id" : 1,                                                                                       
+	 *     "create_date" : "2003-04-08T09:13:36.390+02:00"                                                          
+	 *   }, {                                                                                                       
+	 *     "name" : "tempdb",                                                                                       
+	 *     "database_id" : 2,                                                                                       
+	 *     "create_date" : "2023-07-25T11:45:43.963+02:00"                                                          
+	 *   }, {                                                                                                       
+	 *     "name" : "tpcc",                                                                                         
+	 *     "database_id" : 10,                                                                                      
+	 *     "create_date" : "2021-02-07T21:53:43.730+01:00"                                                          
+	 *   } ]                                                                                                        
+	 * }                                                                                                            
+	 * </pre>
+	 * 
+	 * if printMetaData == false
+	 * <pre>
+	 * [ {                                              
+	 *   "name" : "master",                             
+	 *   "database_id" : 1,                             
+	 *   "create_date" : "2003-04-08T09:13:36.390+02:00"
+	 * }, {                                             
+	 *   "name" : "tempdb",                             
+	 *   "database_id" : 2,                             
+	 *   "create_date" : "2023-07-25T11:45:43.963+02:00"
+	 * }, {                                             
+	 *   "name" : "tpcc",                               
+	 *   "database_id" : 10,                            
+	 *   "create_date" : "2021-02-07T21:53:43.730+01:00"
+	 * } ]                                              
+	 * </pre>
+	 * 
+	 * @param printMetaData    See above example. But if true, it's more ease to parse the information and create a ResultSetTableModel object with method parseJson()
+	 * @param doPrettyPrint    If we want it readable or compact
+	 * @param tsAsIso_8601     Timestamps as ISO 8601 format <code>yyyy-MM-dd'T'HH:mm:ss.SSSXXX</code>, otherwise it will be as a milliseconds since Epoch
+	 * @return
+	 * @throws IOException
+	 */
+	public String toJson(boolean printMetaData, boolean doPrettyPrint, boolean tsAsIso_8601)
+	throws IOException
+	{
+		StringWriter sw = new StringWriter();
+
+		JsonFactory jfactory = new JsonFactory();
+		JsonGenerator gen = jfactory.createGenerator(sw);
+		if (doPrettyPrint)
+			gen.setPrettyPrinter(new DefaultPrettyPrinter());
+		gen.setCodec(new ObjectMapper(jfactory));
+
+		boolean printHead = printMetaData;
+
+		if (printHead)
+		{
+			// START object
+			gen.writeStartObject();
+
+			gen.writeFieldName("head");
+			gen.writeStartObject();
+				gen.writeStringField("type"                   , this.getClass().getSimpleName());
+				gen.writeNumberField("messageVersion"         , JSON_MESSAGE_VERSION);
+//				gen.writeStringField("serverName"             , cont.getServerName());
+				gen.writeStringField("name"                   , getName());
+				gen.writeNumberField("columnCount"            , getColumnCount());
+				gen.writeNumberField("rowCount"               , getRowCount());
+			gen.writeEndObject();
+			
+		}
+
+//		if (printMessages)
+//		{
+//			// SQL Exceptions/SQLWarnings we got during execution ???
+//			gen.writeFieldName("messages");
+//			gen.writeStartArray(); 
+//	    		gen.writeStartObject();
+//	    			gen.writeStringField("message", xxx);
+//	    		gen.writeEndObject();
+//			gen.writeEndArray();
+//		}
+
+		// META DATA
+		if (printMetaData)
+		{
+			gen.writeFieldName("metaData");
+			gen.writeStartArray(); 
+			// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
+			for (int c=0; c<getColumnCount(); c++)
+			{
+				gen.writeStartObject();
+				
+				// Always Write Column Name
+				gen.writeStringField ("columnName"     , getColumnName(c));
+
+				// Write JDBC info
+				gen.writeStringField ("jdbcTypeName"   , getColumnJavaSqlTypeName(getSqlType(c)));
+				gen.writeNumberField ("jdbcTypeLength" , getColumnDisplaySize(c));
+				switch (_rsmdColumnType.get(c))
+				{
+					case Types.DECIMAL:
+//					case Types.DOUBLE:
+//					case Types.FLOAT:
+					case Types.NUMERIC:
+//					case Types.REAL:
+						gen.writeNumberField ("jdbcPrecision", _rsmdColumnPrecision.get(c));
+						gen.writeNumberField ("jdbcScale"    , _rsmdColumnScale    .get(c));
+						break;
+				}
+//				gen.writeNumberField ("jdbcPrecision", _rsmdColumnPrecision.get(c));
+//				gen.writeNumberField ("jdbcScale"    , _rsmdColumnScale    .get(c));
+//				gen.writeStringField ("javaClassName"  , _rsmdColumnClassName.get(c));
+				gen.writeStringField ("guessedDbmsType", getGuessedDbmsDatatype(c));
+
+				gen.writeEndObject();
+			}
+			gen.writeEndArray(); 
+		}
+		
+		// ROWS
+		if (printMetaData)
+		{
+			gen.writeFieldName("rows");
+		}
+		gen.writeStartArray(); 
+		for (int r=0; r<getRowCount(); r++)
+		{
+			gen.writeStartObject();
+
+			for (int c=0; c<getColumnCount(); c++)
+			{
+				Object oVal = getValueAsObject(r, c);
+
+				switch (getSqlType(c))
+				{
+				case Types.TIMESTAMP:
+					if (tsAsIso_8601)
+					{
+						String iso8601 = null;
+						if (oVal instanceof Timestamp)
+						{
+							iso8601 = TimeUtils.toStringIso8601( (Timestamp) oVal);
+						}
+						else if (oVal instanceof Long)
+						{
+							iso8601 = TimeUtils.toStringIso8601( (Long) oVal);
+						}
+						gen.writeObjectField(getColumnName(c), iso8601);
+					}
+					else
+					{
+						gen.writeObjectField(getColumnName(c), oVal);
+					}
+					break;
+
+				default:
+					gen.writeObjectField(getColumnName(c), oVal);
+					break;
+				}
+			}
+			
+			gen.writeEndObject();
+		}
+		gen.writeEndArray();
+
+		// END object
+		if (printHead)
+		{
+			gen.writeEndObject();
+		}
+
+		gen.close();
+
+		String jsonStr = sw.toString();
+//throw new RuntimeException("--NOT-YET-IMPLEMENTED--");
+		return jsonStr;
+	}
+
+	public static ResultSetTableModel parseJson(String json)
+	throws JsonProcessingException, IOException, MissingFieldException
+	{
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode root = mapper.readTree(json);
+			
+		if (root == null)
+		{
+			_logger.error("Problems reading JSON, possibly a bad JSON string. JSON=" + json);
+			throw new IOException("Problems reading JSON, possibly a bad JSON string. JSON-first-part=" + json.substring(0, 150));
+		}
+
+		// head
+		JsonNode headNode = JsonUtils.getNode(root, "head");
+		String type            = JsonUtils.getString(headNode, "type",           "ResultSetTableModel");
+		int    messageVersion  = JsonUtils.getInt   (headNode, "messageVersion", 1);
+		String name            = JsonUtils.getString(headNode, "name",           "");
+		int    metaColumnCount = JsonUtils.getInt   (headNode, "columnCount",    -1);
+		int    metaRowCount    = JsonUtils.getInt   (headNode, "rowCount",       -1);
+
+//System.out.println("HEAD: type=|" + type + "|, messageVersion=|" + messageVersion + "|, name=|" + name + "|");
+
+		// Create a new ResultSetTableModel
+		ResultSetTableModel rstm = new ResultSetTableModel(name);
+
+		// metaData
+		JsonNode metaDatasNode = JsonUtils.getNode(root, "metaData");
+		if (_logger.isDebugEnabled())
+			_logger.debug(" - metaData.count='"+metaDatasNode.size()+"'.");
+		int pos=-1;
+		for (JsonNode metaData : metaDatasNode)
+		{
+			pos++;
+			String    columnName      = JsonUtils.getString(metaData, "columnName");      // Mandatory
+			String    jdbcTypeName    = JsonUtils.getString(metaData, "jdbcTypeName");    // Mandatory
+			int       jdbcTypeLength  = JsonUtils.getInt   (metaData, "jdbcTypeLength");  // Mandatory
+//			int       jdbcPrecision   = JsonUtils.getInt   (metaData, "jdbcPrecision", -1);
+			int       jdbcScale       = JsonUtils.getInt   (metaData, "jdbcScale"    , -1); // Only if we have NUMERIC, DECIMAL
+//			String    javaClassName   = JsonUtils.getString(metaData, "javaClassName");
+//			String    guessedDbmsType = JsonUtils.getString(metaData, "guessedDbmsType", "");
+
+			int      jdbcType     = ResultSetTableModel.getColumnJavaSqlTypeNameToInt(jdbcTypeName);
+			Class<?> clazz        = ResultSetTableModel.getJavaClassFromJdbcType(jdbcType);
+			String   sqlTypeShort = "";
+			String   sqlTypeLong  = "";
+			rstm.addColumn(columnName, pos, jdbcType, sqlTypeShort, sqlTypeLong, jdbcTypeLength, jdbcScale, null, clazz);
+		}
+
+		// rows
+		JsonNode rowsNode = JsonUtils.getNode(root, "rows");
+		if (_logger.isDebugEnabled())
+			_logger.debug(" - rows.count='"+rowsNode.size()+"'.");
+		for (JsonNode row : rowsNode)
+		{
+			ArrayList<Object> rowList = new ArrayList<>( metaColumnCount > 1 ? metaColumnCount : 10); 
+			for (Iterator<Entry<String, JsonNode>> iter = row.fields(); iter.hasNext(); ) 
+			{
+				Entry<String, JsonNode> entry = iter.next();
+				
+				String fieldName  = entry.getKey();
+				int colPos = rstm.findColumn(fieldName);
+				int jdbcType = Integer.MIN_VALUE;
+				if (colPos != -1)
+					jdbcType = rstm.getSqlType(colPos);
+
+				JsonNode node = entry.getValue();
+				Object   val  = jsonParseReadDataValue(node, jdbcType);
+				
+				// Add it at the correct position... (not 100% sure if this will work... if a index position is larger than the max length of the list...)
+				if (colPos != -1)
+					rowList.add(colPos, val);
+				else
+					rowList.add(val);
+			}
+			rstm.addRow(rowList);
+		}
+
+		return rstm;
+	}
+	/**
+	 * Read a text which may contain MANY JSON results (with "various" texts in between the JSON Objects)
+	 * @param input   The String to parse
+	 * @return A List of ResultSetTableModel, empty if not possible to parse...
+	 */
+	public static List<ResultSetTableModel> parseJsonMultiText(String input)
+	{
+		// Extract each JSON section as it's own entry into the 'jsonList'
+		// This extract every string "chunk" between curly braces: {...}
+		List<String> jsonList = JsonUtils.getJsonObjectsFromString(input);
+
+		if (jsonList.isEmpty())
+			return Collections.emptyList();
+		
+		// Parse each of the JSON strings into ResultSetTableModel object(s)
+		List<ResultSetTableModel> rstmList = new ArrayList<>();
+		for (String jsonStr : jsonList)
+		{
+			try
+			{
+				ResultSetTableModel rstm = ResultSetTableModel.parseJson(jsonStr);
+				rstmList.add(rstm);
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Problems parsting the JSON String into a ResultSetTableModel, skipping this and continuing with next. Failed JSON=|" + jsonStr + "|", ex);
+			}
+		}
+		return rstmList;
+	}
 	
+	private static Object jsonParseReadDataValue(JsonNode node, int columnType)
+	{
+		if (columnType == java.sql.Types.TIMESTAMP)
+		{
+			Object val = JsonUtils.createObjectFromNodeType(node);
+			if (val instanceof Number)
+			{
+				val = new Timestamp( ((Number)val).longValue() );
+			}
+			else if (val instanceof String)
+			{
+				try { val = TimeUtils.parseToTimestampIso8601( (String) val ); }
+				catch (ParseException ex)
+				{
+					_logger.warn("Problems parsing Iso8601 String '" + val + "' to TimeStamp. ", ex);
+				}
+			}
+			return val;
+		}
+
+		// FOR ALL OTHERS
+		return JsonUtils.createObjectFromNodeType(node);
+	}
+
+//	private static Object jsonParseReadDataValue(JsonNode node, int columnType)
+//	{
+//		switch (columnType)
+//		{
+//		case java.sql.Types.BIT:           return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.TINYINT:       return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.SMALLINT:      return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.INTEGER:       return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.BIGINT:        return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.FLOAT:         return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.REAL:          return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.DOUBLE:        return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.NUMERIC:       return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.DECIMAL:       return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.CHAR:          return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.VARCHAR:       return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.LONGVARCHAR:   return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.DATE:          return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.TIME:          return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.TIMESTAMP:
+//		{
+//			Object val = JsonUtils.createObjectFromNodeType(node);
+//			if (val instanceof Number)
+//			{
+//				val = new Timestamp( ((Number)val).longValue() );
+//			}
+//			else if (val instanceof String)
+//			{
+//				try { val = TimeUtils.parseToTimestampIso8601( (String) val ); }
+//				catch (ParseException ex)
+//				{
+//					_logger.warn("Problems parsing Iso8601 String '" + val + "' to TimeStamp. ", ex);
+//				}
+//			}
+//			return val;
+//		}
+//		case java.sql.Types.BINARY:        return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.VARBINARY:     return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.LONGVARBINARY: return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.NULL:          return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.OTHER:         return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.JAVA_OBJECT:   return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.DISTINCT:      return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.STRUCT:        return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.ARRAY:         return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.BLOB:          return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.CLOB:          return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.REF:           return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.DATALINK:      return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.BOOLEAN:       return JsonUtils.createObjectFromNodeType(node);
+//
+//		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
+//		case java.sql.Types.ROWID:         return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.NCHAR:         return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.NVARCHAR:      return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.LONGNVARCHAR:  return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.NCLOB:         return JsonUtils.createObjectFromNodeType(node);
+//		case java.sql.Types.SQLXML:        return JsonUtils.createObjectFromNodeType(node);
+//
+//		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
+////		case java.sql.Types.REF_CURSOR:              return false;
+////		case java.sql.Types.TIME_WITH_TIMEZONE:      return false;
+////		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return false;
+//		case 2012:                                   return JsonUtils.createObjectFromNodeType(node);
+//		case 2013:                                   return JsonUtils.createObjectFromNodeType(node);
+//		case 2014:                                   return JsonUtils.createObjectFromNodeType(node);
+//		
+//
+//		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
+//		case -100:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+//		case -101:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+//		case -102:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+//		case -103:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.INTERVALYM";
+//		case -104:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.INTERVALDS";
+//		case  -10:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.CURSOR";
+//		case  -13:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.BFILE";
+//		case 2007:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.OPAQUE";
+//		case 2008:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+//		case  -14:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+//		case  100:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+//		case  101:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+////		case    2:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+////		case   -2:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+//		case  999:                         return JsonUtils.createObjectFromNodeType(node); // "oracle.jdbc.OracleTypes.FIXED_CHAR";
+//
+//	    case -155:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.DATETIMEOFFSET";
+//	    case -153:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.STRUCTURED";
+//	    case -151:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.DATETIME";
+//	    case -150:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.SMALLDATETIME";
+//	    case -148:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.MONEY";
+//	    case -146:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.SMALLMONEY";
+//	    case -145:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.GUID";
+//	    case -156:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.SQL_VARIANT";
+//	    case -157:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.GEOMETRY";
+//	    case -158:                         return JsonUtils.createObjectFromNodeType(node); //  "microsoft.sql.GEOGRAPHY";
+//
+//	    //------------------------- UNHANDLED TYPES  ---------------------------
+//		default:
+//			return JsonUtils.createObjectFromNodeType(node);
+//		}
+//	}
 	
+	//-------------------------------------------------------------------------------------------------------------
+	// END: JSON methods
+	//-------------------------------------------------------------------------------------------------------------
+
+
+
 	//-------------------------------------------------------------------------------------------------------------
 	// BEGIN: Some static methods to execute sql etc
 	//-------------------------------------------------------------------------------------------------------------
@@ -4961,7 +5450,7 @@ public class ResultSetTableModel
 	// END: Some static methods to execute sql etc
 	//-------------------------------------------------------------------------------------------------------------
 	
-	public static void main(String[] args)
+	public static void main_XXX(String[] args)
 	{
 		Properties log4jProps = new Properties();
 		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
@@ -4997,6 +5486,49 @@ public class ResultSetTableModel
 			System.out.println("name='" + rstm.getName() + "', colCount=" + rstm.getColumnCount() + ", rowCount=" + rstm.getRowCount() + ", columns=" + rstm.getColumnNames() + ".");
 			for (int r=0; r<rstm.getRowCount(); r++)
 				System.out.println("    ROW[" + r + "] >> " + rstm.getRowList(r));
+		}
+		
+	}
+	public static void main(String[] args)
+	{
+		Properties log4jProps = new Properties();
+		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+
+		SimpleResultSet srs = new SimpleResultSet();
+		srs.addColumn("c_int",          Types.INTEGER,        0, 0);
+		srs.addColumn("c_bigint",       Types.BIGINT,         0, 0);
+		srs.addColumn("c_vc60",         Types.VARCHAR,       60, 0);
+		srs.addColumn("c_numeric_5_1",  Types.NUMERIC,        5, 1);
+		srs.addColumn("c_decimal_10_5", Types.DECIMAL,       10, 5);
+		srs.addColumn("c_double_10_5",  Types.DOUBLE,        10, 5);
+		srs.addColumn("timestamp",      Types.TIMESTAMP,      0, 0);
+
+		srs.addRow(1, 1, "row-1", 1.1, 2.12345, 9.98765, new Timestamp(System.currentTimeMillis()));
+		srs.addRow(2, 2, "row-2", 1.1, 2.12345, 9.98765, new Timestamp(System.currentTimeMillis()));
+		srs.addRow(3, 3, "row-3", 1.1, 2.12345, 9.98765, new Timestamp(System.currentTimeMillis()));
+		srs.addRow(4, 4, "row-4", 1.1, 2.12345, 9.98765, new Timestamp(System.currentTimeMillis()));
+		srs.addRow(5, 5, "row-5", 1.1, 2.12345, 9.98765, new Timestamp(System.currentTimeMillis()));
+
+		try
+		{
+			ResultSetTableModel rstm = new ResultSetTableModel(srs, "dummy");
+			
+			String json = rstm.toJson();
+			System.out.println("==========================================");
+			System.out.println(json);
+			System.out.println("==========================================");
+
+			ResultSetTableModel rsmdParsed = ResultSetTableModel.parseJson(json);
+			System.out.println("AsciiTable\n" + rsmdParsed.toAsciiTableString());
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
 		}
 		
 	}

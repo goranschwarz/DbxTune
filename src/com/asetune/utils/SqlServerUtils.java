@@ -1173,4 +1173,76 @@ public class SqlServerUtils
 		return rootBlockers;
 	}
 	
+	/**
+	 * Check ALL databases for the procedure 'name'
+	 * <ul>
+	 *     <li>First check in master</li>
+	 *     <li>Then check in reversed database order, so we get 'master' last</li>
+	 * </ul>
+	 * The "last" database we see the procedure in, we will use <br>
+	 */
+	public static String findProcNameInAnyDatabases(DbxConnection conn, String procName, String defaultIfNotFound, boolean printInfoOnNotFound)
+	{
+		if (conn == null)
+			return defaultIfNotFound;
+
+		// Check ALL databases for the procedure 'name' (in reversed database order, so we get 'master' last)
+		// The "last" database we see the procedure in, we will use
+		// if NO procedure was found, print a info message
+		String sql = ""
+			    + "DECLARE @dbname NVARCHAR(128)  = NULL; \n"
+			    + "DECLARE @dblist NVARCHAR(2000) = NULL; \n"
+			    + "DECLARE @sql    NVARCHAR(MAX)  = ''; \n"
+			    + " \n"
+			    + "/* Check if it exists in: master */ \n"
+			    + "IF EXISTS (select 1 from master.sys.all_objects where type = 'P' and name = 'sp_blitz') \n"
+			    + "    set @dbname = 'master' \n"
+			    + " \n"
+			    + "/* Check if it exists in: 'any other database' */ \n"
+			    + "IF (@dbname IS NULL) \n"
+			    + "BEGIN \n"
+			    + "    SELECT @sql = @sql + 'if exists(select 1 from ' + QUOTENAME(name) + '.sys.all_objects where type = ''P'' and name = ''" + procName + "'') set @dbname='''+name+'''' + char(10) \n"
+			    + "          ,@dblist = COALESCE(@dblist + ', ', '') + name \n"
+			    + "    FROM sys.databases \n"
+			    + "    WHERE state = 0 \n"              // Only databases in ONLINE mode
+			    + "      AND HAS_DBACCESS(name) = 1 \n" // Skips database that we do NOT have access to...
+			    + "    ORDER BY database_id DESC \n"    // Check master database last...
+			    + "     \n"
+			    + "    EXEC SP_EXECUTESQL \n"
+			    + "            @Query  = @sql \n"
+			    + "          , @Params = N'@dbname NVARCHAR(128) OUTPUT' \n"
+			    + "          , @dbname = @dbname OUTPUT \n"
+			    + "     \n"
+			    + "END \n"
+			    + " \n"
+			    + "select @dbname AS dbname, @dblist AS dblist \n"
+			    ;
+		
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			String dbname = null;
+			String dblist = null;
+
+			while(rs.next())
+			{
+				dbname = rs.getString(1);
+				dblist = rs.getString(2);
+			}
+			
+			if (StringUtil.isNullOrBlank(dbname))
+			{
+				dbname = defaultIfNotFound;
+
+				if (printInfoOnNotFound)
+					_logger.info("findProcNameInAnyDatabases(procName='" + procName + "'): Not found in any database. Searched databases: " + dblist);
+			}
+
+			return dbname;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems looking up Procedure Name '" + procName + "' from any database. ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Text='" + ex.getMessage()+ "'. SQL=|" + sql + "|, Caught: " + ex);
+			return defaultIfNotFound;
+		}
+	}
 }

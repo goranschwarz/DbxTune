@@ -3403,8 +3403,6 @@ implements Runnable, ConnectionProvider
 
 		return list;
 	}
-
-
 	/*---------------------------------------------------
 	** END: DDL reader
 	**---------------------------------------------------

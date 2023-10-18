@@ -159,6 +159,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JLabel           _lockWaits_lbl                             = new JLabel();
 	private JTextField       _rootBlockerSpids_txt                      = new JTextField();
 	private JLabel           _rootBlockerSpids_lbl                      = new JLabel();
+	private JTextField       _deadlockCount_txt                         = new JTextField();
+	private JTextField       _deadlockCountDiff_txt                     = new JTextField();
+	private JLabel           _deadlockCount_lbl                         = new JLabel();
 	private JLabel           _fullTranslog_lbl                          = new JLabel();
 	private JTextField       _fullTranslog_txt                          = new JTextField();
 	                                                                    
@@ -550,6 +553,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_rootBlockerSpids_txt.setToolTipText(tooltip);
 		_rootBlockerSpids_txt.setEditable(false);
 
+		tooltip = "<html>Number Deadlocks on this instance.<br>"
+				+ "If you have a deadlock <i>problem</i>, please run 'sp_blitzLock' from Brent Ozar's package 'First Responder Kit'...<br>"
+				+ "<br>"
+				+ "To find that package and how to use it; simply Google 'sp_blitzLock'.<br>"
+				+ "It will give you <i>details</i> and <i>summary</i> of what tables/SQL/procs that is responsible for the deadlocks.</html>";
+		_deadlockCount_lbl        .setText("Deadlocks");
+		_deadlockCount_lbl        .setToolTipText(tooltip);
+		_deadlockCount_txt        .setToolTipText(tooltip);
+		_deadlockCount_txt        .setEditable(false);
+		_deadlockCountDiff_txt    .setEditable(false);
+		_deadlockCountDiff_txt    .setToolTipText("The difference since previous sample.");
+		_deadlockCountDiff_txt.setForeground(Color.BLUE);
+		
 
 		//-----------------------------------------------------------------------------------
 		tooltip = "Number of databases that has a full transaction log, which probably means suspended SPID's.";
@@ -983,6 +999,10 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_rootBlockerSpids_lbl,                      "");
 		panel.add(_rootBlockerSpids_txt,                      "growx, wrap");
                                                               
+		panel.add(_deadlockCount_lbl,                         "");
+		panel.add(_deadlockCount_txt,                         "growx, split");
+		panel.add(_deadlockCountDiff_txt,                     "growx, wrap");
+		                                                      
 		panel.add(_fullTranslog_lbl,                          "");
 		panel.add(_fullTranslog_txt,                          "growx, wrap");
                                                               
@@ -1254,6 +1274,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lockWaits_txt                          .setText(cm.getAbsString (0, "LockWaits"));
 		_lockWaitsDiff_txt                      .setText(cm.getDiffString(0, "LockWaits"));
 		_rootBlockerSpids_txt                   .setText(cm.getAbsString (0, "RootBlockerSpids"));  _rootBlockerSpids_txt.setCaretPosition(0);
+		_deadlockCount_txt                      .setText(cm.getAbsString (0, "deadlockCount"));
+		_deadlockCountDiff_txt                  .setText(cm.getDiffString(0, "deadlockCount"));
 		_fullTranslog_txt                       .setText(cm.getAbsString (0, "fullTranslogCount"));
 		
 		_tempdbUsageMbAllAbs_txt		        .setText(cm.getAbsString (0, "tempdbUsageMbAll"));
@@ -1490,6 +1512,39 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		}
 		// end: Check LOCK WAITS and, do notification
 
+		
+		
+		//----------------------------------------------
+		// Check DEADLOCK and, do notification
+		//----------------------------------------------
+		int deadlockCount = StringUtil.parseInt(_deadlockCountDiff_txt.getText(), 0);
+		_logger.debug("DEADLOCK-COUNT-DIFF="+deadlockCount+", TEXT='"+_deadlockCountDiff_txt.getText()+"'.");
+		if (deadlockCount > 0)
+		{
+			_deadlockCount_txt       .setBackground(Color.RED);
+			_deadlockCountDiff_txt   .setBackground(Color.RED);
+
+//			boolean isVisibleInPrevSample = MainFrame.getInstance().hasDeadlocks();
+//			MainFrame.getInstance().setDeadlocks(true, deadlockCount);
+
+//			String toTabName = "Active Statements";
+//			if ( _focusToBlockingTab == null )
+//				_focusToBlockingTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Blocking Locks in the SQL-Server", cm.getGuiController().getTabbedPane(), toTabName);
+//
+//			if ( ! isVisibleInPrevSample )
+//				_focusToBlockingTab.setVisible(true);
+		}
+		else
+		{
+			_deadlockCount_txt       .setBackground(_atAtServerName_txt.getBackground());
+			_deadlockCountDiff_txt   .setBackground(_atAtServerName_txt.getBackground());
+
+//			MainFrame.getInstance().setDeadlocks(false, 0);
+		}
+		// end: Check DEADLOCKS and, do notification
+
+
+		
 		//----------------------------------------------
 		// Check FULL LOGS and, do notification
 		//----------------------------------------------
@@ -1589,6 +1644,8 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_lockWaits_txt                            .setText("");
 		_lockWaitsDiff_txt                        .setText("");
 		_rootBlockerSpids_txt                     .setText("");
+		_deadlockCount_txt                        .setText("");
+		_deadlockCountDiff_txt                    .setText("");
 		_fullTranslog_txt                         .setText("");
                                                   
 		_tempdbUsageMbAllAbs_txt                  .setText("");
