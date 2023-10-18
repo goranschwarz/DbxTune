@@ -264,6 +264,122 @@ extends SqlServerAbstract
 		return list;
 	}
 
+	/**
+	 * Set descriptions for the table, and the columns
+	 */
+	private void setSectionDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null)
+			return;
+		
+		// Section description
+		rstm.setDescription(
+				"Top SQL Statements (and it's Query Plan)...  (ordered by: " + _sqlOrderByCol + ") <br>" +
+				"<br>" +
+				"SqlServer Source table is 'dm_exec_query_stats'. <br>" +
+				"PCS Source table is 'CmExecQueryStats_diff'. (PCS = Persistent Counter Store) <br>" +
+				"");
+
+		// Columns description
+		rstm.setColumnDescription("dbname"                               , "Name of the database");
+		rstm.setColumnDescription("query_hash"                           , "Binary hash value calculated on the query and used to identify queries with similar logic. \nYou can use the query hash to determine the aggregate resource usage for queries that differ only by literal values");
+		rstm.setColumnDescription("SqlText"                              , "SQL Text typical for the 'query_hash'");
+		rstm.setColumnDescription("ExecPlan"                             , "The Execution Plan");
+		rstm.setColumnDescription("plan__count"                          , "");
+		rstm.setColumnDescription("efficiency_pct"                       , "How efficient is the statement. \n" +
+		                                                                   "This is a percentage calculation of how well we have used the CPU for this statement... or more precise: 'total_worker_time_ms__sum' / 'AvgDop' / 'total_elapsed_time_ms__sum' * 100.0 \n" +
+		                                                                   "The lower percentage, the more 'waitTime' we have. (it can be physical IO, blocking locks, Waiting to be sceduled or similar) \n" + 
+		                                                                   "And if it's a parallel query, where the DOP might be skewed (work is not evenly distributed over the worker threads), the percent will be 'lower'...");
+
+		rstm.setColumnDescription("execution_count__chart"               , "Chart showing 'execution count' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+		rstm.setColumnDescription("execution_count__sum"                 , "Number of times that the plan has been executed.");
+		rstm.setColumnDescription("creation_time__min"                   , "When was the plan compiled. The 'oldest' time... min(creation_time)");
+		rstm.setColumnDescription("last_execution_time__max"             , "Latest time when it was executed");
+                                                                         
+		rstm.setColumnDescription("elapsed_time__chart"                  , "Chart showing 'elapsed_time' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements elapsed time.");
+		rstm.setColumnDescription("total_elapsed_time_ms__sum"           , "Summary of all 'elapsed_time' for the recorded period ");
+		rstm.setColumnDescription("AvgElapsedTimeMs"                     , "Average 'elapsed_time' per execution.");
+		                                                                 
+		rstm.setColumnDescription("worker_time__chart"                   , "Chart showing 'worker_time' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements used CPU time.");
+		rstm.setColumnDescription("total_worker_time_ms__sum"            , "Actual CPU spent on this statement in the recording period.");
+		rstm.setColumnDescription("AvgWorkerTimeMs"                      , "Average 'worker_time' per execution.");
+		                                                                 
+		rstm.setColumnDescription("est_wait_time__chart"                 , "Chart showing 'wait_time' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) what the statements was waiting for 'stuff'.");
+		rstm.setColumnDescription("total_est_wait_time_ms__sum"          , "Summary of all 'wait_time' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgEstWaitTimeMs"                     , "Average 'wait_time' per execution.");
+		                                                                 
+		rstm.setColumnDescription("physical_reads__chart"                , "Chart showing 'physical_reads' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was doing physical_reads.");
+		rstm.setColumnDescription("total_physical_reads__sum"            , "Summary of all 'physical_reads' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgPhysicalReads"                     , "Average 'physical_reads' per execution.");
+		                                                                 
+		rstm.setColumnDescription("logical_writes__chart"                , "Chart showing 'logical_writes' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was doing logical_writes.");
+		rstm.setColumnDescription("total_logical_writes__sum"            , "Summary of all 'logical_writes' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgLogicalWrites"                     , "Average 'logical_writes' per execution.");
+		                                                                 
+		rstm.setColumnDescription("logical_reads__chart"                 , "Chart showing 'logical_reads' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was doing logical_reads.");
+		rstm.setColumnDescription("total_logical_reads__sum"             , "Summary of all 'logical_reads' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgLogicalReads"                      , "Average 'logical_reads' per execution.");
+		                                                                 
+		rstm.setColumnDescription("logical_reads_mb__chart"              , "Chart showing 'logical_reads_mb' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was doing logical_reads_mb. (this is the same as 'logical_reads' / 128.0 ");
+		rstm.setColumnDescription("total_logical_reads_mb__sum"          , "Summary of all 'logical_reads_mb' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgLogicalReadsMb"                    , "Average 'logical_reads_mb' per execution.");
+		                                                                 
+		rstm.setColumnDescription("clr_time__chart"                      , "Chart showing 'clr_time' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was doing clr_time.");
+		rstm.setColumnDescription("total_clr_time_ms__sum"               , "Summary of all 'clr_time' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgClrTimeMs"                         , "Average 'clr_time' per execution.");
+		                                                                 
+		rstm.setColumnDescription("rows__chart"                          , "Chart showing 'rows affected' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was returning or ins/upd/del rows.");
+		rstm.setColumnDescription("total_rows__sum"                      , "Summary of all 'rows affected' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgRows"                              , "Average 'rows affected' per execution.");
+		                                                                 
+		rstm.setColumnDescription("dop__chart"                           , "Chart showing 'dop' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was doing work in parallel, with the number of workers.");
+		rstm.setColumnDescription("total_dop__sum"                       , "Summary of all 'dop' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgDop"                               , "Average 'dop' per execution.");
+		                                                                 
+		rstm.setColumnDescription("grant_kb__chart"                      , "Chart showing 'grant_kb' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was requesting memory grants, and how large they were.");
+		rstm.setColumnDescription("total_grant_kb__sum"                  , "Summary of all 'grant_kb' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgGrantKb"                           , "Average 'grant_kb' per execution.");
+		                                                                 
+		rstm.setColumnDescription("total_grant_mb__sum"                  , "Summary of all 'grant_mb' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgGrantMb"                           , "Average 'grant_mb' per execution.");
+		                                                                 
+		rstm.setColumnDescription("total_used_grant_kb__sum"             , "Summary of all 'used_grant_kb' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgUsedGrantKb"                       , "Average 'used_grant_kb' per execution.");
+		                                                                 
+		rstm.setColumnDescription("total_ideal_grant_kb__sum"            , "Summary of all 'ideal_grant_kb' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgIdealGrantKb"                      , "Average 'ideal_grant_kb' per execution.");
+		                                                                 
+		rstm.setColumnDescription("total_reserved_threads__sum"          , "Summary of all 'reserved_threads' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgReservedThreads"                   , "Average 'reserved_threads' per execution.");
+		                                                                 
+		rstm.setColumnDescription("total_used_threads__sum"              , "Summary of all 'used_threads' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgUsedThreads"                       , "Average 'used_threads' per execution.");
+		
+		rstm.setColumnDescription("total_columnstore_segment_reads__sum" , "Summary of all 'columnstore_segment_reads' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgColumnstoreSegmentReads"           , "Average 'columnstore_segment_reads' per execution.");
+		
+		rstm.setColumnDescription("total_columnstore_segment_skips__sum" , "Summary of all 'columnstore_segment_skips' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgColumnstoreSegmentSkips"           , "Average 'columnstore_segment_skips' per execution.");
+		
+		rstm.setColumnDescription("spills__chart"                        , "Chart showing 'spills' to tempdb in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statements was spiiling to tempdb.");
+		rstm.setColumnDescription("total_spills__sum"                    , "Summary of all 'spills' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgSpills"                            , "Average 'spills' per execution.");
+		
+		rstm.setColumnDescription("total_page_server_reads__sum"         , "Summary of all 'grant_kb' for this statement in the recording period.");
+		rstm.setColumnDescription("AvgPageServerReads"                   , "Average 'grant_kb' per execution.");
+		
+		rstm.setColumnDescription("plan_handle"                          , "The 'id' of the execution plan.");
+		rstm.setColumnDescription("samples__count"                       , "Number of records for this 'query_hash' that was found in the PCS (Persistent Counter Storage)");
+		rstm.setColumnDescription("SessionSampleTime__min"               , "First record found in the PCS (Persistent Counter Storage) for this 'query_hash'.");
+		rstm.setColumnDescription("SessionSampleTime__max"               , "Last record found in the PCS (Persistent Counter Storage) for this 'query_hash'.");
+		rstm.setColumnDescription("Duration"                             , "Number of HH:MM:SS this 'query_hash'... or: 'SessionSampleTime__min' - 'SessionSampleTime__max'");
+		rstm.setColumnDescription("newDiffRow_sum"                       , "");
+	}
+//	TODO; // do same "stuff" for Query Store 
+//	TODO; // also add section for "efficiency_pct - sort-on-low-pct"
+//	TODO; // also add section for "parallel -- efficiency_pct - sort-on-low-pct"
+//	TODO; // look at how we can do "plan_count" better...
+
 	@Override
 	public String[] getMandatoryTables()
 	{
@@ -308,11 +424,15 @@ extends SqlServerAbstract
 		// Used by "sparkline" charts to filter out "new diff/rate" rows
 		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : sql_and_skipNewOrDiffRateRows;
 		
-//		TODO; // add cpu_efficiency_pct = total_worker_time / total_dop / total_elapsed_time * 100.0
+//		TODO; // add cpu_efficiency_pct = total_worker_time / avg_dop / total_elapsed_time * 100.0
 //		TODO; // same thing for Query Store
 //		TODO; // Add one extra REPORT_TYPE for "INEFFICIENT_CPU" -- for "any statements"
 //		TODO; // Add one extra REPORT_TYPE for "INEFFICIENT_DOP" -- Only where POD > 1
 		
+		String col_efficiency_pct = "";
+		if (dummyRstm.hasColumnNoCase("total_worker_time") && dummyRstm.hasColumnNoCase("total_dop") && dummyRstm.hasColumnNoCase("total_elapsed_time"))
+			col_efficiency_pct = "    ,cast(sum([total_worker_time]) / (sum([total_dop]) * 1.0 / nullif(sum([execution_count]), 0)) / sum([total_elapsed_time]) * 100.0 as numeric(9,1)) as [efficiency_pct] \n";
+
 		String col_total_elapsed_time_ms__sum           = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0)       as [total_elapsed_time_ms__sum]           \n"; 
 		String col_total_worker_time_ms__sum            = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,sum([total_worker_time]/1000.0)        as [total_worker_time_ms__sum]            \n"; 
 		String col_total_est_wait_time_ms__sum          = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0) - sum([total_worker_time]/1000.0) as [total_est_wait_time_ms__sum]   \n"; 
@@ -406,59 +526,6 @@ extends SqlServerAbstract
 			col_SqlText = "SqlText$dcc$";
 
 
-//		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
-//			    + "select top " + topRows + " \n"
-//			    + "     [dbname] \n"
-//			    + "    ,[plan_handle] \n"
-//			    + "    ,max([query_plan_hash])                 as [query_plan_hash] \n"
-//			    + "    ,max([query_hash])                      as [query_hash] \n"
-//			    + "    ,count(*)                               as [samples__count] \n"
-//			    + "    ,min([SessionSampleTime])               as [SessionSampleTime__min] \n"
-//			    + "    ,max([SessionSampleTime])               as [SessionSampleTime__max] \n"
-//			    + "    ,cast('' as varchar(30))                as [Duration] \n"
-////			    + "    ,sum([CmSampleMs])                      as [CmSampleMs__sum] \n"
-//			    + "    \n"
-//			    + "    ,cast('' as varchar(512))               as [execution_count__chart] \n"
-//			    + "    ,sum([execution_count])                 as [execution_count__sum] \n"
-//			    + "    ,min([creation_time])                   as [creation_time__min] \n"
-//			    + "    ,max([last_execution_time])             as [last_execution_time__max] \n"
-//			    + "    \n"
-//			    + col_total_worker_time__chart            
-//			    + col_total_worker_time__sum               + col_AvgWorkerTimeUs            
-//			    + col_total_physical_reads__chart
-//			    + col_total_physical_reads__sum            + col_AvgPhysicalReads           
-//			    + col_total_logical_writes__sum            + col_AvgLogicalWrites           
-//			    + col_total_logical_reads__chart
-//			    + col_total_logical_reads__sum             + col_AvgLogicalReads            
-//			    + col_total_clr_time__sum                  + col_AvgClrTimeUs               
-//			    + col_total_elapsed_time__sum              + col_AvgElapsedTimeUs           
-//			    + col_total_rows__sum                      + col_AvgRows                    
-//			    + col_max_dop__chart
-//			    + col_total_dop__sum                       + col_AvgDop                     
-//			    + col_max_grant_kb__chart
-//			    + col_total_grant_kb__sum                  + col_AvgGrantKb                 
-//			    + col_total_used_grant_kb__sum             + col_AvgUsedGrantKb             
-//			    + col_total_ideal_grant_kb__sum            + col_AvgIdealGrantKb            
-//			    + col_total_reserved_threads__sum          + col_AvgReservedThreads         
-//			    + col_total_used_threads__sum              + col_AvgUsedThreads             
-//			    + col_total_columnstore_segment_reads__sum + col_AvgColumnstoreSegmentReads 
-//			    + col_total_columnstore_segment_skips__sum + col_AvgColumnstoreSegmentSkips 
-//			    + col_total_spills__chart
-//			    + col_total_spills__sum                    + col_AvgSpills                  
-//			    + col_total_page_server_reads__sum         + col_AvgPageServerReads         
-//			    + "    \n"
-////			    + "    ,max([SqlText])                         as [SqlText] \n"
-//			    + "    ,max([" + col_SqlText +"])                    as [SqlText] \n"
-//				+ "from [CmExecQueryStats_diff] \n"
-//				+ "where [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, when it swaps in/out due to execution every x minute) \n"
-//				+ "  and [execution_count] > 0 \n"
-////				+ "  and [AvgServ_ms] > " + _aboveServiceTime + " \n"
-////				+ "  and [TotalIOs]   > " + _aboveTotalIos    + " \n"
-//				+ getReportPeriodSqlWhere()
-//				+ "group by [plan_handle] \n"
-//				+ "order by " + orderByCol + " desc \n"
-//			    + "";
-		
 //FIXME; group by 'query_hash' or 'query_plan_hash' ... also check that we pick up the correct PLAN in below table
 //Possibly; add link directly in the table for 'plan_handle' instead of the below table!!!
 
@@ -469,11 +536,15 @@ extends SqlServerAbstract
 			    + "    ,max([" + col_SqlText +"])              as [SqlText] \n"
 			    + "    ,cast('' as varchar(30))                as [ExecPlan] \n"
 			    + "    \n"
-			    + "    ,count(*)                               as [plan__count] \n" 
+			    + "    ,count(DISTINCT [query_plan_hash])      as [plan_hash__count] \n" 
+			    + "    ,count(DISTINCT [plan_handle])          as [plan_handle__count] \n" 
+//			    + "    ,count([query_plan_hash])               as [plan__count] \n" 
+//			    + "    ,count(DISTINCT [query_plan_hash])      as [distinct_plan__count] \n" 
 			    // or should the above be be:
 			    		// number_of_plans     = COUNT_BIG(qs.query_plan_hash)          // from https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzCache.sql
 			    		// distinct_plan_count = COUNT_BIG(DISTINCT qs.query_plan_hash) // from https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/blob/dev/sp_BlitzCache.sql
 			    + "    \n"
+			    + col_efficiency_pct
 			    + "    ,cast('' as varchar(512))               as [execution_count__chart] \n"
 			    + "    ,sum([execution_count])                 as [execution_count__sum] \n"
 			    + "    ,min([creation_time])                   as [creation_time__min] \n"
@@ -1191,24 +1262,6 @@ extends SqlServerAbstract
 //		
 //		rstm.setValueAtWithOverride(calc, r, pos_dest);
 //	}
-	
-
-	/**
-	 * Set descriptions for the table, and the columns
-	 */
-	private void setSectionDescription(ResultSetTableModel rstm)
-	{
-		if (rstm == null)
-			return;
-		
-		// Section description
-		rstm.setDescription(
-				"Top SQL Statements (and it's Query Plan)...  (ordered by: " + _sqlOrderByCol + ") <br>" +
-				"<br>" +
-				"SqlServer Source table is 'dm_exec_query_stats'. <br>" +
-				"PCS Source table is 'CmExecQueryStats_diff'. (PCS = Persistent Counter Store) <br>" +
-				"");
-	}
 }
 
 /*

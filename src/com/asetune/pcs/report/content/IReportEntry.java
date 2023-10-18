@@ -270,4 +270,26 @@ public interface IReportEntry
 	 * @return The previous value, if not previously set it will be null
 	 */
 	Object setStatusEntry(String statusKey);
+	
+	/**
+	 * Called at start of writing a Report Entry, so we can track some statistics
+	 * @param writer
+	 * @param fullMessage
+	 */
+	void beginWriteEntry(Writer writer, MessageType messageType);
+
+	/**
+	 * Called at start of writing a Report Entry, so we can track some statistics
+	 * @param writer
+	 * @param fullMessage
+	 */
+	void endWriteEntry(Writer writer, MessageType messageType);
+
+	/**
+	 * Get how many characters (in KB) that was written in this section
+	 * 
+	 * @param messageType
+	 * @return Number of chars written
+	 */
+	long getCharsWrittenKb(MessageType messageType);
 }

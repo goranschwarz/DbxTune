@@ -1388,7 +1388,7 @@ public abstract class SqlServerConfigText
 				    + "          , @Params = N'@dbname NVARCHAR(128) OUTPUT' \n"
 				    + "          , @dbname = @dbname OUTPUT \n"
 				    + "     \n"
-				    + "    END \n"
+				    + "END \n"
 				    + " \n"
 				    + "/* if NOT found anywhere... print some info */ \n"
 				    + "IF (@dbname is NULL) \n"

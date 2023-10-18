@@ -2842,6 +2842,7 @@ public class PersistWriterJdbc
 			checkAndCreateTable(conn, schemaName, SESSION_DBMS_CONFIG_TEXT);
 			checkAndCreateTable(conn, schemaName, SESSION_DBMS_CONFIG_ISSUES);
 //			checkAndCreateTable(conn, schemaName, RECORDING_OPTIONS);
+			checkAndCreateTable(conn, schemaName, KEY_VALUE_STORAGE);
 			checkAndCreateTable(conn, schemaName, DDL_STORAGE);
 //			checkAndCreateTable(conn, schemaName, SQL_CAPTURE_SQLTEXT);
 //			checkAndCreateTable(conn, schemaName, SQL_CAPTURE_STATEMENTS);
@@ -5268,5 +5269,158 @@ public class PersistWriterJdbc
 	}
 	//---------------------------------------------
 	// END: Last Recording Action
+	//---------------------------------------------
+
+
+	//---------------------------------------------
+	// BEGIN: PCS Key Value Store
+	//---------------------------------------------
+	public enum PcsKeyValueStoreType
+	{
+		NUMBER, 
+		SHORT_STR, 
+		LONG_STR
+	};
+//	public static void saveKeyValueStore(DbxConnection pcsConn, Timestamp sessionStartTime, String keyName, Object objValue, PcsKeyValueStoreType type)
+//	throws SQLException
+//	{
+//		String sql = PersistWriterBase.getTableInsertStr(pcsConn, null, KEY_VALUE_STORAGE, null, false);
+//		try (Statement stmnt = pcsConn.createStatement())
+//		{
+//			// 1: SessionStartTime  Timestamp
+//			// 2: KeyName           varchar(255)
+//			// 3: ValueType         varchar(30)
+//			// 4: ValueText         varchar(255)
+//			// 5: ValueClob         CLOB
+//
+//			String textVal = objValue == null ? null : objValue.toString();
+//			String clobVal = null;
+//			
+//			if (PcsKeyValueStoreType.LONG_STR.equals(type))
+//			{
+//				textVal = null;
+//				clobVal = objValue == null ? null : objValue.toString();;
+//			}
+//
+//			sql += "values(" 
+//					+        safeStr(sessionStartTime)
+//					+ ", " + safeStr(keyName)
+//					+ ", " + safeStr(type)
+//					+ ", " + safeStr(textVal)
+//					+ ", " + safeStr(clobVal)
+//					;
+//			
+//			stmnt.executeUpdate(sql);
+//		}
+//	}
+	public static void saveKeyValueStore(DbxConnection pcsConn, String keyName, Object objValue, PcsKeyValueStoreType type)
+	throws SQLException
+	{
+		saveKeyValueStore(pcsConn, null, keyName, objValue, type);
+	}
+	
+	public static void saveKeyValueStore(DbxConnection pcsConn, Timestamp sessionStartTime, String keyName, Object objValue, PcsKeyValueStoreType type)
+	throws SQLException
+	{
+		// Get INSERT statement
+		String sql = PersistWriterBase.getTableInsertStr(pcsConn, null, KEY_VALUE_STORAGE, null, true);
+		
+		// Execute it
+		try (PreparedStatement pstmnt = pcsConn.prepareStatement(sql))
+		{
+			// 1: SessionStartTime  Timestamp
+			// 2: KeyName           varchar(255)
+			// 3: ValueType         varchar(30)
+			// 4: ValueText         varchar(255)
+			// 5: ValueClob         CLOB
+
+			String textVal = objValue == null ? null : objValue.toString();
+			String clobVal = null;
+			
+			if (PcsKeyValueStoreType.LONG_STR.equals(type))
+			{
+				textVal = null;
+				clobVal = objValue == null ? null : objValue.toString();;
+			}
+
+			// Just make up a timestamp
+			if (sessionStartTime == null)
+				sessionStartTime = new Timestamp(System.currentTimeMillis());
+
+			pstmnt.setTimestamp(1, sessionStartTime);
+			pstmnt.setString   (2, keyName);
+			pstmnt.setString   (3, type + "");
+			pstmnt.setString   (4, textVal);
+			pstmnt.setString   (5, clobVal);
+
+			pstmnt.executeUpdate();
+		}
+	}
+
+	public static String getKeyValueStoreAsString(DbxConnection pcsConn, String keyName)
+	throws SQLException
+	{
+		// Get table name
+		String tabName = PersistWriterBase.getDictTableNameNoQuote(null, KEY_VALUE_STORAGE);
+
+		// 1: SessionStartTime  Timestamp
+		// 2: KeyName           varchar(255)
+		// 3: ValueType         varchar(30)
+		// 4: ValueText         varchar(255)
+		// 5: ValueClob         CLOB
+		String sql = pcsConn.quotifySqlString(
+				  "select [ValueType], [ValueText], [ValueClob] from [" + tabName+ "] \n"
+				+ "where [KeyName] = " + safeStr(keyName) + " \n"
+				+ "order by [SessionStartTime] desc"
+				);
+
+		String valueType = null;
+		String valueText = null;
+		String valueClob = null;
+
+		int rowCount = 0;
+		try (Statement stmnt = pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				rowCount++;
+				if (rowCount == 1)
+				{
+					valueType = rs.getString(1);
+					valueText = rs.getString(2);
+					valueClob = rs.getString(3);
+				}
+			}
+		}
+		
+		if (PcsKeyValueStoreType.LONG_STR.toString().equals(valueType))
+		{
+			return valueClob;
+		}
+		return valueText;
+	}
+
+	public static int getKeyValueStoreAsInteger(DbxConnection pcsConn, String keyName, int defaultVal)
+	throws SQLException
+	{
+		String val = getKeyValueStoreAsString(pcsConn, keyName);
+		return StringUtil.parseInt(val, defaultVal);
+	}
+
+	public static double getKeyValueStoreAsLong(DbxConnection pcsConn, String keyName, long defaultVal)
+	throws SQLException
+	{
+		String val = getKeyValueStoreAsString(pcsConn, keyName);
+		return StringUtil.parseLong(val, defaultVal);
+	}
+
+	public static double getKeyValueStoreAsDouble(DbxConnection pcsConn, String keyName, double defaultVal)
+	throws SQLException
+	{
+		String val = getKeyValueStoreAsString(pcsConn, keyName);
+		return StringUtil.parseDouble(val, defaultVal);
+	}
+	//---------------------------------------------
+	// END: PCS Key Value Store
 	//---------------------------------------------
 }

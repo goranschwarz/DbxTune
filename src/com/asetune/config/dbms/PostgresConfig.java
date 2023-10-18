@@ -745,6 +745,23 @@ extends DbmsConfigAbstract
 
 		
 		//-------------------------------------------------------
+		cfgName = "fsync";
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			if ("off".equalsIgnoreCase(entry.configValue))
+			{
+				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".off";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.ERROR, 
+						"The Server Level Configuration '" + cfgName + "' is 'OFF'. You will loose data in case of a power failure.", 
+						"Fix this using: Set configuration '" + cfgName + "' to 'on'.");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+		
+		//-------------------------------------------------------
 		cfgName = "synchronous_commit";
 		entry = _configMap.get(cfgName);
 		if (entry != null)
@@ -760,7 +777,7 @@ extends DbmsConfigAbstract
 				DbmsConfigManager.getInstance().addConfigIssue(issue);
 			}
 		}
-
+		
 		//-------------------------------------------------------
 		cfgName = "shared_buffers"; // default value '???' but if it's less than 25% of the memory on the HW. 
 		// This extension might be useful to get OS Memory --->>>> https://github.com/EnterpriseDB/system_stats
@@ -784,7 +801,7 @@ extends DbmsConfigAbstract
 
 		
 		//-------------------------------------------------------
-		cfgName = "effective_cache_size"; // default value '4G' should be approc 75% of physical memory (or: shared_buffers + filesystem-cache) 
+		cfgName = "effective_cache_size"; // default value '4G' should be approx 75% of physical memory (or: shared_buffers + filesystem-cache) 
 		// This extension might be useful to get OS Memory --->>>> https://github.com/EnterpriseDB/system_stats
 		entry = _configMap.get(cfgName);
 		if (entry != null)
@@ -847,6 +864,10 @@ extends DbmsConfigAbstract
 		// TODO in the future
 		cfgName = "min_parallel_table_scan_size"; // is probably set to low  
 		cfgName = "min_parallel_index_scan_size"; // is probably set to low  
+
+		//check: 'maintenance_work_mem'   DEfault: 64MB, could be much higher (used for create index, vacuum etc)
+		//check: 'work_mem' should not be to high (per sort, not per connection) 
+		//check: 'checkpoint_completion_target' Default=0.5 ...For dedicated systems, with good I/O: 0.8
 
 	}
 

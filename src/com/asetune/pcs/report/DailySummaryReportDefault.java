@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -51,6 +52,7 @@ import com.asetune.pcs.report.content.RecordingInfo;
 import com.asetune.pcs.report.content.ReportContent;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.CountingWriter;
 import com.asetune.utils.HeartbeatMonitor;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
@@ -160,13 +162,16 @@ extends DailySummaryReportAbstract
 		File file = File.createTempFile("dsr_tmp_", ".html");
 		file.deleteOnExit();
 //		Writer writer = new FileWriter(file);
-		try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) 
+//		try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) 
+		try (Writer writer = new CountingWriter(Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8))) 
 		{
 			createHtml(writer);
 		}
 
 		// Create the "ShortMessage" used for email messages etc
-		StringWriter shortMessageWriter = new StringWriter();
+//		StringWriter shortMessageWriter = new StringWriter();
+		StringWriter shortMessageStringWriter = new StringWriter();
+		Writer shortMessageWriter = new CountingWriter(shortMessageStringWriter);
 		createShortMessage(shortMessageWriter);
 		
 		
@@ -185,7 +190,7 @@ extends DailySummaryReportAbstract
 //		content.setReportAsText(clearText);
 		
 		// Set Short Message in content
-		content.setShortMessage(shortMessageWriter.toString());
+		content.setShortMessage(shortMessageStringWriter.toString());
 		content.setShortMessageOfHtml(true);
 
 		boolean hasIssueToReport = hasIssueToReport();
@@ -483,11 +488,36 @@ extends DailySummaryReportAbstract
 		w.append("\n");
 		w.append("        /* Example settings: scrollbar if to big */ \n");
 		w.append("        xmp {                      \n");
-		w.append("//            background: #C0C0C0;   \n");
-		w.append("//            font-size: 0.3em;      \n");
+//		w.append("            background: #C0C0C0;   \n");
+//		w.append("            font-size: 0.3em;      \n");
 		w.append("            white-space: pre-wrap; \n"); // wrap long rows
 		w.append("            width: 100%;           \n");
 		w.append("            max-height: 400px;     \n");
+		w.append("            overflow: auto;        \n");
+		w.append("            margin-top: 0px;       \n");
+		w.append("            margin-right: 0px;     \n");
+		w.append("            margin-bottom: 0px;    \n");
+		w.append("            margin-left: 0px;      \n");
+		w.append("        }                          \n");
+		w.append("        .dbx-xml-text-cell {        \n");
+//		w.append("            background: #C0C0C0;   \n");
+//		w.append("            font-size: 0.3em;      \n");
+		w.append("            white-space: pre-wrap; \n"); // wrap long rows
+		w.append("            width: 100%;           \n");
+		w.append("            max-height: 200px;     \n");
+		w.append("            overflow: auto;        \n");
+		w.append("            margin-top: 0px;       \n");
+		w.append("            margin-right: 0px;     \n");
+		w.append("            margin-bottom: 0px;    \n");
+		w.append("            margin-left: 0px;      \n");
+		w.append("        }                          \n");
+		w.append("        .dbx-sql-text-cell {        \n");
+//		w.append("            background: #C0C0C0;   \n");
+//		w.append("            font-size: 0.3em;      \n");
+//		w.append("            white-space: pre-wrap; \n"); // wrap long rows
+		w.append("            width: 100%;           \n");
+//		w.append("            width: 400px;          \n");
+		w.append("            max-height: 200px;     \n");
 		w.append("            overflow: auto;        \n");
 		w.append("            margin-top: 0px;       \n");
 		w.append("            margin-right: 0px;     \n");
@@ -792,30 +822,30 @@ extends DailySummaryReportAbstract
 	}
 
 
-	public void createHtmlBody(Writer sb)
+	public void createHtmlBody(Writer writer)
 	throws IOException
 	{
-		sb.append("<body>\n");
+		writer.append("<body>\n");
 //		sb.append("<body style'min-width: 100%'>\n");
 //		sb.append("<body style'min-width: 2048px'>\n");
 //		sb.append("<body style'min-width: 1024px'>\n");
 
 		if (useBootstrap())
 		{
-			sb.append("<div class='container-fluid'> \n"); // BEGIN: Bootstrap 4 container
+			writer.append("<div class='container-fluid'> \n"); // BEGIN: Bootstrap 4 container
 		}
-		sb.append("\n");
+		writer.append("\n");
 
 		
 		// Create an area where we can add/show progress bars
-		sb.append("<div id='progress-area' style='background-color: white; position:fixed; top:50px; left:30px; width:100%; z-index: 9999;'>\n");
-		sb.append("</div>\n");
+		writer.append("<div id='progress-area' style='background-color: white; position:fixed; top:50px; left:30px; width:100%; z-index: 9999;'>\n");
+		writer.append("</div>\n");
 		
 
 		// Collapseable group div 
 		if (useBootstrap())
 		{
-			sb.append("<div id='accordion' role='tablist' aria-multiselectable='true'> \n");			
+			writer.append("<div id='accordion' role='tablist' aria-multiselectable='true'> \n");			
 		}
 		
 		// TOC HEADER
@@ -833,34 +863,34 @@ extends DailySummaryReportAbstract
 //			sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 
 			// Bootstrap "card" - BEGIN
-			sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-			sb.append("<div class='card border-dark mb-3' id='toc'> \n");
-			sb.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
-			sb.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
-			sb.append("    <i class='fa fa-chevron-down float-right'></i> \n");
-			sb.append("    <b>").append("Daily Summary Report for Servername: ").append(getServerName()).append("</b> \n");
-			sb.append("  </a> \n");
-			sb.append("</h5> \n");
-			sb.append("<div id='collapse_toc' class='collapse show' role='tabpanel' aria-labelledby='heading_toc'> \n");
-			sb.append("<div class='card-body'> \n");
-			sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+			writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+			writer.append("<div class='card border-dark mb-3' id='toc'> \n");
+			writer.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
+			writer.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
+			writer.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+			writer.append("    <b>").append("Daily Summary Report for Servername: ").append(getServerName()).append("</b> \n");
+			writer.append("  </a> \n");
+			writer.append("</h5> \n");
+			writer.append("<div id='collapse_toc' class='collapse show' role='tabpanel' aria-labelledby='heading_toc'> \n");
+			writer.append("<div class='card-body'> \n");
+			writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 
-			sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-			sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2> \n");
-			sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+			writer.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+			writer.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2> \n");
+			writer.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 		}
 		else
 		{
 			// Normal HTML - H2 heading
-			sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+			writer.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
 		}
-		sb.append( createDbxCentralLink(true) );
+		writer.append( createDbxCentralLink(true) );
 
 		//--------------------------------------------------
 		// TOC
-		sb.append("<br> \n");
-		sb.append("Links to Report Sections. \n");
-		sb.append("<ul> \n");
+		writer.append("<br> \n");
+		writer.append("Links to Report Sections. \n");
+		writer.append("<ul> \n");
 		for (IReportEntry entry : _reportEntries)
 		{
 			String tocSubject = entry.getSubject();
@@ -873,25 +903,25 @@ extends DailySummaryReportAbstract
 
 			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
 			
-			sb.append("<li>").append(liContent).append("</li> \n");
+			writer.append("<li>").append(liContent).append("</li> \n");
 		}
-		sb.append("</ul> \n");
-		sb.append("\n<br>");
+		writer.append("</ul> \n");
+		writer.append("\n<br>");
 
 		// TOC FOOTER
 		if (useBootstrap())
 		{
 			// Bootstrap "card" - END
-			sb.append("<a href='javascript:void(0);' onclick=\"collapseSection('ALL');\">Collapse</a> ");
-			sb.append(" or \n");
-			sb.append("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
-			sb.append(" ALL sections \n");
+			writer.append("<a href='javascript:void(0);' onclick=\"collapseSection('ALL');\">Collapse</a> ");
+			writer.append(" or \n");
+			writer.append("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
+			writer.append(" ALL sections \n");
 
-			sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-			sb.append("</div> \n"); // end: card-body
-			sb.append("</div> \n"); // end: collapse
-			sb.append("</div> \n"); // end: card
-			sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+			writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+			writer.append("</div> \n"); // end: card-body
+			writer.append("</div> \n"); // end: collapse
+			writer.append("</div> \n"); // end: card
+			writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		}
 		
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** at createHtmlBody(): after TOC");
@@ -901,15 +931,18 @@ extends DailySummaryReportAbstract
 		// ALL REPORTS
 		for (IReportEntry entry : _reportEntries)
 		{
+			// So we can gather some statistics
+			entry.beginWriteEntry(writer, MessageType.FULL_MESSAGE);
+
 			String tocSubject = entry.getSubject();
 			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
 
 			// Add a section header
-			sb.append("\n");
-			sb.append("\n");
-			sb.append("<!-- ================================================================================= -->\n");
-			sb.append("<!-- " + entry.getSubject()                                                        + " -->\n");
-			sb.append("<!-- ================================================================================= -->\n");
+			writer.append("\n");
+			writer.append("\n");
+			writer.append("<!-- ================================================================================= -->\n");
+			writer.append("<!-- " + entry.getSubject()                                                        + " -->\n");
+			writer.append("<!-- ================================================================================= -->\n");
 
 			// Section HEADER
 			if (useBootstrap())
@@ -926,26 +959,26 @@ extends DailySummaryReportAbstract
 //				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 
 				// Bootstrap "card" - BEGIN
-				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				sb.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
-				sb.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
-				sb.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
-				sb.append("    <i class='fa fa-chevron-down float-right'></i> \n");
-				sb.append("    <b>").append(entry.getSubject()).append("</b> \n");
-				sb.append("  </a> \n");
-				sb.append("</h5> \n");
-				sb.append("<div id='collapse_").append(tocDiv).append("' class='collapse show' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
-				sb.append("<div class='card-body'> \n");
-				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				writer.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
+				writer.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
+				writer.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
+				writer.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+				writer.append("    <b>").append(entry.getSubject()).append("</b> \n");
+				writer.append("  </a> \n");
+				writer.append("</h5> \n");
+				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse show' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
+				writer.append("<div class='card-body'> \n");
+				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 
-				sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-				sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
-				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+				writer.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+				writer.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 			}
 			else
 			{
 				// Normal HTML - H2 heading
-				sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
 			}
 
 			if (entry.isEnabled())
@@ -956,37 +989,37 @@ extends DailySummaryReportAbstract
 
 					// Warning messages
 					if (entry.hasWarningMsg())
-						sb.append(entry.getWarningMsg());
+						writer.append(entry.getWarningMsg());
 
 					// Get the message text
 					if ( ! entry.hasProblem() )
-						entry.writeMessageText(sb, entry.getCurrentMessageType());
+						entry.writeMessageText(writer, entry.getCurrentMessageType());
 					
 					// If the entry indicates that it has a problem... then print that.
 					if ( entry.hasProblem() )
-						sb.append(entry.getProblemText());
+						writer.append(entry.getProblemText());
 					
 					// if we should append anything after an entry... Possibly '<br>\n'
-					sb.append(entry.getEndOfReportText());
+					writer.append(entry.getEndOfReportText());
 
 					// Notes for how to: Disable this entry
 					if (entry.canBeDisabled())
 					{
-						sb.append("<br>");
-						sb.append("<i>To disable this report entry, put the following in the configuration file. ");
-						sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
+						writer.append("<br>");
+						writer.append("<i>To disable this report entry, put the following in the configuration file. ");
+						writer.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
 					}
 
-					sb.append("<a href='javascript:void(0);' onclick=\"collapseSection('" + tocDiv + "');\">Collapse this section</a> <br>\n");
+					writer.append("<a href='javascript:void(0);' onclick=\"collapseSection('" + tocDiv + "');\">Collapse this section</a> <br>\n");
 				}
 				catch (RuntimeException rte)
 				{
-					sb.append("Problems 'writing' the HTML report text for section '" + entry.getSubject() + "'. Caught: " + rte + "\n");
-					sb.append("Continuing with next report section... <br> \n");
-					sb.append("Exception: <br> \n");
-					sb.append("<pre><code> \n");
-					sb.append(StringUtil.exceptionToString(rte));
-					sb.append("</code></pre> \n");
+					writer.append("Problems 'writing' the HTML report text for section '" + entry.getSubject() + "'. Caught: " + rte + "\n");
+					writer.append("Continuing with next report section... <br> \n");
+					writer.append("Exception: <br> \n");
+					writer.append("<pre><code> \n");
+					writer.append(StringUtil.exceptionToString(rte));
+					writer.append("</code></pre> \n");
 				}
 				finally
 				{
@@ -999,15 +1032,15 @@ extends DailySummaryReportAbstract
 				if (StringUtil.hasValue(reason))
 				{
 					// Entry is DISABLED
-					sb.append("This entry is <b>disabled</b>, reason:<br>");
-					sb.append(reason);
-					sb.append("<br>");
+					writer.append("This entry is <b>disabled</b>, reason:<br>");
+					writer.append(reason);
+					writer.append("<br>");
 				}
 				else
 				{
 					// Entry is DISABLED
-					sb.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
-					sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+					writer.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
+					writer.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
 				}
 			}
 
@@ -1015,43 +1048,46 @@ extends DailySummaryReportAbstract
 			if (useBootstrap())
 			{
 				// Bootstrap "card" - END
-				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				sb.append("</div> \n"); // end: card-body
-				sb.append("</div> \n"); // end: collapse
-				sb.append("</div> \n"); // end: card
-				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				writer.append("</div> \n"); // end: card-body
+				writer.append("</div> \n"); // end: collapse
+				writer.append("</div> \n"); // end: card
+				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 			}
+
+			// So we can gather some statistics
+			entry.endWriteEntry(writer, MessageType.FULL_MESSAGE);
 			
 //System.gc();
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** "+ entry.getClass().getSimpleName());
 		}
-		sb.append("\n<br>");
+		writer.append("\n<br>");
 
 		//--------------------------------------------------
 		// DEBUG - Write time it too to create each report entry
-		printExecTimeReport(sb, MessageType.FULL_MESSAGE);
+		printExecTimeReport(writer, MessageType.FULL_MESSAGE);
 
 		
 		// Collapseable group div 
 		if (useBootstrap())
 		{
-			sb.append("</div> \n");			
+			writer.append("</div> \n");			
 		}
 
 		//--------------------------------------------------
 		// END
-		sb.append("\n<br>");
-		sb.append("\n<br>");
-		sb.append("\n<code>--end-of-report--</code> \n");
+		writer.append("\n<br>");
+		writer.append("\n<br>");
+		writer.append("\n<code>--end-of-report--</code> \n");
 
 		// Some static code for showing dialogs
-		sb.append("\n");
-		sb.append( createShowSqlTextDialogHtml() );
-		sb.append( createShowSqlTextDialogJs()   );
+		writer.append("\n");
+		writer.append( createShowSqlTextDialogHtml() );
+		writer.append( createShowSqlTextDialogJs()   );
 
-		sb.append("\n");
-		sb.append("</div> \n"); // END: Bootstrap 4 container
-		sb.append("</body> \n");
+		writer.append("\n");
+		writer.append("</div> \n"); // END: Bootstrap 4 container
+		writer.append("</body> \n");
 
 		// Collect some garbage
 		System.gc();
@@ -1154,6 +1190,9 @@ extends DailySummaryReportAbstract
 			if ( ! entry.hasShortMessageText() )
 				continue;
 
+			// So we can gather some statistics
+			entry.beginWriteEntry(w, MessageType.SHORT_MESSAGE);
+
 			String tocSubject = entry.getSubject();
 			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
 
@@ -1231,6 +1270,11 @@ extends DailySummaryReportAbstract
 			}
 
 			// Section FOOTER
+
+			
+			// So we can gather some statistics
+			entry.endWriteEntry(w, MessageType.SHORT_MESSAGE);
+
 		}
 		w.append("\n<br>");
 
@@ -1290,22 +1334,23 @@ extends DailySummaryReportAbstract
 		String PROPKEY_printExecTime_fullMsg  = "DailySummaryReport.report.entry.enabled.printExecTime.fullMessage";
 		String PROPKEY_printExecTime_shortMsg = "DailySummaryReport.report.entry.enabled.printExecTime.shortMessage";
 
-		boolean printExecTime = false;
+		boolean printExecTime   = false;
+		boolean printShortMsgKb = false;
 
 		String propName = "";
 		if (MessageType.FULL_MESSAGE.equals(messageType))
 		{
-			printExecTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime_fullMsg, true);
+			printExecTime   = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime_fullMsg, true);
+			printShortMsgKb = false; // SHORT Message "statistics" isn't yet available (it has not yet been created/written)
 		}
 		else if (MessageType.SHORT_MESSAGE.equals(messageType))
 		{
-			printExecTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime_shortMsg, true);
+			printExecTime   = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printExecTime_shortMsg, true);
+			printShortMsgKb = true; // both FULL and SHORT should be available now  
 		}
 
 		if (printExecTime)
 		{
-			long totalExecTime = 0;
-
 			String tocDiv = "sectionTime";
 			String headingName = "Exec/Creation time for each Report Section";
 
@@ -1351,14 +1396,33 @@ extends DailySummaryReportAbstract
 			w.append("This is a DEBUG Section, just to see how long each Report Section takes. \n");
 			w.append("<br> \n");
 			w.append("<table class='sortable'> \n");
-			w.append("<tr> <th>Section Name</th> <th>Start Time HH:MM:SS</th> <th>Exec Time HH:MM:SS</th> </tr> \n");
+
+			w.append("<tr> \n");
+			w.append("  <th>Section Name       </th> \n");
+			w.append("  <th>Start Time HH:MM:SS</th> \n");
+			w.append("  <th>Exec Time HH:MM:SS </th> \n");
+			w.append("  <th>Full Msg KB        </th> \n");
+			if (printShortMsgKb) 
+				w.append("  <th>Short Msg KB   </th> \n");
+			w.append("</tr> \n");
+			
+			long totalExecTime   = 0;
+			long totalFullMsgKb  = 0;
+			long totalShortMsgKb = 0;
+
+			NumberFormat nf = NumberFormat.getInstance();
+
 			for (IReportEntry entry : _reportEntries)
 			{
-				totalExecTime += entry.getExecTime();
+				totalExecTime   += entry.getExecTime();
+				totalFullMsgKb  += entry.getCharsWrittenKb(MessageType.FULL_MESSAGE)  < 0 ? 0 : entry.getCharsWrittenKb(MessageType.FULL_MESSAGE);
+				totalShortMsgKb += entry.getCharsWrittenKb(MessageType.SHORT_MESSAGE) < 0 ? 0 : entry.getCharsWrittenKb(MessageType.SHORT_MESSAGE);
 
-				String tocSubject   = entry.getSubject();
-				String execTimeStr  = TimeUtils.msToTimeStrDHMS( entry.getExecTime() );
-				String startTimeStr = sdf_HMS.format( new Date(entry.getExecStartTime()) );
+				String tocSubject    = entry.getSubject();
+				String execTimeStr   = TimeUtils.msToTimeStrDHMS( entry.getExecTime() );
+				String startTimeStr  = sdf_HMS.format( new Date(entry.getExecStartTime()) );
+				String fullMsgKbStr  = nf.format(entry.getCharsWrittenKb(MessageType.FULL_MESSAGE));
+				String shortMsgKbStr = nf.format(entry.getCharsWrittenKb(MessageType.SHORT_MESSAGE));
 
 				// Strip off parts that may be details
 				int firstLeftParentheses = tocSubject.indexOf("(");
@@ -1366,12 +1430,25 @@ extends DailySummaryReportAbstract
 					tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
 
 				// Add the row
-				w.append("<tr> <td>" + tocSubject + "</td> <td>" + startTimeStr + "</td> <td>" + execTimeStr + "</td> </tr> \n");
+				w.append("<tr> \n");
+				w.append("   <td>"               + tocSubject    + "</td> \n");
+				w.append("   <td>"               + startTimeStr  + "</td> \n");
+				w.append("   <td>"               + execTimeStr   + "</td> \n");
+				w.append("   <td align='right'>" + fullMsgKbStr  + "</td> \n");
+				if (printShortMsgKb) 
+					w.append("   <td align='right'>" + shortMsgKbStr + "</td> \n");
+				w.append("</tr> \n");
 			}
 
 			// SUMMARY Time
-			w.append("<tr> <td><b>Summary: Create Time</b></td> <td></td> <td><b>" + TimeUtils.msToTimeStrDHMS( totalExecTime ) + "</b></td> </tr> \n");
-//			w.append("<tr> <td><b>Summary: Total Time </b></td> <td><b>" + TimeUtils.msToTimeStrDHMS( TimeUtils.msDiffNow(getInitTime())) + "</b></td> </tr> \n");
+			w.append("<tr> \n");
+			w.append("   <td><b>Summary</b></td> \n");
+			w.append("   <td></td> \n");
+			w.append("   <td><b>" + TimeUtils.msToTimeStrDHMS( totalExecTime )   + "</b></td> \n");
+			w.append("   <td align='right'><b>"     + nf.format(totalFullMsgKb)  + "</b></td> \n");
+			if (printShortMsgKb) 
+				w.append("   <td align='right'><b>" + nf.format(totalShortMsgKb) + "</b></td> \n");
+			w.append("</tr> \n");
 
 			w.append("</table> \n");
 			w.append("\n<br>");

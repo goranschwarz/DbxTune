@@ -71,8 +71,9 @@ implements AutoCloseable
 
 	public static final String  PROPKEY_priorityCoreCountParallelFactor = "DailySummaryReport.priority.core.count.parallel.factor";
 //	public static final double  DEFAULT_priorityCoreCountParallelFactor = 0.4; // this is "modest" and probably to under-allocated
+	public static final double  DEFAULT_priorityCoreCountParallelFactor = 0.5; // 50 % ... might be good since we do shutdown "compress" after as well
 //	public static final double  DEFAULT_priorityCoreCountParallelFactor = 0.6; // slightly under-allocated
-	public static final double  DEFAULT_priorityCoreCountParallelFactor = 0.7; // probably the right choice
+//	public static final double  DEFAULT_priorityCoreCountParallelFactor = 0.7; // probably the right choice
 //	public static final double  DEFAULT_priorityCoreCountParallelFactor = 0.8; // probably the right choice
 //	public static final double  DEFAULT_priorityCoreCountParallelFactor = 1.0; // 1 to 1 (but we are using more thread so this will over-allocate)
 //	public static final double  DEFAULT_priorityCoreCountParallelFactor = 1.2; // more over-allocation

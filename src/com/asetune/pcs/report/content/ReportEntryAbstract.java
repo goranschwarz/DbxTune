@@ -23,6 +23,7 @@ package com.asetune.pcs.report.content;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -53,6 +54,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.ddl.model.Index;
 import com.asetune.sql.ddl.model.Table;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.CountingWriter;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.HtmlQueryString;
 import com.asetune.utils.SqlUtils;
@@ -1843,6 +1845,87 @@ implements IReportEntry
 	public Object setStatusEntry(String statusKey)
 	{
 		return getReportingInstance().setStatusEntry(statusKey);
+	}
+	
+	
+	/**
+	 * Called at start of writing a Report Entry, so we can track some statistics
+	 * @param writer
+	 * @param fullMessage
+	 */
+	@Override
+	public void beginWriteEntry(Writer writer, MessageType messageType)
+	{
+		if (writer instanceof CountingWriter)
+		{
+			CountingWriter countingWriter = (CountingWriter) writer;
+			
+			if (MessageType.FULL_MESSAGE.equals(messageType))
+			{
+				_bytesWrittenAtStart_fullMessage = countingWriter.getCharsWritten();
+			}
+			else if (MessageType.SHORT_MESSAGE.equals(messageType))
+			{
+				_bytesWrittenAtStart_shortMessage = countingWriter.getCharsWritten();
+			}
+			else
+			{
+				_logger.error("beginWriteEntry(): Unhandled messageType='" + messageType + "'.");
+			}
+		}
+	}
+
+	/**
+	 * Called at start of writing a Report Entry, so we can track some statistics
+	 * @param writer
+	 * @param fullMessage
+	 */
+	@Override
+	public void endWriteEntry(Writer writer, MessageType messageType)
+	{
+		if (writer instanceof CountingWriter)
+		{
+			CountingWriter countingWriter = (CountingWriter) writer;
+			
+			if (MessageType.FULL_MESSAGE.equals(messageType))
+			{
+				_bytesWrittenAtEnd_fullMessage = countingWriter.getCharsWritten();
+				_bytesWritten_fullMessage = _bytesWrittenAtEnd_fullMessage - _bytesWrittenAtStart_fullMessage;
+			}
+			else if (MessageType.SHORT_MESSAGE.equals(messageType))
+			{
+				_bytesWrittenAtEnd_shortMessage = countingWriter.getCharsWritten();
+				_bytesWritten_shortMessage = _bytesWrittenAtEnd_shortMessage - _bytesWrittenAtStart_shortMessage;
+			}
+			else
+			{
+				_logger.error("endWriteEntry(): Unhandled messageType='" + messageType + "'.");
+			}
+		}
+	}
+	private long _bytesWrittenAtStart_fullMessage;
+	private long _bytesWrittenAtStart_shortMessage;
+	private long _bytesWrittenAtEnd_fullMessage;
+	private long _bytesWrittenAtEnd_shortMessage;
+	private long _bytesWritten_fullMessage  = -1;
+	private long _bytesWritten_shortMessage = -1;
+
+	@Override
+	public long getCharsWrittenKb(MessageType messageType)
+	{
+		if (MessageType.FULL_MESSAGE.equals(messageType))
+		{
+			return _bytesWritten_fullMessage == -1 ? -1 : _bytesWritten_fullMessage / 1024;
+		}
+		else if (MessageType.SHORT_MESSAGE.equals(messageType))
+		{
+			return _bytesWritten_shortMessage == -1 ? -1 : _bytesWritten_shortMessage / 1024;
+		}
+		else
+		{
+			_logger.error("getCharsWrittenKb(): Unhandled messageType='" + messageType + "'.");
+			return -1;
+		}
 	}
 }
 

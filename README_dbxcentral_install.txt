@@ -364,17 +364,22 @@ for example: http://dbxtune.acme.com:8080/
 	use master;
 	CREATE USER [dbxtune] FOR LOGIN [dbxtune];
 	GRANT EXEC ON xp_readerrorlog TO [dbxtune];
-
+	
 	## Note: If you want to inspect 'Job Scheduler', dbxtune needs access to database 'msdb' 
 	USE msdb;
 	CREATE USER dbxtune FOR LOGIN dbxtune;
 	ALTER ROLE db_datareader ADD MEMBER dbxtune;
 
+	## and sp_Blitz* (if you havn't got them installed, now would be a good time: https://www.brentozar.com/blitz/ )
 	## Note: If you want to execute 'sp_blitz' and are using a non 'sysadmin' account (like we do above with the login 'dbxtune')
 	## you need to follow 'https://www.brentozar.com/askbrent/', look for 'How to Grant Permissions to Non-DBAs'
 	## The 'sp_blitz' may be used to do all sorts of 'healthchecks' every time you connect to the monitored server.
 	use master;
-	GRANT EXEC ON sp_blitz TO [dbxtune];
+	GRANT EXEC ON sp_Blitz      TO [dbxtune];  -- Used for quick health check
+	GRANT EXEC ON sp_BlitzLock  TO [dbxtune];  -- Used to list deadlocks (for Daily Summary Reports, if we have had deadlocks during that day)
+	GRANT EXEC ON sp_BlitzIndex TO [dbxtune];  -- [not used by dbxtune yet] -- To get some Index Information
+	GRANT EXEC ON sp_BlitzCache TO [dbxtune];  -- [not used by dbxtune yet] -- To get info from the Plan Cache
+	GRANT EXEC ON sp_BlitzFirst TO [dbxtune];  -- [not used by dbxtune yet] -- To ...
 
 	## Test that we can login to SQL Server with the 'dbxtune' user
 	sqlcmd -Ssrvname -Udbxtune -Pthe_long_and_arbitrary_password

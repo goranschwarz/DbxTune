@@ -31,6 +31,7 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -218,6 +219,8 @@ extends CountersModel
 	public static final String GRAPH_NAME_QUERY_STORE_DB_LOGI_READ  = "QsDbLogiRead";
 	public static final String GRAPH_NAME_QUERY_STORE_DB_LOGI_WRITE = "QsDbLogiWrite";
 
+	public static final String GRAPH_NAME_DEADLOCK_DETAILS          = "DeadlockDetails";
+	
 	private void addTrendGraphs()
 	{
 		//-----
@@ -832,8 +835,37 @@ extends CountersModel
 			false,         // visible at start
 			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);           // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_DEADLOCK_DETAILS,
+			"Deadlock Count Details", // Menu CheckBox text
+			"Deadlock Count Details ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.LOCK,
+			false,         // is Percent Graph
+			false,         // visible at start
+			0,             // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_DEADLOCK_DETAILS.equals(name)) return true; // Used by CmSummary
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+	
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
@@ -2271,7 +2303,63 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
 		}
-		
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_DEADLOCK_DETAILS.equals(tgdp.getName()))
+		{
+			// +---------------+-----------------------+-------------+----------+-----------+
+			// |object_name    |counter_name           |instance_name|cntr_value|cntr_type  |
+			// +---------------+-----------------------+-------------+----------+-----------+
+			// |SQLServer:Locks|Number of Deadlocks/sec|Xact         |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|RowGroup     |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|OIB          |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|AllocUnit    |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|HoBT         |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|Metadata     |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|Application  |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|RID          |        18|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|Extent       |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|Key          |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|Page         |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|Object       |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|File         |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|Database     |         0|272 696 576|
+			// |SQLServer:Locks|Number of Deadlocks/sec|_Total       |        18|272 696 576|
+			// +---------------+-----------------------+-------------+----------+-----------+
+			// Rows 15
+			
+			
+			
+			// get all entries from "Query Store" -- "Query Store logical writes" section
+			Map<String, Object> whereMap = new HashMap<>();
+			whereMap.put("object_name", ":Locks");
+			whereMap.put("counter_name", "Number of Deadlocks/sec");
+			List<Integer> rowIds = getDiffRowIdsWhere(whereMap);
+			
+			String[] larr = new String[rowIds.size()];
+			Double[] darr = new Double[rowIds.size()];
+			
+			for (int r=0; r<darr.length; r++)
+			{
+				Integer rowId = rowIds.get(r);
+
+				String label = getDiffString       (rowId, "instance_name");
+				Double value = getDiffValueAsDouble(rowId, "cntr_value");
+
+				larr[r] = label;
+				darr[r] = value;
+			}
+
+			// If '_Total' is the LAST entry (which is the normal) -->> Move it to First Entry
+			if (larr[larr.length-1].equals("_Total"))
+			{
+				ArrayUtils.shift(larr, 1);
+				ArrayUtils.shift(darr, 1);
+			}
+			
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
 	}
 
 	

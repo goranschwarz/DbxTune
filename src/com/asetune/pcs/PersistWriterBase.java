@@ -77,7 +77,8 @@ public abstract class PersistWriterBase
 	public static final int SESSION_DBMS_CONFIG        = 8;
 	public static final int SESSION_DBMS_CONFIG_TEXT   = 9;
 	public static final int SESSION_DBMS_CONFIG_ISSUES = 10;
-//	public static final int RECORDING_OPTIONS          = 10;
+//	public static final int RECORDING_OPTIONS          = 11;
+	public static final int KEY_VALUE_STORAGE          = 20;
 	public static final int DDL_STORAGE                = 50;
 //	public static final int SQL_CAPTURE_SQLTEXT        = 60;
 	public static final int SQL_CAPTURE_STATEMENTS     = 61;
@@ -715,6 +716,7 @@ public abstract class PersistWriterBase
 		case SESSION_DBMS_CONFIG_TEXT:   return schemaPrefix + lq + "MonSessionDbmsConfigText"    + rq; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
 		case SESSION_DBMS_CONFIG_ISSUES: return schemaPrefix + lq + "MonSessionDbmsConfigIssues"  + rq;
 //		case RECORDING_OPTIONS:          return schemaPrefix + lq + "MonRecordingOptions"         + rq;
+		case KEY_VALUE_STORAGE:          return schemaPrefix + lq + "MonKeyValueStorage"          + rq;
 		case DDL_STORAGE:                return schemaPrefix + lq + "MonDdlStorage"               + rq;
 //		case SQL_CAPTURE_SQLTEXT:        return schemaPrefix + lq + "MonSqlCapSqlText"            + rq;
 		case SQL_CAPTURE_STATEMENTS:     return schemaPrefix + lq + "MonSqlCapStatements"         + rq;
@@ -1090,6 +1092,23 @@ public abstract class PersistWriterBase
 //
 //				ddlList.add(sbSql.toString());
 //			}
+			else if (type == KEY_VALUE_STORAGE)
+			{
+				StringBuffer sbSql = new StringBuffer();
+
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"KeyName"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"ValueType"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(false)+"\n"); // integer, text, json...
+				sbSql.append("   ,"+fill(lq+"ValueText"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(true )+"\n"); // storage for "short" values (255 chars)
+				sbSql.append("   ,"+fill(lq+"ValueClob"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB        ),20)+" "+getNullable(true )+"\n"); // storage for "long" values
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"KeyName"+rq+")\n");
+				sbSql.append(") \n");
+
+				ddlList.add(sbSql.toString());
+			}
 			else if (type == DDL_STORAGE)
 			{
 				StringBuffer sbSql = new StringBuffer();
@@ -1605,6 +1624,19 @@ public abstract class PersistWriterBase
 //			if (addPrepStatementQuestionMarks)
 //				sbSql.append("values(?, ?) \n");
 //		}
+		else if (type == KEY_VALUE_STORAGE)
+		{
+			sbSql.append("insert into ").append(tabName).append(" (");
+			sbSql.append(lq).append("SessionStartTime").append(rq).append(", "); // 1
+			sbSql.append(lq).append("KeyName")         .append(rq).append(", "); // 2
+			sbSql.append(lq).append("ValueType")       .append(rq).append(", "); // 3
+			sbSql.append(lq).append("ValueText")       .append(rq).append(", "); // 4
+			sbSql.append(lq).append("ValueClob")       .append(rq).append("");   // 5
+			sbSql.append(") \n");
+			if (addPrepStatementQuestionMarks)
+				sbSql.append("values(?, ?, ?, ?, ?) \n");
+			//                       1  2  3  4  5
+		}
 		else if (type == DDL_STORAGE)
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
@@ -1829,6 +1861,10 @@ public abstract class PersistWriterBase
 //		{
 //			return null;
 //		}
+		else if (type == KEY_VALUE_STORAGE)
+		{
+			return null;
+		}
 		else if (type == DDL_STORAGE)
 		{
 			return null;

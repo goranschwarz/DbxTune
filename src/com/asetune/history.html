@@ -90,6 +90,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>In the Recording Information section Write what Java version we used.</LI>
 				<LI>Introduced a "priority queue", so that not to many DbxTune collectors does DSR at the same time, which causes extensive CPU usage and possibly memory issues</LI>
 				<LI>When generating SparcLines, introduced a timeout of 10 minutes... and prints SQL for easier debugging.</LI>
+				<LI>In the 'Exec/Creation time for each Report Section' also print aprox how many bytes we have written to each section</LI>
 			</UL>
 		</LI>
 
@@ -246,6 +247,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added Alarm: <b>AlarmEventLowOnWorkerThreads</b> -- which will be raised when we have 20 or less "worker threads" available (called from CmSummary)</LI>
 		<LI>Added Alarm: <b>AlarmEventOutOfWorkerThreads</b> -- which will be raised when we have no more "worker threads" available (called from CmSummary)</LI>
 		<LI>Added Alarm: <b>AlarmEventToxicWait         </b> -- which will be raised when checking "Server Wait Time", wait events (called from CmWaitStats)</LI>
+		<LI>Added Alarm: <b>AlarmEventDeadlock          </b> -- if we had any deadlocks... (within a MovingAverage over 10 minutes), (called from CmSummary)</LI>
 
 		<LI>Added CM: <b>CmExecQueryStatPerDb </b> - Activity Grouped by Database -- Information is fetched from dm_exec_query_stats</LI>
 
@@ -283,6 +285,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmOpenTransactions   </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
 		<LI><b>CmPerfCounters       </b> - Added Chart 'Stolen Server Memory, from Buffer Pool'</LI>
+		<LI><b>CmPerfCounters       </b> - Added Chart 'DeadlockDetails'</LI>
 
 		<LI><b>CmSessions           </b> - The "hidden report" on WaitResources has been extended (can now lookup pages to get ObjectID's and translated to ObjectName's, also lookup 'locked data' when WaitResource is 'KEY')</LI>
 		<LI><b>CmSessions           </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
@@ -293,9 +296,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary            </b> - added Chart "WorkersThreadUsage"  -- to see the behaviour of Worker Thread Usage</LI>
 		<LI><b>CmSummary            </b> - added Chart "WtWaitingForCpu"     -- SQL Server Worker That are Waiting for CPU to be Scheduled</LI>
 		<LI><b>CmSummary            </b> - added Chart "TasksWaitForWorkers" -- Tasks/Requests that are Waiting for Available Worker Threads</LI>
+		<LI><b>CmSummary            </b> - added Chart "DeadlockCountSum"    -- How many deadlocks did we have in last "sample"</LI>
 		<LI><b>CmSummary            </b> - new columns: RootBlockerSpids</LI>
+		<LI><b>CmSummary            </b> - new columns: deadlockCount</LI>
 		<LI><b>CmSummary            </b> - alarm 'AlarmEventBlockingLockAlarm', attach info from "CmSessions" about "RootBlockerSpids" and "oldestOpenTranSpid"</LI>
 		<LI><b>CmSummary            </b> - alarm 'AlarmEventLongRunningTransaction', attach info from "CmSessions" about "oldestOpenTranSpid"</LI>
+		<LI><b>CmSummary            </b> - alarm 'AlarmEventDeadlock' if we had any deadlocks... (within a MovingAverage over 10 minutes) </LI>
 
 		<LI><b>CmTempdbSpidUsage    </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
@@ -314,14 +320,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<b>Daily Report</b><br>
 		<ul>
 			<li>New section: Top Database Activity (order by: 'total_worker_time_ms__sum', origin: CmExecQueryStatPerDb/dm_exec_query_stats)</li>
-			<li>new: SqlServerXxxYyy       -- xxx</li>
+			<li>New section 'Deadlocks', which prints how many deadlocks we had in last 24 hours, and print information we got from sp_BlitzLock</li>
 			<li>new: SqlServerXxxYyy       -- xxx</li>
 
 			<li>In the Recording info, Print the Edition: 'Standard Edition', 'Enterprise Edition', 'Web Edition', 'Developer Edition', 'Express Edition', or 'Azure'</li>
 			<li>In the Recording info, Print the 'Collation Name' and 'Collation Description'</li>
 			<li>In the "Overview" section, added some Graphs: 'CmPerfCounters_CachePhyReads', 'CmPerfCounters_CacheWrites', 'CmMemoryGrantsSum_GrantedMemSum' and 'CmSummary_OsMemoryFreeMb'</li>
 			<li>In the "Plan Cache History"" is no longer included in "short" report (Mail Reports)</li>
-
+			<li>In the "QueryStore" and "TopCmExecQueryStats" new column 'efficiency_pct' for  this may help decide if we have (parallel) queries that are NOT effective</li>
+			<li>PCS - On Database Rollover, If we have seen any Deadlocks... extract them using 'sp_BlitzLock' and store them in the recording.</li>
 		</ul>                                                              
 		</LI>
 	</UL>
@@ -374,6 +381,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<br>
 		<LI><b>DBMS Configuration   </b> - Added some Text config: 'DB Info', 'HBA Conf', 'Extentions', 'Servers'</LI> 
+		<LI><b>DBMS Configuration   </b> - Warn about 'fsync=off'</LI> 
 
 		<br>
 		<LI><b>DDL Lookup/Store     </b> - xxx</LI> 
@@ -409,6 +417,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>Table/Cell ToolTip Better support to handle/display inline HTML content that dosn't start with '&gt;html&lt;'</LI>
+		<LI>The "Copy Result" button can now also copy ResultSets into a JSON format (long or short)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
