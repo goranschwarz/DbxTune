@@ -408,14 +408,14 @@ extends MonitorIo
 		// Skip "loop" devices
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorIo.skipLoopDevices", true))
 		{
-			md.setSkipRows("Device", "^loop[0-9]+");
-			md.setSkipRows("Device", "^/dev/loop[0-9]+");
+			md.setSkipRows("device", "^loop[0-9]+");
+			md.setSkipRows("device", "^/dev/loop[0-9]+");
 		}
 
 		// Skip "tmpfs" devices
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorIo.skip.tmpfs.devices", true))
 		{
-			md.setSkipRows("Device", "^tmpfs");
+			md.setSkipRows("device", "^tmpfs");
 		}
 
 		// Get SKIP and ALLOW from the Configuration
