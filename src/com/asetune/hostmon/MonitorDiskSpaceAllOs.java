@@ -112,6 +112,20 @@ extends HostMonitor
 		
 		md.setDiffCol( "Used-KB", "Available-KB", "Used-MB", "Available-MB" );
 
+		// Skip "loop" devices
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.loop.devices", true))
+		{
+//			md.setSkipRows("Filesystem", "^loop[0-9]+");
+			md.setSkipRows("Filesystem", "^/dev/loop[0-9]+");
+		}
+
+		// Skip "tmpfs" devices
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.tmpfs.devices", true))
+		{
+			md.setSkipRows("Filesystem", "^devtmpfs");
+			md.setSkipRows("Filesystem", "^tmpfs");
+		}
+
 		// Skip the header line
 //		md.setSkipRows("Filesystem", "Filesystem");
 

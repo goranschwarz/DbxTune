@@ -221,6 +221,9 @@ extends CountersModel
 
 	public static final String GRAPH_NAME_DEADLOCK_DETAILS          = "DeadlockDetails";
 	
+	public static final String GRAPH_NAME_COLUMNSTORE_ALL           = "ColumnStoreAll"; // This will PROBABLY have to be split up in sections... But for now at least have SOMETHING for Column Store
+	
+	
 	private void addTrendGraphs()
 	{
 		//-----
@@ -848,6 +851,31 @@ extends CountersModel
 			false,         // visible at start
 			0,             // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);           // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_COLUMNSTORE_ALL,
+			"Column Store Total", // Menu CheckBox text
+			"Column Store Total ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] { 
+					"Delta Rowgroups Created", 
+					"Delta Rowgroups Closed", 
+					"Delta Rowgroups Compressed", 
+					"Total Rowgroups Compressed", 
+					"Total Delete Buffers Migrated", 
+					"Total Merge Policy Evaluations", 
+					"Total Source Rowgroups Merged", 
+					"Total Rowgroups Merge Compressed", 
+					"Total Rowgroups Fit For Merge", 
+					"Segment Cache Hit Ratio", 
+					"Segment Reads/Sec" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OTHER,
+			false,         // is Percent Graph
+			false,         // visible at start
+			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
+
 	}
 
 	@Override
@@ -2359,6 +2387,78 @@ extends CountersModel
 			
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_COLUMNSTORE_ALL.equals(tgdp.getName()))
+		{
+			// +------------+--------------------------------+-------------+----------------+----------------+----------+---------------------------+
+			// |object_name |counter_name                    |instance_name|calculated_value|cntr_type_desc  |cntr_value|cntr_type_name             |
+			// +------------+--------------------------------+-------------+----------------+----------------+----------+---------------------------+
+			// |:Columnstore|Delta Rowgroups Created         |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Delta Rowgroups Closed          |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Delta Rowgroups Compressed      |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Total Rowgroups Compressed      |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Total Delete Buffers Migrated   |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Total Merge Policy Evaluations  |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Total Source Rowgroups Merged   |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Total Rowgroups Merge Compressed|_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Total Rowgroups Fit For Merge   |_Total       |               0|absolute counter|         0|PERF_COUNTER_LARGE_RAWCOUNT|
+			// |:Columnstore|Segment Cache Hit Ratio         |_Total       |               0|percentage rate |         0|PERF_LARGE_RAW_FRACTION    |
+			// |:Columnstore|Segment Cache Hit Ratio Base    |_Total       |                |internal        |         0|PERF_LARGE_RAW_BASE        | << -- NOT INCLUDED
+			// |:Columnstore|Segment Reads/Sec               |_Total       |               0|rate per second |         0|PERF_COUNTER_BULK_COUNT    |
+			// +------------+--------------------------------+-------------+----------------+----------------+----------+---------------------------+
+			
+			Double[] arr = new Double[11];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1  = createPkStr(":Columnstore", "Delta Rowgroups Created"         , "_Total");
+			String pk2  = createPkStr(":Columnstore", "Delta Rowgroups Closed"          , "_Total");
+			String pk3  = createPkStr(":Columnstore", "Delta Rowgroups Compressed"      , "_Total");
+			String pk4  = createPkStr(":Columnstore", "Total Rowgroups Compressed"      , "_Total");
+			String pk5  = createPkStr(":Columnstore", "Total Delete Buffers Migrated"   , "_Total");
+			String pk6  = createPkStr(":Columnstore", "Total Merge Policy Evaluations"  , "_Total");
+			String pk7  = createPkStr(":Columnstore", "Total Source Rowgroups Merged"   , "_Total");
+			String pk8  = createPkStr(":Columnstore", "Total Rowgroups Merge Compressed", "_Total");
+			String pk9  = createPkStr(":Columnstore", "Total Rowgroups Fit For Merge"   , "_Total");
+			String pk10 = createPkStr(":Columnstore", "Segment Cache Hit Ratio"         , "_Total");
+			String pk11 = createPkStr(":Columnstore", "Segment Reads/Sec"               , "_Total");
+			
+			Double val1  = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2  = this.getAbsValueAsDouble(pk2, "calculated_value");
+			Double val3  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val4  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val5  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val6  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val7  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val8  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val9  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val10 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val11 = this.getAbsValueAsDouble(pk3, "calculated_value");
+			
+			if (val1 != null && val2 != null && val3 != null && val4 != null && val5 != null && val6 != null && val7 != null && val8 != null && val9 != null && val10 != null && val11 != null)
+			{
+				arr[0]  = val1;
+				arr[1]  = val2;
+				arr[2]  = val3;
+				arr[3]  = val4;
+				arr[4]  = val5;
+				arr[5]  = val6;
+				arr[6]  = val7;
+				arr[7]  = val8;
+				arr[8]  = val9;
+				arr[9]  = val10;
+				arr[10] = val11;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"', '"+pk6+"'='"+val6+"', '"+pk7+"'='"+val7+"', '"+pk8+"'='"+val8+"', '"+pk9+"'='"+val9+"', '"+pk10+"'='"+val10+"', '"+pk11+"'='"+val11+"'.");
+			}
 		}
 	}
 

@@ -409,14 +409,14 @@ extends MonitorIo
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorIo.skipLoopDevices", true))
 		{
 			md.setSkipRows("device", "^loop[0-9]+");
-			md.setSkipRows("device", "^/dev/loop[0-9]+");
+//			md.setSkipRows("device", "^/dev/loop[0-9]+"); // I probably mixed this one up with 'df -kP', where we have '/dev/loop...'
 		}
 
-		// Skip "tmpfs" devices
-		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorIo.skip.tmpfs.devices", true))
-		{
-			md.setSkipRows("device", "^tmpfs");
-		}
+//		// Skip "tmpfs" devices
+//		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorIo.skip.tmpfs.devices", true))
+//		{
+//			md.setSkipRows("device", "^tmpfs"); // I probably mixed this one up with 'df -kP', where we have Filesystem='tmpfs' 
+//		}
 
 		// Get SKIP and ALLOW from the Configuration
 		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());

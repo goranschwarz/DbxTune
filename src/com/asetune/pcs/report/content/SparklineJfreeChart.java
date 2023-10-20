@@ -368,7 +368,7 @@ public class SparklineJfreeChart
 			boolean encodeAlpha   = false;
 			int     compression   = 0;
 //			ChartUtils.writeChartAsPNG(b64o, _chart, 2048, 300);
-			ChartUtils.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
+//			ChartUtils.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
 			ReportChartAbstract.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
 //			ChartUtils.writeChartAsJPEG(b64o, _chart, width, height);
 
