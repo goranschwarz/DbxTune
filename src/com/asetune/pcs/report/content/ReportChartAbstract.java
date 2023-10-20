@@ -48,6 +48,7 @@ import org.jfree.data.time.TimeSeriesDataItem;
 
 import com.asetune.graph.TrendGraphColors;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.CountingWriter;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -1002,10 +1003,22 @@ public abstract class ReportChartAbstract implements IReportChart
 			{
 				// Write the HTML Meta data
 				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' src='data:image/png;base64,");
-				
+
+//setWriterStartPoint(writer);
 				// Write the Base64 representation of the image
 //				ChartUtils.writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
 				writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
+
+//long size1 = getWritenChars(writer);
+//System.out.println(">>>>>> CHART SIZE-1: " + size1 + ", compression=" + compression + ", tagName='" + tagName + "'.");
+
+//compression = 9;
+//setWriterStartPoint(writer);
+//	writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
+//long size2 = getWritenChars(writer);
+////System.out.println("    >> CHART SIZE-2: " + size2 + ", compression=" + compression + ", tagName='" + tagName + "'.");
+//System.out.println("  -->> CHART DIFF: " + (size2 - size1) + "   (size2[c9]=" + size2 + " - size1[c0]=" + size1 + "), tagName='" + tagName + "'.");
+
 
 				// Write the HTML end tag
 				writer.append("'>");
@@ -1038,6 +1051,38 @@ public abstract class ReportChartAbstract implements IReportChart
 			_problem = ex.toString();
 		}
 	}
+//	//------------------------------------
+//	// BEGIN: debugging size of written chars/bytes for ...
+//	//------------------------------------
+//	private long _writerStartPoint = -1;
+//	private long setWriterStartPoint(Writer writer)
+//	{
+//		if (writer instanceof CountingWriter)
+//		{
+//			CountingWriter cw = (CountingWriter) writer;
+//			_writerStartPoint = cw.getCharsWritten();
+//			return _writerStartPoint;
+//		}
+//		_writerStartPoint = -1;
+//		return _writerStartPoint;
+//	}
+//	private long getWritenChars(Writer writer)
+//	{
+//		if (_writerStartPoint == -1)
+//			return -1;
+//
+//		if (writer instanceof CountingWriter)
+//		{
+//			CountingWriter cw = (CountingWriter) writer;
+//			long nowAt = cw.getCharsWritten();
+//			return nowAt - _writerStartPoint;
+//		}
+//
+//		return -1;
+//	}
+//	//------------------------------------
+//	// END: debugging size of written chars/bytes for ...
+//	//------------------------------------
 
 	/**
 	 * Writes a chart to an output stream in PNG format.
