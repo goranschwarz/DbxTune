@@ -2530,6 +2530,11 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
+		// make: column 'program_name' with value "SQLAgent - TSQL JobStep (Job 0x38AAD6888E5C5E408DE573B0A25EE970 : Step 1)"
+		// into:                                  "SQLAgent - TSQL JobStep (Job '<name-of-the-job>' : Step 1 '<name-of-the-step>')
+		SqlServerCmUtils.localCalculation_resolveSqlAgentProgramName(newSample);
+
+
 		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(CmSummary.PROPKEY_sample_tempdbSpidUsage, CmSummary.DEFAULT_sample_tempdbSpidUsage);
 
 		int pos_OldestTranSpid         = -1; 
@@ -3504,13 +3509,26 @@ extends CountersModel
 					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
 					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
 					
+					Double DbSizeInMbAbs  = cm.getAbsValueAsDouble (r, "DbSizeInMb");
+					Double DbSizeInMbDiff = cm.getDiffValueAsDouble(r, "DbSizeInMbDiff");
+//					boolean isNewDeltaOrRateRow = cm.isNewDeltaOrRateRow(r);
+					
+					// If DbSize is equal in ABS and DIFF values, it can be:
+					//   - a new database
+					//   - or that is has been "detach" copy the files and then "attached" (seems like some applications are using that as a "backup" strategy)
+					// If the size is "big enough", lets NOT alarm on it
+					// But if it's a small size, it's probably a new database (and it might be good to have a "notification" about that)
+					if (DbSizeInMbAbs.equals(DbSizeInMbDiff))
+					{
+						if (DbSizeInMbAbs.intValue() > 512)
+							doAlarm = false;
+					}
+
 					if (doAlarm)
 					{
-						Double DbSizeInMbDiff   = cm.getDiffValueAsDouble(r, "DbSizeInMbDiff");
 						Double DataSizeInMbDiff = cm.getDiffValueAsDouble(r, "DataSizeInMbDiff");
 						Double LogSizeInMbDiff  = cm.getDiffValueAsDouble(r, "LogSizeInMbDiff");
 						
-						Double DbSizeInMbAbs   = cm.getAbsValueAsDouble(r, "DbSizeInMb");
 						Double DataSizeInMbAbs = cm.getAbsValueAsDouble(r, "DataSizeInMb");
 						Double LogSizeInMbAbs  = cm.getAbsValueAsDouble(r, "LogSizeInMb");
 						

@@ -249,7 +249,8 @@ public class PersistWriterJdbc
 	*/
 	public GraphStorageType getGraphStorageType()
 	{
-		return GraphStorageType.LABEL_IN_SEPARATE_COLUMN;
+//		return GraphStorageType.LABEL_IN_SEPARATE_COLUMN;
+		return GraphStorageType.COLUMN_NAME_IS_LABEL;
 	}
 
 	public String getSchemaName()
@@ -4169,9 +4170,22 @@ public class PersistWriterJdbc
 		try
 		{
 			sql = getTableInsertStr(conn, schemaName, whatData, cm, true, cols);
-//			PreparedStatement pstmt = conn.prepareStatement(sql);
-//			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(conn, sql);
-			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
+//			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
+			PreparedStatement pstmt = null;
+			try
+			{
+				pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
+			}
+			catch (SQLException pex)
+			{
+				_logger.warn("Preparing to save data, failed. I will try to check for new columns and alter the table, then execute the SQL again. Failed SQL=" + sql);
+
+				// If we FAILED to do PREPARE, it may be that new columns has been added to the CM, so lets ADD them and try again
+				saveDdl(conn, schemaName, cm);
+				
+				// Now do Prepare again (if it still fails), the exception will be throws...
+				pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
+			}
 
 			// Loop all rows, and ADD them to the Prepared Statement
 			for (int r=0; r<rowsCount; r++)

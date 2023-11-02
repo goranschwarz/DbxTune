@@ -186,6 +186,7 @@ public class ConnectionDialog
 	public static final String   PROPKEY_RECONNECT_ON_FAILURE        = "conn.reconnectOnFailure";
 	public static final boolean  DEFAULT_RECONNECT_ON_FAILURE        = false;
 
+	public static final int      ACTION_EVENT_ID__CONNECT_ON_STARTUP = 99;
 	public static final String   PROPKEY_CONNECT_ON_STARTUP          = "conn.onStartup";
 	public static final boolean  DEFAULT_CONNECT_ON_STARTUP          = false;
 
@@ -5788,7 +5789,6 @@ if ( ! jdbcSshTunnelUse )
 //System.out.println("jdbcConnect2(): sshTunnelInfo="+tunnelInfo+"("+(tunnelInfo == null ? "-NULL-" : tunnelInfo.getConfigString(false, true))+")");
 
 			DbxConnection dbxConn = ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, connProp, connExtraActions, _sshConn, tunnelInfo, desiredProductName, sqlInit, srvIcon); 
-//System.out.println("jdbcConnect2(): AFTER ConnectionProgressDialog.connectWithProgressDialog(): dbxConn ="+dbxConn);
 			return dbxConn;
 		}
 		catch (Exception ex)
@@ -6049,10 +6049,10 @@ if ( ! jdbcSshTunnelUse )
 
 	private boolean _inLoadProfile = false;
 	@Override
-	public void actionPerformed(ActionEvent e)
+	public void actionPerformed(ActionEvent actionEvent)
 	{
-		Object source = e.getSource();
-		String action = e.getActionCommand();
+		Object source = actionEvent.getSource();
+		String action = actionEvent.getActionCommand();
 
 		if (_inLoadProfile)
 			return;
@@ -6812,7 +6812,7 @@ if ( ! jdbcSshTunnelUse )
 			// Save the connection profile if tree expanded/collapsed has changed
 			saveConnectionProfile();
 			
-			action_connect(connType, null);
+			action_connect(connType, null, actionEvent);
 		} // end OK
 
 		
@@ -7135,7 +7135,7 @@ if ( ! jdbcSshTunnelUse )
 		_aseOptions_txt.setText( StringUtil.toCommaStr(optionsMap, "=", ", ") );
 	}
 
-	private void action_connect(int connType, ConnectionProfile connProfile)
+	private void action_connect(int connType, ConnectionProfile connProfile, ActionEvent actionEvent)
 	{
 		boolean recordThisSession        = false;
 		boolean dbxDeferredConnect       = false;
@@ -7164,268 +7164,6 @@ if ( ! jdbcSshTunnelUse )
 			_connectionType = OFFLINE_CONN;
 			setVisible(false);
 		}
-//		// JDBC CONNECT
-//		else if (JDBC_CONN == connType)
-//		{
-//			// CONNECT to the JDBC, if it fails, we stay in the dialog
-//			if ( _jdbcConn == null )
-//			{
-//				if ( ! jdbcConnect(connProfile) )
-//					return;
-//			}
-//
-//			// Update Connection Profile
-//			updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile);
-//
-//			// SET CONNECTION TYP and "CLOSE" the dialog
-//			_connectionType = JDBC_CONN;
-//			setVisible(false);
-//		}
-//		// ASE & PCS CONNECT
-//		else if (TDS_CONN == connType)
-//		{
-//			if (_options._showAseTuneOptions)
-//			{
-//				boolean recordThisSession        = _aseOptionStore_chk.isSelected();
-//				boolean aseDeferredConnect       = _aseDeferredConnect_chk.isSelected();
-//				boolean aseHostMonitor           = _aseHostMonitor_chk.isSelected();
-//	
-//				if (connProfile != null)
-//				{
-//					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
-//	
-//					recordThisSession        = entry._asetuneOptRecordSession;
-//					aseDeferredConnect       = entry._asetuneOptConnectLater;
-//					aseHostMonitor           = entry._asetuneOptOsMonitoring;
-//				}
-//	
-//				// Double check if we want to RECORD the session
-//				// We might have pressed OK and RECORD has been checked, but it was the previous session.
-//				if (recordThisSession)
-//				{
-//					String msgHtml = 
-//						"<html>" +
-//						   "<h2>Do you want to record this session?</h2>" +
-//						   "Your intentions might be: to just view Performance Counters without Recording them in a database (the Persistent Counter Storage)<br>" +
-//						   "Meaning you have just forgot to <b>disable</b> the Recording for this specific session...<br>" +
-//						   "<ul>" +
-//						   "  <li><b>Continue</b> the connection and <b>Record</b> the Performance Counters.</li>" +
-//						   "  <li><b>Continue</b> the connection <b>without recoding</b> the data, just view the Performance Counters.</li>" +
-//						   "  <li><b>Cancel</b> and <b>return</b> to the Connection Dialog.</li>" +
-//						   "</ul>" +
-//						"</html>";
-//	
-//					Object[] options = {
-//							"Record Session",
-//							"Do NOT Record",
-//							"Cancel"
-//							};
-//					int answer = JOptionPane.showOptionDialog(this, 
-//						msgHtml,
-//						"Record this Performance Session?", // title
-//						JOptionPane.YES_NO_CANCEL_OPTION,
-//						JOptionPane.QUESTION_MESSAGE,
-//						null,     //do not use a custom Icon
-//						options,  //the titles of buttons
-//						options[0]); //default button title
-//	
-//					if      (answer == 0) recordThisSession = true;
-//					else if (answer == 1) recordThisSession = false;
-//					else                  return;
-//				}
-//	
-//				// Should we WAIT to make the connection. DEFERRED or CONNECT LATER
-//				if (aseDeferredConnect)
-//				{
-//					final String hhmm = aseDeferredConnectChkAction(connProfile);
-//					if (hhmm != null)
-//					{
-//						Date startTime = null;
-//						try { startTime = PersistWriterBase.getRecordingStartTime(hhmm); }
-//						catch(Exception ignore) { }
-//	
-//						if (startTime != null)
-//						{
-//							// Create a Waitfor Dialog
-//							WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for a Deferred Connect, at "+startTime);
-//	
-//							// Create the Executor object
-//							WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
-//							{
-//								@Override
-//								public Object doWork()
-//								{
-//									try { PersistWriterBase.waitForRecordingStartTime(hhmm, getWaitDialog()); }
-//									catch (InterruptedException ignore) {}
-//	
-//									return null;
-//								}
-//	
-//								/** Should the cancel button be visible or not. */
-//								@Override
-//								public boolean canDoCancel()
-//								{
-//									return true;
-//								}
-//							};
-//							  
-//							// or if you didn't return anything from the doWork() method
-//							wait.execAndWait(doWork);
-//							
-//							// Stay in the Connection Dialog if cancel was pressed
-//							if (wait.wasCanceled())
-//							{
-//								return;
-//							}
-//						}
-//					}
-//				} // end: wait for connect
-//	
-//				// PCS CONNECT
-//				if (recordThisSession)
-//				{
-//					// CONNECT to the PCS, if it fails, we stay in the dialog
-//	
-//					// A new instance will be created each time we connect/hit_ok_but, 
-//					// thats ok because its done inside pcsConnect().
-//					if ( ! pcsConnect(connProfile) )
-//						return;
-//	
-//					// setPersistCounters for all CM:s
-//					if (_useCmForPcsTable && connProfile == null)
-//					{
-//						TableModel tm = _pcsSessionTable.getModel();
-//						for(int r=0; r<tm.getRowCount(); r++)
-//						{
-//							for (CountersModel cm : CounterController.getInstance().getCmList())
-//							{
-//								String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
-//								Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
-//								Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
-//								boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
-//								boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
-//								boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
-//								boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
-//								String  cmName   = cm.getName();
-//								if (cmName.equals(rowName))
-//								{
-//									cm.setPersistCounters    (pcsStore,               true);
-//									cm.setPersistCountersAbs (pcsStoreAbs,            true);
-//									cm.setPersistCountersDiff(pcsStoreDiff,           true);
-//									cm.setPersistCountersRate(pcsStoreRate,           true);
-//									cm.setPostponeTime       (pcsPostpone.intValue(), true);
-//									cm.setQueryTimeout       (pcsTimeout.intValue(),  true);
-//									continue;
-//								}
-//							}
-//						}
-//					}
-//					else
-//					{
-//	//					TableModel tm = _pcsSessionTable.getModel();
-//	//					for(int r=0; r<tm.getRowCount(); r++)
-//	//					{
-//	//						String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
-//	//						Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
-//	//						Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
-//	//						boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
-//	//						boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
-//	//						boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
-//	//						boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
-//	//						
-//	//						//System.out.println("OK: name="+StringUtil.left(rowName,25)+", timeout="+pcsTimeout+", postpone="+pcsPostpone+", store="+pcsStore+", abs="+pcsStoreAbs+", diff="+pcsStoreDiff+", rate="+pcsStoreRate+".");
-//	//					}
-//					}
-//				} // end: PCS CONNECT
-//	
-//				// OS HOST CONNECT
-//				if (aseHostMonitor)
-//				{
-//					// Simply set the Connection Object used to connect
-//					// the ACTUAL SSH Connection will be done as a tak in aseConnect() + ConnectionProgressDialog... 
-//					_sshConn = hostmonCreateConnectionObject(connProfile);
-//	
-//				} // end: OS HOST CONNECT
-//			} // end: _showAseTuneOptions
-//
-//			if ( _aseConn == null )
-//			{
-//				// CONNECT to the ASE
-//				boolean ok = aseConnect(connProfile);
-//
-//				// HOST MONITOR: post fix
-//				if (_sshConn != null && ! _sshConn.isConnected() )
-//				{
-//					_sshConn.close();
-//					_sshConn = null;
-//				}
-//				
-//				// if it failed: stay in the dialog
-//				if ( ! ok  )
-//					return;
-//			}
-//			
-//			
-//			// Set a specific COUNTER TEMPLATE
-//			if (_options._showAseTuneOptions)
-//			{
-//				boolean aseOptionUseTemplate     = _aseOptionUseTemplate_chk.isSelected();
-//				String  aseOptionUseTemplateName = StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx);
-//	
-//				if (connProfile != null)
-//				{
-//					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
-//	
-//					aseOptionUseTemplate     = entry._asetuneUseTemplate;
-//					aseOptionUseTemplateName = entry._asetuneUseTemplateName;
-//				}
-//	
-//				if (aseOptionUseTemplate)
-//				{
-//					if ( NO_TEMPLATE_IS_SELECTED.equals(aseOptionUseTemplateName) )
-//					{
-//						// Should we display a message that NO TEMPLATE is selected here???
-//						// For the moment, just continue...
-//					}
-//					else
-//					{
-//						try 
-//						{
-//							TcpConfigDialog.setTemplate(aseOptionUseTemplateName);
-//						}
-//						catch(NameNotFoundException ex)
-//						{
-//							SwingUtils.showInfoMessage(this, "Error loading Template", 
-//									"<html>"
-//									+ "Can't load the Template Named '"+aseOptionUseTemplateName+"'<br>"
-//									+ "<br>"
-//									+ "Continuing the connect process, but without the specified template loaded."
-//									+ "</html>");
-//						}
-//					}
-//				}
-//
-//				// Set the desired disconnect time.
-//				_disConnectTime = null;
-//				try 
-//				{ 
-//					Date stopTime  = PersistWriterBase.getRecordingStopTime(null, aseDeferredDisConnectChkAction(connProfile)); 
-//					_disConnectTime = stopTime;
-//				}
-//				catch(Exception ex) 
-//				{
-//					_logger.warn("Could not determen stop/disconnect time, stop time will NOT be set.");
-//				}
-//			} // end: _showAseTuneOptions
-//
-//			// Update Connection Profile
-//			updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile);
-//
-//			// SET CONNECTION TYP and "CLOSE" the dialog
-//			_connectionType = TDS_CONN;
-//			setVisible(false);
-//
-//		} // END: ASE & PCS CONNECT
 
 		// ASE/JDBC & PCS CONNECT
 		else if (TDS_CONN == connType || JDBC_CONN == connType)
@@ -7715,24 +7453,36 @@ if ( ! jdbcSshTunnelUse )
 			}
 			else
 			{
-    			// Update Connection Profile
-    			if (TDS_CONN == connType)
-    			{
-    				updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile, false);
-    				
-    				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_aseProfileType_cbx) : connProfile.getProfileTypeName();
-    			}
-    			else if (JDBC_CONN == connType)
-    			{
-    				updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile, false);
-    
-    				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_jdbcProfileType_cbx) : connProfile.getProfileTypeName();
-    			}
-    			else
-    			{
-    				// This could not happen but lets put it ion here if we change the code
-    				throw new RuntimeException("Unknow connection type. connType="+connType);
-    			}
+				boolean tryUpdateConnectionProfile = true;
+				if (actionEvent != null)
+				{
+					if (ACTION_EVENT_ID__CONNECT_ON_STARTUP == actionEvent.getID())
+					{
+						tryUpdateConnectionProfile = false;
+					}
+				}
+
+				// Update Connection Profile
+				if (tryUpdateConnectionProfile)
+				{
+	    			if (TDS_CONN == connType)
+	    			{
+	    				updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile, false);
+	    				
+	    				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_aseProfileType_cbx) : connProfile.getProfileTypeName();
+	    			}
+	    			else if (JDBC_CONN == connType)
+	    			{
+	    				updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile, false);
+	    
+	    				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_jdbcProfileType_cbx) : connProfile.getProfileTypeName();
+	    			}
+	    			else
+	    			{
+	    				// This could not happen but lets put it ion here if we change the code
+	    				throw new RuntimeException("Unknow connection type. connType="+connType);
+	    			}
+				}
 			}
 
 
@@ -8246,9 +7996,9 @@ if ( ! jdbcSshTunnelUse )
 	 */
 	public void connect(ConnectionProfile entry)
 	{
-		if      (entry.isType(ConnectionProfile.Type.TDS))     { action_connect(TDS_CONN,     entry); }
-		else if (entry.isType(ConnectionProfile.Type.JDBC))    { action_connect(JDBC_CONN,    entry); }
-		else if (entry.isType(ConnectionProfile.Type.OFFLINE)) { action_connect(OFFLINE_CONN, entry); }
+		if      (entry.isType(ConnectionProfile.Type.TDS))     { action_connect(TDS_CONN,     entry, null); }
+		else if (entry.isType(ConnectionProfile.Type.JDBC))    { action_connect(JDBC_CONN,    entry, null); }
+		else if (entry.isType(ConnectionProfile.Type.OFFLINE)) { action_connect(OFFLINE_CONN, entry, null); }
 		else
 		{
 			SwingUtils.showErrorMessage("Unknown Connection Profile Type", "Unknown Connection Profile Type of '"+entry.getType()+"'.", null);

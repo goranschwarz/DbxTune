@@ -42,6 +42,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCacheSqlServer;
+import com.asetune.cache.SqlAgentJobInfoCache;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsDiskSpace;
@@ -93,6 +94,7 @@ import com.asetune.cm.sqlserver.CmWaitStats;
 import com.asetune.cm.sqlserver.CmWaitStatsPerDb;
 import com.asetune.cm.sqlserver.CmWaitingTasks;
 import com.asetune.cm.sqlserver.CmWho;
+import com.asetune.cm.sqlserver.CmWhoIsActive;
 import com.asetune.cm.sqlserver.CmWorkers;
 import com.asetune.cm.sqlserver.ToolTipSupplierSqlServer;
 import com.asetune.gui.MainFrame;
@@ -202,6 +204,7 @@ extends CounterControllerAbstract
 		// Server
 		CmSessions           .create(counterController, guiController);
 		CmWho                .create(counterController, guiController);
+		CmWhoIsActive        .create(counterController, guiController);
 		CmSpidWait           .create(counterController, guiController);
 //		CmExecSessions       .create(counterController, guiController);
 //		CmExecRequests       .create(counterController, guiController);
@@ -415,6 +418,78 @@ extends CounterControllerAbstract
 			return;
 		}
 
+		// Warn user if it do NOT have proper permissions or proper roles
+		// Basically: select * from sys.fn_my_permissions(default,default)
+		if (true)
+		{
+			List<String> activeRoles = conn.getActiveServerRolesOrPermissions();
+			if (activeRoles != null)
+			{
+				boolean hasViewServerState    = activeRoles.contains("VIEW SERVER STATE");
+				boolean hasConnectAnyDatabase = activeRoles.contains("CONNECT ANY DATABASE");
+			//	boolean hasViewAnyDatabase    = activeRoles.contains("VIEW ANY DATABASE");
+				boolean hasViewAnyDefinition  = activeRoles.contains("VIEW ANY DEFINITION");
+
+				boolean missingPermissions = (!hasViewServerState || !hasConnectAnyDatabase || !hasViewAnyDefinition);
+
+				if (hasGui && missingPermissions)
+				{
+					String dbmsServerName = conn.getDbmsServerNameNoThrow();
+
+					String sqlVersionStr = "-unknown-";
+					try { sqlVersionStr = conn.getDbmsVersionStr(); } catch (SQLException ignore) {}
+
+					String username = conn.getConnPropOrDefault() == null ? "-unknown-" : conn.getConnPropOrDefault().getUsername();
+					
+					String sqlFixCmds = "";
+					if ( ! hasViewServerState    ) sqlFixCmds += "GRANT VIEW SERVER STATE    TO [" + username + "];\n";
+					if ( ! hasConnectAnyDatabase ) sqlFixCmds += "GRANT CONNECT ANY DATABASE TO [" + username + "];\n";
+					if ( ! hasViewAnyDefinition  ) sqlFixCmds += "GRANT VIEW ANY DEFINITION  TO [" + username + "];\n";
+
+					String guiHtmlMessages = "";
+					if ( ! hasViewServerState    ) guiHtmlMessages += "<li> VIEW SERVER STATE    </li>";
+					if ( ! hasConnectAnyDatabase ) guiHtmlMessages += "<li> CONNECT ANY DATABASE </li>";
+					if ( ! hasViewAnyDefinition  ) guiHtmlMessages += "<li> VIEW ANY DEFINITION  </li>";
+
+					String htmlMsg = "<html>"
+							+ "<h2>Some permission(s) are missing for user '" + username + "' in server '" + dbmsServerName + "'.</h2>"
+							+ "You just connected to <b>Server</b>: " + dbmsServerName + " <br>"
+							+ "With <b>Version</b>: " + sqlVersionStr + " <br>"
+							+ "As <b>User Name</b>: " + username + " <br>"
+							+ "<br>"
+							+ "For optimal experiance and usability the following permissions is needed: <br>"
+							+ "<ul>" + guiHtmlMessages + "</ul>"
+							+ "<br>"
+							+ Version.getAppName() + " will work without the above permissions, but some functionality might not be available.<br>"
+							+ "<b>Note:</b> The SQL Command(s) to grant permissions has been put in the <i>Copy Paste Buffer</i>, for easy access.<br>"
+							+ "</html>"
+							;
+					Object[] options = {"Connect: and Expect a lot of Errors", "CANCEL: Do not connect"};
+
+					int answer = JOptionPane.showOptionDialog(null, //_window, 
+							htmlMsg,
+							"DBMS permission(s) Notice", // title
+							JOptionPane.YES_NO_CANCEL_OPTION,
+							JOptionPane.WARNING_MESSAGE,
+							null,     //do not use a custom Icon
+							options,  //the titles of buttons
+							options[0]); //default button title
+
+					// Copy command to Copy/Paste buffer
+					SwingUtils.setClipboardContents(sqlFixCmds);
+
+					if (answer == 0) // Connect
+					{
+						// Do nothing
+					}
+					if (answer == 1) // DO NOT Connect
+					{
+						conn.closeNoThrow();
+						throw new RuntimeException("Connect attempt was aborted by user.");
+					}
+				} // end: hasGui
+			}
+		}
 		
 		//------------------------------------------------
 		// Get Global Trace Flags
@@ -842,6 +917,17 @@ extends CounterControllerAbstract
 		}
 	}
 
+	/** override this method to cleanup stuff on disconnect */
+	@Override
+	public void cleanupMonConnection()
+	{
+		super.cleanupMonConnection();
+		
+		if (SqlAgentJobInfoCache.hasInstance())
+		{
+			SqlAgentJobInfoCache.getInstance().reset();
+		}
+	}
 
 	/**
 	 * NOTE: This method IS/MUST bee called from both GUI & NO-GUI: CounterCollectorThreadGui AND CounterCollectorThreadNoGui
@@ -946,6 +1032,14 @@ extends CounterControllerAbstract
 						_logger.error("Problem when SETTING the SQL-Server 'lock timeout' before entering refresh mode. SQL="+sql);
 					}
 				}
+			}
+
+			boolean refreshSqlAgentCache = true;
+			if (refreshSqlAgentCache)
+			{
+				SqlAgentJobInfoCache sqlAgentCache = SqlAgentJobInfoCache.getInstance();
+				
+				sqlAgentCache.refresh(getMonConnection());
 			}
 		}	
 
@@ -1342,8 +1436,52 @@ extends CounterControllerAbstract
 	public void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
 	throws Exception
 	{
+		String msg    = ex.getMessage();
+		int errorCode = ex.getErrorCode();
+
+		//----------------------------------------------------
+		// RETRYABLE ERRORS -- The following messages we can do login RETRY on
+		//----------------------------------------------------
+		// * Msg=18401 = Login failed for user 'dbxtune'. Reason: Server is in script upgrade mode. Only administrator can connect at this time. ClientConnectionId:cc3d9fdd-7920-40e1-a234-70041b0a81ef
+		// * Msg=6005  = SHUTDOWN is in progress
+		if (   errorCode == 18401 || msg.contains("Reason: Server is in script upgrade mode") 
+		    || errorCode ==  6005 || msg.contains("SHUTDOWN is in progress")
+		   )
+		{
+			_logger.info("Received SQL Server Error=" + ex.getErrorCode() + ", Message='" + msg + "', this is a RETRYABLE message. So lets retry at next connect attempt.");
+			return;
+		}
+		
+		//----------------------------------------------------
+		// UNRECOVERABLE ERRORS
+		//----------------------------------------------------
 		// Error checking for "invalid password" or other "unrecoverable errors"
-		if (ex.getMessage().contains("Login failed for user"))
+		//
+		// 1> select * from sys.messages where text like '%Login failed for user%'
+		// +----------+-----------+--------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+		// |message_id|language_id|severity|is_event_logged|text                                                                                                                                                                 |
+		// +----------+-----------+--------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+		// |    18 401|      1 033|      14|true           |Login failed for user '%.*ls'. Reason: Server is in script upgrade mode. Only administrator can connect at this time.%.*ls                                           |
+		// |    18 451|      1 033|      14|true           |Login failed for user '%.*ls'. Only administrators may connect at this time.%.*ls                                                                                    |
+		// |    18 456|      1 033|      14|true           |Login failed for user '%.*ls'.%.*ls%.*ls                                                                                                                             |
+		// |    18 461|      1 033|      14|true           |Login failed for user '%.*ls'. Reason: Server is in single user mode. Only one administrator can connect at this time.%.*ls                                          |
+		// |    18 462|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The password for the user is too recent to change. %.*ls                                              |
+		// |    18 463|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The password cannot be used at this time. %.*ls                                                       |
+		// |    18 464|      1 033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is too short.%.*ls         |
+		// |    18 465|      1 033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is too long.%.*ls          |
+		// |    18 466|      1 033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is not complex enough.%.*ls|
+		// |    18 467|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The password does not meet the requirements of the password filter DLL. %.*ls                         |
+		// |    18 468|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. An unexpected error occurred during password validation. %.*ls                                        |
+		// |    18 470|      1 033|      14|true           |Login failed for user '%.*ls'. Reason: The account is disabled.%.*ls                                                                                                 |
+		// |    18 471|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The user does not have permission to change the password. %.*ls                                       |
+		// |    18 486|      1 033|      14|true           |Login failed for user '%.*ls' because the account is currently locked out. The system administrator can unlock it. %.*ls                                             |
+		// |    18 487|      1 033|      14|true           |Login failed for user '%.*ls'.  Reason: The password of the account has expired.%.*ls                                                                                |
+		// |    18 488|      1 033|      14|true           |Login failed for user '%.*ls'.  Reason: The password of the account must be changed.%.*ls                                                                            |
+		// |    40 620|      1 033|      16|false          |The login failed for user "%.*ls". The password change failed. Password change during login is not supported in this version of SQL Server.                          |
+		// |    40 697|      1 033|      16|false          |Login failed for user '%.*ls'.                                                                                                                                       |
+		// +----------+-----------+--------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+		
+		if (msg.contains("Login failed for user"))
 		{
 			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
 		}

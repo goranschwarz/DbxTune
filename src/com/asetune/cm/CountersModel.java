@@ -38,6 +38,7 @@ import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -6518,6 +6519,39 @@ implements Cloneable, ITableTooltip
 //	private Map<String, PcsColumnOptions> _pcsColumnOptions = null;
 
 
+	/** list of SQL Warning to ignore during processing */
+	private List<IgnoreSqlWarning> _ignoreSqlWarnings = new ArrayList<>();
+
+	/**
+	 * Set a list of SQL Warning to ignore during processing
+	 */
+	public void setIgnoreSqlWarnings(List<IgnoreSqlWarning> list)
+	{
+		_ignoreSqlWarnings = list;
+	}
+
+	/**
+	 * @return a list (never null) which holds SQLWarning information to ignore during processing
+	 */
+	public List<IgnoreSqlWarning> getIgnoreSqlWarnings()
+	{
+		if (_ignoreSqlWarnings == null)
+			return Collections.emptyList();
+
+		return _ignoreSqlWarnings;
+	}
+
+
+	/**
+	 * When reading Strings from the DBMS, should we "trim" the string (default is to only "right trim" them)
+	 * @return true = do <code>str.trim()</code>   false=only-right-trim
+	 */
+	public boolean isStringTrimEnabled()
+	{
+		return false;
+	}
+	
+	
 	//----------------------------------------------------------------------------------------------------------
 	// ALARM HANDLING
 	//----------------------------------------------------------------------------------------------------------
@@ -7000,14 +7034,18 @@ implements Cloneable, ITableTooltip
 		_isNewDeltaOrRateRow = null;
 	}
 
+	public enum ClearOption
+	{
+		NORMAL,
+		COLUMN_CHANGES
+	};
+	
 	public void clear()
 	{
-		clear(100);
+		clear(ClearOption.NORMAL);
 	}
-	public synchronized void clear(int clearLevel)
+	public synchronized void clear(ClearOption... clearOptions)
 	{
-		clearCmLevel = clearLevel;
-
 		_prevSample       = null;
 		_newSample        = null;
 		_diffData         = null;
@@ -7018,8 +7056,47 @@ implements Cloneable, ITableTooltip
 		setTimeInfo(null, null, null, 0);
 //		selectedModelRow  = -1;
 
-		if (clearCmLevel > 50)
-			_dataSource = getDefaultDataSource();
+		// Handle options
+		for (ClearOption clearOption : clearOptions)
+		{
+			if (ClearOption.NORMAL.equals(clearOption))
+			{
+				_dataSource = getDefaultDataSource();
+			}
+
+			// STRUCTURAL CHANGES
+			if (ClearOption.COLUMN_CHANGES.equals(clearOption))
+			{
+				// The below is a BASIC version of reset()
+
+				// basic stuff
+				setInitialized(false);
+				setRuntimeInitialized(false);
+
+				_sqlRequest        = null;
+				_sqlWhere          = "";
+				_pkCols            = null;
+
+				_isDiffCol   = null;   // this will be refreshed
+				_isPctCol    = null;   // this will be refreshed
+				_isDiffDissCol   = null;   // this will be refreshed
+
+				_rsmdCached = null;
+				
+				// if this CM has valid data for last sample
+				_hasValidSampleData = false;
+
+				// more basic stuff
+				_dataInitialized = false;
+				_firstTimeSample = true;
+
+				// new delta/rate row flag
+				_isNewDeltaOrRateRow = null;
+				
+				// Aggregate
+				private_resetAggregates();
+			}
+		}
 
 		// Clear dates on panel
 		if (_tabPanel != null)
@@ -8740,7 +8817,30 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		//   - Oracle:     number(...)           -->> int, bigint or similar
 		//   - Postgres:   oid, int2, int4, int8 -->> better data types
 		ResultSetMetaDataCached normalizedSourceRsmd = originRsmd.createNormalizedRsmd(productName);
-		
+
+		// Change CHAR into VARCHAR (due to less storage in PCS)
+		if (changeJdbcCharIntoVarchar())
+		{
+			for (int i=0; i<normalizedSourceRsmd.getColumnCount(); i++)
+			{
+				int jdbcPos = i + 1;
+
+				int jdbcType = normalizedSourceRsmd.getColumnType(jdbcPos);
+				if (jdbcType == Types.CHAR)
+				{
+					normalizedSourceRsmd.setColumnType(jdbcPos, Types.VARCHAR);
+					if (_logger.isDebugEnabled())
+						_logger.debug("CM='" + getName() + "': Changing JDBC type from Types.CHAR to Types.VARCHAR for column '" + normalizedSourceRsmd.getColumnLabel(jdbcPos) + "'.");
+				}
+				if (jdbcType == Types.NCHAR)
+				{
+					normalizedSourceRsmd.setColumnType(jdbcPos, Types.NVARCHAR);
+					if (_logger.isDebugEnabled())
+						_logger.debug("CM='" + getName() + "': Changing JDBC type from Types.NCHAR to Types.NVARCHAR for column '" + normalizedSourceRsmd.getColumnLabel(jdbcPos) + "'.");
+				}
+			}
+		}
+
 		// return the Normalized Metadata Object
 		return normalizedSourceRsmd;
 	}
@@ -8756,6 +8856,20 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		return rsmdc;
 	}
 
+	/**
+	 * Transform Types.CHAR -> Types.VARCHAR  and  Types.NCHAR -> Types.NVARCHAR
+	 * <p>
+	 * This so the PCS (Persistent Counter Store) will minimize how many characters that are saved...
+	 * <p>
+	 * Simply override this in any CM that we do NOT want this behaviour
+	 * 
+	 * @return true == Do Transform. false == leave columns as CHAR or NCHAR
+	 */
+	public boolean changeJdbcCharIntoVarchar()
+	{
+		return true;
+	}
+	
 	/**
 	 * This is called when a PCS Database is about to be rolled over into a new database (timestamp)
 	 * <p>
@@ -10492,6 +10606,7 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			return false;
 		}
 	}
+
 
 	//-------------------------------------------------------
 	// END: Aggregation 

@@ -336,14 +336,14 @@ extends CounterSampleCatalogIterator
 						int rsNum = 0;
 						int rowsAffected = 0;
 						boolean hasRs = stmnt.execute(sendSql);
-						checkWarnings(stmnt);
+						checkWarnings(cm, stmnt);
 						do
 						{
 							if (hasRs)
 							{
 								// Get next result set to work with
 								rs = stmnt.getResultSet();
-								checkWarnings(stmnt);
+								checkWarnings(cm, stmnt);
 
 //								ResultSetMetaData rsmd = rs.getMetaData();
 //								if ( ! cm.hasResultSetMetaData() )
@@ -361,7 +361,7 @@ extends CounterSampleCatalogIterator
 								if (readResultset(cm, rs, translatedRsmd, originRsmd, pkList, rsNum))
 									rs.close();
 
-								checkWarnings(stmnt);
+								checkWarnings(cm, stmnt);
 			
 								rsNum++;
 							}
@@ -387,7 +387,7 @@ extends CounterSampleCatalogIterator
 						}
 						while (hasRs || rowsAffected != -1);
 			
-						checkWarnings(stmnt);
+						checkWarnings(cm, stmnt);
 						batchCounter++;
 					}
 					br.close();

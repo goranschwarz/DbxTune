@@ -1839,6 +1839,23 @@ implements Memory.MemoryListener
 			getCounterController().stopScheduler();
 		}
 
+		//---------------------------
+		// STOP AlarmHandler if any is installed
+		//---------------------------
+		if (AlarmHandler.hasInstance())
+		{
+			AlarmHandler.getInstance().shutdown();
+		}
+
+		//---------------------------
+		// Possibly more "threads/services" that we should stop...
+		//---------------------------
+		Memory.stop();
+		
+		// Stop watching configuration files for CHANGES (ONLY IN NO-GUI mode)
+		Configuration.stopCombinedConfigurationFileWatcher();
+
+		
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending, this should lead to a server STOP.");
 		
 //		_logger.info("DUMMY WHICH SHOULD BE REMOVED... ONLY FOR TESTING PURPOSES OF ShutdownHook TIMEOUT... sleeping for 99 sec...");

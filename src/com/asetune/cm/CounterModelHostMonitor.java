@@ -1158,10 +1158,10 @@ extends CountersModel
 	@Override
 	public void clear()
 	{
-		clear(100);
+		clear(ClearOption.NORMAL);
 	}
 	@Override
-	public synchronized void clear(int clearLevel)
+	public synchronized void clear(ClearOption... clearOptions)
 	{
 //System.out.println(this+"::clear##############################################################################################");
 //System.out.println(this+"::clear(clearLevel="+clearLevel+")");

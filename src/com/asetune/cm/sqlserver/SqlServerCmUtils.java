@@ -21,6 +21,8 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
+import com.asetune.cache.SqlAgentJobInfoCache;
+import com.asetune.cm.CounterSample;
 import com.asetune.utils.Configuration;
 
 public class SqlServerCmUtils
@@ -35,4 +37,54 @@ public class SqlServerCmUtils
 	{
 		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_context_info_str_enabled, DEFAULT_context_info_str_enabled);
 	}
+	
+
+	
+	public static final String  PROPKEY_resolve_sqlAgentProgramName = "SqlServerTune.CmAny.resolve.sqlAgent.programName.enable";
+	public static final boolean DEFAULT_resolve_sqlAgentProgramName = true;
+	
+	/**
+	 * Loop all rows in the passed CM and resolve SQL Agent Job/Step id's into real names
+	 * 
+	 * @param newSample
+	 */
+	public static void localCalculation_resolveSqlAgentProgramName(CounterSample newSample)
+	{
+		localCalculation_resolveSqlAgentProgramName(newSample, "program_name");
+	}
+
+	/**
+	 * Loop all rows in the passed CM and resolve SQL Agent Job/Step id's into real names
+	 * 
+	 * @param newSample
+	 */
+	public static void localCalculation_resolveSqlAgentProgramName(CounterSample newSample, String colname)
+	{
+		boolean isEnabled = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_resolve_sqlAgentProgramName, DEFAULT_resolve_sqlAgentProgramName);
+		if ( ! isEnabled )
+			return;
+		
+		int pos_colname = newSample.findColumn(colname);
+		if (pos_colname == -1)
+		{
+			return;
+		}
+
+		// Loop on all newSample rows
+		int rowc = newSample.getRowCount();
+		for (int rowId=0; rowId < rowc; rowId++) 
+		{
+			Object o_progName = newSample.getValueAt(rowId, pos_colname);
+			
+			if (o_progName instanceof String)
+			{
+				String progName = ((String)o_progName);
+
+				progName = SqlAgentJobInfoCache.resolveProgramNameForJobName(progName);
+				
+				newSample.setValueAt(progName, rowId, pos_colname);
+			}
+		}
+	}
+
 }

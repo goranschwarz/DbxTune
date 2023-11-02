@@ -576,12 +576,9 @@ implements
 			if ( _cmDisplay != null )
 			{
 				// Set what data to show according to what is chosen in the GUI
-				if ( _counterAbs_rb.isSelected() )
-					_cmDisplay.setDataSource(CountersModel.DATA_ABS, false);
-				if ( _counterDelta_rb.isSelected() )
-					_cmDisplay.setDataSource(CountersModel.DATA_DIFF, false);
-				if ( _counterRate_rb.isSelected() )
-					_cmDisplay.setDataSource(CountersModel.DATA_RATE, false);
+				if ( _counterAbs_rb  .isSelected() ) _cmDisplay.setDataSource(CountersModel.DATA_ABS , false);
+				if ( _counterDelta_rb.isSelected() ) _cmDisplay.setDataSource(CountersModel.DATA_DIFF, false);
+				if ( _counterRate_rb .isSelected() ) _cmDisplay.setDataSource(CountersModel.DATA_RATE, false);
 
 				_dataTable.setModel(_cmDisplay);
 				refreshFilterColumns(_cmDisplay);
@@ -964,6 +961,8 @@ implements
 		_lastKnownTooltip = tooltip;
 		super.setToolTipText(tooltip);
 	}
+	
+	
 	public void setErrorToolTipText(String tooltip)
 	{
 		super.setToolTipText(tooltip);
@@ -1178,7 +1177,8 @@ implements
 
 	private JPanel createTopPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Top", false);
+//		JPanel panel = SwingUtils.createPanel("Top", false);
+		GPanel panel = SwingUtils.createGPanel("Top", false);
 //		panel.setLayout(new MigLayout(_migDebug ? "debug" : "" + "ins 3 10 3 3", // ins Top Left Bottom Right
 //				"[] [] [] []", ""));
 		panel.setLayout(new MigLayout((_migDebug ? "debug, " : "") + "ins 3 10 0 3")); // ins Top Left Bottom Right
@@ -1353,6 +1353,14 @@ implements
 		});
 		
 		panel.setComponentPopupMenu(popup);
+		
+		// NOTE: Below is a WORKAROUND, see below explanation
+		// - When calling above: panel.setComponentPopupMenu(popup);
+		//   The tool tip (which I set LATER 'in constructor TabularCntrPanel(String displayName, CountersModel cm, String groupName)' does not work) ??????
+		//   But if I do it from here it seems to work, strange...
+		//   It also work if I do NOT call: panel.setComponentPopupMenu(popup); ?????
+		// But lets use this workaround for now (until I figure out what's going on)
+		panel.setToolTipText(cm.getDescription());
 	}
 
 	/*---------------------------------------------------
@@ -5540,6 +5548,7 @@ implements
 		{
 			// do anything here? ... most of the stuff is done in setDisplayCm()
 			_logger.debug("readOfflineSample('"+_offlineSampleTime+"'): _cmOffline=null");
+System.out.println("OFFLINE-SAMPLE-NOT-FOUND: readOfflineSample('" + _offlineSampleTime + "'): _cmOffline=null");
 		}
 
 		// Mark that we have already read data from offline storage

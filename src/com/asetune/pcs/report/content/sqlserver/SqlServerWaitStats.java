@@ -135,7 +135,9 @@ extends SqlServerAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		String selected = Configuration.getCombinedConfiguration().getProperty(PROPKEY_Selected, DEFAULT_Selected);
-		String cxpacket = "CXPACKET, CXCONSUMER";
+//		String cxpacket = "CXPACKET, CXCONSUMER";
+//		String cxpacket = "CXPACKET, CXCONSUMER, CXSYNC_PORT, CXSYNC_CONSUMER, CXROWSET_SYNC";
+		String cxpacket = "regex: CX.*";
 		
 		int samplePeriod = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_SamplePeriodInMinutes, DEFAULT_SamplePeriodInMinutes);
 		int topCount     = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TopCount             , DEFAULT_TopCount);

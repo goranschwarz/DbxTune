@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.apache.commons.io.IOUtils;
 
@@ -249,4 +250,155 @@ public class SqlUtils
 		
 		return SqlFormatter.of(dialect).format(sql, format);
 	}
+
+	/**
+	 * Remove Comments until any SQL starts (or non white space character)
+	 * 
+	 * @param inputText                   The SQL Text/Code that we want to "clean" from Comments
+	 * @return
+	 */
+	public static String removeFirstSqlComments(String inputText)
+	{
+		return removeSqlComments(inputText, true);
+	}
+
+	/**
+	 * Remove ALL Comments from the input text
+	 * 
+	 * @param inputText                   The SQL Text/Code that we want to "clean" from Comments
+	 * @return
+	 */
+	public static String removeAllSqlComments(String inputText)
+	{
+		return removeSqlComments(inputText, false);
+	}
+
+	/**
+	 * Remove SQL Comments from the inputText
+	 * 
+	 * @param inputText                   The SQL Text/Code that we want to "clean" from Comments
+	 * @param onlyRemoveFirstComments     Only remove Comments until we see any non-whitespace characters (so all comments until first SQL Commands starts)
+	 * @return
+	 */
+	public static String removeSqlComments(String inputText, boolean onlyRemoveFirstComments)
+	{
+		final int OUTSIDE_COMMENT      = 0;
+		final int INSIDE_LINE_COMMENT  = 1;
+		final int INSIDE_BLOCK_COMMENT = 2;
+		final int INSIDE_BLOCK_COMMENT_noNewLineYet = 3; // we want to have at least one new line in the result if the block is not inline.
+	    
+		int currentState = OUTSIDE_COMMENT;
+		StringBuilder endResult = new StringBuilder();
+
+		Scanner scanner   = new Scanner(inputText);
+		scanner.useDelimiter("");
+
+		boolean foundFirstNonWhiteSpace = false;
+		
+		while(scanner.hasNext())
+		{
+			String c = scanner.next();
+
+			// If we have found any "non" whitespace character
+			// AND we only want to remove the FIRST comment
+			// Just append and read next char
+			if (onlyRemoveFirstComments && foundFirstNonWhiteSpace )
+			{
+				endResult.append(c);
+				continue;
+			}
+
+			switch(currentState)
+			{
+			case OUTSIDE_COMMENT: 
+				if (c.equals("/") && scanner.hasNext())
+				{
+					String c2 = scanner.next();
+					if (c2.equals("*"))
+					{
+						currentState = INSIDE_BLOCK_COMMENT_noNewLineYet;
+					}
+					else 
+					{
+						endResult.append(c).append(c2);
+					}
+				}
+				else if (c.equals("-") && scanner.hasNext())
+				{
+					String c2 = scanner.next();
+					if (c2.equals("-"))
+					{
+						currentState = INSIDE_LINE_COMMENT;
+					}
+					else 
+					{
+						endResult.append(c).append(c2);
+					}
+				}
+				else
+				{
+					endResult.append(c);
+					
+					if ( ! Character.isWhitespace(c.charAt(0)) )
+					{
+						foundFirstNonWhiteSpace = true;
+					}
+				}
+				break;
+
+			case INSIDE_LINE_COMMENT:
+				if (c.equals("\n"))
+				{
+					currentState = OUTSIDE_COMMENT;
+					endResult.append("\n");
+				}
+				break;
+
+			case INSIDE_BLOCK_COMMENT_noNewLineYet:
+				if (c.equals("\n"))
+				{
+					endResult.append("\n");
+					currentState = INSIDE_BLOCK_COMMENT;
+				}
+
+			case INSIDE_BLOCK_COMMENT:
+				while (c.equals("*") && scanner.hasNext())
+				{
+					String c2 = scanner.next();
+					if (c2.equals("/"))
+					{
+						currentState = OUTSIDE_COMMENT;
+						break;
+					}
+				}
+			} // end: switch
+		}
+		scanner.close();
+
+		return endResult.toString();
+	}	
+	
+//	public static void main(String[] args)
+//	{
+//		String test1 = ""
+//				+ "\n"
+//				+ "\n"
+//				+ "\n"
+//				+ "---------------\n"
+//				+ "--xxx\n"
+//				+ "----------------\n"
+//				+ "select 1 /* comment */\n"
+//				+ "go\n"
+//				+ "select 2 --- comment\n"
+//				+ "go\n"
+//				+ "--post-1----\n"
+//				+ "/* post-2 */\n"
+//				+ "\n"
+//				+ "/*\n"
+//				+ "** post-3\n"
+//				+ "*/\n"
+//				+ "";
+//		System.out.println("|" + removeSqlComments(test1, false).trim() + "");
+//		System.out.println("|" + removeSqlComments(test1, true) + "");
+//	}
 }

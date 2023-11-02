@@ -3039,13 +3039,11 @@ public class StringUtil
 	 * @param toProcess    the command line to process
 	 * @param removeFirst  If you want to remove the first word (which may be the application name)
 	 * @return the command line broken into strings. An empty or null toProcess parameter results in a zero sized array
-	 *         
+	 * 
+	 * TODO: It does NOT handle escaped quotes like |'This isn''t a quote'| or |"this string is 10"" long"|
+	 *       But to implement that we probably need to loop over chars instead!
 	 * NOTE: code was borrowed from Apache Commons Library, but it was made private...
 	 */
-//	public static String[] translateCommandline(final String toProcess) 
-//	{
-//		return translateCommandline(toProcess, true);
-//	}
 	public static String[] translateCommandline(final String toProcess, boolean removeFirst) 
 	{
 		if (toProcess == null || toProcess.length() == 0) 
@@ -3067,6 +3065,14 @@ public class StringUtil
 		while (tok.hasMoreTokens()) 
 		{
 			final String nextTok = tok.nextToken();
+//System.out.println("-------------------------nextTok=|"+nextTok+"|");
+
+//			// if it's an newline... just continue
+//			if ("\n".equals(nextTok))
+//			{
+//				System.out.println("          ++++ SKIP NEW_LINE");
+//				continue;
+//			}
 
 			switch (state) 
 			{
@@ -4050,7 +4056,7 @@ public class StringUtil
 			if (StringUtil.hasValue(logMessage))
 			{
 				logMessage = logMessage.replace("${maxlen}", ""+maxLen);
-				RuntimeException rte = new RuntimeException(logMessage);
+				RuntimeException rte = new RuntimeException("Creating RuntimeException just so we can trace the origin caller. logMessage: " + logMessage);
 				_logger.warn("Truncated a to long string. MaxLenth=" + maxLen + ", PassedStrLength=" + str.length() + ". User message=|" + logMessage + "|. PassedStr=|" + str + "|", rte);
 			}
 

@@ -375,11 +375,21 @@ extends DbmsObjectIdCache
 			}
 			catch(SQLException ex)
 			{
-				// Azure: Error=40515, Msg='Reference to database and/or server name in 'master.sys.objects' is not supported in this version of SQL Server.'
 				if (ex.getErrorCode() == 40515)
+				{
+					// Azure: Error=40515, Msg='Reference to database and/or server name in 'master.sys.objects' is not supported in this version of SQL Server.'
 					_logger.info("Skipping BULK load of ObjectId's for database '" + dbname + "', Error 40515 should only happen in Azure environments where we dont have access to all databases. Error=" + ex.getErrorCode() + ", Msg=|" + ex.getMessage() + "|.");
+				}
+				else if (ex.getErrorCode() == 976)
+				{
+					// Azure: Error=976, Msg='The target database, 'xxx', is participating in an availability group and is currently not accessible for queries. Either data movement is suspended or the availability replica is not enabled for read access. To allow read-only access to this and other databases in the availability group, enable read access to one or more secondary availability replicas in the group.  For more information, see the ALTER AVAILABILITY GROUP statement in SQL Server Books Online.'
+					_logger.info("Skipping BULK load of ObjectId's for database '" + dbname + "', Error 976 should only happen in Availability Group where we dont have access to standby/failover database. Error=" + ex.getErrorCode() + ", Msg=|" + ex.getMessage() + "|.");
+				}
 				else
+				{
+					// Unknown, LOG the Exception
 					_logger.error("Skipping BULK load of ObjectId's for database '" + dbname + "', continuing with next database. Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.", ex);
+				}
 
 //				return;
 			}

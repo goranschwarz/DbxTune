@@ -97,7 +97,7 @@ extends CountersModel
 	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"dm_os_performance_counters"};
-	public static final String[] NEED_ROLES       = new String[] {};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -2504,9 +2504,9 @@ extends CountersModel
 		
 		String sql = 
 			  "select /* ${cmCollectorName} */ \n" 
-			+ "       object_name = substring(object_name, charindex(':', object_name),128), /* removing 'SQLServer' or 'MSSQL$@@servicename' for easier lookups */ \n"
-			+ "       counter_name, \n"
-			+ "       instance_name, \n"
+			+ "       object_name   = cast(substring(object_name, charindex(':', object_name),128) as varchar(128)), /* removing 'SQLServer' or 'MSSQL$@@servicename' for easier lookups */ \n"
+			+ "       counter_name  = cast(counter_name  as varchar(128)), \n"
+			+ "       instance_name = cast(instance_name as varchar(128)), \n"
 			+ "       calculated_value = convert(numeric(15,2), CASE WHEN cntr_type = 65792 THEN cntr_value ELSE null END), \n"
 			+ "       CASE \n"
 			+ "          WHEN cntr_type = 65792      THEN convert(varchar(30), 'absolute counter')\n" 

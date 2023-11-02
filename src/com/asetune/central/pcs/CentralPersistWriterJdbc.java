@@ -2609,7 +2609,7 @@ extends CentralPersistWriterBase
 				int rowCount = conn.dbExec(sql);
 				if (rowCount != 1)
 				{
-					_logger.warn("Problems updating '" + tabName + "', rowcount is NOT 1, rowcount = " + rowCount + ", sessionStartTime='" + sessionStartTime + "'. Executed following SQL: " + sql);
+					_logger.warn("Problems updating '" + tabName + "', rowcount is NOT 1, rowcount = " + rowCount + ", cont.sessionStartTime='" + sessionStartTime + "'. Executed following SQL: " + sql);
 					
 					// Only show 'SessionStartTime' in the last 24 hours
 					Timestamp sessionStartTime_last24Hours = Timestamp.valueOf( sessionStartTime.toLocalDateTime().minusHours(24).withHour(0).withMinute(0).withSecond(0).withNano(0) );
@@ -2623,7 +2623,13 @@ extends CentralPersistWriterBase
 					debugSql = conn.quotifySqlString(debugSql);
 					ResultSetTableModel debugRstm = ResultSetTableModel.executeQuery(conn, debugSql, true, "debugSql");
 
-					_logger.info("Below is a ResultSet of ALL rows in the above table '" + tabName + "'.\n" + debugRstm.toAsciiTableString());
+					String sessionName = cont.getServerName();
+					_logger.info("DEBUG: PersistWriter for sessionName='" + sessionName + "', pw.isSessionStarted=" + isSessionStarted(sessionName) + ", pw.getSessionStartTime()='" + getSessionStartTime(sessionName) + "', cont.getSessionStartTime()='" + cont.getSessionStartTime() + "'.");
+					_logger.info("DEBUG: The pw.getSessionStartTime() is probably out of sync... and we havn't detected that, and started a new session... What to do here? 1:Should we simply try to INSERT the new record... 2:mark the session as not started... OR should we try to solve it in another way?");
+					_logger.info("DEBUG: Lets mark the session as NOT STARTED, and let next sample-container detect that and start a new session...");
+					setSessionStarted(sessionName, false);
+
+					_logger.info("DEBUG: Below is a ResultSet of ALL rows in the above table '" + tabName + "'.\n" + debugRstm.toAsciiTableString());
 				}
 				getStatistics().incUpdates();
 

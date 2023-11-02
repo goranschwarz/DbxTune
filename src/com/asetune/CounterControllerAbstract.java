@@ -1823,7 +1823,7 @@ implements ICounterController
 			}
 			else
 			{
-				_logger.warn("isClosed(conn) had problems. sql='"+sql+"'.", ex);
+				_logger.warn("isClosed(conn) had problems. ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", Msg=|" + ex.getMessage() + "|, sql='" + sql + "'.", ex);
 			}
 
 			throw ex;

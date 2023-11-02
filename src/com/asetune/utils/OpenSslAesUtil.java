@@ -26,8 +26,10 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.SecureRandom;
 
 // http://moi.vonos.net/java/symmetric-encryption-openssl-bc/
@@ -1046,7 +1048,34 @@ public class OpenSslAesUtil
 			}
 
 			// Now write the file back again
-			Files.write(Paths.get(filename), lines, Charset.forName("UTF-8"), StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			try
+			{
+				Path path = Paths.get(filename);
+				
+				// Make sure it's writable
+				if ( ! PlatformUtils.isWindows() )
+					Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
+
+				// Write file
+				Files.write(path, lines, Charset.forName("UTF-8"), StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+				// Set back the "read only" property
+				if ( ! PlatformUtils.isWindows() )
+					Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("r--------"));
+			}
+			catch(Exception ex)
+			{
+				_logger.error("Problems writing to file '" + filename + "'. Check if it's writable!");
+				System.out.println("##------------------------------------------------------------------------------");
+				System.out.println("## Since the write FAILED, here is the content of my write...");
+				System.out.println("## If you want to fix the 'issue' and insert the content by yourself.");
+				System.out.println("##------------------------------------------------------------------------------");
+				for (String line : lines)
+				{
+					System.out.println(line);
+				}
+				System.out.println("##------------------------------------------------------------------------------");
+			}
 
 			return removedEntry;
 		}
@@ -1236,7 +1265,34 @@ public class OpenSslAesUtil
 				}
 				
 				_logger.info("Writing a new password file='" + f + "', because we upgraded " + upgradeCount + " entries to a never encryption version. upgradeFailCount=" + upgradeFailCount);
-				Files.write(Paths.get(filename), lines, Charset.forName("UTF-8"), StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+				try
+				{
+					Path path = Paths.get(filename);
+					
+					// Make sure it's writable
+					if ( ! PlatformUtils.isWindows() )
+						Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
+
+					// Write file
+					Files.write(path, lines, Charset.forName("UTF-8"), StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+					// Set back the "read only" property
+					if ( ! PlatformUtils.isWindows() )
+						Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("r--------"));
+				}
+				catch(Exception ex)
+				{
+					_logger.error("Problems writing to file '" + filename + "'. Check if it's writable!");
+					System.out.println("##------------------------------------------------------------------------------");
+					System.out.println("## Since the write FAILED, here is the content of my write...");
+					System.out.println("## If you want to fix the 'issue' and insert the content by yourself.");
+					System.out.println("##------------------------------------------------------------------------------");
+					for (String line : lines)
+					{
+						System.out.println(line);
+					}
+					System.out.println("##------------------------------------------------------------------------------");
+				}
 			}
 			else
 			{
