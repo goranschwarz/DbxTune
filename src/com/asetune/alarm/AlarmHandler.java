@@ -32,6 +32,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
@@ -1209,13 +1210,15 @@ implements Runnable
 
 			try 
 			{
-				AlarmEvent alarm = _alarmQueue.take();
-				fireQueueSizeChange();
+//				AlarmEvent alarm = _alarmQueue.take();
+				AlarmEvent alarm = _alarmQueue.poll(3, TimeUnit.SECONDS);
 
 				// Make sure the container isn't empty.
 				if (alarm == null)                     continue;
 //				if (alarm._counterObjects == null)	  continue;
 //				if (alarm._counterObjects.size() <= 0) continue;
+
+				fireQueueSizeChange();
 
 				// if we are about to STOP the service
 				if ( ! isRunning() )

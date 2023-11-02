@@ -230,9 +230,21 @@ extends SqlServerAbstract
 			}
 //System.out.println("_deadlockSummaryPeriodCount[STEP-1-KeyValStore]=" + _deadlockSummaryPeriodCount);
 			
-			// deadlock count from the "chart/graph" table
-//			String sqlGetDeadlockCount = conn.quotifySqlString("select sum([Deadlock Count]) from [CmSummary_DeadlockCountSum]"); // NEW Style
-			String sqlGetDeadlockCount = conn.quotifySqlString("select sum([data_0]) from [CmSummary_DeadlockCountSum] where [label_0] = 'Deadlock Count'"); // OLD Style
+			String sqlGetDeadlockCount = "";
+			String dummySql = "select * from [CmSummary_DeadlockCountSum] where 1 = 2";
+			ResultSetTableModel dummyRstm = ResultSetTableModel.executeQuery(conn, dummySql, true, "metadata");
+			if (dummyRstm.hasColumn("label_0") && dummyRstm.hasColumn("data_0"))
+			{
+				 // OLD Style: Label in separate column ("label_#")
+				sqlGetDeadlockCount = conn.quotifySqlString("select sum([data_0]) from [CmSummary_DeadlockCountSum] where [label_0] = 'Deadlock Count'");
+			}
+			else
+			{
+				// NEW Style: ColumnName is Label
+				sqlGetDeadlockCount = conn.quotifySqlString("select sum([Deadlock Count]) from [CmSummary_DeadlockCountSum]"); 
+			}
+
+			// deadlock count from the "chart/graph" table (SQL created above for OLD/NEW Style)
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sqlGetDeadlockCount))
 			{
 				int deadlockCount = -1;
@@ -255,7 +267,7 @@ extends SqlServerAbstract
 //System.out.println("_deadlockSummaryPeriodReport_spBlitzLock=|" + _deadlockSummaryPeriodReport_spBlitzLock + "|");
 				if (StringUtil.hasValue(_deadlockSummaryPeriodReport_spBlitzLock))	
 				{
-					if (_deadlockSummaryPeriodReport_spBlitzLock.startsWith("ERROR: ErrorCode="))
+					if (_deadlockSummaryPeriodReport_spBlitzLock.startsWith("ERROR: ErrorCode=") || _deadlockSummaryPeriodReport_spBlitzLock.startsWith("Msg "))
 					{
 						addInfoMessage("Some error(s) was caught when calling 'sp_BlitzLock', this needs to be fixed: " + _deadlockSummaryPeriodReport_spBlitzLock);
 //TODO: Check how/where the message is printed

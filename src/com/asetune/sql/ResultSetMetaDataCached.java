@@ -107,7 +107,7 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 		private boolean  _writable;
 		private boolean  _definitelyWritable;
 		private String   _columnClassName;
-		
+
 		// Not standard
 		private int      _columnPos;
 		private String   _columnResolvedTypeName;
@@ -115,7 +115,10 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 
 		private int      _changeBitMap = 0;
 
- 
+		private boolean  _fakedColumn = false;  // if a column has been added, but it's NOT part of the ResultSet
+		private Object   _fakedColumnDefaultValue = null;
+
+		
 		public static int CHANGED_autoIncrement      = 1;      
 		public static int CHANGED_caseSensitive      = 2;      
 		public static int CHANGED_searchable         = 4;      
@@ -198,6 +201,13 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 //		public void setColumnPos         (int     pos               ) { _columnPos          = pos; }
 		public void setColumnResolvedTypeName(String resolvedTypeName){ _columnResolvedTypeName = resolvedTypeName ; }
 //		public void setAltered               (boolean altered)        { _isAltered              = altered; }
+
+
+		public void    setFakedColumn(boolean fakedColumn) { _fakedColumn = fakedColumn; }
+		public boolean isFakedColumn()              { return _fakedColumn; }
+
+		public void   setFakedColumnDefaultValue(Object defaultValue) { _fakedColumnDefaultValue = defaultValue; }
+		public Object getFakedColumnDefaultValue()             { return _fakedColumnDefaultValue; }
 	}
 
 	/**
@@ -382,6 +392,14 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 			try { entry._writable           = source.isWritable          (col); } catch(SQLException sqle) { entry._writable           = false;                                         handlePopulateMetaDataException("isWritable"          , col, sqle); }
 			try { entry._definitelyWritable = source.isDefinitelyWritable(col); } catch(SQLException sqle) { entry._definitelyWritable = false;                                         handlePopulateMetaDataException("isDefinitelyWritable", col, sqle); }
 			try { entry._columnClassName    = source.getColumnClassName  (col); } catch(SQLException sqle) { entry._columnClassName    = "unknown";                                     handlePopulateMetaDataException("getColumnClassName"  , col, sqle); }
+
+			if (source instanceof ResultSetMetaDataCached)
+			{
+				ResultSetMetaDataCached rsmdc = (ResultSetMetaDataCached) source;
+				
+				entry._fakedColumn             = rsmdc.isFakedColumn(col);
+				entry._fakedColumnDefaultValue = rsmdc.getFakedColumnDefaultValue(col);
+			}
 
 			entry._columnPos = col;
 
@@ -818,7 +836,7 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 	public int addColumn(String columnName, int columnType, String columnTypeName, boolean nullable, String columnClassName, int columnDisplaySize) 
 	throws SQLException
 	{
-		return addColumn(columnName, columnType, columnTypeName, nullable, columnClassName, columnDisplaySize, -1, -1);
+		return addColumn(columnName, columnType, columnTypeName, nullable, columnClassName, columnDisplaySize, columnDisplaySize, -1);
 	}
 	/**
 	 * Adds a new column to the metadata. 
@@ -988,6 +1006,12 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 		return set;
 	}
 	
+	public boolean isFakedColumn (int column)               { return _entries.get( column - 1 ).isFakedColumn(); }
+	public void    setFakedColumn(int column, boolean fakedColumn) { _entries.get( column - 1 ).setFakedColumn( fakedColumn ); }
+
+	public Object getFakedColumnDefaultValue(int column)               { return _entries.get( column - 1 ).getFakedColumnDefaultValue(); }
+	public void   setFakedColumnDefaultValue(int column, Object defaultValue) { _entries.get( column - 1 ).setFakedColumnDefaultValue( defaultValue ); }
+
 
 	public void setAutoIncrement     (int column, boolean autoIncrement     ) { _entries.get( column - 1 ).setAutoIncrement      ( autoIncrement     ); }
 	public void setCaseSensitive     (int column, boolean caseSensitive     ) { _entries.get( column - 1 ).setCaseSensitive      ( caseSensitive     ); }
@@ -1197,5 +1221,4 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 
 		return rs;
 	}
-	
 }

@@ -30,6 +30,7 @@ import javax.swing.JComponent;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.pipe.PipeCommandException;
+import com.asetune.utils.SqlUtils;
 import com.asetune.utils.StringUtil;
 
 public class SqlStatementFactory
@@ -40,6 +41,11 @@ public class SqlStatementFactory
 		String sqlOrigin = sql;
 		sql = sql.trim();
 
+		// Remove any leading comments (it's ok to remove them all here, since it's just a "temporary" variable)
+		// This makes it easier to find any "backslash commands"
+		sql = SqlUtils.removeFirstSqlComments(sql).trim();
+//System.out.println("------------- SqlStatementFactory -- AFTER comments was removed=|" + sql + "|");
+		
 		String w1 = "";
 		String w2 = "";
 		// Check if it's a LOCAL command, which starts with: \
@@ -96,7 +102,7 @@ public class SqlStatementFactory
 					+ "    \\ssh [user@host] cmd                       -- execute a command on the remote host\n"
 					+ "    \\rsql                                      -- Execute SQL Statement on a remote DBMS\n"
 					+ "    \\set [-u] [var=val]                        -- Set a variable to a value. Varaibles can be used in text as ${varname}\n"
-					+ "    \\connect profileName                       -- Connect to any saved connection profile\n"
+					+ "    \\connect -p profileName | --url            -- Connect to any saved connection profile or JDBC URL\n"
 					+ "    \\disconnect                                -- Disconnect from current DBMS.\n"
 					+ "    \\use                                       -- Use/switch db Connection (used with DBMS that do not support cross db access, like Postgres and DB2)\n"
 					+ "    \\tabdiff                                   -- Do data 'diff' on two tables (on different servers, or DBMS's)\n"
@@ -140,23 +146,23 @@ public class SqlStatementFactory
 		}
 
 		// Decide what to create
-		if      (w1.equals("\\loadfile"))   return new SqlStatementCmdLoadFile        (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\ddlgen"))     return new SqlStatementCmdDdlGen          (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\ssh"))        return new SqlStatementCmdSsh             (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\rsql"))       return new SqlStatementCmdRemoteSql       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\set"))        return new SqlStatementCmdSet             (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\connect"))    return new SqlStatementCmdConnect         (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\disconnect")) return new SqlStatementCmdDisconnect      (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\use"))        return new SqlStatementCmdUse             (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\tabdiff"))    return new SqlStatementCmdTabDiff         (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\dbdiff"))     return new SqlStatementCmdDbDiff          (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\ccr"))        return new SqlStatementCmdCodeComplRefresh(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\utf8len"))    return new SqlStatementCmdUtf8Length      (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\loadfile"))   return new SqlStatementCmdLoadFile        (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\ddlgen"))     return new SqlStatementCmdDdlGen          (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\ssh"))        return new SqlStatementCmdSsh             (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\rsql"))       return new SqlStatementCmdRemoteSql       (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\set"))        return new SqlStatementCmdSet             (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\connect"))    return new SqlStatementCmdConnect         (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\disconnect")) return new SqlStatementCmdDisconnect      (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\use"))        return new SqlStatementCmdUse             (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\tabdiff"))    return new SqlStatementCmdTabDiff         (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\dbdiff"))     return new SqlStatementCmdDbDiff          (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\ccr"))        return new SqlStatementCmdCodeComplRefresh(conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
+		if (w1.equals("\\utf8len"))    return new SqlStatementCmdUtf8Length      (conn, sql, dbProductName, resultCompList, progress, owner, queryWindow);
 
-//		else if (w1.equals("\\exec"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
-//		else if (w1.equals("\\rpc" ))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
-//		else if (w1.equals("\\call"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
-//		else if (w1.equals("\\prep"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
+//		else if (w1.equals("\\exec"))  return new SqlStatementCallPrep           (conn, sqlOrigin, dbProductName, resultCompList, progress);
+//		else if (w1.equals("\\rpc" ))  return new SqlStatementCallPrep           (conn, sqlOrigin, dbProductName, resultCompList, progress);
+//		else if (w1.equals("\\call"))  return new SqlStatementCallPrep           (conn, sqlOrigin, dbProductName, resultCompList, progress);
+//		else if (w1.equals("\\prep"))  return new SqlStatementCallPrep           (conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		
 //		// Everything else
 //		return new SqlStatementNormal(conn, sqlOrigin, dbProductName, resultCompList);

@@ -322,14 +322,16 @@ extends ReportChartAbstract
 					DataRecord dr = createRecord(rs);
 					if (dr != null)
 					{
-						if (!_skipGroupSet.isEmpty() && _skipGroupSet.contains(dr.group))
+//						if (!_skipGroupSet.isEmpty() && _skipGroupSet.contains(dr.group))
+						if (!_skipGroupSet.isEmpty() && isInSet(_skipGroupSet, dr.group))
 						{
 							if (_logger.isDebugEnabled())
 								_logger.debug("createCategoryDatasetFromCm(): SKIP-GROUP,     in SKIP-SET. group='" + dr.group + "', ts='" + dr.ts + "', value=" + dr.value + ", _skipGroupSet: " + _skipGroupSet);
 							continue;
 						}
 
-						if (!_keepGroupSet.isEmpty() && !_keepGroupSet.contains(dr.group))
+//						if (!_keepGroupSet.isEmpty() && !_keepGroupSet.contains(dr.group)) // Should we possibly change this to do "regex" searches... in some way???
+						if (!_keepGroupSet.isEmpty() && !isInSet(_keepGroupSet, dr.group))
 						{
 							if (_logger.isDebugEnabled())
 								_logger.debug("createCategoryDatasetFromCm(): SKIP-GROUP, NOT in KEEP-SET. group='" + dr.group + "', ts='" + dr.ts + "', value=" + dr.value + ", _keepGroupSet: " + _keepGroupSet);
@@ -365,6 +367,53 @@ extends ReportChartAbstract
 			return null;
 		}
 	}
+
+	/**
+	 * Like set.contains(val), but if the Set entry starts with "regex:" then try to match the value with the regular expression
+	 * @param set     if null: return false
+	 * @param val     if null: return false
+	 * @return
+	 */
+	private static boolean isInSet(Set<String> set, String val)
+	{
+		if (set == null || val == null)
+			return false;
+
+		for (String entry : set)
+		{
+			if (entry == null)
+				continue;
+
+			if (entry.startsWith("regex:"))
+			{
+				String regex = entry.substring("regex:".length()).trim();
+				if (val.matches(regex))
+					return true;
+			}
+			else
+			{
+				if (val.equals(entry))
+					return true;
+			}
+		}
+		return false;
+	}
+	
+//	public static void main(String[] args)
+//	{
+////		Set<String> keep = StringUtil.parseCommaStrToSet("CXPACKET, CXCONSUMER, CXSYNC_PORT, CXSYNC_CONSUMER, CXROWSET_SYNC");
+//		Set<String> keep = StringUtil.parseCommaStrToSet("regex: CX.*, DUMMY-1, DUMMY-3");
+//
+//		for (String str : Arrays.asList("", "CXPACKET", "DUMMY-1", "CXROWSET_SYNC", "DUMMY-2", "DUMMY-3"))
+//		{
+////			if (!keep.isEmpty() && !keep.contains(str))
+//			if (!keep.isEmpty() && !isInSet(keep, str))
+//				System.out.println("NOT-in-keep=|" + str + "|");
+//			else
+//				System.out.println("    in-keep=|" + str + "|");
+//		}
+//		
+//	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected DefaultCategoryDataset sortCategoryDataset(DefaultCategoryDataset originDataset)

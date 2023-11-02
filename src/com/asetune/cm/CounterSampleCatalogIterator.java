@@ -175,14 +175,14 @@ extends CounterSample
 					int rsNum = 0;
 					int rowsAffected = 0;
 					boolean hasRs = stmnt.execute(sendSql);
-					checkWarnings(stmnt);
+					checkWarnings(cm, stmnt);
 					do
 					{
 						if (hasRs)
 						{
 							// Get next result set to work with
 							rs = stmnt.getResultSet();
-							checkWarnings(stmnt);
+							checkWarnings(cm, stmnt);
 
 //							ResultSetMetaData rsmd = rs.getMetaData();
 //							if ( ! cm.hasResultSetMetaData() )
@@ -201,7 +201,7 @@ extends CounterSample
 							if (readResultset(cm, rs, translatedRsmd, originRsmd, pkList, rsNum))
 								rs.close();
 
-							checkWarnings(stmnt);
+							checkWarnings(cm, stmnt);
 		
 							rsNum++;
 						}
@@ -227,7 +227,7 @@ extends CounterSample
 					}
 					while (hasRs || rowsAffected != -1);
 		
-					checkWarnings(stmnt);
+					checkWarnings(cm, stmnt);
 					batchCounter++;
 				}
 				br.close();

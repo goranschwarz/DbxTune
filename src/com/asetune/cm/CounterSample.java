@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
@@ -589,29 +590,47 @@ extends CounterTableModel
 		return true;
 	}
 
-	protected void checkWarnings(Statement st) 
+	protected void checkWarnings(CountersModel cm, Statement st) 
 	throws SQLException
 	{
 		boolean hasWarning = false;
 		StringBuilder sb = new StringBuilder();
 		try
 		{
+			List<IgnoreSqlWarning> cmIgnoreWarnings = cm.getIgnoreSqlWarnings();
+			
 			SQLWarning w = st.getWarnings();
 			while (w != null)
 			{
 				int    errorCode = w.getErrorCode();
 				String sqlState  = w.getSQLState();
 
+				boolean ignoreWarning = false;
+				
+				// Check the CM's list of Warnings to be "discarded"
+				for (IgnoreSqlWarning ignoreEntry : cmIgnoreWarnings)
+				{
+					if (ignoreEntry.ignore(w))
+					{
+						ignoreWarning = true;
+					}
+				}
+				
+				// skip/disregard: 010P4: An output parameter was received and ignored.
 				if (sqlState != null && sqlState.equals("010P4")) 
 				{
-					// skip/disregard: 010P4: An output parameter was received and ignored.
+					ignoreWarning = true;
 				}
-				else if (errorCode == 6002) 
+
+				// skip/disregard: 6002: A SHUTDOWN command is already in progress. Please log off.
+				// This will be handled at the start on next refresh...
+				if (errorCode == 6002) 
 				{
-					// skip/disregard: 6002: A SHUTDOWN command is already in progress. Please log off.
-					// This will be handled at the start on next refresh...
+					ignoreWarning = true;
 				}
-				else
+
+				// Not handled...
+				if ( ! ignoreWarning )
 				{
 					hasWarning = true;
 	
@@ -1102,14 +1121,14 @@ extends CounterTableModel
 				int rsNum = 0;
 				int rowsAffected = 0;
 				boolean hasRs = stmnt.execute(sendSql);
-				checkWarnings(stmnt);
+				checkWarnings(cm, stmnt);
 				do
 				{
 					if (hasRs)
 					{
 						// Get next result set to work with
 						rs = stmnt.getResultSet();
-						checkWarnings(stmnt);
+						checkWarnings(cm, stmnt);
 
 						// first result set in first command batch, will be the "select getdate()"
 						if (rsNum == 0 && batchCounter == 0 && cm.isSqlBatchingSupported() && StringUtil.hasValue(srvTimeCmd))
@@ -1144,7 +1163,7 @@ extends CounterTableModel
 							if (readResultset(cm, rs, translatedRsmd, originRsmd, pkList, rsNum))
 								rs.close();
 	
-							checkWarnings(stmnt);
+							checkWarnings(cm, stmnt);
 						}
 	
 						rsNum++;
@@ -1171,7 +1190,7 @@ extends CounterTableModel
 				}
 				while (hasRs || rowsAffected != -1);
 	
-				checkWarnings(stmnt);
+				checkWarnings(cm, stmnt);
 				batchCounter++;
 			}
 			br.close();
@@ -1361,6 +1380,12 @@ extends CounterTableModel
 			return false;
 		}
 
+		ResultSetMetaDataCached rsmdCached = null;
+		if (rsmd instanceof ResultSetMetaDataCached)
+		{
+			rsmdCached = (ResultSetMetaDataCached) rsmd;
+		}
+		
 		// Load counters in memory
 		int rsRowNum = 0;
 		List<Object> row;
@@ -1391,6 +1416,14 @@ extends CounterTableModel
 			// Get one row
 			for (int i = 1; i <= colCount; i++)
 			{
+				// If it's a "faked" column inserted by the CM, do not read the value... it's NOT part of the ResultSet
+				if (rsmdCached != null && rsmdCached.isFakedColumn(i))
+				{
+					Object defaultValue = rsmdCached.getFakedColumnDefaultValue(i);
+					row.add(defaultValue);
+					continue;
+				}
+
 				// Get values... 
 				// - First try with the "fixed/modified" ResultSetMetaData
 				// - If it failes, use the "origin" ResultSetMetaData
@@ -1404,9 +1437,14 @@ extends CounterTableModel
 					_logger.warn("Failed reading object for cm='"+cm.getName()+"', row="+_rows.size()+", col="+i+", colName='"+_colNames.get(i-1)+"'. Trying to read it again but with the ORIGIN ResultSetMetatData. values using Origin rsmd = '"+val+"'.", ex);
 				}
 
-				// Right trim strings
+				// Trim strings
 				if (val != null && val instanceof String)
-					val = StringUtil.rtrim( (String)val );
+				{
+					if (cm.isStringTrimEnabled())
+						val = StringUtil.trim( (String)val );
+					else
+						val = StringUtil.rtrim( (String)val );
+				}
 
 				if (rsRowNum == 0 && _logger.isTraceEnabled() )
 					_logger.trace(getName()+": READ_RESULTSET(rsnum "+rsNum+", row 0): col=" + i + ", colName=" + (_colNames.get(i - 1) + "                                   ").substring(0, 25) + ", ObjectType=" + (val == null ? "NULL-VALUE" : val.getClass().getName()));

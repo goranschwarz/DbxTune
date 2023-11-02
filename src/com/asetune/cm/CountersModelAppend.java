@@ -206,9 +206,9 @@ public class CountersModelAppend
 	}
 
 	@Override
-	public synchronized void clear(int clearLevel)
+	public synchronized void clear(ClearOption... clearOptions)
 	{
-		super.clear(clearLevel);
+		super.clear(clearOptions);
 
 		_allData         = new ArrayList<>();
 		_lastRefreshData = new ArrayList<>();

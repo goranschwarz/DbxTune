@@ -46,6 +46,7 @@ public class GPanel extends JPanel
 	//--------------------------------------------------------
 	public GPanel()
 	{
+		super();
 		init();
 	}
 

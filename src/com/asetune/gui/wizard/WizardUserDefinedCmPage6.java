@@ -108,7 +108,7 @@ implements ActionListener, TableModelListener
 		"<li> absSum: The summary of all cells in this column (only if type is 'By Column')" +
 		"</ul>" +
 
-		"DIFF values are taken from the data set which is the difference by two sample interwalls " +
+		"DIFF values are taken from the data set which is the difference by two sample interval " +
 		"<ul>" +
 		"<li> diffVal: The value in the cell (only if type is 'By Row')" +
 		"<li> diffMax: Maximum value for this column (only if type is 'By Column')" +

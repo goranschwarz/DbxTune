@@ -782,10 +782,10 @@ System.out.println("Entering refresh() method for " + getName());
 	@Override
 	public void clear()
 	{
-		clear(100);
+		clear(ClearOption.NORMAL);
 	}
 	@Override
-	public synchronized void clear(int clearLevel)
+	public synchronized void clear(ClearOption... clearOptions)
 	{
 		setInitialized(false);
 

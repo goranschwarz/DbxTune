@@ -58,7 +58,7 @@ extends CountersModel
 	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"dm_os_latch_stats"};
-	public static final String[] NEED_ROLES       = new String[] {};//{"VIEW SERVER STATE"};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};

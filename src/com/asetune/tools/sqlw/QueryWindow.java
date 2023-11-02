@@ -467,6 +467,9 @@ public class QueryWindow
 	public final static String  PROPKEY_rsFilterRowThresh      = PROPKEY_APP_PREFIX + "resultset.filter.threshold.rowcount";
 	public final static int     DEFAULT_rsFilterRowThresh      = 5;
 	
+	public final static String  PROPKEY_checkForOversizedResults = PROPKEY_APP_PREFIX + "check.for.oversized.results";
+	public final static boolean DEFAULT_checkForOversizedResults = false;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_asPlainText,         DEFAULT_asPlainText);
@@ -532,7 +535,7 @@ public class QueryWindow
 
 	public static final Color DEFAULT_OUTPUT_ERROR_HIGHLIGHT_COLOR	= new Color(255,255,170);
 
-	private static final String REGEXP_MLC_SLC = "(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?:--.*)"; // SLC=SingleLineComment, MLC=MultiLineComment  from http://blog.ostermiller.org/find-comment
+	public static final String REGEXP_MLC_SLC = "(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?:--.*)"; // SLC=SingleLineComment, MLC=MultiLineComment  from http://blog.ostermiller.org/find-comment
 
 
 	private boolean       _initialized     = false;
@@ -2126,19 +2129,19 @@ public class QueryWindow
 		_resPanelScroll.getVerticalScrollBar()  .setUnitIncrement(16);
 		_resPanelScroll.getHorizontalScrollBar().setUnitIncrement(16);
 		
-		if (JavaVersion.isJava9orLater())
-		{
-			_logger.info("For Java-9 and above, add a 'repaint' when the scrollbar moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA RELEASE.");
-
-			_resPanelScroll.getViewport().addChangeListener(new DeferredChangeListener(50, false)
-			{
-				@Override
-				public void deferredStateChanged(ChangeEvent e)
-				{
-					_resPanelScroll.repaint();
-				}
-			});
-		}
+//		if (JavaVersion.isJava9orLater())
+//		{
+//			_logger.info("For Java-9 and above, add a 'repaint' when the scrollbar moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA RELEASE.");
+//
+//			_resPanelScroll.getViewport().addChangeListener(new DeferredChangeListener(50, false)
+//			{
+//				@Override
+//				public void deferredStateChanged(ChangeEvent e)
+//				{
+//					_resPanelScroll.repaint();
+//				}
+//			});
+//		}
 
 		_resPanelScroll    .setVisible(true);
 		_resPanelTextScroll.setVisible(false);
@@ -2172,60 +2175,80 @@ public class QueryWindow
 				// Check if it's cmd: '\connect' or '\disconnect' then allow it (and let the "execution" handle the connect request) 
 				String curCmd = _query_txt.getSelectedText();
 
-//----------------------------------------------------
-// Doing the: '\connect' when NOT connected in a MULTI BATCH doesnt work
-//  * This probably need MAJOR rewrite
-//    - Possibly do 'AseSqlScriptReader', remove '\connect' from ScriptReader, then send the ScriptReader on for Execution...
-//    - as you see this is MAJOR rewrite
-//----------------------------------------------------
-//try
-//{
-//	// treat each 'go' rows as a individual execution
-//	// readCommand(), does the job
-//	String sqlBatchTerminator = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sqlBatchTerminator, DEFAULT_sqlBatchTerminator);
-//					
-//	AseSqlScriptReader sr = new AseSqlScriptReader(curCmd, true, sqlBatchTerminator, /*ConnectionProvider*/null);
-//	if (_useSemicolonHack_chk.isSelected())
-//		sr.setSemiColonHack(true);
-//	for (String tmpSql = sr.getSqlBatchString(); tmpSql != null; tmpSql = sr.getSqlBatchString())
-//	{
-//		// This can't be part of the for loop, then it just stops if empty row
-//		if ( StringUtil.isNullOrBlank(tmpSql) )
-//			continue;
-//		System.out.println("------------tmpSql=|"+tmpSql+"|.");
-//	}
-//}
-//catch (Exception ex)
-//{
-//	ex.printStackTrace();
-//}
-
+				// Remove any "starting" comments (yes: this probably remove a lot more but...)
+				// NOTE: We should only remove the **FIRST** comments, otherwise the "sqlCmdConnect.getOverflowText()" will loose out on comments
+//				curCmd = curCmd.replaceAll(QueryWindow.REGEXP_MLC_SLC, "").trim();
+				
+				// Remove any "starting" comments, and TRIM the String
+				curCmd = SqlUtils.removeFirstSqlComments(curCmd).trim();
+				
 				if (StringUtil.hasValue(curCmd) && curCmd.startsWith("\\connect"))
 				{
 					// - button '_exec_but' is disabled, so we can't click it  
 					// - and we can't do: actionExecute(null, false);
 					//   since it depends on a connection...
 					// So lets try to do the connect request here.
-					String params = curCmd.replace("\\connect", "").trim();
-					params = StringUtil.removeSemicolonAtEnd(params).trim();
-					params = params.replaceFirst("(?i)^go", "");
-
-					String[] args = StringUtil.translateCommandline(params, false);
-//for (int i = 0; i < args.length; i++)
-//{
-//	System.out.println("___________ACTION_EXECUTE[\\connect]_____________translateCommandline(): args["+i+"]=|"+args[i]+"|.");
-//}
-
-					if (args.length >= 1)
+					try
 					{
-						String profileName = args[0];
-//System.out.println("ACTION_EXECUTE: CONNECTION... doConnect() --- profileName=|"+profileName+"|.");
-						doConnect(profileName);
+						// Parse the '\connect ...'
+						SqlStatementCmdConnect sqlCmdConnect = new SqlStatementCmdConnect(QueryWindow.this);
+						sqlCmdConnect.parse(curCmd);
+
+						// Connect...
+						sqlCmdConnect.execute();
+						
+						// Check for Any messages in the sqlStmntInfo
+						// BUT: If we have "overflow text", that needs to be executed... This will be cleared!
+						ArrayList<JComponent> tmpCompList = new ArrayList<JComponent>();
+						if (sqlCmdConnect instanceof IMessageAware)
+						{
+							IMessageAware ma = (IMessageAware)sqlCmdConnect;
+							
+							for (Message msg : ma.getMessages())
+								tmpCompList.add( new JPipeMessage(msg, sql) );
+							ma.clearMessages();
+						}
+						addToResultsetPanel(tmpCompList, false, false, false, null);
+
+						
+						// EXECUTE OVERFLOW TEXT
+						// in the selected text...
+						// If we have anything AFTER the \connect, then EXEUTE that text 
+						if (sqlCmdConnect.hasOverflowText())
+						{
+							String overflowText = sqlCmdConnect.getOverflowText();
+
+							actionExecute(e, false, overflowText);
+						}
 					}
-					else
+					catch (Exception sqlCmdEx) 
 					{
-						SwingUtils.showErrorMessage(_window, "Connect", "The '\\connect' must have a 'profilename' as a parameter.", null);;
+						//SwingUtils.showErrorMessage("Connect", sqlCmdEx.getMessage(), sqlCmdEx);
+
+						// NOTE: There MUST be an easier way to do this ;)
+						
+						// Set TEXT in Result Window
+						RSyntaxTextAreaX out = new RSyntaxTextAreaX();
+						RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
+						installResultTextExtraMenuEntries(out);
+						_resPanelTextScroll.setViewportView(out);
+						_resPanelTextScroll.setLineNumbersEnabled(true);
+
+						// set this globaly as well
+						_result_txt = out;
+
+						// add exception text to OUTPUT TEXT
+						if (sqlCmdEx instanceof PipeCommandException)
+							out.setText(sqlCmdEx.getMessage());
+						else
+							out.setText(StringUtil.stackTraceToString(sqlCmdEx));
+						
+						// Add results
+						_resPanel.removeAll();
+						_resPanel.add(_result_txt, "gapy 1, growx, pushx");
+						_resPanel.revalidate();
 					}
+					
 				}
 				else if (StringUtil.hasValue(curCmd) && curCmd.startsWith("\\disconnect"))
 				{
@@ -3189,11 +3212,11 @@ public class QueryWindow
 
 		// ACTION for "exec"
 		if (ACTION_EXECUTE.equals(actionCmd))
-			actionExecute(e, false);
+			actionExecute(e, false, null);
 
 		// ACTION for "GUI exec"
 		if (ACTION_EXECUTE_GUI_SHOWPLAN.equals(actionCmd))
-			actionExecute(e, true);
+			actionExecute(e, true, null);
 
 		// ACTION Commit
 		if (ACTION_COMMIT.equals(actionCmd))
@@ -3729,12 +3752,12 @@ public class QueryWindow
 		
 	}
 
-	private boolean isNull(String str)
-	{
-		if (str == null)        return true;
-		if (str.equals("null")) return true;
-		return false;
-	}
+//	private boolean isNull(String str)
+//	{
+//		if (str == null)        return true;
+//		if (str.equals("null")) return true;
+//		return false;
+//	}
 	private void action_connect(ActionEvent e)
 	{
 		// just for debugging...
@@ -3818,16 +3841,18 @@ public class QueryWindow
 					// PropPropEntry parses the entries and then we can query the PPE object
 					_logger.debug(action);
 					PropPropEntry ppe = new PropPropEntry(action);
+//System.out.println("action_connect(): action=|"+action+"|, PropPropEntry="+ppe);
 					String key = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP;
 
 					// ASE Connect
-					if ( ! isNull(ppe.getProperty(key, "aseServer")) )
+					if ( StringUtil.hasValue(ppe.getProperty(key, "aseServer")) )
 					{
+//System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... aseServer");
 						connDialog.setSelectedTab(ConnectionDialog.TDS_CONN);
-						if (!isNull(ppe.getProperty(key, "aseUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "aseUsername"));
-						if (!isNull(ppe.getProperty(key, "asePassword"))) connDialog.setAsePassword(ppe.getProperty(key, "asePassword"));
-						if (!isNull(ppe.getProperty(key, "aseServer"))  ) connDialog.setAseServer  (ppe.getProperty(key, "aseServer"));
-						if (!isNull(ppe.getProperty(key, "aseDbname"))  ) aseDbname = ppe.getProperty(key, "aseDbname");
+						if (StringUtil.hasValue(ppe.getProperty(key, "aseUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "aseUsername"));
+						if (StringUtil.hasValue(ppe.getProperty(key, "asePassword"))) connDialog.setAsePassword(ppe.getProperty(key, "asePassword"));
+						if (StringUtil.hasValue(ppe.getProperty(key, "aseServer"))  ) connDialog.setAseServer  (ppe.getProperty(key, "aseServer"));
+						if (StringUtil.hasValue(ppe.getProperty(key, "aseDbname"))  ) aseDbname = ppe.getProperty(key, "aseDbname");
 	
 	
 	//					if (!isNull(ppe.getProperty(key, "sshUsername"))) connDialog.setSshUsername(ppe.getProperty(key, "sshUsername"));
@@ -3837,24 +3862,25 @@ public class QueryWindow
 					}
 
 					// JDBC Connect
-					if ( ! isNull(ppe.getProperty(key, "jdbcUrl")) )
+					if ( StringUtil.hasValue(ppe.getProperty(key, "jdbcUrl")) )
 					{
+//System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... jdbcUrl");
 						connDialog.setSelectedTab(ConnectionDialog.JDBC_CONN);
-						if (!isNull(ppe.getProperty(key, "jdbcDriver")))   connDialog.setJdbcDriver(  ppe.getProperty(key, "jdbcDriver")); // do this first, it will trigger select action... which sets the URL to default value
-						if (!isNull(ppe.getProperty(key, "jdbcUrl")))      connDialog.setJdbcUrl(     ppe.getProperty(key, "jdbcUrl"));
-						if (!isNull(ppe.getProperty(key, "jdbcUsername"))) connDialog.setJdbcUsername(ppe.getProperty(key, "jdbcUsername"));
-						if (!isNull(ppe.getProperty(key, "jdbcPassword"))) connDialog.setJdbcPassword(ppe.getProperty(key, "jdbcPassword"));
+						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcDriver"  ))) connDialog.setJdbcDriver(  ppe.getProperty(key, "jdbcDriver")); // do this first, it will trigger select action... which sets the URL to default value
+						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcUrl"     ))) connDialog.setJdbcUrl(     ppe.getProperty(key, "jdbcUrl"));
+						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcUsername"))) connDialog.setJdbcUsername(ppe.getProperty(key, "jdbcUsername"));
+						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcPassword"))) connDialog.setJdbcPassword(ppe.getProperty(key, "jdbcPassword"));
 					}
 
 					// Connection Profile
-					if ( ! isNull(ppe.getProperty(key, "connProfile")) )
+					if ( StringUtil.hasValue(ppe.getProperty(key, "connProfile")) )
 					{
 //System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... connProfile");
 						connDialog.setConnProfileName(ppe.getProperty(key, "connProfile"));
 					}
 
 //System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... ConnectionDialog.ACTION_OK");
-					connDialog.actionPerformed(new ActionEvent(this, 0, ConnectionDialog.ACTION_OK));
+					connDialog.actionPerformed(new ActionEvent(this, ConnectionDialog.ACTION_EVENT_ID__CONNECT_ON_STARTUP, ConnectionDialog.ACTION_OK));
 				}
 				catch(Exception ex)
 				{
@@ -6240,7 +6266,7 @@ public class QueryWindow
 	// END: IMPLEMEMNTS the CommandHistoryDialog HistoryExecutor
 	//////////////////////////////////////////////////////////////
 	
-	private void actionExecute(ActionEvent e, boolean guiShowplanExec)
+	private void actionExecute(ActionEvent actionEvent, boolean guiShowplanExec, String overflowText)
 	{
 		// If we had an JTabbedPane, what was the last index
 		_lastTabIndex = -1;
@@ -6266,15 +6292,23 @@ public class QueryWindow
 		}
 
 		// Get the user's query and pass to displayQueryResults()
-		String q = _query_txt.getSelectedText();
-		if ( q != null && !q.equals(""))
+		String selectedText = _query_txt.getSelectedText();
+		if ( StringUtil.hasValue(selectedText) || StringUtil.hasValue(overflowText) )
 		{
 			// Get the line number where the selection started
 			int selectedTextStartAtRow = 0;
 			try { selectedTextStartAtRow = _query_txt.getLineOfOffset(_query_txt.getSelectionStart()); }
 			catch (BadLocationException ignore) {}
 
-			displayQueryResults(q, selectedTextStartAtRow, guiShowplanExec);
+			if (StringUtil.hasValue(overflowText))
+			{
+				selectedTextStartAtRow++;
+				displayQueryResults(overflowText, selectedTextStartAtRow, guiShowplanExec);
+			}
+			else
+			{
+				displayQueryResults(selectedText, selectedTextStartAtRow, guiShowplanExec);
+			}
 		}
 		else
 			displayQueryResults(_query_txt.getText(), 0, guiShowplanExec);
@@ -6717,34 +6751,58 @@ public class QueryWindow
 	}
 	
 	public void doConnect(String profileName)
+	{
+		doConnect(profileName, null, null, null);
+	}
+	public void doConnect(String jdbcUrl, String username, String password)
+	{
+		doConnect(null, jdbcUrl, username, password);
+	}
+	
+	private void doConnect(String profileName, String jdbcUrl, String username, String password)
 	//throws SQLException
 	{
 		doDisconnect();
 //		System.out.println("DO_CONNECT: NOT-YET-IMPLEMENTED");
 
-		// Check if the Profile exists
-		if (ConnectionProfileManager.hasInstance())
+		// tmp: later transferred to 'final String ppeStr'
+		String localPpeStr = null;
+
+		if (profileName != null)
 		{
-			ConnectionProfileManager cpm = ConnectionProfileManager.getInstance();
-			ConnectionProfile cp = cpm.getProfile(profileName);
-			
-			if (cp == null)
+			// Check if the Profile exists
+			if (ConnectionProfileManager.hasInstance())
 			{
-				SwingUtils.showErrorMessage(_window, "Connect", "Connection Profile '"+profileName+"' was not found.", null);;
-				//throw new SQLException("Connection Profile '"+profileName+"' was not found.");
-				return;
+				ConnectionProfileManager cpm = ConnectionProfileManager.getInstance();
+				ConnectionProfile cp = cpm.getProfile(profileName);
+				
+				if (cp == null)
+				{
+					SwingUtils.showErrorMessage(_window, "Connect", "Connection Profile '"+profileName+"' was not found.", null);;
+					//throw new SQLException("Connection Profile '"+profileName+"' was not found.");
+					return;
+				}
+				
+//				ConnectionDialog connDialog = new ConnectionDialog(_jframe);
+//				connDialog.connect(cp);
+				
+//				return;
 			}
 			
-//			ConnectionDialog connDialog = new ConnectionDialog(_jframe);
-//			connDialog.connect(cp);
-			
-//			return;
+			// Create a "connection request"
+			// And the send it...
+			localPpeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + "={connProfile=" + profileName + "}";
+		}
+		else if (jdbcUrl != null)
+		{
+			localPpeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + "={jdbcUrl=" + jdbcUrl + ", jdbcUsername=" + username + ", jdbcPassword=" + password + "}";
+		}
+		else
+		{
+			throw new RuntimeException("private doConnect(profileName, jdbcUrl, username, password) was called with WRONG parameters!");
 		}
 		
-		// Create a "connection request"
-		// And the send it...
-		final String ppeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + "={connProfile=" + profileName + "}";
-		
+		final String ppeStr = localPpeStr;
 		Runnable doRun = new Runnable()
 		{
 			@Override
@@ -8388,7 +8446,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				// if Option() is true, simply do not send
 				try
 				{
-					// The REGEXP_MLC_SLC seems to stacktrace on 'StackOverflow' when MLC and SLC are embedded, for example, which amny people are using for a procedure header.
+					// The REGEXP_MLC_SLC seems to stacktrace on 'StackOverflow' when MLC and SLC are embedded, for example, which any people are using for a procedure header.
 					/* --------------------------------------
 					** -- Some comments -------------------- 
 					** -------------------------------------- */
@@ -8405,7 +8463,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				}
 				
 				// Replace FAKE Quoted Identifiers '[' and ']' with DBMS Vendor specific chars 
-				if ( StringUtil.hasValue(sql) && (_replaceFakeQuotedId_chk.isSelected() || sr.getOption_replaceFakeQuotedIdent()) )
+				if ( StringUtil.hasValue(sql) && _conn != null && (_replaceFakeQuotedId_chk.isSelected() || sr.getOption_replaceFakeQuotedIdent()) )
 				{
 					sql = _conn.quotifySqlString(sql);
 				}
@@ -9266,8 +9324,15 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 	}
 
 
-	/** Add components to output 
-	 * @param asPlainText */
+	/**
+	 * Add component to the Results panel
+	 * 
+	 * @param compList
+	 * @param append
+	 * @param asPlainText
+	 * @param asRsTabbedPane
+	 * @param jTableFilterText
+	 */
 	private void addToResultsetPanel(ArrayList<JComponent> compList, boolean append, boolean asPlainText, boolean asRsTabbedPane, String jTableFilterText)
 	{
 		//-----------------------------
@@ -10808,6 +10873,9 @@ checkPanelSize(_resPanel, comp);
 	private void checkPanelSize(JPanel outerPanel, Component innerPanel)
 	{
 		if ( ! (innerPanel instanceof JPanel) )
+			return;
+
+		if ( ! Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_checkForOversizedResults, DEFAULT_checkForOversizedResults) )
 			return;
 
 		if (innerPanel.getPreferredSize().getHeight() > Short.MAX_VALUE)

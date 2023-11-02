@@ -110,7 +110,7 @@ extends CountersModel
 			,"dm_exec_sql_text"
 		};
 
-	public static final String[] NEED_ROLES       = new String[] {};//{"VIEW SERVER STATE"};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] { "percent_complete" };
@@ -598,6 +598,11 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
+		// make: column 'program_name' with value "SQLAgent - TSQL JobStep (Job 0x38AAD6888E5C5E408DE573B0A25EE970 : Step 1)"
+		// into:                                  "SQLAgent - TSQL JobStep (Job '<name-of-the-job>' : Step 1 '<name-of-the-step>')
+		SqlServerCmUtils.localCalculation_resolveSqlAgentProgramName(newSample);
+
+
 		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(CmSummary.PROPKEY_sample_tempdbSpidUsage, CmSummary.DEFAULT_sample_tempdbSpidUsage);
 
 		int pos_SPID               = newSample.findColumn("session_id");

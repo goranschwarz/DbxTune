@@ -32,6 +32,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfile;
@@ -66,7 +67,11 @@ extends SqlStatementAbstract
 //		String        _driver    = null; // not yet used
 
 		String        _initStr        = null;
-		String        _sql            = null;
+		String        _sql            = null;  
+//		List<String>  _sql            = new ArrayList();  
+		// TODO: Make this a List<String> so we can add several --sql 'select 1' --sql 'select 1' --sql "select 'etc...'"
+		// NOTE: This was harder than expected, since we hook into: QueryWindow.getStatement() and QueryWindow.execute()... 
+		//       So we can't just loop on a LIST in this implementation of: execute()  
 
 		boolean       _debug           = false;  // addDebugMessage()
 		boolean       _trace           = false;  // addTraceMessage()
@@ -119,10 +124,41 @@ extends SqlStatementAbstract
 	public void parse(String input)
 	throws SQLException, PipeCommandException
 	{
+		input = input.trim();
 		_originCmd = input;
+
+		// If this is a "multi-line" input
+		// Divide the: \rsql -.... "line" as the input command
+		// and everything after the \rsql row will be placed in "overflowText"
+		// This so we can pick up potential "trailing" SQL (if not --sql has been passed)
+		String overflowText = null;
+		int firstNewLinePos = input.indexOf("\n");
+		if (firstNewLinePos != -1)
+		{
+			input = input.substring(0, firstNewLinePos).trim();
+			input = StringUtil.removeSemicolonAtEnd(input).trim();
+
+			overflowText = _originCmd.substring(firstNewLinePos).trim();
+
+			// Remove first line **after** "\rsql" if it's a "go"
+			int tmp = overflowText.indexOf("\n");
+			if (tmp != -1)
+			{
+				String overflowFirstLine = overflowText.substring(0, tmp).trim();
+				if (StringUtil.hasValue(overflowFirstLine) && (overflowFirstLine.equalsIgnoreCase("go") || StringUtils.startsWithIgnoreCase(overflowFirstLine, "go ")))
+					overflowText = overflowText.substring(tmp).trim();
+			}
+		}
 		String params = input.replace("\\rsql", "").trim();
 
 		_args = StringUtil.translateCommandline(params, false);
+		
+//		_originCmd = input;
+//		String params = input.replace("\\rsql", "").trim();
+//
+//		String firstRow = "";
+//		int firstNewLinePos = 
+//		_args = StringUtil.translateCommandline(params, false);
 
 		if (_args.length >= 1)
 		{
@@ -148,6 +184,9 @@ extends SqlStatementAbstract
 			
 			if ("null".equalsIgnoreCase(_params._passwd))
 				_params._passwd = "";
+			
+			if (StringUtil.isNullOrBlank(_params._sql) && StringUtil.hasValue(overflowText))
+				_params._sql = overflowText;
 		}
 		else
 		{
@@ -203,7 +242,7 @@ extends SqlStatementAbstract
 			printHelp(null, "Missing mandatory parameter '-p|--profile <profile>' or '-S|--server <srvName>' or '-u|--url jdbc:...'");
 
 		if (StringUtil.isNullOrBlank(_params._sql))
-			printHelp(null, "Missing mandatory parameter '-s|--sql <text>'");
+			printHelp(null, "Missing mandatory parameter '-s|--sql <text>' or any trailing SQL Text after \\rsql");
 	}
 
 	private CommandLine parseCmdLine(String[] args)
@@ -289,8 +328,9 @@ extends SqlStatementAbstract
 		sb.append("  -u,--url <dest_db_url>    Destination DB URL, if it's not an ASE as destination.\n");
 		sb.append("  -p,--profile <name>       Take user/passwd/url from a connection profile.\n");
 		sb.append("\n");
-		sb.append("  -s,--sql                  SQL Statement to execute on remote connection.\n");
 		sb.append("  -i,--initSql              SQL Statement to initialize the connection.\n");
+		sb.append("  -s,--sql                  SQL Statement to execute on remote connection.\n");
+		sb.append("                            Or you can specify the SQL Text on the proceeding line\n");
 		sb.append("\n");
 		sb.append("  -x,--debug                Debug, print some extra info \n");
 		sb.append("  -X,--trace                Trace, print some extra info (more than debug)\n");
@@ -307,6 +347,12 @@ extends SqlStatementAbstract
 		sb.append("Example: \n");
 		sb.append("    -- Same as above but with a profile\n");
 		sb.append("    \\rsql -p 'PROD_1B_DS' -Ddbname -s 'select @@servername, @@version, db_name()'\n");
+		sb.append("\n");
+		sb.append("Example: \n");
+		sb.append("    -- With a proceeding SQL text *instead* of using the --sql switch\n");
+		sb.append("    \\rsql -p 'PROD_1B_DS' -Ddbname \n");
+		sb.append("    select @@servername, @@version, db_name() \n");
+		sb.append("    go\n");
 		sb.append("\n");
 		sb.append("\n");
 
@@ -362,8 +408,8 @@ extends SqlStatementAbstract
 			sql = _rightConn.quotifySqlString(sql);
 		}
 
-		if (_progress != null) _progress.setState("Executing SQL at Remote DBMS: "+sql);
-		if (_params._debug)     addDebugMessage(  "Executing SQL at Remote DBMS: "+sql);
+		if (_progress != null) _progress.setState("Executing SQL at Remote DBMS: "    + sql);
+		if (_params._debug)     addDebugMessage(  "Executing SQL at Remote DBMS: \n|" + sql + "|");
 
 		return _rightStmnt.execute(sql);
 	}

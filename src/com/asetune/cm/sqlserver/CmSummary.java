@@ -471,14 +471,25 @@ extends CountersModel
 		String dm_tran_active_transactions   = "dm_tran_active_transactions";
 		String dm_tran_database_transactions = "dm_tran_database_transactions";
 		String dm_tran_session_transactions  = "dm_tran_session_transactions";
+		String dm_os_performance_counters    = "dm_os_performance_counters";
+
 		
 		if (ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			dm_tran_active_transactions   = "dm_pdw_nodes_tran_active_transactions";
 			dm_tran_database_transactions = "dm_pdw_nodes_tran_database_transactions";
 			dm_tran_session_transactions  = "dm_pdw_nodes_tran_session_transactions";
+			dm_os_performance_counters    = "dm_pdw_nodes_os_performance_counters";
 		}
 
+		// Are we allowed to SELECT on "MOST" sys.dm_xxx tables
+		boolean hasViewServerState = false;
+		List<String> activeRoles = conn.getActiveServerRolesOrPermissions();
+		if (activeRoles != null)
+		{
+			hasViewServerState = activeRoles.contains("VIEW SERVER STATE");
+		}
+		
 		// ----- SQL-Server 2014 and above
 //		String user_objects_deferred_dealloc_page_count = "0";
 //		if (srvVersion >= Ver.ver(2014))
@@ -544,7 +555,7 @@ extends CountersModel
 				"";
 		
 		// Listeners are NOT available in Azure 
-		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics() || ssVersionInfo.isAzureManagedInstance())
+		if ( !hasViewServerState || ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics() || ssVersionInfo.isAzureManagedInstance())
 			listenerInfo = "select @listeners = '-unknown-' \n";
 		
 		
@@ -573,33 +584,33 @@ extends CountersModel
 				"declare @oldestOpenTranInSec                 int = 0\n" +
 				"declare @oldestOpenTranInSecThreshold        int = " + oldestOpenTranInSec + " \n" +
 				"\n" +
-				"declare @start_date                          datetime = NULL \n" +
-				"declare @days_running                        int      = 0 \n" +
-				"declare @Target_Server_Memory_MB             bigint   = 0 \n" +
-				"declare @Total_Server_Memory_MB              bigint   = 0 \n" +
-			    "declare @TargetVsTotal_diff_MB               bigint   = 0 \n" +
-			    "declare @scheduler_count                     int      = 0 \n" +
-			    "declare @ms_ticks                            bigint   = 0 \n" +
-			    "declare @process_kernel_time_ms              bigint   = 0 \n" +
-			    "declare @process_user_time_ms                bigint   = 0 \n" +
+				"declare @start_date                          datetime      = NULL \n" +
+				"declare @days_running                        int           = -1 \n" +
+				"declare @Target_Server_Memory_MB             bigint        = -1 \n" +
+				"declare @Total_Server_Memory_MB              bigint        = -1 \n" +
+			    "declare @TargetVsTotal_diff_MB               bigint        = -1 \n" +
+			    "declare @scheduler_count                     int           = -1 \n" +
+			    "declare @ms_ticks                            bigint        = -1 \n" +
+			    "declare @process_kernel_time_ms              bigint        = -1 \n" +
+			    "declare @process_user_time_ms                bigint        = -1 \n" +
+			    " \n" +                                                     
+			    "declare @total_os_memory_mb                  bigint        = -1 \n" +
+			    "declare @available_os_memory_mb              bigint        = -1 \n" +
+			    "declare @system_high_memory_signal_state     bit           = -1 \n" +
+			    "declare @system_low_memory_signal_state      bit           = -1 \n" +
+			    " \n" +                                                     
+			    "declare @memory_used_by_sqlserver_MB         bigint        = -1 \n" +
+			    "declare @locked_pages_used_by_sqlserver_MB   bigint        = -1 \n" +
+			    "declare @process_memory_utilization_pct      int           = -1 \n" +
+			    "declare @process_physical_memory_low         bit           = -1 \n" +
+			    "declare @process_virtual_memory_low          bit           = -1 \n" +
 			    " \n" +
-			    "declare @total_os_memory_mb                  bigint   = 0 \n" +
-			    "declare @available_os_memory_mb              bigint   = 0 \n" +
-			    "declare @system_high_memory_signal_state     bit      = 0 \n" +
-			    "declare @system_low_memory_signal_state      bit      = 0 \n" +
+			    "declare @databaseCacheMemoryMb               numeric(12,1) = -1 \n" +
+			    "declare @grantedWorkspaceMemoryMb            numeric(12,1) = -1 \n" +
+			    "declare @stolenServerMemoryMb                numeric(12,1) = -1 \n" +
+			    "declare @deadlockCount                       int           = -1 \n" +
 			    " \n" +
-			    "declare @memory_used_by_sqlserver_MB         bigint   = 0 \n" +
-			    "declare @locked_pages_used_by_sqlserver_MB   bigint   = 0 \n" +
-			    "declare @process_memory_utilization_pct      int      = 0 \n" +
-			    "declare @process_physical_memory_low         bit      = 0 \n" +
-			    "declare @process_virtual_memory_low          bit      = 0 \n" +
-			    " \n" +
-			    "declare @databaseCacheMemoryMb               numeric(12,1) \n" +
-			    "declare @grantedWorkspaceMemoryMb            numeric(12,1) \n" +
-			    "declare @stolenServerMemoryMb                numeric(12,1) \n" +
-			    "declare @deadlockCount                       int      = -1 \n" +
-			    " \n" +
-	    	    "declare @max_workers_count                   int = (SELECT max_workers_count FROM sys.dm_os_sys_info) \n" +
+	    	    "declare @max_workers_count                   int = " + ( ! hasViewServerState ? "-1 /* no='VIEW SERVER STATE' */" : "(SELECT max_workers_count FROM sys.dm_os_sys_info)") + " \n" +
 	    	    "declare @wt_usedThreads                      int \n" +
 	    	    "declare @wt_availableThreads                 int \n" +
 	    	    "declare @wt_workersWaitingForCPU             int \n" +
@@ -607,8 +618,9 @@ extends CountersModel
 	    	    "declare @wt_allocatedWorkers                 int \n" +
 			    "\n" +
 				listenerInfo +
-				"\n" +
+				"\n" + 
 			    "/*------- dm_os_sys_info -------*/ \n" +
+				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
 			    "select \n" +
 			    "       @start_date                        = sqlserver_start_time \n" +
 			    "      ,@days_running                      = datediff(day, sqlserver_start_time, getdate()) \n" +
@@ -619,37 +631,45 @@ extends CountersModel
 			    "      ,@ms_ticks                          = ms_ticks \n" +
 			    "      ,@process_kernel_time_ms            = process_kernel_time_ms \n" +
 			    "      ,@process_user_time_ms              = process_user_time_ms \n" +
-			    "from sys.dm_os_sys_info \n" +
+			    "from sys.dm_os_sys_info \n" 
+			    ) +
 			    " \n" +
 			    "/*------- dm_os_sys_memory -------*/ \n" +
+				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
 			    "select \n" +
 			    "       @total_os_memory_mb                = total_physical_memory_kb     / 1024 \n" +
 			    "      ,@available_os_memory_mb            = available_physical_memory_kb / 1024 \n" +
 			    "      ,@system_high_memory_signal_state   = system_high_memory_signal_state \n" +
 			    "      ,@system_low_memory_signal_state    = system_low_memory_signal_state \n" +
-			    "from sys.dm_os_sys_memory \n" +
+			    "from sys.dm_os_sys_memory \n"
+				) +
 			    " \n" +
 			    "/*------- dm_os_process_memory -------*/ \n" +
+				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
 			    "select \n" +
 			    "       @memory_used_by_sqlserver_MB       = physical_memory_in_use_kb  / 1024 \n" +
 			    "      ,@locked_pages_used_by_sqlserver_MB = locked_page_allocations_kb / 1024 \n" +
 			    "      ,@process_memory_utilization_pct    = memory_utilization_percentage \n" +
 			    "      ,@process_physical_memory_low       = process_physical_memory_low \n" +
 			    "      ,@process_virtual_memory_low        = process_virtual_memory_low \n" +
-			    "from sys.dm_os_process_memory \n" +
+			    "from sys.dm_os_process_memory \n"
+				) +
 			    " \n" +
 			    "/*------- dm_os_performance_counters -------*/ \n" +
+				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
 			    "select \n" + // Note: We could have done this with 1 select for every counter, but this only requires 1 scan on dm_os_performance_counters
 			    "       @databaseCacheMemoryMb    = CASE WHEN counter_name = 'Database Cache Memory (KB)'    THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @databaseCacheMemoryMb    END \n" +
 			    "      ,@grantedWorkspaceMemoryMb = CASE WHEN counter_name = 'Granted Workspace Memory (KB)' THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @grantedWorkspaceMemoryMb END \n" +
 			    "      ,@stolenServerMemoryMb     = CASE WHEN counter_name = 'Stolen Server Memory (KB)'     THEN cast(cntr_value/1024.0 as numeric(12,1)) ELSE @stolenServerMemoryMb     END \n" +
 			    "      ,@deadlockCount            = CASE WHEN counter_name = 'Number of Deadlocks/sec'       THEN      cntr_value                          ELSE @deadlockCount            END \n" +
-			    "from sys.dm_os_performance_counters \n" +
+			    "from sys." + dm_os_performance_counters + " \n" +
 			    "where counter_name in ('Stolen Server Memory (KB)', 'Database Cache Memory (KB)', 'Granted Workspace Memory (KB)', 'Number of Deadlocks/sec') \n" +
-			    "  and instance_name in ('', '_Total') \n" +
+			    "  and instance_name in ('', '_Total') \n"
+				) +
 
 			    " \n" +
 			    "/*------- WorkerThreads -- dm_os_schedulers -------*/ \n" +
+				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
 			    "select \n" + 
 			    "     @wt_usedThreads               = SUM(active_workers_count) \n" +
 			    "    ,@wt_availableThreads          = @max_workers_count - SUM(active_workers_count) \n" +
@@ -657,9 +677,11 @@ extends CountersModel
 			    "    ,@wt_requestsWaitingForThreads = SUM(work_queue_count) \n" +
 			    "    ,@wt_allocatedWorkers          = SUM(current_workers_count) \n" +
 			    "from sys.dm_os_schedulers \n" +
-			    "where status = 'VISIBLE ONLINE' \n" +
+			    "where status = 'VISIBLE ONLINE' \n"
+			    ) +
 			    " \n" +
 				"/*------- Get info about Open Transactions -------*/\n" +
+				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
 				"select @oldestOpenTranBeginTime = min(database_transaction_begin_time) \n" +
 				"                                  from sys." + dm_tran_database_transactions + " \n" +
 				"                                  where database_transaction_begin_time is not null \n" +
@@ -702,7 +724,8 @@ extends CountersModel
 //				"                                              from tempdb.sys.dm_db_session_space_usage ts \n" + 
 //				"                                              where ts.session_id = @oldestOpenTranSpid \n" +
 				"    end \n" +
-				"end \n" +
+				"end \n"
+				) +
 				"\n" +
 				"/* And some other metrics */\n" +
 				"select @LockWaits           = count(*) FROM sys.sysprocesses WHERE blocked != 0 AND waittime >= " + (LockWaitsThresholdSec * 1000) + " \n" +
@@ -812,6 +835,13 @@ extends CountersModel
 		_lastSuspectPage_rstm = null;
 		_lastRootBlockersList = null;
 
+		boolean hasViewServerState = false;
+		List<String> activeRoles = conn.getActiveServerRolesOrPermissions();
+		if (activeRoles != null)
+		{
+			hasViewServerState = activeRoles.contains("VIEW SERVER STATE");
+		}
+		
 		// Root Blockers
 		boolean getRootBlockerSpids = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_rootBlockerSpids, DEFAULT_sample_rootBlockerSpids);
 		if (getRootBlockerSpids)
@@ -850,7 +880,7 @@ extends CountersModel
 
 		// refresh tempdb usage info
 		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_tempdbSpidUsage, DEFAULT_sample_tempdbSpidUsage);
-		if (getTempdbSpidUsage)
+		if (getTempdbSpidUsage && hasViewServerState)
 		{
 			long startTime = System.currentTimeMillis();
 
@@ -1795,14 +1825,14 @@ extends CountersModel
 		{
 			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_availableWorkers, DEFAULT_alarm_availableWorkers);
 
+			int maxWorkers        = cm.getAbsValueAsInteger(0, "maxWorkers"      , false, -1);
 			int availableWorkers  = cm.getAbsValueAsInteger(0, "availableWorkers", false, -1);
 
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", availableWorkers="+availableWorkers+".");
 
-			if (availableWorkers <= threshold)
+			if (maxWorkers > 0 && availableWorkers <= threshold)
 			{
-				int maxWorkers       = cm.getAbsValueAsInteger(0, "maxWorkers"      , false, -1);
 				int allocatedWorkers = cm.getAbsValueAsInteger(0, "allocatedWorkers", false, -1);
 
 				String extendedDescText = "";

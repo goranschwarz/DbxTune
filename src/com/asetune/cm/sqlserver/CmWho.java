@@ -59,12 +59,8 @@ extends CountersModel
 	public static final String   SHORT_NAME       = "Who";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-			"<p>What SybasePIDs are doing what.</p>" +
+			"<p>What SQL Server SPIDs are doing what.</p>" +
 			"<br>" +
-			"<b>Tip:</b><br>" +
-			"Sort by 'BatchIdDiff', will give you the one that executes the most SQL Batches.<br>" +
-			"Or check 'WaitEventDesc' to find out when the SPID is waiting for." +
-			"<br><br>" +
 			"Table Background colors:" +
 			"<ul>" +
 			"    <li>YELLOW      - SPID is a System Processes</li>" +
@@ -354,6 +350,11 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
+		// make: column 'program_name' with value "SQLAgent - TSQL JobStep (Job 0x38AAD6888E5C5E408DE573B0A25EE970 : Step 1)"
+		// into:                                  "SQLAgent - TSQL JobStep (Job '<name-of-the-job>' : Step 1 '<name-of-the-step>')
+		SqlServerCmUtils.localCalculation_resolveSqlAgentProgramName(newSample);
+
+
 		int pos_SPID               = newSample.findColumn("spid");
 		int pos_BlockingSPID       = newSample.findColumn("blocked");
 		int pos_BlockingOtherSpids = newSample.findColumn("BlockingOtherSpids");

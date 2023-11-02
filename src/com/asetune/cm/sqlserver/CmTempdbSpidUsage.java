@@ -34,6 +34,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.sqlserver.AlarmEventTempdbSpidUsage;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -82,7 +83,7 @@ extends CountersModel
 	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"dm_db_task_space_usage", "dm_db_session_space_usage", "dm_exec_session", "dm_exec_connections", "dm_exec_sql_text"};
-	public static final String[] NEED_ROLES       = new String[] {};
+	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -289,6 +290,14 @@ extends CountersModel
 		}
 
 		return map;
+	}
+
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		// make: column 'program_name' with value "SQLAgent - TSQL JobStep (Job 0x38AAD6888E5C5E408DE573B0A25EE970 : Step 1)"
+		// into:                                  "SQLAgent - TSQL JobStep (Job '<name-of-the-job>' : Step 1 '<name-of-the-step>')
+		SqlServerCmUtils.localCalculation_resolveSqlAgentProgramName(newSample);
 	}
 
 	@Override

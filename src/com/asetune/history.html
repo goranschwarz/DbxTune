@@ -56,6 +56,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>openssl en/de-crypting passwords for RHEL 8 when using algorithm "openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000" instead of "openssl enc -aes-128-cbc -a -salt"</LI>
 		<LI>cmd line util to upgrade the ${HOME}/.passwd.enc file from version 1 to v2 (bin/dbxtune.sh dbxPasswordUpgrade)</LI>
 		<LI>cmd line util for dbxPassword. (bin/dbxtune.sh dbxPassword)</LI>
+		<LI>if a ResultSet holds Types.CHAR/NCHAR it's automatically changed to Types.VARCHAR/NVARCHAR, to save space in PCS. (turn this off by override changeJdbcCharIntoVarchar())</LI>
+		<LI>Changed the default storage for Graph/Charts from LABEL_IN_SEPARATE_COLUMN to COLUMN_NAME_IS_LABEL (now using the column name as the "label name" instead of a separate column holding the name)</LI>
+		<LI>PCS: If CountersModel number of columns changes "on the fly", we will now alter the CM PCS tables on the fly (more columns will be added, but not deleted)</LI>
 
 		<LI>CmOsVmstat:  for Linux:   Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
 		<LI>CmOsMeminfo: for Windows: Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
@@ -242,6 +245,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<LI>setNetworkTimeout to default value of 60 seconds. (this can be changed with property 'SqlServerTune.onConnect.setNetworkTimeout.ms' <br>
 		This will help when the server is "unresponsive", so we can disconnect ant try to make a new connection... and hope for the best...</LI>
+		<LI>Changed most CounterModels to need role 'VIEW SERVER STATE' so that users with "sufficient permission" dont get hammered in the error log</LI>
+		<LI>Warn users that "do not have sufficient permission", and copies the grant SQL Statements for fix it into the Copy Paste Buffer</LI>
+		<LI>Added retryable error message 18401 -- Login failed for user 'dbxtune'. Reason: Server is in script upgrade mode.</LI>
+		<LI>DbmsObjectIdCache - Handle error 976 -- The target database, 'xxx', is participating in an availability group and is currently not accessible for queries.</LI>
+		<LI>Added SqlAgentJobInfoCache, which get's reloaded every 4 hour. (set refresh rate with: SqlAgentJobInfoCache.refresh.interval.minutes=###)</LI>
+		<LI>All CounterModels with column "program_name" and it contains a JobId and StepId the real names will be used from SqlAgentJobInfoCache (disable with: SqlServerTune.CmAny.resolve.sqlAgent.programName.enable=false)</LI>
 
 		<LI>Added Alarm: <b>AlarmEventMemoryGrantWait   </b> -- Used by CM 'CmMemoryGrantsSum' to alarm if we have anyone waiting to grab a memory grant.</LI>
 		<LI>Added Alarm: <b>AlarmEventLowOnWorkerThreads</b> -- which will be raised when we have 20 or less "worker threads" available (called from CmSummary)</LI>
@@ -250,10 +259,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added Alarm: <b>AlarmEventDeadlock          </b> -- if we had any deadlocks... (within a MovingAverage over 10 minutes), (called from CmSummary)</LI>
 
 		<LI>Added CM: <b>CmExecQueryStatPerDb </b> - Activity Grouped by Database -- Information is fetched from dm_exec_query_stats</LI>
-
 		<LI>Added CM: <b>CmMemoryGrantsSum    </b> - A Memory Grant Summary (from: dm_exec_query_resource_semaphores)</LI>
-
 		<LI>Added CM: <b>CmWaitStatsPerDb     </b> - What are we waiting on, at a database level (from: dm_exec_session_wait_stats/dm_exec_sessions)</LI>
+		<LI>Added CM: <b>CmWhoIsActive        </b> - Execute sp_whoIsActive from Adam Machanic</LI>
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 		<LI><b>DBMS Configuration </b> - if Linux also grab file content of '/var/opt/mssql/mssql.conf' in tab 'Server Registry' note: this needs permission 'ADMINISTER DATABASE BULK OPERATIONS'</LI>
@@ -291,6 +299,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSessions           </b> - The "hidden report" on WaitResources has been extended (can now lookup pages to get ObjectID's and translated to ObjectName's, also lookup 'locked data' when WaitResource is 'KEY')</LI>
 		<LI><b>CmSessions           </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
+		<LI><b>CmSummary            </b> - Adjustments for "users with sufficient permission", more sensitive to what SQL Statements that are executed</LI>
 		<LI><b>CmSummary            </b> - added column 'databaseCacheMemoryMb', 'grantedWorkspaceMemoryMb', 'stolenServerMemoryMb' (grabbed from dm_os_performance_counters)</LI>
 		<LI><b>CmSummary            </b> - added Chart 'PerfMon: SQL Server Memory Usage'</LI>
 		<LI><b>CmSummary            </b> - added columns "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" </LI>
@@ -330,7 +339,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>In the "Plan Cache History"" is no longer included in "short" report (Mail Reports)</li>
 			<li>In the "QueryStore" and "TopCmExecQueryStats" new column 'efficiency_pct' for  this may help decide if we have (parallel) queries that are NOT effective</li>
 			<li>PCS - On Database Rollover, If we have seen any Deadlocks... extract them using 'sp_BlitzLock' and store them in the recording.</li>
-		</ul>                                                              
+			<li>WaitStats -- Chart "Wait types for..." Instead of getting only CXPACKET, CXCONSUMER I now get all starting with CX*</li>
+		</ul>
 		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
@@ -419,6 +429,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<LI>Table/Cell ToolTip Better support to handle/display inline HTML content that dosn't start with '&gt;html&lt;'</LI>
 		<LI>The "Copy Result" button can now also copy ResultSets into a JSON format (long or short)</LI>
+		<LI>Enhancement with the backslash commands. They can now have comments etc prior to them</LI>
+		<LI>\connect now works with with a section of code (multiple "go" batches)</LI>
+		<LI>\rsql Can now omit the --sql 'sql text' and have the SQL Text "after" the \rsql command (at the next couple of lines)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

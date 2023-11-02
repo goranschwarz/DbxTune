@@ -147,22 +147,22 @@ implements ToolTipHyperlinkResolver
 		super(tm);
 		
 		// if it's java9 there seems to be some problems with repainting... (if the table is not added to a ScrollPane, which takes upp the whole scroll)
-		if (JavaVersion.isJava9orLater())
-		{
-			_logger.info("For Java-9 and above, add a 'repaint' when the mouse moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA RELEASE.");
-
-			// Add a repaint every 50ms (when the mouse stops moving = no more repaint until we start to move it again)
-			// with the second parameter to true: it will only do repaint 50ms after you have stopped moving the mouse.
-			addMouseMotionListener(new DeferredMouseMotionListener(50, false)
-			{
-				@Override
-				public void deferredMouseMoved(MouseEvent e)
-				{
-					//System.out.println("ResultSetJXTable.this.repaint(): "+System.currentTimeMillis());
-					ResultSetJXTable.this.repaint();
-				}
-			});
-		}
+//		if (JavaVersion.isJava9orLater())
+//		{
+//			_logger.info("For Java-9 and above, add a 'repaint' when the mouse moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA RELEASE.");
+//
+//			// Add a repaint every 50ms (when the mouse stops moving = no more repaint until we start to move it again)
+//			// with the second parameter to true: it will only do repaint 50ms after you have stopped moving the mouse.
+//			addMouseMotionListener(new DeferredMouseMotionListener(50, false)
+//			{
+//				@Override
+//				public void deferredMouseMoved(MouseEvent e)
+//				{
+//					//System.out.println("ResultSetJXTable.this.repaint(): "+System.currentTimeMillis());
+//					ResultSetJXTable.this.repaint();
+//				}
+//			});
+//		}
 
 		addMouseListener(new MouseListener()
 		{

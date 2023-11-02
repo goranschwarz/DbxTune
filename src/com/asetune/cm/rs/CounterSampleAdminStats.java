@@ -203,14 +203,14 @@ extends CounterSample
 				int rsNum = 0;
 				int rowsAffected = 0;
 				boolean hasRs = stmnt.execute(sendSql);
-				checkWarnings(stmnt);
+				checkWarnings(cm, stmnt);
 				do
 				{
 					if (hasRs)
 					{
 						// Get next result set to work with
 						rs = stmnt.getResultSet();
-						checkWarnings(stmnt);
+						checkWarnings(cm, stmnt);
 
 						// first resultset in first command batch, will be the "select getdate()"
 						if (rsNum == 0 && batchCounter == 0)
@@ -239,7 +239,7 @@ extends CounterSample
 							if (readResultset(cm, rs, rsmd, rsmd, pkList, rsNum))
 								rs.close();
 	
-							checkWarnings(stmnt);
+							checkWarnings(cm, stmnt);
 						}
 	
 						rsNum++;
@@ -266,7 +266,7 @@ extends CounterSample
 				}
 				while (hasRs || rowsAffected != -1);
 	
-				checkWarnings(stmnt);
+				checkWarnings(cm, stmnt);
 				batchCounter++;
 			}
 			br.close();
