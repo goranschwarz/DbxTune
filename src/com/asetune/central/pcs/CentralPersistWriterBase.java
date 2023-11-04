@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,6 +40,7 @@ import com.asetune.central.pcs.DbxTuneSample.GraphEntry;
 import com.asetune.cm.CountersModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 
 public abstract class CentralPersistWriterBase
@@ -1266,24 +1268,94 @@ implements ICentralPersistWriter
 		// Remove "existing table columns"
 		geCols.removeAll(tabCols);
 
-//		cols.remove("SessionStartTime");
-//		cols.remove("SessionSampleTime");
-//		cols.remove("CmSampleTime");
-
-//		// Remove columns from the GraphEntry that we are about to insert into... the columns left are the columns we need to add/alter to the table
-//		for (String label : ge._labelValue.keySet())
-//		{
-//System.out.println("########################################## getGraphAlterTableDdlString(): removingCo='"+label+"' from cols...");
-//			cols.remove(label);
-//		}
-
-//System.out.println("########################################## getGraphAlterTableDdlString(): alterCols ="+geCols);
-		List<String> list = new ArrayList<String>();
-		for (String addCol : geCols)
+		// If no new columns...
+		if (geCols.isEmpty())
 		{
-//			list.add("alter table " + tabPrefix + lq+tabName+rq + " add  "+fill(lq+addCol+rq,40)+" "+fill(getDatatype("numeric",-1,16, 2),20)+" "+getNullable(true)+" \n");
-			list.add("alter table " + tabPrefix + lq+tabName+rq + " add  "+fill(lq+addCol+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC,16, 2),20)+" "+getNullable(true)+" \n");
+			return Collections.emptyList();
 		}
+//System.out.println("########################################## getGraphAlterTableDdlString(): alterCols ="+geCols);
+
+		// Example of alter many column at the same time for different vendors
+		// --------------------------------------
+		// ------- H2 ---------------------------
+		// --------------------------------------
+		// alter table [dummy_test] add 
+		// (
+		//     [c10] numeric(16,2) null
+		//    ,[c11] numeric(16,2) null
+		//    ,[c12] numeric(16,2) null
+		// )
+
+		// --------------------------------------
+		// ------- MS SQL Server ----------------
+		// --------------------------------------
+		// alter table [dummy_test] add 
+		//     [c10] numeric(16,2) null
+		//    ,[c11] numeric(16,2) null
+		//    ,[c12] numeric(16,2) null
+
+		// --------------------------------------
+		// ------- Postgres ---------------------
+		// --------------------------------------
+		// alter table [dummy_test]  
+		//     add [c10] numeric(16,2) null
+		//    ,add [c11] numeric(16,2) null
+		//    ,add [c12] numeric(16,2) null
+		
+		List<String> list = new ArrayList<String>();
+		boolean multiColumns = geCols.size() > 1;
+		String  commaStr     = "  "; // Set this to ", " at the end of every column loop below
+		
+		// All vendors seems to do alter of *many* columns differently
+		if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
+		{
+			String alterStr = "alter table " + tabPrefix + lq+tabName+rq + " add " + (multiColumns ? "\n" : "");
+			
+			if (multiColumns) alterStr += "( \n";
+			for (String addCol : geCols)
+			{
+				alterStr += "  " + commaStr + fill(lq+addCol+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC,16, 2),20)+" "+getNullable(true)+" \n";
+				commaStr = ", ";
+			}
+			if (multiColumns) alterStr += ") \n";
+
+			// Add above SQL to list
+			list.add(StringUtil.removeLastNewLine(alterStr));
+		}
+		else if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_MSSQL))
+		{
+			String alterStr = "alter table " + tabPrefix + lq+tabName+rq + " add " + (multiColumns ? "\n" : "");
+			
+			for (String addCol : geCols)
+			{
+				alterStr += "  " + commaStr + fill(lq+addCol+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC,16, 2),20)+" "+getNullable(true)+" \n";
+				commaStr = ", ";
+			}
+
+			// Add above SQL to list
+			list.add(StringUtil.removeLastNewLine(alterStr));
+		}
+		else if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES))
+		{
+			String alterStr = "alter table " + tabPrefix + lq+tabName+rq + " " + (multiColumns ? "\n" : "");
+			
+			for (String addCol : geCols)
+			{
+				alterStr += "  " + commaStr + " add " + fill(lq+addCol+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC,16, 2),20)+" "+getNullable(true)+" \n";
+				commaStr = ", ";
+			}
+
+			// Add above SQL to list
+			list.add(StringUtil.removeLastNewLine(alterStr));
+		}
+		else // UNHANDLED DBMS: Do one alter table for every column...
+		{
+			for (String addCol : geCols)
+			{
+				list.add("alter table " + tabPrefix + lq+tabName+rq + " add  "+fill(lq+addCol+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC,16, 2),20)+" "+getNullable(true)+" \n");
+			}
+		}
+
 		return list;
 	}
 

@@ -39,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
@@ -1960,10 +1961,38 @@ public abstract class PersistWriterBase
 		}
 		else if (GraphStorageType.COLUMN_NAME_IS_LABEL.equals(graphStorageType))
 		{
-			String[] labelArr  = tgdp.getLabel();
+			String[] labelArr = tgdp.getLabel();
+			Double[] dataArr  = tgdp.getData();
+
 			if (labelArr == null)
 				throw new IllegalArgumentException("The graph '" + tgdp.getName() + "' has a null pointer for it's LABEL array.");
+			if (dataArr == null)
+				throw new IllegalArgumentException("The graph '" + tgdp.getName() + "' has a null pointer for it's DATA array.");
 
+			if (dataArr.length != labelArr.length)
+			{
+				String msg = "The CM '" + cm.getName() + "', graph '" + tgdp.getName() + "' has different label/data array sizes. labelArr.length=" + labelArr.length + ", dataArr.length=" + dataArr.length + ", labelArr=[" + StringUtil.toCommaStrQuoted(labelArr) + "], dataArr=[" + StringUtil.toCommaStr(dataArr) + "]. Trying to fix this... possibly adding 'labels'.";
+				_logger.warn(msg);
+				
+				if (labelArr.length < dataArr.length)
+				{
+					// ADD Unknown labels as "dummy"... "lbl_#"
+					for (int i=labelArr.length; i<dataArr.length; i++)
+					{
+						String addLabelName = "lbl-" + i;
+
+						_logger.warn("Adding column '" + addLabelName + "' to the insert column list, this so we can insert the data value [" + dataArr[i] + "].");
+						labelArr = ArrayUtils.add(labelArr, addLabelName);
+					}
+					tgdp.setLabel(labelArr);
+				}
+				else
+				{
+					msg = "The CM '" + cm.getName() + "', graph '" + tgdp.getName() + "' has different label/data array sizes. (DATA is LESS than Labels, NULL Data will be inserted...)  labelArr.length=" + labelArr.length + ", dataArr.length=" + dataArr.length + ", labelArr=[" + StringUtil.toCommaStrQuoted(labelArr) + "], dataArr=[" + StringUtil.toCommaStr(dataArr) + "].";
+					_logger.warn(msg);
+				}
+			}
+			
 			// loop all labels
 			for (int l=0; l<labelArr.length; l++)
 			{
