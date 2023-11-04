@@ -280,6 +280,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases          </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 		<LI><b>CmDatabases          </b> - added new columns 'DataOsDiskLabel', 'LogOsDiskLabel' (this so we in Graphs and alarms can say "E: [SQL Data]"</LI>
 
+		<LI><b>CmDeviceIo           </b> - LogicalName - is now based om dbname and file_id (instead of master_files.name, which may not be unique enough)</LI>
+		<LI><b>CmDeviceIo           </b> - added new columns 'lname' (master_files.name), which is the 'old' LogicaName.</LI>
+
 		<LI><b>CmExecFunctionStats  </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
 
 		<LI><b>CmExecProcedureStats </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>

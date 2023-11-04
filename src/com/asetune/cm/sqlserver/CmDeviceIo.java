@@ -366,7 +366,12 @@ extends CountersModel
 		       "                         WHEN a.file_id = 2 THEN 'Log' \n" +
 		       "                         ELSE 'Data' \n" +
 		       "                     END, \n" +
-		       "LogicalName        = b.name, \n" +
+		       "LogicalName        = isnull(db_name(a.database_id), 'unknow-dbid-' + cast(a.database_id as varchar(30))) \n" +
+		       "                   + CASE \n" +
+		       "                         WHEN a.file_id = 1 THEN '_Data' \n" +
+		       "                         WHEN a.file_id = 2 THEN '_Log' \n" +
+		       "                         ELSE '_fid_' + cast(a.file_id as varchar(10)) \n" +
+		       "                     END, \n" +
 		       "TotalIOs           = "+TotalIOs+", \n" +
 		       "Reads              = a.num_of_reads, \n" +
 		       "ReadsKB            = (a.num_of_bytes_read / 1024), \n" +
@@ -396,9 +401,10 @@ extends CountersModel
 		       "                          ELSE convert(numeric(10,1), null) \n" +
 		       "                     END, \n" +
 		       "SizeOnDiskMB       = ( ( a.size_on_disk_bytes / 1024 ) / 1024.0 ), \n" +
-		       "PhysicalName = b.physical_name, \n" +
-		       "a.database_id, \n" +
-		       "a.file_id \n";
+		       "lname              = b.name, \n" +
+		       "PhysicalName       = b.physical_name, \n" +
+		       "database_id        = a.database_id, \n" +
+		       "file_id            = a.file_id \n";
 
 		String sql = 
 			"select /* ${cmCollectorName} */ \n" + 

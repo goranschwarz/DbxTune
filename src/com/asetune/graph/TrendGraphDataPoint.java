@@ -410,6 +410,19 @@ implements Cloneable
 		return true;
 	}
 
+	/**
+	 * NOTE: This should only be used in extreme cases, like when "fixing" things in an inconsistent state...
+	 * 
+	 * @param labelArray
+	 */
+	public void setLabel(String[] labelArray)
+	{
+		_labelArray = labelArray;
+		// NOTE: What to do with: _labelDisplayArray
+		// NOTE: Should we check that it "in sync" with _dataArray
+		// NOTE: OR should we create method: setLabelAndData(String[] labelArray, Double[] dataArray)
+	}
+
 	
 //	// The 2 below is only used in setData() to keep track of already added data, which might not been added in the current map
 //	private Map<String,  Integer> _labelOrder_labelName      = null;

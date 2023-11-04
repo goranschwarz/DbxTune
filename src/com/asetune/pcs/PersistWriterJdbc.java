@@ -4436,6 +4436,13 @@ public class PersistWriterJdbc
 		if (dataArr  == null) throw new IllegalArgumentException("The CM '" + cm.getName() + "', graph '" + tgdp.getName() + "' has a null pointer for it's DATA array.");
 		if (labelArr == null) throw new IllegalArgumentException("The CM '" + cm.getName() + "', graph '" + tgdp.getName() + "' has a null pointer for it's LABEL array.");
 
+		if (dataArr.length != labelArr.length)
+		{
+			String msg = "The CM '" + cm.getName() + "', graph '" + tgdp.getName() + "' has different label/data array sizes. labelArr.length=" + labelArr.length + ", dataArr.length=" + dataArr.length + ", labelArr=[" + StringUtil.toCommaStrQuoted(labelArr) + "], dataArr=[" + StringUtil.toCommaStr(dataArr) + "].";
+			_logger.warn(msg);
+//			throw new IllegalArgumentException(msg);
+		}
+		
 		if (GraphStorageType.LABEL_IN_SEPARATE_COLUMN.equals(graphStorageType))
 		{
 			for (int d=0; d<dataArr.length; d++)
@@ -4580,13 +4587,18 @@ public class PersistWriterJdbc
 				List<String> sqlAlterList = getGraphAlterTableDdlString(conn, graphStorageType, schemaName, tabName, tgdp);
 				if ( ! sqlAlterList.isEmpty() )
 				{
-					_logger.info("Persistent Counter DB: Altering table '" + schemaPrefixPlain + tabName + "' for CounterModel graph '" + tgdp.getName() + "'.");
+					_logger.info("Persistent Counter DB: Altering table '" + schemaPrefixPlain + tabName + "' for CounterModel graph '" + tgdp.getName() + "'. Making " + sqlAlterList.size() + " DDL Changes.");
 //System.out.println("XXXXXXXXXXXXXX: " + sqlAlterList);
 
 					for (String sqlAlterTable : sqlAlterList)
+					{
+						_logger.info("Persistent Counter DB: Altering table '" + schemaPrefixPlain + tabName + "' for CounterModel graph '" + tgdp.getName() + "'. Executing SQL: " + sqlAlterTable);
+
 						dbDdlExec(conn, sqlAlterTable);
 
-					getStatistics().incAlterTables();
+						getStatistics().incAlterTables();
+					}
+
 				}
 			}
 		}
