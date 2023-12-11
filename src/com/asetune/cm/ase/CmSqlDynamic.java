@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -146,28 +147,13 @@ extends CountersModel
 	//------------------------------------------------------------
 	public static final String GRAPH_NAME_DYNAMIC_SQL_SEC            = "DynamicSql";
 	
-//	public static final String GRAPH_NAME_XXX = "xxxGraph"; //String x=GetCounters.XXX;
-//
-//	private void addTrendGraphs()
-//	{
-//		addTrendGraph(GRAPH_NAME_XXX,
-//			"MenuTextXXX", 	                                 // Menu CheckBox text
-//			"GrapgLabelXXX", // Label 
-//			new String[] { "XXX", "YYY", "ZZZ" }, 
-//			LabelType.Static,
-//			TrendGraphDataPoint.Category.OTHER,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);
-//	}
 	private void addTrendGraphs()
 	{
 		//-----
 		addTrendGraph(GRAPH_NAME_DYNAMIC_SQL_SEC,
 			"Dynamic SQL Operations per Sec", // Menu CheckBox text
 			"Dynamic SQL Operations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -181,22 +167,6 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-//		// -----------------------------------------------------------------------------------------
-//		if (GRAPH_NAME_DYNAMIC_SQL_SEC.equals(tgdp.getName()))
-//		{
-//			// Write 1 "line" for every device
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				// MAYBE: Skip record where 'operation' is "CR-OP"  (but then we need to recreate an array with the actual records at-the-end. like we do in: CmXXXX)
-//				lArray[i] = this.getRateString       (i, "name");
-//				dArray[i] = this.getRateValueAsDouble(i, "diffCount");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//		}
 		// -----------------------------------------------------------------------------------------
 		if (GRAPH_NAME_DYNAMIC_SQL_SEC.equals(tgdp.getName()))
 		{

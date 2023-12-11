@@ -25,20 +25,17 @@ import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.asetune.alarm.events.AlarmEvent;
-import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.NumberUtils;
@@ -62,6 +59,9 @@ public class DbxTuneSample
 	int    _collectorSampleInterval;
 	String _collectorCurrentUrl;
 	String _collectorInfoFile;
+//	String _collectorMgtHostname;
+//	int    _collectorMgtPort;
+//	String _collectorMgtInfo;
 	
 //	String _sessionStartTime;
 //	String _sessionSampleTime;
@@ -90,6 +90,9 @@ public class DbxTuneSample
 	public int       getCollectorSampleInterval() { return _collectorSampleInterval; }
 	public String    getCollectorCurrentUrl()     { return _collectorCurrentUrl;     }
 	public String    getCollectorInfoFile()       { return _collectorInfoFile;       }
+//	public String    getCollectorMgtHostname()    { return _collectorMgtHostname;    }
+//	public int       getCollectorMgtPort()        { return _collectorMgtPort;        }
+//	public String    getCollectorMgtInfo()        { return _collectorMgtInfo;       }
 	
 	public Timestamp getSessionStartTime()  { return _sessionStartTime;  }
 	public Timestamp getSessionSampleTime() { return _sessionSampleTime; }
@@ -108,6 +111,9 @@ public class DbxTuneSample
 	public void setCollectorSampleInterval(int    interval)       { _collectorSampleInterval = interval;    }
 	public void setCollectorCurrentUrl    (String url)            { _collectorCurrentUrl     = url;         }
 	public void setCollectorInfoFile      (String filename)       { _collectorInfoFile       = filename;    }
+//	public void setCollectorMgtHostname   (String mgtHostname)    { _collectorMgtHostname    = mgtHostname; }
+//	public void setCollectorMgtPort       (int    mgtPort)        { _collectorMgtPort        = mgtPort;     }
+//	public void setCollectorMgtInfo       (String mgtToken)       { _collectorMgtInfo        = mgtToken;    }
 	
 	public void setSessionStartTime (Timestamp sessionStartTime)  { _sessionStartTime  = sessionStartTime;  }
 	public void setSessionSampleTime(Timestamp sessionSampleTime) { _sessionSampleTime = sessionSampleTime; }
@@ -115,7 +121,10 @@ public class DbxTuneSample
 	public void setServerDisplayName(String    displayName)       { _serverDisplayName = displayName;       }
 	public void setOnHostname       (String    onHostname)        { _onHostname        = onHostname;        }
 
-	public DbxTuneSample(String appName, String appVersion, String appBuildString, String collectorHostname, int collectorSampleInterval, String collectorCurrentUrl, String collectorInfoFile, Timestamp sessionStartTime, Timestamp sessionSampleTime, String serverName, String serverDisplayName, String onHostname)
+	public DbxTuneSample(String appName, String appVersion, String appBuildString, 
+			String collectorHostname, int collectorSampleInterval, String collectorCurrentUrl, String collectorInfoFile, 
+//			String collectorMgtHostname, int collectorMgtPort, String collectorMgtInfo, 
+			Timestamp sessionStartTime, Timestamp sessionSampleTime, String serverName, String serverDisplayName, String onHostname)
 	{
 		_appName                 = appName;
 		_appVersion              = appVersion;
@@ -124,6 +133,9 @@ public class DbxTuneSample
 		_collectorSampleInterval = collectorSampleInterval;
 		_collectorCurrentUrl     = collectorCurrentUrl;
 		_collectorInfoFile       = collectorInfoFile;
+//		_collectorMgtHostname    = collectorMgtHostname;
+//		_collectorMgtPort        = collectorMgtPort;
+//		_collectorMgtInfo        = collectorMgtInfo;
 
 		_sessionStartTime        = sessionStartTime;
 		_sessionSampleTime       = sessionSampleTime;
@@ -784,7 +796,7 @@ public class DbxTuneSample
 	 * @return                   A String
 	 * @throws MissingFieldException  When the field name is not found
 	 */
-	private static JsonNode getNode(JsonNode node, String fieldName)
+	public static JsonNode getNode(JsonNode node, String fieldName)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -799,7 +811,7 @@ public class DbxTuneSample
 	 * @param fieldName  name of the field(s) you checking for... It may be more than one
 	 * @return 
 	 */
-	private static boolean doFieldExist(JsonNode node, String... fieldNames)
+	public static boolean doFieldExist(JsonNode node, String... fieldNames)
 	{
 		for (String fieldName : fieldNames)
 		{
@@ -816,7 +828,7 @@ public class DbxTuneSample
 	 * @param defaultValue   Default value if field is not found
 	 * @return               A String
 	 */
-	private static String getString(JsonNode node, String fieldName, String defaultValue)
+	public static String getString(JsonNode node, String fieldName, String defaultValue)
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
@@ -835,7 +847,7 @@ public class DbxTuneSample
 	 * @return                   A String
 	 * @throws MissingFieldException  When the field name is not found
 	 */
-	private static String getString(JsonNode node, String fieldName)
+	public static String getString(JsonNode node, String fieldName)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -853,7 +865,7 @@ public class DbxTuneSample
 	 * @return                   A String
 	 * @throws MissingFieldException  When the field name is not found
 	 */
-	private static String getStringAny(JsonNode node, String... fieldNames)
+	public static String getStringAny(JsonNode node, String... fieldNames)
 	throws MissingFieldException
 	{
 		for (String entry : fieldNames)
@@ -876,7 +888,7 @@ public class DbxTuneSample
 	 * @return                   A String
 	 * @throws MissingFieldException  When the field name is not found
 	 */
-	private static String getStringAny(String defaultVal, JsonNode node, String... fieldNames)
+	public static String getStringAny(String defaultVal, JsonNode node, String... fieldNames)
 //	throws MissingFieldException
 	{
 		for (String entry : fieldNames)
@@ -899,7 +911,7 @@ public class DbxTuneSample
 	 * @return                   A List of Strings
 	 * @throws MissingFieldException  When the field name is not found
 	 */
-	private static List<String> getStringList(JsonNode node, String fieldName)
+	public static List<String> getStringList(JsonNode node, String fieldName)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -921,13 +933,42 @@ public class DbxTuneSample
 	}
 
 	/**
+	 * Get String Map from a object node where key=FieldName, value=StringValue 
+	 * @param node               The node
+	 * @param fieldName          The fields name
+	 * @return                   A Map&lt;String,String&gt; where key=FieldName, val=StringValue   A empty map if not found
+	 */
+	public static Map<String, String> getStringMap(JsonNode node, String fieldName)
+	throws MissingFieldException
+	{
+		Map<String, String> map = new HashMap<>();
+
+		JsonNode n = node.get(fieldName);
+		if (n == null)
+			return map;
+//			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+		if (n.isNull())
+			return map;
+		
+		List<String> fieldNames = new ArrayList<>();
+		n.fieldNames().forEachRemaining(fieldNames::add);
+
+		for( String field : fieldNames)
+		{
+			map.put(field, n.get(field).asText());
+		}
+		
+		return map;
+	}
+
+	/**
 	 * Get int value from a node
 	 * @param node               The node
 	 * @param fieldName          The fields name
 	 * @param defaultValue       Default value if field is not found
 	 * @return                   an int
 	 */
-	private static int getInt(JsonNode node, String fieldName, int defaultValue)
+	public static int getInt(JsonNode node, String fieldName, int defaultValue)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -943,7 +984,7 @@ public class DbxTuneSample
 	 * @return                   an int
 	 * @throws MissingFieldException  When the field name is not found
 	 */
-	private static int getInt(JsonNode node, String fieldName)
+	public static int getInt(JsonNode node, String fieldName)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -959,7 +1000,7 @@ public class DbxTuneSample
 	 * @param defaultValue       Default value if field is not found
 	 * @return                   an boolean value
 	 */
-	private static boolean getBoolean(JsonNode node, String fieldName, boolean defaultValue)
+	public static boolean getBoolean(JsonNode node, String fieldName, boolean defaultValue)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -975,7 +1016,7 @@ public class DbxTuneSample
 	 * @throws MissingFieldException  When the field name is not found
 	 * @return                   an boolean value
 	 */
-	private static boolean getBoolean(JsonNode node, String fieldName)
+	public static boolean getBoolean(JsonNode node, String fieldName)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -991,7 +1032,7 @@ public class DbxTuneSample
 	 * @param defaultValue       Default value if field is not found
 	 * @return                   an double value
 	 */
-	private static double getDouble(JsonNode node, String fieldName, double defaultValue)
+	public static double getDouble(JsonNode node, String fieldName, double defaultValue)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -1007,7 +1048,7 @@ public class DbxTuneSample
 	 * @throws MissingFieldException  When the field name is not found
 	 * @return                   an double value
 	 */
-	private static double getDouble(JsonNode node, String fieldName)
+	public static double getDouble(JsonNode node, String fieldName)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -1023,7 +1064,7 @@ public class DbxTuneSample
 	 * @param defaultValue       Default value if field is not found
 	 * @return                   an Timestamp value
 	 */
-	private static Timestamp getTimestampAny(Timestamp defaultValue, JsonNode node, String... fieldNames)
+	public static Timestamp getTimestampAny(Timestamp defaultValue, JsonNode node, String... fieldNames)
 //	throws MissingFieldException
 	{
 		for (String entry : fieldNames)
@@ -1054,7 +1095,7 @@ public class DbxTuneSample
 	 * @param defaultValue       Default value if field is not found
 	 * @return                   an Timestamp value
 	 */
-	private static Timestamp getTimestamp(JsonNode node, String fieldName, Timestamp defaultValue)
+	public static Timestamp getTimestamp(JsonNode node, String fieldName, Timestamp defaultValue)
 	throws MissingFieldException
 	{
 		try
@@ -1074,7 +1115,7 @@ public class DbxTuneSample
 	 * @throws MissingFieldException  When the field name is not found
 	 * @return                   an Timestamp value
 	 */
-	private static Timestamp getTimestamp(JsonNode node, String fieldName)
+	public static Timestamp getTimestamp(JsonNode node, String fieldName)
 	throws MissingFieldException
 	{
 		JsonNode n = node.get(fieldName);
@@ -1129,7 +1170,7 @@ public class DbxTuneSample
 	 * create a Object based on what type the desired field is of
 	 * @param node               The node
 	 */
-	private static Object createObjectFromNodeType(JsonNode node)
+	public static Object createObjectFromNodeType(JsonNode node)
 	{
 		if (node == null)
 			return null;
@@ -1246,8 +1287,11 @@ public class DbxTuneSample
 			String appBuildString          = getString(headNode, "appBuildString");
 			String collectorHostname       = getString(headNode, "collectorHostname");
 			int    collectorSampleInterval = getInt   (headNode, "collectorSampleInterval", -1);
-			String collectorCurrentUrl     = getString(headNode, "collectorCurrentUrl", null);
-			String collectorInfoFile       = getString(headNode, "collectorInfoFile",   null);
+			String collectorCurrentUrl     = getString(headNode, "collectorCurrentUrl"    , null);
+			String collectorInfoFile       = getString(headNode, "collectorInfoFile"      , null);
+//			String collectorMgtHostname    = getString(headNode, "collectorMgtHostname"   , null);
+//			int    collectorMgtPort        = getInt   (headNode, "collectorMgtPort"       , -1);
+//			String collectorMgtInfo        = getString(headNode, "collectorMgtInfo"       , null);
 			
 			Timestamp sessionStartTime     = getTimestamp(headNode, "sessionStartTime");
 			Timestamp sessionSampleTime    = getTimestamp(headNode, "sessionSampleTime");
@@ -1268,8 +1312,12 @@ public class DbxTuneSample
 			// skip serverName "unknown" 
 			if ("unknown".equals(serverName))
 			{
-				String headerInfo = "appName='"+appName+"', appVersion='"+appVersion+"', appBuildString='"+appBuildString+"', collectorHostname='"+collectorHostname+"', collectorSampleInterval="+collectorSampleInterval+", collectorCurrentUrl='"+collectorCurrentUrl+"', collectorInfoFile='"+collectorInfoFile+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', onHostname='"+onHostname+"', serverNameAlias='"+serverNameAlias+"', serverDisplayName='"+serverDisplayName+"'.";
-				_logger.warn("Recieved a JSON massage with serverName='unknown'. Skipping this entry. headerInfo: "+headerInfo);
+				String headerInfo = "appName='" + appName + "', appVersion='" + appVersion + "', appBuildString='" + appBuildString + "', "
+						+ "collectorHostname='" + collectorHostname + "', collectorSampleInterval=" + collectorSampleInterval + ", collectorCurrentUrl='" + collectorCurrentUrl + "', collectorInfoFile='" + collectorInfoFile + "', "
+//						+ "collectorMgtHostname='" + collectorMgtHostname + "', collectorMgtPort='" + collectorMgtPort + "', collectorMgtInfo='" + collectorMgtInfo + "', "
+						+ "sessionStartTime='" + sessionStartTime + "', sessionSampleTime='" + sessionSampleTime + "', serverName='" + serverName + "', "
+						+ "onHostname='" + onHostname + "', serverNameAlias='" + serverNameAlias + "', serverDisplayName='" + serverDisplayName + "'.";
+				_logger.warn("Recieved a JSON massage with serverName='unknown'. Skipping this entry. headerInfo: " + headerInfo);
 				return null;
 			}
 
@@ -1279,7 +1327,10 @@ public class DbxTuneSample
 				debugPrint = true;
 
 
-			DbxTuneSample sample = new DbxTuneSample(appName, appVersion, appBuildString, collectorHostname, collectorSampleInterval, collectorCurrentUrl, collectorInfoFile, sessionStartTime, sessionSampleTime, serverNameOrAlias, serverDisplayName, onHostname);
+			DbxTuneSample sample = new DbxTuneSample(appName, appVersion, appBuildString, 
+					collectorHostname, collectorSampleInterval, collectorCurrentUrl, collectorInfoFile, 
+//					collectorMgtHostname, collectorMgtPort, collectorMgtInfo,
+					sessionStartTime, sessionSampleTime, serverNameOrAlias, serverDisplayName, onHostname);
 
 //			sample._cmListEnabled         = cmListEnabled;
 //			sample._cmListEnabledGraphs   = cmListEnabledGraphs;

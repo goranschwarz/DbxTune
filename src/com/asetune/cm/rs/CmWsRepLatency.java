@@ -39,6 +39,7 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.rs.AlarmEventRsMissingLogicalConnection;
 import com.asetune.alarm.events.rs.AlarmEventRsReplicationAge;
 import com.asetune.alarm.events.rs.AlarmEventRsWsState;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
@@ -152,7 +153,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LATENCY_IN_SEC,
 			"Latency In Seconds, from Active->Standby", // Menu CheckBox text
 			"Latency In Seconds, from Active->Standby", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -164,7 +165,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_APPLY_AGE_IN_SEC,
 			"Apply Age In Seconds, from Active->Standby", // Menu CheckBox text
 			"Apply Age In Seconds, from Active->Standby", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -176,7 +177,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATA_AGE_IN_SEC,
 			"Data Age In Seconds, from Active->Standby", // Menu CheckBox text
 			"Data Age In Seconds, from Active->Standby", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,

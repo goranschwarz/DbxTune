@@ -35,6 +35,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -202,7 +203,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_SUM,
 			"CPU Summary", 	                                 // Menu CheckBox text
 			"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "System+User CPU", "System CPU", "User CPU" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -214,7 +215,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_ENG,
 			"CPU per Engine",                       // Menu CheckBox text
 			"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -223,33 +224,6 @@ extends CountersModel
 			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_CPU_SUM,
-//					"CPU Summary", 	                                 // Menu CheckBox text
-//					"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//					sumLabels, 
-//					true, // is Percent Graph
-//					this, 
-//					true, // visible at start
-//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//					-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_CPU_ENG,
-//					"CPU per Engine",                       // Menu CheckBox text
-//					"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//					engLabels, 
-//					true, // is Percent Graph
-//					this, 
-//					true, // visible at start
-//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//					-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

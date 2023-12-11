@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
@@ -183,41 +184,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_jvmMem         = new String[] { "Maximum Memory - MB", "Total Memory Allocated - MB", "Free Memory - MB", "Memory Usage - MB" };
-//		String[] labels_jvmMemPct      = new String[] { "JVM % max memory used" };
-//		String[] labels_ltlCmdSent     = new String[] { "Number of LTL commands sent" };
-//		String[] labels_ltlBytesSent   = new String[] { "Total bytes Sent to RS" };
-//		String[] labels_ltlKbSent      = new String[] { "Total KB Sent to RS" };
-//		String[] labels_ltlMbSent      = new String[] { "Total MB Sent to RS" };
-//		String[] labels_ltiQueueSize   = new String[] { "Current number of commands in the LTI queue" };
-//		String[] labels_lrOperations   = new String[] { "Scanned", "Processed", "Skipped"};
-//		String[] labels_lrTrans        = new String[] { "Processed", "Skipped", "Opened", "Closed", "Committed", "Aborted (rolled back)", "System transactions skipped" };
-//		String[] labels_lrMaintFilter  = new String[] { "Maint user operations read from log and skipped" };
-//		String[] labels_globalLruCache = new String[] { "Number of object references in the internal LRU cache" };
-//		String[] labels_oraLr          = new String[] { "Queued", "Filtered" };
-//		String[] labels_oraLobOp       = new String[] { "Total LOB operations processed by query data from PDB" };
-//		String[] labels_oraRasdCache   = new String[] { "Proc cache size (abs)", "Proc hits (per sec)", "Proc misses (per sec)", "Proc_Name cache size (abs)", "Proc_Name hits (per sec)", "Proc_Name misses (per sec)" };
-//		
-//		addTrendGraphData(GRAPH_NAME_JVM_MEM,          new TrendGraphDataPoint(GRAPH_NAME_JVM_MEM,          labels_jvmMem,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_JVM_MEM_PCT,      new TrendGraphDataPoint(GRAPH_NAME_JVM_MEM_PCT,      labels_jvmMemPct,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LTL_CMD_SENT,     new TrendGraphDataPoint(GRAPH_NAME_LTL_CMD_SENT,     labels_ltlCmdSent,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LTL_BYTES_SENT,   new TrendGraphDataPoint(GRAPH_NAME_LTL_BYTES_SENT,   labels_ltlBytesSent,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LTL_KB_SENT,      new TrendGraphDataPoint(GRAPH_NAME_LTL_KB_SENT,      labels_ltlKbSent,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LTL_MB_SENT,      new TrendGraphDataPoint(GRAPH_NAME_LTL_MB_SENT,      labels_ltlMbSent,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LTI_QUEUE_SIZE,   new TrendGraphDataPoint(GRAPH_NAME_LTI_QUEUE_SIZE,   labels_ltiQueueSize,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LR_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_LR_OPERATIONS,    labels_lrOperations,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LR_TRANS,         new TrendGraphDataPoint(GRAPH_NAME_LR_TRANS,         labels_lrTrans,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LR_MAINT_FILTER,  new TrendGraphDataPoint(GRAPH_NAME_LR_MAINT_FILTER,  labels_lrMaintFilter,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_GLOBAL_LRU_CACHE, new TrendGraphDataPoint(GRAPH_NAME_GLOBAL_LRU_CACHE, labels_globalLruCache, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ORA_LR,           new TrendGraphDataPoint(GRAPH_NAME_ORA_LR,           labels_oraLr,          LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ORA_LOB_OP,       new TrendGraphDataPoint(GRAPH_NAME_ORA_LOB_OP,       labels_oraLobOp,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ORA_RASD_CACHE,   new TrendGraphDataPoint(GRAPH_NAME_ORA_RASD_CACHE,   labels_oraRasdCache,   LabelType.Static));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_JVM_MEM,
 			"JVM Memory Usage",                   // Menu CheckBox text
 			"JVM Memory Usage (Absolute Value)",  // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Maximum Memory - MB", "Total Memory Allocated - MB", "Free Memory - MB", "Memory Usage - MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -230,7 +201,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_JVM_MEM_PCT,
 			"JVM Memory Usage in Percent",                   // Menu CheckBox text
 			"JVM Memory Usage in Percent (Absolute Value)",  // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "JVM % max memory used" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -243,7 +214,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_CMD_SENT,
 			"LTI: Number of LTL commands sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of LTL commands sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Number of LTL commands sent" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -256,7 +227,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_BYTES_SENT,
 			"LTI: Number of Bytes sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of Bytes sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Total bytes Sent to RS" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -269,7 +240,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_KB_SENT,
 			"LTI: Number of KB sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of KB sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Total KB Sent to RS" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -282,7 +253,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_MB_SENT,
 			"LTI: Number of MB sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of MB sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Total MB Sent to RS" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -295,7 +266,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTI_QUEUE_SIZE,
 			"LTI: Current number of commands in the LTI queue",                       // Menu CheckBox text
 			"LTI: Current number of commands in the LTI queue (Absolute Value)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Current number of commands in the LTI queue" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -308,7 +279,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LR_OPERATIONS,
 			"LogReader: Operations",                   // Menu CheckBox text
 			"LogReader: Operations (per second)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Scanned", "Processed", "Skipped"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -321,7 +292,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LR_TRANS,
 			"LogReader: Transactions",                   // Menu CheckBox text
 			"LogReader: Transactions (per second)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Processed", "Skipped", "Opened", "Closed", "Committed", "Aborted (rolled back)", "System transactions skipped" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -334,7 +305,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LR_MAINT_FILTER,
 			"LogReader: Maintenance user operations read from log devices and skipped",                   // Menu CheckBox text
 			"LogReader: Maintenance user operations read from log devices and skipped (per second)",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Maint user operations read from log and skipped" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -347,7 +318,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_GLOBAL_LRU_CACHE,
 			"Number of Object in the Global LRU Cache",                   // Menu CheckBox text
 			"Number of Object in the Global LRU Cache (Absolute Value)",  // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Number of object references in the internal LRU cache" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -360,7 +331,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ORA_LR,
 			"Number of Log Records (Oracle specific)",                  // Menu CheckBox text
 			"Number of Log Records (per second), Oracle specific",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Queued", "Filtered" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -373,7 +344,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ORA_LOB_OP,
 			"Number of LOB Operations from PDB (Oracle specific)",                  // Menu CheckBox text
 			"Number of LOB Operations from PDB (per second), Oracle specific",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Total LOB operations processed by query data from PDB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -386,7 +357,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ORA_RASD_CACHE,
 			"RepAgent System Database Repository Cache (Oracle specific)",                  // Menu CheckBox text
 			"RepAgent System Database Repository Cache (per second), Oracle specific",      // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Proc cache size (abs)", "Proc hits (per sec)", "Proc misses (per sec)", "Proc_Name cache size (abs)", "Proc_Name hits (per sec)", "Proc_Name misses (per sec)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -395,179 +366,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 		
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_JVM_MEM,
-//				"JVM Memory Usage",                   // Menu CheckBox text
-//				"JVM Memory Usage (Absolute Value)",  // Label 
-//				labels_jvmMem, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_JVM_MEM_PCT,
-//				"JVM Memory Usage in Percent",                   // Menu CheckBox text
-//				"JVM Memory Usage in Percent (Absolute Value)",  // Label 
-//				labels_jvmMemPct, 
-//				true, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LTL_CMD_SENT,
-//				"LTI: Number of LTL commands sent to RepServer",                   // Menu CheckBox text
-//				"LTI: Number of LTL commands sent to RepServer (per second)",      // Label 
-//				labels_ltlCmdSent, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LTL_BYTES_SENT,
-//				"LTI: Number of Bytes sent to RepServer",                   // Menu CheckBox text
-//				"LTI: Number of Bytes sent to RepServer (per second)",      // Label 
-//				labels_ltlBytesSent, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LTL_KB_SENT,
-//				"LTI: Number of KB sent to RepServer",                   // Menu CheckBox text
-//				"LTI: Number of KB sent to RepServer (per second)",      // Label 
-//				labels_ltlKbSent, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LTL_MB_SENT,
-//				"LTI: Number of MB sent to RepServer",                   // Menu CheckBox text
-//				"LTI: Number of MB sent to RepServer (per second)",      // Label 
-//				labels_ltlMbSent, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LTI_QUEUE_SIZE,
-//				"LTI: Current number of commands in the LTI queue",                       // Menu CheckBox text
-//				"LTI: Current number of commands in the LTI queue (Absolute Value)",      // Label 
-//				labels_ltiQueueSize, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LR_OPERATIONS,
-//				"LogReader: Operations",                   // Menu CheckBox text
-//				"LogReader: Operations (per second)",      // Label 
-//				labels_lrOperations, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LR_TRANS,
-//				"LogReader: Transactions",                   // Menu CheckBox text
-//				"LogReader: Transactions (per second)",      // Label 
-//				labels_lrTrans, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LR_MAINT_FILTER,
-//				"LogReader: Maintenance user operations read from log devices and skipped",                   // Menu CheckBox text
-//				"LogReader: Maintenance user operations read from log devices and skipped (per second)",      // Label 
-//				labels_lrMaintFilter, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_GLOBAL_LRU_CACHE,
-//				"Number of Object in the Global LRU Cache",                   // Menu CheckBox text
-//				"Number of Object in the Global LRU Cache (Absolute Value)",  // Label 
-//				labels_globalLruCache, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_ORA_LR,
-//				"Number of Log Records (Oracle specific)",                  // Menu CheckBox text
-//				"Number of Log Records (per second), Oracle specific",      // Label 
-//				labels_oraLr, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_ORA_LOB_OP,
-//				"Number of LOB Operations from PDB (Oracle specific)",                  // Menu CheckBox text
-//				"Number of LOB Operations from PDB (per second), Oracle specific",      // Label 
-//				labels_oraLobOp, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//				
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_ORA_RASD_CACHE,
-//				"RepAgent System Database Repository Cache (Oracle specific)",                  // Menu CheckBox text
-//				"RepAgent System Database Repository Cache (per second), Oracle specific",      // Label 
-//				labels_oraRasdCache, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 	
 	@Override

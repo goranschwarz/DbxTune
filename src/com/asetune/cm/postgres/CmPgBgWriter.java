@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.graph.TrendGraphDataPoint;
@@ -169,7 +170,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BUFFER,
 				"Buffers", 	                // Menu CheckBox text
 				"Buffers ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"Written During Checkpoints [buffers_checkpoint]", "Written [buffers_clean]", "Written Directly by a Backend [buffers_backend]", "Allocated [buffers_alloc]"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -181,7 +182,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BUFFER_EVENTS,
 				"Buffer Events", 	                // Menu CheckBox text
 				"Buffer Events ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"Number of bgwriter Stopped by Max Write Count [maxwritten_clean]", "Times a Backend Execute Its Own Fsync [buffers_backend_fsync]"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -193,7 +194,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CHECKPOINT_COUNT,
 				"Checkpoints Count", 	                // Menu CheckBox text
 				"Checkpoints Count ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"By Timeout [checkpoints_timed]", "By WAL [checkpoints_req]"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -205,7 +206,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CHECKPOINT_TIME,
 				"Checkpoints Time in ms", 	                // Menu CheckBox text
 				"Checkpoints Time in ms ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"Sync Time [checkpoint_sync_time]", "Write Time [checkpoint_write_time]"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,

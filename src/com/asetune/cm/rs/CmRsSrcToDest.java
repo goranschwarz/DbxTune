@@ -40,6 +40,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -162,16 +163,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "-added-at-runtime-" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_PERF_INDICATOR, new TrendGraphDataPoint(GRAPH_NAME_PERF_INDICATOR, labels, LabelType.Dynamic));
-
 		//-----
 		addTrendGraph(GRAPH_NAME_PERF_INDICATOR,
 			"Source to Destination - Performance Indicator", // Menu CheckBox text
 			"Source to Destination - Performance Indicator (0: good, <0: DSI is Slow, >0: DSI is Fast)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -180,24 +176,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_PERF_INDICATOR,
-//				"Source to Destination - Performance Indicator", // Menu CheckBox text
-//				"Source to Destination - Performance Indicator (0: good, <0: DSI is Slow, >0: DSI is Fast)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

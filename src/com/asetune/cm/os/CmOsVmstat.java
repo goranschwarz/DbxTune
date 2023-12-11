@@ -31,6 +31,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEventOsSwapThrashing;
 import com.asetune.alarm.events.AlarmEventOsSwapping;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
@@ -132,7 +133,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_PROCS_USAGE,
 			"vmstat: Processes Usage",                                // Menu CheckBox text
 			"vmstat: Processes Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -145,7 +146,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_SWAP_USAGE,
 			"vmstat: Swap Usage",                                // Menu CheckBox text
 			"vmstat: Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -158,7 +159,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_USAGE,
 			"vmstat: Memory Usage",                                // Menu CheckBox text
 			"vmstat: Memory Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -170,7 +171,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_SWAP_IN_OUT,
 			"vmstat: Swap In/Out per sec",                                // Menu CheckBox text
 			"vmstat: Swap In/Out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -182,7 +183,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_IO_READ_WRITE,
 			"vmstat: IO Read/Write or blk-in/out per sec",                                // Menu CheckBox text
 			"vmstat: IO Read/Write or blk-in/out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -195,7 +196,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_CPU_USAGE,
 			"vmstat: CPU Usage",                                // Menu CheckBox text
 			"vmstat: CPU Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -545,12 +546,12 @@ extends CounterModelHostMonitor
 	public static final String  PROPKEY_alarm_swap                             = CM_NAME + ".alarm.system.if.swap.gt";  // Pages in OR out
 	public static final int     DEFAULT_alarm_swap                             = 1000;
                                                                                
-	public static final String  PROPKEY_alarm_swap_thrashing                   = CM_NAME + ".alarm.system.if.swap.thrashing.gt"; // Pages in AND out
-	public static final int     DEFAULT_alarm_swap_thrashing                   = 150;
-                                                                               
 	public static final String  PROPKEY_alarm_swap_maxCap_multiplier           = CM_NAME + ".alarm.system.swap.maxCap.multiplier";
 	public static final double  DEFAULT_alarm_swap_maxCap_multiplier           = 1.5d;
 
+	public static final String  PROPKEY_alarm_swap_thrashing                   = CM_NAME + ".alarm.system.if.swap.thrashing.gt"; // Pages in AND out
+	public static final int     DEFAULT_alarm_swap_thrashing                   = 150;
+                                                                               
 	public static final String  PROPKEY_alarm_swap_thrashing_maxCap_multiplier = CM_NAME + ".alarm.system.swap.thrashing.maxCap.multiplier";
 	public static final double  DEFAULT_alarm_swap_thrashing_maxCap_multiplier = 2.0d;
 
@@ -560,8 +561,13 @@ extends CounterModelHostMonitor
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("Swapping"     , PROPKEY_alarm_swap           , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap           , DEFAULT_alarm_swap)          , DEFAULT_alarm_swap          , "If 'swap-in' or 'swap-out' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Linux/Unix. (for Windows see 'CmOsMeminfo')" ));
-		list.add(new CmSettingsHelper("SwapThrashing", PROPKEY_alarm_swap_thrashing , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap_thrashing , DEFAULT_alarm_swap_thrashing), DEFAULT_alarm_swap_thrashing, "If 'swap-in' AND 'swap-out' is greater than ## (5 minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Linux/Unix. (for Windows see 'CmOsMeminfo')" ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("Swapping"     , isAlarmSwitch  , PROPKEY_alarm_swap                             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap                             , DEFAULT_alarm_swap                            ), DEFAULT_alarm_swap                            , "If 'swap-in' or 'swap-out' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Linux/Unix. (for Windows see 'CmOsMeminfo')" ));
+		list.add(new CmSettingsHelper("Swapping MaxCapMultiplier"     , PROPKEY_alarm_swap_maxCap_multiplier           , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_maxCap_multiplier           , DEFAULT_alarm_swap_maxCap_multiplier          ), DEFAULT_alarm_swap_maxCap_multiplier          , "Parameter to 'Swapping', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 1000 and 'MaxCap Multiplier' is '1.5' The MaxCap will be 1500..." ));
+
+		list.add(new CmSettingsHelper("SwapThrashing", isAlarmSwitch  , PROPKEY_alarm_swap_thrashing                   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap_thrashing                   , DEFAULT_alarm_swap_thrashing)                  , DEFAULT_alarm_swap_thrashing                  , "If 'swap-in' AND 'swap-out' is greater than ## (5 minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Linux/Unix. (for Windows see 'CmOsMeminfo')" ));
+		list.add(new CmSettingsHelper("SwapThrashing MaxCapMultiplier", PROPKEY_alarm_swap_thrashing_maxCap_multiplier , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_thrashing_maxCap_multiplier , DEFAULT_alarm_swap_thrashing_maxCap_multiplier), DEFAULT_alarm_swap_thrashing_maxCap_multiplier, "Parameter to 'SwapThrashing', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 150 and 'MaxCap Multiplier' is '2.0' The MaxCap will be 300..." ));
 
 		return list;
 	}

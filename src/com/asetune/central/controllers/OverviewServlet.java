@@ -93,7 +93,7 @@ public class OverviewServlet extends HttpServlet
 	public static final String  PROPKEY_enableDownloadRecordings = "download.recordings.enabled";
 	public static final boolean DEFAULT_enableDownloadRecordings = true;
 	
-	private List<String> getInfoFilesDbxTune()
+	public static List<String> getInfoFilesDbxTune()
 	{
 		String directory = INFO_DIR;
 

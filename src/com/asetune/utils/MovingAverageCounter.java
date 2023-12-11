@@ -262,6 +262,101 @@ public class MovingAverageCounter
 		return sum / size;
 	}
 
+
+
+	/**
+	 * Get SUM value for records that has been sampled during the sample period
+	 * <ul>
+	 *   <li>If the period has no values, ZERO will be returned </li>
+	 *   <li>if the sample period has <b>NOT</b> been achieved, SUM will still be calculated on added values.</li>
+	 * </ul>
+	 * 
+	 * To check if the sample period has been achieved call <code>isPeriodAchieved()</code>
+	 */
+	public double getSum()
+	{
+		return getSum(0d, false);
+	}
+
+	/**
+	 * Get SUM value for records that has been sampled during the sample period
+	 * <ul>
+	 *   <li>If the period has no values, <i>defaultVal</i> will be returned </li>
+	 *   <li>if the sample period has <b>NOT</b> been achieved, SUM will still be calculated on added values.</li>
+	 * </ul>
+	 * 
+	 * To check if the sample period has been achieved call <code>isPeriodAchieved()</code>
+	 * 
+	 * @param defaultVal                                  default value
+	 */
+	public double getSum(double defaultVal)
+	{
+		return getSum(defaultVal, false);
+	}
+
+	/**
+	 * Get SUM value for records that has been sampled during the sample period
+	 * <ul>
+	 *   <li>If the period has no values, <i>defaultVal</i> will be returned </li>
+	 *   <li>if the sample period has <b>NOT</b> been achieved, SUM or <i>defaultVal</i> will be returned. based on parameter: <code>returnDefaultIfPeriodHasNotBeenAchieved</code></li>
+	 * </ul>
+	 * 
+	 * To check if the sample period has been achieved call <code>isPeriodAchieved()</code>
+	 * 
+	 * @param defaultVal                                  default value
+	 * @param returnDefaultIfPeriodHasNotBeenAchieved     like the name of the parameter
+	 */
+	public synchronized double getSum(double defaultVal, boolean returnDefaultIfPeriodHasNotBeenAchieved)
+	{
+		return getSum(defaultVal, returnDefaultIfPeriodHasNotBeenAchieved, -1);
+	}
+
+	/**
+	 * Get SUM value for records that has been sampled during the sample period
+	 * <ul>
+	 *   <li>If the period has no values, <i>defaultVal</i> will be returned </li>
+	 *   <li>if the sample period has <b>NOT</b> been achieved, SUM or <i>defaultVal</i> will be returned. based on parameter: <code>returnDefaultIfPeriodHasNotBeenAchieved</code></li>
+	 * </ul>
+	 * 
+	 * To check if the sample period has been achieved call <code>isPeriodAchieved()</code>
+	 * 
+	 * @param defaultVal                                  default value
+	 * @param returnDefaultIfPeriodHasNotBeenAchieved     like the name of the parameter
+	 * @param capValue                                    Upper value for the avgCalculation, only used if above 0. (values above this will be read as "this" value) 
+	 * 
+	 */
+	public synchronized double getSum(double defaultVal, boolean returnDefaultIfPeriodHasNotBeenAchieved, double capValue)
+	{
+		// first remove old entries
+		removeOldEntries();
+
+		int size = _values.size();
+		double sum = 0;
+
+		if (size == 0)
+			return defaultVal;
+
+		if ( returnDefaultIfPeriodHasNotBeenAchieved  &&  ! isPeriodAchieved() )
+			return defaultVal;
+
+		for (Entry e : _values)
+		{
+			if (capValue > 0 && e._val > capValue)
+			{
+				sum += capValue;
+			}
+			else
+			{
+				sum += e._val;
+			}
+		}
+		
+		return sum;
+	}
+
+	
+	
+	
 	/**
 	 * Get peak/max value over the period 
 	 * @return

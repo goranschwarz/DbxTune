@@ -51,6 +51,7 @@ import com.asetune.alarm.events.AlarmEventLowDbFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
 import com.asetune.alarm.events.AlarmEventOldBackup;
 import com.asetune.alarm.events.AlarmEventOldTranLogBackup;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -207,21 +208,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels         = new String[] { "runtime-replaced" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-////		String[] openTranLabels = new String[] { "Seconds" };
-		
-//		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT,  new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT,  labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_LOGSIZE_LEFT_MB,    new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_LEFT_MB,    labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_LOGSIZE_USED_PCT,   new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_USED_PCT,   labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_DATASIZE_LEFT_MB,   new TrendGraphDataPoint(GRAPH_NAME_DATASIZE_LEFT_MB,   labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_DATASIZE_USED_PCT,  new TrendGraphDataPoint(GRAPH_NAME_DATASIZE_USED_PCT,  labels, LabelType.Dynamic));
-////		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, openTranLabels));
-
 		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
 			"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
 			"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -233,7 +223,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
 			"DB Transaction Log Space Available in MB",        // Menu CheckBox text
 			"DB Transaction Log Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -245,7 +235,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_MB,
 			"DB Transaction Log Space Used in MB",        // Menu CheckBox text
 			"DB Transaction Log Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -257,7 +247,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
 			"DB Transaction Log Space Used in PCT",     // Menu CheckBox text
 			"DB Transaction Log Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -269,7 +259,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
 			"DB Data Space Available in MB",        // Menu CheckBox text
 			"DB Data Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -281,7 +271,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_MB,
 			"DB Data Space Used in MB",     // Menu CheckBox text
 			"DB Data Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -293,7 +283,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
 			"DB Data Space Used in PCT",     // Menu CheckBox text
 			"DB Data Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -302,21 +292,10 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-//			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-//			"Oldest Open Transaction in any Databases, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
-//			new String[] { "Seconds" },
-//			LabelType.Static,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-
 		addTrendGraph(GRAPH_NAME_TEMPDB_USED_MB,
 			"TempDB Space Used in MB",     // Menu CheckBox text
 			"TempDB Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,

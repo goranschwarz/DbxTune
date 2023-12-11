@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -388,7 +389,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_TIME_MS,
 			"SPID Wait, group by wait_type - wait_time_ms, Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by wait_type - wait_time_ms, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -400,7 +401,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAITING_TASKS_COUNT,
 			"SPID Wait, group by wait_type - waiting_tasks_count, Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by wait_type - waiting_tasks_count, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -412,7 +413,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WaitTimePerCount,
 			"SPID Wait, group by wait_type - WaitTimePerCount, Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by wait_type - WaitTimePerCount, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,

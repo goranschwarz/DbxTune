@@ -98,6 +98,7 @@ import com.asetune.cm.sqlserver.CmWhoIsActive;
 import com.asetune.cm.sqlserver.CmWorkers;
 import com.asetune.cm.sqlserver.ToolTipSupplierSqlServer;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
@@ -1227,17 +1228,27 @@ extends CounterControllerAbstract
 			{
 				int deadlockCountOverRecordingPeriod = ((Number)o_deadlockCountOverRecordingPeriod).intValue();
 				
-				//TODO: Possibly use 'CmSummary_DeadlockCountSum' to get Deadlock Count instead of the PCS Key Value Store
 				// deadlock count from the "chart/graph" table
-//				String sqlGetDeadlockCount = conn.quotifySqlString("select sum([Deadlock Count]) from [CmSummary_DeadlockCountSum]"); // NEW Style
-				String sqlGetDeadlockCount = pcsConn.quotifySqlString("select sum([data_0]) from [CmSummary_DeadlockCountSum] where [label_0] = 'Deadlock Count'"); // OLD Style
+				String sqlGetDeadlockCount = "";
+				String dummySql = "select * from [CmSummary_DeadlockCountSum] where 1 = 2";
+				ResultSetTableModel dummyRstm = ResultSetTableModel.executeQuery(pcsConn, dummySql, true, "metadata");
+				if (dummyRstm.hasColumn("label_0") && dummyRstm.hasColumn("data_0"))
+				{
+					 // OLD Style: Label in separate column ("label_#")
+					sqlGetDeadlockCount = pcsConn.quotifySqlString("select sum([data_0]) from [CmSummary_DeadlockCountSum] where [label_0] = 'Deadlock Count'");
+				}
+				else
+				{
+					// NEW Style: ColumnName is Label
+					sqlGetDeadlockCount = pcsConn.quotifySqlString("select sum([Deadlock Count]) from [CmSummary_DeadlockCountSum]"); 
+				}
+
 				try (Statement stmnt = pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sqlGetDeadlockCount))
 				{
 					int deadlockCount = -1;
 					while(rs.next())
 						deadlockCount = rs.getInt(1);
 
-//System.out.println("deadlockCountOverRecordingPeriod[KeyValStore]=" + deadlockCountOverRecordingPeriod + ", deadlockCount[CmSummary_DeadlockCountSum]=" + deadlockCount);
 					deadlockCountOverRecordingPeriod = deadlockCount;
 				}
 				catch (SQLException ex)

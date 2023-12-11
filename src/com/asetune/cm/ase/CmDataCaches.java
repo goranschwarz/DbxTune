@@ -34,6 +34,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -137,19 +138,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels  = new String[] { "Logical Reads", "Physical Reads", "Writes" };
-//		String[] dynLbls = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_CACHE_ACTIVITY,       new TrendGraphDataPoint(GRAPH_NAME_CACHE_ACTIVITY,       labels,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_LOGICAL_READS,  new TrendGraphDataPoint(GRAPH_NAME_CACHE_LOGICAL_READS,  dynLbls, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_CACHE_PHYSICAL_READS, new TrendGraphDataPoint(GRAPH_NAME_CACHE_PHYSICAL_READS, dynLbls, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_CACHE_APF_READS,      new TrendGraphDataPoint(GRAPH_NAME_CACHE_APF_READS,      dynLbls, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_CACHE_WRITES,         new TrendGraphDataPoint(GRAPH_NAME_CACHE_WRITES,         dynLbls, LabelType.Dynamic));
-
 		addTrendGraph(GRAPH_NAME_CACHE_ACTIVITY,
 			"Data Caches Activity", 	               // Menu CheckBox text
 			"Activity for All Data Caches per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Logical Reads", "Real Physical Reads", "Writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -162,7 +154,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_LOGICAL_READS,
 			"Data Caches LogicalReads", 	               // Menu CheckBox text
 			"Data Caches LogicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -175,7 +167,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_PHYSICAL_READS,
 			"Data Caches PhysicalReads", 	               // Menu CheckBox text
 			"Data Caches PhysicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -188,7 +180,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_APF_READS,
 			"Data Caches ApfReads", 	               // Menu CheckBox text
 			"Data Caches ApfReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -201,7 +193,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_WRITES,
 			"Data Caches Writes", 	               // Menu CheckBox text
 			"Data Caches Writes per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -210,71 +202,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_ACTIVITY,
-//				"Data Caches Activity", 	               // Menu CheckBox text
-//				"Activity for All Data Caches per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_LOGICAL_READS,
-//				"Data Caches LogicalReads", 	               // Menu CheckBox text
-//				"Data Caches LogicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_PHYSICAL_READS,
-//				"Data Caches PhysicalReads", 	               // Menu CheckBox text
-//				"Data Caches PhysicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_APF_READS,
-//				"Data Caches ApfReads", 	               // Menu CheckBox text
-//				"Data Caches ApfReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_WRITES,
-//				"Data Caches Writes", 	               // Menu CheckBox text
-//				"Data Caches Writes per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 //	@Override

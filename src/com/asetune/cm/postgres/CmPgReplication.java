@@ -35,6 +35,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.postgres.AlarmEventPgReplicationAge;
 import com.asetune.alarm.events.postgres.AlarmEventPgReplicationLag;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -316,7 +317,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TOTAL_LAG,
 			"Replication Lag in KB", 	                // Menu CheckBox text
 			"Replication Lag in KB ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.REPLICATION,
 			false, // is Percent Graph
@@ -327,7 +328,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REP_AGE_SECONDS,
 			"Replication Age in Seconds", 	                // Menu CheckBox text
 			"Replication Age in Seconds ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.REPLICATION,
 			false, // is Percent Graph

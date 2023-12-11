@@ -31,9 +31,17 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -1737,6 +1745,9 @@ public class DbxTuneCentral
 			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
 			webapp1.setParentLoaderPriority(true);
 
+//			InterceptExceptionsFilter interceptFilter = new InterceptExceptionsFilter();
+			webapp1.addFilter(InterceptExceptionsFilter.class, "/*", EnumSet.of(DispatcherType.INCLUDE, DispatcherType.REQUEST));
+
 //	        // The below 4 lines is to get JSP going????
 //	        webapp1.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern",".*/[^/]*jstl.*\\.jar$");
 //	        org.eclipse.jetty.webapp.Configuration.ClassList classlist = org.eclipse.jetty.webapp.Configuration.ClassList.setServerDefault(_server);
@@ -1834,6 +1845,96 @@ public class DbxTuneCentral
 //		}
 	}
 	
+	public static class InterceptExceptionsFilter implements javax.servlet.Filter
+	{
+		@Override
+		public void init(FilterConfig filterConfig) throws ServletException
+		{
+			_logger.info("Initializing 'InterceptExceptionsFilter' to intercept Exceptions and possible do restart of the server. filterConfig=" + filterConfig);
+		}
+
+		@Override
+		public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) 
+		throws IOException, ServletException
+		{
+			try 
+			{
+//System.out.println(">>>>> InterceptExceptionsFilter.doFilter(): request=|" + request + "|, response=|" + response + "|, chain=|" + chain + "|.");
+				chain.doFilter(request, response);
+//System.out.println("<<<<< InterceptExceptionsFilter.doFilter(): request=|" + request + "|, response=|" + response + "|, chain=|" + chain + "|.");
+			} 
+			catch (Throwable ex) 
+			{
+				inspectException(ex);
+
+				throw ex;
+//				if (ex instanceof IOException) 
+//				{
+//					throw (IOException) ex;
+//				} 
+//				else if (ex instanceof ServletException) 
+//				{
+//					throw (ServletException) ex;
+//				} 
+//				else if (ex instanceof RuntimeException) 
+//				{
+//					throw (RuntimeException) ex;
+//				} 
+//				else 
+//				{
+//					//This should never be hit
+//					throw new RuntimeException("Unexpected Exception", ex);
+//				}
+		    }
+		}
+
+		private void inspectException(Throwable ex)
+		{
+//			ex.printStackTrace();
+			_logger.info("InterceptExceptionsFilter is inspecting an Exception |" + ex + "|.");;
+
+			// Loop some chained exceptions (max 500, so we do not end up in an infinitive loop here)
+			for (int cnt = 0; ex != null && cnt < 500; cnt++)
+			{
+				if (ex instanceof RuntimeException && "DUMMY-SIMULATE-OutOfMemoryError".equals(ex.getMessage()))
+				{
+					ShutdownHandler.shutdownWithRestart("Caught 'DUMMY-SIMULATE-OutOfMemoryError' Exception when in a Web Request.");
+				}
+
+				if (ex instanceof SQLException)
+				{
+					SQLException sqlEx = (SQLException) ex;
+
+					// org.h2.jdbc.JdbcSQLNonTransientConnectionException: The database has been closed [90098-214]
+					if (sqlEx.getMessage() != null && sqlEx.getMessage().contains("[90098-"))
+					{
+						_logger.info("InterceptExceptionsFilter found Exception |" + ex + "|, which we made the decition to Restart the server.");;
+						ShutdownHandler.shutdownWithRestart("Caught SQLException '" + sqlEx.getMessage() + "' when in a Web Request.");
+					}
+
+					// Possibly also check for: java.sql.SQLNonTransientConnectionException
+					// BUT: I don't think that many Vendors has implemented any java.sql "Sub classes of SQLException" 
+					//      I have only seen H2 so far, most just throws SQLException with a SQLState set to "something"
+				}
+				else if (ex instanceof OutOfMemoryError)
+				{
+					System.out.println("*********************** OutOfMemoryError ************************ TIME TO RESTART **************** cnt=" + cnt);
+					_logger.info("InterceptExceptionsFilter found Exception |" + ex + "|, which we made the decition to Restart the server.");;
+					ShutdownHandler.shutdownWithRestart("Caught 'OutOfMemoryError' Exception when in a Web Request.");
+				}
+
+				ex = ex.getCause();
+//				System.out.println("**** InterceptExceptionsFilter.doCustomErrorLogging(): Exceptins Loop counter=" + cnt);
+			}
+		}
+
+		@Override
+		public void destroy()
+		{
+			_logger.info("destroy 'InterceptExceptionsFilter'.");
+		}
+		
+	}
 //	private static void startWebServerTomcat()
 //	throws Exception
 //	{

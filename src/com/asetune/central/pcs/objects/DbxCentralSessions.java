@@ -29,6 +29,7 @@ import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 @JsonPropertyOrder(value = {"sessionStartTime", "status", "serverName", "serverDisplayName", "onHostname", "productString", "versionString", "buildString", "collectorHostname", "collectorSampleInterval", "collectorCurrentUrl", "collectorInfoFile", "collectorIsLocal", "numOfSamples", "lastSampleTime", "lastSampleAgeInSec", "serverDescription", "serverExtraInfo"}, alphabetic = true)
+//@JsonPropertyOrder(value = {"sessionStartTime", "status", "serverName", "serverDisplayName", "onHostname", "productString", "versionString", "buildString", "collectorHostname", "collectorSampleInterval", "collectorCurrentUrl", "collectorInfoFile", "collectorMgtHostname", "collectorMgtPort", "collectorMgtInfo", "collectorIsLocal", "numOfSamples", "lastSampleTime", "lastSampleAgeInSec", "serverDescription", "serverExtraInfo"}, alphabetic = true)
 public class DbxCentralSessions
 {
 	public static final int ST_DISABLED = 1;
@@ -45,6 +46,9 @@ public class DbxCentralSessions
 	private int       _collectorSampleInterval ;
 	private String    _collectorCurrentUrl     ;
 	private String    _collectorInfoFile       ;
+//	private String    _collectorMgtHostname    ;
+//	private int       _collectorMgtPort        ;
+//	private String    _collectorMgtInfo        ;
 	private int       _numOfSamples            ;
 	private Timestamp _lastSampleTime          ;
 	private String    _serverDescription       ;
@@ -65,6 +69,9 @@ public class DbxCentralSessions
 	public int    getCollectorSampleInterval()   { return _collectorSampleInterval; }
 	public String getCollectorCurrentUrl()       { return _collectorCurrentUrl;     }
 	public String getCollectorInfoFile()         { return _collectorInfoFile;       }
+//	public String getCollectorMgtHostname()      { return _collectorMgtHostname;    }
+//	public int    getCollectorMgtPort()          { return _collectorMgtPort;        }
+//	public String getCollectorMgtInfo()          { return _collectorMgtInfo;        }
 	public int    getNumOfSamples()              { return _numOfSamples;            }
 //	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss.SSS")
 	public Timestamp getLastSampleTime()         { return _lastSampleTime;          }
@@ -120,6 +127,9 @@ public class DbxCentralSessions
 	public void setCollectorSampleInterval(int       collectorSampleInterval) { _collectorSampleInterval = collectorSampleInterval; }
 	public void setCollectorCurrentUrl    (String    collectorCurrentUrl    ) { _collectorCurrentUrl     = collectorCurrentUrl; }
 	public void setCollectorInfoFile      (String    collectorInfoFile      ) { _collectorInfoFile       = collectorInfoFile; }
+//	public void setCollectorMgtHostname   (String    collectorMgtHostname   ) { _collectorMgtHostname    = collectorMgtHostname; }
+//	public void setCollectorMgtPort       (int       collectorMgtPort       ) { _collectorMgtPort        = collectorMgtPort;  }
+//	public void setCollectorMgtInfo       (String    collectorMgtInfo       ) { _collectorMgtInfo        = collectorMgtInfo; }
 	public void setNumOfSamples           (int       numOfSamples           ) { _numOfSamples            = numOfSamples;      }
 	public void setLastSampleTime         (Timestamp lastSampleTime         ) { _lastSampleTime          = lastSampleTime;    }
 	public void setServerDescription      (String    serverDescription      ) { _serverDescription       = serverDescription; }
@@ -128,7 +138,8 @@ public class DbxCentralSessions
 
 	public DbxCentralSessions(Timestamp sessionStartTime, int status, String serverName, String serverDisplayName, String onHostname, 
 			String productString, String versionString, String buildString, String collectorHostname, int collectorSampleInterval, 
-			String collectorCurrentUrl, String collectorInfoFile, int numOfSamples, Timestamp lastSampleTime, String serverDescription, 
+			String collectorCurrentUrl, String collectorInfoFile, //String collectorMgtHostname, int collectorMgtPort, String collectorMgtInfo, 
+			int numOfSamples, Timestamp lastSampleTime, String serverDescription, 
 			String serverExtraInfo, List<DbxGraphProperties> graphProperties)
 	{
 		super();
@@ -145,6 +156,9 @@ public class DbxCentralSessions
 		_collectorSampleInterval = (collectorSampleInterval <= 0) ? -1 : collectorSampleInterval;
 		_collectorCurrentUrl     = collectorCurrentUrl;
 		_collectorInfoFile       = collectorInfoFile;
+//		_collectorMgtHostname    = collectorMgtHostname;
+//		_collectorMgtPort        = collectorMgtPort;
+//		_collectorMgtInfo        = collectorMgtInfo;
 		_numOfSamples            = numOfSamples;
 		_lastSampleTime          = lastSampleTime;
 		_graphProperties         = graphProperties;

@@ -34,6 +34,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -135,16 +136,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labelsPerSec  = new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" };
-//		String[] labelsHitRate = new String[] { "Hit rate" };
-//		
-//		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, labelsPerSec,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_HIT_RATE_PCT,    new TrendGraphDataPoint(GRAPH_NAME_HIT_RATE_PCT,    labelsHitRate, LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Statement Cache Requests", 	                           // Menu CheckBox text
 			"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -157,7 +152,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HIT_RATE_PCT,
 			"Statement Cache Hit Rate", 	                           // Menu CheckBox text
 			"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Hit rate" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -166,34 +161,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
-//				"Statement Cache Requests", 	                           // Menu CheckBox text
-//				"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labelsPerSec, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_HIT_RATE_PCT,
-//				"Statement Cache Hit Rate", 	                           // Menu CheckBox text
-//				"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
-//				labelsHitRate, 
-//				true, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 //	@Override

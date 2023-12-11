@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -155,21 +156,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_runQueueLength  = new String[] { "Sum: runnable_tasks_count", "Avg: runnable_tasks_count" };
-//		String[] labels_pendingIo       = new String[] { "Sum: pending_disk_io_count", "Avg: pending_disk_io_count" };
-////		String[] labels_runtimeReplaced = new String[] { "-runtime-replaced-" };
-//		String[] labels_runtimeReplaced = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//
-//		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, labels_runQueueLength,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, labels_runtimeReplaced, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_PENDING_IO_SUM,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_SUM,       labels_pendingIo,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_PENDING_IO_ENG,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_ENG,       labels_runtimeReplaced, LabelType.Dynamic));
-
 		// GRAPH: Run Queue Length
 		addTrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM,
 			"Runnable Queue Length, Summary", 	                        // Menu CheckBox text
 			"Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Sum: runnable_tasks_count", "Avg: runnable_tasks_count" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -182,7 +173,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG,
 			"Runnable Queue Length, per Scheduler", 	                        // Menu CheckBox text
 			"Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -195,7 +186,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PENDING_IO_SUM,
 			"Outstanding IO Requests, Summary", 	                        // Menu CheckBox text
 			"Outstanding IO Requests, Summary (using dm_os_schedulers.pending_disk_io_count)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Sum: pending_disk_io_count", "Avg: pending_disk_io_count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -208,7 +199,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PENDING_IO_ENG,
 			"Outstanding IO Requests, per Scheduler", 	                        // Menu CheckBox text
 			"Outstanding IO Requests, per Scheduler (using dm_os_schedulers.pending_disk_io_count)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -221,7 +212,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_ALL_SCHEDULERS,
 			"CPU Usage in Percent, ALL Schedulers", 	                        // Menu CheckBox text
 			"CPU Usage in Percent, ALL Schedulers (using dm_os_schedulers.total_cpu_usage_ms)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "cpu_usage_in_percent_all_schedulers" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -234,7 +225,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_PER_SCHEDULER,
 			"CPU Usage in Percent, per Scheduler", 	                        // Menu CheckBox text
 			"CPU Usage in Percent, per Scheduler (using dm_os_schedulers.total_cpu_usage_ms)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -247,7 +238,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_DELAY_PER_SCHEDULER,
 			"CPU Delay in Milisec, per Scheduler", 	                        // Menu CheckBox text
 			"CPU Delay in Milisec, per Scheduler (using dm_os_schedulers.total_scheduler_delay_ms)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -260,7 +251,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_DELAY_ALL_SCHEDULERS,
 			"CPU Delay in Milisec, ALL Schedulers", 	                        // Menu CheckBox text
 			"CPU Delay in Milisec, ALL Schedulers (using dm_os_schedulers.total_scheduler_delay_ms)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Sum: total_scheduler_delay_ms", "Avg: total_scheduler_delay_ms" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -269,59 +260,6 @@ extends CountersModel
 			Ver.ver(2016),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH: Run Queue Length
-//			tg = new TrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM,
-//				"Runnable Queue Length, Summary", 	                        // Menu CheckBox text
-//				"Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)", // Label 
-//				labels_runQueueLength, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH: Run Queue Length
-//			tg = new TrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG,
-//				"Runnable Queue Length, per Scheduler", 	                        // Menu CheckBox text
-//				"Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)", // Label 
-//				labels_runQueueLength, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH: Outstanding IO's
-//			tg = new TrendGraph(GRAPH_NAME_PENDING_IO_SUM,
-//				"Outstanding IO Requests, Summary", 	                        // Menu CheckBox text
-//				"Outstanding IO Requests, Summary (using dm_os_schedulers.pending_disk_io_count)", // Label 
-//				labels_pendingIo, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH: Outstanding IO's
-//			tg = new TrendGraph(GRAPH_NAME_PENDING_IO_ENG,
-//				"Outstanding IO Requests, per Scheduler", 	                        // Menu CheckBox text
-//				"Outstanding IO Requests, per Scheduler (using dm_os_schedulers.pending_disk_io_count)", // Label 
-//				labels_pendingIo, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 		
 	@Override

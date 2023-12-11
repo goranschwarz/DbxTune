@@ -1944,9 +1944,26 @@ extends CentralPersistWriterBase
 				internalDbUpgradeAlarmActiveHistory_step15(conn, step, schemaName, Table.ALARM_ACTIVE);
 				internalDbUpgradeAlarmActiveHistory_step15(conn, step, schemaName, Table.ALARM_HISTORY);
 			}
-
 		}
 
+//		if (fromDbVersion <= 13)
+//		{
+//			// Add column 'ServerDisplayName' to Table.CENTRAL_SESSIONS
+//			step = 16;
+//
+//			// Add column 'CollectorMgtHostname', 'CollectorMgtPort' and 'CollectorMgtInfo' to table 'DbxCentralSessions'
+//			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
+//			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorMgtHostname"+rq + " varchar(255) null"; // NOTE: 'not null' is not supported at upgrades
+//			internalDbUpgradeDdlExec(conn, step, sql);
+//
+//			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorMgtPort"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
+//			internalDbUpgradeDdlExec(conn, step, sql);
+//
+//			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorMgtInfo"+rq + " varchar(512) null"; // NOTE: 'not null' is not supported at upgrades
+//			internalDbUpgradeDdlExec(conn, step, sql);
+//		}
+
+		
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '"+fromDbVersion+"' to version '"+toDbVersion+"'.");
 		return toDbVersion;
 	}
@@ -2316,32 +2333,37 @@ extends CentralPersistWriterBase
 				String centralSessionTableName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false); // Note: for Table.CENTRAL_SESSIONS schema should NOT be used
 
 				ResultSetMetaDataCached rsmdc = ResultSetMetaDataCached.getMetaData(conn, null, null, centralSessionTableName); // Note: for Table.CENTRAL_SESSIONS schema should NOT be used
-				int len_ServerName          = rsmdc != null ? rsmdc.getPrecision("ServerName"         , -1) : -1;
-				int len_ServerDisplayName   = rsmdc != null ? rsmdc.getPrecision("ServerDisplayName"  , -1) : -1;
-				int len_OnHostname          = rsmdc != null ? rsmdc.getPrecision("OnHostname"         , -1) : -1;
-				int len_ProductString       = rsmdc != null ? rsmdc.getPrecision("ProductString"      , -1) : -1;
-				int len_VersionString       = rsmdc != null ? rsmdc.getPrecision("VersionString"      , -1) : -1;
-				int len_BuildString         = rsmdc != null ? rsmdc.getPrecision("BuildString"        , -1) : -1;
-				int len_CollectorHostname   = rsmdc != null ? rsmdc.getPrecision("CollectorHostname"  , -1) : -1;
-				int len_CollectorCurrentUrl = rsmdc != null ? rsmdc.getPrecision("CollectorCurrentUrl", -1) : -1;
-				int len_CollectorInfoFile   = rsmdc != null ? rsmdc.getPrecision("CollectorInfoFile"  , -1) : -1;
+				int len_ServerName           = rsmdc != null ? rsmdc.getPrecision("ServerName"          , -1) : -1;
+				int len_ServerDisplayName    = rsmdc != null ? rsmdc.getPrecision("ServerDisplayName"   , -1) : -1;
+				int len_OnHostname           = rsmdc != null ? rsmdc.getPrecision("OnHostname"          , -1) : -1;
+				int len_ProductString        = rsmdc != null ? rsmdc.getPrecision("ProductString"       , -1) : -1;
+				int len_VersionString        = rsmdc != null ? rsmdc.getPrecision("VersionString"       , -1) : -1;
+				int len_BuildString          = rsmdc != null ? rsmdc.getPrecision("BuildString"         , -1) : -1;
+				int len_CollectorHostname    = rsmdc != null ? rsmdc.getPrecision("CollectorHostname"   , -1) : -1;
+				int len_CollectorCurrentUrl  = rsmdc != null ? rsmdc.getPrecision("CollectorCurrentUrl" , -1) : -1;
+				int len_CollectorInfoFile    = rsmdc != null ? rsmdc.getPrecision("CollectorInfoFile"   , -1) : -1;
+//				int len_CollectorMgtHostname = rsmdc != null ? rsmdc.getPrecision("CollectorMgtHostname", -1) : -1;
+//				int len_CollectorMgtInfo     = rsmdc != null ? rsmdc.getPrecision("CollectorMgtInfo"    , -1) : -1;
 				
 				//StringBuffer sbSql = new StringBuffer();
 				sbSql = new StringBuffer();
 				sbSql.append(getTableInsertStr(conn, schemaName, Table.CENTRAL_SESSIONS, null, false));
 				sbSql.append(" values(");
-				sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()                                ));
-				sbSql.append(", ").append(DbUtils.safeStr(0                                                         )); // Status is not in the container, so always add 0
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerName()             , len_ServerName         ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerDisplayName()      , len_ServerDisplayName  ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getOnHostname()             , len_OnHostname         ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppName()                , len_ProductString      ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppVersion()             , len_VersionString      ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppBuildStr()            , len_BuildString        ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorHostname()      , len_CollectorHostname  ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorSampleInterval()                         ));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorCurrentUrl()    , len_CollectorCurrentUrl));
-				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorInfoFile()      , len_CollectorInfoFile  ));
+				sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()                                 ));
+				sbSql.append(", ").append(DbUtils.safeStr(0                                                          )); // Status is not in the container, so always add 0
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerName()             , len_ServerName          ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerDisplayName()      , len_ServerDisplayName   ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getOnHostname()             , len_OnHostname          ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppName()                , len_ProductString       ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppVersion()             , len_VersionString       ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppBuildStr()            , len_BuildString         ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorHostname()      , len_CollectorHostname   ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorSampleInterval()                          ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorCurrentUrl()    , len_CollectorCurrentUrl ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorInfoFile()      , len_CollectorInfoFile   ));
+//				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorMgtHostname()   , len_CollectorMgtHostname));
+//				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorMgtPort()                                 ));
+//				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorMgtInfo()       , len_CollectorMgtInfo    ));
 				sbSql.append(", 0");     // NumOfSamples   always starts at 0
 				sbSql.append(", null"); // LastSampleTime is null at start
 				sbSql.append(")"); // end-of-values
@@ -2554,6 +2576,9 @@ extends CentralPersistWriterBase
 		Timestamp sessionStartTime    = cont.getSessionStartTime();
 		Timestamp sessionSampleTime   = cont.getSessionSampleTime();
 		String    collectorCurrentUrl = cont.getCollectorCurrentUrl();
+//		String    collectorMgtHostname= cont.getCollectorMgtHostname();
+//		int       collectorMgtPort    = cont.getCollectorMgtPort();
+//		String    collectorMgtInfo    = cont.getCollectorMgtInfo();
 
 		
 		StringBuffer sbSql = null;
@@ -2600,9 +2625,11 @@ extends CentralPersistWriterBase
 				sbSql.append("    set  ").append(lq).append("NumOfSamples")       .append(rq).append(" = ").append(lq).append("NumOfSamples").append(rq).append(" + 1").append("\n");
 				sbSql.append("        ,").append(lq).append("LastSampleTime")     .append(rq).append(" = '").append(sessionSampleTime).append("'").append("\n");
 
-				if (StringUtil.hasValue(collectorCurrentUrl))
-					sbSql.append("        ,").append(lq).append("CollectorCurrentUrl").append(rq).append(" = '").append(collectorCurrentUrl).append("'").append("\n");
-
+				if (StringUtil.hasValue(collectorCurrentUrl))  sbSql.append("        ,").append(lq).append("CollectorCurrentUrl") .append(rq).append(" = '").append(collectorCurrentUrl) .append("'").append("\n");
+//				if (StringUtil.hasValue(collectorMgtHostname)) sbSql.append("        ,").append(lq).append("CollectorMgtHostname").append(rq).append(" = '").append(collectorMgtHostname).append("'").append("\n");
+//				if (collectorMgtPort >= 0)                     sbSql.append("        ,").append(lq).append("CollectorMgtPort")    .append(rq).append(" = ") .append(collectorMgtPort)                .append("\n");
+//				if (StringUtil.hasValue(collectorMgtInfo))     sbSql.append("        ,").append(lq).append("CollectorMgtInfo")    .append(rq).append(" = '").append(collectorMgtInfo)    .append("'").append("\n");
+				
 				sbSql.append("  where ").append(lq).append("SessionStartTime")   .append(rq).append(" = '").append(sessionStartTime).append("'").append("\n");
 
 				String sql = sbSql.toString();

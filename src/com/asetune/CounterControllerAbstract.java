@@ -2559,6 +2559,7 @@ implements ICounterController
 	//==================================================================
 	// BEGIN: serverAliasName and serverDisplayName
 	//==================================================================
+	private HeaderInfo _lastKnownHeaderInfo;
 	private String _serverAliasName;
 	private String _serverDisplayName;
 
@@ -2569,6 +2570,9 @@ implements ICounterController
 	@Override
 	public String getServerAliasName()
 	{
+		if (StringUtil.isNullOrBlank(_serverAliasName) && _lastKnownHeaderInfo != null) 
+			return _lastKnownHeaderInfo.getServerNameAlias();
+
 		return _serverAliasName;
 	}
 
@@ -2589,6 +2593,9 @@ implements ICounterController
 	@Override
 	public String getServerDisplayName()
 	{
+		if (StringUtil.isNullOrBlank(_serverDisplayName) && _lastKnownHeaderInfo != null) 
+			return _lastKnownHeaderInfo.getServerDisplayName();
+
 		return _serverDisplayName;
 	}
 
@@ -2604,4 +2611,44 @@ implements ICounterController
 	//==================================================================
 	// END: serverDisplayName
 	//==================================================================
+
+	/** Get the server name, which depends on dbms/aliasName and displayName */
+	@Override
+	public String getServerName()
+	{
+		String displaySrvName = getServerDisplayName();
+		String aliasSrvName   = getServerAliasName();
+		String dbmsSrvName    = getDbmsServerName();
+		
+		if (StringUtil.hasValue(displaySrvName)) return displaySrvName;
+		if (StringUtil.hasValue(aliasSrvName  )) return aliasSrvName;
+		if (StringUtil.hasValue(dbmsSrvName   )) return dbmsSrvName;
+		
+		return null;
+	}
+
+	/** Get the DBMS Server name */
+	@Override
+	public String getDbmsServerName()
+	{
+		if (_lastKnownHeaderInfo == null)
+			return null;
+
+		return _lastKnownHeaderInfo.getServerName();
+	}
+
+	/** Set the last known header info, which we can extract server name etc... */
+	@Override
+	public void setLastKnownHeaderInfo(HeaderInfo headerInfo)
+	{
+		_lastKnownHeaderInfo = headerInfo;
+	}
+
+	/** Set the last known header info, which we can extract server name etc... */
+	@Override
+	public HeaderInfo getLastKnownHeaderInfo()
+	{
+		return _lastKnownHeaderInfo;
+	}
+
 }

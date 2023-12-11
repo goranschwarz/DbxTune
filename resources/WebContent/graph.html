@@ -1268,6 +1268,9 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					runtimeParamsArr.push(xxx);
 				}
 			});
+			// Reverse the arrays (since the XML holds it in the "wrong" order
+			compileParamsArr = compileParamsArr.reverse();
+			runtimeParamsArr = runtimeParamsArr.reverse();
 
 			let compileParameterText = "";
 			let runtimeParameterText = "";

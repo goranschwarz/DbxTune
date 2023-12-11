@@ -108,6 +108,9 @@ public class CentralPersistReader
 	
 	// Unlimited query time
 	private int _defaultQueryTimeout = 0; 
+
+	/** 360 records is 2 hours, with a 20 seconds sample interval:  60 * 3 * 2 */
+	public static final int SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE = 360;
 	
 	/** Different ways we can use to get data from the storage tables */
 	public enum SampleType
@@ -1653,6 +1656,9 @@ public class CentralPersistReader
 					+ " ," + lq + "CollectorSampleInterval" + rq
 					+ " ," + lq + "CollectorCurrentUrl"     + rq
 					+ " ," + lq + "CollectorInfoFile"       + rq
+//					+ " ," + lq + "CollectorMgtHostname"    + rq
+//					+ " ," + lq + "CollectorMgtPort"        + rq
+//					+ " ," + lq + "CollectorMgtInfo"        + rq
 					+ " ," + lq + "NumOfSamples"            + rq
 					+ " ," + lq + "LastSampleTime"          + rq
 				+" from " + tabName
@@ -1708,6 +1714,9 @@ public class CentralPersistReader
 						rs.getInt      (c++), // "CollectorSampleInterval"
 						rs.getString   (c++), // "CollectorCurrentUrl"
 						rs.getString   (c++), // "CollectorInfoFile"
+//						rs.getString   (c++), // "CollectorMgtHostname"
+//						rs.getInt      (c++), // "CollectorMgtPort"           
+//						rs.getString   (c++), // "CollectorMgtInfo"
 						rs.getInt      (c++), // "NumOfSamples"           
 						rs.getTimestamp(c++), // "LastSampleTime"         
 						serverDescrption,    // serverDescrption,
@@ -1780,6 +1789,9 @@ public class CentralPersistReader
 						+ " ," + lq + "CollectorSampleInterval" + rq
 						+ " ," + lq + "CollectorCurrentUrl"     + rq
 						+ " ," + lq + "CollectorInfoFile"       + rq
+//						+ " ," + lq + "CollectorMgtHostname"    + rq
+//						+ " ," + lq + "CollectorMgtPort"        + rq
+//						+ " ," + lq + "CollectorMgtInfo"        + rq
 						+ " ," + lq + "NumOfSamples"            + rq
 						+ " ," + lq + "LastSampleTime"          + rq
 					+" from " + tabName
@@ -1833,6 +1845,9 @@ public class CentralPersistReader
 							rs.getInt      (c++), // "CollectorSampleInterval"
 							rs.getString   (c++), // "CollectorCurrentUrl"
 							rs.getString   (c++), // "CollectorInfoFile"
+//							rs.getString   (c++), // "CollectorMgtHostname"
+//							rs.getInt      (c++), // "CollectorMgtPort"           
+//							rs.getString   (c++), // "CollectorMgtInfo"
 							rs.getInt      (c++), // "NumOfSamples"           
 							rs.getTimestamp(c++), // "LastSampleTime"         
 							serverDescrption,     // serverDescrption
@@ -3362,7 +3377,7 @@ public class CentralPersistReader
 			// Get num records that we expect (this so we automatically can apply SampleType.MAX_OVER_SAMPLES if it's to many rows)
 			if (SampleType.AUTO.equals(sampleType))
 			{
-				int threshold = 360;        // 360 records is 2 hours, with a 20 seconds sample interval:  60 * 3 * 2
+				int threshold = SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE;        // 360 records is 2 hours, with a 20 seconds sample interval:  60 * 3 * 2
 				int dataRowCount = -1;
 
 				if (sampleValue > 0)

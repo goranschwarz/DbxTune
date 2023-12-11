@@ -27,6 +27,7 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -121,16 +122,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "-added-at-runtime-" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_BYTES_SENT,       new TrendGraphDataPoint(GRAPH_NAME_BYTES_SENT,       labels, LabelType.Dynamic));
-
 		//-----
 		addTrendGraph(GRAPH_NAME_BYTES_SENT,
 			"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Menu CheckBox text
 			"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -139,24 +135,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_BYTES_SENT,
-//				"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Menu CheckBox text
-//				"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

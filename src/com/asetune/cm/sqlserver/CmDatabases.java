@@ -57,6 +57,7 @@ import com.asetune.alarm.events.sqlserver.AlarmEventDbNotInHadr;
 import com.asetune.alarm.events.sqlserver.AlarmEventDbccCheckdbAge;
 import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
 import com.asetune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -238,21 +239,10 @@ extends CountersModel
 	
 	private void addTrendGraphs()
 	{
-//		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
-//			"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
-//			"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			null, 
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.DISK,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-
 		addTrendGraph(GRAPH_NAME_DB_SIZE_MB,
 			"Database Size in MB",        // Menu CheckBox text
 			"Database Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -264,7 +254,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
 			"DB Transaction Log Space Available in MB",        // Menu CheckBox text
 			"DB Transaction Log Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -276,7 +266,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_MB,
 			"DB Transaction Log Space Used in MB",        // Menu CheckBox text
 			"DB Transaction Log Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -288,7 +278,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
 			"DB Transaction Log Space Used in PCT",     // Menu CheckBox text
 			"DB Transaction Log Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -300,7 +290,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
 			"DB Data Space Available in MB",        // Menu CheckBox text
 			"DB Data Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -312,7 +302,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_MB,
 			"DB Data Space Used in MB",     // Menu CheckBox text
 			"DB Data Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -324,7 +314,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
 			"DB Data Space Used in PCT",     // Menu CheckBox text
 			"DB Data Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -333,20 +323,10 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-//			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-//			"Oldest Open Transaction in any Databases, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			new String[] { "Seconds" },
-//			LabelType.Static,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-
 		addTrendGraph(GRAPH_NAME_TEMPDB_USED_MB,
 			"TempDB Space Used in MB",     // Menu CheckBox text
 			"TempDB Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -360,7 +340,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OS_DISK_FREE_MB,
 			"DB OS Disk Space Available in MB",        // Menu CheckBox text
 			"DB OS Disk Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -372,7 +352,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OS_DISK_USED_MB,
 			"DB OS Disk Space Used in MB",        // Menu CheckBox text
 			"DB OS Disk Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -384,7 +364,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OS_DISK_USED_PCT,
 			"DB OS Disk Space Used in PCT",     // Menu CheckBox text
 			"DB OS Disk Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -4240,7 +4220,7 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("DbState",                          isAlarmSwitch, PROPKEY_alarm_DbState                         , String .class, conf.getProperty      (PROPKEY_alarm_DbState                         , DEFAULT_alarm_DbState                         ), DEFAULT_alarm_DbState                         , "If 'user_access_desc' or 'state_desc' do NOT match the regexp then send 'AlarmEventDatabaseState'. format: db1=(MULTI_USER|RESTRICTED_USER|ONLINE|OFFLINE ), db2=(MULTI_USER|ONLINE|RESTORING)  (Note: the 'dbname' can aslo be a regexp)" , new RegExpInputValidator()));
 
-		list.add(new CmSettingsHelper("QsIsOk ",                          isAlarmSwitch, PROPKEY_alarm_QsIsOk                          , String .class, conf.getProperty      (PROPKEY_alarm_QsIsOk                          , DEFAULT_alarm_QsIsOk                          ), DEFAULT_alarm_QsIsOk                          , "If 'QsIsOk' is not 'YES' (meaning 'QsDesiredState' and 'QsActualState' do not match) then send 'AlarmEventQueryStoreUnexpectedState'. Note: This is not configurabe per database name"));
+		list.add(new CmSettingsHelper("QsIsOk",                           isAlarmSwitch, PROPKEY_alarm_QsIsOk                          , String .class, conf.getProperty      (PROPKEY_alarm_QsIsOk                          , DEFAULT_alarm_QsIsOk                          ), DEFAULT_alarm_QsIsOk                          , "If 'QsIsOk' is not 'YES' (meaning 'QsDesiredState' and 'QsActualState' do not match) then send 'AlarmEventQueryStoreUnexpectedState'. Note: This is not configurabe per database name"));
 		list.add(new CmSettingsHelper("QsUsedPct",                        isAlarmSwitch, PROPKEY_alarm_QsUsedSpaceInPct                , Double .class, conf.getDoubleProperty(PROPKEY_alarm_QsUsedSpaceInPct                , DEFAULT_alarm_QsUsedSpaceInPct                ), DEFAULT_alarm_QsUsedSpaceInPct                , "If 'QsUsedSpaceInPct' more than ## Percent then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
 		list.add(new CmSettingsHelper("QsFreeSpaceInMb",                  isAlarmSwitch, PROPKEY_alarm_QsFreeSpaceInMb                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_QsFreeSpaceInMb                 , DEFAULT_alarm_QsFreeSpaceInMb                 ), DEFAULT_alarm_QsFreeSpaceInMb                 , "If 'QsFreeSpaceInMb' is less that ## MB then send 'AlarmEventQueryStoreLowFreeSpace'. Note: This is not configurabe per database name"));
 

@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -158,24 +159,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_POOL_HIT_RATE,      new TrendGraphDataPoint(GRAPH_NAME_POOL_HIT_RATE,      labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_UTIL,          new TrendGraphDataPoint(GRAPH_NAME_POOL_UTIL,          labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_USED_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_USED_MB,       labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_FREE_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_FREE_MB,       labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_TO_MRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_MRU,        labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_TO_LRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_LRU,        labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_LOGICAL_READ,  new TrendGraphDataPoint(GRAPH_NAME_POOL_LOGICAL_READ,  labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_PHYSICAL_READ, new TrendGraphDataPoint(GRAPH_NAME_POOL_PHYSICAL_READ, labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_APF_READ,      new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_READ,      labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_APF_PCT,       new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_PCT,       labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_POOL_REPLACE_SLIDE, new TrendGraphDataPoint(GRAPH_NAME_POOL_REPLACE_SLIDE, labels, LabelType.Dynamic));
-
 		addTrendGraph(GRAPH_NAME_POOL_HIT_RATE,
 			"Cache Pools Hit Rate", 	               // Menu CheckBox text
 			"Cache Pools Hit Rate Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -188,7 +175,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_UTIL,
 			"Cache Pools Utilization", 	               // Menu CheckBox text
 			"Cache Pools Utilization Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -201,7 +188,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_USED_MB,
 			"Cache Pools Used MB", 	               // Menu CheckBox text
 			"Cache Pools Used MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -214,7 +201,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_FREE_MB,
 			"Cache Pools Free MB", 	               // Menu CheckBox text
 			"Cache Pools Free MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -227,7 +214,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_TO_MRU,
 			"Cache Pools MRU Replacement", 	               // Menu CheckBox text
 			"Cache Pools MRU Replacement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -240,7 +227,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_TO_LRU,
 			"Cache Pools LRU fetch-and-discard Placement", 	               // Menu CheckBox text
 			"Cache Pools LRU fetch-and-discard Placement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -253,7 +240,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_LOGICAL_READ,
 			"Cache Pools Logical Reads", 	               // Menu CheckBox text
 			"Cache Pools Logical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -266,7 +253,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_REAL_PHYSICAL_READ,
 			"Cache Pools Real Physical Reads (Physical+APF)", 	               // Menu CheckBox text
 			"Cache Pools Real Physical Reads (Physical+APF) per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -279,7 +266,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
 			"Cache Pools Physical Reads", 	               // Menu CheckBox text
 			"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -292,7 +279,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_APF_READ,
 			"Cache Pools APF Reads", 	               // Menu CheckBox text
 			"Cache Pools APF Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -305,7 +292,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_APF_PCT,
 			"Cache Pools APF Reads Percent", 	               // Menu CheckBox text
 			"Cache Pools APF Reads Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -318,7 +305,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_POOL_REPLACE_SLIDE,
 			"Cache Pools Replacement Slide", 	               // Menu CheckBox text
 			"Cache Pools Replacement Slide Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,

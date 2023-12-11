@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -440,43 +441,13 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		// GET CONFIG: Graph Data Source
-//		// In GUI mode we can change the type, but in NO-GUI mode it will be static to what is configured AT-START
-//		WaitCounterSummary.Type type = WaitCounterSummary.Type.WaitTimePerWait;
-//		String dataSourceStr = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
-//		try { type = WaitCounterSummary.Type.valueOf(dataSourceStr); }
-//		catch (Throwable t) { _logger.warn("CM='"+getName()+"', Problems converting '"+dataSourceStr+"' to WaitCounterSummary.Type. Using '"+type+"' instead."); }
-//		
-//		addTrendGraph(GRAPH_NAME_EVENT_NAME,
-//			"SPID Wait, group by EventID, "+type+" Average", 	                   // Menu CheckBox text
-//			"SPID Wait, group by EventID, "+type+" Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			null, 
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.WAITS,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			160);  // minimum height
-//
-//		// GRAPH
-//		addTrendGraph(GRAPH_NAME_CLASS_NAME,
-//			"SPID Wait, group by ClassName, "+type+" Average", 	                     // Menu CheckBox text
-//			"SPID Wait, group by ClassName, "+type+" Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			null, 
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.WAITS,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);  // minimum height
-
 		//----------------------------------
 		// GRAPH - EVENTID
 		//----------------------------------
 		addTrendGraph(GRAPH_NAME_EVENT_WAITS,
 			"SPID Wait, group by EventID, Waits Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by EventID, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -488,7 +459,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EVENT_WTIME,
 			"SPID Wait, group by EventID, WaitTime Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by EventID, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -500,7 +471,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EVENT_WTPW,
 			"SPID Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -515,7 +486,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CLASS_WAITS,
 			"SPID Wait, group by ClassName, Waits Average", 	                     // Menu CheckBox text
 			"SPID Wait, group by ClassName, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -527,7 +498,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CLASS_WTIME,
 			"SPID Wait, group by ClassName, WaitTime Average", 	                     // Menu CheckBox text
 			"SPID Wait, group by ClassName, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -539,7 +510,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CLASS_WTPW,
 			"SPID Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
 			"SPID Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,

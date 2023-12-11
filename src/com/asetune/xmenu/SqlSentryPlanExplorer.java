@@ -57,7 +57,8 @@ extends XmenuActionBase
 //	private boolean    _closeConnOnExit;
 
 	public final static String PROPKEY_SQL_PLAN_EXPLORER = "SqlSentryPlanExplorer";
-	public final static String DEFAULT_SQL_PLAN_EXPLORER = "C:\\Program Files\\SentryOne\\SentryOne Plan Explorer\\SentryOne Plan Explorer.exe";
+//	public final static String DEFAULT_SQL_PLAN_EXPLORER = "C:\\Program Files\\SentryOne\\SentryOne Plan Explorer\\SentryOne Plan Explorer.exe";
+	public final static String DEFAULT_SQL_PLAN_EXPLORER = "C:\\Program Files\\SolarWinds\\SQL Sentry Plan Explorer\\SQL Sentry Plan Explorer.exe.exe";
 	/**
 	 * 
 	 */

@@ -36,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DbxAlarmActive;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
@@ -128,6 +129,11 @@ extends HttpServlet
 				// Above entries will be sorted by: conf/SERVER_LIST
 				// This can be disabled by property: CentralPersistReader.PROPKEY_SERVER_LIST_SORT
 				// Another way to "sort" them in "your own" order is to specify the list in the URL like: dbxtune.acme.com:8080/api/healthcheck?srv=SRV1,SRV2,SRV3,SRV4,SRV5
+
+				// Should we remove DbxCentral -- LocalMetrics
+				// I don't think we want to check health on that...
+				if (true)
+					map.remove(LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME);
 			}
 
 

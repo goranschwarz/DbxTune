@@ -27,6 +27,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -120,7 +121,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ACTIVE_THREADS,
 			"Worker Threads in Use ", 	                                  // Menu CheckBox text
 			"Worker Threads in Use & Parallel Queries per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "ThreadsActive", "ParallelQueries" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,

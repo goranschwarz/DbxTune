@@ -39,6 +39,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.AlarmHelper;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
@@ -232,20 +233,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_chkptHk   = new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" };
-//		String[] labels_batch     = new String[] { "SQL Batch/Statement Count" };
-//		String[] labels_execTime  = new String[] { "Max Active SQL Execution Time In Seconds" };
-//		String[] labels_execCount = new String[] { "Active/Concurrent SQL Statement Execution Count" };
-//		
-//		addTrendGraphData(GRAPH_NAME_CHKPT_HK,    new TrendGraphDataPoint(GRAPH_NAME_CHKPT_HK,    labels_chkptHk,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_BATCH_COUNT, new TrendGraphDataPoint(GRAPH_NAME_BATCH_COUNT, labels_batch,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_EXEC_TIME,   new TrendGraphDataPoint(GRAPH_NAME_EXEC_TIME,   labels_execTime,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_EXEC_COUNT,  new TrendGraphDataPoint(GRAPH_NAME_EXEC_COUNT,  labels_execCount, LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_CHKPT_HK,
 			"Checkpoint and HK Writes",                     // Menu CheckBox text
 			"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -258,7 +249,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BATCH_COUNT,
 			"SQL Batch/Statement Count",                   // Menu CheckBox text
 			"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "SQL Batch/Statement Count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -271,7 +262,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EXEC_TIME,
 			"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
 			"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -284,7 +275,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EXEC_COUNT,
 			"Active SQL Statement Execution Count",                   // Menu CheckBox text
 			"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Active/Concurrent SQL Statement Execution Count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -297,7 +288,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_SUM,
 			"Tempdb Usage in MB, using pssinfo",                   // Menu CheckBox text
 			"Tempdb Usage in MB, using pssinfo ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Tempdb usage: sum(pssinfo_tempdb_pages) in MB" }, // pssinfo(SP.spid, 'tempdb_pages') 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,
@@ -306,61 +297,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_CHKPT_HK,
-//				"Checkpoint and HK Writes",                     // Menu CheckBox text
-//				"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_chkptHk, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_BATCH_COUNT,
-//				"SQL Batch/Statement Count",                   // Menu CheckBox text
-//				"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_batch, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_EXEC_TIME,
-//				"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
-//				"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_execTime, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_EXEC_COUNT,
-//				"Active SQL Statement Execution Count",                   // Menu CheckBox text
-//				"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_execCount, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 	// GRAPH
 

@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>DbxTune - Central</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<script>
+/**
+ * Utility function: Get a specififc parameter from the window URL
+ * @param {*} key
+ * @param {*} defaultValue
+ */
+function getParameter(key, defaultValue)
+{
+	// console.log("window.location.href: "+window.location.href);
+	// console.log("window.location: "+window.location);
+	// // const inputUrl = new URL(window.location.href);
+	// const inputUrl = new URL(window.location.href);
+	// const value = inputUrl.searchParams.get(key);
+	// return inputUrl.searchParams.has(key) ? value : defaultValue;
+
+	var vars = [], hash;
+	var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+	for(var i = 0; i < hashes.length; i++)
+	{
+		hash = hashes[i].split('=');
+		vars.push(hash[0]);
+		vars[hash[0]] = hash[1];
+	}
+
+//return vars.hasOwnProperty(key) ? vars[key] : defaultValue;
+//      return vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
+	var retValue = vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
+	//console.log("getParameter(key='"+key+"',default='"+defaultValue+"') <<--- '"+retValue+"'.");
+	return retValue;
+}
+</script>
+  <!--
+    =======================================================================
+    == JS imports - JAVA SCRIPTS GOES HERE
+    =======================================================================
+  -->
+  <!-- JS: JQuery -->
+  <!--
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
+  -->
+
+  <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
+  <!--
+  <script type="text/javascript" src="/scripts/moment/moment.js"></script>
+  <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
+  -->
+
+  <!-- JS: Bootstrap -->
+  <!--
+  <script type="text/javascript" src="/scripts/popper/1.12.9/popper.min.js"></script>
+  <script type="text/javascript" src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+  -->
+
+  <!-- JS: Selectize -->
+  <!--
+  <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
+  -->
+
+  <!-- JS: DbxCentral -->
+  <!--
+  <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
+  -->
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js" integrity="sha512-57oZ/vW8ANMjR/KQ6Be9v/+/h6bq9/l3f0Oc7vn6qMqyhvPd1cvKBRWWpzu0QoneImqr2SkmO4MSqU+RpHom3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js" integrity="sha512-CryKbMe7sjSCDPl18jtJI5DR5jtkUWxPXWaLCst6QjH8wxDexfRJic2WRmRXmstr2Y8SxDDWuBO6CQC6IE4KTA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-duration-format/2.3.2/moment-duration-format.min.js" integrity="sha512-ej3mVbjyGQoZGS3JkES4ewdpjD8UBxHRGW+MN5j7lg3aGQ0k170sFCj5QJVCFghZRCio7DEmyi+8/HAwmwWWiA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js" integrity="sha512-TPh2Oxlg1zp+kz3nFA0C5vVC6leG/6mm1z9+mA81MI5eaUVqasPLO8Cuk4gMF4gUfP5etR73rgU/8PNMsSesoQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js" integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/js/selectize.min.js" integrity="sha512-IOebNkvA/HZjMM7MxL0NYeLYEalloZ8ckak+NDtOViP7oiYzG5vn6WVXyrJDiJPhl4yRdmNAG49iuLmhkUdVsQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/smoothness/theme.min.css" integrity="sha512-Q2qvb9omuMvaoo6ofA3xaiD3b1aA7BlQGYxEOTij6i4HRsDNB7K2uEUHbbymUqqFDduToacMzKNYYVRwe4H2yw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/css/selectize.default.css" integrity="sha512-Uw2oepxJJm1LascwjuUQ904kRXdxvf6dLGH5GQYTg/eZBS3U4aR1+BhpIQ1nzHXoMDa5Xi5j8rEHucyi8+9kVg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link href="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.css" rel="stylesheet">
+  
+<link href="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.css" rel="stylesheet">
+
+<script src="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.js"></script>
+<script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+                <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script>
+                <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script>
+
+<style type='text/css'>
+        /* Override some 'prism' formatting to be smaller & wrap long lines */
+        code[class*=language-], pre[class*=language-] {
+            font-size: 11px;
+            white-space: pre-wrap;
+        }
+</style>
+
+
+  <!--
+    =======================================================================
+    == CSS imports - STYLES SHEETS GOES HERE
+    =======================================================================
+  -->
+  <!-- CSS: jqueri-ui -->
+  <!--  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">-->
+  <!--
+  <link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
+  -->
+
+  <!-- CSS: DbxCentral -->
+  <!--
+  <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
+  -->
+
+  <!-- CSS: Bootstrap -->
+  <!--
+  <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
+  -->
+
+  <!-- CSS: Font Awsome -->
+  <!--
+  <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
+  -->
+
+  <!-- CSS: Selectize -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.bootstrap3.css"> -->
+  <!--
+  <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css">
+  -->
+
+  <!-- Local CSS -->
+  <style type='text/css'>
+    /* table {border-collapse: collapse;}
+    th, td {border: 1px solid black; text-align: left; padding: 2px;}
+    tr:nth-child(even) {background-color: #f2f2f2;} */
+    .dbx-quick-access-tooltip-table table {border-collapse: collapse;}
+    .dbx-quick-access-tooltip-table th, td {border: 1px solid white; text-align: left; padding: 2px;}
+
+    .tooltip-inner { max-width: 1000px; }
+
+    .jumbotron{ margin-top:-30px; }
+
+	/* selectize selected items */
+	.ui-sortable-handle {
+		width: 100%;
+	}
+	.selectize-dropdown, .selectize-dropdown.form-control{
+		height: 35vh !important;
+	}
+	.selectize-dropdown-content{
+		max-height: 100% !important;
+		height: 100% !important;
+	}
+
+	/* extra small button */
+	.btn-group-xs > .btn, .btn-xs {
+		padding: .4rem .4rem;
+		font-size: .875rem;
+		line-height: .5;
+		border-radius: .2rem;
+	}
+
+	.image-unchecked {
+		width:16px;
+		height:16px;
+		background-repeat: no-repeat;
+		background-position: center;
+		background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIFdpbmRvd3MiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6RTRBMEQyNTU1OUFBMTFFMkIwMERBRDZGM0NFNENENzUiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6RTRBMEQyNTY1OUFBMTFFMkIwMERBRDZGM0NFNENENzUiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpFNEEwRDI1MzU5QUExMUUyQjAwREFENkYzQ0U0Q0Q3NSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpFNEEwRDI1NDU5QUExMUUyQjAwREFENkYzQ0U0Q0Q3NSIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PotIZFcAAAEoSURBVHjanJNBTgMxDEVtJ3Q9PQMHYYnEEZA4QDcchgUXqLgCYssNukBij8QO1ErAok0c853pMLDphEbKZCZjv9g/Nt/ePayTale0kNH0YEwJQichbBaX5/PoztdXF/TfcbO873wVK0bHjMEv+kPNsEFUSpl0FBFiGb8rYJuUsN0GwMFFx6iji7JLGaJEAKbTQayUNFcx+wjwtsuKRZojcPuBEP0tZUTAgbQB4Hft9gMhskcADWahNAGMenvmXxo4MUMYbdEAN+b2fzUAUWelOQW3pzECrhsZpey3YAcK2m0NBVNT2BNqSeTc94Hx4RT8v+3tf+pAhEmx/fr2DnpDM+HgEAK5XwV8fX48rlbPZ+5sDQQGwSGq+WXozlPM7oh+2uLAp28BBgB476Ywykj6VwAAAABJRU5ErkJggg==);
+	}
+
+	.image-checked {
+		width:16px;
+		height:16px;
+		background-repeat: no-repeat;
+		background-position: center;
+		background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAhVJREFUeNqkUz1oFEEU/uZnf+7iJTGCgkJAgmBAgoUgSVCJjVhcI3hwFlECQVAEBVNZKJjYpEwXEkHFyKmVTbBKFdRYqKXFGYggiBEE4XKX3dnxzeztZrxCFN8yy77hfd/73s8yrTX+x6R5nb31dLW5rUZUkvwVSHCO0Bc/lmcquy2BAa/MVqFbDfxJDzMPY4AfYmzqSW+uQCmTWePz102kFbEOIB0uIZkPwTj2HgihkjQVh4UaS8ApyARyIZxDQBmi6Pdg7VsN51/2ObRtBXlDpERiJeg8SBBhKHbh1ZdHWPxwFSW2U45DYByBYlBCnMQkL4KZjlEUSgJvPMT820kUSO9WnKVzSrCNIbtYK2Kz8YmIuhEGXSgVerBSn8P86wkUKD5pAdeHF1O4dgnaclgETC8fxffGOrq7QiysXsDjtRsIKDYm8JXRBzg5MNHOr3dKyBxPpSQzL4Yw1F/Gm/ozBCaIC0yeuo/RQ+OIVItAPuAqyJzTgxUk2zTWVhPv6s8hidDXDHfPfcSJw+OIdURT0lZz1uZ0jDrdwMtnaqgcv4Noi+6aGh5dT1fr2N83QM1VVqvZQtd457aVR27jWnkJjLp979I69u05aIckBYPvSXieB3fVbA+k+J3n2GAVC3TcNLwjV4axBD7XG2M3l/pjWmmdT4W1m6vzJmcT8wgcePyn9c08aQ+O0Hfwj3+yIuz7XwIMANPJsyJzXkTpAAAAAElFTkSuQmCC);
+	}
+
+	.tooltip{
+		z-index:100000000;
+	}
+  </style>
+	
+
+</head>
+
+<body>
+  <!-- NavBar that works, except for: iphone... -->
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+    <a class="navbar-brand" href="/">DbxCentral</a>
+    <!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
+    <!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/overview">Servers</a>
+        </li>
+        <li class="nav-item active">
+          <a class="nav-link" href="/admin/admin.html">Admin</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/desktop_app.html">Desktop App</a>
+        </li>
+      </ul>
+	  <!-- on the right hand side of the menu... -->
+      <ul class="navbar-nav">
+	    <!-- IS LOGGED IN -->
+        <div id="dbx-nb-isLoggedIn-div" style="display: none;">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
+            </a>
+            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+            <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
+            </div>
+          </li>
+        </div>
+	    <!-- IS LOGGED OUT -->
+        <div id="dbx-nb-isLoggedOut-div">
+          <a class="nav-link" href="/index.html?login"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+        </div>
+      </ul> <!-- end right hand side -->
+    </div>
+  </nav>
+
+  <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
+<!--  <main role="main" class="container">-->
+<!--    <div class="jumbotron">-->
+<div class="container-fluid">
+	
+      <h1>Server Collector '<span id='ccSrvName'>-</span>' - Configuration</h1>
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- Collector CONFIG -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='server-config' class='card border-dark mb-3'>
+        <h5 class='card-header'>Server Collector Configuration</h5>
+        <div class='card-body'>
+		
+		Below is a list of counters, <b>click</b> on any row to see details about it...
+		<table
+		  id="cmTable"
+		  class="table table-sm table-striped text-nowrap""
+		  data-toggle="table"
+		  data-height="460"
+		  >
+		  <thead>
+			<tr>
+			  <th data-field="displayName"                     data-filter-control="input">Display Name</th>
+			  <th data-field="cmName"                          data-filter-control="input">CM Name</th>
+			  <th data-field="groupName"                       data-filter-control="input">Group Name</th>
+<!--		  <th data-field="isAlarmEnabled"                  data-filter-control="input" data-formatter="formatBoolean">Is Alarms Enabled</th>-->
+			  <th data-field="hasSystemAlarms"                 data-filter-control="input" data-formatter="formatBoolean">Has System Alarms</th>
+			  <th data-field="isSystemAlarmsEnabled"           data-filter-control="input" data-formatter="formatBoolean">Is System Alarms Enabled</th>
+			  <th data-field="hasUserDefinedAlarmInterrogator" data-filter-control="input" data-formatter="formatBoolean">Has User Defined Alarms</th>
+			  <th data-field="isUserDefinedAlarmsEnabled"      data-filter-control="input" data-formatter="formatBoolean">Is User Defined Alarms Enabled</th>
+
+<!--			  <th data-field="options.isPaused">Is Paused</th>-->
+<!--			  <th data-field="options.isSystemAlarmsEnabled">isSystemAlarmsEnabled</th>-->
+			  <th data-field="options.postponeTime" data-formatter="formatPostponeTime">postponeTime</th>
+			  <th data-field="options.queryTimeout" data-formatter="formatQueryTimeout">queryTimeout</th>
+			</tr>
+		  </thead>
+		</table>
+
+		<br>
+
+		<ul class="nav nav-tabs" id="myTab" role="tablist">
+		  <li class="nav-item" role="presentation">
+			<button class="nav-link active" id="cm-info-tab" data-bs-toggle="tab" data-bs-target="#cm-info" type="button" role="tab" aria-controls="home" aria-selected="true">Info</button>
+		  </li>
+		  <li class="nav-item" role="presentation">
+			<button class="nav-link" id="cm-options-tab" data-bs-toggle="tab" data-bs-target="#cm-options" type="button" role="tab" aria-controls="home" aria-selected="true">Options</button>
+		  </li>
+		  <li class="nav-item" role="presentation">
+			<button class="nav-link" id="cm-settings-tab" data-bs-toggle="tab" data-bs-target="#cm-settings" type="button" role="tab" aria-controls="profile" aria-selected="false">Local Settings</button>
+		  </li>
+		  <li class="nav-item" role="presentation">
+			<button class="nav-link" id="cm-alarms-tab" data-bs-toggle="tab" data-bs-target="#cm-alarms" type="button" role="tab" aria-controls="contact" aria-selected="false">Alarms</button>
+		  </li>
+		</ul>
+		<div class="tab-content" id="myTabContent">
+		  <!-- ================= INFO ================== -->
+		  <div class="tab-pane fade show active" id="cm-info" role="tabpanel" aria-labelledby="cminfo-tab">
+
+			<div class="row mt-2">
+				<label for="cm-info-cmName" class="col-sm-2 col-form-label col-form-label-sm">CM Name</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-cmName" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-displayName" class="col-sm-2 col-form-label col-form-label-sm">Display Name</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-displayName" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-pk" class="col-sm-2 col-form-label col-form-label-sm">Primary Key</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-pk" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-diffCols" class="col-sm-2 col-form-label col-form-label-sm">Diff Columns</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-diffCols" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-pctCols" class="col-sm-2 col-form-label col-form-label-sm">Percent Columns</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-pctCols" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-needSrvConfig" class="col-sm-2 col-form-label col-form-label-sm">Need Server Config</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-needSrvConfig" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-needSrvRoles" class="col-sm-2 col-form-label col-form-label-sm">Need Server Roles</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-needSrvRoles" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-needSrvVersion" class="col-sm-2 col-form-label col-form-label-sm">Need Server Version</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-needSrvVersion" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-dependsOnCm" class="col-sm-2 col-form-label col-form-label-sm">Depends On Cm</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-dependsOnCm" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-sqlInit" class="col-sm-2 col-form-label col-form-label-sm">Init SQL</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-sqlInit" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-sqlClose" class="col-sm-2 col-form-label col-form-label-sm">Close SQL</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control form-control-sm" id="cm-info-sqlClose" placeholder="" readonly>
+				</div>
+			</div>
+
+			<div class="row mt-2">
+				<label for="cm-info-sqlRefresh">Get Counter SQL</label>
+				<pre><code id='cm-info-sqlRefresh' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
+			</div>
+		  </div>
+
+		  <!-- ================= OPTIONS ================== -->
+		  <div class="tab-pane fade" id="cm-options" role="tabpanel" aria-labelledby="options-tab">
+			<br>
+			<b>Collector Options for the above selected Counter</b> <i>Click the row, to change the value...</i>
+			<table
+			  id="optionsTable"
+			  class="table table-sm table-striped text-nowrap""
+			  data-toggle="table"
+			  >
+			  <thead>
+				<tr>
+					<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+					<th data-field="name"           data-filter-control="input">Name</th>
+					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+					<th data-field="value"          data-filter-control="input">value</th>
+					<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+					<th data-field="datatype"       data-filter-control="input">datatype</th>
+					<th data-field="desciption"     data-filter-control="input">desciption</th>
+					<th data-field="property"       data-filter-control="input">property</th>
+				</tr>
+			  </thead>
+			</table>
+		  </div>
+
+		  <!-- ================= SETTINGS ================== -->
+		  <div class="tab-pane fade" id="cm-settings" role="tabpanel" aria-labelledby="settings-tab">
+			<br>
+			<b>Settings for the above selected Counter</b> <i>Click the row, to change the value...</i>
+			<table
+			  id="settingsTable"
+			  class="table table-sm table-striped text-nowrap""
+			  data-toggle="table"
+			  >
+			  <thead>
+				<tr>
+					<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+					<th data-field="name"           data-filter-control="input">Name</th>
+					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+					<th data-field="value"          data-filter-control="input">value</th>
+					<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+					<th data-field="datatype"       data-filter-control="input">datatype</th>
+					<th data-field="desciption"     data-filter-control="input">desciption</th>
+					<th data-field="property"       data-filter-control="input">property</th>
+				</tr>
+			  </thead>
+			</table>
+		  </div>
+
+		  <!-- ================= ALARMS ================== -->
+		  <div class="tab-pane fade" id="cm-alarms" role="tabpanel" aria-labelledby="alarms-tab">
+			<div id="pre-check-div">
+				<br>
+				<b>Pre Checks</b> (checked on each of the rows before applying parameters/threshold, so you can skip entries at an early stage)
+				<table
+				  id="alarmPreChecks"
+				  class="table table-sm table-striped text-nowrap""
+				  data-toggle="table"
+				  >
+				  <thead>
+					<tr>
+						<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+						<th data-field="name"           data-filter-control="input">Name</th>
+						<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+						<th data-field="value"          data-filter-control="input">value</th>
+						<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+						<th data-field="datatype"       data-filter-control="input">datatype</th>
+						<th data-field="desciption"     data-filter-control="input">desciption</th>
+						<th data-field="property"       data-filter-control="input">property</th>
+						<th data-field="validatorName"  data-filter-control="input">validatorName</th>
+					</tr>
+				  </thead>
+				</table>
+			</div>
+
+			<br>
+			<b>Alarms for the above selected Counter</b> <i>Click the row, to see parameters for this alarm, in a table below...</i>
+			<table
+			  id="alarmTable"
+			  class="table table-sm table-striped text-nowrap""
+			  data-toggle="table"
+			  >
+			  <thead>
+				<tr>
+				  <th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+				  <th data-field="name"                 data-filter-control="input">Name</th>
+				  <th data-field="isAlarmEnabled"       data-filter-control="input" data-formatter="formatBoolean">isAlarmEnabled</th>
+				  <th data-field="timeRangeCron"        data-filter-control="input" data-formatter="formatTimeRangeCron">timeRangeCron</th>
+				  <th data-field="timeRangeDescrption"  data-filter-control="input">timeRangeDescrption</th>
+				  <th data-field="desciption"           data-filter-control="input">desciption</th>
+				</tr>
+			  </thead>
+			</table>
+
+
+			<br>
+			<b>Alarm Parameters for the above selected Alarm</b> <i>Click the row, to change the value...</i>
+			<table
+			  id="alarmParams"
+			  class="table table-sm table-striped text-nowrap""
+			  data-toggle="table"
+			  >
+			  <thead>
+				<tr>
+				  <th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+				  <th data-field="name"           data-filter-control="input">Name</th>
+		<!--		  <th data-field="isMainParam"    data-filter-control="input">isMainParam</th>-->
+				  <th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+				  <th data-field="value"          data-filter-control="input">value</th>
+				  <th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+				  <th data-field="datatype"       data-filter-control="input">datatype</th>
+				  <th data-field="desciption"     data-filter-control="input">desciption</th>
+				  <th data-field="property"       data-filter-control="input">property</th>
+				  <th data-field="validatorName"  data-filter-control="input">validatorName</th>
+				</tr>
+			  </thead>
+			</table>
+
+		  </div>
+		</div>
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
+
+
+      <div id='server-config' class='card border-dark mb-3'>
+        <h5 class='card-header'>Alarm Writers Configuration</h5>
+        <div class='card-body'>
+		
+		Below is a list of Alarm Writers, <b>click</b> on any row to see details about it...
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
+</div> <!-- end: container -->
+
+
+<style type='text/css'>
+.table tbody tr.highlight td {
+	background-color: gold;
+}	
+</style>
+
+<script>
+	$('#cmTable')      .on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+	$('#alarmTable')   .on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+	$('#alarmParams')  .on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+	$('#optionsTable') .on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+	$('#settingsTable').on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+
+	function detailFormatter(index, row) {
+		var html = [];
+		$.each(row, function (key, value) {
+			html.push('<p><b>' + key + ':</b> ' + value + '</p>');
+		});
+		return html.join('');
+	}
+</script>
+
+
+<script>
+	// Global variables
+	var _jsonResp;
+	var _cmTable        = [];
+	var _ccSrvName;
+	const _passedSrvName = getParameter("srvName", "");
+//	const _mgtHostname   = getParameter("host", "localhost");
+//	const _mgtPort       = getParameter("port", 8900);
+//	const _mgtAuthorization = getParameter("authorization", "");
+
+	var _lastClickedOptionsTableRow   = undefined;
+	var _lastClickedSettingsTableRow  = undefined;
+	var _lastClickedCmRow             = undefined;
+	var _lastClickedAlarmRow          = undefined;
+	var _lastClickedAlarmParameterRow = undefined;
+
+//	if (_mgtAuthorization !== "")
+//	{
+//		if (_mgtAuthorization === "ss")
+//		{
+//			_mgtAuthorization = sessionStorage.getItem("ccMgtAuthorization");
+//			console.log("sessionStorage.getItem('ccMgtAuthorization'): |" + _mgtAuthorization + "|.");
+//		}
+//	}
+
+	async function getConfig()
+	{
+		$('#ccSrvName').text(_passedSrvName);
+
+//		const url = "http://" + _mgtHostname + ":" + _mgtPort + "/api/mgt/config/get";
+		const url = "/api/cc/mgt/config/get?srvName=" + _passedSrvName;
+		const response = await fetch(url);
+		_jsonResp = await response.json();
+		console.log("data:", _jsonResp);
+		
+		_ccSrvName = _jsonResp.srvName;
+		_cmTable   = _jsonResp.cmList;
+
+		console.log("_passedSrvName=|" + _passedSrvName + "|.");
+		console.log("_ccSrvName=|"    + _ccSrvName    + "|.");
+		
+		if (_passedSrvName !== '' && _passedSrvName !== _ccSrvName) 
+		{
+			console.log("WARNING: _passedSrvName='" + _passedSrvName + "' and _ccSrvName='" + _ccSrvName + "' is DIFFERENT... are we on the correct server?");
+		}
+		// Set the server name...
+		$('#ccSrvName').text(_ccSrvName);
+		
+
+
+		$('#cmTable').bootstrapTable('load', _cmTable);
+//		$('#cmTable').bootstrapTable({
+//			onClickRow: function(row, element, field)
+//			{
+//				console.log("onClickRow:", row, element, field);
+//			}
+//		});
+	}
+
+	getConfig();
+
+	// By default hide "pre check"
+	$('#pre-check-div').hide();
+
+
+	function toStringValue(value)
+	{
+		if (value === undefined) return "";
+		if (value === null) return "";
+		if (Array.isArray(value)) return value.join(', ');
+
+		return value;
+	}
+
+	//-----------------------------------------
+	// Click on table: cmTable
+	$('#cmTable').on('click-cell.bs.table', function (field, value, row, element) 
+	{
+		_lastClickedCmRow             = element;
+		_lastClickedAlarmRow          = undefined;
+		_lastClickedAlarmParameterRow = undefined;
+
+//console.log(">>>>>>>>>> field:", field);
+//console.log(">>>>>>>>>> value:", value);
+//console.log(">>>>>>>>>> row:", row);
+//console.log(">>>>>>>>>> element:", element);
+
+		let cmName = element.cmName;
+		console.log(">>>>>>>>>> cmName='" + element.cmName + "', col='" + value + "' >>>>>>>>>>>>> ");
+
+		let cmObject = findCm(_cmTable, "cmName", cmName);
+//		let found = _cmTable.filter(function(item) { return item.name === cmName; });
+//		console.log("found:", found);
+//		let cmObject = found[0];
+
+
+//		console.log("found.length=", found.length);
+//		console.log("found.length[0]=", found[0]);
+//		console.log("found:", found);
+		console.log("CmObject:", cmObject);
+		
+//		console.log("CmObject.alarmSettings:", cmObject.alarmSettings);
+//		console.log("CmObject.alarmSettings.alarms:", cmObject.alarmSettings.alarms);
+//		console.log("CmObject.alarmSettings.alarms.parameters:", cmObject.alarmSettings.alarms.parameters);
+
+		//----------------------------------------------------
+		// Set INFO Fields
+		$("#cm-info-cmName")        .val( toStringValue(cmObject.cmName));
+		$("#cm-info-displayName")   .val( toStringValue(cmObject.displayName));
+		$("#cm-info-pk")            .val( toStringValue(cmObject.pkCols));
+		$("#cm-info-diffCols")      .val( toStringValue(cmObject.diffCols));
+		$("#cm-info-pctCols")       .val( toStringValue(cmObject.pctCols));
+		$("#cm-info-needSrvConfig") .val( toStringValue(cmObject.needSrvConfig));
+		$("#cm-info-needSrvRoles")  .val( toStringValue(cmObject.needSrvRoles));
+		$("#cm-info-needSrvVersion").val( toStringValue(cmObject.needSrvVersion));
+		$("#cm-info-dependsOnCm")   .val( toStringValue(cmObject.dependsOnCm));
+		$("#cm-info-sqlInit")       .val( toStringValue(cmObject.sqlInit));
+		$("#cm-info-sqlClose")      .val( toStringValue(cmObject.sqlClose));
+		$("#cm-info-sqlRefresh")    .text(toStringValue(cmObject.sqlRefresh));
+		Prism.highlightAll();
+
+		//----------------------------------------------------
+		// Set OPTIONS tab
+		if (cmObject.hasOwnProperty('options'))
+			$('#optionsTable').bootstrapTable('load', cmObject.options);
+		else
+			$('#optionsTable').bootstrapTable('load', []);
+
+		//----------------------------------------------------
+		// Set LOCAL SETTINGS tab
+		if (cmObject.hasOwnProperty('settings'))
+			$('#settingsTable').bootstrapTable('load', cmObject.settings);
+		else
+			$('#settingsTable').bootstrapTable('load', []);
+
+		//----------------------------------------------------
+		// Set ALARMS tab
+		if (cmObject.hasOwnProperty('alarmSettings') && cmObject.alarmSettings.hasOwnProperty('alarms'))
+			$('#alarmTable').bootstrapTable('load', cmObject.alarmSettings.alarms);
+		else
+			$('#alarmTable').bootstrapTable('load', []);
+
+		if (cmObject.hasOwnProperty('alarmSettings') && cmObject.alarmSettings.hasOwnProperty('preChecks'))
+		{
+			$('#pre-check-div').show();
+			$('#alarmPreChecks').bootstrapTable('load', cmObject.alarmSettings.preChecks);
+		}
+		else
+		{
+			$('#pre-check-div').hide();
+			$('#alarmPreChecks').bootstrapTable('load', []);
+		}
+
+		$('#alarmParams')   .bootstrapTable('load', []);
+	});
+
+	//-----------------------------------------
+	// Click on table: alarmTable
+	$('#alarmTable').on('click-cell.bs.table', function (field, value, row, element) 
+	{
+		_lastClickedAlarmRow          = element;
+		_lastClickedAlarmParameterRow = undefined;
+//		let cmName = element.cmName;
+		console.log(">>>>>>>>>> ALARM-NAME='" + element.name + "', col='" + value + "' >>>>>>>>>>>>> ", element);
+
+		if (element.hasOwnProperty('parameters'))
+			$('#alarmParams').bootstrapTable('load', element.parameters);
+		else
+			$('#alarmParams').bootstrapTable('load', []);
+
+		if (value === "operation")
+		{
+			doChange("alarmTable", element.name, element);
+		}
+	});
+
+	//-----------------------------------------
+	// Click on table: alarmParams
+	$('#alarmParams').on('click-cell.bs.table', function (field, value, row, element) 
+	{
+		_lastClickedAlarmParameterRow = element;
+		console.log(">>>>>>>>>> ALARM-PARAMETER-NAME='" + element.name + "', col='" + value + "' >>>>>>>>>>>>> ", element);
+
+		if (value === "operation")
+		{
+			doChange("alarmParams", element.name, element);
+		}
+	});
+
+	//-----------------------------------------
+	// Click on table: optionsTable
+	$('#optionsTable').on('click-cell.bs.table', function (field, value, row, element) 
+	{
+		_lastClickedOptionsTableRow = element;
+		console.log(">>>>>>>>>> optionsTable-NAME='" + element.name + "', col='" + value + "' >>>>>>>>>>>>> ", element);
+
+		if (value === "operation")
+		{
+			doChange("optionsTable", element.name, element);
+		}
+	});
+
+	//-----------------------------------------
+	// Click on table: settingsTable
+	$('#settingsTable').on('click-cell.bs.table', function (field, value, row, element) 
+	{
+		_lastClickedSettingsTableRow = element;
+		console.log(">>>>>>>>>> settingsTable-NAME='" + element.name + "', col='" + value + "' >>>>>>>>>>>>> ", element);
+
+		if (value === "operation")
+		{
+			doChange("settingsTable", element.name, element);
+		}
+	});
+
+
+	function findCm(arr, propName, propValue) 
+	{
+//		console.log("-------findCm(): propName='" + propName + "', propValue='" + propValue + "'. ", arr);
+		for (var i=0; i < arr.length; i++)
+		{
+//			console.log("------- propName='" + propName + "', propValue='" + propValue + "'. ", arr[i]);
+			if (arr[i][propName] === propValue)
+			{
+				return arr[i];
+			}
+		}
+
+	  // will return undefined if not found; you could return a default instead
+	}
+	
+	function formatBoolean(value, row, index)
+	{
+	//	return value==0 ? 'No' : 'Yes';
+	//	return value==0 ? '&#x2610;' : '&#x2611;';
+	//	return value==0 ? '<input type="checkbox" onclick="return false;">' : '<input type="checkbox" onclick="return false;" checked>';
+		return value==0 ? '<div class="image-unchecked"></div>' : '<div class="image-checked"></div>';
+	}
+
+	function formatPostponeTime(value, row, index)
+	{
+		let found = row.options.filter(function(item) { return item.name === "Postpone Time"; });
+		if (found.length > 0)
+			return found[0].value;
+	}
+
+	function formatQueryTimeout(value, row, index)
+	{
+		let found = row.options.filter(function(item) { return item.name === "Query Timeout"; });
+		if (found.length > 0)
+			return found[0].value;
+	}
+
+	function formatTimeRangeCron(value, row, index)
+	{
+//		return value + ' &nbsp;<a href="#" onClick();>change</a>' + 
+//		console.log("formatTimeRangeCron:", row);
+//		return value + ' &nbsp;<a href="javascript:changeTimeRangeCron(\'' + row.name + '\');">change</a>';
+		return value;
+	}
+
+	function changeTimeRangeCron(name)
+	{
+		console.log("changeTimeRangeCron(): name=|" + name + "|.");
+		
+		return false;
+	}
+
+	function createChangeButton(value, row, index)
+	{
+//		return '<button type="button" class="btn btn-primary btn-xs">Change</button>';
+		return '<button type="button" class="btn btn-secondary btn-xs">Change...</button>';
+//		return '<button type="button" class="btn btn-outline-secondary btn-xs">Change</button>';
+//		return '<button type="button" class="btn btn-outline-primary btn-xs">Change</button>';
+	}
+
+	function doChange(tableName, optionName, element)
+	{
+		console.log("doChange(): tableName=|" + tableName + "|, optionName=|" + optionName + "|, element=|" + element + "|.", element);
+
+		if      (tableName === "alarmTable"   ) { dbxOpenConfigAlarmDialog(element); }
+		else if (tableName === "optionsTable" ) { dbxOpenConfigAlarmParametersDialog(element); }
+		else if (tableName === "settingsTable") { dbxOpenConfigAlarmParametersDialog(element); }
+		else if (tableName === "alarmParams"  ) { dbxOpenConfigAlarmParametersDialog(element); }
+		else
+		{
+			alert("doChange(): Unhandled tableName='" + tableName + "', optionName='" + optionName + "'.");
+		}
+	}
+
+	// Enable bootstrap ToolTip
+	function enableBootstrapTooltip()
+	{
+		var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+		var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+			return new bootstrap.Tooltip(tooltipTriggerEl);
+		});
+	}
+	
+
+//	$.getJSON('http://localhost:8900/api/mgt/config/get', function(data) 
+//	{
+//		console.log("data:", data);
+//	});
+
+
+  //-----------------------------------------------------------
+  // get SERVERS
+  //-----------------------------------------------------------
+//	$.ajax(
+//	{
+//		url: "http://localhost:8900/api/mgt/config/get",
+//		headers: {
+//			"Access-Control-Allow-Origin": "*"
+//		},
+//		type: 'get',
+//		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+//
+//		success: function(data, status)
+//		{
+//			// console.log("RECEIVED DATA: "+data);
+//			var jsonResp = JSON.parse(data);
+//console.log("jsonResp:", jsonResp);
+//
+////			const cmNamesArr = [...new Set(jsonResp.map(item => item.productString))];
+//			//console.log("DbxProducts:", dbxProducts);
+//
+//			for (var i=0; i<jsonResp.length; i++)
+//			{
+//				var entry = jsonResp[i];
+//
+//			}
+//			// Enable bootstrap tooltip...
+//			$('[data-toggle="tooltip"]').tooltip();
+//		},
+//		error: function(xhr, desc, err)
+//		{
+//			console.log(xhr);
+//			console.log("Details: " + desc + "\nError: " + err);
+//		}
+//	}); // end: ajax call
+
+
+	// -------------- enable/disable "save" button ---------------------
+	// https://stackoverflow.com/questions/58753515/bootstrap-4-validation-disable-submit-button-until-form-validated
+//	window.addEventListener('load', function()
+//	{
+//	});
+
+	// -------------- Check for input parameters ---------------------
+	// if: op='openAddSkipEntry' --> open "skip" modal dialog
+	// http://localhost:8080/admin/admin.html?op=openDsrSkipDialog=openAddSkipEntry&srvName=xxx&className=yyy&entryType=zzz&stringVal=aaa&description=bbb&sqlTextExample=ccc
+//	const param_op             = getParameter("op", '');
+//	console.log("Input Parameters: 'op' = |" + param_op + "|")
+//	if (param_op === 'openDsrSkipDialog')
+//	{
+//		const param_srvName        = getParameter("srvName",         '');
+//		const param_className      = getParameter("className",       '');
+//		const param_entryType      = getParameter("entryType",       '');
+//		const param_stringVal      = getParameter("stringVal",       '');
+//		const param_description    = getParameter("description",     '');
+//		const param_sqlTextExample = getParameter("sqlTextExample",  '');
+//
+//		console.log("Input Parameters: 'param_srvName'        = |" + param_srvName        + "|")
+//		console.log("Input Parameters: 'param_className'      = |" + param_className      + "|")
+//		console.log("Input Parameters: 'param_entryType'      = |" + param_entryType      + "|")
+//		console.log("Input Parameters: 'param_stringVal'      = |" + param_stringVal      + "|")
+//		console.log("Input Parameters: 'param_description'    = |" + param_description    + "|")
+//		console.log("Input Parameters: 'param_sqlTextExample' = |" + param_sqlTextExample + "|")
+//
+//		document.getElementById('dbx-dsr-skip-srvName')       .value = param_srvName;
+//		document.getElementById('dbx-dsr-skip-className')     .value = param_className;
+//		document.getElementById('dbx-dsr-skip-entryType')     .value = param_entryType;
+//		document.getElementById('dbx-dsr-skip-stringVal')     .value = param_stringVal;
+//		document.getElementById('dbx-dsr-skip-description')   .value = param_description;
+//		document.getElementById('dbx-dsr-skip-sqlTextExample').value = param_sqlTextExample;
+//
+//		$('#dbx-dsr-skip-dialog').modal('show');
+//	}
+
+	//-----------------------------------------------------------
+	// Check for login and set props
+	//-----------------------------------------------------------
+//	isLoggedIn( function(isLogedIn, asUserName)
+//	{
+//		console.log("isLoggedIn-callback: isLogedIn='"+isLogedIn+"', asUserName='"+asUserName+"'.");
+//	});
+
+</script>
+
+
+
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: Xxx -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class="modal fade" id="dbx-cfg-alarm" tabindex="-1" role="dialog" aria-labelledby="dbx-cfg-alarm-dialog" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+			<h5 class="modal-title" id="dbx-cfg-alarm-dialog-title">Alarm Options</h5>
+			<button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+				<span aria-hidden="true">&times;</span>
+			</button>
+			</div>
+			<div class="modal-body">
+				<table>
+					<tr> <td nowrap><b>CM Display Name:   </b></td>  <td id="dbx-cfg-alarm-f-cmDisplayName"></td> </tr>
+					<tr> <td nowrap><b>CM Name:           </b></td>  <td id="dbx-cfg-alarm-f-cmName"       ></td> </tr>
+					<tr> <td></td>  <td></td> </tr>
+					<tr> <td></td>  <td></td> </tr>
+					<tr> <td nowrap><b>Alarm Name:        </b></td>  <td id="dbx-cfg-alarm-f-name"         ></td> </tr>
+					<tr> <td nowrap><b>Alarm Description: </b></td>  <td id="dbx-cfg-alarm-f-desciption"   ></td> </tr>
+				</table>
+				<br>
+
+				<div class='card'>
+					<div class="card-header">Options that can be Changed</div>
+					<div class='card-body'>
+				
+						<div class="row mt-2">
+							<label for="dbx-cfg-alarm-f-isAlarmEnabled" class="col-sm-3 col-form-label col-form-label-sm">Alarm is Enabled</label>
+							<div class="col-sm-2">
+								<input type="checkbox" class="form-check-input" value="" id="dbx-cfg-alarm-f-isAlarmEnabled">
+							</div>
+						</div>
+
+						<div class="row mt-2">
+							<label for="dbx-cfg-alarm-f-timeRangeCron" class="col-sm-3 col-form-label col-form-label-sm">In Period</label>
+							<div class="col col-sm-2">
+<!--								<input type="text" class="is-valid form-control form-control-sm" id="dbx-cfg-alarm-f-timeRangeCron" placeholder="" data-bs-html="true" data-bs-toggle="tooltip" data-bs-placement="bottom" title="What time the Alarm can be Activated<br>The time is described in <code>crontab</code> pattern.<br> 1: Minute (0-59)<br> 2: Hour (0-23)<br> 3: Day of Month (1-31)<br> 4: Month (1-12)<br> 5: Day Of Week (0-7, 0&7 are Sunday)<br><b>Note:</b> If we prefix the time string with the char <code>!</code>, it menas we negates the time description (not in that time).">-->
+								<input type="text" class="form-control form-control-sm" id="dbx-cfg-alarm-f-timeRangeCron" placeholder="">
+							</div>
+<!--							<div class="valid-feedback" id="dbx-cfg-alarm-f-timeRangeDescrption-feedback">xxx</div>-->
+							<div class="col">
+								<input type="text" class="form-control form-control-sm" id="dbx-cfg-alarm-f-timeRangeDescrption" placeholder="" readonly>
+							</div>
+						</div>
+
+					</div>  <!-- end: card-body -->
+				</div>  <!-- end: card -->
+			</div>
+			<div class="modal-footer">
+			<div class="text-danger" id="dbx-cfg-alarm-dialog-problem"></div>
+<!--			<button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="dbx-cfg-alarm-dialog-ok">Change Config</button>-->
+			<button type="button" class="btn btn-primary" id="dbx-cfg-alarm-dialog-ok">Change Config</button>
+			<button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+		</div>
+	</div>
+	<script>
+		var _modalOriginObject_cfgAlarm  = undefined;
+
+		$('#dbx-cfg-alarm').on('show.bs.modal', function () {
+
+			$("#dbx-cfg-alarm-dialog-problem").text("");
+//			document.getElementById('dbx-cfg-alarm-dialog-problem').innerHTML = "";
+
+//			$('.tooltips').tooltip({
+//				container: $(this)
+//			});
+
+//			setTimeout(() => { enableBootstrapTooltip(); }, 200);
+
+			$(this).find('.modal-body').css({
+				'max-height':'100%'
+			});
+		});
+
+		// What should happen when we click OK in the dialog
+		$("#dbx-cfg-alarm-dialog-ok").click( function()
+		{
+			// Get dialog values
+			var dialog_isAlarmEnabled = $("#dbx-cfg-alarm-f-isAlarmEnabled").is(":checked");
+			var dialog_timeRangeCron  = $("#dbx-cfg-alarm-f-timeRangeCron").val();
+//console.log("xxxxxxxxxxxxxx: dialog_isAlarmEnabled=|"+dialog_isAlarmEnabled+"|, typeof=|"+(typeof dialog_isAlarmEnabled)+"|.", dialog_isAlarmEnabled);
+//console.log("xxxxxxxxxxxxxx: dialog_timeRangeCron=|"+dialog_timeRangeCron+"|, typeof=|"+(typeof dialog_timeRangeCron)+"|.", dialog_timeRangeCron);
+
+			var originValues = _modalOriginObject_cfgAlarm;
+//console.log("xxxxxxxxxxxxxx: originValues.isAlarmEnabled=|"+originValues.isAlarmEnabled+"|, typeof=|"+(typeof originValues.isAlarmEnabled)+"|.", originValues.isAlarmEnabled);
+//console.log("xxxxxxxxxxxxxx: originValues.timeRangeCron=|"+originValues.timeRangeCron+"|, typeof=|"+(typeof originValues.timeRangeCron)+"|.", originValues.timeRangeCron);
+
+			var changes = [];
+
+			// Check what was changed
+			if (dialog_isAlarmEnabled !== originValues.isAlarmEnabled) changes.push({ isAlarmEnabled: dialog_isAlarmEnabled });
+			if (dialog_timeRangeCron  !== originValues.timeRangeCron ) changes.push({ timeRangeCron:  dialog_timeRangeCron  });
+
+			if (changes.length > 0)
+			{
+				// Send the information to the Collectors REST Management Interface
+				//const element = document.querySelector('#put-request-error-handling .date-updated');
+//				const dialogProblem = $("#dbx-cfg-alarm-dialog-problem");
+				const dialogProblem = document.getElementById('dbx-cfg-alarm-dialog-problem');
+
+				const sendObject = {
+					type: 'alarmSettings',
+					cmName: _lastClickedCmRow.cmName,
+					optName: _lastClickedAlarmRow.name,
+					change: {}
+				};
+				for (entry of changes) {
+					const firstKey = Object.keys(entry)[0];
+					const firstVal = entry[firstKey];
+
+					sendObject.change[firstKey] = firstVal;
+				}
+
+				// Below is taken from -->> https://jasonwatmore.com/post/2021/09/20/fetch-http-put-request-examples
+				const requestOptions = {
+					method: 'POST',
+//					method: 'PUT',
+					mode: 'no-cors',
+					headers: {
+						'Access-Control-Allow-Origin': '*',
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(sendObject)
+				};
+//				const url = "http://" + _mgtHostname + ":" + _mgtPort + "/api/mgt/config/set";
+				const url = "/api/cc/mgt/config/set?srvName=" + _ccSrvName;
+console.log("fetch-url: " + url);
+console.log("requestOptions: ", requestOptions);
+console.log("sendObject: ", sendObject);
+				fetch(url, requestOptions)
+					.then(async response => {
+						const isJson = response.headers.get('content-type')?.includes('application/json');
+						const data = isJson && await response.json();
+
+console.log("response:", response);
+						// check for error response
+						if (!response.ok) {
+							// get error message from body or default to response status
+							const error = (data && data.message) || response.status;
+							dialogProblem.innerHTML = "Error: " + error;
+							return Promise.reject(error);
+						}
+
+						dialogProblem.innerHTML = "Send OK";
+
+						// CLOSE the modal
+						console.log("#dbx-cfg-alarm-dialog-ok -- Do Actions...\n" + changes.join("\n"));
+						$('#dbx-cfg-alarm').modal('hide');
+					})
+					.catch(error => {
+//						dialogProblem.innerHTML = `Error: ${error}`;
+						dialogProblem.innerHTML = "XXX Error: " + error;
+						console.error('There was an error!', error);
+					});
+			}
+			else
+			{
+				$("#dbx-cfg-alarm-dialog-problem").text("No changes was made, maybe 'Close' instead...");
+				// Stay in dialog
+			}
+		});
+
+		function dbxOpenConfigAlarmDialog(element)
+		{
+			//
+			console.log("OPEN-DIALOG: dbxOpenConfigAlarmDialog()", element);
+			console.log("OPEN-DIALOG: dbxOpenConfigAlarmDialog()._lastClickedCmRow", _lastClickedCmRow);
+
+
+			$("#dbx-cfg-alarm-f-cmDisplayName"      ).text(_lastClickedCmRow.displayName);
+			$("#dbx-cfg-alarm-f-cmName"             ).text(_lastClickedCmRow.cmName);
+			$("#dbx-cfg-alarm-f-name"               ).text(element.name);
+			$("#dbx-cfg-alarm-f-desciption"         ).text(element.desciption);
+			
+			$("#dbx-cfg-alarm-f-isAlarmEnabled"     ).prop( "checked", element.isAlarmEnabled);
+			$("#dbx-cfg-alarm-f-timeRangeCron"      ).val(element.timeRangeCron);
+			$("#dbx-cfg-alarm-f-timeRangeDescrption").val(element.timeRangeDescrption);
+
+			// I was NOT able to set/pass the "element" (json object) to the dialog "#dbx-cfg-alarm"
+			// So instead remember it here...
+			_modalOriginObject_cfgAlarm = element;
+			console.log( "_modalOriginObject_cfgAlarm: ", _modalOriginObject_cfgAlarm );
+
+			// Show the dialog
+			$("#dbx-cfg-alarm").modal('show');
+		}
+	</script>
+
+
+
+
+</body>
+</html>

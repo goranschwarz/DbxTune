@@ -1456,6 +1456,36 @@ Active Alarms
 					serverDisplayName = srvSession.serverDisplayName;
 				}
 
+//				var ccMgtHost = "";
+//				var ccMgtPort = -1;
+//				var ccMgtInfo = "";
+//				var isLoggedIn = false;
+//				if (srvSession.hasOwnProperty('collectorMgtHostname')) { ccMgtHost = srvSession.collectorMgtHostname; }
+//				if (srvSession.hasOwnProperty('collectorMgtPort'))     { ccMgtPort = srvSession.collectorMgtPort; }
+//				if (srvSession.hasOwnProperty('collectorMgtInfo'))     { ccMgtInfo = srvSession.collectorMgtInfo; }
+//
+//				let ccMgtButton = '    <a class="dropdown-item" href="/admin/config.html?name='+serverName+'&host='+ccMgtHost+'&port='+ccMgtPort+'" target="_blank">View Collector <b>Configuration</b></a>'
+//				if (isLoggedIn && ccMgtInfo !== "")
+//				{
+//					// If 'ccMgtInfo' is a JSON, parse it and get 'authorization'
+//					try
+//					{
+//						var ccMgtInfoJsonObj = JSON.parse(ccMgtInfo);
+//						if (ccMgtInfoJsonObj.hasOwnProperty('authorization'))
+//						{
+//							let ccMgtAuthorization = ccMgtInfoJsonObj.token;
+//							sessionStorage.setItem("ccMgtAuthorization", ccMgtAuthorization);
+//							let authorization = "ss";
+//
+//							ccMgtButton = '    <a class="dropdown-item" href="/admin/config.html?name='+serverName+'&host='+ccMgtHost+'&port='+ccMgtPort+'&authorization='+authorization+'" target="_blank">Change Collector <b>Configuration</b></a>'
+//						}
+//					}
+//					catch(ex)
+//					{
+//						console.log("Error parsing 'ccMgtInfo' into JSON Object. ccMgtInfo='" + ccMgtInfo + "', ex='" + ex + "'.");
+//					}
+//				}
+				const ccMgtButton = '    <a class="dropdown-item" href="/admin/config.html?srvName='+serverName+' target="_blank"><b>View</b>/Change Collector <b>Configuration</b></a>'
 
 				html += ''
 						+ '<div class="btn-group">'
@@ -1474,6 +1504,8 @@ Active Alarms
 						+ '    <a class="dropdown-item" href="/overview#offline-srv-'+serverName+'" target="_blank">View <b>List</b> of all <b>Recordings</b> for this Server</a>'
 						+ '    <div class="dropdown-divider"></div>'
 						+ '    <a class="dropdown-item" href="/log?name='+serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'
+						+ '    <div class="dropdown-divider"></div>'
+						+ ccMgtButton
 						+ '    <div class="dropdown-divider"></div>'
 						+ '    <a class="dropdown-item" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
 						+ '  </div>'

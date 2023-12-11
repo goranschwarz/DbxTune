@@ -34,6 +34,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventRunQueueLength;
 import com.asetune.alarm.events.AlarmEventRunQueueLength.RangeType;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -141,21 +142,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] avgLabels = new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" };
-//		String[] sumLabels = new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" };
-////		String[] engLabels = new String[] { "-runtime-replaced-" };
-//		String[] engLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    new TrendGraphDataPoint(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    avgLabels, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, engLabels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_SUM_OUTSTAND_IO,        new TrendGraphDataPoint(GRAPH_NAME_SUM_OUTSTAND_IO,        sumLabels, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, engLabels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  new TrendGraphDataPoint(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  engLabels, LabelType.Dynamic));
-
 		addTrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,
 			"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
 			"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -167,7 +157,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
 			"Run Queue Length, Per Engine", 	                                               // Menu CheckBox text
 			"Run Queue Length, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -179,7 +169,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
 			"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
 			"Outstanding IO's, Summary for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -191,7 +181,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
 			"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
 			"Outstanding IO's, When the refresh happened, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -203,7 +193,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
 			"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
 			"Outstanding IO's, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -212,66 +202,6 @@ extends CountersModel
 			Ver.ver(15, 5), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,
-//				"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
-//				"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				avgLabels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
-//				"Run Queue Length, Per Engine", 	                                               // Menu CheckBox text
-//				"Run Queue Length, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				engLabels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
-//				"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
-//				"Outstanding IO's, Summary for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				sumLabels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
-//				"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
-//				"Outstanding IO's, When the refresh happened, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				engLabels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
-//				"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
-//				"Outstanding IO's, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				engLabels, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 //	@Override

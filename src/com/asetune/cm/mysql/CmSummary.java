@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -125,16 +126,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_xxx            = new String[] { "Hour", "Minute", "Second"};
-////		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
-//		
-//		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx, LabelType.Static));
-////		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
-
 		addTrendGraph(GRAPH_NAME_XXX,
 			"Dummy Graph", 	                        // Menu CheckBox text
 			"Dummy Graph showing hour, minute, second", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Hour", "Minute", "Second"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -143,37 +138,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_XXX,
-////				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-////				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
-//				"Dummy Graph", 	                        // Menu CheckBox text
-//				"Dummy Graph showing hour, minute, second", // Label 
-//				labels_xxx, 
-//				true,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-////			// GRAPH
-////			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
-////					"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-////					"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
-////					labels_aaNwPacket, 
-////					false, // is Percent Graph
-////					this, 
-////					false, // visible at start
-////					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-////					-1);   // minimum height
-////				addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

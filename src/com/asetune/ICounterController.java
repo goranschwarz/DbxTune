@@ -344,4 +344,16 @@ public interface ICounterController
 
 	/** (in no-gui mode) the Collector can specify '-N' or '--displayName' this would be that value  */
 	void setServerDisplayName(String displayName);
+
+	/** Get the server name, which depends on dbms/aliasName and displayName */
+	String getServerName();
+
+	/** Get the DBMS Server name */
+	String getDbmsServerName();
+
+	/** Set the last known header info, which we can extract server name etc... */
+	void setLastKnownHeaderInfo(HeaderInfo headerInfo);
+
+	/** Get the last known header info */
+	HeaderInfo getLastKnownHeaderInfo();
 }

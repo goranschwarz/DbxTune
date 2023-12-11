@@ -34,6 +34,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventStatementCacheAboveConfig;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -143,7 +144,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE,
 			"Procedure Cache Module Usage", 	                                 // Menu CheckBox text
 			"Procedure Cache Module Usage (in page count) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SRV_CONFIG, // or CACHE
@@ -155,7 +156,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE_MB,
 			"Procedure Cache Module Usage", 	                                 // Menu CheckBox text
 			"Procedure Cache Module Usage (in MB) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SRV_CONFIG, // or CACHE

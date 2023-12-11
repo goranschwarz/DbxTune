@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -147,7 +148,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HIT,
 				"Cache Hits [blks_hit] per Second", 	                // Menu CheckBox text
 				"Cache Hits [blks_hit] per Second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -159,7 +160,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_READS,
 				"Cache Reads [blks_read] per Second", 	                // Menu CheckBox text
 				"Cache Reads [blks_read] per Second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -171,7 +172,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITES,
 				"Cache Writes [blks_written] per Second", 	                // Menu CheckBox text
 				"Cache Writes [blks_written] per Second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OTHER,

@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -155,24 +156,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels_xxx            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
-//		String[] labels_xxx            = new String[] { "Hour", "Minute", "Second"};
-//		String[] labels_cpu            = new String[] { "System+User CPU", "System CPU", "User CPU" };
-//		String[] labels_aaNwPacket     = new String[] { "PacketsReceived", "PacketsSent" };
-//		String[] labels_commits        = new String[] { "Commits" };
-//		String[] labels_requests       = new String[] { "ConnectionsActive", "OperationsWaiting", "OperationsActive", "OperationsActiveLoadTableStatements" };
-//		
-//		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CPU,             new TrendGraphDataPoint(GRAPH_NAME_CPU,             labels_cpu,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_NW_PACKET,       labels_aaNwPacket, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_COMMITS,         new TrendGraphDataPoint(GRAPH_NAME_COMMITS,         labels_commits,    LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_REQUESTS,        new TrendGraphDataPoint(GRAPH_NAME_REQUESTS,        labels_requests,   LabelType.Static));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_XXX,
 			"Dummy Graph", 	                        // Menu CheckBox text
 			"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Hour", "Minute", "Second"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -185,7 +173,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU,
 			"CPU Summary", 	                        // Menu CheckBox text
 			"CPU Summary, using property('ProcessCPUSystem') and property('ProcessCPUUser') ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "System+User CPU", "System CPU", "User CPU" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -198,7 +186,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_NW_PACKET,
 			"Network Packets received/sent", 	                            // Menu CheckBox text
 			"Network Packets received/sent per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "PacketsReceived", "PacketsSent" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -211,7 +199,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMMITS,
 			"Commits", 	                            // Menu CheckBox text
 			"Commits per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Commits" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -224,7 +212,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REQUESTS,
 			"RequestsReceived", 	            // Menu CheckBox text
 			"RequestsReceived per second ("+GROUP_NAME+"->"+SHORT_NAME+")", 		// Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "ConnectionsActive", "OperationsWaiting", "OperationsActive", "OperationsActiveLoadTableStatements" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -233,73 +221,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_XXX,
-////				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-////				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
-//				"Dummy Graph", 	                        // Menu CheckBox text
-//				"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_xxx, 
-//				true,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CPU,
-//				"CPU Summary", 	                        // Menu CheckBox text
-//				"CPU Summary, using property('ProcessCPUSystem') and property('ProcessCPUUser') ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cpu, 
-//				true,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_NW_PACKET,
-//				"Network Packets received/sent", 	                            // Menu CheckBox text
-//				"Network Packets received/sent per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_aaNwPacket, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_COMMITS,
-//				"Commits", 	                            // Menu CheckBox text
-//				"Commits per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_commits, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_REQUESTS,
-//				"RequestsReceived", 	            // Menu CheckBox text
-//				"RequestsReceived per second ("+GROUP_NAME+"->"+SHORT_NAME+")", 		// Label 
-//				labels_requests, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

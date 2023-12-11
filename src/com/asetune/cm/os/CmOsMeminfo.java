@@ -32,6 +32,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEventOsSwapThrashing;
 import com.asetune.alarm.events.AlarmEventOsSwapping;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
@@ -165,7 +166,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_USED,
 			"meminfo: Used Memory", 	                                // Menu CheckBox text
 			"meminfo: Used Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "MemUsed in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -174,22 +175,11 @@ extends CounterModelHostMonitor
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// GRAPH
-//		addTrendGraph(GRAPH_NAME_MEM_FREE,
-//			"meminfo: Free Memory", 	                                // Menu CheckBox text
-//			"meminfo: Free Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//			new String[] { "MemFree in MB" }, 
-//			LabelType.Static,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MEM_AVAILABLE,
 			"meminfo: Available Memory", 	                                // Menu CheckBox text
 			"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			new String[] { "MemAvailable in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -202,7 +192,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WIN_PAGING,
 			"meminfo: Windows Paging or Swap Usage", 	                                // Menu CheckBox text
 			"meminfo: Windows Paging or Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Pages/sec", "Pages Input/sec", "Pages Output/sec"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -215,7 +205,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WIN_PAGING_FILE,
 			"meminfo: Windows Paging File Usage", 	                                // Menu CheckBox text
 			"meminfo: Windows Paging File Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Paging File(_Total) - % Usage", "Paging File(_Total) - % Usage Peak"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -616,12 +606,12 @@ extends CounterModelHostMonitor
 	public static final String  PROPKEY_alarm_swap                             = CM_NAME + ".alarm.system.if.swap.gt"; // Pages in OR out
 	public static final int     DEFAULT_alarm_swap                             = 1000;
                                                                                
-	public static final String  PROPKEY_alarm_swap_thrashing                   = CM_NAME + ".alarm.system.if.swap.thrashing.gt"; // Pages in AND out
-	public static final int     DEFAULT_alarm_swap_thrashing                   = 150;
-                                                                               
 	public static final String  PROPKEY_alarm_swap_maxCap_multiplier           = CM_NAME + ".alarm.system.swap.maxCap.multiplier";
 	public static final double  DEFAULT_alarm_swap_maxCap_multiplier           = 1.5d;
 
+	public static final String  PROPKEY_alarm_swap_thrashing                   = CM_NAME + ".alarm.system.if.swap.thrashing.gt"; // Pages in AND out
+	public static final int     DEFAULT_alarm_swap_thrashing                   = 150;
+                                                                               
 	public static final String  PROPKEY_alarm_swap_thrashing_maxCap_multiplier = CM_NAME + ".alarm.system.swap.thrashing.maxCap.multiplier";
 	public static final double  DEFAULT_alarm_swap_thrashing_maxCap_multiplier = 2.0d;
 
@@ -631,8 +621,13 @@ extends CounterModelHostMonitor
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("Swapping"     , PROPKEY_alarm_swap           , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap           , DEFAULT_alarm_swap          ), DEFAULT_alarm_swap          , "If 'Pages Input/sec' or 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
-		list.add(new CmSettingsHelper("SwapThrashing", PROPKEY_alarm_swap_thrashing , Integer.class, conf.getIntProperty(PROPKEY_alarm_swap_thrashing , DEFAULT_alarm_swap_thrashing), DEFAULT_alarm_swap_thrashing, "If 'Pages Input/sec' AND 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("Swapping"     , isAlarmSwitch  , PROPKEY_alarm_swap                             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap                             , DEFAULT_alarm_swap                            ), DEFAULT_alarm_swap                            , "If 'Pages Input/sec' or 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+		list.add(new CmSettingsHelper("Swapping MaxCapMultiplier"     , PROPKEY_alarm_swap_maxCap_multiplier           , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_maxCap_multiplier           , DEFAULT_alarm_swap_maxCap_multiplier          ), DEFAULT_alarm_swap_maxCap_multiplier          , "Parameter to 'Swapping', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 1000 and 'MaxCap Multiplier' is '1.5' The MaxCap will be 1500..." ));
+
+		list.add(new CmSettingsHelper("SwapThrashing", isAlarmSwitch  , PROPKEY_alarm_swap_thrashing                   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap_thrashing                   , DEFAULT_alarm_swap_thrashing)                  , DEFAULT_alarm_swap_thrashing                  , "If 'Pages Input/sec' AND 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+		list.add(new CmSettingsHelper("SwapThrashing MaxCapMultiplier", PROPKEY_alarm_swap_thrashing_maxCap_multiplier , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_thrashing_maxCap_multiplier , DEFAULT_alarm_swap_thrashing_maxCap_multiplier), DEFAULT_alarm_swap_thrashing_maxCap_multiplier, "Parameter to 'SwapThrashing', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 150 and 'MaxCap Multiplier' is '2.0' The MaxCap will be 300..." ));
 
 		return list;
 	}

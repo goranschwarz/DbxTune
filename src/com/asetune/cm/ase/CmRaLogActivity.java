@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -130,22 +131,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_lscan    = new String[] { "LogRecordsScanned", "LogRecordsProcessed" };
-//		String[] labels_tran     = new String[] { "BeginTran", "CommitTran", "AbortedTran", "PreparedTran", "DelayedCommit", "MaintUserTran" };
-//		String[] labels_op_crud  = new String[] { "Updates", "Inserts", "Deletes" };
-//		String[] labels_op_other = new String[] { "StoredProcedures", "SQLStatements", "DDL", "Writetxt", "LobColumns", "CLRs" };
-//		String[] labels_runtime  = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//
-//		addTrendGraphData(GRAPH_NAME_SUM_LOG_SCAN,     new TrendGraphDataPoint(GRAPH_NAME_SUM_LOG_SCAN,     labels_lscan,    LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_SUM_LOG_TRAN,     new TrendGraphDataPoint(GRAPH_NAME_SUM_LOG_TRAN,     labels_tran,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_SUM_LOG_OP_CRUD,  new TrendGraphDataPoint(GRAPH_NAME_SUM_LOG_OP_CRUD,  labels_op_crud,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_SUM_LOG_OP_OTHER, new TrendGraphDataPoint(GRAPH_NAME_SUM_LOG_OP_OTHER, labels_op_other, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_DB_CRUD_OP,       new TrendGraphDataPoint(GRAPH_NAME_DB_CRUD_OP,       labels_runtime,  LabelType.Dynamic));
-
 		addTrendGraph(GRAPH_NAME_SUM_LOG_SCAN,
 			"RA LogScan Records Sum", 	          // Menu CheckBox text
 			"RA LogScan Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "LogRecordsScanned", "LogRecordsProcessed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -158,7 +147,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_LOG_TRAN,
 			"RA Log Transaction Records Sum", 	          // Menu CheckBox text
 			"RA Log Transaction Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "BeginTran", "CommitTran", "AbortedTran", "PreparedTran", "DelayedCommit", "MaintUserTran" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -171,7 +160,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_LOG_OP_CRUD,
 			"RA Log CRUD Operations Sum", 	          // Menu CheckBox text
 			"RA Log CRUD Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Updates", "Inserts", "Deletes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -184,7 +173,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_LOG_OP_OTHER,
 			"RA Log Other Operations Sum", 	          // Menu CheckBox text
 			"RA Log Other Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "StoredProcedures", "SQLStatements", "DDL", "Writetxt", "LobColumns", "CLRs" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -197,7 +186,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DB_CRUD_OP,
 			"RA CRUD Operations per DB", 	          // Menu CheckBox text
 			"RA CRUD Operations per DB, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -206,71 +195,6 @@ extends CountersModel
 			Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_SUM_LOG_SCAN,
-//				"RA LogScan Records Sum", 	          // Menu CheckBox text
-//				"RA LogScan Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_lscan, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_SUM_LOG_TRAN,
-//				"RA Log Transaction Records Sum", 	          // Menu CheckBox text
-//				"RA Log Transaction Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_tran, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_SUM_LOG_OP_CRUD,
-//				"RA Log CRUD Operations Sum", 	          // Menu CheckBox text
-//				"RA Log CRUD Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_op_crud, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_SUM_LOG_OP_OTHER,
-//				"RA Log Other Operations Sum", 	          // Menu CheckBox text
-//				"RA Log Other Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_op_other, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_DB_CRUD_OP,
-//				"RA CRUD Operations per DB", 	          // Menu CheckBox text
-//				"RA CRUD Operations per DB, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_runtime, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

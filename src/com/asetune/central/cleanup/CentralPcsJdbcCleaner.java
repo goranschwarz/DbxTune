@@ -121,7 +121,7 @@ extends Task
 		DbxConnection conn = null;
 		try
 		{
-			_logger.info("Open DBMS connection to CentralPersistWriterJdbc. connProps="+connProps);
+			_logger.info("Open DBMS connection to CentralPersistWriterJdbc. connProps=" + connProps);
 			conn = DbxConnection.connect(null, connProps);
 		}
 		catch (Exception e)
@@ -163,11 +163,11 @@ extends Task
 
 		int keepDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_keepDays, DEFAULT_keepDays);
 		Timestamp olderThan = new Timestamp( DateUtils.addDays(new Date(), -keepDays).getTime() );
-		_logger.info(_prefix + "Retention period is "+keepDays+", so data that is older than "+keepDays+" days (or older than '"+olderThan+"') will be deleted. This can be changed with property '"+PROPKEY_keepDays+"'.");
+		_logger.info(_prefix + "Retention period is " + keepDays + ", so data that is older than " + keepDays + " days (or older than '" + olderThan + "') will be deleted. This can be changed with property '" + PROPKEY_keepDays + "'.");
 
 		// Get "ServerNames" so we know what DBMS schemas we should iterate
 		String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
-		String sql = "select distinct "+lq+"ServerName"+rq+" from "+tabName+" order by 1";
+		String sql = "select distinct " + lq+"ServerName"+rq + " from " + tabName + " order by 1";
 		List<String> schemaList = new ArrayList<>();
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -237,7 +237,7 @@ extends Task
 		// Get expected number of samples to delete
 		int sessionsSampleCount = -99;
 		tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.SESSION_SAMPLES, null, true);
-		sql = "select count(*) from "+tabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
+		sql = "select count(*) from " + tabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql))
 		{
 			pstmnt.setTimestamp(1, olderThan);
@@ -247,10 +247,10 @@ extends Task
 					sessionsSampleCount = rs.getInt(1);
 			}
 		}
-		_logger.info(_prefix + "schema='"+schema+"': Found "+sessionsSampleCount+" samples was found that was older than '"+olderThan+"'.");
+		_logger.info(_prefix + "schema='" + schema + "': Found " + sessionsSampleCount + " samples was found that was older than '" + olderThan + "'.");
 		if (sessionsSampleCount <= 0)
 		{
-			_logger.info(_prefix + "schema='"+schema+"': ---- Nothing to cleanup in schema '"+schema+"'.");
+			_logger.info(_prefix + "schema='" + schema + "': ---- Nothing to cleanup in schema '" + schema + "'.");
 			return 0;
 		}
 
@@ -261,7 +261,7 @@ extends Task
 		// Get "graph" tables
 		List<String> graphTables = new ArrayList<>();
 		tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.GRAPH_PROPERTIES, null, true);
-		sql = "select distinct "+lq+"TableName"+rq+" from "+tabName+" order by 1";
+		sql = "select distinct " + lq+"TableName"+rq + " from " + tabName + " order by 1 ";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while (rs.next())
@@ -274,19 +274,19 @@ extends Task
 			// check if the table exists... If not just continue...
 			if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, schema, name) )
 			{
-				_logger.info(_prefix + "Skipping, table do not exist: schema '"+schema+"' table '"+name+"'.");
+				_logger.info(_prefix + "Skipping, table do not exist: schema '" + schema + "' table '" + name + "'.");
 				continue;
 			}
 			
 			// TODO: delete TOP #### from ... in a loop so we do not use up to much transaction log for some databases
 			
-			sql = "delete from "+lq+schema+rq+"."+lq+name+rq+" where "+lq+"SessionSampleTime"+rq+" < ?";
+			sql = "delete from " + lq+schema+rq + "." + lq+name+rq + " where " + lq+"SessionSampleTime"+rq + " < ? ";
 
 			String dryRunComment = "";
 			if (_dryRun)
 			{
 				sql += " and 1=2 -- DRY-RUN";
-				dryRunComment = "... DRY-RUN: SQL=|"+sql+"|, olderThan='"+olderThan+"'.";
+				dryRunComment = "... DRY-RUN: SQL=|" + sql + "|, olderThan='" + olderThan + "'.";
 			}
 
 			long startTime = System.currentTimeMillis();
@@ -294,11 +294,11 @@ extends Task
 			{
 				pstmnt.setTimestamp(1, olderThan);
 				int delCount = pstmnt.executeUpdate();
-				_logger.info(_prefix + ">>>> Deleted "+delCount+" records from schema '"+schema+"' in table '"+name+"'. ["+TimeUtils.msDiffNowToTimeStr(startTime)+"]" + dryRunComment);
+				_logger.info(_prefix + ">>>> Deleted " + delCount + " records from schema '" + schema + "' in table '" + name + "'. [" + TimeUtils.msDiffNowToTimeStr(startTime) + "], olderThan='" + olderThan + "'." + dryRunComment);
 			}
 			catch(SQLException ex)
 			{
-				_logger.error(_prefix + "Problems deleting records from schema '"+schema+"' in table '"+name+"' using SQL=|"+sql+"|. Continuing anyway... Caught: "+ex);
+				_logger.error(_prefix + "Problems deleting records from schema '" + schema + "' in table '" + name + "' using SQL=|" + sql + "|. Continuing anyway... Caught: " + ex);
 			}
 		}
 		
@@ -311,7 +311,7 @@ extends Task
 		doCleanupForDbxTableInSchema(conn, schema, Table.SESSION_SAMPLES,        olderThan);
 		doCleanupForDbxTableInSchema(conn, schema, Table.CM_HISTORY_SAMPLE_JSON, olderThan);
 		
-		_logger.info(_prefix + "schema='"+schema+"': << Done cleanup. sessionsSampleCount="+sessionsSampleCount);
+		_logger.info(_prefix + "schema='" + schema + "': << Done cleanup. sessionsSampleCount=" + sessionsSampleCount);
 
 		return sessionsSampleCount;
 	}
@@ -335,15 +335,14 @@ extends Task
 		}
 		
 		String sql = null;
-//		String sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
 		if      (Table.ALARM_ACTIVE          .equals(table)) return 0; // Do not delete from this
 		else if (Table.CM_LAST_SAMPLE_JSON   .equals(table)) return 0; // Do not delete from this
-		else if (Table.CM_HISTORY_SAMPLE_JSON.equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
-		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
-		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime" +rq+" < ?";
-		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
-		else if (Table.SESSION_SAMPLES       .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
-		else if (Table.SESSION_SAMPLE_SUM    .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime" +rq+" < ?";
+		else if (Table.CM_HISTORY_SAMPLE_JSON.equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
+		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
+		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionStartTime" +rq + " < ? ";
+		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
+		else if (Table.SESSION_SAMPLES       .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
+		else if (Table.SESSION_SAMPLE_SUM    .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionStartTime" +rq + " < ? ";
 
 		if (StringUtil.isNullOrBlank(sql))
 			return 0;
@@ -352,7 +351,7 @@ extends Task
 		if (_dryRun)
 		{
 			sql += " and 1=2 -- DRY-RUN";
-			dryRunComment = "... DRY-RUN: SQL=|"+sql+"|, olderThan='"+olderThan+"'.";
+			dryRunComment = "... DRY-RUN: SQL=|" + sql + "|, olderThan='" + olderThan + "'.";
 		}
 			
 		int delCount = -99;
@@ -360,11 +359,11 @@ extends Task
 		{
 			pstmnt.setTimestamp(1, olderThan);
 			delCount = pstmnt.executeUpdate();
-			_logger.info(_prefix + ">>>> Deleted "+delCount+" records from schema '"+schema+"' in table '"+shortTabName+"'." + dryRunComment);
+			_logger.info(_prefix + ">>>> Deleted " + delCount + " records from schema '" + schema + "' in table '" + shortTabName + "', olderThan='" + olderThan + "'." + dryRunComment);
 		}
 		catch(SQLException ex)
 		{
-			_logger.error(_prefix + "Problems deleting records from schema '"+schema+"' in table '"+shortTabName+"' using SQL=|"+sql+"|. Continuing anyway... Caught: "+ex);
+			_logger.error(_prefix + "Problems deleting records from schema '" + schema + "' in table '" + shortTabName + "' using SQL=|" + sql + "|. Continuing anyway... Caught: " + ex);
 		}
 		return delCount;
 	}
@@ -378,10 +377,14 @@ extends Task
 		String shortTabName = CentralPersistWriterBase.getTableName(conn, null, table, null, false);
 
 		String sql = null;
-//		String sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
+		String sqlGetOldestEntry = null;
 		if      (Table.CENTRAL_VERSION_INFO  .equals(table)) return 0; // Do not delete from this
 		else if (Table.CENTRAL_GRAPH_PROFILES.equals(table)) return 0; // Do not delete from this
-		else if (Table.CENTRAL_SESSIONS      .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime"+rq+" < ?";
+		else if (Table.CENTRAL_SESSIONS      .equals(table)) 
+		{
+			sql               = "delete from " + fullTabName + " where " + lq+"SessionStartTime"+rq + " < ? ";
+			sqlGetOldestEntry = "select min(" + lq+"SessionStartTime"+rq + ") from " + fullTabName;
+		}
 
 		if (StringUtil.isNullOrBlank(sql))
 			return 0;
@@ -390,20 +393,41 @@ extends Task
 		if (_dryRun)
 		{
 			sql += " and 1=2 -- DRY-RUN";
-			dryRunComment = "... DRY-RUN: SQL=|"+sql+"|, olderThan='"+olderThan+"'.";
+			dryRunComment = "... DRY-RUN: SQL=|" + sql + "|, olderThan='" + olderThan + "'.";
 		}
-			
+
+		// do DELETE
 		int delCount = -99;
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql))
 		{
 			pstmnt.setTimestamp(1, olderThan);
 			delCount = pstmnt.executeUpdate();
-			_logger.info(_prefix + ">>>> Deleted "+delCount+" records from DbxCentral table '"+shortTabName+"'." + dryRunComment);
+			_logger.info(_prefix + ">>>> Deleted " + delCount + " records from DbxCentral table '" + shortTabName + "', olderThan='" + olderThan + "'." + dryRunComment);
 		}
 		catch(SQLException ex)
 		{
-			_logger.error(_prefix + "Problems deleting records from DbxCentral table '"+shortTabName+"' using SQL=|"+sql+"|. Continuing anyway... Caught: "+ex);
+			_logger.error(_prefix + "Problems deleting records from DbxCentral table '" + shortTabName + "' using SQL=|" + sql + "|. Continuing anyway... Caught: " + ex);
 		}
+		
+		// Get oldest record, and print it...
+		sql = sqlGetOldestEntry;
+		if (delCount >= 0)
+		{
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				Timestamp oldestTs = null;
+				while (rs.next())
+				{
+					oldestTs = rs.getTimestamp(1);
+				}
+				_logger.info(_prefix + ">>>> Oldest 'SessionStartTime' is '" + oldestTs + "' from DbxCentral table '" + shortTabName + "'.");
+			}
+			catch(SQLException ex)
+			{
+				_logger.error(_prefix + "Problems getting last 'SessionStartTime' from DbxCentral table '" + shortTabName + "' using SQL=|" + sql + "|. Continuing anyway... Caught: " + ex);
+			}
+		}
+		
 		return delCount;
 	}
 	
@@ -469,13 +493,13 @@ extends Task
 		
 		// TODO: delete TOP #### from ... in a loop so we do not use up to much transaction log for some databases
 		
-		String sql = "delete from " + lq+schema+rq + "." + lq+tabName+rq + " where "+lq+"SessionSampleTime"+rq+" < ?";
+		String sql = "delete from " + lq+schema+rq + "." + lq+tabName+rq + " where " + lq+"SessionSampleTime"+rq + " < ? ";
 
 		String dryRunComment = "";
 		if (_dryRun)
 		{
 			sql += " and 1=2 -- DRY-RUN";
-			dryRunComment = "... DRY-RUN: SQL=|"+sql+"|, olderThan='"+olderThan+"'.";
+			dryRunComment = "... DRY-RUN: SQL=|" + sql + "|, olderThan='" + olderThan + "'.";
 		}
 
 		long startTime = System.currentTimeMillis();
@@ -483,11 +507,11 @@ extends Task
 		{
 			pstmnt.setTimestamp(1, olderThan);
 			int delCount = pstmnt.executeUpdate();
-			_logger.info(_prefix + ">>>> Deleted "+delCount+" records from schema '"+schema+"' in table '"+tabName+"'. ["+TimeUtils.msDiffNowToTimeStr(startTime)+"]" + dryRunComment);
+			_logger.info(_prefix + ">>>> Deleted " + delCount + " records from schema '" + schema + "' in table '" + tabName + "'. [" + TimeUtils.msDiffNowToTimeStr(startTime) + "], olderThan='" + olderThan + "'." + dryRunComment);
 		}
 		catch(SQLException ex)
 		{
-			_logger.error(_prefix + "Problems deleting records from schema '"+schema+"' in table '"+tabName+"' using SQL=|"+sql+"|. Continuing anyway... Caught: "+ex);
+			_logger.error(_prefix + "Problems deleting records from schema '" + schema + "' in table '" + tabName + "' using SQL=|" + sql + "|. Continuing anyway... Caught: " + ex);
 		}
 	}
 

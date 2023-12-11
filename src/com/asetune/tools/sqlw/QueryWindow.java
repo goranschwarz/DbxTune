@@ -137,7 +137,6 @@ import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
-import javax.swing.event.ChangeEvent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.PopupMenuEvent;
@@ -217,7 +216,6 @@ import com.asetune.gui.ResultSetMetaDataViewDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.AbstractComponentDecorator;
-import com.asetune.gui.swing.DeferredChangeListener;
 import com.asetune.gui.swing.EventQueueProxy;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTableFilter;
@@ -332,6 +330,10 @@ import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 import com.asetune.utils.WatchdogIsFileChanged;
 import com.asetune.xmenu.TablePopupFactory;
+import com.microsoft.sqlserver.jdbc.ISQLServerMessage;
+import com.microsoft.sqlserver.jdbc.ISQLServerMessageHandler;
+import com.microsoft.sqlserver.jdbc.SQLServerError;
+import com.microsoft.sqlserver.jdbc.SQLServerInfoMessage;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
@@ -7995,16 +7997,22 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			int    msgSeverity = -1;
 			String objectText  = null;
 
+			StringBuilder sb = new StringBuilder();
+
 			// Create a "common" EedInfo, which is a "container" class that contains all different EedInfo variants
+			// This for both Sybase and SQL Server
 			CommonEedInfo ceedi = new CommonEedInfo(sqe);
 				
-			StringBuilder sb = new StringBuilder();
+			if (_logger.isDebugEnabled() || Configuration.getCombinedConfiguration().getBooleanProperty("sqlw.debug.srvMsg", false))
+				sb.append("DEBUG: classType: " + sqe.getClass().getName() + ", ceedi.hasEedInfo()=" + ceedi.hasEedInfo() + "\n");
+
 			int scriptRow = -1;
-//			if (sqe instanceof EedInfo) // Message from jConnect
 			if (ceedi.hasEedInfo())
 			{
-				// Error is using the addtional TDS error data.
-//				EedInfo eedi = (EedInfo) sqe;
+				if (_logger.isDebugEnabled() || Configuration.getCombinedConfiguration().getBooleanProperty("sqlw.debug.srvMsg", false))
+					sb.append("DEBUG: ErrorCode=" + ceedi.getErrorCode() + ", Severity=" + ceedi.getSeverity() + ", State=" + ceedi.getState() + ", ServerName='" + ceedi.getServerName() + "', LineNumber=" + ceedi.getLineNumber() + ", ProcedureName='" + ceedi.getProcedureName() + "', Message=" + ceedi.getMessage() + "'.\n");
+
+				// Error is using the additional TDS error data.
 				msgSeverity  = ceedi.getSeverity();
 				
 				// Try to figgure out what we should write out in the 'script row'
@@ -8174,7 +8182,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				else
 					sb.append(msg+"\n");
 
-			} // end: if(sqe instanceof EedInfo) -- jConnect message
+			} // end: hasEedInfo()
 			else
 			{
 				// jConnect: SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
@@ -8381,6 +8389,35 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			}
 			if (conn instanceof TdsConnection)
 				((TdsConnection)conn).setSybMessageHandler(newMsgHandler);
+		}
+
+		if (conn instanceof SqlServerConnection)
+		{
+			ISQLServerMessageHandler newMsgHandler = new ISQLServerMessageHandler()
+			{
+				@Override
+				public ISQLServerMessage messageHandler(ISQLServerMessage srvMsg)
+				{
+					// Add it to the progress dialog
+					progress.addMessage(srvMsg.toSqlExceptionOrSqlWarning());
+
+					if (srvMsg instanceof SQLServerInfoMessage)
+					{
+						incSqlWarningCount();
+					}
+
+					if (srvMsg instanceof SQLServerError) 
+					{
+						incSqlExceptionCount();
+
+						SQLServerError errorMsg = (SQLServerError)srvMsg;
+						srvMsg = errorMsg.toSQLServerInfoMessage();
+					}
+					
+					return srvMsg;
+				}
+			};
+			((SqlServerConnection)conn).setMessageHandler(newMsgHandler);
 		}
 
 		// Vendor specific setting before we start to execute
@@ -9028,6 +9065,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						}
 						catch (SQLException ex)
 						{
+//System.out.println(">>>>>>>>>> SQLW.caught(SQLException): ex=" + ex);
 							_logger.debug("Caught SQL Exception, get the stacktrace if in debug mode...", ex);
 
 							incSqlExceptionCount();
@@ -9246,6 +9284,10 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			// Restore old message handler
 			if (conn instanceof TdsConnection)
 				((TdsConnection)conn).restoreSybMessageHandler();
+
+			// Restore old message handler
+			if (conn instanceof SqlServerConnection)
+				((SqlServerConnection)conn).restoreMessageHandler();
 		}
 		
 		// In some cases, some of the area in not repainted

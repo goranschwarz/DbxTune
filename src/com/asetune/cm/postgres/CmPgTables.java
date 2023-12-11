@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
@@ -199,7 +200,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DEAD_ROWS,
 			"Number of Dead Rows per Database", 	                // Menu CheckBox text
 			"Number of Dead Rows per Database(n_dead_tup) per Database ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph

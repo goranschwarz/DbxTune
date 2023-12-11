@@ -62,6 +62,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI>CmOsVmstat:  for Linux:   Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
 		<LI>CmOsMeminfo: for Windows: Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
+		<LI>NO-GUI now starts a Management Web Server (localhost:89##), so we can do some management of configuration etc from DbxCentral web ui<br>
+            Note: This is still in development...</LI>
+		<LI>Added extra "Graph Properties", so individual graphs can set "sampleType" to other than "AUTO" (for example Disk Space Available can have MIN_OVER_SAMPLES)</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -100,16 +103,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
-	 			<li>To version 2.1.214        Component: H2 Database</li>
-	 			<li>To version 9.4.51         Component: Jetty Webserver</li>
-	 			<li>To version 12.4.1         Component: MS SQL Server JDBC Driver</li>
+	 			<li>To version 2.1.214          Component: H2 Database</li>
+	 			<li>To version 9.4.53           Component: Jetty Webserver</li>
+	 			<li>To version 12.5.0 snapshot  Component: MS SQL Server JDBC Driver</li>
+	 			<li>To version 8.2.0            Component: MySQL JDBC Driver</li>
+	 			<li>To version 42.6.0           Component: Postgres JDBC Driver</li>
 
-	 			<li>To version 0.2.7          Component: Jsch (replacing ganymed-ssh2)</li>
+	 			<li>To version 0.2.7            Component: Jsch (replacing ganymed-ssh2)</li>
 
-	 			<li>To version 3.7.0          Component: jquery</li>
-	 			<li>To version 1.13.2         Component: jquery UI</li>
-	 			<li>To version 2.9.2          Component: jquery-contextmenu</li>
-	 			<li>To version 3.1            Component: bootstrap-daterangepicker</li>
+	 			<li>To version 3.7.0            Component: jquery</li>
+	 			<li>To version 1.13.2           Component: jquery UI</li>
+	 			<li>To version 2.9.2            Component: jquery-contextmenu</li>
+	 			<li>To version 3.1              Component: bootstrap-daterangepicker</li>
 			</ul>
 		</LI>
 	</UL>
@@ -144,6 +149,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>'Show Local DbxCentral (OS) Metrics' has been added as a "Profile" so it can easily be accessed at the start page</LI>
 		<LI>In 'Overview', added links to 'Show Local DbxCentral (OS) Metrics'</LI>
 		<LI>Local Metrics: After startup, some alarms are diabled for 5 minutes (during restart, there will be "heavy load" due to all DbxTune collectors starts at the same time.</LI>
+		<LI>Added "Exception handler" to intercept some Exceptions and restart the server if they happens (like OutOfMemoryError and H2 'The database has been closed')</LI>
+		<LI>PCS JDBC Cleaner -- added some more trace statements to detect what oldest date that will be deleted</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -251,6 +258,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DbmsObjectIdCache - Handle error 976 -- The target database, 'xxx', is participating in an availability group and is currently not accessible for queries.</LI>
 		<LI>Added SqlAgentJobInfoCache, which get's reloaded every 4 hour. (set refresh rate with: SqlAgentJobInfoCache.refresh.interval.minutes=###)</LI>
 		<LI>All CounterModels with column "program_name" and it contains a JobId and StepId the real names will be used from SqlAgentJobInfoCache (disable with: SqlServerTune.CmAny.resolve.sqlAgent.programName.enable=false)</LI>
+		<LI>PCS Transfer new QueryStore tables for SQL Server 2022</LI>
 
 		<LI>Added Alarm: <b>AlarmEventMemoryGrantWait   </b> -- Used by CM 'CmMemoryGrantsSum' to alarm if we have anyone waiting to grab a memory grant.</LI>
 		<LI>Added Alarm: <b>AlarmEventLowOnWorkerThreads</b> -- which will be raised when we have 20 or less "worker threads" available (called from CmSummary)</LI>
@@ -367,6 +375,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPgActivity         </b> - if property 'CmPgActivity.sample.sslInfo=true' is set (default is false), then show new columns: ssl, ssl_version, ssl_cipher, ssl_bits, ssl_client_dn, sss_client_serial, sss_issuer_dn</LI>
 		<LI><b>CmPgActivity         </b> - The alarms 'StatementExecInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
 
+		<LI><b>CmPgArchive          </b> - When 'archived_mb_last_hour' is greater than 10240 MB (10 GB) then raise AlarmEventPgArchiveRate (property 'CmPgArchive.alarm.system.if.archived_mb_last_hour.gt=##')</LI>
+
 		<LI><b>CmPgBufferCache      </b> - new Collector -- Table names and size in the Buffer Cache -- Note: Depends on extenstion: pg_buffercache, which is created on first sample (if not exists)</LI>
 
 		<LI><b>CmPgProgAnalyze      </b> - new Collector -- Whenever ANALYZE is running, the pg_stat_progress_analyze view will contain a row for each backend that is currently running that command</LI>
@@ -435,6 +445,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Enhancement with the backslash commands. They can now have comments etc prior to them</LI>
 		<LI>\connect now works with with a section of code (multiple "go" batches)</LI>
 		<LI>\rsql Can now omit the --sql 'sql text' and have the SQL Text "after" the \rsql command (at the next couple of lines)</LI>
+		<LI>Changes for SQL Server JDBC Driver that supports message handler (new PR https://github.com/microsoft/mssql-jdbc/pull/2251 hopefully soon merged)<br>
+		    This enables us to see messages from long running statement that sends feedback messages (like <code>BACKUP DATABASE</code> or <code>RAISERROR ('...', 0, 1) WITH NOWAIT</code>)
+		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

@@ -66,6 +66,7 @@ implements ICentralPersistWriter
 	 * </ul> 
 	 */
 	public static int DBX_CENTRAL_DB_VERSION = 13;
+//	public static int DBX_CENTRAL_DB_VERSION = 14; // ok to reuse: 14 was scrapped which was the CollectorMgtHostname, CollectorMgtPort, CollectorMgtInfo
 	
 	
 	public enum Table
@@ -471,6 +472,9 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"CollectorSampleInterval" +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER     ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"CollectorCurrentUrl"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"CollectorInfoFile"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(true )+"\n");
+//				sbSql.append("   ,"+fill(lq+"CollectorMgtHostname"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(true )+"\n");
+//				sbSql.append("   ,"+fill(lq+"CollectorMgtPort"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER     ),20)+" "+getNullable(true )+"\n");
+//				sbSql.append("   ,"+fill(lq+"CollectorMgtInfo"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 512),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"NumOfSamples"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER     ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"LastSampleTime"          +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
@@ -850,12 +854,16 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("CollectorSampleInterval").append(rq).append(", "); // 10
 			sbSql.append(lq).append("CollectorCurrentUrl")    .append(rq).append(", "); // 11
 			sbSql.append(lq).append("CollectorInfoFile")      .append(rq).append(", "); // 12
-			sbSql.append(lq).append("NumOfSamples")           .append(rq).append(", "); // 13
+//			sbSql.append(lq).append("CollectorMgtHostname")   .append(rq).append(", "); // 13
+//			sbSql.append(lq).append("CollectorMgtPort")       .append(rq).append(", "); // 14
+//			sbSql.append(lq).append("CollectorMgtInfo")       .append(rq).append(", "); // 15
+			sbSql.append(lq).append("NumOfSamples")           .append(rq).append(", "); // 16
 			sbSql.append(lq).append("LastSampleTime")         .append(rq).append("");
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
+//				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
 		}
 		else if (type.equals(Table.CENTRAL_GRAPH_PROFILES))
 		{

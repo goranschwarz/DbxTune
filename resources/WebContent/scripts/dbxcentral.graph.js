@@ -1969,7 +1969,16 @@ class DbxGraph
 
 			if (_debug > 0)
 				console.log("DbxGraph: " + this._fullName + ", _yAxisScaleLabels="+this._yAxisScaleLabels, this._yAxisScaleLabels);
-			
+
+			// Get defaults (if not specified with initSampleType && initSampleValue)
+			if (this._initSampleType === "" && tmp.hasOwnProperty("sampleType")) {
+				this._initSampleType = tmp.sampleType;
+				console.log(">>>>>>>>>>>>>>>>>> srvName=" + this._serverName + ", cmName=" + this._cmName + ", graphName=" + this._graphName + ">>>> Using sampleType=|" + this._initSampleType + "|", tmp);
+			}
+			if (this._initSampleValue === "" && tmp.hasOwnProperty("sampleValue")) {
+				this._initSampleValue = tmp.sampleValue;
+				console.log(">>>>>>>>>>>>>>>>>> srvName=" + this._serverName + ", cmName=" + this._cmName + ", graphName=" + this._graphName + ">>>> Using sampleValue=|" + this._initSampleValue + "|", tmp);
+			}
 		} catch(e) {
 			console.log("Creating DbxGraph: problems parsing 'graphProps' = '" + this._graphProps + "'. Caught: " + e, e);
 		}
@@ -3271,7 +3280,9 @@ function dbxChartPrintApiHelp()
 			'  <li>ALL - Get all data points</li>' + 
 			'  <li>AUTO - Uses a automatic formula using MAX_OVER_SAMPLES, with a <code>sampleValue=320</code></li>' + 
 			'  <li>MAX_OVER_SAMPLES - Get MAX values over X number of data points</li>' + 
+			'  <li>MIN_OVER_SAMPLES - Get MIN values over X number of data points</li>' + 
 			'  <li>MAX_OVER_MINUTES - Get MAX values over X minutes of data points</li>' + 
+			'  <li>MIN_OVER_MINUTES - Get MIN values over X minutes of data points</li>' + 
 			'  <li>AVG_OVER_MINUTES - Get AVERAGE values over X minutes of data points</li>' + 
 			'  <li>SUM_OVER_MINUTES - Get SUM values over X minutes of data points</li>' + 
 			'</ul>' + 
@@ -3280,14 +3291,17 @@ function dbxChartPrintApiHelp()
 		'</tr>' +
 		'<tr>' + 
 			'<td>sampleValue</td>' + 
-			'<td>Used by <code>sampleType</code>' + 
+			'<td>Used by <code>sampleType</code> <br>' + 
+			'    NOTE: this is a <b>number</b>... sampleValue=360 (for XXX_OVER_SAMPLES) or sampleValue=10 (for XXX_OVER_MINUTES)' + 
 			'<ul>' + 
-			'  <li>ALL - not used</li>' + 
-			'  <li>AUTO - not used (same as specify <code>sampleType=MAX_OVER_SAMPLES&sampleValue=320</code>)</li>' + 
-			'  <li>MAX_OVER_SAMPLES - A number value...</li>' + 
-			'  <li>MAX_OVER_MINUTES - A number value...</li>' + 
-			'  <li>AVG_OVER_MINUTES - A number value...</li>' + 
-			'  <li>SUM_OVER_MINUTES - A number value... there are 60 minutes in one hour, and 1440 minutes in one day</li>' + 
+			'  <li>ALL - <code>sampleValue</code> will not be used.</li>' + 
+			'  <li>AUTO - <code>sampleValue</code> will not be used. (same as specify <code>sampleType=MAX_OVER_SAMPLES&sampleValue=360</code>)</li>' + 
+			'  <li>sampleValue=360   for: MAX_OVER_SAMPLES - A number value...</li>' + 
+			'  <li>sampleValue=360   for: MIN_OVER_SAMPLES - A number value...</li>' + 
+			'  <li>sampleValue=10    for: MAX_OVER_MINUTES - A number value... like: 10 for ten minutes</li>' + 
+			'  <li>sampleValue=10    for: MIN_OVER_MINUTES - A number value... like: 10 for ten minutes</li>' + 
+			'  <li>sampleValue=10    for: AVG_OVER_MINUTES - A number value... like: 10 for ten minutes</li>' + 
+			'  <li>sampleValue=10    for: SUM_OVER_MINUTES - A number value... there are 60 minutes in one hour, and 1440 minutes in one day</li>' + 
 			'</ul>' + 
 			'<b>default:</b> ""<br>' + 
 			'</td>' + 

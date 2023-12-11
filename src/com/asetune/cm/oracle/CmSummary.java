@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -133,23 +134,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_xxx              = new String[] { "Hour", "Minute", "Second"};
-//		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
-//		String[] labels_connection       = new String[] { "UserConnections (abs)", "distinctLogins (abs)" };
-//		String[] labels_openTran         = new String[] { "Seconds" };
-//		String[] labels_transaction      = new String[] { "user commits", "user rollbacks" };
-//		
-//		addTrendGraphData(GRAPH_NAME_XXX,                new TrendGraphDataPoint(GRAPH_NAME_XXX,                labels_xxx,           LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction,   LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection,    LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran,      LabelType.Static));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_XXX,
 			"Dummy Graph", 	                        // Menu CheckBox text
 			"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Hour", "Minute", "Second"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -161,7 +150,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANSACTION,
 			"Transaction per second",    // Menu CheckBox text
 			"Transaction per Second ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -173,7 +162,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                     // Menu CheckBox text
 			"Number of Concurrently Blocking Locks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -185,7 +174,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users", 	          // Menu CheckBox text
 			"Connections/Users connected to Oracle ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -197,7 +186,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction",     // Menu CheckBox text
 			"Oldest Open Transaction, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -206,70 +195,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 		
-		
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_XXX,
-////				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-////				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
-//				"Dummy Graph", 	                        // Menu CheckBox text
-//				"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_xxx, 
-//				true,  // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
-//				"Transaction per second",    // Menu CheckBox text
-//				"Transaction per Second ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//				labels_transaction, 
-//				false,   // is Percent Graph
-//				this, 
-//				true,   // visible at start
-//				0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
-//				"Blocking Locks", 	                     // Menu CheckBox text
-//				"Number of Concurrently Blocking Locks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_blockingLocks, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
-//				"Connections/Users", 	          // Menu CheckBox text
-//				"Connections/Users connected to Oracle ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_connection, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-//				"Oldest Open Transaction",     // Menu CheckBox text
-//				"Oldest Open Transaction, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_openTran, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

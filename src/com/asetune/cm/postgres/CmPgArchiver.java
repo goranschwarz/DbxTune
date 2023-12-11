@@ -31,16 +31,24 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.postgres.AlarmEventPgArchiveError;
+import com.asetune.alarm.events.postgres.AlarmEventPgArchiveRate;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.os.CmOsDiskSpace;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.IDbmsConfigEntry;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
-import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MovingAverageCounterManager;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
 
 /**
@@ -133,6 +141,8 @@ extends CountersModel
 	//------------------------------------------------------------
 	public static final String GRAPH_NAME_ARCHIVED_COUNT = "ArchivedCount";
 	
+	public static final int ARCHIVE_CHUNK_IN_MB = 16; // 16 MB per archive chunk/count 
+
 //	@Override
 //	protected TabularCntrPanel createGui()
 //	{
@@ -172,7 +182,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ARCHIVED_COUNT,
 				"Archived Files Count", 	                // Menu CheckBox text
 				"Archived Files Count (archived_count) ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"archived_count"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -195,6 +205,34 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+	}
+	
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_ARCHIVED_COUNT.equals(name)) return true;  // Used locally
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+	
+	@Override
+	public void reset()
+	{
+		// deadlocks
+		if (true)
+		{
+			MovingAverageCounterManager.getInstance(CM_NAME, "archived_mb", 60).reset();
+		}
+		
+		super.reset();
 	}
 	
 	
@@ -243,10 +281,10 @@ extends CountersModel
 					alarmHandler.addAlarm( ae );
 				}
 			}
-		}
+		} // end: failed_count
 
 		//-------------------------------------------------------
-		// failed_count
+		// last_archived_in_seconds
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("last_archived_in_seconds"))
 		{
@@ -273,7 +311,80 @@ extends CountersModel
 					alarmHandler.addAlarm( ae );
 				}
 			}
-		}
+		} // end: last_archived_in_seconds
+
+		//-------------------------------------------------------
+		// archived_mb_last_hour
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("archived_mb_last_hour"))
+		{
+			int row = 0; // We only have 1 row in this CM, so rowId=0
+
+			double thresholdMb = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_archived_mb_last_hour, DEFAULT_alarm_archived_mb_last_hour);
+
+			int archived_count = cm.getDiffValueAsInteger(row, "archived_count", -1);
+			int archived_mb    = archived_count * ARCHIVE_CHUNK_IN_MB; // Every Archive Chunk/Count is 16 MB
+
+			double archivedMbInLastHour    = -1;
+			int    archivedCountInLastHour = -1;
+			if (archived_mb > 0)
+				archivedMbInLastHour = MovingAverageCounterManager.getInstance(CM_NAME, "archived_mb", 60).add(archived_mb).getSum(-1, true);
+
+			if (archivedMbInLastHour > 0)
+				archivedCountInLastHour = (int)archivedMbInLastHour / ARCHIVE_CHUNK_IN_MB;
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): thresholdMb=" + thresholdMb + ", archivedMbInLastHour=" + archivedMbInLastHour + ", archivedCountInLastHour=" + archivedCountInLastHour + ".");
+
+			if (archivedMbInLastHour > thresholdMb)
+			{
+				String extendedDescText = "";
+				String extendedDescHtml = "";
+
+				String configArchiveMode    = "-unknown-";
+				String configArchiveCommand = "-unknown-";
+				if (DbmsConfigManager.hasInstance())
+				{
+					IDbmsConfig dbmsConfig = DbmsConfigManager.getInstance();
+					
+					// archive_mode
+					IDbmsConfigEntry entry = dbmsConfig.getDbmsConfigEntry("archive_mode");
+					configArchiveMode = entry == null ? "-null-" : entry.getConfigValue();
+
+					// archive_command
+					entry = dbmsConfig.getDbmsConfigEntry("archive_command");
+					configArchiveCommand = entry == null ? "-null-" : entry.getConfigValue();
+				}
+
+				// Print Postgres Configuration: "archive_mode" and "archive_command"
+				extendedDescHtml += "Postgres Config 'archive_mode':    <code>" + configArchiveMode    + "</code><br>";
+				extendedDescHtml += "Postgres Config 'archive_command': <code>" + configArchiveCommand + "</code><br>";
+
+				// Graph: Archive Count
+				extendedDescHtml += "<br>"
+						+ "<b>Note:</b> Multiply 'archived_count' with " + ARCHIVE_CHUNK_IN_MB + " to get MB Archived.<br>"
+						+ getGraphDataHistoryAsHtmlImage(GRAPH_NAME_ARCHIVED_COUNT);
+				
+				// Info from: CmOsDiskSpace
+				CountersModel cmOsDiskSpace = getCounterController().getCmByName(CmOsDiskSpace.CM_NAME);
+				if (cmOsDiskSpace != null)
+				{
+					// Everything in CmOsDiskSpace ABS Counters to a HTML Table
+					extendedDescHtml += "<br><br>" + SwingUtils.tableToHtmlString(cmOsDiskSpace.getCounterDataAbs());
+
+					// And a graph 'Available' (for last hour)
+					extendedDescHtml += "<br><br>" + cmOsDiskSpace.getGraphDataHistoryAsHtmlImage(CmOsDiskSpace.GRAPH_NAME_AVAILABLE_MB);
+
+					// And a graph 'Percent Used' (for last hour)
+					extendedDescHtml += "<br><br>" + cmOsDiskSpace.getGraphDataHistoryAsHtmlImage(CmOsDiskSpace.GRAPH_NAME_USED_PCT);
+				}
+				
+				AlarmEvent ae = new AlarmEventPgArchiveRate(cm, thresholdMb, archivedMbInLastHour, archivedCountInLastHour);
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				
+				alarmHandler.addAlarm( ae );
+			}
+		} // end: archived_mb_last_hour
 	}
 
 
@@ -283,16 +394,20 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_last_archived_in_seconds   = CM_NAME + ".alarm.system.if.last_archived_in_seconds.gt";
 	public static final int     DEFAULT_alarm_last_archived_in_seconds   = Integer.MAX_VALUE; // approximately 68 year... so basically disabled
 
+	public static final String  PROPKEY_alarm_archived_mb_last_hour      = CM_NAME + ".alarm.system.if.archived_mb_last_hour.gt";
+	public static final int     DEFAULT_alarm_archived_mb_last_hour      = 10*1024; // 10 GB in last hour, "or 64 ArchiveCounts in 1 hour" (this is probably to small... at least for a *high* performing server)
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		
+
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
-		
+
 		list.add(new CmSettingsHelper("failed_count"            , isAlarmSwitch, PROPKEY_alarm_failed_count            , Integer.class, conf.getIntProperty(PROPKEY_alarm_failed_count            , DEFAULT_alarm_failed_count            ), DEFAULT_alarm_failed_count            , "If 'diff.failed_count' is greater than ## then send 'AlarmEventPgArchiveError'." ));
 		list.add(new CmSettingsHelper("last_archived_in_seconds", isAlarmSwitch, PROPKEY_alarm_last_archived_in_seconds, Integer.class, conf.getIntProperty(PROPKEY_alarm_last_archived_in_seconds, DEFAULT_alarm_last_archived_in_seconds), DEFAULT_alarm_last_archived_in_seconds, "If 'last_archived_in_seconds' is greater than ## then send 'AlarmEventPgArchiveError'." ));
+		list.add(new CmSettingsHelper("archive_mb_last_hour"    , isAlarmSwitch, PROPKEY_alarm_archived_mb_last_hour   , Integer.class, conf.getIntProperty(PROPKEY_alarm_archived_mb_last_hour   , DEFAULT_alarm_archived_mb_last_hour   ), DEFAULT_alarm_archived_mb_last_hour   , "If 'archived_mb_last_hour' is greater than ## MB then send 'AlarmEventPgArchiveRate'." ));
 
 		return list;
 	}

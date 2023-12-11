@@ -31,6 +31,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -133,7 +134,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_VERSION_STORE_USAGE,
 			"Version Store Usage by DBName, in MB", // Menu CheckBox text
 			"Version Store Usage by DBName, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,

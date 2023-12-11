@@ -37,6 +37,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.sqlserver.AlarmEventToxicWait;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -765,7 +766,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_TYPE_TIME,
 			"Server Wait, group by 'wait_type', 'wait_time_ms' Average", 	                   // Menu CheckBox text
 			"Server Wait, group by 'wait_type', 'wait_time_ms' Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -774,21 +775,10 @@ extends CountersModel
 			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
 			160);  // minimum height
 
-//		addTrendGraph(GRAPH_NAME_WAIT_CLASS_TIME,
-//			"Server Wait, group by 'WaitClass', 'wait_time_ms' Average", 	                   // Menu CheckBox text
-//			"Server Wait, group by 'WaitClass', 'wait_time_ms' Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			null,
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.WAITS,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
-//			160);  // minimum height
-
 		addTrendGraph(GRAPH_NAME_KNOWN_TOP_10_TIME,
 			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms'", 	                   // Menu CheckBox text
 			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"LCK_M_X", "LCK_M_U", "WRITELOG", "LCK_M_IX", "LATCH_EX", "ASYNC_NETWORK_IO", "SOS_SCHEDULER_YIELD", "PAGEIOLATCH_SH", "LCK_M_S", "CXPACKET"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -800,7 +790,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_KNOWN_TOP_10_COUNT,
 			"Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
 			"Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"LCK_M_X", "LCK_M_U", "WRITELOG", "LCK_M_IX", "LATCH_EX", "ASYNC_NETWORK_IO", "SOS_SCHEDULER_YIELD", "PAGEIOLATCH_SH", "LCK_M_S", "CXPACKET"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -813,7 +803,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TOXIC_TIME,
 			"Server Toxic Wait Types, by 'wait_time_ms'", 	                   // Menu CheckBox text
 			"Server Toxic Wait Types, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -825,7 +815,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TOXIC_COUNT,
 			"Server Toxic Wait Types, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
 			"Server Toxic Wait Types, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -837,7 +827,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TOXIC_TPW,
 			"Server Toxic Wait Types, by 'WaitTimePerCount'", 	                   // Menu CheckBox text
 			"Server Toxic Wait Types, by 'WaitTimePerCount' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -1176,8 +1166,8 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("WaitTime_RESOURCE_SEMAPHORE", isAlarmSwitch, PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE, Integer.class, conf.getIntProperty(PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE, DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE), DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE, "If 'wait_time_ms' for 'RESOURCE_SEMAPHORE' is greater than ## then send 'AlarmEventFIXME'." ));
-		list.add(new CmSettingsHelper("WaitTime_THREADPOOL"        , isAlarmSwitch, PROPKEY_alarm_WaitTime_THREADPOOL        , Integer.class, conf.getIntProperty(PROPKEY_alarm_WaitTime_THREADPOOL        , DEFAULT_alarm_WaitTime_THREADPOOL        ), DEFAULT_alarm_WaitTime_THREADPOOL        , "If 'wait_time_ms' for 'THREADPOOL' is greater than ## then send 'AlarmEventFIXME'." ));
+		list.add(new CmSettingsHelper("WaitTime_RESOURCE_SEMAPHORE", isAlarmSwitch, PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE, Integer.class, conf.getIntProperty(PROPKEY_alarm_WaitTime_RESOURCE_SEMAPHORE, DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE), DEFAULT_alarm_WaitTime_RESOURCE_SEMAPHORE, "If 'wait_time_ms' for 'RESOURCE_SEMAPHORE' is greater than ## then send 'AlarmEventToxicWait'." ));
+		list.add(new CmSettingsHelper("WaitTime_THREADPOOL"        , isAlarmSwitch, PROPKEY_alarm_WaitTime_THREADPOOL        , Integer.class, conf.getIntProperty(PROPKEY_alarm_WaitTime_THREADPOOL        , DEFAULT_alarm_WaitTime_THREADPOOL        ), DEFAULT_alarm_WaitTime_THREADPOOL        , "If 'wait_time_ms' for 'THREADPOOL' is greater than ## then send 'AlarmEventToxicWait'." ));
 
 		return list;
 	}

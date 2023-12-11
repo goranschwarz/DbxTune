@@ -55,6 +55,7 @@ import com.asetune.alarm.events.sqlserver.AlarmEventAgSecondaryCommitTimeLag;
 import com.asetune.alarm.events.sqlserver.AlarmEventAgSplitBrain;
 import com.asetune.alarm.events.sqlserver.AlarmEventAgUnexpectedState;
 import com.asetune.alarm.events.sqlserver.AlarmEventBagRolePercentSkewed;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -245,7 +246,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITE_TRANS,
 				"AlwaysOn Write Transactions Per Sec",        // Menu CheckBox text
 				"AlwaysOn Write Transactions Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -257,7 +258,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BYTES_TO_REPLICA,
 				"AlwaysOn Bytes Sent to Replica Per Sec",        // Menu CheckBox text
 				"AlwaysOn Bytes Sent to Replica Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -269,7 +270,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RECOVERY_QUEUE,
 				"AlwaysOn Recovery Queue, # Log Records",        // Menu CheckBox text
 				"AlwaysOn Recovery Queue, # Log Records ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -281,7 +282,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB,
 				"AlwaysOn Log Send Queue Size In KB",        // Menu CheckBox text
 				"AlwaysOn Log Send Queue Size In KB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -293,7 +294,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME,
 				"AlwaysOn Secondary Commit Lag Time, in Seconds",        // Menu CheckBox text
 				"AlwaysOn Secondary Commit Lag Time, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,

@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -192,7 +193,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_EXEC_SEC,
 				"SQL Statements Per DB - Total Statements Executed/sec", // Menu CheckBox text
 				"SQL Statements Per DB - Total Statements Executed/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -204,7 +205,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_BATCHES_SEC,
 				"SQL Statements Per DB - SQL Batches Executed/sec", // Menu CheckBox text
 				"SQL Statements Per DB - SQL Batches Executed/secc ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -216,7 +217,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_STMNT_CACHE_SEC,
 				"SQL Statements Per DB - SQL in Statement Cache Executed/sec", // Menu CheckBox text
 				"SQL Statements Per DB - SQL in Statement Cache Executed/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -228,7 +229,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_DYNAMIC_SQL_SEC,
 				"SQL Statements Per DB - Dynamic SQL/sec", // Menu CheckBox text
 				"SQL Statements Per DB - Dynamic SQL/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -240,7 +241,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_STMNT_IN_PROC_SEC,
 				"SQL Statements Per DB - Statements in Procedures Executed/sec", // Menu CheckBox text
 				"SQL Statements Per DB - Statements in Procedures Executed/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -254,7 +255,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_EXEC_TIME,
 				"SQL Statements Per DB - Sum Execution Time in ms", // Menu CheckBox text
 				"SQL Statements Per DB - Sum Execution Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -266,7 +267,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_LOGICAL_READ,
 				"SQL Statements Per DB - Sum Logical Reads", // Menu CheckBox text
 				"SQL Statements Per DB - Sum Logical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -278,7 +279,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_PHYSICAL_READ,
 				"SQL Statements Per DB - Sum Physical Reads", // Menu CheckBox text
 				"SQL Statements Per DB - Sum Physical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -290,7 +291,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_CPU_TIME,
 				"SQL Statements Per DB - Sum CPU Time in ms", // Menu CheckBox text
 				"SQL Statements Per DB - Sum CPU Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -302,7 +303,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_WAIT_TIME,
 				"SQL Statements Per DB - Sum Wait Time in ms", // Menu CheckBox text
 				"SQL Statements Per DB - Sum Wait Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -314,7 +315,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_ROWS_AFFECTED,
 				"SQL Statements Per DB - Sum Number of Rows Affected", // Menu CheckBox text
 				"SQL Statements Per DB - Sum Number of Rows Affected ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -328,7 +329,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_ERROR_COUNT,
 				"SQL Statements Per DB - Errors/sec", // Menu CheckBox text
 				"SQL Statements Per DB - Errors/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.OPERATIONS,
