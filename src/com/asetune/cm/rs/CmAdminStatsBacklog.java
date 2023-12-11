@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -128,15 +129,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "-added-at-runtime-" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE, labels, LabelType.Dynamic));
-
 		addTrendGraph(GRAPH_NAME_QUEUE_SIZE,
 			"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Menu CheckBox text
 			"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -145,67 +141,11 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 		
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
-//				"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Menu CheckBox text
-//				"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-//		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
-//		{
-//			int size = 0;
-//			for (int i = 0; i < this.size(); i++)
-//			{
-//				String monitorVal = this.getAbsString       (i, "Monitor");
-//				Double Obs        = this.getAbsValueAsDouble(i, "Obs");
-//				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
-//					size++;
-//			}
-//			
-//			if (size == 0)
-//			{
-//				_logger.info("Skipping adding entry to graph '"+tgdp.getName()+"'. There are NO 'Monitor' (SQMRBacklogSeg) values with a 'Obs' value above 0");
-//			}
-//			else
-//			{
-//				// Write 1 "line" for every SQMRBacklogSeg row
-//				Double[] dArray = new Double[size];
-//				String[] lArray = new String[dArray.length];
-//				int i2 = 0;
-////				for (int i = 0; i < dArray.length; i++)
-//				for (int i = 0; i < this.size(); i++)
-//				{
-//					String monitorVal = this.getAbsString       (i, "Monitor");
-//					Double Obs        = this.getAbsValueAsDouble(i, "Obs");
-//					if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
-//					{
-//						lArray[i2] = this.getAbsString       (i, "Instance");
-//						dArray[i2] = this.getAbsValueAsDouble(i, "Last");
-//						i2++;
-//					}
-//				}
-//
-//				// Set the values
-//				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//			}
-//		}
 		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
 		{
 			// STEP 1 -- put all desired/wanted entries in a MAP with <LabelName, RowPos> so we in STEP 2, easily can add desired records to the GraphDataArray

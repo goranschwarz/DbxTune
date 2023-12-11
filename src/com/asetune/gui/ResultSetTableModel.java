@@ -4098,12 +4098,13 @@ public class ResultSetTableModel
 
 		for (int c=0; c<getColumnCount(); c++)
 		{
-			boolean isColumnNumber = true;
+			boolean isColumnNumber  = true;
+			boolean isColumnBoolean = true;
 			
 			for (int r=0; r<getRowCount(); r++)
 			{
-//System.out.println("----: guessDatatypes(): c="+c+", r="+r);
 				Object colObject = getValueAt(r, c);
+//System.out.println("----: guessDatatypes()[-check-for-NUMBER-]: c="+c+", r="+r+", value="+colObject);
 				if (colObject == null)
 					continue;
 				
@@ -4111,18 +4112,6 @@ public class ResultSetTableModel
 					continue;
 					
 				
-//				try 
-//				{
-//					// NOTE: This is *very* inefficient way... maybe something better here...
-//					NumberUtils.toNumber(colObject); 
-//				}
-//				catch (NumberFormatException ignore) 
-//				{
-//					isColumnNumber = false;
-////System.out.println("CHECK: guessDatatypes(): c="+c+", r="+r+", value='"+colObject+"' is NOT A NUMBER");
-//					break;
-//				}
-
 				try
 				{
 					if (colObject instanceof String)
@@ -4158,11 +4147,69 @@ public class ResultSetTableModel
 				catch (ParseException eNum)
 				{
 					isColumnNumber = false;
-//System.out.println("CHECK: guessDatatypes(): c="+c+", r="+r+", value='"+colObject+"' is NOT A NUMBER");
+//System.out.println("CHECK: guessDatatypes()[-check-for-NUMBER-]: c="+c+", r="+r+", value='"+colObject+"' is NOT A NUMBER");
 					break;
 				}
 			}
 			
+			// Check for Boolean
+			if ( isColumnNumber )
+			{
+				isColumnBoolean = false;
+			}
+			else
+			{
+				for (int r=0; r<getRowCount(); r++)
+				{
+					Object colObject = getValueAt(r, c);
+//System.out.println("----: guessDatatypes()[-check-for-BOOLEAN-]: c="+c+", r="+r+", value="+colObject);
+					if (colObject == null)
+						continue;
+					
+					if (NULL_REPLACE.equals(colObject))
+						continue;
+
+					String strVal = (colObject instanceof String) ? (String)colObject : colObject.toString();
+					strVal = strVal.trim();
+					
+					boolean isBoolean = strVal.equalsIgnoreCase("true") || strVal.equalsIgnoreCase("false");
+
+					if ( ! isBoolean )
+					{
+						isColumnBoolean = false;
+//System.out.println("CHECK: guessDatatypes()[-check-for-BOOLEAN-]: c="+c+", r="+r+", value='"+colObject+"' is NOT A BOOLEAN");
+						break;
+					}
+				}
+			}
+
+			//--------------------------------------------
+			// Now convert data for this column into...
+			//--------------------------------------------
+//System.out.println("CONVERT: guessDatatypes()[-convert-]: c="+c+". isColumnBoolean="+isColumnBoolean+", isColumnNumber="+isColumnNumber);
+			if (isColumnBoolean)
+			{
+				// Loop all rows and make it into a Boolean
+				for (int r=0; r<getRowCount(); r++)
+				{
+					Object colObject = getValueAt(r, c);
+					if (colObject == null)
+						continue;
+					
+					if (NULL_REPLACE.equals(colObject))
+						continue;
+
+					Boolean val   = null;
+					String strVal = (colObject instanceof String) ? (String)colObject : colObject.toString();
+					strVal = strVal.trim();
+					
+					val = strVal.equalsIgnoreCase("true");
+
+					setValueAtWithOverride(val, r, c);
+					_classType[c+1] = val.getClass(); // Could we use Boolean.class here instead
+				}
+			} // end: isBoolean
+
 			if (isColumnNumber)
 			{
 //System.out.println("IS NUMBER COLUMN: guessDatatypes(): c="+c);
@@ -4201,8 +4248,8 @@ public class ResultSetTableModel
 					{
 					}
 				}
-			}
-		}
+			} // end: isNumber
+		} // end: loop COLUMNS
 	}
 	
 	/**

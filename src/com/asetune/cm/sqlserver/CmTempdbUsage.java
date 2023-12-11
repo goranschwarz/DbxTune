@@ -27,6 +27,7 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -161,7 +162,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_USAGE_SUM_FULL,
 			"Tempdb Usage by Object Type, in MB, All", // Menu CheckBox text
 			"Tempdb Usage by Object Type, in MB, All ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,
@@ -174,7 +175,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_USAGE_SUM_SMALL,
 			"Tempdb Usage by Object Type, in MB, Subset", // Menu CheckBox text
 			"Tempdb Usage by Object Type, in MB, Subset ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,

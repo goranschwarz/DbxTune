@@ -35,6 +35,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLowOsDiskFreeSpace;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -130,7 +131,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_USED_MB,
 			"df: Space Used in MB, at MountPoint", 	                                    // Menu CheckBox text
 			"df: Space Used in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			Category.DISK,
@@ -143,7 +144,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_USED_PCT,
 			"df: Space Used in Percent, at MountPoint", 	                                    // Menu CheckBox text
 			"df: Space Used in Percent, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			Category.DISK,
@@ -156,7 +157,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_AVAILABLE_MB,
 			"df: Space Available in MB, at MountPoint", 	                                    // Menu CheckBox text
 			"df: Space Available in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			null, 
 			LabelType.Dynamic,
 			Category.DISK,
@@ -631,12 +632,13 @@ extends CounterModelHostMonitor
 		List<CmSettingsHelper> list = new ArrayList<>();
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		CmSettingsHelper.Type isPreCheck    = CmSettingsHelper.Type.IS_PRE_CHECK;
 
-		list.add(new CmSettingsHelper("SkipMountNameRegex",               PROPKEY_alarm_SkipMountNameRegex, String .class, conf.getProperty   (PROPKEY_alarm_SkipMountNameRegex, DEFAULT_alarm_SkipMountNameRegex), DEFAULT_alarm_SkipMountNameRegex, "Skip entries where 'MountedOn' mathing this regexp", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("SkipSizeBelowMb",                  PROPKEY_alarm_SkipSizeBelowMb   , Integer.class, conf.getIntProperty(PROPKEY_alarm_SkipSizeBelowMb   , DEFAULT_alarm_SkipSizeBelowMb   ), DEFAULT_alarm_SkipSizeBelowMb   , "Skip entries where 'Size-MB' is less than this value." ));
+		list.add(new CmSettingsHelper("SkipMountNameRegex", isPreCheck   , PROPKEY_alarm_SkipMountNameRegex, String .class, conf.getProperty   (PROPKEY_alarm_SkipMountNameRegex, DEFAULT_alarm_SkipMountNameRegex), DEFAULT_alarm_SkipMountNameRegex, "Skip entries where 'MountedOn' mathing this regexp", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("SkipSizeBelowMb"   , isPreCheck   , PROPKEY_alarm_SkipSizeBelowMb   , Integer.class, conf.getIntProperty(PROPKEY_alarm_SkipSizeBelowMb   , DEFAULT_alarm_SkipSizeBelowMb   ), DEFAULT_alarm_SkipSizeBelowMb   , "Skip entries where 'Size-MB' is less than this value." ));
 
-		list.add(new CmSettingsHelper("LowFreeSpaceInMb",  isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInMb  , String.class,  conf.getProperty   (PROPKEY_alarm_LowFreeSpaceInMb  , DEFAULT_alarm_LowFreeSpaceInMb  ), DEFAULT_alarm_LowFreeSpaceInMb  , "If 'Available-MB' is less than ## then send 'AlarmEventLowOsDiskFreeSpace'. format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)",      new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowFreeSpaceInPct", isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInPct , String.class,  conf.getProperty   (PROPKEY_alarm_LowFreeSpaceInPct , DEFAULT_alarm_LowFreeSpaceInPct ), DEFAULT_alarm_LowFreeSpaceInPct , "If 'UsedPct' is greater than ##.# Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)", new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowFreeSpaceInMb"  , isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInMb  , String.class,  conf.getProperty   (PROPKEY_alarm_LowFreeSpaceInMb  , DEFAULT_alarm_LowFreeSpaceInMb  ), DEFAULT_alarm_LowFreeSpaceInMb  , "If 'Available-MB' is less than ## then send 'AlarmEventLowOsDiskFreeSpace'. format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)",      new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowFreeSpaceInPct" , isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInPct , String.class,  conf.getProperty   (PROPKEY_alarm_LowFreeSpaceInPct , DEFAULT_alarm_LowFreeSpaceInPct ), DEFAULT_alarm_LowFreeSpaceInPct , "If 'UsedPct' is greater than ##.# Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)", new MapNumberValidator()));
 
 		return list;
 	}

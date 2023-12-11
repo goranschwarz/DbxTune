@@ -163,11 +163,11 @@ extends SqlServerAbstract
 		{
 			if (allConfRstm == null)
 			{
-				allConfRstm = new ResultSetTableModel(entry._confRstm, "allConfRstm", true);
+				allConfRstm = new ResultSetTableModel(entry._qsConfRstm, "allConfRstm", true);
 			}
 			else
 			{
-				try { allConfRstm.add(entry._confRstm); }
+				try { allConfRstm.add(entry._qsConfRstm); }
 				catch(ModelMissmatchException ex) { _logger.error("Problems adding Query Store Configuration for database ''.", ex);}
 			}
 		}
@@ -408,15 +408,17 @@ extends SqlServerAbstract
 			//-----------------------------------------------------
 			if (_topCpuRstm  == null) _topCpuRstm  = new ResultSetTableModel(entry._topCpuRstm , "SUMMARY-CPU"   , false);
 			if (_topWaitRstm == null) _topWaitRstm = new ResultSetTableModel(entry._topWaitRstm, "SUMMARY-WAIT"  , false);
-			if (_confRstm    == null) _confRstm    = new ResultSetTableModel(entry._confRstm   , "SUMMARY-CONFIG", false);
-			if (_recomRstm   == null) _recomRstm   = new ResultSetTableModel(entry._recomRstm  , "SUMMARY-RECOM" , false);
+			if (_qsConfRstm  == null) _qsConfRstm  = new ResultSetTableModel(entry._qsConfRstm , "SUMMARY-CONFIG", false);
+			if (_qsRecomRstm == null) _qsRecomRstm = new ResultSetTableModel(entry._qsRecomRstm, "SUMMARY-RECOM" , false);
+			if (_qsHintsRstm == null) _qsHintsRstm = new ResultSetTableModel(entry._qsHintsRstm, "SUMMARY-HINTS" , false);
 
 			try
 			{
 				_topCpuRstm .add(entry._topCpuRstm);
 				_topWaitRstm.add(entry._topWaitRstm);
-				_confRstm   .add(entry._confRstm);
-				_recomRstm  .add(entry._recomRstm);
+				_qsConfRstm .add(entry._qsConfRstm);
+				_qsRecomRstm.add(entry._qsRecomRstm);
+				_qsHintsRstm.add(entry._qsHintsRstm);
 			}
 			catch (ModelMissmatchException ex)
 			{
@@ -494,8 +496,9 @@ extends SqlServerAbstract
 		ResultSetTableModel _topCpuRstm;
 		ResultSetTableModel _cpuSqlTextRstm;
 		ResultSetTableModel _topWaitRstm;
-		ResultSetTableModel _confRstm;    // database_query_store_options
-		ResultSetTableModel _recomRstm;   // dm_db_tuning_recommendations
+		ResultSetTableModel _qsConfRstm;  // database_query_store_options
+		ResultSetTableModel _qsRecomRstm; // dm_db_tuning_recommendations
+		ResultSetTableModel _qsHintsRstm; // query_store_query_hints 
 
 		ExecutionPlanCollection _planCollectionCpu;
 		ExecutionPlanCollection _planCollectionWait;
@@ -702,13 +705,13 @@ extends SqlServerAbstract
 			//----------------------------------------------------
 			w.append("<br>\n");
 			w.append("<hr> \n");
-			if (_recomRstm == null)
+			if (_qsRecomRstm == null)
 			{
 				w.append("This SQL Server Version do NOT have 'Tuning Recommendation' in the Query Store. Needs at least SQL Server 2017.<br>\n");
 			}
 			else
 			{
-				if (_recomRstm.isEmpty())
+				if (_qsRecomRstm.isEmpty())
 				{
 					w.append("NO Tuning Recomendations from the Query Store subsystem.<br>");
 				}
@@ -716,12 +719,36 @@ extends SqlServerAbstract
 				{
 					w.append("Tuning Recomendations from the Quesry Store subsystem.<br>");
 
-					w.append("Row Count: " + _recomRstm.getRowCount() + "<br>\n");
-					w.append(toHtmlTable(_recomRstm));
-//					w.append(_recomRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+					w.append("Row Count: " + _qsRecomRstm.getRowCount() + "<br>\n");
+					w.append(toHtmlTable(_qsRecomRstm));
+//					w.append(_qsRecomRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 				}
 			}
 
+			//----------------------------------------------------
+			//---- Hints
+			//----------------------------------------------------
+			w.append("<br>\n");
+			w.append("<hr> \n");
+			if (_qsHintsRstm == null)
+			{
+				w.append("This SQL Server Version do NOT have 'Hints' in the Query Store. Needs at least SQL Server 2022.<br>\n");
+			}
+			else
+			{
+				if (_qsHintsRstm.isEmpty())
+				{
+					w.append("NO Hints from the Query Store subsystem.<br>");
+				}
+				else
+				{
+					w.append("Hints in the Quesry Store subsystem.<br>");
+
+					w.append("Row Count: " + _qsHintsRstm.getRowCount() + "<br>\n");
+					w.append(toHtmlTable(_qsHintsRstm));
+//					w.append(_qsHintsRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+				}
+			}
 			
 			// Section FOOTER
 			if (useBootstrap)
@@ -745,7 +772,10 @@ extends SqlServerAbstract
 		{
 			String sql = "";
 
-			boolean hasTable_query_store_wait_stats = DbUtils.checkIfTableExistsNoThrow(conn, null, _schemaName, "query_store_wait_stats");
+			boolean hasTable_query_store_wait_stats       = DbUtils.checkIfTableExistsNoThrow(conn, null, _schemaName, "query_store_wait_stats");
+			boolean hasTable_database_query_store_options = DbUtils.checkIfTableExistsNoThrow(conn, null, _schemaName, "database_query_store_options");
+			boolean hasTable_dm_db_tuning_recommendations = DbUtils.checkIfTableExistsNoThrow(conn, null, _schemaName, "dm_db_tuning_recommendations");
+			boolean hasTable_query_store_query_hints      = DbUtils.checkIfTableExistsNoThrow(conn, null, _schemaName, "query_store_query_hints");
 
 			// Create helper index (which is needed for performance)
 			if (hasTable_query_store_wait_stats)
@@ -771,15 +801,31 @@ extends SqlServerAbstract
 			//-----------------------------------------------------------
 			// database_query_store_options
 			//-----------------------------------------------------------
-			sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[database_query_store_options] \n";
-			_confRstm = executeQuery(conn, sql, false, _dbname + "_conf");
+			if (hasTable_database_query_store_options)
+			{
+				sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[database_query_store_options] \n";
+				_qsConfRstm = executeQuery(conn, sql, false, _dbname + "_conf");
+			}
 
 
 			//-----------------------------------------------------------
 			// dm_db_tuning_recommendations
 			//-----------------------------------------------------------
-			sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[dm_db_tuning_recommendations] \n";
-			_recomRstm = executeQuery(conn, sql, false, _dbname + "_conf");
+			if (hasTable_dm_db_tuning_recommendations)
+			{
+				sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[dm_db_tuning_recommendations] \n";
+				_qsRecomRstm = executeQuery(conn, sql, false, _dbname + "_recom");
+			}
+
+
+			//-----------------------------------------------------------
+			// query_store_query_hints
+			//-----------------------------------------------------------
+			if (hasTable_query_store_query_hints)
+			{
+				sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[query_store_query_hints ] \n";
+				_qsHintsRstm = executeQuery(conn, sql, false, _dbname + "_hints");
+			}
 
 
 			//-----------------------------------------------------------

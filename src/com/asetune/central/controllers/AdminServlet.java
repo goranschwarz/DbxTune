@@ -85,9 +85,11 @@ public class AdminServlet extends HttpServlet
 		
 		out.println("<table border=1 cellpadding=1>");
 		out.println("  <tr> <th> Operation Name            </th> <th> Description </th> </tr>");
-		out.println("  <tr> <td> removeServer              </td> <td> Removed a DBMS Server from the system. </td> </tr>");
-		out.println("  <tr> <td> disableServer             </td> <td> Disable a DBMS Server from the system. </td> </tr>");
-		out.println("  <tr> <td> ddc|DataDirectoryCleaner  </td> <td> Execute a 'Data Directory Cleanup'.    </td> </tr>");
+		out.println("  <tr> <td> removeServer              </td> <td> Removed a DBMS Server from the system.    </td> </tr>");
+		out.println("  <tr> <td> disableServer             </td> <td> Disable a DBMS Server from the system.    </td> </tr>");
+		out.println("  <tr> <td> refreshCc                 </td> <td> Send a 'refresh' message to name=srvName  </td> </tr>");
+		out.println("  <tr> <td> restartCc                 </td> <td> Send a 'restart' message to name=srvName  </td> </tr>");
+		out.println("  <tr> <td> ddc|DataDirectoryCleaner  </td> <td> Execute a 'Data Directory Cleanup'.       </td> </tr>");
 		out.println("</table>");
 		out.println("");
 
@@ -178,6 +180,38 @@ public class AdminServlet extends HttpServlet
 		else if ("setConfig".equals(inputOp))
 		{
 		}
+		else if ("refreshCc".equals(inputOp))
+		{
+			if (StringUtil.isNullOrBlank(inputName))
+				throw new ServletException("No input parameter named 'name'.");
+
+			// TODO: get management port for the CounterCollector Service, and send: http://localhost:8900/api/mgt/refresh
+			out.println("<html>");
+			out.println("<body>");
+			out.println("<h1>refreshCc: -NOT-YET-IMMPLEMENTED-</h1>");
+			out.println("</body>");
+			out.println("</html>");
+			out.flush();
+			
+			out.close();
+			return;
+		}
+		else if ("restartCc".equals(inputOp))
+		{
+			if (StringUtil.isNullOrBlank(inputName))
+				throw new ServletException("No input parameter named 'name'.");
+
+			// TODO: get management port for the CounterCollector Service, and send: http://localhost:8900/api/mgt/restart
+			out.println("<html>");
+			out.println("<body>");
+			out.println("<h1>restartCc: -NOT-YET-IMMPLEMENTED-</h1>");
+			out.println("</body>");
+			out.println("</html>");
+			out.flush();
+			
+			out.close();
+			return;
+		}
 		else if ("DataDirectoryCleaner".equals(inputOp) || "ddc".equals(inputOp))
 		{
 			out.println("<html>");
@@ -211,6 +245,10 @@ public class AdminServlet extends HttpServlet
 			out.flush();
 			out.close();
 			return;
+		}
+		else if ("DUMMY-SIMULATE-OutOfMemoryError".equals(inputOp))
+		{
+			throw new RuntimeException("DUMMY-SIMULATE-OutOfMemoryError");
 		}
 		else 
 		{

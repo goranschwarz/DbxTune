@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -399,7 +400,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DB_WAIT_TIME_MS,
 				"DB Wait, wait_time_ms, Summary per database", 	                   // Menu CheckBox text
 				"DB Wait, wait_time_ms, Summary per database ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.WAITS,

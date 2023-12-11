@@ -38,6 +38,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.rs.AlarmEventRsInMemoryControl;
 import com.asetune.alarm.events.rs.AlarmEventRsMemoryUsage;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -191,7 +192,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_PCT,
 			"Stat: RS Total Memory Usage in Percent", // Menu CheckBox text
 			"Stat: RS Total Memory Usage in Percent", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"Total RS Memory Usage"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -204,7 +205,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE,
 			"Stat: Memory Usage in MB per Module", // Menu CheckBox text
 			"Stat: Memory Usage in MB per Module", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,

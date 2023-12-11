@@ -28,6 +28,7 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -147,45 +148,11 @@ extends CountersModel
 	
 	private void addTrendGraphs()
 	{
-//		String[] labels_cl_recv_sent       = new String[] { "KB Received [Bytes_received/1024]", "KB Sent [Bytes_sent/1024]" };
-//		String[] labels_questions          = new String[] { "Client Statements [Questions]", "Client & Internal Statements [Queries]" };
-//		String[] labels_InnodbPages        = new String[] { "Innodb_pages_created", "Innodb_pages_read", "Innodb_pages_written" };
-//		String[] labels_SlowQueries        = new String[] { "Slow_queries (diff)", "Slow_queries (rate)" };
-//		String[] labels_SlowQueriesCount   = new String[] { "Slow_queries (abs)" };
-//		String[] labels_InnodbRowsIud      = new String[] { "Innodb_rows_inserted", "Innodb_rows_updated", "Innodb_rows_deleted" };
-//		String[] labels_InnodbRowsRead     = new String[] { "Innodb_rows_read" };
-//		String[] labels_InnodbRowLockWait  = new String[] { "Innodb_row_lock_waits" };
-//		String[] labels_InnodbBpWaitFree   = new String[] { "Innodb_buffer_pool_wait_free" };
-//		String[] labels_OpenTables         = new String[] { "Open_tables" };
-//		String[] labels_Connections        = new String[] { "Threads_connected" };
-//		String[] labels_AbortedConnections = new String[] { "Aborted_connects" };
-//		String[] labels_Transactions       = new String[] { "Handler_commit", "Handler_rollback", "Handler_savepoint", "Handler_savepoint_rollback" };
-//		String[] labels_HandlerReads       = new String[] { "Handler_read_first", "Handler_read_key", "Handler_read_last", "Handler_read_next", "Handler_read_prev", "Handler_read_rnd", "Handler_read_rnd_next", "Handler_mrr_init" };
-//		String[] labels_HandlerIud         = new String[] { "Handler_write", "Handler_update", "Handler_delete" };
-//		String[] labels_TmpTables          = new String[] { "Created_tmp_disk_tables", "Created_tmp_tables", "Created_tmp_files" };
-//				
-//		addTrendGraphData(GRAPH_NAME_KB_RECV_SENT,         new TrendGraphDataPoint(GRAPH_NAME_KB_RECV_SENT,         labels_cl_recv_sent,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_QUESTIONS,            new TrendGraphDataPoint(GRAPH_NAME_QUESTIONS,            labels_questions,          LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_INNODB_PAGES,         new TrendGraphDataPoint(GRAPH_NAME_INNODB_PAGES,         labels_InnodbPages,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_SLOW_QUERIES,         new TrendGraphDataPoint(GRAPH_NAME_SLOW_QUERIES,         labels_SlowQueries,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_SLOW_QUERIES_COUNT,   new TrendGraphDataPoint(GRAPH_NAME_SLOW_QUERIES_COUNT,   labels_SlowQueriesCount,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_INNODB_ROWS_IUD,      new TrendGraphDataPoint(GRAPH_NAME_INNODB_ROWS_IUD,      labels_InnodbRowsIud,      LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_INNODB_ROWS_READ,     new TrendGraphDataPoint(GRAPH_NAME_INNODB_ROWS_READ,     labels_InnodbRowsRead,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_INNODB_ROW_LOCK_WAIT, new TrendGraphDataPoint(GRAPH_NAME_INNODB_ROW_LOCK_WAIT, labels_InnodbRowLockWait,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_INNODB_BP_WAIT_FREE,  new TrendGraphDataPoint(GRAPH_NAME_INNODB_BP_WAIT_FREE,  labels_InnodbBpWaitFree,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_OPEN_TABLES,          new TrendGraphDataPoint(GRAPH_NAME_OPEN_TABLES,          labels_OpenTables,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CONNECTIONS,          new TrendGraphDataPoint(GRAPH_NAME_CONNECTIONS,          labels_Connections,        LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ABORTED_CONNECTIONS,  new TrendGraphDataPoint(GRAPH_NAME_ABORTED_CONNECTIONS,  labels_AbortedConnections, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_TRANSACTIONS,         new TrendGraphDataPoint(GRAPH_NAME_TRANSACTIONS,         labels_Transactions,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_HANDLER_READS,        new TrendGraphDataPoint(GRAPH_NAME_HANDLER_READS,        labels_HandlerReads,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_HANDLER_IUD,          new TrendGraphDataPoint(GRAPH_NAME_HANDLER_IUD,          labels_HandlerIud,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_TMP_TABLES,           new TrendGraphDataPoint(GRAPH_NAME_TMP_TABLES,           labels_TmpTables,          LabelType.Static));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_KB_RECV_SENT,
 			"Connections, KBytes Received/Sent per sec", // Menu CheckBox text
 			"Connections, KBytes Received/Sent per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "KB Received [Bytes_received/1024]", "KB Sent [Bytes_sent/1024]" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -197,7 +164,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUESTIONS,
 			"Number of Statements per sec", // Menu CheckBox text
 			"Number of Statements per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Client Statements [Questions]", "Client & Internal Statements [Queries]" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -209,7 +176,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_PAGES,
 			"InnoDB Pages per sec", // Menu CheckBox text
 			"InnoDB Pages per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Innodb_pages_created", "Innodb_pages_read", "Innodb_pages_written" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -221,7 +188,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SLOW_QUERIES,
 			"Slow Queries per sec", // Menu CheckBox text
 			"Slow Queries per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Slow_queries (diff)", "Slow_queries (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -233,7 +200,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SLOW_QUERIES_COUNT,
 			"Slow Queries Count", // Menu CheckBox text
 			"Slow Queries Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Slow_queries (abs)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -245,7 +212,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_ROWS_IUD,
 			"InnoDB Rows Ins/Upd/Del per sec", // Menu CheckBox text
 			"InnoDB Rows Ins/Upd/Del per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Innodb_rows_inserted", "Innodb_rows_updated", "Innodb_rows_deleted" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -257,7 +224,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_ROWS_READ,
 			"InnoDB Rows Read per sec", // Menu CheckBox text
 			"InnoDB Rows Read per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Innodb_rows_read" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -269,7 +236,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_ROW_LOCK_WAIT,
 			"InnoDB Row Lock Wait per sec", // Menu CheckBox text
 			"InnoDB Row Lock Wait per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Innodb_row_lock_waits" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -281,7 +248,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_BP_WAIT_FREE,
 			"InnoDB BufferPool Wait Free Count", // Menu CheckBox text
 			"InnoDB BufferPool Wait Free Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Innodb_buffer_pool_wait_free" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -293,7 +260,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OPEN_TABLES,
 			"Open Table Count", // Menu CheckBox text
 			"Open Table Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Open_tables" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -305,7 +272,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTIONS,
 			"Client Connection Count", // Menu CheckBox text
 			"Client Connection Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Threads_connected" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -317,7 +284,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ABORTED_CONNECTIONS,
 			"Aborted Connections per sec", // Menu CheckBox text
 			"Aborted Connections per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Aborted_connects" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -329,7 +296,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANSACTIONS,
 			"Transactions per sec", // Menu CheckBox text
 			"Transactions per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Handler_commit", "Handler_rollback", "Handler_savepoint", "Handler_savepoint_rollback" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -341,7 +308,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HANDLER_READS,
 			"Handler Reads per sec", // Menu CheckBox text
 			"Handler Reads per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Handler_read_first", "Handler_read_key", "Handler_read_last", "Handler_read_next", "Handler_read_prev", "Handler_read_rnd", "Handler_read_rnd_next", "Handler_mrr_init" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -353,7 +320,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HANDLER_IUD,
 			"Handler Ins/Upd/Del per sec", // Menu CheckBox text
 			"Handler Ins/Upd/Del per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Handler_write", "Handler_update", "Handler_delete" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -365,7 +332,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TMP_TABLES,
 			"Temporary Tables per sec", // Menu CheckBox text
 			"Temporary Tables per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Created_tmp_disk_tables", "Created_tmp_tables", "Created_tmp_files" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -374,187 +341,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 		
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_KB_RECV_SENT,
-//				"Connections, KBytes Received/Sent per sec", // Menu CheckBox text
-//				"Connections, KBytes Received/Sent per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_cl_recv_sent, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//			
-//			tg = new TrendGraph(GRAPH_NAME_QUESTIONS,
-//				"Number of Statements per sec", // Menu CheckBox text
-//				"Number of Statements per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_questions, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//			
-//			tg = new TrendGraph(GRAPH_NAME_INNODB_PAGES,
-//				"InnoDB Pages per sec", // Menu CheckBox text
-//				"InnoDB Pages per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_InnodbPages, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//			
-//			tg = new TrendGraph(GRAPH_NAME_SLOW_QUERIES,
-//				"Slow Queries per sec", // Menu CheckBox text
-//				"Slow Queries per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_SlowQueries, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_SLOW_QUERIES_COUNT,
-//				"Slow Queries Count", // Menu CheckBox text
-//				"Slow Queries Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_SlowQueriesCount, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_INNODB_ROWS_IUD,
-//				"InnoDB Rows Ins/Upd/Del per sec", // Menu CheckBox text
-//				"InnoDB Rows Ins/Upd/Del per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_InnodbRowsIud, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_INNODB_ROWS_READ,
-//				"InnoDB Rows Read per sec", // Menu CheckBox text
-//				"InnoDB Rows Read per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_InnodbRowsIud, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_INNODB_ROW_LOCK_WAIT,
-//				"InnoDB Row Lock Wait per sec", // Menu CheckBox text
-//				"InnoDB Row Lock Wait per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_InnodbRowLockWait, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_INNODB_BP_WAIT_FREE,
-//				"InnoDB BufferPool Wait Free Count", // Menu CheckBox text
-//				"InnoDB BufferPool Wait Free Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_InnodbBpWaitFree, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_OPEN_TABLES,
-//				"Open Table Count", // Menu CheckBox text
-//				"Open Table Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_OpenTables, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_CONNECTIONS,
-//				"Client Connection Count", // Menu CheckBox text
-//				"Client Connection Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_Connections, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_ABORTED_CONNECTIONS,
-//				"Aborted Connections per sec", // Menu CheckBox text
-//				"Aborted Connections per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_AbortedConnections, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_TRANSACTIONS,
-//				"Transactions per sec", // Menu CheckBox text
-//				"Transactions per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_Transactions, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_HANDLER_READS,
-//				"Handler Reads per sec", // Menu CheckBox text
-//				"Handler Reads per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_HandlerReads, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_HANDLER_IUD,
-//				"Handler Ins/Upd/Del per sec", // Menu CheckBox text
-//				"Handler Ins/Upd/Del per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_HandlerIud, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_TMP_TABLES,
-//				"Temporary Tables per sec", // Menu CheckBox text
-//				"Temporary Tables per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_TmpTables, 
-//				false, // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

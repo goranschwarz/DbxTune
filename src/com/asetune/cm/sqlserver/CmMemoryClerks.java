@@ -31,6 +31,7 @@ import javax.naming.NameNotFoundException;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -140,7 +141,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_CLERK_BUFFER_POOL,
 			"Buffer Pool Memory Clerk, in MB", // Menu CheckBox text
 			"Buffer Pool Memory Clerk, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"Buffer Pool (MEMORYCLERK_SQLBUFFERPOOL)"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -153,7 +154,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_CLERKS_TOP,
 			"Top 10 Memory Clerks, in MB", // Menu CheckBox text
 			"Top 10 Memory Clerks, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -166,7 +167,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS,
 			"All Memory Clerks vs Target & Total Memory, in MB", // Menu CheckBox text
 			"All Memory Clerks vs Target & Total Memory, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"SUM of All Memory Clerks", "Target Server Memory MB", "Total Server Memory MB", "Buffer Pool Memory Clerk"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,

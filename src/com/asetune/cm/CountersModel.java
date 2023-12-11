@@ -1321,6 +1321,27 @@ implements Cloneable, ITableTooltip
 		return null;
 	}
 
+	/** Used by the: Config Servlet */
+	public List<CmSettingsHelper> getCollectorOptions()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		String base = this.getName() + ".";
+		
+		list.add(new CmSettingsHelper("Is Paused"                                 , base + PROPKEY_sampleDataIsPaused         , Boolean.class, isDataPollingPaused()         , getDefaultIsDataPollingPaused()          , "Used to temporarily pause collection of this counters" ));
+		list.add(new CmSettingsHelper("Postpone Time"                             , base + PROPKEY_postponeTime               , Integer.class, getPostponeTime()             , getDefaultPostponeTime()                 , "If you want to skip some intermidiate samples, Here you can specify minimum seconds between samples. tip: '10m' is 10 minutes, '24h' is 24 hours" ));
+		list.add(new CmSettingsHelper("Is Postpone Enabled"                       , base + PROPKEY_postponeIsEnabled          , Boolean.class, isPostponeEnabled()           , getDefaultPostponeIsEnabled()            , "Should we use postpone time or not. This mean that we can temporaraly disable the postpone, without changing the postpone time..." ));
+		list.add(new CmSettingsHelper("Query Timeout"                             , base + PROPKEY_queryTimeout               , Integer.class, getQueryTimeout()             , getDefaultQueryTimeout()                 , "How long do we wait for DBMS to deliver results for this Performance Counter... Empty value = set to the default value."  ));
+		list.add(new CmSettingsHelper("Reset Negative delta/rate counters to Zero", base + PROPKEY_negativeDiffCountersToZero , Boolean.class, isNegativeDiffCountersToZero(), getDefaultIsNegativeDiffCountersToZero() , "If the differance between 'this' and 'previous' data sample has negative counter values, reset them to be <b>zero</b>"  ));
+
+		list.add(new CmSettingsHelper("Save Counters"                             , base + PROPKEY_persistCounters            , Boolean.class, isPersistCountersEnabled()    , getDefaultIsPersistCountersEnabled()     , "Save counters to PCS (Persistent Counter Storage)." ));
+		list.add(new CmSettingsHelper("Save Counters Abs"                         , base + PROPKEY_persistCounters_abs        , Boolean.class, isPersistCountersAbsEnabled() , getDefaultIsPersistCountersAbsEnabled()  , "Save Absolute Counter Values" ));
+		list.add(new CmSettingsHelper("Save Counters Diff"                        , base + PROPKEY_persistCounters_diff       , Boolean.class, isPersistCountersDiffEnabled(), getDefaultIsPersistCountersDiffEnabled() , "Save Difference Calculation between two samples"));
+		list.add(new CmSettingsHelper("Save Counters Rate"                        , base + PROPKEY_persistCounters_rate       , Boolean.class, isPersistCountersRateEnabled(), getDefaultIsPersistCountersRateEnabled() , "Save the Calculated Number per second (diff values / seconds between two samples)."));
+
+		return list;
+	}
+
 	/**
 	 * Check if a specific DBMS Option is enabled 
 	 * 
@@ -7018,6 +7039,31 @@ implements Cloneable, ITableTooltip
 		// return list;
 		//--------------------------------------------------------------------------------------------
 	}
+
+	/**
+	 * A simple wrapper method that calls <code>CmSettingsHelper.create_isAlarmEnabled(this, name)</code>
+	 * 
+	 * @param name
+	 * @param cm
+	 * @return
+	 */
+	public CmSettingsHelper createIsAlarmEnabled(String name, CountersModel cm)
+	{
+		return CmSettingsHelper.create_isAlarmEnabled(this, name);
+	}
+
+	/**
+	 * A simple wrapper method that calls <code>CmSettingsHelper.create_timeRangeCron(this, name)</code>
+	 * 
+	 * @param name
+	 * @param cm
+	 * @return
+	 */
+	public CmSettingsHelper createTimeRangeCron(String name, CountersModel cm)
+	{
+		return CmSettingsHelper.create_timeRangeCron(this, name);
+	}
+
 
 
 

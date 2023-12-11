@@ -79,11 +79,20 @@ public class SqlServerQueryStoreExtractor
 		
 		,database_automatic_tuning_options    // Automatic Tuning (2017 and beyond)
 		,dm_db_tuning_recommendations         // Recommendations from the (Query Store, 2017 and beyond)
+
+//		,database_query_store_internal_state  // 2022 - DO-NOT-CAPTURE -- Contains information about queue length and memory usage for the Query Store when Query Store for secondary replicas is enabled. 
+		,query_store_plan_feedback            // 2022 -                -- Contains information about Query Store tuning via memory grant, CE, and DOP feedback.
+//		,query_store_plan_forcing_locations   // 2022 - DO-NOT-CAPTURE -- Contains information about Query Store plans that have been forced on secondary replicas using sp_query_store_force_plan, when Query Store for secondary replicas is enabled. You can use this information to determine what queries have plans forced on different replica sets.
+		,query_store_query_hints              // 2022 -                -- Returns query hints from Query Store hints.
+		,query_store_query_variant            // 2022 -                -- Contains information about the parent-child relationships between the original parameterized queries (also known as parent queries), dispatcher plans, and their child query variants. This catalog view offers the ability to view all query variants associated with a dispatcher as well as the original parameterized queries. Query variants will have the same query_hash value as viewed from within the sys.query_store_query catalog view, which when joined with the sys.query_store_query_variant and sys.query_store_runtime_stats catalog views, aggregate resource usage statistics can be obtained for queries that differ only by their input values.
+		,query_store_replicas                 // 2022 -                -- Contains information about Query Store replicas, when Query Store for secondary replicas is enabled. You can use this information to determine what replica_group_id to use when using Query Store to force or un-force a plan on a secondary replica with sys.sp_query_store_set_query_hints.
+
 	};
 	//------------------------------------------------------------------------------------------------------------
 	// Check for ER diagram: https://docs.microsoft.com/en-us/sql/relational-databases/performance/how-query-store-collects-data?view=sql-server-ver15
 	//------------------------------------------------------------------------------------------------------------
 	// database_query_store_options         -->> https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-database-query-store-options-transact-sql?view=sql-server-ver15
+	// database_query_store_internal_state  -->> https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-database-query-store-internal-state-transact-sql?view=sql-server-ver16
 	// query_context_settings               -->> https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-context-settings-transact-sql?view=sql-server-ver15
 	// query_store_query_text               -->> https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-query-text-transact-sql?view=sql-server-ver15
 	// query_store_query                    -->> https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-query-transact-sql?view=sql-server-ver15
@@ -94,8 +103,12 @@ public class SqlServerQueryStoreExtractor
 
 	// dm_db_tuning_recommendations         -->> https://docs.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-db-tuning-recommendations-transact-sql?view=sql-server-ver15
 
-// Possibly also add this one: since 2017
-// select * from sys.dm_db_tuning_recommendations
+	// database_query_store_internal_state  -->> https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-database-query-store-internal-state-transact-sql?view=sql-server-ver16
+	// query_store_plan_feedback            -->> https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-plan-feedback?view=sql-server-ver16
+	// query_store_plan_forcing_locations   -->> https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-plan-forcing-locations-transact-sql?view=sql-server-ver16
+	// query_store_query_hints              -->> https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-query-hints-transact-sql?view=sql-server-ver16
+	// query_store_query_variant            -->> https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-query-variant?view=sql-server-ver16
+	// query_store_replicas                 -->> https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-replicas?view=sql-server-ver16
 
 	
 	public SqlServerQueryStoreExtractor(String dbname, int period, DbxConnection monConn, DbxConnection pcsConn)
@@ -139,18 +152,7 @@ public class SqlServerQueryStoreExtractor
 				    + "";
 		}
 
-		if (QsTables.database_automatic_tuning_options.equals(tabName))
-		{
-			return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
-		}
-
-		if (QsTables.dm_db_tuning_recommendations.equals(tabName))
-		{
-			return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
-		}
-		
-		
-		// transfer EVERYTHING
+		// transfer EVERYTHING (not a specific PERIOD)
 		if (_period <= 0)
 		{
 			switch (tabName)
@@ -168,6 +170,14 @@ public class SqlServerQueryStoreExtractor
 				case query_store_runtime_stats_interval: return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case database_automatic_tuning_options : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 				case dm_db_tuning_recommendations      : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				
+//				case database_query_store_internal_state: return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_plan_feedback          : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+//				case query_store_plan_forcing_locations : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_query_hints            : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_query_variant          : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_replicas               : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				
 				default:
 					throw new RuntimeException("getSqlForTable(): Unhandled Query Store Table Name: " + tabName);
 			}
@@ -330,17 +340,15 @@ public class SqlServerQueryStoreExtractor
 						    + "";
 				}
 
-//				case database_automatic_tuning_options:
-//				{
-//					// GET ALL
-//					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
-//				}
-//			
-//				case dm_db_tuning_recommendations:
-//				{
-//					// GET ALL Recommendations
-//					return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
-//				}
+				case database_automatic_tuning_options : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case dm_db_tuning_recommendations      : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				
+//				case database_query_store_internal_state: return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_plan_feedback          : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+//				case query_store_plan_forcing_locations : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_query_hints            : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_query_variant          : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
+				case query_store_replicas               : return "select * from [" + _monDbName + "].sys." + tabName + " where 1=1";
 			
 				default:
 					throw new RuntimeException("getSqlForTable(): Unhandled Query Store Table Name: " + tabName);
@@ -397,6 +405,14 @@ public class SqlServerQueryStoreExtractor
 
 			transferTable(QsTables.database_automatic_tuning_options);
 			transferTable(QsTables.dm_db_tuning_recommendations);
+			
+//			transferTable(QsTables.database_query_store_internal_state);
+			transferTable(QsTables.query_store_plan_feedback);
+//			transferTable(QsTables.query_store_plan_forcing_locations);
+			transferTable(QsTables.query_store_query_hints);
+			transferTable(QsTables.query_store_query_variant);
+			transferTable(QsTables.query_store_replicas);
+			
 		}
 		finally
 		{
@@ -577,6 +593,17 @@ public class SqlServerQueryStoreExtractor
 			// Introduced in 2017
 			if (QsTables.dm_db_tuning_recommendations.equals(tabName))
 				return -1;
+		}
+		
+		// only from Version 2022... so get out of here
+		if (_monConn.getDbmsVersionNumber() < Ver.ver(2022))
+		{
+//			if (QsTables.database_query_store_internal_state.equals(tabName)) return -1;
+			if (QsTables.query_store_plan_feedback          .equals(tabName)) return -1;
+//			if (QsTables.query_store_plan_forcing_locations .equals(tabName)) return -1;
+			if (QsTables.query_store_query_hints            .equals(tabName)) return -1;
+			if (QsTables.query_store_query_variant          .equals(tabName)) return -1;
+			if (QsTables.query_store_replicas               .equals(tabName)) return -1;
 		}
 
 		
@@ -801,6 +828,13 @@ public class SqlServerQueryStoreExtractor
 			// No indexes
 			break;
 
+//		case database_query_store_internal_state: /* No indexes */ break;
+		case query_store_plan_feedback          : /* No indexes */ break;
+//		case query_store_plan_forcing_locations : /* No indexes */ break;
+		case query_store_query_hints            : /* No indexes */ break;
+		case query_store_query_variant          : /* No indexes */ break;
+		case query_store_replicas               : /* No indexes */ break;
+		
 		default:
 			throw new RuntimeException("createIndexForTable(): Unhandled Query Store Table Name: " + tabName);
 		}

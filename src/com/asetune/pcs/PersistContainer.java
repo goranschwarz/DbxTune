@@ -463,6 +463,11 @@ public class PersistContainer
 			collectorSampleInterval = CounterController.getInstance().getDefaultSleepTimeInSec();
 		}
 
+		// Management host/port
+//		String collectorMgtHostname = null;
+//		int    collectorMgtPort = -1;
+//		String collectorMgtInfo = null;
+		
 		// Get the current recording database from the INFO Configuration object ( which is written in PersistWriterJdbc.startServices() )
 		String collectorCurrentUrl = null;
 		String collectorInfoFile = null;
@@ -471,6 +476,10 @@ public class PersistContainer
 		{
 			collectorCurrentUrl = conf.getProperty("pcs.h2.jdbc.url");
 			collectorInfoFile   = conf.getFilename();
+			
+//			collectorMgtHostname = conf.getProperty   ("dbxtune.management.host", null);
+//			collectorMgtPort     = conf.getIntProperty("dbxtune.management.port", -1);
+//			collectorMgtInfo     = conf.getProperty   ("dbxtune.management.info", null);
 		}
 
 		// Get List of Cm's with enabled Graphs / Counters
@@ -523,6 +532,9 @@ public class PersistContainer
 			gen.writeNumberField("collectorSampleInterval", collectorSampleInterval);
 			gen.writeStringField("collectorCurrentUrl"    , collectorCurrentUrl);
 			gen.writeStringField("collectorInfoFile"      , collectorInfoFile);
+//			gen.writeStringField("collectorMgtHostname"   , collectorMgtHostname);
+//			gen.writeNumberField("collectorMgtPort"       , collectorMgtPort);
+//			gen.writeStringField("collectorMgtInfo"       , collectorMgtInfo);
 
 			gen.writeStringField("sessionStartTime"       , TimeUtils.toStringIso8601(cont.getSessionStartTime()));
 			gen.writeStringField("sessionSampleTime"      , TimeUtils.toStringIso8601(cont.getMainSampleTime()));

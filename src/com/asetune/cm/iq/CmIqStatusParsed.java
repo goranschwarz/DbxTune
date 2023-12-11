@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -130,23 +131,11 @@ extends CountersModel
 	
 	private void addTrendGraphs()
 	{
-//		String[] labels_version     = new String[] { "Active Txn Versions - Count", "Active Txn Versions - Created MB", "Active Txn Versions - Deleted MB", "Other Versions - Count", "Other Versions - MB" };
-//		String[] labels_compression = new String[] { "Main IQ I/O - Compression Ratio", "Temporary IQ I/O - Compression Ratio" };
-//		String[] labels_cache_reads = new String[] { "Main - Logical Read", "Temporary - Logical Read" };
-//		String[] labels_cache_main  = new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" };
-//		String[] labels_cache_temp  = new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" };
-//
-//		addTrendGraphData(GRAPH_NAME_VERSION,     new TrendGraphDataPoint(GRAPH_NAME_VERSION,     labels_version,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_COMPRESSION, new TrendGraphDataPoint(GRAPH_NAME_COMPRESSION, labels_compression, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_READS, new TrendGraphDataPoint(GRAPH_NAME_CACHE_READS, labels_cache_reads, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_MAIN,  new TrendGraphDataPoint(GRAPH_NAME_CACHE_MAIN,  labels_cache_main,  LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CACHE_TEMP,  new TrendGraphDataPoint(GRAPH_NAME_CACHE_TEMP,  labels_cache_temp,  LabelType.Static));
-
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_VERSION,
 			"Versioning", 	                        // Menu CheckBox text
 			"Versioning, using Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Active Txn Versions - Count", "Active Txn Versions - Created MB", "Active Txn Versions - Deleted MB", "Other Versions - Count", "Other Versions - MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -159,7 +148,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMPRESSION,
 			"Compression Ratio", 	                        // Menu CheckBox text
 			"Compression Ratio - in Percent, Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Main IQ I/O - Compression Ratio", "Temporary IQ I/O - Compression Ratio" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -172,7 +161,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Cache Activity - Logical Reads", 	                        // Menu CheckBox text
 			"Cache Activity - Logical Reads, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Main - Logical Read", "Temporary - Logical Read" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -185,7 +174,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_MAIN,
 			"Cache IO Activity - Main", 	                        // Menu CheckBox text
 			"Cache IO Activity - Main, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -198,7 +187,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_TEMP,
 			"Cache IO Activity - Temporary", 	                        // Menu CheckBox text
 			"Cache IO Activity - Temporary, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -207,71 +196,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg = null;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_VERSION,
-//				"Versioning", 	                        // Menu CheckBox text
-//				"Versioning, using Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_version, 
-//				false,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_COMPRESSION,
-//				"Compression Ratio", 	                        // Menu CheckBox text
-//				"Compression Ratio - in Percent, Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_version, 
-//				true,  // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_READS,
-//				"Cache Activity - Logical Reads", 	                        // Menu CheckBox text
-//				"Cache Activity - Logical Reads, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_version, 
-//				false,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_MAIN,
-//				"Cache IO Activity - Main", 	                        // Menu CheckBox text
-//				"Cache IO Activity - Main, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_version, 
-//				false,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CACHE_TEMP,
-//				"Cache IO Activity - Temporary", 	                        // Menu CheckBox text
-//				"Cache IO Activity - Temporary, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels_version, 
-//				false,  // is Percent Graph
-//				this, 
-//				true, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 //	@Override
 //	protected TabularCntrPanel createGui()

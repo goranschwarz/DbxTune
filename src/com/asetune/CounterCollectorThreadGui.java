@@ -594,6 +594,10 @@ extends CounterCollectorThreadAbstract
 				// Save header info, so we can send AlarmEvents to DbxCentral (in case of connectivity issues) and ruse the servername and other fields.
 				_lastKnownHeaderInfo = headerInfo;
 
+				// Set the headerInfo in the CounterController
+				if (headerInfo != null && CounterController.hasInstance())
+					CounterController.getInstance().setLastKnownHeaderInfo(headerInfo);
+
 				// If there is a ServerAlias, apply that... This is used by the DbxCentral for an alternate schema/servername
 //				if (StringUtil.hasValue(_dbmsServerAlias))
 //					headerInfo.setServerNameAlias(_dbmsServerAlias);

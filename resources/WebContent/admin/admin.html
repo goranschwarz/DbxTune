@@ -214,6 +214,36 @@
       </div>  <!-- end: card -->
 
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- Counter Collector - REFRESH -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbx-cc-refresh' class='card border-dark mb-3'>
+        <h5 class='card-header'>Counter Collector - Refresh (send a message the collector to go to work and refresh counters)</h5>
+        <div class='card-body'>
+
+          <b>Refresh</b> any of the below Counter Collectors
+          <div id="dbx-cc-refresh-server-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+          </div>
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- Counter Collector - RESTART -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbx-cc-restart' class='card border-dark mb-3'>
+        <h5 class='card-header'>Counter Collector - Restart (send a message the collector to restart)</h5>
+        <div class='card-body'>
+
+          <b>Restart</b> any of the below Counter Collectors
+          <div id="dbx-cc-restart-server-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+          </div>
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- DBMS Alarm Admin -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <div id='alarm-admin' class='card border-dark mb-3'>
@@ -1130,7 +1160,7 @@
   }
 
   /**
-   * remove Server
+   * clearActiveAlarms
    */
   function clearActiveAlarms(serverName)
   {
@@ -1152,6 +1182,60 @@
 //			title: jsonResp.REMOVE-ACTIVE-ALARMS.status,
 //            message: jsonResp.REMOVE-ACTIVE-ALARMS.message
 //        });
+      },
+      error: function(xhr, desc, err)
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+      }
+    }); // end: ajax call
+  }
+
+
+  /**
+   * refreshCc
+   */
+  function refreshCc(serverName)
+  {
+    console.log("refreshCm() serverName: "+serverName);
+    $.ajax(
+    {
+      url: "/admin?op=refreshCc&name="+serverName,
+      type: 'get',
+      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+      success: function(data, status)
+      {
+        var jsonResp = JSON.parse(data);
+        var actions = jsonResp.actions;
+        console.log("actions: "+actions, actions);
+      },
+      error: function(xhr, desc, err)
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+      }
+    }); // end: ajax call
+  }
+
+
+  /**
+   * restartCc
+   */
+  function restartCc(serverName)
+  {
+    console.log("restartCm() serverName: "+serverName);
+    $.ajax(
+    {
+      url: "/admin?op=restartCc&name="+serverName,
+      type: 'get',
+      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+      success: function(data, status)
+      {
+        var jsonResp = JSON.parse(data);
+        var actions = jsonResp.actions;
+        console.log("actions: "+actions, actions);
       },
       error: function(xhr, desc, err)
       {
@@ -1239,6 +1323,8 @@
 			var htmlRemove  = "";
 			var htmlEnable  = "";
 			var htmlDisable = "";
+			var htmlRefreshCc = "";
+			var htmlRestartCc = "";
 			var htmlClearAlarm = "";
 			for (var i=0; i<jsonResp.length; i++)
 			{
@@ -1275,6 +1361,9 @@
 				else
 					htmlDisable += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 
+				htmlRefreshCc   += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'refreshCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlRestartCc   += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'restartCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+
 				htmlClearAlarm  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'clearActiveAlarms("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 			}
 			if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
@@ -1284,6 +1373,9 @@
 			$('#dbx-remove-server-list').html(htmlRemove);
 			$('#dbx-disable-server-list').html(htmlDisable);
 			$('#dbx-enable-server-list').html(htmlEnable);
+
+			$('#dbx-refresh-server-list').html(htmlRefreshCc);
+			$('#dbx-restart-server-list').html(htmlRestartCc);
 
 			$('#dbx-alarm-clear-server-list').html(htmlClearAlarm);
 

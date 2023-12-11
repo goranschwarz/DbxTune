@@ -114,8 +114,10 @@ public class MovingAverageChart
 		{
 			TimeSeries serie = new TimeSeries(c.getName());
 
+//			for (MovingAverageCounter.Entry mae : c.getValues())
+//				serie.add(new FixedMillisecond(mae.getTime()), mae.getValue());
 			for (MovingAverageCounter.Entry mae : c.getValues())
-				serie.add(new FixedMillisecond(mae.getTime()), mae.getValue());
+				serie.addOrUpdate(new FixedMillisecond(mae.getTime()), mae.getValue());
 			
 			dataset.addSeries(serie);
 		}

@@ -195,8 +195,35 @@
 		<servlet-class>com.asetune.central.controllers.UserDefinedContentServlet</servlet-class>
 	</servlet>
 
+<!--
+	<servlet>
+		<servlet-name>MgtProxyServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ccmgt.MgtProxyServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>MgtProxyServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/*</url-pattern>
+	</servlet-mapping>
+-->
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>ProxyConfigGetServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ccmgt.ProxyConfigGetServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyConfigGetServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/config/get</url-pattern>
+	</servlet-mapping>
 
-
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>ProxyConfigSetServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ccmgt.ProxyConfigSetServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyConfigSetServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/config/set</url-pattern>
+	</servlet-mapping>
 
 
 
@@ -359,11 +386,6 @@
 	<servlet-mapping>
 		<servlet-name>HistoryActiveSamplesForCmController</servlet-name>
 		<url-pattern>/api/history-active-samples</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>UserDefinedContentServlet</servlet-name>
-		<url-pattern>/api/udc</url-pattern>
 	</servlet-mapping>
 
 

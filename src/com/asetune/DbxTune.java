@@ -67,6 +67,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
 import com.asetune.gui.swing.EventQueueProxy;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
+import com.asetune.mgt.NoGuiManagementServer;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -1002,15 +1003,15 @@ public abstract class DbxTune
 						storeConfigProps.setProperty("conn.dbmsPassword", asePasswd, true); // should we encrypt the passwd or not
 					}
 					else
-						_logger.info("No DBMS password was specified. and NO entry, for user '"+aseUser+"', DBMS Server '"+aseServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						_logger.warn("No DBMS password was specified. and NO entry, for user '"+aseUser+"', DBMS Server '"+aseServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
 				}
 				catch(DecryptionException ex)
 				{
-					_logger.info("Problems decrypting the password, for user '"+aseUser+"', DBMS Server '"+aseServer+"'. Probably a bad passphrase for the encrypted passwd. Caught: "+ex);
+					_logger.warn("Problems decrypting the password, for user '"+aseUser+"', DBMS Server '"+aseServer+"'. Probably a bad passphrase for the encrypted passwd. Caught: "+ex);
 				}
 				catch(FileNotFoundException ex)
 				{
-					_logger.info("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
+					_logger.warn("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
 				}
 				catch(IOException ex)
 				{
@@ -1319,6 +1320,15 @@ public abstract class DbxTune
 			}
 		}
 
+boolean startEvenIfGui_justToTestTheService = false;
+if (_gui && startEvenIfGui_justToTestTheService)
+{
+	(new Exception("REMOVE THIS, we should NOT start a Management Server in GUI Mode...")).printStackTrace();
+
+	NoGuiManagementServer noGuiMngmntSrv = new NoGuiManagementServer();
+	NoGuiManagementServer.setInstance(noGuiMngmntSrv);
+	noGuiMngmntSrv.startServer();
+}
 		// 
 		// Create a file, that will be deleted when the process ends.
 		// This file will hold various configuration about the NO-GUI process
@@ -1326,6 +1336,12 @@ public abstract class DbxTune
 		//
 		if ( ! _gui )
 		{
+			// Start a HTTP Server so DbxTune Central can "talk" to the NOGUI instance
+			NoGuiManagementServer noGuiMngmntSrv = new NoGuiManagementServer();
+			NoGuiManagementServer.setInstance(noGuiMngmntSrv);
+			noGuiMngmntSrv.startServer();
+
+			// Write a "Service Info File" -- Can be used by DbxCentral lookup stuff 
 			boolean writeDbxTuneServiceFile = true;
 			if (writeDbxTuneServiceFile)
 			{
@@ -1361,6 +1377,10 @@ public abstract class DbxTune
 				conf.setProperty("dbxtune.dbms.srvAliasName",   dbmsSrvAliasName == null ? "" : dbmsSrvAliasName); // on null: set it to ""
 				conf.setProperty("dbxtune.dbms.srvOrAliasName", dbmsSrvOrAliasName);
 				conf.setProperty("dbxtune.refresh.rate",        storeConfigProps.getProperty("offline.sampleTime", ""));
+				
+				conf.setProperty("dbxtune.management.host",     noGuiMngmntSrv.getListenerHost());
+				conf.setProperty("dbxtune.management.port",     noGuiMngmntSrv.getPort());
+				conf.setProperty("dbxtune.management.info",     noGuiMngmntSrv.getExInfo());
 
 				// AlarmWriteToFile ACTIVE/LOG properties (so the DBXCENTRAL OverviewServlet can pick it up)
 				String wtoFileActiveFilename = Configuration.getCombinedConfiguration().getPropertyRaw(AlarmWriterToFile.PROPKEY_activeFilename);
@@ -1372,19 +1392,9 @@ public abstract class DbxTune
 				conf.save(true);
 				
 				// Later of, for instance in the PCS JDBC Writer will write information on where a recording is stored etc.
-			}
 
-			// Start a HTTP Server so DbxTune Central can "talk" to the NOGUI instance
-			boolean startHttpSrv = false;
-			if (startHttpSrv)
-			{
-				// TODO: implement this
+			} // end: writeDbxTuneServiceFile
 
-				//Configuration conf = Configuration.getInstance(DBXTUNE_NOGUI_INFO_CONFIG);
-				//conf.setProperty("dbxtune.http.url", "http://127.0.0.1:"+portNumber);
-				
-				// Or I may choose to do it via: JMX - Java Management Extensions
-			}
 		}
 		else
 		{

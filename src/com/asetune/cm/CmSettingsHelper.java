@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,9 +33,14 @@ import java.util.regex.PatternSyntaxException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
+import com.asetune.utils.Configuration;
+import com.asetune.utils.CronUtils;
 import com.asetune.utils.StringUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+
+import it.sauronsoftware.cron4j.InvalidPatternException;
+import it.sauronsoftware.cron4j.SchedulingPattern;
 
 /**
  * Used by the: Create 'Offline Session' Wizard<br>
@@ -139,6 +145,35 @@ public class CmSettingsHelper
 		}
 	}
 
+	/** CronTimeRange - Input validator */
+	public static class CronTimeRangeInputValidator
+	implements InputValidator
+	{
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			String cronStr = val;
+
+			// is this a negation/not within time period...
+			//boolean negation = false;
+			if (cronStr.startsWith("!"))
+			{
+				//negation = true;
+				cronStr  = cronStr.substring(1);
+			}
+
+			try
+			{
+				new SchedulingPattern(cronStr);
+				return true;
+			}
+			catch(InvalidPatternException ex)
+			{
+				throw new ValidationException("The specified 'cron' value '"+cronStr+"' is not a valid cron-pattern. This will be disregarded. Caught: " + ex.getMessage());
+			}
+		}
+	}
+
 
 	/** ValidationException is thrown when you try to set data to a invalid content */
 	public static class ValidationException extends Exception
@@ -162,6 +197,7 @@ public class CmSettingsHelper
 //	public boolean isOptional()    { return Type.OPTIONAL       .equals(_type);	}
 //	public boolean isTemplate()    { return Type.TEMPLATE       .equals(_type);	}
 	public boolean isAlarmSwitch() { return Type.IS_ALARM_SWITCH.equals(_type);	}
+	public boolean isPreCheck()    { return Type.IS_PRE_CHECK   .equals(_type);	}
 	
 	public boolean hasValue() 
 	{
@@ -243,6 +279,14 @@ public class CmSettingsHelper
 		return true;
 	}
 	
+	public String getInputValidatorClassName()
+	{
+		if (_inputValidator == null)
+			return "None";
+
+		return _inputValidator.getClass().getSimpleName();
+	}
+	
 	public Type   getType()           { return _type; }
 	public String getName()           { return _name; }
 	public String getPropName()       { return _propName; }
@@ -273,6 +317,7 @@ public class CmSettingsHelper
 	{
 		NOT_USED(""), 
 		IS_ALARM_SWITCH("isAlarmSwitch"), // used when column name is/can be enabled or disabled... '<CMNAME>.alarm.system.enabled.<COLNAME> = true|false' 
+		IS_PRE_CHECK("isPreCheck"), // This parameter is for ALL alarms in this module 
 		MANDATORY("<mandatory>"), 
 		PROBABLY("<probably>"); 
 //		OPTIONAL("<optional>"), 
@@ -293,6 +338,31 @@ public class CmSettingsHelper
 //	/** Use this as a value if the setting needs to be changed */
 //	public static final String TEMPLATE = "<template>";
 	
+	public static CmSettingsHelper create_isAlarmEnabled(CountersModel cm, String colname)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// isAlarmEnabled
+		String  isAlarmEnabled_propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname);
+		boolean isAlarmEnabled_defVal  = CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnEnabled;
+		boolean isAlarmEnabled_propVal = conf.getBooleanProperty(isAlarmEnabled_propKey, isAlarmEnabled_defVal);
+		String  isAlarmEnabled_desc    = "Is the Alarm Enabled or Disabled";
+
+		return new CmSettingsHelper(colname + " isAlarmEnabled", isAlarmEnabled_propKey, Boolean.class, isAlarmEnabled_propVal, isAlarmEnabled_defVal, isAlarmEnabled_desc);
+	}
+
+	public static CmSettingsHelper create_timeRangeCron(CountersModel cm, String colname)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		// timeRangeCron
+		String timeRangeCron_propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname);
+		String timeRangeCron_defVal  = CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange;
+		String timeRangeCron_propVal = conf.getProperty(timeRangeCron_propKey, timeRangeCron_defVal);
+		String timeRangeCron_desc    = "At what time the alarm can fire. decoded[" + CronUtils.getCronExpressionDescriptionForAlarms(timeRangeCron_propVal) + "]";
+
+		return new CmSettingsHelper(colname + " timeRangeCron", timeRangeCron_propKey, String.class, timeRangeCron_propVal, timeRangeCron_defVal, timeRangeCron_desc, new CronTimeRangeInputValidator());
+	}
+
 	public CmSettingsHelper()
 	{
 	}
@@ -319,6 +389,9 @@ public class CmSettingsHelper
 		_defaultValue   = defaultValue == null ? null : defaultValue.toString();   // Should we allow null or should we set it to "";
 		_description    = description;
 		_inputValidator = inputValidator;
+
+		if (_name != null)
+			_name = _name.trim();
 
 		if (_inputValidator == null)
 			_inputValidator = new InputValidatorBasic();
@@ -462,7 +535,23 @@ public class CmSettingsHelper
 				
 			return true;
 		}
+	}
+	
+	/**
+	 * Get a entry from a list
+	 */
+	public static CmSettingsHelper getByName(String name, Collection<CmSettingsHelper> list)
+	{
+		if (name == null)
+			return null;
 
-		
+		for (CmSettingsHelper cmSettingsHelper : list)
+		{
+			if (name.equals(cmSettingsHelper.getName()))
+				return cmSettingsHelper;
+		}
+
+		// No entry was found
+		return null;
 	}
 }

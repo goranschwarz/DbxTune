@@ -34,6 +34,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -52,7 +53,6 @@ import org.fife.ui.rtextarea.SearchResult;
 import com.asetune.sql.conn.TdsConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
-import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
@@ -328,7 +328,8 @@ implements PropertyChangeListener, ActionListener
 					_msg_lbl.setVisible(true);
 					_msg_sroll.setVisible(true);
 	
-					String msg = AseConnectionUtils.getSqlWarningMsgs(sqle);
+//					String msg = AseConnectionUtils.getSqlWarningMsgs(sqle);
+					String msg = getMessage(sqle);
 					_msg_txt.append(msg);
 	
 					_msg_txt.setCaretPosition(_msg_txt.getText().length());
@@ -349,6 +350,69 @@ implements PropertyChangeListener, ActionListener
 				}
 			}
 		}
+	}
+	
+	private String getMessage(SQLException sqlex)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		while (sqlex != null)
+		{
+			int    msgNum      = sqlex.getErrorCode();
+			String msgText     = StringUtil.removeLastNewLine(sqlex.getMessage());
+			int    msgSeverity = -1;
+
+			// Create a "common" EedInfo, which is a "container" class that contains all different EedInfo variants
+			// This for both Sybase and SQL Server
+			CommonEedInfo ceedi = new CommonEedInfo(sqlex);
+
+			if (ceedi.hasEedInfo())
+			{
+				// 
+				// severity is found in Sybase and MS SQL Server messages
+				msgSeverity  = ceedi.getSeverity();
+				
+				// Fill in some extra information for error messages
+				if (msgSeverity > 10)
+				{
+					boolean firstOnLine = true;
+					sb.append("Msg " + msgNum +	", Level " + ceedi.getSeverity() + ", State " +	ceedi.getState() + ":\n");
+
+					if (StringUtil.hasValue( ceedi.getServerName() ))
+					{
+						sb.append("Server '" + ceedi.getServerName() + "'");
+						firstOnLine = false;
+					}
+					if (StringUtil.hasValue( ceedi.getProcedureName() ))
+					{
+						sb.append( (firstOnLine ? "" : ", ") + "Procedure '" + ceedi.getProcedureName() + "'");
+						firstOnLine = false;
+					}
+
+//					sb.append( (firstOnLine ? "" : ", ") + "Line " + ceedi.getLineNumber() + scriptRowStr);
+					sb.append( (firstOnLine ? "" : ", ") + "Line " + ceedi.getLineNumber() );
+					if (ceedi.supportsEedParams()) sb.append(", Status "    + ceedi.getStatus());
+					if (ceedi.supportsTranState()) sb.append(", TranState " + ceedi.getTranState() + ":");
+
+					if (ceedi.hasEedParams())
+					{
+						Map<String, Object> map = ceedi.getEedParamsAsMap();
+						if ( ! map.isEmpty() )
+							sb.append("Extra Error Info: ").append(map).append("\n");
+					}
+				}
+			}
+			else
+			{
+				sb.append("ErrorCode=").append(msgNum).append(" - ");
+			}
+			sb.append(msgText + "\n");
+
+			// If there are chained messages
+			sqlex = sqlex.getNextException();
+		}
+				
+		return sb.toString();
 	}
 
 	public void setWidth(int widthInChars)

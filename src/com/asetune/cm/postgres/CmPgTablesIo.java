@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
@@ -184,7 +185,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_HIT,
 			"Tables Total Cache Hit Percent", 	                // Menu CheckBox text
 			"Tables Total Cache Hit in Percent ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"Data Pages Cache Hit"}, 
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.CPU,
@@ -196,7 +197,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Tables Total Cache Reads", 	                // Menu CheckBox text
 			"Tables Total Cache Reads per Second ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"total_reads", "Reads From Cache", "Reads From Disk"}, 
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.SRV_CONFIG,

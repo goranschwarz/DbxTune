@@ -36,6 +36,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.sqlserver.AlarmEventMemoryGrantWait;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -335,7 +336,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_GRANTEE_WAITER_COUNT,
 				"Memory Grants and Wait Count",        // Menu CheckBox text
 				"Memory Grants and Wait Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"grantee_count", "waiter_count"}, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -347,7 +348,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_GRANTED_MEMORY_SUM,
 				"Memory Grant Summary in MB",        // Menu CheckBox text
 				"Memory Grant Summary in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"granted_memory_mb", "used_memory_mb"}, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.MEMORY,
@@ -359,7 +360,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_GRANTED_MEMORY_PCT,
 				"Memory Granted in Percent of Total Available Memory",        // Menu CheckBox text
 				"Memory Granted in Percent of Total Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] {"granted_memory_pct"}, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.MEMORY,

@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -138,7 +139,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
 				"Lock Count", 	                           // Menu CheckBox text
 				"Number of Current Locks Held in the Server ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 				new String[] { "Lock Count" }, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.LOCK,
@@ -147,22 +148,6 @@ extends CountersModel
 				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_LOCK_COUNT,
-//				"Lock Count", 	                           // Menu CheckBox text
-//				"Number of Current Locks Held in the Server ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labelsLockCount, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	

@@ -29,6 +29,7 @@ import java.util.Map;
 
 import com.microsoft.sqlserver.jdbc.SQLServerError;
 import com.microsoft.sqlserver.jdbc.SQLServerException;
+import com.microsoft.sqlserver.jdbc.SQLServerWarning;
 import com.sybase.jdbcx.EedInfo;
 
 /**
@@ -74,11 +75,13 @@ public class CommonEedInfo
 			
 			_hasEedInfoProperties = true;
 		}
-		else if (sqlex instanceof SQLServerException)
+		else if (sqlex instanceof SQLServerException || sqlex instanceof SQLServerWarning)
 		{
-			SQLServerException sqlServerEx = (SQLServerException) sqlex;
+			SQLServerError e = null;
+
+			if (sqlex instanceof SQLServerException) e = ((SQLServerException)sqlex).getSQLServerError();
+			if (sqlex instanceof SQLServerWarning  ) e = ((SQLServerWarning  )sqlex).getSQLServerError();
 			
-			SQLServerError e = sqlServerEx.getSQLServerError();
 			if (e != null)
 			{
 				_state      = e.getErrorState();

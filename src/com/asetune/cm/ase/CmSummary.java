@@ -43,6 +43,7 @@ import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -177,45 +178,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels_aaCpu            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
-//		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
-//		String[] labels_connection       = new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" };
-//		String[] labels_connRate         = new String[] { "@@connections (rate)" };
-//		String[] labels_aaDiskRW         = new String[] { "@@total_read", "@@total_write" };
-//		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
-//		String[] labels_openTran         = new String[] { "Seconds" };
-//		String[] labels_lockCount        = new String[] { "Lock Count" };
-//
-//		String[] labels_transaction      = new String[] { "Transactions", "Rollbacks" };
-//		String[] labels_selectOperations = new String[] { "Selects" };
-//		String[] labels_iudmOperations   = new String[] { "Inserts", "Updates", "Deletes", "Merges" };
-//		String[] labels_tabIndAccess     = new String[] { "TableAccesses", "IndexAccesses" };
-//		String[] labels_tempdbAccess     = new String[] { "TempDbObjects", "WorkTables" };
-//		String[] labels_ulc              = new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" };
-//		String[] labels_ioRw             = new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" };
-//		String[] labels_logicalReads     = new String[] { "LogicalReads" };
-		
-//		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu,            LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction,      LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_SELECT_OPERATIONS,  new TrendGraphDataPoint(GRAPH_NAME_SELECT_OPERATIONS,  labels_selectOperations, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_IUDM_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_IUDM_OPERATIONS,    labels_iudmOperations,   LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_TAB_IND_ACCESS,     new TrendGraphDataPoint(GRAPH_NAME_TAB_IND_ACCESS,     labels_tabIndAccess,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_TEMPDB_ACCESS,      new TrendGraphDataPoint(GRAPH_NAME_TEMPDB_ACCESS,      labels_tempdbAccess,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_ULC,                new TrendGraphDataPoint(GRAPH_NAME_ULC,                labels_ulc,              LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_IO_RW,              new TrendGraphDataPoint(GRAPH_NAME_IO_RW,              labels_ioRw,             LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LOGICAL_READ,       new TrendGraphDataPoint(GRAPH_NAME_LOGICAL_READ,       labels_logicalReads,     LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks,    LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_CONNECTION_RATE,    new TrendGraphDataPoint(GRAPH_NAME_CONNECTION_RATE,    labels_connRate,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket,       LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran,         LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_LOCK_COUNT,         new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT,         labels_lockCount,        LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_AA_CPU,
 			"CPU Summary, Global Variables", 	                                         // Menu CheckBox text
 			"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -227,7 +193,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANSACTION,
 			"ASE Operations - Transaction per second",                         // Menu CheckBox text
 			"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Transactions", "Rollbacks" },
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -239,7 +205,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
 			"ASE Operations - Selects per second", 	                     // Menu CheckBox text
 			"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Selects" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -251,7 +217,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
 			"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
 			"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Inserts", "Updates", "Deletes", "Merges" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -263,7 +229,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
 			"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
 			"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "TableAccesses", "IndexAccesses" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -275,7 +241,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
 			"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
 			"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "TempDbObjects", "WorkTables" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -287,7 +253,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ULC,
 			"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
 			"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -299,7 +265,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_IO_RW,
 			"ASE Operations - IO's per second", 	                  // Menu CheckBox text
 			"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -311,7 +277,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGICAL_READ,
 			"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
 			"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "LogicalReads" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -323,7 +289,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
 			"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -335,7 +301,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users in ASE", 	          // Menu CheckBox text
 			"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -347,7 +313,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
 			"Connection Rate in ASE", 	          // Menu CheckBox text
 			"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -359,7 +325,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
 			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Total (read + write)", "@@total_read", "@@total_write" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -371,7 +337,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
 			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Total (received + sent + errors)", "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -383,7 +349,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
 			"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -395,7 +361,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
 			"Lock Count", 	                   // Menu CheckBox text
 			"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Lock Count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -404,197 +370,6 @@ extends CountersModel
 			0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);     // minimum height
 		
-
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_AA_CPU,
-//				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-//				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Label 
-//				labels_aaCpu, 
-//				true,  // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
-//				"ASE Operations - Transaction per second",                         // Menu CheckBox text
-//				"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
-//				labels_transaction, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1503030, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,0,3,3), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
-//				"ASE Operations - Selects per second", 	                     // Menu CheckBox text
-//				"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
-//				labels_selectOperations, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
-//				"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
-//				"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
-//				labels_iudmOperations, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
-//				"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
-//				"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
-//				labels_tabIndAccess, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
-//				"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
-//				"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
-//				labels_tempdbAccess, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_ULC,
-//				"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
-//				"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
-//				labels_ulc, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_IO_RW,
-//				"ASE Operations - IO's per second", 	                  // Menu CheckBox text
-//				"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
-//				labels_ioRw, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_LOGICAL_READ,
-//				"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
-//				"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
-//				labels_logicalReads, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
-//				"Blocking Locks", 	                                     // Menu CheckBox text
-//				"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
-//				labels_blockingLocks, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
-//				"Connections/Users in ASE", 	          // Menu CheckBox text
-//				"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
-//				labels_connection, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_CONNECTION_RATE,
-//				"Connection Rate in ASE", 	          // Menu CheckBox text
-//				"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
-//				labels_connRate, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
-//				"Disk read/write, Global Variables", 	                         // Menu CheckBox text
-//				"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
-//				labels_aaDiskRW, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
-//				"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-//				"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
-//				labels_aaNwPacket, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-//				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-//				"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
-//				labels_openTran, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			tg = new TrendGraph(GRAPH_NAME_LOCK_COUNT,
-//				"Lock Count", 	                   // Menu CheckBox text
-//				"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
-//				labels_lockCount, 
-//				false,   // is Percent Graph
-//				this, 
-//				false,   // visible at start
-//				0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);     // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//		}
 	}
 
 	@Override

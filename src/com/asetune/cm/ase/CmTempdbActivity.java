@@ -28,6 +28,7 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -132,18 +133,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "runtime-replaced" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT, new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT, labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_LREADS,            new TrendGraphDataPoint(GRAPH_NAME_LREADS,            labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_PWRITES,           new TrendGraphDataPoint(GRAPH_NAME_PWRITES,           labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_CAT_LOCK_REQ,      new TrendGraphDataPoint(GRAPH_NAME_CAT_LOCK_REQ,      labels, LabelType.Dynamic));
-
 		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
 			"TempDB Transaction Log Semaphore Contention ", 	          // Menu CheckBox text
 			"TempDB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -156,7 +149,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LREADS,
 			"TempDB Logical Reads", 	          // Menu CheckBox text
 			"TempDB Logical Reads per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CACHE,
@@ -169,7 +162,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PWRITES,
 			"TempDB Physical Writes", 	          // Menu CheckBox text
 			"TempDB Physical Writes per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -182,7 +175,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CAT_LOCK_REQ,
 			"TempDB Catalog Lock Requests", 	          // Menu CheckBox text
 			"TempDB Catalog Lock Requests per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.LOCK,
@@ -191,59 +184,6 @@ extends CountersModel
 			Ver.ver(15,5),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			TrendGraph tg;
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
-//				"TempDB Transaction Log Semaphore Contention ", 	          // Menu CheckBox text
-//				"TempDB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_LREADS,
-//				"TempDB Logical Reads", 	          // Menu CheckBox text
-//				"TempDB Logical Reads per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,5),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_PWRITES,
-//				"TempDB Physical Writes", 	          // Menu CheckBox text
-//				"TempDB Physical Writes per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,5),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_CAT_LOCK_REQ,
-//				"TempDB Catalog Lock Requests", 	          // Menu CheckBox text
-//				"TempDB Catalog Lock Requests per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,5),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

@@ -36,6 +36,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -269,7 +270,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_NEW_STATEMENTS,
 				"SQL Statements [new_statements] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [new_statements] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -281,7 +282,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CALL_COUNT,
 				"SQL Statements [calls] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [calls] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -293,7 +294,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TOTAL_TIME,
 				"SQL Statements [total_time] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [total_time] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -305,7 +306,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS,
 				"SQL Statements [rows] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [rows] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -317,7 +318,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SHARED_BLKS_HIT,
 				"SQL Statements [shared_blks_hit] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [shared_blks_hit] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -329,7 +330,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SHARED_BLKS_READ,
 				"SQL Statements [shared_blks_read] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [shared_blks_read] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -341,7 +342,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMP_BLK_READ,
 				"SQL Statements [temp_blks_read] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [temp_blks_read] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -353,7 +354,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMP_BLK_WRITTEN,
 				"SQL Statements [temp_blks_written] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [temp_blks_written] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -365,7 +366,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAL_RECORDS,
 				"SQL Statements [wal_records] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [wal_records] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -377,7 +378,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAL_BYTES,
 				"SQL Statements [wal_bytes] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [wal_bytes] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -386,64 +387,6 @@ extends CountersModel
 				Ver.ver(13),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 	}
-
-//	private void localUpdateGraphData(TrendGraphDataPoint tgdp, int dataType, boolean addSummaryRow, boolean doAverageSum, String colname)
-//	{
-////		// Get database count (do dot include template databases)
-////		int size = 0;
-////		for (int i = 0; i < this.size(); i++)
-////		{
-////			String dbname = this.getAbsString(i, "datname");
-////			if (dbname != null && !dbname.startsWith("template"))
-////				size++;
-////		}
-//			
-////System.out.println("localUpdateGraphData(): rowCount="+getRowCount()+", size="+(this.size())+", adjSize="+(addSummaryRow ? this.size()+1 : this.size())+", name='"+tgdp.getName()+"', addSummaryRow="+addSummaryRow+", colname='"+colname+"'.");
-//
-//		// Write 1 "line" for every db (except for 'template*' databases)
-//		Double[] dArray = new Double[ addSummaryRow ? this.size()+1 : this.size()];
-//		String[] lArray = new String[dArray.length];
-//		int ap = addSummaryRow ? 1 : 0;
-//		double sum = 0;
-//
-//		int rc = this.size();
-//		for (int r = 0; r < rc; r++) // we still need to loop all rows...
-//		{
-//			String dbname = this.getAbsString(r, "dbname");
-//			if (dbname != null && !dbname.startsWith("template"))
-//			{
-//				Double data;
-//				if      (dataType == CountersModel.DATA_ABS)  data = this.getAbsValueAsDouble (r, colname);
-//				else if (dataType == CountersModel.DATA_DIFF) data = this.getDiffValueAsDouble(r, colname);
-//				else if (dataType == CountersModel.DATA_RATE) data = this.getRateValueAsDouble(r, colname);
-//				else throw new RuntimeException("dataType(tgName=" + tgdp.getName() + "): Unsupported dataType=" + dataType);
-//				
-//				if (data != null)
-//					sum += data;
-//
-////System.out.println("     xxx: r=" + r + ", rc=" + rc + ", ap=" + ap + ", size()=" + size() + ", lArray.length=" + lArray.length + ", dArray.length=" + dArray.length + ", dbname='" + dbname + "'.");
-//				lArray[ap] = dbname;
-//				dArray[ap] = data;
-//				ap++;
-//			}
-//		}
-//
-//		if (addSummaryRow && this.size() > 0)
-//		{
-//			String sumLabel = "ALL-DBs";
-//			if (doAverageSum)
-//			{
-//				sumLabel = "AVG-ALL-DBs";
-//				sum = sum / (this.size() * 1.0);
-//			}
-//				
-//			lArray[0] = sumLabel;
-//			dArray[0] = sum;
-//		}
-//
-//		// Set the values
-//		tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//	}
 
 	private void localUpdateGraphData(TrendGraphDataPoint tgdp, int dataType, String colname)
 	{

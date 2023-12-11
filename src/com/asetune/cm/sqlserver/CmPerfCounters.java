@@ -41,6 +41,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEvent.Severity;
 import com.asetune.alarm.events.sqlserver.AlarmEventPerfCounter;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -230,7 +231,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_PCT,
 			"CPU Usage in Percent", // Menu CheckBox text
 			"CPU Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "CPU usage %" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -243,7 +244,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_EFFECTIVE_PCT,
 			"CPU Usage Effective in Percent", // Menu CheckBox text
 			"CPU Usage Effective in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "CPU effective %" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -256,7 +257,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_SEC,
 			"SQL Batches Received per Sec", // Menu CheckBox text
 			"SQL Batches Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Batch Requests/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -269,7 +270,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_ALL,
 			"SQL Batches (all) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Batches (all) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -282,7 +283,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_0,
 			"SQL Batches (0-10ms) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Batches (0-10ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "<1ms", "1-2ms", "2-5ms", "5-10ms" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -295,7 +296,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_1,
 			"SQL Batches (10ms-100ms) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Batches (10ms-100ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "10-20ms", "20-50ms", "50-100ms" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -308,7 +309,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_2,
 			"SQL Batches (100ms-1s) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Batches (100ms-1s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "100-200ms", "200-500ms", "500ms-1s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -321,7 +322,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_3,
 			"SQL Batches (1s-10s) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Batches (1s-10s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "1-2s", "2-5s", "5-10s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -334,7 +335,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_4,
 			"SQL Batches (>10s) In Time Span Received per SAMPLE", // Menu CheckBox text
 			"SQL Batches (>10s) In Time Span Received per SAMPLE ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -347,7 +348,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_HIT_RATE,
 			"Buffer Cache Hit Rate", // Menu CheckBox text
 			"Buffer Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Buffer cache hit ratio (Cache Hit Percent)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -360,7 +361,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_PLE,
 			"Page Life Expectancy", // Menu CheckBox text
 			"Page Life Expectancy ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Page life expectancy (high is good)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -373,7 +374,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Buffer Cache Reads", // Menu CheckBox text
 			"Buffer Cache Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Page lookups (LogicalReads)", "Page reads (PhysicalReads)", "Readahead pages (PhysicalReads)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -386,7 +387,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_PHY_READS,
 			"Buffer Cache Physical Reads", // Menu CheckBox text
 			"Buffer Cache Physical Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Page Reads (PhysicalReads)", "Read Ahead Pages (PhysicalReads)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -399,7 +400,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_WRITES,
 			"Buffer Cache Writes", // Menu CheckBox text
 			"Buffer Cache Writes per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Page writes", "Checkpoint pages", "Background writer pages", "Lazy writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -412,7 +413,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_DATA_SIZE,
 			"Buffer Cache Data Size in MB", // Menu CheckBox text
 			"Buffer Cache Data Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Database pages" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -425,7 +426,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMP_STAT,
 			"Temp Table Stats", // Menu CheckBox text
 			"Temp Table Stats ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Active Temp Tables", "Temp Tables Creation Rate", "Temp Tables For Destruction" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -438,7 +439,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_FREE_SPACE,
 			"Tempdb Free Space", // Menu CheckBox text
 			"Tempdb Free Space ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Free Space in tempdb (KB)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,
@@ -451,7 +452,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_VERSION_STORE,
 			"Version Store in Tempdb", // Menu CheckBox text
 			"Version Store in Tempdb ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Version Store Size (KB)", "Version Generation rate (KB/s)", "Version Cleanup rate (KB/s)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,
@@ -464,7 +465,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SNAPSHOT_ISOLATION,
 			"Snapshot Isolation", // Menu CheckBox text
 			"Snapshot Isolation ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Snapshot Transactions", "Update Snapshot Transactions", "NonSnapshot Version Transactions", "Longest Transaction Running Time", "Update conflict ratio" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,
@@ -477,7 +478,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOG_CACHE_HIT_RATE,
 			"Log Cache Hit Rate", // Menu CheckBox text
 			"Log Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -490,7 +491,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOG_CACHE_READS,
 			"Log Cache Reads", // Menu CheckBox text
 			"Log Cache Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -503,7 +504,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOG_POOL_REQUESTS,
 			"Log Pool Requets", // Menu CheckBox text
 			"Log Pool Requets per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -516,7 +517,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANS_SEC,
 			"Transactions", // Menu CheckBox text
 			"Transactions per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -529,7 +530,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANS_WRITE_SEC,
 			"Write Transactions", // Menu CheckBox text
 			"Write Transactions per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -542,7 +543,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANS_ACTIVE,
 			"Active Transactions", // Menu CheckBox text
 			"Active Transactions ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -555,7 +556,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMPILE,
 			"SQL Compilations", // Menu CheckBox text
 			"SQL Compilations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "SQL Compilations/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -568,7 +569,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RECOMPILE,
 			"SQL Re-Compilations", // Menu CheckBox text
 			"SQL Re-Compilations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "SQL Re-Compilations/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -581,7 +582,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKED_PROCESSES,
 			"Blocked Processes", // Menu CheckBox text
 			"Blocked Processes ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Processes blocked" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -594,7 +595,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PAGE_SPLITS,
 			"Page Splits", // Menu CheckBox text
 			"Page Splits per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Page Splits/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -607,7 +608,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_FWD_RIDS,
 			"Forwarded Records", // Menu CheckBox text
 			"Forwarded Records per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Forwarded Records/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -620,7 +621,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ACCESS_METHODS,
 			"Access Methods", // Menu CheckBox text
 			"Access Methods per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Full Scans/sec", "Range Scans/sec", "Probe Scans/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -633,7 +634,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LATCH_WAITS,
 			"Latch Waits", // Menu CheckBox text
 			"Latch Waits per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Latch Waits/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -646,7 +647,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LATCH_WAIT_TIME,
 			"Average Latch Wait Time", // Menu CheckBox text
 			"Average Latch Wait Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Average Latch Wait Time (ms)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -660,7 +661,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_FREE_LIST_STALLS,
 			"Buffer Cache - Waiting for free pages per Sec", // Menu CheckBox text
 			"Buffer Cache - Waiting for free pages per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Free list stalls/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -673,7 +674,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_GRANTS_PENDING,
 			"'Memory Grants Pending' per Sec", // Menu CheckBox text
 			"'Memory Grants Pending' per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Memory Grants Pending" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -687,7 +688,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_HIT_RATE,
 			"Plan Cache Hit Rate", // Menu CheckBox text
 			"Plan Cache Hit Rate ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "SQL Plans", "Object Plans(sp/tr/func)", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -700,7 +701,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_MB,
 			"Plan Cache Size in MB", // Menu CheckBox text
 			"Plan Cache Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -713,7 +714,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_OBJ_CNT,
 			"Plan Cache Object Count", // Menu CheckBox text
 			"Plan Cache Object Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -726,7 +727,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_OBJ_USE,
 			"Plan Cache Objects In Use", // Menu CheckBox text
 			"Plan Cache Objects In Use ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -739,7 +740,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_MANAGER,
 			"Memory Manager", // Menu CheckBox text
 			"Memory Manager ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -752,7 +753,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_TARGET_VS_TOTAL,
 			"Target vs Total Memory", // Menu CheckBox text
 			"Target vs Total Memory ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Target Server Memory (KB)", "Total Server Memory (KB)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -765,7 +766,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_STOLEN,
 			"Stolen Server Memory, from Buffer Pool", // Menu CheckBox text
 			"Stolen Server Memory, from Buffer Pool ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Stolen Server Memory, in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -778,7 +779,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_TOTAL,
 			"Query Story Total", // Menu CheckBox text
 			"Query Store Total ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "CPU Usage", "Physical Reads", "Logical Reads", "Logical Writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -791,7 +792,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_CPU,
 			"Query Story DB - CPU", // Menu CheckBox text
 			"Query Store DB - CPU ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -804,7 +805,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_PHYS_READ,
 			"Query Story DB - Physical Reads", // Menu CheckBox text
 			"Query Store DB - Physical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -817,7 +818,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_LOGI_READ,
 			"Query Story DB - Logical Reads", // Menu CheckBox text
 			"Query Store DB - Logical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -830,7 +831,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_LOGI_WRITE,
 			"Query Story DB - Logical Writes", // Menu CheckBox text
 			"Query Store DB - Logical Writes ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -843,7 +844,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DEADLOCK_DETAILS,
 			"Deadlock Count Details", // Menu CheckBox text
 			"Deadlock Count Details ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.LOCK,
@@ -856,7 +857,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COLUMNSTORE_ALL,
 			"Column Store Total", // Menu CheckBox text
 			"Column Store Total ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { 
 					"Delta Rowgroups Created", 
 					"Delta Rowgroups Closed", 

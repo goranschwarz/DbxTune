@@ -44,6 +44,7 @@ import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.alarm.events.sqlserver.AlarmEventLowOnWorkerThreads;
 import com.asetune.alarm.events.sqlserver.AlarmEventOutOfWorkerThreads;
 import com.asetune.alarm.events.sqlserver.AlarmEventSuspectPages;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
@@ -207,7 +208,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_CPU,
 			"CPU Summary, Global Variables", 	                        // Menu CheckBox text
 			"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -235,7 +236,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
 			"Number of Concurrently Blocking Locks, above " + LockWaitsThresholdSec + " sec, from sysprocesses ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -247,7 +248,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users in SQL-Server", 	          // Menu CheckBox text
 			"Connections/Users connected to the SQL-Server ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SRV_CONFIG,
@@ -259,7 +260,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
 			"Connection Rate in ASE", 	          // Menu CheckBox text
 			"Connection Attemtps per Second, using @@connections ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -271,7 +272,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
 			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "@@total_read", "@@total_write" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -283,7 +284,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
 			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -295,7 +296,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
 			"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -307,7 +308,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC,
 			"Max Active SQL Execution Time In Seconds",     // Menu CheckBox text
 			"Max Active SQL Execution Time In Second ("+SHORT_NAME+")s", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -319,7 +320,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_SPID_USAGE,
 			"Tempdb Usage by SPID's in MB",     // Menu CheckBox text
 			"Tempdb Usage by SPID's in MB ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "All", "User Objects", "Internal Objects" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,
@@ -331,7 +332,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB,
 			"Target and Total Server Memory in MB",     // Menu CheckBox text
 			"Target and Total Server Memory in MB ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Target Server Memory MB", "Total Server Memory MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -343,7 +344,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_UTILAZATION_PCT,
 			"SQL Server Memory Utilazation in Percent", // Menu CheckBox text
 			"SQL Server Memory Utilazation in Percent ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "process_memory_utilization_percentage" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -355,7 +356,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OS_MEMORY_FREE_MB,
 			"OS Free/Available Memory in MB", // Menu CheckBox text
 			"OS Free/Available Memory in MB ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
 			new String[] { "available_physical_memory_mb" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -367,7 +368,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PERFMON_MEMORY,
 			"PerfMon: SQL Server Memory Usage", // Menu CheckBox text
 			"PerfMon: SQL Server Memory Usage ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Buffer Pool Cache Memory MB", "Granted Workspace Memory MB", "Stolen Server Memory MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -379,7 +380,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WORKER_THREAD_USAGE,
 			"SQL Server Worker Threads Usage", // Menu CheckBox text
 			"SQL Server Worker Threads Usage ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -391,7 +392,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WT_WAITING_FOR_CPU,
 			"SQL Server Workers That are Waiting for CPU to be Scheduled", // Menu CheckBox text
 			"SQL Server Workers That are Waiting for CPU to be Scheduled ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "workersWaitingForCPU", "workersWaitingForCPU_perScheduler" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -403,7 +404,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS,
 			"Tasks/Requests that are Waiting for Available Worker Threads", // Menu CheckBox text
 			"Tasks/Requests that are Waiting for Available Worker Threads ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "requestsWaitingForWorkers" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -415,7 +416,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DEADLOCK_COUNT_SUM,
 			"Deadlock Count", // Menu CheckBox text
 			"Deadlock Count ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Deadlock Count" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,

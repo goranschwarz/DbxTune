@@ -31,6 +31,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEventOsLoadAverage;
 import com.asetune.alarm.events.AlarmEventOsLoadAverage.RangeType;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
@@ -125,7 +126,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_LOAD_AVERAGE,
 			"uptime: Load Average", 	                                    // Menu CheckBox text
 			"uptime: Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "loadAverage_1Min",    "loadAverage_5Min",    "loadAverage_15Min" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -138,7 +139,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_ADJ_LOAD_AVERAGE,
 			"uptime: Adjusted Load Average", 	                                    // Menu CheckBox text
 			"uptime: Adjusted Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "adjLoadAverage_1Min", "adjLoadAverage_5Min", "adjLoadAverage_15Min" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -151,7 +152,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WIN_LOAD_AVERAGE,
 			"uptime: Windows Processor Queue Length", 	                                    // Menu CheckBox text
 			"uptime: Windows Processor Queue Length ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] { "Processor Queue Length" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,

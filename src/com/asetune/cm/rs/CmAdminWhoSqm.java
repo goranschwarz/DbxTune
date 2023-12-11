@@ -28,6 +28,7 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -133,19 +134,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "-added-at-runtime-" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_WRITES,          new TrendGraphDataPoint(GRAPH_NAME_WRITES,          labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_READ,            new TrendGraphDataPoint(GRAPH_NAME_READ,            labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_BLK_READS,       new TrendGraphDataPoint(GRAPH_NAME_BLK_READS,       labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_BLK_CACHE_READS, new TrendGraphDataPoint(GRAPH_NAME_BLK_CACHE_READS, labels, LabelType.Dynamic));
-
 		//-----
 		addTrendGraph(GRAPH_NAME_WRITES,
 			"SQM: Number of messages written into the queue (col 'Writes', per second)", // Menu CheckBox text
 			"SQM: Number of messages written into the queue (col 'Writes', per second)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -158,7 +151,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_READ,
 			"SQM: Number of messages read from the queue (col 'Read', per second)", // Menu CheckBox text
 			"SQM: Number of messages read from the queue (col 'Read', per second)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -171,7 +164,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLK_READS,
 			"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Menu CheckBox text
 			"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -184,7 +177,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLK_CACHE_READS,
 			"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Menu CheckBox text
 			"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -193,60 +186,6 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_WRITES,
-//				"SQM: Number of messages written into the queue (col 'Writes', per second)", // Menu CheckBox text
-//				"SQM: Number of messages written into the queue (col 'Writes', per second)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_READ,
-//					"SQM: Number of messages read from the queue (col 'Read', per second)", // Menu CheckBox text
-//					"SQM: Number of messages read from the queue (col 'Read', per second)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_BLK_READS,
-//					"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Menu CheckBox text
-//					"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_BLK_CACHE_READS,
-//					"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Menu CheckBox text
-//					"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	private List<Integer> getValidRows()

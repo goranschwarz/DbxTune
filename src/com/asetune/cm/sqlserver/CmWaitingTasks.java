@@ -34,6 +34,7 @@ import com.asetune.ICounterController.DbmsOption;
 import com.asetune.IGuiController;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCache.ObjectInfo;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -522,7 +523,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_COUNT,
 			"Number of Current Wait Tasks", 	                   // Menu CheckBox text
 			"Number of Current Wait Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"WaitCount"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -534,7 +535,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_MAX_TIME,
 			"Max Wait Time in ms for Current Tasks", 	                   // Menu CheckBox text
 			"Max Wait Time in ms for Current Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
 			new String[] {"wait_duration_ms"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,

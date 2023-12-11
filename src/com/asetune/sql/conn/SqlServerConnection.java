@@ -52,6 +52,8 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
+import com.microsoft.sqlserver.jdbc.ISQLServerMessageHandler;
+import com.microsoft.sqlserver.jdbc.SQLServerConnection;
 
 public class SqlServerConnection 
 extends DbxConnection
@@ -354,41 +356,25 @@ extends DbxConnection
 		}
 	}
 
-//	protected JtdsMessageHandler _oldMsgHandlerJtds = null;
-//	protected SQLServerMessageHandler _oldMsgHandlerSqlServer = null;
+	protected ISQLServerMessageHandler _oldMsgHandlerSqlServer = null;
 
-//	public void setMessageHandler(SQLServerMessageHandler messageHandler)
-//	{
-//		if (_conn instanceof SQLServerConnection)
-//		{
-//    		// Save the current message handler so we can restore it later
-//			_oldMsgHandlerSqlServer = ((SQLServerConnection)_conn).getSQLServerMessageHandler();
-//    
-//    		((SQLServerConnection)_conn).setSQLServerMessageHandler(messageHandler);
-//		}
-//	}
-
-//	public void setMessageHandler(JtdsMessageHandler messageHandler)
-//	{
-//		if (_conn instanceof JtdsConnection)
-//		{
-//    		// Save the current message handler so we can restore it later
-//			_oldMsgHandlerJtds = ((JtdsConnection)_conn).getJtdsMessageHandler();
-//    
-//    		((JtdsConnection)_conn).setJtdsMessageHandler(messageHandler);
-//		}
-//	}
+	public void setMessageHandler(ISQLServerMessageHandler messageHandler)
+	{
+		if (_conn instanceof SQLServerConnection)
+		{
+    		// Save the current message handler so we can restore it later
+			_oldMsgHandlerSqlServer = ((SQLServerConnection)_conn).getServerMessageHandler();
+    
+    		((SQLServerConnection)_conn).setServerMessageHandler(messageHandler);
+		}
+	}
 
 	public void restoreMessageHandler()
 	{
-//		if (_conn instanceof JtdsConnection)
-//		{
-//			((JtdsConnection)_conn).setJtdsMessageHandler(_oldMsgHandlerJtds);
-//		}
-//		if (_conn instanceof SQLServerConnection)
-//		{
-//			((SQLServerConnection)_conn).setSQLServerMessageHandler(_oldMsgHandlerSqlServer);
-//		}
+		if (_conn instanceof SQLServerConnection)
+		{
+			((SQLServerConnection)_conn).setServerMessageHandler(_oldMsgHandlerSqlServer);
+		}
 	}
 
 	/**

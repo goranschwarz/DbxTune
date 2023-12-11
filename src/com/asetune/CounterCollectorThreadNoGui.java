@@ -72,6 +72,7 @@ import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.hostmon.HostMonitorConnectionLocalOsCmd;
 import com.asetune.hostmon.HostMonitorConnectionLocalOsCmdWrapper;
 import com.asetune.hostmon.HostMonitorConnectionSsh;
+import com.asetune.mgt.NoGuiManagementServer;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistWriterBase;
@@ -1121,6 +1122,12 @@ implements Memory.MemoryListener
 		MonTablesDictionary mtd = null;
 		
 		//---------------------------
+		// START: Web Management interface 
+		//---------------------------
+		// This is done in DbxTune.java
+
+
+		//---------------------------
 		// START the Persistent Storage thread
 		//---------------------------
 		PersistentCounterHandler pch = null;
@@ -1456,6 +1463,11 @@ implements Memory.MemoryListener
 
 				// Save header info, so we can send AlarmEvents to DbxCentral (in case of connectivity issues) and ruse the servername and other fields.
 				_lastKnownHeaderInfo = headerInfo;
+
+				// Set the headerInfo in the CounterController
+				if (headerInfo != null && CounterController.hasInstance())
+					CounterController.getInstance().setLastKnownHeaderInfo(headerInfo);
+						
 
 				// If there is a ServerAlias, apply that... This is used by the DbxCentral for an alternate schema/servername
 				if (StringUtil.hasValue(_dbmsServerAlias))
@@ -1855,6 +1867,14 @@ implements Memory.MemoryListener
 		// Stop watching configuration files for CHANGES (ONLY IN NO-GUI mode)
 		Configuration.stopCombinedConfigurationFileWatcher();
 
+		
+		//---------------------------
+		// STOP: Web Management interface 
+		//---------------------------
+		if (NoGuiManagementServer.hasInstance())
+		{
+			NoGuiManagementServer.getInstance().stopServer();
+		}
 		
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending, this should lead to a server STOP.");
 		
