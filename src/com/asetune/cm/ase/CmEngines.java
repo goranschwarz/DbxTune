@@ -203,7 +203,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_SUM,
 			"CPU Summary", 	                                 // Menu CheckBox text
 			"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "System+User CPU", "System CPU", "User CPU" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -215,7 +215,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_ENG,
 			"CPU per Engine",                       // Menu CheckBox text
 			"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,

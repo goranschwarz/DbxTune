@@ -140,7 +140,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CLOSED,
 			"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Menu CheckBox text
 			"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -153,7 +153,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_READ,
 			"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Menu CheckBox text
 			"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -166,7 +166,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OPEN,
 			"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Menu CheckBox text
 			"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -179,7 +179,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRUNC,
 			"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Menu CheckBox text
 			"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -192,7 +192,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REMOVED,
 			"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Menu CheckBox text
 			"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -205,7 +205,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PARSED,
 			"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Menu CheckBox text
 			"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,

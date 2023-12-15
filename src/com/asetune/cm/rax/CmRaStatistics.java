@@ -188,7 +188,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_JVM_MEM,
 			"JVM Memory Usage",                   // Menu CheckBox text
 			"JVM Memory Usage (Absolute Value)",  // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Maximum Memory - MB", "Total Memory Allocated - MB", "Free Memory - MB", "Memory Usage - MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -201,7 +201,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_JVM_MEM_PCT,
 			"JVM Memory Usage in Percent",                   // Menu CheckBox text
 			"JVM Memory Usage in Percent (Absolute Value)",  // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "JVM % max memory used" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -214,7 +214,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_CMD_SENT,
 			"LTI: Number of LTL commands sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of LTL commands sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Number of LTL commands sent" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -227,7 +227,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_BYTES_SENT,
 			"LTI: Number of Bytes sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of Bytes sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total bytes Sent to RS" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -240,7 +240,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_KB_SENT,
 			"LTI: Number of KB sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of KB sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total KB Sent to RS" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -253,7 +253,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTL_MB_SENT,
 			"LTI: Number of MB sent to RepServer",                   // Menu CheckBox text
 			"LTI: Number of MB sent to RepServer (per second)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total MB Sent to RS" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -266,7 +266,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LTI_QUEUE_SIZE,
 			"LTI: Current number of commands in the LTI queue",                       // Menu CheckBox text
 			"LTI: Current number of commands in the LTI queue (Absolute Value)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Current number of commands in the LTI queue" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -279,7 +279,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LR_OPERATIONS,
 			"LogReader: Operations",                   // Menu CheckBox text
 			"LogReader: Operations (per second)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Scanned", "Processed", "Skipped"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -292,7 +292,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LR_TRANS,
 			"LogReader: Transactions",                   // Menu CheckBox text
 			"LogReader: Transactions (per second)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Processed", "Skipped", "Opened", "Closed", "Committed", "Aborted (rolled back)", "System transactions skipped" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -305,7 +305,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LR_MAINT_FILTER,
 			"LogReader: Maintenance user operations read from log devices and skipped",                   // Menu CheckBox text
 			"LogReader: Maintenance user operations read from log devices and skipped (per second)",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Maint user operations read from log and skipped" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -318,7 +318,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_GLOBAL_LRU_CACHE,
 			"Number of Object in the Global LRU Cache",                   // Menu CheckBox text
 			"Number of Object in the Global LRU Cache (Absolute Value)",  // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Number of object references in the internal LRU cache" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -331,7 +331,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ORA_LR,
 			"Number of Log Records (Oracle specific)",                  // Menu CheckBox text
 			"Number of Log Records (per second), Oracle specific",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Queued", "Filtered" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -344,7 +344,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ORA_LOB_OP,
 			"Number of LOB Operations from PDB (Oracle specific)",                  // Menu CheckBox text
 			"Number of LOB Operations from PDB (per second), Oracle specific",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total LOB operations processed by query data from PDB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -357,7 +357,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ORA_RASD_CACHE,
 			"RepAgent System Database Repository Cache (Oracle specific)",                  // Menu CheckBox text
 			"RepAgent System Database Repository Cache (per second), Oracle specific",      // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Proc cache size (abs)", "Proc hits (per sec)", "Proc misses (per sec)", "Proc_Name cache size (abs)", "Proc_Name hits (per sec)", "Proc_Name misses (per sec)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,

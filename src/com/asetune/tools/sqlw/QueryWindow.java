@@ -137,6 +137,7 @@ import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.PopupMenuEvent;
@@ -216,6 +217,7 @@ import com.asetune.gui.ResultSetMetaDataViewDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.AbstractComponentDecorator;
+import com.asetune.gui.swing.DeferredChangeListener;
 import com.asetune.gui.swing.EventQueueProxy;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTableFilter;
@@ -2131,19 +2133,21 @@ public class QueryWindow
 		_resPanelScroll.getVerticalScrollBar()  .setUnitIncrement(16);
 		_resPanelScroll.getHorizontalScrollBar().setUnitIncrement(16);
 		
-//		if (JavaVersion.isJava9orLater())
-//		{
+		// if it's java9 there seems to be some problems with repainting... (if the table is not added to a ScrollPane, which takes upp the whole scroll)
+		// This is better in java 17, but still not 100% good, so lets keep this for a while longer
+		if (JavaVersion.isJava9orLater())
+		{
 //			_logger.info("For Java-9 and above, add a 'repaint' when the scrollbar moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA RELEASE.");
-//
-//			_resPanelScroll.getViewport().addChangeListener(new DeferredChangeListener(50, false)
-//			{
-//				@Override
-//				public void deferredStateChanged(ChangeEvent e)
-//				{
-//					_resPanelScroll.repaint();
-//				}
-//			});
-//		}
+
+			_resPanelScroll.getViewport().addChangeListener(new DeferredChangeListener(50, false)
+			{
+				@Override
+				public void deferredStateChanged(ChangeEvent e)
+				{
+					_resPanelScroll.repaint();
+				}
+			});
+		}
 
 		_resPanelScroll    .setVisible(true);
 		_resPanelTextScroll.setVisible(false);

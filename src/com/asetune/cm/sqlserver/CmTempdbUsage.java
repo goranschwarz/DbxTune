@@ -162,7 +162,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_USAGE_SUM_FULL,
 			"Tempdb Usage by Object Type, in MB, All", // Menu CheckBox text
 			"Tempdb Usage by Object Type, in MB, All ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space", "Free Space", "Total Space" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,
@@ -175,7 +175,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_USAGE_SUM_SMALL,
 			"Tempdb Usage by Object Type, in MB, Subset", // Menu CheckBox text
 			"Tempdb Usage by Object Type, in MB, Subset ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Version Store", "Internal Objects", "User Objects", "Mixed Extents", "Allocated Space" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,

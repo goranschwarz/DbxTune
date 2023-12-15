@@ -132,14 +132,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labelsLockCount  = new String[] { "Lock Count" };
-//		
-//		addTrendGraphData(GRAPH_NAME_LOCK_COUNT, new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT, labelsLockCount, LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
 				"Lock Count", 	                           // Menu CheckBox text
 				"Number of Current Locks Held in the Server ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] { "Lock Count" }, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.LOCK,

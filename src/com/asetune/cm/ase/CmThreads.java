@@ -143,7 +143,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BUSY_AVG,
 			"CPU Thread BusyTicksPct Average per Pool Type",                  // Menu CheckBox text
 			"CPU Thread BusyTicksPct Average per Pool Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -155,7 +155,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BUSY_THREAD,
 			"CPU Thread BusyTicksPct Usage per Thread",                  // Menu CheckBox text
 			"CPU Thread BusyTicksPct Usage per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -167,7 +167,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TASKS,
 			"Tasks Executed per Thread",                  // Menu CheckBox text
 			"Tasks Executed per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,

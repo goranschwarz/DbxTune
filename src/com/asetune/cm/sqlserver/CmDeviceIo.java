@@ -151,7 +151,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RW_ALL_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and ALL Devices", // Menu CheckBox text
 			"Number of Disk Operations (Read+Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -164,7 +164,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_R_ALL_DISK_IO,
 			"Number of Disk Operations (Read), per Second and ALL Devices", // Menu CheckBox text
 			"Number of Disk Operations (Read), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -177,7 +177,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_W_ALL_DISK_IO,
 			"Number of Disk Operations (Write), per Second and ALL Devices", // Menu CheckBox text
 			"Number of Disk Operations (Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -192,7 +192,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RW_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and Device", // Menu CheckBox text
 			"Number of Disk Operations (Read+Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -205,7 +205,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_R_DISK_IO,
 			"Number of Disk Operations (Read), per Second and Device", // Menu CheckBox text
 			"Number of Disk Operations (Read), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -218,7 +218,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_W_DISK_IO,
 			"Number of Disk Operations (Write), per Second and Device", // Menu CheckBox text
 			"Number of Disk Operations (Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -233,7 +233,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
 			"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
 			"Device IO Service Time (Read+Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -246,7 +246,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_R_SERVICE_TIME,
 			"Device IO Service Time (Read), per Device",                 // Menu CheckBox text
 			"Device IO Service Time (Read) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -259,7 +259,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_W_SERVICE_TIME,
 			"Device IO Service Time (Write), per Device",                 // Menu CheckBox text
 			"Device IO Service Time (Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,

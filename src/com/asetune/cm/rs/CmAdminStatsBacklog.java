@@ -132,7 +132,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUEUE_SIZE,
 			"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Menu CheckBox text
 			"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,

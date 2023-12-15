@@ -400,7 +400,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DB_WAIT_TIME_MS,
 				"DB Wait, wait_time_ms, Summary per database", 	                   // Menu CheckBox text
 				"DB Wait, wait_time_ms, Summary per database ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.WAITS,

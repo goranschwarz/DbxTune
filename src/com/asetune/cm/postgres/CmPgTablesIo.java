@@ -185,7 +185,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_HIT,
 			"Tables Total Cache Hit Percent", 	                // Menu CheckBox text
 			"Tables Total Cache Hit in Percent ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"Data Pages Cache Hit"}, 
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.CPU,
@@ -197,7 +197,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Tables Total Cache Reads", 	                // Menu CheckBox text
 			"Tables Total Cache Reads per Second ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"total_reads", "Reads From Cache", "Reads From Disk"}, 
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.SRV_CONFIG,

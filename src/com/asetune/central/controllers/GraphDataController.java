@@ -56,7 +56,7 @@ extends HttpServlet
 //		resp.setCharacterEncoding("UTF-8");
 
 		// Check for known input parameters
-		if (Helper.hasUnKnownParameters(req, resp, "sessionName", "srv", "srvName",    "cmName", "graphName", "startTime", "endTime", "sampleType", "sampleValue"))
+		if (Helper.hasUnKnownParameters(req, resp, "sessionName", "srv", "srvName",    "cmName", "graphName", "startTime", "endTime", "sampleType", "sampleValue", "autoOverflow"))
 			return;
 
 		String sessionName    = Helper.getParameter(req, new String[] {"sessionName", "srv", "srvName"} );
@@ -66,6 +66,7 @@ extends HttpServlet
 		String endTime        = Helper.getParameter(req, "endTime");
 		String sampleTypeStr  = Helper.getParameter(req, "sampleType");
 		String sampleValueStr = Helper.getParameter(req, "sampleValue");
+		String autoOverflowStr= Helper.getParameter(req, "autoOverflow", "");
 
 		int sampleValue = -1;
 		if (StringUtil.hasValue(sampleValueStr))
@@ -91,6 +92,20 @@ extends HttpServlet
 		}
 //System.out.println("GraphData: getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', avgOverMinutes='"+avgOverMinutes+"'.)");
 
+		SampleType autoOverflow = null;
+		if (StringUtil.hasValue(autoOverflowStr))
+		{
+			try 
+			{
+				autoOverflow = SampleType.valueOf(autoOverflowStr);
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.info("Unknown value for SampleType 'autoOverflow', cant map the String '" + autoOverflowStr + "' to a valid SampleType. Setting autoOverflow to NULL.");
+				autoOverflow = null;
+			}
+		}
+
 		// Check that "sessionName" or "srvName" exists
 		if (CentralPersistReader.hasInstance())
 		{
@@ -112,7 +127,7 @@ extends HttpServlet
 		try
 		{
 			CentralPersistReader reader = CentralPersistReader.getInstance();
-			List<DbxGraphData> list = reader.getGraphData(sessionName, cmName, graphName, startTime, endTime, sampleType, sampleValue);
+			List<DbxGraphData> list = reader.getGraphData(sessionName, cmName, graphName, startTime, endTime, sampleType, sampleValue, autoOverflow);
 			
 			ObjectMapper om = Helper.createObjectMapper();
 			payload = om.writeValueAsString(list);

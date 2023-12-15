@@ -137,7 +137,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_STAT_OPER,
 			"Connections, Operations and Load", // Menu CheckBox text
 			"Connections, Operations and Load ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Connections Active", "Operations Waiting", "Operations Active", "Active Load Statements" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -149,7 +149,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_STAT_DISK,
 			"Disk activity", // Menu CheckBox text
 			"Disk activity ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Main Store Disk Reads",	"Main Store Disk Writes", "Temp Store Disk Reads", "Temp Store Disk Writes", "Cache Dbspace Disk Reads", "Cache Dbspace Disk Writes"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -161,7 +161,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_STAT_CPUS,
 			"CPU usage",                     // Menu CheckBox text
 			"CPU usage (100 per core) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Cpu Total Time", "Cpu User Time", "Cpu System Time"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,

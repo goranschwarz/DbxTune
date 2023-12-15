@@ -135,7 +135,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_VERSION,
 			"Versioning", 	                        // Menu CheckBox text
 			"Versioning, using Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Active Txn Versions - Count", "Active Txn Versions - Created MB", "Active Txn Versions - Deleted MB", "Other Versions - Count", "Other Versions - MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -148,7 +148,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMPRESSION,
 			"Compression Ratio", 	                        // Menu CheckBox text
 			"Compression Ratio - in Percent, Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Main IQ I/O - Compression Ratio", "Temporary IQ I/O - Compression Ratio" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -161,7 +161,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Cache Activity - Logical Reads", 	                        // Menu CheckBox text
 			"Cache Activity - Logical Reads, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Main - Logical Read", "Temporary - Logical Read" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -174,7 +174,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_MAIN,
 			"Cache IO Activity - Main", 	                        // Menu CheckBox text
 			"Cache IO Activity - Main, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -187,7 +187,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_TEMP,
 			"Cache IO Activity - Temporary", 	                        // Menu CheckBox text
 			"Cache IO Activity - Temporary, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -740,7 +740,7 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 //
 //    I: Input
 //
-//    L: Logical pages read (“Finds”)
+//    L: Logical pages read (ï¿½Findsï¿½)
 //
 //    P: Physical pages read
 //
@@ -766,7 +766,7 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 //
 //    Other Versions shows other db versions and the total space consumed. These versions will eventually be dropped when they are no longer referenced or referencable by active transactions.
 //
-//    Active Txn Versions shows the number of active write transactions and the amount of data they have created and destroyed. If these transactions commit, the “destroyed” data will become an old version and eventually be dropped. If they rollback, the “created” data will be freed.
+//    Active Txn Versions shows the number of active write transactions and the amount of data they have created and destroyed. If these transactions commit, the ï¿½destroyedï¿½ data will become an old version and eventually be dropped. If they rollback, the ï¿½createdï¿½ data will be freed.
 //
 //    Main Reserved Blocks Available and Temporary Reserved Blocks Available show the amount of reserved space that is available.
 //

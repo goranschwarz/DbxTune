@@ -153,7 +153,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LATENCY_IN_SEC,
 			"Latency In Seconds, from Active->Standby", // Menu CheckBox text
 			"Latency In Seconds, from Active->Standby", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -165,7 +165,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_APPLY_AGE_IN_SEC,
 			"Apply Age In Seconds, from Active->Standby", // Menu CheckBox text
 			"Apply Age In Seconds, from Active->Standby", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,
@@ -177,7 +177,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATA_AGE_IN_SEC,
 			"Data Age In Seconds, from Active->Standby", // Menu CheckBox text
 			"Data Age In Seconds, from Active->Standby", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,

@@ -166,7 +166,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_USED,
 			"meminfo: Used Memory", 	                                // Menu CheckBox text
 			"meminfo: Used Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "MemUsed in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -179,7 +179,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_AVAILABLE,
 			"meminfo: Available Memory", 	                                // Menu CheckBox text
 			"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
 			new String[] { "MemAvailable in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -192,7 +192,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WIN_PAGING,
 			"meminfo: Windows Paging or Swap Usage", 	                                // Menu CheckBox text
 			"meminfo: Windows Paging or Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Pages/sec", "Pages Input/sec", "Pages Output/sec"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -205,7 +205,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WIN_PAGING_FILE,
 			"meminfo: Windows Paging File Usage", 	                                // Menu CheckBox text
 			"meminfo: Windows Paging File Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Paging File(_Total) - % Usage", "Paging File(_Total) - % Usage Peak"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -614,6 +614,10 @@ extends CounterModelHostMonitor
                                                                                
 	public static final String  PROPKEY_alarm_swap_thrashing_maxCap_multiplier = CM_NAME + ".alarm.system.swap.thrashing.maxCap.multiplier";
 	public static final double  DEFAULT_alarm_swap_thrashing_maxCap_multiplier = 2.0d;
+
+	// The names are used "elsewhere", this makes it less buggy if we change the name
+	public static final String  ALARM_NAME_Swapping                            = "Swapping";
+	public static final String  ALARM_NAME_SwapThrashing                       = "SwapThrashing";
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()

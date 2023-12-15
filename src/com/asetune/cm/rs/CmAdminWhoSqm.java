@@ -138,7 +138,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITES,
 			"SQM: Number of messages written into the queue (col 'Writes', per second)", // Menu CheckBox text
 			"SQM: Number of messages written into the queue (col 'Writes', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -151,7 +151,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_READ,
 			"SQM: Number of messages read from the queue (col 'Read', per second)", // Menu CheckBox text
 			"SQM: Number of messages read from the queue (col 'Read', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -164,7 +164,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLK_READS,
 			"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Menu CheckBox text
 			"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -177,7 +177,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLK_CACHE_READS,
 			"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Menu CheckBox text
 			"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -308,11 +308,11 @@ extends CountersModel
 			mtd.addColumn("sqm", "Writes",          "<html>The number of messages written into the queue.</html>");
 			mtd.addColumn("sqm", "Read",            "<html>The number of messages read from the queue. This usually exceeds the number of writes because the last segment is read at start-up to determine where writing is to begin. Also, long transactions may cause messages to be reread.</html>");
 			mtd.addColumn("sqm", "Bytes",           "<html>The number of bytes written.</html>");
-			mtd.addColumn("sqm", "B Writes",        "<html>The number of 16K blocks written. It may be greater than Bytes/16K because not every 16K block written is full. You can determine the density of blocks by dividing Bytes by B Writes.</html>");
+			mtd.addColumn("sqm", "B Writes",        "<html>The number of 16K blocks written. It may be greater than Bytes/16K because not every 16K block written is full. You can determine the density of blocks by dividing Bytes by Bï¿½Writes.</html>");
 			mtd.addColumn("sqm", "B Filled",        "<html>The number of 16K blocks written to disk because they are filled.</html>");
 			mtd.addColumn("sqm", "B Reads",         "<html>The number of 16K blocks read.</html>");
 			mtd.addColumn("sqm", "B Cache",         "<html>The number of 16K blocks read that are in cache.</html>");
-			mtd.addColumn("sqm", "Save_Int:Seg",    "<html>The Save_Int interval and the oldest segment in the Save_Int list. The Save_Int interval is the number of minutes the Replication Server maintains an SQM segment after all messages in the segment have been acknowledged by targets.<br><br>For example, a value of 5:88 indicates a Save_Int interval of 5 minutes, where segment 88 is the oldest segment in the Save_Int list.<br><br>This feature provides redundancy in the event of replication system failure. For example, a Replication Server could lose its disk partitions while receiving data from another Replication Server. The Save_Int feature lets the sending Replication Server re-create all messages saved during the Save_Int interval.<br><br>A Save_Int value of “strict” may be used when a queue is read by more than one reader thread. Replication Server maintains the SQM segment until all threads reading the queue have read the messages on the segment and applied them to their destination.</html>");
+			mtd.addColumn("sqm", "Save_Int:Seg",    "<html>The Save_Int interval and the oldest segment in the Save_Int list. The Save_Int interval is the number of minutes the Replication Server maintains an SQM segment after all messages in the segment have been acknowledged by targets.<br><br>For example, a value of 5:88 indicates a Save_Int interval of 5 minutes, where segment 88 is the oldest segment in the Save_Int list.<br><br>This feature provides redundancy in the event of replication system failure. For example, a Replication Server could lose its disk partitions while receiving data from another Replication Server. The Save_Int feature lets the sending Replication Server re-create all messages saved during the Save_Int interval.<br><br>A Save_Int value of ï¿½strictï¿½ may be used when a queue is read by more than one reader thread. Replication Server maintains the SQM segment until all threads reading the queue have read the messages on the segment and applied them to their destination.</html>");
 			mtd.addColumn("sqm", "First Seg.Block", "<html>The first undeleted segment and block number in the queue. If the figures for First Seg.Block and Last Seg.Block do not match, data remains in the queue for processing.<br><br>This information is useful when dumping queues. For more information, refer to the Replication Server Troubleshooting Guide.</html>");
 			mtd.addColumn("sqm", "Last Seg.Block",  "<html>The last segment and block written to the queue. If the figures for First Seg.Block and Last Seg.Block do not match, data remains in the queue for processing.<br><br>This information is useful when dumping queues. For more information, refer to the Replication Server Troubleshooting Guide.</html>");
 			mtd.addColumn("sqm", "Next Read",       "<html>The next segment, block, and row to be read from the queue.</html>");

@@ -173,7 +173,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Statement Cache Requests", 	                           // Menu CheckBox text
 			"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -186,7 +186,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HIT_RATE_PCT,
 			"Statement Cache Hit Rate", 	                           // Menu CheckBox text
 			"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Hit rate percent" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -233,8 +233,8 @@ extends CountersModel
 ////			mtd.addColumn("monStatementCache",  "OveralAvgReusePct", "<html>" +
 ////					"A good indication of overall average reuse for each statement. A 10:1 ratio obviously is much better than 2:1<br>" +
 ////					"<b>Formula</b>: diff.HitCount / diff.NumStatements * 100 <br>" +
-////					"<b>Note</b>: The sampling interval plays a huge role in this metric – during a 1 second sample, not that many statements <br>" +
-////					"             may be executed as compared to a 10 minute sample – and could distort the ratio to be viewed as excessively low.<br></html>");
+////					"<b>Note</b>: The sampling interval plays a huge role in this metric ï¿½ during a 1 second sample, not that many statements <br>" +
+////					"             may be executed as compared to a 10 minute sample ï¿½ and could distort the ratio to be viewed as excessively low.<br></html>");
 //		}
 //		catch (NameNotFoundException e) {/*ignore*/}
 	}

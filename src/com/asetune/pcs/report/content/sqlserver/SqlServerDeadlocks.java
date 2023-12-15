@@ -183,6 +183,12 @@ extends SqlServerAbstract
 				w.append("<p><b>Please considder installing 'sp_BlitzLock' on the server '" + getReportingInstance().getDbmsServerName() + "', this will give more detailed information about the deadlocks in here.</b></p>");
 			}
 
+			// Print any Info Messages
+			if (hasInfogMsg())
+			{
+				w.append(getInfoMsg());
+			}
+
 			// OTHER info
 //			if (StringUtil.hasValue(_deadlockSummaryPeriodReport_xxx))
 //			{
@@ -262,29 +268,17 @@ extends SqlServerAbstract
 			if (_deadlockSummaryPeriodCount > 0)
 			{
 				_deadlockSummaryPeriodReport_spBlitzLock = PersistWriterJdbc.getKeyValueStoreAsString(conn, CounterControllerSqlServer.PCS_KEY_VALUE_deadlockReport_blitzLock);
-//				_deadlockSummaryPeriodReport_xxx         = PersistWriterJdbc.getKeyValueStoreAsString(conn, CounterControllerSqlServer.PCS_KEY_VALUE_deadlockReport_xxx);
 
 //System.out.println("_deadlockSummaryPeriodReport_spBlitzLock=|" + _deadlockSummaryPeriodReport_spBlitzLock + "|");
-				if (StringUtil.hasValue(_deadlockSummaryPeriodReport_spBlitzLock))	
+				if (StringUtil.hasValue(_deadlockSummaryPeriodReport_spBlitzLock))
 				{
 					if (_deadlockSummaryPeriodReport_spBlitzLock.startsWith("ERROR: ErrorCode=") || _deadlockSummaryPeriodReport_spBlitzLock.startsWith("Msg "))
 					{
+						_logger.info  ("Some error(s) was caught when calling 'sp_BlitzLock', this needs to be fixed: " + _deadlockSummaryPeriodReport_spBlitzLock);
 						addInfoMessage("Some error(s) was caught when calling 'sp_BlitzLock', this needs to be fixed: " + _deadlockSummaryPeriodReport_spBlitzLock);
-//TODO: Check how/where the message is printed
 					}
 					else
 					{
-//						// TODO: Decode the report(s) into ResultSetTableModel objects so we can print some HTML Tables out of it
-//						List<ResultSetTableModel> rstmList = ResultSetTableModel.parseTextTables(_deadlockSummaryPeriodReport_spBlitzLock);
-//						if (rstmList.size() >= 1) _spBlitzLock_section1 = rstmList.get(0);
-//						if (rstmList.size() >= 2) _spBlitzLock_section2 = rstmList.get(1);
-//						if (rstmList.size() >= 3) _spBlitzLock_section3 = rstmList.get(2);
-//
-//						// Guess what data types that each column holds (makes the HTML tables sortable/readable)
-//						if (_spBlitzLock_section1 != null) _spBlitzLock_section1.guessDatatypes();
-//						if (_spBlitzLock_section2 != null) _spBlitzLock_section2.guessDatatypes();
-//						if (_spBlitzLock_section3 != null) _spBlitzLock_section3.guessDatatypes();
-
 						// Decode the report(s) into ResultSetTableModel objects so we can print some HTML Tables out of it
 						List<ResultSetTableModel> rstmList = ResultSetTableModel.parseJsonMultiText(_deadlockSummaryPeriodReport_spBlitzLock);
 //System.out.println(">>>>>>>>>>>>>>>>>>>>>> rstmList.size()==" + rstmList.size());

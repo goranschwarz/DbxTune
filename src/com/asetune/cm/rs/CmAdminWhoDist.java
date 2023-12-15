@@ -136,7 +136,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANS_PROCESSED,
 			"DIST: Number of Transactions (col 'TransProcessed', per second)", // Menu CheckBox text
 			"DIST: Number of Transactions (col 'TransProcessed', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -149,7 +149,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CMD_PROCESSED,
 			"DIST: Number of Commands (col 'CmdsProcessed', per second)", // Menu CheckBox text
 			"DIST: Number of Commands (col 'CmdsProcessed', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -225,7 +225,7 @@ extends CountersModel
 			mtd.addColumn("dist", "Info",           "<html>FIXME: Info</html>");
 			mtd.addColumn("dist", "PrimarySite",    "<html>The ID of the primary database for the SQT thread.</html>");
 			mtd.addColumn("dist", "Type",           "<html>The thread is a physical or logical connection.</html>");
-			mtd.addColumn("dist", "Status",         "<html>The thread has a status of “normal” or “ignoring.”</html>");
+			mtd.addColumn("dist", "Status",         "<html>The thread has a status of ï¿½normalï¿½ or ï¿½ignoring.ï¿½</html>");
 			mtd.addColumn("dist", "PendingCmds",    "<html>The number of commands that are pending for the thread.</html>");
 			mtd.addColumn("dist", "SqtBlocked",     "<html>Whether or not the thread is waiting for the SQT.</html>");
 			mtd.addColumn("dist", "Duplicates",     "<html>The number of duplicate commands the thread has seen and dropped.</html>");

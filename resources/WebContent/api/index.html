@@ -258,7 +258,7 @@
 			<tr> <td>endTime       </td> <td>                 </td> <td>Optional: To what time Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) if startTime is 'date' then #mhd is added to startTime (default='')</td> </tr>
 			<tr> <td>sampleType    </td> <td>AUTO             </td> <td>Optional: (default=AUTO)<br>
 			                                                               <code>ALL             </code> get <b>all</b> saved data points<br>
-			                                                               <code>AUTO            </code> Auto switch to MAX_OVER_SAMPLES when there are to many samples<br>
+			                                                               <code>AUTO            </code> Uses a automatic formula, normally uses ALL, if there are to many data-points in the sample intervall, then switch over to: MAX_OVER_SAMPLES or MIN_OVER_SAMPLES<br>
 			                                                               <code>MAX_OVER_SAMPLES</code> Only take the MAX value from X samples, this can be used if there are to many samples<br>
 			                                                               <code>MIN_OVER_SAMPLES</code> Only take the MIN value from X samples, this can be used if there are to many samples<br>
 			                                                               <code>MAX_OVER_MINUTES</code> Only take the MAX value from a sample over X minutes, this can be used if there are to many samples<br>
@@ -266,7 +266,8 @@
 			                                                               <code>AVG_OVER_MINUTES</code> Only take the Average value from a sample over X minutes, this can be used if there are to many samples<br>
 			                                                               <code>SUM_OVER_MINUTES</code> Sum all values from a sample over X minutes, this can be used if there are to many samples<br>
 			                                                               > </tr>
-			<tr> <td>sampleValue   </td> <td>                 </td> <td>Optional: Used with 'AUTO' to "skip" data-points if there are to many. (default='360', if we find more than 360 data-points, then switch to 'MAX_OVER_SAMPLES')</td> </tr>
+			<tr> <td>sampleValue   </td> <td>                 </td> <td>Optional: Used when NOT ALL or AUTO to set how many data-points/samples or minutes that we should do MIN/MAX/AVG/SUM over</td> </tr>
+			<tr> <td>autoOverflow  </td> <td>                 </td> <td>Optional: Used with 'AUTO' to "skip" data-points if there are to many. (default='360', if we find more than 360 data-points, then switch to 'MAX_OVER_SAMPLES')</td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->

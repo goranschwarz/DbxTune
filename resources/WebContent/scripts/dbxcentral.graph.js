@@ -1970,6 +1970,9 @@ class DbxGraph
 			if (_debug > 0)
 				console.log("DbxGraph: " + this._fullName + ", _yAxisScaleLabels="+this._yAxisScaleLabels, this._yAxisScaleLabels);
 
+			// NOTE: Should we look at "autoOverflow" ...
+			// NOTE: Not sure if 'sampleType' and 'sampleValue' are valid anymore... but keep it for now...
+
 			// Get defaults (if not specified with initSampleType && initSampleValue)
 			if (this._initSampleType === "" && tmp.hasOwnProperty("sampleType")) {
 				this._initSampleType = tmp.sampleType;
@@ -3278,7 +3281,7 @@ function dbxChartPrintApiHelp()
 			'Here are the methods:<br>' + 
 			'<ul>' + 
 			'  <li>ALL - Get all data points</li>' + 
-			'  <li>AUTO - Uses a automatic formula using MAX_OVER_SAMPLES, with a <code>sampleValue=320</code></li>' + 
+			'  <li>AUTO - Uses a automatic formula, normally uses ALL, if there are to many data-points in the sample intervall, then switch over to: MAX_OVER_SAMPLES or MIN_OVER_SAMPLES</li>' + 
 			'  <li>MAX_OVER_SAMPLES - Get MAX values over X number of data points</li>' + 
 			'  <li>MIN_OVER_SAMPLES - Get MIN values over X number of data points</li>' + 
 			'  <li>MAX_OVER_MINUTES - Get MAX values over X minutes of data points</li>' + 
@@ -3294,8 +3297,8 @@ function dbxChartPrintApiHelp()
 			'<td>Used by <code>sampleType</code> <br>' + 
 			'    NOTE: this is a <b>number</b>... sampleValue=360 (for XXX_OVER_SAMPLES) or sampleValue=10 (for XXX_OVER_MINUTES)' + 
 			'<ul>' + 
-			'  <li>ALL - <code>sampleValue</code> will not be used.</li>' + 
-			'  <li>AUTO - <code>sampleValue</code> will not be used. (same as specify <code>sampleType=MAX_OVER_SAMPLES&sampleValue=360</code>)</li>' + 
+			'  <li>ALL - <code>sampleValue</code> <b>will not be used.</b></li>' + 
+			'  <li>AUTO - <code>sampleValue</code> <b>will not be used.</b></li>' + 
 			'  <li>sampleValue=360   for: MAX_OVER_SAMPLES - A number value...</li>' + 
 			'  <li>sampleValue=360   for: MIN_OVER_SAMPLES - A number value...</li>' + 
 			'  <li>sampleValue=10    for: MAX_OVER_MINUTES - A number value... like: 10 for ten minutes</li>' + 

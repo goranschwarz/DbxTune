@@ -388,6 +388,10 @@
 		<url-pattern>/api/history-active-samples</url-pattern>
 	</servlet-mapping>
 
+	<servlet-mapping>
+		<servlet-name>UserDefinedContentServlet</servlet-name>
+		<url-pattern>/api/udc</url-pattern>
+	</servlet-mapping>
 
  <!-- 
     <servlet id="jsp">

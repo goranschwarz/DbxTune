@@ -136,15 +136,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "runtime-replaced" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_MODULE_USAGE, new TrendGraphDataPoint(GRAPH_NAME_MODULE_USAGE, labels, LabelType.Dynamic));
-
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE,
 			"Procedure Cache Module Usage", 	                                 // Menu CheckBox text
 			"Procedure Cache Module Usage (in page count) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SRV_CONFIG, // or CACHE
@@ -156,7 +151,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE_MB,
 			"Procedure Cache Module Usage", 	                                 // Menu CheckBox text
 			"Procedure Cache Module Usage (in MB) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SRV_CONFIG, // or CACHE

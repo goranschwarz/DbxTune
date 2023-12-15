@@ -143,7 +143,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MAX_XID,
 				"MAX Transaction ID", 	                // Menu CheckBox text
 				"MAX Transaction ID ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"oldest_backend_xmin_age", "oldest_prepared_xact_age", "oldest_replication_slot_age", "oldest_replica_xact_age"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -155,7 +155,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_XACT_IN_SEC,
 				"Oldest Open Transaction in Seconds", 	                // Menu CheckBox text
 				"Oldest Open Transaction in Seconds ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"oldest_xact_start_in_sec"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -167,7 +167,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_STMNT_IN_SEC,
 				"Oldest Statement in Seconds", 	                // Menu CheckBox text
 				"Oldest Statement in Seconds ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"oldest_stmnt_start_in_sec"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -179,7 +179,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_STATE_IN_SEC,
 				"Oldest State in Seconds", 	                // Menu CheckBox text
 				"Oldest State in Seconds ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -191,7 +191,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_COMBO_IN_SEC,
 				"Oldest Xact/Stmnt/State in Seconds", 	                // Menu CheckBox text
 				"Oldest Xact/Stmnt/State in Seconds ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -203,7 +203,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCK_COUNT,
 				"Blocking Locks Count", 	                // Menu CheckBox text
 				"Blocking Locks Count ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"blocking_lock_count"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -215,7 +215,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKING_MAX_WAIT_TIME,
 				"Max Wait Time for Blocking Locks in Seconds", 	                // Menu CheckBox text
 				"Max Wait Time for Blocking Locks in Seconds ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"blocking_lock_wait_in_sec"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,

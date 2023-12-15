@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.asetune.central.pcs.DbxCentralRealm;
 import com.asetune.utils.StringUtil;
 
 // https://www.javatpoint.com/servlet-http-session-login-and-logout-example
@@ -43,10 +44,11 @@ public class LoginCheckServlet extends HttpServlet
 		response.setContentType("text/html;charset=UTF-8");
 		PrintWriter out = response.getWriter();
 
-		String username = request.getRemoteUser();
+		String userName = request.getRemoteUser();
+		boolean isAdmin = request.isUserInRole(DbxCentralRealm.ROLE_ADMIN);
 
-		if (StringUtil.hasValue(username))
-			out.print("{\"isLoggedIn\":true,\"asUserName\":\""+username+"\"}");  
+		if (StringUtil.hasValue(userName))
+			out.print("{\"isLoggedIn\":true,\"asUserName\":\"" + userName + "\",\"isAdmin\":" + isAdmin + "}");  
 		else
 			out.print("{\"isLoggedIn\":false,\"asUserName\":\"\"}");
 		out.close();  

@@ -86,6 +86,9 @@ import com.asetune.central.pcs.H2WriterStatCronTask;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbxCentral;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.os.CmOsMeminfo;
+import com.asetune.cm.os.CmOsUptime;
+import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.report.senders.MailHelper;
@@ -1546,7 +1549,7 @@ public class DbxTuneCentral
 		String tmpPropKey    = "";
 		String tmpPropVal    = "";
 		String tmpPropDefVal = CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange;
-		String newPropDefVal = "!* 0 * * *"; // not between 00:00 and 01:00
+		String newPropDefVal = "!* 0 * * *"; // NOT between 00:00 and 01:00 or "At every minute past hour 0" -- https://crontab.guru/#*_0_*_*_*
 		
 		String newPropDefDesc = CronUtils.getCronExpressionDescriptionForAlarms(newPropDefVal);
 
@@ -1558,8 +1561,8 @@ public class DbxTuneCentral
 		// Adjusted Load Average
 		//-----------------------
 
-		//-----------------------
-		tmpPropKey = CountersModel.replaceCmAndColName("CmOsUptime", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "adjLoadAverage_1Min");
+		//----------------------- adjLoadAverage_1Min
+		tmpPropKey = CountersModel.replaceCmAndColName(CmOsUptime.CM_NAME, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, CmOsUptime.ALARM_NAME_adjLoadAverage_1Min);
 		tmpPropVal = conf.getProperty(tmpPropKey);
 		if ( tmpPropVal == null )
 		{
@@ -1567,8 +1570,8 @@ public class DbxTuneCentral
 			System.setProperty(tmpPropKey, newPropDefVal);
 		}
 
-		//-----------------------
-		tmpPropKey = CountersModel.replaceCmAndColName("CmOsUptime", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "adjLoadAverage_5Min");
+		//----------------------- adjLoadAverage_5Min
+		tmpPropKey = CountersModel.replaceCmAndColName(CmOsUptime.CM_NAME, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, CmOsUptime.ALARM_NAME_adjLoadAverage_5Min);
 		tmpPropVal = conf.getProperty(tmpPropKey);
 		if ( tmpPropVal == null )
 		{
@@ -1576,8 +1579,8 @@ public class DbxTuneCentral
 			System.setProperty(tmpPropKey, newPropDefVal);
 		}
 
-		//-----------------------
-		tmpPropKey = CountersModel.replaceCmAndColName("CmOsUptime", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "adjLoadAverage_15Min");
+		//----------------------- adjLoadAverage_15Min
+		tmpPropKey = CountersModel.replaceCmAndColName(CmOsUptime.CM_NAME, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, CmOsUptime.ALARM_NAME_adjLoadAverage_15Min);
 		tmpPropVal = conf.getProperty(tmpPropKey);
 		if ( tmpPropVal == null )
 		{
@@ -1591,8 +1594,8 @@ public class DbxTuneCentral
 		// Swapping
 		//-----------------------
 
-		//-----------------------
-		tmpPropKey = CountersModel.replaceCmAndColName("CmOsVmstat", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "swappInOut");
+		//----------------------- Swapping
+		tmpPropKey = CountersModel.replaceCmAndColName(CmOsVmstat.CM_NAME, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, CmOsVmstat.ALARM_NAME_Swapping);
 		tmpPropVal = conf.getProperty(tmpPropKey);
 		if ( tmpPropVal == null )
 		{
@@ -1600,8 +1603,27 @@ public class DbxTuneCentral
 			System.setProperty(tmpPropKey, newPropDefVal);
 		}
 
-		//---- (Windows) --------
-		tmpPropKey = CountersModel.replaceCmAndColName("CmOsMeminfo", CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, "swapping");
+		//----------------------- SwapThrashing
+		tmpPropKey = CountersModel.replaceCmAndColName(CmOsVmstat.CM_NAME, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, CmOsVmstat.ALARM_NAME_SwapThrashing);
+		tmpPropVal = conf.getProperty(tmpPropKey);
+		if ( tmpPropVal == null )
+		{
+			_logger.info("Local Metrics: No configuration for '" + tmpPropKey + "' was set. Overriding the default '" + tmpPropDefVal + "' with value '" + newPropDefVal + "'  #-- desc: " + newPropDefDesc);
+			System.setProperty(tmpPropKey, newPropDefVal);
+		}
+
+
+		//---- (Windows) -------- Swapping
+		tmpPropKey = CountersModel.replaceCmAndColName(CmOsMeminfo.CM_NAME, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, CmOsMeminfo.ALARM_NAME_Swapping);
+		tmpPropVal = conf.getProperty(tmpPropKey);
+		if ( tmpPropVal == null )
+		{
+			_logger.info("Local Metrics: No configuration for '" + tmpPropKey + "' was set. Overriding the default '" + tmpPropDefVal + "' with value '" + newPropDefVal + "'  #-- desc: " + newPropDefDesc);
+			System.setProperty(tmpPropKey, newPropDefVal);
+		}
+
+		//---- (Windows) -------- SwapThrashing
+		tmpPropKey = CountersModel.replaceCmAndColName(CmOsMeminfo.CM_NAME, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, CmOsMeminfo.ALARM_NAME_SwapThrashing);
 		tmpPropVal = conf.getProperty(tmpPropKey);
 		if ( tmpPropVal == null )
 		{

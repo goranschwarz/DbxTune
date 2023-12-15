@@ -119,14 +119,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] sumLabels = new String[] { "Requests", "Loads" };
-//		
-//		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, sumLabels, LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Procedure Cache Requests", 	                                  // Menu CheckBox text
 			"Number of Procedure Requests per Second (procs,triggers,views) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Requests", "Loads" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,

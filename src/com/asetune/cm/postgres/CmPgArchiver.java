@@ -182,7 +182,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ARCHIVED_COUNT,
 				"Archived Files Count", 	                // Menu CheckBox text
 				"Archived Files Count (archived_count) ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"archived_count"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
