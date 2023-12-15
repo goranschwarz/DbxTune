@@ -126,16 +126,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels1 = new String[] { "Pending" };
-//		String[] labels2 = new String[] { "Completed" };
-//		
-//		addTrendGraphData(GRAPH_NAME_PENDING_DISK_IO,   new TrendGraphDataPoint(GRAPH_NAME_PENDING_DISK_IO,   labels1, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_COMPLETED_DISK_IO, new TrendGraphDataPoint(GRAPH_NAME_COMPLETED_DISK_IO, labels2, LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_PENDING_DISK_IO,
 			"Pending DiskIO's", 	                                 // Menu CheckBox text
 			"Pending DiskIO's, or number of outstanding ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Pending" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -148,7 +142,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
 			"Completed DiskIO's", 	                                 // Menu CheckBox text
 			"Completed DiskIO's per Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Completed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,

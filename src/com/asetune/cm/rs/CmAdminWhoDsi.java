@@ -151,7 +151,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_XACT_SUCCEEDED,
 			"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Menu CheckBox text
 			"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -164,7 +164,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CMD_READ,
 			"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Menu CheckBox text
 			"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -177,7 +177,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CMD_PARSED_BY_SQT,
 			"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Menu CheckBox text
 			"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -305,11 +305,11 @@ extends CountersModel
 			mtd.addColumn("dsi", "Current Secondary QID", "<html>If the thread is processing an atomic subscription applied incrementally, this column holds the queue ID of the current transaction.</html>");
 			mtd.addColumn("dsi", "Cmds_read",             "<html>The number of commands read from the DSI queue.</html>");
 			mtd.addColumn("dsi", "Cmds_parsed_by_sqt",    "<html>The number of commands parsed by SQT before being read by the DSI queue.</html>");
-			mtd.addColumn("dsi", "IgnoringStatus",        "<html>Contains “Ignoring” if the DSI is ignoring transactions while waiting for a marker. Contains “Applying” if the DSI is executing transactions in the database.</html>");
+			mtd.addColumn("dsi", "IgnoringStatus",        "<html>Contains ï¿½Ignoringï¿½ if the DSI is ignoring transactions while waiting for a marker. Contains ï¿½Applyingï¿½ if the DSI is executing transactions in the database.</html>");
 			mtd.addColumn("dsi", "Xacts_Sec_ignored",     "<html>In a warm standby application, the number of transactions that were ignored after the switchover.</html>");
-			mtd.addColumn("dsi", "GroupingStatus",        "<html>Contains “on” if the DSI is executing transactions in groups. Contains “off” if the DSI is executing transactions one at a time.</html>");
-			mtd.addColumn("dsi", "TriggerStatus",         "<html>Contains “on” if set triggers is on. Contains “off” if set triggers is off.</html>");
-			mtd.addColumn("dsi", "ReplStatus",            "<html>Indicates whether the Replication Server replicates transactions in the database. The default is “off” for standby databases. The default is “on” for all other databases.</html>");
+			mtd.addColumn("dsi", "GroupingStatus",        "<html>Contains ï¿½onï¿½ if the DSI is executing transactions in groups. Contains ï¿½offï¿½ if the DSI is executing transactions one at a time.</html>");
+			mtd.addColumn("dsi", "TriggerStatus",         "<html>Contains ï¿½onï¿½ if set triggers is on. Contains ï¿½offï¿½ if set triggers is off.</html>");
+			mtd.addColumn("dsi", "ReplStatus",            "<html>Indicates whether the Replication Server replicates transactions in the database. The default is ï¿½offï¿½ for standby databases. The default is ï¿½onï¿½ for all other databases.</html>");
 			mtd.addColumn("dsi", "NumThreads",            "<html>The number of parallel DSI threads in use.</html>");
 			mtd.addColumn("dsi", "NumLargeThreads",       "<html>The number of parallel DSI threads reserved for use with large transactions.</html>");
 			mtd.addColumn("dsi", "LargeThreshold",        "<html>In a parallel DSI configuration, the number of commands allowed in a transaction before it is considered large.</html>");
@@ -322,7 +322,7 @@ extends CountersModel
 			mtd.addColumn("dsi", "CommitLogChecks",       "<html>Indicates the maximum number of lock contention attempts before logging a message.</html>");
 			mtd.addColumn("dsi", "CommitCheckIntvl",      "<html>Amount of time, in milliseconds, a transaction waits before issuing a check for lock contention.</html>");
 			mtd.addColumn("dsi", "IsolationLevel",        "<html>Database isolation level for DSI connection.</html>");
-			mtd.addColumn("dsi", "RSTicket",              "<html>The number of rs_ticket subcommands that have been processed by a DSI queue manager, if the Replication Server stats_sampling parameter is “on”.<br>The default, 0, means that the current setting of sqt_max_cache_size is used as the maximum cache size for the connection.</html>");
+			mtd.addColumn("dsi", "RSTicket",              "<html>The number of rs_ticket subcommands that have been processed by a DSI queue manager, if the Replication Server stats_sampling parameter is ï¿½onï¿½.<br>The default, 0, means that the current setting of sqt_max_cache_size is used as the maximum cache size for the connection.</html>");
 			mtd.addColumn("dsi", "dsi_rs_ticket_report", "<html>Determines whether to call function string rs_ticket_report. rs_ticket_report function string is invoked when dsi_rs_ticket_report is set to on.<br>Default: off</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}

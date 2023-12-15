@@ -192,7 +192,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_PCT,
 			"Stat: RS Total Memory Usage in Percent", // Menu CheckBox text
 			"Stat: RS Total Memory Usage in Percent", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"Total RS Memory Usage"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -205,7 +205,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE,
 			"Stat: Memory Usage in MB per Module", // Menu CheckBox text
 			"Stat: Memory Usage in MB per Module", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,

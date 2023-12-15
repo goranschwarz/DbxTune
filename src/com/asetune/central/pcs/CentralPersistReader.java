@@ -110,7 +110,7 @@ public class CentralPersistReader
 	private int _defaultQueryTimeout = 0; 
 
 	/** 360 records is 2 hours, with a 20 seconds sample interval:  60 * 3 * 2 */
-	public static final int SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE = 360;
+	private static final int SAMPLE_TYPE_AUTO__OVERFLOW_THRESHOLD = 360;
 	
 	/** Different ways we can use to get data from the storage tables */
 	public enum SampleType
@@ -1371,7 +1371,8 @@ public class CentralPersistReader
 
 			JsonNode node = om.readTree(jsonText);
 //			private_addSampleTime(node, sampleTime.toString(), false); // false is internally used as a switch WHEN to start writing 'sampleTime'
-			
+
+			// Add JSON Field: "sampleTime" : "-time-description-" to 'absCounters', 'diffCounters' and 'rateCounters'
 			List<JsonNode> xxxCounters = new ArrayList<>();
 			xxxCounters.add( node.path("counters").path("absCounters") );
 			xxxCounters.add( node.path("counters").path("diffCounters") );
@@ -1406,6 +1407,21 @@ public class CentralPersistReader
 					}
 				}
 			}
+
+			// If we in above xxxCounters added "sampleTime", we also needs to add META DATA for that column 
+			// Add JSON Object: "columnName" : "sampleTime" as FIRST entry in 'metaData'
+			JsonNode metaData = node.path("counters").path("metaData");
+			if (metaData != null && metaData.isArray())
+			{
+				ArrayNode arrayNode = (ArrayNode) metaData; 
+
+				// Create a new "metaData" object entry at START
+				ObjectNode newObjectName = arrayNode.insertObject(0); // or possibly -1
+				newObjectName.put("columnName",   "sampleTime");
+				newObjectName.put("isDiffColumn", false);
+				newObjectName.put("isPctColumn",  false);
+			}
+
 			gen.writeTree(node);
 			
 			String newJsonStr = sw.toString();
@@ -3197,11 +3213,12 @@ public class CentralPersistReader
 	 * @param startTime     Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day)
 	 * @param endTime       Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) if startTime is 'date' then #mhd is added to startTime
 	 * @param sampleType    Used specify what method we want to use for reading data
-	 * @param sampleValue   The assosiated value for the above sampleType
+	 * @param sampleValue   The associated value for the above sampleType
+	 * @param autoOverflow  If we use sampleType.AUTO then if we have to many "data entries", lets fallback to this sampleType
 	 * 
 	 * @return A List of entries
 	 */
-	public List<DbxGraphData> getGraphData(String sessionName, String cmName, String graphName, String startTime, String endTime, SampleType sampleType, int sampleValue)
+	public List<DbxGraphData> getGraphData(String sessionName, String cmName, String graphName, String startTime, String endTime, SampleType sampleType, int sampleValue, SampleType autoOverflow)
 	throws SQLException
 	{
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
@@ -3260,6 +3277,34 @@ public class CentralPersistReader
 
 			// TODO: We could probably use 'graphProps' or guess from 'graphLabel'
 			//       what 'sampleType' we should use MIN or MAX (if the input is AUTO)
+			SampleType sampleType_AutoOverflowFallback = autoOverflow;
+			if (sampleType_AutoOverflowFallback == null)
+			{
+				sampleType_AutoOverflowFallback = SampleType.MAX_OVER_SAMPLES;
+				if (StringUtil.hasValue(graphProps) && graphProps.contains("autoOverflow"))
+				{
+					// Parse the JSON in 'graphProps'
+					try
+					{
+						ObjectMapper mapper = new ObjectMapper();
+						JsonNode jsonRoot = mapper.readTree(graphProps);
+						JsonNode autoOverflowNode = jsonRoot.get("autoOverflow");
+						if (autoOverflowNode != null)
+						{
+							String autoOverflowStr = autoOverflowNode.asText();
+							if      ("MAX_OVER_SAMPLES".equalsIgnoreCase(autoOverflowStr)) sampleType_AutoOverflowFallback = SampleType.MAX_OVER_SAMPLES;
+							else if ("MIN_OVER_SAMPLES".equalsIgnoreCase(autoOverflowStr)) sampleType_AutoOverflowFallback = SampleType.MIN_OVER_SAMPLES;
+							else {
+								_logger.info("Unknown value '" + autoOverflowStr + "' for JSON field 'autoOverflow'. The default '" + sampleType_AutoOverflowFallback + "' will be used.");
+							}
+						}
+					}
+					catch(IOException ex)
+					{
+						_logger.info("Problems parsing JSON 'graphProps' String '" + graphProps + "'. Setting autoOverflow to '" + sampleType_AutoOverflowFallback + "'.");
+					}
+				}
+			}
 			
 			// sessionName.cmName_graphName
 			tabName = lq + sessionName + rq + "." + lq + cmName + "_" + graphName + rq;
@@ -3377,7 +3422,7 @@ public class CentralPersistReader
 			// Get num records that we expect (this so we automatically can apply SampleType.MAX_OVER_SAMPLES if it's to many rows)
 			if (SampleType.AUTO.equals(sampleType))
 			{
-				int threshold = SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE;        // 360 records is 2 hours, with a 20 seconds sample interval:  60 * 3 * 2
+				int threshold = SAMPLE_TYPE_AUTO__OVERFLOW_THRESHOLD;        // 360 records is 2 hours, with a 20 seconds sample interval:  60 * 3 * 2
 				int dataRowCount = -1;
 
 				if (sampleValue > 0)
@@ -3410,7 +3455,8 @@ public class CentralPersistReader
 					sampleValue = dataRowCount / threshold;
 					if (sampleValue > 1)
 					{
-						sampleType  = SampleType.MAX_OVER_SAMPLES;
+					//	sampleType = SampleType.MAX_OVER_SAMPLES;
+						sampleType = sampleType_AutoOverflowFallback;
 					}
 				}
 				//System.out.println("GraphData AUTO... dataRowCount="+dataRowCount+", sampleType="+sampleType+", sampleValue="+sampleValue+" :::: for sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"'.");

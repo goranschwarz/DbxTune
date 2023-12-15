@@ -270,7 +270,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_NEW_STATEMENTS,
 				"SQL Statements [new_statements] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [new_statements] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -282,7 +282,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CALL_COUNT,
 				"SQL Statements [calls] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [calls] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -294,7 +294,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TOTAL_TIME,
 				"SQL Statements [total_time] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [total_time] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -306,7 +306,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS,
 				"SQL Statements [rows] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [rows] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -318,7 +318,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SHARED_BLKS_HIT,
 				"SQL Statements [shared_blks_hit] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [shared_blks_hit] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -330,7 +330,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SHARED_BLKS_READ,
 				"SQL Statements [shared_blks_read] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [shared_blks_read] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -342,7 +342,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMP_BLK_READ,
 				"SQL Statements [temp_blks_read] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [temp_blks_read] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -354,7 +354,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMP_BLK_WRITTEN,
 				"SQL Statements [temp_blks_written] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [temp_blks_written] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -366,7 +366,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAL_RECORDS,
 				"SQL Statements [wal_records] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [wal_records] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,
@@ -378,7 +378,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAL_BYTES,
 				"SQL Statements [wal_bytes] per DB", 	                           // Menu CheckBox text
 				"SQL Statements [wal_bytes] per DB per second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
 				TrendGraphDataPoint.Category.OPERATIONS,

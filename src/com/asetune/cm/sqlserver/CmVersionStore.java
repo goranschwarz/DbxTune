@@ -134,7 +134,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_VERSION_STORE_USAGE,
 			"Version Store Usage by DBName, in MB", // Menu CheckBox text
 			"Version Store Usage by DBName, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,

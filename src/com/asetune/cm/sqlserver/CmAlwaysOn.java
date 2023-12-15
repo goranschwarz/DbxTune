@@ -246,7 +246,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITE_TRANS,
 				"AlwaysOn Write Transactions Per Sec",        // Menu CheckBox text
 				"AlwaysOn Write Transactions Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -258,7 +258,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BYTES_TO_REPLICA,
 				"AlwaysOn Bytes Sent to Replica Per Sec",        // Menu CheckBox text
 				"AlwaysOn Bytes Sent to Replica Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -270,7 +270,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RECOVERY_QUEUE,
 				"AlwaysOn Recovery Queue, # Log Records",        // Menu CheckBox text
 				"AlwaysOn Recovery Queue, # Log Records ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -282,7 +282,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB,
 				"AlwaysOn Log Send Queue Size In KB",        // Menu CheckBox text
 				"AlwaysOn Log Send Queue Size In KB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -294,7 +294,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME,
 				"AlwaysOn Secondary Commit Lag Time, in Seconds",        // Menu CheckBox text
 				"AlwaysOn Secondary Commit Lag Time, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -1068,7 +1068,14 @@ extends CountersModel
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("When trying to get real-time data from 'REMOTE' server '" + srvName + "', there was a problem. atStep='" + atStep + "'. Caught: Error=" + ex.getErrorCode() + ", Message=" + ex);
+				if (ex.getErrorCode() == 976)
+				{
+					_logger.error("When trying to get real-time data from 'REMOTE' server '" + srvName + "', there was a problem (Msg=976, 'DB in AG not Accessible'). /*remote sql-text removed*/ Caught: Error=" + ex.getErrorCode() + ", Message=" + ex);
+				}
+				else
+				{
+					_logger.error("When trying to get real-time data from 'REMOTE' server '" + srvName + "', there was a problem. atStep='" + atStep + "'. Caught: Error=" + ex.getErrorCode() + ", Message=" + ex);
+				}
 			}
 			finally 
 			{

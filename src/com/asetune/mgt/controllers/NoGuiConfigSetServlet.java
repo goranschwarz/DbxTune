@@ -74,14 +74,78 @@ extends HttpServlet
 		return _xxxToken.equals(request.getParameter("password"));
 	}
 
+	/**
+	 * Send a JSON Response to the caller
+	 * 
+	 * @param response               The response object (can be null if you DO NOT want the JSON to be sent, but just return the JSON String) 
+	 * @param httpErrorCode          The error code normally <code>HttpServletResponse.SC_OK</code> (200) 
+	 * @param success                if the request succeeded or not
+	 * @param infoMsg                Send info message in the JSON object
+	 * @param errorMsg               Send error message in the JSON object
+	 * @param collectorNeedsReboot   If the Collector needs to be rebooted after this change
+	 * 
+	 * @return A JSON String like: {"success":true|false, "info":"...", "error":"...", "isBootNeeded":true|false}
+	 * @throws IOException
+	 */
+	private String sendJsonResponce(HttpServletResponse response, int httpErrorCode, boolean success, String infoMsg, String errorMsg, boolean collectorNeedsReboot)
+	throws IOException
+	{
+		// Setup a JSON "writer"
+		StringWriter sw = new StringWriter();
+		JsonFactory jfactory = new JsonFactory();
+		JsonGenerator gen = jfactory.createGenerator(sw);
+		gen.setPrettyPrinter(new DefaultPrettyPrinter());
+		gen.setCodec(new ObjectMapper(jfactory));
+
+		// Return JSON Object
+		gen.writeStartObject();
+		gen.writeBooleanField("success"      , success);
+//		gen.writeStringField ("status"      , statusMessage);
+
+		if (StringUtil.hasValue(infoMsg))  
+			gen.writeStringField ("info" , infoMsg);
+
+		if (StringUtil.hasValue(errorMsg)) 
+			gen.writeStringField ("error", errorMsg);
+		
+		gen.writeBooleanField("isBootNeeded", collectorNeedsReboot);
+		gen.writeEndObject();
+		gen.close();
+		
+		// Generate PAYLOAD
+		String payload = sw.toString();
+
+		// If we have passed a 'response' object
+		if (response != null)
+		{
+			if (httpErrorCode != HttpServletResponse.SC_OK)
+			{
+				String respMsg = "";
+				if (StringUtil.hasValue(infoMsg))  respMsg += "info: '" + infoMsg   + "'. ";
+				if (StringUtil.hasValue(errorMsg)) respMsg += "error: '" + errorMsg + "'. ";
+
+				response.sendError(httpErrorCode, respMsg);
+			}
+			else
+			{
+				response.sendError(httpErrorCode);
+			}
+
+			// Set content type etc...
+			response.setContentType("application/json");
+			response.setCharacterEncoding("UTF-8");
+			response.setHeader("Access-Control-Allow-Origin", "*");
+
+			// Send JSON payload
+			ServletOutputStream out = response.getOutputStream();
+			out.println(payload);
+		}
+		
+		return payload;
+	}
+	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
-	{
-		doPut(req, resp);
-	}
-
-	@Override
-	protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
 		ServletOutputStream out = resp.getOutputStream();
 //		resp.setContentType("text/html");
@@ -96,7 +160,7 @@ extends HttpServlet
 
 //		String sessionName    = Helper.getParameter(req, new String[] {"sessionName", "srv", "srvName"} );
 		String cmName         = Helper.getParameter(req, "cmName");
-		String alarmName      = Helper.getParameter(req, "alarmName");
+		String optName      = Helper.getParameter(req, "alarmName");
 		String propertyName   = Helper.getParameter(req, "key");
 		String propertyValue  = Helper.getParameter(req, "val");
 //		String validatorName  = Helper.getParameter(req, "validator");
@@ -108,13 +172,14 @@ System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT: getQueryString()=" +
 System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT: getParameterMap()=" + req.getParameterMap());
 
 System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: cmName   = |" + cmName        + "|.");
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: alarmName= |" + alarmName     + "|.");
+System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: alarmName= |" + optName     + "|.");
 System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: key      = |" + propertyName  + "|.");
 System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: val      = |" + propertyValue + "|.");
 
 		final String auth = req.getHeader( "Authorization" );
 System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.HEADER: Authorization = |" + auth + "|.");
 
+		boolean hasAdminRole = false;
 		String currentUsername = "-no-principal-";
 
 		Principal principal = req.getUserPrincipal();
@@ -126,10 +191,18 @@ System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.HEADER: Authorization
 		Principal userPrincipal = req.getUserPrincipal();
 		if (userPrincipal != null)
 		{
+			hasAdminRole = req.isUserInRole(DbxCentralRealm.ROLE_ADMIN);
 			System.out.println(">>>>>>>>>>>> userPrincipal.getName() = |" + userPrincipal.getName() + "|.");
 			System.out.println(">>>>>>>>>>>> req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) = |" + req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) + "|."); 
 		}
 
+		if (!hasAdminRole)
+		{
+			_logger.warn("Unauthorized SET attempt. " + from);
+			resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+			return;
+		}
+		
 //		if (!hasCorrectSecurityToken(req))
 //		{
 //			_logger.warn("Unauthorized SET Config attempt " + from);
@@ -152,12 +225,12 @@ System.out.println("---- requestBody: " + requestBody);
 
 			sendType  = DbxTuneSample.getString(rootNode, "type");
 			cmName    = DbxTuneSample.getString(rootNode, "cmName");
-			alarmName = DbxTuneSample.getString(rootNode, "optName");
+			optName   = DbxTuneSample.getString(rootNode, "optName");
 			changeMap = DbxTuneSample.getStringMap(rootNode, "change");
 
 System.out.println("---- json.sendType  = '" + sendType  + "'.");
 System.out.println("---- json.cmName    = '" + cmName    + "'.");
-System.out.println("---- json.alarmName = '" + alarmName + "'.");
+System.out.println("---- json.optName   = '" + optName + "'.");
 System.out.println("---- json.changeMap = '" + changeMap + "'.");
 		}
 		catch (MissingFieldException e)
@@ -225,12 +298,14 @@ System.out.println("---- found-Cm: " + cm);
 			}
 			else
 			{
+				String newValue = changeMap.get("value");
+				
 				// FIRST: Alarms
-				cfgEntry = CmSettingsHelper.getByName(alarmName, cm.getLocalAlarmSettings());
+				cfgEntry = CmSettingsHelper.getByName(optName, cm.getLocalAlarmSettings());
 
 				// SECOND: LocalSettings
 				if (cfgEntry == null)
-					cfgEntry = CmSettingsHelper.getByName(alarmName, cm.getLocalSettings());
+					cfgEntry = CmSettingsHelper.getByName(optName, cm.getLocalSettings());
 
 				// Validate data
 				if (cfgEntry != null)
@@ -238,12 +313,13 @@ System.out.println("---- found-Cm: " + cm);
 System.out.println("---- found-cfgEntry: " + cfgEntry);
 					try
 					{
-						cfgEntry.isValidInput(propertyValue);
+						cfgEntry.isValidInput(newValue);
 System.out.println("---- isValid-cfgEntry: " + cfgEntry);
 					}
 					catch (ValidationException ex) 
 					{
-						respStatus    = HttpServletResponse.SC_NOT_MODIFIED;
+//						respStatus    = HttpServletResponse.SC_NOT_MODIFIED;
+						respStatus    = HttpServletResponse.SC_OK;
 						statusMessage = "FAILED";
 						infoMessage   = "Validation failed";
 						errorMessage  = ex.getMessage();
@@ -253,9 +329,10 @@ System.out.println("---- isValid-cfgEntry: " + cfgEntry);
 				}
 				else // NOT FOUND
 				{
-					respStatus    = HttpServletResponse.SC_NOT_FOUND;
+//					respStatus    = HttpServletResponse.SC_NOT_FOUND;
+					respStatus    = HttpServletResponse.SC_OK;
 					statusMessage = "FAILED";
-					infoMessage   = "alarmName '" + alarmName + "' for cmName '" + cmName + "' not found.";
+					infoMessage   = "optName '" + optName + "' for cmName '" + cmName + "' not found.";
 				}
 			}
 		}

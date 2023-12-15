@@ -302,10 +302,10 @@ extends CountersModel
 		{
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			
-			mtd.addColumn("pg_stat_replication",  "pending_kb",           "<html>difference between current and sent locations shows how many WAL have been generated, but haven’t yet been sent to the standbys</html>");
+			mtd.addColumn("pg_stat_replication",  "pending_kb",           "<html>difference between current and sent locations shows how many WAL have been generated, but havenï¿½t yet been sent to the standbys</html>");
 			mtd.addColumn("pg_stat_replication",  "write_kb",             "<html>difference between sent and written locations shows WAL in the network, that have been sent but not yet written</html>");
-			mtd.addColumn("pg_stat_replication",  "flush_kb",             "<html>difference between write and flush locations shows WAL written but not flushed to the permanent storage – in case postgres crashes these changes will be lost, because they have not been flushed yet</html>");
-			mtd.addColumn("pg_stat_replication",  "replay_kb",            "<html>difference between flush and replay locations shows WAL that has been flushed to the permanent storage but not yet replayed – when WAL will be replayed, changes from the master would reach the standby in full</html>");
+			mtd.addColumn("pg_stat_replication",  "flush_kb",             "<html>difference between write and flush locations shows WAL written but not flushed to the permanent storage ï¿½ in case postgres crashes these changes will be lost, because they have not been flushed yet</html>");
+			mtd.addColumn("pg_stat_replication",  "replay_kb",            "<html>difference between flush and replay locations shows WAL that has been flushed to the permanent storage but not yet replayed ï¿½ when WAL will be replayed, changes from the master would reach the standby in full</html>");
 			mtd.addColumn("pg_stat_replication",  "total_lag_kb",         "<html>difference between current location on master and replay location on standby shows a total lag.</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
@@ -317,7 +317,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TOTAL_LAG,
 			"Replication Lag in KB", 	                // Menu CheckBox text
 			"Replication Lag in KB ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.REPLICATION,
 			false, // is Percent Graph
@@ -328,7 +328,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REP_AGE_SECONDS,
 			"Replication Age in Seconds", 	                // Menu CheckBox text
 			"Replication Age in Seconds ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.REPLICATION,
 			false, // is Percent Graph

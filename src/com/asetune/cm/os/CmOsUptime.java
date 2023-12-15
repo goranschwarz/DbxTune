@@ -126,7 +126,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_LOAD_AVERAGE,
 			"uptime: Load Average", 	                                    // Menu CheckBox text
 			"uptime: Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "loadAverage_1Min",    "loadAverage_5Min",    "loadAverage_15Min" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -139,7 +139,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_ADJ_LOAD_AVERAGE,
 			"uptime: Adjusted Load Average", 	                                    // Menu CheckBox text
 			"uptime: Adjusted Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "adjLoadAverage_1Min", "adjLoadAverage_5Min", "adjLoadAverage_15Min" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -152,7 +152,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WIN_LOAD_AVERAGE,
 			"uptime: Windows Processor Queue Length", 	                                    // Menu CheckBox text
 			"uptime: Windows Processor Queue Length ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Processor Queue Length" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -432,6 +432,11 @@ extends CounterModelHostMonitor
 	public static final String  PROPKEY_alarm_adjLoadAverage_15Min = CM_NAME + ".alarm.system.if.adjLoadAverage_15Min.gt";
 //	public static final double  DEFAULT_alarm_adjLoadAverage_15Min = 1.0;
 	public static final double  DEFAULT_alarm_adjLoadAverage_15Min = 1.5;
+
+	// The names are used "elsewhere", this makes it less buggy if we change the name
+	public static final String  ALARM_NAME_adjLoadAverage_1Min     = "adjLoadAverage_1Min";
+	public static final String  ALARM_NAME_adjLoadAverage_5Min     = "adjLoadAverage_5Min";
+	public static final String  ALARM_NAME_adjLoadAverage_15Min    = "adjLoadAverage_15Min";
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()

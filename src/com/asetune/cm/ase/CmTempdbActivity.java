@@ -136,7 +136,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
 			"TempDB Transaction Log Semaphore Contention ", 	          // Menu CheckBox text
 			"TempDB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -149,7 +149,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LREADS,
 			"TempDB Logical Reads", 	          // Menu CheckBox text
 			"TempDB Logical Reads per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CACHE,
@@ -162,7 +162,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PWRITES,
 			"TempDB Physical Writes", 	          // Menu CheckBox text
 			"TempDB Physical Writes per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -175,7 +175,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CAT_LOCK_REQ,
 			"TempDB Catalog Lock Requests", 	          // Menu CheckBox text
 			"TempDB Catalog Lock Requests per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.LOCK,

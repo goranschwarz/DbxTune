@@ -102,6 +102,10 @@ function isLoggedIn(callback)
 			
 			var asUserName = jsonResp.asUserName;
 			var isLoggedIn = jsonResp.isLoggedIn;
+			var isAdmin    = false;
+			
+			if (jsonResp.hasOwnProperty("isAdmin"))
+				isAdmin    = jsonResp.isAdmin;
 
 			// Set some stuff in the NavigationBar
 			if (isLoggedIn)
@@ -117,7 +121,7 @@ function isLoggedIn(callback)
 				document.getElementById("dbx-nb-isLoggedInUser-div").textContent   = "";
 			}
 			
-			callback(isLoggedIn, asUserName);
+			callback(isLoggedIn, asUserName, isAdmin);
 		},
 		error: function(xhr, desc, err) 
 		{

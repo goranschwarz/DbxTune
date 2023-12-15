@@ -152,7 +152,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_KB_RECV_SENT,
 			"Connections, KBytes Received/Sent per sec", // Menu CheckBox text
 			"Connections, KBytes Received/Sent per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "KB Received [Bytes_received/1024]", "KB Sent [Bytes_sent/1024]" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -164,7 +164,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUESTIONS,
 			"Number of Statements per sec", // Menu CheckBox text
 			"Number of Statements per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Client Statements [Questions]", "Client & Internal Statements [Queries]" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -176,7 +176,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_PAGES,
 			"InnoDB Pages per sec", // Menu CheckBox text
 			"InnoDB Pages per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Innodb_pages_created", "Innodb_pages_read", "Innodb_pages_written" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -188,7 +188,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SLOW_QUERIES,
 			"Slow Queries per sec", // Menu CheckBox text
 			"Slow Queries per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Slow_queries (diff)", "Slow_queries (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -200,7 +200,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SLOW_QUERIES_COUNT,
 			"Slow Queries Count", // Menu CheckBox text
 			"Slow Queries Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Slow_queries (abs)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -212,7 +212,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_ROWS_IUD,
 			"InnoDB Rows Ins/Upd/Del per sec", // Menu CheckBox text
 			"InnoDB Rows Ins/Upd/Del per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Innodb_rows_inserted", "Innodb_rows_updated", "Innodb_rows_deleted" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -224,7 +224,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_ROWS_READ,
 			"InnoDB Rows Read per sec", // Menu CheckBox text
 			"InnoDB Rows Read per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Innodb_rows_read" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -236,7 +236,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_ROW_LOCK_WAIT,
 			"InnoDB Row Lock Wait per sec", // Menu CheckBox text
 			"InnoDB Row Lock Wait per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Innodb_row_lock_waits" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -248,7 +248,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_INNODB_BP_WAIT_FREE,
 			"InnoDB BufferPool Wait Free Count", // Menu CheckBox text
 			"InnoDB BufferPool Wait Free Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Innodb_buffer_pool_wait_free" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -260,7 +260,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OPEN_TABLES,
 			"Open Table Count", // Menu CheckBox text
 			"Open Table Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Open_tables" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -272,7 +272,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTIONS,
 			"Client Connection Count", // Menu CheckBox text
 			"Client Connection Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Threads_connected" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -284,7 +284,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ABORTED_CONNECTIONS,
 			"Aborted Connections per sec", // Menu CheckBox text
 			"Aborted Connections per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Aborted_connects" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -296,7 +296,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANSACTIONS,
 			"Transactions per sec", // Menu CheckBox text
 			"Transactions per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Handler_commit", "Handler_rollback", "Handler_savepoint", "Handler_savepoint_rollback" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -308,7 +308,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HANDLER_READS,
 			"Handler Reads per sec", // Menu CheckBox text
 			"Handler Reads per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Handler_read_first", "Handler_read_key", "Handler_read_last", "Handler_read_next", "Handler_read_prev", "Handler_read_rnd", "Handler_read_rnd_next", "Handler_mrr_init" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -320,7 +320,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HANDLER_IUD,
 			"Handler Ins/Upd/Del per sec", // Menu CheckBox text
 			"Handler Ins/Upd/Del per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Handler_write", "Handler_update", "Handler_delete" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -332,7 +332,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TMP_TABLES,
 			"Temporary Tables per sec", // Menu CheckBox text
 			"Temporary Tables per sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Created_tmp_disk_tables", "Created_tmp_tables", "Created_tmp_files" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,

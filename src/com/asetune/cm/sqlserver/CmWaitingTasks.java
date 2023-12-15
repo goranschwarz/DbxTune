@@ -523,7 +523,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_COUNT,
 			"Number of Current Wait Tasks", 	                   // Menu CheckBox text
 			"Number of Current Wait Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"WaitCount"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -535,7 +535,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_MAX_TIME,
 			"Max Wait Time in ms for Current Tasks", 	                   // Menu CheckBox text
 			"Max Wait Time in ms for Current Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"wait_duration_ms"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,

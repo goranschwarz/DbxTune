@@ -156,7 +156,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RECORDS,
 				"WAL Records per Second", 	                // Menu CheckBox text
 				"WAL Records per Second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_records"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.OTHER,
@@ -168,7 +168,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITE_COUNT,
 				"WAL Writes per Second", 	                // Menu CheckBox text
 				"WAL Writes per Second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_write", "wal_sync"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.DISK,
@@ -180,7 +180,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITE_TIME,
 				"WAL Write Time in ms", 	                // Menu CheckBox text
 				"WAL Write Time in ms ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_write_time", "wal_sync_time"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.DISK,
@@ -192,7 +192,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAL_KB,
 				"WAL KB Written per Second", 	                // Menu CheckBox text
 				"WAL KB Written per Second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_kb"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.DISK,
@@ -204,7 +204,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_FULL_COUNT,
 				"WAL Buffer was Full Writes per Second", 	                // Menu CheckBox text
 				"WAL Buffer was Full Writes per Second ("+SHORT_NAME+")", // Graph Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_buffers_full"}, 
 				LabelType.Static, 
 				TrendGraphDataPoint.Category.DISK,

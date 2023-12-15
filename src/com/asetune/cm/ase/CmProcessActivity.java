@@ -236,7 +236,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CHKPT_HK,
 			"Checkpoint and HK Writes",                     // Menu CheckBox text
 			"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -249,7 +249,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BATCH_COUNT,
 			"SQL Batch/Statement Count",                   // Menu CheckBox text
 			"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Batch/Statement Count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -262,7 +262,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EXEC_TIME,
 			"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
 			"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -275,7 +275,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EXEC_COUNT,
 			"Active SQL Statement Execution Count",                   // Menu CheckBox text
 			"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Active/Concurrent SQL Statement Execution Count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -288,7 +288,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_SUM,
 			"Tempdb Usage in MB, using pssinfo",                   // Menu CheckBox text
 			"Tempdb Usage in MB, using pssinfo ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Tempdb usage: sum(pssinfo_tempdb_pages) in MB" }, // pssinfo(SP.spid, 'tempdb_pages') 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,

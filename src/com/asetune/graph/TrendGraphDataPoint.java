@@ -67,6 +67,52 @@ implements Cloneable
 		return str;
 	}
 
+//	/**
+//	 * Create a JSON Text string which holds: <br>
+//	 * <code>{"yAxisScaleLabels":{...}, "sampleType":"xxx", "sampleValue":yyy}</code>
+//	 * 
+//	 * @param yAxisScaleLabels   JSON String holding yAxisScaleLabels. <br>
+//	 *                           Example: <code>"yAxisScaleLabels":{"name":"normal", "s0":"", "s1":" K", "s2":" M", "s3":" G", "s4":" T"}</code>
+//	 *
+//	 * @param sampleType         What sample type should be the default used.
+//	 * @param sampleValue        What sample value should be used when reading data (depends on sampleType).
+//	 * 
+//	 * This is typically called in the following way
+//	 * <pre>
+//	 *     TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES, 360);
+//	 * </pre>
+//	 *  
+//	 * @return
+//	 */
+//	public static String createGraphProps(String yAxisScaleLabels, CentralPersistReader.SampleType sampleType, int sampleValue)
+//	{
+//		if (sampleType == null)
+//			sampleType = CentralPersistReader.SampleType.AUTO;
+//
+//		String sampleTypeAndValueStr = "";
+//		if (sampleType.equals(CentralPersistReader.SampleType.AUTO))
+//		{
+//			sampleTypeAndValueStr="";
+//		}
+//		else
+//		{
+//			String sampleValueStr = "";
+//			
+//			if (sampleValue < 0)
+//				sampleValueStr = "";
+//			else
+//				sampleValueStr = fixJson(", |sampleValue|:" + sampleValue);
+//
+//			sampleTypeAndValueStr = fixJson("|sampleType|:|" + sampleType.name() + "|") + sampleValueStr;
+//		}
+//
+//		
+//		String separator = "";
+//		if (StringUtil.hasValue(sampleTypeAndValueStr))
+//			separator = ", ";
+//		
+//		return "{" + yAxisScaleLabels + separator + sampleTypeAndValueStr + "}";
+//	}
 	/**
 	 * Create a JSON Text string which holds: <br>
 	 * <code>{"yAxisScaleLabels":{...}, "sampleType":"xxx", "sampleValue":yyy}</code>
@@ -74,52 +120,27 @@ implements Cloneable
 	 * @param yAxisScaleLabels   JSON String holding yAxisScaleLabels. <br>
 	 *                           Example: <code>"yAxisScaleLabels":{"name":"normal", "s0":"", "s1":" K", "s2":" M", "s3":" G", "s4":" T"}</code>
 	 *
-	 * @param sampleType         What sample type should be the default used.
-	 * @param sampleValue        What sample value should be used when reading data (depends on sampleType).
+	 * @param sampleType_AutoOverflowFallback         If AUTO is used but we have to many data points, then switch to this sampleType.
 	 * 
 	 * This is typically called in the following way
 	 * <pre>
-	 *     TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES, 360);
+	 *     TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.{MAX|MIN}_OVER_SAMPLES);
 	 * </pre>
 	 *  
 	 * @return
 	 */
-	public static String createGraphProps(String yAxisScaleLabels, CentralPersistReader.SampleType sampleType, int sampleValue)
+	public static String createGraphProps(String yAxisScaleLabels, CentralPersistReader.SampleType sampleType_AutoOverflowFallback)
 	{
-		if (sampleType == null)
-			sampleType = CentralPersistReader.SampleType.AUTO;
-
-		String sampleTypeAndValueStr = "";
-		if (sampleType.equals(CentralPersistReader.SampleType.AUTO))
-		{
-			sampleTypeAndValueStr="";
-		}
-		else
-		{
-			String sampleValueStr = "";
-			
-			if (sampleValue < 0)
-				sampleValueStr = "";
-			else
-				sampleValueStr = fixJson(", |sampleValue|:" + sampleValue);
-
-			sampleTypeAndValueStr = fixJson("|sampleType|:|" + sampleType.name() + "|") + sampleValueStr;
-		}
-
+		String autoOverflow = fixJson(", |autoOverflow|:|" + sampleType_AutoOverflowFallback + "|");
 		
-		String separator = "";
-		if (StringUtil.hasValue(sampleTypeAndValueStr))
-			separator = ", ";
-		
-		return "{" + yAxisScaleLabels + separator + sampleTypeAndValueStr + "}";
+		return "{" + yAxisScaleLabels + autoOverflow + "}";
 	}
 
 //	public static void main(String[] args)
 //	{
 //		System.out.println("[");
-//		System.out.println(" " + createGraphProps(Y_AXIS_SCALE_LABELS_BYTES, null, -1));
-//		System.out.println("," + createGraphProps(Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MAX_OVER_SAMPLES, -1));
-//		System.out.println("," + createGraphProps(Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MIN_OVER_SAMPLES, CentralPersistReader.SAMPLE_TYPE_AUTO__DEFAULT__SAMPLE_VALUE));
+//		System.out.println("," + createGraphProps(Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MAX_OVER_SAMPLES));
+//		System.out.println("," + createGraphProps(Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MIN_OVER_SAMPLES));
 //		System.out.println("]");
 //	}
 

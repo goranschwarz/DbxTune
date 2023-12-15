@@ -139,7 +139,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Statement Cache Requests", 	                           // Menu CheckBox text
 			"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -152,7 +152,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_HIT_RATE_PCT,
 			"Statement Cache Hit Rate", 	                           // Menu CheckBox text
 			"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Hit rate" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,

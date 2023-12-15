@@ -153,7 +153,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DYNAMIC_SQL_SEC,
 			"Dynamic SQL Operations per Sec", // Menu CheckBox text
 			"Dynamic SQL Operations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,

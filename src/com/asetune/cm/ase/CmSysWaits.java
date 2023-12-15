@@ -410,7 +410,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EVENT_WAITS,
 			"Server Wait, group by EventID, Waits Average", 	                   // Menu CheckBox text
 			"Server Wait, group by EventID, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -422,7 +422,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EVENT_WTIME,
 			"Server Wait, group by EventID, WaitTime Average", 	                   // Menu CheckBox text
 			"Server Wait, group by EventID, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -434,7 +434,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EVENT_WTPW,
 			"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
 			"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -449,7 +449,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CLASS_WAITS,
 			"Server Wait, group by ClassName, Waits Average", 	                     // Menu CheckBox text
 			"Server Wait, group by ClassName, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -461,7 +461,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CLASS_WTIME,
 			"Server Wait, group by ClassName, WaitTime Average", 	                     // Menu CheckBox text
 			"Server Wait, group by ClassName, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -473,7 +473,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CLASS_WTPW,
 			"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
 			"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,

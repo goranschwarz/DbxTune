@@ -129,7 +129,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_RECV_BANDWIDTH_KB,
 			"Network Received KB", 	                                           // Menu CheckBox text
 			"Network Received KB per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -142,7 +142,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_RECV_BANDWIDTH_MBIT,
 			"Network Received Mbit", 	                                         // Menu CheckBox text
 			"Network Received Mbit per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -155,7 +155,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_RECV_PACKETS,
 			"Network Received Packets", 	                                        // Menu CheckBox text
 			"Network Received Packets per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -168,7 +168,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_TRANS_BANDWIDTH_KB,
 			"Network Transmitted in KB", 	                                         // Menu CheckBox text
 			"Network Transmitted in KB per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -181,7 +181,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_TRANS_BANDWIDTH_MBIT,
 			"Network Transmitted in Mbit", 	                                         // Menu CheckBox text
 			"Network Transmitted in Mbit per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",  // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -194,7 +194,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_TRANS_PACKETS,
 			"Network Transmitted Packets", 	                                           // Menu CheckBox text
 			"Network Transmitted Packets per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -207,7 +207,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_ALL_BANDWIDTH_MBIT,
 			"Network Received/Transmitted all NIC in Mbit", 	                                        // Menu CheckBox text
 			"Network Received/Transmitted all NIC in Mbit per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"Received", "Transmitted"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,

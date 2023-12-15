@@ -125,12 +125,8 @@
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-0.2.7.jar" sourcepath="3pp/jsch-0.2.7-sources.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.72.jar" sourcepath="3pp/bcprov-jdk18on-1.72-sources.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre1.8.0_241"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-12.5.0-SNAPSHOT.jre8-preview.jar"/>
-	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.53.v20231009-uber.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="https://eclipse.dev/jetty/javadoc/jetty-9/"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.51.v20230217-uber.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

@@ -200,7 +200,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DEAD_ROWS,
 			"Number of Dead Rows per Database", 	                // Menu CheckBox text
 			"Number of Dead Rows per Database(n_dead_tup) per Database ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph

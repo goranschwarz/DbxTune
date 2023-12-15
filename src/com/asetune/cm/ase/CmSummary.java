@@ -181,7 +181,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_CPU,
 			"CPU Summary, Global Variables", 	                                         // Menu CheckBox text
 			"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -193,7 +193,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANSACTION,
 			"ASE Operations - Transaction per second",                         // Menu CheckBox text
 			"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Transactions", "Rollbacks" },
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -205,7 +205,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
 			"ASE Operations - Selects per second", 	                     // Menu CheckBox text
 			"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Selects" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -217,7 +217,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
 			"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
 			"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Inserts", "Updates", "Deletes", "Merges" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -229,7 +229,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
 			"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
 			"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "TableAccesses", "IndexAccesses" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -241,7 +241,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
 			"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
 			"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "TempDbObjects", "WorkTables" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -253,7 +253,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ULC,
 			"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
 			"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -265,7 +265,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_IO_RW,
 			"ASE Operations - IO's per second", 	                  // Menu CheckBox text
 			"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -277,7 +277,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGICAL_READ,
 			"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
 			"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "LogicalReads" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -289,7 +289,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
 			"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -301,7 +301,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users in ASE", 	          // Menu CheckBox text
 			"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -313,7 +313,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
 			"Connection Rate in ASE", 	          // Menu CheckBox text
 			"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -325,7 +325,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
 			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total (read + write)", "@@total_read", "@@total_write" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -337,7 +337,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
 			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total (received + sent + errors)", "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -349,7 +349,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
 			"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -361,7 +361,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
 			"Lock Count", 	                   // Menu CheckBox text
 			"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Lock Count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,

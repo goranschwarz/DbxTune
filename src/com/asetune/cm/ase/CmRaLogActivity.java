@@ -134,7 +134,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_LOG_SCAN,
 			"RA LogScan Records Sum", 	          // Menu CheckBox text
 			"RA LogScan Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "LogRecordsScanned", "LogRecordsProcessed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -147,7 +147,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_LOG_TRAN,
 			"RA Log Transaction Records Sum", 	          // Menu CheckBox text
 			"RA Log Transaction Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "BeginTran", "CommitTran", "AbortedTran", "PreparedTran", "DelayedCommit", "MaintUserTran" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -160,7 +160,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_LOG_OP_CRUD,
 			"RA Log CRUD Operations Sum", 	          // Menu CheckBox text
 			"RA Log CRUD Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Updates", "Inserts", "Deletes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -173,7 +173,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_LOG_OP_OTHER,
 			"RA Log Other Operations Sum", 	          // Menu CheckBox text
 			"RA Log Other Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "StoredProcedures", "SQLStatements", "DDL", "Writetxt", "LobColumns", "CLRs" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -186,7 +186,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DB_CRUD_OP,
 			"RA CRUD Operations per DB", 	          // Menu CheckBox text
 			"RA CRUD Operations per DB, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.REPLICATION,

@@ -68,9 +68,8 @@ function getParameter(key, defaultValue)
   -->
 
   <!-- JS: DbxCentral -->
-  <!--
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
-  -->
+
 
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -203,7 +202,7 @@ function getParameter(key, defaultValue)
     <a class="navbar-brand" href="/">DbxCentral</a>
     <!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
     <!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarCollapse">
@@ -219,14 +218,14 @@ function getParameter(key, defaultValue)
         </li>
       </ul>
 	  <!-- on the right hand side of the menu... -->
-      <ul class="navbar-nav">
+      <ul class="navbar-nav ml-auto">
 	    <!-- IS LOGGED IN -->
         <div id="dbx-nb-isLoggedIn-div" style="display: none;">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
             </a>
-            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
             <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
             <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
             </div>
@@ -234,7 +233,7 @@ function getParameter(key, defaultValue)
         </div>
 	    <!-- IS LOGGED OUT -->
         <div id="dbx-nb-isLoggedOut-div">
-          <a class="nav-link" href="/index.html?login"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+          <a class="nav-link" href="/index.html?login=open"> <i class="fa fa-sign-in"></i> <span data-bs-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
         </div>
       </ul> <!-- end right hand side -->
     </div>
@@ -395,9 +394,9 @@ function getParameter(key, defaultValue)
 				<tr>
 					<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
 					<th data-field="name"           data-filter-control="input">Name</th>
-					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 					<th data-field="value"          data-filter-control="input">value</th>
 					<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 					<th data-field="datatype"       data-filter-control="input">datatype</th>
 					<th data-field="desciption"     data-filter-control="input">desciption</th>
 					<th data-field="property"       data-filter-control="input">property</th>
@@ -419,9 +418,9 @@ function getParameter(key, defaultValue)
 				<tr>
 					<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
 					<th data-field="name"           data-filter-control="input">Name</th>
-					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 					<th data-field="value"          data-filter-control="input">value</th>
 					<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 					<th data-field="datatype"       data-filter-control="input">datatype</th>
 					<th data-field="desciption"     data-filter-control="input">desciption</th>
 					<th data-field="property"       data-filter-control="input">property</th>
@@ -444,9 +443,9 @@ function getParameter(key, defaultValue)
 					<tr>
 						<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
 						<th data-field="name"           data-filter-control="input">Name</th>
-						<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 						<th data-field="value"          data-filter-control="input">value</th>
 						<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+						<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 						<th data-field="datatype"       data-filter-control="input">datatype</th>
 						<th data-field="desciption"     data-filter-control="input">desciption</th>
 						<th data-field="property"       data-filter-control="input">property</th>
@@ -488,9 +487,9 @@ function getParameter(key, defaultValue)
 				  <th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
 				  <th data-field="name"           data-filter-control="input">Name</th>
 		<!--		  <th data-field="isMainParam"    data-filter-control="input">isMainParam</th>-->
-				  <th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 				  <th data-field="value"          data-filter-control="input">value</th>
 				  <th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+				  <th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 				  <th data-field="datatype"       data-filter-control="input">datatype</th>
 				  <th data-field="desciption"     data-filter-control="input">desciption</th>
 				  <th data-field="property"       data-filter-control="input">property</th>
@@ -524,6 +523,29 @@ function getParameter(key, defaultValue)
 	background-color: gold;
 }	
 </style>
+
+<script>
+	var _isLoggedIn = false;
+	var _isLoggedInAsAdmin = false;
+	//-----------------------------------------------------------
+	// Call function 'isLoggedIn' in dbxcentral.utils.JS
+	// This will call the "passed function", which is local, and sets the global page variabel '_isLoggedIn'
+	//-----------------------------------------------------------
+	isLoggedIn( function(isLogedIn, asUserName, isAdmin)
+	{
+		_isLoggedIn = isLogedIn;
+
+		if (asUserName === "admin")
+			_isLoggedInAsAdmin = true;
+
+		if (isAdmin === true)
+			_isLoggedInAsAdmin = true;
+
+		console.log("isLoggedIn-callback: isLogedIn='"+isLogedIn+"', asUserName='"+asUserName+"', isAdmin="+isAdmin+".");
+	});
+</script>
+
+
 
 <script>
 	$('#cmTable')      .on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
@@ -812,23 +834,37 @@ function getParameter(key, defaultValue)
 
 	function createChangeButton(value, row, index)
 	{
-//		return '<button type="button" class="btn btn-primary btn-xs">Change</button>';
-		return '<button type="button" class="btn btn-secondary btn-xs">Change...</button>';
-//		return '<button type="button" class="btn btn-outline-secondary btn-xs">Change</button>';
-//		return '<button type="button" class="btn btn-outline-primary btn-xs">Change</button>';
+		if (_isLoggedInAsAdmin)
+		{
+//			return '<button type="button" class="btn btn-primary btn-xs">Change</button>';
+			return '<button type="button" class="btn btn-secondary btn-xs">Change...</button>';
+//			return '<button type="button" class="btn btn-outline-secondary btn-xs">Change</button>';
+//			return '<button type="button" class="btn btn-outline-primary btn-xs">Change</button>';
+		}
+		else
+		{
+			return '<button type="button" class="btn btn-secondary btn-xs" href="/index.html?login=open" title="You need to login with *admin* rights to change configuration!" >Login...</button>';
+		}
 	}
 
 	function doChange(tableName, optionName, element)
 	{
-		console.log("doChange(): tableName=|" + tableName + "|, optionName=|" + optionName + "|, element=|" + element + "|.", element);
+		console.log("doChange(): _isLoggedInAsAdmin=" + _isLoggedInAsAdmin + ", tableName=|" + tableName + "|, optionName=|" + optionName + "|, element=|" + element + "|.", element);
 
-		if      (tableName === "alarmTable"   ) { dbxOpenConfigAlarmDialog(element); }
-		else if (tableName === "optionsTable" ) { dbxOpenConfigAlarmParametersDialog(element); }
-		else if (tableName === "settingsTable") { dbxOpenConfigAlarmParametersDialog(element); }
-		else if (tableName === "alarmParams"  ) { dbxOpenConfigAlarmParametersDialog(element); }
+		if (_isLoggedInAsAdmin)
+		{
+			if      (tableName === "alarmTable"   ) { dbxOpenConfigAlarmDialog(element); }
+			else if (tableName === "optionsTable" ) { dbxOpenConfigParametersDialog("optionsTable" , element); }
+			else if (tableName === "settingsTable") { dbxOpenConfigParametersDialog("settingsTable", element); }
+			else if (tableName === "alarmParams"  ) { dbxOpenConfigParametersDialog("alarmParams"  , element); }
+			else
+			{
+				alert("doChange(): Unhandled tableName='" + tableName + "', optionName='" + optionName + "'.");
+			}
+		}
 		else
 		{
-			alert("doChange(): Unhandled tableName='" + tableName + "', optionName='" + optionName + "'.");
+			window.open("/index.html?login=open");
 		}
 	}
 
@@ -921,14 +957,6 @@ function getParameter(key, defaultValue)
 //
 //		$('#dbx-dsr-skip-dialog').modal('show');
 //	}
-
-	//-----------------------------------------------------------
-	// Check for login and set props
-	//-----------------------------------------------------------
-//	isLoggedIn( function(isLogedIn, asUserName)
-//	{
-//		console.log("isLoggedIn-callback: isLogedIn='"+isLogedIn+"', asUserName='"+asUserName+"'.");
-//	});
 
 </script>
 
@@ -1125,8 +1153,246 @@ console.log("response:", response);
 			$("#dbx-cfg-alarm").modal('show');
 		}
 	</script>
+		
+		
+		
+		
+		
+		
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: Xxx -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class="modal fade" id="dbx-cfg-prop" tabindex="-1" role="dialog" aria-labelledby="dbx-cfg-prop-dialog" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+			<h5 class="modal-title" id="dbx-cfg-prop-dialog-title">Alarm Options</h5>
+			<button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+				<span aria-hidden="true">&times;</span>
+			</button>
+			</div>
+			<div class="modal-body">
+				<table>
+					<tr> <td nowrap><b>CM Display Name:   </b></td>  <td id="dbx-cfg-prop-f-cmDisplayName"></td> </tr>
+					<tr> <td nowrap><b>CM Name:           </b></td>  <td id="dbx-cfg-prop-f-cmName"       ></td> </tr>
+					<tr> <td></td>  <td></td> </tr>
+					<tr> <td></td>  <td></td> </tr>
+					<tr> <td nowrap><b>Prop Name:         </b></td>  <td id="dbx-cfg-prop-f-name"         ></td> </tr>
+					<tr> <td nowrap><b>Prop Description:  </b></td>  <td id="dbx-cfg-prop-f-desciption"   ></td> </tr>
+					<tr> <td></td>  <td></td> </tr>
+					<tr> <td></td>  <td></td> </tr>
+					<tr> <td nowrap><b>Property to change:</b></td>  <td><code><span id="dbx-cfg-prop-f-property"></span></code></td> </tr>
+					<tr> <td nowrap><b>Default Value:     </b></td>  <td id="dbx-cfg-prop-f-default"      ></td> </tr>
+					<tr> <td nowrap><b>Datatype:          </b></td>  <td id="dbx-cfg-prop-f-datatype"     ></td> </tr>
+					<tr> <td nowrap><b>Validator:         </b></td>  <td id="dbx-cfg-prop-f-validator"    ></td> </tr>
+				</table>
+				<br>
 
+				<div class='card'>
+					<div class="card-header">Changable Value</div>
+					<div class='card-body'>
+				
+						<div class="row mt-2">
+							<label for="dbx-cfg-prop-f-value" class="col-sm-3 col-form-label col-form-label-sm">Value to Change</label>
+							<div class="col col-sm-2">
+								<input type="text" class="form-control form-control-sm" id="dbx-cfg-prop-f-value" placeholder="">
+							</div>
+						</div>
 
+						<div class="text-danger" id="dbx-cfg-prop-dialog-info-msg"></div>
+						<div class="text-danger" id="dbx-cfg-prop-dialog-error-msg"></div>
+						
+					</div>  <!-- end: card-body -->
+				</div>  <!-- end: card -->
+			</div>
+			<div class="modal-footer">
+			<div class="text-danger" id="dbx-cfg-prop-dialog-problem"></div>
+			<button type="button" class="btn btn-primary" id="dbx-cfg-prop-dialog-ok">Change Config</button>
+			<button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+		</div>
+	</div>
+	<script>
+		var _modalOriginObject_cfgProp  = undefined;
+
+		$('#dbx-cfg-prop').on('show.bs.modal', function () {
+
+			$("#dbx-cfg-prop-dialog-problem")  .text("");
+			$("#dbx-cfg-prop-dialog-info-msg") .text("");
+			$("#dbx-cfg-prop-dialog-error-msg").text("");
+//			document.getElementById('dbx-cfg-prop-dialog-problem').innerHTML = "";
+
+//			$('.tooltips').tooltip({
+//				container: $(this)
+//			});
+
+//			setTimeout(() => { enableBootstrapTooltip(); }, 200);
+
+			$(this).find('.modal-body').css({
+				'max-height':'100%'
+			});
+		});
+
+		// What should happen when we click OK in the dialog
+		$("#dbx-cfg-prop-dialog-ok").click( function()
+		{
+			$("#dbx-cfg-prop-dialog-problem")  .text("");
+			$("#dbx-cfg-prop-dialog-info-msg") .text("");
+			$("#dbx-cfg-prop-dialog-error-msg").text("");
+
+			// Get dialog values
+			var dialog_newValue  = $("#dbx-cfg-prop-f-value").val();
+//console.log("xxxxxxxxxxxxxx: dialog_newValue=|"+dialog_newValue+"|, typeof=|"+(typeof dialog_newValue)+"|.", dialog_newValue);
+
+			var originValues = _modalOriginObject_cfgProp;
+//console.log("xxxxxxxxxxxxxx: originValues.isAlarmEnabled=|"+originValues.value+"|, typeof=|"+(typeof originValues.value)+"|.", originValues.value);
+
+			var changes = [];
+
+			// Check what was changed
+			if (dialog_newValue !== originValues.value) changes.push({ value: dialog_newValue });
+
+			if (changes.length > 0)
+			{
+				// Send the information to the Collectors REST Management Interface
+				const dialogProblem  = document.getElementById('dbx-cfg-prop-dialog-problem');
+				const dialogInfoMsg  = document.getElementById('dbx-cfg-prop-dialog-info-msg');
+				const dialogErrorMsg = document.getElementById('dbx-cfg-prop-dialog-error-msg');
+
+				const sendObject = {
+					type: 'xxx',
+					cmName: _lastClickedCmRow.cmName,
+					optName: _lastClickedAlarmRow.name,
+					change: {}
+				};
+				for (entry of changes) {
+					const firstKey = Object.keys(entry)[0];
+					const firstVal = entry[firstKey];
+
+					sendObject.change[firstKey] = firstVal;
+				}
+
+				// Below is taken from -->> https://jasonwatmore.com/post/2021/09/20/fetch-http-put-request-examples
+				const requestOptions = {
+					method: 'POST',
+//					method: 'PUT',
+					mode: 'no-cors',
+					headers: {
+						'Access-Control-Allow-Origin': '*',
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(sendObject)
+				};
+//				const url = "http://" + _mgtHostname + ":" + _mgtPort + "/api/mgt/config/set";
+				const url = "/api/cc/mgt/config/set?srvName=" + _ccSrvName;
+console.log("fetch-url: " + url);
+console.log("requestOptions: ", requestOptions);
+console.log("sendObject: ", sendObject);
+				fetch(url, requestOptions)
+					.then(async response => {
+						const isJson = response.headers.get('content-type')?.includes('application/json');
+						const data = isJson && await response.json();
+
+console.log("data:", data);
+console.log("response:", response);
+						// check for error response
+						if (!response.ok) {
+							// get error message from body or default to response status
+							const error = (data && data.message) || response.status;
+							dialogProblem.innerHTML = "Error: " + error;
+							return Promise.reject(error);
+						}
+
+						// Check JSON Responce for SUCCESS FAIL
+						if (data.hasOwnProperty("status") || data.hasOwnProperty("success"))
+						{
+							let errorMsg = "";
+
+							if (data.hasOwnProperty("success") && data.success === false)
+							{
+								errorMsg = "success=false";
+							}
+							if (data.hasOwnProperty("status") && !(data.status.toUpperCase() === "OK" || data.status.toUpperCase() === "SUCCESS"))
+							{
+								errorMsg = "status='" + data.status + "'.";
+							}
+
+							if (errorMsg !== "") 
+							{
+								if (data.hasOwnProperty("info"))
+								{
+									dialogInfoMsg.innerHTML = data.info;
+								}
+								if (data.hasOwnProperty("error"))
+								{
+									dialogErrorMsg.innerHTML = data.error;
+								}
+
+								// get error message from body or default to response status
+								dialogProblem.innerHTML = "Error: " + errorMsg;
+//								return Promise.reject(error);
+								return Promise.reject(errorMsg);
+							}
+						}
+
+						if (data.hasOwnProperty("isBootNeeded") && data.isBootNeeded === true)
+						{
+							if (confirm("The Collector needs to be restarted, do you want to do this NOW?") == true) 
+							{
+								alert("SORRY: Restart is NOT YET IMPLEMENTED, you need to do this manually");
+							}
+						}
+
+						dialogProblem.innerHTML = "Send OK";
+
+						// CLOSE the modal
+						console.log("#dbx-cfg-prop-dialog-ok -- Do Actions...\n" + changes.join("\n"));
+						$('#dbx-cfg-prop').modal('hide');
+					})
+					.catch(error => {
+//						dialogProblem.innerHTML = `Error: ${error}`;
+						dialogProblem.innerHTML = "Catch Error -- " + error;
+						console.error('There was an error!', error);
+					});
+			}
+			else
+			{
+				$("#dbx-cfg-prop-dialog-problem").text("No changes was made, maybe 'Close' instead...");
+				// Stay in dialog
+			}
+		});
+
+		
+		function dbxOpenConfigParametersDialog(tableName, element)
+		{
+			console.log("OPEN-DIALOG: dbxOpenConfigParametersDialog(): tableName='" + tableName + "'.");
+			console.log("OPEN-DIALOG: dbxOpenConfigParametersDialog()", element);
+			console.log("OPEN-DIALOG: dbxOpenConfigParametersDialog()._lastClickedSettingsTableRow", _lastClickedSettingsTableRow);
+
+			$("#dbx-cfg-prop-f-cmDisplayName").text(_lastClickedCmRow.displayName);
+			$("#dbx-cfg-prop-f-cmName"       ).text(_lastClickedCmRow.cmName);
+
+			$("#dbx-cfg-prop-f-name"         ).text(element.name);
+			$("#dbx-cfg-prop-f-desciption"   ).text(element.desciption);
+
+			$("#dbx-cfg-prop-f-property"     ).text(element.property);
+			$("#dbx-cfg-prop-f-default"      ).text(element.defaultValue);
+			$("#dbx-cfg-prop-f-datatype"     ).text(element.datatype);
+			$("#dbx-cfg-prop-f-validator"    ).text(element.validatorName);
+
+			$("#dbx-cfg-prop-f-value"        ).val(element.value);
+
+			// I was NOT able to set/pass the "element" (json object) to the dialog "#dbx-cfg-prop"
+			// So instead remember it here...
+			_modalOriginObject_cfgProp = element;
+			console.log( "_modalOriginObject_cfgProp: ", _modalOriginObject_cfgProp );
+
+			// Show the dialog
+			$("#dbx-cfg-prop").modal('show');
+		}
+		
+	</script>
 
 
 </body>

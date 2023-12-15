@@ -130,7 +130,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WORKERS_COUNT,
 				"Workers Free, in Use & Parallel Queries", 	                                // Menu CheckBox text
 				"Workers Free, in Use & Parallel Queries ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] { "max_worker_count", "free_worker_count", "reserved_worker_count", "used_worker_count" }, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.CPU,

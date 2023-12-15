@@ -133,7 +133,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_PROCS_USAGE,
 			"vmstat: Processes Usage",                                // Menu CheckBox text
 			"vmstat: Processes Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -146,7 +146,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_SWAP_USAGE,
 			"vmstat: Swap Usage",                                // Menu CheckBox text
 			"vmstat: Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -159,7 +159,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_USAGE,
 			"vmstat: Memory Usage",                                // Menu CheckBox text
 			"vmstat: Memory Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -171,7 +171,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_SWAP_IN_OUT,
 			"vmstat: Swap In/Out per sec",                                // Menu CheckBox text
 			"vmstat: Swap In/Out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -183,7 +183,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_IO_READ_WRITE,
 			"vmstat: IO Read/Write or blk-in/out per sec",                                // Menu CheckBox text
 			"vmstat: IO Read/Write or blk-in/out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -196,7 +196,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_CPU_USAGE,
 			"vmstat: CPU Usage",                                // Menu CheckBox text
 			"vmstat: CPU Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -555,6 +555,10 @@ extends CounterModelHostMonitor
 	public static final String  PROPKEY_alarm_swap_thrashing_maxCap_multiplier = CM_NAME + ".alarm.system.swap.thrashing.maxCap.multiplier";
 	public static final double  DEFAULT_alarm_swap_thrashing_maxCap_multiplier = 2.0d;
 
+	// The names are used "elsewhere", this makes it less buggy if we change the name
+	public static final String  ALARM_NAME_Swapping                            = "Swapping";
+	public static final String  ALARM_NAME_SwapThrashing                       = "SwapThrashing";
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -571,8 +575,6 @@ extends CounterModelHostMonitor
 
 		return list;
 	}
-
-	
 
 //-----------------------------------------------------------------------------
 //-- MAYBE: Do alarm when the machine has been swaping "to much" for a while

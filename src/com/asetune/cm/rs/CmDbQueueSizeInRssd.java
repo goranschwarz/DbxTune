@@ -134,7 +134,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUEUE_SIZE,
 			"Queue Size from the RSSD (col 'size', Absolute Value)", // Menu CheckBox text
 			"Queue Size from the RSSD (col 'size', Absolute Value)", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,

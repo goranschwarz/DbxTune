@@ -127,14 +127,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "User Data", "User Log", "Tempdb Data", "Tempdb Log", "System" };
-//		
-//		addTrendGraphData(GRAPH_NAME_DISK_IO_OPS, new TrendGraphDataPoint(GRAPH_NAME_DISK_IO_OPS, labels, LabelType.Static));
-
 		addTrendGraph(GRAPH_NAME_DISK_IO_OPS,
 			"Disk IO Operations, per Type",                     // Menu CheckBox text
 			"Number of Disk IO Operations per Second and Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.AUTO, -1),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "User Data", "User Log", "Tempdb Data", "Tempdb Log", "System" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
