@@ -645,7 +645,11 @@ extends CountersModel
 			mtd.addColumn("monOpenDatabases", "minLogMode",   "<html>Integer value saved in master..sysattributes for keeping dboption: 'full logging for {all|select into|alter table|reorg rebuild}'</html>");
 
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

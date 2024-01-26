@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -263,7 +264,11 @@ extends CountersModel
 			mtd.addColumn("CmSessions",  "tmp_internal_objects_alloc_mb",        "<html>MB in 'tempdb': reserved or allocated for <b>internal objects</b> by this session</html>");
 			mtd.addColumn("CmSessions",  "tmp_internal_objects_dealloc_mb",      "<html>MB in 'tempdb': deallocated and no longer reserved for <b>internal objects</b> by this session</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override
@@ -1528,17 +1533,20 @@ extends CountersModel
 			} // end: version less than SQL Server 2019
 			else
 			{
-				
 				String sql = ""
 						+ "SELECT object_id, index_id, partition_id, page_type_desc "
-						+ "FROM sys.dm_db_page_info(" + dbid + ", " + fileNum + ", " + pageNum + ", 'DETAILED')";   // 'LIMITED' (do not fill in descriptive fields) or 'DETAILED'
+						+ "FROM sys.dm_db_page_info(?, ?, ?, 'DETAILED')";   // 'LIMITED' (do not fill in descriptive fields) or 'DETAILED'
 
-				try (Statement stmnt = conn.createStatement())
+				try (PreparedStatement pstmnt = conn.prepareStatement(sql))
 				{
 					long startTime = System.currentTimeMillis();
+					
+					pstmnt.setInt(1, dbid);
+					pstmnt.setInt(2, fileNum);
+					pstmnt.setInt(3, pageNum);
 
-					stmnt.setQueryTimeout(1);
-					try (ResultSet rs = stmnt.executeQuery(sql))
+					pstmnt.setQueryTimeout(1);
+					try (ResultSet rs = pstmnt.executeQuery())
 					{
 						int    object_id      = -1;
 						int    index_id       = -1;

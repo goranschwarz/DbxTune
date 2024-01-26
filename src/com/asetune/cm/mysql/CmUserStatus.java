@@ -146,7 +146,11 @@ extends CountersModel
 			mtd.addColumn("status_by_user", "VARIABLE_NAME",  "<html>Name of the variable.</html>");
 			mtd.addColumn("status_by_user", "VARIABLE_VALUE", "<html>Value of the variable.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

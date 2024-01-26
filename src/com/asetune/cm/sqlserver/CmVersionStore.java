@@ -184,7 +184,7 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
-//			mtd.addTable("dm_db_file_space_usage",  "");
+			mtd.addTable("dm_tran_version_store_space_usage",  "Returns a table that displays total space in tempdb used by version store records for each database. sys.dm_tran_version_store_space_usage is efficient and not expensive to run, as it does not navigate through individual version store records, and returns aggregated version store space consumed in tempdb per database.");
 
 			mtd.addColumn("dm_tran_version_store_space_usage",  "database_id"             , "<html>Just the database ID</html>");
 			mtd.addColumn("dm_tran_version_store_space_usage",  "database_name"           , "<html>Name of the database</html>");
@@ -193,7 +193,11 @@ extends CountersModel
 			mtd.addColumn("dm_tran_version_store_space_usage",  "reserved_page_count"     , "<html>How many PAGES are we using.</html>");
 			mtd.addColumn("dm_tran_version_store_space_usage",  "reserved_page_count_diff", "<html>How many PAGES are we using.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

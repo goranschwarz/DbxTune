@@ -42,11 +42,11 @@ public class AlarmWritersTableModel extends AbstractTableModel
 {
 	private static final long serialVersionUID = 1L;
 
-	protected static final String[] TAB_HEADER = {"Use", "Name", "Class Name", "Description"};
-	protected static final int TAB_POS_USE          = 0;
-	protected static final int TAB_POS_NAME         = 1;
-	protected static final int TAB_POS_CLASSNAME    = 2;
-	protected static final int TAB_POS_DESCRIPTION  = 3;
+	public static final String[] TAB_HEADER = {"Use", "Name", "Class Name", "Description"};
+	public static final int TAB_POS_USE          = 0;
+	public static final int TAB_POS_NAME         = 1;
+	public static final int TAB_POS_CLASSNAME    = 2;
+	public static final int TAB_POS_DESCRIPTION  = 3;
 
 	public String getToolTipText(int col)
 	{
@@ -60,14 +60,14 @@ public class AlarmWritersTableModel extends AbstractTableModel
 		return null;
 	}
 
-	AlarmWritersTableModel()
+	public AlarmWritersTableModel()
 	{
 		super();
 	}
 
 	private List<AlarmWriterEntry> _entries = new ArrayList<>();
 	
-	protected static class AlarmWriterEntry
+	public static class AlarmWriterEntry
 	{
 		boolean _modified = false;
 		boolean _selected;
@@ -79,6 +79,13 @@ public class AlarmWritersTableModel extends AbstractTableModel
 //		List<AlarmWriterSettingsEntry> _settings = new ArrayList<>();
 		List<CmSettingsHelper> _settings = new ArrayList<>();
 		List<CmSettingsHelper> _filters = new ArrayList<>();
+		
+		public boolean                 isSelected()     { return _selected; }
+		public String                  getName()        { return _name; }
+		public String                  getClassName()   { return _className; }
+		public String                  getDescription() { return _description; }
+		public List<CmSettingsHelper>  getSettings()    { return _settings; }
+		public List<CmSettingsHelper>  getFilters()     { return _filters; }
 		
 		public boolean checkSettingsForMandatoryData()
 		{
@@ -242,7 +249,7 @@ public class AlarmWritersTableModel extends AbstractTableModel
 
 
 	/** Populate information in the table */
-	protected void refreshTable()
+	public void refreshTable()
 	{
 		_entries.clear();
 

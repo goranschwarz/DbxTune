@@ -24,6 +24,8 @@
  */
 package com.asetune.config.dict;
 
+import java.lang.invoke.MethodHandles;
+
 import javax.naming.NameNotFoundException;
 
 import org.apache.log4j.Logger;
@@ -251,7 +253,7 @@ extends MonTablesDictionaryDefault
 			                                                                                             + "</ul>"
 			                                                                                             + "</p></html>");
 		}
-		catch (NameNotFoundException e)
+		catch (NameNotFoundException e) 
 		{
 			_logger.warn("Problems adding 'availability_group_listener_ip_addresses' to MonTablesDictionary. Caught: " + e, e);
 		}
@@ -279,7 +281,7 @@ extends MonTablesDictionaryDefault
 			                                                                                              + "</p></html>");
 			mtd.addColumn("availability_group_listeners", "ip_configuration_string_from_cluster"      , "<html><p>Cluster IP configuration strings, if any, for this listener. <br>NULL = Listener has no virtual IP addresses.</p></html>");
 		}
-		catch (NameNotFoundException e)
+		catch (NameNotFoundException e) 
 		{
 			_logger.warn("Problems adding 'availability_group_listeners' to MonTablesDictionary. Caught: " + e, e);
 		}
@@ -322,7 +324,7 @@ extends MonTablesDictionaryDefault
 			mtd.addColumn("availability_groups", "db_failover"                      , "<html><p>Specifies whether the availability group supports failover for database health conditions. The DB_FAILOVER option of CREATE AVAILABILITY GROUP controls this setting.</p></html>");
 			mtd.addColumn("availability_groups", "is_distributed"                   , "<html><p>Specifies whether this is a distributed availability group. For more information, see Distributed Availability Groups (Always On Availability Groups).</p></html>");
 		}
-		catch (NameNotFoundException e)
+		catch (NameNotFoundException e) 
 		{
 			_logger.warn("Problems adding 'availability_groups' to MonTablesDictionary. Caught: " + e, e);
 		}

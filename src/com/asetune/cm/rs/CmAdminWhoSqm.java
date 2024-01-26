@@ -320,7 +320,11 @@ extends CountersModel
 			mtd.addColumn("sqm", "Truncs",          "<html>The number of truncation points for the queue.</html>");
 			mtd.addColumn("sqm", "Loss Status",     "<html>FIXME: Loss Status</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

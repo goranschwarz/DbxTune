@@ -188,7 +188,11 @@ extends CountersModel
 			mtd.addColumn("iq_cache_custom", "PropValue",       "<html>Value</html>");
 			mtd.addColumn("iq_cache_custom", "PropUnit",        "<html>Unit of measure</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

@@ -239,7 +239,11 @@ extends CountersModel
 			mtd.addColumn("db_queue_size", "status",        "<html>FIXME</html>");
 			mtd.addColumn("db_queue_size", "xnl_large_msg", "<html>FIXME</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

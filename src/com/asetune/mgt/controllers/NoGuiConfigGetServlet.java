@@ -23,7 +23,6 @@ package com.asetune.mgt.controllers;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -38,10 +37,9 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
+import com.asetune.alarm.ui.config.AlarmWritersTableModel;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.CmSettingsHelper.CronTimeRangeInputValidator;
-import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.CronUtils;
 import com.asetune.utils.StringUtil;
@@ -49,8 +47,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import it.sauronsoftware.cron4j.SchedulingPattern;
 
 public class NoGuiConfigGetServlet 
 extends HttpServlet
@@ -403,6 +399,136 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 
 		gen.writeEndArray(); // end: cmList
 
+
+		
+		//----------------------------------
+		// Start: alarmWriters
+		// alarmWriters: 
+		// [
+		//     {
+		//         isActive: true|false,
+		//         name: "...",
+		//         className: "...",
+		//         description: "...",
+		//         settings:
+		//         [
+		//             {
+		//                 isSelected: true|false,
+		//                 isMandatory: true|false,
+		//                 name: "...",
+		//                 datatype: "...",
+		//                 property: "...",
+		//                 value: "...",
+		//                 defaultValue: "...",
+		//                 isDefaultValue: "...",
+		//                 desciption: "...",
+		//                 validatorName: "..."
+		//             },{
+		//                 ...
+		//             }
+		//         ],
+		//         filters:
+		//         [
+		//             {
+		//                 isSelected: true|false,
+		//                 name: "...",
+		//                 datatype: "...",
+		//                 property: "...",
+		//                 value: "...",
+		//                 defaultValue: "...",
+		//                 isDefaultValue: "...",
+		//                 desciption: "...",
+		//                 validatorName: "..."
+		//             },{
+		//                 ...
+		//             }
+		//         ]
+		//     },{
+		//         ...
+		//     }
+		// ]
+		gen.writeFieldName("alarmWriters");
+		gen.writeStartArray(); // START: array: alarmWriters[]
+		
+		AlarmWritersTableModel alarmWritersTableModel = new AlarmWritersTableModel();
+		alarmWritersTableModel.refreshTable();
+
+		for (int r = 0; r < alarmWritersTableModel.getRowCount(); r++)
+		{
+			AlarmWritersTableModel.AlarmWriterEntry awe = alarmWritersTableModel.getWriterEntryForRow(r);
+
+			gen.writeStartObject(); // BEGIN object: under alarmWriters[]
+			
+			gen.writeBooleanField("isActive"   , awe.isSelected());
+			gen.writeStringField ("name"       , awe.getName());
+			gen.writeStringField ("className"  , awe.getClassName());
+			gen.writeStringField ("description", awe.getDescription());
+
+			// SETTINGS
+			List<CmSettingsHelper> settings = awe.getSettings();
+			if (settings != null && !settings.isEmpty())
+			{
+				gen.writeFieldName("settings");
+				gen.writeStartArray(); // START: array: settings[]
+				for (CmSettingsHelper entry : settings)
+				{
+					gen.writeStartObject(); // BEGIN: object under settings[]
+					gen.writeBooleanField("isSelected"    , entry.isSelected());
+					gen.writeBooleanField("isMandatory"   , entry.isMandatory());
+					gen.writeStringField ("name"          , entry.getName());
+					gen.writeStringField ("datatype"      , entry.getDataTypeString());
+					gen.writeStringField ("property"      , entry.getPropName());
+					gen.writeStringField ("value"         , entry.getStringValue());
+					gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
+					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
+					gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+					gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
+					gen.writeEndObject(); // END: object under settings[]
+				}
+				gen.writeEndArray(); // END: array: settings[]
+			}
+
+			// FILTERS
+			List<CmSettingsHelper> filters  = awe.getFilters();
+			if (filters != null && !filters.isEmpty())
+			{
+				gen.writeFieldName("filters");
+				gen.writeStartArray(); // START: array: filters[]
+				for (CmSettingsHelper entry : filters)
+				{
+					gen.writeStartObject(); // BEGIN: object under filters[]
+					gen.writeBooleanField("isSelected"    , entry.isSelected());
+					gen.writeStringField ("name"          , entry.getName());
+					gen.writeStringField ("datatype"      , entry.getDataTypeString());
+					gen.writeStringField ("property"      , entry.getPropName());
+					gen.writeStringField ("value"         , entry.getStringValue());
+					gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
+					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
+					gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+					gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
+					gen.writeEndObject(); // END: object under filters[]
+				}
+				gen.writeEndArray(); // END: array: filters[]
+			}
+
+			gen.writeEndObject(); // END: object: under alarmWriters[]
+		}
+
+		gen.writeEndArray(); // END: array: alarmWriters[]
+
+
+		//----------------------------------
+		gen.writeFieldName("dailySummaryReport");
+//		gen.writeStartArray(); // START: array: alarmWriters[]
+		gen.writeStartObject(); // BEGIN object
+		gen.writeStringField("xxx", "dummy x");
+		gen.writeStringField("yyy", "dummy y");
+		gen.writeStringField("zzz", "dummy z");
+		gen.writeEndObject(); // END object
+//		gen.writeEndArray(); // END: array: alarmWriters[]
+
+
+		//----------------------------------
 		gen.writeEndObject(); // end: SERVER
 
 		gen.close();

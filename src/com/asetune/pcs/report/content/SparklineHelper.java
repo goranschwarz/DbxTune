@@ -33,6 +33,7 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -703,6 +704,44 @@ public class SparklineHelper
 		}
 	}
 
+//	public static void main(String[] args)
+//	{
+//		LocalDateTime dt  = LocalDateTime.now();
+//		LocalDateTime adt = adjustTimeToLowerMinuteBound(dt, 15);
+//		
+//		System.out.println("NOW: " + dt);
+//		System.out.println("ADJ: " + adt);
+//		
+//	}
+	/**
+	 * Adjust time to the lower bound of the "minuteSpan"
+	 * <p>
+	 * <b>NOTE: NOT Fully tested</b> 
+	 * <p>
+	 * Example
+	 * <pre>
+	 *    adjustTimeToLowerMinuteBound(...T17:18:01,  1); --->>> 17:18 
+	 *    adjustTimeToLowerMinuteBound(...T17:18:01,  5); --->>> 17:15 
+	 *    adjustTimeToLowerMinuteBound(...T17:18:01, 10); --->>> 17:10 
+	 * </pre>
+	 * 
+	 * @param dt                LocalDateTime to "truncate"
+	 * @param minuteSpan        The minute to "bound" to...
+	 * @return
+	 */
+	public static LocalDateTime adjustTimeToLowerMinuteBound(LocalDateTime dt, int minuteSpan)
+	{
+		if (minuteSpan == 0)
+			minuteSpan = 1;
+
+		int atMinute = dt.getMinute();
+
+		int newMinute = atMinute / minuteSpan * minuteSpan;
+		
+		LocalDateTime tmp = dt.withMinute(newMinute).truncatedTo(ChronoUnit.MINUTES);
+		return tmp;
+	}
+
 	/**
 	 * 
 	 * @param conn
@@ -730,8 +769,10 @@ public class SparklineHelper
 		if (whereColNameList.size() != whereColValList.size())   throw new IllegalArgumentException("getSparclineData(): ColNameList and ColValList must be of same size. whereColNameList.size()=" + whereColNameList.size() + ", whereColValList.size()=" + whereColValList.size());
 		if (whereColNameList.isEmpty())                          throw new IllegalArgumentException("getSparclineData(): ColNameList and ColValList must have at least 1 entry. whereColNameList.size()=" + whereColNameList.size() + ", whereColValList.size()=" + whereColValList.size());
 		
-		LocalDateTime tmpBegin = beginLdt;
-		LocalDateTime tmpEnd   = beginLdt.plusMinutes(durationInMinutes);
+//		LocalDateTime tmpBegin = beginLdt;
+//		LocalDateTime tmpEnd   = beginLdt.plusMinutes(durationInMinutes);
+		LocalDateTime tmpBegin = adjustTimeToLowerMinuteBound(beginLdt, durationInMinutes);
+		LocalDateTime tmpEnd   = tmpBegin.plusMinutes(durationInMinutes);
 		
 		StringBuilder sqlSb = new StringBuilder();
 		DateTimeFormatter tsFormat = DateTimeFormatter.ISO_DATE_TIME;

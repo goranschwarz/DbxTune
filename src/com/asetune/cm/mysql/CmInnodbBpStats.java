@@ -193,7 +193,11 @@ extends CountersModel
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "UNCOMPRESS_TOTAL"                    , "<html>Total number of pages decompressed</html>");
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "UNCOMPRESS_CURRENT"                  , "<html>The number of pages decompressed in the current interval</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

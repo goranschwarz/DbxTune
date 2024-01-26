@@ -363,7 +363,11 @@ extends CountersModel
 			mtd.addColumn("sqt", "Change Oqids",   "<html>Indicates that the origin queue ID has changed.</html>");
 			mtd.addColumn("sqt", "Detect Orphans", "<html>Indicates that it is doing orphan detection.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

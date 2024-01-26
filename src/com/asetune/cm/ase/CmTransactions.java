@@ -202,7 +202,11 @@ extends CountersModel
 			mtd.addColumn("systransactions", "namelen",     "<html>Length of xactname</html>");
 			mtd.addColumn("systransactions", "xactname",    "<html>Transaction name or XID</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 

@@ -453,7 +453,11 @@ extends CountersModel
 //			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"=count, \"MsgNumber\"=count}.</html>");
 			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"={\"dbname\"=count}, \"MsgNumber\"={\"dbname\"=count}}.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

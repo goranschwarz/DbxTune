@@ -63,7 +63,11 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {
 			"bytes_pct"
 	};
-	public static final String[] DIFF_COLUMNS     = new String[] {};
+	public static final String[] DIFF_COLUMNS     = new String[] {
+			"bytes_processed",
+			"tuples_processed",
+			"tuples_excluded"
+	};
 	
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -127,8 +131,9 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-//		pkCols.add("dbname");
-//		pkCols.add("funcid");
+		pkCols.add("pid");
+		pkCols.add("datid");
+		pkCols.add("relid");
 
 		return pkCols;
 	}

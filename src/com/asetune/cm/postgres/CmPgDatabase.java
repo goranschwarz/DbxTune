@@ -36,6 +36,7 @@ import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.asetune.alarm.events.postgres.AlarmEventPgChecksumFailure;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
@@ -54,6 +55,7 @@ import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MathUtils;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -109,7 +111,11 @@ extends CountersModel
 			"blk_read_time",
 			"blk_write_time",
 			
+			// 12
+			"checksum_failures_diff",
+			
 			// 14
+			"sessions",
 			"session_time",
 			"active_time",
 			"idle_in_transaction_time"
@@ -242,6 +248,10 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		String checksum_failures_diff = "";
+		if (versionInfo.getLongVersion() >= Ver.ver(12))
+			checksum_failures_diff = "    ,checksum_failures              AS checksum_failures_diff \n";
+		
 		return ""
 			+ "SELECT \n"
 			+ "     sd.* \n"
@@ -257,6 +267,7 @@ extends CountersModel
 			+ "    ,d.datconnlimit                 AS db_conn_limit \n"
 //			+ "    ,a.rolname                      AS db_owner \n"
 			+ "    ,a.usename                      AS db_owner \n"
+			+ checksum_failures_diff
 			+ "    ,d.datcollate                   AS db_collation \n" 
 			+ "    ,CAST(d.datacl as varchar(512)) AS db_access_privileges \n" 
 			+ "FROM pg_stat_database sd \n"
@@ -334,7 +345,11 @@ extends CountersModel
 			                                                                 "<b>Formula</b>: select setting::int from pg_settings where name='max_connections'<br>" +
 			                                                            "</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 	
 
@@ -974,7 +989,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", numFree='"+numFree+"'.");
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): free_connections: threshold="+threshold+", numFree='"+numFree+"'.");
 
 				if (numFree < threshold)
 				{
@@ -989,6 +1004,41 @@ extends CountersModel
 				}
 			}
 		}
+
+		//-------------------------------------------------------
+		// Get needed column positions, but do not "fail/skip" if they don't exists (they are not present in some versions)
+		int pos__checksum_failures_diff = cm.findColumn("checksum_failures_diff");
+
+		//-------------------------------------------------------
+		// Below we need to loop AL the rows
+		for (int r=0; r<cm.getDiffRowCount(); r++)
+		{
+			//-------------------------------------------------------
+			// ChecksumFailures (only from version 12)
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("checksum_failures") && pos__checksum_failures_diff != -1)
+			{
+				int checksum_failures_diff = cm.getDiffValueAsInteger(r, pos__checksum_failures_diff, 0);
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ChecksumFailures, DEFAULT_alarm_ChecksumFailures);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): checksum_failures: threshold=" + threshold + ", checksum_failures_diff='" + checksum_failures_diff + "'.");
+
+				if (checksum_failures_diff > threshold)
+				{
+					String dbname                = cm.getDiffString       (r, "datname");
+					String checksum_last_failure = cm.getDiffString       (r, "checksum_last_failure");
+					int    checksum_failures_tot = cm.getAbsValueAsInteger(r, "checksum_failures", -1);
+
+					AlarmEvent ae = new AlarmEventPgChecksumFailure(cm, dbname, checksum_failures_diff, checksum_last_failure, checksum_failures_tot, threshold);
+
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			} // end: ChecksumFailures
+
+		} // end: loop-rows
+
 	} // end: method
 
 	@Override
@@ -1012,6 +1062,9 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_FreeConnections = CM_NAME + ".alarm.system.if.free_connections.lt";
 	public static final int     DEFAULT_alarm_FreeConnections = 25;
 
+	public static final String  PROPKEY_alarm_ChecksumFailures = CM_NAME + ".alarm.system.if.checksum_failures_diff.gt";
+	public static final int     DEFAULT_alarm_ChecksumFailures = 0;
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -1020,7 +1073,8 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("free_connections", isAlarmSwitch, PROPKEY_alarm_FreeConnections, Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections), DEFAULT_alarm_FreeConnections, "If 'free_connections' is less than this value, send 'AlarmEventConfigResourceIsLow'." ));
+		list.add(new CmSettingsHelper("free_connections" , isAlarmSwitch, PROPKEY_alarm_FreeConnections , Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeConnections , DEFAULT_alarm_FreeConnections ), DEFAULT_alarm_FreeConnections , "If 'free_connections' is less than this value, send 'AlarmEventConfigResourceIsLow'." ));
+		list.add(new CmSettingsHelper("checksum_failures", isAlarmSwitch, PROPKEY_alarm_ChecksumFailures, Integer.class, conf.getIntProperty(PROPKEY_alarm_ChecksumFailures, DEFAULT_alarm_ChecksumFailures), DEFAULT_alarm_ChecksumFailures, "If 'checksum_failures_diff' is greater than this value, send 'AlarmEventPgChecksumFailure'." ));
 
 		return list;
 	}

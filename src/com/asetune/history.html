@@ -65,6 +65,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>NO-GUI now starts a Management Web Server (localhost:89##), so we can do some management of configuration etc from DbxCentral web ui<br>
             Note: This is still in development...</LI>
 		<LI>Added extra "Graph Properties", so individual graphs can set "sampleType" to other than "AUTO" (for example Disk Space Available can have MIN_OVER_SAMPLES)</LI>
+		<LI>MonitorIoLinux -- In RHEL 9, there are new column in 'iostat' </LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -159,6 +160,28 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<li>xxx</li>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmActiveStatement - tab: Active Statements</b><br>
+		<ul>
+			<li>Added column 'HasLastKnownSqlText' -- Has values in column 'LastKnownSqlText'</li>
+			<li>Added column 'LastKnownSqlText' -- Holds the last known SQL Text executed by this SPID, KPID and BatchId, NOTE: Recording Must be enabled.</li>
+			<li>Added column 'TranName' -- The transaction name. (from sysprocesses.tran_name</li>
+			<li>Added column 'ConnectionTime' -- When did the client login to ASE</li>
+		</ul>
+		</LI>
+
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmProcessActivity - tab: Processes</b><br>
+		<ul>
+			<li>Added column 'HasLastKnownSqlText' -- Has values in column 'LastKnownSqlText'</li>
+			<li>CmProcessActivity Added column 'LastKnownSqlText' -- Holds the last known SQL Text executed by this SPID, KPID and BatchId, NOTE: Recording Must be enabled.</li>
+		</ul>
+		</LI>
+
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -288,6 +311,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmDatabases          </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 		<LI><b>CmDatabases          </b> - added new columns 'DataOsDiskLabel', 'LogOsDiskLabel' (this so we in Graphs and alarms can say "E: [SQL Data]"</LI>
+		<LI><b>CmDatabases          </b> - added new columns 'collation_name'</LI>
 
 		<LI><b>CmDeviceIo           </b> - LogicalName - is now based om dbname and file_id (instead of master_files.name, which may not be unique enough)</LI>
 		<LI><b>CmDeviceIo           </b> - added new columns 'lname' (master_files.name), which is the 'old' LogicaName.</LI>
@@ -326,6 +350,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary            </b> - alarm 'AlarmEventDeadlock' if we had any deadlocks... (within a MovingAverage over 10 minutes) </LI>
 
 		<LI><b>CmTempdbSpidUsage    </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+		<LI><b>CmTempdbSpidUsage    </b> - in AlarmEventTempdbSpidUsage also include information from CmActiveStatements</LI>
 
 		<LI><b>CmWaitStats          </b> - Added Charts "ToxicTime", "ToxicCount", "ToxicTpw" (TPW=Time Per Wait) -- to see the Toxic wait event (if they are happening)</LI>
 		<LI><b>CmWaitStats          </b> - Raising Alarm on Toxic Wait types "RESOURCE_SEMAPHORE", "THREADPOOL" if there has been more wait time than 10 seconds (can be changed with Properties 'CmWaitStats.alarm.system.if.wait_time_ms.RESOURCE_SEMAPHORE.gt', 'CmWaitStats.alarm.system.if.wait_time_ms.THREADPOOL.gt')</LI>
@@ -352,6 +377,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>In the "QueryStore" and "TopCmExecQueryStats" new column 'efficiency_pct' for  this may help decide if we have (parallel) queries that are NOT effective</li>
 			<li>PCS - On Database Rollover, If we have seen any Deadlocks... extract them using 'sp_BlitzLock' and store them in the recording.</li>
 			<li>WaitStats -- Chart "Wait types for..." Instead of getting only CXPACKET, CXCONSUMER I now get all starting with CX*</li>
+			<li>in the "DB Information", If collation is not the same as tempdb, mark it as red</li>
 		</ul>
 		</LI>
 	</UL>
@@ -373,12 +399,24 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - The alarms 'OpenXactInSec' new threshold 1h (previously 30 minutes)</LI>
 		<LI><b>CmActiveStatements   </b> - added column 'pid_advlock_count' -- How many Advisory Exclusive locks does this PID hold</LI>
 
+		<LI><b>CmErrorLog           </b> - new Collector -- Look at the Postgres errorlog (also sends alarms for: PgChecksumFailure, PgDeadlock, PgInsufficientResources, PgInternalError, PgSystemError</LI>
+		
 		<LI><b>CmPgActivity         </b> - if property 'CmPgActivity.sample.sslInfo=true' is set (default is false), then show new columns: ssl, ssl_version, ssl_cipher, ssl_bits, ssl_client_dn, sss_client_serial, sss_issuer_dn</LI>
 		<LI><b>CmPgActivity         </b> - The alarms 'StatementExecInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
+		<LI><b>CmPgActivity         </b> - Added graph for: Parallel Execution Usage</LI>
+		<LI><b>CmPgActivity         </b> - New column 'worker_count', which counts number of worker thread for the 'leader_pid'</LI>
+		<LI><b>CmPgActivity         </b> - For Parallel Workers, Sort/Group the rows with LeaderPid first, the the WorkerPid (workers are also marked with beige color)</LI>
 
 		<LI><b>CmPgArchive          </b> - When 'archived_mb_last_hour' is greater than 10240 MB (10 GB) then raise AlarmEventPgArchiveRate (property 'CmPgArchive.alarm.system.if.archived_mb_last_hour.gt=##')</LI>
 
-		<LI><b>CmPgBufferCache      </b> - new Collector -- Table names and size in the Buffer Cache -- Note: Depends on extenstion: pg_buffercache, which is created on first sample (if not exists)</LI>
+		<LI><b>CmPgBufferCacheDet   </b> - new Collector -- Table names and size in the Buffer Cache -- Note: Depends on extenstion: pg_buffercache, which is created on first sample (if not exists)</LI>
+		<LI><b>CmPgBufferCacheSum   </b> - new Collector -- Buffer Cache overall statistics. (from pg_buffercache_summary() function)</LI>
+		<LI><b>CmPgBufferCacheACnt  </b> - new Collector -- Buffer Cache Clock-sweep access count statistics. (from pg_buffercache_usage_counts() function)</LI>
+
+		<LI><b>CmPgDatabase         </b> - Alarm 'PgChecksumFailure' if 'checksum_failures' has accured. (and in the GUI also light them up as RED cells)</LI>
+
+		<LI><b>CmPgPidWait          </b> - new Collector -- What are the PID's waiting for (uses extension pg_wait_sampling)</LI>
+		<LI><b>CmPgSrvWait          </b> - new Collector -- What are the server waiting for (uses extension pg_wait_sampling)</LI>
 
 		<LI><b>CmPgProgAnalyze      </b> - new Collector -- Whenever ANALYZE is running, the pg_stat_progress_analyze view will contain a row for each backend that is currently running that command</LI>
 		<LI><b>CmPgProgBaseBackup   </b> - new Collector -- Whenever an application like pg_basebackup is taking a base backup, the pg_stat_progress_basebackup view will contain a row for each WAL sender process that is currently running the BASE_BACKUP replication command and streaming the backup</LI>
@@ -415,6 +453,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Daily Summary Report </b> - In the 'Recording info', Print if the DBMS is in 'Recovery/Standby Mode' or in 'Normal (r/w) Mode'</LI>
 		<LI><b>Daily Summary Report </b> - SQL Statement Information table now also holds information about 'Functions', 'Procedures', 'Remote Tables' (DDL Information and what tables they references, statistics on those tables)</LI>
 		<LI><b>Daily Summary Report </b> - Long Running Statements -- Content changes and adjustment for MS Outlook</LI>
+		<LI><b>Daily Summary Report </b> - Added section for Server Wait Stats</LI>
+
+		<br>
+		<LI><b>Alarm                </b> - Added AlarmEventPgChecksumFailure -- Fired from CmErrorLog and CmPgDatabase</LI>
+		<LI><b>Alarm                </b> - Added AlarmEventPgDeadlock  -- Fired from CmErrorLog</LI>
+		<LI><b>Alarm                </b> - Added AlarmEventPgInsufficientResources -- Fired from CmErrorLog</LI>
+		<LI><b>Alarm                </b> - Added AlarmEventPgInternalError -- Fired from CmErrorLog</LI>
+		<LI><b>Alarm                </b> - Added AlarmEventPgSystemError -- Fired from CmErrorLog</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

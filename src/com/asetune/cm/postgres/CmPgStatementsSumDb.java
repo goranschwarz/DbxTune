@@ -528,7 +528,11 @@ extends CountersModel
 			mtd.addColumn(cmName, "cache_hit_pct"               ,"<html>How many pages was found in memory (cached by the buffer pool).   <br><br><b>Algorithm:</b> shared_blks_hit / (shared_blks_hit + shared_blks_read) </html>");
 
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	
@@ -649,6 +653,7 @@ extends CountersModel
 
 
 		// EXCLUDE DbxTune logins (or exclude all users, which 'PostgresTune' happened to connect as)
+		//                         but if 'PostgresTune' is connected as 'postgres' then we DO NOT exclude
 		String where_excludeDbxTune = "";
 		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_excludeDbxTune, DEFAULT_excludeDbxTune))
 		{
@@ -659,7 +664,7 @@ extends CountersModel
 			}
 			else
 			{
-				where_excludeDbxTune = "      and s.userid not in (select a.usesysid from pg_stat_activity a where a.application_name = '" + Version.getAppName() + "') \n";
+				where_excludeDbxTune = "      and s.userid not in (select a.usesysid from pg_stat_activity a where a.application_name = '" + Version.getAppName() + "' and usename != 'postgres') \n";
 			}
 		}
 //		TODO; Can we think of a better alternative here?
@@ -925,130 +930,12 @@ extends CountersModel
 	@Override
 	public boolean beforeRefreshGetData(DbxConnection conn) throws Exception
 	{
-		return CmPgStatementsUtils.beforeRefreshGetData(this, conn);
+		return PostgresCmHelper.pgStatements_beforeRefreshGetData(this, conn);
 	}
 
 	@Override
 	public boolean checkDependsOnOther(DbxConnection conn)
 	{
-		return CmPgStatementsUtils.checkDependsOnOther(this, conn);
+		return PostgresCmHelper.pgStatements_checkDependsOnOther(this, conn);
 	}
-	
-//	/**
-//	 * Called before <code>refreshGetData(conn)</code> where we can make various checks
-//	 * <p>
-//	 * Note: this is a special case since SIX is recreating the Postgres Server 
-//	 *       (every now and then) during the day/night...
-//	 *       We need to check/create the extension before polling data from it!
-//	 */
-//	@Override
-//	public boolean beforeRefreshGetData(DbxConnection conn) throws Exception
-//	{
-//		String sql = "SELECT 1 FROM pg_catalog.pg_class c WHERE c.relname = 'pg_stat_statements' AND c.relkind = 'v' ";
-//		
-//		// Check if 'pg_stat_statements' exists... 
-//		// and possibly create it...
-//		boolean exists = false;
-//		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
-//		{
-//			while(rs.next())
-//				exists = true;
-//		}
-//		
-//		if ( ! exists )
-//		{
-//			_logger.warn("When checking Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists.");
-//
-//			_logger.warn("Possible solution for 'pg_stat_statements': (1: check that file 'PG_INST_DIR/lib/pg_stat_statements.so' exists, if not install postgres contrib package), (2: check that config 'shared_preload_libraries' contains 'pg_stat_statements'), (3: optional: configure 'pg_stat_statements.max=10000', 'pg_stat_statements.track=all' in the config file and restart postgres), (4: execute: CREATE EXTENSION pg_stat_statements), (5: verify with: SELECT * FROM pg_stat_statements). or look at https://www.postgresql.org/docs/current/static/pgstatstatements.html");
-//
-//			boolean createExtension = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_createExtension, DEFAULT_createExtension);
-//			if (createExtension)
-//			{
-//				_logger.info("AUTO-FIX: The table 'pg_stat_statements' did not exists... Trying to create it, this will simply work if you are authorized. to DISABLE the 'CREATE EXTENSION pg_stat_statements' set config '" + PROPKEY_createExtension + "=false'.");
-//
-//				try (Statement stmnt = conn.createStatement())
-//				{
-//					_logger.info("AUTO-FIX: Executing: CREATE EXTENSION pg_stat_statements");
-//
-//					stmnt.executeUpdate("CREATE EXTENSION pg_stat_statements");
-//
-//					_logger.info("AUTO-FIX: Success executing: CREATE EXTENSION pg_stat_statements");
-//
-//					// Check if the table is accessible after 'CREATE EXTENSION pg_stat_statements'
-//					try( Statement stmnt2 = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_stat_statements where dbid = -999"); )
-//					{
-//						while(rs.next())
-//							; // just loop the RS, no rows will be found...
-//						exists = true;
-//					}
-//					catch (SQLException exSelChk)
-//					{
-//						exists = false;
-//						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_stat_statements' after 'CREATE EXTENSION pg_stat_statements'. Caught: " + exSelChk);
-//						
-//						// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
-//						//System.setProperty(PROPKEY_createExtension, "false"); 
-//					}
-//				}
-//				catch(SQLException exCrExt)
-//				{
-//					exists = false;
-//					_logger.warn("AUTO-FIX: FAILED when executing 'CREATE EXTENSION pg_stat_statements'. Caught: " + exCrExt);
-//
-//					// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
-//					//System.setProperty(PROPKEY_createExtension, "false"); 
-//				}
-//			}
-//		}
-//		
-//		return exists;
-//	}
-
-//	@Override
-//	public boolean checkDependsOnOther(DbxConnection conn)
-//	{
-//		boolean isOk = false;
-//		String  message = "";
-//		
-//		// Check if the table exists, since it's optional and needs to be installed
-//		try
-//		{
-//			isOk = beforeRefreshGetData(conn);
-//		}
-//		catch (Exception ex)
-//		{
-//			isOk = false;
-//			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists. This is an optional component. Caught: "+ex);
-//			message = ex.getMessage();
-//		}
-//
-//		if (isOk)
-//		{
-//			_logger.info("Check dependencies SUCCESS: Table 'pg_stat_statements' exists when checking Counters Model '"+getName()+"'.");
-//			return true;
-//		}
-//		
-//		setActive(false, 
-//				"The table 'pg_stat_statements' do not exists.\n"
-//				+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n"
-//				+ "\n"
-//				+ "Or possibly issue: CREATE EXTENSION pg_stat_statements \n"
-//				+ "\n"
-//				+ message);
-//
-//		TabularCntrPanel tcp = getTabPanel();
-//		if (tcp != null)
-//		{
-//			tcp.setUseFocusableTips(true);
-//			tcp.setToolTipText("<html>"
-//					+ "The table 'pg_stat_statements' do not exists.<br>"
-//					+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br>"
-//					+ "<br>"
-//					+ "Or possibly issue: CREATE EXTENSION pg_stat_statements <br>"
-//					+ "<br>"
-//					+ message+"</html>");
-//		}
-//		
-//		return false;
-//	}	
 }

@@ -24,6 +24,7 @@
  */
 package com.asetune.config.dict;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -882,7 +883,7 @@ extends MonTablesDictionary
 //mtd.addColumn("sysprocesses", "gid",				"Group ID of user who executed command.");
 //mtd.addColumn("sysprocesses", "tran_name",			"Name of the active transaction.");
 //mtd.addColumn("sysprocesses", "time_blocked",		"Time blocked in seconds.");
-//mtd.addColumn("sysprocesses", "network_pktsz",		"Current connection’s network packet size.");
+//mtd.addColumn("sysprocesses", "network_pktsz",		"Current connectionï¿½s network packet size.");
 //mtd.addColumn("sysprocesses", "fid",				"Process ID of the worker process parent.");
 //mtd.addColumn("sysprocesses", "execlass",			"Execution class that the process is bound to.");
 //mtd.addColumn("sysprocesses", "priority",			"Base priority associated with the process.");
@@ -897,8 +898,8 @@ extends MonTablesDictionary
 //mtd.addColumn("sysprocesses", "clientapplname",		"Name by which the application is known for the current session. (set clientapplname somename)");
 //mtd.addColumn("sysprocesses", "sys_id",				"Unique identity of companion node.");
 //mtd.addColumn("sysprocesses", "ses_id",				"Unique identity of each client session.");
-//mtd.addColumn("sysprocesses", "loggedindatetime",	"Shows the time and date when the client connected to the SAP ASE server. See “Row-level access control“ in Chapter 11, “Managing User Permissions” of the Security Administration Guide for more information.");
-//mtd.addColumn("sysprocesses", "ipaddr",				"IP address of the client where the login is made. See “Row-level access control“ in Chapter 11, “Managing User Permissions” of the Security Administration Guide for more information.");
+//mtd.addColumn("sysprocesses", "loggedindatetime",	"Shows the time and date when the client connected to the SAP ASE server. See ï¿½Row-level access controlï¿½ in Chapter 11, ï¿½Managing User Permissionsï¿½ of the Security Administration Guide for more information.");
+//mtd.addColumn("sysprocesses", "ipaddr",				"IP address of the client where the login is made. See ï¿½Row-level access controlï¿½ in Chapter 11, ï¿½Managing User Permissionsï¿½ of the Security Administration Guide for more information.");
 //mtd.addColumn("sysprocesses", "nodeid",				"Reserved for future use (not available for cluster environments).");
 //mtd.addColumn("sysprocesses", "instanceid",			"ID of the instance (available only for cluster environments).");
 //mtd.addColumn("sysprocesses", "pad",				"(Cluster Edition) Column added for alignment purposes.");
@@ -966,9 +967,10 @@ extends MonTablesDictionary
 //			partition spinlock ratio                10           6           10           10 ratio                dynamic    
 //			user log cache spinlock ratio           20           0           20           20 ratio                dynamic    
 		}
-		catch (NameNotFoundException e)
+		catch (NameNotFoundException e) 
 		{
-			/* ignore */
+			_logger.warn("Problems in '" + MethodHandles.lookup().lookupClass() + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + MethodHandles.lookup().lookupClass() + "', adding addMonTableDictForVersion. Caught: " + e); 
 		}
 	}
 

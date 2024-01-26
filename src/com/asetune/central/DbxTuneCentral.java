@@ -103,6 +103,7 @@ import com.asetune.utils.Memory;
 import com.asetune.utils.NetUtils;
 import com.asetune.utils.ShutdownHandler;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 import it.sauronsoftware.cron4j.Scheduler;
 
@@ -1682,7 +1683,37 @@ public class DbxTuneCentral
 		if (_server == null)
 			return;
 		
-		_server.stop();
+		// Try to stop the Web Service in it's own thread, so we can detect any timeout
+		// NOTE: We might have to create/allocate the thread "up-front" we might not have memory here...
+		_server.setStopTimeout(10_000L);
+		Thread stopWebServerThread = new Thread("WebSeverStop")
+		{
+			@Override
+			public void run()
+			{
+				try 
+				{
+					_logger.info("Initiating stop on the WebServer.");
+					_server.stop();
+					_logger.info("Stop on the WebServer is now complete");
+				} 
+				catch (Exception ex) 
+				{
+					_logger.error("Problem when trying to stop the WebServer.", ex);
+				}
+			}
+		};
+		// Wait for the above thread to do the shutdown.
+		long webShutdownTimeout = 15_000L;
+		long webShutdownStartTime = System.currentTimeMillis();
+		stopWebServerThread.setDaemon(true);
+		stopWebServerThread.start();
+		stopWebServerThread.join(webShutdownTimeout);
+		long webShutdownMs = TimeUtils.msDiffNow(webShutdownStartTime);
+		if ( webShutdownMs >= webShutdownTimeout)
+		{
+			_logger.info("Problems shutting down WebServer, Timedout waiting after " + webShutdownMs + " ms. Continuing with the shutdown sequence.");
+		}
 	}
 
 	private static void startWebServerJetty()
@@ -1841,6 +1872,7 @@ public class DbxTuneCentral
 				}
 			}
 
+			_server.setStopAtShutdown(true);
 
 			// Starting the Server
 			_server.start();

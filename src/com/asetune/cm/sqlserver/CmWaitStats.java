@@ -304,7 +304,11 @@ extends CountersModel
 			mtd.addColumn("dm_os_wait_stats", "SkipInTrendGraphs",   "<html>If this 'wait_type' should be discarded from the <b>Trend Graphs</b> in the <b>Summary Tab</b>.</html>");
 			mtd.addColumn("dm_os_wait_stats", "Description",         "<html>A Static description (originaly fetched from Microsoft Documentation)</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 

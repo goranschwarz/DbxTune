@@ -53,6 +53,9 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
@@ -177,6 +180,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_spidLocks          = PROP_PREFIX + ".sample.spidLocks";
 	public static final boolean DEFAULT_sample_spidLocks          = true;
 
+	public static final String  PROPKEY_sample_lastKnownSqlText   = PROP_PREFIX + ".sample.lastKnownSqlText";
+	public static final boolean DEFAULT_sample_lastKnownSqlText   = true;
+
 	private void addTrendGraphs()
 	{
 	}
@@ -228,8 +234,16 @@ extends CountersModel
 			mtd.addColumn("monProcess",  "HasBlockedSpidsInfo",        "Has values in column 'BlockedSpidsInfo'");
 			mtd.addColumn("monProcess",  "BlockedSpidsInfo",           "If this SPID is BLOCKING other spid's, then here is a html-table of showplan for the Blocked spid's. (Note: 'Get Showplan' must be enabled)");
 			mtd.addColumn("monProcess",  "SrvUserName",                "Login Name: SrvUserName = suser_name(P.ServerUserID)");
+			mtd.addColumn("monProcess",  "HasLastKnownSqlText",        "Has values in column 'LastKnownSqlText'");
+			mtd.addColumn("monProcess",  "LastKnownSqlText",           "Holds the last known SQL Text executed by this SPID, KPID and BatchId, NOTE: Recording Must be enabled.");
+//			mtd.addColumn("monProcess",  "TranName",                   "The transaction name. NOTE: This is get from CmProcessActivity, column 'tran_name', so that CM must be active, otherwise the value will be NULL.");
+			mtd.addColumn("monProcess",  "TranName",                   "The transaction name. (from sysprocesses.tran_name");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override
@@ -370,7 +384,8 @@ extends CountersModel
 		         "S.BatchID, S.LineNumber, \n" +
 		         dbNameCol+", procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), linenum=S.LineNumber, \n" +
 		         SrvUserName +
-		         "P.Command, P.Application, \n" +
+//		         "P.Command, TranName = convert(varchar(30), NULL), P.Application, \n" +
+		         "P.Command, TranName = (select x.tran_name from master.dbo.sysprocesses x where x.spid = P.SPID and x.kpid = P.KPID), P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
 		         "S.CpuTime, \n" +
 		         "S.WaitTime, \n" +
@@ -385,12 +400,14 @@ extends CountersModel
 		         "HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), HasCachedPlanInXml=convert(bit,0), \n" +
 		         "HasSpidLocks=convert(bit,0), \n" +
 		         "HasBlockedSpidsInfo=convert(bit,0), \n" +
+		         "HasLastKnownSqlText=convert(bit,0), \n" +
 		         "SpidLockCount=convert(int,-1), \n" +
 		         "S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n";
 		cols2 += "";
 		cols3 += "S.PagesModified, S.PacketsSent, S.PacketsReceived, S.NetworkPacketSize, \n" +
 		         "S.PlansAltered, S.StartTime, S.PlanID, S.DBID, S.ProcedureID, \n" +
-		         "P.SecondsConnected, P.EngineNumber, P.NumChildren, \n" +
+		         "P.SecondsConnected, ConnectionTime=dateadd(second, P.SecondsConnected * -1, getdate()), \n" +
+		         "P.EngineNumber, P.NumChildren, \n" +
 		         "MonSqlText=convert(text,null), \n" +
 		         "DbccSqlText=convert(text,null), \n" +
 		         "ProcCallStack=convert(text,null), \n" +
@@ -398,7 +415,8 @@ extends CountersModel
 		         "DbccStacktrace=convert(text,null), \n" +
 		         "CachedPlanInXml=convert(text,null), \n" +
 		         "SpidLocks=convert(text,null), \n" +
-		         "BlockedSpidsInfo=convert(text,null) \n" +
+		         "BlockedSpidsInfo=convert(text,null), \n" +
+		         "LastKnownSqlText=convert(text,null) \n" +
 		         "";
 
 		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
@@ -462,7 +480,8 @@ extends CountersModel
 		         "P.BatchID, P.LineNumber, \n" +
 		         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
 		         SrvUserName +
-		         "P.Command, P.Application, \n" +
+//		         "P.Command, TranName = convert(varchar(30), NULL), P.Application, \n" +
+		         "P.Command, TranName = (select x.tran_name from master.dbo.sysprocesses x where x.spid = P.SPID and x.kpid = P.KPID), P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
 		         "CpuTime         = -1, \n" +
 //		         "WaitTime        = -1, \n" +
@@ -478,12 +497,14 @@ extends CountersModel
 		         "HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), HasCachedPlanInXml=convert(bit,0), \n" +
 		         "HasSpidLocks=convert(bit,0), \n" +
 		         "HasBlockedSpidsInfo=convert(bit,0), \n" +
+		         "HasLastKnownSqlText=convert(bit,0), \n" +
 		         "SpidLockCount=convert(int,-1), \n" +
 		         "MemUsageKB=-1, "+PhysicalReads+", "+LogicalReads+", \n";
 		cols2 += "";
 		cols3 += PagesModified+", PacketsSent=-1, PacketsReceived=-1, NetworkPacketSize=-1, \n" +
 		         "PlansAltered=-1, StartTime=convert(datetime,NULL), PlanID=-1, P.DBID, ProcedureID=-1, \n" +
-		         "P.SecondsConnected, P.EngineNumber, P.NumChildren, \n" +
+		         "P.SecondsConnected, ConnectionTime=dateadd(second, P.SecondsConnected * -1, getdate()), \n" +
+		         "P.EngineNumber, P.NumChildren, \n" +
 		         "MonSqlText=convert(text,null), \n" +
 		         "DbccSqlText=convert(text,null), \n" +
 		         "ProcCallStack=convert(text,null), \n" +
@@ -491,7 +512,8 @@ extends CountersModel
 		         "DbccStacktrace=convert(text,null), \n" +
 		         "CachedPlanInXml=convert(text,null), \n" +
 		         "SpidLocks=convert(text,null), \n" +
-		         "BlockedSpidsInfo=convert(text,null) \n" +
+		         "BlockedSpidsInfo=convert(text,null), \n" +
+		         "LastKnownSqlText=convert(text,null) \n" +
 		         "";
 		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
@@ -560,6 +582,8 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Get SPID's holding locks"                   , PROPKEY_sample_holdingLocks                  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks                  , DEFAULT_sample_holdingLocks                  ), DEFAULT_sample_holdingLocks                  , "Include SPID's that holds locks even if that are not active in the server."            ));
 		list.add(new CmSettingsHelper("Get SPID's holding locks, idle above X sec" , PROPKEY_sample_holdingLocks_gt_SecondsWaiting, Integer.class, conf.getIntProperty    (PROPKEY_sample_holdingLocks_gt_SecondsWaiting, DEFAULT_sample_holdingLocks_gt_SecondsWaiting), DEFAULT_sample_holdingLocks_gt_SecondsWaiting, "Include SPID's that holds locks even if that are not active in the server, AND has been idle for more than X seconds. Set this to -1 to see even shorter idel times."));
 		list.add(new CmSettingsHelper("Get SPID Locks"                             , PROPKEY_sample_spidLocks                     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks                     , DEFAULT_sample_spidLocks                     ), DEFAULT_sample_spidLocks                     , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+		list.add(new CmSettingsHelper("Get Last Known SQL Text"                    , PROPKEY_sample_lastKnownSqlText              , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText              , DEFAULT_sample_lastKnownSqlText              ), DEFAULT_sample_lastKnownSqlText              , "Try to get Last Known SQL Text, NOTE: Recording Must be enabled"     ));
+
 
 		return list;
 	}
@@ -720,6 +744,24 @@ extends CountersModel
 			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
 		}
 		
+		if ("HasLastKnownSqlText".equals(colName))
+		{
+			// Find 'ProcCallStack' column, is so get it and set it as the tool tip
+			int pos_LastKnownSqlText = findColumn("LastKnownSqlText");
+			if (pos_LastKnownSqlText > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_LastKnownSqlText);
+				if (cellVal == null)
+					return "<html>No value</html>";
+				else
+					return "<html><pre>" + cellVal + "</pre></html>";
+			}
+		}
+		if ("LastKnownSqlText".equals(colName))
+		{
+			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
+		}
+
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 	/** add HTML around the string, and translate linebreaks into <br> */
@@ -757,6 +799,7 @@ extends CountersModel
 		else if ("HasCachedPlanInXml" .equals(colName)) return Boolean.class;
 		else if ("HasSpidLocks"       .equals(colName)) return Boolean.class;
 		else if ("HasBlockedSpidsInfo".equals(colName)) return Boolean.class;
+		else if ("HasLastKnownSqlText".equals(colName)) return Boolean.class;
 		else return super.getColumnClass(columnIndex);
 	}
 
@@ -784,9 +827,10 @@ extends CountersModel
 		boolean getDbccStacktrace  = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace  , DEFAULT_sample_dbccStacktrace );
 		boolean getCachedPlanInXml = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml , DEFAULT_sample_cachedPlanInXml);
 		boolean getSpidLocks       = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks);
+		boolean getLastKnownSqlText= conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText, DEFAULT_sample_lastKnownSqlText);
 
 		// Where are various columns located in the Vector 
-		int pos_WaitEventID                = -1, pos_WaitEventDesc   = -1, pos_WaitClassDesc = -1, pos_SPID = -1;
+		int pos_WaitEventID                = -1, pos_WaitEventDesc   = -1, pos_WaitClassDesc = -1, pos_SPID = -1, pos_KPID = -1;
 		int pos_HasShowPlan                = -1, pos_ShowPlanText    = -1;
 		int pos_HasMonSqlText              = -1, pos_MonSqlText      = -1;
 		int pos_HasDbccSqlText             = -1, pos_DbccSqlText     = -1;
@@ -801,6 +845,8 @@ extends CountersModel
 		int pos_StartTime                  = -1;
 		int pos_BatchID                    = -1;
 		int pos_HasBlockedSpidsInfo        = -1, pos_BlockedSpidsInfo = -1;
+		int pos_HasLastKnownSqlText        = -1, pos_LastKnownSqlText = -1;
+//		int pos_TranName                   = -1;
 		int waitEventID = 0;
 		String waitEventDesc = "";
 		String waitClassDesc = "";
@@ -816,7 +862,8 @@ extends CountersModel
 
 		// Find column Id's
 		List<String> colNames = counters.getColNames();
-		if (colNames==null) return;
+		if (colNames == null) 
+			return;
 
 		for (int colId=0; colId < colNames.size(); colId++) 
 		{
@@ -825,6 +872,7 @@ extends CountersModel
 			else if (colName.equals("WaitEventDesc"))              pos_WaitEventDesc              = colId;
 			else if (colName.equals("WaitClassDesc"))              pos_WaitClassDesc              = colId;
 			else if (colName.equals("SPID"))                       pos_SPID                       = colId;
+			else if (colName.equals("KPID"))                       pos_KPID                       = colId;
 			else if (colName.equals("HasShowPlan"))                pos_HasShowPlan                = colId;
 			else if (colName.equals("ShowPlanText"))               pos_ShowPlanText               = colId;
 			else if (colName.equals("HasMonSqlText"))              pos_HasMonSqlText              = colId;
@@ -850,26 +898,9 @@ extends CountersModel
 			else if (colName.equals("BatchID"))                    pos_BatchID                    = colId;
 			else if (colName.equals("HasBlockedSpidsInfo"))        pos_HasBlockedSpidsInfo        = colId;
 			else if (colName.equals("BlockedSpidsInfo"))           pos_BlockedSpidsInfo           = colId;
-
-			// No need to continue, we got all our columns
-			if (    pos_WaitEventID                >= 0 && pos_WaitEventDesc   >= 0 
-			     && pos_WaitClassDesc              >= 0 && pos_SPID            >= 0 
-			     && pos_HasShowPlan                >= 0 && pos_ShowPlanText    >= 0 
-			     && pos_HasMonSqlText              >= 0 && pos_MonSqlText      >= 0 
-			     && pos_HasDbccSqlText             >= 0 && pos_DbccSqlText     >= 0 
-			     && pos_HasProcCallStack           >= 0 && pos_ProcCallStack   >= 0 
-			     && pos_HasStacktrace              >= 0 && pos_DbccStacktrace  >= 0 
-			     && pos_HasCachedPlanInXml         >= 0 && pos_CachedPlanInXml >= 0 && pos_procname >= 0
-			     && pos_HasSpidLocks               >= 0 && pos_SpidLocks       >= 0 && pos_SpidLockCount >= 0
-			     && pos_BlockingOtherSpids         >= 0 && pos_BlockingSPID    >= 0
-			     && pos_SecondsWaiting             >= 0
-			     && pos_BlockingOthersMaxTimeInSec >= 0
-			     && pos_multiSampled               >= 0
-			     && pos_StartTime                  >= 0
-			     && pos_BatchID                    >= 0
-			     && pos_HasBlockedSpidsInfo        >= 0 && pos_BlockedSpidsInfo >= 0
-			   )
-				break;
+			else if (colName.equals("HasLastKnownSqlText"))        pos_HasLastKnownSqlText        = colId;
+			else if (colName.equals("LastKnownSqlText"))           pos_LastKnownSqlText           = colId;
+//			else if (colName.equals("TranName"))                   pos_TranName                   = colId;
 		}
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
@@ -970,6 +1001,12 @@ extends CountersModel
 		if (pos_HasBlockedSpidsInfo < 0)
 		{
 			_logger.debug("Can't find the position for columns ('HasBlockedSpidsInfo'="+pos_HasBlockedSpidsInfo+")");
+			return;
+		}
+
+		if (pos_HasLastKnownSqlText < 0)
+		{
+			_logger.debug("Can't find the position for columns ('HasLastKnownSqlText'="+pos_HasLastKnownSqlText+")");
 			return;
 		}
 
@@ -1140,6 +1177,45 @@ extends CountersModel
 						spidLockCount += lockRecord._lockCount;
 					}
 				}
+				
+				// LastKnownSqlText
+				if (getLastKnownSqlText && PersistentCounterHandler.hasInstance())
+				{
+					ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+					if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)
+					{
+						SqlCaptureBrokerAse aseSqlCaptureBroker = (SqlCaptureBrokerAse) sqlCaptureBroker;
+
+						int kpid    = counters.getValueAsInteger(rowId, pos_KPID   , -1);
+						int batchId = counters.getValueAsInteger(rowId, pos_BatchID, -1);
+
+						if (kpid != -1 && batchId != -1)
+						{
+							String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId);
+							if (lastKnownSqlText != null)
+							{
+								counters.setValueAt(true            , rowId, pos_HasLastKnownSqlText);
+								counters.setValueAt(lastKnownSqlText, rowId, pos_LastKnownSqlText);
+							}
+						}
+					}
+				}
+
+//				// Get 'tran_name' from CmProcessActivity by "SPID" and store it in 'TranName'
+//				boolean getTranName = true;
+//				CountersModel cmProcessActivity = getCounterController().getCmByName(CmProcessActivity.CM_NAME);
+//				if (getTranName && cmProcessActivity != null)
+//				{
+//					int tmpPos_tran_name = cmProcessActivity.findColumn("tran_name");
+//					int[] spidRowIds = cmProcessActivity.getAbsRowIdsWhere("SPID", spid);
+//					if (spidRowIds != null && spidRowIds.length == 1 && tmpPos_tran_name != -1)
+//					{
+//						String tran_name = cmProcessActivity.getAbsString(spidRowIds[0], tmpPos_tran_name);
+//						counters.setValueAt(tran_name, rowId, pos_TranName);
+//					}
+//				}
+				// The above "lookup" is now done i SQL:  TranName = (select x.tran_name from master.dbo.sysprocesses x where x.spid = P.SPID and x.kpid = P.KPID)
+				// It shouldn't be a big overhead, since number of Active SQL Statements should be LOW (between 0 and a handful)
 
 				boolean b = true;
 				b = !"This was disabled".equals(monSqlText)    && !"Not Available".equals(monSqlText)    && !monSqlText   .startsWith("Not properly configured");
@@ -1468,7 +1544,8 @@ extends CountersModel
 					{
 						// Get various fields passed to the AlarmEvent
 						String StatementStartTime = cm.getRateString(r, "StartTime");
-						String currentTranName    = "-unknown-";
+//						String currentTranName    = "-unknown-";
+						String currentTranName    = cm.getRateString(r, "TranName");
 
 						// Get various names to "skip"
 						String currentDbname   = cm.getRateString(r, "dbname");
@@ -1576,6 +1653,20 @@ extends CountersModel
 		list.add(new CmSettingsHelper("StatementExecInSec SkipSrvUserName"        , PROPKEY_alarm_StatementExecInSecSkipSrvUserName         , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipSrvUserName         , DEFAULT_alarm_StatementExecInSecSkipSrvUserName        ), DEFAULT_alarm_StatementExecInSecSkipSrvUserName        , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipHostName"           , PROPKEY_alarm_StatementExecInSecSkipHostName            , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipHostName            , DEFAULT_alarm_StatementExecInSecSkipHostName           ), DEFAULT_alarm_StatementExecInSecSkipHostName           , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator()));
 
+//		CmSettingsHelper.add(this, list, "BlockingOthersMaxTimeInSec", null             , PROPKEY_alarm_BlockingOthersMaxTimeInSec                , Integer.class, conf.getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec                , DEFAULT_alarm_BlockingOthersMaxTimeInSec               ), DEFAULT_alarm_BlockingOthersMaxTimeInSec               , "If 'BlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'.", null );
+//		CmSettingsHelper.add(this, list, "BlockingOthersMaxTimeInSec", "SkipDbname"     , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipDbname      , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipDbname      , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipDbname     ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipDbname     , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (dbname  .matches('regexp'))... This to remove alarms of '(db1|db2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."    , new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "BlockingOthersMaxTimeInSec", "SkipCommand"    , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipCommand     , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand    ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipCommand    , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "BlockingOthersMaxTimeInSec", "SkipApplication", PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipApplication , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipApplication, "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "BlockingOthersMaxTimeInSec", "SkipSrvUserName", PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipSrvUserName, "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "BlockingOthersMaxTimeInSec", "SkipHostName"   , PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    , String .class, conf.getProperty   (PROPKEY_alarm_BlockingOthersMaxTimeInSecSkipHostName    , DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName   ), DEFAULT_alarm_BlockingOthersMaxTimeInSecSkipHostName   , "If 'BlockingOthersMaxTimeInSec' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator());
+//
+//		CmSettingsHelper.add(this, list, "StatementExecInSec", null                     , PROPKEY_alarm_StatementExecInSec                        , Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementExecInSec                        , DEFAULT_alarm_StatementExecInSec                       ), DEFAULT_alarm_StatementExecInSec                       , "If 'ExecTimeInMs/1000' is greater than ## then send 'AlarmEventLongRunningStatement'.", null );
+//		CmSettingsHelper.add(this, list, "StatementExecInSec", "SkipDbname"             , PROPKEY_alarm_StatementExecInSecSkipDbname              , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipDbname              , DEFAULT_alarm_StatementExecInSecSkipDbname             ), DEFAULT_alarm_StatementExecInSecSkipDbname             , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (dbname  .matches('regexp'))... This to remove alarms of '(db1|db2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."    , new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "StatementExecInSec", "SkipCommand"            , PROPKEY_alarm_StatementExecInSecSkipCommand             , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCommand             , DEFAULT_alarm_StatementExecInSecSkipCommand            ), DEFAULT_alarm_StatementExecInSecSkipCommand            , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "StatementExecInSec", "SkipApplication"        , PROPKEY_alarm_StatementExecInSecSkipApplication         , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipApplication         , DEFAULT_alarm_StatementExecInSecSkipApplication        ), DEFAULT_alarm_StatementExecInSecSkipApplication        , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranProg.matches('regexp'))... This to remove alarms of 'SQLAgent.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "StatementExecInSec", "SkipSrvUserName"        , PROPKEY_alarm_StatementExecInSecSkipSrvUserName         , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipSrvUserName         , DEFAULT_alarm_StatementExecInSecSkipSrvUserName        ), DEFAULT_alarm_StatementExecInSecSkipSrvUserName        , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranUser.matches('regexp'))... This to remove alarms of '(user1|user2)' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator());
+//		CmSettingsHelper.add(this, list, "StatementExecInSec", "SkipHostName"           , PROPKEY_alarm_StatementExecInSecSkipHostName            , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipHostName            , DEFAULT_alarm_StatementExecInSecSkipHostName           ), DEFAULT_alarm_StatementExecInSecSkipHostName           , "If 'ExecTimeInMs/1000' is true; then we can filter out transaction names using a Regular expression... if (tranHost.matches('regexp'))... This to remove alarms of '.*-prod-.*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'."   , new RegExpInputValidator());
+		
 		return list;
 	}
 }

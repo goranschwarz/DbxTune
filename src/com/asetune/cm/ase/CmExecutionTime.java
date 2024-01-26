@@ -227,7 +227,11 @@ extends CountersModel
 			                                                                     "<b>Formula</b>: count(*) from master.dbo.monEngine where Status = 'online' <br>" +
 			                                                                 "</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

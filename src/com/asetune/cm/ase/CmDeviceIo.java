@@ -312,7 +312,11 @@ extends CountersModel
 			                                                   "<b>Note</b>: However in ASE 15.7.0 ESD#2 and beyond the time resolution seems to be better (measured at 1 ms level).<br>" +
 			                                              "</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

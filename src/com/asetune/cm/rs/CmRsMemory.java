@@ -291,7 +291,11 @@ extends CountersModel
 			mtd.addColumn("mem_detail_stats", "Memory_Consumed_Mb",            "<html>Memory in MB</html>");
 			mtd.addColumn("mem_detail_stats", "Max_Memory_Consumed_Mb",        "<html>Max Memory every used by this module in MB</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

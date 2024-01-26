@@ -67,11 +67,16 @@ public class PostgresWaitTypeDictionary
 	 * @param waitName
 	 * @return
 	 */
-	public String getDescriptionPlain(String waitName)
+	public String getDescriptionPlain(String waitName, boolean doPrefix)
 	{
 		WaitTypeRecord rec = _waitTypes.get(waitName);
 		if (rec != null)
-			return StringUtil.stripHtml(rec._description);
+		{
+			if (doPrefix)
+				return StringUtil.stripHtml(rec._description.replace("[ID]", waitName));
+			else
+				return StringUtil.stripHtml(rec._description.replace("<html><b>[ID]</b> - ", ""));
+		}
 
 		// Compose an empty one
 		return "";
@@ -131,6 +136,7 @@ public class PostgresWaitTypeDictionary
 		add("CheckpointerMain",              "<html><b>[ID]</b> - Waiting in main loop of checkpointer process.</html>");
 		add("LogicalApplyMain",              "<html><b>[ID]</b> - Waiting in main loop of logical replication apply process.</html>");
 		add("LogicalLauncherMain",           "<html><b>[ID]</b> - Waiting in main loop of logical replication launcher process.</html>");
+		add("LogicalParallelApplyMain",      "<html><b>[ID]</b> - Waiting in main loop of logical replication parallel apply process</html>");
 		add("RecoveryWalStream",             "<html><b>[ID]</b> - Waiting in main loop of startup process for WAL to arrive, during streaming recovery.</html>");
 		add("SysLoggerMain",                 "<html><b>[ID]</b> - Waiting in main loop of syslogger process.</html>");
 		add("WalReceiverMain",               "<html><b>[ID]</b> - Waiting in main loop of WAL receiver process.</html>");
@@ -155,9 +161,11 @@ public class PostgresWaitTypeDictionary
 
 		// Table 28.9. Wait Events of Type IO
 		add("BaseBackupRead",                "<html><b>[ID]</b> - Waiting for base backup to read from a file.</html>");
+		add("BaseBackupSync",                "<html><b>[ID]</b> - Waiting for data written by a base backup to reach durable storage.</html>");
+		add("BaseBackupWrite",               "<html><b>[ID]</b> - Waiting for base backup to write to a file.</html>");
 		add("BufFileRead",                   "<html><b>[ID]</b> - Waiting for a read from a buffered file.</html>");
-		add("BufFileWrite",                  "<html><b>[ID]</b> - Waiting for a write to a buffered file.</html>");
 		add("BufFileTruncate",               "<html><b>[ID]</b> - Waiting for a buffered file to be truncated.</html>");
+		add("BufFileWrite",                  "<html><b>[ID]</b> - Waiting for a write to a buffered file.</html>");
 		add("ControlFileRead",               "<html><b>[ID]</b> - Waiting for a read from the pg_control file.</html>");
 		add("ControlFileSync",               "<html><b>[ID]</b> - Waiting for the pg_control file to reach durable storage.</html>");
 		add("ControlFileSyncUpdate",         "<html><b>[ID]</b> - Waiting for an update to the pg_control file to reach durable storage.</html>");
@@ -165,6 +173,7 @@ public class PostgresWaitTypeDictionary
 		add("ControlFileWriteUpdate",        "<html><b>[ID]</b> - Waiting for a write to update the pg_control file.</html>");
 		add("CopyFileRead",                  "<html><b>[ID]</b> - Waiting for a read during a file copy operation.</html>");
 		add("CopyFileWrite",                 "<html><b>[ID]</b> - Waiting for a write during a file copy operation.</html>");
+		add("DSMAllocate",                   "<html><b>[ID]</b> - Waiting for a dynamic shared memory segment to be allocated.</html>");
 		add("DSMFillZeroWrite",              "<html><b>[ID]</b> - Waiting to fill a dynamic shared memory backing file with zeroes.</html>");
 		add("DataFileExtend",                "<html><b>[ID]</b> - Waiting for a relation data file to be extended.</html>");
 		add("DataFileFlush",                 "<html><b>[ID]</b> - Waiting for a relation data file to reach durable storage.</html>");
@@ -254,6 +263,8 @@ public class PostgresWaitTypeDictionary
 		add("HashGrowBucketsAllocate",       "<html><b>[ID]</b> - Waiting for an elected Parallel Hash participant to finish allocating more buckets.</html>");
 		add("HashGrowBucketsElect",          "<html><b>[ID]</b> - Waiting to elect a Parallel Hash participant to allocate more buckets.</html>");
 		add("HashGrowBucketsReinsert",       "<html><b>[ID]</b> - Waiting for other Parallel Hash participants to finish inserting tuples into new buckets.</html>");
+		add("LogicalApplySendData",          "<html><b>[ID]</b> - Waiting for a logical replication leader apply process to send data to a parallel apply process.</html>");
+		add("LogicalParallelApplyStateChange", "<html><b>[ID]</b> - Waiting for a logical replication parallel apply process to change state.</html>");
 		add("LogicalSyncData",               "<html><b>[ID]</b> - Waiting for a logical replication remote server to send data for initial table synchronization.</html>");
 		add("LogicalSyncStateChange",        "<html><b>[ID]</b> - Waiting for a logical replication remote server to change state.</html>");
 		add("MessageQueueInternal",          "<html><b>[ID]</b> - Waiting for another process to be attached to a shared message queue.</html>");
@@ -281,6 +292,7 @@ public class PostgresWaitTypeDictionary
 
 		// Table 28.11. Wait Events of Type Lock
 		add("advisory",                      "<html><b>[ID]</b> - Waiting to acquire an advisory user lock.</html>");
+		add("applytransaction",              "<html><b>[ID]</b> - Waiting to acquire a lock on a remote transaction being applied by a logical replication subscriber.</html>");
 		add("extend",                        "<html><b>[ID]</b> - Waiting to extend a relation.</html>");
 		add("frozenid",                      "<html><b>[ID]</b> - Waiting to update pg_database.datfrozenxid and pg_database.datminmxid.</html>");
 		add("object",                        "<html><b>[ID]</b> - Waiting to acquire a lock on a non-relation database object.</html>");
@@ -308,7 +320,9 @@ public class PostgresWaitTypeDictionary
 		add("ControlFile",                   "<html><b>[ID]</b> - Waiting to read or update the pg_control file or create a new WAL file.</html>");
 		add("DynamicSharedMemoryControl",    "<html><b>[ID]</b> - Waiting to read or update dynamic shared memory allocation information.</html>");
 		add("LockFastPath",                  "<html><b>[ID]</b> - Waiting to read or update a process' fast-path lock information.</html>");
-		add("LockManager",                   "<html><b>[ID]</b> - Waiting to read or update information about “heavyweight” locks.</html>");
+		add("LockManager",                   "<html><b>[ID]</b> - Waiting to read or update information about \"heavyweight\" locks.</html>");
+		add("LogicalRepLauncherDSA",         "<html><b>[ID]</b> - Waiting to access logical replication launcher's dynamic shared memory allocator.</html>");
+		add("LogicalRepLauncherHash",        "<html><b>[ID]</b> - Waiting to access logical replication launcher's shared hash table.</html>");
 		add("LogicalRepWorker",              "<html><b>[ID]</b> - Waiting to read or update the state of logical replication workers.</html>");
 		add("MultiXactGen",                  "<html><b>[ID]</b> - Waiting to read or update shared multixact state.</html>");
 		add("MultiXactMemberBuffer",         "<html><b>[ID]</b> - Waiting for I/O on a multixact member SLRU buffer.</html>");
@@ -329,6 +343,9 @@ public class PostgresWaitTypeDictionary
 		add("PerSessionRecordType",          "<html><b>[ID]</b> - Waiting to access a parallel query's information about composite types.</html>");
 		add("PerSessionRecordTypmod",        "<html><b>[ID]</b> - Waiting to access a parallel query's information about type modifiers that identify anonymous record types.</html>");
 		add("PerXactPredicateList",          "<html><b>[ID]</b> - Waiting to access the list of predicate locks held by the current serializable transaction during a parallel query.</html>");
+		add("PgStatsData",                   "<html><b>[ID]</b> - Waiting for shared memory stats data access.</html>");
+		add("PgStatsDSA",                    "<html><b>[ID]</b> - Waiting for stats dynamic shared memory allocator access.</html>");
+		add("PgStatsHash",                   "<html><b>[ID]</b> - Waiting for stats shared memory hash table access.</html>");
 		add("PredicateLockManager",          "<html><b>[ID]</b> - Waiting to access predicate lock information used by serializable transactions.</html>");
 		add("ProcArray",                     "<html><b>[ID]</b> - Waiting to access the shared per-process data structures (typically, to get a snapshot or report a session's transaction ID).</html>");
 		add("RelationMapping",               "<html><b>[ID]</b> - Waiting to read or update a pg_filenode.map file (used to track the filenode assignments of certain system catalogs).</html>");
@@ -341,9 +358,6 @@ public class PostgresWaitTypeDictionary
 		add("SerialBuffer",                  "<html><b>[ID]</b> - Waiting for I/O on a serializable transaction conflict SLRU buffer.</html>");
 		add("SerializableFinishedList",      "<html><b>[ID]</b> - Waiting to access the list of finished serializable transactions.</html>");
 		add("SerializablePredicateList",     "<html><b>[ID]</b> - Waiting to access the list of predicate locks held by serializable transactions.</html>");
-		add("PgStatsDSA",                    "<html><b>[ID]</b> - Waiting for stats dynamic shared memory allocator access</html>");
-		add("PgStatsHash",                   "<html><b>[ID]</b> - Waiting for stats shared memory hash table access</html>");
-		add("PgStatsData",                   "<html><b>[ID]</b> - Waiting for shared memory stats data access</html>");
 		add("SerializableXactHash",          "<html><b>[ID]</b> - Waiting to read or update information about serializable transactions.</html>");
 		add("SerialSLRU",                    "<html><b>[ID]</b> - Waiting to access the serializable transaction conflict SLRU cache.</html>");
 		add("SharedTidBitmap",               "<html><b>[ID]</b> - Waiting to access a shared TID bitmap during a parallel bitmap index scan.</html>");
@@ -373,11 +387,17 @@ public class PostgresWaitTypeDictionary
 		add("RecoveryApplyDelay",            "<html><b>[ID]</b> - Waiting to apply WAL during recovery because of a delay setting.</html>");
 		add("RecoveryRetrieveRetryInterval", "<html><b>[ID]</b> - Waiting during recovery when WAL data is not available from any source (pg_wal, archive or stream).</html>");
 		add("RegisterSyncRequest",           "<html><b>[ID]</b> - Waiting while sending synchronization requests to the checkpointer, because the request queue is full.</html>");
+		add("SpinDelay",                     "<html><b>[ID]</b> - Waiting while acquiring a contended spinlock.</html>");
 		add("VacuumDelay",                   "<html><b>[ID]</b> - Waiting in a cost-based vacuum delay point.</html>");
 		add("VacuumTruncate",                "<html><b>[ID]</b> - Waiting to acquire an exclusive lock to truncate off any empty pages at the end of a table vacuumed.</html>");
 	}
 	
 	
+
+	public static String getWaitEventDescriptionPlain(String name, boolean doPrefix)
+	{
+		return getInstance().getDescriptionPlain(name, doPrefix);
+	}
 
 	public static String getWaitEventDescription(String name)
 	{

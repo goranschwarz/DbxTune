@@ -579,7 +579,11 @@ extends CountersModel
 			mtd.addColumn(tn, "creation_time__latest"          ,  "<html>Last created execution plan for this datbase<br>SQL: MAX(creation_time) </html>");
 			mtd.addColumn(tn, "last_execution_time__latest"    ,  "<html>Last execution time for this datbase<br>SQL: MAX(last_execution_time) </html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 

@@ -295,7 +295,11 @@ extends CountersModel
 			mtd.addColumn("V$SQLSTATS", "AVOIDED_EXECUTIONS",                       "<html> Number of executions attempted on this object, but prevented due to the SQL statement being in quarantine </html>");
 			mtd.addColumn("V$SQLSTATS", "DELTA_AVOIDED_EXECUTIONS",                 "<html> Number of executions attempted on this object, but prevented due to the SQL statement being in quarantine, since the last AWR snapshot </html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

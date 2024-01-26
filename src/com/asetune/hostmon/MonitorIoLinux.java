@@ -85,7 +85,11 @@ extends MonitorIo
 		{
 			_logger.warn("Number of fields for iostat could not be resoved. ioStatColCount=" + ioStatColCount + ". So we need to resolv to parsing the version number. utilVersionAsStr=" + VersionShort.toStr(utilVersion)+", utilVersionAsInt=" + utilVersion);
 
-			if ( utilVersion >= VersionShort.toInt(12,2,0))
+			if ( utilVersion >= VersionShort.toInt(12,5,4))
+			{
+				ioStatColCount = 23;
+			}
+			else if ( utilVersion >= VersionShort.toInt(12,2,0))
 			{
 				ioStatColCount = 21;
 			}
@@ -228,6 +232,26 @@ extends MonitorIo
 		// 1 (field#)          2         3        4      5       6        7       8         9       10     11      12       13      14        15       16     17      18       19      20     21
 		// ------------- ------- ---------  ------- ------ ------- -------- ------- --------- -------- ------ ------- -------- ------- --------- -------- ------ ------- -------- ------- ------
 		
+
+		//------------------------------------------
+		// Version 12.5.4 has 23 columns (not sure what version 'f/s' and 'f_await' was introduced)
+		//------------------------------------------
+		// [gorans@pg-3a-cos9 ~]$ iostat -V
+		// sysstat version 12.5.4
+		// (C) Sebastien Godard (sysstat <at> orange.fr)
+		// 
+		// [gorans@pg-3a-cos9 ~]$ iostat -xdk 5
+		// Linux 5.14.0-391.el9.x86_64 (pg-3a-cos9)        01/13/2024      _x86_64_        (1 CPU)
+        // 
+		// Device            r/s     rkB/s   rrqm/s  %rrqm r_await rareq-sz     w/s     wkB/s   wrqm/s  %wrqm w_await wareq-sz     d/s     dkB/s   drqm/s  %drqm d_await dareq-sz     f/s f_await  aqu-sz  %util
+		// dm-0            43.88   3831.74     0.00   0.00    0.61    87.32    3.96   1070.55     0.00   0.00    2.83   270.36    0.00      0.00     0.00   0.00    0.00     0.00    0.00    0.00    0.04   1.44
+		// dm-1             0.11      0.43     0.00   0.00    0.31     4.02    0.18      0.75     0.00   0.00    9.31     4.04    0.00      0.00     0.00   0.00    0.00     0.00    0.00    0.00    0.00   0.00
+		// sda             43.90   3832.24     0.08   0.19    0.62    87.29    4.52   1071.30     0.26   5.53    3.80   237.20    0.00      0.00     0.00   0.00    0.00     0.00    0.00    0.00    0.04   1.44
+		// ------------- ------- ---------  ------- ------ ------- -------- ------- --------- -------- ------ ------- -------- ------- --------- -------- ------ ------- -------- ------- ------- ------- ------
+		// 1 (field#)          2         3        4      5       6        7       8         9       10     11      12       13      14        15       16     17      18       19      20      21      22     23
+		// ------------- ------- ---------  ------- ------ ------- -------- ------- --------- -------- ------ ------- -------- ------- --------- -------- ------ ------- -------- ------- ------- ------- ------
+		
+		
 		
 //System.out.println("MonitorIoLinux.createMetaData(utilVersion="+utilVersion+")");
 		_logger.info("When creating meta data for Linux 'iostat', initializing it using utility version "+VersionShort.toStr(utilVersion)+" (intVer="+utilVersion+"), extraInfo_ioStatColCount="+extraInfo_ioStatColCount+", ioStatColCount="+ioStatColCount+".");
@@ -237,6 +261,55 @@ extends MonitorIo
 		if (alwaysFalse)
 		{
 			// Dummy code, which we never enter... so we can comment out first section easy (probably just when adding new io stat layout)
+		}
+		else if ( ioStatColCount >= 23) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
+		{
+			_logger.info("Initializing MetaData with 23 (or above [" + ioStatColCount + "]) column. utilVersion='"+VersionShort.toStr(utilVersion)+"', intVer="+utilVersion+", VersionShort.toInt(12,2,0)="+VersionShort.toInt(12,2,0));
+
+			md.addStrColumn( "device",            1,  1, false,   30, "iostat[Device]: This column gives the device (or partition) name as listed in the /dev directory.");
+			md.addIntColumn( "samples",           2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
+
+			md.addDecColumn ("totalIoPerSec",     3,  0, true, 10, 2, "Total number of IO's Formula: readsPerSec + writesPerSec");
+			md.addDecColumn ("readPct",           4,  0, true, 10, 1, "Percent of Reads    from total IO's. Formula: readsPerSec / totalIo * 100");
+			md.addDecColumn ("writePct",          5,  0, true, 10, 1, "Percent of Writes   from total IO's. Formula: writesPerSec / totalIo * 100");
+
+			md.addStatColumn("readsPerSec",       6,  2, true, 10, 2, "iostat[r/s]: The number (after merges) of read requests completed per second for the device.");
+			md.addStatColumn("writesPerSec",      7,  8, true, 10, 2, "iostat[w/s]: The number (after merges) of write requests completed per second for the device.");
+			md.addStatColumn("discardPerSec",     8, 14, true, 10, 2, "iostat[d/s]: The number (after merges) of discard requests completed per second for the device.");
+			md.addStatColumn("flushPerSec",       9, 21, true, 10, 2, "iostat[f/s]: The number (after merges) of flush requests completed per second for the device.  This counts flush requests executed by disks. Flush requests are not tracked for partitions.  Before being merged, flush operations are counted as writes.");
+
+			md.addStatColumn("kbReadPerSec",     10,  3, true, 10, 2, "iostat[rkB/s]: The number of kilobytes read from the device per second.");
+			md.addStatColumn("kbWritePerSec",    11,  9, true, 10, 2, "iostat[wkB/s]: The number of kilobytes written to the device per second.");
+			md.addStatColumn("kbDiscardPerSec",  12, 15, true, 10, 2, "iostat[dkB/s]: The number of kilobytes discarded for the device per second.");
+
+			md.addStatColumn("rrqmPerSec",       13,  4, true, 10, 2, "iostat[rrqm/s]: The number of read requests merged per second that were queued to the device. ");
+			md.addStatColumn("wrqmPerSec",       14, 10, true, 10, 2, "iostat[wrqm/s]: The number of write requests merged per second that were queued to the device.");
+			md.addStatColumn("drqmPerSec",       15, 16, true, 10, 2, "iostat[drqm/s]: The number of discard requests merged per second that were queued to the device.");
+
+			md.addStatColumn("rrqmPct",          16,  5, true, 10, 2, "iostat[%rrqm]: The percentage of read requests merged together before being sent to the device.");
+			md.addStatColumn("wrqmPct",          17, 11, true, 10, 2, "iostat[%wrqm]: The percentage of write requests merged together before being sent to the device.");
+			md.addStatColumn("drqmPct",          18, 17, true, 10, 2, "iostat[%drqm]: The percentage of discard requests merged together before being sent to the device.");
+
+			md.addDecColumn ("avgReadKbPerIo",   19,  0, true, 10, 1, "Average read size in KB per IO. Formula: kbReadPerSec/readsPerSec");
+			md.addDecColumn ("avgWriteKbPerIo",  20,  0, true, 10, 1, "Average write size in KB per IO. Formula: kbWritePerSec/writePerSec");
+
+			md.addStatColumn("readAvgSizeKb",    21,  7, true, 10, 2, "iostat[rareq-sz]: The average size (in kilobytes) of the read requests that were issued to the device.");
+			md.addStatColumn("writeAvgSizeKb",   22, 13, true, 10, 2, "iostat[wareq-sz]: The average size (in kilobytes) of the write requests that were issued to the device.");
+			md.addStatColumn("discardAvgSizeKb", 23, 19, true, 10, 2, "iostat[dareq-sz]: The average size (in kilobytes) of the discard requests that were issued to the device.");
+
+			md.addStatColumn("r_await",          24,  6, true, 10, 2, "iostat[r_await]: The average time (in milliseconds) for read requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
+			md.addStatColumn("w_await",          25, 12, true, 10, 2, "iostat[w_await]: The average time (in milliseconds) for write requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
+			md.addStatColumn("d_await",          26, 18, true, 10, 2, "iostat[d_await]: The average time (in milliseconds) for discard requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
+			md.addStatColumn("f_await",          27, 20, true, 10, 2, "iostat[f_await]: The average time (in milliseconds) for flush requests issued to the device to be served.  The block layer combines flush requests and executes at most one at a time.  Thus flush operations could be twice as long: Wait for current flush request, then execute it, then wait for the next one.");
+
+		//	md.addStatColumn("r_avgrq-sz",       ##, ##, true, 10, 1, "--->> removed in this version");
+		//	md.addStatColumn("w_avgrq-sz",       ##, ##, true, 10, 1, "--->> removed in this version");
+			md.addStatColumn("avgqu-sz",         28, 22, true, 10, 2, "iostat[aqu-sz]: The average queue length of the requests that were issued to the device. Note: In previous versions, this field was known as avgqu-sz.");
+
+		//	md.addStatColumn("svctm",            ##, ##, true, 10, 2, "--->> removed in this version");
+			md.addStatColumn("utilPct",          29, 23, true, 5,  2, "iostat[%util]: Percentage of elapsed time during which I/O requests were issued to the device (bandwidth utilization for the device). Device saturation occurs when this value is close to 100% for devices serving requests serially. But for devices serving requests in parallel, such as RAID arrays and modern SSDs, this number does not reflect their performance limits.");
+
+			md.addStrColumn("deviceDescription", 30,  0, true, 255,   "Mapping of the column 'device' to your own description.");
 		}
 		else if ( ioStatColCount >= 21) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 		{

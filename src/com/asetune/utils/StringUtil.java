@@ -1894,6 +1894,23 @@ public class StringUtil
 		return str;
 	}
 
+	public static String removeAllNewLines(String str, String replaceStr)
+	{
+		if (str == null)
+			return null;
+
+//		str = str.trim();
+		str = rtrim2(str);
+
+		while(str.contains("\n"))
+			str = str.replace("\n", replaceStr);
+
+		while(str.contains("\r"))
+			str = str.replace("\r", replaceStr);
+
+		return str;
+	}
+
 	/**
 	 * Check if last character is a ';'<br>
 	 * <pre>
@@ -3442,6 +3459,84 @@ public class StringUtil
 			sb.append("  <tr> \n");
 			sb.append("    <td nowrap><b>").append( entry.getKey()   ).append("</b></td> \n");
 			sb.append("    <td nowrap>")   .append( entry.getValue() ).append("</td> \n");
+			sb.append("  </tr> \n");
+		}
+		sb.append("</tbody> \n");
+
+		// END tag
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
+	/**
+	 * Produce a 2 column HTML Table from a <code>List</code>, column headers (left column) is also a <code>List</code> 
+	 * <p>
+	 * data and column list should match in size<br>
+	 * If they differ a "col-#" columns will be added
+	 * 
+	 * @param data          List with <b>COLUMN-VALUE</b>
+	 * @param columns       List with <b>COLUMN-NAME</b>
+	 * 
+	 * @return a html table
+	 */
+	public static String toHtmlTable(List<Object> data, List<String> columns)
+	{
+		return toHtmlTable(data, columns, null, null);
+	}
+
+	/**
+	 * Produce a 2 column HTML Table from a <code>List</code>, column headers (left column) is also a <code>List</code> 
+	 * <p>
+	 * data and column list should match in size<br>
+	 * If they differ a "col-#" columns will be added
+	 * 
+	 * @param data          List with <b>COLUMN-VALUE</b>
+	 * @param columns       List with <b>COLUMN-NAME</b>
+	 * @param keepCols      Only print out the following columns (null or empty list: print all columns) 
+	 * @param skipCols      Skip any of the following columns    (null or empty list: print all columns)
+	 * 
+	 * @return a html table
+	 */
+	public static String toHtmlTable(List<Object> data, List<String> columns, List<String> keepCols, List<String> skipCols)
+	{
+		if (data == null)
+			return "";
+
+		if (columns == null)
+			columns = new ArrayList<>();
+
+		// Fill out columns until data & columns are the same
+		if (columns.size() < data.size())
+		{
+			for (int c = columns.size(); c < data.size(); c++)
+			{
+				columns.add("col-" + (c+1) );
+			}
+		}
+		
+		StringBuilder sb = new StringBuilder();
+
+		// START tag
+		sb.append("<table> \n");
+
+		// TBODY
+		sb.append("<tbody> \n");
+		for (int i = 0; i < data.size(); i++)
+		{
+			String colName = columns.get(i);
+
+			// Check SKIP List
+			if (skipCols != null && !skipCols.isEmpty() && skipCols.contains(colName))
+				continue;
+				
+			// Check KEEP List
+			if (keepCols != null && !keepCols.isEmpty() && !keepCols.contains(colName))
+				continue;
+				
+			sb.append("  <tr> \n");
+			sb.append("    <td nowrap><b>").append( colName     ).append("</b></td> \n");
+			sb.append("    <td nowrap>")   .append( data.get(i) ).append("</td> \n");
 			sb.append("  </tr> \n");
 		}
 		sb.append("</tbody> \n");

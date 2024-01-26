@@ -534,6 +534,43 @@ refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
 	psql --username dbxtune --host $(hostname) --port 5432 
 	select * from pg_stat_statements;
 
+##--------------------------------------
+## Preparations of the Postgres DBMS, Step 3 -- RECOMENDED
+##     - If you want to track "what" the server/pid's are Waiting on, we need another extention 
+##     - Make sure that the extension 'pg_wait_sampling' are enabled 
+## Note: search the internet for 'pg_wait_sampling configuration' and you will find some results
+##--------------------------------------
+	psql --username dbxtune --host $(hostname) --port 5432 
+	select * from pg_wait_sampling_profile;
+	## If the above works, no need to continue!
+
+	## Check current config
+	psql 
+	select name, setting, sourcefile from pg_settings where name = 'shared_preload_libraries'
+	## 'pg_wait_sampling' should be in there
+	## If not fix the config (edit config file or)
+	## ALTER SYSTEM SET shared_preload_libraries TO 'pg_stat_statements, pg_wait_sampling'
+	## Then restart Postgres
+
+	## as the postgres admin user
+	psql 
+	CREATE EXTENSION pg_wait_sampling;
+	
+	## Now test with dbxtune user
+	psql --username dbxtune --host $(hostname) --port 5432 
+	select * from pg_wait_sampling_profile;
+
+
+##--------------------------------------
+## Preparations of the Postgres DBMS, Step 4 -- RECOMENDED
+##     - If you want to monitor the error log (needs Version 15) 
+##     - And JSON Logging https://www.cybertec-postgresql.com/en/json-logs-in-postgresql-15/ 
+##--------------------------------------
+	## We need access to some system functions from user 'dbxtune'
+	GRANT EXECUTE ON FUNCTION pg_current_logfile()     TO dbxtune
+	GRANT EXECUTE ON FUNCTION pg_current_logfile(text) TO dbxtune
+	GRANT EXECUTE ON FUNCTION pg_read_file(text)       TO dbxtune
+
 
 
 ##--------------------------------------

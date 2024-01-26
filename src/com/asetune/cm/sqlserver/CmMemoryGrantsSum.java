@@ -166,7 +166,11 @@ extends CountersModel
 			mtd.addColumn(thisClassName, "used_memory_pct"   ,  "<html>How much of the granted memory do the workers use<br>"
 			                                                  + "<b>Algorithm:</b> granted_memory_kb / total_memory_kb * 100.0</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

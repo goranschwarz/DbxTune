@@ -239,7 +239,11 @@ extends CountersModel
 			mtd.addColumn("monEngine", "IOCPUTimePct"       ,"<html>'IO CPU Busy' Percent calculation.<br>     <b>Formula</b>: IOCPUTime / CPUTime * 100.0       <br> <b>Note</b>: IOCPUTime depends on ASE Version and if 'Collapse IOCPUTime into IdleCPUTime' is enabled or not. (-1 if 'Collapse...' is enabled)<br></html>");
 			mtd.addColumn("monEngine", "IdleCPUTimePct"     ,"<html>'Idle' Percent calculation.<br>            <b>Formula</b>: IdleCPUTime / CPUTime * 100.0     <br></html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

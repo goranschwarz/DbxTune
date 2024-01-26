@@ -180,7 +180,11 @@ extends CountersModel
 			mtd.addColumn("x$schema_table_statistics", "io_misc_requests",  "<html>The total number of miscellaneous I/O requests for the table.</html>");
 			mtd.addColumn("x$schema_table_statistics", "io_misc_latency",   "<html>The total wait time of miscellaneous I/O requests for the table.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

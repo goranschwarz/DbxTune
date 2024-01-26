@@ -184,7 +184,11 @@ extends CountersModel
 			mtd.addColumn("ENV_GET_SYSTEM_RESOURCES", "OS_KERNEL_VERSION"     ,    "<html>os_kernel_version - Operating system kernel identifier monitor element</html>");
 			mtd.addColumn("ENV_GET_SYSTEM_RESOURCES", "OS_ARCH_TYPE"          ,    "<html>os_arch_type - Operating system architecture type monitor element</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

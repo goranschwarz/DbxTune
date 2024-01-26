@@ -183,7 +183,11 @@ extends CountersModel
 			mtd.addColumn("dm_exec_query_parallel_workers", "used_worker_count",      "<html>Number of workers used by parallel queries.</html>");
 			mtd.addColumn("dm_exec_query_parallel_workers", "used_worker_count_diff", "<html>Same as 'used_worker_count', but difference calculated.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

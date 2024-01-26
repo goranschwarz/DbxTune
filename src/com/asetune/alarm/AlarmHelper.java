@@ -134,7 +134,7 @@ public class AlarmHelper
 		if (StringUtil.hasValue(colName)) 
 		{
 			list.add(new CmSettingsHelper(
-					"Mandatory-ColumnNameContent-List",   
+					"Mandatory-ColumnNameContent-List-" + colName,
 					CmSettingsHelper.Type.IS_ALARM_SWITCH,
 					fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContent), 
 					String.class, 

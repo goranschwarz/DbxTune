@@ -145,7 +145,11 @@ extends CountersModel
 			mtd.addColumn("sp_iqmpxinfo", "c5",  "<html>FIXME: c5</html>");
 			mtd.addColumn("sp_iqmpxinfo", "c6",  "<html>FIXME: c6/html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

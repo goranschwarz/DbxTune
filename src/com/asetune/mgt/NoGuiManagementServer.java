@@ -261,9 +261,17 @@ public class NoGuiManagementServer
 		return _port;
 	}
 
-	/** Get authorization token... "Basic uuEncodedStringWithUserAndPassword" used with header "Authorization" */
+	/** 
+	 * Get Extra Info as a JSON String: {"authorization":"Basic uuEncodedStringWithUserAndPassword"}<br>
+	 * */
 	public String getExInfo()
 	{
 		return "{\"authorization\":\"" + _authorizationToken + "\"}";
+	}
+
+	/** Get authorization token... <code>Basic uuEncodedStringWithUserAndPassword</code> */
+	public String getAuthTokenString()
+	{
+		return _authorizationToken;
 	}
 }

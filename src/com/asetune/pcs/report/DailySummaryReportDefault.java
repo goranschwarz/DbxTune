@@ -160,7 +160,7 @@ extends DailySummaryReportAbstract
 		// Create a temporary file (used to back the report content so we don't have to hold the string in memory
 		// it will be deleted when the JVM stops
 		File file = File.createTempFile("dsr_tmp_", ".html");
-		file.deleteOnExit();
+//		file.deleteOnExit(); // remove the file in removeOldReports() instead
 //		Writer writer = new FileWriter(file);
 //		try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) 
 		try (Writer writer = new CountingWriter(Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8))) 

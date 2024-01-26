@@ -25,6 +25,7 @@ import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -363,6 +364,48 @@ public class CmSettingsHelper
 		return new CmSettingsHelper(colname + " timeRangeCron", timeRangeCron_propKey, String.class, timeRangeCron_propVal, timeRangeCron_defVal, timeRangeCron_desc, new CronTimeRangeInputValidator());
 	}
 
+	/**
+	 * Add a CmSettingsHelper to the passed 'list'<br>
+	 * <ul>
+	 *     <li>if param: name='SomeName' and optionName=null --- Then it's an isAlarmSwitch parameter.</li>
+	 *     <li>if param: name='SomeName' and optionName='SomeOption' --- Then it's an parameter to the: name='SomeName'</li>
+	 * </ul>
+	 * Also if this is an <i>isAlarmSwitch</i> Then some extra parameters might be added.
+	 * 
+	 * @param cm            CountersModel
+	 * @param list          List that the CmSettingsHelper will be added to
+	 * @param name          Name or Slogan of this setting
+	 * @param optionName    null=isAlarmSwitch, if value then this is a 'option' / 'parameter' to the isAlarmSwitch
+	 * @param propName      Property Name/Key for this setting
+	 * @param dataType      Datatype for this setting
+	 * @param stringValue   Current configuration, or suggested value for this setting
+	 * @param defaultValue  Default value for this setting
+	 * @param description   A longer description of what this setting does
+	 * @param inputValidator If we have an user defined InputValidator
+	 */
+	public static void add(CountersModel cm, List<CmSettingsHelper> list, String name, String optionName, String propName, Class<?> dataType, Object stringValue, Object defaultValue, String description, InputValidator inputValidator)
+	{
+		if (list == null)
+			throw new RuntimeException("Parameter 'list' can't be null.");
+		if (name == null && optionName == null)
+			throw new RuntimeException("Parameter 'name' and 'optionName' can't BOTH be null.");
+
+		// Create IS_ALARM_SWITCH
+		if (name != null && optionName == null)
+		{
+			list.add(new CmSettingsHelper(name, Type.IS_ALARM_SWITCH, propName, dataType, stringValue, defaultValue, description, inputValidator));
+
+			// Add "extra" settings...
+			list.add(create_isAlarmEnabled(cm, name));
+			list.add(create_timeRangeCron (cm, name));
+		}
+		// Create parameters to any alarmSwitch
+		else
+		{
+			list.add(new CmSettingsHelper(name, propName, dataType, stringValue, defaultValue, description, inputValidator));
+		}
+	}
+	
 	public CmSettingsHelper()
 	{
 	}

@@ -74,6 +74,7 @@ extends TabularCntrPanel
 		l_excludeDbxTune_chk.setName(CmPgStatementsSumDb.PROPKEY_excludeDbxTune);
 		l_excludeDbxTune_chk.setToolTipText("<html>" +
 				"Exclude Statements issued by " + Version.getAppName() + " (discards all statements issued by the same <b>username</b> that any " + Version.getAppName() + " connected as.<br>" +
+				"<b>Note</b>: If " + Version.getAppName() + " connects with username 'postgres', we will NOT discard those..." +
 				"</html>");
 
 		l_excludeDbxTune_chk.addActionListener(new ActionListener()

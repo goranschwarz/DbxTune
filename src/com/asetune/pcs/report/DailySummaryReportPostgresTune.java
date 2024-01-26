@@ -42,6 +42,7 @@ import com.asetune.pcs.report.content.postgres.PostgresConfig;
 import com.asetune.pcs.report.content.postgres.PostgresConfiguration;
 import com.asetune.pcs.report.content.postgres.PostgresDbSize;
 import com.asetune.pcs.report.content.postgres.PostgresLongRunningStmnts;
+import com.asetune.pcs.report.content.postgres.PostgresSrvWaitStats;
 import com.asetune.pcs.report.content.postgres.PostgresStatementsPerDb;
 import com.asetune.pcs.report.content.postgres.PostgresTopDeadRows;
 import com.asetune.pcs.report.content.postgres.PostgresTopSql;
@@ -60,8 +61,9 @@ extends DailySummaryReportDefault
 		// Add the Alarms Active/History
 		super.addReportEntries();
 
-		// CPU
+		// CPU / Waits
 		addReportEntry( new OsCpuUsageOverview    (this) );
+		addReportEntry( new PostgresSrvWaitStats  (this) );
 
 		// Statements
 		addReportEntry( new PostgresLongRunningStmnts(this) );

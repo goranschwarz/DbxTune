@@ -174,9 +174,13 @@ extends CountersModel
 			mtd.addColumn("sp_iqfile", "LastBlk",
 					"<html>Last IQ block number assigned to the file.</html>");
 			mtd.addColumn("sp_iqfile", "OkToDrop",
-					"<html>‘Y’ indicates the file can be dropped; otherwise ‘N’.</html>");
+					"<html>ï¿½Yï¿½ indicates the file can be dropped; otherwise ï¿½Nï¿½.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

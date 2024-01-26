@@ -1531,6 +1531,7 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "HasCachedPlanInXml"  && rowData.hasOwnProperty('CachedPlanInXml')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml, 'xml' ) ); }
 					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SpidLocks              ) ); }
 					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSpidsInfo       ) ); }
+					if (metaData.columnName === "HasLastKnownSqlText" && rowData.hasOwnProperty('LastKnownSqlText') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.LastKnownSqlText,'tsql') ); }
 				}
 				else if ("SqlServerTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{

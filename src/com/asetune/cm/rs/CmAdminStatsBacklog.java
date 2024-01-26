@@ -310,7 +310,11 @@ extends CountersModel
 			mtd.addColumn("admin_stats_backlog", "Max",         "<html>FIXME</html>");
 			mtd.addColumn("admin_stats_backlog", "Avg ttl/obs", "<html>FIXME</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

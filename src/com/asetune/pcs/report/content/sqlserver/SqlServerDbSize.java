@@ -94,6 +94,32 @@ extends SqlServerAbstract
 						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
 					}
 				}
+
+				/**
+				 * If 'collation_name' is not same as "tempdb", then mark the cell as RED
+				 */
+				if ("collation_name".equals(colName))
+				{
+					String collation_name_tempdb = "";
+					for (int r=0; r<rstm.getRowCount(); r++)
+					{
+						String dbname = rstm.getValueAsString(r, "DBName");
+						if ("tempdb".equals(dbname))
+						{
+							collation_name_tempdb = rstm.getValueAsString(r, "collation_name", true, "");
+							break;
+						}
+					}
+					String collation_name_curDb = strVal;
+					if (collation_name_curDb != null && !collation_name_curDb.equals(collation_name_tempdb))
+					{
+						String tooltip = "Column 'collation_name' " + collation_name_curDb + " is different than 'tempdb'.\n"
+								+ "This might give you substandard performance, due to implicit convertions... \n";
+
+						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
+					}
+				}
+
 				/**
 				 * If 'LogSizeInMb' is *high*, then mark the cell as RED
 				 * Larger than 'DataSizeInMb'
@@ -213,11 +239,22 @@ extends SqlServerAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		// just to get Column names
+		String dummySql = "select * from [CmDatabases_abs] where 1 = 2";
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, false, "metadata");
+
+		String collation_name = "";
+		if (dummyRstm.hasColumn("collation_name"))
+		{
+			collation_name = "    ,[collation_name] \n";
+		}
+		
 		String sql = ""
 			    + "select \n"
 			    + "     [DBName] \n"
 			    + "    ,[compatibility_level] \n"
 			    + "    ,[recovery_model_desc] \n"
+			    + collation_name
 //			    + "    ,[DataFileGroupCount] \n"
 			    + "\n"
 			    + "    ,[DbSizeInMb] \n"

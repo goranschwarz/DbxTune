@@ -1348,10 +1348,11 @@ public abstract class PersistWriterBase
 		int cols = rsmd.getColumnCount();
 		for (int c=1; c<=cols; c++) 
 		{
-			String plainColName = rsmd.getColumnLabel(c);
+			String plainColName    = rsmd.getColumnLabel(c);
+			String plainColNameDcc = plainColName + DictCompression.DCC_MARKER; // DCC_MARKER = "$dcc$"
 
 			// If the current columns is NOT missing continue to next column
-			if ( ! missingCols.contains(plainColName) )
+			if ( ! (missingCols.contains(plainColName) || missingCols.contains(plainColNameDcc)) )
 				continue;
 				
 			boolean isDeltaOrPct = false;

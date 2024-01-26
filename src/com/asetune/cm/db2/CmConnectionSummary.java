@@ -190,7 +190,7 @@ extends CountersModel
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "APP_RQSTS_COMPLETED_TOTAL"             , "<html>Total number of external (application) requests that completed successfully across all members of the database for the specified service subclass</html>");
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "AVG_RQST_CPU_TIME"                     , "<html>Average amount of CPU time, in microseconds, used by all external requests that completed successfully. It represents the total of both user and system CPU time. Formula to calculate ratio: TOTAL_CPU_TIME / APP_RQSTS_COMPLETED_TOTAL</html>");
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "ROUTINE_TIME_RQST_PERCENT"             , "<html>The percentage of time the database server spent working on requests that was spent executing user routines. Formula to calculate ratio: TOTAL_ROUTINE_TIME / TOTAL_RQST_TIME</html>");
-			mtd.addColumn("MON_CONNECTION_SUMMARY", "RQST_WAIT_TIME_PERCENT"                , "<html>The percentage of the time spent working on requests that was spent waiting within the DB2® database server. Formula to calculate ratio: TOTAL_WAIT_TIME / TOTAL_RQST_TIME</html>");
+			mtd.addColumn("MON_CONNECTION_SUMMARY", "RQST_WAIT_TIME_PERCENT"                , "<html>The percentage of the time spent working on requests that was spent waiting within the DB2ï¿½ database server. Formula to calculate ratio: TOTAL_WAIT_TIME / TOTAL_RQST_TIME</html>");
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "ACT_WAIT_TIME_PERCENT"                 , "<html>The percentage of the time spent executing activities that was spent waiting within the DB2 database server. Formula to calculate ratio: TOTAL_ACT_WAIT_TIME / TOTAL_ACT_TIME</html>");
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "IO_WAIT_TIME_PERCENT"                  , "<html>The percentage of the time spent waiting within the DB2 database server that was due to I/O operations. This includes time spent performing direct reads or direct writes, and time spent reading data and index pages from the table space to the bufferpool or writing them back to disk. Formula to calculate ratio: (POOL_READ_TIME + POOL_WRITE_TIME + DIRECT_READ_TIME + DIRECT_WRITE_TIME) / TOTAL_WAIT_TIME</html>");
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "LOCK_WAIT_TIME_PERCENT"                , "<html>The percentage of time spent waiting within the DB2 database server that was spent waiting on locks. Formula to calculate ratio: LOCK_WAIT_TIME / TOTAL_WAIT_TIME</html>");
@@ -213,7 +213,11 @@ extends CountersModel
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "RECLAIM_WAIT_TIME_PERCENT"             , "<html></html>");
 			mtd.addColumn("MON_CONNECTION_SUMMARY", "SPACEMAPPAGE_RECLAIM_WAIT_TIME_PERCENT", "<html></html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override
