@@ -55,7 +55,10 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
@@ -215,12 +218,18 @@ extends CountersModel
 	public static final String  PROPKEY_sample_sqlText              = PROP_PREFIX + ".sample.sqlText";
 	public static final boolean DEFAULT_sample_sqlText              = false;
 
+	public static final String  PROPKEY_sample_lastKnownSqlText     = PROP_PREFIX + ".sample.lastKnownSqlText";
+	public static final boolean DEFAULT_sample_lastKnownSqlText     = false;
+
 	@Override
 	protected void registerDefaultValues()
 	{
 		super.registerDefaultValues();
 
-		Configuration.registerDefaultValue(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);
+		Configuration.registerDefaultValue(PROPKEY_sample_systemThreads       , DEFAULT_sample_systemThreads);
+		Configuration.registerDefaultValue(PROPKEY_summaryGraph_discardDbxTune, DEFAULT_summaryGraph_discardDbxTune);
+		Configuration.registerDefaultValue(PROPKEY_sample_sqlText             , DEFAULT_sample_sqlText);
+		Configuration.registerDefaultValue(PROPKEY_sample_lastKnownSqlText    , DEFAULT_sample_lastKnownSqlText);
 	}
 
 	private HashMap<Number,Object> _blockingSpids = new HashMap<Number,Object>(); // <(SPID)Integer> <null> indicator that the SPID is BLOCKING some other SPID
@@ -321,7 +330,8 @@ extends CountersModel
 		if (map == null)
 		{
 			map = new HashMap<>();
-			map.put("SqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("SqlText"         , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("LastKnownSqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
 
 			// Set the map in the super
 			setPcsColumnOptions(map);
@@ -504,7 +514,8 @@ extends CountersModel
 //			+ "  StatementExecInMs = datediff(ms, ST.StartTime, getdate()), \n"
 			+ "  StatementExecInMs = CASE WHEN datediff(day, ST.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, ST.StartTime, getdate()) END, \n"
 			+ QueryOptimizationTime + ase160_sp3_nl
-			+ "  MP.Command, SP.tran_name, "+HasSqlText+"\n"
+			+ "  MP.Command, SP.tran_name, \n"
+			+ "  HasLastKnownSqlText = convert(bit,0), "+HasSqlText+" \n"
 			+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
 			+ "  procName = isnull(object_name(SP.id, SP.dbid), object_name(SP.id, 2)), \n"
 			+ "  SP.stmtnum, SP.linenum, \n"
@@ -545,6 +556,7 @@ extends CountersModel
 			+ "  N.BytesReceived, N.PacketsReceived, \n"
 			+ "  AvgBytesPerReceivedPacket = CASE WHEN N.PacketsReceived > 0 THEN N.BytesReceived / N.PacketsReceived ELSE 0 END, \n" 
 			+ "  MP.ExecutionClass, MP.EngineGroupName, "
+	        + "  LastKnownSqlText = convert(text,null), \n"
 			+ nl_16000 + SqlText;
 		cols3 = StringUtil.removeLastComma(cols3);
 
@@ -580,6 +592,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Show System Processes",                   PROPKEY_sample_systemThreads ,        Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads        , DEFAULT_sample_systemThreads        ), DEFAULT_sample_systemThreads       , CmProcessActivityPanel.TOOLTIP_sample_systemThreads        ));
 		list.add(new CmSettingsHelper("Discard AseTune Activity in TrendGraphs", PROPKEY_summaryGraph_discardDbxTune , Boolean.class, conf.getBooleanProperty(PROPKEY_summaryGraph_discardDbxTune , DEFAULT_summaryGraph_discardDbxTune ), DEFAULT_summaryGraph_discardDbxTune, CmProcessActivityPanel.TOOLTIP_summaryGraph_discardDbxTune ));
 		list.add(new CmSettingsHelper("Get SQL Text from Active SPID's",         PROPKEY_sample_sqlText ,              Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText              , DEFAULT_sample_sqlText              ), DEFAULT_sample_sqlText             , CmProcessActivityPanel.TOOLTIP_sample_sqlText              ));
+		list.add(new CmSettingsHelper("Get Last Known SQL Text",                 PROPKEY_sample_lastKnownSqlText ,     Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText     , DEFAULT_sample_lastKnownSqlText     ), DEFAULT_sample_lastKnownSqlText    , CmProcessActivityPanel.TOOLTIP_sample_lastKnownSqlText     ));
 
 		return list;
 	}
@@ -645,7 +658,11 @@ extends CountersModel
                          "<b>Formula</b>: pssinfo(SP.spid, 'ipport').<br>" +
                     "</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	/** 
@@ -659,10 +676,18 @@ extends CountersModel
 	{
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID = -1, pos_WaitEventDesc = -1, pos_WaitClassDesc = -1, pos_BlockingSPID = -1;
-		int pos_SqlText = -1, pos_HasSqlText = -1;
+		int pos_SqlText               = -1, pos_HasSqlText                = -1;
+		int pos_HasLastKnownSqlText   = -1, pos_LastKnownSqlText          = -1;
+		int pos_SPID                  = -1;
+		int pos_KPID                  = -1;
+		int pos_BatchID               = -1;
+
 		int pos_AvgBytesPerSentPacket = -1, pos_AvgBytesPerReceivedPacket = -1;
 		int pos_BytesSent             = -1, pos_PacketsSent               = -1;
 		int pos_BytesReceived         = -1, pos_PacketsReceived           = -1;
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean getLastKnownSqlText = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText, DEFAULT_sample_lastKnownSqlText);
 
 		int waitEventID = 0;
 		String waitEventDesc = "";
@@ -695,6 +720,9 @@ extends CountersModel
 			else if (colName.equals("WaitEventDesc"))             pos_WaitEventDesc             = colId;
 			else if (colName.equals("WaitClassDesc"))             pos_WaitClassDesc             = colId;
 			else if (colName.equals("BlockingSPID"))              pos_BlockingSPID              = colId;
+			else if (colName.equals("SPID"))                      pos_SPID                      = colId;
+			else if (colName.equals("KPID"))                      pos_KPID                      = colId;
+			else if (colName.equals("BatchID"))                   pos_BatchID                   = colId;
 			else if (colName.equals("SqlText"))                   pos_SqlText                   = colId;
 			else if (colName.equals("HasSqlText"))                pos_HasSqlText                = colId;
 			else if (colName.equals("AvgBytesPerSentPacket"))     pos_AvgBytesPerSentPacket     = colId;
@@ -703,11 +731,19 @@ extends CountersModel
 			else if (colName.equals("PacketsSent"))               pos_PacketsSent               = colId;
 			else if (colName.equals("BytesReceived"))             pos_BytesReceived             = colId;
 			else if (colName.equals("PacketsReceived"))           pos_PacketsReceived           = colId;
+			else if (colName.equals("HasLastKnownSqlText"))       pos_HasLastKnownSqlText       = colId;
+			else if (colName.equals("LastKnownSqlText"))          pos_LastKnownSqlText          = colId;
 		}
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 		{
 			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+			return;
+		}
+		
+		if (pos_SPID < 0 || pos_KPID < 0 || pos_BatchID < 0)
+		{
+			_logger.debug("Can't find the position for column ('SPID'=" + pos_SPID + ", 'KPID'=" + pos_KPID + ", 'BatchID'=" + pos_BatchID + ", )");
 			return;
 		}
 		
@@ -749,6 +785,30 @@ extends CountersModel
 				//row.set( pos_WaitEventDesc, waitEventDesc);
 				counters.setValueAt(waitEventDesc, rowId, pos_WaitEventDesc);
 				counters.setValueAt(waitClassDesc, rowId, pos_WaitClassDesc);
+			}
+
+			// LastKnownSqlText
+			if (getLastKnownSqlText && PersistentCounterHandler.hasInstance())
+			{
+				ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+				if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)
+				{
+					SqlCaptureBrokerAse aseSqlCaptureBroker = (SqlCaptureBrokerAse) sqlCaptureBroker;
+
+					int spid    = counters.getValueAsInteger(rowId, pos_SPID   , -1);
+					int kpid    = counters.getValueAsInteger(rowId, pos_KPID   , -1);
+					int batchId = counters.getValueAsInteger(rowId, pos_BatchID, -1);
+
+					if (spid != -1 && kpid != -1 && batchId != -1)
+					{
+						String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId);
+						if (lastKnownSqlText != null)
+						{
+							counters.setValueAt(true            , rowId, pos_HasLastKnownSqlText);
+							counters.setValueAt(lastKnownSqlText, rowId, pos_LastKnownSqlText);
+						}
+					}
+				}
 			}
 
 			// SQL Text
@@ -840,6 +900,25 @@ extends CountersModel
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
 	{
+		// LastKnownSqlText
+		if ("HasLastKnownSqlText".equals(colName))
+		{
+			// Find 'ProcCallStack' column, is so get it and set it as the tool tip
+			int pos_LastKnownSqlText = findColumn("LastKnownSqlText");
+			if (pos_LastKnownSqlText > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_LastKnownSqlText);
+				if (cellVal == null)
+					return "<html>No value</html>";
+				else
+					return "<html><pre>" + cellVal + "</pre></html>";
+			}
+		}
+		if ("LastKnownSqlText".equals(colName))
+		{
+			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
+		}
+
 		// MON SQL TEXT
 		if ("HasSqlText".equals(colName))
 		{

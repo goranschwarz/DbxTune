@@ -211,7 +211,11 @@ extends CountersModel
 			mtd.addColumn("sysmonitors", "longest_forward_wait",  "<html>Schema Cache:                      Longest Wait (ms)</html>");
 			mtd.addColumn("sysmonitors", "schema_reuse",          "<html>Schema Cache:                      Schemas reused</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

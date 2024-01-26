@@ -47,6 +47,9 @@ extends TabularCntrPanel
 //	private static final Logger  _logger	           = Logger.getLogger(CmPgActivityPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
+	private static final Color WORKER_PARENT    = new Color(229, 194, 149); // DARK Beige 
+	private static final Color WORKER_PROCESSES = new Color(255, 245, 216); // Beige
+
 	public CmPgActivityPanel(CountersModel cm)
 	{
 		super(cm);
@@ -77,6 +80,7 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
+		
 		// YELLOW = idle in transaction
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.idle_in_transaction");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
@@ -91,20 +95,22 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
-//		// PINK = idle in transaction (aborted)
-//		if (conf != null) colorStr = conf.getProperty(getName()+".color.idle_in_transaction");
-//		addHighlighter( new ColorHighlighter(new HighlightPredicate()
-//		{
-//			@Override
-//			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
-//			{
-//				String status = (String) adapter.getValue(adapter.getColumnIndex("state"));
-//				if ( status != null && status.equals("idle in transaction (aborted)") )
-//					return true;
-//				return false;
-//			}
-//		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
+		
+		// BEIGE = worker process
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.parallel_worker");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String backend_type = (String) adapter.getValue(adapter.getColumnIndex("backend_type"));
+				if ( backend_type != null && backend_type.equals("parallel worker") )
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, WORKER_PROCESSES), null));
 
+		
 		// Mark the row as PINK if this SPID is BLOCKED by another thread
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
@@ -122,6 +128,7 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
+		
 		// Mark the row as RED if blocks other users from working
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
@@ -140,6 +147,50 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+	
+		// DARK BEIGE = PARENT of WORKER processes
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String colName = adapter.getColumnName(adapter.column);
+				if ( ! StringUtil.equalsAny(colName, "pid", "worker_count"))
+					return false;
+
+				Number worker_count = (Number) adapter.getValue(adapter.getColumnIndex("worker_count"));
+				if (worker_count != null && worker_count.intValue() > 0)
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, WORKER_PARENT), null));
+
+
+		// GREEN = active (BUT JUST ON THE 'state' column)
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.active");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String colName = adapter.getColumnName(adapter.column);
+				if ( ! StringUtil.equalsAny(colName, "state"))
+					return false;
+
+				if ( "state".equals(colName))
+				{
+					String status = (String) adapter.getValue(adapter.getColumnIndex(colName));
+					if ( status != null && status.equals("active") )
+						return true;
+				}
+
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
+
+		
 	}
 
 	private JCheckBox l_sampleSslInfo_chk;

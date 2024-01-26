@@ -665,7 +665,28 @@ extends CountersModel
 							// This will show us if there are MORE than 1 SPID that is *eating* tempdb space!
 							double reportSpaceThresholdInMb = threshold * 0.1;
 							extendedDescHtml += "<br><br>" + TempdbUsagePerSpid.getInstance().toHtmlTableString(reportSpaceThresholdInMb);
-							
+
+							// get ACTIVE Statement for 'session_id'
+							CountersModel cmActiveStatements = getCounterController().getCmByName(CmActiveStatements.CM_NAME);
+							if (cmActiveStatements != null)
+							{
+								// the "spid" can be in both ACTIVE and BLOCKER section
+								int[] activeStmntRows = cmActiveStatements.getAbsRowIdsWhere("session_id", session_id);
+								if (activeStmntRows != null && activeStmntRows.length > 0)
+								{
+									extendedDescHtml += "<br><br>" + activeStmntRows.length + " Active Statement(s) was found for session_id=" + session_id;
+									for (int asr=0; asr<activeStmntRows.length; asr++)
+									{
+										extendedDescHtml += "<br><br>" + cmActiveStatements.toHtmlTableString(DATA_ABS, asr, true, false, false);
+									}
+								}
+								else
+								{
+									extendedDescHtml += "<br><br>No Active Statement was found for session_id=" + session_id;
+								}
+							}
+
+							// Send the Alarm
 							AlarmEvent ae = new AlarmEventTempdbSpidUsage(cm, threshold, session_id, TotalUsageMb_abs, last_request_start_time, last_request_in_sec, login_name, program_name);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						

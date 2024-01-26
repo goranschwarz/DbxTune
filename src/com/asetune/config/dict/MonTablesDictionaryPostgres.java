@@ -24,6 +24,8 @@
  */
 package com.asetune.config.dict;
 
+import java.lang.invoke.MethodHandles;
+
 import javax.naming.NameNotFoundException;
 
 import com.asetune.sql.conn.DbxConnection;
@@ -989,9 +991,10 @@ extends MonTablesDictionaryDefault
 			//---------------------------------------------------------------------------------------------------------------
 			// http://postgresql.nabble.com/Waits-monitoring-td5857215.html
 		}
-		catch (NameNotFoundException e)
+		catch (NameNotFoundException e) 
 		{
-			/* ignore */
+		//	_logger.warn("Problems in '" + MethodHandles.lookup().lookupClass() + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + MethodHandles.lookup().lookupClass() + "', adding addMonTableDictForVersion. Caught: " + e); 
 		}
 	}
 }

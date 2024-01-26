@@ -370,7 +370,8 @@ extends CountersModel
 				if (cmOsDiskSpace != null)
 				{
 					// Everything in CmOsDiskSpace ABS Counters to a HTML Table
-					extendedDescHtml += "<br><br>" + SwingUtils.tableToHtmlString(cmOsDiskSpace.getCounterDataAbs());
+					if (cmOsDiskSpace.getCounterDataAbs() != null)
+						extendedDescHtml += "<br><br>" + SwingUtils.tableToHtmlString(cmOsDiskSpace.getCounterDataAbs());
 
 					// And a graph 'Available' (for last hour)
 					extendedDescHtml += "<br><br>" + cmOsDiskSpace.getGraphDataHistoryAsHtmlImage(CmOsDiskSpace.GRAPH_NAME_AVAILABLE_MB);

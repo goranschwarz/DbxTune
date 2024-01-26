@@ -196,7 +196,11 @@ extends CountersModel
 			                                                         + "If from INC connection, the value is the name of the multiplex server where the transaction originates. NULL if not from an INC connection. Always NULL if the transaction is not active.</html>");
 			mtd.addColumn("sp_iqtransaction", "GlobalTxnID",     "<html>The value indicates the global transaction ID associated with the current transaction. Zero if there is no associated global transaction.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

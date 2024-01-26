@@ -401,14 +401,18 @@ extends CountersModel
 			mtd.addColumn(CM_NAME,  "collection_time",          "<html>Time that this script's final SELECT ran</html>");
 			mtd.addColumn(CM_NAME,  "memory_info",              "<html>(Requires @get_memory_info)<BR>For active queries that require workspace memory, returns information on memory grants, resource semaphores, and the resource governor settings that are impacting the allocation.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol)
 	{
-		if (StringUtil.containsAny(colName, "locks", "additional_info", "memory_info"))
+		if (StringUtil.equalsAny(colName, "locks", "additional_info", "memory_info"))
 		{
 			String formatted = StringUtil.xmlFormat(cellValue + "");
 			String htmlEscaped = "<pre>" + StringEscapeUtils.escapeHtml4(formatted) + "<pre>";
@@ -425,7 +429,7 @@ extends CountersModel
 			return htmlEscaped;
 		}
 
-		if (StringUtil.containsAny(colName, "sql_text", "sql_command"))
+		if (StringUtil.equalsAny(colName, "sql_text", "sql_command"))
 		{
 			return "<pre>" + StringEscapeUtils.escapeHtml4(cellValue + "") + "<pre>";
 		}

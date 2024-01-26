@@ -283,7 +283,11 @@ extends CountersModel
 			mtd.addColumn("logical_status", "StateOfOpInProgress", "<html>The current step in the operation.</html>");
 			mtd.addColumn("logical_status", "Spid",                "<html>The process ID for the server thread that is executing the operation.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

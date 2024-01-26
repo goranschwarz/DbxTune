@@ -26,6 +26,7 @@ import java.awt.event.MouseEvent;
 import javax.swing.JPanel;
 
 import com.asetune.gui.focusabletip.FocusableTip;
+import com.asetune.utils.StringUtil;
 
 public class GPanel extends JPanel
 {
@@ -128,6 +129,9 @@ public class GPanel extends JPanel
 		if (ttLen > _useFocusableTipAboveSize)
 			return true;
 
+		if (StringUtil.containsAnyIgnoreCase(toolTipText, "<a>", "http://", "https://"))
+			return true;
+		
 		return false;
 	}
 
@@ -155,7 +159,7 @@ public class GPanel extends JPanel
 		String text = super.getToolTipText(e);
 
 		// Do we want to use "focusable" tips?
-		if (getUseFocusableTips() && getUseFocusableTipForText(text)) 
+		if (getUseFocusableTips() || getUseFocusableTipForText(text)) 
 		{
 			if (text != null) 
 			{

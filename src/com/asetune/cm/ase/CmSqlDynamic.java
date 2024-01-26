@@ -254,7 +254,11 @@ extends CountersModel
 			mtd.addColumn("CmSqlDynamic", "totalCount",           "<html>Number of enties found for the 'name'.</html>");
 			mtd.addColumn("CmSqlDynamic", "diffCount",            "<html>Number of enties found for the 'name'.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

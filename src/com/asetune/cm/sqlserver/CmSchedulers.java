@@ -588,7 +588,11 @@ extends CountersModel
 			mtd.addColumn("dm_os_schedulers", "ideal_workers_limit",        "<html>How many workers should ideally be on the scheduler. If the current workers exceed the limit due to imbalanced task load, once they become idle they will be trimmed. Is not nullable.</html>");
 			mtd.addColumn("dm_os_schedulers", "pdw_node_id",                "<html>The identifier for the node that this distribution is on</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

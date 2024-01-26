@@ -3234,55 +3234,9 @@ implements Cloneable, ITableTooltip
 	 * If getSql() shows NULL or empty SQL statement, this method will be called
 	 * to compose a new SQL statement. 
 	 */
-//	public void initSql(DbxConnection conn)
-//	{
-//		// Get what version we are connected to.
-//		long    srvVersion       = getServerVersion();
-//		boolean isClusterEnabled = isClusterEnabled();
-//
-//		// Get what configuration we depends on
-//		String[] dependsOnConfig = getDependsOnConfigForVersion(conn, srvVersion, isClusterEnabled);
-//		setDependsOnConfig(dependsOnConfig);
-//		
-//		// Generate the SQL, for the specific ASE version
-//		String sql = getSqlForVersion(conn, srvVersion, isClusterEnabled);
-//
-//		// Replace any "${cmCollectorName}" --> "xxxTune:CmName"
-//		sql = replaceCollectorName(sql);
-//		
-//		// set the SQL to use
-//		if (useSqlPrefix())
-//		{
-//			String sqlPrefix = getSqlPrefix(); 
-//			setSql(sqlPrefix + sql);
-//		}
-//		else
-//		{
-//			setSql(sql);
-//		}
-//
-//		// Generate the SQL INIT, for the specific ASE version
-//		String sqlInit = getSqlInitForVersion(conn, srvVersion, isClusterEnabled);
-//		setSqlInit(sqlInit);
-//
-//		// Generate the SQL CLOSE, for the specific ASE version
-//		String sqlClose = getSqlCloseForVersion(conn, srvVersion, isClusterEnabled);
-//		setSqlClose(sqlClose);
-//
-//		// Generate PrimaryKey, for the specific ASE version
-//		List<String> pkList = getPkForVersion(conn, srvVersion, isClusterEnabled);
-////		if (pkList != null && pkList.isEmpty()) // NOTE: not sure if we can do this here: since "empty" list I think does "diffCalc - but on CM's with a single row"
-////			pkList = null;
-//		setPk(pkList);
-//		
-//		// Set specific column descriptions
-//		addMonTableDictForVersion(conn, srvVersion, isClusterEnabled);
-//	}
 	public void initSql(DbxConnection conn)
 	{
-//		// Get what version we are connected to.
-//		long    srvVersion       = getServerVersion();
-//		boolean isClusterEnabled = isClusterEnabled();
+		// Get what version we are connected to.
 		DbmsVersionInfo versionInfo = conn.getDbmsVersionInfo();
 
 		// Get what configuration we depends on
@@ -3401,6 +3355,19 @@ implements Cloneable, ITableTooltip
 		return getCounterController().isSqlBatchingSupported();
 	}
 
+	
+	/**
+	 * If we want to create a new SQL Statement at every refresh, then return true
+	 * <p>
+	 * Override this in any CM where we need this
+	 * 
+	 * @return true = call <code>getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)</code> before every refresh
+	 */
+	public boolean createNewSqlForEveryRefresh()
+	{
+		return false;
+	}
+
 	/**
 	 * This one could or <br>should</b> be called to get a SQL string that will be used
 	 * to get data for a specific Performance Counter.
@@ -3411,29 +3378,16 @@ implements Cloneable, ITableTooltip
 	 * (by calling setSql()) for the desired ASE version.
 	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
-//	public abstract String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
-//	public String getSqlForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
-//	{
-//		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
-//	}
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
-//	public String getSqlInitForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
-//	{
-//		return null;
-//	}
 	public String getSqlInitForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return null;
 	}
 
-//	public String getSqlCloseForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
-//	{
-//		return null;
-//	}
 	public String getSqlCloseForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return null;
@@ -3606,7 +3560,7 @@ implements Cloneable, ITableTooltip
 	public String getStateDescription()
 	{
 		if (_state == State.SRV_IN_SHUTDOWN) 
-			return "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
+			return "The DBMS Server is waiting for a SHUTDOWN, data collection is put on hold...";
 
 		return "";
 	}
@@ -5101,6 +5055,26 @@ implements Cloneable, ITableTooltip
 			setSampleException(null);
 			beginSqlRefresh();
 			
+			// If we need to create a new SQL Statement for every Sample
+			if (createNewSqlForEveryRefresh())
+			{
+				String sql = getSqlForVersion(conn, conn.getDbmsVersionInfo());
+
+				// Replace any "${cmCollectorName}" --> "xxxTune:CmName"
+				sql = replaceCollectorName(sql);
+				
+				// set the SQL to use
+				if (useSqlPrefix())
+				{
+					String sqlPrefix = getSqlPrefix(); 
+					setSql(sqlPrefix + sql);
+				}
+				else
+				{
+					setSql(sql);
+				}
+			}
+
 			// construct the SQL to execute
 			String sql = getSql() + getSqlWhere();
 
@@ -7822,7 +7796,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	 * @param colvalue Value to search for in the above column name
 	 * @return int[] an array of integers where rows meets above search criteria, if nothing was found return null
 	 */
-	private int[] getRowIdsWhere(int whatData, String colname, boolean caseSensitive, String colvalue)
+	private int[] getRowIdsWhere(int whatData, String colname, boolean caseSensitive, Object colvalue)
 	{
 		CounterTableModel data = null;
 
@@ -7851,6 +7825,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			Object o = data.getValueAt(i, idCol);
 			if (o == null)
 				continue;
+
+//if ("SPID".equals(colname))
+//	System.out.println("getRowIdsWhere(): colname='"+colname+"', colvalue='"+colvalue+"', colValue.class="+colvalue.getClass().getSimpleName()+" ---- o.toString=|"+o+"|, o.class="+o.getClass().getSimpleName()+", o.equals(colvalue) == " + o.equals(colvalue));
 
 			if (o.equals(colvalue))
 				rowsList.add(i);
@@ -8494,8 +8471,8 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public String getAbsPkValue       (int    rowId)                                         { return getPkValue       (DATA_ABS, rowId  ); }
 	public int    getAbsRowIdForPkValue(String pkStr)                                        { return getRowIdForPkValue(DATA_ABS, pkStr); }
 	
-	public int[]  getAbsRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_ABS, colname, true, colval); }
-	public int[]  getAbsRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_ABS, colname,   cs, colval); }
+	public int[]  getAbsRowIdsWhere   (String colname, Object colval)                        { return getRowIdsWhere   (DATA_ABS, colname, true, colval); }
+	public int[]  getAbsRowIdsWhere   (String colname, boolean cs, Object colval)            { return getRowIdsWhere   (DATA_ABS, colname,   cs, colval); }
 	
 	public Double getAbsValueMax      (int[] rowIds, String colname)                         { return getMaxValue      (DATA_ABS, rowIds,  colname, true); }
 	public Double getAbsValueMax      (int[] rowIds, String colname, boolean cs)             { return getMaxValue      (DATA_ABS, rowIds,  colname,   cs); }
@@ -8589,8 +8566,8 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public String getDiffPkValue       (int    rowId)                                         { return getPkValue       (DATA_DIFF, rowId  ); }
 	public int    getDiffRowIdForPkValue(String pkStr)                                        { return getRowIdForPkValue(DATA_DIFF, pkStr); }
                                                                                   
-	public int[]  getDiffRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_DIFF, colname, true, colval); }
-	public int[]  getDiffRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_DIFF, colname,   cs, colval); }
+	public int[]  getDiffRowIdsWhere   (String colname, Object colval)                        { return getRowIdsWhere   (DATA_DIFF, colname, true, colval); }
+	public int[]  getDiffRowIdsWhere   (String colname, boolean cs, Object colval)            { return getRowIdsWhere   (DATA_DIFF, colname,   cs, colval); }
 	
 	public Double getDiffValueMax      (int[] rowIds, String colname)                         { return getMaxValue      (DATA_DIFF, rowIds,  colname, true); }
 	public Double getDiffValueMax      (int[] rowIds, String colname, boolean cs)             { return getMaxValue      (DATA_DIFF, rowIds,  colname,   cs); }
@@ -8684,8 +8661,8 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public String getRatePkValue       (int    rowId)                                         { return getPkValue       (DATA_RATE, rowId  ); }
 	public int    getRateRowIdForPkValue(String pkStr)                                        { return getRowIdForPkValue(DATA_RATE, pkStr); }
                                                                                   
-	public int[]  getRateRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_RATE, colname, true, colval); }
-	public int[]  getRateRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_RATE, colname,   cs, colval); }
+	public int[]  getRateRowIdsWhere   (String colname, Object colval)                        { return getRowIdsWhere   (DATA_RATE, colname, true, colval); }
+	public int[]  getRateRowIdsWhere   (String colname, boolean cs, Object colval)            { return getRowIdsWhere   (DATA_RATE, colname,   cs, colval); }
 	
 	public Double getRateValueMax      (int[] rowIds, String colname)                         { return getMaxValue      (DATA_RATE, rowIds,  colname, true); }
 	public Double getRateValueMax      (int[] rowIds, String colname, boolean cs)             { return getMaxValue      (DATA_RATE, rowIds,  colname,   cs); }

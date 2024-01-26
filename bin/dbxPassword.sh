@@ -37,7 +37,7 @@ function printUsage
 		echo "#########################################################################"
 	fi
 	echo ""
-	echo "usage: $(basename $0) get|set [-P passwd] [-U user] [-S srv] [-k key] [-f file]"
+	echo "usage: $(basename $0) get|set [-P passwd] [-U user] [-S srv] [-k key] [-f file] [-l] [-x]"
 	echo ""
 	echo "-U  user name              DEFAULT '${userName}'"
 	echo "-P  Password to use"
@@ -143,7 +143,8 @@ function readCmdLine
 # Function:
 #--------------------------------
 # How to "decrypt/use" it in a script:
-# sa_passwd=$(awk -F: '{if ($1=="sa") print $2}' ${HOME}/.passwd.enc | openssl enc -aes-128-cbc -a -d -salt -pass pass:${USER})
+# sa_passwd=$(awk -F: '{if ($1=="sa") print $2}' ${HOME}/.passwd.enc | openssl enc -aes-128-cbc -a -d -salt -pass pass:sybase)
+# sa_passwd=$(awk -F: '{if ($1=="sa") print $2}' ${HOME}/.passwd.enc | sed 's/v2;//' | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k sybase -d)
 #--------------------------------
 function addToSybasePasswordFile
 {
@@ -182,11 +183,14 @@ function addToSybasePasswordFile
 		encPasswd=$(echo "${pPassword}" | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k ${keyPassPhrase})
 	fi
 
+	printf "%-20s : %-20s : %s\n" "${pUserName}" "${pHostName}" "${lEncryptPrefixStr}${lEncPasswd}" >> ~postgres/.passwd.enc
 	if [ -z "${pSrvname}" ]
 	then
-		echo "${pUsername}: ${encPrefix}${encPasswd}" >> ${passwdFile}
+#		echo "${pUsername}: ${encPrefix}${encPasswd}" >> ${passwdFile}
+		printf "%-20s : %s\n" "${pUsername}" "${encPrefix}${encPasswd}" >> ${passwdFile}
 	else
-		echo "${pUsername}: ${pSrvname}: ${encPrefix}${encPasswd}" >> ${passwdFile}
+#		echo "${pUsername}: ${pSrvname}: ${encPrefix}${encPasswd}" >> ${passwdFile}
+		printf "%-20s : %-20s : %s\n" "${pUsername}" "${pSrvname}" "${encPrefix}${encPasswd}" >> ${passwdFile}
 	fi
 	chmod 400 ${passwdFile}
 }

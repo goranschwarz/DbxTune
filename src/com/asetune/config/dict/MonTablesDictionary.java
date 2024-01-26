@@ -1153,6 +1153,11 @@ public abstract class MonTablesDictionary
 		else
 		{
 			String currentDesc = entry._description;
+
+			// If Description has NOT changed, no need to continue!
+			if (desc != null && desc.equals(currentDesc))
+				return;
+
 			if (! currentDesc.trim().endsWith("."))
 				currentDesc = currentDesc.trim() + ".";
 

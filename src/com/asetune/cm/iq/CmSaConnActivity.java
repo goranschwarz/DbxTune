@@ -159,7 +159,11 @@ extends CountersModel
 					                                              "</html>");
 			mtd.addColumn("sa_conn_activity", "LastStatement", "<html>Returns the most recently prepared SQL statement for the current connection.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

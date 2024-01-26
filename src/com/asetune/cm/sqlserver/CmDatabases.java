@@ -801,7 +801,11 @@ extends CountersModel
 			mtd.addColumn(cmName, "LastGoodCheckDbTime"     ,"<html>Timestamp when we last executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
 			mtd.addColumn(cmName, "LastGoodCheckDbDays"     ,"<html>How many days since we executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override
@@ -2052,6 +2056,7 @@ extends CountersModel
 			    + availabilityGroupPrimaryServer
 			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
 			    + "    ,DBOwner                  = suser_sname(d.owner_sid) \n" // or possibly: original_login(), but that does not take a parameter
+			    + "    ,d.collation_name \n"
 			    + "    ,d.log_reuse_wait \n"
 			    + "    ,d.log_reuse_wait_desc \n"
 			    + " \n"

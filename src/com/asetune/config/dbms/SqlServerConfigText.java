@@ -246,6 +246,53 @@ public abstract class SqlServerConfigText
 			//  23 VERBOSE_TRUNCATION_WARNINGS          1         NULL
 			//  24 LAST_QUERY_PLAN_STATS                0         NULL
 		}
+		
+		@Override
+		public void checkConfig(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			// no nothing, if we havn't got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			String sql = ""
+				    + "DECLARE @tempdb_callation nvarchar(128) \n"
+				    + " \n"
+				    + "SELECT @tempdb_callation = collation_name \n"
+				    + "FROM sys.databases \n"
+				    + "WHERE name = 'tempdb' \n"
+				    + " \n"
+				    + "SELECT name, collation_name, DATABASEPROPERTYEX('tempdb', 'Collation') as tempdb_collation \n"
+				    + "FROM sys.databases \n"
+				    + "WHERE collation_name != @tempdb_callation \n"
+				    + "  AND name NOT IN('SSISDB', 'ReportServer', 'ReportServerTempDB') \n"
+				    + "";
+			
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					String dbname           = rs.getString(1);
+					String collation_name   = rs.getString(2);
+					String tempdb_collation = rs.getString(3);
+
+					String key = "DbmsConfigIssue." + srvName + ".collation_name_vs_tempdb." + dbname;
+
+					DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "DB-Collation-Name differs tempdb", Severity.INFO, 
+							"Database '" + dbname + "' has collation '" + collation_name + "', which is different from the collation '" + tempdb_collation + "' used by 'tempdb'. Collation differences between user databases and tempdb can cause conflicts especially when comparing string values.", 
+							"https://www.brentozar.com/blitz/database-server-collation-mismatch/");
+					DbmsConfigManager.getInstance().addConfigIssue(issue);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems detecting DB Collation that is different than 'tempdb', using sql '" + sql + "'. Caught: " + ex, ex);
+			}
+		}
 	}
 
 	public static class SysMasterFiles extends DbmsConfigTextAbstract

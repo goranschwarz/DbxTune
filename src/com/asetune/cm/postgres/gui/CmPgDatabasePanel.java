@@ -21,6 +21,8 @@
  ******************************************************************************/
 package com.asetune.cm.postgres.gui;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -30,10 +32,16 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import org.jdesktop.swingx.decorator.ColorHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
+
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.CmPgDatabase;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -59,6 +67,32 @@ extends TabularCntrPanel
 	
 	private void init()
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String colorStr = null;
+
+		// RED = active
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.checksum_failures");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String colName = adapter.getColumnName(adapter.column);
+				if ( ! StringUtil.equalsAny(colName, "checksum_failures", "checksum_last_failure"))
+					return false;
+				
+				if ( "checksum_failures".equals(colName) && adapter.getValue() instanceof Number)
+				{
+					Number failures = (Number) adapter.getValue();
+					return failures.intValue() > 0;
+				}
+
+				if ( "checksum_last_failure".equals(colName))
+					return adapter.getValue() != null;
+
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
 	private JLabel     _slideWindowTime_lbl;

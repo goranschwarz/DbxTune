@@ -38,6 +38,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.AlarmHelper;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
+import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
@@ -46,6 +47,8 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmPgActivityPanel;
 import com.asetune.config.dict.PostgresWaitTypeDictionary;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
@@ -53,6 +56,7 @@ import com.asetune.pcs.PcsColumnOptions.ColumnType;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -73,14 +77,16 @@ extends CountersModel
 		"<br><br>" +
 		"Table Background colors:" +
 		"<ul>" +
-		"    <li>GREEN  - active - The backend is executing a query.</li>" +
-//		"    <li>WHITE  - idle - The backend is waiting for a new client command.</li>" +
-		"    <li>YELLOW - idle in transaction -  The backend is in a transaction, but is not currently executing a query.</li>" +
-//		"    <li>PINK   - idle in transaction (aborted) -  This state is similar to idle in transaction, except one of the statements in the transaction caused an error.</li>" +
-//		"    <li>XXX    - fastpath function call -  The backend is executing a fast-path function.</li>" +
-//		"    <li>XXX    - disabled -  This state is reported if track_activities is disabled in this backend.</li>" +
-		"    <li>PINK   - PID is Blocked by another PID from running, this PID is the Victim of a Blocking Lock, which is showned in RED.</li>" +
-		"    <li>RED    - PID is Blocking other PID's from running, this PID is Responslibe or the Root Cause of a Blocking Lock.</li>" +
+		"    <li>GREEN       - active - The backend is executing a query.</li>" +
+//		"    <li>WHITE       - idle - The backend is waiting for a new client command.</li>" +
+		"    <li>YELLOW      - idle in transaction -  The backend is in a transaction, but is not currently executing a query.</li>" +
+//		"    <li>PINK        - idle in transaction (aborted) -  This state is similar to idle in transaction, except one of the statements in the transaction caused an error.</li>" +
+//		"    <li>XXX         - fastpath function call -  The backend is executing a fast-path function.</li>" +
+//		"    <li>XXX         - disabled -  This state is reported if track_activities is disabled in this backend.</li>" +
+		"    <li>PINK        - PID is Blocked by another PID from running, this PID is the Victim of a Blocking Lock, which is showned in RED.</li>" +
+		"    <li>RED         - PID is Blocking other PID's from running, this PID is Responslibe or the Root Cause of a Blocking Lock.</li>" +
+		"    <li>DARK BEIGE  - PID has Worker Processes Connected to it (Parent for a worker thread), but only display this for columns 'pid', 'worker_count'</li>" +
+		"    <li>BEIGE       - PID is a Worker Processes</li>" +
 		"</ul>" +
 		"</html>";
 
@@ -146,6 +152,8 @@ extends CountersModel
 	public static final String  PROPKEY_sample_sslInfo          = CM_NAME + ".sample.sslInfo";
 	public static final boolean DEFAULT_sample_sslInfo          = false;
 	
+	public static final String GRAPH_NAME_PARALELL_WORKER_USAGE = "WorkerUsage";
+
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
 	public List<CmSettingsHelper> getLocalSettings()
@@ -168,6 +176,61 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
+		//--------------------------------------------------------
+		addTrendGraph(GRAPH_NAME_PARALELL_WORKER_USAGE,
+				"Parallel Execution Usage", 	                // Menu CheckBox text
+				"Parallel Execution Usage ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				new String[] {"Total Used Workers", "Num of Paralell Statements", "Avg Workers per Statement"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.CPU,
+				false, // is Percent Graph
+				false, // visible at start
+				Ver.ver(13),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		int pos__leader_pid = findColumn("leader_pid");
+
+		//-------------------------------------------------------
+		if (GRAPH_NAME_PARALELL_WORKER_USAGE.equals(tgdp.getName()) && pos__leader_pid != -1)
+		{
+			double workerCount = 0;
+			Map<Integer, Integer> leaderPidCountMap = new HashMap<>();  // Map<leader_pid, count>
+			for (int r = 0; r < getAbsRowCount(); r++)
+			{
+				Integer leader_pid = getAbsValueAsInteger(r, pos__leader_pid, 0);
+				if (leader_pid != 0)
+				{
+					workerCount++;
+					Integer leaderPidEntry = leaderPidCountMap.get(leader_pid);
+					if (leaderPidEntry == null)
+					{
+						leaderPidEntry = 0;
+					}
+					leaderPidEntry++;
+					leaderPidCountMap.put(leader_pid, leaderPidEntry);
+				}
+			}
+			double paralellStmntCount = leaderPidCountMap.size();
+			double avgWorkersPerStmnt = 0;
+			if ( ! leaderPidCountMap.isEmpty() )
+				avgWorkersPerStmnt = NumberUtils.round(workerCount / (leaderPidCountMap.size()*1.0), 1);
+			
+			// Add
+			Double[] arr = new Double[3];
+
+			arr[0] = workerCount;
+			arr[1] = paralellStmntCount;
+			arr[2] = avgWorkersPerStmnt;
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 
 	@Override
@@ -229,6 +292,8 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		String orderBy = "ORDER BY a.pid";
+
 		//-----------------------------
 		// BEGIN: SSL Info
 		//-----------------------------
@@ -315,9 +380,13 @@ extends CountersModel
 		// ----- 12: No changes
 		// ----- 13
 		String leader_pid = "";
+		String worker_count = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(13))
 		{
 			leader_pid  = "    ,a.leader_pid \n";
+			orderBy = "ORDER BY COALESCE(a.leader_pid, a.pid), a.backend_start \n"; 
+
+			worker_count    = "    ,CAST(-1 as int)                         AS worker_count \n";
 		}
 
 		// ----- 14
@@ -336,6 +405,7 @@ extends CountersModel
 				+ "    ,a.datname \n"
 				+ leader_pid
 				+ "    ,a.pid \n"
+				+ worker_count
 				+ "    ,CAST(a.state            as varchar(128)) AS state \n"
 				+ backend_type
 				+ waiting
@@ -408,6 +478,7 @@ extends CountersModel
 
 				+ "from pg_stat_activity a \n"
 				+ pg_stat_ssl_join
+				+ orderBy
 				+ "";
 			
 		return sql;
@@ -503,7 +574,10 @@ extends CountersModel
 		int pos_im_blocked_by_pids     = newSample.findColumn("im_blocked_by_pids");
 		int pos_im_blocking_other_pids = newSample.findColumn("im_blocking_other_pids");
 
+		int pos_leader_pid             = newSample.findColumn("leader_pid");
+		int pos_worker_count           = newSample.findColumn("worker_count");
 		
+		// set: pos_im_blocking_other_pids
 		if (pos_im_blocked_by_pids != -1 && pos_im_blocking_other_pids != -1)
 		{
 			for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
@@ -513,6 +587,19 @@ extends CountersModel
 				// Get LIST of SPID's that I'm blocking
 				String blockingList = getBlockingListStr(newSample, pid, pos_im_blocked_by_pids, pos_pid);
 				newSample.setValueAt(blockingList, rowId, pos_im_blocking_other_pids);
+			}
+		}
+
+		// set: worker_count
+		if (pos_leader_pid != -1 && pos_worker_count != -1)
+		{
+			for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+			{
+				int pid = newSample.getValueAsInteger(rowId, pos_pid);
+
+				// Get LIST of SPID's that I'm blocking
+				int worker_count = getWorkersCount(newSample, pid, pos_leader_pid);
+				newSample.setValueAt(worker_count, rowId, pos_worker_count);
 			}
 		}
 	}
@@ -550,6 +637,22 @@ extends CountersModel
 		return StringUtil.toCommaStr(pidSet);
 	}
 	
+	private int getWorkersCount(CounterSample counters, int pid, int pos_leader_pid)
+	{
+		int workerCount = 0;
+
+		// Loop on all rows
+		int rows = counters.getRowCount();
+		for (int rowId=0; rowId<rows; rowId++)
+		{
+			Integer leader_pid = counters.getValueAsInteger(rowId, pos_leader_pid);
+			if (leader_pid != null && leader_pid.intValue() == pid)
+			{
+				workerCount++;
+			}
+		}
+		return workerCount;
+	}
 
 
 

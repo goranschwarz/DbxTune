@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import javax.naming.NameNotFoundException;
+
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -38,7 +40,9 @@ import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.postgres.gui.CmPgBufferCachePanel;
+import com.asetune.cm.postgres.gui.CmPgBufferCacheDetPanel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
@@ -48,18 +52,20 @@ import com.asetune.utils.Configuration;
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
-public class CmPgBufferCache
+public class CmPgBufferCacheDet
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmPgBufferCache.class);
+	private static Logger        _logger          = Logger.getLogger(CmPgBufferCacheDet.class);
 	private static final long    serialVersionUID = 1L;
 
-	public static final String   CM_NAME          = CmPgBufferCache.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Buffer Cache";
+	public static final String   CM_NAME          = CmPgBufferCacheDet.class.getSimpleName();
+	public static final String   SHORT_NAME       = "Buffer Cache Details";
 	public static final String   HTML_DESC        = 
 		"<html>" +
 		"Table names and size in the Buffer Cache. (from pg_buffercache)<br>" +
 		"<br>" +
+		"For more details how the 'buffer manager' works, see: <a href='https://www.interdb.jp/pg/pgsql08/04.html'>https://www.interdb.jp/pg/pgsql08/04.html</a> <br>" +
+		"<br>" + 
 		"<b>Note:</b> Depends on extenstion: pg_buffercache, which is created on first sample (if not exists)<br>" +
 		"<code>CREATE EXTENSION IF NOT EXISTS pg_buffercache</code>" +
 		"</html>";
@@ -99,10 +105,10 @@ extends CountersModel
 		if (guiController != null && guiController.hasGUI())
 			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
 
-		return new CmPgBufferCache(counterController, guiController);
+		return new CmPgBufferCacheDet(counterController, guiController);
 	}
 
-	public CmPgBufferCache(ICounterController counterController, IGuiController guiController)
+	public CmPgBufferCacheDet(ICounterController counterController, IGuiController guiController)
 	{
 		super(counterController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
@@ -161,7 +167,7 @@ extends CountersModel
 	@Override
 	protected TabularCntrPanel createGui()
 	{
-		return new CmPgBufferCachePanel(this);
+		return new CmPgBufferCacheDetPanel(this);
 	}
 	
 	/**
@@ -205,7 +211,12 @@ extends CountersModel
 				String schema_name   = null;
 				String relation_name = null;
 				
-				if (relation != null && relation > 0)
+				// Skip template
+				boolean isTemplateDb = false;
+				if (dbname != null && dbname.startsWith("template"))
+					isTemplateDb = true;
+
+				if (relation != null && relation > 0 && !isTemplateDb)
 				{
 					try
 					{
@@ -262,6 +273,7 @@ extends CountersModel
 		tmp = new AggregationType("buffer_count_diff"  , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("buffer_count"       , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("buffer_dirty_count" , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avg_usagecount"     , AggregationType.Agg.AVG);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("buffer_mb"          , AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 
 		return aggColumns;
@@ -324,9 +336,11 @@ extends CountersModel
 			    + "    ,COUNT(*)                                  AS buffer_count_diff \n"
 			    + "    ,COUNT(*)                                  AS buffer_count \n"
 			    + "    ,SUM( CASE WHEN isdirty THEN 1 ELSE 0 END) AS buffer_dirty_count \n"
+			    + "    ,CAST(AVG(usagecount) as DECIMAL(12, 1))   AS avg_usagecount \n"
 			    + "    ,CAST(COUNT(*) / 128.0 as DECIMAL(12, 1))  AS buffer_mb \n"
 			    + "FROM pg_buffercache \n"
 			    + "WHERE reldatabase != 0 or reldatabase IS NULL \n" // Some records has  reldatabase = 0 and relfilenode != 0 ... so remove those but keep NULL (since it's "FREE" pages)
+//			    + "WHERE reldatabase not in(0,1,4) or reldatabase IS NULL \n" // Some records has reldatabase = 0 and relfilenode != 0 ... so remove those but keep NULL (since it's "FREE" pages) and also dbid=1,4 (1='template1', 4='template0') 
 			    + "GROUP BY reldatabase, relfilenode \n"
 			    + "ORDER BY buffer_count DESC \n"
 			    + topRows
@@ -344,4 +358,41 @@ extends CountersModel
 	private void addTrendGraphs()
 	{
 	}
+
+	@Override
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+	{
+		String name = "pg_buffercache";
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			mtd.addTable(name, "describeme");
+			
+			mtd.addColumn(name, "bufferid",           "<html>ID, in the range 1..shared_buffers</html>");
+			mtd.addColumn(name, "relfilenode",        "<html>Filenode number of the relation</html>");
+			mtd.addColumn(name, "reltablespace",      "<html>Tablespace OID of the relation</html>");
+			mtd.addColumn(name, "reldatabase",        "<html>Database OID of the relation</html>");
+			mtd.addColumn(name, "relforknumber",      "<html>Fork number within the relation; see common/relpath.h</html>");
+			mtd.addColumn(name, "relblocknumber",     "<html>Page number within the relation</html>");
+			mtd.addColumn(name, "isdirty",            "<html>Is the page dirty?</html>");
+			mtd.addColumn(name, "usagecount",         "<html>Clock-sweep access count</html>");
+			mtd.addColumn(name, "pinning_backends",   "<html>Number of backends pinning this buffer</html>");
+			
+			mtd.addColumn(name, "dbname",             "<html>Name of the Database</html>");
+			mtd.addColumn(name, "schema_name",        "<html>Name of the Schema</html>");
+			mtd.addColumn(name, "relation_name",      "<html>Name of the Table</html>");
+			mtd.addColumn(name, "buffer_count_diff",  "<html>How many pages/buffers does this table/relation have in memory (diff calculated on previous sample)</html>");
+			mtd.addColumn(name, "buffer_count",       "<html>How many pages/buffers does this table/relation have in memory</html>");
+			mtd.addColumn(name, "buffer_dirty_count", "<html>How many pages/buffers of this table/relation has changed on not yet been flushed by the checkpoint handler.</html>");
+			mtd.addColumn(name, "avg_usagecount",     "<html>Average <i>Clock-sweep access count</i> for this table.</html>");
+			mtd.addColumn(name, "buffer_mb",          "<html>In MB, how many pages/buffers does this table have in memory</html>");
+		}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
+	}
+
+
 }

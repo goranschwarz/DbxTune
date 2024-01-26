@@ -171,7 +171,11 @@ extends CountersModel
 			mtd.addColumn("sp_iqcontext", "CmdLine",  "<html>First 4096 characters of the user command being executed.</html>");
 			
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

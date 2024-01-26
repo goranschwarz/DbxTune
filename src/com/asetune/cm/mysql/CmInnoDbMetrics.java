@@ -145,7 +145,11 @@ extends CountersModel
 			mtd.addColumn("innodb_metrics", "comment",   "<html>FIXME</html>");
 			mtd.addColumn("innodb_metrics", "count",     "<html>FIXME</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

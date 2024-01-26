@@ -325,7 +325,11 @@ extends CountersModel
 			mtd.addColumn("dsi", "RSTicket",              "<html>The number of rs_ticket subcommands that have been processed by a DSI queue manager, if the Replication Server stats_sampling parameter is �on�.<br>The default, 0, means that the current setting of sqt_max_cache_size is used as the maximum cache size for the connection.</html>");
 			mtd.addColumn("dsi", "dsi_rs_ticket_report", "<html>Determines whether to call function string rs_ticket_report. rs_ticket_report function string is invoked when dsi_rs_ticket_report is set to on.<br>Default: off</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

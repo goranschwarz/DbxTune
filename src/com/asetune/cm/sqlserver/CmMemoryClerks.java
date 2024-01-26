@@ -267,7 +267,11 @@ extends CountersModel
 			mtd.addColumn(cmName, "shared_memory_reserved_MB"    ,"<html>Specifies the amount of shared memory that is reserved by a memory clerk. The amount of memory reserved for use by shared memory and file mapping.</html>");
 			mtd.addColumn(cmName, "shared_memory_committed_MB"   ,"<html>Specifies the amount of shared memory that is committed by the memory clerk.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

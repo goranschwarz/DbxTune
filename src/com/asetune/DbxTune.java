@@ -981,7 +981,7 @@ public abstract class DbxTune
 				if (cmd.hasOption('A'))
 					aseServer = cmd.getOptionValue('A');
 
-//FIXME; rewrite a bunch of this... this is to "rörigt" and it's also a bit of duplicate in CounterCollectorThreadNoGui
+//FIXME; rewrite a bunch of this... this is to "rï¿½rigt" and it's also a bit of duplicate in CounterCollectorThreadNoGui
 
 				try
 				{
@@ -1320,7 +1320,7 @@ public abstract class DbxTune
 			}
 		}
 
-boolean startEvenIfGui_justToTestTheService = false;
+boolean startEvenIfGui_justToTestTheService = "gorans2".equals(StringUtil.getHostname());
 if (_gui && startEvenIfGui_justToTestTheService)
 {
 	(new Exception("REMOVE THIS, we should NOT start a Management Server in GUI Mode...")).printStackTrace();

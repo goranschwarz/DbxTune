@@ -176,7 +176,11 @@ extends CountersModel
 			mtd.addColumn("x$io_global_by_file_by_latency", "write_lpc",     "<html> Wait time per count <br> lpc = Latency Per Count. <br> Formula: write_latency / count_write </html>");
 			mtd.addColumn("x$io_global_by_file_by_latency", "misc_lpc",      "<html> Wait time per count <br> lpc = Latency Per Count. <br> Formula: misc_latency / count_misc</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

@@ -1647,6 +1647,12 @@ public class SwingUtils
 
 	public static String tableToHtmlString(TableModel tm)
 	{
+		if (tm == null)
+		{
+			_logger.warn("tableToHtmlString(TableModel tm): The passed TableModel is null, returning '' (blank)");
+			return "";
+		}
+
 		StringBuilder sb = new StringBuilder();
 		int rows = tm.getRowCount();
 		int cols = tm.getColumnCount();

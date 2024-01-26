@@ -251,7 +251,11 @@ extends CountersModel
 			mtd.addColumn("dm_db_file_space_usage",  "internal_object_reserved_MB",     "<html>Same as 'internal_object_reserved_page_count' but as MB. <br><b>Algorithm</b>: internal_object_reserved_page_count / 128.0</html>");
 			mtd.addColumn("dm_db_file_space_usage",  "mixed_extent_MB"            ,     "<html>Same as 'mixed_extent_page_count'             but as MB. <br><b>Algorithm</b>: mixed_extent_page_count             / 128.0</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

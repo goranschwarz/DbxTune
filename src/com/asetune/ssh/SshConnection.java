@@ -1729,7 +1729,7 @@ public class SshConnection
 			}
 		}
 		
-		_logger.info("When issuing command '" + cmd + "' the version " + intVersion + " was parsed from the version string '" + StringUtil.removeLastNewLine(usedVersionString) + "'.");
+		_logger.info("When issuing command '" + cmd + "' the version " + intVersion + " was parsed from the version string '" + StringUtil.removeAllNewLines(usedVersionString, " ") + "'.");
 
 		if ( intVersion == -1 && output.getExitCode() != 0 )
 			return -1;

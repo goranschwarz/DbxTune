@@ -90,8 +90,16 @@ function getParameter(key, defaultValue)
   
 <link href="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.css" rel="stylesheet">
 
+	<!--<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/bootstrap-table.js"></script>-->
+	<!--   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/editable/bootstrap-table-editable.js"></script> -->
+	<!--   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.js"></script> -->
+	<!--   <script src="https://rawgit.com/hhurz/tableExport.jquery.plugin/master/tableExport.js"></script> -->
+	<!--<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>-->
+
 <script src="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.js"></script>
+<script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/utils.min.js"></script>
 <script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/bootstrap-table-filter-control.css">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
                 <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script>
@@ -197,252 +205,310 @@ function getParameter(key, defaultValue)
 </head>
 
 <body>
-  <!-- NavBar that works, except for: iphone... -->
-  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
-    <a class="navbar-brand" href="/">DbxCentral</a>
-    <!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
-    <!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav mr-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="/overview">Servers</a>
-        </li>
-        <li class="nav-item active">
-          <a class="nav-link" href="/admin/admin.html">Admin</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/desktop_app.html">Desktop App</a>
-        </li>
-      </ul>
-	  <!-- on the right hand side of the menu... -->
-      <ul class="navbar-nav ml-auto">
-	    <!-- IS LOGGED IN -->
-        <div id="dbx-nb-isLoggedIn-div" style="display: none;">
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
-            </a>
-            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
-            <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
-            <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
-            </div>
-          </li>
-        </div>
-	    <!-- IS LOGGED OUT -->
-        <div id="dbx-nb-isLoggedOut-div">
-          <a class="nav-link" href="/index.html?login=open"> <i class="fa fa-sign-in"></i> <span data-bs-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
-        </div>
-      </ul> <!-- end right hand side -->
-    </div>
-  </nav>
+<!-- NavBar that works, except for: iphone... -->
+	<nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+	<a class="navbar-brand" href="/">DbxCentral</a>
+	<!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
+	<!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
+	<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+		<span class="navbar-toggler-icon"></span>
+	</button>
+	<div class="collapse navbar-collapse" id="navbarCollapse">
+		<ul class="navbar-nav mr-auto">
+			<li class="nav-item">
+				<a class="nav-link" href="/overview">Servers</a>
+			</li>
+			<li class="nav-item active">
+				<a class="nav-link" href="/admin/admin.html">Admin</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="/desktop_app.html">Desktop App</a>
+			</li>
+		</ul>
+		<!-- on the right hand side of the menu... -->
+		<ul class="navbar-nav ms-auto">
+			<!-- IS LOGGED IN -->
+			<div id="dbx-nb-isLoggedIn-div" style="display: none;">
+				<li class="nav-item dropdown">
+					<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						<i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
+					</a>
+					<div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+						<a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+						<a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
+					</div>
+				</li>
+			</div>
+			<!-- IS LOGGED OUT -->
+			<div id="dbx-nb-isLoggedOut-div">
+				<a class="nav-link" href="/index.html?login=open"> <i class="fa fa-sign-in"></i> <span data-bs-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+			</div>
+		</ul> <!-- end right hand side -->
+	</div>
+	</nav>
 
   <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
 <!--  <main role="main" class="container">-->
 <!--    <div class="jumbotron">-->
 <div class="container-fluid">
+
+	<div class="text-end">Configuration for Server: <b><span id='ccSrvName'>-</span></b></div>
+
+	<ul class="nav nav-tabs" id="main-tab" role="tablist">
+		<li class="nav-item" role="presentation">
+			<button class="nav-link active" id="cc-cfg-tab-head" data-bs-toggle="tab" data-bs-target="#cc-cfg-tab" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Collector Configuration</b></button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="alarm-writer-tab-head" data-bs-toggle="tab" data-bs-target="#alarm-writer-tab" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Alarm Writers Configuration</b></button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="dsr-cfg-tab-head" data-bs-toggle="tab" data-bs-target="#dsr-cfg-tab" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Daily Summary Report Configuration</b></button>
+		</li>
+	</ul>
+
+	<div class="tab-content" id="main-tabbed-pane">
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<!-- Collector CONFIG -->
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<div class="tab-pane fade show active" id="cc-cfg-tab" role="tabpanel" aria-labelledby="cc-cfg-tab-head">
+<!--		<div style="background-color:#A1A1A1">Below is a list of counters, <b>click</b> on any row to see details about it...</div>-->
+			<i>Below is a list of counters, <b>click</b> on any row to see details about it...</i>
+			<table
+				id="cmTable"
+				class="table table-sm text-nowrap"
+				data-toggle="table"
+				data-filtering="true"
+				data-filter-control="true"
+				data-height="460"
+			>
+			<thead>
+				<tr>
+					<th data-field="displayName"                     data-filter-control="input" data-sortable="true">Display Name</th>
+					<th data-field="cmName"                          data-filter-control="input" data-sortable="true">CM Name</th>
+					<th data-field="groupName"                       data-filter-control="input" data-sortable="true">Group Name</th>
+	<!--			<th data-field="isAlarmEnabled"                  data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Is Alarms Enabled</th>-->
+					<th data-field="hasSystemAlarms"                 data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Has System Alarms</th>
+					<th data-field="isSystemAlarmsEnabled"           data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Is System Alarms Enabled</th>
+					<th data-field="hasUserDefinedAlarmInterrogator" data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Has User Defined Alarms</th>
+					<th data-field="isUserDefinedAlarmsEnabled"      data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Is User Defined Alarms Enabled</th>
 	
-      <h1>Server Collector '<span id='ccSrvName'>-</span>' - Configuration</h1>
-      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <!-- Collector CONFIG -->
-      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='server-config' class='card border-dark mb-3'>
-        <h5 class='card-header'>Server Collector Configuration</h5>
-        <div class='card-body'>
+	<!--			<th data-field="options.isPaused"                data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Is Paused</th>-->
+	<!--			<th data-field="options.isSystemAlarmsEnabled"   data-filter-control="input" data-sortable="true" data-formatter="formatPostponeTime">isSystemAlarmsEnabled</th>-->
+					<th data-field="options.postponeTime"            data-filter-control="input" data-sortable="true" data-formatter="formatPostponeTime">postponeTime</th>
+					<th data-field="options.queryTimeout"            data-filter-control="input" data-sortable="true" data-formatter="formatQueryTimeout">queryTimeout</th>
+				</tr>
+			</thead>
+			</table>
+	
+			<br>
+	
+			<ul class="nav nav-tabs" id="myTab" role="tablist">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link active" id="cm-info-tab" data-bs-toggle="tab" data-bs-target="#cm-info" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Info</b></button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="cm-options-tab" data-bs-toggle="tab" data-bs-target="#cm-options" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Options</b></button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="cm-settings-tab" data-bs-toggle="tab" data-bs-target="#cm-settings" type="button" role="tab" aria-controls="profile" aria-selected="false"><b>Local Settings</b></button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="cm-alarms-tab" data-bs-toggle="tab" data-bs-target="#cm-alarms" type="button" role="tab" aria-controls="contact" aria-selected="false"><b>Alarms</b></button>
+				</li>
+			</ul>
+			<div class="tab-content" id="alarm-info-tabbed-pane">
+				<!-- ================= INFO ================== -->
+				<div class="tab-pane fade show active" id="cm-info" role="tabpanel" aria-labelledby="cminfo-tab">
+	
+					<div class="row mt-2">
+						<label for="cm-info-cmName" class="col-sm-2 col-form-label col-form-label-sm">CM Name</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-cmName" placeholder="" readonly>
+						</div>
+					</div>
 		
-		Below is a list of counters, <b>click</b> on any row to see details about it...
-		<table
-		  id="cmTable"
-		  class="table table-sm table-striped text-nowrap""
-		  data-toggle="table"
-		  data-height="460"
-		  >
-		  <thead>
-			<tr>
-			  <th data-field="displayName"                     data-filter-control="input">Display Name</th>
-			  <th data-field="cmName"                          data-filter-control="input">CM Name</th>
-			  <th data-field="groupName"                       data-filter-control="input">Group Name</th>
-<!--		  <th data-field="isAlarmEnabled"                  data-filter-control="input" data-formatter="formatBoolean">Is Alarms Enabled</th>-->
-			  <th data-field="hasSystemAlarms"                 data-filter-control="input" data-formatter="formatBoolean">Has System Alarms</th>
-			  <th data-field="isSystemAlarmsEnabled"           data-filter-control="input" data-formatter="formatBoolean">Is System Alarms Enabled</th>
-			  <th data-field="hasUserDefinedAlarmInterrogator" data-filter-control="input" data-formatter="formatBoolean">Has User Defined Alarms</th>
-			  <th data-field="isUserDefinedAlarmsEnabled"      data-filter-control="input" data-formatter="formatBoolean">Is User Defined Alarms Enabled</th>
-
-<!--			  <th data-field="options.isPaused">Is Paused</th>-->
-<!--			  <th data-field="options.isSystemAlarmsEnabled">isSystemAlarmsEnabled</th>-->
-			  <th data-field="options.postponeTime" data-formatter="formatPostponeTime">postponeTime</th>
-			  <th data-field="options.queryTimeout" data-formatter="formatQueryTimeout">queryTimeout</th>
-			</tr>
-		  </thead>
-		</table>
-
-		<br>
-
-		<ul class="nav nav-tabs" id="myTab" role="tablist">
-		  <li class="nav-item" role="presentation">
-			<button class="nav-link active" id="cm-info-tab" data-bs-toggle="tab" data-bs-target="#cm-info" type="button" role="tab" aria-controls="home" aria-selected="true">Info</button>
-		  </li>
-		  <li class="nav-item" role="presentation">
-			<button class="nav-link" id="cm-options-tab" data-bs-toggle="tab" data-bs-target="#cm-options" type="button" role="tab" aria-controls="home" aria-selected="true">Options</button>
-		  </li>
-		  <li class="nav-item" role="presentation">
-			<button class="nav-link" id="cm-settings-tab" data-bs-toggle="tab" data-bs-target="#cm-settings" type="button" role="tab" aria-controls="profile" aria-selected="false">Local Settings</button>
-		  </li>
-		  <li class="nav-item" role="presentation">
-			<button class="nav-link" id="cm-alarms-tab" data-bs-toggle="tab" data-bs-target="#cm-alarms" type="button" role="tab" aria-controls="contact" aria-selected="false">Alarms</button>
-		  </li>
-		</ul>
-		<div class="tab-content" id="myTabContent">
-		  <!-- ================= INFO ================== -->
-		  <div class="tab-pane fade show active" id="cm-info" role="tabpanel" aria-labelledby="cminfo-tab">
-
-			<div class="row mt-2">
-				<label for="cm-info-cmName" class="col-sm-2 col-form-label col-form-label-sm">CM Name</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-cmName" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-displayName" class="col-sm-2 col-form-label col-form-label-sm">Display Name</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-displayName" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-pk" class="col-sm-2 col-form-label col-form-label-sm">Primary Key</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-pk" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-diffCols" class="col-sm-2 col-form-label col-form-label-sm">Diff Columns</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-diffCols" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-pctCols" class="col-sm-2 col-form-label col-form-label-sm">Percent Columns</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-pctCols" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-needSrvConfig" class="col-sm-2 col-form-label col-form-label-sm">Need Server Config</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-needSrvConfig" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-needSrvRoles" class="col-sm-2 col-form-label col-form-label-sm">Need Server Roles</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-needSrvRoles" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-needSrvVersion" class="col-sm-2 col-form-label col-form-label-sm">Need Server Version</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-needSrvVersion" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-dependsOnCm" class="col-sm-2 col-form-label col-form-label-sm">Depends On Cm</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-dependsOnCm" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-sqlInit" class="col-sm-2 col-form-label col-form-label-sm">Init SQL</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-sqlInit" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-sqlClose" class="col-sm-2 col-form-label col-form-label-sm">Close SQL</label>
-				<div class="col-sm-10">
-					<input type="text" class="form-control form-control-sm" id="cm-info-sqlClose" placeholder="" readonly>
-				</div>
-			</div>
-
-			<div class="row mt-2">
-				<label for="cm-info-sqlRefresh">Get Counter SQL</label>
-				<pre><code id='cm-info-sqlRefresh' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
-			</div>
-		  </div>
-
-		  <!-- ================= OPTIONS ================== -->
-		  <div class="tab-pane fade" id="cm-options" role="tabpanel" aria-labelledby="options-tab">
-			<br>
-			<b>Collector Options for the above selected Counter</b> <i>Click the row, to change the value...</i>
-			<table
-			  id="optionsTable"
-			  class="table table-sm table-striped text-nowrap""
-			  data-toggle="table"
-			  >
-			  <thead>
-				<tr>
-					<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
-					<th data-field="name"           data-filter-control="input">Name</th>
-					<th data-field="value"          data-filter-control="input">value</th>
-					<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
-					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
-					<th data-field="datatype"       data-filter-control="input">datatype</th>
-					<th data-field="desciption"     data-filter-control="input">desciption</th>
-					<th data-field="property"       data-filter-control="input">property</th>
-				</tr>
-			  </thead>
-			</table>
-		  </div>
-
-		  <!-- ================= SETTINGS ================== -->
-		  <div class="tab-pane fade" id="cm-settings" role="tabpanel" aria-labelledby="settings-tab">
-			<br>
-			<b>Settings for the above selected Counter</b> <i>Click the row, to change the value...</i>
-			<table
-			  id="settingsTable"
-			  class="table table-sm table-striped text-nowrap""
-			  data-toggle="table"
-			  >
-			  <thead>
-				<tr>
-					<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
-					<th data-field="name"           data-filter-control="input">Name</th>
-					<th data-field="value"          data-filter-control="input">value</th>
-					<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
-					<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
-					<th data-field="datatype"       data-filter-control="input">datatype</th>
-					<th data-field="desciption"     data-filter-control="input">desciption</th>
-					<th data-field="property"       data-filter-control="input">property</th>
-				</tr>
-			  </thead>
-			</table>
-		  </div>
-
-		  <!-- ================= ALARMS ================== -->
-		  <div class="tab-pane fade" id="cm-alarms" role="tabpanel" aria-labelledby="alarms-tab">
-			<div id="pre-check-div">
-				<br>
-				<b>Pre Checks</b> (checked on each of the rows before applying parameters/threshold, so you can skip entries at an early stage)
-				<table
-				  id="alarmPreChecks"
-				  class="table table-sm table-striped text-nowrap""
-				  data-toggle="table"
-				  >
-				  <thead>
-					<tr>
+					<div class="row mt-2">
+						<label for="cm-info-displayName" class="col-sm-2 col-form-label col-form-label-sm">Display Name</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-displayName" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-pk" class="col-sm-2 col-form-label col-form-label-sm">Primary Key</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-pk" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-diffCols" class="col-sm-2 col-form-label col-form-label-sm">Diff Columns</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-diffCols" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-pctCols" class="col-sm-2 col-form-label col-form-label-sm">Percent Columns</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-pctCols" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-needSrvConfig" class="col-sm-2 col-form-label col-form-label-sm">Need Server Config</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-needSrvConfig" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-needSrvRoles" class="col-sm-2 col-form-label col-form-label-sm">Need Server Roles</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-needSrvRoles" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-needSrvVersion" class="col-sm-2 col-form-label col-form-label-sm">Need Server Version</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-needSrvVersion" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-dependsOnCm" class="col-sm-2 col-form-label col-form-label-sm">Depends On Cm</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-dependsOnCm" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-sqlInit" class="col-sm-2 col-form-label col-form-label-sm">Init SQL</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-sqlInit" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-sqlClose" class="col-sm-2 col-form-label col-form-label-sm">Close SQL</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control form-control-sm" id="cm-info-sqlClose" placeholder="" readonly>
+						</div>
+					</div>
+		
+					<div class="row mt-2">
+						<label for="cm-info-sqlRefresh">Get Counter SQL</label>
+						<pre><code id='cm-info-sqlRefresh' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
+					</div>
+				</div> <!-- END: INFO -->
+		
+				<!-- ================= OPTIONS ================== -->
+				<div class="tab-pane fade" id="cm-options" role="tabpanel" aria-labelledby="options-tab">
+					<br>
+					<b>Collector Options for the above selected Counter</b> <i>Click the row, to change the value...</i>
+					<table
+					id="optionsTable"
+					class="table table-sm text-nowrap"
+					data-toggle="table"
+					>
+					<thead>
+						<tr>
+							<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+							<th data-field="name"           data-filter-control="input">Name</th>
+							<th data-field="value"          data-filter-control="input">value</th>
+							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+							<th data-field="datatype"       data-filter-control="input">datatype</th>
+							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="property"       data-filter-control="input">property</th>
+						</tr>
+					</thead>
+					</table>
+				</div> <!-- END: OPTIONS -->
+		
+				<!-- ================= SETTINGS ================== -->
+				<div class="tab-pane fade" id="cm-settings" role="tabpanel" aria-labelledby="settings-tab">
+					<br>
+					<b>Settings for the above selected Counter</b> <i>Click the row, to change the value...</i>
+					<table
+					id="settingsTable"
+					class="table table-sm text-nowrap"
+					data-toggle="table"
+					>
+					<thead>
+						<tr>
+							<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+							<th data-field="name"           data-filter-control="input">Name</th>
+							<th data-field="value"          data-filter-control="input">value</th>
+							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+							<th data-field="datatype"       data-filter-control="input">datatype</th>
+							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="property"       data-filter-control="input">property</th>
+						</tr>
+					</thead>
+					</table>
+				</div> <!-- END: INFO -->
+		
+				<!-- ================= SETTINGS ================== -->
+				<div class="tab-pane fade" id="cm-alarms" role="tabpanel" aria-labelledby="alarms-tab">
+					<div id="pre-check-div">
+						<br>
+						<b>Pre Checks</b> (checked on each of the rows before applying parameters/threshold, so you can skip entries at an early stage)
+						<table
+						id="alarmPreChecks"
+						class="table table-sm text-nowrap"
+						data-toggle="table"
+						>
+						<thead>
+							<tr>
+								<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+								<th data-field="name"           data-filter-control="input">Name</th>
+								<th data-field="value"          data-filter-control="input">value</th>
+								<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+								<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+								<th data-field="datatype"       data-filter-control="input">datatype</th>
+								<th data-field="desciption"     data-filter-control="input">desciption</th>
+								<th data-field="property"       data-filter-control="input">property</th>
+								<th data-field="validatorName"  data-filter-control="input">validatorName</th>
+							</tr>
+						</thead>
+						</table>
+					</div>
+		
+					<br>
+					<b>Alarms for the above selected Counter</b> <i>Click the row, to see parameters for this alarm, in a table below...</i>
+					<table
+					id="alarmTable"
+					class="table table-sm text-nowrap"
+					data-toggle="table"
+					>
+					<thead>
+						<tr>
+		<!--				  <th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>-->
+						<th data-field="name"                 data-filter-control="input">Name</th>
+		<!--				  <th data-field="isAlarmEnabled"       data-filter-control="input" data-formatter="formatBoolean">isAlarmEnabled</th>-->
+		<!--				  <th data-field="timeRangeCron"        data-filter-control="input" data-formatter="formatTimeRangeCron">timeRangeCron</th>-->
+		<!--				  <th data-field="timeRangeDescrption"  data-filter-control="input">timeRangeDescrption</th>-->
+						<th data-field="desciption"           data-filter-control="input">desciption</th>
+						</tr>
+					</thead>
+					</table>
+		
+		
+					<br>
+					<b>Alarm Parameters for the above selected Alarm</b> <i>Click the row, to change the value...</i>
+					<table
+					id="alarmParams"
+					class="table table-sm text-nowrap"
+					data-toggle="table"
+					>
+					<thead>
+						<tr>
 						<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
 						<th data-field="name"           data-filter-control="input">Name</th>
+				<!--		  <th data-field="isMainParam"    data-filter-control="input">isMainParam</th>-->
 						<th data-field="value"          data-filter-control="input">value</th>
 						<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
 						<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
@@ -450,70 +516,121 @@ function getParameter(key, defaultValue)
 						<th data-field="desciption"     data-filter-control="input">desciption</th>
 						<th data-field="property"       data-filter-control="input">property</th>
 						<th data-field="validatorName"  data-filter-control="input">validatorName</th>
-					</tr>
-				  </thead>
-				</table>
-			</div>
+						</tr>
+					</thead>
+					</table>
+				</div> <!-- END: SETTINGS -->
+	
+			</div>  <!-- alarm-info-tabbed-pane -->
 
-			<br>
-			<b>Alarms for the above selected Counter</b> <i>Click the row, to see parameters for this alarm, in a table below...</i>
+		</div>  <!-- END: Collector CONFIG -->
+
+
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<!-- Alarm Writers Configuration -->
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<div class="tab-pane fade" id="alarm-writer-tab" role="tabpanel" aria-labelledby="alarm-writer-tab-head">
+			<i>Below is a list of Alarm Writers, <b>click</b> on any row to see details about it...</i>
 			<table
-			  id="alarmTable"
-			  class="table table-sm table-striped text-nowrap""
-			  data-toggle="table"
-			  >
-			  <thead>
+				id="alarmWritersTable"
+				class="table table-sm text-nowrap"
+				data-toggle="table"
+<!--				data-filtering="true"-->
+<!--				data-filter-control="true"-->
+				data-height="460"
+			>
+			<thead>
+<!--
 				<tr>
-				  <th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
-				  <th data-field="name"                 data-filter-control="input">Name</th>
-				  <th data-field="isAlarmEnabled"       data-filter-control="input" data-formatter="formatBoolean">isAlarmEnabled</th>
-				  <th data-field="timeRangeCron"        data-filter-control="input" data-formatter="formatTimeRangeCron">timeRangeCron</th>
-				  <th data-field="timeRangeDescrption"  data-filter-control="input">timeRangeDescrption</th>
-				  <th data-field="desciption"           data-filter-control="input">desciption</th>
+					<th data-field="isSelected"   data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Activated</th>
+					<th data-field="name"         data-filter-control="input" data-sortable="true">Name</th>
+					<th data-field="description"  data-filter-control="input" data-sortable="true">Description</th>
+					<th data-field="className"    data-filter-control="input" data-sortable="true">Class Name</th>
 				</tr>
-			  </thead>
+-->
+				<tr>
+					<th data-field="name"         >Name</th>
+					<th data-field="description"  >Description</th>
+					<th data-field="className"    >Class Name</th>
+				</tr>
+			</thead>
 			</table>
 
+			<ul class="nav nav-tabs" id="aw-sub-tabbed-pane-tabList" role="tablist">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link active" id="aw-settings-tab" data-bs-toggle="tab" data-bs-target="#aw-settings" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Settings</b></button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="aw-filters-tab" data-bs-toggle="tab" data-bs-target="#aw-filters" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Filters</b></button>
+				</li>
+			</ul>
+			<div class="tab-content" id="aw-sub-tabbed-pane">
 
-			<br>
-			<b>Alarm Parameters for the above selected Alarm</b> <i>Click the row, to change the value...</i>
-			<table
-			  id="alarmParams"
-			  class="table table-sm table-striped text-nowrap""
-			  data-toggle="table"
-			  >
-			  <thead>
-				<tr>
-				  <th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
-				  <th data-field="name"           data-filter-control="input">Name</th>
-		<!--		  <th data-field="isMainParam"    data-filter-control="input">isMainParam</th>-->
-				  <th data-field="value"          data-filter-control="input">value</th>
-				  <th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
-				  <th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
-				  <th data-field="datatype"       data-filter-control="input">datatype</th>
-				  <th data-field="desciption"     data-filter-control="input">desciption</th>
-				  <th data-field="property"       data-filter-control="input">property</th>
-				  <th data-field="validatorName"  data-filter-control="input">validatorName</th>
-				</tr>
-			  </thead>
-			</table>
+				<!-- ================= AW SETTINGS ================== -->
+				<div class="tab-pane fade" id="aw-settings" role="tabpanel" aria-labelledby="options-tab">
+					<br>
+					<b>Alarm Writer Settings for the above selected Alarm Writer</b> <i>Click the row, to change the value...</i>
+					<table
+						id="alarmWriterSettingsTable"
+						class="table table-sm text-nowrap"
+						data-toggle="table"
+					>
+					<thead>
+						<tr>
+							<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+							<th data-field="isMandatory"    data-filter-control="input" data-formatter="formatBoolean">Is Mandatory</th>
+							<th data-field="isSelected"     data-filter-control="input" data-formatter="formatBoolean">Is Activated</th>
+							<th data-field="name"           data-filter-control="input">Name</th>
+							<th data-field="value"          data-filter-control="input">value</th>
+							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+							<th data-field="datatype"       data-filter-control="input">datatype</th>
+							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="property"       data-filter-control="input">property</th>
+						</tr>
+					</thead>
+					</table>
+				</div> <!-- END: AW SETTINGS -->
 
-		  </div>
-		</div>
+				<!-- ================= AW FILTERS ================== -->
+				<div class="tab-pane fade" id="aw-filters" role="tabpanel" aria-labelledby="options-tab">
+					<br>
+					<b>Alarm Writer Filters for the above selected Alarm Writer</b> <i>Click the row, to change the value...</i>
+					<table
+						id="alarmWriterFiltersTable"
+						class="table table-sm text-nowrap"
+						data-toggle="table"
+					>
+					<thead>
+						<tr>
+							<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
+							<th data-field="isSelected"     data-filter-control="input" data-formatter="formatBoolean">Is Activated</th>
+							<th data-field="name"           data-filter-control="input">Name</th>
+							<th data-field="value"          data-filter-control="input">value</th>
+							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
+							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
+							<th data-field="datatype"       data-filter-control="input">datatype</th>
+							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="property"       data-filter-control="input">property</th>
+						</tr>
+					</thead>
+					</table>
+				</div> <!-- END: AW SETTINGS -->
+							
+			</div>  <!-- aw-sub-tabbed-pane -->
 
-        </div>  <!-- end: card-body -->
-      </div>  <!-- end: card -->
+		</div>  <!-- END: Alarm Writers Configuration -->
 
-
-
-      <div id='server-config' class='card border-dark mb-3'>
-        <h5 class='card-header'>Alarm Writers Configuration</h5>
-        <div class='card-body'>
-		
-		Below is a list of Alarm Writers, <b>click</b> on any row to see details about it...
-
-        </div>  <!-- end: card-body -->
-      </div>  <!-- end: card -->
+	
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<!-- DSR Configuration -->
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<div class="tab-pane fade" id="dsr-cfg-tab" role="tabpanel" aria-labelledby="dsr-cfg-tab-head">
+			Below is a list of Daily Summary Report, <b>click</b> on any row to see details about it...<br>
+			--NOT-YET-IMPLEMENTED--
+		</div>  <!-- END: DSR Configuration -->
+	
+	</div>  <!-- END: TABBED-PANE -->
 
 </div> <!-- end: container -->
 
@@ -554,6 +671,10 @@ function getParameter(key, defaultValue)
 	$('#optionsTable') .on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
 	$('#settingsTable').on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
 
+	$('#alarmWritersTable'       ).on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+	$('#alarmWriterSettingsTable').on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+	$('#alarmWriterFiltersTable' ).on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+
 	function detailFormatter(index, row) {
 		var html = [];
 		$.each(row, function (key, value) {
@@ -567,7 +688,8 @@ function getParameter(key, defaultValue)
 <script>
 	// Global variables
 	var _jsonResp;
-	var _cmTable        = [];
+	var _cmTable          = [];
+	var _alarmWriterTable = [];
 	var _ccSrvName;
 	const _passedSrvName = getParameter("srvName", "");
 //	const _mgtHostname   = getParameter("host", "localhost");
@@ -579,6 +701,11 @@ function getParameter(key, defaultValue)
 	var _lastClickedCmRow             = undefined;
 	var _lastClickedAlarmRow          = undefined;
 	var _lastClickedAlarmParameterRow = undefined;
+
+	var _lastClickedAlarmWriterRow         = undefined;
+	var _lastClickedAlarmWriterSettingsRow = undefined;
+	var _lastClickedAlarmWriterFiltersRow  = undefined;
+
 
 //	if (_mgtAuthorization !== "")
 //	{
@@ -599,8 +726,9 @@ function getParameter(key, defaultValue)
 		_jsonResp = await response.json();
 		console.log("data:", _jsonResp);
 		
-		_ccSrvName = _jsonResp.srvName;
-		_cmTable   = _jsonResp.cmList;
+		_ccSrvName        = _jsonResp.srvName;
+		_cmTable          = _jsonResp.cmList;
+		_alarmWriterTable = _jsonResp.alarmWriters;
 
 		console.log("_passedSrvName=|" + _passedSrvName + "|.");
 		console.log("_ccSrvName=|"    + _ccSrvName    + "|.");
@@ -614,13 +742,22 @@ function getParameter(key, defaultValue)
 		
 
 
+		// CM "stuff"
 		$('#cmTable').bootstrapTable('load', _cmTable);
-//		$('#cmTable').bootstrapTable({
-//			onClickRow: function(row, element, field)
-//			{
-//				console.log("onClickRow:", row, element, field);
-//			}
-//		});
+		$('#cmTable').bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+
+		$('#optionsTable'  ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+		$('#settingsTable' ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+		$('#alarmTable'    ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+		$('#alarmPreChecks').bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+		$('#alarmParams'   ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+
+		// Alarm Writers
+		$('#alarmWritersTable').bootstrapTable('load', _alarmWriterTable);
+		$('#alarmWritersTable').bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+
+		$('#alarmWriterSettingsTable').bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
+		$('#alarmWriterFiltersTable' ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
 	}
 
 	getConfig();
@@ -654,7 +791,7 @@ function getParameter(key, defaultValue)
 		let cmName = element.cmName;
 		console.log(">>>>>>>>>> cmName='" + element.cmName + "', col='" + value + "' >>>>>>>>>>>>> ");
 
-		let cmObject = findCm(_cmTable, "cmName", cmName);
+		let cmObject = findObjInArray(_cmTable, "cmName", cmName);
 //		let found = _cmTable.filter(function(item) { return item.name === cmName; });
 //		console.log("found:", found);
 //		let cmObject = found[0];
@@ -718,6 +855,7 @@ function getParameter(key, defaultValue)
 		}
 
 		$('#alarmParams')   .bootstrapTable('load', []);
+		
 	});
 
 	//-----------------------------------------
@@ -780,9 +918,69 @@ function getParameter(key, defaultValue)
 	});
 
 
-	function findCm(arr, propName, propValue) 
+
+
+
+	//-----------------------------------------
+	// Click on table: alarmWritersTable
+	$('#alarmWritersTable').on('click-cell.bs.table', function (field, value, row, element) 
 	{
-//		console.log("-------findCm(): propName='" + propName + "', propValue='" + propValue + "'. ", arr);
+		_lastClickedAlarmWriterRow         = element;
+		_lastClickedAlarmWriterSettingsRow = undefined;
+		_lastClickedAlarmWriterFiltersRow  = undefined;
+
+		let alarmWriterName = element.name;
+		console.log(">>>>>>>>>> alarmWriterName='" + alarmWriterName + "', col='" + value + "' >>>>>>>>>>>>> ");
+
+		let alarmWriterObject = findObjInArray(_alarmWriterTable, "name", alarmWriterName);
+		console.log(">>>>>>>>>> alarmWriterObject='" + alarmWriterObject + "'.", alarmWriterObject);
+
+		//----------------------------------------------------
+		// Set 'settings' tab
+		if (alarmWriterObject.hasOwnProperty('settings'))
+			$('#alarmWriterSettingsTable').bootstrapTable('load', alarmWriterObject.settings);
+		else
+			$('#alarmWriterSettingsTable').bootstrapTable('load', []);
+
+		//----------------------------------------------------
+		// Set 'filters' tab
+		if (alarmWriterObject.hasOwnProperty('filters'))
+			$('#alarmWriterFiltersTable').bootstrapTable('load', alarmWriterObject.filters);
+		else
+			$('#alarmWriterFiltersTable').bootstrapTable('load', []);
+	});
+
+	//-----------------------------------------
+	// Click on table: alarmWriterSettingsTable
+	$('#alarmWriterSettingsTable').on('click-cell.bs.table', function (field, value, row, element) 
+	{
+		_lastClickedAlarmWriterSettingsRow = element;
+		console.log(">>>>>>>>>> alarmWriterSettingsTable-NAME='" + element.name + "', col='" + value + "' >>>>>>>>>>>>> ", element);
+
+		if (value === "operation")
+		{
+			doChange("alarmWriterSettingsTable", element.name, element);
+		}
+	});
+
+	//-----------------------------------------
+	// Click on table: alarmWriterFiltersTable
+	$('#alarmWriterFiltersTable').on('click-cell.bs.table', function (field, value, row, element) 
+	{
+		_lastClickedAlarmWriterFiltersRow = element;
+		console.log(">>>>>>>>>> alarmWriterFiltersTable-NAME='" + element.name + "', col='" + value + "' >>>>>>>>>>>>> ", element);
+
+		if (value === "operation")
+		{
+			doChange("alarmWriterFiltersTable", element.name, element);
+		}
+	});
+
+
+
+	function findObjInArray(arr, propName, propValue) 
+	{
+//		console.log("-------findObjInArray(): propName='" + propName + "', propValue='" + propValue + "'. ", arr);
 		for (var i=0; i < arr.length; i++)
 		{
 //			console.log("------- propName='" + propName + "', propValue='" + propValue + "'. ", arr[i]);
@@ -794,13 +992,20 @@ function getParameter(key, defaultValue)
 
 	  // will return undefined if not found; you could return a default instead
 	}
+
 	
+//	var filterBoolean = {
+//		true: 'TRUE',
+//		false: 'FALSE'
+//	};
+
 	function formatBoolean(value, row, index)
 	{
 	//	return value==0 ? 'No' : 'Yes';
 	//	return value==0 ? '&#x2610;' : '&#x2611;';
 	//	return value==0 ? '<input type="checkbox" onclick="return false;">' : '<input type="checkbox" onclick="return false;" checked>';
-		return value==0 ? '<div class="image-unchecked"></div>' : '<div class="image-checked"></div>';
+	//	return value==0 ? '<div class="image-unchecked"></div>' : '<div class="image-checked"></div>';
+		return value==0 ? '<i class="fa-regular fa-square"></i>' : '<i class="fa-regular fa-square-check"></i>'
 	}
 
 	function formatPostponeTime(value, row, index)
@@ -844,6 +1049,7 @@ function getParameter(key, defaultValue)
 		else
 		{
 			return '<button type="button" class="btn btn-secondary btn-xs" href="/index.html?login=open" title="You need to login with *admin* rights to change configuration!" >Login...</button>';
+//			return '<button type="button" class="btn btn-secondary btn-xs" href="/index.html?login=open" title="You need to login with *admin* rights to change configuration!" ><del>Change...</del></button>';
 		}
 	}
 
@@ -1176,11 +1382,11 @@ console.log("response:", response);
 					<tr> <td nowrap><b>CM Display Name:   </b></td>  <td id="dbx-cfg-prop-f-cmDisplayName"></td> </tr>
 					<tr> <td nowrap><b>CM Name:           </b></td>  <td id="dbx-cfg-prop-f-cmName"       ></td> </tr>
 					<tr> <td></td>  <td></td> </tr>
-					<tr> <td></td>  <td></td> </tr>
+					<tr> <td></td>  <td><hr hr width="100%" /></td> </tr>
 					<tr> <td nowrap><b>Prop Name:         </b></td>  <td id="dbx-cfg-prop-f-name"         ></td> </tr>
 					<tr> <td nowrap><b>Prop Description:  </b></td>  <td id="dbx-cfg-prop-f-desciption"   ></td> </tr>
 					<tr> <td></td>  <td></td> </tr>
-					<tr> <td></td>  <td></td> </tr>
+					<tr> <td></td>  <td><hr hr width="100%" /></td> </tr>
 					<tr> <td nowrap><b>Property to change:</b></td>  <td><code><span id="dbx-cfg-prop-f-property"></span></code></td> </tr>
 					<tr> <td nowrap><b>Default Value:     </b></td>  <td id="dbx-cfg-prop-f-default"      ></td> </tr>
 					<tr> <td nowrap><b>Datatype:          </b></td>  <td id="dbx-cfg-prop-f-datatype"     ></td> </tr>
@@ -1207,6 +1413,16 @@ console.log("response:", response);
 			</div>
 			<div class="modal-footer">
 			<div class="text-danger" id="dbx-cfg-prop-dialog-problem"></div>
+			<div class="dropdown">
+				<button type="button" class="btn btn-primary dropdown-toggle" id="dbx-cfg-prop-dialog-ok-but" data-bs-toggle="dropdown">
+					Change Config
+				</button>
+				<ul class="dropdown-menu">
+					<li><a class="dropdown-item" id="dbx-cfg-prop-dialog-ok-1">Only in-memory (do not save to any file)</a></li>
+					<li><a class="dropdown-item" id="dbx-cfg-prop-dialog-ok-2">Save for THIS server</a></li>
+					<li><a class="dropdown-item" id="dbx-cfg-prop-dialog-ok-3">Save for ALL Servers sharing the same config file</a></li>
+				</ul>
+			</div>			
 			<button type="button" class="btn btn-primary" id="dbx-cfg-prop-dialog-ok">Change Config</button>
 			<button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
 			</div>
@@ -1235,8 +1451,15 @@ console.log("response:", response);
 		});
 
 		// What should happen when we click OK in the dialog
-		$("#dbx-cfg-prop-dialog-ok").click( function()
+		$("#dbx-cfg-prop-dialog-ok")  .click( function() { dbxSaveConfigParametersDialog("UNKNOWN");         });
+		$("#dbx-cfg-prop-dialog-ok-1").click( function() { dbxSaveConfigParametersDialog("IN_MEMORY");       });
+		$("#dbx-cfg-prop-dialog-ok-2").click( function() { dbxSaveConfigParametersDialog("THIS_SERVER");     });
+		$("#dbx-cfg-prop-dialog-ok-3").click( function() { dbxSaveConfigParametersDialog("SERVER_TEMPLATE"); });
+
+		// And here is the ACTION function that does the save (calls a URL with a JSON Object)
+		function dbxSaveConfigParametersDialog(saveType)
 		{
+console.log("dbxSaveConfigParametersDialog(): saveType: " + saveType);
 			$("#dbx-cfg-prop-dialog-problem")  .text("");
 			$("#dbx-cfg-prop-dialog-info-msg") .text("");
 			$("#dbx-cfg-prop-dialog-error-msg").text("");
@@ -1246,12 +1469,14 @@ console.log("response:", response);
 //console.log("xxxxxxxxxxxxxx: dialog_newValue=|"+dialog_newValue+"|, typeof=|"+(typeof dialog_newValue)+"|.", dialog_newValue);
 
 			var originValues = _modalOriginObject_cfgProp;
+console.log("xxxxxxxxxxxxxx: originValues=|" + originValues + "|.", originValues);
 //console.log("xxxxxxxxxxxxxx: originValues.isAlarmEnabled=|"+originValues.value+"|, typeof=|"+(typeof originValues.value)+"|.", originValues.value);
 
 			var changes = [];
 
 			// Check what was changed
-			if (dialog_newValue !== originValues.value) changes.push({ value: dialog_newValue });
+			if (dialog_newValue !== originValues.value) 
+				changes.push( { value: dialog_newValue } );
 
 			if (changes.length > 0)
 			{
@@ -1262,6 +1487,7 @@ console.log("response:", response);
 
 				const sendObject = {
 					type: 'xxx',
+					saveType: saveType,
 					cmName: _lastClickedCmRow.cmName,
 					optName: _lastClickedAlarmRow.name,
 					change: {}
@@ -1361,7 +1587,7 @@ console.log("response:", response);
 				$("#dbx-cfg-prop-dialog-problem").text("No changes was made, maybe 'Close' instead...");
 				// Stay in dialog
 			}
-		});
+		}
 
 		
 		function dbxOpenConfigParametersDialog(tableName, element)
@@ -1374,7 +1600,7 @@ console.log("response:", response);
 			$("#dbx-cfg-prop-f-cmName"       ).text(_lastClickedCmRow.cmName);
 
 			$("#dbx-cfg-prop-f-name"         ).text(element.name);
-			$("#dbx-cfg-prop-f-desciption"   ).text(element.desciption);
+			$("#dbx-cfg-prop-f-desciption"   ).html(element.desciption);
 
 			$("#dbx-cfg-prop-f-property"     ).text(element.property);
 			$("#dbx-cfg-prop-f-default"      ).text(element.defaultValue);

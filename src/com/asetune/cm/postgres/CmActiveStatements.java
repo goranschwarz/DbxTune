@@ -256,7 +256,11 @@ extends CountersModel
 			mtd.addColumn("CmActiveStatements", "execTimeInMs"                      ,  "<html>How many milli seconds has current Statement been running for. -1 If the Statement has finnished.  </html>");
 			mtd.addColumn("CmActiveStatements", "xactTimeInMs"                      ,  "<html>How many milli seconds has the Transaction been running for  </html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	

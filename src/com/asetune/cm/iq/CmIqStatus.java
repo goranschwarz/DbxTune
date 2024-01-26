@@ -42,7 +42,7 @@ import com.asetune.sql.conn.info.DbmsVersionInfo;
 /**
  * The following is a key to understanding the Main IQ I/O and Temporary IQ I/O output codes:
  * I: Input
- * L: Logical pages read (“Finds”)
+ * L: Logical pages read (ï¿½Findsï¿½)
  * P: Physical pages read
  * O: Output
  * C: Pages created
@@ -157,7 +157,11 @@ extends CountersModel
 			mtd.addColumn("sp_iqstatus", "name",  "<html>Name</html>");
 			mtd.addColumn("sp_iqstatus", "value",  "<html>Value</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

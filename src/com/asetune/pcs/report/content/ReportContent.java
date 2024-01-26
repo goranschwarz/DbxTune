@@ -204,4 +204,11 @@ public class ReportContent
 	{
 		return _contentFile;
 	}
+	public boolean removeReportFile()
+	{
+		if (hasReportFile())
+			return getReportFile().delete();
+		
+		return false;
+	}
 }

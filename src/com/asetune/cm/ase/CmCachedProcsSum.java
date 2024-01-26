@@ -217,7 +217,11 @@ extends CountersModel
 			mtd.addColumn("monCachedProcedures",  "AvgSnapJITTime",        "<html>AVG SNAP Just In Time Compilation (microseconds)    (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: SumSnapJITTime       / SumSnapExecutionCount <br></html>");
 			mtd.addColumn("monCachedProcedures",  "AvgSnapExecutionTime",  "<html>AVG SNAP Execution Time                             (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: SumSnapExecutionTime / SumSnapExecutionCount <br></html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

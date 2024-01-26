@@ -224,7 +224,11 @@ extends CountersModel
 			mtd.addColumn("sp_iqstatus_parsed", "Unit",          "<html>FIXME: Unit</html>");
 			mtd.addColumn("sp_iqstatus_parsed", "Description",   "<html>FIXME: Description</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

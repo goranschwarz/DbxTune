@@ -199,7 +199,7 @@ extends CountersModel
 					+ "<br/>are using the most resources.</html>");
 			mtd.addColumn("sp_iqconnection","TxnID",
 					"<html>The transaction ID of the current transaction on the connection. "
-					+ "<br/>This is the same as the transaction ID displayed in the .iqmsg file by the BeginTxn, CmtTxn, and PostCmtTxn "
+					+ "<br/>This is the same as the transaction ID displayed in theï¿½.iqmsg file by the BeginTxn, CmtTxn, and PostCmtTxn "
 					+ "<br/>messages, as well as the Txn ID Seq logged when the database is opened.</html>");
 			mtd.addColumn("sp_iqconnection","ConnCreateTime",
 					"<html>The time the connection was created.</html>");
@@ -212,7 +212,7 @@ extends CountersModel
 					+ "<br/>or other objects that are part of indexes on Sybase IQ temporary tables are reflected in "
 					+ "<br/>TempTableSpaceKB.</html>");
 			mtd.addColumn("sp_iqconnection","IQConnID",
-					"<html>The 10-digit connection ID displayed as part of all messages in the .iqmsg file. "
+					"<html>The 10-digit connection ID displayed as part of all messages in theï¿½.iqmsg file. "
 					+ "<br/>This is a monotonically increasing integer unique within a server session.</html>");
 			mtd.addColumn("sp_iqconnection","satoiq_count",
 					"<html>An internal counter used to display the number of crossings from the SQL Anywhere "
@@ -234,7 +234,11 @@ extends CountersModel
 					"<html>If an INC connection, the varchar(128) value contains the name of the multiplex server where "
 					+ "<br/>the INC connection originates. NULL if not an INC connection.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

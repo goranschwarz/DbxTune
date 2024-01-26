@@ -150,7 +150,11 @@ extends CountersModel
 			mtd.addColumn("dm_os_spinlock_stats", "Description",         "<html>Description of this specific spinlock</html>");
 			
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

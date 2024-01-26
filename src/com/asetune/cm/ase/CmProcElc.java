@@ -157,7 +157,11 @@ extends CountersModel
 			mtd.addColumn("monProcELC", "Full",               "<html>Number of times this ELC was found to be full.                                 <br>Origin column 'ProcELCFull'.    </html>");
 			mtd.addColumn("monProcELC", "Flushes",            "<html>Number of times this ELC was flushed.                                          <br>Origin column 'ProcELCFlushes'. </html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 		
 	@Override

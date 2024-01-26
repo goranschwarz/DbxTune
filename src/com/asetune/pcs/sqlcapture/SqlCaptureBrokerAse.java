@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
@@ -3233,6 +3234,57 @@ extends SqlCaptureBrokerAbstract
 	//--------------------------------------------------------------------------
 	private SpidSqlTextAndPlanManager _spidSqlTextAndPlanManager = new SpidSqlTextAndPlanManager();
 
+	/**
+	 * Get "last known" SQL Text for a SPID, KPID and BatchID 
+	 * <p>
+	 * If the batch has been cleared for "any" reason, the SQL Statement is no longer available
+	 * <p>
+	 * For now it's used in CmActiveStatement to get "Last Known" SQL text... 
+	 * 
+	 * @param spid
+	 * @param kpid
+	 * @param batchId
+	 * @return
+	 */
+	public String getSqlText(int spid, int kpid, int batchId)
+	{
+		if (_spidSqlTextAndPlanManager == null)
+			return null;
+		
+		SpidEntry spidEntry = _spidSqlTextAndPlanManager._spidMap.get(spid);
+		if (spidEntry == null)
+			return null;
+
+		String sqlText = null;
+		if (spidEntry._batchIdMap.size() > 1)
+		{
+			sqlText = "------------------------------------------------\n"
+					+ "-- Found " + spidEntry._batchIdMap.size() + " BatchId Entries. \n"
+					+ "------------------------------------------------\n";
+
+			// NOTE: spidEntry._batchIdMap is a ConcurrentHashMap so we should be file from ConcurrentModificationException 
+			//       If not we might need to copy the Map before looping it!
+			for (BatchIdEntry batchIdEntry : spidEntry._batchIdMap.values())
+			{
+				sqlText += "\n/* ##### BatchId: " + batchIdEntry._batchId + " ##### */ \n"
+						+ batchIdEntry.getSqlText()
+						+ "\n";
+//				System.out.println("XXXXXXXXXX: getBatchIdEntryLazy(): batchId = " + batchIdEntry._batchId);
+//				System.out.println("XXXXXXXXXX: getBatchIdEntryLazy(): sqlText = |" + batchIdEntry.getSqlText() + "|");
+			}
+		}
+		else
+		{
+			BatchIdEntry entry = _spidSqlTextAndPlanManager.getBatchIdEntryLazy(spid, kpid, batchId);
+			if (entry == null)
+				return null;
+
+			sqlText = entry.getSqlText();
+		}
+		
+		return sqlText;
+	}
+
 	//----------------------------------------------------------------------------------------
 	private static class SpidSqlTextAndPlanManager
 	{
@@ -3394,7 +3446,10 @@ extends SqlCaptureBrokerAbstract
 		private int _maxBatchId;
 //		private int _batchIdCount;
 		
-		private HashMap<Integer, BatchIdEntry> _batchIdMap = new HashMap<>();
+		// If we use: getSqlText(spid, kpid, batchId) to get 'LastFoundSqlText'
+		// We need to use ConcurrentHashMap, since we are not "alone" anymore (and getSqlText() loops the _batchIdMap)
+//		private HashMap<Integer, BatchIdEntry> _batchIdMap = new HashMap<>();
+		private ConcurrentHashMap<Integer, BatchIdEntry> _batchIdMap = new ConcurrentHashMap<>();
 
 		public SpidEntry(int spid, int kpid)
 		{

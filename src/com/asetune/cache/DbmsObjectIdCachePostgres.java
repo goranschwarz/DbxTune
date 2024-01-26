@@ -122,6 +122,13 @@ extends DbmsObjectIdCache
 			return null;
 		}
 
+		// If we do not have a dbname we can't continue.
+		if (dbname.startsWith("template"))
+		{
+			_logger.warn("Can't lookup ObjectName reason: dbid=" + dbid + " dbname='" + dbname + "' is a template database, which we can't connect to.");
+			return null;
+		}
+
 		if ( ! CounterController.hasInstance() )
 			return null;
 

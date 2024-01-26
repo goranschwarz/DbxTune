@@ -191,7 +191,11 @@ extends CountersModel
 			mtd.addColumn("rsi", "Locater Sent",    "<html>The locator of the last message sent (contains the queue segment, block and row).</html>");
 			mtd.addColumn("rsi", "Locater Deleted", "<html>The last locator that the recipient acknowledged and that has been deleted by Replication Server.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

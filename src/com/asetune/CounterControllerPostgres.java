@@ -42,15 +42,19 @@ import com.asetune.cm.os.CmOsPs;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.postgres.CmActiveStatements;
+import com.asetune.cm.postgres.CmErrorLog;
 import com.asetune.cm.postgres.CmPgActivity;
 import com.asetune.cm.postgres.CmPgArchiver;
 import com.asetune.cm.postgres.CmPgBgWriter;
-import com.asetune.cm.postgres.CmPgBufferCache;
+import com.asetune.cm.postgres.CmPgBufferCacheACnt;
+import com.asetune.cm.postgres.CmPgBufferCacheDet;
+import com.asetune.cm.postgres.CmPgBufferCacheSum;
 import com.asetune.cm.postgres.CmPgDatabase;
 import com.asetune.cm.postgres.CmPgFunctions;
 import com.asetune.cm.postgres.CmPgIndexes;
 import com.asetune.cm.postgres.CmPgIndexesIo;
 import com.asetune.cm.postgres.CmPgLocks;
+import com.asetune.cm.postgres.CmPgPidWait;
 import com.asetune.cm.postgres.CmPgProgAnalyze;
 import com.asetune.cm.postgres.CmPgProgBaseBackup;
 import com.asetune.cm.postgres.CmPgProgCluster;
@@ -60,6 +64,7 @@ import com.asetune.cm.postgres.CmPgProgVacuum;
 import com.asetune.cm.postgres.CmPgReplication;
 import com.asetune.cm.postgres.CmPgSequencesIo;
 import com.asetune.cm.postgres.CmPgSlru;
+import com.asetune.cm.postgres.CmPgSrvWait;
 import com.asetune.cm.postgres.CmPgStatements;
 import com.asetune.cm.postgres.CmPgStatementsSumDb;
 import com.asetune.cm.postgres.CmPgTableSize;
@@ -121,11 +126,14 @@ extends CounterControllerAbstract
 
 		// Server
 		CmPgActivity        .create(counterController, guiController);
+		CmPgPidWait         .create(counterController, guiController);
 		CmPgDatabase        .create(counterController, guiController);
+		CmPgSrvWait         .create(counterController, guiController);
 		CmPgBgWriter        .create(counterController, guiController);
 		CmPgWal             .create(counterController, guiController);
 		CmPgArchiver        .create(counterController, guiController);
 		CmPgReplication     .create(counterController, guiController);
+		CmErrorLog          .create(counterController, guiController);
 
 		// Object Access
 		CmActiveStatements  .create(counterController, guiController);
@@ -146,7 +154,9 @@ extends CounterControllerAbstract
 		
 		// Cache
 		CmPgSlru            .create(counterController, guiController);
-		CmPgBufferCache     .create(counterController, guiController);
+		CmPgBufferCacheSum  .create(counterController, guiController);
+		CmPgBufferCacheACnt .create(counterController, guiController); // pg_buffercache_usage_counts() Function  -- CmPgBufferCacheAccessCount
+		CmPgBufferCacheDet  .create(counterController, guiController);
 
 		// Disk
 

@@ -238,7 +238,11 @@ extends CountersModel
 			mtd.addColumn("dist", "RSTicket",       "<html>The number of rs_ticket subcommands that have been processed by a DIST thread, if the Replication Server stats_sampling parameter is on.</html>");
 			mtd.addColumn("dist", "SqtMaxCache",    "<html>Maximum SQT (Stable Queue Transaction interface) cache memory for the database connection, in bytes.<br>The default, 0, means that the current setting of sqt_max_cache_size is used as the maximum cache size for the connection.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

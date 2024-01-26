@@ -31,20 +31,20 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.postgres.CmPgBufferCache;
+import com.asetune.cm.postgres.CmPgBufferCacheDet;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
-public class CmPgBufferCachePanel
+public class CmPgBufferCacheDetPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgBufferCachePanel.class);
+//	private static final Logger  _logger	           = Logger.getLogger(CmPgBufferCacheDetPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
-	public CmPgBufferCachePanel(CountersModel cm)
+	public CmPgBufferCacheDetPanel(CountersModel cm)
 	{
 		super(cm);
 
@@ -103,8 +103,8 @@ extends TabularCntrPanel
 //				list.add(new CmSettingsHelper("Limit num of rows",     PROPKEY_sample_topRows      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_topRows      , DEFAULT_sample_topRows      ), DEFAULT_sample_topRows     , "Get only first # rows (select top # ...) true or false"   ));
 //				list.add(new CmSettingsHelper("Limit num of rowcount", PROPKEY_sample_topRowsCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRowsCount , DEFAULT_sample_topRowsCount ), DEFAULT_sample_topRowsCount, "Get only first # rows (select top # ...), number of rows" ));
 
-				l_sampleTopRows_chk      .setSelected(conf.getBooleanProperty(CmPgBufferCache.PROPKEY_sample_topRows,      CmPgBufferCache.DEFAULT_sample_topRows));
-				l_sampleTopRowsCount_txt .setText(""+ conf.getIntProperty    (CmPgBufferCache.PROPKEY_sample_topRowsCount, CmPgBufferCache.DEFAULT_sample_topRowsCount));
+				l_sampleTopRows_chk      .setSelected(conf.getBooleanProperty(CmPgBufferCacheDet.PROPKEY_sample_topRows,      CmPgBufferCacheDet.DEFAULT_sample_topRows));
+				l_sampleTopRowsCount_txt .setText(""+ conf.getIntProperty    (CmPgBufferCacheDet.PROPKEY_sample_topRowsCount, CmPgBufferCacheDet.DEFAULT_sample_topRowsCount));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -119,18 +119,18 @@ extends TabularCntrPanel
 		int     defaultIntOpt;
 
 		// Top Rows (top #)
-		defaultOpt    = conf == null ? CmPgBufferCache.DEFAULT_sample_topRows      : conf.getBooleanProperty(CmPgBufferCache.PROPKEY_sample_topRows,      CmPgBufferCache.DEFAULT_sample_topRows);
-		defaultIntOpt = conf == null ? CmPgBufferCache.DEFAULT_sample_topRowsCount : conf.getIntProperty    (CmPgBufferCache.PROPKEY_sample_topRowsCount, CmPgBufferCache.DEFAULT_sample_topRowsCount);
+		defaultOpt    = conf == null ? CmPgBufferCacheDet.DEFAULT_sample_topRows      : conf.getBooleanProperty(CmPgBufferCacheDet.PROPKEY_sample_topRows,      CmPgBufferCacheDet.DEFAULT_sample_topRows);
+		defaultIntOpt = conf == null ? CmPgBufferCacheDet.DEFAULT_sample_topRowsCount : conf.getIntProperty    (CmPgBufferCacheDet.PROPKEY_sample_topRowsCount, CmPgBufferCacheDet.DEFAULT_sample_topRowsCount);
 		l_sampleTopRows_chk      = new JCheckBox("Limit number of rows (top #)", defaultOpt);
 		l_sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
 
 		l_filterOutSystemTables_but = new JButton("Set 'filter', remove system tables");
 		
-		l_sampleTopRows_chk.setName(CmPgBufferCache.PROPKEY_sample_topRows);
-		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCache.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRows_chk.setName(CmPgBufferCacheDet.PROPKEY_sample_topRows);
+		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCacheDet.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
-		l_sampleTopRowsCount_txt.setName(CmPgBufferCache.PROPKEY_sample_topRowsCount);
-		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCache.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRowsCount_txt.setName(CmPgBufferCacheDet.PROPKEY_sample_topRowsCount);
+		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCacheDet.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
 		l_filterOutSystemTables_but.setToolTipText("<html>The will just set the free text filter to discard schema names 'pg_*' and 'information_schema' </html>");
 		
@@ -142,7 +142,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(CmPgBufferCache.PROPKEY_sample_topRows, ((JCheckBox)e.getSource()).isSelected());
+				conf.setProperty(CmPgBufferCacheDet.PROPKEY_sample_topRows, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 				
 				// This will force the CM to re-initialize the SQL statement.
@@ -162,15 +162,15 @@ extends TabularCntrPanel
 				if (conf == null) return;
 				
 				String strVal = l_sampleTopRowsCount_txt.getText();
-				int    intVal = CmPgBufferCache.DEFAULT_sample_topRowsCount;
+				int    intVal = CmPgBufferCacheDet.DEFAULT_sample_topRowsCount;
 				try { intVal = Integer.parseInt(strVal);}
 				catch (NumberFormatException nfe)
 				{
-					intVal = CmPgBufferCache.DEFAULT_sample_topRowsCount;
-					SwingUtils.showWarnMessage(CmPgBufferCachePanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
+					intVal = CmPgBufferCacheDet.DEFAULT_sample_topRowsCount;
+					SwingUtils.showWarnMessage(CmPgBufferCacheDetPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
 					l_sampleTopRowsCount_txt.setText(intVal+"");
 				}
-				conf.setProperty(CmPgBufferCache.PROPKEY_sample_topRowsCount, intVal);
+				conf.setProperty(CmPgBufferCacheDet.PROPKEY_sample_topRowsCount, intVal);
 				conf.save();
 				
 				// This will force the CM to re-initialize the SQL statement.

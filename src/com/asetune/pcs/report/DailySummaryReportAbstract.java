@@ -320,6 +320,19 @@ implements IDailySummaryReport
 		{
 			_logger.info("Removing old reports... The directory '" + saveDirFile + "' didn't exists. Skipping this.");
 		}
+		
+		// If any temporary files for the content was created... remove it
+		DailySummaryReportContent reportContent = getReportContent();
+		if (reportContent != null)
+		{
+			File reportFile = reportContent.getReportFile();
+			if (reportFile != null)
+			{
+				boolean success = reportContent.removeReportFile();
+				_logger.info("Removing (temporary) Report File '" + reportFile + "' " + (success ? "was successful." : "failed."));
+			}
+			
+		}
 	}
 
 	

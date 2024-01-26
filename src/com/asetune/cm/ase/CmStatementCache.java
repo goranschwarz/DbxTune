@@ -202,7 +202,11 @@ extends CountersModel
 //					"<b>Note</b>: The sampling interval plays a huge role in this metric � during a 1 second sample, not that many statements <br>" +
 //					"             may be executed as compared to a 10 minute sample � and could distort the ratio to be viewed as excessively low.<br></html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

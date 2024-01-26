@@ -167,7 +167,7 @@ extends CountersModel
 			mtd.addColumn("x$session", "time",                   "<html>The time in seconds that the thread has been in its current state.</html>");
 			mtd.addColumn("x$session", "current_statement",      "<html>The statement the thread is executing, or NULL if it is not executing any statement.</html>");
 			mtd.addColumn("x$session", "statement_latency",      "<html>How long the statement has been executing. <br> This column was added in MySQL 5.7.9.</html>");
-			mtd.addColumn("x$session", "progress",               "<html>The percentage of work completed for stages that support progress reporting. See Section 26.3, “sys Schema Progress Reporting”. <br> This column was added in MySQL 5.7.9.</html>");
+			mtd.addColumn("x$session", "progress",               "<html>The percentage of work completed for stages that support progress reporting. See Section 26.3, ï¿½sys Schema Progress Reportingï¿½. <br> This column was added in MySQL 5.7.9.</html>");
 			mtd.addColumn("x$session", "lock_latency",           "<html>The time spent waiting for locks by the current statement.</html>");
 			mtd.addColumn("x$session", "rows_examined",          "<html>The number of rows read from storage engines by the current statement.</html>");
 			mtd.addColumn("x$session", "rows_sent",              "<html>The number of rows returned by the current statement.</html>");
@@ -187,7 +187,11 @@ extends CountersModel
 			mtd.addColumn("x$session", "pid",                    "<html>The client process ID.<br> This column was added in MySQL 5.7.9.</html>");
 			mtd.addColumn("x$session", "program_name",           "<html>The client program name.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override

@@ -308,7 +308,11 @@ extends CountersModel
 			mtd.addColumn("pg_stat_replication",  "replay_kb",            "<html>difference between flush and replay locations shows WAL that has been flushed to the permanent storage but not yet replayed � when WAL will be replayed, changes from the master would reach the standby in full</html>");
 			mtd.addColumn("pg_stat_replication",  "total_lag_kb",         "<html>difference between current location on master and replay location on standby shows a total lag.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 	
 

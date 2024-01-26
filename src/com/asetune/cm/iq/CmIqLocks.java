@@ -156,24 +156,28 @@ extends CountersModel
 			mtd.addColumn("sp_iqlocks", "table_name",  "<html>Table on which the lock is held.</html>");
 			mtd.addColumn("sp_iqlocks", "index_id",  "<html>The index ID or NULL.</html>");		
 			mtd.addColumn("sp_iqlocks", "lock_class",  "<html>String of characters indicating the type of lock:"
-					+ "<ul><li>S – share."
-					+ "<li>SW – share and write."
-					+ "<li>EW – exclusive and write."
-					+ "<li>E – exclusive."
-					+ "<li>P – phantom."
-					+ "<li>A – antiphantom."
-					+ "<li>W – write.</ul>"
+					+ "<ul><li>S ï¿½ share."
+					+ "<li>SW ï¿½ share and write."
+					+ "<li>EW ï¿½ exclusive and write."
+					+ "<li>E ï¿½ exclusive."
+					+ "<li>P ï¿½ phantom."
+					+ "<li>A ï¿½ antiphantom."
+					+ "<li>W ï¿½ write.</ul>"
 					+ "All locks listed have one of S, E, EW, or SW, and may also have P, A, or both. Phantom and antiphantom locks also have a qualifier of T or *:"
-					+ "<ul><li>T – the lock is with respect to a sequential scan."
-					+ "<li>* – the lock is with respect to all scans."
-					+ "<li>nnn – Index number; the lock is with respect to a particular index."
+					+ "<ul><li>T ï¿½ the lock is with respect to a sequential scan."
+					+ "<li>* ï¿½ the lock is with respect to all scans."
+					+ "<li>nnn ï¿½ Index number; the lock is with respect to a particular index."
 					+ "Sybase IQ obtains a share lock before a write lock. If a connection has exclusive lock, share lock does not appear. For write locks, if a connection has all-exclusive, share, and write locks, it is EW."
 					+ "</html>");
 			mtd.addColumn("sp_iqlocks", "lock_duration",  "<html>The duration of the lock. One of Transaction, Position, or Connection.</html>");
 			mtd.addColumn("sp_iqlocks", "lock_type",  "<html>Value identifying the lock (dependent on the lock class)</html>");
 			mtd.addColumn("sp_iqlocks", "row_identifier",  "<html>The identifier for the row or NULL.</html>");
 		}
-		catch (NameNotFoundException e) {/*ignore*/}
+		catch (NameNotFoundException e) 
+		{
+		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
 	}
 
 	@Override
