@@ -123,10 +123,10 @@
 	<classpathentry kind="lib" path="lib/h2-2.1.214.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jsch-0.2.7.jar" sourcepath="3pp/jsch-0.2.7-sources.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.72.jar" sourcepath="3pp/bcprov-jdk18on-1.72-sources.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-12.5.0-SNAPSHOT.jre8-preview.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.54.v20240208-uber.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-0.2.17.jar" sourcepath="3pp/jsch-0.2.17-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
