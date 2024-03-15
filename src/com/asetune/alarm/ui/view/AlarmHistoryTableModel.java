@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.alarm.ui.view;
 
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,12 +29,15 @@ import javax.swing.table.AbstractTableModel;
 
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.writers.AlarmWriterAbstract;
+import com.asetune.gui.swing.GTable;
+import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
 public class AlarmHistoryTableModel
 extends AbstractTableModel
+implements ITableTooltip
 //implements TableModel
 {
 	private static final long serialVersionUID = 1L;
@@ -292,4 +296,27 @@ extends AbstractTableModel
 
 		return super.getColumnClass(column);
 	}
+
+	@Override
+	public String getToolTipTextOnTableColumnHeader(String colName)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol)
+	{
+		if (    modelCol == TAB_POS_DESCRIPTION
+			 || modelCol == TAB_POS_LAST_DESCRIPTION
+			 || modelCol == TAB_POS_EXTENDED_DESCRIPTION
+			 || modelCol == TAB_POS_LAST_EXTENDED_DESCRIPTION
+		   )
+		{
+			return GTable.TOOLTIP_TYPE_FOCUSABLE + cellValue; 
+		}
+
+		return cellValue == null ? null : "" + cellValue;
+	}
+	
 }

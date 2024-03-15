@@ -107,7 +107,7 @@ public class TtpEntry
 	private String _module      = null;
 	private String _section     = null;
 	private String _version     = null;
-	private String _desciption  = null;
+	private String _description = null;
 	private String _syntax      = null;
 	private String _parameters  = null;
 	private String _example     = null;
@@ -137,7 +137,7 @@ public class TtpEntry
 	public String  getModule()                 { return _module      == null ? "" : _module;      }
 	public String  getSection()                { return _section     == null ? "" : _section;     }
 	public String  getFromVersion()            { return _version     == null ? "" : _version;     }
-	public String  getDescription()            { return _desciption  == null ? "" : _desciption;  }
+	public String  getDescription()            { return _description == null ? "" : _description; }
 	public String  getSyntax()                 { return _syntax      == null ? "" : _syntax;      }
 	public String  getParameters()             { return _parameters  == null ? "" : _parameters;  }
 	public String  getExample()                { return _example     == null ? "" : _example;     }
@@ -150,7 +150,7 @@ public class TtpEntry
 	public void    setModule      (String str) { _module      = str; }
 	public void    setSection     (String str) { _section     = str; }
 	public void    setFromVersion (String str) { _version     = str; }
-	public void    setDescription (String str) { _desciption  = str; }
+	public void    setDescription (String str) { _description = str; }
 	public void    setSyntax      (String str) { _syntax      = str; }
 	public void    setParameters  (String str) { _parameters  = str; }
 	public void    setExample     (String str) { _example     = str; }

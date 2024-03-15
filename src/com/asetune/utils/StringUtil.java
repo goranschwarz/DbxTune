@@ -1721,6 +1721,54 @@ public class StringUtil
 		}
 	}
 
+	/** Get host name in the short form <code>host1</code> */
+	public static String getHostname(String ip)
+	{
+		if (StringUtil.isNullOrBlank(ip))
+			return "";
+
+		try 
+		{
+			InetAddress addr = InetAddress.getByName(ip);
+			
+			// Get IP Address
+			//byte[] ipAddr = addr.getAddress();
+
+			// Get hostname
+			String hostname = addr.getHostName();
+
+			return hostname;
+		}
+		catch (UnknownHostException e) 
+		{
+			return null;
+		}
+	}
+
+	/** Get host name in the long form <code>host1.acme.com</code> */
+	public static String getHostnameWithDomain(String ip)
+	{
+		if (StringUtil.isNullOrBlank(ip))
+			return "";
+
+		try 
+		{
+			InetAddress addr = InetAddress.getByName(ip);
+			
+			// Get IP Address
+			//byte[] ipAddr = addr.getAddress();
+
+			// Get hostname
+			String hostname = addr.getCanonicalHostName();
+
+			return hostname;
+		}
+		catch (UnknownHostException e) 
+		{
+			return null;
+		}
+	}
+
 	/**
 	 * Converts a Throwable to  String
 	 * 
@@ -3419,7 +3467,7 @@ public class StringUtil
 	 * @param map            Map with <b>COLUMN-NAME</b>  and COLUMN-VALUE
 	 * @return
 	 */
-	public static String toHtmlTable(Map<String, Object> map)
+	public static <T> String toHtmlTable(Map<String, T> map)
 	{
 		return toHtmlTable(map, (String[]) null);
 	}
@@ -3431,7 +3479,7 @@ public class StringUtil
 	 * @param colNames       If we want to have any column names
 	 * @return
 	 */
-	public static String toHtmlTable(Map<String, Object> map, String... colNames)
+	public static <T> String toHtmlTable(Map<String, T> map, String... colNames)
 	{
 		if (map == null)
 			return "";
@@ -3454,7 +3502,7 @@ public class StringUtil
 
 		// TBODY
 		sb.append("<tbody> \n");
-		for (Entry<String, Object> entry : map.entrySet())
+		for (Entry<String, T> entry : map.entrySet())
 		{
 			sb.append("  <tr> \n");
 			sb.append("    <td nowrap><b>").append( entry.getKey()   ).append("</b></td> \n");

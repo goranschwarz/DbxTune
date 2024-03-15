@@ -21,8 +21,11 @@
  ******************************************************************************/
 package com.asetune.central.controllers.ud.chart;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+
+import com.asetune.utils.Configuration;
 
 public interface IUserDefinedChart
 {
@@ -88,6 +91,13 @@ public interface IUserDefinedChart
 	void produce() throws Exception;
 
 	/**
+	 * Get Information content for this User Defined Chart
+	 * <p>
+	 * This will be presented "at the top" in a collapse section
+	 */
+	String getInfoContent();
+
+	/**
 	 * Get User Defined Chart HTML Content
 	 * <p>
 	 * This should only return 
@@ -132,4 +142,15 @@ public interface IUserDefinedChart
 	 */
 	String[] getKnownParameters();
 
+	/**
+	 * A description of each of the parameters
+	 * @return <code>parameterName = description</code> Possibly a LinkedHashMap to preserve the order of the names
+	 */
+	Map<String, String> getParameterDescription();
+
+	/**
+	 * If anybody changes the underlying configuration file, this is called (from {@link Configuration.FileWatcher}) 
+	 * @param fullPath
+	 */
+	void onConfigFileChange(Path fullPath);
 }

@@ -24,6 +24,8 @@ package com.asetune.central.controllers.ud.chart;
 import java.io.File;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +44,9 @@ public class UserDefinedChartManager
 
 //	private List<IUserDefinedChart> _charts = new ArrayList<>();
 	private Map<String, IUserDefinedChart> _charts = new LinkedHashMap<>();
+
+	public static final String USER_DEFINED_FILE_POST = ".ud.content.props";
+
 
 	//----------------------------------------------------------------
 	// BEGIN: instance
@@ -85,8 +90,7 @@ public class UserDefinedChartManager
 			if (! file.isFile() )
 				continue;
 
-//			if (file.getName().endsWith(".ud.chart.props"))
-			if (file.getName().endsWith(".ud.content.props"))
+			if (file.getName().endsWith(USER_DEFINED_FILE_POST))
 			{
 				Configuration conf = new Configuration(file.getAbsolutePath());
 				String chartType = conf.getProperty("chartType");
@@ -100,12 +104,15 @@ public class UserDefinedChartManager
 					{
 						UserDefinedTimelineChart chart = new UserDefinedTimelineChart(conf);
 
-						String key = chart.getName() + "|" + chart.getDbmsServerName();
+//						String key = chart.getName() + "|" + chart.getDbmsServerName();
+						String key = chart.getName();
 						IUserDefinedChart prevVal = _charts.put(key, chart);
 						if (prevVal != null)
 						{
-							throw new Exception("A User Defined Chart has already been added with the Name='" + chart.getName() + "' and SrvName='" + chart.getDbmsServerName() + "'.");
+//							throw new Exception("A User Defined Chart has already been added with the Name='" + chart.getName() + "' and SrvName='" + chart.getDbmsServerName() + "'.");
+							throw new Exception("A User Defined Chart has already been added with the Name='" + chart.getName() + "'.");
 						}
+						_logger.info("Initialized User Defined Chart of type '" + chartType + "', with key/name '" + key + "' in the file '" + file.getAbsolutePath() + "'.");
 					}
 					else
 					{
@@ -120,9 +127,32 @@ public class UserDefinedChartManager
 		} 
 	}
 
-	public IUserDefinedChart getChart(String name, String srvName)
+	/**
+	 * Called from {@link Configuration.FileWatcher} when file has been changed.
+	 * @param fullPath
+	 */
+	public void onConfigChange(Path fullPath)
 	{
-		return _charts.get(name + "|" + srvName);
+		_logger.info("Changes to User Defined Chart file '" + fullPath + "'.");
+
+		for (IUserDefinedChart chart : _charts.values())
+		{
+			Path chartCfgPath = Paths.get(chart.getConfigFilename());
+			if (chartCfgPath.equals(fullPath))
+			{
+				chart.onConfigFileChange(fullPath);
+			}
+		}
+	}
+
+	
+//	public IUserDefinedChart getChart(String name, String srvName)
+//	{
+//		return _charts.get(name + "|" + srvName);
+//	}
+	public IUserDefinedChart getChart(String name)
+	{
+		return _charts.get(name);
 	}
 	
 	public List<IUserDefinedChart> getCharts()
@@ -150,5 +180,4 @@ public class UserDefinedChartManager
 			return "Problems reading '" + templateFile + "'. Caught: " + ex;
 		}
 	}
-
 }

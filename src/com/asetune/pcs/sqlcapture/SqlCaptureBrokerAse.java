@@ -26,9 +26,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -172,7 +175,7 @@ extends SqlCaptureBrokerAbstract
 
 	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount = "PersistentCounterHandler.sqlCapture.ase.batchIdEntry.keepCount";
 //	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount = 2;
-	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount = 10; // 10 should be WAY to much, it's just for testing...
+	public static final int     DEFAULT_sqlCap_ase_sqlTextAndPlan_batchIdEntry_keepCount = 20; // 20 should be WAY to much, it's just for testing...
 	//NOTE: if we have a keep count higher than 1 or 2, then we should do LOW ON MEMORY to first remove all with a keep-count > 1 or similar...
 
 	public static final String  PROPKEY_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength = "PersistentCounterHandler.sqlCapture.ase.sqlText.shortLength";
@@ -2745,6 +2748,7 @@ extends SqlCaptureBrokerAbstract
 		if (_sampleSqlText)
 		{
 			long captureStartTime = System.currentTimeMillis();
+//			_spidSqlTextAndPlanManager.setLastSqlCaptureTime(captureStartTime);xxx
 
 			try ( Statement stmnt = conn.createStatement();
 			      ResultSet rs = stmnt.executeQuery(_sql_sqlText); )
@@ -2785,7 +2789,7 @@ extends SqlCaptureBrokerAbstract
 						updateSqlTextStats(SPID, KPID, BatchID, SequenceInBatch, sqlText);
 					}
 
-					_spidSqlTextAndPlanManager.addSqlText(SPID, KPID, BatchID, SequenceInBatch, sqlText, ServerLogin);
+					_spidSqlTextAndPlanManager.addSqlText(SPID, KPID, BatchID, SequenceInBatch, sqlText, ServerLogin, captureStartTime);
 				}
 				_statSqlTextCaptureRows       += rowCount;
 				_statSqlTextCaptureRowsDiff   += rowCount;
@@ -2986,7 +2990,6 @@ extends SqlCaptureBrokerAbstract
 					+ ", StatementCaptureRows="      + _statStatementCaptureRows
 					+ ", SqlTextCaptureRows="        + _statSqlTextCaptureRows
 					+ ", PlanTextCaptureRows="       + _statPlanTextCaptureRows
-
 					);
 
 			// Reset DIFF Counters
@@ -3001,6 +3004,10 @@ extends SqlCaptureBrokerAbstract
 			_statStatementCaptureRowsDiff = 0;
 			_statSqlTextCaptureRowsDiff   = 0;
 			_statPlanTextCaptureRowsDiff  = 0;
+			
+			
+			// Print some statistics about: SPID count, BatchId's in the various structure, memory usage etc...
+			_spidSqlTextAndPlanManager.logStatistics();
 		}
 
 		return count;
@@ -3242,11 +3249,11 @@ extends SqlCaptureBrokerAbstract
 	 * For now it's used in CmActiveStatement to get "Last Known" SQL text... 
 	 * 
 	 * @param spid
-	 * @param kpid
-	 * @param batchId
+	 * @param kpid          (if -1, then take kpid from spidEntry)
+	 * @param batchId        
 	 * @return
 	 */
-	public String getSqlText(int spid, int kpid, int batchId)
+	public String getSqlText(int spid, int kpid, int batchId, boolean getAllIfPossible)
 	{
 		if (_spidSqlTextAndPlanManager == null)
 			return null;
@@ -3255,40 +3262,89 @@ extends SqlCaptureBrokerAbstract
 		if (spidEntry == null)
 			return null;
 
-		String sqlText = null;
-		if (spidEntry._batchIdMap.size() > 1)
+		if (kpid < 0)
 		{
-			sqlText = "------------------------------------------------\n"
-					+ "-- Found " + spidEntry._batchIdMap.size() + " BatchId Entries. \n"
-					+ "------------------------------------------------\n";
+			kpid = spidEntry._kpid;
+		}
 
-			// NOTE: spidEntry._batchIdMap is a ConcurrentHashMap so we should be file from ConcurrentModificationException 
-			//       If not we might need to copy the Map before looping it!
-			for (BatchIdEntry batchIdEntry : spidEntry._batchIdMap.values())
-			{
-				sqlText += "\n/* ##### BatchId: " + batchIdEntry._batchId + " ##### */ \n"
-						+ batchIdEntry.getSqlText()
-						+ "\n";
-//				System.out.println("XXXXXXXXXX: getBatchIdEntryLazy(): batchId = " + batchIdEntry._batchId);
-//				System.out.println("XXXXXXXXXX: getBatchIdEntryLazy(): sqlText = |" + batchIdEntry.getSqlText() + "|");
-			}
+		if ( ! getAllIfPossible )
+		{
+			String sqlText = null;
+
+			if (spidEntry._lastKnownBatchIdEntry != null)
+				sqlText = spidEntry._lastKnownBatchIdEntry.getSqlText();
+
+			return sqlText;
 		}
 		else
 		{
-			BatchIdEntry entry = _spidSqlTextAndPlanManager.getBatchIdEntryLazy(spid, kpid, batchId);
-			if (entry == null)
-				return null;
+			String sqlText = null;
 
-			sqlText = entry.getSqlText();
+			if (spidEntry._batchIdMap.size() > 1)
+			{
+				SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+
+				// We need to sort the BatchId's first...
+				List<Integer> sortedBatchId = new ArrayList<>(spidEntry._batchIdMap.keySet());
+				Collections.sort(sortedBatchId);
+
+				sqlText = "------------------------------------------------\n"
+						+ "-- Found " + sortedBatchId.size() + " BatchId Entries. \n"
+						+ "------------------------------------------------\n";
+
+				// NOTE: spidEntry._batchIdMap is a ConcurrentHashMap so we should be fine from ConcurrentModificationException 
+				//       But new we are doing "lookups" (so we should be perfectly fine)
+				long prevBatchCaptureStartTime = -1;
+				for (Integer id : sortedBatchId)
+				{
+					BatchIdEntry batchEntry = spidEntry.getBatchIdEntryLazy(spid, kpid, id);
+					if (batchEntry != null)
+					{
+						long batchCaptureStartTime = batchEntry.getCaptureStartTime();
+						String ts = sdf.format( new Date(batchCaptureStartTime) );
+
+						long captureTimeMsDiff = 0;
+						if (prevBatchCaptureStartTime != -1)
+							captureTimeMsDiff = batchCaptureStartTime - prevBatchCaptureStartTime;
+						prevBatchCaptureStartTime = batchCaptureStartTime;
+
+						sqlText += "\n/* ##### SPID: " + batchEntry._spid + " ##### BatchId: " + batchEntry._batchId + " ##### sampleTime: " + ts + " [" + NumberFormat.getInstance().format(captureTimeMsDiff) + "] ##### */ \n"
+								+ batchEntry.getSqlText()
+								+ "\n";
+					}
+				}
+			}
+			else
+			{
+				BatchIdEntry entry = _spidSqlTextAndPlanManager.getBatchIdEntryLazy(spid, kpid, batchId);
+				if (entry != null)
+					sqlText = entry.getSqlText();
+			}
+			
+			// If we still do not find anything, lets fallback to 
+			if (sqlText == null)
+			{
+				if (spidEntry._lastKnownBatchIdEntry != null)
+					sqlText = spidEntry._lastKnownBatchIdEntry.getSqlText();
+			}
+
+			return sqlText;
 		}
-		
-		return sqlText;
 	}
 
 	//----------------------------------------------------------------------------------------
 	private static class SpidSqlTextAndPlanManager
 	{
 		private HashMap<Integer, SpidEntry> _spidMap = new HashMap<>();
+
+		private int _lastCallTo_removeUnusedSlots_removeCount = 0;
+
+//		private long _lastSqlCaptureStartTime;
+//		public void setLastSqlCaptureTime(long startTime)
+//		{
+//			_lastSqlCaptureStartTime = startTime;
+//		}
+
 		
 		private SpidEntry getSpidEntry(int spid, int kpid)
 		{
@@ -3337,9 +3393,9 @@ extends SqlCaptureBrokerAbstract
 			return getSpidEntry(spid, kpid).getBatchIdEntry(spid, kpid, batchId);
 		}
 		
-		public void addSqlText(int spid, int kpid, int batchId, int sequenceNum, String sqlText, String serverLogin)
+		public void addSqlText(int spid, int kpid, int batchId, int sequenceNum, String sqlText, String serverLogin, long sqlCaptureStartTime)
 		{
-			getSpidEntry(spid, kpid).addSqlText(spid, kpid, batchId, sequenceNum, sqlText, serverLogin);
+			getSpidEntry(spid, kpid).addSqlText(spid, kpid, batchId, sequenceNum, sqlText, serverLogin, sqlCaptureStartTime);
 		}
 //		public String getSqlText(int spid, int kpid, int batchId)
 //		{
@@ -3400,6 +3456,7 @@ extends SqlCaptureBrokerAbstract
 //				if ( ! spidsToBeRemoved.isEmpty() )
 //					_logger.info("Removed the following SPIDs from the SqlText/PlanText structure, which was no longer present in ASE. size=" + spidsToBeRemoved.size() + ", removeSet=" + spidsToBeRemoved);
 
+				_lastCallTo_removeUnusedSlots_removeCount = spidsToBeRemoved.size();
 				return spidsToBeRemoved;
 			}
 			catch(Exception ex)
@@ -3436,6 +3493,42 @@ extends SqlCaptureBrokerAbstract
 			_spidMap.clear();
 //			_spidMap = new HashMap<>();
 		}
+
+
+		public void logStatistics()
+		{
+			int spidMapSize = _spidMap.size();
+			int spidBatchCountSumSize = 0;
+			int spidBatchSqlTextSumSize = 0;
+
+			try
+			{
+				// Loop spid's
+				for (SpidEntry spidEntry : _spidMap.values())
+				{
+					// Loop batchId's
+					for (BatchIdEntry batchEntry : spidEntry._batchIdMap.values())
+					{
+						spidBatchCountSumSize++;
+						
+						spidBatchSqlTextSumSize += batchEntry._sqlText.length();
+					}
+				}
+				
+				_logger.info("STAT [SqlCaptureBrokerAse.SpidSqlTextAndPlanManager]: "
+						+ "spidMapSize="                   + spidMapSize 
+						+ ", spidBatchCountSumSize="       + spidBatchCountSumSize 
+						+     " [batchPerSpid="            + (spidMapSize == 0 ? 0 : spidBatchCountSumSize / spidMapSize) + "]" 
+						+ ", spidBatchSqlTextSumSizeKb="   + (spidBatchSqlTextSumSize / 1024) 
+						+     " [sqlTextBytePerBatch="     + (spidBatchCountSumSize == 0 ? 0 : spidBatchSqlTextSumSize / spidBatchCountSumSize) + "]"
+						+ ", lastRemoveUnusedSlotsCount="  + _lastCallTo_removeUnusedSlots_removeCount
+						);
+			}
+			catch(RuntimeException rte)
+			{
+				_logger.warn("Problems i SpidSqlTextAndPlanManager.logStatistics, skipping this and continues.", rte);
+			}
+		}
 	}
 
 	//----------------------------------------------------------------------------------------
@@ -3445,6 +3538,11 @@ extends SqlCaptureBrokerAbstract
 		private int _kpid;
 		private int _maxBatchId;
 //		private int _batchIdCount;
+		private int _maxAddSeqId; // Since batchId isn't always sequential (like when using a cursor, only batchId[1]='FETCH_CURSOR', then next batchId will be "how many fetch" was done...)
+		private int _batchKeepCount = _default_batchIdEntry_keepCount; // Used to hold last X number of bathId's in the cache 
+		private BatchIdEntry _lastKnownBatchIdEntry = null;
+//		private List<String> _lastKnownSqlEntries = new ArrayList<>();
+//		private int          _lastKnownSqlMaxSize = 20;
 		
 		// If we use: getSqlText(spid, kpid, batchId) to get 'LastFoundSqlText'
 		// We need to use ConcurrentHashMap, since we are not "alone" anymore (and getSqlText() loops the _batchIdMap)
@@ -3460,7 +3558,7 @@ extends SqlCaptureBrokerAbstract
 		/** Remove all BatchId entries that is no longer used */ 
 		public void endOfScan()
 		{
-			if (_batchIdMap.size() <= 1)
+			if (_batchIdMap.size() <= _batchKeepCount)
 				return;
 
 			BatchIdEntry maxBatchIdEntry = _batchIdMap.get(_maxBatchId);
@@ -3491,12 +3589,29 @@ extends SqlCaptureBrokerAbstract
 					
 					// if we want to keep a BatchId's (and it's content) for more than one -END-OF-SCAN- the "keepCounter" can be used.
 					// Note: The initial value for the keepCounter is set in BatchIdEntry class
-					if (be._keepCounter > 0)
+//					if (be._keepCounter > 0)
+//					{
+//						be._keepCounter--;
+//						remove = false;
+//					}
+					
+//					// Keep at least "some" batchId's (so we can get LastKnownSqlText)
+//					//   _batchIdKeepCount: 20;
+//					//   remove: maxBatchId=200 batchId=179 >> diff=21
+//					//   keep  : maxBatchId=200 batchId=180 >> diff=20
+//					if (_maxBatchId - batchId <= _batchKeepCount)
+//					{
+//						remove = false;
+//					}
+					// Keep at least "some" batch's (so we can get LastKnownSqlText)
+					//   _batchKeepCount: 20;
+					//   remove: maxAddSeqId=200 addSeqId=179 >> diff=21
+					//   keep  : maxAddSeqId=200 addSeqId=180 >> diff=20
+					if (_maxAddSeqId - be._addSeqId <= _batchKeepCount)
 					{
-						be._keepCounter--;
 						remove = false;
 					}
-					
+
 					if (remove)
 					{
 						//System.out.println("    <-- SpidEntry[spid="+_spid+", kpid="+_kpid+", maxBatchId="+_maxBatchId+"] -- removing: batchId=" + entry.getValue()._batchId + ", sqlText="+entry.getValue().getSqlText());
@@ -3528,6 +3643,7 @@ extends SqlCaptureBrokerAbstract
 				//System.out.println("  --- Found NEW KPID for SPID clearing old batchMap: spid="+spid+", new-kpid="+kpid+", current-kpid="+_kpid);
 				_batchIdMap.clear();
 				_maxBatchId = 0;
+				_maxAddSeqId = 0;
 				_kpid = kpid;
 			}
 			
@@ -3557,9 +3673,22 @@ extends SqlCaptureBrokerAbstract
 //			return count;
 //		}
 
-		public void addSqlText(int spid, int kpid, int batchId, int sequenceNum, String sqlText, String serverLogin)
+		public void addSqlText(int spid, int kpid, int batchId, int sequenceNum, String sqlText, String serverLogin, long sqlCaptureStartTime)
 		{
-			getBatchIdEntry(spid, kpid, batchId).addSqlText(sequenceNum, sqlText, serverLogin);
+			// Increment only when FIRST section of SqlText arrives (sequenceNum==1)
+			// In the BatchIdEntry (if it's a new one) it will set 'addSeqId' to the value of SpidEntry._maxAddSeqId
+			if (sequenceNum == 1)
+				_maxAddSeqId++;
+
+			BatchIdEntry batchIdEntry = getBatchIdEntry(spid, kpid, batchId);
+
+			if (sequenceNum == 1)
+				batchIdEntry._captureStartTime = sqlCaptureStartTime;
+
+			if (batchId >= _maxBatchId)
+				_lastKnownBatchIdEntry = batchIdEntry;
+
+			batchIdEntry.addSqlText(sequenceNum, sqlText, serverLogin);
 		}
 //		public String getSqlText(int spid, int kpid, int batchId)
 //		{
@@ -3588,10 +3717,12 @@ extends SqlCaptureBrokerAbstract
 		private int _spid;
 		private int _kpid;
 		private int _batchId;
+		private int _addSeqId;
+		private long _captureStartTime;
 
 		// if we want to keep a BatchId's (and it's content) for more than one -END-OF-SCAN- the "keepCounter" can be used.
 		// This is decremented in SpidEntry.endOfScan(), and when it reaches 0 it is removed.
-		public int _keepCounter = 0; 
+//		public int _keepCounter = 0; 
 
 		private String  _dynamicSqlName;
 		private String  _dynamicSqlText;
@@ -3608,8 +3739,9 @@ extends SqlCaptureBrokerAbstract
 			_spid    = spid;
 			_kpid    = kpid;
 			_batchId = batchId;
+			_addSeqId = _parent._maxAddSeqId;
 			
-			_keepCounter = _default_batchIdEntry_keepCount;
+//			_keepCounter = _default_batchIdEntry_keepCount;
 		}
 
 		public boolean isDynamicSql()
@@ -3686,6 +3818,10 @@ extends SqlCaptureBrokerAbstract
 			return _sqlText.toString();
 		}
 
+		public long getCaptureStartTime()
+		{
+			return _captureStartTime;
+		}
 		public String getServerLogin()
 		{
 			return _srvLogin;

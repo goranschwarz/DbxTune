@@ -373,7 +373,7 @@ extends ReportEntryAbstract
 //		sb.append("  <th>Index Name</th> \n");
 //		sb.append("  <th>Keys</th> \n");
 //		sb.append("  <th>IndexID</th> \n");
-//		sb.append("  <th>Desciption</th> \n");
+//		sb.append("  <th>Description</th> \n");
 //		sb.append("  <th>Size MB</th> \n");
 //		sb.append("  <th>Size Pages</th> \n");
 //		sb.append("  <th title='Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount'>Avg RowSize</th> \n");
@@ -401,7 +401,7 @@ extends ReportEntryAbstract
 		sb.append(createHtmlTh("Index Name"     , ""));
 		sb.append(createHtmlTh("Keys"           , ""));
 		sb.append(createHtmlTh("IndexID"        , ""));
-		sb.append(createHtmlTh("Desciption"     , ""));
+		sb.append(createHtmlTh("Description"    , ""));
 		sb.append(createHtmlTh("Size MB"        , ""));
 		sb.append(createHtmlTh("Size Pages"     , ""));
 		sb.append(createHtmlTh("Avg RowSize"    , "Average Bytes used per Row\nCalculted by: SizeBytes/TableRowcount"));
@@ -2735,9 +2735,9 @@ extends ReportEntryAbstract
 					
 					rstm.setToStringTimestampFormat("yyyy-MM-dd HH:mm:ss");
 
-					setWaitDesciption(rstm, "WaitEventID", "WaitEventDesc", "WaitClassID", "WaitClassDesc");
-					setDurationColumn(rstm, "sampleTime_min", "sampleTime_max", "Duration");
-					setMsToHms       (rstm, "WaitTime_sum", "WaitTime_HMS");
+					setWaitDescription(rstm, "WaitEventID", "WaitEventDesc", "WaitClassID", "WaitClassDesc");
+					setDurationColumn (rstm, "sampleTime_min", "sampleTime_max", "Duration");
+					setMsToHms        (rstm, "WaitTime_sum", "WaitTime_HMS");
 
 					waitEntry.waitTime = rstm;
 				}
@@ -2821,7 +2821,7 @@ extends ReportEntryAbstract
 	 * @param waitClassId
 	 * @param waitClassDesc
 	 */
-	public void setWaitDesciption(ResultSetTableModel rstm, String waitEventId, String waitEventDesc, String waitClassId, String waitClassDesc)
+	public void setWaitDescription(ResultSetTableModel rstm, String waitEventId, String waitEventDesc, String waitClassId, String waitClassDesc)
 	{
 		int pos_waitEventId   = rstm.findColumn(waitEventId);
 		int pos_waitEventDesc = rstm.findColumn(waitEventDesc);
@@ -2831,7 +2831,7 @@ extends ReportEntryAbstract
 		
 //		if ( ! MonTablesDictionaryManager.hasInstance() )
 //		{
-//			_logger.warn("setWaitDesciption(): No 'MonTablesDictionary' was found... cant set descriptions...");
+//			_logger.warn("setWaitDescription(): No 'MonTablesDictionary' was found... cant set descriptions...");
 //			return;
 //		}
 //		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();

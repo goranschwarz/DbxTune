@@ -93,6 +93,14 @@ public abstract class XmlPlanCache
 	// END: Constructors
 	//----------------------------------------------------------------
 
+	public int size()
+	{
+		if (_cache != null)
+			return _cache.size();
+
+		return 0;
+	}
+
 	/** 
 	 * Close and release all object 
 	 */

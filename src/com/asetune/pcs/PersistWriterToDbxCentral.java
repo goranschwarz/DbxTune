@@ -200,7 +200,7 @@ extends PersistWriterToHttpJson
 		}
 		
 		//--------------------------------------------
-		// Read "http" configurations
+		// Read "file" configurations
 		//--------------------------------------------
 		if (WriterType.FILE.equals(_writerType))
 		{
@@ -212,6 +212,18 @@ extends PersistWriterToHttpJson
 
 			// Most is done in the super class: PersistWriterToHttpJson (to get what we should save)
 			initConfigSlot(conf, "DbxCentral", _fileConfSlot);
+			
+			// NOTE: The above 'initConfigSlot', if no URL like HERE, it will do NOTHING...
+			//       So we need to initialize "some" stuff:
+			//          - What Counters and graphs we want to store in the output files
+			String cfgKey = "";
+			SendCountersConfig sendCounters = new SendCountersConfig(conf, key(PROPKEY_sendCounters, cfgKey), DEFAULT_sendCounters);
+			SendCountersConfig sendGraphs   = new SendCountersConfig(conf, key(PROPKEY_sendGraphs  , cfgKey), DEFAULT_sendGraphs);
+			
+			// We still need this to be configured (Example: the default is to send CmActiveStatements)
+			_fileConfSlot._sendCounters = sendCounters;
+			_fileConfSlot._sendGraphs   = sendGraphs;
+
 		}
 
 		//------------------------------------------

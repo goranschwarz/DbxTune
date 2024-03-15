@@ -688,7 +688,7 @@ public class OverviewServlet extends HttpServlet
 					out.println("    " + td + srvName + "</td>");
 					out.println("    " + td + chartType + "</td>");
 					out.println("    " + td + srvDesc + "</td>");
-					out.println("    " + td + "<a href='" + url + "'><code>" + url + "</code></a></td>");
+					out.println("    " + td + "<a href='" + url + "' target='_blank'><code>" + url + "</code></a></td>");
 					out.println("    " + td + filename + "</td>");
 					out.println("  </tr>");
 					

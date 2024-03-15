@@ -146,14 +146,14 @@ function readCmdLine
 # sa_passwd=$(awk -F: '{if ($1=="sa") print $2}' ${HOME}/.passwd.enc | openssl enc -aes-128-cbc -a -d -salt -pass pass:sybase)
 # sa_passwd=$(awk -F: '{if ($1=="sa") print $2}' ${HOME}/.passwd.enc | sed 's/v2;//' | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k sybase -d)
 #--------------------------------
-function addToSybasePasswordFile
+function addToUserPasswordFile
 {
 	local pUsername=${1}
 	local pPassword=${2}
 	local pSrvname=${3}
 
-	if [ -z "${pUsername}" ]; then echo "addToSybasePasswordFile(): #1 - pUsername is mandatory parameter"; exit 1; fi
-	if [ -z "${pPassword}" ]; then echo "addToSybasePasswordFile(): #2 - pPassword is mandatory parameter"; exit 1; fi
+	if [ -z "${pUsername}" ]; then echo "${FUNCNAME}: #1 - pUsername is mandatory parameter"; exit 1; fi
+	if [ -z "${pPassword}" ]; then echo "${FUNCNAME}: #2 - pPassword is mandatory parameter"; exit 1; fi
 
 	if [ -f ${passwdFile} ]
 	then
@@ -183,16 +183,13 @@ function addToSybasePasswordFile
 		encPasswd=$(echo "${pPassword}" | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k ${keyPassPhrase})
 	fi
 
-	printf "%-20s : %-20s : %s\n" "${pUserName}" "${pHostName}" "${lEncryptPrefixStr}${lEncPasswd}" >> ~postgres/.passwd.enc
 	if [ -z "${pSrvname}" ]
 	then
-#		echo "${pUsername}: ${encPrefix}${encPasswd}" >> ${passwdFile}
 		printf "%-20s : %s\n" "${pUsername}" "${encPrefix}${encPasswd}" >> ${passwdFile}
 	else
-#		echo "${pUsername}: ${pSrvname}: ${encPrefix}${encPasswd}" >> ${passwdFile}
 		printf "%-20s : %-20s : %s\n" "${pUsername}" "${pSrvname}" "${encPrefix}${encPasswd}" >> ${passwdFile}
 	fi
-	chmod 400 ${passwdFile}
+	chmod 600 ${passwdFile}
 }
 
 
@@ -222,7 +219,7 @@ readCmdLine $@
 if [ ${operation} == "set" ]
 then
 	#echo "${password}" | openssl enc -aes-128-cbc -a -salt -pass pass:${USER}
-	addToSybasePasswordFile ${userName} ${password} ${srvName}
+	addToUserPasswordFile ${userName} ${password} ${srvName}
 
 	## List the passwdfile content
 	if [ ${listPasswdFile} -gt 0 ]

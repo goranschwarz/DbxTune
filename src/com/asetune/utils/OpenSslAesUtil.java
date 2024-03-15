@@ -673,6 +673,7 @@ public class OpenSslAesUtil
 				}
 			}
 			
+			boolean usedFallback        = false; 
 			String rawEncryptedStr      = null;
 			int    rawEncryptedStrAtRow = 0;
 
@@ -680,6 +681,7 @@ public class OpenSslAesUtil
 			// entry looking like |sa:encryptedPasswd|
 			if (fallbackEncPasswd != null)
 			{
+				usedFallback         = true;
 				rawEncryptedStr      = fallbackEncPasswd;
 				rawEncryptedStrAtRow = fallbackEncPasswdAtRow;
 			}
@@ -688,6 +690,7 @@ public class OpenSslAesUtil
 			// entry looking like |sa:PROD_A_ASE:encryptedPasswd|
 			if (srvMatchEncPasswd != null) 
 			{
+				usedFallback         = false;
 				rawEncryptedStr      = srvMatchEncPasswd;
 				rawEncryptedStrAtRow = srvMatchEncPasswdAtRow;
 			}
@@ -695,6 +698,8 @@ public class OpenSslAesUtil
 			// DECODE the rawEncryptedStr
 			if (rawEncryptedStr != null)
 			{
+				_logger.info("Found encrypted password for username '" + user + "', servername='" + serverName + "', at row " + rawEncryptedStrAtRow + ", in file '" + filename + "' usedFallback=" + usedFallback + ".");
+
 				// First try with the supplied passphrase
 				try
 				{
@@ -717,6 +722,7 @@ public class OpenSslAesUtil
 			}
 
 			// Nothing was found...
+			_logger.info("No password found for username '" + user + "', servername='" + serverName + "' in file '" + rawEncryptedStrAtRow + "'.");
 			return null;
 		}
 		else

@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
+import com.asetune.cm.postgres.CmErrorLog;
 import com.asetune.pcs.DdlDetails;
 import com.asetune.pcs.ObjectLookupQueueEntry;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -86,6 +87,9 @@ extends ObjectLookupInspectorAbstract
 		if (StringUtil.startsWithIgnoreBlankIgnoreCase(objectName, "pg_"))
 			return false;
 		
+		if (PersistentCounterHandler.STATEMENT_CACHE_NAME.equals(entry._dbname))
+			entry.setStatementCacheEntry(true);
+
 		// allow inspection
 		return true;
 	}
@@ -107,6 +111,66 @@ extends ObjectLookupInspectorAbstract
 	{
 		final String dbname = qe._dbname;
 
+		// Check if the input is a: ExecutionPlan
+		boolean isExecutionPlan = false;
+		if (qe.isStatementCacheEntry() || PersistentCounterHandler.STATEMENT_CACHE_NAME.equals(dbname))
+			isExecutionPlan = true;
+
+		if (isExecutionPlan)
+		{
+			List<DdlDetails> storeList = new ArrayList<>();
+
+			// If the source is "CmErrorlog", then the qe.source will contain both the "source" AND the Actual data
+			// So we do NOT need to look things up here (Just create a storage object and return that)
+			// Possible: Parse the Execution plan's SQL Text and grab table names for DDL Lookup...
+
+			String objectName  = qe._objectName;
+			int    dependLevel = qe._dependLevel;
+			String source      = qe._source;
+			String execPlan    = null;
+			if (source.startsWith(CmErrorLog.CM_NAME + "|"))
+			{
+				execPlan = source.substring( CmErrorLog.CM_NAME.length() + 1 );
+				source   = CmErrorLog.CM_NAME;
+
+				DdlDetails storeEntry = new DdlDetails(PersistentCounterHandler.STATEMENT_CACHE_NAME, objectName);
+				storeEntry.setCrdate( new Timestamp(System.currentTimeMillis()) );
+				storeEntry.setSource( source );
+				storeEntry.setDependLevel( dependLevel );
+//				entry.setOwner("ssql");
+				storeEntry.setOwner(dbname);
+				storeEntry.setType("SS");
+				storeEntry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
+
+				// Set the EXEC PLAN TEXT to store
+				storeEntry.setExtraInfoText( execPlan ); // AseTune uses setExtraInfoText(), so lets stick with that
+
+				// Set ExtraInfoText (if we have extra information about the Execution Plan, if we did some investigations)
+				// This could be: HEAVY Table scan... Unusual Something (see InspectorSqlServer for example) 
+				//storeEntry.setObjectText(sb.toString());
+
+//				if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_xmlPlan_parseAndSendTables, DEFAULT_xmlPlan_parseAndSendTables))
+//				{
+//					String sqlText = SqlServerUtils.getSqlTextFromXmlPlan(xmlPlan);
+//
+//					// Get list of tables in the SQL Text and add them for a DDL Lookup/Store
+//					Set<String> tableList = SqlParserUtils.getTables(sqlText);
+//					for (String tableName : tableList)
+//					{
+////System.out.println("doObjectInfoLookup(): ---->>>> pch.addDdl ---->>>> dbname='" + dbname + "', tableName='" + tableName + "', source='"+this.getClass().getSimpleName() + ".xmlPlan.sql'");
+//						pch.addDdl(dbname, tableName, this.getClass().getSimpleName() + ".xmlPlan.sql");
+//					}
+//				}
+
+				// Finally add the entry to the "SAVE LIST"
+				storeList.add(storeEntry);
+			}
+			
+			
+			return storeList;
+		}
+		
+		
 		DbxConnection conn = null;
 		try
 		{

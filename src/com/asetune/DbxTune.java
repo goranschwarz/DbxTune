@@ -46,6 +46,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -1073,9 +1074,23 @@ public abstract class DbxTune
 				{
 					String sshUser   = storeConfigProps.getProperty("conn.sshUsername", "sybase");
 					String sshServer = storeConfigProps.getProperty("conn.sshHostname", null);
+					
+					String sshUserName      = sshUser;
+					String sshUserLookupKey = sshUser;
+					if (sshUser.contains(":"))
+					{
+						sshUserName      = StringUtils.substringBefore(sshUser, ":");
+						sshUserLookupKey = StringUtils.substringAfter (sshUser, ":");
+						
+						storeConfigProps.setProperty("conn.sshUsername", sshUserName);
+						storeConfigProps.setProperty("conn.sshUsername.lookupKey", sshUserLookupKey);
+						
+						_logger.info("SSH User name contained 'key-lookup' method. sshUserName='" + sshUserName + "', sshUserLookupKey='" + sshUserLookupKey + "'.");
+					}
 
-					// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
-					String sshPasswd = OpenSslAesUtil.readPasswdFromFile(sshUser, sshServer);
+					// Note: generate a passwd in linux:  echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
+					// Note: generate in RHEL 8 or above: echo 'thePasswd' | openssl enc -base64 -aes-256-cbc -pbkdf2 -iter 100000 -k sybase
+					String sshPasswd = OpenSslAesUtil.readPasswdFromFile(sshUserLookupKey, sshServer);
 					
 					if (sshPasswd != null)
 					{
@@ -1894,8 +1909,11 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		pw.println("  -N,--displayName <name>      Display Name (used by DbxCentral) to label buttons at start page.");
 		pw.println("                               note: <SRVNAME> will be replaced with the DBMS Instance Name");
 		pw.println("  -O,--urlOptions <server>     jdbc Url options/properties example: 'key1=val;key2=val'");
-		pw.println("  ");                          
+		pw.println("  ");
 		pw.println("  -u,--sshUser <user>          SSH Username, used by Host Monitoring subsystem.");
+		pw.println("                                   Note: can be specified as 'user:lookupKey' which can be used");
+		pw.println("                                   if password are stored in ~/.passwd.enc and the user/key ");
+		pw.println("                                   is not the same as the username.");
 		pw.println("  -p,--sshPasswd <passwd>      SSH Password, used by Host Monitoring subsystem.");
 		pw.println("  -k,--sshKeyFile <file>       SSH Private Key File, used by Host Monitoring subsystem.");
 		pw.println("  -s,--sshServer <host>        SSH Hostname, used by Host Monitoring subsystem.");

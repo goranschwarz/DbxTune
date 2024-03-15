@@ -48,7 +48,6 @@ public class HtmlStatic
 		"    ======================================================================= \n" +
 		"  --> \n" +
 		"  <!-- JS: JQuery --> \n" +
-//		"  <script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.min.js'></script> \n" +
 		"  <script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.min.js'></script> \n" +
 		"   \n" +
 		"  <!-- JS: Moment; used by: ChartJs, DateRangePicker --> \n" +

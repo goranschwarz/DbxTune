@@ -31,6 +31,7 @@ import java.util.Map;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -56,6 +57,9 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
+import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
@@ -1439,9 +1443,38 @@ extends CountersModel
 					{
 						extendedDescHtml += ""
 								+ "<br>"
-								+ "Process Activity information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
+								+ "Process Activity information for 'Oldest Open Tran' SPID: " + oldestOpenTranSpid
 								+ oldestOpenTranSpid_ProcessActivity_htmlTable
 								;
+					}
+
+					// Get 'LastKnownSqlText'
+					boolean getLastKnownSqlText = true;
+					if (getLastKnownSqlText)
+					{
+						ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+						if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)
+						{
+							SqlCaptureBrokerAse aseSqlCaptureBroker = (SqlCaptureBrokerAse) sqlCaptureBroker;
+
+							int spid    = StringUtil.parseInt(oldestOpenTranSpid, -1);
+							int kpid    = -1;
+							int batchId = -1;
+
+//							if (spid != -1 && kpid != -1 && batchId != -1)
+							if (spid != -1)
+							{
+								boolean getAllAvailableBatches = true;
+								String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId, getAllAvailableBatches);
+
+								extendedDescHtml += "<br><br><b>Last Known SQL Text for 'Oldest Open Tran' SPID: " + spid + "</b>"
+										+ "<br>"
+										+ "<pre><code>"
+										+ StringEscapeUtils.escapeHtml4(lastKnownSqlText)
+										+ "</code></pre>"
+										+ "<br><br>";
+							}
+						}
 					}
 					
 					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
@@ -1525,6 +1558,34 @@ extends CountersModel
 									;
 						}
 						
+						// Get 'LastKnownSqlText'
+						boolean getLastKnownSqlText = true;
+						if (getLastKnownSqlText)
+						{
+							ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+							if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)
+							{
+								SqlCaptureBrokerAse aseSqlCaptureBroker = (SqlCaptureBrokerAse) sqlCaptureBroker;
+
+								int spid    = StringUtil.parseInt(oldestOpenTranSpid, -1);
+								int kpid    = -1;
+								int batchId = -1;
+
+//								if (spid != -1 && kpid != -1 && batchId != -1)
+								if (spid != -1)
+								{
+									boolean getAllAvailableBatches = true;
+									String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId, getAllAvailableBatches);
+
+									extendedDescHtml += "<br><br><b>Last Known SQL Text for 'Oldest Open Tran' SPID: " + spid + "</b>"
+											+ "<br>"
+											+ "<pre><code>"
+											+ StringEscapeUtils.escapeHtml4(lastKnownSqlText)
+											+ "</code></pre>"
+											+ "<br><br>";
+								}
+							}
+						}
 						
 						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranDbName, oldestOpenTranInSec, oldestOpenTranName);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);

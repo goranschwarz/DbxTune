@@ -30,6 +30,7 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -1191,7 +1192,8 @@ extends CountersModel
 
 						if (kpid != -1 && batchId != -1)
 						{
-							String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId);
+							boolean getAllAvailableBatches = true;
+							String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId, getAllAvailableBatches);
 							if (lastKnownSqlText != null)
 							{
 								counters.setValueAt(true            , rowId, pos_HasLastKnownSqlText);
@@ -1510,10 +1512,80 @@ extends CountersModel
 
 						if (doAlarm)
 						{
-							int spid = cm.getRateValueAsDouble(r, "SPID").intValue();
+							int spid = cm.getRateValueAsInteger(r, "SPID", -1);
 
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							String extendedDescHtml = "<br><b>Below is all columns from 'Active Statements' for SPID=" + spid + "</b><br>" 
+									+ cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+							// get ProcessActivity for 'SPID' (this SPID)
+							CountersModel cmProcessActivity = getCounterController().getCmByName(CmProcessActivity.CM_NAME);
+							if (cmProcessActivity != null)
+							{
+								int[] cmRows = cmProcessActivity.getAbsRowIdsWhere("SPID", spid);
+								if (cmRows != null && cmRows.length > 0)
+								{
+									extendedDescHtml += "<br><br><b>Process Activity for SPID=" + spid + "</b>";
+									for (int cmr=0; cmr<cmRows.length; cmr++)
+									{
+										extendedDescHtml += "<br><br>" + cmProcessActivity.toHtmlTableString(DATA_ABS, cmRows[cmr], true, false, false);
+									}
+								}
+								else
+								{
+									extendedDescHtml += "<br><br><b>No record was found in 'Process Activity' for SPID=" + spid + "</b>";
+								}
+							}
+
+							// get ProcessActivity for 'SPID' (SPID's that are blocked by this SPID)
+							if (cmProcessActivity != null)
+							{
+								for (String bSpidStr : BlockingOtherSpidsList)
+								{
+									int blockedSpid = StringUtil.parseInt(bSpidStr, -1);
+									if (blockedSpid != -1)
+									{
+										int[] cmRows = cmProcessActivity.getAbsRowIdsWhere("SPID", blockedSpid);
+										if (cmRows != null && cmRows.length > 0)
+										{
+											extendedDescHtml += "<br><br><b>Process Activity for BLOCKED/WAITING SPID=" + blockedSpid + "</b>";
+											for (int cmr=0; cmr<cmRows.length; cmr++)
+											{
+												int blockedSpidRowId = cmRows[cmr];
+												extendedDescHtml += "<br><br>" + cmProcessActivity.toHtmlTableString(DATA_ABS, blockedSpidRowId, true, false, false);
+
+												// Get 'LastKnownSqlText'
+												if (true)
+												{
+													ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+													if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)
+													{
+														SqlCaptureBrokerAse aseSqlCaptureBroker = (SqlCaptureBrokerAse) sqlCaptureBroker;
+
+														int kpid    = cmProcessActivity.getAbsValueAsInteger(blockedSpidRowId, "KPID"   , -1);
+														int batchId = cmProcessActivity.getAbsValueAsInteger(blockedSpidRowId, "BatchID", -1);
+
+														if (kpid != -1 && batchId != -1)
+														{
+															boolean getAllAvailableBatches = true;
+															String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(blockedSpid, kpid, batchId, getAllAvailableBatches);
+
+															extendedDescHtml += "<br><br><b>Last Known SQL Text for BLOCKED/WAITING SPID=" + blockedSpid + "</b>"
+																	+ "<br>"
+																	+ "<pre><code>"
+																	+ StringEscapeUtils.escapeHtml4(lastKnownSqlText)
+																	+ "</code></pre>"
+																	+ "<br><br>";
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+							
+							// Finally create the alarm
 							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							

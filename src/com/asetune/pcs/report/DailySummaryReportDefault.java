@@ -725,10 +725,8 @@ extends DailySummaryReportAbstract
 		createDbxTuneCss(w);
 
 		w.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
-//		sb.append("    <SCRIPT src='https://code.jquery.com/jquery-3.2.1.min.js'></SCRIPT> \n");                       // NOTE: FIXME -- This should be located "elsewhere"
-//		sb.append("    <SCRIPT src='https://omnipotent.net/jquery.sparkline/2.1.2/jquery.sparkline.js'></SCRIPT> \n"); // NOTE: FIXME -- This should be located "elsewhere"
 
-		w.append("    <SCRIPT src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js'></SCRIPT> \n");
+		w.append("    <SCRIPT src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js'></SCRIPT> \n");
 		w.append("    <SCRIPT src='https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js'></SCRIPT> \n");
 		
 		if (useBootstrap())

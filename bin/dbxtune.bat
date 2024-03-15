@@ -118,6 +118,11 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
+) ELSE IF /I "%APP_NAME%" == "configUtil" (
+	set JAVA_START_CLASS=com.asetune.utils.Configuration
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME%" == "h2srv" (
 	set JAVA_START_CLASS=org.h2.tools.Server
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists

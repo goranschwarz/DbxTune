@@ -466,6 +466,37 @@ at pc:
 			animation: blink 1.5s infinite;
 		}
 
+/*
+		#dbx-history-get-data-bussy {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+
+			font-size: 24px;
+			z-index: 10000;
+		}
+*/
+		#dbx-history-get-data-bussy {
+			position: fixed;
+			top: 20%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			z-index: 10000;
+
+			margin: auto;
+			border: 10px solid #EAF0F6;
+			border-radius: 50%;
+			border-top: 10px solid #242add;
+			width: 100px;
+			height: 100px;
+			animation: spinner 1s linear infinite;
+		}
+		@keyframes spinner {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+
 	</style>
 
 	<!--
@@ -476,9 +507,7 @@ at pc:
 	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> -->
 	<!-- Custom styles for this template -->
 	<!-- <link href="/scripts/bootstrap/css/navbar-top-fixed.css" rel="stylesheet"> -->
-<!--	<script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>-->
 	<script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
-<!--	<script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>-->
 	<script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
 
 	<!--
@@ -506,7 +535,6 @@ at pc:
 	<script type="text/javascript" src="/scripts/popper/1.12.9/popper.min.js"></script>
 
 	<!-- JS: DateRangePicker -->
-<!--	<script type="text/javascript" src="/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.js"></script>-->
 	<script type="text/javascript" src="/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js"></script>
 
 	<!-- JS: Bootstrap - TABLE -->
@@ -517,12 +545,12 @@ at pc:
 	<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>
 
 	<!-- JS: jquery - contextMenu -->
-<!--	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>-->
 	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.js"></script>
 
 	<!-- Prism: SQL Text Area needs this -->
     <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js'></script>
 
 	<!-- SQL Server Showplan: html-query-plan -->
 	<script src="https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js"></script>
@@ -535,13 +563,17 @@ at pc:
 	<!-- JQuery Sparklines -->
 	<!--<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js'></script> -->
 
+	<!-- Postgres Query Plan -- PEV2 -->
+	<script src="https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js"></script>
+	<script src="https://unpkg.com/pev2/dist/pev2.umd.js"></script>
+
+
 	<!--
 	  =======================================================================
 	  == CSS imports - STYLES SHEETS GOES HERE
 	  =======================================================================
 	-->
 	<!-- CSS: jqueri-ui -->
-<!--	<link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">-->
 	<link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
 
 	<!-- CSS: DbxCentral -->
@@ -551,10 +583,10 @@ at pc:
 	<link rel="stylesheet" href="/scripts/css/iota.css" type="text/css">
 
 	<!-- CSS: Bootstrap -->
+	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css">  <!--  <<<< NOTE: This needs to go **BEFORE** bootstrap 4 css >>> -->
 	<link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
 
 	<!-- CSS: DateRangePicker -->
-<!--	<link rel="stylesheet" href="/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.css">-->
 	<link rel="stylesheet" href="/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css">
 
 	<!-- CSS: Font Awsome -->
@@ -569,12 +601,15 @@ at pc:
 	<!-- <link rel="stylesheet" href="https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css"> -->
 
 	<!-- JS: jquery - contextMenu -->
-<!--	<link rel="stylesheet" href="/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css">-->
 	<link rel="stylesheet" href="/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.css">
 
 	<!-- Prism: SQL Text Area needs this -->
 	<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">-->
 	<!--The above at top since we override some of the stuff */
+
+	<!-- Postgres Query Plan -- PEV2 -->
+<!--	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css">-->
+	<link rel="stylesheet" href="https://unpkg.com/pev2/dist/style.css">
 
 </head>
 
@@ -700,6 +735,9 @@ at pc:
 	<div id="dbx-history-label-top" style="visibility: hidden;">
 	History View
 	</div>
+
+	<!-- Spinner when loading history data from PCS -->
+	<div id="dbx-history-get-data-bussy" style="visibility: hidden;"></div>
 
 
 
@@ -1097,6 +1135,282 @@ at pc:
 
 
     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<!-- Modal: View Postgres Execution Plan dialog -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class='modal fade' id='dbx-view-pgShowplan-dialog' role='dialog' aria-labelledby='dbx-view-pgShowplan-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>
+			<div class='modal-content' style='height: 80vh;'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-view-pgShowplan-dialog-title'><b>Postgres Execution Plan:</b> <span id='dbx-view-pgShowplan-objectName'></span></h5>
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div class='scroll-tree'>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-pgShowplan-content").toggle();'>Hide/Show Below Execution Plan</button>
+						<br>
+						<div id='dbx-view-pgShowplan-content' class='dbx-view-pgShowplan-content'> 
+							<!-- The below tag is injected when creating the vue object -->
+							<!-- AT: $('#dbx-view-pgShowplan-dialog').on('shown.bs.modal'...-->
+							<!-- <pev2 style='min-height: 50vh;' :plan-source="plan" :plan-query="query" /> -->
+						</div>
+						<br>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-pgShowplan-sqlContent").toggle();'>Hide/Show Below SQL Text</button>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick="pgShowplanFormatSql();">Format Below SQL Text</button>
+						<pre><code id='dbx-view-pgShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>
+
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-pgShowplan-planContent").toggle();'>Hide/Show Below Plan Text</button>
+						<pre><code id='dbx-view-pgShowplan-planContent' class='language-json line-numbers dbx-view-sqltext-content' ></code></pre>
+
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-outline-secondary' onclick="pgShowplanCopySql();">Copy SQL Text</button>
+					<button type='button' class='btn btn-outline-secondary' onclick="pgShowplanCopyPlan();">Copy Plan Text</button>
+					<button type='button' class='btn btn-outline-secondary' onclick="pgShowplanSaveToFile();">Save Plan File</button>
+					<button type='button' class='btn btn-outline-secondary' onclick="pgShowplanOpenExternal();">Open Plan in External Window</button>
+					&emsp;&emsp;&emsp;&emsp;&emsp;
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+
+		// Variable to hold the PEV2 Vue Component (so that we can unmount/destroy it when the Modal is CLOSED
+		var pev2app;
+
+		//---------------------------------------------------------------------------
+		// BEFORE the modal is visible, set some properties...
+		$('#dbx-view-pgShowplan-dialog').on('show.bs.modal', function(e) {
+			var data = $(e.relatedTarget).data();
+
+//			console.log('#dbx-view-pgShowplan-dialog: data: '+data, data);
+
+			$('#dbx-view-pgShowplan-objectName' , this).text(data.objectname);
+			$('#dbx-view-pgShowplan-planContent', this).text(data.tooltip);
+//			$('#dbx-view-pgShowplan-sqlContent' , this).text(pgShowplanGetSql(data.tooltip));
+			pgShowplanGetSql(data.tooltip, true);
+		});
+
+		//---------------------------------------------------------------------------
+		// AFTER the modal is visible, CREATE the PEV2 Vue Component that will show the Postgres Execution Plan
+		// If we do it at 'show.bs.modal' the component will not show/work to 100%
+		$('#dbx-view-pgShowplan-dialog').on('shown.bs.modal', function(e) {
+			var data = $(e.relatedTarget).data();
+
+			// Add/Inject the "html tag" that IS the Vue component
+			// This is done here; Because when we do pev2app.unmount() in: $('#dbx-view-pgShowplan-dialog').on('hidden.bs.modal'...
+			// The DOM is also removed (content under "dbx-view-pgShowplan-content" seems to be removed by: unmount()
+			const dbxViewPgShowplanContent = document.getElementById("dbx-view-pgShowplan-content");
+			dbxViewPgShowplanContent.innerHTML = "<pev2 style='min-height: 55vh;' :plan-source='plan' :plan-query='query' />";
+			
+			const { createApp } = Vue;
+			pev2app = createApp({
+				data() {
+					return {
+						plan: data.tooltip,
+//						query: "-- Sorry, SQL Text was not provided!" // This will be overridden if the Plan holds any SQL Text...
+						query: ""
+					}
+				},
+				created() {
+//					console.log("component.created() QUERY: " + this.$data.query, this.$data.query);
+//					console.log("component.created() XXXXX: " + pev2.Plan.queryText.value);
+				}
+			});
+			pev2app.component("pev2", pev2.Plan);
+			pev2app.mount("#dbx-view-pgShowplan-content");
+
+			// highlight again, since the dialog DOM wasn't visible earlier
+			Prism.highlightAll();
+
+			// Scroll top top (do not seems to work)
+			$('#dbx-view-pgShowplan-dialog').animate({ scrollTop: 0 }, 'slow');
+		});
+		
+		//---------------------------------------------------------------------------
+		// AFTER the modal is CLOSED, Destroy the PEV2 Vue Component that was showing the Postgres Execution Plan
+		$('#dbx-view-pgShowplan-dialog').on('hidden.bs.modal', function(e) {
+			//console.log("#dbx-view-pgShowplan-dialog <<<<<<<<<<<<<<<<<<<< hidden.");
+			pev2app.unmount();
+			pev2app = undefined;
+		});
+
+		//---------------------------------------------------------------------------
+		function pgShowplanGetSql(planText, setFields)
+		{
+			//duration: 4001.386 ms  plan:
+			//Query Text: select pg_sleep(4)
+			//
+			//Result  (cost=0.00..0.03 rows=1 width=4) (actual time=4001.370..4001.372 rows=1 loops=1)
+			//Output: pg_sleep('4'::double precision)
+			//Settings: work_mem = '16MB', effective_io_concurrency = '200', random_page_cost = '1.1', cpu_tuple_cost = '0.03'
+			//Query Identifier: -3416356442043621232
+
+			let sqlText = undefined;
+			let queryId = undefined;
+
+			planText = planText.trim();
+
+			// Remove: duration: 4001.386 ms  plan:
+			planText = planText.replace(/^duration: .* ms\s+plan:$/m, "").trim();
+
+			// Try with JSON
+			try {
+				const json = JSON.parse(planText);
+				if (json.hasOwnProperty('Query Text'))        sqlText = json['Query Text'];
+				if (json.hasOwnProperty('Query Identifier'))  queryId = json['Query Identifier'];
+			} catch (error) {
+				//console.log("pgShowplanGetSql(): Parse JSON error=|" + error + "|.", error);
+				// continue
+			}
+
+			// Fallback on 
+			if (sqlText === undefined)
+			{
+				if (/^Query Text: /.test(planText))
+				{
+					planText = planText.replace(/^Query Text: /, "").trim();
+					// first "empty newline"
+					let endPos = planText.search(/^$/m);
+					sqlText = planText.substring(0, endPos).trim();
+				}
+
+				// Get "Query Identifier"
+				let startPos = planText.search(/Query Identifier: /m);
+				if (startPos !== -1)
+					queryId = planText.substring(startPos + "Query Identifier: ".length).trim();
+			}
+
+			if (sqlText === undefined)
+				sqlText = "-- No 'Query Text' was found in the plan. The SQL Text *may* be available in the above Plan, under 'Query' tab.";
+
+			if (setFields !== undefined && setFields)
+			{
+				$('#dbx-view-pgShowplan-sqlContent').text(sqlText);
+
+				if (queryId === undefined)
+					$('#dbx-view-pgShowplan-objectName').text("--Unknown Query Identifier--");
+				else
+					$('#dbx-view-pgShowplan-objectName').text(queryId);
+			}
+
+			return sqlText;
+		}
+		//---------------------------------------------------------------------------
+		function pgShowplanFormatSql()
+		{
+			let formatOptions = {
+				language: 'postgresql',
+				tabWidth: 4,
+				keywordCase: 'upper',
+				tabulateAlias: true
+			};
+
+			let sqlText = $("#dbx-view-pgShowplan-sqlContent").text();
+
+		 	try {
+				let formattedSqlText = sqlFormatter.format( sqlText, formatOptions );
+				$("#dbx-view-pgShowplan-sqlContent").text(formattedSqlText);
+				Prism.highlightAll();
+			} catch (error) {
+				alert(error);
+			}
+		}
+		//---------------------------------------------------------------------------
+		function submit_post_via_hidden_form(url, params) {
+			var hiddenForm = $("<form target='_blank' method='POST' style='display:none;'></form>").attr({
+				action: url
+			}).appendTo(document.body);
+
+			for (var i in params) {
+				if (params.hasOwnProperty(i)) {
+					$('<input type="hidden" />').attr({
+						name: i,
+						value: params[i]
+					}).appendTo(hiddenForm);
+				}
+			}
+
+			hiddenForm.submit();
+			hiddenForm.remove();
+		}
+		//---------------------------------------------------------------------------
+		function pgShowplanOpenExternal()
+		{
+			let planText = $("#dbx-view-pgShowplan-planContent").text();
+			let currentLocation = window.location.toString();
+
+			// If we are NOT served by a WebServer we might want to "direct" this "somewhere else"
+			let toUrl = '/showplan/postgres';
+			if ( ! currentLocation.toLowerCase().startsWith("http") )
+				toUrl = "http://dbxtune.gorans.org" + toUrl;
+
+			//console.log("currentLocation=|" + currentLocation + "|, toUrl=|" + toUrl + "|");
+			submit_post_via_hidden_form(toUrl,
+			{
+				plan: planText
+			});
+		}
+		//------------------------------------------------------------------------------------------
+		function pgShowplanSaveToFile()
+		{
+			let pgShowplanXmlText = $("#dbx-view-pgShowplan-planContent").text();
+			let pgPlanName        = $("#dbx-view-pgShowplan-objectName").text();
+
+			if (pgPlanName === "")
+				pgPlanName = "name";
+
+			const link = document.createElement("a");
+			const file = new Blob([pgShowplanXmlText], { type: 'text/plain' });
+			link.href = URL.createObjectURL(file);
+			link.download = "pg_execution_plan_" + pgPlanName + ".pgplan";
+			link.click();
+			URL.revokeObjectURL(link.href);
+		}
+		//---------------------------------------------------------------------------
+		function pgShowplanCopySql()
+		{
+			let txt = $("#dbx-view-pgShowplan-sqlContent").text();
+
+//console.log("SQL-TEXT=|"+txt+"|");
+
+			const textArea = document.createElement("textarea");
+			textArea.value = txt;
+			document.body.appendChild(textArea);
+			textArea.select();
+			try {
+				document.execCommand('copy');
+			} catch (err) {
+				alert('Unable to copy to clipboard\n\n' + err);
+			}
+			document.body.removeChild(textArea);
+		}
+		//---------------------------------------------------------------------------
+		function pgShowplanCopyPlan()
+		{
+			let txt = $("#dbx-view-pgShowplan-planContent").text();
+
+//console.log("PLAN-TEXT=|"+txt+"|");
+
+			const textArea = document.createElement("textarea");
+			textArea.value = txt;
+			document.body.appendChild(textArea);
+			textArea.select();
+			try {
+				document.execCommand('copy');
+			} catch (err) {
+				alert('Unable to copy to clipboard\n\n' + err);
+			}
+			document.body.removeChild(textArea);
+		}
+	</script>
+
+
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<!-- Modal: View SQL Server Showplan dialog -->
     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 	<div class='modal fade' id='dbx-view-ssShowplan-dialog' role='dialog' aria-labelledby='dbx-view-ssShowplan-dialog' aria-hidden='true'>
@@ -1131,6 +1445,8 @@ at pc:
 				<div class='modal-footer'>
 					<button type='button' class='btn btn-outline-secondary' onclick="ssShowplanCopySql();">Copy SQL Text</button>
 					<button type='button' class='btn btn-outline-secondary' onclick="ssShowplanCopyXml();">Copy XML Text</button>
+					<button type='button' class='btn btn-outline-secondary' onclick="ssShowplanSaveXmlToFile();">Save XML File</button>
+					<button type='button' class='btn btn-outline-secondary' onclick="ssShowplanOpenExternal();">Open Plan in External Window</button>
 					&emsp;&emsp;&emsp;&emsp;&emsp;
 					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
 				</div>
@@ -1138,6 +1454,48 @@ at pc:
 		</div>
 	</div>
 	<script>
+		//---------------------------------------------------------------------------
+		// BEFORE the modal is visible, set some properties...
+		$('#dbx-view-ssShowplan-dialog').on('show.bs.modal', function(e) {
+			var data = $(e.relatedTarget).data();
+
+//			console.log('#dbx-view-ssShowplan-dialog: data: '+data, data);
+
+			$('#dbx-view-ssShowplan-objectName', this).text(data.objectname);
+			//$('#dbx-view-ssShowplan-content',  this).text(data.tooltip);
+			$('#dbx-view-ssShowplan-content',    this).text("Waiting for the plain to be loaded... Hold on for a few seconds.");
+			$('#dbx-view-ssShowplan-xmlContent', this).text(formatXml(data.tooltip));
+			$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql());
+			ssShowplanGetParameters(); // sets both Compile and Runtime parameters in there fields
+		});
+
+		//---------------------------------------------------------------------------
+		// AFTER the modal is visible, CREATE the PEV2 Vue Component that will show the Postgres Execution Plan
+		// If we do it at 'show.bs.modal' the component will not show/work to 100%
+		$('#dbx-view-ssShowplan-dialog').on('shown.bs.modal', function(e) {
+			var data = $(e.relatedTarget).data();
+
+			console.log('#dbx-view-ssShowplan-dialog: AFTER-SHOW: data: '+data, data);
+
+			// Create and DRAW the Showplan in a deferred mode, otherwise the "lines" between the nodes wont show up in the *correct location*
+//			setTimeout(function() {
+				QP.showPlan(document.getElementById("dbx-view-ssShowplan-content"), data.tooltip);
+//			}, 500);
+
+			// highlight again, since the dialog DOM wasn't visible earlier
+			Prism.highlightAll();
+
+			// Scroll top top (do not seems to work)
+			$('#dbx-view-ssShowplan-dialog').animate({ scrollTop: 0 }, 'slow');
+
+//			// If it takes a LONG time to load... the lines are NOT VISIBLE, so lets draw them again!
+//			$('#dbx-view-ssShowplan-dialog').on('loaded.bs.modal', function(e) {
+//				setTimeout(function() {
+//					QP.drawLines(document.getElementById("dbx-view-ssShowplan-content"));
+//				}, 500);
+//			});
+		});
+			
 		//------------------------------------------------------------------------------------------
 		function ssShowplanFormatSql()
 		{
@@ -1157,6 +1515,41 @@ at pc:
 			} catch (error) {
 				alert(error);
 			}
+		}
+		//---------------------------------------------------------------------------
+		function ssShowplanOpenExternal()
+		{
+			let planText = $("#dbx-view-ssShowplan-xmlContent").text();
+			let currentLocation = window.location.toString();
+
+			// If we are NOT served by a WebServer we might want to "direct" this "somewhere else"
+			let toUrl = '/showplan/sqlserver';
+			if ( ! currentLocation.toLowerCase().startsWith("http") )
+				toUrl = "http://dbxtune.gorans.org" + toUrl;
+
+			//console.log("currentLocation=|" + currentLocation + "|, toUrl=|" + toUrl + "|");
+			submit_post_via_hidden_form(toUrl,
+			{
+				plan: planText
+			});
+		}
+		//------------------------------------------------------------------------------------------
+		function ssShowplanSaveXmlToFile()
+		{
+			let ssShowplanXmlText = $("#dbx-view-ssShowplan-xmlContent").text();
+			let ssPlanName        = $("#dbx-view-ssShowplan-objectName").text();
+
+			if (ssPlanName === "")
+				ssPlanName = "name";
+			else
+				ssPlanName = "for_QueryPlanHash_" + ssPlanName;
+
+			const link = document.createElement("a");
+			const file = new Blob([ssShowplanXmlText], { type: 'text/plain' });
+			link.href = URL.createObjectURL(file);
+			link.download = "showplan_" + ssPlanName + ".xml.sqlplan";
+			link.click();
+			URL.revokeObjectURL(link.href);
 		}
 		//------------------------------------------------------------------------------------------
 		function ssShowplanCopyXml()
@@ -1186,10 +1579,13 @@ at pc:
 			let xmlDoc = $.parseXML(ssShowplanXmlText);
 //			let sqlText = $(xmlDoc).find("StmtSimple").attr("StatementText");
 
-			let sqlText = "";
-			let sqlTextArr = [];
+			let sqlText          = "";
+			let sqlTextArr       = [];
+			let queryPlanHash    = "";
+			let queryPlanHashArr = [];
 			$(xmlDoc).find("StmtSimple").each(function(i,e) {
-				sqlTextArr.push($(e).attr("StatementText"));
+				sqlTextArr      .push($(e).attr("StatementText"));
+				queryPlanHashArr.push($(e).attr("QueryPlanHash"));
 			});
 
 //			if (sqlTextArr.length === 0)
@@ -1209,6 +1605,18 @@ at pc:
 					sqlText += "\n";
 				}
 			}
+			
+			// Set the ObjectName...
+			if (queryPlanHashArr.length > 0)
+			{
+				queryPlanHash = queryPlanHashArr[0];
+				
+				if ( $('#dbx-view-ssShowplan-objectName').text() === "" )
+				{
+					$('#dbx-view-ssShowplan-objectName').text("QueryPlanHash=" + queryPlanHash);
+				}
+			}
+			
 			return sqlText;
 		}
 		//------------------------------------------------------------------------------------------
@@ -1383,34 +1791,6 @@ console.log("SQLTEXT=|"+sqlText+"|");
 		$('#dbx-view-lockTable-dialog').animate({ scrollTop: 0 }, 'slow');
 	});
 
-	$('#dbx-view-ssShowplan-dialog').on('show.bs.modal', function(e) {
-		var data = $(e.relatedTarget).data();
-
-		console.log('#dbx-view-ssShowplan-dialog: data: '+data, data);
-
-		$('#dbx-view-ssShowplan-objectName', this).text(data.objectname);
-		//$('#dbx-view-ssShowplan-content',  this).text(data.tooltip);
-		$('#dbx-view-ssShowplan-xmlContent', this).text(formatXml(data.tooltip));
-		$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql());
-		ssShowplanGetParameters(); // sets both Compile and Runtime parameters in there fields
-
-		// Create and DRAW thw Showplan in a deferred mode, otherwise the "lines" between the nodes wont show up in the *correct location*
-		setTimeout(function() {
-			QP.showPlan(document.getElementById("dbx-view-ssShowplan-content"), data.tooltip);
-		}, 500);
-
-		// highlight again, since the dialog DOM wasn't visible earlier
-		Prism.highlightAll();
-
-		// Scroll top top (do not seems to work)
-		$('#dbx-view-ssShowplan-dialog').animate({ scrollTop: 0 }, 'slow');
-	});
-	// If it takes a LONG time to load... the lines are NOT VISIBLE, so lets draw them again!
-	$('#dbx-view-ssShowplan-dialog').on('loaded.bs.modal', function(e) {
-		setTimeout(function() {
-			QP.drawLines(document.getElementById("dbx-view-ssShowplan-content"));
-		}, 500);
-	});
 
 
 
@@ -2082,10 +2462,14 @@ console.log("SQLTEXT=|"+sqlText+"|");
 						_historyLoadDeferredTimerId = setTimeout(function() 
 						{
 							dbxTuneGetHistoryStatements( startTime, endTime );
+
+							// it looks like setting the "timeline marker", takes a long time...
+							// SO for now the method: only set the "timeline marker" for the elements which is Visible in the Viewport
 							dbxTuneSetTimeLineMarkerForAllGraphs(momentTs, value);
 
 							// Set focus so we can do: Ctrl + left/right
 							dbxHistoryTimelineSlider.focus();
+
 						}, 300);
 					});
 

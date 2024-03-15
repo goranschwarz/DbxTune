@@ -211,7 +211,7 @@ public abstract class SqlServerConfigText
 			else
 			{
 				sql += "" +
-					"exec sys.sp_MSforeachdb 'select convert(varchar(60),''?'') as dbname, * from sys.database_scoped_configurations' \n" +
+					"exec sys.sp_MSforeachdb 'select convert(varchar(60),''?'') as dbname, * from [?].sys.database_scoped_configurations' \n" +
 					"go \n" +
 					"";
 			}

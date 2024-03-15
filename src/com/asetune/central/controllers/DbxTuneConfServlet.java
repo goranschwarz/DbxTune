@@ -26,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -69,8 +71,31 @@ public class DbxTuneConfServlet extends HttpServlet
 //		System.out.println("DbxTuneConfServlet: type   = '"+inputType+"'.");
 //		System.out.println("DbxTuneConfServlet: method = '"+inputMethod+"'.");
 
+		// Check for mandatory parameters
 		if (StringUtil.isNullOrBlank(inputName))
-			throw new ServletException("No input parameter named 'name'.");
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Could not find mandatory parameter 'name'.");
+			return;
+		}
+
+		// CHECK: that the input file really INSIDE the LOG_DIR and not outside (for example /tmp/filename or /var/log/message)
+		Path logDirPath   = Paths.get(CONF_DIR);
+		Path inputPath    = Paths.get(CONF_DIR + "/" + inputName);
+		Path relativePath = logDirPath.relativize(inputPath);
+		if (relativePath.startsWith(".."))
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputPath + "' must be located in the CONF dir '" + logDirPath + "'.");
+			return;
+		}
+	
+		// Check if file EXISTS
+		File inputFile = new File(CONF_DIR + "/" + inputName);
+		if ( ! inputFile.exists() )
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputFile + "' doesn't exist.");
+			return;
+		}
+
 
 		if ("plain".equalsIgnoreCase(inputMethod))
 		{
@@ -210,7 +235,6 @@ public class DbxTuneConfServlet extends HttpServlet
 		out.println("<head> ");
 		out.println("<title>"+inputName+"</title> ");
 
-//		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.js'></script>");
 		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");

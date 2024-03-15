@@ -75,9 +75,7 @@ extends HttpServlet
 		out.println("	<!-- <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css' integrity='sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm' crossorigin='anonymous'> --> ");
 		out.println("	<!-- Custom styles for this template --> ");
 		out.println("	<!-- <link href='/scripts/bootstrap/css/navbar-top-fixed.css' rel='stylesheet'> --> ");
-//		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.min.js'></script> ");
 		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.min.js'></script> ");
-//		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.11.3/jquery-ui.min.js'></script> ");
 		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.13.2/jquery-ui.min.js'></script> ");
 		out.println("	 ");
 		out.println("	<!-- ");
@@ -105,7 +103,6 @@ extends HttpServlet
 		out.println("	<script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: DateRangePicker --> ");
-//		out.println("	<script type='text/javascript' src='/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.js'></script> ");
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap - TABLE --> ");
@@ -116,7 +113,6 @@ extends HttpServlet
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
-//		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js'></script> ");
 		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!--  ");
@@ -125,7 +121,6 @@ extends HttpServlet
 		out.println("	  ======================================================================= ");
 		out.println("	--> ");
 		out.println("	<!-- CSS: jqueri-ui --> ");
-//		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css'> ");
 		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DbxCentral --> ");
@@ -138,7 +133,6 @@ extends HttpServlet
 		out.println("	<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DateRangePicker --> ");
-//		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-daterangepicker/2.1.27/daterangepicker.css'> ");
 		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: Font Awsome --> ");
@@ -153,7 +147,6 @@ extends HttpServlet
 		out.println("	<!-- <link rel='stylesheet' href='https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css'> --> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
-//		out.println("	<link rel='stylesheet' href='/scripts/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css'> ");
 		out.println("	<link rel='stylesheet' href='/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.css'> ");
 		out.println(" ");
 

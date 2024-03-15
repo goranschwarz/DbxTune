@@ -120,7 +120,6 @@ function getParameter(key, defaultValue)
     =======================================================================
   -->
   <!-- CSS: jqueri-ui -->
-  <!--  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">-->
   <!--
   <link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
   -->
@@ -286,6 +285,7 @@ function getParameter(key, defaultValue)
 					<th data-field="displayName"                     data-filter-control="input" data-sortable="true">Display Name</th>
 					<th data-field="cmName"                          data-filter-control="input" data-sortable="true">CM Name</th>
 					<th data-field="groupName"                       data-filter-control="input" data-sortable="true">Group Name</th>
+					<th data-field="isCmEnabled"                     data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Is CM Enabled</th>
 	<!--			<th data-field="isAlarmEnabled"                  data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Is Alarms Enabled</th>-->
 					<th data-field="hasSystemAlarms"                 data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Has System Alarms</th>
 					<th data-field="isSystemAlarmsEnabled"           data-filter-control="input" data-sortable="true" data-formatter="formatBoolean">Is System Alarms Enabled</th>
@@ -420,7 +420,7 @@ function getParameter(key, defaultValue)
 							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
 							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 							<th data-field="datatype"       data-filter-control="input">datatype</th>
-							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="description"    data-filter-control="input">description</th>
 							<th data-field="property"       data-filter-control="input">property</th>
 						</tr>
 					</thead>
@@ -444,7 +444,7 @@ function getParameter(key, defaultValue)
 							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
 							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 							<th data-field="datatype"       data-filter-control="input">datatype</th>
-							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="description"    data-filter-control="input">description</th>
 							<th data-field="property"       data-filter-control="input">property</th>
 						</tr>
 					</thead>
@@ -469,7 +469,7 @@ function getParameter(key, defaultValue)
 								<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
 								<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 								<th data-field="datatype"       data-filter-control="input">datatype</th>
-								<th data-field="desciption"     data-filter-control="input">desciption</th>
+								<th data-field="description"    data-filter-control="input">description</th>
 								<th data-field="property"       data-filter-control="input">property</th>
 								<th data-field="validatorName"  data-filter-control="input">validatorName</th>
 							</tr>
@@ -491,7 +491,7 @@ function getParameter(key, defaultValue)
 		<!--				  <th data-field="isAlarmEnabled"       data-filter-control="input" data-formatter="formatBoolean">isAlarmEnabled</th>-->
 		<!--				  <th data-field="timeRangeCron"        data-filter-control="input" data-formatter="formatTimeRangeCron">timeRangeCron</th>-->
 		<!--				  <th data-field="timeRangeDescrption"  data-filter-control="input">timeRangeDescrption</th>-->
-						<th data-field="desciption"           data-filter-control="input">desciption</th>
+						<th data-field="description"          data-filter-control="input">description</th>
 						</tr>
 					</thead>
 					</table>
@@ -513,7 +513,7 @@ function getParameter(key, defaultValue)
 						<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
 						<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 						<th data-field="datatype"       data-filter-control="input">datatype</th>
-						<th data-field="desciption"     data-filter-control="input">desciption</th>
+						<th data-field="description"    data-filter-control="input">description</th>
 						<th data-field="property"       data-filter-control="input">property</th>
 						<th data-field="validatorName"  data-filter-control="input">validatorName</th>
 						</tr>
@@ -535,10 +535,10 @@ function getParameter(key, defaultValue)
 				id="alarmWritersTable"
 				class="table table-sm text-nowrap"
 				data-toggle="table"
-<!--				data-filtering="true"-->
-<!--				data-filter-control="true"-->
 				data-height="460"
 			>
+<!--				data-filtering="true"-->
+<!--				data-filter-control="true"-->
 			<thead>
 <!--
 				<tr>
@@ -550,6 +550,7 @@ function getParameter(key, defaultValue)
 -->
 				<tr>
 					<th data-field="name"         >Name</th>
+					<th data-field="isActive"     >Active</th>
 					<th data-field="description"  >Description</th>
 					<th data-field="className"    >Class Name</th>
 				</tr>
@@ -585,7 +586,7 @@ function getParameter(key, defaultValue)
 							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
 							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 							<th data-field="datatype"       data-filter-control="input">datatype</th>
-							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="description"    data-filter-control="input">description</th>
 							<th data-field="property"       data-filter-control="input">property</th>
 						</tr>
 					</thead>
@@ -610,7 +611,7 @@ function getParameter(key, defaultValue)
 							<th data-field="defaultValue"   data-filter-control="input">defaultValue</th>
 							<th data-field="isDefaultValue" data-filter-control="input" data-formatter="formatBoolean">isDefaultValue</th>
 							<th data-field="datatype"       data-filter-control="input">datatype</th>
-							<th data-field="desciption"     data-filter-control="input">desciption</th>
+							<th data-field="description"    data-filter-control="input">description</th>
 							<th data-field="property"       data-filter-control="input">property</th>
 						</tr>
 					</thead>
@@ -637,7 +638,7 @@ function getParameter(key, defaultValue)
 
 <style type='text/css'>
 .table tbody tr.highlight td {
-	background-color: gold;
+	background-color: rgb(204, 238, 255);
 }	
 </style>
 
@@ -1188,7 +1189,7 @@ function getParameter(key, defaultValue)
 					<tr> <td></td>  <td></td> </tr>
 					<tr> <td></td>  <td></td> </tr>
 					<tr> <td nowrap><b>Alarm Name:        </b></td>  <td id="dbx-cfg-alarm-f-name"         ></td> </tr>
-					<tr> <td nowrap><b>Alarm Description: </b></td>  <td id="dbx-cfg-alarm-f-desciption"   ></td> </tr>
+					<tr> <td nowrap><b>Alarm Description: </b></td>  <td id="dbx-cfg-alarm-f-description"  ></td> </tr>
 				</table>
 				<br>
 
@@ -1344,7 +1345,7 @@ console.log("response:", response);
 			$("#dbx-cfg-alarm-f-cmDisplayName"      ).text(_lastClickedCmRow.displayName);
 			$("#dbx-cfg-alarm-f-cmName"             ).text(_lastClickedCmRow.cmName);
 			$("#dbx-cfg-alarm-f-name"               ).text(element.name);
-			$("#dbx-cfg-alarm-f-desciption"         ).text(element.desciption);
+			$("#dbx-cfg-alarm-f-description"        ).text(element.description);
 			
 			$("#dbx-cfg-alarm-f-isAlarmEnabled"     ).prop( "checked", element.isAlarmEnabled);
 			$("#dbx-cfg-alarm-f-timeRangeCron"      ).val(element.timeRangeCron);
@@ -1384,7 +1385,7 @@ console.log("response:", response);
 					<tr> <td></td>  <td></td> </tr>
 					<tr> <td></td>  <td><hr hr width="100%" /></td> </tr>
 					<tr> <td nowrap><b>Prop Name:         </b></td>  <td id="dbx-cfg-prop-f-name"         ></td> </tr>
-					<tr> <td nowrap><b>Prop Description:  </b></td>  <td id="dbx-cfg-prop-f-desciption"   ></td> </tr>
+					<tr> <td nowrap><b>Prop Description:  </b></td>  <td id="dbx-cfg-prop-f-description"  ></td> </tr>
 					<tr> <td></td>  <td></td> </tr>
 					<tr> <td></td>  <td><hr hr width="100%" /></td> </tr>
 					<tr> <td nowrap><b>Property to change:</b></td>  <td><code><span id="dbx-cfg-prop-f-property"></span></code></td> </tr>
@@ -1600,7 +1601,7 @@ console.log("response:", response);
 			$("#dbx-cfg-prop-f-cmName"       ).text(_lastClickedCmRow.cmName);
 
 			$("#dbx-cfg-prop-f-name"         ).text(element.name);
-			$("#dbx-cfg-prop-f-desciption"   ).html(element.desciption);
+			$("#dbx-cfg-prop-f-description"  ).html(element.description);
 
 			$("#dbx-cfg-prop-f-property"     ).text(element.property);
 			$("#dbx-cfg-prop-f-default"      ).text(element.defaultValue);

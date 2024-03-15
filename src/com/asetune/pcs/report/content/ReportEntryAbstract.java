@@ -716,7 +716,7 @@ implements IReportEntry
 
 			String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Column(s) description...", htmlContent);
 			
-			sb.append( msOutlookAlternateText(showHideDiv, "Column Desciption", "") );
+			sb.append( msOutlookAlternateText(showHideDiv, "Column Description", "") );
 		}
 
 		if (addSqlText)

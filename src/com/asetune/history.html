@@ -66,6 +66,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
             Note: This is still in development...</LI>
 		<LI>Added extra "Graph Properties", so individual graphs can set "sampleType" to other than "AUTO" (for example Disk Space Available can have MIN_OVER_SAMPLES)</LI>
 		<LI>MonitorIoLinux -- In RHEL 9, there are new column in 'iostat' </LI>
+		<LI>NO GUI Mode: -u|--sshUser has an "extended format "userName:userNameToLookup" where 'userNameToLookup' is the key in the ~.passwd.enc file (this so we can have different passwords on a DBMS user and a OS User)</LI>
+		<LI>Configuration File changes (if the underlying file change) now also supports change notifications if the config file is a soft link</LI>
+		<LI>Configuration command line utility to "create" a encrypted property field from cmdline (so we can paste the value into a property file manually)</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -105,11 +108,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
 	 			<li>To version 2.1.214          Component: H2 Database</li>
-<!--   			<li>To version 9.4.53           Component: Jetty Webserver</li> -->
- 	  			<li>To version 9.4.51           Component: Jetty Webserver</li>
+ 	  			<li>To version 9.4.54           Component: Jetty Webserver</li>
 	 			<li>To version 12.5.0 snapshot  Component: MS SQL Server JDBC Driver</li>
 	 			<li>To version 8.2.0            Component: MySQL JDBC Driver</li>
-	 			<li>To version 42.6.0           Component: Postgres JDBC Driver</li>
+	 			<li>To version 42.7.2           Component: Postgres JDBC Driver</li>
 
 	 			<li>To version 0.2.7            Component: Jsch (replacing ganymed-ssh2)</li>
 
@@ -139,7 +141,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>Lock Table</li>
 				<li>Blocking Information</li>
 				<li>Sybase ASE -- Showplan as a Text Representation</li>
-				<li>SQL Server -- Showplan as a HTMP/GUI plan, with SQL Statement, Compile/Runtime Parameters, The XML plan itself</li>
+				<li>SQL Server -- Showplan as a HTML/GUI plan, with SQL Statement, Compile/Runtime Parameters, The XML plan itself</li>
+				<li>Postgres   -- Showplan as a HTML/GUI plan, with SQL Statement, The JSON/Text plan itself</li>
 			</ul> 
 		</LI>
 		<LI>Historical view of Active SQL Statements (you can view executed SQL Statements from a History View, by clicking on the "History" button or by clicking on a "line" on any graphs), historical SQL Statements are saved for 60 days (can be configured with <code>CentralPcsJdbcCleaner.history.cm.keep.days=##</code></LI>
@@ -153,6 +156,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Local Metrics: After startup, some alarms are diabled for 5 minutes (during restart, there will be "heavy load" due to all DbxTune collectors starts at the same time.</LI>
 		<LI>Added "Exception handler" to intercept some Exceptions and restart the server if they happens (like OutOfMemoryError and H2 'The database has been closed')</LI>
 		<LI>PCS JDBC Cleaner -- added some more trace statements to detect what oldest date that will be deleted</LI>
+		<LI>First steps on remote configure a collector, for now just 'view' a collector. Click on the server name and choose 'View/Change Collector Configuration'</LI>
+		<LI>In History view: Show a spinning bussy icon when fetching old Active Statements</LI>
+		<LI>In History view: Also better performance (postponing update of the "time bar" within graps)</LI>
+		<LI>removed some file access with relative path name, and list file options for some directories</LI>
+		<LI>You must be logged in to download recording files, and to remove Daily Summary Report files</LI>
+		<LI>User Defined Charts got some new parameters, and also reload some parameters (like SQL) if the underlying file was changed</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -169,6 +178,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added column 'LastKnownSqlText' -- Holds the last known SQL Text executed by this SPID, KPID and BatchId, NOTE: Recording Must be enabled.</li>
 			<li>Added column 'TranName' -- The transaction name. (from sysprocesses.tran_name</li>
 			<li>Added column 'ConnectionTime' -- When did the client login to ASE</li>
+			<li>BlockingOthersMaxTimeInSec:AlarmEventBlockingLockAlarm -- Added some more details "Process Activity for SPID", "Process Activity for BLOCKED/WAITING SPI" and "Last Known SQL Text for BLOCKED/WAITING SPID"</li>
+		</ul>
+		</LI>
+
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmOpenDatabases - tab: Databases</b><br>
+		<ul>
+			<li>OldestTranInSeconds:AlarmEventLongRunningTransaction -- Added som more details "Last Known SQL Text for 'Oldest Open Tran' SPID"</li>
 		</ul>
 		</LI>
 
@@ -179,6 +198,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>Added column 'HasLastKnownSqlText' -- Has values in column 'LastKnownSqlText'</li>
 			<li>CmProcessActivity Added column 'LastKnownSqlText' -- Holds the last known SQL Text executed by this SPID, KPID and BatchId, NOTE: Recording Must be enabled.</li>
+			<li>Added local Setting 'Get Last Known SQL Text (all)'</li>
 		</ul>
 		</LI>
 
@@ -189,6 +209,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>AlarmEventBlockingLockAlarm, attaches information from 'CmProcessActivity' about "oldestOpenTranSpid"</li>
 			<li>AlarmEventLongRunningTransaction, attaches information from 'CmProcessActivity' about "oldestOpenTranSpid"</li>
+			<li>LockWaits:AlarmEventBlockingLockAlarm -- Added some more details "Last Known SQL Text for 'Oldest Open Tran' SPID"</li>
+			<li>oldestOpenTranInSec:AlarmEventLongRunningTransaction -- Added some more details "Last Known SQL Text for 'Oldest Open Tran' SPID"</li>
 		</ul>
 		</LI>
 
@@ -207,7 +229,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 		<b>SQL Capture</b><br>
 		<ul>
-			<li>xxxx</li>
+			<li>Save last 20 exeecuted SQL Text for every SPID, this so we can grab "Last Known SQL Text" in various CM's</li>
 		</ul>
 		</LI>
 
@@ -300,12 +322,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>DBMS Configuration </b> - (if windows) Check: Windows Power Plan (this is done via OS Command 'powercfg /list')</LI>
 		<LI><b>DBMS Configuration </b> - (if windows) Check if AllocationUnitSize is smaller than 64K (this is done via OS Command 'powershell "Get-Volume | Select-Object DriveLetter, AllocationUnitSize, FileSystemType, FileSystemLabel | ConvertTo-Json"')</LI>
 		<LI><b>DBMS Configuration </b> - Added 'sp_blitz' -- which is a Stored Proc from Brent Ozar that does various "healthchecks" on the server. (it's only executed if it's installed in the SQL Server)</LI>
+		<LI><b>DBMS Configuration </b> - Scoped configurations was only comming from current database (master)</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>
 		<LI><b>CmActiveStatements   </b> - Rewrote a sub select into a join (for better performance)</LI>
 		<LI><b>CmActiveStatements   </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 		<LI><b>CmActiveStatements   </b> - added new columns 'memory_grant_requested', 'memory_grant_wait_time_ms', 'requested_memory_kb', 'granted_memory_kb', 'used_memory_kb', 'used_memory_pct'</LI>
+		<LI><b>CmActiveStatements   </b> - Changed "multiSampled" from 'StartTime' to 'StartTime' AND 'StmntStart' (that is if we are in a procedure)</LI>
+		<LI><b>CmActiveStatements   </b> - ImBlockingOthersMaxTimeInSec:AlarmEventBlockingLockAlarm added "skip" capability for columns: 'login_name', 'HOST_NAME', 'database_name', 'program_name', 'ProcName' -- default is to skip 'program_name' with "Report Server"</LI>
+		<LI><b>CmActiveStatements   </b> - HoldingLocksWhileWaitForClientInputInSec:AlarmEventHoldingLocksWhileWaitForClientInput added "skip" capability for columns: 'login_name', 'HOST_NAME', 'database_name', 'program_name', 'ProcName' -- default is to skip 'program_name' with "Report Server"</LI>
+		<LI><b>CmActiveStatements   </b> - Mark "dop" where dop > 1 with a green color, just for easier spotting if it uses Paralell workers (this is also changed in DbxCentral)</LI>
 		
 		<LI><b>CmAlwaysOn           </b> - Performance enhancement</LI>
 
@@ -378,6 +405,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>PCS - On Database Rollover, If we have seen any Deadlocks... extract them using 'sp_BlitzLock' and store them in the recording.</li>
 			<li>WaitStats -- Chart "Wait types for..." Instead of getting only CXPACKET, CXCONSUMER I now get all starting with CX*</li>
 			<li>in the "DB Information", If collation is not the same as tempdb, mark it as red</li>
+			<li>Fixed bug that skipped the "summary" section for ALL databases that has Query Store Enabled</li>
 		</ul>
 		</LI>
 	</UL>
@@ -398,8 +426,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - The alarms 'StatementExecInSec' and 'OpenXactInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
 		<LI><b>CmActiveStatements   </b> - The alarms 'OpenXactInSec' new threshold 1h (previously 30 minutes)</LI>
 		<LI><b>CmActiveStatements   </b> - added column 'pid_advlock_count' -- How many Advisory Exclusive locks does this PID hold</LI>
+		<LI><b>CmActiveStatements   </b> - added column 'multiSampled' -- if 'query_start' has not changed between two samples, markt the row as 'multiSampled'</LI>
+		<LI><b>CmActiveStatements   </b> - new Column 'has_query_plan', 'query_plan' -- The 'query_plan' we get from CmErrorlog and the "auto_explain" functionality</LI>
 
-		<LI><b>CmErrorLog           </b> - new Collector -- Look at the Postgres errorlog (also sends alarms for: PgChecksumFailure, PgDeadlock, PgInsufficientResources, PgInternalError, PgSystemError</LI>
+		<LI><b>CmErrorLog           </b> - new Collector -- Look at the Postgres errorlog (also sends alarms for: PgChecksumFailure, PgDeadlock, PgInsufficientResources, PgInternalError, PgSystemError) and if "auto_explain" is enabled, saves Execution Plans, which can be used by CmActiveStatements</LI>
 		
 		<LI><b>CmPgActivity         </b> - if property 'CmPgActivity.sample.sslInfo=true' is set (default is false), then show new columns: ssl, ssl_version, ssl_cipher, ssl_bits, ssl_client_dn, sss_client_serial, sss_issuer_dn</LI>
 		<LI><b>CmPgActivity         </b> - The alarms 'StatementExecInSec' will no longer alarm if the column 'backend_type' is 'walsender'</LI>
@@ -414,6 +444,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPgBufferCacheACnt  </b> - new Collector -- Buffer Cache Clock-sweep access count statistics. (from pg_buffercache_usage_counts() function)</LI>
 
 		<LI><b>CmPgDatabase         </b> - Alarm 'PgChecksumFailure' if 'checksum_failures' has accured. (and in the GUI also light them up as RED cells)</LI>
+		<LI><b>CmPgDatabase         </b> - Only get databases size if we are authorized to access the database (this is mostly if we are monitoring with a user that do not have access to all databases, like in "the cloud")</LI>
 
 		<LI><b>CmPgPidWait          </b> - new Collector -- What are the PID's waiting for (uses extension pg_wait_sampling)</LI>
 		<LI><b>CmPgSrvWait          </b> - new Collector -- What are the server waiting for (uses extension pg_wait_sampling)</LI>
@@ -425,10 +456,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPgProgIndex        </b> - new Collector -- Whenever CREATE INDEX or REINDEX is running, the pg_stat_progress_create_index view will contain one row for each backend that is currently creating indexes</LI>
 		<LI><b>CmPgProgVacuum       </b> - new Collector -- Whenever VACUUM is running, the pg_stat_progress_vacuum view will contain one row for each backend (including autovacuum worker processes) that is currently vacuuming.  Progress for VACUUM FULL commands is reported via pg_stat_progress_cluster because both VACUUM FULL and CLUSTER rewrite the table, while regular VACUUM only modifies it in place</LI>
 
-		<LI><b>CmPgWall      </b> - new chart: WAL KB Written per Second</LI>
-		<LI><b>CmPgWall      </b> - new chart: WAL Buffer was Full Writes per Second</LI>
+		<LI><b>CmPgReplication      </b> - Changed the "tab name" from 'Replication' to 'Rep Stats', and created a new Group Tab to hold every CM with Replication</LI>
 
-		<LI><b>CmXxxx      </b> - </LI>
+		<LI><b>CmPgRepSlots         </b> - New CM to check 'pg_replication_slots', which raises AlarmEventPgReplicationLag when 'lag_kb' is greater than 100MB (config with: CmPgRepSlots.alarm.system.if.lag_kb.gt)</LI>
+
+		<LI><b>CmPgWalReceiver      </b> - New CM to check 'pg_stat_wal_receiver' </LI>
+
+		<LI><b>CmPgWall             </b> - new chart: WAL KB Written per Second</LI>
+		<LI><b>CmPgWall             </b> - new chart: WAL Buffer was Full Writes per Second</LI>
+
 		<LI><b>CmXxxx      </b> - </LI>
 		<LI><b>CmXxxx      </b> - </LI>
 
@@ -443,11 +479,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>DbmsObjectIdCache    </b> - Enhancement when getting data for missing entries</LI> 
 
 		<br>
-		<LI><b>DBMS Configuration   </b> - Added some Text config: 'DB Info', 'HBA Conf', 'Extentions', 'Servers'</LI> 
+		<LI><b>DBMS Configuration   </b> - Added some Text config: 'DB Info', 'HBA Conf', 'Extentions', 'Servers', 'pg_config'</LI> 
 		<LI><b>DBMS Configuration   </b> - Warn about 'fsync=off'</LI> 
+		<LI><b>DBMS Configuration   </b> - Warn about 'autovacuum=off'</LI> 
 
 		<br>
-		<LI><b>DDL Lookup/Store     </b> - xxx</LI> 
+		<LI><b>DDL Lookup/Store     </b> - storage of Execution Plans (sent by CmErrorLog if "auto_explain" is enabled)</LI> 
 
 		<br>
 		<LI><b>Daily Summary Report </b> - In the 'Recording info', Print if the DBMS is in 'Recovery/Standby Mode' or in 'Normal (r/w) Mode'</LI>
@@ -495,6 +532,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Changes for SQL Server JDBC Driver that supports message handler (new PR https://github.com/microsoft/mssql-jdbc/pull/2251 hopefully soon merged)<br>
 		    This enables us to see messages from long running statement that sends feedback messages (like <code>BACKUP DATABASE</code> or <code>RAISERROR ('...', 0, 1) WITH NOWAIT</code>)
 		</LI>
+		<LI>For SQL Server get more details on table tooltip (added: In-Row data size, Index Size, LOB Size... so a bit more granular)</LI>
+		<LI>Code Completion (for Postgres do not add *known* schema names, it just clutters the code)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

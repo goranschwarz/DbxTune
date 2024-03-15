@@ -314,13 +314,13 @@ extends JDialog
 			this.desc       = desc;
 		}
 
-		public int    getJdbcNumber() { return jdbcNumber; }
-		public String getDesciption() { return desc; }
+		public int    getJdbcNumber()  { return jdbcNumber; }
+		public String getDescription() { return desc; }
 
 		@Override
 		public String toString()
 		{
-			return "<html>" + name() + " - <font color=\"green\">" + getDesciption() + "</font></html>";
+			return "<html>" + name() + " - <font color=\"green\">" + getDescription() + "</font></html>";
 		}
 	};
 	

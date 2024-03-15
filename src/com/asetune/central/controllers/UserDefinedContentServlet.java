@@ -69,10 +69,12 @@ extends HttpServlet
 		}
 
 		// Get the User Defined Content object, which is responsible for producing the content
-		IUserDefinedChart udc = UserDefinedChartManager.getInstance().getChart(name, srvName);
+//		IUserDefinedChart udc = UserDefinedChartManager.getInstance().getChart(name, srvName);
+		IUserDefinedChart udc = UserDefinedChartManager.getInstance().getChart(name);
 		if (udc == null)
 		{
-			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No User Defined Content with the name='" + name + "', srvName='" + srvName + "'.");
+//			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No User Defined Content with the name='" + name + "', srvName='" + srvName + "'.");
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No User Defined Content with the name='" + name + "'.");
 			return;
 		}
 
@@ -129,25 +131,54 @@ extends HttpServlet
 ////		out.println("  .topright { position: absolute; top: 8px; right: 16px; font-size: 14px; }"); // topright did not work with bootstrap (and navigation bar) 
 //		out.println("</style>");
 
+		out.println("<style type='text/css'>");
+		out.println("    /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ ");
+		out.println("    [data-tooltip] { ");
+		out.println("        position: relative; ");
+		out.println("    } ");
+		out.println();
+		out.println("    /* 'tooltip' CSS settings for SQL Text... */ ");
+		out.println("    [data-tooltip]:hover::before { ");
+		out.println("        content: attr(data-tooltip);		 ");
+//		out.println("        content: 'Click to Open Text Dialog...'; ");
+		out.println("        position: absolute; ");
+		out.println("        z-index: 103; ");
+		out.println("        top: 20px; ");
+		out.println("        left: 30px; ");
+		out.println("        width: 1000px; ");
+		out.println("        height: 900px; ");
+//		out.println("        width: 220px; ");
+		out.println("        padding: 10px; ");
+		out.println("        background: #454545; ");
+		out.println("        color: #fff; ");
+		out.println("        font-size: 11px; ");
+		out.println("        font-family: Courier; ");
+		out.println("        white-space: pre-wrap; ");
+		out.println("    } ");
+		out.println("    [data-title]:hover::after { ");
+		out.println("        content: ''; ");
+		out.println("        position: absolute; ");
+		out.println("        bottom: -12px; ");
+		out.println("        left: 8px; ");
+		out.println("        border: 8px solid transparent; ");
+		out.println("        border-bottom: 8px solid #000; ");
+		out.println("    } ");
+		out.println();
+//		out.println("    table, th, td { ");
+//		out.println("    parameter-description, parameter-description th, parameter-description td { ");
+		out.println("    table.parameter-description th, ");
+		out.println("    table.parameter-description td { ");
+		out.println("        border: 1px solid black; ");
+		out.println("        border-collapse: collapse; ");
+		out.println("        padding: 5px; ");
+		out.println("    } ");
+		out.println("</style>");
+
 		out.println("</head>");
 		
 		out.println("<body onload='updateLastUpdatedClock()'>");
 
 		out.println(HtmlStatic.getUserDefinedContentNavbar());
-
-		out.println("<div class='container-fluid'>");
-
-//		String ver = "Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
-//		out.println("<h1>DbxTune - Central - " + username + "@" + hostname + "</h1>");
-//		out.println("<div class='topright'>"+ver+"</div>");
-
-//		out.println("<p>");
-		out.println("Page loaded: <span id='last-update-ts'>" + (new Timestamp(System.currentTimeMillis())) + "</span>, ");
-		if (refresh > 0)
-			out.println("This page will 'auto-refresh' every " + refresh + " second. This can be changed with URL parameter 'refresh=##' (where ## is seconds)<br>" );
-		else
-			out.println("To 'auto-refresh' this page every ## second. This can be changed with URL parameter 'refresh=##' (where ## is seconds)<br>" );
-//		out.println("</p>");
 
 		out.println("<script>");
 		out.println("function updateLastUpdatedClock() {                   ");
@@ -165,6 +196,26 @@ extends HttpServlet
 		{
 			out.println("<script type='text/javascript' src='" + scriptLocation + "'></script>");
 		}
+
+		out.println("<div class='container-fluid'>");
+
+//		String ver = "Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
+//		out.println("<h1>DbxTune - Central - " + username + "@" + hostname + "</h1>");
+//		out.println("<div class='topright'>"+ver+"</div>");
+
+		// Create a "drop down section" where we will have
+		// - When was the page loaded
+		// - And various User Defined Information content
+		out.println("<details>");
+		out.println("<summary>");
+		out.println("Page loaded: <span id='last-update-ts'>" + (new Timestamp(System.currentTimeMillis())) + "</span>, ");
+		if (refresh > 0)
+			out.println("This page will 'auto-refresh' every " + refresh + " second. This can be changed with URL parameter 'refresh=##' (where ## is seconds)<br>" );
+		else
+			out.println("To 'auto-refresh' this page every ## second. This can be changed with URL parameter 'refresh=##' (where ## is seconds)<br>" );
+		out.println("</summary>");
+		out.println(udc.getInfoContent());
+		out.println("</details>");
 
 		out.println("<div id='ud-content'>");
 

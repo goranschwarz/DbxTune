@@ -46,6 +46,7 @@ public abstract class PostgresConfigText
 	{
 		 PostgresDbInfo
 		,PostgresHbaConf
+		,PostgresPgConfig
 		,PostgresExtentions
 		,PostgresServers
 		};
@@ -57,6 +58,7 @@ public abstract class PostgresConfigText
 	{
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.DbInfo());
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.HbaConf());
+		DbmsConfigTextManager.addInstance(new PostgresConfigText.PgConfig());
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.Extentions());
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.Servers());
 	}
@@ -76,7 +78,7 @@ public abstract class PostgresConfigText
 		@Override public    String     getConfigType()                        { return getName(); }
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from pg_database"; }
 	}
-		
+
 	public static class HbaConf extends DbmsConfigTextAbstract
 	{
 		@Override public    String     getTabLabel()                          { return "HBA Conf"; }
@@ -86,7 +88,16 @@ public abstract class PostgresConfigText
 		@Override public  List<String> needRole()                             { return Lists.newArrayList("superuser"); }
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from pg_hba_file_rules"; }
 	}
-		
+
+	public static class PgConfig extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                          { return "PG Config"; }
+		@Override public    String     getName()                              { return ConfigType.PostgresPgConfig.toString(); }
+		@Override public    String     getConfigType()                        { return getName(); }
+		@Override public    long       needVersion()                          { return Ver.ver(9,6); } // https://pgpedia.info/p/pg_config-view.html
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from pg_config"; }
+	}
+
 	public static class Extentions extends DbmsConfigTextAbstract
 	{
 		@Override public    String     getTabLabel()                          { return "Extentions"; }

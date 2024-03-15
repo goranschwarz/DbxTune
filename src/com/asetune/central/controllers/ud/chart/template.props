@@ -3,8 +3,8 @@
 ##------------------------------------------------------------
 ## 'name' is MANDATORY field
 ## Note:
-##   - If 'name' has FROM_FILENAME, then get first part of the filename as the server name (example: xxx.dbms-name.db-name.ud.chart.props)
-##     in the example we will use 'xxx' as the name
+##   - If 'name' has FROM_FILENAME, then get first part of the filename as the name (example: xxx.server-name.db-name.ud.chart.props)
+##     in the example we will use 'xxx@server-name' as the name
 ##------------------------------------------------------------
 name = FROM_FILENAME
 
@@ -37,21 +37,25 @@ refresh = 300
 ##
 ## ${startTime} and ${endTime} is variables that will be replaced with ISO date time 'yyyy-MM-dd HH:mm:ss.SSS'
 ##
-## Note: New Lines will have to be escaped by \ at the end of the rowe
+## HINT: To get a sense of what you can do (how to order the rows in the SQL Statement)
+##       read https://developers.google.com/chart/interactive/docs/gallery/timeline
+##       which is the component used to visualize the SQL data.
+##
+## Note: New Lines will have to be escaped by \ at the end of the row
 ##------------------------------------------------------------
-dbms.sql = SELECT \
-     someLabelColumn, \
-     descriptionColumn, \
-     CASE WHEN statusCol = 'RUNNING' THEN 'green' \
-          WHEN statusCol = 'WARNING' THEN 'orange' \
-          WHEN statusCol = 'ERROR'   THEN 'red' \
-          WHEN statusCol = 'DONE'    THEN 'blue' \
-          ELSE 'yellow' \
-     END, \
-     someStartTimestampColumn, \
-     someEndTimestampColumn \
-FROM someJobStatusTable \
-WHERE someStartTimestampColumn BETWEEN ${startTime} AND ${endTime} \
+dbms.sql = SELECT \n\
+     someLabelColumn, \n\
+     descriptionColumn, \n\
+     CASE WHEN statusCol = 'RUNNING' THEN 'green' \n\
+          WHEN statusCol = 'WARNING' THEN 'orange' \n\
+          WHEN statusCol = 'ERROR'   THEN 'red' \n\
+          WHEN statusCol = 'DONE'    THEN 'blue' \n\
+          ELSE 'yellow' \n\
+     END, \n\
+     someStartTimestampColumn, \n\
+     someEndTimestampColumn \n\
+FROM someJobStatusTable \n\
+WHERE someStartTimestampColumn BETWEEN ${startTime} AND ${endTime} \n\
 ORDER BY someStartTimestampColumn
 
 
@@ -88,19 +92,27 @@ dbms.dbname     = FROM_FILENAME
 ## Note:
 ##   - If 'dbms.servername' is specified, the variables '${ifile-hostname}' and '${ifile-port}' will be replaced in 'dbms.url'
 ##     the values is fetched from the ${SYBASE}/interfaces or ${SYBASE}/ini/sql.ini file
-##   - If 'dbms.servername' is specified, the variable '${srvName}' will be replaced in 'dbms.url'
+##   - If 'dbms.servername' is specified, the variable '${srvName}' or '${servername}' will be replaced in 'dbms.url'
 ##   - If 'dbms.dbname'     is specified, the variable '${dbname}'  will be replaced in 'dbms.url'
 ## 'dbms.url' is MANDATORY field
 ##------------------------------------------------------------
 dbms.url = jdbc:sybase:Tds:${ifile-hostname}:${ifile-port}/${dbname}?ENCRYPT_PASSWORD=true
 
+
+
 ##------------------------------------------------------------
 ## Below are some JDBC URL Examples for: Sybase, Postgres, SQL-Server, Oracle, DB2, MySQL
 ##------------------------------------------------------------
 #jdbc:sybase:Tds://192.168.0.110:1600/${dbname}
+#
 #jdbc:postgresql://192.168.0.110:5432/${dbname}
+#
 #jdbc:sqlserver://192.168.0.110:1433;databaseName=${dbname};integratedSecurity=true
+#jdbc:sqlserver://${servername};databaseName=${dbname};encrypt=true;trustServerCertificate=true
+#
 #jdbc:oracle:thin:@//192.168.0.110:1539/XEPDB1
+#
 #jdbc:db2://192.168.255.130:50000/${dbname}
+#
 #jdbc:mysql://192.168.0.110:3306//${dbname}
 ##------------------------------------------------------------

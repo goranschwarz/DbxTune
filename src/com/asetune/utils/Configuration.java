@@ -38,7 +38,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
@@ -65,8 +67,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.Version;
+import com.asetune.central.controllers.ud.chart.UserDefinedChartManager;
 
 public class Configuration
 extends Properties
@@ -370,13 +374,18 @@ extends Properties
 
 			try (WatchService watchService = FileSystems.getDefault().newWatchService()) 
 			{
+				// If a target file for a symbolic link is changed, we want to get "notified" that the symbolic link-file was changed
+				// SO: remember the target file (which gets the change-notification), so we can simulate that the "link" was changed even if it was the "target"
+				HashMap<Path, Path> targetFileToSymbolicLinkMap = new HashMap<>();
+
 				// Grab unique directories, and register those directories with the "watch service"
 				Set<Path> dirs = new HashSet<>();
 				for (String name : fileNames)
 				{
 					File f = new File(name);
-					Path path = f.toPath().getParent();
-					
+					Path p = f.toPath();
+					Path path = p.getParent();
+
 					dirs.add(path);
 				}
 				if (dirs.isEmpty())
@@ -388,6 +397,29 @@ extends Properties
 				{
 					_logger.info("Starts to listen for Configuration file modifications in directory '" + path + "'. All Filenames: " + fileNames);
 					path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+
+					try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) 
+					{
+						for (Path p : stream) 
+						{
+							if ( ! Files.isDirectory(p) ) 
+							{
+								if (Files.isSymbolicLink(p))
+								{
+									try 
+									{
+										Path targetPath = p.toRealPath();
+										_logger.info("The file '" + p.toAbsolutePath() + "' is a symbolic link that points to '" + targetPath.toAbsolutePath() + "', which we will track for changes.");
+										targetFileToSymbolicLinkMap.put(p.toRealPath(), p);
+									} 
+									catch (IOException ex) 
+									{
+										_logger.warn("Problems looking up real/target name for the symbolic link '" + p.toAbsolutePath() + "', So changes wont be correctly notified for this file.", ex);
+									}
+								}
+							}
+						}
+					}
 				}
 
 
@@ -424,12 +456,30 @@ extends Properties
 						} 
 						else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY)
 						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("WatchService: Found changes for file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
+
+							if (targetFileToSymbolicLinkMap.containsKey(fullPath))
+							{
+								Path symbolicLink = targetFileToSymbolicLinkMap.get(fullPath);
+								_logger.info("WatchService: Found changes for file '" + fullPath + "' which HAS a symbolic link pointing towards it. The symbolic link is '" + symbolicLink + "', which will be used to propegate file change.");
+								fullPath = symbolicLink;
+							}
+
 							String longFilename = fullPath.toString();
-							
+
 							// If the file is any of the files we want to "reload"
 							if (fileNames.contains(longFilename))
 							{
 								onChange(fullPath);
+							}
+
+							// Changes to: User Defined Charts
+							boolean isUserDefinedContent = longFilename.endsWith(UserDefinedChartManager.USER_DEFINED_FILE_POST);
+							if (isUserDefinedContent)
+							{
+								UserDefinedChartManager udChartManager = UserDefinedChartManager.getInstance();
+								udChartManager.onConfigChange(fullPath);
 							}
 						}
 
@@ -2693,6 +2743,97 @@ extends Properties
 	}
 	
 	
+	private static void printUsageAndExit(String error)
+	{
+		if (error != null)
+		{
+			System.out.println("");
+			System.out.println("ERROR: " + error);
+		}
+
+		System.out.println("");
+		System.out.println("Usage: operation propertyKey propertyVal");
+		System.out.println("");
+		System.out.println(" operation can be:");
+		System.out.println("     - encrypt  To encrypt a sensitive property");
+		System.out.println("     - decrypt  To decrypt a sensitive property");
+		System.out.println(" propertyKey:");
+		System.out.println("     - the Property Key,   ex: xxx.yyy.password");
+		System.out.println(" propertyVal:");
+		System.out.println("     - the Property Value, ex: theSecretPassword");
+		System.out.println("     - the Property Value, ex: encrypted:v3zAPq8zMLy/u1MvHHTJxgPuz0sn8kT/");
+		System.out.println("     if propertyVal is '', use: null");
+		System.out.println("");
+		
+		System.exit(1);
+	}
+	/**
+	 * Used to generate password entries from "outside"
+	 */
+	public static void main(String[] args)
+	{
+		Properties log4jProps = new Properties();
+		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+
+
+		String op    = "";
+		String prop  = "";
+		String inStr = "";
+		
+		if (args.length > 0) op    = args[0];
+		if (args.length > 1) prop  = args[1];
+		if (args.length > 2) inStr = args[2];
+
+		if ("".equals(op) || "".equals(prop) || "".equals(inStr))
+		{
+			printUsageAndExit("To few parameters");
+		}
+
+		Configuration conf = new Configuration();
+		
+		if ("null".equalsIgnoreCase(inStr))
+			inStr =  "";
+
+		if ("encrypt".equalsIgnoreCase(op))
+		{
+			conf.setProperty(prop, inStr, true);
+			String encValue = conf.getPropertyRaw(prop);
+			
+			System.out.println("");
+			System.out.println("operation    = '" + op   + "'");
+			System.out.println("property     = '" + prop +"'");
+			System.out.println("strToEncrypt = '" + inStr +"'");
+			System.out.println("---------------------------------------------------------------------------------------");
+			System.out.println(prop + " = " + encValue);
+			System.out.println("---------------------------------------------------------------------------------------");
+			System.out.println("");
+		}
+		else if ("decrypt".equalsIgnoreCase(op))
+		{
+			conf.setProperty(prop, inStr);
+			String decValue = conf.getProperty(prop);
+			
+			System.out.println("");
+			System.out.println("operation    = '" + op   + "'");
+			System.out.println("property     = '" + prop +"'");
+			System.out.println("strToDecrypt = '" + inStr +"'");
+			System.out.println("---------------------------------------------------------------------------------------");
+			System.out.println("Decypted value '" + decValue + "'");
+			System.out.println("---------------------------------------------------------------------------------------");
+			System.out.println("");
+		}
+		else
+		{
+			printUsageAndExit("Unknown operation: '" + op + "'");
+		}
+		
+	}
+	
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
 	// main / test code.
@@ -2704,7 +2845,7 @@ extends Properties
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args)
+	public static void main_xxx(String[] args)
 	{
 		Configuration tConf = new Configuration();
 		Configuration uConf = new Configuration();

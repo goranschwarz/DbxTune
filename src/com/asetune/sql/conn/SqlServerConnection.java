@@ -530,61 +530,194 @@ extends DbxConnection
 			}
 		}
 		
-		boolean useSpSpaceused = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_useSpSpaceused, DEFAULT_getTableExtraInfo_useSpSpaceused);
-		if (useSpSpaceused)
-		{
-			String sql = "exec "+cat+".sp_spaceused '" + schema + table + "'"; 
-			try
-			{
-				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
-				ResultSetTableModel tableInfo = rstmList.get(0);
-
-				NumberFormat nf = NumberFormat.getInstance();
-
-				// Get Table Info
-				int rowtotal = StringUtil.parseInt( tableInfo.getValueAsString(0, "rows"      , true, ""), 0);
-				int reserved = StringUtil.parseInt( tableInfo.getValueAsString(0, "reserved"  , true, "").replace(" KB", ""), 0);
-				int data     = StringUtil.parseInt( tableInfo.getValueAsString(0, "data"      , true, "").replace(" KB", ""), 0);
-				int index    = StringUtil.parseInt( tableInfo.getValueAsString(0, "index_size", true, "").replace(" KB", ""), 0);
-				int unused   = StringUtil.parseInt( tableInfo.getValueAsString(0, "unused"    , true, "").replace(" KB", ""), 0);		
-
-				// ADD INFO
-				extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rowtotal    , "Number of rows in the table. Note: exec dbname..sp_spaceused 'schema.tabname'", null));
-				extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index  , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
-				extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data        , "From 'sp_spaceued', column 'data'.", null));
-				extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", index       , "From 'sp_spaceued', column 'index_size'.", null));
-				//extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize  , "From 'sp_spaceued', index section, 'size' of columns name 't"+table+"'. Details: size="+nf.format(sumLobSize)+" KB, reserved="+nf.format(sumLobReserved)+" KB, unused="+nf.format(sumLobUnused)+" KB", null));
-			}
-			catch (SQLException ex)
-			{
-				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
-				if (_logger.isDebugEnabled())
-					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
-			}
-		}
-		else
+//		boolean useSpSpaceused = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_useSpSpaceused, DEFAULT_getTableExtraInfo_useSpSpaceused);
+//		boolean useSpSpaceused = false;
+//		if (useSpSpaceused)
+//		{
+//			String sql = "exec "+cat+".sp_spaceused '" + schema + table + "'"; 
+//			try
+//			{
+//				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
+//				ResultSetTableModel tableInfo = rstmList.get(0);
+//
+//				NumberFormat nf = NumberFormat.getInstance();
+//
+//				// Get Table Info
+//				int rowtotal = StringUtil.parseInt( tableInfo.getValueAsString(0, "rows"      , true, ""), 0);
+//				int reserved = StringUtil.parseInt( tableInfo.getValueAsString(0, "reserved"  , true, "").replace(" KB", ""), 0);
+//				int data     = StringUtil.parseInt( tableInfo.getValueAsString(0, "data"      , true, "").replace(" KB", ""), 0);
+//				int index    = StringUtil.parseInt( tableInfo.getValueAsString(0, "index_size", true, "").replace(" KB", ""), 0);
+//				int unused   = StringUtil.parseInt( tableInfo.getValueAsString(0, "unused"    , true, "").replace(" KB", ""), 0);		
+//
+//				// ADD INFO
+//				extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rowtotal    , "Number of rows in the table. Note: exec dbname..sp_spaceused 'schema.tabname'", null));
+//				extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index  , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
+//				extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data        , "From 'sp_spaceued', column 'data'.", null));
+//				extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", index       , "From 'sp_spaceued', column 'index_size'.", null));
+//				//extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize  , "From 'sp_spaceued', index section, 'size' of columns name 't"+table+"'. Details: size="+nf.format(sumLobSize)+" KB, reserved="+nf.format(sumLobReserved)+" KB, unused="+nf.format(sumLobUnused)+" KB", null));
+//			}
+//			catch (SQLException ex)
+//			{
+//				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+//				if (_logger.isDebugEnabled())
+//					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+//			}
+//		}
+//		else
 		{
 //			String sql = "select row_count(db_id('"+cat+"'), object_id('"+schema+"."+table+"'))";
-			String sql = "SELECT SUM(row_count) as RowCnt, count(*) as partitionCnt \n"
+//			String sql = "SELECT SUM(row_count) as RowCnt, count(*) as partitionCnt \n"
+//					+ "FROM " + cat + "sys.dm_db_partition_stats \n"
+//					+ "WHERE object_id=OBJECT_ID('" + cat + schema + table + "') \n"
+//					+ "AND (index_id=0 or index_id=1)";
+			String sql = ""
+				    + "SELECT \n"
+				    + "     'DATA'                                   as type \n"
+				    + "    ,SUM(in_row_data_page_count)*8            as in_row_data_kb \n"
+				    + "    ,SUM(in_row_used_page_count)*8            as in_row_used_kb \n"
+				    + "    ,SUM(in_row_reserved_page_count)*8        as in_row_reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(lob_used_page_count)*8               as lob_used_kb \n"
+				    + "    ,SUM(lob_reserved_page_count)*8           as lob_reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(row_overflow_used_page_count)*8      as row_overflow_used_kb \n"
+				    + "    ,SUM(row_overflow_reserved_page_count)*8  as row_overflow_reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(used_page_count)*8                   as used_kb \n"
+				    + "    ,SUM(reserved_page_count)*8               as reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(row_count)                           as row_cnt \n"
+				    + "    ,count(*)                                 as partition_cnt \n"
 					+ "FROM " + cat + "sys.dm_db_partition_stats \n"
 					+ "WHERE object_id=OBJECT_ID('" + cat + schema + table + "') \n"
-					+ "AND (index_id=0 or index_id=1)";
-			try
+				    + "AND (index_id=0 or index_id=1) \n"
+				    
+				    + "UNION ALL \n"
+				    
+				    + "SELECT \n"
+				    + "     'INDEX'                                  as type \n"
+				    + "    ,SUM(in_row_data_page_count)*8            as in_row_data_kb \n"
+				    + "    ,SUM(in_row_used_page_count)*8            as in_row_used_kb \n"
+				    + "    ,SUM(in_row_reserved_page_count)*8        as in_row_reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(lob_used_page_count)*8               as lob_used_kb \n"
+				    + "    ,SUM(lob_reserved_page_count)*8           as lob_reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(row_overflow_used_page_count)*8      as row_overflow_used_kb \n"
+				    + "    ,SUM(row_overflow_reserved_page_count)*8  as row_overflow_reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(used_page_count)*8                   as used_kb \n"
+				    + "    ,SUM(reserved_page_count)*8               as reserved_kb \n"
+				    + " \n"
+				    + "    ,SUM(row_count)                           as row_cnt \n"
+				    + "    ,count(*)                                 as partition_cnt \n"
+				    + "FROM sys.dm_db_partition_stats \n"
+					+ "WHERE object_id=OBJECT_ID('" + cat + schema + table + "') \n"
+				    + "AND index_id >= 2 \n"
+				    + "";
+
+			try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql);)
 			{
-				Statement stmnt = _conn.createStatement();
-				ResultSet rs = stmnt.executeQuery(sql);
+				String type; // DATA or INDEX
+				long in_row_data_kb           = 0;
+				long in_row_used_kb           = 0;
+				long in_row_reserved_kb       = 0;
+
+				long lob_used_kb              = 0;
+				long lob_reserved_kb          = 0;
+
+				long row_overflow_used_kb     = 0;
+				long row_overflow_reserved_kb = 0;
+
+				long used_kb                  = 0;
+				long reserved_kb              = 0;
+				long index_used_kb            = 0;
+				long index_reserved_kb        = 0;
+
+				long row_cnt                  = 0;
+				long partition_cnt            = 0;
+
 				while(rs.next())
 				{
-					extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong(1), "Number of rows in the table. Note: fetched from statistics using DMV 'dm_db_partition_stats'", null));
-					extraInfo.put(TableExtraInfo.TablePartitionCount, new TableExtraInfo(TableExtraInfo.TablePartitionCount, "Partition Count", rs.getLong(2), "Number of table partition(s). Note: fetched from statistics using DMV 'dm_db_partition_stats'", null));
+					type = rs.getString(1);
+					if ("DATA".equals(type))
+					{
+						in_row_data_kb           = rs.getLong(2);
+						in_row_used_kb           = rs.getLong(3);
+						in_row_reserved_kb       = rs.getLong(4);
+
+						lob_used_kb              = rs.getLong(5);
+						lob_reserved_kb          = rs.getLong(6);
+
+						row_overflow_used_kb     = rs.getLong(7);
+						row_overflow_reserved_kb = rs.getLong(8);
+
+						used_kb                  = rs.getLong(9);
+						reserved_kb              = rs.getLong(10);
+
+						row_cnt                  = rs.getLong(11);
+						partition_cnt            = rs.getLong(12);
+					}
+					if ("INDEX".equals(type))
+					{
+						index_used_kb            = rs.getLong(9);
+						index_reserved_kb        = rs.getLong(10);
+					}
 				}
-				rs.close();
+
+				long in_row_data_unused_kb      = in_row_reserved_kb       - in_row_used_kb;
+				long lob_unused_kb              = lob_reserved_kb          - lob_used_kb;
+				long row_overflow_unused_kb     = row_overflow_reserved_kb - row_overflow_used_kb;
+				long data_unused_kb             = reserved_kb              - used_kb;
+				long index_unused_kb            = index_reserved_kb        - index_used_kb;
+				long total_unused_kb            = data_unused_kb + index_unused_kb;
+
+				NumberFormat nf = NumberFormat.getInstance();
+				
+				extraInfo.put(TableExtraInfo.TableRowCount,             new TableExtraInfo(TableExtraInfo.TableRowCount,            "Row Count",          row_cnt                         , "Number of rows in the table. From: dm_db_partition_stats", null));
+				extraInfo.put(TableExtraInfo.TableTotalSizeInKb,        new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,       "Total Size In KB",   reserved_kb + index_reserved_kb , "Details: reserved_kb=" + nf.format(reserved_kb) + " + index_reserved_kb=" + nf.format(index_reserved_kb) + ", total_unused_kb=" + nf.format(total_unused_kb) + ".", null));
+				extraInfo.put(TableExtraInfo.TableDataSizeInKb,         new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,        "Data Size In KB",    reserved_kb                     , "Details: used_kb=" + nf.format(used_kb) + ", reserved_kb=" + nf.format(reserved_kb) + ", data_unused_kb=" + nf.format(data_unused_kb) + "", null));
+				extraInfo.put(TableExtraInfo.TableInRowSizeInKb,        new TableExtraInfo(TableExtraInfo.TableInRowSizeInKb,       "In-Row Data In KB",  in_row_reserved_kb              , "Details: in_row_data_kb=" + nf.format(in_row_data_kb) + ", in_row_used_kb=" + nf.format(in_row_used_kb) + ", in_row_reserved_kb=" + nf.format(in_row_reserved_kb) + ", in_row_data_unused_kb=" + nf.format(in_row_data_unused_kb) + ".", null));
+				extraInfo.put(TableExtraInfo.TableOverflowRowSizeInKb,  new TableExtraInfo(TableExtraInfo.TableOverflowRowSizeInKb, "Row Overflow In KB", row_overflow_reserved_kb        , "Details: row_overflow_used_kb=" + nf.format(row_overflow_used_kb) + ", row_overflow_reserved_kb=" + nf.format(row_overflow_unused_kb) + ", index_unused_kb=" + nf.format(row_overflow_unused_kb) + ".", null));
+				extraInfo.put(TableExtraInfo.TableLobSizeInKb,          new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,         "LOB Size In KB",     lob_reserved_kb                 , "Details: lob_used_kb=" + nf.format(lob_used_kb) + ", lob_reserved_kb=" + nf.format(lob_reserved_kb) + ", lob_unused_kb=" + nf.format(lob_unused_kb) + ".", null));
+				extraInfo.put(TableExtraInfo.TableIndexSizeInKb,        new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,       "Index Size In KB",   index_reserved_kb               , "Details: index_used_kb=" + nf.format(index_used_kb) + ", index_reserved_kb=" + nf.format(index_reserved_kb) + ", index_unused_kb=" + nf.format(index_unused_kb) + ".", null));
+				extraInfo.put(TableExtraInfo.TablePartitionCount,       new TableExtraInfo(TableExtraInfo.TablePartitionCount,      "Partition Count",    partition_cnt                   , "Number of table partition(s). From: dm_db_partition_stats", null));
 			}
 			catch (SQLException ex)
 			{
 				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
 				if (_logger.isDebugEnabled())
 					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+
+				// IF 'dm_db_partition_stats' FAILS, try with 'sp_spaceused'
+				sql = "exec "+cat+".sp_spaceused '" + schema + table + "'"; 
+				try
+				{
+					List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
+					ResultSetTableModel tableInfo = rstmList.get(0);
+
+					NumberFormat nf = NumberFormat.getInstance();
+
+					// Get Table Info
+					int rowtotal = StringUtil.parseInt( tableInfo.getValueAsString(0, "rows"      , true, ""), 0);
+					int reserved = StringUtil.parseInt( tableInfo.getValueAsString(0, "reserved"  , true, "").replace(" KB", ""), 0);
+					int data     = StringUtil.parseInt( tableInfo.getValueAsString(0, "data"      , true, "").replace(" KB", ""), 0);
+					int index    = StringUtil.parseInt( tableInfo.getValueAsString(0, "index_size", true, "").replace(" KB", ""), 0);
+					int unused   = StringUtil.parseInt( tableInfo.getValueAsString(0, "unused"    , true, "").replace(" KB", ""), 0);		
+
+					// ADD INFO
+					extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rowtotal    , "Number of rows in the table. Note: exec dbname..sp_spaceused 'schema.tabname'", null));
+					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index  , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
+					extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data        , "From 'sp_spaceued', column 'data'.", null));
+					extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", index       , "From 'sp_spaceued', column 'index_size'.", null));
+					//extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize  , "From 'sp_spaceued', index section, 'size' of columns name 't"+table+"'. Details: size="+nf.format(sumLobSize)+" KB, reserved="+nf.format(sumLobReserved)+" KB, unused="+nf.format(sumLobUnused)+" KB", null));
+				}
+				catch (SQLException ex2)
+				{
+					_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex2);
+					if (_logger.isDebugEnabled())
+						_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex2, ex2);
+				}
 			}
 		}
 		

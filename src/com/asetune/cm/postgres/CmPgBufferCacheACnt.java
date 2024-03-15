@@ -176,7 +176,15 @@ extends CountersModel
 	@Override
 	public String getSqlInitForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		return "CREATE EXTENSION IF NOT EXISTS pg_buffercache";
+		String sql = ""
+			    + "DO $$ BEGIN \n"
+			    + "    IF NOT EXISTS (SELECT * FROM pg_extension WHERE extname = 'pg_buffercache') \n"
+			    + "    THEN \n"
+			    + "        CREATE EXTENSION pg_buffercache; \n"
+			    + "    END IF; \n"
+			    + "END; $$; \n"
+			    + "";
+		return sql;
 	}
 	
 	@Override

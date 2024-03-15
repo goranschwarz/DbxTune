@@ -45,6 +45,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.MainFramePostgres;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.sql.conn.DbxConnection;
@@ -66,13 +67,17 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgReplication.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Replication";
+	public static final String   SHORT_NAME       = "Rep Stats";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"One row per Replication destination/endpoint." +
+		"One row per Replication/WAL Sender. <br>" +
+		"<br>" +
+		
+		"You also want to look at 'Rep Slots', which (if created) holds WAL <i>retention</i> points. <br>" +
+		"Which means that a destination has not yet aknowledged data, and therefor we can't <i>truncate</i> local WAL entries.<br>" +
 		"</html>";
 
-	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
+	public static final String   GROUP_NAME       = MainFramePostgres.TCP_GROUP_REPLICATION;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 	public static final long     NEED_SRV_VERSION = 0;

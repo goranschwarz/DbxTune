@@ -499,10 +499,10 @@ implements ICentralPersistWriter
 			{
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"UserName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Password"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Email"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Roles"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 120),20)+" "+getNullable(false)+"\n");
+				sbSql.append("    "+fill(lq+"UserName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 128),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"Password"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 128),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"Email"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 128),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"Roles"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 128),20)+" "+getNullable(false)+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"UserName"+rq+")\n");
 				sbSql.append(") \n");

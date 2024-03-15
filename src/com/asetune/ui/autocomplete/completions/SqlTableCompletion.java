@@ -58,6 +58,13 @@ extends SqlCompletion
 		if (StringUtil.hasValue(dbmsDefaultSchemaName) && dbmsDefaultSchemaName.equals(ti._tabSchema))
 			addSchema = false;
 		
+		String[] dbmsSkipResolvSchemaName = provider.getDbSkipResolvSchemaName();
+		for (String schName : dbmsSkipResolvSchemaName)
+		{
+			if (StringUtil.hasValue(schName) && schName.equals(ti._tabSchema))
+				addSchema = false;
+		}
+
 		String out = "";
 		if (addCatalog) out += catalogName + ".";
 		if (addSchema)  out += schemaName  + ".";

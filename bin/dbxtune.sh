@@ -46,6 +46,8 @@ function printUsage
 	echo " dbxcdbcopy  - Copy a DBX Cental DB to a new destination (used to migrate to a new DBMS)"
 	echo " dbxPassword - Manage Encrypted Passwords"
 	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
+	echo "               Property/Configuration encryption utility"
+	echo " configEnc   - Encrypt a password that you can insert into a config file"
 	echo ""
 
 	exit 1
@@ -208,6 +210,15 @@ case "${toolset}" in
 		shortAppName="dbxPasswordUpgrade"
 		longAppName="dbxPasswordUpgrade"
 		javaMainClass="com.asetune.utils.DbxPasswordUpgrade"
+		javaMainParams=""
+		javaSplashScreen=""
+#		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
+		;;
+
+	configutil|configUtil)
+		shortAppName="configUtil"
+		longAppName="configUtil"
+		javaMainClass="com.asetune.utils.Configuration"
 		javaMainParams=""
 		javaSplashScreen=""
 #		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"

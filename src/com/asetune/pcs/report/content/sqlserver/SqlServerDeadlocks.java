@@ -94,6 +94,10 @@ extends SqlServerAbstract
 					String showHideDiv = createShowHideDiv(divId, showAtStart, "<b>A high-level analysis of all the stuff we pull out.</b> (" + _spBlitzLock_section3.getRowCount() + " rows)", htmlContent);
 					w.append( msOutlookAlternateText(showHideDiv, divId, null) );
 				}
+				else
+				{
+					w.append("<p>NOTE: NO high-level analysis was available (_spBlitzLock_section_3 == null)</p>");
+				}
 
 				//---------------------------------------------------------
 				// Section 1 is Details
@@ -160,6 +164,10 @@ extends SqlServerAbstract
 					String showHideDiv = createShowHideDiv(divId, showAtStart, "<b>Below are each of the deadlocks</b> (" + _spBlitzLock_section1.getRowCount() + " rows)", htmlContent);
 					w.append( msOutlookAlternateText(showHideDiv, divId, null) );
 				}
+				else
+				{
+					w.append("<p>NOTE: NO deadlock details Available (_spBlitzLock_section_1 == null)</p>");
+				}
 
 				//---------------------------------------------------------
 				// Section 2 is info from "plan cache"
@@ -176,6 +184,10 @@ extends SqlServerAbstract
 
 					String showHideDiv = createShowHideDiv(divId, showAtStart, "<b>This section holds information about the statements (if they are still in the Cache Plan)</b> (" + _spBlitzLock_section2.getRowCount() + " rows)", htmlContent);
 					w.append( msOutlookAlternateText(showHideDiv, divId, null) );
+				}
+				else
+				{
+					w.append("<p>NOTE: NO deadlock Statements from PlanCache Available (_spBlitzLock_section_2 == null)</p>");
 				}
 			}
 			else
