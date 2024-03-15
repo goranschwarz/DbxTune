@@ -1994,7 +1994,7 @@ extends CountersModel
 					int count = NumberUtils.createNumber(val).intValue();
 					_map_alarm_ErrorNumbers.put(error, count);
 
-					_logger.info(prefix + "Initializing alarm. Using 'ErrorNumbers', ErrorMsg='"+key+"', thresholdCount="+count+", ErrorDesciption='"+AseErrorMessageDictionary.getInstance().getDescription(error)+"'.");
+					_logger.info(prefix + "Initializing alarm. Using 'ErrorNumbers', ErrorMsg='"+key+"', thresholdCount="+count+", ErrorDescription='"+AseErrorMessageDictionary.getInstance().getDescription(error)+"'.");
 				}
 				catch (NumberFormatException ex)
 				{

@@ -26,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -75,7 +77,42 @@ public class AlarmLogServlet extends HttpServlet
 		System.out.println("AlarmLogServlet: type   = '" + inputType   + "'.");
 		System.out.println("AlarmLogServlet: method = '" + inputMethod + "'.");
 		System.out.println("AlarmLogServlet: age    = '" + inputAge    + "'.");
+
 		
+		// Check for mandatory parameters
+		if (StringUtil.isNullOrBlank(inputName))
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Could not find mandatory parameter 'name'.");
+			return;
+		}
+
+		// Validate input (if it involves any "reading files")
+		if ("pcs".equalsIgnoreCase(inputMethod))
+		{
+			// NO Need to verify relative filename, since we get the information from the PCS (no files) 
+		}
+		else
+		{
+			// CHECK: that the input file really INSIDE the LOG_DIR and not outside (for example /etc/passwd or /var/log/message)
+			Path logDirPath   = Paths.get(LOG_DIR);
+			Path inputPath    = Paths.get(LOG_DIR + "/" + inputName);
+			Path relativePath = logDirPath.relativize(inputPath);
+			if (relativePath.startsWith(".."))
+			{
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputPath + "' must be located in the LOG dir '" + logDirPath + "'.");
+				return;
+			}
+		
+			// Check if file EXISTS
+			File inputFile = new File(LOG_DIR + "/" + inputName);
+			if ( ! inputFile.exists() )
+			{
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputFile + "' doesn't exist.");
+				return;
+			}
+		}
+		
+
 		int age = StringUtil.parseInt(inputAge, 0);
 
 		if  ("json".equalsIgnoreCase(inputMethod))
@@ -349,7 +386,6 @@ public class AlarmLogServlet extends HttpServlet
 
 //		out.println("<script type='text/javascript' src='/scripts/tablefilter/tablefilter.js'></script>");
 		
-//		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.js'></script>");
 		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
@@ -546,7 +582,6 @@ public class AlarmLogServlet extends HttpServlet
 	{
 		out.println("<html>");
 
-//		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.js'></script>");
 		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
@@ -591,7 +626,7 @@ public class AlarmLogServlet extends HttpServlet
 		out.println("");
 		out.println("<script>");
 		out.println("                                                      ");
-		out.println("function toggleExtendedDesciption()");
+		out.println("function toggleExtendedDescription()");
 		out.println("{");
 		out.println("	var extDesc = document.querySelectorAll('.extDesc-origin-class,.extDesc-stripped-class')");
 		out.println("                                                      ");
@@ -618,7 +653,7 @@ public class AlarmLogServlet extends HttpServlet
 			List<DbxAlarmHistory> list = CentralPersistReader.getInstance().getAlarmHistory(inputName, age, null, inputType);
 
 			// Write how many rows there is in the table
-			out.println(list.size() + " rows in below table... <a href='javascript:toggleExtendedDesciption();'>Show/hide: Extended description</a><br>");
+			out.println(list.size() + " rows in below table... <a href='javascript:toggleExtendedDescription();'>Show/hide: Extended description</a><br>");
 			out.println("<br>");
 
 			// Write the table head + data
@@ -764,7 +799,7 @@ public class AlarmLogServlet extends HttpServlet
 			return "";
 
 		String val = ""
-				+ "<a href='javascript:toggleExtendedDesciption();'>Show/hide: Extended description</a>"
+				+ "<a href='javascript:toggleExtendedDescription();'>Show/hide: Extended description</a>"
 				+ "<br> "
 				+ "<div style='display: none;'  class='extDesc-origin-class'>"   + originText + "</div>"
 				+ "<div style='display: block;' class='extDesc-stripped-class'>" + StringUtil.stripHtml( originText ) + "</div>"

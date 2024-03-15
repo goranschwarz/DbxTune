@@ -42,6 +42,7 @@ import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventExtensiveUsage;
 import com.asetune.alarm.events.AlarmEventHoldingLocksWhileWaitForClientInput;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -465,7 +466,7 @@ extends CountersModel
 		// SPID's that are BLOCKING
 		//
 		String sql2_cols = 
-			"SELECT /* ${cmCollectorName} */  \n" +
+//			"SELECT DISTINCT /* ${cmCollectorName} */  \n" +
 			"     monSource    = convert(varchar(20), 'BLOCKER')  \n" +
 			"    ,multiSampled = convert(varchar(10), '')  \n" +
 			"    ,p1.loginame                                  --des.login_name \n" +
@@ -558,6 +559,7 @@ extends CountersModel
 //			"";
 
 		String sql2 = 
+			"SELECT DISTINCT /* ${cmCollectorName} */  \n" +
 			sql2_cols +
 			"FROM sys.sysprocesses p1 \n" +
 			"JOIN sys.sysprocesses p2 ON p1.spid = p2.spid AND p2.blocked > 0 \n" +
@@ -573,10 +575,15 @@ extends CountersModel
 		String sql3 = "";
 		if (showHoldingLocks)
 		{
+			String cols = sql2_cols;
+			cols = cols.replace("'BLOCKER'", "'HOLDING-LOCKS'");
+
 			sql3 = 	"\n" +
 					"UNION ALL \n" +
 					"\n" +
-			sql2_cols.replace("'BLOCKER'", "'HOLDING-LOCKS'") +
+					
+			"SELECT /* ${cmCollectorName} */  \n" +
+			cols +
 			"FROM sys.sysprocesses p1 \n" +
 			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 			"WHERE p1.open_tran > 0 \n" + 
@@ -705,6 +712,7 @@ extends CountersModel
 		String str = StringUtil.makeApproxLineBreak(in, 150, 10, "\n");
 		str = str.replace("<","&lt;").replace(">","&gt;");
 		str = str.replaceAll("\\n", "<br>");
+		str = str.replaceAll("\\r", "");
 		
 		return "<html><pre>" + str + "</pre></html>";
 	}
@@ -830,6 +838,7 @@ extends CountersModel
 		int pos_wait_time          = -1;
 		int pos_multiSampled       = -1;
 		int pos_StartTime          = -1;
+		int pos_StmntStart         = -1; // this would be like "row number" inside a procedure (but it's the "character position" instead of row number 
 //		int waitEventID = 0;
 //		String waitEventDesc = "";
 //		String waitClassDesc = "";
@@ -876,6 +885,7 @@ extends CountersModel
 			else if (colName.equals("multiSampled"))                 pos_multiSampled               = colId;
 //			else if (colName.equals("StartTime"))                    pos_StartTime                  = colId;
 			else if (colName.equals("start_time"))                   pos_StartTime                  = colId;
+			else if (colName.equals("StmntStart"))                   pos_StmntStart                 = colId;
 			else if (colName.equals("HasSpidLocks"))                 pos_HasSpidLocks               = colId;
 			else if (colName.equals("SpidLocks"))                    pos_SpidLocks                  = colId;
 			else if (colName.equals("SpidLockCount"))                pos_SpidLockCount              = colId;
@@ -956,6 +966,13 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 			return;
 		}
 
+		if (pos_StmntStart < 0)
+		{
+System.out.println("Can't find the position for columns ('StmntStart'="+pos_StmntStart+")");
+			_logger.debug("Can't find the position for columns ('StmntStart'="+pos_StmntStart+")");
+			return;
+		}
+
 		if (pos_HasSpidLocks < 0 || pos_SpidLocks < 0 || pos_SpidLockCount < 0)
 		{
 			_logger.debug("Can't find the position for columns ('HasSpidLocks'="+pos_HasSpidLocks+", 'SpidLocks'="+pos_SpidLocks+", 'SpidLockCount'="+pos_SpidLockCount+")");
@@ -990,9 +1007,12 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 				Object o_this_StartTime = counters  .getValueAt(rowId,       pos_StartTime);
 				Object o_prev_StartTime = prevSample.getValueAt(prevPkRowId, pos_StartTime);
 
+				int this_StmntStart = counters  .getValueAsInteger(rowId,       pos_StmntStart, -1);
+				int prev_StmntStart = prevSample.getValueAsInteger(prevPkRowId, pos_StmntStart, -1);
+
 				if (o_this_StartTime instanceof Timestamp && o_prev_StartTime instanceof Timestamp)
 				{
-					if (o_this_StartTime.equals(o_prev_StartTime))
+					if (o_this_StartTime.equals(o_prev_StartTime) && this_StmntStart == prev_StmntStart)
 						counters.setValueAt("YES", rowId, pos_multiSampled);
 				}
 			}
@@ -1463,14 +1483,43 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 						if (ImBlockingOthersMaxTimeInSec > threshold)
 						{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-
-							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
-
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							// Get data for 'skip names'
+							String rowUsername = cm.getAbsString(r, "login_name");
+							String rowHostname = cm.getAbsString(r, "HOST_NAME");
+							String rowDbname   = cm.getAbsString(r, "database_name");
+							String rowProgname = cm.getAbsString(r, "program_name");
+							String rowProcname = cm.getAbsString(r, "ProcName");
 							
-							alarmHandler.addAlarm( ae );
+							// Get config 'skip names'
+							String skipUsernameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipUsername, DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipUsername);
+							String skipHostnameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipHostname, DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipHostname);
+							String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipDbname  , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipDbname  );
+							String skipPrognameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname, DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname);
+							String skipProcnameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProcname, DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProcname);
+
+							// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+							boolean doAlarm = true;
+							
+							// The below could have been done with nested if(skip-name), if(skip-prog), if(skip-user), if(skip-host) doAlarm=true; 
+							// Below is more readable, from a variable context point-of-view, but HARDER to understand
+							// to *continue*: doAlarm needs to be true AND (regExp is empty OR not-matching)
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipUsernameRegExp) || ! rowUsername.matches(skipUsernameRegExp)));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipHostnameRegExp) || ! rowHostname.matches(skipHostnameRegExp)));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp  ) || ! rowDbname  .matches(skipDbnameRegExp  )));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipPrognameRegExp) || ! rowProgname.matches(skipPrognameRegExp)));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipProcnameRegExp) || ! rowProcname.matches(skipProcnameRegExp)));
+
+							if (doAlarm)
+							{
+								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+								AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+
+								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+								
+								alarmHandler.addAlarm( ae );
+							}
 						}
 					}
 				}
@@ -1504,27 +1553,45 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 						boolean onlySendAlarmForExclusiveLocks = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX);
 
-						// TODO; // Possibly add "skip" on below column names
-						// +---------------+----------------+
-						// |Column Name    |Ex Column Value |
-						// +---------------+----------------+
-						// |tran_name      |user_transaction|
-						// |ProcName       |WriteLockSession|
-						// |HOST_NAME      |MM-OP-SSRS      |
-						// |database_name  |ReportServer    |
-						// |program_name   |Report Server   |
-						// +---------------+----------------+
-						
 						if ( (onlySendAlarmForExclusiveLocks && hasExlusiveLocks) || onlySendAlarmForExclusiveLocks == false )
 						{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							// Get data for 'skip names'
+							String rowUsername = cm.getAbsString(r, "login_name");
+							String rowHostname = cm.getAbsString(r, "HOST_NAME");
+							String rowDbname   = cm.getAbsString(r, "database_name");
+							String rowProgname = cm.getAbsString(r, "program_name");
+							String rowProcname = cm.getAbsString(r, "ProcName");
+							
+							// Get config 'skip names'
+							String skipUsernameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername);
+							String skipHostnameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname);
+							String skipDbnameRegExp   = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname  , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname  );
+							String skipPrognameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname);
+							String skipProcnameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname);
 
-							AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, spid, ExecTimeInSec, startTime, hasExlusiveLocks);
+							// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+							boolean doAlarm = true;
 							
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-							
-							alarmHandler.addAlarm( ae );
+							// The below could have been done with nested if(skip-name), if(skip-prog), if(skip-user), if(skip-host) doAlarm=true; 
+							// Below is more readable, from a variable context point-of-view, but HARDER to understand
+							// to *continue*: doAlarm needs to be true AND (regExp is empty OR not-matching)
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipUsernameRegExp) || ! rowUsername.matches(skipUsernameRegExp)));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipHostnameRegExp) || ! rowHostname.matches(skipHostnameRegExp)));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbnameRegExp  ) || ! rowDbname  .matches(skipDbnameRegExp  )));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipPrognameRegExp) || ! rowProgname.matches(skipPrognameRegExp)));
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipProcnameRegExp) || ! rowProcname.matches(skipProcnameRegExp)));
+
+							if (doAlarm)
+							{
+								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+								AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, spid, ExecTimeInSec, startTime, hasExlusiveLocks);
+								
+								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+								
+								alarmHandler.addAlarm( ae );
+							}
 						}
 					}
 				}
@@ -1561,17 +1628,49 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 		} // end: loop rows
 	}
 
-	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec              = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
-	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec              = 60;
-	
-	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec  = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.gt";
-	public static final int     DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec  = 180; // 3 minutes
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec                          = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
+	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec                          = 60;
 
-	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.exclusiveLocksOnly";
-	public static final boolean DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX = true;
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipUsername              = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.skip.username";
+	public static final String  DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipUsername              = "";
+
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipHostname              = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.skip.hostname";
+	public static final String  DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipHostname              = "";
+
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipDbname                = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipDbname                = "";
+
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname              = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.skip.progname";
+	public static final String  DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname              = "Report Server";
+
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProcname              = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.skip.procname";
+	public static final String  DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProcname              = "";
+
 	
-	public static final String  PROPKEY_alarm_TempdbUsageMb                             = CM_NAME + ".alarm.system.if.TempdbUsageMb.gt";
-	public static final int     DEFAULT_alarm_TempdbUsageMb                             = 16384; // 16 GB ... which is pretty much
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec              = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.gt";
+	public static final int     DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec              = 180; // 3 minutes
+
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX             = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.exclusiveLocksOnly";
+	public static final boolean DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX             = true;
+	
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername  = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.skip.username";
+	public static final String  DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername  = "";
+
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname  = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.skip.hostname";
+	public static final String  DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname  = "";
+
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname    = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.skip.dbname";
+	public static final String  DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname    = "";
+
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname  = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.skip.progname";
+	public static final String  DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname  = "Report Server";
+
+	public static final String  PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname  = CM_NAME + ".alarm.system.if.HoldingLocksWhileWaitForClientInputInSec.skip.procname";
+	public static final String  DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname  = "";
+
+	
+	public static final String  PROPKEY_alarm_TempdbUsageMb                                         = CM_NAME + ".alarm.system.if.TempdbUsageMb.gt";
+	public static final int     DEFAULT_alarm_TempdbUsageMb                                         = 16384; // 16 GB ... which is pretty much
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1581,10 +1680,22 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec"                , isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_ImBlockingOthersMaxTimeInSec             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSec             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec             , "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
-		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec"    , isAlarmSwitch, PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec , Integer.class, conf.getIntProperty    (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec , "If Client is HOLDING-LOCKS at DBMS and 'ExecTimeInMs' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
-		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec ExclusiveLocksOnly", PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX, "Only send Alarm AlarmEventHoldingLocksWhileWaitForClientInput, if we are holding any Exlusive Locks" ));
-		list.add(new CmSettingsHelper("TempdbUsageMb"                               , isAlarmSwitch, PROPKEY_alarm_TempdbUsageMb                            , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TempdbUsageMb                            , DEFAULT_alarm_TempdbUsageMb                            ), DEFAULT_alarm_TempdbUsageMb                            , "If 'TempdbUsageMb' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec"                , isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec                         , Integer.class, conf.getIntProperty    (PROPKEY_alarm_ImBlockingOthersMaxTimeInSec                         , DEFAULT_alarm_ImBlockingOthersMaxTimeInSec                         ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec                         , "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipUsername",                   PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out user      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(user1|user2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipHostname",                   PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out host      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '.*(dev|test).*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipDbname",                     PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out database  names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(db1|db2)'      or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec Progname",                       PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out program   names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of 'Report Server'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipProcname",                   PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out procedure names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(proc1|proc2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec"    , isAlarmSwitch, PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec             , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec             ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec             , "If Client is HOLDING-LOCKS at DBMS and 'ExecTimeInMs' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec ExclusiveLocksOnly", PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX            , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecX            , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX            ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecX            , "Only send Alarm AlarmEventHoldingLocksWhileWaitForClientInput, if we are holding any Exlusive Locks" ));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipUsername",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out user      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(user1|user2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipHostname",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out host      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '.*(dev|test).*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipDbname",         PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out database  names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(db1|db2)'      or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec Progname",           PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out program   names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of 'Report Server'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipProcname",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out procedure names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(proc1|proc2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("TempdbUsageMb"                               , isAlarmSwitch, PROPKEY_alarm_TempdbUsageMb                                        , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TempdbUsageMb                                        , DEFAULT_alarm_TempdbUsageMb                                        ), DEFAULT_alarm_TempdbUsageMb                                        , "If 'TempdbUsageMb' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
 
 		return list;
 	}

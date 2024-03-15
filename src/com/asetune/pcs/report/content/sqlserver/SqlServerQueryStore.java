@@ -406,19 +406,19 @@ extends SqlServerAbstract
 			//-----------------------------------------------------
 			// Copy: ResultSets
 			//-----------------------------------------------------
-			if (_topCpuRstm  == null) _topCpuRstm  = new ResultSetTableModel(entry._topCpuRstm , "SUMMARY-CPU"   , false);
-			if (_topWaitRstm == null) _topWaitRstm = new ResultSetTableModel(entry._topWaitRstm, "SUMMARY-WAIT"  , false);
-			if (_qsConfRstm  == null) _qsConfRstm  = new ResultSetTableModel(entry._qsConfRstm , "SUMMARY-CONFIG", false);
-			if (_qsRecomRstm == null) _qsRecomRstm = new ResultSetTableModel(entry._qsRecomRstm, "SUMMARY-RECOM" , false);
-			if (_qsHintsRstm == null) _qsHintsRstm = new ResultSetTableModel(entry._qsHintsRstm, "SUMMARY-HINTS" , false);
+			if (_topCpuRstm  == null && entry._topCpuRstm  != null) _topCpuRstm  = new ResultSetTableModel(entry._topCpuRstm , "SUMMARY-CPU"   , false);
+			if (_topWaitRstm == null && entry._topWaitRstm != null) _topWaitRstm = new ResultSetTableModel(entry._topWaitRstm, "SUMMARY-WAIT"  , false);
+			if (_qsConfRstm  == null && entry._qsConfRstm  != null) _qsConfRstm  = new ResultSetTableModel(entry._qsConfRstm , "SUMMARY-CONFIG", false);
+			if (_qsRecomRstm == null && entry._qsRecomRstm != null) _qsRecomRstm = new ResultSetTableModel(entry._qsRecomRstm, "SUMMARY-RECOM" , false);
+			if (_qsHintsRstm == null && entry._qsHintsRstm != null) _qsHintsRstm = new ResultSetTableModel(entry._qsHintsRstm, "SUMMARY-HINTS" , false);
 
 			try
 			{
-				_topCpuRstm .add(entry._topCpuRstm);
-				_topWaitRstm.add(entry._topWaitRstm);
-				_qsConfRstm .add(entry._qsConfRstm);
-				_qsRecomRstm.add(entry._qsRecomRstm);
-				_qsHintsRstm.add(entry._qsHintsRstm);
+				if (entry._topCpuRstm  != null) _topCpuRstm .add(entry._topCpuRstm);
+				if (entry._topWaitRstm != null) _topWaitRstm.add(entry._topWaitRstm);
+				if (entry._qsConfRstm  != null) _qsConfRstm .add(entry._qsConfRstm);
+				if (entry._qsRecomRstm != null) _qsRecomRstm.add(entry._qsRecomRstm);
+				if (entry._qsHintsRstm != null) _qsHintsRstm.add(entry._qsHintsRstm);
 			}
 			catch (ModelMissmatchException ex)
 			{

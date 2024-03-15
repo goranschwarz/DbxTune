@@ -187,7 +187,7 @@ function jsonToTable(json, stripHtmlInCells)
 
 				var newlink = document.createElement('a');
 				newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
-				newlink.setAttribute('href', 'javascript:toggleActiveAlarmsExtendedDesciption();');
+				newlink.setAttribute('href', 'javascript:toggleActiveAlarmsExtendedDescription();');
 				
 				var originDiv   = document.createElement('div');
 				var strippedDiv = document.createElement('div');
@@ -236,7 +236,7 @@ function isHTML(str) {
 	return false;
 }
 
-function toggleActiveAlarmsExtendedDesciption()
+function toggleActiveAlarmsExtendedDescription()
 {
 //	var extDesc = document.getElementsByClassName("active-alarms-extDesc-origin-class active-alarms-extDesc-stripped-class");
 	var extDesc = document.querySelectorAll('.active-alarms-extDesc-origin-class,.active-alarms-extDesc-stripped-class')

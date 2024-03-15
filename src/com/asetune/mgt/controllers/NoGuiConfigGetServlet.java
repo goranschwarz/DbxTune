@@ -147,6 +147,8 @@ if (auth != null)
 			gen.writeStringField("displayName"   , cm.getDisplayName());
 			gen.writeStringField("groupName"     , cm.getGroupName());
 
+			gen.writeObjectField("isCmEnabled"    , cm.isActive());
+
 			gen.writeObjectField("isAlarmEnabled"                 , cm.isAlarmEnabled());
 			gen.writeObjectField("hasSystemAlarms"                , cm.hasSystemAlarms());
 			gen.writeObjectField("isSystemAlarmsEnabled"          , cm.isSystemAlarmsEnabled());
@@ -195,7 +197,7 @@ System.out.println("----------: CM name()               = |" + cm.getName() + ",
 					gen.writeStringField ("value"         , settings.getStringValue());
 					gen.writeStringField ("defaultValue"  , settings.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
-					gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(settings.getDescription()));
+					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
 					gen.writeEndObject();
 				}
 				gen.writeEndArray();
@@ -217,7 +219,7 @@ System.out.println("----------: CM name()               = |" + cm.getName() + ",
 					gen.writeStringField ("value"         , settings.getStringValue());
 					gen.writeStringField ("defaultValue"  , settings.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
-					gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(settings.getDescription()));
+					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
 					gen.writeEndObject();
 				}
 				gen.writeEndArray();
@@ -251,7 +253,7 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 						gen.writeStringField ("value"         , entry.getStringValue());
 						gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 						gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
-						gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+						gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 						gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
 						gen.writeEndObject();
 					}
@@ -289,7 +291,7 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 						gen.writeBooleanField("isAlarmEnabled", cm.isSystemAlarmsForColumnEnabled(colname));
 						gen.writeStringField ("timeRangeCron" , cronStr);
 						gen.writeStringField ("timeRangeDescrption" , cronStrDesc);
-						gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+						gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 
 						
 						// Insert "extra" settings: 'isAlarmEnabled', 'timeRangeCron'
@@ -421,7 +423,7 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 		//                 value: "...",
 		//                 defaultValue: "...",
 		//                 isDefaultValue: "...",
-		//                 desciption: "...",
+		//                 description: "...",
 		//                 validatorName: "..."
 		//             },{
 		//                 ...
@@ -437,7 +439,7 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 		//                 value: "...",
 		//                 defaultValue: "...",
 		//                 isDefaultValue: "...",
-		//                 desciption: "...",
+		//                 description: "...",
 		//                 validatorName: "..."
 		//             },{
 		//                 ...
@@ -481,7 +483,7 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 					gen.writeStringField ("value"         , entry.getStringValue());
 					gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
-					gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 					gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
 					gen.writeEndObject(); // END: object under settings[]
 				}
@@ -504,7 +506,7 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 					gen.writeStringField ("value"         , entry.getStringValue());
 					gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
-					gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 					gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
 					gen.writeEndObject(); // END: object under filters[]
 				}
@@ -587,7 +589,7 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 		gen.writeStringField ("value"         , entry.getStringValue());
 		gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 		gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
-		gen.writeStringField ("desciption"    , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+		gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 		gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
 		gen.writeEndObject();
 	}

@@ -107,6 +107,22 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
+		// Mark the row as ORANGE if PK has been visible on more than 1 sample
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.multi_sampled");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String multiSampled = adapter.getString(adapter.getColumnIndex("multi_sampled"));
+				if (multiSampled != null)
+					multiSampled = multiSampled.trim();
+				if ( ! "".equals(multiSampled))
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
+
 //		// PINK = idle in transaction (aborted)
 //		if (conf != null) colorStr = conf.getProperty(getName()+".color.idle_in_transaction");
 //		addHighlighter( new ColorHighlighter(new HighlightPredicate()

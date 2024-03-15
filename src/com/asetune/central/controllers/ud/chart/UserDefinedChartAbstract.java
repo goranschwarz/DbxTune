@@ -22,9 +22,11 @@
 package com.asetune.central.controllers.ud.chart;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
@@ -64,6 +66,7 @@ implements IUserDefinedChart
 	
 	private Configuration _conf;
 	private boolean       _isValid;
+	private String        _infoContent;
 	private String        _content;
 	private Map<String, String> _urlParameterMap;
 	
@@ -132,7 +135,10 @@ implements IUserDefinedChart
 
 		if (_name != null && _name.equalsIgnoreCase("FROM_FILENAME"))
 		{
-			_name = getFromFileName(0, conf.getFilename());  // 0 == indexPos, logicalPos is 1 
+			String name    = getFromFileName(0, conf.getFilename());  // 0 == indexPos, logicalPos is 1 
+			String srvName = getFromFileName(1, conf.getFilename());  // 1 == indexPos, logicalPos is 2 
+//			_name = name + "@" + srvName; 
+			_name = name; 
 		}
 
 		if (_dbms_servername != null && _dbms_servername.equalsIgnoreCase("FROM_FILENAME"))
@@ -164,6 +170,12 @@ implements IUserDefinedChart
 			_dbms_url = _dbms_url.replace("${srvName}", _dbms_servername);
 		}
 
+		// Replace '${servername}' from the DBMS URL
+		if (_dbms_url.contains("${servername}"))
+		{
+			_dbms_url = _dbms_url.replace("${servername}", _dbms_servername);
+		}
+
 		// Replace '${ifile-hostname}', '${ifile-port}' from the DBMS URL
 		if (_dbms_url.contains("${ifile-hostname}") || _dbms_url.contains("${ifile-port}"))
 		{
@@ -186,6 +198,55 @@ implements IUserDefinedChart
 		}
 	}
 
+	@Override
+	public void onConfigFileChange(Path fullPath)
+	{
+		_logger.info("Configuration was changed for '" + getName() + "' with filename '" + fullPath + "'.");
+
+		Configuration newConfig = new Configuration(fullPath.toString());
+		Configuration curConfig = getConfig();
+		
+		// No changes has been made... (the file was saved with same values or touched) no need to continue
+		if (curConfig.equals(newConfig))
+		{
+			_logger.info("NO Config changes was found, someone probably just 'touched' the file... nothing will be done.");
+			return;
+		}
+		
+		try
+		{
+			// Properties that can NOT be changed
+			String new_name      = newConfig.getProperty(PROPKEY_name);
+			String new_chartType = newConfig.getProperty(PROPKEY_chartType);
+
+			if ( ! _name                .equals(new_name)     ) { throw new Exception("Propery '" + PROPKEY_name      + "' can NOT be changed."); }
+			if ( ! _chartType.toString().equals(new_chartType)) { throw new Exception("Propery '" + PROPKEY_chartType + "' can NOT be changed."); }
+
+
+			// Let the "init" do it's stuff
+			init(newConfig);
+
+			// Print information about what was changed!
+			if ( ! curConfig.getProperty(PROPKEY_description    , "").equals(newConfig.getProperty(PROPKEY_description    , "")) ) { _logger.info("Propery '" + PROPKEY_description     + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_description    , "") + "'."); }
+			if ( ! curConfig.getProperty(PROPKEY_refresh        , "").equals(newConfig.getProperty(PROPKEY_refresh        , "")) ) { _logger.info("Propery '" + PROPKEY_refresh         + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_refresh        , "") + "'."); }
+			if ( ! curConfig.getProperty(PROPKEY_dbms_sql       , "").equals(newConfig.getProperty(PROPKEY_dbms_sql       , "")) ) { _logger.info("Propery '" + PROPKEY_dbms_sql        + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_dbms_sql       , "") + "'."); }
+			if ( ! curConfig.getProperty(PROPKEY_dbms_username  , "").equals(newConfig.getProperty(PROPKEY_dbms_username  , "")) ) { _logger.info("Propery '" + PROPKEY_dbms_username   + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_dbms_username  , "") + "'."); }
+			if ( ! curConfig.getProperty(PROPKEY_dbms_password  , "").equals(newConfig.getProperty(PROPKEY_dbms_password  , "")) ) { _logger.info("Propery '" + PROPKEY_dbms_password   + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_dbms_password  , "") + "'."); }
+			if ( ! curConfig.getProperty(PROPKEY_dbms_servername, "").equals(newConfig.getProperty(PROPKEY_dbms_servername, "")) ) { _logger.info("Propery '" + PROPKEY_dbms_servername + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_dbms_servername, "") + "'."); }
+			if ( ! curConfig.getProperty(PROPKEY_dbms_dbname    , "").equals(newConfig.getProperty(PROPKEY_dbms_dbname    , "")) ) { _logger.info("Propery '" + PROPKEY_dbms_dbname     + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_dbms_dbname    , "") + "'."); }
+			if ( ! curConfig.getProperty(PROPKEY_dbms_url       , "").equals(newConfig.getProperty(PROPKEY_dbms_url       , "")) ) { _logger.info("Propery '" + PROPKEY_dbms_url        + "' was changed. The new value is '" + newConfig.getProperty(PROPKEY_dbms_url       , "") + "'."); }
+			
+			// Switch to the new Configuration Object
+			_conf = newConfig;
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Configuration changes for User Defined Chart '" + getName() + "' and file '" + fullPath + "' was REJECTED. reason: " + ex.getMessage(), ex);
+			return;
+		}
+	}
+
+	
 	/**
 	 * Split the file name on '.' and get the string from the index position 'pos'  
 	 * @param pos       index position (starting at 0)
@@ -225,9 +286,25 @@ implements IUserDefinedChart
 	}
 
 	@Override
+	public String getInfoContent()
+	{
+		return _infoContent;
+	}
+
+	@Override
 	public String getContent()
 	{
 		return _content;
+	}
+
+	/**
+	 * Set content
+	 * 
+	 * @param content
+	 */
+	public void setInfoContent(String infoContent)
+	{
+		_infoContent = infoContent;
 	}
 
 	/**
@@ -253,6 +330,34 @@ implements IUserDefinedChart
 		return _urlParameterMap != null ? _urlParameterMap : Collections.emptyMap();
 	}
 	
+	public String getParameterDescriptionHtmlTable()
+	{
+		Map<String, String> map = getParameterDescription();
+		if (map == null)
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+
+		// START tag
+		sb.append("<table class='parameter-description'> \n");
+
+		// TBODY
+		sb.append("<tbody> \n");
+		for (Entry<String, String> entry : map.entrySet())
+		{
+			sb.append("  <tr> \n");
+			sb.append("    <td nowrap><b>").append( entry.getKey()   ).append("</b></td> \n");
+			sb.append("    <td nowrap>")   .append( entry.getValue() ).append("</td> \n");
+			sb.append("  </tr> \n");
+		}
+		sb.append("</tbody> \n");
+
+		// END tag
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
 	/**
 	 * Connect via JDBC to the configured DBMS URL. using: getDbmsUrl(), getDbmsUsername(), getDbmsPassword()
 	 * @return

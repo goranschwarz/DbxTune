@@ -20,8 +20,10 @@
  ******************************************************************************/
 package com.asetune.utils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -577,11 +579,22 @@ public class JsonUtils
 
 		boolean inQuote = false; // toggled every time we see " (double quote char)
 		char prevChar = ' ';
-		
+
+		// For debug
+		int pos=0;
+		int row=1;
+		int col=0;
+
 		for (char thisChar : input.toCharArray())
 		{
+			if (thisChar == '\n') { row++; col=0; }
+			pos++;
+			col++;
+//System.out.println("row=" + row + ", col=" + col + ", pos=" + pos + ", char=|" + (thisChar=='\n'?"<<<\\n>>>":thisChar) + "|, inQuote=" + inQuote + ", temp.length=" + temp.length() + ", stack.size="+stack.size());
+
 			if ( stack.isEmpty() && thisChar == '{' )
 			{
+//System.out.println(">>>--->>> row=" + row + ", col=" + col + ", pos=" + pos + ", char=|" + thisChar + "|inQuote=" + inQuote + ", , FOUND START {... stack.size=" + stack.size());
 				stack.add(thisChar);
 				temp.append(thisChar);
 			}
@@ -599,29 +612,36 @@ public class JsonUtils
 					}
 				}
 				
-				if ( stack.get(stack.size() - 1).equals('{') && thisChar == '}')
+				if ( ! inQuote )
 				{
-					if (prevChar == '\\' || inQuote)
+					if ( stack.get(stack.size() - 1).equals('{') && thisChar == '}')
 					{
-						// Do nothing
-					}
-					else
-					{
-						stack.remove(stack.size() - 1);
-						if ( stack.isEmpty() )
+						if (prevChar == '\\' || inQuote)
 						{
-							jsons.add(temp.toString());
-							temp = new StringBuilder();
+							// Do nothing
+						}
+						else
+						{
+							stack.remove(stack.size() - 1);
+//System.out.println("   CLOSE '}' row=" + row + ", col=" + col + ", pos=" + pos + ", char=|" + thisChar + "|, inQuote=" + inQuote + ", stack.size=" + stack.size());
+							if ( stack.isEmpty() )
+							{
+								jsons.add(temp.toString());
+//System.out.println("<<<---<<< row=" + row + ", col=" + col + ", pos=" + pos + ", char=|" + thisChar + "|, inQuote=" + inQuote + ", FOUND END JSON jsonList.size=" + jsons.size() + ", strSize=" + temp.toString().length());
+								temp = new StringBuilder();
+							}
 						}
 					}
-				}
-				else if ( thisChar == '{' || thisChar == '}' )
-				{
-					stack.add(thisChar);
-				}
+					else if ( thisChar == '{' || thisChar == '}' )
+					{
+						stack.add(thisChar);
+//System.out.println("   START-OR-CLOSE '" + thisChar + "' row=" + row + ", col=" + col + ", pos=" + pos + ", char=|" + thisChar + "|, inQuote=" + inQuote + ", stack.size=" + stack.size());
+					}
+				} //end: !inQuote
 			}
 			else if ( temp.length() > 0 && stack.isEmpty() )
 			{
+//System.out.println("---END OBJ... row=" + row + ", col=" + col + ", pos=" + pos + ", char=|" + thisChar + "|, FOUND END JSON jsonList.size=" + jsons.size() + ", strSize=" + temp.toString().length());
 				jsons.add(temp.toString());
 				temp = new StringBuilder();
 			}
@@ -668,8 +688,8 @@ public class JsonUtils
 //		
 //	}
 //	
-//	public static void main(String[] args)
-//	{
+	public static void main(String[] args)
+	{
 //		System.out.println("--------------------------");
 //		test(true, "{#name#:#value#}"                                                   , new String[] {"{#name#:#value#}"});
 //		test(true, "{#name#:#val\\#ue#}"                                                , new String[] {"{#name#:#val\\#ue#}"});
@@ -677,25 +697,27 @@ public class JsonUtils
 //		test(true, "-123-{#name#:#some } embedded in a string#}-456-{aaa=bbb}-321-"     , new String[] {"{#name#:#some } embedded in a string#}"     , "{aaa=bbb}"});
 //		test(true, "-123-{#name#:#some escaped \\} embedded string#}-456-{aaa=bbb}-321-", new String[] {"{#name#:#some escaped \\} embedded string#}", "{aaa=bbb}"});
 //		test(true, "-123-{#name#:some escaped \\} right curlyBrace}-456-{aaa=bbb}-321-" , new String[] {"{#name#:some escaped \\} right curlyBrace}" , "{aaa=bbb}"});
-//
-//		try
-//		{
-//			String content = FileUtils.readFile("C:\\tmp\\xxx.json", StandardCharsets.UTF_8.toString());
-////			System.out.println("Content=|"+content+"|.");
-//
-//			long startTime = System.currentTimeMillis();
-//			List<String> list = getJsonFromString(content);
-//			System.out.println("ExecTimeMs=" + TimeUtils.msDiffNow(startTime) + ", for list.size()=" + list.size());
-//
-//			for (String str : list)
-//			{
-//				System.out.println("Length=" + str.length());
-//			}
-//		}
-//		catch (IOException e)
-//		{
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	}
+
+		try
+		{
+			String content = FileUtils.readFile("C:\\tmp\\QQQQQQQQQQQQQQQQQQQQQQ.json", StandardCharsets.UTF_8.toString());
+//			System.out.println("Content=|"+content+"|.");
+			System.out.println("Content=|"+content.length()+"| bytes.");
+			System.out.println("Content=|"+content.length()/1024+"| KB.");
+
+			long startTime = System.currentTimeMillis();
+			List<String> list = getJsonObjectsFromString(content);
+			System.out.println("ExecTimeMs=" + TimeUtils.msDiffNow(startTime) + ", for list.size()=" + list.size());
+
+			for (String str : list)
+			{
+				System.out.println("Length=" + str.length());
+			}
+		}
+		catch (IOException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }

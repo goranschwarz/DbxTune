@@ -58,12 +58,26 @@ extends HttpServlet
 		if (principal != null)
 			currentUsername = principal.getName();
 
-		String from = "from getRemoteHost='" + request.getRemoteHost() + "', currentUsername='"+currentUsername+"', by user '" + request.getRemoteUser() + "'.";
+		String from = "from getRemoteHost='" + request.getRemoteHost() + "', currentUsername='"+currentUsername+"', by user '" + request.getRemoteUser() + "', UserAgent='" + request.getHeader("User-Agent") + "'.";
 
-		
 		String recordingsDir = DbxTuneCentral.getAppDataDir();
 		
 		String fileName = request.getParameter("name");
+
+
+		//-----------------------------------------
+		// Check that we are logged in
+		//-----------------------------------------
+		String userName = request.getRemoteUser();
+		//boolean isAdmin = req.isUserInRole(DbxCentralRealm.ROLE_ADMIN);
+		if (StringUtil.isNullOrBlank(userName))
+		{
+			// Write information about this in the log
+			_logger.warn("Unauthorized download of Recording file '" + fileName + "' detected from '" + request.getRemoteAddr() + "' [" + StringUtil.getHostnameWithDomain(request.getRemoteAddr()) + "], UserAgent='" + request.getHeader("User-Agent") + "'.");
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "To download Recordings, you need to login.");
+			return;
+		}
+
 
 		//-----------------------------------------
 		// CHECK: Error / input

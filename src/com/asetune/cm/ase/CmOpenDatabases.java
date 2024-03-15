@@ -37,6 +37,7 @@ import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -69,7 +70,10 @@ import com.asetune.gui.DbSelectionForGraphsDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PcsColumnOptions;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.PcsColumnOptions.ColumnType;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSybaseAse;
@@ -1824,6 +1828,36 @@ extends CountersModel
 						{
 							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+							// Get 'LastKnownSqlText'
+							boolean getLastKnownSqlText = true;
+							if (getLastKnownSqlText)
+							{
+								ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+								if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)
+								{
+									SqlCaptureBrokerAse aseSqlCaptureBroker = (SqlCaptureBrokerAse) sqlCaptureBroker;
+
+									int spid    = getAbsValueAsInteger(r, "OldestTranSpid", -1);
+									int kpid    = -1;
+									int batchId = -1;
+
+//									if (spid != -1 && kpid != -1 && batchId != -1)
+									if (spid != -1)
+									{
+										boolean getAllAvailableBatches = true;
+										String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId, getAllAvailableBatches);
+
+										extendedDescHtml += "<br><br><b>Last Known SQL Text for 'Oldest Open Tran' SPID: " + spid + "</b>"
+												+ "<br>"
+												+ "<pre><code>"
+												+ StringEscapeUtils.escapeHtml4(lastKnownSqlText)
+												+ "</code></pre>"
+												+ "<br><br>";
+									}
+								}
+							}
+							
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							

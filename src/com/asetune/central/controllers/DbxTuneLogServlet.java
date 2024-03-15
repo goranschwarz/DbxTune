@@ -100,10 +100,9 @@ public class DbxTuneLogServlet extends HttpServlet
 			return;
 		}
 
-
 		// CHECK: that the input file really INSIDE the LOG_DIR and not outside (for example /tmp/filename or /var/log/message)
 		Path logDirPath   = Paths.get(LOG_DIR);
-		Path inputPath    = Paths.get(LOG_DIR+"/"+inputName);
+		Path inputPath    = Paths.get(LOG_DIR + "/" + inputName);
 		Path relativePath = logDirPath.relativize(inputPath);
 		if (relativePath.startsWith(".."))
 		{
@@ -112,7 +111,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		}
 	
 		// Check if file EXISTS
-		File inputFile = new File(LOG_DIR+"/"+inputName);
+		File inputFile = new File(LOG_DIR + "/" + inputName);
 		if ( ! inputFile.exists() )
 		{
 			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputFile + "' doesn't exist.");
@@ -683,7 +682,6 @@ public class DbxTuneLogServlet extends HttpServlet
 
 //		out.println("<script type='text/javascript' src='/scripts/tablefilter/tablefilter.js'></script>");
 		
-//		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.js'></script>");
 		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");

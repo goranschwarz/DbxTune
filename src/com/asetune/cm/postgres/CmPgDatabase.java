@@ -257,7 +257,7 @@ extends CountersModel
 			+ "     sd.* \n"
 			+ "    ,(sd.blks_hit + sd.blks_read)   AS total_reads \n"
 			+ "    ,CAST(100.0 * (sd.blks_hit*1.0) / NULLIF((sd.blks_hit + sd.blks_read), 0) as numeric(10,2)) AS cache_hit_pct \n"
-			+ "    ,pg_database_size(sd.datname) / 1024 /1024                             AS dbsize_mb \n"
+			+ "    ,CASE WHEN has_database_privilege(sd.datname, 'CONNECT') THEN pg_database_size(sd.datname) / 1024 /1024 ELSE -1 END AS dbsize_mb \n"
 			+ "    ,CAST( CASE WHEN sd.tup_returned > 0 THEN (sd.tup_fetched*1.0)/(sd.tup_returned*1.0)*100.0 ELSE null END as numeric(10,2)) AS fetch_efficency_pct \n"
 			+ "    ,CAST( 0.0   as numeric(10,2))  AS fetch_efficency_slide_pct \n"
 			+ "    ,CAST( 0     as bigint)         AS tup_fetched_in_slide \n"

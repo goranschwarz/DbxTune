@@ -221,6 +221,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_lastKnownSqlText     = PROP_PREFIX + ".sample.lastKnownSqlText";
 	public static final boolean DEFAULT_sample_lastKnownSqlText     = false;
 
+	public static final String  PROPKEY_sample_lastKnownSqlText_all = PROP_PREFIX + ".sample.lastKnownSqlText.all";
+	public static final boolean DEFAULT_sample_lastKnownSqlText_all = false;
+
 	@Override
 	protected void registerDefaultValues()
 	{
@@ -593,6 +596,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Discard AseTune Activity in TrendGraphs", PROPKEY_summaryGraph_discardDbxTune , Boolean.class, conf.getBooleanProperty(PROPKEY_summaryGraph_discardDbxTune , DEFAULT_summaryGraph_discardDbxTune ), DEFAULT_summaryGraph_discardDbxTune, CmProcessActivityPanel.TOOLTIP_summaryGraph_discardDbxTune ));
 		list.add(new CmSettingsHelper("Get SQL Text from Active SPID's",         PROPKEY_sample_sqlText ,              Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText              , DEFAULT_sample_sqlText              ), DEFAULT_sample_sqlText             , CmProcessActivityPanel.TOOLTIP_sample_sqlText              ));
 		list.add(new CmSettingsHelper("Get Last Known SQL Text",                 PROPKEY_sample_lastKnownSqlText ,     Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText     , DEFAULT_sample_lastKnownSqlText     ), DEFAULT_sample_lastKnownSqlText    , CmProcessActivityPanel.TOOLTIP_sample_lastKnownSqlText     ));
+		list.add(new CmSettingsHelper("Get Last Known SQL Text (all)",           PROPKEY_sample_lastKnownSqlText_all,  Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText_all , DEFAULT_sample_lastKnownSqlText_all ), DEFAULT_sample_lastKnownSqlText_all, CmProcessActivityPanel.TOOLTIP_sample_lastKnownSqlText_all ));
 
 		return list;
 	}
@@ -687,7 +691,8 @@ extends CountersModel
 		int pos_BytesReceived         = -1, pos_PacketsReceived           = -1;
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean getLastKnownSqlText = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText, DEFAULT_sample_lastKnownSqlText);
+		boolean getLastKnownSqlText     = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText    , DEFAULT_sample_lastKnownSqlText);
+		boolean getLastKnownSqlText_all = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_lastKnownSqlText_all, DEFAULT_sample_lastKnownSqlText_all);
 
 		int waitEventID = 0;
 		String waitEventDesc = "";
@@ -801,7 +806,8 @@ extends CountersModel
 
 					if (spid != -1 && kpid != -1 && batchId != -1)
 					{
-						String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId);
+						// getLastKnownSqlText_all: If we should get ALL available or just LAST SqlText (default=false, which means:LAST)
+						String lastKnownSqlText = aseSqlCaptureBroker.getSqlText(spid, kpid, batchId, getLastKnownSqlText_all);
 						if (lastKnownSqlText != null)
 						{
 							counters.setValueAt(true            , rowId, pos_HasLastKnownSqlText);

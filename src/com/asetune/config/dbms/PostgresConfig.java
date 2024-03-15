@@ -861,6 +861,24 @@ extends DbmsConfigAbstract
 		}
 
 		//-------------------------------------------------------
+		cfgName = "autovacuum"; //  may lead to 'transaction wraparound' or other bad stuff
+		                        //  TODO: Possibly check for tables where it's also turned off
+		entry = _configMap.get(cfgName);
+		if (entry != null)
+		{
+			if ("off".equalsIgnoreCase(entry.configValue) || "false".equalsIgnoreCase(entry.configValue))
+			{
+				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".off";
+
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.WARNING, 
+						"The Server Level Configuration '" + cfgName + "' is 'OFF'. You may experiance transaction wraparound.", 
+						"Fix this using: Set configuration '" + cfgName + "' to 'on'.");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
+
+		//-------------------------------------------------------
 		// TODO in the future
 		cfgName = "min_parallel_table_scan_size"; // is probably set to low  
 		cfgName = "min_parallel_index_scan_size"; // is probably set to low  

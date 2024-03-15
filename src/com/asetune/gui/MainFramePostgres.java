@@ -31,6 +31,8 @@ import org.apache.log4j.Logger;
 import com.asetune.Version;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCachePostgres;
+import com.asetune.cache.XmlPlanCache;
+import com.asetune.cache.XmlPlanCachePostgres;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -190,6 +192,9 @@ extends MainFrame
 			DbmsObjectIdCache.getInstance().getBulk(null); // null == ALL Databases
 		else
 			_logger.info("Skipping BULK load of ObjectId's at connectMonitorHookin(), isBulkLoadOnStartEnabled() was NOT enabled. Property '" + DbmsObjectIdCachePostgres.PROPKEY_BulkLoadOnStart + "=true|false'.");
+
+		// (XML) Plan Cache... maybe it's not the perfect place to initialize this...
+		XmlPlanCache.setInstance( new XmlPlanCachePostgres(this) );
 	}
 
 	@Override
@@ -222,15 +227,18 @@ extends MainFrame
 	@Override
 	protected Icon getGroupIcon(String groupName)
 	{
-		if      (TCP_GROUP_SERVER  .equals(groupName)) return TCP_GROUP_ICON_SERVER;
-		else if (TCP_GROUP_PROGRESS.equals(groupName)) return TCP_GROUP_ICON_PROGRESS;
+		if      (TCP_GROUP_SERVER     .equals(groupName)) return TCP_GROUP_ICON_SERVER;
+		else if (TCP_GROUP_PROGRESS   .equals(groupName)) return TCP_GROUP_ICON_PROGRESS;
+		else if (TCP_GROUP_REPLICATION.equals(groupName)) return TCP_GROUP_ICON_REPLICATION;
 		else
 			return super.getGroupIcon(groupName);
 	}
 	public static final ImageIcon TCP_GROUP_ICON_SERVER        = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_postgresserver.png");
 	public static final ImageIcon TCP_GROUP_ICON_PROGRESS      = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_progress.png");
+	public static final ImageIcon TCP_GROUP_ICON_REPLICATION   = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_pg_replication.png");
 
 	public static final String    TCP_GROUP_PROGRESS         = "Progress";
+	public static final String    TCP_GROUP_REPLICATION      = "Replication";
 	
 	@Override
 	protected boolean addTabGroup(String groupName)
@@ -252,6 +260,7 @@ extends MainFrame
 //		GTabbedPane tabGroupDisk         = new GTabbedPane("MainFrame_TabbedPane_Disk");
 //		GTabbedPane tabGroupRepAgent     = new GTabbedPane("MainFrame_TabbedPane_RepAgent");
 		GTabbedPane tabGroupProgress     = new GTabbedPane("MainFrame_TabbedPane_Progress");
+		GTabbedPane tabGroupReplication  = new GTabbedPane("MainFrame_TabbedPane_Replication");
 		GTabbedPane tabGroupHostMonitor  = new GTabbedPane("MainFrame_TabbedPane_HostMonitor");
 		GTabbedPane tabGroupUdc          = new GTabbedPane("MainFrame_TabbedPane_Udc");
 
@@ -262,6 +271,7 @@ extends MainFrame
 //		tabGroupDisk        .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
 //		tabGroupRepAgent    .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
 		tabGroupProgress    .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
+		tabGroupReplication .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
 		tabGroupHostMonitor .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
 		tabGroupUdc         .setTabLayoutPolicy(mainTabbedPane.getTabLayoutPolicy());
 
@@ -271,6 +281,7 @@ extends MainFrame
 //		if (addTabGroup(TCP_GROUP_DISK))          mainTabbedPane.addTab(TCP_GROUP_DISK,          getGroupIcon(TCP_GROUP_DISK),          tabGroupDisk,         getGroupToolTipText(TCP_GROUP_DISK));
 //		if (addTabGroup(TCP_GROUP_REP_AGENT))     mainTabbedPane.addTab(TCP_GROUP_REP_AGENT,     getGroupIcon(TCP_GROUP_REP_AGENT),     tabGroupRepAgent,     getGroupToolTipText(TCP_GROUP_REP_AGENT));
 		if (addTabGroup(TCP_GROUP_PROGRESS))      mainTabbedPane.addTab(TCP_GROUP_PROGRESS,      getGroupIcon(TCP_GROUP_PROGRESS),      tabGroupProgress,     "Show information from progress reports: 'pg_stat_progress_*' tables.");
+		if (addTabGroup(TCP_GROUP_REPLICATION))   mainTabbedPane.addTab(TCP_GROUP_REPLICATION,   getGroupIcon(TCP_GROUP_REPLICATION),   tabGroupReplication,  "Show information about Replication.");
 		if (addTabGroup(TCP_GROUP_HOST_MONITOR))  mainTabbedPane.addTab(TCP_GROUP_HOST_MONITOR,  getGroupIcon(TCP_GROUP_HOST_MONITOR),  tabGroupHostMonitor,  getGroupToolTipText(TCP_GROUP_HOST_MONITOR));
 		if (addTabGroup(TCP_GROUP_UDC))           mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,          getGroupToolTipText(TCP_GROUP_UDC));
 		

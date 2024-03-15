@@ -1792,10 +1792,15 @@ public class DbxTuneCentral
 			
 			String webDir = getAppWebDir();
 			WebAppContext webapp1 = new WebAppContext();
-			webapp1.setDescriptor(webDir+"/WEB-INF/web.xml");
+			webapp1.setDescriptor(webDir + "/WEB-INF/web.xml");
 			webapp1.setResourceBase(webDir);
 			webapp1.setContextPath("/");
 			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
+			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+//			webapp1.getServletContext().getContextHandler().setMaxFormContentSize(10000000);
+			webapp1.getServletContext().getContextHandler().setMaxFormContentSize(-1);
+
+
 			webapp1.setParentLoaderPriority(true);
 
 //			InterceptExceptionsFilter interceptFilter = new InterceptExceptionsFilter();

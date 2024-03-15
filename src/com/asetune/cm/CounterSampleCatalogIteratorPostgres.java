@@ -92,9 +92,10 @@ extends CounterSampleCatalogIterator
 	{
 		String sql 
 				= "select datname \n"
-				+ "from pg_catalog.pg_database \n"
-				+ "where datname not like 'template%' \n"
-				+ "  and pg_catalog.has_database_privilege(datname, 'CONNECT') \n" // Possibly add this to only lookup databases that we have access to
+				+ "from pg_database \n"
+//				+ "where datname not like 'template%' \n"
+				+ "where NOT datistemplate \n"
+				+ "  and has_database_privilege(datname, 'CONNECT') \n" // Possibly add this to only lookup databases that we have access to
 				+ "order by 1 \n";
 
 		ArrayList<String> list = new ArrayList<String>();

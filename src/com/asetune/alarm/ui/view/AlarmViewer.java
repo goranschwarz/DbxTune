@@ -24,7 +24,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Frame;
 import java.awt.Image;
-import java.awt.Point;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -583,38 +582,38 @@ implements ActionListener
 				return super.createDefaultTableHeader();
 		}
 
-		/** CELL tool tip */
-		@Override
-		public String getToolTipText(MouseEvent e)
-		{
-			String tip = null;
-
-			Point p = e.getPoint();
-			int row = rowAtPoint(p);
-			int col = columnAtPoint(p);
-			if ( row >= 0 && col >= 0 )
-			{
-				int mcol = super.convertColumnIndexToModel(col);
-				int mrow = super.convertRowIndexToModel(row);
-
-				if (mcol < 0 || mrow < 0)
-					return null;
-
-				// View Content of the following columns
-				if (    mcol == AlarmHistoryTableModel.TAB_POS_DESCRIPTION
-				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_DESCRIPTION
-				     || mcol == AlarmHistoryTableModel.TAB_POS_EXTENDED_DESCRIPTION
-				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_EXTENDED_DESCRIPTION
-					)
-					tip = (String) super.getModel().getValueAt(mrow, mcol);
-
-				if (tip == null)
-					return null;
-			}
-
-//			return "<html>" + tip + "</html>";
-			return tip;
-		}
+//		/** CELL tool tip */
+//		@Override
+//		public String getToolTipText(MouseEvent e)
+//		{
+//			String tip = null;
+//
+//			Point p = e.getPoint();
+//			int row = rowAtPoint(p);
+//			int col = columnAtPoint(p);
+//			if ( row >= 0 && col >= 0 )
+//			{
+//				int mcol = super.convertColumnIndexToModel(col);
+//				int mrow = super.convertRowIndexToModel(row);
+//
+//				if (mcol < 0 || mrow < 0)
+//					return null;
+//
+//				// View Content of the following columns
+//				if (    mcol == AlarmHistoryTableModel.TAB_POS_DESCRIPTION
+//				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_DESCRIPTION
+//				     || mcol == AlarmHistoryTableModel.TAB_POS_EXTENDED_DESCRIPTION
+//				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_EXTENDED_DESCRIPTION
+//					)
+//					tip = (String) super.getModel().getValueAt(mrow, mcol);
+//
+//				if (tip == null)
+//					return null;
+//			}
+//
+////			return "<html>" + tip + "</html>";
+//			return tip;
+//		}
 
 		/** Populate information in the table */
 		protected void refreshTable()
@@ -916,38 +915,40 @@ implements ActionListener
 				return super.createDefaultTableHeader();
 		}
 
-		/** CELL tool tip */
-		@Override
-		public String getToolTipText(MouseEvent e)
-		{
-			String tip = null;
-
-			Point p = e.getPoint();
-			int row = rowAtPoint(p);
-			int col = columnAtPoint(p);
-			if ( row >= 0 && col >= 0 )
-			{
-				int mcol = super.convertColumnIndexToModel(col);
-				int mrow = super.convertRowIndexToModel(row);
-
-				if (mcol < 0 || mrow < 0)
-					return null;
-
-				// View Content of the following columns
-				if (    mcol == AlarmHistoryTableModel.TAB_POS_DESCRIPTION
-				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_DESCRIPTION
-				     || mcol == AlarmHistoryTableModel.TAB_POS_EXTENDED_DESCRIPTION
-				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_EXTENDED_DESCRIPTION
-					)
-						tip = (String) super.getModel().getValueAt(mrow, mcol);
-
-				if (tip == null)
-					return null;
-			}
-
-//			return "<html>" + tip + "</html>";
-			return tip;
-		}
+//		/** CELL tool tip */
+//		@Override
+//		public String getToolTipText(MouseEvent e)
+//		{
+//			String tip = null;
+//
+//			Point p = e.getPoint();
+//			int row = rowAtPoint(p);
+//			int col = columnAtPoint(p);
+//			if ( row >= 0 && col >= 0 )
+//			{
+//				int mcol = super.convertColumnIndexToModel(col);
+//				int mrow = super.convertRowIndexToModel(row);
+//
+//				if (mcol < 0 || mrow < 0)
+//					return null;
+//
+//				// View Content of the following columns
+//				if (    mcol == AlarmHistoryTableModel.TAB_POS_DESCRIPTION
+//				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_DESCRIPTION
+//				     || mcol == AlarmHistoryTableModel.TAB_POS_EXTENDED_DESCRIPTION
+//				     || mcol == AlarmHistoryTableModel.TAB_POS_LAST_EXTENDED_DESCRIPTION
+//					)
+//				{
+//					tip = "" + super.getModel().getValueAt(mrow, mcol);
+//				}
+//
+//				if (tip == null)
+//					return null;
+//			}
+//
+////			return "<html>" + tip + "</html>";
+//			return tip;
+//		}
 
 		/** Populate information in the table */
 		protected void refreshTable()

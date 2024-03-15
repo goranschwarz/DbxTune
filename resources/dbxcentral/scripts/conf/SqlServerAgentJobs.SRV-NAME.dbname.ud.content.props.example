@@ -1,0 +1,259 @@
+## This is a template file to create a User Defined Chart
+
+##------------------------------------------------------------
+## 'name' is mandatory field
+## Note:
+##   - If 'name' has FROM_FILENAME, then get first part of the filename as the server name (example: xxx.dbms-name.db-name.ud.chart.props)
+##     in the example we will use 'xxx' as the name
+##------------------------------------------------------------
+name = FROM_FILENAME
+
+##------------------------------------------------------------
+## 'chartType' is mandatory field
+##------------------------------------------------------------
+chartType = TIMELINE
+
+##------------------------------------------------------------
+## 'description'
+##------------------------------------------------------------
+description = SQL Server Job Scheduler Progress
+
+##------------------------------------------------------------
+## 'refresh' - Auto refresh every ## seconds
+##------------------------------------------------------------
+refresh = 300
+
+##------------------------------------------------------------
+## 'dbms.sql' is mandatory field
+## SQL Statement that produces a TIMELINE ResultSet
+## Column DataType  Description
+## ------ --------  -------------------------------------
+##      1 String    labelKey  (Text on the left side of the graph)
+##      2 String    barText   (Text on the bar within the time-line chart)
+##      3 String    color     (any valid HTML color that the bar will have)
+##      4 Timestamp beginTime (Start time for this entry)
+##      5 Timestamp endTime   (End time for this entry)
+##      All extra columns will be put in the "tool tip" section
+##
+## ${startTime} and ${endTime} is variables that will be replaced with ISO date time 'yyyy-MM-dd HH:mm:ss.SSS'
+##------------------------------------------------------------
+dbms.sql = \
+/* NOTE: the below needs: use msdb; GRANT EXECUTE ON msdb.dbo.agent_datetime TO PUBLIC -- or: dbxtune */ \n\
+DECLARE @minimum_duration_in_seconds int = 10 \n\
+DECLARE @start_time datetime = '${startTime}' \n\
+DECLARE @end_time   datetime = '${endTime}'   \n\
+\n\
+;WITH st0 AS \n\
+( \n\
+    /* Get "parent" jobs (step_id=0) that are in the history -- jobs that already has been executed */ \n\
+    SELECT  \n\
+        job_name     = j.name \n\
+       ,run_datetime = msdb.dbo.agent_datetime(h.run_date, h.run_time) \n\
+       ,h.instance_id \n\
+       ,h.job_id \n\
+       ,h.run_date \n\
+       ,h.run_time \n\
+       ,query_src = '1' \n\
+    FROM msdb.dbo.sysjobhistory h  \n\
+    INNER JOIN msdb..sysjobs j ON h.job_id = j.job_id \n\
+    WHERE h.step_id = 0 \n\
+      AND msdb.dbo.agent_datetime(h.run_date, h.run_time) BETWEEN @start_time and @end_time \n\
+      /* possibly rewrite this to use 'run_date, run_time' instead of a datetime... */ \n\
+      /* this so we can create/use a index on sysjobhistory(run_date, run_time)     */ \n\
+      AND (h.run_duration/10000*3600 + (h.run_duration/100)%100*60 + h.run_duration%100) > @minimum_duration_in_seconds \n\
+\n\
+    UNION ALL  \n\
+\n\
+    /* Get "parent" jobs that are ACTIVE -- currently executing, which is not YET part on the sysjobhistory table */ \n\
+    SELECT  \n\
+        job_name    = j.name \n\
+       ,run_date    = ja.start_execution_date \n\
+       ,instance_id = (/* id of last history that HAS executed */  select top 1 jh.instance_id from msdb.dbo.sysjobhistory jh where jh.job_id = ja.job_id and jh.step_id >= 1 order by jh.run_date desc, jh.run_time desc ) \n\
+       ,job_id      = ja.job_id \n\
+       ,run_date    = convert(int, convert(varchar(8), ja.start_execution_date, 112))                   /* 112 = yyyymmdd */ \n\
+       ,run_time    = convert(int, REPLACE(convert(varchar(8), ja.start_execution_date, 114), ':', '')) /* 114 = hh:mi:ss:mmm  ... then remove ':' */ \n\
+       ,query_src = '2' \n\
+    FROM msdb.dbo.sysjobactivity ja  \n\
+    INNER JOIN msdb.dbo.sysjobs j ON ja.job_id = j.job_id  \n\
+    WHERE 1=1 \n\
+      AND ja.session_id = ( select max(session_id) FROM msdb.dbo.syssessions ) \n\
+      AND ja.start_execution_date IS NOT NULL  \n\
+      AND ja.start_execution_date <= @end_time \n\
+      AND ja.stop_execution_date  IS NULL  \n\
+) \n\
+,job_history AS \n\
+( \n\
+	SELECT \n\
+	       chart_key = FORMAT(st0.run_datetime, 'yyyy-MM-dd HH:mm:ss') + ' -- ' + st0.job_name + ' - step: [' + FORMAT(jh.step_id,'D3') + ']' \n\
+	      ,CASE \n\
+	         WHEN jh.step_id = 0  \n\
+	           THEN '[' + CAST(jh.step_id as varchar(9)) + '] - FULL JOB: ' + st0.job_name \n\
+	         ELSE   '[' + CAST(jh.step_id as varchar(9)) + '] - ' + jh.step_name \n\
+	       END as bar_name \n\
+           ,CASE \n\
+                WHEN jh.run_status = 0                    THEN 'red'         /* Failed      */ \n\
+                WHEN jh.run_status = 1 AND jh.step_id = 0 THEN 'lightblue'   /* Succeeded on BASE  */ \n\
+                WHEN jh.run_status = 1 AND jh.step_id > 0 THEN 'blue'        /* Succeeded on STEPS  */ \n\
+                WHEN jh.run_status = 2                    THEN 'orange'      /* Retry       */ \n\
+                WHEN jh.run_status = 3                    THEN 'red'         /* Canceled    */ \n\
+                WHEN jh.run_status = 4                    THEN 'green'       /* In Progress */ \n\
+            END as bar_color \n\
+	      ,jh.job_id \n\
+	      ,jh.step_id \n\
+	      ,main_job_start_ts  = st0.run_datetime \n\
+	      ,step_start_ts      = msdb.dbo.agent_datetime(st0.run_date, jh.run_time) \n\
+	      ,step_end_ts        = dateadd(second,  (jh.run_duration/10000*3600 + (jh.run_duration/100)%100*60 + jh.run_duration%100), msdb.dbo.agent_datetime(st0.run_date, jh.run_time)) \n\
+	      ,step_duration_sec  = (jh.run_duration/10000*3600 + (jh.run_duration/100)%100*60 + jh.run_duration%100) \n\
+	      ,sql_message_id     = jh.sql_message_id \n\
+	      ,sql_severity       = jh.sql_severity \n\
+	      ,message            = jh.message \n\
+	      ,query_src          = st0.query_src \n\
+	FROM st0 \n\
+	INNER JOIN msdb.dbo.sysjobhistory jh ON (    jh.job_id       = st0.job_id \n\
+	                                         AND jh.instance_id <= st0.instance_id \n\
+	                                         AND (   jh.run_date > st0.run_date \n\
+	                                              OR (    jh.run_date  = st0.run_date  \n\
+	                                                  AND jh.run_time >= st0.run_time \n\
+	                                                 ) \n\
+	                                             ) \n\
+	                                        ) \n\
+            /* ---------------------------------- \n\
+             * The above "join" was found at: \n\
+             * https://dba.stackexchange.com/questions/187672/linking-job-steps-from-a-single-run-together-in-sysjobhistory \n\
+             * ---------------------------------- \n\
+             * Note that sysjobhistory has an ID column (instance_id). at least one entry should hit the table for each step of a job that was completed,  \n\
+             * followed by an entry with step_id = 0, recording the outcome of the job. Each step also records the time (run_date and run_time)  \n\
+             * the step was started, which will be equal to or greater than the time the job was started.  \n\
+             * So, the step_id = 0 row for a given run has a higher instance_id than the related steps, but a lower (or equal) run time. \n\
+             *  \n\
+             * So, try doing an initial pull of the data from the rows where step_id = 0 into a temp table (or equivalent).  \n\
+             * Then, all rows from sysjobhistory with the same job_id, a lower instance_id, and a higher or equal start time  \n\
+             * (from run_date and run_time) should belong to the job run you're looking for. \n\
+             */ \n\
+) \n\
+SELECT  \n\
+     chart_key \n\
+    ,bar_name \n\
+    ,bar_color \n\
+    ,step_start_ts \n\
+    ,step_end_ts \n\
+    ,job_history.step_id \n\
+    ,subsystem     = CAST(js.subsystem as nvarchar(40)) \n\
+    ,command       = CAST(js.command   as nvarchar(4000)) \n\
+    ,js.server \n\
+    ,js.database_name \n\
+    ,js.database_user_name \n\
+    ,js.output_file_name \n\
+    ,sql_message_id = CASE WHEN job_history.sql_message_id = 0 THEN '' ELSE CAST(job_history.sql_message_id as varchar(10)) END \n\
+    ,sql_severity   = CASE WHEN job_history.sql_severity   = 0 THEN '' ELSE CAST(job_history.sql_severity   as varchar(10)) END \n\
+    ,message        = CAST(job_history.message as nvarchar(4000)) \n\
+    ,job_history.main_job_start_ts \n\
+    ,job_history.job_id \n\
+    ,query_src \n\
+FROM job_history \n\
+LEFT OUTER JOIN msdb.dbo.sysjobsteps js ON job_history.job_id = js.job_id AND job_history.step_id = js.step_id \n\
+\n\
+UNION ALL \n\
+\n\
+/* Get Active jobs (at level 0) */ \n\
+SELECT  \n\
+     chart_key          = FORMAT(ja.start_execution_date, 'yyyy-MM-dd HH:mm:ss') + ' -- ' + j.name + ' - step: [000]'   \n\
+    ,bar_name           = '[0] FULL JOB: ' + j.name \n\
+    ,bar_color          = 'lightgreen'  \n\
+    ,startDate          = ja.start_execution_date \n\
+    ,endDate            = NULL /*--getdate() -- OR NULL */ \n\
+    ,step_id            = CAST(0         as int) \n\
+    ,subsystem          = CAST(NULL      as nvarchar(40)) \n\
+    ,command            = CAST(NULL      as nvarchar(4000)) \n\
+    ,server             = CAST(NULL      as nvarchar(128)) \n\
+    ,database_name      = CAST(NULL      as nvarchar(128)) \n\
+    ,database_user_name = CAST(NULL      as nvarchar(128)) \n\
+    ,output_file_name   = CAST(NULL      as nvarchar(128)) \n\
+    ,sql_message_id = CAST('' as varchar(10)) \n\
+    ,sql_severity   = CAST('' as varchar(10)) \n\
+    ,message        = CAST('' as nvarchar(4000)) \n\
+    ,main_job_start_ts  = ja.start_execution_date \n\
+    ,job_id             = CAST(ja.job_id as nvarchar(128)) \n\
+    ,query_src          = '10' \n\
+FROM msdb.dbo.sysjobactivity ja  \n\
+INNER JOIN msdb.dbo.sysjobs   j ON ja.job_id         = j.job_id  \n\
+WHERE 1=1 \n\
+  AND ja.session_id = ( select max(session_id) FROM msdb.dbo.syssessions ) \n\
+  AND ja.start_execution_date IS NOT NULL  \n\
+  AND ja.start_execution_date <= @end_time \n\
+  AND ja.stop_execution_date  IS NULL  \n\
+\n\
+UNION ALL  \n\
+\n\
+/* Get Active jobs sub levels (step_id's above 0) */ \n\
+SELECT \n\
+     chart_key = FORMAT(ja.start_execution_date, 'yyyy-MM-dd HH:mm:ss') + ' -- ' + j.name + ' - step: [' + FORMAT(ISNULL(last_executed_step_id,0)+1,'D3') + ']'  \n\
+    ,bar_name  = '[' + CAST(ISNULL(last_executed_step_id,0)+1 as varchar(9)) + '] ' + js.step_name \n\
+    ,bar_color = 'green' \n\
+    ,startDate = COALESCE(ja.last_executed_step_date, ja.start_execution_date) \n\
+/*  ,startDate = ja.last_executed_step_date */ \n\
+    ,endDate   = NULL /*--getdate() -- OR NULL */ \n\
+    ,js.step_id \n\
+    ,js.subsystem \n\
+    ,js.command \n\
+    ,js.server \n\
+    ,js.database_name \n\
+    ,js.database_user_name \n\
+    ,js.output_file_name \n\
+    ,sql_message_id = CAST('' as varchar(10)) \n\
+    ,sql_severity   = CAST('' as varchar(10)) \n\
+    ,message        = CAST('' as nvarchar(4000)) \n\
+    ,main_job_start_ts = ja.start_execution_date \n\
+    ,js.job_id \n\
+    ,query_src    = '20' \n\
+FROM msdb.dbo.sysjobactivity ja  \n\
+INNER JOIN msdb.dbo.sysjobs        j ON ja.job_id         = j.job_id \n\
+INNER JOIN msdb.dbo.sysjobsteps   js ON ja.job_id         = js.job_id      AND ISNULL(ja.last_executed_step_id,0)+1 = js.step_id \n\
+WHERE 1=1 \n\
+  AND ja.session_id = ( select max(session_id) FROM msdb.dbo.syssessions ) \n\
+  AND ja.start_execution_date IS NOT NULL \n\
+  AND ja.start_execution_date <= @end_time \n\
+  AND ja.stop_execution_date  IS NULL \n\
+ \n\
+ORDER BY 1, 2 \n\
+
+
+##------------------------------------------------------------
+## DBMS specification
+##------------------------------------------------------------
+
+##------------------------------------------------------------
+## User name, used to login to the DBMS
+## 'dbms.username' is mandatory field
+##------------------------------------------------------------
+dbms.username = dbxtune
+
+##------------------------------------------------------------
+## Password
+## Note:
+##  - if not specified: Try to get the password from the encrypted file '${HOME}/.passwd.enc'
+##    Also specify 'dbms.serverName' to search the above file for password that is for a specific server name
+##------------------------------------------------------------
+#dbms.password = if-not-assigned-get-value-from-passwd-file
+
+##------------------------------------------------------------
+## Used if password is not specified and we need to lookup the password from the encrypted file '${HOME}/.passwd.enc'
+## Note:
+##   - If 'dbms.servername' has FROM_FILENAME, then get second part of the filename as the server name (example: xxxx.dbms-name.db-name.ud.chart.props)
+##   - If 'dbms.dbname'     has FROM_FILENAME, then get third  part of the filename as the server name (example: xxxx.dbms-name.db-name.ud.chart.props)
+##------------------------------------------------------------
+dbms.servername = FROM_FILENAME
+dbms.dbname     = FROM_FILENAME
+
+##------------------------------------------------------------
+## The JDBC URL to the DBMS
+## Note:
+##   - ${srvName} can be used for 'dbms.servername'
+##   - If 'dbms.servername' is specified, the variables '${ifile-hostname}' and '${ifile-port}' will be replaced in 'dbms.url'
+##     the values is fetched from the ${SYBASE}/interfaces or ${SYBASE}/ini/sql.ini file
+##   - If 'dbms.dbname' is specified, the variable '${dbname}' will be replaced in 'dbms.url'
+## 'dbms.url' is mandatory field
+##------------------------------------------------------------
+dbms.url = jdbc:sqlserver://${servername};databaseName=${dbname};encrypt=true;trustServerCertificate=true
+
+

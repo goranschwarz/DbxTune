@@ -127,6 +127,6 @@
 	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.72.jar" sourcepath="3pp/bcprov-jdk18on-1.72-sources.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-12.5.0-SNAPSHOT.jre8-preview.jar"/>
-	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.51.v20230217-uber.jar"/>
+	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.54.v20240208-uber.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

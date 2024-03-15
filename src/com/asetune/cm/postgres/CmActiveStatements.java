@@ -22,6 +22,7 @@ package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
@@ -45,6 +47,7 @@ import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventHoldingLocksWhileWaitForClientInput;
 import com.asetune.alarm.events.AlarmEventLongRunningStatement;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
+import com.asetune.cache.XmlPlanCache;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
@@ -88,6 +91,7 @@ extends CountersModel
 		"    <li>GREEN  - active - The backend is executing a query.</li>" +
 //		"    <li>WHITE  - idle - The backend is waiting for a new client command.</li>" +
 		"    <li>YELLOW - idle in transaction -  The backend is in a transaction, but is not currently executing a query.</li>" +
+		"    <li>ORANGE - The PID was visible in previous sample as well (multi_sampled)</li>" +
 //		"    <li>PINK   - idle in transaction (aborted) -  This state is similar to idle in transaction, except one of the statements in the transaction caused an error.</li>" +
 //		"    <li>XXX    - fastpath function call -  The backend is executing a fast-path function.</li>" +
 //		"    <li>XXX    - disabled -  This state is reported if track_activities is disabled in this backend.</li>" +
@@ -192,6 +196,10 @@ extends CountersModel
 
 			mtd.addColumn("CmActiveStatements", "datid"                             ,  "<html>OID of the database this backend is connected to  </html>");
 			mtd.addColumn("CmActiveStatements", "datname"                           ,  "<html>Name of the database this backend is connected to  </html>");
+			mtd.addColumn("CmActiveStatements",  "multiSampled"                     ,  "<html>" +
+			                                                                               "This indicates that the PrimaryKey (pid) has been in this table for more than one sample.<br>" +
+			                                                                               "Also 'query_start' has to be the <b>same</b> as in the previous sample.<br>" +
+			                                                                               "</html>");
 			mtd.addColumn("CmActiveStatements", "pid"                               ,  "<html>Process ID of this backend  </html>");
 			mtd.addColumn("CmActiveStatements", "leader_pid"                        ,  "<html>Process ID of the parallel group leader, if this process is a parallel query worker. NULL if this process is a parallel group leader or does not participate in parallel query.  </html>");
 			mtd.addColumn("CmActiveStatements", "im_blocked_by_pids"                ,  "<html>This pid is <b>blocked</b> by a list of other pid's. This pad will WAIT until the other pid's has released there locks.<br><b>Note:</b> This is only maintained from Version 9.6 and above.  </html>");
@@ -210,6 +218,7 @@ extends CountersModel
 			mtd.addColumn("CmActiveStatements", "stmnt_last_exec_age"               ,  "<html>When did the last Statement Execute (HH:MM:SS.ssssss)  </html>");
 			mtd.addColumn("CmActiveStatements", "in_current_state_age"              ,  "<html>For how long have we been in this state (HH:MM:SS.ssssss)  </html>");
 			mtd.addColumn("CmActiveStatements", "has_sql_text"                      ,  "<html>If we have any SQL Statement in column 'last_known_sql_statement'  </html>");
+			mtd.addColumn("CmActiveStatements", "has_query_plan"                    ,  "<html>If we have any Query Plan in column 'query_plan'  </html>");
 			mtd.addColumn("CmActiveStatements", "has_pid_lock_info"                 ,  "<html>A table of locks that this PID is holding. <br><b>Note:</b> WaitTime in the table is only maintained from Version 14 and above.  </html>");
 			mtd.addColumn("CmActiveStatements", "pid_lock_count"                    ,  "<html>How many locks does this PID hold</html>");
 			mtd.addColumn("CmActiveStatements", "pid_exlock_count"                  ,  "<html>How many <b>Exclusive</b> locks does this PID hold</html>");
@@ -251,6 +260,7 @@ extends CountersModel
 			mtd.addColumn("CmActiveStatements", "client_port"                       ,  "<html>TCP port number that the client is using for communication with this backend, or -1 if a Unix socket is used. If this field is null, it indicates that this is an internal server process  </html>");
 			mtd.addColumn("CmActiveStatements", "query_id"                          ,  "<html>Identifier of this backend's most recent query. If state is active this field shows the identifier of the currently executing query. In all other states, it shows the identifier of last query that was executed. Query identifiers are not computed by default so this field will be null unless compute_query_id parameter is enabled or a third-party module that computes query identifiers is configured  </html>");
 			mtd.addColumn("CmActiveStatements", "last_known_sql_statement"          ,  "<html>Text of this backend's most recent query. If state is active this field shows the currently executing query. In all other states, it shows the last query that was executed. By default the query text is truncated at 1024 bytes; this value can be changed via the parameter track_activity_query_size  </html>");
+			mtd.addColumn("CmActiveStatements", "query_plan"                        ,  "<html>Query Plan for this 'query_id'.<br>A possible source for this is CmErrorLog if 'auto_explain' is loaded/enabled, otherwise it's probably 'null/not-known'</html>");
 			mtd.addColumn("CmActiveStatements", "pid_lock_info"                     ,  "<html>A table of locks that this PID is holding. <br><b>Note:</b> WaitTime in the table is only maintained from Version 14 and above.  </html>");
 			mtd.addColumn("CmActiveStatements", "blocked_pids_info"                 ,  "<html>If this PID is BLOCKING other pid's, then here is a html-table of info for the Blocked spid's.  </html>");
 			mtd.addColumn("CmActiveStatements", "execTimeInMs"                      ,  "<html>How many milli seconds has current Statement been running for. -1 If the Statement has finnished.  </html>");
@@ -322,6 +332,7 @@ extends CountersModel
 		String im_blocking_others_max_time_in_sec = "";
 		String wait_event_type                    = "";
 		String wait_event                         = "";
+		String where__wait_event                  = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(9, 6))
 		{
 			im_blocked_by_pids                 = "    ,CAST(array_to_string(pg_blocking_pids(pid), ', ') as varchar(512)) AS im_blocked_by_pids \n";
@@ -332,6 +343,8 @@ extends CountersModel
 			waiting         = ""; // Waiting was removed in 9.6 and replaced by wait_event_type and wait_event
 			wait_event_type = "    ,CAST(wait_event_type as varchar(128)) AS wait_event_type \n";
 			wait_event      = "    ,CAST(wait_event      as varchar(128)) AS wait_event \n";
+
+			where__wait_event = "  AND wait_event not like '%Main' \n"; // or: WalSenderMain
 		}
 
 		// ----- 10
@@ -351,13 +364,19 @@ extends CountersModel
 		}
 
 		// ----- 14
-		String query_id = "";
+		String query_id       = "";
+		String has_query_plan = "";
+		String query_plan     = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(14))
 		{
-			query_id  = "    ,query_id \n";
+			query_id       = "    ,query_id \n";
+			has_query_plan = "    ,CAST(false as boolean)                 AS has_query_plan \n";
+			query_plan     = "    ,CAST(null as text)                     AS query_plan \n";
 		}
 
 		// ----- 15: No changes
+
+		// ----- 16: No changes
 
 		// Construct the SQL Statement
 		String sql = ""
@@ -366,6 +385,7 @@ extends CountersModel
 				+ "    ,datname \n"
 				+ leader_pid
 				+ "    ,pid \n"
+				+ "    ,CAST(''               as varchar(10) ) AS multi_sampled \n"
 				+ "    ,CAST(state            as varchar(128)) AS state \n"
 				+ backend_type
 				+ waiting
@@ -381,6 +401,7 @@ extends CountersModel
 				+ "    ,CAST(application_name as varchar(128)) AS application_name \n"
 			    + " \n"
 				+ "    ,CAST(false as boolean)                 AS has_sql_text \n"
+			    + has_query_plan
 				+ "    ,CAST(false as boolean)                 AS has_pid_lock_info \n"
 				+ "    ,CAST(-1    as integer)                 AS pid_lock_count \n"
 				+ "    ,CAST(-1    as integer)                 AS pid_exlock_count \n"
@@ -414,6 +435,7 @@ extends CountersModel
 				+ "    ,client_port \n"
 				+ query_id
 				+ "    ,query                                  AS last_known_sql_statement \n"
+				+ query_plan
 
 				+ "    ,CAST(null as text)                     AS pid_lock_info \n"
 				+ "    ,CAST(null as text)                     AS blocked_pids_info \n"
@@ -426,10 +448,11 @@ extends CountersModel
 				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) as int) \n"
 				+ "     END as \"xactTimeInMs\" \n"
 
-				+ "from pg_stat_activity \n"
-				+ "where state != 'idle' \n"
-				+ "  and pid   != pg_backend_pid() \n"
-				+ "  and application_name != '" + Version.getAppName() + "' \n"
+				+ "FROM pg_stat_activity \n"
+				+ "WHERE state != 'idle' \n"
+				+ "  AND pid   != pg_backend_pid() \n"
+				+ "  AND application_name != '" + Version.getAppName() + "' \n"
+				+ where__wait_event
 				+ "";
 
 		// Note: This FILTER should be MOVED into the HTML page (so users can decide the filter criteria) 
@@ -517,6 +540,37 @@ extends CountersModel
 			return cellValue == null ? null : toHtmlString(cellValue.toString());
 		}
 
+		if ("has_query_plan".equals(colName))
+		{
+			// Find 'SpidLocks' column, is so get it and set it as the tool tip
+			int colPos = findColumn("query_plan");
+			if (colPos > 0)
+			{
+				Object cellVal = getValueAt(modelRow, colPos);
+				if (cellVal instanceof String)
+				{
+					String extraInfo = "<br><br>"
+							+ "To view the plan in a graphical way"
+							+ "<ul>"
+							+ "  <li>Copy the above text, and Paste it in any of the below pages!</li>"
+							+ "  <li><a href='https://explain.dalibo.com/'>https://explain.dalibo.com/</a></li>"
+							+ "  <li><a href='http://dbxtune.your-company-name.com/pev'>http://dbxtune.your-company-name.com/pev</a></li>"
+							+ "</ul>";
+					// NOTE: We could also send a Java Post request with form data to 'dbxtune.gorans.org/pov'
+					//   OR: create a 'tmp.html' file that fires up the registered browser... the file should hold a small javascript that calls 'dbxtune.gorans.org/pov'
+					//   OR: like we do in SqlWindow with tool tip on various content (possibly look at that code)
+
+					return "<html><pre>" + StringEscapeUtils.escapeHtml4((String)cellVal) + "</pre>" + extraInfo + "</html>";
+				}
+			}
+		}
+		if ("query_plan".equals(colName))
+		{
+			if (cellValue == null)
+				return null;
+			return "<html><pre>" + StringEscapeUtils.escapeHtml4((String)cellValue) + "</pre></html>";
+		}
+
 
 		if ("wait_event_type".equals(colName))
 		{
@@ -592,6 +646,53 @@ extends CountersModel
 
 	
 	@Override
+	public void localCalculation(CounterSample prevSample, CounterSample newSample)
+	{
+		CounterSample counters = newSample;
+
+		// set value of 'multi_sampled' column
+		boolean setMultiSampled = true;
+		if (setMultiSampled)
+		{
+			int pos__multi_sampled = counters.findColumn("multi_sampled");
+			int pos__query_start   = counters.findColumn("query_start");
+
+			if (pos__multi_sampled != -1 && pos__query_start != -1)
+			{
+				// Loop on all "newSample" rows
+				for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+				{
+					String thisRowPk = counters.getPkValue(rowId);
+					int prevPkRowId = (prevSample == null) ? -1 : prevSample.getRowNumberForPkValue(thisRowPk);
+					boolean prevPkExists = prevPkRowId >= 0;
+
+					if (prevPkExists)
+					{
+						Timestamp this_StartTime = counters  .getValueAsTimestamp(rowId,       pos__query_start, null);
+						Timestamp prev_StartTime = prevSample.getValueAsTimestamp(prevPkRowId, pos__query_start, null);
+
+						// Check StartTime, but at a SECOND level instead of MS (since MS isn't 100% accurate)
+						// If it's a SQL Batch, we might run several things in a loop... which means it's more or less like a "a here" stored procedure
+						if (this_StartTime != null && prev_StartTime != null)
+						{
+							long l_this_StartTime = this_StartTime.getTime();
+							long l_prev_StartTime = prev_StartTime.getTime();
+							long l_diff = Math.abs(l_this_StartTime - l_prev_StartTime); // turn negative numbers positive
+							
+//							// 100ms diff, is treated as "multiSampled" or "sameStartTime" as previously...
+//							if (l_diff < 100)
+							if (l_diff == 0)
+								counters.setValueAt("YES", rowId, pos__multi_sampled);
+						}
+					} //end: prevPkExists
+				} //end: loop-rows
+			} //end: hasCols
+		} //end: setMultiSampled
+	} //end: method
+
+
+
+	@Override
 	public void localCalculation(CounterSample newSample)
 	{
 		// Set the CheckBox 'has_sql_text' to true if we got a SQL Statement
@@ -613,6 +714,38 @@ extends CountersModel
 				}
 			}
 		} // end: setHasSqlText
+			
+		
+		// Set the CheckBox 'has_query_plan' to true if we got a SQL Statement
+		boolean setQueryPlan = true && XmlPlanCache.hasInstance();
+		if (setQueryPlan)
+		{
+			int pos_query_id       = newSample.findColumn("query_id");
+			int pos_has_query_plan = newSample.findColumn("has_query_plan");
+			int pos_query_plan     = newSample.findColumn("query_plan");
+			
+			if (pos_query_id != -1 && pos_has_query_plan != -1 && pos_query_plan != -1)
+			{
+				for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+				{
+					// NOTE: in 16.2 (and probably prior report 'query_id' as NULL/0 when it's a JDBC Connection 
+					//       This MUST be a bug, but I only find this: https://postgrespro.com/list/thread-id/2649141
+					//       but no resolution is found...
+					String query_id   = newSample.getValueAsString(rowId, pos_query_id);
+					if (StringUtil.hasValue(query_id))
+					{
+						String query_plan = XmlPlanCache.getInstance().getPlan(query_id);
+//System.out.println("ActiveStatements::localCalculation(): XmlPlanCache.hasInstance()=" + XmlPlanCache.hasInstance() + ", XmlPlanCache.size()=" + (XmlPlanCache.hasInstance() ? XmlPlanCache.getInstance().size()+"" : "-no-cache-") + ", queryId='" + query_id + "', query_plan=" + query_plan);
+
+						if (StringUtil.hasValue(query_plan))
+						{
+							newSample.setValueAt(query_plan, rowId, pos_query_plan);
+							newSample.setValueAt(true      , rowId, pos_has_query_plan);
+						}
+					}
+				}
+			}
+		} // end: setHasQueryPlan
 			
 		
 		boolean resolvImBlockedByPids = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_pidLocks, DEFAULT_sample_pidLocks);

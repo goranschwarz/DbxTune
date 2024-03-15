@@ -346,7 +346,7 @@ extends AseAbstract
 						+ getOwner().getReportEntry().getReportPeriodSqlWhere()
 						+ "  and [est_wait_time_ms] > 0 \n"
 						+ "group by [event_type], [event] \n"
-						+ "having CAST(sum([est_wait_time_ms])/1000 as BIGINT) > 0 \n" // having [WaitTimeInSec] above 0
+//						+ "having CAST(sum([est_wait_time_ms])/1000 as BIGINT) > 0 \n" // having [WaitTimeInSec] above 0
 						+ "order by 3 desc \n"
 						+ "";
 
@@ -375,6 +375,8 @@ extends AseAbstract
 			{
 				int samplePeriod = getSamplePeriodInMinutes();
 
+				// NOTE: The below would probably cause GAPS in the 10-minute timespan if there re no data
+				//       Possibly use same algorithm as in SparklineHelper.getSparclineData... which is a CTE with 10m spans, and the join with that
 				String sql = ""
 					    + "select \n"
 					    + "     DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01') as [Period] \n"

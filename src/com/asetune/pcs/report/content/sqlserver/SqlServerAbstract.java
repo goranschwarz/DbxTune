@@ -481,7 +481,7 @@ extends ReportEntryAbstract
 		sb.append(createHtmlTh("Keys"                     , ""));
 		sb.append(createHtmlTh("Include"                  , "Columns included on the leafe index page... create index... on(c1,c2) INCLUDE(c3,c4,c5)"));
 		sb.append(createHtmlTh("Filter"                   , "Filter Expression used to create the index... create index... on(c1,c2) WHERE colName='someValue'"));
-		sb.append(createHtmlTh("Desciption"               , ""));
+		sb.append(createHtmlTh("Description"              , ""));
 		sb.append(createHtmlTh("Size MB"                  , ""));
 		sb.append(createHtmlTh("Pages"                    , ""));
 		sb.append(createHtmlTh("FillFactor"               , ""));

@@ -32,6 +32,8 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCachePostgres;
+import com.asetune.cache.XmlPlanCache;
+import com.asetune.cache.XmlPlanCachePostgres;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
@@ -61,6 +63,7 @@ import com.asetune.cm.postgres.CmPgProgCluster;
 import com.asetune.cm.postgres.CmPgProgCopy;
 import com.asetune.cm.postgres.CmPgProgIndex;
 import com.asetune.cm.postgres.CmPgProgVacuum;
+import com.asetune.cm.postgres.CmPgRepSlots;
 import com.asetune.cm.postgres.CmPgReplication;
 import com.asetune.cm.postgres.CmPgSequencesIo;
 import com.asetune.cm.postgres.CmPgSlru;
@@ -71,6 +74,7 @@ import com.asetune.cm.postgres.CmPgTableSize;
 import com.asetune.cm.postgres.CmPgTables;
 import com.asetune.cm.postgres.CmPgTablesIo;
 import com.asetune.cm.postgres.CmPgWal;
+import com.asetune.cm.postgres.CmPgWalReceiver;
 import com.asetune.cm.postgres.CmSummary;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
@@ -132,7 +136,6 @@ extends CounterControllerAbstract
 		CmPgBgWriter        .create(counterController, guiController);
 		CmPgWal             .create(counterController, guiController);
 		CmPgArchiver        .create(counterController, guiController);
-		CmPgReplication     .create(counterController, guiController);
 		CmErrorLog          .create(counterController, guiController);
 
 		// Object Access
@@ -168,6 +171,11 @@ extends CounterControllerAbstract
 		CmPgProgCopy        .create(counterController, guiController);
 		CmPgProgBaseBackup  .create(counterController, guiController);
 		
+		// Replication
+		CmPgReplication     .create(counterController, guiController);
+		CmPgRepSlots        .create(counterController, guiController);
+		CmPgWalReceiver     .create(counterController, guiController);
+
 		// OS HOST Monitoring
 		CmOsIostat          .create(counterController, guiController);
 		CmOsVmstat          .create(counterController, guiController);
@@ -526,8 +534,7 @@ extends CounterControllerAbstract
 	{
 		DbxConnection conn = super.noGuiConnect(dbmsUsername, dbmsPassword, dbmsServer, dbmsHostPortStr, jdbcUrlOptions);
 		
-		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
-		DbmsObjectIdCache.setInstance( new DbmsObjectIdCachePostgres( new ConnectionProvider()
+		ConnectionProvider connectionProvider = new ConnectionProvider()
 		{
 			@Override
 			public DbxConnection getNewConnection(String appname)
@@ -549,7 +556,10 @@ extends CounterControllerAbstract
 //				return getCounterController().getMonConnection();
 				return getMonConnection();
 			}
-		}) );
+		};
+				
+		// DBMS ObjectID --> ObjectName Cache... maybe it's not the perfect place to initialize this...
+		DbmsObjectIdCache.setInstance( new DbmsObjectIdCachePostgres(connectionProvider) );
 
 		// Populate Object ID Cache
 		if (DbmsObjectIdCache.hasInstance() && DbmsObjectIdCache.getInstance().isBulkLoadOnStartEnabled())
@@ -557,6 +567,9 @@ extends CounterControllerAbstract
 		else
 			_logger.info("Skipping BULK load of ObjectId's at noGuiConnect(), isBulkLoadOnStartEnabled() was NOT enabled. Property '" + DbmsObjectIdCachePostgres.PROPKEY_BulkLoadOnStart + "=true|false'.");
 
+		// "XML" Plan Cache... maybe it's not the perfect place to initialize this...
+		XmlPlanCache.setInstance( new XmlPlanCachePostgres(connectionProvider) );
+		
 		// Return the connection
 		return conn;
 	}

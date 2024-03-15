@@ -104,7 +104,7 @@ function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDat
 
 				var newlink = document.createElement('a');
 				newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
-				newlink.setAttribute('href', 'javascript:toggleActiveTableExtendedDesciption();');
+				newlink.setAttribute('href', 'javascript:toggleActiveTableExtendedDescription();');
 				
 				var originDiv   = document.createElement('div');
 				var strippedDiv = document.createElement('div');
@@ -170,7 +170,7 @@ function isHTML(str) {
 	return false;
 }
 
-function toggleActiveTableExtendedDesciption()
+function toggleActiveTableExtendedDescription()
 {
 //	var extDesc = document.getElementsByClassName("active-table-extDesc-origin-class active-table-extDesc-stripped-class");
 	var extDesc = document.querySelectorAll('.active-table-extDesc-origin-class,.active-table-extDesc-stripped-class')
@@ -330,6 +330,37 @@ var _hasActiveHistoryStatementArr = null;
 //};
 
 
+//-----------------------------------------------------------
+// Observer so we can update properties when entries enters visiblity in a scroll
+// add element to it using: _graphObserver.observe(document.getElementById("test"));
+//-----------------------------------------------------------
+const _graphObserver = new IntersectionObserver(entries => 
+{
+	entries.forEach(entry => 
+	{
+		if (entry.isIntersecting)
+		{
+			//console.log("Observer: entry.isIntersecting -- " + entry.target.id)
+			let dbxGraph = getDbxGraphByName(entry.target.id);
+			if (dbxGraph !== undefined)
+			{
+				dbxGraph.enterVisibility();
+			}
+		}
+	});
+});
+
+function getDbxGraphByName(name)
+{
+	for (let i = 0; i < _graphMap.length; i++) 
+	{
+		if (_graphMap[i].getFullName() === name)
+			return _graphMap[i];
+	}	
+	return undefined;
+}
+
+
 function isHistoryViewActive()
 {
 	return $("#dbx-history-container-div").is(":visible");
@@ -462,7 +493,7 @@ function activeStatementsCompExtDescClick(checkbox)
 	// Reload the page
 	//location.reload();
 	
-	toggleActiveTableExtendedDesciption();
+	toggleActiveTableExtendedDescription();
 }
 
 
@@ -630,7 +661,12 @@ function dbxTuneGetHistoryStatements(startTime, endTime)
 	             + "";
 	console.log("dbxTuneGetHistoryStatements(): Calling url '" + urlStr + "'.");
 	
-	
+	// Show info that we are getting data (this might be slow), only disaply after x ms
+	// And in the below SUCCESS/FAIL -- CLOSE the info field/popup
+//	document.getElementById("dbx-history-get-data-bussy").style.visibility = 'visible';
+	var dbxHistoryGetDataBussyTime = setTimeout(function() { document.getElementById("dbx-history-get-data-bussy").style.visibility = 'visible'; }, 20);
+
+	// GET Data
 	$.ajax(
 	{
 		url: urlStr,
@@ -658,9 +694,16 @@ function dbxTuneGetHistoryStatements(startTime, endTime)
 			console.log("RECEIVED DATA[dbxTuneGetHistoryStatements]: ", jsonResp);
 
 			setHistoryStatement(jsonResp); 
+
+			// CLOSE the info field (that we are getting data from the DB)
+			clearTimeout(dbxHistoryGetDataBussyTime);
+			document.getElementById("dbx-history-get-data-bussy").style.visibility = 'hidden';
 		},
 		error: function(xhr, desc, err) 
 		{
+			clearTimeout(dbxHistoryGetDataBussyTime);
+			document.getElementById("dbx-history-get-data-bussy").style.visibility = 'hidden';
+
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
 		}
@@ -794,7 +837,7 @@ function activeAlarmsCompExtDescClick(checkbox)
 	// Reload the page
 	//location.reload();
 	
-	toggleActiveTableExtendedDesciption();
+	toggleActiveTableExtendedDescription();
 }
 
 // do: deferred (since all DOM elements might not be created yet)
@@ -1431,6 +1474,25 @@ function dbxTuneGraphSubscribe()
 	
 		return div;
 	}
+	function createPostgresQueryPlanToolTipDiv(data)
+	{
+		// creates a div that will open a modal-div where we can VIEW a Postgres Execution Plan (using https://github.com/dalibo/pev2?tab=readme-ov-file)
+
+		const dataVal = data;
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-pgShowplan-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-tooltip"    , dataVal);
+//		div.setAttribute("data-planContent"     , 'DummyValue'); --> will become object member 'plancontent'
+//		div.setAttribute("data-plan-content"    , 'DummyValue'); --> will become object member 'planContent' // kebab-case -->> camelCase
+	
+		return div;
+	}
+	 
 	 
 	/**
 	 * INTERNAL: buildActiveStatementDiv
@@ -1516,6 +1578,19 @@ function dbxTuneGraphSubscribe()
 						td.innerHTML = cellContent.toLocaleString(undefined);
 					td.className = "active-statement-cell-abs";
 				}
+
+				// Highlight some columns (for some DbxTune collectors)
+				if (metaData !== undefined && metaData.hasOwnProperty('columnName'))
+				{
+					if ("SqlServerTune" === appName)
+					{
+						if (metaData.columnName === "dop")
+						{
+							if (cellContent > 1)
+								td.style.backgroundColor = "green";
+						}
+					}
+				}
 			}
 			
 			// Possibly fill in Tooltop for SQL Text etc
@@ -1544,6 +1619,7 @@ function dbxTuneGraphSubscribe()
 				else if ("PostgresTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
 					if (metaData.columnName === "has_sql_text"          && rowData.hasOwnProperty('last_known_sql_statement') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.last_known_sql_statement, 'postgresql') ); }
+					if (metaData.columnName === "has_query_plan"        && rowData.hasOwnProperty('query_plan')               && cellContent === true) { td.appendChild( createPostgresQueryPlanToolTipDiv(rowData.query_plan) ); }
 					if (metaData.columnName === "has_pid_lock_info"     && rowData.hasOwnProperty('pid_lock_info')            && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) ); }
 					if (metaData.columnName === "has_blocked_pids_info"                                                       && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) ); }
 				}
@@ -1633,6 +1709,10 @@ function dbxTuneGraphSubscribe()
 				if (row.hasOwnProperty('state') && row.state === 'idle in transaction')
 					tr.className = "active-statement-row-holding-locks-while-idle";
 
+				// multiSampled
+				if (row.hasOwnProperty('multi_sampled') && row.multi_sampled !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
 				// Blocked by some spid
 				if (row.hasOwnProperty('im_blocked_by_pids') && row.im_blocked_by_pids !== "")
 					tr.className = "active-statement-row-blocked";
@@ -1646,6 +1726,7 @@ function dbxTuneGraphSubscribe()
 			};
 			tooltip = "Background colors: \n"
 			        + " * YELLOW: In Transaction, while client has control (poor transaction control) \n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
 			        + " * PINK:   Blocked by some other session(s) \n"
 			        + " * RED:    BLOCKING other session(s) from working.\n"
 					+ "";
@@ -1877,16 +1958,15 @@ function dbxTuneGraphSubscribe()
 		for(var i=0; i<_graphMap.length; i++)
 		{
 			const dbxGraph = _graphMap[i];
+
+//			console.log("dbxTuneSetTimeLineMarkerForAllGraphs(ts=|" + ts + "|, momentArrayPos=" + momentArrayPos + ") i=" + i +", isInViewport=" + dbxGraph.isInViewport());
+
+			// It takes to long to update ALL graphs (the UI feels "slugish", so just update the ones that are visible)
+			// So: if dbxGraph is NOT visible "on screen".... then it just SETS the timeline (and do not update the GUI)
+			// Then when the graph comes "into view" the UI update will happen
+			// The above async behaviour is done by: https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API
 			dbxGraph.setTimelineMarker(ts);
 		}
-		
-//		if (isHistoryViewActive() && momentArrayPos !== undefined)
-//		{
-//			let dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
-//			
-//			dbxHistoryTimelineSlider.value = momentArrayPos; 
-//			dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
-//		}
 	}
 
 //--------------------------------------------------------------------
@@ -1931,6 +2011,8 @@ class DbxGraph
 
 		if (typeof this._graphLineProps !== 'object')
 			this._graphLineProps = {};
+
+		this._timelineMarker = undefined;
 
 		if (_debug > 0)
 			console.log("Creating DbxGraph: " 
@@ -2747,6 +2829,13 @@ class DbxGraph
 	{
 //		console.log("setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
 
+		this._timelineMarker = ts;
+		if ( ! this.isInViewport() )
+		{
+			//console.log("<<< NOT inViewPort -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
+			return;
+		}
+
 		// Reset timeline-marker
 		this._chartObject.options.annotation.annotations = [];
 		this._chartObject.update(0);
@@ -2784,6 +2873,42 @@ class DbxGraph
 		this._chartObject.options.annotation.annotations[0] = annotation;
 		this._chartObject.update(0);
 	} // end: method
+
+	/**
+	 * Is visible in the viewport (any pixel)
+	 */
+	isInViewport() 
+	{
+		const rect = this._canvas.getBoundingClientRect();
+
+		// DOMRect { x: 8, y: 8, width: 100, height: 100, top: 8, right: 108, bottom: 108, left: 8 }
+		var windowHeight = (window.innerHeight || document.documentElement.clientHeight);
+		var windowWidth = (window.innerWidth || document.documentElement.clientWidth);
+
+		// http://stackoverflow.com/questions/325933/determine-whether-two-date-ranges-overlap
+		var vertInView = (rect.top <= windowHeight) && ((rect.top + rect.height) >= 0);
+		var horInView = (rect.left <= windowWidth) && ((rect.left + rect.width) >= 0);
+
+		return (vertInView && horInView);
+//		return (
+//			rect.top >= 0 &&
+//			rect.left >= 0 &&
+//			rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+//			rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+//		);
+	}
+
+	/**
+	 * Called from _graphObserver when graph is "srolled into"
+	 */
+	enterVisibility()
+	{
+//		console.log("enterVisibility: name='" + this._fullName + "', this._timelineMarker='" + this._timelineMarker + "'.");
+		if (this._timelineMarker !== undefined)
+		{
+			this.setTimelineMarker(this._timelineMarker);
+		}
+	}
 
 	setInitialized()     { this._initialized = true; }
 	isInitialized()      { return this._initialized; }
@@ -3805,6 +3930,9 @@ function dbxTuneLoadCharts(destinationDivId)
 
 						// add it to the global list/map
 						_graphMap.push(dbxGraph);
+						
+						// Add it to the observer instance
+						_graphObserver.observe(dbxGraph._chartDiv);
 					}
 				} // end: for loop
 			}

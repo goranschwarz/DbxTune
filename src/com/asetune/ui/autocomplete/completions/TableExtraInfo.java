@@ -27,6 +27,8 @@ public class TableExtraInfo
 	public static final String TableRowCount             = "TableRowCount";
 	public static final String TableTotalSizeInKb        = "TableTotalSizeInKb";
 	public static final String TableDataSizeInKb         = "TableDataSizeInKb";
+	public static final String TableInRowSizeInKb        = "TableInRowSizeInKb"; /* mostly for SQL Server */
+	public static final String TableOverflowRowSizeInKb  = "TableOverflowRowSizeInKb"; /* mostly for SQL Server */
 	public static final String TableIndexSizeInKb        = "TableIndexSizeInKb";
 	public static final String TableLobSizeInKb          = "TableLobSizeInKb";
 

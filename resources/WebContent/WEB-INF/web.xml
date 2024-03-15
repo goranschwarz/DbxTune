@@ -195,6 +195,27 @@
 		<servlet-class>com.asetune.central.controllers.UserDefinedContentServlet</servlet-class>
 	</servlet>
 
+
+	<servlet>
+		<servlet-name>ShowplanPostgresServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ShowplanPostgresServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ShowplanPostgresServlet</servlet-name>
+		<url-pattern>/showplan/postgres</url-pattern>
+	</servlet-mapping>
+
+
+	<servlet>
+		<servlet-name>ShowplanSqlServerServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ShowplanSqlServerServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ShowplanSqlServerServlet</servlet-name>
+		<url-pattern>/showplan/sqlserver</url-pattern>
+	</servlet-mapping>
+
+
 <!--
 	<servlet>
 		<servlet-name>MgtProxyServlet</servlet-name>

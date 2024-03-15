@@ -161,6 +161,7 @@ extends CompletionProviderAbstract
 	protected boolean _dbStoresLowerCaseIdentifiers = false;
 	protected boolean _dbSupportsSchema             = true; // so far it's only MySQL that do not support schema it uses the catalog as schemas...
 	protected String  _dbDefaultSchemaName          = "";
+	protected String[] _dbDefaultSkipResolvSchemaName = new String[] {""};
 
 	protected String _currentCatalog                = null;
 	protected String _currentServerName             = null;
@@ -185,6 +186,7 @@ extends CompletionProviderAbstract
 		_dbStoresLowerCaseIdentifiers = false;
 		_dbSupportsSchema             = true;
 		_dbDefaultSchemaName          = "";
+		_dbDefaultSkipResolvSchemaName = new String[] {""};
 
 		_currentCatalog          = null;
 		_currentServerName       = null;
@@ -434,6 +436,18 @@ extends CompletionProviderAbstract
 		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_H2           )) return "PUBLIC";
 
 		return _dbDefaultSchemaName;
+	}
+
+	public String[] getDbSkipResolvSchemaName()
+	{
+		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, 
+				                                  DbUtils.DB_PROD_NAME_SYBASE_ASA, 
+				                                  DbUtils.DB_PROD_NAME_SYBASE_IQ, 
+				                                  DbUtils.DB_PROD_NAME_MSSQL        )) return new String[] {"dbo"};
+		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_POSTGRES     )) return new String[] {"public", "pg_catalog"};
+		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_H2           )) return new String[] {"PUBLIC"};
+
+		return _dbDefaultSkipResolvSchemaName;
 	}
 
 

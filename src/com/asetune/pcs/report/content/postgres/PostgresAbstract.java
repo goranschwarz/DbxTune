@@ -523,7 +523,7 @@ extends ReportEntryAbstract
 			sb.append(createHtmlTh("Index Name"           , ""));
 			sb.append(createHtmlTh("Keys"                 , ""));
 			sb.append(createHtmlTh("Include"              , "Columns included on the leafe index page... create index... on(c1,c2) INCLUDE(c3,c4,c5)"));
-			sb.append(createHtmlTh("Desciption"           , ""));
+			sb.append(createHtmlTh("Description"          , ""));
 			sb.append(createHtmlTh("RowCount"             , ""));
 			sb.append(createHtmlTh("Size Pages"           , ""));
 			sb.append(createHtmlTh("Size MB"              , ""));

@@ -55,12 +55,14 @@ extends TabularCntrPanel
 	public static final String  TOOLTIP_sample_systemThreads        = "<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
 	public static final String  TOOLTIP_summaryGraph_discardDbxTune = "<html>Do <b>not</b> include values where Application name starts with '"+Version.getAppName()+"' in the Summary Graphs.</html>";
 	public static final String  TOOLTIP_sample_sqlText              = "<html>Get SQL Text for SPID's that are active<br>Using ASE Function query_text(spid) but only if WaitEventID != 250 <i>'waiting for input from the network'</i>.<br><b>Note</b>: This functionality is only available in ASE 16 and above.</html>";
-	public static final String  TOOLTIP_sample_lastKnownSqlText     = "<html>Try to get Last Known SQL Text, NOTE: Recording Must be enabled</html>";
+	public static final String  TOOLTIP_sample_lastKnownSqlText     = "<html>Try to get Last Known SQL Text, <b>NOTE: Recording Must be enabled</b></html>";
+	public static final String  TOOLTIP_sample_lastKnownSqlText_all = "<html>if 'get Last Known SQL Text' is enabled, we can choose to get <b>more</b> than just the last SQL Text... </html>";
 
 	private JCheckBox l_sampleSystemThreads_chk;
 	private JCheckBox l_discardAppnameDbxTune_chk;
 	private JCheckBox l_sampleSqlText_chk;
 	private JCheckBox l_sampleLastKnownSqlText_chk;
+	private JCheckBox l_sampleLastKnownSqlTextAll_chk;
 	
 	private static final Color WORKER_PARENT    = new Color(229, 194, 149); // DARK Beige 
 	private static final Color WORKER_PROCESSES = new Color(255, 245, 216); // Beige
@@ -217,10 +219,11 @@ extends TabularCntrPanel
 			{
 				Configuration conf = Configuration.getCombinedConfiguration();
 
-				l_sampleSystemThreads_chk   .setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
-				l_discardAppnameDbxTune_chk .setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
-				l_sampleSqlText_chk         .setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
-				l_sampleLastKnownSqlText_chk.setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText,     CmProcessActivity.DEFAULT_sample_lastKnownSqlText));
+				l_sampleSystemThreads_chk      .setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
+				l_discardAppnameDbxTune_chk    .setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
+				l_sampleSqlText_chk            .setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
+				l_sampleLastKnownSqlText_chk   .setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText,     CmProcessActivity.DEFAULT_sample_lastKnownSqlText));
+				l_sampleLastKnownSqlTextAll_chk.setSelected(conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText_all, CmProcessActivity.DEFAULT_sample_lastKnownSqlText_all));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -234,27 +237,32 @@ extends TabularCntrPanel
 //		JCheckBox sampleSystemThreads_chk   = new JCheckBox("Show system processes",                                                                   conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads        : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
 //		JCheckBox discardAppnameDbxTune_chk = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
 //		JCheckBox sampleSqlText_chk         = new JCheckBox("<html>Get SQL Text for active SPID's</html>",                                             conf == null ? CmProcessActivity.DEFAULT_sample_sqlText              : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
-		l_sampleSystemThreads_chk    = new JCheckBox("Show system processes",                                                                   conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads        : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
-		l_discardAppnameDbxTune_chk  = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
-		l_sampleSqlText_chk          = new JCheckBox("<html>Get SQL Text for active SPID's</html>",                                             conf == null ? CmProcessActivity.DEFAULT_sample_sqlText              : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
-		l_sampleLastKnownSqlText_chk = new JCheckBox("<html>Get Last Active SQL Text for SPID's</html>",                                        conf == null ? CmProcessActivity.DEFAULT_sample_lastKnownSqlText     : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText,     CmProcessActivity.DEFAULT_sample_lastKnownSqlText));
+		l_sampleSystemThreads_chk       = new JCheckBox("Show system processes",                                                                   conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads        : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
+		l_discardAppnameDbxTune_chk     = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
+		l_sampleSqlText_chk             = new JCheckBox("<html>Get SQL Text for active SPID's</html>",                                             conf == null ? CmProcessActivity.DEFAULT_sample_sqlText              : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
+		l_sampleLastKnownSqlText_chk    = new JCheckBox("<html>Get Last Active SQL Text for SPID's</html>",                                        conf == null ? CmProcessActivity.DEFAULT_sample_lastKnownSqlText     : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText,     CmProcessActivity.DEFAULT_sample_lastKnownSqlText));
+		l_sampleLastKnownSqlTextAll_chk = new JCheckBox("<html>All Available</html>",                                                              conf == null ? CmProcessActivity.DEFAULT_sample_lastKnownSqlText     : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText_all, CmProcessActivity.DEFAULT_sample_lastKnownSqlText_all));
 
-		l_sampleSystemThreads_chk   .setName(CmProcessActivity.PROPKEY_sample_systemThreads);
-		l_sampleSystemThreads_chk   .setToolTipText(TOOLTIP_sample_systemThreads);
+		l_sampleSystemThreads_chk      .setName(CmProcessActivity.PROPKEY_sample_systemThreads);
+		l_sampleSystemThreads_chk      .setToolTipText(TOOLTIP_sample_systemThreads);
+                                       
+		l_discardAppnameDbxTune_chk    .setName(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune);
+		l_discardAppnameDbxTune_chk    .setToolTipText(TOOLTIP_summaryGraph_discardDbxTune);
+                                       
+		l_sampleSqlText_chk            .setName(CmProcessActivity.PROPKEY_sample_sqlText);
+		l_sampleSqlText_chk            .setToolTipText(TOOLTIP_sample_sqlText);
+                                       
+		l_sampleLastKnownSqlText_chk   .setName(CmProcessActivity.PROPKEY_sample_lastKnownSqlText);
+		l_sampleLastKnownSqlText_chk   .setToolTipText(TOOLTIP_sample_lastKnownSqlText);
 
-		l_discardAppnameDbxTune_chk .setName(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune);
-		l_discardAppnameDbxTune_chk .setToolTipText(TOOLTIP_summaryGraph_discardDbxTune);
+		l_sampleLastKnownSqlTextAll_chk.setName(CmProcessActivity.PROPKEY_sample_lastKnownSqlText_all);
+		l_sampleLastKnownSqlTextAll_chk.setToolTipText(TOOLTIP_sample_lastKnownSqlText_all);
 
-		l_sampleSqlText_chk         .setName(CmProcessActivity.PROPKEY_sample_sqlText);
-		l_sampleSqlText_chk         .setToolTipText(TOOLTIP_sample_sqlText);
-
-		l_sampleLastKnownSqlText_chk.setName(CmProcessActivity.PROPKEY_sample_lastKnownSqlText);
-		l_sampleLastKnownSqlText_chk.setToolTipText(TOOLTIP_sample_lastKnownSqlText);
-
-		panel.add(l_sampleSystemThreads_chk,    "wrap");
-		panel.add(l_discardAppnameDbxTune_chk,  "wrap");
-		panel.add(l_sampleSqlText_chk,          "wrap");
-		panel.add(l_sampleLastKnownSqlText_chk, "wrap");
+		panel.add(l_sampleSystemThreads_chk,       "wrap");
+		panel.add(l_discardAppnameDbxTune_chk,     "wrap");
+		panel.add(l_sampleSqlText_chk,             "wrap");
+		panel.add(l_sampleLastKnownSqlText_chk,    "split"); // on same row as next 
+		panel.add(l_sampleLastKnownSqlTextAll_chk, "wrap");
 
 		l_sampleSystemThreads_chk.addActionListener(new ActionListener()
 		{
@@ -313,6 +321,22 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				conf.setProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				//getCm().setSql(null);
+			}
+		});
+		
+		l_sampleLastKnownSqlTextAll_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText_all, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 				
 				// ReInitialize the SQL

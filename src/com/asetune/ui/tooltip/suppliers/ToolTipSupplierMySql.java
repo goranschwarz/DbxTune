@@ -101,15 +101,15 @@ extends ToolTipSupplierAbstractSql
 			{
 				TtpEntry e = new TtpEntry();
 				
-				String module     = rs.getString(1);
-				String cmdName    = rs.getString(2);
-				String desciption = rs.getString(3);
-				String example    = rs.getString(4);
-				String sourceUrl  = rs.getString(5);
+				String module      = rs.getString(1);
+				String cmdName     = rs.getString(2);
+				String description = rs.getString(3);
+				String example     = rs.getString(4);
+				String sourceUrl   = rs.getString(5);
 
 				e.setModule     (module);
 				e.setCmdName    (cmdName);
-				e.setDescription("<pre>" + desciption + "</pre>");
+				e.setDescription("<pre>" + description + "</pre>");
 				e.setSourceUrl  (sourceUrl);
 
 				if (example != null && !example.trim().isEmpty())

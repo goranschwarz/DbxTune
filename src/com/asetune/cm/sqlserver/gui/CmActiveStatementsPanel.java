@@ -144,6 +144,27 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+	
+		// Mark the CELL as GREEN if "dop" > 1
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.dop");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String colName = adapter.getColumnName(adapter.column);
+				
+				// ONLY check for cell named "dop"
+				if ( "dop".equals(colName) && adapter.getValue() instanceof Number)
+				{
+					Number dop = (Number) adapter.getValue();
+					return dop.intValue() > 1;
+				}
+
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 	}
 
 	private JCheckBox l_sampleSystemSpids_chk;

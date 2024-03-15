@@ -11,9 +11,7 @@
     =======================================================================
   -->
   <!-- JS: JQuery -->
-<!--  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>-->
   <script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
-<!--  <script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>-->
   <script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
 
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
@@ -36,7 +34,6 @@
     =======================================================================
   -->
   <!-- CSS: jqueri-ui -->
-<!--  <link rel="stylesheet" href="/scripts/jquery/ui/1.11.3/themes/smoothness/jquery-ui.css">-->
   <link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
 
   <!-- CSS: DbxCentral -->
@@ -318,7 +315,7 @@
             </div>
             <div class="form-group">
               <label class="form-control-label" for="dbx-fld-profileDesc">Profile Descrption</label>
-              <input type="text" class="form-control" name="profileDesciption" id="dbx-fld-profileDesc" placeholder="Describe the profile, shows up in tooltip" value="" required />
+              <input type="text" class="form-control" name="profileDescription" id="dbx-fld-profileDesc" placeholder="Describe the profile, shows up in tooltip" value="" required />
               <div class="invalid-feedback">A Description must be specified!</div>
             </div>
             <div class="form-group">
@@ -670,7 +667,7 @@ Active Alarms
 
 					var newlink = document.createElement('a');
 					newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
-					newlink.setAttribute('href', 'javascript:toggleActiveTableExtendedDesciption();');
+					newlink.setAttribute('href', 'javascript:toggleActiveTableExtendedDescription();');
 
 					var originDiv   = document.createElement('div');
 					var strippedDiv = document.createElement('div');
@@ -832,7 +829,7 @@ Active Alarms
 		// Reload the page
 		//location.reload();
 
-		toggleActiveAlarmsExtendedDesciption();
+		toggleActiveAlarmsExtendedDescription();
 	}
 
 	// do: deferred (since all DOM elements might not be created yet)
