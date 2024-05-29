@@ -270,7 +270,7 @@ public class PostgresUtils
 		if (list.isEmpty())
 			return "";
 
-		StringBuilder sb = new StringBuilder("<TABLE BORDER=1>");
+		StringBuilder sb = new StringBuilder("<TABLE class='dbx-table-basic' BORDER=1>");
 		sb.append("<TR>");
 		sb.append(" <TH>").append("pid"          ).append("</TH>");
 		sb.append(" <TH>").append("dbid"         ).append("</TH>");

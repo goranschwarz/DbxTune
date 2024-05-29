@@ -22,8 +22,10 @@ package com.asetune.cm.postgres;
 
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
@@ -291,17 +293,28 @@ extends CountersModel
 	{
 		if (GRAPH_NAME_LAG_KB.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
-			String[] lArray = new String[dArray.length];
-			for (int i = 0; i < dArray.length; i++)
+			// Write 1 "line" for every slot...
+			// Basebackup also creates a temporary replication slot with different names all the times, so normalize this into "pg_basebackup_###"
+			Map<String, Double> map = new LinkedHashMap<>();
+			for (int i = 0; i < this.size(); i++)
 			{
-				lArray[i] = this.getAbsString       (i, "slot_name");
-				dArray[i] = this.getAbsValueAsDouble(i, "lag_kb");
-			}
+				String slotName = this.getAbsString       (i, "slot_name");
+				Double logKb    = this.getAbsValueAsDouble(i, "lag_kb");
 
+				// Skip some slots
+				if (slotName == null)
+					continue;
+
+				// Rename some slots
+				if (slotName.startsWith("pg_basebackup_"))
+					slotName = "pg_basebackup_###";
+
+				map.put(slotName, logKb);
+			}
+			
 			// Set the values
-			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			if ( ! map.isEmpty() )
+				tgdp.setData(this.getTimestamp(), map);
 		}
 	}
 

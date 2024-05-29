@@ -338,11 +338,11 @@ extends CountersModel
 		}
 
 		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
-		String contextInfoStr = "/*    ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		String contextInfoStr = "/*    ,context_info_str = replace(cast(er.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
 		if (SqlServerCmUtils.isContextInfoStrEnabled())
 		{
 			// Make the binary 'context_info' into a String
-			contextInfoStr = "    ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+			contextInfoStr = "    ,context_info_str = replace(cast(er.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 		}
 
 		
@@ -391,7 +391,8 @@ extends CountersModel
 			    + "    ,BlockingOtherSpids=convert(varchar(512),'') \n"
 			    + "    ,es.login_name \n"
 			    + "    ,ec.connect_time \n"
-			    + "    ,connect_time_sec = datediff(ss, ec.connect_time, getdate())  -- fix case... if seconds are to big \n"
+//			    + "    ,connect_time_sec = datediff(ss, ec.connect_time, getdate())  -- fix case... if seconds are to big \n"
+			    + "    ,connect_time_sec = CASE WHEN datediff(day, ec.connect_time, getdate()) >= 3650 THEN -1 ELSE datediff(ss, ec.connect_time, getdate()) END \n"
 			    + "    ,es.host_name \n"
 			    + "    ,es.host_process_id \n"
 			    + "    ,es.program_name \n"
@@ -434,11 +435,9 @@ extends CountersModel
 			    
 			    + "    ,es.last_request_start_time \n"
 			    + "    ,es.last_request_end_time \n"
-//CASE WHEN datediff(day, ST.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, ST.StartTime, getdate()) END			    
 			    + "    ,last_request_exec_time = CASE WHEN datediff(day, es.last_request_start_time, es.last_request_end_time) >= 24 THEN -1 ELSE datediff(ms, es.last_request_start_time, es.last_request_end_time) END \n"
-//			    + "    ,last_request_exec_time = datediff(ms, es.last_request_start_time, es.last_request_end_time) -- fix case... if ms are to big \n"
-			    + "    ,last_request_age_sec   = datediff(ss, es.last_request_end_time, getdate())                  -- fix case... if sec are to big \n"
-
+//			    + "    ,last_request_age_sec   = datediff(ss, es.last_request_end_time, getdate())                  -- fix case... if sec are to big \n"
+				+ "    ,last_request_age_sec   = CASE WHEN datediff(day, es.last_request_end_time, getdate()) >= 3650 THEN -1 ELSE datediff(ss, es.last_request_end_time, getdate()) END \n"
 			    + "    ,er.sql_handle \n"
 			    + "    ,er.statement_start_offset \n"
 			    + "    ,er.statement_end_offset \n"
@@ -463,9 +462,11 @@ extends CountersModel
 			    + "    ,net_bytes_received = ec.num_reads                    -- DIFF CALC \n"
 			    + "    ,net_bytes_sent     = ec.num_writes                   -- DIFF CALC \n"
 			    + "    ,ec.last_read \n"
-			    + "    ,last_read_sec = datediff(ss, ec.last_read, getdate())  -- fix case... if seconds are to big \n"
+//			    + "    ,last_read_sec  = datediff(ss, ec.last_read, getdate())  -- fix case... if seconds are to big \n"
+				+ "    ,last_read_sec  = CASE WHEN datediff(day, ec.last_read, getdate()) >= 3650 THEN -1 ELSE datediff(ss, ec.last_read, getdate()) END \n"
 			    + "    ,ec.last_write \n"
-			    + "    ,last_write_sec = datediff(ss, ec.last_write, getdate())  -- fix case... if seconds are to big \n"
+//			    + "    ,last_write_sec = datediff(ss, ec.last_write, getdate())  -- fix case... if seconds are to big \n"
+				+ "    ,last_write_sec  = CASE WHEN datediff(day, ec.last_write, getdate()) >= 3650 THEN -1 ELSE datediff(ss, ec.last_write, getdate()) END \n"
 			    + "    ,ec.net_packet_size \n"
 			    + "    ,endpoint_type = CASE WHEN es.endpoint_id = 1 THEN 'DAC - Dedicated Admin Connection (TCP) - 1' \n"
 			    + "                          WHEN es.endpoint_id = 2 THEN 'TSQL Local Machine (SHARED_MEMORY) - 2' \n"

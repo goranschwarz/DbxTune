@@ -101,6 +101,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Introduced a "priority queue", so that not to many DbxTune collectors does DSR at the same time, which causes extensive CPU usage and possibly memory issues</LI>
 				<LI>When generating SparcLines, introduced a timeout of 10 minutes... and prints SQL for easier debugging.</LI>
 				<LI>In the 'Exec/Creation time for each Report Section' also print aprox how many bytes we have written to each section</LI>
+				<LI>In the header added "OS Core Count" and "OS Physical Memory" information.</LI>
 			</UL>
 		</LI>
 
@@ -305,6 +306,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added SqlAgentJobInfoCache, which get's reloaded every 4 hour. (set refresh rate with: SqlAgentJobInfoCache.refresh.interval.minutes=###)</LI>
 		<LI>All CounterModels with column "program_name" and it contains a JobId and StepId the real names will be used from SqlAgentJobInfoCache (disable with: SqlServerTune.CmAny.resolve.sqlAgent.programName.enable=false)</LI>
 		<LI>PCS Transfer new QueryStore tables for SQL Server 2022</LI>
+		<LI>a bunch of cm's -- Get 'context_info' from 'dm_exec_requests' instead of 'dm_exec_connections'</LI>
 
 		<LI>Added Alarm: <b>AlarmEventMemoryGrantWait   </b> -- Used by CM 'CmMemoryGrantsSum' to alarm if we have anyone waiting to grab a memory grant.</LI>
 		<LI>Added Alarm: <b>AlarmEventLowOnWorkerThreads</b> -- which will be raised when we have 20 or less "worker threads" available (called from CmSummary)</LI>
@@ -333,15 +335,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - ImBlockingOthersMaxTimeInSec:AlarmEventBlockingLockAlarm added "skip" capability for columns: 'login_name', 'HOST_NAME', 'database_name', 'program_name', 'ProcName' -- default is to skip 'program_name' with "Report Server"</LI>
 		<LI><b>CmActiveStatements   </b> - HoldingLocksWhileWaitForClientInputInSec:AlarmEventHoldingLocksWhileWaitForClientInput added "skip" capability for columns: 'login_name', 'HOST_NAME', 'database_name', 'program_name', 'ProcName' -- default is to skip 'program_name' with "Report Server"</LI>
 		<LI><b>CmActiveStatements   </b> - Mark "dop" where dop > 1 with a green color, just for easier spotting if it uses Paralell workers (this is also changed in DbxCentral)</LI>
+		<LI><b>CmActiveStatements   </b> - New columns to track "SPID Wait Info": 'SpidWaitCountSum', 'SpidWaitTimeMsSum', 'HasSpidWaitInfo', 'SpidWaitInfo'. The information is fetched from CmSpidWait (if not enabled, no info will be available)</LI>
+		<LI><b>CmActiveStatements   </b> - Added column 'sql_handle' to better track "multiSampled" SPID/row</LI>
 		
 		<LI><b>CmAlwaysOn           </b> - Performance enhancement</LI>
 
 		<LI><b>CmDatabases          </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 		<LI><b>CmDatabases          </b> - added new columns 'DataOsDiskLabel', 'LogOsDiskLabel' (this so we in Graphs and alarms can say "E: [SQL Data]"</LI>
 		<LI><b>CmDatabases          </b> - added new columns 'collation_name'</LI>
+		<LI><b>CmDatabases          </b> - Added column 'is_read_only'</LI>
+		<LI><b>CmDatabases          </b> - if database is in status "SINGLE_USER", (it wont be investigated), then set Alarm "Time To Live" to 10 minutes, so we don't CANCEL/RASE the alarm to often!</LI>
 
 		<LI><b>CmDeviceIo           </b> - LogicalName - is now based om dbname and file_id (instead of master_files.name, which may not be unique enough)</LI>
 		<LI><b>CmDeviceIo           </b> - added new columns 'lname' (master_files.name), which is the 'old' LogicaName.</LI>
+		<LI><b>CmDeviceIo           </b> - added columns 'AvgReadKbPerIo', 'AvgWriteKbPerIo'</LI>
+		<LI><b>CmDeviceIo           </b> - added charts 'Disk Throughput in KB (Sum,Read,Write)', 'Number of Disk Operations (Sum,Read,Write)', 'Average (Read) KB Per Disk IO, per Device', 'Average (Write) KB Per Disk IO, per Device'</LI>
 
 		<LI><b>CmExecFunctionStats  </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
 
@@ -358,9 +366,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPerfCounters       </b> - Added Chart 'Stolen Server Memory, from Buffer Pool'</LI>
 		<LI><b>CmPerfCounters       </b> - Added Chart 'DeadlockDetails'</LI>
 		<LI><b>CmPerfCounters       </b> - Added Chart 'ColumnStoreAll'</LI>
+		<LI><b>CmPerfCounters       </b> - Changed NEGATIVE_DIFF_COUNTERS_TO_ZERO from false to true</LI>
+		<LI><b>CmPerfCounters       </b> - new chart 'CachePhyReadAheadPct' -- Buffer Cache Physical Readahead Percent</LI>
+
+		<LI><b>CmSchedulers         </b> - Changed NEGATIVE_DIFF_COUNTERS_TO_ZERO from false to true</LI>
 
 		<LI><b>CmSessions           </b> - The "hidden report" on WaitResources has been extended (can now lookup pages to get ObjectID's and translated to ObjectName's, also lookup 'locked data' when WaitResource is 'KEY')</LI>
 		<LI><b>CmSessions           </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+
+		<LI><b>CmSpidWait           </b> - Changed NEGATIVE_DIFF_COUNTERS_TO_ZERO from false to true</LI>
 
 		<LI><b>CmSummary            </b> - Adjustments for "users with sufficient permission", more sensitive to what SQL Statements that are executed</LI>
 		<LI><b>CmSummary            </b> - added column 'databaseCacheMemoryMb', 'grantedWorkspaceMemoryMb', 'stolenServerMemoryMb' (grabbed from dm_os_performance_counters)</LI>
@@ -375,13 +389,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmSummary            </b> - alarm 'AlarmEventBlockingLockAlarm', attach info from "CmSessions" about "RootBlockerSpids" and "oldestOpenTranSpid"</LI>
 		<LI><b>CmSummary            </b> - alarm 'AlarmEventLongRunningTransaction', attach info from "CmSessions" about "oldestOpenTranSpid"</LI>
 		<LI><b>CmSummary            </b> - alarm 'AlarmEventDeadlock' if we had any deadlocks... (within a MovingAverage over 10 minutes) </LI>
+		<LI><b>CmSummary            </b> - new chart 'MemoryPressure' -- Memory Pressure, with columns 'osMem_system_high_memory_signal_state', 'osMem_system_low_memory_signal_state', 'memProcessPhysicalMemoryLow', 'memProcessVirtualMemoryLow' </LI>
+		<LI><b>CmSummary            </b> - for some columns 'io_total_read', 'io_total_write', 'pack_received' 'pack_sent', 'packet_errors' -- Set negative counters to 0 </LI>
 
 		<LI><b>CmTempdbSpidUsage    </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 		<LI><b>CmTempdbSpidUsage    </b> - in AlarmEventTempdbSpidUsage also include information from CmActiveStatements</LI>
+		<LI><b>CmTempdbSpidUsage    </b> - Getting "Active Statement" did not work to 100%</LI>
 
 		<LI><b>CmWaitStats          </b> - Added Charts "ToxicTime", "ToxicCount", "ToxicTpw" (TPW=Time Per Wait) -- to see the Toxic wait event (if they are happening)</LI>
 		<LI><b>CmWaitStats          </b> - Raising Alarm on Toxic Wait types "RESOURCE_SEMAPHORE", "THREADPOOL" if there has been more wait time than 10 seconds (can be changed with Properties 'CmWaitStats.alarm.system.if.wait_time_ms.RESOURCE_SEMAPHORE.gt', 'CmWaitStats.alarm.system.if.wait_time_ms.THREADPOOL.gt')</LI>
 		<LI><b>CmWaitStats          </b> - alarm 'AlarmEventToxicWait', attach info from "CmMemoryGrants" about "Current Memory Grants, per SPID"</LI>
+		<LI><b>CmWaitStats          </b> - removed 'CMTHREAD' from "Toxic Wait Type"</LI>
+		<LI><b>CmWaitStats          </b> - removed 'CXCONSUMER' from getDefaultLocalGraphsSkipList()</LI>
 
 		<LI><b>CmWaitingTasks       </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
@@ -406,6 +425,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>WaitStats -- Chart "Wait types for..." Instead of getting only CXPACKET, CXCONSUMER I now get all starting with CX*</li>
 			<li>in the "DB Information", If collation is not the same as tempdb, mark it as red</li>
 			<li>Fixed bug that skipped the "summary" section for ALL databases that has Query Store Enabled</li>
+			<li>Added chart 'CmOsIostat_IoBusyPct' to the "summary" section</li>
 		</ul>
 		</LI>
 	</UL>
@@ -464,6 +484,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmPgWall             </b> - new chart: WAL KB Written per Second</LI>
 		<LI><b>CmPgWall             </b> - new chart: WAL Buffer was Full Writes per Second</LI>
+		<LI><b>CmPgWall             </b> - New Chart: pg_wal_dir Size in MB</LI>
+		<LI><b>CmPgWall             </b> - new chart: New alarm AlarmEventPgWalSizeHigh when the WALL size gets "high"</LI>
 
 		<LI><b>CmXxxx      </b> - </LI>
 		<LI><b>CmXxxx      </b> - </LI>
@@ -534,6 +556,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>For SQL Server get more details on table tooltip (added: In-Row data size, Index Size, LOB Size... so a bit more granular)</LI>
 		<LI>Code Completion (for Postgres do not add *known* schema names, it just clutters the code)</LI>
+		<LI>command 'toparquet' -- a first attempt to writet to Parquet Files  (not implemented yet)</LI>
+		<LI>right click menu -- "Get Foreign Key ***Child*** rows for selected rows(s)"</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

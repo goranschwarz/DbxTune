@@ -1359,7 +1359,7 @@ extends CountersModel
 
 		StringBuilder sb = new StringBuilder(1024);
 
-		sb.append("<TABLE BORDER=1>\n");
+		sb.append("<TABLE BORDER=1 class='dbx-table-basic'>\n");
 		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>Showplan</TH> </TR>\n");
 		
 		int addCount = 0;

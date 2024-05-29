@@ -555,6 +555,20 @@ extends UserDefinedChartAbstract
 						 }
 					}
 					
+					// Check if endTs is BEFORE startTs ... Then the GUI component will behave "strange" 
+					if (endTs != null && startTs != null)
+					{
+//						if (endTs.getTime() < startTs.getTime())
+						if (endTs.before(startTs))
+						{
+							// just ADD 60 seconds to the startTs
+							Timestamp newEndTs = new Timestamp(startTs.getTime() + 60 * 1000);
+							
+							_logger.warn("The 'endTs' is before 'startTs'... labelKey='" + labelKey + "', barText='" + barText + "', origin[startTs='" + sdf.format(startTs) + "', endTs='" + sdf.format(endTs) + "']. Adjusting 'endTs' to be 60 seconds AFTER startTs. newEndTs='" + sdf.format(newEndTs) + "'.");
+							endTs = newEndTs;
+						}
+					}
+
 					// Remember the previous row start/end Timestamps (if we need them at next row loop)
 					prevRowStartTs = startTs;
 					prevRowEndTs   = endTs;
@@ -594,6 +608,8 @@ extends UserDefinedChartAbstract
 					udTooltip = createUserDefinedTooltip(useDefaultTooltip, labelKey, barText, startTs, endTs, extraColumns);
 					labelKey  = escapeJsQuote(labelKey);
 					barText   = escapeJsQuote(barText);
+					
+					// TODO: is there some way we can set background color.. If it's a "FULL JOB" it would be nice to a have a different BG color
 
 //					sb.append("                          [ 'label', 'barText', 'green', new Date(2020,10,20, 14,1,1), new Date(2020,10,20, 14,1,2) ] \n");
 					sb.append("            " + prefix + "[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] \n");
@@ -873,6 +889,15 @@ extends UserDefinedChartAbstract
 //				ttVal = ttVal.replace("\n", "\\n");
 				ttVal = ttVal.replace("\r", "");
 				ttVal = ttVal.replace("\n", "<br>");
+				ttVal = ttVal.replace("\\", "&#92;");
+				
+				// If key is "command", then add <code></code> (hard coded because: I was lazy)
+				if (ttKey.equalsIgnoreCase("command"))
+					ttVal = "<code>" + ttVal + "</code>";
+
+				// If key is "message", then try to parse the message a bit and add NEWLINES in some places (hard coded because: I was lazy)
+				if (ttKey.equalsIgnoreCase("message"))
+					ttVal = tooltipForMessage(ttVal);
 
 				// Hack to get a separator in before column 'main_job_start_ts' (hard coded because: I was lazy)
 				if (ttKey.equals("main_job_start_ts"))
@@ -890,6 +915,48 @@ extends UserDefinedChartAbstract
 		return "'" + escapeJsQuote(tooltip) + "', ";
 	}
 
+	/**
+	 * Try to make messages a bit more readable<br>
+	 *  - If it's to long try to add NEWLINE somewhere
+	 *  - NewLine on some special words
+	 *  - If it looks like a "console log line" add newlines
+	 * @param ttVal
+	 * @return
+	 */
+	private static String tooltipForMessage(String ttVal)
+	{
+		if (ttVal == null)
+			return null;
+		
+		if (ttVal.length() < 64)
+			return ttVal;
+		
+		// "Executed as user: MAXM\\goran.schwarz. " -->> "Executed as user: MAXM\\goran.schwarz. <BR>"
+		ttVal = ttVal.replaceFirst("Executed as user: \\S* ", "$0<BR>");
+		
+		// Console messages
+		ttVal = ttVal.replace("DEBUG   - ", "<BR>DEBUG   - ");
+		ttVal = ttVal.replace("INFO    - ", "<BR>INFO    - ");
+		ttVal = ttVal.replace("WARNING - ", "<BR>WARNING - ");
+		ttVal = ttVal.replace("ERROR   - ", "<BR>ERROR   - ");
+
+		// Some Error messages
+		ttVal = ttVal.replace("ERROR-MSG: ", "<BR>ERROR-MSG: ");
+		
+		ttVal = ttVal.replace("Warning! ", "<BR>Warning! ");
+		ttVal = ttVal.replace("Warning: ", "<BR>Warning: ");
+
+		ttVal = ttVal.replace("Process Exit Code ", "<BR>Process Exit Code ");
+		
+		ttVal = ttVal.replace("The step failed."   , "<BR>The step failed."); 
+		ttVal = ttVal.replace("The step succeeded.", "<BR>The step succeeded.");
+		
+		// Remove any "double newlines"
+		ttVal = ttVal.replace("<BR><BR>", "<BR>");
+		
+		return ttVal;
+	}
+	
 	private String calculateDuration(Timestamp startTs, Timestamp endTs)
 	{
 		if (startTs == null || endTs == null)

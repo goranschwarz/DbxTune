@@ -91,7 +91,7 @@ extends CountersModel
 		"signal_wait_time_ms"
 	};
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true; // 2024-04-23: I see no reason why we should keep negative number
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
@@ -252,6 +252,10 @@ extends CountersModel
 				sql_sample_extraWhereClause +
 				"order by session_id, wait_type \n" +
 				"";
+
+		// QUESTION: Should we remove some 'wait_type' from the above ?
+		// Like: https://www.sqlskills.com/blogs/paul/wait-statistics-or-please-tell-me-where-it-hurts/
+		// Right now all 'wait_event' for SPID (from dm_exec_session_wait_stats) is reported...
 
 		// TODO: Possibly add 'dbname' -- So we can get statistics on Wait's per Database
 //		   ,dbname = DB_NAME(es.database_id)

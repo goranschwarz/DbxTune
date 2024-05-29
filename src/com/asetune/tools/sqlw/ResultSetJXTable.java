@@ -1611,6 +1611,62 @@ implements ToolTipHyperlinkResolver
 			+ "<html/>";
 	}
 
+//	THE BELOW NEEDS MORE WORK, but the idea is that "somehow" it's called from SqlWindow - ResultSetTable - rightClickMenu - Select PARENT/CHILD rows...
+//	public enum ForeignKey
+//	{
+//		Parent, Child
+//	};
+//	public String getForeignKeySqlForSelectedRows(DbxConnection conn, JMenu menu, ForeignKey fkType)
+//	{
+//		int[] selRows = getSelectedRows();
+//
+//		TableModel tm = getModel();
+//		if (tm instanceof ResultSetTableModel)
+//		{
+//			ResultSetTableModel rstm = (ResultSetTableModel) tm;
+//			List<String> uniqueTables = rstm.getRsmdReferencedTableNames();
+//			if (uniqueTables.isEmpty())
+//			{
+//				menu.add(new JMenuItem("No tables refrences was found in the ResultSet"));
+//			}
+//			else
+//			{
+//				for (String tabname : uniqueTables)
+//				{
+//System.out.println("getForeignKeySqlForSelectedRows(): tabname=|" + tabname + "|");
+//					if (tabname.startsWith("/"))
+//						tabname = tabname.substring(1); // Remove first "/"
+//
+//					
+//					try
+//					{
+//						DatabaseMetaData dbmd = conn.getMetaData();
+//						
+//						SqlObjectName sqlObj = new SqlObjectName(conn, tabname);
+//						String catName    = sqlObj.getCatalogNameNull(); 
+//						String schemaName = sqlObj.getSchemaNameNull(); 
+//
+//						ResultSetTableModel mdFkOut = new ResultSetTableModel( dbmd.getImportedKeys(catName, schemaName, tabname), "getImportedKeys");
+//						ResultSetTableModel mdfkIn  = new ResultSetTableModel( dbmd.getExportedKeys(catName, schemaName, tabname), "getExportedKeys");
+//
+//System.out.println("FK-OUT: \n" + mdFkOut.toAsciiTableString());
+//System.out.println("FK-IN: \n" + mdfkIn.toAsciiTableString());
+////						ResultSet rs = conn.getMetaData().getImportedKeys(null, schemaName, tabname);
+////						TableInfo.getFkOutboundDesc // asetune.ui.autocomplete.completions.TableInfo.java
+//					}
+//					catch (SQLException e)
+//					{
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				}
+//				
+//			}
+//		}
+//
+//		return "";
+//	}
+	
 	public enum DmlOperation
 	{
 		Insert, Update, Delete

@@ -97,7 +97,11 @@ public class CommonEedInfo
 				if (lineNumber < Integer.MAX_VALUE)
 					_lineNum = (int) lineNumber;
 				else
-					throw new RuntimeException("CommonEedInfo.SQLServerException.getLineNumber: has a value above Integer.MAX_VALUE: " + lineNumber);
+				{
+					System.out.println("CommonEedInfo.SQLServerException.getLineNumber: has a value above Integer.MAX_VALUE, setting it to Integer.MAX_VALUE, originValue=" + lineNumber);
+					_lineNum = Integer.MAX_VALUE;
+					//throw new RuntimeException("CommonEedInfo.SQLServerException.getLineNumber: has a value above Integer.MAX_VALUE: " + lineNumber);
+				}
 					
 				_supportsTranState = false;
 				_supportsEedParams = false;
@@ -272,9 +276,9 @@ public class CommonEedInfo
 	 * Not yet implemented in jTDS, SQLServer and will always for now return -1<br>
 	 * <p>
 	 * This will return one of the following transaction states:<br>
-	 * 0 – the connection is currently in an extended transaction.<br>
-	 * 1 – the previous transaction committed successfully.<br>
-	 * 3 – the previous transaction aborted.<br>
+	 * 0 ï¿½ the connection is currently in an extended transaction.<br>
+	 * 1 ï¿½ the previous transaction committed successfully.<br>
+	 * 3 ï¿½ the previous transaction aborted.<br>
 	 * 
 	 * @return -1 if not supported otherwise
 	 */

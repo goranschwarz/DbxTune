@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2020 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -8,8 +8,7 @@
  * 
  * DbxTune is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, version 3 of the License.
  * 
  * DbxTune is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,47 +18,45 @@
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package com.asetune.alarm.events.sqlserver;
+package com.asetune.alarm.events.postgres;
 
 import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.cm.CountersModel;
 
-public class AlarmEventTempdbSpidUsage
+public class AlarmEventPgWalSizeHigh
 extends AlarmEvent 
 {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Alarm when a SPID is using excessive amount of memory in tempdb
+	 * When archiving rate is "high"
 	 * 
 	 * @param cm
+	 * @param archivedCountInLastHour 
 	 * @param threshold
-	 * @param session_id
-	 * @param totalUsageMb
-	 * @param last_request_start_time
-	 * @param last_request_in_sec
-	 * @param login
-	 * @param program_name
+	 * @param logicalName
+	 * @param colName
 	 */
-	public AlarmEventTempdbSpidUsage(CountersModel cm, int threshold, int session_id, int totalUsageMb, String last_request_start_time, String last_request_in_sec, String login_name, String program_name)
+	public AlarmEventPgWalSizeHigh(CountersModel cm, Double pg_waldir_total_size_mb, int thresholdInMb)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				session_id,           // extraInfo
+				null,                 // extraInfo
 				AlarmEvent.Category.SPACE,
-				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"At server '" + cm.getServerName() + "', A SPID is using a lot of space (" + totalUsageMb + " MB) in tempdb.  spid=" + session_id + ", login_name='" + login_name + "', program_name='" + program_name + "', last_request_start_time='" + last_request_start_time + "', last_request_in_sec='" + last_request_in_sec + "'.",
-				threshold
+				"WAL Size in Directory 'pg_wal' ia high at Server '" + cm.getServerName() + "', pg_waldir_total_size_mb=" + pg_waldir_total_size_mb + ". (thresholdInMb=" + thresholdInMb + ")",
+				thresholdInMb
 				);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 
 		// Set the raw data carrier
-		setData("spid=" + session_id + ", login_name='" + login_name + "', program_name='" + program_name + "', last_request_start_time='" + last_request_start_time + "', last_request_in_sec='" + last_request_in_sec + "'.");
+		setData("pg_waldir_total_size_mb=" + pg_waldir_total_size_mb);
 	}
+
 }

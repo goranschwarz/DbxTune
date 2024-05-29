@@ -70,6 +70,9 @@ extends Task
 	public static final String PROPKEY_cmHistory_keepDays = "CentralPcsJdbcCleaner.history.cm.keep.days";
 	public static final int    DEFAULT_cmHistory_keepDays = 30; // 30 days for CM Details, while graph is using PROPKEY_keepDays
 
+	public static final String PROPKEY_sessionsSampleDetails_keepDays = "CentralPcsJdbcCleaner.sessionsSampleDetails.cm.keep.days";
+	public static final int    DEFAULT_sessionsSampleDetails_keepDays = 30; // 30 days for CM Details, while graph is using PROPKEY_keepDays
+
 	public static final String PROPKEY_localMetricsCm_keepDays = "CentralPcsJdbcCleaner.localMetrics.cm.keep.days";
 	public static final int    DEFAULT_localMetricsCm_keepDays = 30; // 30 days for CM Details, while graph is using PROPKEY_keepDays
 	
@@ -326,12 +329,27 @@ extends Task
 
 		if (Table.CM_HISTORY_SAMPLE_JSON.equals(table))
 		{
-			int cmHistory_keepDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmHistory_keepDays, DEFAULT_localMetricsCm_keepDays);
+			int cmHistory_keepDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmHistory_keepDays, DEFAULT_cmHistory_keepDays);
 			Timestamp cmHistory_olderThan = new Timestamp( DateUtils.addDays(new Date(), -cmHistory_keepDays).getTime() );
 			_logger.info(_prefix + "Retention period for Specialized CM History (like CmActiveStatements) is " + cmHistory_keepDays + ", so data that is older than " + cmHistory_keepDays + " days (or older than '" + cmHistory_olderThan + "') will be deleted. This can be changed with property '" + PROPKEY_cmHistory_keepDays + "'.");
 
 			// Override the default value
 			olderThan = cmHistory_olderThan;
+		}
+		
+		if (Table.SESSION_SAMPLE_DETAILS.equals(table))
+		{
+			// TODO: Can we check if we have a DETAILS collector database for this "schema"
+			//       If we don't have details, we might just delete the details records... (since we wont be able to view it) 
+			//       And if it's a remote Collector, we can have a Fixed number of days, lets say 30 days or so...
+			// For now: just set it to the default: 30 days
+
+			int sessionsSampleDetails_keepDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sessionsSampleDetails_keepDays, DEFAULT_sessionsSampleDetails_keepDays);
+			Timestamp sessionsSampleDetails_olderThan = new Timestamp( DateUtils.addDays(new Date(), -sessionsSampleDetails_keepDays).getTime() );
+			_logger.info(_prefix + "Retention period for table " + shortTabName + " in schema '" + schema + "' is " + sessionsSampleDetails_keepDays + ", so data that is older than " + sessionsSampleDetails_keepDays + " days (or older than '" + sessionsSampleDetails_olderThan + "') will be deleted. This can be changed with property '" + PROPKEY_sessionsSampleDetails_keepDays + "'.");
+
+			// Override the default value
+			olderThan = sessionsSampleDetails_olderThan;
 		}
 		
 		String sql = null;

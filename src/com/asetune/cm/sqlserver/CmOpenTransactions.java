@@ -214,11 +214,11 @@ extends CountersModel
 		}
 
 		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
-		String contextInfoStr = "/*    ,replace(cast([s_es].context_info as varchar(128)),char(0),'') AS context_info_str -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		String contextInfoStr = "/*    ,replace(cast([s_er].context_info as varchar(128)),char(0),'') AS context_info_str -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
 		if (SqlServerCmUtils.isContextInfoStrEnabled())
 		{
 			// Make the binary 'context_info' into a String
-			contextInfoStr = "    ,replace(cast([s_es].context_info as varchar(128)),char(0),'') AS context_info_str /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+			contextInfoStr = "    ,replace(cast([s_er].context_info as varchar(128)),char(0),'') AS context_info_str /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 		}
 		
 		String sql = ""

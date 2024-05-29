@@ -36,7 +36,7 @@ extends AlarmEvent
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				dbname,               // extraInfo
-				AlarmEvent.Category.SPACE,
+				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
 				"Unexpected Database State in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FoundState: "+alarmState+". (not matching Regex='"+usedRegex+"')",

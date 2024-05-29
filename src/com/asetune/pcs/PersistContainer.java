@@ -431,14 +431,14 @@ public class PersistContainer
 	 * Write JSON for the container
 	 * 
 	 * @param cont                           The PersistContainer we should produce JSON text for 
-	 * @param sendCounters                   What COUNTER(s) should we send/write information about
-	 * @param sendGraphs                     What GRAPH/CHART(s) should we send/write information about
+	 * @param sendCountersConfig             What COUNTER(s) should we send/write information about
+	 * @param sendGraphsConfig               What GRAPH/CHART(s) should we send/write information about
 	 * @param sendExtendedAlarmDescAsHtml    Should Extended Alarm text be in HTML = true, or should we produce PLAIN TEXT = false
 	 * 
 	 * @return A JSON String
 	 * @throws IOException 
 	 */
-	public static String toJsonMessage(PersistContainer cont, SendCountersConfig sendCounters, SendCountersConfig sendGraphs, boolean sendExtendedAlarmDescAsHtml)
+	public static String toJsonMessage(PersistContainer cont, SendCountersConfig sendCountersConfig, SendCountersConfig sendGraphsConfig, boolean sendExtendedAlarmDescAsHtml)
 	throws IOException
 	{
 		StringWriter sw = new StringWriter();
@@ -506,10 +506,10 @@ public class PersistContainer
 //
 //			cmListEnabled.add(shortCmName);
 //
-//			if (sendCounters.isEnabled(shortCmName)) 
+//			if (sendCountersConfig.isEnabled(shortCmName)) 
 //				cmListEnabledCounters.add(shortCmName);
 //
-//			if (sendGraphs.isEnabled(shortCmName) && cm.hasTrendGraphData())
+//			if (sendGraphsConfig.isEnabled(shortCmName) && cm.hasTrendGraphData())
 //				cmListEnabledGraphs.add(shortCmName);
 //		}
 		
@@ -647,44 +647,72 @@ public class PersistContainer
 		gen.writeFieldName("collectors");
 		gen.writeStartArray();
 
+
 		//--------------------------------------
 		// COUNTERS
 		//--------------------------------------
+//-------------------------------------------
+// Moved the below logic to: cm.toJson(...)
+//-------------------------------------------
+//		for (CountersModel cm : cont.getCounterObjects())
+//		{
+//			// For the moment do not send Append Models
+//			if (cm instanceof CountersModelAppend) 
+//				continue;
+//
+////System.out.println("HttpJson.toJsonMessage[srvName='"+cont.getServerNameAlias()+"', CmName="+StringUtil.left(cm.getName(),30)+"]: hasValidSampleData()="+cm.hasValidSampleData()+", hasData()="+cm.hasData()+", hasTrendGraphData()="+cm.hasTrendGraphData()+", writeGraphs="+writeGraphs+", getTrendGraphCountWithData()="+cm.getTrendGraphCountWithData());
+//			if ( ! cm.hasValidSampleData() )
+//				continue;
+//
+//			if ( ! cm.hasData() && ! cm.hasTrendGraphData() )
+//				continue;
+//
+//			String shortCmName = cm.getName();
+//			
+//			// Create Options object that specifies *what* JSON objects to write/produce 
+//			JsonCmWriterOptions writeOptions = new JsonCmWriterOptions();
+//			writeOptions.writeCounters      = sendCounters.isEnabled(shortCmName);
+//			if (writeOptions.writeCounters)
+//			{
+//				writeOptions.writeMetaData      = sendCounters.isMetaDataEnabled    (shortCmName);
+//				writeOptions.writeMetaData_jdbc = sendCounters.isMetaDataJdbcEnabled(shortCmName);
+//				writeOptions.writeMetaData_cm   = sendCounters.isMetaDataCmEnabled  (shortCmName);
+//				writeOptions.writeCounters_abs  = sendCounters.isAbsEnabled         (shortCmName);
+//				writeOptions.writeCounters_diff = sendCounters.isDiffEnabled        (shortCmName);
+//				writeOptions.writeCounters_rate = sendCounters.isRateEnabled        (shortCmName);
+//			}
+//
+//			writeOptions.writeGraphs = sendGraphs.isEnabled(shortCmName);
+//			
+//			// if we ONLY write graph data, but there is no graphs with data
+//			// or possibly move this check INTO the cm method: cm.toJson(w, writeOptions);
+//			if ( writeOptions.writeCounters == false && (writeOptions.writeGraphs && cm.getTrendGraphCountWithData() == 0))
+//				continue;
+//
+//			// Use the CM method to write JSON
+//			cm.toJson(gen, writeOptions);
+//		}
 		for (CountersModel cm : cont.getCounterObjects())
 		{
-			// For the moment do not send Append Models
-			if (cm instanceof CountersModelAppend) 
-				continue;
-
-//System.out.println("HttpJson.toJsonMessage[srvName='"+cont.getServerNameAlias()+"', CmName="+StringUtil.left(cm.getName(),30)+"]: hasValidSampleData()="+cm.hasValidSampleData()+", hasData()="+cm.hasData()+", hasTrendGraphData()="+cm.hasTrendGraphData()+", writeGraphs="+writeGraphs+", getTrendGraphCountWithData()="+cm.getTrendGraphCountWithData());
-			if ( ! cm.hasValidSampleData() )
-				continue;
-
-			if ( ! cm.hasData() && ! cm.hasTrendGraphData() )
-				continue;
-
 			String shortCmName = cm.getName();
 			
 			// Create Options object that specifies *what* JSON objects to write/produce 
 			JsonCmWriterOptions writeOptions = new JsonCmWriterOptions();
-			writeOptions.writeCounters      = sendCounters.isEnabled(shortCmName);
+			
+			// The "sender", decides what we should send...
+			writeOptions.writeCounters = sendCountersConfig.isEnabled(shortCmName);
 			if (writeOptions.writeCounters)
 			{
-				writeOptions.writeMetaData      = sendCounters.isMetaDataEnabled    (shortCmName);
-				writeOptions.writeMetaData_jdbc = sendCounters.isMetaDataJdbcEnabled(shortCmName);
-				writeOptions.writeMetaData_cm   = sendCounters.isMetaDataCmEnabled  (shortCmName);
-				writeOptions.writeCounters_abs  = sendCounters.isAbsEnabled         (shortCmName);
-				writeOptions.writeCounters_diff = sendCounters.isDiffEnabled        (shortCmName);
-				writeOptions.writeCounters_rate = sendCounters.isRateEnabled        (shortCmName);
+				writeOptions.writeMetaData      = sendCountersConfig.isMetaDataEnabled    (shortCmName);
+				writeOptions.writeMetaData_jdbc = sendCountersConfig.isMetaDataJdbcEnabled(shortCmName);
+				writeOptions.writeMetaData_cm   = sendCountersConfig.isMetaDataCmEnabled  (shortCmName);
+				writeOptions.writeCounters_abs  = sendCountersConfig.isAbsEnabled         (shortCmName);
+				writeOptions.writeCounters_diff = sendCountersConfig.isDiffEnabled        (shortCmName);
+				writeOptions.writeCounters_rate = sendCountersConfig.isRateEnabled        (shortCmName);
 			}
 
-			writeOptions.writeGraphs = sendGraphs.isEnabled(shortCmName);
+			writeOptions.writeGraphs = sendGraphsConfig.isEnabled(shortCmName);
 			
-			// if we ONLY write graph data, but there is no graphs with data
-			// or possibly move this check INTO the cm method: cm.toJson(w, writeOptions);
-			if ( writeOptions.writeCounters == false && (writeOptions.writeGraphs && cm.getTrendGraphCountWithData() == 0))
-				continue;
-
 			// Use the CM method to write JSON
 			cm.toJson(gen, writeOptions);
 		}

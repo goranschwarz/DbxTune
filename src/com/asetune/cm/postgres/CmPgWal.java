@@ -21,6 +21,7 @@
 package com.asetune.cm.postgres;
 
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,7 +29,11 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.postgres.AlarmEventPgWalSizeHigh;
 import com.asetune.central.pcs.CentralPersistReader;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -39,6 +44,7 @@ import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.NumberUtils;
 import com.asetune.utils.Ver;
 
@@ -64,7 +70,7 @@ extends CountersModel
 	public static final long     NEED_SRV_VERSION = Ver.ver(14);
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"pg_stat_wal"};
+	public static final String[] MON_TABLES       = new String[] {"pg_stat_wal", "pg_ls_waldir"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -143,6 +149,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_WRITE_TIME  = "WTime";
 	public static final String GRAPH_NAME_WAL_KB      = "WalKb";
 	public static final String GRAPH_NAME_FULL_COUNT  = "FullCount";
+	public static final String GRAPH_NAME_WAL_SIZE_MB = "WalSizeMb";
 	
 //	@Override
 //	protected TabularCntrPanel createGui()
@@ -213,6 +220,18 @@ extends CountersModel
 				Ver.ver(14),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_WAL_SIZE_MB,
+				"pg_wal dir Size in MB", 	                // Menu CheckBox text
+				"pg_wal dir Size in MB ("+SHORT_NAME+")", // Graph Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				new String[] {"pg_waldir_total_size_mb"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.DISK,
+				false, // is Percent Graph
+				true,  // visible at start
+				Ver.ver(14),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
 	}
 
 	@Override
@@ -275,6 +294,16 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
+		//---------------------------------
+		if (GRAPH_NAME_WAL_SIZE_MB.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getRateValueAsDouble(0, "pg_waldir_total_size_mb", 0d);
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 
 	@Override
@@ -293,23 +322,26 @@ extends CountersModel
 	{
 		// possibly add: wal_write_time / wal_write AS wal_write_time_per_write   (it also needs to be maintained for DIFF level)
 		// possibly add: wal_sync_time  / wal_sync  AS wal_sync_time_per_write    (it also needs to be maintained for DIFF level) 
-		return "select * from pg_stat_wal";
+//		return "select * from pg_stat_wal";
+		
+		// I would also want to use "pg_get_free_disk_space('pg_wal')", but there is no such functionality i Postgres
+		// So I can't WARN about eminent SPACE ISSUES here, we have to trust that 'CmOsDiskSpace' is enabled and do want about that!!!
 
-//		String sql = ""
-//			    + "select \n"
-//			    + "     wal_records \n"
-//			    + "    ,wal_fpi \n"
-//			    + "    ,CAST(wal_bytes as numeric(38,0)) AS wal_bytes /* need to cast, pg uses: numeric(0,0) */ \n"
-//			    + "    ,wal_buffers_full \n"
-//			    + "    ,wal_write \n"
-//			    + "    ,wal_sync \n"
-//			    + "    ,wal_write_time \n"
-//			    + "    ,wal_sync_time \n"
-//			    + "    ,stats_reset \n"
-//			    + "from pg_stat_wal \n"
-//			    + "";
-//		
-//		return sql;
+		// pg_ls_waldir -- Was introduced in PG 10, and pg_stat_wal in PG 14
+		String sql = ""
+			    + "with waldir as ( \n"
+			    + "    select \n"
+			    + "         cast(sum(size) / 1024 / 1024 as numeric(15,1)) AS pg_waldir_total_size_mb \n"
+			    + "        ,min(modification) AS oldest_wal_file_ts \n"
+			    + "        ,max(modification) AS latest_wal_file_ts \n"
+			    + "        ,cast(age(max(modification), min(modification)) as varchar(60)) AS latest_vs_oldest_wal_file_ts_diff \n"
+			    + "    from pg_ls_waldir() \n"
+			    + "    where name not like '%.backup' \n"
+			    + ") \n"
+			    + "select ws.*, waldir.* \n"
+			    + "from pg_stat_wal ws, waldir \n"
+			    + "";
+		return sql;
 	}
 
 	@Override
@@ -333,4 +365,85 @@ extends CountersModel
 		return rsmdc;
 	}
 
+
+
+
+
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		CountersModel cm = this;
+
+		//-------------------------------------------------------
+		// free_connections
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("pg_waldir_total_size_mb"))
+		{
+			// There should only be 1 row... but lets use SUM anyway
+			Double pg_waldir_total_size_mb = cm.getAbsValueSum("pg_waldir_total_size_mb");
+			
+			if (pg_waldir_total_size_mb != null)
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_pgWaldirTotalSizeMb, DEFAULT_alarm_pgWaldirTotalSizeMb);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): pg_waldir_total_size_mb: threshold="+threshold+", pg_waldir_total_size_mb='"+pg_waldir_total_size_mb+"'.");
+
+				if (pg_waldir_total_size_mb.intValue() >= threshold)
+				{
+					String extendedDescText = "";
+					String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WAL_SIZE_MB);
+
+					AlarmEvent ae = new AlarmEventPgWalSizeHigh(cm, pg_waldir_total_size_mb, threshold);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+		}
+	} // end: method
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_WAL_SIZE_MB.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		//return super.getGraphDataHistoryTimeInterval(name);
+		
+		// Keep 4 hours in history
+		return 60 * 4;
+	}
+
+	public static final String  PROPKEY_alarm_pgWaldirTotalSizeMb = CM_NAME + ".alarm.system.if.pg_waldir_total_size_mb.lt";
+	public static final int     DEFAULT_alarm_pgWaldirTotalSizeMb = 32 * 1024; // 32 GB
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("pg_waldir_total_size_mb" , isAlarmSwitch, PROPKEY_alarm_pgWaldirTotalSizeMb , Integer.class, conf.getIntProperty(PROPKEY_alarm_pgWaldirTotalSizeMb , DEFAULT_alarm_pgWaldirTotalSizeMb ), DEFAULT_alarm_pgWaldirTotalSizeMb , "If 'pg_waldir_total_size_mb' is less than this value, send 'AlarmEventWalSizeHigh'." ));
+
+		return list;
+	}
 }

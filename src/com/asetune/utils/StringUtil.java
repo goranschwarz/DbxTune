@@ -802,6 +802,11 @@ public class StringUtil
 		return map;
 	}
 
+	public static String toCommaStr(String... values)
+	{
+		return toCommaStr(values, ", ");
+	}
+
 	public static String toCommaStr(Object[] oa)
 	{
 		return toCommaStr(oa, ", ");
@@ -2126,9 +2131,10 @@ public class StringUtil
 			return defaultValue;
 //			throw new NullPointerException("parseInt(str) expects a string value not a null");
 
+		str = cleanupNumberStr(str, false);
 		try
 		{
-			return Integer.parseInt(str.trim());
+			return Integer.parseInt(str);
 		}
 		catch (NumberFormatException nfe)
 		{
@@ -2144,6 +2150,10 @@ public class StringUtil
 	 */
 	public static long parseLong(String str, long defaultValue)
 	{
+		if (str == null)
+			return defaultValue;
+
+		str = cleanupNumberStr(str, false);
 		try
 		{
 			return Long.parseLong(str);
@@ -2153,6 +2163,77 @@ public class StringUtil
 			return defaultValue;
 		}
 	}
+	/**
+	 * Removes 
+	 * <ul>
+	 *   <li>leading/trailing blanks</li>
+	 *   <li>spaces in string, Example: "311 915 120" becomes "311915120"</li>
+	 * </ul>
+	 * @return
+	 */
+	public static String cleanupNumberStr(String str, boolean canHaveDecimalPoints)
+	{
+		if (StringUtil.isNullOrBlank(str))
+			return str;
+
+		boolean debugInput = Configuration.getCombinedConfiguration().getBooleanProperty("StringUtil.cleanupNumberStr.debug", false);
+		//debugInput = true;
+		if (debugInput)
+			System.out.println("\nStringUtil.cleanupNumberStr.debug: inputStr=|" + str + "|");
+
+		final int initSize = str.length();
+		final char[] copyBuffer = new char[initSize];
+		int copyCount = 0;
+		for (int i = 0; i < initSize; i++) 
+		{
+			boolean copyChar = true;
+
+			if (copyChar && '\u00A0' == str.charAt(i))                     copyChar = false; // NBSP -- Non Breakable Space 
+			if (copyChar && Character.isWhitespace(str.charAt(i)))         copyChar = false; // Normal WhiteSpace
+			if (copyChar && !canHaveDecimalPoints && ',' == str.charAt(i)) copyChar = false; // noDecimalPoints && ','
+			if (copyChar && !canHaveDecimalPoints && '.' == str.charAt(i)) copyChar = false; // noDecimalPoints && '.'
+
+			// TODO: we still need to figure out how to parse values that CAN Contain ',' or '.' as decimal points (and not as "separators" for readability)
+			// Should we also handle "other" Locale(s)
+			//   123,456.7  -->> 123456.7 -- Kind of easy
+			//   123.456,7  -->> 123456.7 -- Kind of easy
+			//   123.456    -->> 123.456  -- A bit harder ??? is '.' a decimal point or a separator (since it looks like a "big number")
+			//   123,456    -->> 123.456  -- A bit harder ??? is ',' a decimal point or a separator (since it looks like a "big number")
+			// Could we use: NumberFormat.getInstance().parse(theNumberString)
+
+			if (debugInput)
+				System.out.println("StringUtil.cleanupNumberStr.debug: >>>> ch[" + i + "]=|" + str.charAt(i) + "|, num=" + (int)str.charAt(i) + ", copyChar=" + copyChar);
+
+			if (copyChar)
+				copyBuffer[copyCount++] = str.charAt(i);
+		}
+		if (copyCount == initSize)
+		{
+			if (debugInput)
+				System.out.println("StringUtil.cleanupNumberStr.debug: <<<< return-UNTOUCHED-string=|" + str + "|");
+		}
+		else
+		{
+			// Create a new "stripped" string
+			str = new String(copyBuffer, 0, copyCount);
+
+			if (debugInput)
+				System.out.println("StringUtil.cleanupNumberStr.debug: <<<< return-CHANGED-string=|" + str + "|");
+		}
+
+		return str;
+	}
+	
+//	public static void main(String[] args)
+//	{
+//		System.out.println("xxx['']           =" + parseLong("", -1L));
+//		System.out.println("xxx['123']        =" + parseLong("123", -1L));
+//		System.out.println("xxx[' 123 ']      =" + parseLong(" 123 ", -1L));
+//		System.out.println("xxx['123,456,789']=" + parseLong("123,456,789", -1L));
+//		System.out.println("xxx['123.456.789']=" + parseLong("123.456.789", -1L));
+//		System.out.println("xxx['123 456 789']=" + parseLong("123 456 789", -1L));
+//		System.out.println("xxx['123;456;789']=" + parseLong("123;456;789", -1L));
+//	}
 
 	/**
 	 * Simply do Double.parseDouble(str), but if it fails (NumberFormatException), then return the default value

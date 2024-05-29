@@ -70,7 +70,7 @@ extends CountersModel
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"dm_io_virtual_file_stats", "master_files"};
+	public static final String[] MON_TABLES       = new String[] {"deviceIo", "dm_io_virtual_file_stats", "master_files"};
 	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -133,6 +133,9 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_SRW_ALL_DISK_KB = "KbAllSRW";
+
+	public static final String GRAPH_NAME_SRW_ALL_DISK_IO = "IoAllSRW";
 	public static final String GRAPH_NAME_RW_ALL_DISK_IO  = "IoAllRW";
 	public static final String GRAPH_NAME_R_ALL_DISK_IO   = "IoAllR";
 	public static final String GRAPH_NAME_W_ALL_DISK_IO   = "IoAllW";
@@ -141,12 +144,42 @@ extends CountersModel
 	public static final String GRAPH_NAME_R_DISK_IO       = "IoR";
 	public static final String GRAPH_NAME_W_DISK_IO       = "IoW";
 
+//	public static final String GRAPH_NAME_RW_AVG_KB_PER_IO= "AvgKbPerIoRW";  // This is not done so far... maybe in the future
+	public static final String GRAPH_NAME_R_AVG_KB_PER_IO = "AvgKbPerIoR";
+	public static final String GRAPH_NAME_W_AVG_KB_PER_IO = "AvgKbPerIoW";
+
 	public static final String GRAPH_NAME_RW_SERVICE_TIME = "SvcTimeRW";
 	public static final String GRAPH_NAME_R_SERVICE_TIME  = "SvcTimeR";
 	public static final String GRAPH_NAME_W_SERVICE_TIME  = "SvcTimeW";
 
 	private void addTrendGraphs()
 	{
+		//-----
+		addTrendGraph(GRAPH_NAME_SRW_ALL_DISK_KB,
+			"Disk Throughput in KB (Sum,Read,Write), per Second and ALL Devices", // Menu CheckBox text
+			"Disk Throughput in KB (Sum,Read,Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "Sum_KB_ALL_devices", "Read_KB_ALL_devices", "Write_KB_ALL_devices" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SRW_ALL_DISK_IO,
+			"Number of Disk Operations (Sum,Read,Write), per Second and ALL Devices", // Menu CheckBox text
+			"Number of Disk Operations (Sum,Read,Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "Sum_ALL_devices", "Read_ALL_devices", "Write_ALL_devices" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		//-----
 		addTrendGraph(GRAPH_NAME_RW_ALL_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and ALL Devices", // Menu CheckBox text
@@ -230,6 +263,47 @@ extends CountersModel
 
 
 		//-----
+//		addTrendGraph(GRAPH_NAME_RW_AVG_KB_PER_IO,
+//			"Average (Read+Write) KB Per Disk IO, per Device", // Menu CheckBox text
+//			"Average (Read+Write) KB Per Disk IO, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+//			null, 
+//			LabelType.Dynamic,
+//			TrendGraphDataPoint.Category.DISK,
+//			false, // is Percent Graph
+//			true,  // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_R_AVG_KB_PER_IO,
+			"Average (Read) KB Per Disk IO, per Device", // Menu CheckBox text
+			"Average (Read) KB Per Disk IO, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_W_AVG_KB_PER_IO,
+			"Average (Write) KB Per Disk IO, per Device", // Menu CheckBox text
+			"Average (Write) KB Per Disk IO, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+
+
+		//-----
 		addTrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
 			"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
 			"Device IO Service Time (Read+Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
@@ -290,36 +364,53 @@ extends CountersModel
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("deviceIo",  "");
 
-			mtd.addColumn("deviceIo",  "TotalIOs",     "<html>" +
+			mtd.addColumn("deviceIo",  "dbname",          "<html>Name of the database this device is attached to </html>");
+			mtd.addColumn("deviceIo",  "type",            "<html>Data or Log </html>");
+			mtd.addColumn("deviceIo",  "LogicalName",     "<html>The logical name of the device </html>");
+
+			mtd.addColumn("deviceIo",  "TotalIOs",        "<html>" +
 			                                                   "Total number of IO's issued on this device.<br>" +
 			                                                   "<b>Formula</b>: Reads + Writes<br>" +
 			                                              "</html>");
-//			mtd.addColumn("deviceIo",  "APFReadsPct",  "<html>" +
-//			                                                   "Of all the issued Reads, what's the Asynch Prefetch Reads percentage.<br>" +
-//			                                                   "<b>Formula</b>: APFReads / Reads * 100<br>" +
-//			                                              "</html>");
-			mtd.addColumn("deviceIo",  "WritesPct",    "<html>" +
-			                                                   "Of all the issued IO's, what's the Write percentage.<br>" +
-			                                                   "<b>Formula</b>: Writes / (Reads + Writes) * 100<br>" +
+			mtd.addColumn("deviceIo",  "Reads",           "<html>Number of Reads made on this device </html>");
+			mtd.addColumn("deviceIo",  "ReadsKB",         "<html>How Many KB that was Read from this device </html>");
+			mtd.addColumn("deviceIo",  "AvgReadKbPerIo",  "<html>" +
+			                                                 "Average Read KB Per issued IO.<br>" +
+			                                                 "<b>Formula</b>: ReadsKB / Reads <br>" +
 			                                              "</html>");
-			mtd.addColumn("deviceIo",  "AvgServ_ms",   "<html>" +
+			mtd.addColumn("deviceIo",  "ReadsPct",        "<html>How many of the TotalIO's was Reads in Percent</html>");
+
+			mtd.addColumn("deviceIo",  "Writes",           "<html>Number of Writes made on this device </html>");
+			mtd.addColumn("deviceIo",  "WritesKB",         "<html>How Many KB that was Written from this device </html>");
+			mtd.addColumn("deviceIo",  "AvgWriteKbPerIo", "<html>" +
+			                                                  "Average Write KB Per issued IO.<br>" +
+			                                                  "<b>Formula</b>: WritesKB / Writes <br>" +
+			                                              "</html>");
+			mtd.addColumn("deviceIo",  "WritesPct",       "<html>How many of the TotalIO's was Writes in Percent</html>");
+			mtd.addColumn("deviceIo",  "IOTime",          "<html>How many milliseconds were we spending on waiting for ALL IO's</html>");
+			mtd.addColumn("deviceIo",  "ReadTime",        "<html>How many milliseconds were we spending on waiting for Read IO's</html>");
+			mtd.addColumn("deviceIo",  "WriteTime",       "<html>How many milliseconds were we spending on waiting for Write IO's</html>");
+			
+			mtd.addColumn("deviceIo",  "AvgServ_ms",      "<html>" +
 			                                                   "Service time on the disk.<br>" +
 			                                                   "This is basically the average time it took to make a disk IO on this device.<br>" +
-			                                                   "Warning: ASE isn't timing each IO individually, Instead it uses the 'click ticks' to do it... This might change in the future.<br>" +
 			                                                   "<b>Formula</b>: IOTime / (Reads + Writes) <br>" +
 			                                              "</html>");
 			mtd.addColumn("deviceIo",  "ReadServiceTimeMs", "<html>" +
 			                                                   "Service time on the disk for <b>Read</b> operations.<br>" +
 			                                                   "This is basically the average time it took to make a <b>read</b> IO on this device.<br>" +
-			                                                   "Warning: ASE isn't timing each IO individually, Instead it uses the 'click ticks' to do it... This might change in the future.<br>" +
 			                                                   "<b>Formula</b>: ReadTime / Reads <br>" +
 			                                              "</html>");
 			mtd.addColumn("deviceIo",  "WriteServiceTimeMs", "<html>" +
 			                                                   "Service time on the disk for <b>Write</b> operations.<br>" +
 			                                                   "This is basically the average time it took to make a <b>write</b> IO on this device.<br>" +
-			                                                   "Warning: ASE isn't timing each IO individually, Instead it uses the 'click ticks' to do it... This might change in the future.<br>" +
 			                                                   "<b>Formula</b>: WriteTime / Writes <br>" +
 			                                              "</html>");
+			mtd.addColumn("deviceIo",  "SizeOnDiskMB",    "<html>Disk size for this device</html>");
+			mtd.addColumn("deviceIo",  "lname",           "<html>The logical name</html>");
+			mtd.addColumn("deviceIo",  "PhysicalName",    "<html>Full path to this device/file</html>");
+			mtd.addColumn("deviceIo",  "database_id",     "<html>ID of the database</html>");
+			mtd.addColumn("deviceIo",  "file_id",         "<html>ID of the file</html>");
 		}
 		catch (NameNotFoundException e) 
 		{
@@ -380,12 +471,14 @@ extends CountersModel
 		       "TotalIOs           = "+TotalIOs+", \n" +
 		       "Reads              = a.num_of_reads, \n" +
 		       "ReadsKB            = (a.num_of_bytes_read / 1024), \n" +
+		       "AvgReadKbPerIo     = convert(numeric(10,1), (a.num_of_bytes_read / 1024.0) / (1.0 * NULLIF(a.num_of_reads, 0))), \n" +
 		       "ReadsPct           = CASE WHEN "+TotalIOs+" > 0 \n" +
 		       "                          THEN convert(numeric(10,1), (a.num_of_reads + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
 		       "                          ELSE convert(numeric(10,1), 0.0 ) \n" +
 		       "                     END, \n" +
 		       "Writes             = a.num_of_writes, \n" +
 		       "WritesKB           = (a.num_of_bytes_written / 1024), \n" +
+		       "AvgWriteKbPerIo    = convert(numeric(10,1), (a.num_of_bytes_written / 1024.0) / (1.0 * NULLIF(a.num_of_writes, 0))), \n" +
 		       "WritesPct          = CASE WHEN "+TotalIOs+" > 0 \n" +
 		       "                          THEN convert(numeric(10,1), (a.num_of_writes + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
 		       "                          ELSE convert(numeric(10,1), 0.0 ) \n" +
@@ -428,8 +521,36 @@ extends CountersModel
 //		long srvVersion = getServerVersion();
 
 		//------------------------------------------------
+		// ---- ALL DISK Throughput in KB PER SECOND GRAPHS
+		//------------------------------------------------
+		if (GRAPH_NAME_SRW_ALL_DISK_KB.equals(tgdp.getName()))
+		{
+			Double readsKB  = this.getRateValueSum("ReadsKB");
+			Double writesKB = this.getRateValueSum("WritesKB");
+
+			Double[] arr = new Double[3];
+			arr[0] = readsKB + writesKB;
+			arr[1] = readsKB;
+			arr[2] = writesKB;
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//------------------------------------------------
 		// ---- ALL DISK IO's PER SECOND GRAPHS
 		//------------------------------------------------
+		if (GRAPH_NAME_SRW_ALL_DISK_IO.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[3];
+			arr[0] = this.getRateValueSum("TotalIOs");
+			arr[1] = this.getRateValueSum("Reads");
+			arr[2] = this.getRateValueSum("Writes");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
 		if (GRAPH_NAME_RW_ALL_DISK_IO.equals(tgdp.getName()))
 		{
 			Double[] arr = new Double[1];
@@ -506,6 +627,55 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
+
+		//------------------------------------------------
+		// ---- AVERAGE KB PER IO
+		//------------------------------------------------
+//		if (GRAPH_NAME_RW_AVG_KB_PER_IO.equals(tgdp.getName()))
+//		{
+//			// Write 1 "line" for every device
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "LogicalName");
+//				dArray[i] = this.getRateValueAsDouble(i, "TotalIOs");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+//		}
+
+		if (GRAPH_NAME_R_AVG_KB_PER_IO.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "LogicalName");
+				dArray[i] = this.getRateValueAsDouble(i, "AvgReadKbPerIo");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_W_AVG_KB_PER_IO.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "LogicalName");
+				dArray[i] = this.getRateValueAsDouble(i, "AvgWriteKbPerIo");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
 		
 		//------------------------------------------------
 		// ---- SERVICE TIME GRAPHS
@@ -570,6 +740,11 @@ extends CountersModel
 		int ReadTime     = -1, WriteTime     = -1;
 		int pos_ReadTime = -1, pos_WriteTime = -1, pos_ReadServiceTimeMs = -1, pos_WriteServiceTimeMs = -1;
 
+		int pos_ReadsKB         = -1;
+		int pos_WritesKB        = -1;
+		int pos_AvgReadKbPerIo  = -1;
+		int pos_AvgWriteKbPerIo = -1;
+		
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
 		if (colNames == null)
@@ -577,35 +752,41 @@ extends CountersModel
 		for (int colId = 0; colId < colNames.size(); colId++)
 		{
 			String colName = (String) colNames.get(colId);
-			if      (colName.equals("Reads"))       ReadsId       = colId;
-//			else if (colName.equals("APFReads"))    APFReadsId    = colId;
-			else if (colName.equals("Writes"))      WritesId      = colId;
-			else if (colName.equals("IOTime"))      IOTimeId      = colId;
+			if      (colName.equals("Reads"))              ReadsId                = colId;
+//			else if (colName.equals("APFReads"))           APFReadsId             = colId;
+			else if (colName.equals("Writes"))             WritesId               = colId;
+			else if (colName.equals("IOTime"))             IOTimeId               = colId;
 
-			else if (colName.equals("ReadsPct"))    ReadsPctId    = colId;
-//			else if (colName.equals("APFReadsPct")) APFReadsPctId = colId;
-			else if (colName.equals("WritesPct"))   WritesPctId   = colId;
-			else if (colName.equals("AvgServ_ms"))  AvgServ_msId  = colId;
+			else if (colName.equals("ReadsPct"))           ReadsPctId             = colId;
+//			else if (colName.equals("APFReadsPct"))        APFReadsPctId          = colId;
+			else if (colName.equals("WritesPct"))          WritesPctId            = colId;
+			else if (colName.equals("AvgServ_ms"))         AvgServ_msId           = colId;
 
 			else if (colName.equals("ReadTime"))           pos_ReadTime           = colId;
 			else if (colName.equals("WriteTime"))          pos_WriteTime          = colId;
 			else if (colName.equals("ReadServiceTimeMs"))  pos_ReadServiceTimeMs  = colId;
 			else if (colName.equals("WriteServiceTimeMs")) pos_WriteServiceTimeMs = colId;
+
+			else if (colName.equals("ReadsKB"))            pos_ReadsKB            = colId;
+			else if (colName.equals("WritesKB"))           pos_WritesKB           = colId;
+			else if (colName.equals("AvgReadKbPerIo"))     pos_AvgReadKbPerIo     = colId;
+			else if (colName.equals("AvgWriteKbPerIo"))    pos_AvgWriteKbPerIo    = colId;
 		}
 
 		// Loop on all diffData rows
 		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 		{
-			Reads    = ((Number) diffData.getValueAt(rowId, ReadsId))   .intValue();
-//			APFReads = ((Number) diffData.getValueAt(rowId, APFReadsId)).intValue();
-			Writes   = ((Number) diffData.getValueAt(rowId, WritesId))  .intValue();
-			IOTime   = ((Number) diffData.getValueAt(rowId, IOTimeId))  .intValue();
-			if (pos_ReadTime  >= 0) ReadTime  = ((Number) diffData.getValueAt(rowId, pos_ReadTime)).intValue();
-			if (pos_WriteTime >= 0) WriteTime = ((Number) diffData.getValueAt(rowId, pos_WriteTime)).intValue();
+			Reads    = diffData.getValueAsInteger(rowId, ReadsId   , 0);
+//			APFReads = diffData.getValueAsInteger(rowId, APFReadsId, 0);
+			Writes   = diffData.getValueAsInteger(rowId, WritesId  , 0);
+			IOTime   = diffData.getValueAsInteger(rowId, IOTimeId  , 0);
+			if (pos_ReadTime  >= 0) ReadTime  = diffData.getValueAsInteger(rowId, pos_ReadTime , 0);
+			if (pos_WriteTime >= 0) WriteTime = diffData.getValueAsInteger(rowId, pos_WriteTime, 0);
+
+			int totIo = Reads + Writes;
 
 			//--------------------
 			//---- AvgServ_ms
-			int totIo = Reads + Writes;
 			if (totIo != 0)
 			{
 				// AvgServ_ms = (IOTime * 1000) / ( totIo);
@@ -682,6 +863,35 @@ extends CountersModel
 			}
 			else
 				diffData.setValueAt(new BigDecimal(0), rowId, WritesPctId);
+
+			
+			//--------------------
+			//---- AvgReadKbPerIo
+			if (Reads > 0)
+			{
+				int ReadsKB = diffData.getValueAsInteger(rowId, pos_ReadsKB, 0);
+				double calc = (ReadsKB + 0.0) / (Reads + 0.0);
+				
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				//System.out.println(">>> ReadsKB=" + ReadsKB + ", Reads=" + Reads + ", calc=" + calc + ", newVal=" + newVal + ", pos_AvgReadKbPerIo=" + pos_AvgReadKbPerIo);
+				diffData.setValueAt(newVal, rowId, pos_AvgReadKbPerIo);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_AvgReadKbPerIo);
+
+			//--------------------
+			//---- AvgWriteKbPerIo
+			if (Writes > 0)
+			{
+				int WritesKB = diffData.getValueAsInteger(rowId, pos_WritesKB, 0);
+				double calc = (WritesKB + 0.0) / (Writes + 0.0);
+				
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				//System.out.println(">>> WritesKB=" + WritesKB + ", Writes=" + Writes + ", calc=" + calc + ", newVal=" + newVal + ", pos_AvgWriteKbPerIo=" + pos_AvgWriteKbPerIo);
+				diffData.setValueAt(newVal, rowId, pos_AvgWriteKbPerIo);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_AvgWriteKbPerIo);
 		}
 	}
 }

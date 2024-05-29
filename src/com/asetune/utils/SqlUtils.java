@@ -287,6 +287,9 @@ public class SqlUtils
 		final int INSIDE_BLOCK_COMMENT = 2;
 		final int INSIDE_BLOCK_COMMENT_noNewLineYet = 3; // we want to have at least one new line in the result if the block is not inline.
 	    
+		if (StringUtil.isNullOrBlank(inputText))
+			return inputText;
+
 		int currentState = OUTSIDE_COMMENT;
 		StringBuilder endResult = new StringBuilder();
 

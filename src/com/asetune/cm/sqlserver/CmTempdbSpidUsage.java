@@ -352,11 +352,11 @@ extends CountersModel
 		
 
 		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
-		String contextInfoStr = "/*    ,replace(cast(es.context_info as varchar(128)),char(0),'') AS [context_info_str] -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		String contextInfoStr = "/*    ,replace(cast(er.context_info as varchar(128)),char(0),'') AS [context_info_str] -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
 		if (SqlServerCmUtils.isContextInfoStrEnabled())
 		{
 			// Make the binary 'context_info' into a String
-			contextInfoStr = "    ,replace(cast(es.context_info as varchar(128)),char(0),'') AS [context_info_str] /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+			contextInfoStr = "    ,replace(cast(er.context_info as varchar(128)),char(0),'') AS [context_info_str] /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 		}
 
 		
@@ -630,7 +630,7 @@ extends CountersModel
 //						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_TotalUsageMb_abs_SkipCmd,      DEFAULT_alarm_TotalUsageMb_abs_SkipCmd);
 //						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_TotalUsageMb_abs_SkipTranName, DEFAULT_alarm_TotalUsageMb_abs_SkipTranName);
 
-						String session_id              = cm.getAbsValue(r, "session_id")              + "";
+						int    session_id              = cm.getAbsValueAsInteger(r, "session_id", -1);
 						String last_request_start_time = cm.getAbsValue(r, "last_request_start_time") + "";
 						String last_request_in_sec     = cm.getAbsValue(r, "last_request_in_sec") + "";
 //						String StatementStartTime      = cm.getAbsValue(r, "exec_start_time")         + "";
@@ -671,13 +671,14 @@ extends CountersModel
 							if (cmActiveStatements != null)
 							{
 								// the "spid" can be in both ACTIVE and BLOCKER section
-								int[] activeStmntRows = cmActiveStatements.getAbsRowIdsWhere("session_id", session_id);
-								if (activeStmntRows != null && activeStmntRows.length > 0)
+								int[] activeStmntRowsArr = cmActiveStatements.getAbsRowIdsWhere("session_id", session_id);
+								if (activeStmntRowsArr != null && activeStmntRowsArr.length > 0)
 								{
-									extendedDescHtml += "<br><br>" + activeStmntRows.length + " Active Statement(s) was found for session_id=" + session_id;
-									for (int asr=0; asr<activeStmntRows.length; asr++)
+									extendedDescHtml += "<br><br>" + activeStmntRowsArr.length + " Active Statement(s) was found for session_id=" + session_id;
+									for (int asr=0; asr<activeStmntRowsArr.length; asr++)
 									{
-										extendedDescHtml += "<br><br>" + cmActiveStatements.toHtmlTableString(DATA_ABS, asr, true, false, false);
+										int asrRowId = activeStmntRowsArr[asr];
+										extendedDescHtml += "<br><br>" + cmActiveStatements.toHtmlTableString(DATA_ABS, asrRowId, true, false, false);
 									}
 								}
 								else

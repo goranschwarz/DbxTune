@@ -67,6 +67,7 @@ extends SqlServerAbstract
 				"CmSummary_aaCpuGraph",
 				"CmOsMpstat_MpSum",
 				"CmSummary_aaReadWriteGraph",
+				"CmOsIostat_IoBusyPct",
 				"CmPerfCounters_CacheReads",
 				"CmPerfCounters_CachePhyReads",
 				"CmPerfCounters_CacheWrites",
@@ -85,6 +86,7 @@ extends SqlServerAbstract
 		_CmSummary_aaCpuGraph           .writeHtmlContent(w, null, null);
 		_CmOsMpstat_MpSum               .writeHtmlContent(w, null, null);
 		_CmSummary_aaReadWriteGraph     .writeHtmlContent(w, null, null);
+		_CmOsIostat_IoBusyPct           .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CacheReads      .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CachePhyReads   .writeHtmlContent(w, null, null);
 		_CmPerfCounters_CacheWrites     .writeHtmlContent(w, null, null);
@@ -145,6 +147,7 @@ extends SqlServerAbstract
 		_CmSummary_aaCpuGraph            = createTsLineChart(conn, schema, "CmSummary",         "aaCpuGraph",       maxValue, false, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
 		_CmOsMpstat_MpSum                = createTsLineChart(conn, schema, "CmOsMpstat",        "MpSum",            maxValue, false, idlePct, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
 		_CmSummary_aaReadWriteGraph      = createTsLineChart(conn, schema, "CmSummary",         "aaReadWriteGraph", -1,       false, null,    "Disk read/write per second, using @@total_read, @@total_write (Summary)");
+		_CmOsIostat_IoBusyPct            = createTsLineChart(conn, schema, "CmOsIostat",        "IoBusyPct",        maxValue, false, null,    "OS: Disk Busy Percent(utilPct) per Device (Host Monitor->OS Disk Stat(iostat))");
 //		_CmPerfCounters_OsCpuEffective   = createTsLineChart(conn, schema, "CmPerfCounters",    "OsCpuEffective",   maxValue, false, null,    "CPU Usage Effective in Percent (Perf Counters)");
 		_CmPerfCounters_CacheReads       = createTsLineChart(conn, schema, "CmPerfCounters",    "CacheReads",       -1,       false, null,    "Buffer Cache Reads per Sec (Server->Perf Counters)");
 		_CmPerfCounters_CachePhyReads    = createTsLineChart(conn, schema, "CmPerfCounters",    "CachePhyReads",    -1,       false, null,    "Buffer Cache Physical Reads per Sec (Server->Perf Counters)");
@@ -165,6 +168,7 @@ extends SqlServerAbstract
 	private IReportChart _CmSummary_aaCpuGraph;
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmSummary_aaReadWriteGraph;
+	private IReportChart _CmOsIostat_IoBusyPct;
 	private IReportChart _CmPerfCounters_CacheReads;
 	private IReportChart _CmPerfCounters_CachePhyReads;
 	private IReportChart _CmPerfCounters_CacheWrites;

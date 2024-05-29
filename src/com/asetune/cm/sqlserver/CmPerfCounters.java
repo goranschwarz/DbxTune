@@ -60,6 +60,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -106,7 +107,10 @@ extends CountersModel
 		"cntr_value"
 		};
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	// 2024-04-24 I THINK we should have NEGATIVE_DIFF_COUNTERS_TO_ZERO to TRUE (but not 100% sure). 
+	// There might be specific counters that we want to have as negative calculated, but with "ndctz"=FALSE many graphs will have negative values after aSQL Server restart, which might not be the best
+	// Lets go with "reset negative counters to zero" for a while and see how it behaves
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;  // See comments above
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
@@ -171,6 +175,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_CACHE_PLE                 = "CachePle";  // PLE = Page Life Expectancy
 	public static final String GRAPH_NAME_CACHE_READS               = "CacheReads";
 	public static final String GRAPH_NAME_CACHE_PHY_READS           = "CachePhyReads";
+	public static final String GRAPH_NAME_CACHE_PHY_READ_AHEAD_PCT  = "CachePhyReadAheadPct";
 	public static final String GRAPH_NAME_CACHE_WRITES              = "CacheWrites";
 	public static final String GRAPH_NAME_CACHE_DATA_SIZE           = "CacheDataSize";
                                                                     
@@ -392,6 +397,19 @@ extends CountersModel
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_CACHE_PHY_READ_AHEAD_PCT,
+			"Buffer Cache Physical Readahead Percent", // Menu CheckBox text
+			"Buffer Cache Physical Readahead Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "Readahead Percent" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			true,  // is Percent Graph
 			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
@@ -1347,6 +1365,37 @@ extends CountersModel
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
 					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_CACHE_PHY_READ_AHEAD_PCT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr(":Buffer Manager", "Page reads/sec", "");
+			String pk2 = createPkStr(":Buffer Manager", "Readahead pages/sec", "");
+			
+			Double PageReadsPerSec      = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double ReadaheadPagesPerSec = this.getAbsValueAsDouble(pk2, "calculated_value");
+			
+			if (PageReadsPerSec != null && PageReadsPerSec != null)
+			{
+				double raedaheadPct = 0d;
+				if (PageReadsPerSec > 0) 
+					raedaheadPct = NumberUtils.round(ReadaheadPagesPerSec / PageReadsPerSec * 100.0, 1);
+
+				arr[0] = raedaheadPct;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+PageReadsPerSec+"', '"+pk2+"'='"+ReadaheadPagesPerSec+"'.");
 			}
 		}
 
