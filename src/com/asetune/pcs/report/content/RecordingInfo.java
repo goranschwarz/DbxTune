@@ -27,16 +27,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -66,7 +69,10 @@ extends ReportEntryAbstract
 	private String _recordingVersion = null;
 	
 	private int    _recordingSampleTime = -1;
-	
+
+	private String _osCoreInfo   = "";
+	private String _osMemoryInfo = "";
+
 	private boolean _isHostMonitoringEnabled = false;
 	private String  _hostMonitorHostname;
 
@@ -171,6 +177,24 @@ extends ReportEntryAbstract
 				}
 			}
 
+			// OS info: CORE Count, MEMORY ...
+			if (StringUtil.hasValue(_osCoreInfo) || StringUtil.hasValue(_osMemoryInfo))
+			{
+				if (StringUtil.hasValue(_dbmsDisplayName) && _dbmsDisplayName.contains("SQL Server"))
+				{
+					sb.append(blankTableRow);
+					sb.append("  <tr> " + tdBullet +" <td><b>OS Core Info:            </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
+					sb.append("  <tr> " + tdBullet +" <td><b>OS Memory Info:          </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
+				}
+				else
+				{
+					sb.append(blankTableRow);
+					sb.append("  <tr> " + tdBullet +" <td><b>OS Core Count:            </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
+					sb.append("  <tr> " + tdBullet +" <td><b>OS Physical Memory:       </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
+				}
+			}
+
+			// Host monitoring
 			sb.append(blankTableRow);
 			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring was Enabled:  </b></td> <td>" + _isHostMonitoringEnabled + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring hostname:     </b></td> <td>" + _hostMonitorHostname     + "</td> </tr>\n");
@@ -322,6 +346,12 @@ extends ReportEntryAbstract
 		_hostMonitorHostname = getRecordingSessionParameter(conn, null, "conn.sshHostname");
 
 		//-----------------------------------------
+		// OS CoreCound & MemoryInfo
+		//-----------------------------------------
+		_osCoreInfo   = getOsCoreInfo(conn);
+		_osMemoryInfo = getOsMemoryInfo(conn);
+
+		//-----------------------------------------
 		// Get/Check if Host Monitoring was enabled
 		//-----------------------------------------
 		_isHostMonitoringEnabled = isHostMonitoringEnabled(conn);
@@ -379,4 +409,268 @@ extends ReportEntryAbstract
 		
 		return false;
 	}
+
+	/**
+	 * Get OS Memory Information (and SQL Server specifics, is available)
+	 * @param conn A Connection the the PCS Storage
+	 * @return A String with various information
+	 */
+	private String getOsMemoryInfo(DbxConnection conn)
+	{
+		// Get SQL Server info
+		String sqlServerInfo = "";
+		{
+			Map<String, String> sysInfo = getSqlServerConfig_SysInfo(conn);
+			if (sysInfo != null && !sysInfo.isEmpty())
+			{
+				long   physical_memory_kb       = StringUtil.parseLong(sysInfo.get("physical_memory_kb"), 0);
+				long   cfg_max_server_memory_MB = StringUtil.parseLong(sysInfo.get("max server memory (MB)"), 0);
+				String sql_memory_model_desc    = sysInfo.get("sql_memory_model_desc");
+
+				double physical_memory_mb = NumberUtils.round((physical_memory_kb / 1024.0)         , 1);
+				double physical_memory_gb = NumberUtils.round((physical_memory_kb / 1024.0 / 1024.0), 1);
+
+				sqlServerInfo = "dm_os_sys_info: physical_memory_GB=" + physical_memory_gb + ", physical_memory_MB=" + physical_memory_mb + ", sql_memory_model_desc=" + sql_memory_model_desc + ", SrvConfig: 'max server memory (MB)'=" + cfg_max_server_memory_MB;
+//				if ( isWindows() )
+//				{
+//					sqlServerInfo += "<br><b>Note:</b> dm_os_sys_info.physical_memory_XX is <i>in my experiance</i> only 80% of the real physical memory on Windows.";
+//				}
+			}
+		}
+
+		// NOT SQL-Server and on Windows ... NOT Supported
+		if (isWindows() && StringUtil.isNullOrBlank(sqlServerInfo))
+		{
+			return "Physical Memory on Windows is not supported right now, sorry. (only supported for SQL Server)";
+			// We could "possibly" get it from "CmOsMeminfo_abs" but I couldn't work out the columns to use...
+			// I tried: [Available Bytes], [Committed Bytes] and [Commit Limit] but couldn't work out the details... 
+			//     and ([Available Bytes] + [Committed Bytes]) / 1024.0 / 1024.0  looks like the "closest"
+			// So lets do that at a later stage... 
+		}
+
+		// On Linux Only -- Get OS info
+		String linuxInfo = "";
+		if ( ! isWindows() )
+		{
+			if ( ! doTableExist(conn, null, "CmOsMeminfo_abs"  ) )
+			{
+				_logger.info("getOsMemoryInfo(): No PCS Table 'CmOsMeminfo_abs' was found.");
+				linuxInfo = "No PCS Table 'CmOsMeminfo_abs' was found.";
+			}
+			else
+			{
+				String schemaNamePrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
+
+				long memTotalKb = -1;
+				String sql = ""
+					    + "select [used] as [MemTotalKb] \n"
+					    + "from " + schemaNamePrefix + "[CmOsMeminfo_abs] \n"
+					    + "where [memoryType] = 'MemTotal' \n"
+					    + "  and [SessionSampleTime] = (select max([SessionSampleTime]) from " + schemaNamePrefix + "[CmOsMeminfo_abs]) \n"
+					    + "";
+
+				sql = conn.quotifySqlString(sql);
+				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next())
+					{
+						memTotalKb = rs.getLong(1);
+					}
+				}
+				catch(SQLException ex)
+				{
+					_logger.warn("Problems getting: 'getOsMemoryInfo()', Caught: " + ex);
+					memTotalKb = -1;
+				}
+				
+				if (memTotalKb > 0)
+				{
+					double memTotalMb = NumberUtils.round((memTotalKb / 1024.0)         , 1);
+					double memTotalGb = NumberUtils.round((memTotalKb / 1024.0 / 1024.0), 1);
+					linuxInfo = memTotalMb + " MB, " + memTotalGb + " GB";
+				}
+			}
+		}
+
+		// Decide what to output
+		String output = "";
+
+		if (StringUtil.hasValue(linuxInfo))
+			output += "OsInfo: " + linuxInfo;
+
+		if (StringUtil.hasValue(sqlServerInfo))
+		{
+			if (StringUtil.hasValue(output))
+				output += "<br>";
+
+			output += "SqlServerInfo: " + sqlServerInfo;
+		}
+		
+		return output;
+	}
+
+	/**
+	 * Get OS Core/CPU Information (and SQL Server specifics, is available)
+	 * @param conn A Connection the the PCS Storage
+	 * @return A String with various information
+	 */
+	private String getOsCoreInfo(DbxConnection conn)
+	{
+		// Get SQL Server info
+		String sqlServerInfo = "";
+		if (StringUtil.hasValue(_dbmsVersionString) && _dbmsVersionString.contains("SQL Server"))
+		{
+			Map<String, String> sysInfo = getSqlServerConfig_SysInfo(conn);
+			if (sysInfo != null && !sysInfo.isEmpty())
+			{
+				String cpu_count                 = "cpu_count="                 + sysInfo.get("cpu_count");
+				String hyperthread_ratio         = "hyperthread_ratio="         + sysInfo.get("hyperthread_ratio");
+				String socket_count              = "socket_count="              + sysInfo.get("socket_count");
+				String cores_per_socket          = "cores_per_socket="          + sysInfo.get("cores_per_socket");
+				String numa_node_count           = "numa_node_count="           + sysInfo.get("numa_node_count");
+				String virtual_machine_type_desc = "virtual_machine_type_desc=" + sysInfo.get("virtual_machine_type_desc");
+				
+				sqlServerInfo = "dm_os_sys_info: " + StringUtil.toCommaStr(cpu_count, hyperthread_ratio, socket_count, cores_per_socket, numa_node_count, virtual_machine_type_desc);
+			}
+		}
+
+		// Get OS info
+		String osInfo = "";
+		if ( ! doTableExist(conn, null, "CmOsMpstat_abs"  ) )
+		{
+			_logger.info("getOsCoreInfo(): No PCS Table 'CmOsMpstat_abs' was found.");
+			osInfo = "No PCS Table 'CmOsMpstat_abs' was found.";
+		}
+		else
+		{
+			String schemaNamePrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
+
+			int coreCount = -1;
+			String sql = "";
+			
+			// LINUX
+			sql = ""
+				+ "select count(*) as [CoreCount] \n"
+				+ "from " + schemaNamePrefix + "[CmOsMpstat_abs] \n"
+				+ "where [CPU] != 'all'  \n"
+				+ "  and [SessionSampleTime] = (select max([SessionSampleTime]) from " + schemaNamePrefix + "[CmOsMpstat_abs])";
+			
+			// Windows
+			if (isWindows())
+			{
+				sql = "select count(*) as [CoreCount] \n"
+				    + "from " + schemaNamePrefix + "[CmOsMpstat_abs] \n"
+				    + "where [Instance] != '_Total' \n"
+				    + "  and [SessionSampleTime] = (select max([SessionSampleTime]) from " + schemaNamePrefix + "[CmOsMpstat_abs]) \n"
+				    + "";
+			}
+
+			sql = conn.quotifySqlString(sql);
+			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					coreCount = rs.getInt(1);
+				}
+			}
+			catch(SQLException ex)
+			{
+				_logger.warn("Problems getting: 'getOsCoreInfo()', Caught: " + ex);
+				coreCount = -1;
+			}
+			
+			if (coreCount > 0)
+				osInfo = "coreCount=" + coreCount;
+		}
+
+
+		// Decide what to output
+		String output = "";
+
+		if (StringUtil.hasValue(osInfo))
+			output += "OsInfo: " + osInfo;
+
+		if (StringUtil.hasValue(sqlServerInfo))
+		{
+			if (StringUtil.hasValue(output))
+				output += "<br>";
+
+			output += "SqlServerInfo: " + sqlServerInfo;
+		}
+		
+		return output;
+	}
+	
+	/**
+	 * Get SQL Server information from the PCS Config subsystem (all available columns as a Map from sys.dm_os_sys_info)
+	 * @param conn A Connection the the PCS Storage
+	 * @return A Map with various information
+	 */
+	private Map<String, String> getSqlServerConfig_SysInfo(DbxConnection conn)
+	{
+		Map<String, String> sqlServerSysInfoMap = new LinkedHashMap<>();
+		String sqlServerSysInfo = null;
+
+		String schemaNamePrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
+
+		String sql = ""
+			+ "select [configText] \n"
+			+ "from " + schemaNamePrefix + "[MonSessionDbmsConfigText] \n"
+			+ "where [configName] = 'SqlServerSysInfo' \n"
+		    + "  and [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionDbmsConfigText]) \n"
+			+ "";
+				
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				sqlServerSysInfo = rs.getString(1);
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'getSqlServerConfig_SysInfo()', Caught: " + ex);
+			sqlServerSysInfo = null;
+		}
+
+		if (sqlServerSysInfo != null)
+		{
+			ResultSetTableModel rstm = ResultSetTableModel.parseTextTable(sqlServerSysInfo);
+			for (int c=0; c<rstm.getColumnCount(); c++)
+			{
+				String colName = rstm.getColumnName(c);
+				String colval  = rstm.getValueAsString(0, c);
+				
+				sqlServerSysInfoMap.put(colName, colval);
+			} 
+
+			// Can we also get 'max server memory (MB)' from config...
+			sql = ""
+					+ "select [Name], [RunValue] \n"
+					+ "from " + schemaNamePrefix + "[MonSessionDbmsConfig] \n"
+					+ "where [Name] = 'max server memory (MB)' \n"
+				    + "  and [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionDbmsConfig]) \n"
+					+ "";
+
+			sql = conn.quotifySqlString(sql);
+			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					String colName = rs.getString(1);
+					String colval  = rs.getString(2);
+					
+					sqlServerSysInfoMap.put(colName, colval);
+				}
+			}
+			catch(SQLException ex)
+			{
+				_logger.warn("Problems getting: 'getSqlServerConfig_SysInfo()::sp_config_values', Caught: " + ex);
+			}
+		}
+		
+		return sqlServerSysInfoMap;
+	}
+
 }

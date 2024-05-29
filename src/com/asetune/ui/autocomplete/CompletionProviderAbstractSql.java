@@ -1064,6 +1064,53 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		//System.out.println("--------------- SQL: getCompletionsImpl() ----- records("+cSize+") --- END");
 		return cList;
 	}
+
+	private String getAlreadyEnteredTextRespectQuotes(RSyntaxTextArea textArea)
+	{
+		try
+		{
+			int caretOffset = textArea.getCaretPosition();
+			int lineNumber  = textArea.getLineOfOffset(caretOffset);
+			int startOffset = textArea.getLineStartOffset(lineNumber);
+//			int endOffset   = textArea.getLineEndOffset(lineNumber);
+			
+			// Get "start" of the text (from current line to current caret pos)
+			String strBeforeCaret = textArea.getText(startOffset, caretOffset - startOffset);
+
+			// Loop from end to start: Stop at first single or double quote
+			int quotePos = strBeforeCaret.length();
+			boolean foundQuote = false;
+			for (int p=quotePos-1; p>0; p--)
+			{
+				char ch = strBeforeCaret.charAt(p);
+				if ( ch == '\'' || ch == '\"' )
+				{
+					foundQuote = true;
+					break;
+				}
+				quotePos--;
+			}
+			
+			if (foundQuote)
+			{
+				// return from quote up to caret position
+				int    len = caretOffset - (startOffset + quotePos);
+				String str = textArea.getText(startOffset + quotePos, len);
+
+				return str;
+			}
+			else
+			{
+				return getAlreadyEnteredText(textArea);
+			}
+		}
+		catch (BadLocationException e)
+		{
+			_logger.info("Problems in CodeCompletion -- getAlreadyEnteredTextRespectQuotes(textArea)", e);
+		}
+		return "";
+	}
+
 	protected List<Completion> getCompletionsSql(JTextComponent comp)
 	{
 		RSyntaxTextArea textArea = (RSyntaxTextArea)comp;
@@ -1090,22 +1137,40 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		String prevWord3   = getRelativeWord(textArea, -3);
 //		String prevWord4   = getRelativeWord(textArea, -4);
 
+//System.out.println("");
+//System.out.println("");
+//System.out.println("currentLineStr=|" + currentLineStr + "|.");
+		// Try to "figure out" if "enteredText" is within single/double quotes... then we might want to respect that and extend "enteredText" to the quote(s)
+		if (currentLineStr != null)
+		{
+			if (currentLineStr.contains("\"") || currentLineStr.contains("'"))
+			{
+				enteredText = getAlreadyEnteredTextRespectQuotes(textArea);
+//System.out.println("START FIX FOR QUOTES: new-enteredText=|" + enteredText + "|.");
+				_logger.debug("START FIX FOR QUOTES: new-enteredText=|" + enteredText + "|.");
+			}
+		}
+
 		if (enteredText != null) enteredText = enteredText.replace('%', '*'); // Change any SQL WildCardChar '%' into a more RegExp Friendly '*'
 		if (currentWord != null) currentWord = currentWord.replace('%', '*'); // Change any SQL WildCardChar '%' into a more RegExp Friendly '*'
 		
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug("START: enteredText='"+enteredText+"'.");
-			_logger.debug("START: currentWord='"+currentWord+"'.");
+			_logger.debug("START: enteredText=|"    + enteredText    + "|.");
+			_logger.debug("START: currentWord=|"    + currentWord    + "|.");
+			_logger.debug("START: currentLineStr=|" + currentLineStr + "|.");
 		}
-
+//System.out.println("START: enteredText=|"    + enteredText    + "|.");
+//System.out.println("START: currentWord=|"    + currentWord    + "|.");
+//System.out.println("START: currentLineStr=|" + currentLineStr + "|.");
+		
 		SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbStoresLowerCaseIdentifiers, _dbSupportsSchema, false);
 		//SqlObjectName cwId = new SqlObjectName(currentWord);
 
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug("START: enteredText(etId) IDENTIFIER: "+ etId);
-//			_logger.debug("START: currentWord(cwId) IDENTIFIER: "+ cwId);
+			_logger.debug("START: enteredText(etId) IDENTIFIER: " + etId);
+//			_logger.debug("START: currentWord(cwId) IDENTIFIER: " + cwId);
 		}
 
 //		System.out.println("-----------------------------------");
@@ -1156,9 +1221,10 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		//
 		if (    currentLineStr != null 
 		     && ( currentLineStr.startsWith("\\") || currentLineStr.toLowerCase().startsWith("go") )
-		     && ( currentLineStr.startsWith("\\connect") || prevWord1.equals("-p") || prevWord2.equals("-p") || prevWord3.equals("-p") || prevWord1.equals("--profile") || prevWord2.equals("--profile") || prevWord3.equals("--profile") )
+		     && ( currentLineStr.startsWith("\\connect") || currentLineStr.startsWith("\\rsql") || prevWord1.equals("-p") || prevWord2.equals("-p") || prevWord3.equals("-p") || prevWord1.equals("--profile") || prevWord2.equals("--profile") || prevWord3.equals("--profile") )
 		   )
 		{
+//System.out.println("##################################### Complete Connection Profiles ######################################");
 			if (ConnectionProfileManager.hasInstance())
 			{
 				ArrayList<Completion> cList = new ArrayList<Completion>();

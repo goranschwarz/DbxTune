@@ -185,7 +185,7 @@ extends CentralPersistWriterBase
 		super.init(conf);
 
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
-		_logger.info("Initializing the Central PersistentCounterHandler.WriterClass component named '"+this.getClass().getName()+"'.");
+		_logger.info("Initializing the Central PersistentCounterHandler.WriterClass component named '" + this.getClass().getName() + "'.");
 		
 //		// Create a connection pool (probably move this to CentralPcs(Reader|Writer)Jdbc or some other place)
 //		ConnectionProp cp = new ConnectionProp();
@@ -314,9 +314,9 @@ extends CentralPersistWriterBase
 //			if ( localJdbcUrl.indexOf("${") >= 0)
 //			{
 //				localJdbcUrl = urlSubstitution(cont, localJdbcUrl);
-//				_logger.info("Found variables in the URL '"+_jdbcUrl+"', the new URL will be '"+localJdbcUrl+"'.");
+//				_logger.info("Found variables in the URL '" + _jdbcUrl + "', the new URL will be '" + localJdbcUrl + "'.");
 //				if (_h2NewDbOnDateChange)
-//					_logger.info("When a new ${DATE} of the format '"+_h2DbDateParseFormat+"' has been reached, a new database will be opened using that timestamp.");
+//					_logger.info("When a new ${DATE} of the format '" + _h2DbDateParseFormat + "' has been reached, a new database will be opened using that timestamp.");
 //
 //				// This will be used to determine if a new DB should be opened with a new TIMESTAMP.
 //				String dateStr = new SimpleDateFormat(_h2DbDateParseFormat).format(newDate);
@@ -376,7 +376,7 @@ extends CentralPersistWriterBase
 						if (h2ReuseSpace.equals("TRUE") || h2ReuseSpace.equals("FALSE"))
 						{
 							change = true;
-							_logger.info("H2 URL add option: REUSE_SPACE="+h2ReuseSpace);
+							_logger.info("H2 URL add option: REUSE_SPACE=" + h2ReuseSpace);
 							urlMap.put("REUSE_SPACE",  h2ReuseSpace);
 						}
 						else
@@ -414,7 +414,7 @@ extends CentralPersistWriterBase
 					if (h2RetentionTime > -1) // set to -1 to disable this option
 					{
 						change = true;
-						_logger.info("H2 URL add option: RETENTION_TIME="+h2RetentionTime);
+						_logger.info("H2 URL add option: RETENTION_TIME=" + h2RetentionTime);
 						urlMap.put("RETENTION_TIME",  Integer.toString(h2RetentionTime));
 					}
 				}
@@ -427,8 +427,8 @@ extends CentralPersistWriterBase
 					{
     					int h2CacheInKb = h2CacheInMb * 1024;
     					change = true;
-    					_logger.info("H2 URL add option: CACHE_SIZE="+h2CacheInKb);
-    					urlMap.put("CACHE_SIZE",  h2CacheInKb+"");
+    					_logger.info("H2 URL add option: CACHE_SIZE=" + h2CacheInKb);
+    					urlMap.put("CACHE_SIZE",  h2CacheInKb + "");
 					}
 				}
 
@@ -466,8 +466,8 @@ extends CentralPersistWriterBase
 					if (h2WriteDelay > -1) // set to -1 to disable this option
 					{
 						change = true;
-						_logger.info("H2 URL add option: WRITE_DELAY="+h2WriteDelay);
-						urlMap.put("WRITE_DELAY",  h2WriteDelay+"");
+						_logger.info("H2 URL add option: WRITE_DELAY=" + h2WriteDelay);
+						urlMap.put("WRITE_DELAY",  h2WriteDelay + "");
 					}
 				}
 
@@ -481,7 +481,7 @@ extends CentralPersistWriterBase
 						String key = entry.getKey();
 						String val = entry.getValue();
 						String oldVal = urlMap.get(key);
-						_logger.info("H2 URL add option: " + key + "=" + val + (oldVal == null ? "" : "  (overriding previous value: "+oldVal+")") );
+						_logger.info("H2 URL add option: " + key + "=" + val + (oldVal == null ? "" : "  (overriding previous value: " + oldVal + ")") );
 						urlMap.put(key, val);
 					}
 				}
@@ -490,7 +490,7 @@ extends CentralPersistWriterBase
 //				if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
 //				{
 //					change = true;
-//					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
+//					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER=" + H2DatabaseEventListener.class.getName());
 //					urlMap.put("DATABASE_EVENT_LISTENER",  "'" + H2DatabaseEventListener.class.getName() + "'");
 //				}
 
@@ -501,7 +501,7 @@ extends CentralPersistWriterBase
 					if ( ! urlMap.containsKey("DB_CLOSE_ON_EXIT") )
 					{
 						change = true;
-						_logger.info("H2 URL add option: DB_CLOSE_ON_EXIT=false  (due to isShutdownHookInstalled="+isShutdownHookInstalled+")");
+						_logger.info("H2 URL add option: DB_CLOSE_ON_EXIT=false  (due to isShutdownHookInstalled=" + isShutdownHookInstalled + ")");
 						urlMap.put("DB_CLOSE_ON_EXIT", "FALSE");
 					}
 				}
@@ -512,7 +512,7 @@ extends CentralPersistWriterBase
 					urlHelper.setUrlOptionsMap(urlMap);
 					localJdbcUrl = urlHelper.getUrl();
 					
-					_logger.info("Added some options to the H2 URL. New URL is '"+localJdbcUrl+"'.");
+					_logger.info("Added some options to the H2 URL. New URL is '" + localJdbcUrl + "'.");
 				}
 			}
 
@@ -524,7 +524,7 @@ extends CentralPersistWriterBase
 			connProp.setUsername(_jdbcUsername);
 			connProp.setPassword(_jdbcPassword);
 			connProp.setUrl(localJdbcUrl);
-			connProp.setAppName(Version.getAppName()+"-pcsWriter");
+			connProp.setAppName(Version.getAppName() + "-pcsWriter");
 			connProp.setAppVersion(Version.getVersionStr());
 
 			// Now Connect
@@ -535,8 +535,8 @@ extends CentralPersistWriterBase
 			// Remember the last used URL (in case of H2 spill over database), the _mainConn is null at that time, so we cant use _mainConn.getConnProp().getUrl()
 			_lastUsedUrl = localJdbcUrl;
 			
-			_logger.info("A Database connection has been opened. connectTime='"+connectTimeStr+"', to URL '"+localJdbcUrl+"', using driver '"+_jdbcDriver+"'.");
-			_logger.debug("The connection has property auto-commit set to '"+_mainConn.getAutoCommit()+"'.");
+			_logger.info("A Database connection has been opened. connectTime='" + connectTimeStr + "', to URL '" + localJdbcUrl + "', using driver '" + _jdbcDriver + "'.");
+			_logger.debug("The connection has property auto-commit set to '" + _mainConn.getAutoCommit() + "'.");
 
 			// Write info about what JDBC driver we connects via.
 			if ( ! _jdbcDriverInfoHasBeenWritten )
@@ -584,18 +584,18 @@ extends CentralPersistWriterBase
 
 //					try	{ getIdentifierQuoteString  = dbmd.getIdentifierQuoteString();  } catch (Throwable ignore) {}
 					
-					_logger.info("Connected using JDBC driver Name='"+getDriverName
-							+"', Version='"         +getDriverVersion
-							+"', MajorVersion='"    +getDriverMajorVersion
-							+"', MinorVersion='"    +getDriverMinorVersion
-							+"', JdbcMajorVersion='"+getJDBCMajorVersion
-							+"', JdbcMinorVersion='"+getJDBCMinorVersion
-							+"'.");
-					_logger.info("Connected to Database Product Name='"+getDatabaseProductName
-							+"', Version='"     +getDatabaseProductVersion
-							+"', MajorVersion='"+getDatabaseMajorVersion
-							+"', MinorVersion='"+getDatabaseMinorVersion
-							+"'.");
+					_logger.info("Connected using JDBC driver Name='" + getDriverName
+							+ "', Version='"          + getDriverVersion
+							+ "', MajorVersion='"     + getDriverMajorVersion
+							+ "', MinorVersion='"     + getDriverMinorVersion
+							+ "', JdbcMajorVersion='" + getJDBCMajorVersion
+							+ "', JdbcMinorVersion='" + getJDBCMinorVersion
+							+ "'.");
+					_logger.info("Connected to Database Product Name='" + getDatabaseProductName
+							+ "', Version='"      + getDatabaseProductVersion
+							+ "', MajorVersion='" + getDatabaseMajorVersion
+							+ "', MinorVersion='" + getDatabaseMinorVersion
+							+ "'.");
 
 					// Set what type of database we are connected to.
 					setDatabaseProductName(getDatabaseProductName == null ? "" : getDatabaseProductName);
@@ -663,7 +663,7 @@ extends CentralPersistWriterBase
 			}
 			String errorMessages = sb.toString().trim();
 			
-			_logger.error("Problems when connecting to a datastore Server. "+errorMessages);
+			_logger.error("Problems when connecting to a datastore Server. " + errorMessages);
 			_mainConn = closeConn(_mainConn);
 
 			// IF H2, make special things
@@ -685,7 +685,7 @@ extends CentralPersistWriterBase
 //					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
 					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
 
-					String reason = "Restart Requested from CentralPersistWriterJdbc.open(): DATABASE_ALREADY_OPEN_1(90020), url='"+localJdbcUrl+"', errors='"+errorMessages+"'.";
+					String reason = "Restart Requested from CentralPersistWriterJdbc.open(): DATABASE_ALREADY_OPEN_1(90020), url='" + localJdbcUrl + "', errors='" + errorMessages + "'.";
 					boolean doRestart = true;
 					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
 				}
@@ -727,18 +727,18 @@ extends CentralPersistWriterBase
 //		}
 //		if (_h2AutoDefragTime < 0 || _h2AutoDefragTime > 2359 || (_h2AutoDefragTime%100) >= 60)
 //		{
-//			_logger.info("H2 'auto defrag' wont be installed. Reason: config parameter '"+PROPKEY_H2_AUTO_DEFRAG_TIME+"' must be between '0000' and '2359'. current values is '"+_h2AutoDefragTime+"'.");
+//			_logger.info("H2 'auto defrag' wont be installed. Reason: config parameter '" + PROPKEY_H2_AUTO_DEFRAG_TIME + "' must be between '0000' and '2359'. current values is '" + _h2AutoDefragTime + "'.");
 //			return;
 //		}
 //
-//		_logger.info("Installing H2 'auto defrag' thread, which will 'defrag' the database at '"+_h2AutoDefragTime+"' every day.");
+//		_logger.info("Installing H2 'auto defrag' thread, which will 'defrag' the database at '" + _h2AutoDefragTime + "' every day.");
 //		_h2AutoDefragThread = new Thread()
 //		{
 //			@Override
 //			public void run()
 //			{
 //				boolean running = true;
-//				_logger.info("Started H2 'auto defrag' thread, which will 'defrag' the database at '"+_h2AutoDefragTime+"' every day.");
+//				_logger.info("Started H2 'auto defrag' thread, which will 'defrag' the database at '" + _h2AutoDefragTime + "' every day.");
 //				while(running)
 //				{
 //					try
@@ -759,7 +759,7 @@ extends CentralPersistWriterBase
 //					}
 //					catch (Throwable t)
 //					{
-//						_logger.error("Auto-Defrag-Thread. Excpeption, but continuing... Caught: "+t);
+//						_logger.error("Auto-Defrag-Thread. Excpeption, but continuing... Caught: " + t);
 //					}
 //				}
 //				_logger.info("Ending H2 'auto defrag' thread.");
@@ -906,7 +906,7 @@ extends CentralPersistWriterBase
 		}
 		catch(SQLException ex)
 		{
-			_logger.info("Problems getting H2 Settings/Config. Caught: "+ex);
+			_logger.info("Problems getting H2 Settings/Config. Caught: " + ex);
 		}
 		
 		return map;
@@ -924,8 +924,8 @@ extends CentralPersistWriterBase
 		// for Better/other Performance: lets reconnect, using an alternate URL
 		// DYNAMIC_PREPARE=true  or  ENABLE_BULK_LOAD=true
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean aseDynamicPrepare = conf.getBooleanProperty(PROPKEY_BASE+"ase.option.DYNAMIC_PREPARE",  true);
-		boolean aseEnableBulkLoad = conf.getBooleanProperty(PROPKEY_BASE+"ase.option.ENABLE_BULK_LOAD", false);
+		boolean aseDynamicPrepare = conf.getBooleanProperty(PROPKEY_BASE + "ase.option.DYNAMIC_PREPARE",  true);
+		boolean aseEnableBulkLoad = conf.getBooleanProperty(PROPKEY_BASE + "ase.option.ENABLE_BULK_LOAD", false);
 
 //		// use BULK_LOAD over DYNAMIC_PREPARE
 //		if (aseEnableBulkLoad)
@@ -946,7 +946,7 @@ extends CentralPersistWriterBase
 //			{
 //				change = true;
 //				_logger.info("ASE URL add option: DYNAMIC_PREPARE=true");
-//				_logger.info("Setting '"+PROPKEY_cachePreparedStatements+"' to 'true' when DYNAMIC_PREPARE is enabled. This means most SQL PreparedStatements (and the server side lightweight stored procedure) in the Writer is reused. And the statements are not closed when pstmnt.close() is called.");
+//				_logger.info("Setting '" + PROPKEY_cachePreparedStatements + "' to 'true' when DYNAMIC_PREPARE is enabled. This means most SQL PreparedStatements (and the server side lightweight stored procedure) in the Writer is reused. And the statements are not closed when pstmnt.close() is called.");
 //				
 //				_cachePreparedStatements = true;
 //				urlMap.put("DYNAMIC_PREPARE", "true");
@@ -968,12 +968,12 @@ extends CentralPersistWriterBase
 				_logger.info("Closing ASE connection, Now that I know It's ASE, I want to add specific URL options for load performance.");
 				try { conn.close(); } catch(SQLException ignore) {}
 
-				_logger.info("Added some options to the ASE URL. New URL is '"+localJdbcUrl+"'.");
+				_logger.info("Added some options to the ASE URL. New URL is '" + localJdbcUrl + "'.");
 				// Set the new URL for the connection to be made.
 				conn.getConnProp().setUrl(localJdbcUrl);
 
 				// do the connect again.
-				_logger.info("Re-connecting to ASE after fixing the URL options. New URL is '"+localJdbcUrl+"'.");
+				_logger.info("Re-connecting to ASE after fixing the URL options. New URL is '" + localJdbcUrl + "'.");
 //				_mainConn = DriverManager.getConnection(localJdbcUrl, _jdbcUser, _jdbcPasswd);
 				conn.reConnect(null);
 			}
@@ -987,7 +987,7 @@ extends CentralPersistWriterBase
 		long srvVersion = conn.getDbmsVersionNumber();
 		if (srvVersion < Ver.ver(15,0))
 		{
-			String msg = "The PCS storage is ASE Version '"+Ver.versionNumToStr(srvVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
+			String msg = "The PCS storage is ASE Version '" + Ver.versionNumToStr(srvVersion) + "', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the " + Version.getAppName() + " package.";
 			_logger.error(msg);
 //			close(true); // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect() 
 
@@ -1003,7 +1003,7 @@ extends CentralPersistWriterBase
 		String dbname = conn.getCatalog();
 		if ("master".equals(dbname))
 		{
-			String msg = "Current ASE Database is '"+dbname+"'. "+Version.getAppName()+" does NOT support storage off Performance Counters in the '"+dbname+"' database.";
+			String msg = "Current ASE Database is '" + dbname + "'. " + Version.getAppName() + " does NOT support storage off Performance Counters in the '" + dbname + "' database.";
 			_logger.error(msg);
 //			close(true); // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect() 
 			
@@ -1025,7 +1025,7 @@ extends CentralPersistWriterBase
 		int asePageSize = AseConnectionUtils.getAsePageSize(_mainConn);
 		if (asePageSize < 4096)
 		{
-			_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+Ver.versionNumToStr(srvVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
+			_logger.warn("The ASE Servers Page Size is '" + asePageSize + "', to the connected server version '" + Ver.versionNumToStr(srvVersion) + "', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
 		}
 	}
 
@@ -1075,7 +1075,7 @@ extends CentralPersistWriterBase
 			String msgStr   = e.getMessage();
 			String sqlState = e.getSQLState();
 	
-			_logger.debug("isSevereProblem(): execptionLevel='"+exLevel+"', sqlState='"+sqlState+"', error='"+error+"', msgStr='"+msgStr+"'.");
+			_logger.debug("isSevereProblem(): execptionLevel='" + exLevel + "', sqlState='" + sqlState + "', error='" + error + "', msgStr='" + msgStr + "'.");
 
 			// H2 Messages
 			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
@@ -1108,8 +1108,8 @@ extends CentralPersistWriterBase
 				Throwable rootCauseEx = ExceptionUtils.getRootCause(e);
 				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
 				{
-					_logger.error("ATTENTION: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", ex.toString="+e.toString()+", rootCauseEx="+rootCauseEx);
-					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+					_logger.error("ATTENTION: ErrorCode=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", ex.toString=" + e.toString() + ", rootCauseEx=" + rootCauseEx);
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx=" + rootCauseEx, rootCauseEx);
 
 					doThrow = true;
 				}
@@ -1126,12 +1126,12 @@ extends CentralPersistWriterBase
 					// Meaning closing the connection would result in a "reopen" on next save!
 					if (conn != null)
 					{
-						_logger.error("checking for connection errors in: 'isSevereProblem()'. Caught error="+error+", rootCauseMsg='"+rootCauseMsg+"'. which is mapped to 'close-connection'. A new connection will be opened on next save attempt.");
+						_logger.error("checking for connection errors in: 'isSevereProblem()'. Caught error=" + error + ", rootCauseMsg='" + rootCauseMsg + "'. which is mapped to 'close-connection'. A new connection will be opened on next save attempt.");
 						
 						try { conn.close(); }
 						catch (SQLException closeEx)
 						{
-							_logger.error("Error when closing the Counter Storage Database Connection (in isSevereProblem()) due to original error="+error+", '"+msgStr+"'.", closeEx);
+							_logger.error("Error when closing the Counter Storage Database Connection (in isSevereProblem()) due to original error=" + error + ", '" + msgStr + "'.", closeEx);
 						}
 					}
 				}
@@ -1153,7 +1153,7 @@ extends CentralPersistWriterBase
 			e = e.getNextException();
 		}
 
-		_logger.debug("isSevereProblem(): doShutdown='"+doShutdown+"', dbIsFull='"+dbIsFull+"', retCode='"+doThrow+"', _shutdownWithNoWait='"+_shutdownWithNoWait+"'.");
+		_logger.debug("isSevereProblem(): doShutdown='" + doShutdown + "', dbIsFull='" + dbIsFull + "', retCode='" + doThrow + "', _shutdownWithNoWait='" + _shutdownWithNoWait + "'.");
 
 		// Actions
 		if (dbIsFull)
@@ -1180,7 +1180,7 @@ extends CentralPersistWriterBase
 				if (dbIsFull)
 					extraMessage = " (Database seems to be out of space) ";
 
-				_logger.warn(getDatabaseProductName()+": Severe problems "+extraMessage+"when storing Performance Counters, Marking the writes for SHUTDOWN.");
+				_logger.warn(getDatabaseProductName() + ": Severe problems " + extraMessage + "when storing Performance Counters, Marking the writes for SHUTDOWN.");
 				_shutdownWithNoWait = true;
 
 				// Then STOP the service
@@ -1204,7 +1204,7 @@ extends CentralPersistWriterBase
 
 				if (DbxTune.hasGui())
 				{
-					String msg = getDatabaseProductName()+": Severe problems "+extraMessage+"when storing Performance Counters, Disconnected from monitored server.";
+					String msg = getDatabaseProductName() + ": Severe problems " + extraMessage + "when storing Performance Counters, Disconnected from monitored server.";
 					_logger.info(msg);
 
 					MainFrame.getInstance().action_disconnect();
@@ -1255,12 +1255,12 @@ extends CentralPersistWriterBase
 		
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug(String.format("checkH2DataDirSpace: doCleanup="+doCleanup+", Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%, thresholdInMb = %d, dir='%s', resolvedDir='%s'", freeGb, totalGb, pctUsed, thresholdInMb, dataDir, dataDirRes));
+			_logger.debug(String.format("checkH2DataDirSpace: doCleanup=" + doCleanup + ", Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%, thresholdInMb = %d, dir='%s', resolvedDir='%s'", freeGb, totalGb, pctUsed, thresholdInMb, dataDir, dataDirRes));
 		}
 
 		if (doCleanup)
 		{
-			_logger.warn("Low on disk space available for the H2 Database... at '"+dataDir+"', resolved to '"+dataDirRes+"'.");
+			_logger.warn("Low on disk space available for the H2 Database... at '" + dataDir + "', resolved to '" + dataDirRes + "'.");
 			_logger.warn(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%, thresholdInMb = %d", freeGb, totalGb, pctUsed, thresholdInMb));
 			
 			_logger.info("Trying to cleanup older H2 Database files, by calling DataDirectoryCleaner.execute(null)");
@@ -1280,7 +1280,7 @@ extends CentralPersistWriterBase
 				didCleanup = true;
 				double freedMb = (freeSpaceAfter - freeSpaceBefore) / 1024.0 / 1024.0;
 				double freedGb = freedMb / 1024.0;
-				_logger.info("Cleanup looked like it freed up some space. "+String.format("%.1f GB, %.1f MB", freedGb, freedMb));
+				_logger.info("Cleanup looked like it freed up some space. " + String.format("%.1f GB, %.1f MB", freedGb, freedMb));
 			}
 		}
 
@@ -1291,7 +1291,7 @@ extends CentralPersistWriterBase
 	throws SQLException
 	{
 		if (logInfo)
-			_logger.info(getDatabaseProductName()+": "+sql);
+			_logger.info(getDatabaseProductName() + ": " + sql);
 		return conn.dbExec(sql, true) >= 0;
 	}
 
@@ -1385,7 +1385,7 @@ extends CentralPersistWriterBase
 		catch(SQLException e)
 		{
 			if (printErrors)
-				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+				_logger.warn("Problems when executing sql statement: " + sql + " SqlException: ErrorCode=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", toString=" + e.toString());
 			throw e;
 		}
 
@@ -1437,7 +1437,7 @@ extends CentralPersistWriterBase
 //		}
 //		catch (SQLException e)
 //		{
-//			_logger.warn("Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(sessionsStartTime='"+sessionsStartTime+"', type='"+type+"', key='"+key+"', val='"+val+"')", e);
+//			_logger.warn("Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(sessionsStartTime='" + sessionsStartTime + "', type='" + type + "', key='" + key + "', val='" + val + "')", e);
 // 			// throws Exception if it's a severe problem
 //			if (isSevereProblem(conn, e))
 //				throw e;
@@ -1501,7 +1501,7 @@ extends CentralPersistWriterBase
 					// FIXME: check if "VersionString" is the same as Version.getVersionStr()
 					//        if not, just throw a WARNING message to the log
 					int currentDbVersion = -1;
-					sql = "select "+lq+"DbVersion"+rq+" from "+lq+onlyTabName+rq; // possibly: where ProductString = Version.getAppName()
+					sql = "select " + lq+"DbVersion"+rq+" from " +lq+onlyTabName+rq; // possibly: where ProductString = Version.getAppName()
 					Statement stmnt = conn.createStatement();
 					rs = stmnt.executeQuery(sql);
 					while (rs.next())
@@ -1509,12 +1509,12 @@ extends CentralPersistWriterBase
 					rs.close();
 					stmnt.close();
 
-					String infoStr = (currentDbVersion == DBX_CENTRAL_DB_VERSION) ? "which is the latest version." : "latest version is "+DBX_CENTRAL_DB_VERSION+", so we need to take actions...";
-					_logger.info("Internal Dbx Central database version number is "+currentDbVersion+", "+infoStr);
+					String infoStr = (currentDbVersion == DBX_CENTRAL_DB_VERSION) ? "which is the latest version." : "latest version is " + DBX_CENTRAL_DB_VERSION + ", so we need to take actions...";
+					_logger.info("Internal Dbx Central database version number is " + currentDbVersion + ", " + infoStr);
 
 					if (currentDbVersion != DBX_CENTRAL_DB_VERSION)
 					{
-						_logger.warn("Internal Dbx Central database version is not in sync. It needs to be upgraded from current version "+currentDbVersion+" to "+DBX_CENTRAL_DB_VERSION);
+						_logger.warn("Internal Dbx Central database version is not in sync. It needs to be upgraded from current version " + currentDbVersion + " to " + DBX_CENTRAL_DB_VERSION);
 
 						// Upgrade to later DBX_CENTRAL_LAYOUT
 						int newDbxCentralVersion = internalDbUpgrade(conn, currentDbVersion, DBX_CENTRAL_DB_VERSION);
@@ -1527,9 +1527,9 @@ extends CentralPersistWriterBase
 							stmnt.close();
 							
 							if (newDbxCentralVersion > currentDbVersion)
-								_logger.info("Upgraded Dbx Central database tables from version '"+currentDbVersion+"' to version '"+newDbxCentralVersion+"'.");
+								_logger.info("Upgraded Dbx Central database tables from version '" + currentDbVersion + "' to version '" + newDbxCentralVersion + "'.");
 							else
-								_logger.info("Downgraded Dbx Central database tables from version '"+currentDbVersion+"' to version '"+newDbxCentralVersion+"'.");
+								_logger.info("Downgraded Dbx Central database tables from version '" + currentDbVersion + "' to version '" + newDbxCentralVersion + "'.");
 						}
 					}
 				}
@@ -1558,7 +1558,7 @@ extends CentralPersistWriterBase
 				{
 					String dbProductName = "unknown";
 					try { dbProductName = conn.getDatabaseProductName(); }
-					catch(Throwable t) { _logger.warn("Problems getting Database Product Name from the Storage connection. Caught: "+t); }
+					catch(Throwable t) { _logger.warn("Problems getting Database Product Name from the Storage connection. Caught: " + t); }
 					
 					StringBuffer sbSql = new StringBuffer();
 					sbSql.append(getTableInsertStr(conn, schemaName, Table.CENTRAL_VERSION_INFO, null, false));
@@ -1578,7 +1578,7 @@ extends CentralPersistWriterBase
 					}
 					catch(SQLException ex)
 					{
-						_logger.warn("Problems inserting values to '"+getTableName(conn, schemaName, Table.CENTRAL_VERSION_INFO, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+						_logger.warn("Problems inserting values to '" + getTableName(conn, schemaName, Table.CENTRAL_VERSION_INFO, null, false) + "'. Continuing anyway. sql='" + sql + "', Caught: " + ex);
 					}
 				}
 
@@ -1636,13 +1636,13 @@ extends CentralPersistWriterBase
 						sql = insertStmnt;
 						try
 						{
-							_logger.info("Inserting base data into '"+getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Using SQL: "+sql);
+							_logger.info("Inserting base data into '" + getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false) + "'. Using SQL: " + sql);
 							conn.dbExec(sql);
 							getStatistics().incInserts();
 						}
 						catch(SQLException ex)
 						{
-							_logger.warn("Problems inserting values to '"+getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+							_logger.warn("Problems inserting values to '" + getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false) + "'. Continuing anyway. sql='" + sql + "', Caught: " + ex);
 						}
 					}
 				}
@@ -1702,7 +1702,7 @@ extends CentralPersistWriterBase
 		String sql  = "";
 		int    step = -1;
 
-		_logger.info("Start - Internal Upgrade of Dbx Central database tables from version '"+fromDbVersion+"' to version '"+toDbVersion+"'.");
+		_logger.info("Start - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 
 		if (fromDbVersion <= 1)
 		{
@@ -1946,25 +1946,39 @@ extends CentralPersistWriterBase
 			}
 		}
 
-//		if (fromDbVersion <= 13)
-//		{
-//			// Add column 'ServerDisplayName' to Table.CENTRAL_SESSIONS
-//			step = 16;
-//
-//			// Add column 'CollectorMgtHostname', 'CollectorMgtPort' and 'CollectorMgtInfo' to table 'DbxCentralSessions'
-//			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
-//			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorMgtHostname"+rq + " varchar(255) null"; // NOTE: 'not null' is not supported at upgrades
-//			internalDbUpgradeDdlExec(conn, step, sql);
-//
-//			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorMgtPort"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
-//			internalDbUpgradeDdlExec(conn, step, sql);
-//
-//			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorMgtInfo"+rq + " varchar(512) null"; // NOTE: 'not null' is not supported at upgrades
-//			internalDbUpgradeDdlExec(conn, step, sql);
-//		}
+		if (fromDbVersion <= 13)
+		{
+			// Add column 'ServerDisplayName' to Table.CENTRAL_SESSIONS
+			step = 16;
 
+			// Get schemas
+			Set<String> schemaSet = DbUtils.getSchemaNames(conn);
+			
+			// get table name WITHOUT schema specification and NOT quoted
+			String onlyTabName = getTableName(conn, null, Table.SESSION_SAMPLE_DETAILS, null, false);
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				if (DbUtils.checkIfTableExists(conn, null, schemaName, onlyTabName))
+				{
+					// Add column 'graphCollectedCount', 'absCollectedRows', 'diffCollectedRows' and 'rateCollectedRows' to table 'DbxSessionSampleDetailes'
+					sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " "
+							+ " add ( "
+							+ "        " + lq+"graphCollectedCount"+rq + " int null "
+							+ "      , " + lq+"absCollectedRows"   +rq + " int null "
+							+ "      , " + lq+"diffCollectedRows"  +rq + " int null "
+							+ "      , " + lq+"rateCollectedRows"  +rq + " int null "
+							+ "     ) "
+							+ " after " + lq+"rateSaveRows"+rq;
+
+					internalDbUpgradeDdlExec(conn, step, sql, "42S21"); // 42S21 = Error=42121, SQLState=42S21, Message=Duplicate column name "graphCollectedCount"
+				}
+			}
+		}
 		
-		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '"+fromDbVersion+"' to version '"+toDbVersion+"'.");
+		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;
 	}
 
@@ -2145,10 +2159,10 @@ extends CentralPersistWriterBase
 	}
 
 	
-	private void internalDbUpgradeDdlExec(DbxConnection conn, int step, String sql)
+	private void internalDbUpgradeDdlExec(DbxConnection conn, int step, String sql, String... allowSqlState)
 	throws SQLException
 	{
-		_logger.info("Internal Dbx Cental Db upgrade, step["+step+"]: Executing SQL: "+sql);
+		_logger.info("Internal Dbx Cental Db upgrade, step[" + step + "]: Executing SQL: " + sql);
 		try
 		{
 			boolean autoCommitWasChanged = false;
@@ -2170,10 +2184,19 @@ extends CentralPersistWriterBase
 				conn.setAutoCommit(true);
 			}
 
+			long startTime = System.currentTimeMillis();
+			
 			Statement s = conn.createStatement();
+			s.setQueryTimeout(0);
 			s.execute(sql);
 			s.close();
 
+			long execTime = TimeUtils.msDiffNow(startTime);
+			if (execTime >= 10_000)
+			{
+				_logger.info("Execution of SQL Statement was a bit slow, it took " + TimeUtils.msToTimeStr(execTime) + "  (HH:MM:SS.ms)  SQL=|" + sql + "|.");
+			}
+			
 			if (autoCommitWasChanged)
 			{
 				conn.setAutoCommit(false);
@@ -2181,8 +2204,15 @@ extends CentralPersistWriterBase
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems during upgrade step["+step+"] of Internal Dbx Central Database when executing DDL sql statement: "+sql);
-			throw e;
+			if (allowSqlState != null && StringUtil.equalsAny(e.getSQLState(), allowSqlState))
+			{
+				_logger.info("Found issue, but continuing since SQLState='" + e.getSQLState() + "' IS in allowSqlState=" + StringUtil.toCommaStr(allowSqlState)+ ", this during upgrade step[" + step + "] of Internal Dbx Central Database when executing DDL sql statement: " + sql + ", Error=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", Message=|" + e.getMessage() + "|");
+			}
+			else
+			{
+				_logger.warn("Problems during upgrade step[" + step + "] of Internal Dbx Central Database when executing DDL sql statement: " + sql + ", Error=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", Message=|" + e.getMessage() + "|");
+				throw e;
+			}
 		}
 	}
 
@@ -2218,7 +2248,7 @@ extends CentralPersistWriterBase
 		{
 //			String schemaName = cont.getServerName();
 			String schemaName = sessionName;
-			_logger.info("Starting a new Storage Session for '"+schemaName+"' with the start date '"+cont.getSessionStartTime()+"'.");
+			_logger.info("Starting a new Storage Session for '" + schemaName + "' with the start date '" + cont.getSessionStartTime() + "'.");
 
 			// Create a schema
 			conn.createSchemaIfNotExists(schemaName);
@@ -2271,7 +2301,7 @@ extends CentralPersistWriterBase
 
 //			String dbProductName = "unknown";
 //			try { dbProductName = CounterController.getInstance().getMonConnection().getDatabaseProductName(); }
-//			catch(Throwable t) { _logger.warn("Problems getting Database Product Name from the monitor connection. Caught: "+t); }
+//			catch(Throwable t) { _logger.warn("Problems getting Database Product Name from the monitor connection. Caught: " + t); }
 			
 //			StringBuffer sbSql = new StringBuffer();
 //			sbSql.append(getTableInsertStr(schemaName, Table.VERSION_INFO, null, false));
@@ -2299,7 +2329,7 @@ extends CentralPersistWriterBase
 //			}
 //			catch(SQLException ex)
 //			{
-//				_logger.warn("Problems inserting values to '"+getTableName(schemaName, Table.VERSION_INFO, null, false)+"'. Continuing anyway. sql='"+sbSql.toString()+"', Caught: "+ex);
+//				_logger.warn("Problems inserting values to '" + getTableName(schemaName, Table.VERSION_INFO, null, false) + "'. Continuing anyway. sql='" + sbSql.toString() + "', Caught: " + ex);
 //			}
 
 			String sql = "";
@@ -2321,7 +2351,7 @@ extends CentralPersistWriterBase
 			}
 			catch(SQLException ex)
 			{
-				_logger.warn("Problems getting/checking existence from table '"+getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+				_logger.warn("Problems getting/checking existence from table '" + getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false) + "'. Continuing anyway. sql='" + sql + "', Caught: " + ex);
 			}
 			
 			// Now insert the record to CENTRAL_SESSIONS if it do NOT exist
@@ -2382,12 +2412,12 @@ extends CentralPersistWriterBase
 				}
 				catch(SQLException ex)
 				{
-					_logger.warn("Problems inserting values to '"+getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+					_logger.warn("Problems inserting values to '" + getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false) + "'. Continuing anyway. sql='" + sql + "', Caught: " + ex);
 				}
 			}
 			
 
-//			_logger.info("Storing CounterModel information in table "+getTableName(SESSION_PARAMS, null, false));
+//			_logger.info("Storing CounterModel information in table " + getTableName(SESSION_PARAMS, null, false));
 //			//--------------------------------
 //			// LOOP ALL THE CM's and store some information
 ////			tabName = getTableName(SESSION_PARAMS, null, true);
@@ -2397,20 +2427,20 @@ extends CentralPersistWriterBase
 //			{
 //				String prefix = cm.getName();
 //
-//				insertSessionParam(conn, ts, "cm", prefix+".name",     cm.getName());
-//				insertSessionParam(conn, ts, "cm", prefix+".sqlInit",  cm.getSqlInit());
-//				insertSessionParam(conn, ts, "cm", prefix+".sql",      cm.getSql());
-//				insertSessionParam(conn, ts, "cm", prefix+".sqlClose", cm.getSqlClose());
+//				insertSessionParam(conn, ts, "cm", prefix + ".name",     cm.getName());
+//				insertSessionParam(conn, ts, "cm", prefix + ".sqlInit",  cm.getSqlInit());
+//				insertSessionParam(conn, ts, "cm", prefix + ".sql",      cm.getSql());
+//				insertSessionParam(conn, ts, "cm", prefix + ".sqlClose", cm.getSqlClose());
 //
-//				insertSessionParam(conn, ts, "cm", prefix+".pk",       cm.getPk()==null ? null : cm.getPk().toString());
-//				insertSessionParam(conn, ts, "cm", prefix+".diff",     Arrays.deepToString(cm.getDiffColumns()));
-//				insertSessionParam(conn, ts, "cm", prefix+".diffDiss", Arrays.deepToString(cm.getDiffDissColumns()));
-//				insertSessionParam(conn, ts, "cm", prefix+".pct",      Arrays.deepToString(cm.getPctColumns()));
+//				insertSessionParam(conn, ts, "cm", prefix + ".pk",       cm.getPk()==null ? null : cm.getPk().toString());
+//				insertSessionParam(conn, ts, "cm", prefix + ".diff",     Arrays.deepToString(cm.getDiffColumns()));
+//				insertSessionParam(conn, ts, "cm", prefix + ".diffDiss", Arrays.deepToString(cm.getDiffDissColumns()));
+//				insertSessionParam(conn, ts, "cm", prefix + ".pct",      Arrays.deepToString(cm.getPctColumns()));
 //
-//				insertSessionParam(conn, ts, "cm", prefix+".graphNames",Arrays.deepToString(cm.getTrendGraphNames()));
+//				insertSessionParam(conn, ts, "cm", prefix + ".graphNames",Arrays.deepToString(cm.getTrendGraphNames()));
 //			}
 //			
-//			_logger.info("Storing "+Version.getAppName()+" configuration information in table "+getTableName(SESSION_PARAMS, null, false));
+//			_logger.info("Storing " + Version.getAppName() + " configuration information in table " + getTableName(SESSION_PARAMS, null, false));
 //			//--------------------------------
 //			// STORE the configuration file
 //			Configuration conf;
@@ -2539,7 +2569,7 @@ extends CentralPersistWriterBase
 		
 		if (NotificationType.DROP_SERVER.equals(type))
 		{
-			_logger.info("Received notification '"+type+"'. I will remove schema '"+notifyStr+"' from DDL cache.");
+			_logger.info("Received notification '" + type + "'. I will remove schema '" + notifyStr + "' from DDL cache.");
 			
 			List<String> removeEntries = new ArrayList<>();
 			for (String str : _ddlSet)
@@ -2690,7 +2720,7 @@ extends CentralPersistWriterBase
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
@@ -2711,7 +2741,7 @@ extends CentralPersistWriterBase
 	private void saveAlarms(DbxConnection conn, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime, DbxTuneSample cont)
 	throws SQLException
 	{
-//		System.out.println("saveAlarms(schemaName='"+schemaName+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"'): ActiveAlarmCnt="+cont.getActiveAlarms().size()+", AlarmEntriesCnt="+cont.getAlarmEntries().size());
+//		System.out.println("saveAlarms(schemaName='" + schemaName + "', sessionStartTime='" + sessionStartTime + "', sessionSampleTime='" + sessionSampleTime + "'): ActiveAlarmCnt=" + cont.getActiveAlarms().size() + ", AlarmEntriesCnt=" + cont.getAlarmEntries().size());
 
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
@@ -2725,7 +2755,7 @@ extends CentralPersistWriterBase
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error deleting Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			_logger.warn("Error deleting Active Alarm(s) to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
@@ -2773,7 +2803,7 @@ extends CentralPersistWriterBase
 				}
 				catch (SQLException e)
 				{
-					_logger.warn("Error writing Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+					_logger.warn("Error writing Active Alarm(s) to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 					// throws Exception if it's a severe problem
 					isSevereProblem(conn, e);
 				}
@@ -2834,14 +2864,14 @@ extends CentralPersistWriterBase
 							String alarmEntryRecord = ae.toString();
 							
 							_logger.warn("Checking if PK ROW Exists for ALARM_HISTORY, record already exists... The INSERT will NOT be attempted. \n"
-									+ "\t PK Check SQL  = |"+sql+"| \n"
-									+ "\t Existing  row = |"+existingRow+"| \n"
-									+ "\t Incomming row = |"+alarmEntryRecord+"|.");
+									+ "\t PK Check SQL  = |" + sql + "| \n"
+									+ "\t Existing  row = |" + existingRow + "| \n"
+									+ "\t Incomming row = |" + alarmEntryRecord + "|.");
 						}
 					}
 					catch (SQLException e)
 					{
-						_logger.warn("Error when checking if PK ROW Exists: History Alarm Event(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+						_logger.warn("Error when checking if PK ROW Exists: History Alarm Event(s) to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 						// throws Exception if it's a severe problem
 						isSevereProblem(conn, e);
 					}
@@ -2893,7 +2923,7 @@ extends CentralPersistWriterBase
 					}
 					catch (SQLException e)
 					{
-						_logger.warn("Error writing History Alarm Event(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+						_logger.warn("Error writing History Alarm Event(s) to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 						// throws Exception if it's a severe problem
 						isSevereProblem(conn, e);
 					}
@@ -2905,7 +2935,7 @@ extends CentralPersistWriterBase
 	private void saveCmJsonCounters(DbxConnection conn, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime, DbxTuneSample cont)
 	throws SQLException
 	{
-//		System.out.println("saveAlarms(schemaName='"+schemaName+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"'): ActiveAlarmCnt="+cont.getActiveAlarms().size()+", AlarmEntriesCnt="+cont.getAlarmEntries().size());
+//		System.out.println("saveAlarms(schemaName='" + schemaName + "', sessionStartTime='" + sessionStartTime + "', sessionSampleTime='" + sessionSampleTime + "'): ActiveAlarmCnt=" + cont.getActiveAlarms().size() + ", AlarmEntriesCnt=" + cont.getAlarmEntries().size());
 
 //		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 //		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
@@ -2919,7 +2949,7 @@ extends CentralPersistWriterBase
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error deleting Old CM Sample(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			_logger.warn("Error deleting Old CM Sample(s) to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sql, e);
 			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
@@ -2931,14 +2961,14 @@ extends CentralPersistWriterBase
 			{
 				String cmName = cmEntry.getName();
 
-				if ("CmActiveStatements".equals(cmName))   // Move CmActiveStatement into a something else... like a config or global List
+				if ("CmActiveStatements".equals(cmName) && (cmEntry.hasAbsData() || cmEntry.hasDiffData() || cmEntry.hasRateData()) )   // Move CmActiveStatement into a something else... like a config or global List
 				{
 					// Store some info
 					sql = getTableInsertStr(conn, schemaName, Table.CM_LAST_SAMPLE_JSON, null, true);
 
 					String json = cmEntry.getJsonCounterData();
 
-//System.out.println("saveCmJsonCounters(): schemaName='"+schemaName+"', sql=|"+sql+"|. json=|"+json+"|");
+//System.out.println("saveCmJsonCounters(): schemaName='" + schemaName + "', sql=|" + sql + "|. json=|" + json + "|");
 					
 					try (PreparedStatement pstmnt = conn.prepareStatement(sql))
 					{
@@ -2947,7 +2977,7 @@ extends CentralPersistWriterBase
 						pstmnt.setString   (3, json);
 
 						int rowCount = pstmnt.executeUpdate();
-//System.out.println("saveCmJsonCounters(): schemaName='"+schemaName+"', INSERT ROW-COUNT="+rowCount);
+//System.out.println("saveCmJsonCounters(): schemaName='" + schemaName + "', INSERT ROW-COUNT=" + rowCount);
 						getStatistics().incInserts();
 					}
 					catch (SQLException e)
@@ -2982,7 +3012,7 @@ extends CentralPersistWriterBase
 							pstmnt.setString   (3, json);
 
 							int rowCount = pstmnt.executeUpdate();
-//System.out.println("saveCmJsonCounters(): schemaName='"+schemaName+"', INSERT ROW-COUNT="+rowCount);
+//System.out.println("saveCmJsonCounters(): schemaName='" + schemaName + "', INSERT ROW-COUNT=" + rowCount);
 							getStatistics().incInserts();
 						}
 						catch (SQLException e)
@@ -3077,7 +3107,7 @@ extends CentralPersistWriterBase
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
-		_logger.debug("Persisting Counters for CounterModel='"+cme.getName()+"'.");
+		_logger.debug("Persisting Counters for CounterModel='" + cme.getName() + "'.");
 
 		int counterType  = 0;
 		int absRecvRows  = 0;
@@ -3154,6 +3184,10 @@ extends CentralPersistWriterBase
 				sbSql.append(", ") .append(absSaveRows);
 				sbSql.append(", ") .append(diffSaveRows);
 				sbSql.append(", ") .append(rateSaveRows);
+				sbSql.append(", ") .append(cme.getStatGraphCount());
+				sbSql.append(", ") .append(cme.getStatAbsRowCount());
+				sbSql.append(", ") .append(cme.getStatDiffRowCount());
+				sbSql.append(", ") .append(cme.getStatRateRowCount());
 				sbSql.append(", ") .append(cme.getSqlRefreshTime());
 				sbSql.append(", ") .append(cme.getGuiRefreshTime());
 				sbSql.append(", ") .append(cme.getLcRefreshTime());
@@ -3171,7 +3205,7 @@ extends CentralPersistWriterBase
 			}
 			catch (SQLException e)
 			{
-				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 				// throws Exception if it's a severe problem
 				isSevereProblem(conn, e); 
 			}
@@ -3223,7 +3257,7 @@ extends CentralPersistWriterBase
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode() + ", SQL: " + sbSql.toString(), e);
 			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
@@ -3256,14 +3290,14 @@ extends CentralPersistWriterBase
 			_logger.error("Type of data is unknown, only 'ABS', 'DIFF' and 'RATE' is handled.");
 			return -1;
 		}
-System.out.println("save("+whatData+"): ----------------------------NOT-YET-IMPLEMENTED--------------------------------------");
+System.out.println("save(" + whatData + "): ----------------------------NOT-YET-IMPLEMENTED--------------------------------------");
 return -1;
 //		List<List<Object>> rows = cme.getDataCollection(cmWhatData);
 //		List<String>       cols = cme.getColNames(cmWhatData);
 //
 //		if (rows == null || cols == null)
 //		{
-//			_logger.error("Rows or Columns can't be null. rows='"+rows+"', cols='"+cols+"'");
+//			_logger.error("Rows or Columns can't be null. rows='" + rows + "', cols='" + cols + "'");
 //			return -1;
 //		}
 //
@@ -3281,10 +3315,10 @@ return -1;
 //		int rowsCount = rows.size();
 //		int colsCount = cols.size();
 //		
-////System.out.println("Counter '"+cmWhatDataStr+"' data for CM '"+cm.getName()+"'. (rowsCount="+rowsCount+", colsCount="+colsCount+") cols="+cols);
+////System.out.println("Counter '" + cmWhatDataStr + "' data for CM '" + cm.getName() + "'. (rowsCount=" + rowsCount + ", colsCount=" + colsCount + ") cols=" + cols);
 //		if (rowsCount == 0 || colsCount == 0)
 //		{
-//			_logger.debug("Skipping Storing Counter '"+cmWhatDataStr+"' data for CM '"+cme.getName()+"'. Rowcount or column count is 0 (rowsCount="+rowsCount+", colsCount="+colsCount+")");
+//			_logger.debug("Skipping Storing Counter '" + cmWhatDataStr + "' data for CM '" + cme.getName() + "'. Rowcount or column count is 0 (rowsCount=" + rowsCount + ", colsCount=" + colsCount + ")");
 //			return 0;
 //		}
 //		
@@ -3379,7 +3413,7 @@ return -1;
 //						if (year > 9999)
 //						{
 //							String colName = cme.getColumnName(c); // cm colname starts at 0
-//							_logger.warn("Date problems for table '"+tabName+"', column '"+colName+"', Timestamp value '"+dateStr+"', Year seems to be out of whack, replacing this with NULL.");
+//							_logger.warn("Date problems for table '" + tabName + "', column '" + colName + "', Timestamp value '" + dateStr + "', Year seems to be out of whack, replacing this with NULL.");
 //							pstmt.setString(col++, null);
 //						}
 //						else
@@ -3428,7 +3462,7 @@ return -1;
 //								else
 //									truncStr = str.substring(0, allowedLength - 3) + "...";
 //
-//								_logger.info("save(): Truncating a Overflowing String value. table='"+tabName+"', column='"+colName+"', allowedLength="+allowedLength+", dataLength="+dataLength+", newStr["+truncStr.length()+"]='"+truncStr+"', originStr["+str.length()+"]='"+str+"'.");
+//								_logger.info("save(): Truncating a Overflowing String value. table='" + tabName + "', column='" + colName + "', allowedLength=" + allowedLength + ", dataLength=" + dataLength + ", newStr[" + truncStr.length() + "]='" + truncStr + "', originStr[" + str.length() + "]='" + str + "'.");
 //
 //								str = truncStr;
 //							}
@@ -3458,7 +3492,7 @@ return -1;
 //		}
 //		catch (SQLException e)
 //		{
-//			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'. getErrorCode()="+e.getErrorCode()+" SQL="+sql, e);
+//			_logger.warn("Error writing to Persistent Counter Store. to table name '" + tabName + "'. getErrorCode()=" + e.getErrorCode() + " SQL=" + sql, e);
 //			// throws Exception if it's a severe problem
 //			isSevereProblem(conn, e);
 //			return -1;
@@ -3494,7 +3528,7 @@ return -1;
 
 		if ( ! ge.hasData() )
 		{
-			_logger.debug("The graph '"+ge.getName()+"' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint="+ge);
+			_logger.debug("The graph '" + ge.getName() + "' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint=" + ge);
 			return 0;
 		}
 		if (_shutdownWithNoWait)
@@ -3546,7 +3580,7 @@ return -1;
 		}
 		catch (SQLException e)
 		{
-			_logger.info("Problems writing Graph '"+ge.getName()+"' information to table '"+fullTabName+"', Problems when creating the table or checked if it existed. Caught: "+e);
+			_logger.info("Problems writing Graph '" + ge.getName() + "' information to table '" + fullTabName + "', Problems when creating the table or checked if it existed. Caught: " + e);
 			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
@@ -3563,7 +3597,7 @@ return -1;
 		}
 		catch (SQLException e)
 		{
-			_logger.info("Problems writing Graph '"+ge.getName()+"' information to table '"+fullTabName+"', This probably happens if series has been added to the graph, I will checking/create/alter the table and try again.");
+			_logger.info("Problems writing Graph '" + ge.getName() + "' information to table '" + fullTabName + "', This probably happens if series has been added to the graph, I will checking/create/alter the table and try again.");
 			try
 			{
 				// we probably need to alter the table...
@@ -3575,7 +3609,7 @@ return -1;
 			}
 			catch (SQLException e2)
 			{
-				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e2.getErrorCode()+", getSQLState()="+e2.getSQLState()+", ex.toString='"+e2.toString()+"', SQL: "+sb.toString(), e2);
+				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e2.getErrorCode() + ", getSQLState()=" + e2.getSQLState() + ", ex.toString='" + e2.toString() + "', SQL: " + sb.toString(), e2);
 				// throws Exception if it's a severe problem
 				isSevereProblem(conn, e2);
 				return 0;
@@ -3663,7 +3697,7 @@ return -1;
 //		}
 //		catch(SQLException ex)
 //		{
-//			_logger.warn("Problems saving Graph Properties for cm='"+cme.getName()+"', graphName='"+ge.getName()+"', sql='"+sql+"', Caught: "+ex);
+//			_logger.warn("Problems saving Graph Properties for cm='" + cme.getName() + "', graphName='" + ge.getName() + "', sql='" + sql + "', Caught: " + ex);
 //		}
 //	}
 	
@@ -3734,18 +3768,18 @@ return -1;
 					savedGraphPropsCount = rs.getInt(1);
 			}
 			if (_logger.isDebugEnabled())
-				_logger.debug("checkSaveGraphProperties(): GET rowcount from PCS: savedGraphPropsCount="+savedGraphPropsCount+", sql="+sql);
+				_logger.debug("checkSaveGraphProperties(): GET rowcount from PCS: savedGraphPropsCount=" + savedGraphPropsCount + ", sql=" + sql);
 		}
 		else
 		{
 			savedGraphPropsCount = _graphPropertiesCountMap.get(key);
 			if (_logger.isDebugEnabled())
-				_logger.debug("checkSaveGraphProperties(): GET MAP: key='"+key+"', value(savedGraphPropsCount)="+savedGraphPropsCount);
+				_logger.debug("checkSaveGraphProperties(): GET MAP: key='" + key + "', value(savedGraphPropsCount)=" + savedGraphPropsCount);
 		}
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("checkSaveGraphProperties(): receivedGraphCount="+receivedGraphCount+", savedGraphPropsCount="+savedGraphPropsCount);
-//System.out.println("checkSaveGraphProperties(): receivedGraphCount="+receivedGraphCount+", savedGraphPropsCount="+savedGraphPropsCount);
+			_logger.debug("checkSaveGraphProperties(): receivedGraphCount=" + receivedGraphCount + ", savedGraphPropsCount=" + savedGraphPropsCount);
+//System.out.println("checkSaveGraphProperties(): receivedGraphCount=" + receivedGraphCount + ", savedGraphPropsCount=" + savedGraphPropsCount);
 
 		// DELETE old records and INSERT new records
 		if (receivedGraphCount > savedGraphPropsCount)
@@ -3758,7 +3792,7 @@ return -1;
 			String sql = sb.toString();
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("checkSaveGraphProperties(): DELETE PCS RECORD: sql="+sql);
+				_logger.debug("checkSaveGraphProperties(): DELETE PCS RECORD: sql=" + sql);
 
 			int delCount = conn.dbExec(sql, false);
 			getStatistics().incDeletes(delCount);
@@ -3797,8 +3831,8 @@ return -1;
 						sql = sb.toString();
 						
 						if (_logger.isTraceEnabled())
-							_logger.trace("checkSaveGraphProperties(): INSERT PCS RECORD: sql="+sql);
-						//System.out.println("checkSaveGraphProperties(): insert: schemaName='"+schemaName+"', tab='"+Table.GRAPH_PROPERTIES+"', graphFullName='"+graphFullName+"', initialOrder="+initialOrder+".");
+							_logger.trace("checkSaveGraphProperties(): INSERT PCS RECORD: sql=" + sql);
+						//System.out.println("checkSaveGraphProperties(): insert: schemaName='" + schemaName + "', tab='" + Table.GRAPH_PROPERTIES + "', graphFullName='" + graphFullName + "', initialOrder=" + initialOrder + ".");
 						
 						conn.dbExec(sql, false);
 						getStatistics().incInserts();
@@ -3809,13 +3843,13 @@ return -1;
 			} // end: loop Collectors
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("checkSaveGraphProperties(): INSERTED PCS RECORD: count="+initialOrder);
+				_logger.debug("checkSaveGraphProperties(): INSERTED PCS RECORD: count=" + initialOrder);
 			
 			// save the receivedGraphCount in the cached Map
 			_graphPropertiesCountMap.put(key, receivedGraphCount);
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("checkSaveGraphProperties(): PUT MAP: key='"+key+"', value(receivedGraphCount)="+receivedGraphCount);
+				_logger.debug("checkSaveGraphProperties(): PUT MAP: key='" + key + "', value(receivedGraphCount)=" + receivedGraphCount);
 			
 		} // end: DELETE old records and INSERT new records
 	} // end: method
@@ -3823,7 +3857,7 @@ return -1;
 	private void saveGraphDataDdl(DbxConnection conn, String schemaName, String tabName, GraphEntry ge)
 	throws SQLException
 	{
-//System.out.println("########################################## saveGraphDataDdl(): schemaName='"+schemaName+"', tabName='"+tabName+"', GraphEntry='"+ge+"'.");
+//System.out.println("########################################## saveGraphDataDdl(): schemaName='" + schemaName + "', tabName='" + tabName + "', GraphEntry='" + ge + "'.");
 		ResultSet rs = null;
 
 		// Obtain a DatabaseMetaData object from our current connection
@@ -3851,13 +3885,13 @@ return -1;
 			while(rs.next())
 			{
 				tabExists = true;
-//				System.out.println("getColumns(): TABLE_SCHEM=|"+rs.getString("TABLE_SCHEM")+"|, TABLE_NAME=|"+rs.getString("TABLE_NAME")+"|, COLUMN_NAME=|"+rs.getString("COLUMN_NAME")+"|.");
+//				System.out.println("getColumns(): TABLE_SCHEM=|" + rs.getString("TABLE_SCHEM") + "|, TABLE_NAME=|" + rs.getString("TABLE_NAME") + "|, COLUMN_NAME=|" + rs.getString("COLUMN_NAME") + "|.");
 			}
 			rs.close();
 
 			if( ! tabExists )
 			{
-//System.out.println("########################################## saveGraphDataDdl(): ---NOT-EXISTS--- schemaName='"+schemaName+"', tabName='"+tabName+"', GraphEntry='"+ge+"'.");
+//System.out.println("########################################## saveGraphDataDdl(): ---NOT-EXISTS--- schemaName='" + schemaName + "', tabName='" + tabName + "', GraphEntry='" + ge + "'.");
 				_logger.info("Persistent Counter DB: Creating table " + StringUtil.left("'" + schemaName + "." + tabName + "'", schemaName.length()+50, true) + " for CounterModel graph '" + ge.getName() + "'.");
 
 				String sqlTable = getGraphTableDdlString(conn, schemaName, tabName, ge);
@@ -3870,22 +3904,22 @@ return -1;
 			}
 			else // Check if we need to add any new columns
 			{
-//System.out.println("########################################## saveGraphDataDdl(): ---EXISTS--- schemaName='"+schemaName+"', tabName='"+tabName+"', GraphEntry='"+ge+"'.");
+//System.out.println("########################################## saveGraphDataDdl(): ---EXISTS--- schemaName='" + schemaName + "', tabName='" + tabName + "', GraphEntry='" + ge + "'.");
 //				String sqlAlterTable = getGraphAlterTableDdlString(conn, tabName, tgdp);
 //				if ( ! sqlAlterTable.trim().equals("") )
 //				{
-//					_logger.info("Persistent Counter DB: Altering table '"+tabName+"' for CounterModel graph '" + tgdp.getName() + "'.");
+//					_logger.info("Persistent Counter DB: Altering table '" + tabName + "' for CounterModel graph '" + tgdp.getName() + "'.");
 //
 //					dbDdlExec(sqlAlterTable);
 //					incAlterTables();
 //				}
 				List<String> sqlAlterList = getGraphAlterTableDdlString(conn, schemaName, tabName, ge);
-//System.out.println("########################################## saveGraphDataDdl(): sqlAlterList="+sqlAlterList);
+//System.out.println("########################################## saveGraphDataDdl(): sqlAlterList=" + sqlAlterList);
 				if ( ! sqlAlterList.isEmpty() )
 				{
 					for (String sqlAlterTable : sqlAlterList)
 					{
-						_logger.info("Persistent Counter DB: Altering table '"+tabName+"' for CounterModel graph '" + ge.getName() + "'. sql="+sqlAlterTable);
+						_logger.info("Persistent Counter DB: Altering table '" + tabName + "' for CounterModel graph '" + ge.getName() + "'. sql=" + sqlAlterTable);
 
 						dbDdlExec(conn, sqlAlterTable);
 						getStatistics().incAlterTables();
@@ -3963,7 +3997,7 @@ return -1;
 	{
 		if ( _servicesStoppedByThread != null )
 		{
-			_logger.info("Services has already been stopped by thread '"+_servicesStoppedByThread+"'... the stopServices() will do nothing.");
+			_logger.info("Services has already been stopped by thread '" + _servicesStoppedByThread + "'... the stopServices() will do nothing.");
 			return;
 		}
 		_servicesStoppedByThread = Thread.currentThread().getName();
@@ -3978,20 +4012,20 @@ return -1;
 //			int  maxWaitTimeInMs = 10 * 1000;
 			long startTime = System.currentTimeMillis();
 
-			_logger.info("Waiting for "+getName()+" to persist current container. Max wait time is "+maxWaitTimeInMs+" milliseconds.");
+			_logger.info("Waiting for " + getName() + " to persist current container. Max wait time is " + maxWaitTimeInMs + " milliseconds.");
 			
 			while (_inSaveSample)
 			{
 				long waitSoFar = System.currentTimeMillis() - startTime;
 				if (waitSoFar > maxWaitTimeInMs)
 				{
-					_logger.info("Aborting waiting for "+getName()+" to persist current container. Waited "+waitSoFar+", now stopping the service without waiting for last persist to finish.");
+					_logger.info("Aborting waiting for " + getName() + " to persist current container. Waited " + waitSoFar + ", now stopping the service without waiting for last persist to finish.");
 					_shutdownWithNoWait = true;
 					break;
 				}
 				if ( ! _inSaveSample)
 				{
-					_logger.info("Done waiting for "+getName()+" to persist current container. Waited "+waitSoFar+" until the last save was finished.");
+					_logger.info("Done waiting for " + getName() + " to persist current container. Waited " + waitSoFar + " until the last save was finished.");
 					break;
 				}
 				
@@ -4018,15 +4052,15 @@ return -1;
 			H2ShutdownType h2ShutdownType = H2ShutdownType.DEFAULT;
 //			String h2ShutdownTypeStr = shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());
 			String h2ShutdownTypeStr = shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());
-			_logger.info("Received a H2 database shutdown request with 'h2.shutdown.type' of '"+h2ShutdownTypeStr+"'.");
+			_logger.info("Received a H2 database shutdown request with 'h2.shutdown.type' of '" + h2ShutdownTypeStr + "'.");
 			try { 
 				h2ShutdownType = H2ShutdownType.valueOf( h2ShutdownTypeStr ); 
 			} catch(RuntimeException ex) { 
-				_logger.info("Shutdown type '"+h2ShutdownTypeStr+"' is unknown value, supported values: "+StringUtil.toCommaStr(H2ShutdownType.values())+". ex="+ex);
+				_logger.info("Shutdown type '" + h2ShutdownTypeStr + "' is unknown value, supported values: " + StringUtil.toCommaStr(H2ShutdownType.values()) + ". ex=" + ex);
 			}
 			
 			File shutdownWithDefrag = new File(H2_SHUTDOWN_WITH_DEFRAG_FILENAME);
-			_logger.info("Checking for override of H2 shutdown type. Checking for file '"+shutdownWithDefrag+"'. exists="+shutdownWithDefrag.exists());
+			_logger.info("Checking for override of H2 shutdown type. Checking for file '" + shutdownWithDefrag + "'. exists=" + shutdownWithDefrag.exists());
 			if (shutdownWithDefrag.exists())
 			{
 				// get the reason why we shutdown
@@ -4035,7 +4069,7 @@ return -1;
 				catch(IOException ignore) {}
 
 				shutdownWithDefrag.delete();
-				_logger.info("Found file '"+shutdownWithDefrag+"'. So 'SHUTDOWN DEFRAG' will be used to stop/shutdown H2 database. reason='"+shutdownReason+"'.");
+				_logger.info("Found file '" + shutdownWithDefrag + "'. So 'SHUTDOWN DEFRAG' will be used to stop/shutdown H2 database. reason='" + shutdownReason + "'.");
 				
 				h2ShutdownType = H2ShutdownType.DEFRAG;
 			}
@@ -4110,32 +4144,32 @@ return -1;
 		try (Statement stmnt = _mainConn.createStatement();) {
 			stmnt.execute("select 1111");
 		} catch(SQLException ex) {
-			_logger.error("Problem when executing DUMMY SQL 'select 1111' before "+shutdownCmd+". SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", toString="+ex.toString());
+			_logger.error("Problem when executing DUMMY SQL 'select 1111' before " + shutdownCmd + ". SqlException: ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", toString=" + ex.toString());
 		}
 
 		try (Statement stmnt = _mainConn.createStatement();) 
 		{
-			_logger.info("Sending Command '"+shutdownCmd+"' to H2 database.");
+			_logger.info("Sending Command '" + shutdownCmd + "' to H2 database.");
 			stmnt.execute(shutdownCmd);
-			_logger.info("Shutdown H2 database using Command '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			_logger.info("Shutdown H2 database using Command '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 		} 
 		catch(SQLException ex) 
 		{
 			// during shutdown we would expect: ErrorCode=90121, SQLState=90121, toString=org.h2.jdbc.JdbcSQLException: Database is already closed (to disable automatic closing at VM shutdown, add ";DB_CLOSE_ON_EXIT=FALSE" to the db URL)
 			if ( ex.getErrorCode() == 90121 )
-				_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+				_logger.info("Shutdown H2 database using '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 			else
 			{
 				Throwable rootCauseEx  = ExceptionUtils.getRootCause(ex);
 				// String    rootCauseMsg = ExceptionUtils.getRootCauseMessage(ex);
 
-				_logger.error("Problem when shutting down H2 using command '"+shutdownCmd+"'. SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", ex.toString="+ex.toString()+", rootCauseEx="+rootCauseEx);
+				_logger.error("Problem when shutting down H2 using command '" + shutdownCmd + "'. SqlException: ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", ex.toString=" + ex.toString() + ", rootCauseEx=" + rootCauseEx);
 				
 				// Check if the H2 database seems CORRUPT...
 				// Caused by: java.lang.IllegalStateException: Reading from nio:/opt/dbxtune_data/DBXTUNE_CENTRAL_DB.mv.db failed; file length -1 read length 768 at 2026700328 [1.4.197/1]
 				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
 				{
-					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx=" + rootCauseEx, rootCauseEx);
 				}
 			}
 		}
@@ -4146,11 +4180,11 @@ return -1;
 			long dbFileSizeAfter = dbFile.length();
 			long sizeDiff = dbFileSizeAfter - dbFileSizeBefore;
 			
-			_logger.info("Shutdown H2 database file size info, after '"+shutdownCmd+"'. " 
+			_logger.info("Shutdown H2 database file size info, after '" + shutdownCmd + "'. " 
 					+ "DiffMb="     + String.format("%.1f", (sizeDiff        /1024.0/1024.0))
 					+ ", BeforeMb=" + String.format("%.1f", (dbFileSizeBefore/1024.0/1024.0))
 					+ ", AfterMb="  + String.format("%.1f", (dbFileSizeAfter /1024.0/1024.0))
-					+ ", Filename='"+dbFile.getAbsolutePath()
+					+ ", Filename='" + dbFile.getAbsolutePath()
 					+ "'.");
 			
 			// if file size is smaller: 
@@ -4168,7 +4202,7 @@ return -1;
 			File shutdownTempFile = new File(dbFile.getAbsolutePath() + ".tempFile");
 			if (shutdownTempFile.exists())
 			{
-				_logger.warn("After Shutdown H2 database using '"+shutdownCmd+"', the file '"+shutdownTempFile+"' exists. sizeMb("+(shutdownTempFile.length()/1024/1024)+"), sizeB("+shutdownTempFile.length()+"). This is probably due to a 'incomplete' shutdown (defrag). REMOVING THIS FILE.");
+				_logger.warn("After Shutdown H2 database using '" + shutdownCmd + "', the file '" + shutdownTempFile + "' exists. sizeMb(" + (shutdownTempFile.length()/1024/1024) + "), sizeB(" + shutdownTempFile.length() + "). This is probably due to a 'incomplete' shutdown (defrag). REMOVING THIS FILE.");
 				shutdownTempFile.delete();
 			}
 			
@@ -4213,7 +4247,7 @@ return -1;
 	@Override
 	public void saveLocalMetricsSample(PersistContainer cont)
 	{
-//System.out.println("saveLocalMetricsSample(): cont.getCounterObjects().size()="+cont.getCounterObjects().size());
+//System.out.println("saveLocalMetricsSample(): cont.getCounterObjects().size()=" + cont.getCounterObjects().size());
 		DbxConnection conn = _mainConn;
 
 		if (conn == null)
@@ -4245,7 +4279,7 @@ return -1;
 		}
 //		catch (SQLException e)
 //		{
-//			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode(), e);
+//			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode(), e);
 //		}
 		finally
 		{

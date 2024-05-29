@@ -176,6 +176,7 @@ extends TabularCntrPanel
 	private JCheckBox l_sampleLiveQueryPlan_chk;
 	private JCheckBox l_sampleHoldingLocks_chk;
 	private JCheckBox l_sampleLocksForSpid_chk;
+	private JCheckBox l_sampleSpidWaits_chk;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
@@ -200,6 +201,7 @@ extends TabularCntrPanel
 				l_sampleLiveQueryPlan_chk .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan, CmActiveStatements.DEFAULT_sample_liveQueryPlan));
 				l_sampleHoldingLocks_chk  .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks , CmActiveStatements.DEFAULT_sample_holdingLocks));
 				l_sampleLocksForSpid_chk  .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks    , CmActiveStatements.DEFAULT_sample_spidLocks));
+				l_sampleSpidWaits_chk     .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidWaits    , CmActiveStatements.DEFAULT_sample_spidWaits));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -231,6 +233,7 @@ extends TabularCntrPanel
 		l_sampleLiveQueryPlan_chk  = new JCheckBox("Get Live Query Plan",      conf == null ? CmActiveStatements.DEFAULT_sample_liveQueryPlan : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan, CmActiveStatements.DEFAULT_sample_liveQueryPlan));
 		l_sampleHoldingLocks_chk   = new JCheckBox("Show SPID's holding locks",conf == null ? CmActiveStatements.DEFAULT_sample_holdingLocks  : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks , CmActiveStatements.DEFAULT_sample_holdingLocks));
 		l_sampleLocksForSpid_chk   = new JCheckBox("Get Locks for SPID",       conf == null ? CmActiveStatements.DEFAULT_sample_spidLocks     : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks    , CmActiveStatements.DEFAULT_sample_spidLocks));
+		l_sampleSpidWaits_chk      = new JCheckBox("Get WaitInfo for SPID",    conf == null ? CmActiveStatements.DEFAULT_sample_spidWaits     : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidWaits    , CmActiveStatements.DEFAULT_sample_spidWaits));
 
 		l_sampleSystemSpids_chk   .setName(CmActiveStatements.PROPKEY_sample_systemSpids);
 		l_sampleMonSqltext_chk    .setName(CmActiveStatements.PROPKEY_sample_monSqlText);
@@ -241,6 +244,7 @@ extends TabularCntrPanel
 		l_sampleLiveQueryPlan_chk .setName(CmActiveStatements.PROPKEY_sample_liveQueryPlan);
 		l_sampleHoldingLocks_chk  .setName(CmActiveStatements.PROPKEY_sample_holdingLocks);
 		l_sampleLocksForSpid_chk  .setName(CmActiveStatements.PROPKEY_sample_spidLocks);
+		l_sampleSpidWaits_chk     .setName(CmActiveStatements.PROPKEY_sample_spidWaits);
 		
 		l_sampleSystemSpids_chk   .setToolTipText("<html>Do 'Incluse System SPID's in the list.</html>");
 		l_sampleMonSqltext_chk    .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
@@ -251,6 +255,7 @@ extends TabularCntrPanel
 		l_sampleLiveQueryPlan_chk .setToolTipText("<html>Do 'select query_plan from sys.dm_exec_query_statistics_xml(spid)' on every row in the table.<br>       This will give us the LIVE Query Plan of each active session.</html>");
 		l_sampleHoldingLocks_chk  .setToolTipText("<html>Include SPID's that are holding <i>any</i> locks in dm_tran_locks.<br>This will help you trace Statements that havn't released it's locks and are <b>not</b> active. (meaning that the control is at the client side)</html>");
 		l_sampleLocksForSpid_chk  .setToolTipText("<html>Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking.</html>");
+		l_sampleSpidWaits_chk     .setToolTipText("<html>Get info from CmSpidWait/dm_exec_session_wait_stats. <br>This will help us to diagnose in detail what we have been waiting on since the last sample. <br><b>NOTE:</b> CmSpidWait needs to be enabled</html>");
 
 		resetMoveToTab_but.setToolTipText(
 				"<html>" +
@@ -278,7 +283,8 @@ extends TabularCntrPanel
 		panel.add(l_sampleHoldingLocks_chk,   "wrap");  // -  x
 		panel.add(l_sampleMonSqltext_chk,     "");      // x  -
 		panel.add(l_sampleLocksForSpid_chk,   "wrap");  // -  x
-		panel.add(l_sampleShowplan_chk,       "wrap");  // x  -
+		panel.add(l_sampleShowplan_chk,       "");      // x  -
+		panel.add(l_sampleSpidWaits_chk,      "wrap");  // -  x
 		panel.add(l_sampleLiveQueryPlan_chk,  "wrap");  // x  -
 		panel.add(resetMoveToTab_but,         "wrap");  // x  -
 
@@ -398,6 +404,22 @@ extends TabularCntrPanel
 				
 				// ReInitialize the SQL
 				getCm().setSql(null);
+			}
+		});
+		
+		l_sampleSpidWaits_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_spidWaits, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				//getCm().setSql(null);  // Not needed, since we get the info from CmSpidWait
 			}
 		});
 		

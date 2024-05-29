@@ -318,17 +318,19 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		ResultSetTableModel rstm_dummy = ResultSetTableModel.executeQuery(conn, "select * from sys.dm_os_memory_clerks where 1=2", true, "dummy");
+		ResultSetTableModel rstm_dummy = null;
+		if (conn != null)
+			rstm_dummy = ResultSetTableModel.executeQuery(conn, "select * from sys.dm_os_memory_clerks where 1=2", true, "dummy");
 		
 		// in Version 2012 ??? the columns 'pages_kb' was introduced
 		String pages_kb = "([single_pages_kb] + [multi_pages_kb])";
-		if (rstm_dummy.hasColumn("pages_kb"))
+		if (rstm_dummy  != null && rstm_dummy.hasColumn("pages_kb"))
 		{
 			pages_kb = "[pages_kb]";
 		}
 
 		String calculation_cols = "([single_pages_kb] + [multi_pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
-		if (rstm_dummy.hasColumn("pages_kb"))
+		if (rstm_dummy  != null && rstm_dummy.hasColumn("pages_kb"))
 		{
 			calculation_cols = "([pages_kb] + [virtual_memory_committed_kb] + [awe_allocated_kb])";
 		}

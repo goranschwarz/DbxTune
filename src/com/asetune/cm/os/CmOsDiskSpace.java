@@ -69,7 +69,7 @@ extends CounterModelHostMonitor
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -86,7 +86,7 @@ extends CounterModelHostMonitor
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmOsDiskSpace(counterController, guiController);
 	}
@@ -130,7 +130,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_USED_MB,
 			"df: Space Used in MB, at MountPoint", 	                                    // Menu CheckBox text
-			"df: Space Used in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"df: Space Used in MB, at MountPoint (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -143,7 +143,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_USED_PCT,
 			"df: Space Used in Percent, at MountPoint", 	                                    // Menu CheckBox text
-			"df: Space Used in Percent, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"df: Space Used in Percent, at MountPoint (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -156,7 +156,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_AVAILABLE_MB,
 			"df: Space Available in MB, at MountPoint", 	                                    // Menu CheckBox text
-			"df: Space Available in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"df: Space Available in MB, at MountPoint (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -171,7 +171,7 @@ extends CounterModelHostMonitor
 	@Override
 	public void localCalculation(OsTable newSample)
 	{
-//		System.out.println("localCalculation(OsTable thisSample): newSample.getColumnCount()="+newSample.getColumnCount()+", "+newSample.getColNames());
+//		System.out.println("localCalculation(OsTable thisSample): newSample.getColumnCount()=" + newSample.getColumnCount() + ", " + newSample.getColNames());
 
 		int sizeKB_pos      = newSample.findColumn("Size-KB");
 		int usedKB_pos      = newSample.findColumn("Used-KB");
@@ -185,7 +185,7 @@ extends CounterModelHostMonitor
 
 		if (sizeKB_pos == -1 || usedKB_pos == -1 || availableKB_pos == -1 || sizeMB_pos == -1 || usedMB_pos == -1 || availableMB_pos == -1 || usedPct_pos == -1)
 		{
-			_logger.warn("Column position not available. sizeKB_pos="+sizeKB_pos+", usedKB_pos="+usedKB_pos+", availableKB_pos="+availableKB_pos+", sizeMB_pos="+sizeMB_pos+", usedMB_pos="+usedMB_pos+", availableMB_pos="+availableMB_pos+", usedPct_pos="+usedPct_pos+".");
+			_logger.warn("Column position not available. sizeKB_pos=" + sizeKB_pos + ", usedKB_pos=" + usedKB_pos + ", availableKB_pos=" + availableKB_pos + ", sizeMB_pos=" + sizeMB_pos + ", usedMB_pos=" + usedMB_pos + ", availableMB_pos=" + availableMB_pos + ", usedPct_pos=" + usedPct_pos + ".");
 			return;
 		}
 		
@@ -195,14 +195,16 @@ extends CounterModelHostMonitor
 			Number usedKB_num      = (Number) newSample.getValueAt(r, usedKB_pos);
 			Number availableKB_num = (Number) newSample.getValueAt(r, availableKB_pos);
 
-			if (sizeKB_num      != null) newSample.setValueAt(new Integer(sizeKB_num     .intValue()/1024), r, sizeMB_pos);
-			if (usedKB_num      != null) newSample.setValueAt(new Integer(usedKB_num     .intValue()/1024), r, usedMB_pos);
-			if (availableKB_num != null) newSample.setValueAt(new Integer(availableKB_num.intValue()/1024), r, availableMB_pos);
+			// NOTE: beware of integer overflow... use |(int)(var.longValue()/1024)| instead of |var.intValue()/1024| ... 
+			//       Number.intVal() may cause integer overflow and return a negative number
+			if (sizeKB_num      != null) newSample.setValueAt(new Integer((int)(sizeKB_num     .longValue()/1024)), r, sizeMB_pos);
+			if (usedKB_num      != null) newSample.setValueAt(new Integer((int)(usedKB_num     .longValue()/1024)), r, usedMB_pos);
+			if (availableKB_num != null) newSample.setValueAt(new Integer((int)(availableKB_num.longValue()/1024)), r, availableMB_pos);
 
 			// Calculate the Pct value with a higher (scale=1) resolution than df
 			if (sizeKB_num != null && usedKB_num != null && availableKB_num != null)
 			{
-				if (sizeKB_num.intValue() > 0)
+				if (sizeKB_num.longValue() > 0)
 				{
 //					double pct = usedKB_num.doubleValue() / sizeKB_num.doubleValue() * 100.0;
 					double pct = 100.0 - (availableKB_num.doubleValue() / sizeKB_num.doubleValue() * 100.0);
@@ -337,7 +339,7 @@ extends CounterModelHostMonitor
 				Number threshold = getFreeSpaceThreshold(mountPoint, _map_alarm_LowFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): Available-MB - threshold="+threshold+", mountPoint='"+mountPoint+"', freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): Available-MB - threshold=" + threshold + ", mountPoint='" + mountPoint + "', freeMb='" + freeMb + "', usedPct='" + usedPct + "'.");
 
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
@@ -367,7 +369,7 @@ extends CounterModelHostMonitor
 				Number threshold = getFreeSpaceThreshold(mountPoint, _map_alarm_LowFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): UsedPct - threshold="+threshold+", mountPoint='"+mountPoint+"', freeMb='"+freeMb+"', usedPct='"+usedPct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): UsedPct - threshold=" + threshold + ", mountPoint='" + mountPoint + "', freeMb='" + freeMb + "', usedPct='" + usedPct + "'.");
 
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
@@ -418,7 +420,7 @@ extends CounterModelHostMonitor
 	{
     	if (map == null)
     	{
-    		_logger.warn("getFreeSpaceThreshold(name=|"+name+"|, map=|"+map+"|). map is NULL, which wasn't expected... some initialization must have failed.");
+    		_logger.warn("getFreeSpaceThreshold(name=|" + name + "|, map=|" + map + "|). map is NULL, which wasn't expected... some initialization must have failed.");
     		return null;
     	}
 
@@ -530,7 +532,7 @@ extends CounterModelHostMonitor
 		{
 			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
 			if (_logger.isDebugEnabled())
-				_logger.debug(prefix + "Initializing alarm 'LowFreeSpaceInMb'. After parseCommaStrToMap, map looks like: "+map);
+				_logger.debug(prefix + "Initializing alarm 'LowFreeSpaceInMb'. After parseCommaStrToMap, map looks like: " + map);
 			
 			for (String key : map.keySet())
 			{
@@ -541,11 +543,11 @@ extends CounterModelHostMonitor
 					int mb = NumberUtils.createNumber(val).intValue();
 					_map_alarm_LowFreeSpaceInMb.put(key, mb);
 
-					_logger.info(prefix + "Initializing alarm. Using 'LowFreeSpaceInMb', mountPoint='"+key+"', mb="+mb);
+					_logger.info(prefix + "Initializing alarm. Using 'LowFreeSpaceInMb', mountPoint='" + key + "', mb=" + mb);
 				}
 				catch (NumberFormatException ex)
 				{
-					_logger.info(prefix + "Initializing alarm. Skipping 'LowFreeSpaceInMb' enty mountPoint='"+key+"', val='"+val+"'. The value is not a number.");
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowFreeSpaceInMb' enty mountPoint='" + key + "', val='" + val + "'. The value is not a number.");
 				}
 			}
 			
@@ -573,7 +575,7 @@ extends CounterModelHostMonitor
 		{
 			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
 			if (_logger.isDebugEnabled())
-				_logger.debug(prefix + "Initializing alarm 'LowFreeSpaceInPct'. After parseCommaStrToMap, map looks like: "+map);
+				_logger.debug(prefix + "Initializing alarm 'LowFreeSpaceInPct'. After parseCommaStrToMap, map looks like: " + map);
 			
 			for (String key : map.keySet())
 			{
@@ -584,11 +586,11 @@ extends CounterModelHostMonitor
 					double pct = NumberUtils.createNumber(val).doubleValue();
 					_map_alarm_LowFreeSpaceInPct.put(key, pct);
 
-					_logger.info(prefix + "Initializing alarm. Using 'LowFreeSpaceInPct', mountPoint='"+key+"', pct="+pct);
+					_logger.info(prefix + "Initializing alarm. Using 'LowFreeSpaceInPct', mountPoint='" + key + "', pct=" + pct);
 				}
 				catch (NumberFormatException ex)
 				{
-					_logger.info(prefix + "Initializing alarm. Skipping 'LowFreeSpaceInPct' enty mountPoint='"+key+"', val='"+val+"'. The value is not a number.");
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowFreeSpaceInPct' enty mountPoint='" + key + "', val='" + val + "'. The value is not a number.");
 				}
 			}
 			

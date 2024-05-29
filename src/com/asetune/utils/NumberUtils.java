@@ -106,6 +106,31 @@ public class NumberUtils
 	}
 
 	/**
+	 * Compare 2 number objects... The value, do not care about data types
+	 * <br>
+	 * Simply converts them into a double and do compare 
+	 *
+	 * @param n1
+	 * @param n2
+	 * 
+	 * @return
+	 */
+	public static boolean compareValues(Number n1, Number n2)
+	{
+		if (n1 == null && n2 == null) return true;
+		if (n1 == null || n2 == null) return false;
+		
+		// FIXME: Possibly do this in a more secure way... Not sure if BigDecimal etc may be converted *CORRECTLY* to a double value 
+		//        Isn't there another utility that already does this...
+
+		double d1 = n1.doubleValue();
+		double d2 = n2.doubleValue();
+
+		return Double.compare(d1, d2) == 0;
+	}
+
+
+	/**
 	 * Round a Double value at some decimals
 	 * @param val
 	 * @param places

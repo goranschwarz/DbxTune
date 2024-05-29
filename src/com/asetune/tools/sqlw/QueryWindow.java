@@ -72,6 +72,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -81,13 +82,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
@@ -140,6 +144,8 @@ import javax.swing.event.CaretListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.table.JTableHeader;
@@ -230,6 +236,7 @@ import com.asetune.parser.ParserProperties;
 import com.asetune.sql.CommonEedInfo;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.SqlObjectName;
+import com.asetune.sql.SqlParserUtils;
 import com.asetune.sql.SqlPickList;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
@@ -246,6 +253,7 @@ import com.asetune.sql.pipe.PipeCommandGraph;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.sql.pipe.PipeCommandLinkedQuery;
 import com.asetune.sql.pipe.PipeCommandToFile;
+import com.asetune.sql.pipe.PipeCommandToParquet;
 import com.asetune.sql.showplan.ShowplanHtmlView;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.NormalExitException;
@@ -2186,7 +2194,8 @@ public class QueryWindow
 //				curCmd = curCmd.replaceAll(QueryWindow.REGEXP_MLC_SLC, "").trim();
 				
 				// Remove any "starting" comments, and TRIM the String
-				curCmd = SqlUtils.removeFirstSqlComments(curCmd).trim();
+				if (StringUtil.hasValue(curCmd))
+					curCmd = SqlUtils.removeFirstSqlComments(curCmd).trim();
 				
 				if (StringUtil.hasValue(curCmd) && curCmd.startsWith("\\connect"))
 				{
@@ -7422,6 +7431,213 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		popup.add(menuItem);
 
 		//------------------------------------------------------------------------------------
+		// Get rows for FK: Parent Table
+		//------------------------------------------------------------------------------------
+		JMenu fkParentMenu = new JMenu("<html>Get Foreign Key <b>Parent</b> row for selected rows(s)</html>");
+		popup.add(fkParentMenu);
+		
+		menuItem = new JMenuItem("Sorry: Not yet implemented...");
+		fkParentMenu.add(menuItem);
+
+
+		//------------------------------------------------------------------------------------
+		// Get rows for FK: Child Table
+		//------------------------------------------------------------------------------------
+		final JMenu fkChildtMenu = new JMenu("<html>Get Foreign Key <b>Child</b> rows for selected rows(s)</html>");
+		popup.add(fkChildtMenu);
+		
+//		TODO; //On Popup check if we have FK for the selected row(s) 
+//		      // If we do add child menu with the tables names
+//		      // and in those menu items, generate SELECT * from ... with the column names/values from this table 
+
+		// When the 'fkChildtMenu' opens, we will create "MenuItems", and when it closes, we remove all items
+		fkChildtMenu.addMenuListener(new MenuListener()
+		{
+			
+			@Override
+			public void menuSelected(MenuEvent e)
+			{
+				System.out.println("menuSelected(): e="+e);
+
+				JMenu menu = (JMenu)e.getSource();
+//				if (menu.getItemCount() > 0)
+//					return;
+
+				Component invoker = TablePopupFactory.getPopupMenuInvoker(menu);
+				if (invoker instanceof ResultSetJXTable)
+				{
+					ResultSetJXTable table = (ResultSetJXTable)invoker;
+					
+					TableModel tm = table.getModel();
+					if (tm instanceof ResultSetTableModel)
+					{
+						ResultSetTableModel rstm = (ResultSetTableModel) tm;
+						List<String> uniqueTables = rstm.getRsmdReferencedTableNames();
+						uniqueTables.remove("-none-");
+
+						if (uniqueTables.isEmpty())
+						{
+							String executedSql = rstm.getName();
+							Set<String> tableList = SqlParserUtils.getTables(executedSql);
+
+							_logger.info("When trying to find tables in ResultSetMetaData, no rows tables was found... so I parsed the SQL Statement trying to get tables, which might be WRONG. Found tables: " + tableList);
+							uniqueTables.addAll(tableList);
+						}
+
+						if (uniqueTables.isEmpty())
+						{
+							menu.add(new JMenuItem("No table references was found in the MetaData for this ResultSet."));
+						}
+						else
+						{
+							for (String tabname : uniqueTables)
+							{
+								if (tabname.startsWith("/"))
+									tabname = tabname.substring(1); // Remove first "/"
+
+								SqlObjectName sqlObj = new SqlObjectName(_conn, tabname);
+								System.out.println("tabname='" + tabname + "'. sqlObj=" + sqlObj);
+
+								String catName    = sqlObj.getCatalogNameNull(); 
+								String schemaName = sqlObj.getSchemaNameNull(); 
+								String tableName  = sqlObj.getObjectNameNull(); 
+
+								int selectedRow = table.getSelectedRow();
+								
+								try 
+								{
+									DatabaseMetaData dbmd = _conn.getMetaData();
+
+									System.out.println("----------- getImportedKeys(catName='" + catName + "', schemaName='" + schemaName + "', tableName='" + tableName + "')");
+									ResultSetTableModel mdFkOut = new ResultSetTableModel( dbmd.getImportedKeys(catName, schemaName, tableName), "getImportedKeys");
+
+									System.out.println("----------- getExportedKeys(catName='" + catName + "', schemaName='" + schemaName + "', tableName='" + tableName + "')");
+									ResultSetTableModel mdfkIn  = new ResultSetTableModel( dbmd.getExportedKeys(catName, schemaName, tableName), "getExportedKeys");
+
+									System.out.println("FK-OUT: \n" + mdFkOut.toAsciiTableString());
+									System.out.println("FK-IN: \n" + mdfkIn.toAsciiTableString());
+									
+									ResultSetTableModel xxx = mdfkIn;
+
+									// <fkSchemaAndTable, Map<fkCol, pkCol>
+									Map<String, Map<String, String>> fkSchemaAndTable_to_fkCol_pkCol_Map = new HashMap<>();
+									for (int c=0; c<xxx.getRowCount(); c++)
+									{
+//										String pkTabName = xxx.getValueAsString(c, "PKTABLE_NAME" , false, null);
+										String pkColName = xxx.getValueAsString(c, "PKCOLUMN_NAME", false, null);
+
+										String fkSchName = xxx.getValueAsString(c, "FKTABLE_SCHEM", false, null);
+										String fkTabName = xxx.getValueAsString(c, "FKTABLE_NAME" , false, null);
+										String fkColName = xxx.getValueAsString(c, "FKCOLUMN_NAME", false, null);
+
+										String fkFullTabName = fkSchName + "." + fkTabName;
+
+										// PK 
+										Map<String, String> fk2pkColMap = fkSchemaAndTable_to_fkCol_pkCol_Map.get(fkFullTabName);
+										if (fk2pkColMap == null)
+										{
+											fk2pkColMap = new LinkedHashMap<>();
+											fkSchemaAndTable_to_fkCol_pkCol_Map.put(fkFullTabName, fk2pkColMap);
+										}
+										fk2pkColMap.put(fkColName, pkColName);
+									}
+									
+									if ( ! fkSchemaAndTable_to_fkCol_pkCol_Map.isEmpty() )
+									{
+										System.out.println("fkSchemaAndTable_to_fkCol_pkCol_Map=" + fkSchemaAndTable_to_fkCol_pkCol_Map);
+										
+										for (Entry<String, Map<String, String>> entry : fkSchemaAndTable_to_fkCol_pkCol_Map.entrySet())
+										{
+											String fkFullTabName = entry.getKey();
+											String xSql = "select * \n"
+													+ "from " + fkFullTabName + " \n"
+													+ "where 1 = 1 \n";
+											
+											for (Entry<String, String> fk2pkColMap : entry.getValue().entrySet())
+											{
+												String fkColName = fk2pkColMap.getKey();
+												String pkColName = fk2pkColMap.getValue();
+												
+												if (rstm.hasColumn(pkColName))
+												{
+													Object colDataVal = rstm.getValueAsObject(selectedRow, pkColName, false);
+
+													xSql += "  and " + fkColName + " = " + DbUtils.safeStr(colDataVal) + " \n";
+												}
+											}
+											xSql += "go psql"; // Print SQL Statement in ResultSet output
+											
+											final String fSql = xSql;
+											JMenuItem menuItem = new JMenuItem(fkFullTabName);
+											menuItem.addActionListener(new ActionListener()
+											{
+												@Override
+												public void actionPerformed(ActionEvent e)
+												{
+													displayQueryResults(fSql, 0, false);
+												}
+											});
+											menu.add(menuItem);
+										}
+									}
+									if ( ! fkSchemaAndTable_to_fkCol_pkCol_Map.isEmpty() )
+									{
+										System.out.println("fkSchemaAndTable_to_fkCol_pkCol_Map=" + fkSchemaAndTable_to_fkCol_pkCol_Map);
+									}
+								} 
+								catch(SQLException ex)
+								{
+									ex.printStackTrace();
+								}
+								
+							}
+						}
+					}
+//					String sqlText = table.getForeignKeySqlForSelectedRows(getConnection(), fkChildtMenu, ForeignKey.Child);
+
+//					//System.out.println("FK SQL=|"+sqlText+"|");
+//					if (StringUtil.hasValue(sqlText))
+//						displayQueryResults(sqlText, 0, false);
+				}
+				
+				if (menu.getItemCount() == 0)
+					menu.add(new JMenuItem("None"));
+			}
+			
+			@Override
+			public void menuDeselected(MenuEvent e)
+			{
+				fkChildtMenu.removeAll();
+			}
+			
+			@Override
+			public void menuCanceled(MenuEvent e)
+			{
+			}
+		});
+
+//		fkChildtMenu.addActionListener(new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				SwingUtils.showInfoMessage(_window, "Not Yet Implemented", "Sorry, Not Yet Implemented");
+//
+//				Component invoker = TablePopupFactory.getPopupMenuInvoker((JMenuItem)e.getSource());
+//				if (invoker instanceof ResultSetJXTable)
+//				{
+//					ResultSetJXTable table = (ResultSetJXTable)invoker;
+//					String sqlText = table.getForeignKeySqlForSelectedRows(getConnection(), fkChildtMenu, ForeignKey.Child);
+//
+//					//System.out.println("FK SQL=|"+sqlText+"|");
+//					if (StringUtil.hasValue(sqlText))
+//						displayQueryResults(sqlText, 0, false);
+//					
+//				}
+//			}
+//		});
+
+		//------------------------------------------------------------------------------------
 		// Generate DDL from the ResultSet
 		//------------------------------------------------------------------------------------
 		JMenu ddlGenMenu = new JMenu("Generate SQL for selected rows(s)");
@@ -8784,6 +9000,35 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 											_resultCompList.add( new JAseRowCount(rowsWritten, sql) );
 
 										String toFileMessage = (String) pipeCmd.getCmd().getEndPointResult(PipeCommandToFile.message);
+										if (toFileMessage != null)
+											_resultCompList.add( new JToFileMessage(toFileMessage, pipeCmd, sql) );
+									}
+									//---------------------------------
+									// PIPE - ToParquet
+									//---------------------------------
+									else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandToParquet))
+									{
+										try
+										{
+											pipeCmd.getCmd().doEndPoint(rs, progress);
+										}
+										catch (Exception e)
+										{
+											progress.setState("Canceling the query (if the JDBC driver supports this).");
+											_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
+											stmnt.cancel(); // Cancel big queries
+											throw e;
+										}
+
+										int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandToParquet.rowsSelected);
+										int rowsWritten  = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandToParquet.rowsWritten);
+										incRsRowsCount(rowsSelected);
+										incIudRowsCount(rowsWritten);
+
+										if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+											_resultCompList.add( new JAseRowCount(rowsWritten, sql) );
+
+										String toFileMessage = (String) pipeCmd.getCmd().getEndPointResult(PipeCommandToParquet.message);
 										if (toFileMessage != null)
 											_resultCompList.add( new JToFileMessage(toFileMessage, pipeCmd, sql) );
 									}

@@ -156,7 +156,8 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+//	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 20;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -704,6 +705,8 @@ extends CountersModel
 			mtd.addColumn(cmName, "database_id"             ,"<html>ID of the database</html>");
 			mtd.addColumn(cmName, "compatibility_level"     ,"<html>Integer corresponding to the version of SQL Server for which behavior is compatible. (same as sys.database.compatibility_level)</html>");
 			mtd.addColumn(cmName, "user_access_desc"        ,"<html>User-access setting, MULTI_USER, SINGLE_USER , RESTRICTED_USER. (same as sys.database.compatibility_level)</html>");
+			mtd.addColumn(cmName, "is_read_only"            ,"<html>Is database in read-only or read-write mode... (same as sys.database.is_read_only)</html>");
+//			mtd.addColumn(cmName, "updateability"           ,"<html>Is database in read-only or read-write mode... Can be 'READ_ONLY' or 'READ_WRITE' (uses: sys.database.is_read_only)</html>");
 			mtd.addColumn(cmName, "state_desc"              ,"<html>Description of the database state: ONLINE, RESTORING, RECOVERING, RECOVERY_PENDING, SUSPECT, EMERGENCY, OFFLINE, COPYING, OFFLINE_SECONDARY (same as sys.database.state_desc)</html>");
 			mtd.addColumn(cmName, "recovery_model_desc"     ,"<html>Description of recovery model selected: FULL, BULK_LOGGED, SIMPLE. (same as sys.database.recovery_model_desc)</html>");
 			mtd.addColumn(cmName, "ag_name"                 ,"<html>Availability Group Name</html>");
@@ -1673,7 +1676,8 @@ extends CountersModel
 //			backupset                    = "msdb.dbo.backupset";                      // same as Normal SQL-Server
 //		}
 
-		String foreachDbBegin = "EXEC sp_MSforeachdb ' \n";
+		//TODO; // Look at 'sp_ineachdb' and how a similar approach can be used instead of 'sp_MSforeachdb' 
+		String foreachDbBegin = "EXEC sp_MSforeachdb ' \n"; // NOTE: possibly use 'sp_ineachdb' from Brent Ozar instead, it's safer (but it needs to be *installed*)
 		String foreachDbEnd   = "FROM [?].${TABLE_NAME}' \n";
 
 		
@@ -1714,12 +1718,12 @@ extends CountersModel
 
 		if (srvVersion >= Ver.ver(2016))
 		{
-			String foreachDbId = "     DB_ID(''?'')   as database_id \n";
-			String foreachDbSq = "''"; // sq == SingleQuote
+			String foreachDbId   = "     DB_ID(''?'')            as database_id \n";
+			String foreachDbSq   = "''"; // sq == SingleQuote
 			if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 			{
-				foreachDbId = "     DB_ID()   as database_id \n";
-				foreachDbSq = "'";
+				foreachDbId   = "     DB_ID()   as database_id \n";
+				foreachDbSq   = "'";
 			}
 
 			queryStoreCreateTempTable   = "--------------------------- \n"
@@ -1730,6 +1734,7 @@ extends CountersModel
 			                            + foreachDbBegin
 			                            + "SELECT /* ${cmCollectorName} */ \n"
 			                            + foreachDbId
+//			                            + foreachDbName
 			                            + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
 			                            + "    ,CASE WHEN (desired_state = actual_state) THEN #YES#        ELSE #NO#         END as state_is_ok \n".replace("#", foreachDbSq)
 			                            + "    ,desired_state_desc \n"
@@ -1738,7 +1743,7 @@ extends CountersModel
 			                            + "    ,current_storage_size_mb \n"
 			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
 			                            + "    ,readonly_reason \n"
-			                            + foreachDbEnd.replace("${TABLE_NAME}", "sys.database_query_store_options")
+			                            + foreachDbEnd.replace("${TABLE_NAME}", "sys.database_query_store_options \nOPTION(RECOMPILE)") // Sometimes: 'actual_state' shows WRONG value WITHOUT OPTION(RECOMPILE)
 			                            + " \n";
 
 			queryStoreColumns           = "    ,QsIsEnabled              = qs.is_enabled \n"
@@ -1768,12 +1773,12 @@ extends CountersModel
 		}
 
 		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
-		String contextInfoStr_1 = "/*        ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		String contextInfoStr_1 = "/*        ,context_info_str = replace(cast(er.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
 		String contextInfoStr_2 = "/*    ,OldestTranContextInfoStr = oti.context_info_str -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
 		if (SqlServerCmUtils.isContextInfoStrEnabled())
 		{
 			// Make the binary 'context_info' into a String
-			contextInfoStr_1 = "        ,context_info_str = replace(cast(es.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+			contextInfoStr_1 = "        ,context_info_str = replace(cast(er.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 			contextInfoStr_2 = "    ,OldestTranContextInfoStr = oti.context_info_str /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 		}
 		
@@ -2049,6 +2054,8 @@ extends CountersModel
 			    + "    ,d.database_id \n"
 			    + "    ,compatibility_level      = convert(int, d.compatibility_level) \n"
 			    + "    ,d.user_access_desc \n"
+			    + "    ,d.is_read_only \n"
+//			    + "    ,updateability            = CASE WHEN d.is_read_only = 1 THEN 'READ_ONLY' ELSE 'READ_WRITE' END \n" // use above 'is_read_only' instead it was more "visual"
 			    + "    ,d.state_desc \n"
 			    + "    ,d.recovery_model_desc \n"
 			    + availabilityGroupName
@@ -2137,7 +2144,7 @@ extends CountersModel
 			    + osvDataJoin
 			    + osvLogJoin
 			    + queryStoreJoin
-			    + "WHERE has_dbaccess(d.name) != 0 \n"
+			    + "WHERE has_dbaccess(d.name) != 0   /** NOTE: if database is in SINGLE_USER mode, this will disqualify a row if 'someone' is in the database, and ALARMS will RAISED/CANCELED inpredictable **/ \n"
 			    + whereAvailabilityGroup
 			    + "go \n"
 			    + " \n"
@@ -3281,6 +3288,16 @@ extends CountersModel
 						
 						AlarmEvent ae = new AlarmEventDatabaseState(cm, dbname, alarm, p.pattern());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// If the database is in SINGLE_USER Mode, then set TTL (Time To Live) to 10 minutes
+						// Because the database that ARE in single user mode will not always be available, which means the alarms will be RAISED/CANCELED often...
+						// due to the WHERE has_dbaccess(d.name) != 0  -- (HAS_DBACCESS returns 0 if the database is in single-user mode and the database is in use by another user.)
+						// So this is a "try" to limit/reduce number of faulty 'RAIS/CANCEL' due to other users are using the database
+						if (user_access_desc.equals("SINGLE_USER"))
+						{
+							int ttlMs = 10 * 60 * 1000;
+							ae.setTimeToLive(ttlMs);
+						}
 						
 						alarmHandler.addAlarm( ae );
 					}

@@ -104,7 +104,7 @@ extends CountersModel
 		"usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers"
 	};
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false; // We want *some* counters to be negative (so we can see decrements)
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
@@ -188,6 +188,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_WT_WAITING_FOR_CPU        = "WtWaitingForCpu";
 	public static final String GRAPH_NAME_TASKS_WAITING_FOR_WORKERS = "TasksWaitForWorkers";
 	public static final String GRAPH_NAME_DEADLOCK_COUNT_SUM        = "DeadlockCountSum";
+	public static final String GRAPH_NAME_MEMORY_PRESSURE           = "MemoryPressure";
 	
 	// If we got Suspect Page Count > 0; then we will try to populate this, so we can attach it to the alarm.
 	private ResultSetTableModel _lastSuspectPage_rstm = null;
@@ -307,7 +308,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC,
 			"Max Active SQL Execution Time In Seconds",     // Menu CheckBox text
-			"Max Active SQL Execution Time In Second ("+SHORT_NAME+")s", // Label 
+			"Max Active SQL Execution Time In Second ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
@@ -418,6 +419,18 @@ extends CountersModel
 			"Deadlock Count ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Deadlock Count" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.LOCK,
+			false,  // is Percent Graph
+			false,  // visible at start
+			0,      // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_MEMORY_PRESSURE,
+			"Memory Pressure", // Menu CheckBox text
+			"Memory Pressure ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "osMem_system_high_memory_signal_state", "osMem_system_low_memory_signal_state", "memProcessPhysicalMemoryLow", "memProcessVirtualMemoryLow" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
 			false,  // is Percent Graph
@@ -1385,6 +1398,29 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+		
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_MEMORY_PRESSURE.equals(tgdp.getName()))
+		{	
+			boolean osMem_system_high_memory_signal_state = "true".equalsIgnoreCase(this.getAbsString (0, "system_high_memory_signal_state"));
+			boolean osMem_system_low_memory_signal_state  = "true".equalsIgnoreCase(this.getAbsString (0, "system_low_memory_signal_state"));
+			boolean memProcessPhysicalMemoryLow           = "true".equalsIgnoreCase(this.getAbsString (0, "process_physical_memory_low"));
+			boolean memProcessVirtualMemoryLow            = "true".equalsIgnoreCase(this.getAbsString (0, "process_virtual_memory_low"));
+
+			Double[] arr = new Double[4];
+
+			arr[0] = new Double( osMem_system_high_memory_signal_state ? 1 : 0);
+			arr[1] = new Double( osMem_system_low_memory_signal_state  ? 1 : 0);
+			arr[2] = new Double( memProcessPhysicalMemoryLow           ? 1 : 0);
+			arr[3] = new Double( memProcessVirtualMemoryLow            ? 1 : 0);
+
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): osMem_system_high_memory_signal_state=" + arr[0] + ", osMem_system_low_memory_signal_state=" + arr[1] + ", memProcessPhysicalMemoryLow=" + arr[2] + ", memProcessVirtualMemoryLow=" + arr[3]);
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 	
 	@Override
@@ -1445,6 +1481,18 @@ extends CountersModel
 	{
 		if (diffData != null)
 		{
+			// Reset some negative counters to 0
+			// Since we do NOT reset Negative Counters to Zero i CmSummary
+			// There might be SOME counters that needs this
+			for (int rowId=0; rowId < diffData.getRowCount(); rowId++) 
+			{
+				checkAndSetNc20(diffData, rowId, "io_total_read");
+				checkAndSetNc20(diffData, rowId, "io_total_write");
+				checkAndSetNc20(diffData, rowId, "pack_received");
+				checkAndSetNc20(diffData, rowId, "pack_sent");
+				checkAndSetNc20(diffData, rowId, "packet_errors");
+			}
+			
 			// Set GLOBAL property which can be extracted later
 			// This one is used for: doLastRecordingActionBeforeDatabaseRollover()
 			// So we can extract "extra information" about "todays" DEADLOCKS (the plan is to use: sp_blitzLock)
@@ -1461,6 +1509,23 @@ extends CountersModel
 			}
 
 			setClientProperty(PROPKEY_clientProp_deadlockCountOverRecordingPeriod, deadlockCount);
+		}
+	}
+	private void checkAndSetNc20(CounterSample counters, int rowId, String columnName)
+	{
+		int colId = counters.findColumn(columnName);
+		if (colId >= 0)
+		{
+			Object obj  = counters.getValueAt(rowId, colId);
+			if (obj != null && obj instanceof Number)
+			{
+				//System.out.println("colId="+colId+", name='"+columnName+"', o="+obj);
+				if (((Number)obj).intValue() < 0)
+				{
+					//System.out.println("colId="+colId+", name='"+columnName+"', setting to Integer(0)");
+					counters.setValueAt(new Integer(0), rowId, colId);
+				}
+			}
 		}
 	}
 	
@@ -1576,7 +1641,7 @@ extends CountersModel
 //							+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
 							;
 					String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
-							+ "<table> \n"
+							+ "<table class='dbx-table-basic'> \n"
 							+ "    <tr> <td><b>Number of Waiting Locks               </b></td> <td>" + LockWaits                            + "</td> </tr> \n"
 							+ "    <tr> <td><b>Root Blocker Spids (CSV)              </b></td> <td>" + rootBlockerSpids                     + "</td> </tr> \n"
 							+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
@@ -1709,7 +1774,7 @@ extends CountersModel
 //								+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
 								;
 						String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
-								+ "<table> \n"
+								+ "<table class='dbx-table-basic'> \n"
 								+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
 								+ "    <tr> <td><b>Oldest Open Tran Id                   </b></td> <td>" + oldestOpenTranId                     + "</td> </tr> \n"
 								+ "    <tr> <td><b>Oldest Open Tran Spid                 </b></td> <td>" + oldestOpenTranSpid                   + "</td> </tr> \n"

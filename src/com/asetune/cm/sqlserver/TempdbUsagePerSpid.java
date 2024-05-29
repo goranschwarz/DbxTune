@@ -351,7 +351,7 @@ public class TempdbUsagePerSpid
 		
 		
 		// Table start & header
-		sb.append("<table").append(border).append(cellPadding).append(cellSpacing).append(">\n");
+		sb.append("<table class='dbx-table-basic'").append(border).append(cellPadding).append(cellSpacing).append(">\n");
 
 		sb.append("<thead>\n");
 		sb.append("<tr>\n");

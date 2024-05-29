@@ -88,7 +88,7 @@ extends CountersModel
 		"total_scheduler_delay_ms"
 		};
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true; // 2024-04-23: I see no reason why we should keep negative number
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;

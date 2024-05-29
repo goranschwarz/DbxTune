@@ -814,6 +814,9 @@ function activeAlarmsRadioClick(radioBut)
 }
 function activeAlarmsChkClick(checkbox) 
 {
+	if (checkbox === 'undefined' || checkbox === null)
+		return;
+
 	console.log('activeAlarmsChkClick(): Checked: ' + checkbox.checked);
 	if (checkbox.checked)
 	{
@@ -1443,16 +1446,17 @@ function dbxTuneGraphSubscribe()
 	
 		return div;
 	}
-	function createLockTableToolTipDiv(data)
+	function createLockTableToolTipDiv(data, label)
 	{
-		const dataVal = data;
+		const dataVal  = data;
+		const labelVal = label;
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
 		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
 		div.setAttribute("data-toggle"     , 'modal');
 		div.setAttribute("data-target"     , '#dbx-view-lockTable-dialog');
-		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-objectname" , labelVal);
 		div.setAttribute("data-tooltip"    , dataVal);
 	
 		return div;
@@ -1604,24 +1608,25 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "HasShowPlan"         && rowData.hasOwnProperty('ShowPlanText')     && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ShowPlanText,    'text') ); }
 					if (metaData.columnName === "HasStackTrace"       && rowData.hasOwnProperty('DbccStacktrace')   && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.DbccStacktrace,  'text') ); }
 					if (metaData.columnName === "HasCachedPlanInXml"  && rowData.hasOwnProperty('CachedPlanInXml')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml, 'xml' ) ); }
-					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SpidLocks              ) ); }
-					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSpidsInfo       ) ); }
-					if (metaData.columnName === "HasLastKnownSqlText" && rowData.hasOwnProperty('LastKnownSqlText') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.LastKnownSqlText,'tsql') ); }
+					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SpidLocks,       'Lock Table'       ) ); }
+					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSpidsInfo,'Blocked SPID Info') ); }
+					if (metaData.columnName === "HasLastKnownSqlText" && rowData.hasOwnProperty('LastKnownSqlText') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.LastKnownSqlText,'tsql'             ) ); }
 				}
 				else if ("SqlServerTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
 					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('lastKnownSql')     && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(   rowData.lastKnownSql, 'tsql') ); }
 					if (metaData.columnName === "HasQueryplan"        && rowData.hasOwnProperty('query_plan')       && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan          ) ); }
 					if (metaData.columnName === "HasLiveQueryplan"    && rowData.hasOwnProperty('LiveQueryPlan')    && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan       ) ); }
-					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidLocks           ) ); }
-					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.BlockedSpidsInfo    ) ); }
+					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidLocks       ,'Lock Table'       ) ); }
+					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.BlockedSpidsInfo,'Blocked SPID Info') ); }
+					if (metaData.columnName === "HasSpidWaitInfo"     && rowData.hasOwnProperty('SpidWaitInfo')     && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidWaitInfo    ,'SPID Wait Info'   ) ); }
 				}
 				else if ("PostgresTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
 					if (metaData.columnName === "has_sql_text"          && rowData.hasOwnProperty('last_known_sql_statement') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.last_known_sql_statement, 'postgresql') ); }
 					if (metaData.columnName === "has_query_plan"        && rowData.hasOwnProperty('query_plan')               && cellContent === true) { td.appendChild( createPostgresQueryPlanToolTipDiv(rowData.query_plan) ); }
-					if (metaData.columnName === "has_pid_lock_info"     && rowData.hasOwnProperty('pid_lock_info')            && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) ); }
-					if (metaData.columnName === "has_blocked_pids_info"                                                       && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info) ); }
+					if (metaData.columnName === "has_pid_lock_info"     && rowData.hasOwnProperty('pid_lock_info')            && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info, 'PID Lock Info') ); }
+					if (metaData.columnName === "has_blocked_pids_info"                                                       && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info, 'PID Lock Info') ); }
 				}
 			} // end: metaData && columnName
 		};

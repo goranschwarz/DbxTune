@@ -1988,7 +1988,7 @@ implements Cloneable, ITableTooltip
 		int    maxStrLen   = Integer.MAX_VALUE;        //Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_HtmlToolTip_maxCellLength, DEFAULT_HtmlToolTip_maxCellLength);
 		
 		// One row for every column
-		sb.append("<table").append(border).append(cellPadding).append(cellSpacing).append(">\n");
+		sb.append("<table class='dbx-table-basic'").append(border).append(cellPadding).append(cellSpacing).append(">\n");
 		for (int c=0; c<cols; c++)
 		{
 			String stripeTag = "";
@@ -2124,7 +2124,7 @@ implements Cloneable, ITableTooltip
 		String cellSpacing = borders ? ""               : " cellspacing=0";
 
 		// One row for every column
-		sb.append("<table").append(border).append(cellPadding).append(cellSpacing).append(">\n");
+		sb.append("<table class='dbx-table-basic'").append(border).append(cellPadding).append(cellSpacing).append(">\n");
 
 		// Table head
 		sb.append("<thead> \n");
@@ -6611,6 +6611,13 @@ implements Cloneable, ITableTooltip
 		
 		if (isAlarmsTemporaryDisabled())
 			return;
+		
+		// Check here if we had a "timeout" and return... OR should we do it "somewhere else" or in some other way
+		if (getSequentialTimeoutExceptionCount() > 0)
+		{
+			_logger.info("Skipping calling 'sendAlarmRequest()' for CM='" + getName() + "'. Reason: getSequentialTimeoutExceptionCount()==" + getSequentialTimeoutExceptionCount() + " is above ZERO.");
+			return;
+		}
 
 		// Add a "message" to the AlarmHandler saying that THIS CM have undergone Alarm detection
 		// So when endOfScan() is called, we can see WHAT CM's we can CANCEL alarms for
@@ -7826,11 +7833,17 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			if (o == null)
 				continue;
 
-//if ("SPID".equals(colname))
-//	System.out.println("getRowIdsWhere(): colname='"+colname+"', colvalue='"+colvalue+"', colValue.class="+colvalue.getClass().getSimpleName()+" ---- o.toString=|"+o+"|, o.class="+o.getClass().getSimpleName()+", o.equals(colvalue) == " + o.equals(colvalue));
-
-			if (o.equals(colvalue))
+			if (o instanceof Number && colvalue instanceof Number)
+			{
+				if (NumberUtils.compareValues((Number)o, (Number)colvalue))
+				{
+					rowsList.add(i);
+				}
+			}
+			else if (o.equals(colvalue))
+			{
 				rowsList.add(i);
+			}
 		}
 		if (rowsList.isEmpty())
 			return null;
@@ -8732,9 +8745,19 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				{
 					matchColCount++;
 				}
-				else if (whereColVal != null && whereColVal.equals(rowColVal))
+				else if (whereColVal != null)
 				{
-					matchColCount++;
+					if (whereColVal instanceof Number && rowColVal instanceof Number)
+					{
+						if (NumberUtils.compareValues((Number)whereColVal, (Number)rowColVal))
+						{
+							matchColCount++;
+						}
+					}
+					else if (whereColVal.equals(rowColVal))
+					{
+						matchColCount++;
+					}
 				}
 			}
 			
@@ -9433,19 +9456,59 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 //		}
 	}
 	
-//	public void toJson(JsonGenerator w, boolean writeCounters, boolean writeGraphs)
 	public void toJson(JsonGenerator gen, JsonCmWriterOptions writerOptions)
 	throws IOException
 	{
-//		JsonFactory jfactory = new JsonFactory();
+		// Previously we had various check if we should "send" or not, in PersistContainer.toJsonMessage(...)
+		// Now I have moved them a bit "closer" to where they are written
+		// For the moment do not send Append Models
+		if (this instanceof CountersModelAppend) 
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug(getName() + ": toJson(): Skipping due to: instance is 'CountersModelAppend'.");
+			return;
+		}
+
+		if ( ! isActive() )
+		{
+			if ("CmSummary".equals(getName()))
+			{
+				// NOTE: CmSummary is always disabled (I don't know why... I can probably fix that by override isActive() in CmSummary...)
+				// But I didn't know the consequences so (for now) I choose to do it like this...
+				// BUT: I need to look at this: so we can trust isActive() in more cases without doing "exceptions" for CmSummary
+			}
+			else
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug(getName() + ": toJson(): Skipping due to: isActive() is FALSE");
+				return;
+			}
+		}
+
+//		if ( ! hasValidSampleData() )
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug(getName() + ": toJson(): Skipping due to: hasValidSampleData() is FALSE");
+//			return;
+//		}
+
+//		if ( ! hasData() && ! hasTrendGraphData() )
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug(getName() + ": toJson(): Skipping due to: hasData()==FALSE && hasTrendGraphData()==FALSE");
+//			return;
+//		}
+
+//		// if we ONLY write graph data, but there is no graphs with data
+//		// or possibly move this check INTO the cm method: cm.toJson(w, writeOptions);
+//		if ( writerOptions.writeCounters == false && (writerOptions.writeGraphs && getTrendGraphCountWithData() == 0))
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug(getName() + ": toJson(): Skipping due to: writeCounters=FALSE && writeGraphs==TRUE but getTrendGraphCountWithData()==ZERO");
+//			return;
+//		}
 //
-//		Writer writer = new StringWriter();
-//		JsonGenerator w = jfactory.createGenerator(writer);
-		
-//System.out.println(" >>> toJson >>> graph [srvName='"+getServerName()+"', CmName="+StringUtil.left(getName(),30)+"]: writeGraphs="+writeGraphs+", hasTrendGraphData()="+hasTrendGraphData());
-		// Check MANDATORY parameters
-//		boolean throwOnMissingMandatoryParams = false;
-//		if (throwOnMissingMandatoryParams)
+		// Check some other parameters
 		if (writerOptions.throwOnMissingMandatoryParams)
 		{
 			if (getSampleTime() == null) throw new NullPointerException("When writing CM '"+getName()+"' to JSON. 'sessionSampleTime' value was NULL, which is mandatory.");
@@ -9460,8 +9523,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			if (doReturn)
 				return;
 		}
-		
-		gen.writeStartObject();
+
+
+		gen.writeStartObject(); // START: this CS
 
 		gen.writeStringField("cmName",            getName());
 		gen.writeStringField("sessionSampleTime", TimeUtils.toStringIso8601(getSampleTime()));
@@ -9497,8 +9561,21 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			gen.writeEndObject(); // END: Counters
 		}
 
+		// If has collected data, BUT we DO NOT want to send Counters & there are NO graphs to send (we can stop here)
+		// meaning: we just send "what" we have collected, or just the "header"...
+		if ( writerOptions.writeCounters == false && (writerOptions.writeGraphs && getTrendGraphCountWithData() == 0))
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug(getName() + ": toJson(): Skipping due to: writeCounters=FALSE && writeGraphs==TRUE but getTrendGraphCountWithData()==ZERO");
+
+			gen.writeEndObject(); // END: this CM
+
+			return;
+		}
+
+		
 		// JSON: counters
-		if (writerOptions.writeCounters)
+		if (writerOptions.writeCounters && hasData())
 		{
 			gen.writeFieldName("counters");
 			gen.writeStartObject();
@@ -9654,108 +9731,6 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 		gen.writeEndObject(); // END: this CM
 	}
 
-//---------------------------------------------------------
-// The below id for GSON Writer
-//---------------------------------------------------------
-//	public void toJson(JsonWriter w, boolean writeCounters, boolean writeGraphs)
-//	throws IOException
-//	{
-//		w.beginObject();
-//
-//		w.name("cmName")           .value(getName());
-//		w.name("cmSampleTime")     .value(TimeUtils.toStringIso8601(getTimestamp()));
-//		w.name("cmSampleMs")       .value(getLastSampleInterval());
-//		w.name("type")             .value(isSystemCm() ? "SYSTEM" : "USER_DEFINED");
-//
-//		if (writeCounters)
-//		{
-//			w.name("counters");
-//			w.beginObject();
-//
-//			if (hasResultSetMetaData())
-//			{
-//				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
-//				try
-//				{
-//					w.name("metaData");
-//					w.beginArray(); 
-//
-//					// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
-//					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
-//					{
-//						w.beginObject();
-//						w.name("columnName")     .value(rsmd.getColumnLabel(c));
-//						w.name("jdbcTypeName")   .value(ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
-//						w.name("javaClassName")  .value(rsmd.getColumnClassName(c));
-//						w.name("guessedDbmsType").value(ResultSetTableModel.getColumnTypeName(rsmd, c));
-//						w.name("isDiffColumn")   .value(isDiffColumn(c-1)); // column pos starts at 0 in the CM
-//						w.name("isPctColumn")    .value(isPctColumn(c-1));  // column pos starts at 0 in the CM
-//						w.endObject();
-//					}
-//					w.endArray();
-//				}
-////				catch (SQLException ex)
-//				catch (Exception ex)
-//				{
-//					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
-//				}
-//			}
-//
-//			if (hasAbsData())
-//				writeJsonCounterSample(w, DATA_ABS);
-//
-//			if (hasDiffData())
-//				writeJsonCounterSample(w, DATA_DIFF);
-//
-//			if (hasRateData())
-//				writeJsonCounterSample(w, DATA_RATE);
-//
-//			w.endObject(); // END: Counters
-//		}
-//
-//		if (writeGraphs && hasTrendGraph())
-//		{
-//			w.name("graphs");
-//			w.beginArray();
-//			for (String graphName : getTrendGraphs().keySet())
-//			{
-//				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
-//
-//				w.beginObject();
-//				w.name("graphName"       ).value(graphName);
-////				w.name("graphDescription").value(tgdp.getDescription());
-//				w.name("data");
-//				w.beginArray();
-//				// loop all data
-//				Double[] dataArr  = tgdp.getData();
-//				String[] labelArr = tgdp.getLabel();
-////				if (dataArr  == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's DATA array.");
-////				if (labelArr == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's LABEL array.");
-//				if (dataArr != null && labelArr != null)
-//				{
-//					for (int d=0; d<dataArr.length; d++)
-//					{
-//						w.beginObject();
-//
-//						Double data  = dataArr[d];
-//						String label = null;
-//						if (d < labelArr.length)
-//							label = labelArr[d];
-//
-//						w.name("label")    .value(label);
-//						w.name("dataPoint").value(data);
-//
-//						w.endObject();
-//					}
-//				}
-//				w.endArray();
-//				w.endObject(); // END: GraphName
-//			}
-//			w.endArray();
-//		}
-//
-//		w.endObject(); // END: this CM
-//	}
 
 //--------------------------------------------------------------
 // How a JSON might look like

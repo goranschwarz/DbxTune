@@ -454,6 +454,9 @@ public class SqlServerUtils
 	public static List<LockRecord> getLockSummaryForSpid(DbxConnection conn, int spid) 
 	throws TimeoutException
 	{
+
+		// TODO: start using 'sys.dm_tran_locks' instead of 'syslockinfo' hopefully we will get *less* blocking locks on 'dm_tran_locks'
+
 		String sql = ""
 			    + "select \n"
 			    + "     spid       = req_spid \n"
@@ -726,7 +729,7 @@ public class SqlServerUtils
 		if (list.isEmpty())
 			return "";
 
-		StringBuilder sb = new StringBuilder("<TABLE BORDER=1>");
+		StringBuilder sb = new StringBuilder("<TABLE class='dbx-table-basic' BORDER=1>");
 		sb.append("<TR> <TH>spid</TH> <TH>dbid</TH> <TH>dbname</TH> <TH>ObjectID</TH> <TH>Schema</TH> <TH>Table</TH> <TH>IndexID</TH> <TH>IndexName</TH> <TH>Type</TH> <TH>Mode</TH> <TH>Status</TH> <TH>Count</TH> </TR>");
 		for (LockRecord lr : list)
 		{

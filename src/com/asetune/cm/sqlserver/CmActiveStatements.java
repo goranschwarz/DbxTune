@@ -22,12 +22,14 @@ package com.asetune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
@@ -183,6 +185,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_spidLocks          = PROP_PREFIX + ".sample.spidLocks";
 	public static final boolean DEFAULT_sample_spidLocks          = true;
 
+	public static final String  PROPKEY_sample_spidWaits          = PROP_PREFIX + ".sample.spidWaits";
+	public static final boolean DEFAULT_sample_spidWaits          = true;
+
 	
 	private void addTrendGraphs()
 	{
@@ -245,6 +250,12 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("granted_memory_kb",           "Total amount of memory actually granted in kilobytes. Can be NULL if the memory is not granted yet. For a typical situation, this value should be the same as 'requested_memory_kb'. For index creation, the server may allow additional on-demand memory beyond initially granted memory");
 		setLocalToolTipTextOnTableColumnHeader("used_memory_kb",              "Physical memory used at this moment in kilobytes");
 		setLocalToolTipTextOnTableColumnHeader("used_memory_pct",             "Percent calculation of 'granted_memory_kb' and 'used_memory_kb'.");
+
+		
+		setLocalToolTipTextOnTableColumnHeader("SpidWaitCountSum",            "Summary of wait counts from CmSpidWait/dm_exec_session_wait_stats  (if enabled).");
+		setLocalToolTipTextOnTableColumnHeader("SpidWaitTimeMsSum",           "Summary of wait time in MS from CmSpidWait/dm_exec_session_wait_stats  (if enabled).");
+		setLocalToolTipTextOnTableColumnHeader("HasSpidWaitInfo",             "True/false if wait info was available from CmSpidWait/dm_exec_session_wait_stats  (if enabled).");
+		setLocalToolTipTextOnTableColumnHeader("SpidWaitInfo",                "A 'table' with all WaitTypes/WaitCount/WaitTimeMs from CmSpidWait/dm_exec_session_wait_stats  (if enabled).");
 	}
 
 	@Override
@@ -340,12 +351,12 @@ extends CountersModel
 		}
 		
 		// Is 'context_info_str' enabled (if it causes any problem, it can be disabled)
-		String contextInfoStr1 = "/*    ,context_info_str    = replace(cast(des.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
+		String contextInfoStr1 = "/*    ,context_info_str    = replace(cast(der.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
 		String contextInfoStr2 = "/*    ,context_info_str    = replace(cast(p1.context_info as varchar(128)),char(0),'') -- " + SqlServerCmUtils.HELPTEXT_howToEnable__context_info_str + " */ \n";
 		if (SqlServerCmUtils.isContextInfoStrEnabled())
 		{
 			// Make the binary 'context_info' into a String
-			contextInfoStr1 = "    ,context_info_str    = replace(cast(des.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
+			contextInfoStr1 = "    ,context_info_str    = replace(cast(der.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 			contextInfoStr2 = "    ,context_info_str    = replace(cast(p1.context_info as varchar(128)),char(0),'') /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 		}
 
@@ -399,8 +410,11 @@ extends CountersModel
 			"    ,HasSpidLocks        = convert(bit,0) \n" +
 			"    ,HasBlockedSpidsInfo = convert(bit,0) \n" +
 			"    ,SpidLockCount       = convert(int,-1) \n" +
+			"    ,HasSpidWaitInfo     = convert(bit   , 0) \n"  +             // filled in with 'localCalculation(...)' with values from CmSpidWait
 //			"    ,DB_NAME(der.database_id) AS database_name \n" +
 			"    ,(select db.name from sys.databases db where db.database_id = der.database_id) AS database_name \n" +
+			"    ,SpidWaitCountSum    = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait
+			"    ,SpidWaitTimeMsSum   = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait 
 			"    ,exec_cpu_time       = der.cpu_time \n" +
 			"    ,exec_reads          = der.reads \n" +
 			"    ,exec_logical_reads  = der.logical_reads \n" +
@@ -442,6 +456,7 @@ extends CountersModel
 			"	                               ELSE NULL \n" +
 			"	                          END \n" +
 //			"    ,OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
+			"    ,der.sql_handle \n" +
 			"    ,SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
 			"        ( CASE WHEN der.statement_end_offset = -1  \n" +
 			"               THEN DATALENGTH(dest.text)  \n" +
@@ -449,6 +464,7 @@ extends CountersModel
 			"          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
 			"    ,SpidLocks        = convert(varchar(max),null) \n" +
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
+			"    ,SpidWaitInfo     = convert(varchar(max),null) \n" +    // filled in with 'localCalculation(...)' with values from CmSpidWait
 			"    ,deqp.query_plan \n" +
 			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
@@ -496,8 +512,11 @@ extends CountersModel
 			"    ,HasSpidLocks        = convert(bit,0) \n" +
 			"    ,HasBlockedSpidsInfo = convert(bit,0) \n" +
 			"    ,SpidLockCount       = convert(int,-1) \n" +
+			"    ,HasSpidWaitInfo     = convert(bit   , 0) \n"  +             // filled in with 'localCalculation(...)' with values from CmSpidWait
 //			"    ,DB_NAME(p1.dbid) AS database_name  \n" +
 			"    ,(SELECT db.name FROM sys.databases db WHERE db.database_id = p1.dbid) AS database_name \n" +
+			"    ,SpidWaitCountSum    = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait
+			"    ,SpidWaitTimeMsSum   = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait 
 			"    ,p1.cpu                                       --der.cpu_time \n" +
 			"    ,0                                            --der.reads   \n" +
 			"    ,0                                            --der.logical_reads   \n" +
@@ -541,9 +560,11 @@ extends CountersModel
 			"    ,percent_complete          = -1\n" +
 			"    ,estimated_completion_time = -1\n" +
 			"    ,estimated_finish_time     = NULL \n" + 
+			"    ,p1.sql_handle \n" +
 			"    ,dest.text \n" +
 			"    ,SpidLocks        = convert(varchar(max),null) \n" +
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
+			"    ,SpidWaitInfo     = convert(varchar(max),null) \n" +    // filled in with 'localCalculation(...)' with values from CmSpidWait
 			"    ,''                                           --deqp.query_plan  \n" +
 			LiveQueryPlanBlocked +
 			"";
@@ -701,6 +722,25 @@ extends CountersModel
 			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
 		}
 
+
+		if ("HasSpidWaitInfo".equals(colName))
+		{
+			// Find 'SpidLocks' column, is so get it and set it as the tool tip
+			int pos_SpidWaitInfo = findColumn("SpidWaitInfo");
+			if (pos_SpidWaitInfo > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_SpidWaitInfo);
+				if (cellVal instanceof String)
+				{
+					return "<html>" + cellVal + "</html>";
+				}
+			}
+		}
+		if ("SpidWaitInfo".equals(colName))
+		{
+			return cellValue == null ? null : "<html>" + cellValue + "</html>";
+		}
+
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 	/** add HTML around the string, and translate line breaks into <br> */
@@ -734,6 +774,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Get Live Query Plan"      , PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), DEFAULT_sample_liveQueryPlan, "Also get LIVE queryplan" ));
 		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks , DEFAULT_sample_holdingLocks ), DEFAULT_sample_holdingLocks , "Include SPID's that holds locks even if that are not active in the server." ));
 		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks    , DEFAULT_sample_spidLocks    ), DEFAULT_sample_spidLocks    , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+		list.add(new CmSettingsHelper("Get SPID Waits"           , PROPKEY_sample_spidWaits    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidWaits    , DEFAULT_sample_spidWaits    ), DEFAULT_sample_spidWaits    , "Get info from CmSpidWait/dm_exec_session_wait_stats. This will help us to diagnose in detail what we have been waiting on since the last sample. NOTE: CmSpidWait needs to be enabled"));
 
 		return list;
 	}
@@ -750,6 +791,7 @@ extends CountersModel
 		else if ("HasLiveQueryplan"   .equals(colName)) return Boolean.class;
 		else if ("HasSpidLocks"       .equals(colName)) return Boolean.class;
 		else if ("HasBlockedSpidsInfo".equals(colName)) return Boolean.class;
+		else if ("HasSpidWaitInfo"    .equals(colName)) return Boolean.class;
 		else return super.getColumnClass(columnIndex);
 	}
 
@@ -820,6 +862,7 @@ extends CountersModel
 //		boolean getDbccStacktrace = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false);
 		boolean getLiveQueryPlan  = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan,  DEFAULT_sample_liveQueryPlan);
 		boolean getSpidLocks      = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidLocks,      DEFAULT_sample_spidLocks);
+		boolean getSpidWaits      = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidWaits,      DEFAULT_sample_spidWaits);
 
 		// Where are various columns located in the Vector 
 		int pos_SPID = -1;
@@ -833,12 +876,18 @@ extends CountersModel
 		int pos_HasSpidLocks        = -1, pos_SpidLocks        = -1, pos_SpidLockCount = -1;
 		int pos_HasBlockedSpidsInfo = -1, pos_BlockedSpidsInfo = -1;
 
+		int pos_SpidWaitCountSum    = -1;
+		int pos_SpidWaitTimeMsSum   = -1;
+		int pos_HasSpidWaitInfo     = -1, pos_SpidWaitInfo     = -1;
+
+		
 		int pos_BlockingOtherSpids = -1, pos_BlockingSPID   = -1;
 		int pos_ImBlockingOthersMaxTimeInSec= -1;
 		int pos_wait_time          = -1;
 		int pos_multiSampled       = -1;
 		int pos_StartTime          = -1;
 		int pos_StmntStart         = -1; // this would be like "row number" inside a procedure (but it's the "character position" instead of row number 
+		int pos_sql_handle         = -1;
 //		int waitEventID = 0;
 //		String waitEventDesc = "";
 //		String waitClassDesc = "";
@@ -886,11 +935,17 @@ extends CountersModel
 //			else if (colName.equals("StartTime"))                    pos_StartTime                  = colId;
 			else if (colName.equals("start_time"))                   pos_StartTime                  = colId;
 			else if (colName.equals("StmntStart"))                   pos_StmntStart                 = colId;
+			else if (colName.equals("sql_handle"))                   pos_sql_handle                 = colId;
 			else if (colName.equals("HasSpidLocks"))                 pos_HasSpidLocks               = colId;
 			else if (colName.equals("SpidLocks"))                    pos_SpidLocks                  = colId;
 			else if (colName.equals("SpidLockCount"))                pos_SpidLockCount              = colId;
 			else if (colName.equals("HasBlockedSpidsInfo"))          pos_HasBlockedSpidsInfo        = colId;
 			else if (colName.equals("BlockedSpidsInfo"))             pos_BlockedSpidsInfo           = colId;
+
+			else if (colName.equals("SpidWaitCountSum"))             pos_SpidWaitCountSum           = colId;
+			else if (colName.equals("SpidWaitTimeMsSum"))            pos_SpidWaitTimeMsSum          = colId;
+			else if (colName.equals("HasSpidWaitInfo"))              pos_HasSpidWaitInfo            = colId;
+			else if (colName.equals("SpidWaitInfo"))                 pos_SpidWaitInfo               = colId;
 		}
 
 //		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
@@ -973,6 +1028,13 @@ System.out.println("Can't find the position for columns ('StmntStart'="+pos_Stmn
 			return;
 		}
 
+		if (pos_sql_handle < 0)
+		{
+System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_handle+")");
+			_logger.debug("Can't find the position for columns ('sql_handle'="+pos_sql_handle+")");
+			return;
+		}
+
 		if (pos_HasSpidLocks < 0 || pos_SpidLocks < 0 || pos_SpidLockCount < 0)
 		{
 			_logger.debug("Can't find the position for columns ('HasSpidLocks'="+pos_HasSpidLocks+", 'SpidLocks'="+pos_SpidLocks+", 'SpidLockCount'="+pos_SpidLockCount+")");
@@ -1004,16 +1066,23 @@ System.out.println("Can't find the position for columns ('StmntStart'="+pos_Stmn
 
 			if (prevPkExists)
 			{
-				Object o_this_StartTime = counters  .getValueAt(rowId,       pos_StartTime);
-				Object o_prev_StartTime = prevSample.getValueAt(prevPkRowId, pos_StartTime);
+				Object o_this_StartTime = counters  .getValueAt(       rowId,       pos_StartTime);
+				Object o_prev_StartTime = prevSample.getValueAt(       prevPkRowId, pos_StartTime);
 
-				int this_StmntStart = counters  .getValueAsInteger(rowId,       pos_StmntStart, -1);
-				int prev_StmntStart = prevSample.getValueAsInteger(prevPkRowId, pos_StmntStart, -1);
+				int    this_StmntStart = counters   .getValueAsInteger(rowId,       pos_StmntStart, -1);
+				int    prev_StmntStart = prevSample .getValueAsInteger(prevPkRowId, pos_StmntStart, -1);
+
+				String this_sql_handle = counters   .getValueAsString(rowId,        pos_sql_handle); // returns "" if null
+				String prev_sql_handle = prevSample .getValueAsString(prevPkRowId,  pos_sql_handle); // returns "" if null
 
 				if (o_this_StartTime instanceof Timestamp && o_prev_StartTime instanceof Timestamp)
 				{
-					if (o_this_StartTime.equals(o_prev_StartTime) && this_StmntStart == prev_StmntStart)
+					if ( o_this_StartTime.equals(o_prev_StartTime) 
+					    && this_StmntStart == prev_StmntStart 
+					    && this_sql_handle.equals(prev_sql_handle))
+					{
 						counters.setValueAt("YES", rowId, pos_multiSampled);
+					}
 				}
 			}
 
@@ -1077,6 +1146,200 @@ System.out.println("Can't find the position for columns ('StmntStart'="+pos_Stmn
 						}
 					}
 				}
+				
+				// Get information from: CmSpidWait
+				if (getSpidWaits)
+				{
+					if (pos_SpidWaitCountSum == -1 || pos_SpidWaitTimeMsSum == -1 || pos_HasSpidWaitInfo == -1 || pos_SpidWaitInfo == -1)
+					{
+						_logger.info("Skipping 'getSpidWaits' due to not all columns was found. pos_SpidWaitCountSum=" + pos_SpidWaitCountSum + ", pos_SpidWaitTimeMsSum=" + pos_SpidWaitTimeMsSum + ", pos_HasSpidWaitInfo=" + pos_HasSpidWaitInfo + ", pos_SpidWaitInfo=" + pos_SpidWaitInfo);
+					}
+					else
+					{
+						CountersModel cmSpidWait = getCounterController().getCmByName(CmSpidWait.CM_NAME);
+						if (cmSpidWait != null && cmSpidWait.isActive())
+						{
+							int[] spidWaitRowIds = cmSpidWait.getAbsRowIdsWhere("session_id", spid);
+//System.out.println("XXXXXXXXXXXXXXXXXXXXXX: spid=" + spid + ", spidWaitRowIds=" + StringUtil.toCommaStr(spidWaitRowIds));
+							if (spidWaitRowIds != null && spidWaitRowIds.length > 0)
+							{
+								int pos_wait_type            = cmSpidWait.findColumn("wait_type");
+								int pos_WaitClass            = cmSpidWait.findColumn("WaitClass");
+								int pos_waiting_tasks_count  = cmSpidWait.findColumn("waiting_tasks_count");
+								int pos_wait_time_ms         = cmSpidWait.findColumn("wait_time_ms");
+
+								if (pos_wait_type == -1 || pos_WaitClass == -1 || pos_HasSpidWaitInfo == -1 || pos_SpidWaitInfo == -1)
+								{
+									_logger.info("Issue finding columns in CmSpidWait: cmSpidWait.pos_wait_type=" + pos_wait_type + ", cmSpidWait.pos_WaitClass=" + pos_WaitClass + "', cmSpidWait.pos_WaitClass=" + pos_WaitClass + ", cmSpidWait.pos_waiting_tasks_count=" + pos_waiting_tasks_count + ", cmSpidWait.pos_wait_time_ms=" + pos_wait_time_ms);
+								}
+								
+								NumberFormat nf = NumberFormat.getInstance();
+
+								long abs_spidWaitCountSum  = 0;
+								long diff_spidWaitCountSum = 0;
+
+								long abs_spidWaitTimeMsSum  = 0;
+								long diff_spidWaitTimeMsSum = 0;
+								
+								String abs_waitInfoTable    = "";
+								String diff_waitInfoTable   = "";
+								String rate_waitInfoTable   = "";
+
+								for (int spidWaitRowId : spidWaitRowIds)
+								{
+									String wait_type = cmSpidWait.getAbsString(spidWaitRowId, pos_wait_type);
+									String WaitClass = cmSpidWait.getAbsString(spidWaitRowId, pos_WaitClass);
+
+									long cmSpidWait_sampleInterval = cmSpidWait.getSampleInterval();
+									
+									// NOTE: cmSpidWait.get>>Rate<<Value... is not YET CALCULATED here
+									//       so we need to calculate it ourself... hence the 'cmSpidWait_sampleInterval'
+
+									long   abs_waiting_tasks_count  = cmSpidWait.getAbsValueAsLong   (spidWaitRowId, pos_waiting_tasks_count, 0L);
+									long   diff_waiting_tasks_count = cmSpidWait.getDiffValueAsLong  (spidWaitRowId, pos_waiting_tasks_count, 0L);
+									double rate_waiting_tasks_count = cmSpidWait_sampleInterval <= 0 ? 0 : (diff_waiting_tasks_count * 1.0) / (cmSpidWait_sampleInterval / 1000.0);
+
+									long   abs_wait_time_ms  = cmSpidWait.getAbsValueAsLong   (spidWaitRowId, pos_wait_time_ms, 0L);
+									long   diff_wait_time_ms = cmSpidWait.getDiffValueAsLong  (spidWaitRowId, pos_wait_time_ms, 0L);
+									double rate_wait_time_ms = cmSpidWait_sampleInterval <= 0 ? 0 : (diff_wait_time_ms * 1.0) / (cmSpidWait_sampleInterval / 1000.0);
+
+									double abs_spidWaitTimePerCount  = abs_waiting_tasks_count  <= 0 ? 0D : ( abs_wait_time_ms*1.0) / ( abs_waiting_tasks_count*1.0);
+									double diff_spidWaitTimePerCount = diff_waiting_tasks_count <= 0 ? 0D : (diff_wait_time_ms*1.0) / (diff_waiting_tasks_count*1.0);
+
+//System.out.println("            >>>>>>>>> : spid=" + spid + ", spidWaitRowId=" + spidWaitRowId + ", wait_type='" + StringUtil.left(wait_type, 40) + "', WaitClass='" + StringUtil.left(WaitClass, 15) + "', abs_waiting_tasks_count=" + abs_waiting_tasks_count + ", diff_waiting_tasks_count=" + diff_waiting_tasks_count + ", abs_wait_time_ms=" + abs_wait_time_ms + ", diff_wait_time_ms=" + diff_wait_time_ms + ".");
+									// Add to SUM
+									abs_spidWaitCountSum   += abs_waiting_tasks_count;
+									diff_spidWaitCountSum  += diff_waiting_tasks_count;
+
+									// Add to SUM
+									abs_spidWaitTimeMsSum  += abs_wait_time_ms;
+									diff_spidWaitTimeMsSum += diff_wait_time_ms;
+									
+									// ABS Table
+									if (abs_waiting_tasks_count > 0 || abs_wait_time_ms > 0)
+									{
+										abs_waitInfoTable += "<tr>"
+												+ "<td>" + spid                                              + "</td>"
+												+ "<td>" + wait_type                                         + "</td>"
+												+ "<td>" + WaitClass                                         + "</td>"
+												+ "<td align='right'>" + nf.format(abs_waiting_tasks_count)  + "</td>"
+												+ "<td align='right'>" + nf.format(abs_wait_time_ms)         + "</td>"
+												+ "<td align='right'>" + nf.format(abs_spidWaitTimePerCount) + "</td>"
+												+ "</tr> \n";
+									}
+
+									// DIFF Table
+									if (diff_waiting_tasks_count > 0 || diff_wait_time_ms > 0)
+									{
+										diff_waitInfoTable += "<tr>"
+												+ "<td>" + spid                                               + "</td>"
+												+ "<td>" + wait_type                                          + "</td>"
+												+ "<td>" + WaitClass                                          + "</td>"
+												+ "<td align='right'>" + nf.format(diff_waiting_tasks_count)  + "</td>"
+												+ "<td align='right'>" + nf.format(diff_wait_time_ms)         + "</td>"
+												+ "<td align='right'>" + nf.format(diff_spidWaitTimePerCount) + "</td>"
+												+ "</tr> \n";
+									}
+
+									// RATE Table
+									if (rate_waiting_tasks_count > 0 || rate_wait_time_ms > 0)
+									{
+										rate_waitInfoTable += "<tr>"
+												+ "<td>" + spid                                               + "</td>"
+												+ "<td>" + wait_type                                          + "</td>"
+												+ "<td>" + WaitClass                                          + "</td>"
+												+ "<td align='right'>" + nf.format(rate_waiting_tasks_count)  + "</td>"
+												+ "<td align='right'>" + nf.format(rate_wait_time_ms)         + "</td>"
+												+ "<td align='right'>" + nf.format(cmSpidWait_sampleInterval) + "</td>" 
+												+ "<td align='right'>" + nf.format(diff_waiting_tasks_count)  + "</td>"
+												+ "<td align='right'>" + nf.format(diff_wait_time_ms)         + "</td>" 
+												+ "<td align='right'>" + nf.format(diff_spidWaitTimePerCount) + "</td>"
+												+ "</tr> \n";
+									}
+								} // end: loop PK rows
+								
+								// SpidWaitCountSum
+								newSample.setValueAt(abs_spidWaitCountSum , rowId, pos_SpidWaitCountSum);
+								diffData .setValueAt(diff_spidWaitCountSum, rowId, pos_SpidWaitCountSum);
+
+								// SpidWaitTimeMsSum
+								newSample.setValueAt(abs_spidWaitTimeMsSum , rowId, pos_SpidWaitTimeMsSum);
+								diffData .setValueAt(diff_spidWaitTimeMsSum, rowId, pos_SpidWaitTimeMsSum);
+
+								// ABS: SpidWaitInfo
+								if (StringUtil.hasValue(abs_waitInfoTable))
+								{
+									String strVal = "<table class='dbx-table-basic tablesorter' border='1'> \n"
+											+ "<tr>"
+											+ " <th>spid</th>"
+											+ " <th>wait_type</th>"
+											+ " <th>WaitClass</th>"
+											+ " <th>ABS: waiting_tasks_count</th>"
+											+ " <th>ABS: wait_time_ms</th>"
+											+ " <th>ABS: WaitTimePerCount</th>"
+											+ "</tr> \n" 
+											+ abs_waitInfoTable
+											+ "</table> \n";
+									newSample.setValueAt(true  , rowId, pos_HasSpidWaitInfo);
+									newSample.setValueAt(strVal, rowId, pos_SpidWaitInfo);
+								}
+
+								// DIFF: SpidWaitInfo
+								if (StringUtil.hasValue(diff_waitInfoTable))
+								{
+									String strVal = "<table class='dbx-table-basic tablesorter' border='1'> \n"
+											+ "<tr>"
+											+ " <th>spid</th>"
+											+ " <th>wait_type</th>"
+											+ " <th>WaitClass</th>"
+											+ " <th>DIFF: waiting_tasks_count</th>"
+											+ " <th>DIFF: wait_time_ms</th>"
+											+ " <th>DIFF: WaitTimePerCount</th>"
+											+ "</tr> \n" 
+											+ diff_waitInfoTable
+											+ "</table>";
+									diffData.setValueAt(true  , rowId, pos_HasSpidWaitInfo);
+									diffData.setValueAt(strVal, rowId, pos_SpidWaitInfo);
+								}
+
+								// RATE: SpidWaitInfo
+								if (StringUtil.hasValue(rate_waitInfoTable))
+								{
+									String strVal = "<table class='dbx-table-basic tablesorter' border='1'> \n"
+											+ "<tr>"
+											+ " <th>spid</th>"
+											+ " <th>wait_type</th>"
+											+ " <th>WaitClass</th>"
+											+ " <th>RATE: waiting_tasks_count</th>"
+											+ " <th>RATE: wait_time_ms</th>"
+											+ " <th>CmSpidWait: SampleInterval Ms</th>"
+											+ " <th>DIFF: waiting_tasks_count</th>"
+											+ " <th>DIFF: wait_time_ms</th>"
+											+ " <th>DIFF: WaitTimePerCount</th>"
+											+ "</tr> \n" 
+											+ rate_waitInfoTable
+											+ "</table>";
+
+									// Since RATE values are not yet available, we cant do 'rateData.setValueAt(...)'
+									// So for the RATE values, lest save it in a Map<rowId, SpidWaitInfoTable>
+									// and in method 'localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)'
+									//        we use '_tmpRate_spidWaitInfoMap' and set the RATE values
+									//        at the end of 'localCalculationRatePerSec' the '_tmpRate_spidWaitInfoMap' should be set to NULL
+									// Yes this is a "hack", but it was much simpler that other solutions...
+									if (_tmpRate_spidWaitInfoMap == null)
+										_tmpRate_spidWaitInfoMap = new HashMap<>();
+									
+									_tmpRate_spidWaitInfoMap.put(rowId, strVal);
+									//rateData.setValueAt(true  , rowId, pos_HasSpidWaitInfo);
+									//rateData.setValueAt(strVal, rowId, pos_SpidWaitInfo);
+								}
+							} // end: has spidWaitRowIds
+
+						} // end: cmSpidWait != null
+						
+					} // end: has-wanted-columns
+
+				} // end: getSpidWaits
 
 //				String monSqlText    = "Not properly configured (need 'SQL batch capture' & 'max SQL text monitored').";
 //				String dbccSqlText   = "User does not have: sa_role";
@@ -1215,7 +1478,36 @@ System.out.println("Can't find the position for columns ('StmntStart'="+pos_Stmn
 			} // end: loop all rows
 		} // end: BlockedSpidsInfo
 	} // end: method
+
+	/**
+	 *  <pre>Map&lt;rowId, HtmlTableStr&gt; </pre><br>
+	 *  Used to temporary hold SPID Wait RATE information... which isn't available at the time in localCalculation(prevSample, newSample, diffData)
+	 *  <p>
+	 *  This is set in method: localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)' <br>
+	 *  And should be set to NULL at the end of method: localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
+	 */
+	private Map<Integer, String> _tmpRate_spidWaitInfoMap;
 	
+	@Override
+	public void localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
+	{
+		// in method 'localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)'
+		// the RATE values are not yet created, so we need to set/adjust the column "SpidWaitInfo" and set the HTML Table created in 'localCalculation()'
+		// Yes this is a "hack", but it was much simpler that other solutions...
+		if (_tmpRate_spidWaitInfoMap != null)
+		{
+			for (Entry<Integer, String> entry : _tmpRate_spidWaitInfoMap.entrySet())
+			{
+				int    rowId        = entry.getKey();
+				String spidWaitInfo = entry.getValue();
+
+				rateData.setValueAt(spidWaitInfo, rowId, "SpidWaitInfo");
+			}
+
+			_tmpRate_spidWaitInfoMap = null;
+		}
+	}
+
 //	@Override
 //	protected Object clone() throws CloneNotSupportedException
 //	{
@@ -1318,7 +1610,7 @@ System.out.println("Can't find the position for columns ('StmntStart'="+pos_Stmn
 
 		StringBuilder sb = new StringBuilder(1024);
 
-		sb.append("<TABLE BORDER=1>\n");
+		sb.append("<TABLE BORDER=1 class='dbx-table-basic'>\n");
 //		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>LockInfo</TH> <TH>XML Showplan</TH> </TR>\n");
 		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>LockInfo</TH> </TR>\n");
 		

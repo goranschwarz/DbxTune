@@ -63,10 +63,11 @@ implements ICentralPersistWriter
 	 *   <li> 9  - Change column 'data', 'lastData' from varchar(80) -> 160     in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
 	 *   <li> 10 - Add    column 'GraphProps'                                   to table 'DbxGraphProperties' </li>
 	 *   <li> 11 - Change column 'data', 'lastData' from varchar(160) -> 512    in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
+	 *   <li> 12 - Change column 'duration' from 10 to 80                        in table 'DbxAlarmActive', 'DbxAlarmHistory' </li>
+	 *   <li> 13 - Add column 'graphCollectedCount', 'absCollectedRows', 'diffCollectedRows', 'rateCollectedRows'   in tables *schema*.'DbxSessionSampleDetailes'</li>
 	 * </ul> 
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 13;
-//	public static int DBX_CENTRAL_DB_VERSION = 14; // ok to reuse: 14 was scrapped which was the CollectorMgtHostname, CollectorMgtPort, CollectorMgtInfo
+	public static int DBX_CENTRAL_DB_VERSION = 14;
 	
 	
 	public enum Table
@@ -562,6 +563,10 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"absSaveRows"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"diffSaveRows"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"rateSaveRows"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"graphCollectedCount"   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"absCollectedRows"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"diffCollectedRows"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(lq+"rateCollectedRows"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"sqlRefreshTime"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"guiRefreshTime"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(lq+"lcRefreshTime"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
@@ -949,20 +954,24 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("absSaveRows")           .append(rq).append(", "); // 10
 			sbSql.append(lq).append("diffSaveRows")          .append(rq).append(", "); // 11
 			sbSql.append(lq).append("rateSaveRows")          .append(rq).append(", "); // 12
-			sbSql.append(lq).append("sqlRefreshTime")        .append(rq).append(", "); // 13
-			sbSql.append(lq).append("guiRefreshTime")        .append(rq).append(", "); // 14
-			sbSql.append(lq).append("lcRefreshTime")         .append(rq).append(", "); // 15
-			sbSql.append(lq).append("nonCfgMonHappened")     .append(rq).append(", "); // 16
-			sbSql.append(lq).append("nonCfgMonMissingParams").append(rq).append(", "); // 17
-			sbSql.append(lq).append("nonCfgMonMessages")     .append(rq).append(", "); // 18
-			sbSql.append(lq).append("isCountersCleared")     .append(rq).append(", "); // 19
-			sbSql.append(lq).append("hasValidSampleData")    .append(rq).append(", "); // 20
-			sbSql.append(lq).append("exceptionMsg")          .append(rq).append(", "); // 21
-			sbSql.append(lq).append("exceptionFullText")     .append(rq).append(" ");  // 22
+			sbSql.append(lq).append("graphCollectedCount")   .append(rq).append(", "); // 13
+			sbSql.append(lq).append("absCollectedRows")      .append(rq).append(", "); // 14
+			sbSql.append(lq).append("diffCollectedRows")     .append(rq).append(", "); // 15
+			sbSql.append(lq).append("rateCollectedRows")     .append(rq).append(", "); // 16
+			sbSql.append(lq).append("sqlRefreshTime")        .append(rq).append(", "); // 17
+			sbSql.append(lq).append("guiRefreshTime")        .append(rq).append(", "); // 18
+			sbSql.append(lq).append("lcRefreshTime")         .append(rq).append(", "); // 19
+			sbSql.append(lq).append("nonCfgMonHappened")     .append(rq).append(", "); // 20
+			sbSql.append(lq).append("nonCfgMonMissingParams").append(rq).append(", "); // 21
+			sbSql.append(lq).append("nonCfgMonMessages")     .append(rq).append(", "); // 22
+			sbSql.append(lq).append("isCountersCleared")     .append(rq).append(", "); // 23
+			sbSql.append(lq).append("hasValidSampleData")    .append(rq).append(", "); // 24
+			sbSql.append(lq).append("exceptionMsg")          .append(rq).append(", "); // 25
+			sbSql.append(lq).append("exceptionFullText")     .append(rq).append(" ");  // 26
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
 		}
 		else if (type.equals(Table.GRAPH_PROPERTIES))
 		{
