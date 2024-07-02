@@ -314,6 +314,8 @@ extends CountersModel
 			return;
 		}
 		
+		// Used to NOT lookup AFTER first time it happened in THIS loop
+		int getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId = -1;
 		
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
@@ -330,16 +332,24 @@ extends CountersModel
 				if (getSpidLocks)
 				{
 					List<LockRecord> lockList = null;
-					try
+					if (getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId != -1)
 					{
-						lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid);
-						spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
-						if (spidLocks == null)
-							spidLocks = "No Locks found";
+						spidLocks = "Timeout - on rowId=" + getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId + ", so skipping LockSummary for this ActiveStatement (spid=" + spid + ")";
 					}
-					catch (TimeoutException ex)
+					else
 					{
-						spidLocks = "Timeout - when getting lock information";
+						try
+						{
+							lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid, this);
+							spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
+							if (spidLocks == null)
+								spidLocks = "No Locks found";
+						}
+						catch (TimeoutException ex)
+						{
+							spidLocks = "Timeout - when getting lock information: " + ex.getMessage();
+							getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId = rowId;
+						}
 					}
 					
 					spidLockCount = 0;

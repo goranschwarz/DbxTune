@@ -211,7 +211,35 @@ public class RSyntaxTextAreaEditorKitX
 	}
 
 	/**
-	 * to uppercase
+	 * Enable Disable "mark words" on double click
+	 */
+	@SuppressWarnings("serial")
+	public static class MarkWordOnDoubleClickAction extends RecordableTextAction
+	{
+		protected MarkWordOnDoubleClickAction(String name)
+		{
+			super(name);
+		}
+
+		@Override
+		public void actionPerformedImpl(ActionEvent e, RTextArea textArea)
+		{
+			RSyntaxTextArea syntaxTextArea = (textArea instanceof RSyntaxTextArea) ? (RSyntaxTextArea) textArea : null;
+			if (syntaxTextArea != null)
+			{
+				RSyntaxTextAreaX.setHiglightWordModeEnabled(syntaxTextArea, ! RSyntaxTextAreaX.isHiglightWordModeEnabled(syntaxTextArea) );
+			}
+		}
+
+		@Override
+		public final String getMacroID()
+		{
+			return getName();
+		}
+	}
+
+	/**
+	 * Format SQL
 	 */
 	@SuppressWarnings("serial")
 	public static class FormatSqlAction extends RecordableTextAction

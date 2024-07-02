@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -2425,6 +2426,10 @@ extends CountersModel
 						+ dataColName + "("    + DataColName_pos       + ")='" + DataColValue      + "'.");
 			}
 
+			// Maintain: _diskIdToLabel
+			setDiskDescription(LogOsDisk , LogOsDiskLabel);
+			setDiskDescription(DataOsDisk, DataOsDiskLabel);
+			
 			String logOsName  = LogOsDisk;
 			String dataOsName = DataOsDisk;
 			
@@ -2452,6 +2457,68 @@ extends CountersModel
 
 		// Set the values
 		tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+	}
+
+	/** A map (specific for Windows machines. Map&lt;DiskDrive, DiskLabel&gt; */
+	private Map<String, String> _diskIdToLabel = new ConcurrentHashMap<>();
+	
+	private void setDiskDescription(String driveName, String labelName)
+	{
+		if (_diskIdToLabel == null)
+			return;
+
+		String tmpDriveName = driveName.trim();
+		if (tmpDriveName.endsWith(":\\"))
+			tmpDriveName = tmpDriveName.substring(0, tmpDriveName.length()-2); // looks like "D:\"  -- remove last ":\"
+
+		tmpDriveName = tmpDriveName.trim();
+		
+		_diskIdToLabel.put(tmpDriveName, labelName);
+	}
+	/**
+	 * Get a "Label" for a specific disk drive
+	 * @param driveName       Name of the drive, for example "D", "D:", "D:\", "1 D:"
+	 * @param doFormat        If you want to format in the following way: "$driveName [$label]"
+	 * 
+	 * @return 
+	 * <ul>
+	 *   <li>The label name of the driveName</li>
+	 *   <li>or if doFormat=true "$driveName [$label]"</li>
+	 *   <li>If the driveName can't be resolved, simply return the inputed "driveName"</li>
+	 * </ul>
+	 * 
+	 * This may typically be called from: CmOsIoStat -- to Resolve "1 D:" --> "1 D: [labelName]"
+	 */
+	public String getDiskDescription(String driveName, boolean doFormat)
+	{
+		if (StringUtil.isNullOrBlank(driveName))
+			return driveName;
+
+		if (_diskIdToLabel == null)
+			return driveName;
+		
+		if (_diskIdToLabel.isEmpty())
+			return driveName;
+		
+		// 
+		String tmpDriveName = driveName.trim();
+		if (tmpDriveName.matches("^[0-9] .*")) tmpDriveName = tmpDriveName.substring(2);                          // looks like "1 D:" -- remove "1 "
+		if (tmpDriveName.endsWith("\\"))       tmpDriveName = tmpDriveName.substring(0, tmpDriveName.length()-1); // looks like "D:\"  -- remove last "\"
+		if (tmpDriveName.endsWith(":"))        tmpDriveName = tmpDriveName.substring(0, tmpDriveName.length()-1); // looks like "D:"   -- remove last ":"
+
+		String labelName = _diskIdToLabel.get(tmpDriveName);
+		if (labelName == null)
+		{
+			// NOT Found, return input...
+			return driveName;
+		}
+		else
+		{
+			if (doFormat)
+				return driveName + " [" + labelName + "]";
+
+			return labelName;
+		}
 	}
 
 	@Override
@@ -2567,6 +2634,9 @@ extends CountersModel
 			else if (colName.equals("OldestTranLocks"))        pos_OldestTranLocks        = colId;
 		}
 
+		// Used to NOT lookup AFTER first time it happened in THIS loop
+		int getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId = -1;
+		
 		// Loop on all rows
 		for (int rowId = 0; rowId < newSample.getRowCount(); rowId++)
 		{
@@ -2589,16 +2659,24 @@ extends CountersModel
 					String sysLocks = "This was disabled";
 					if (getLocks)
 					{
-						try
+						if (getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId != -1)
 						{
-							sysLocks  = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), OldestTranSpid, true, false);
-							if (sysLocks == null)
-								sysLocks = NO_LOCKS_WAS_FOUND; // "No locks was found"; //sysLocks = "Not Available";
+							sysLocks = "Timeout - on rowId=" + getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId + ", so skipping LockSummary for this ActiveStatement (spid=" + OldestTranSpid + ")";
 						}
-						catch (TimeoutException ex)
+						else
 						{
-							sysLocks = "Timeout - when getting lock information";
-						}						
+							try
+							{
+								sysLocks  = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), OldestTranSpid, this, true, false);
+								if (sysLocks == null)
+									sysLocks = NO_LOCKS_WAS_FOUND; // "No locks was found"; //sysLocks = "Not Available";
+							}
+							catch (TimeoutException ex)
+							{
+								sysLocks = "Timeout - when getting lock information: " + ex.getMessage();
+								getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId = rowId;
+							}						
+						}
 					}
 
 					// Set the values: *Has* and *Text*

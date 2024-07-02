@@ -469,11 +469,11 @@ extends CountersModel
 				+ "    ,a.query \n"
 
 				+ "    ,CASE WHEN a.state != 'active' OR a.state IS NULL THEN -1 \n"
-				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from a.query_start)) * 1000) as int) \n"
+				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from a.query_start)) * 1000) as bigint) \n"
 				+ "     END as \"execTimeInMs\" \n"
 
 				+ "    ,CASE WHEN a.xact_start IS NULL THEN -1 \n"
-				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from a.xact_start)) * 1000) as int) \n"
+				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from a.xact_start)) * 1000) as bigint) \n"
 				+ "     END as \"xactTimeInMs\" \n"
 
 				+ "from pg_stat_activity a \n"
@@ -717,13 +717,13 @@ extends CountersModel
 				String state = cm.getDiffValue(r, "state") + "";
 				if ("active".equals(state))
 				{
-					int execTimeInMs = -1;
+					long execTimeInMs = -1;
 
 					// get 'execTimeInMs'
 					Object o_execTimeInMs = cm.getDiffValue(r, "execTimeInMs");
 					if (o_execTimeInMs != null && o_execTimeInMs instanceof Number)
 					{
-						execTimeInMs = ((Number)o_execTimeInMs).intValue();
+						execTimeInMs = ((Number)o_execTimeInMs).longValue();
 					}
 //					else
 //					{
@@ -736,9 +736,9 @@ extends CountersModel
 //						}
 //					}
 					
-					int StatementExecInSec = (int)execTimeInMs / 1000;
+					long StatementExecInSec = (int)execTimeInMs / 1000;
 					
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
+					long threshold = Configuration.getCombinedConfiguration().getLongProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");

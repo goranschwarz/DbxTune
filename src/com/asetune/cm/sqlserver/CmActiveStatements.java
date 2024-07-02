@@ -384,11 +384,12 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
 			"    ,des.status \n" +
 			"    ,der.command \n" +
-			"    ,tran_id  = der.transaction_id \n" +
-			"    ,tran_name=(SELECT TOP 1 tat.name \n" +
-			"                FROM       sys.dm_tran_session_transactions tst \n" +
-	        "                INNER JOIN sys.dm_tran_active_transactions  tat ON tst.transaction_id = tat.transaction_id \n" + 
-	        "                WHERE tst.session_id = des.session_id) \n" +
+			"    ,tran_id         = der.transaction_id \n" +
+			"    ,tran_begin_time = (SELECT TOP 1 tat.transaction_begin_time FROM sys.dm_tran_active_transactions tat WHERE tat.transaction_id = der.transaction_id) \n" +
+			"    ,tran_name       = (SELECT TOP 1 tat.name \n" +
+			"                        FROM       sys.dm_tran_session_transactions tst \n" +
+	        "                        INNER JOIN sys.dm_tran_active_transactions  tat ON tst.transaction_id = tat.transaction_id \n" + 
+	        "                        WHERE tst.session_id = des.session_id) \n" +
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = der.statement_start_offset \n" +
 			"    ,des.[HOST_NAME] \n" +
@@ -493,13 +494,17 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
 			"    ,p1.status                                    --des.status \n" +
 			"    ,p1.cmd                                       --der.command \n" +
-			"    ,tran_id  = (SELECT TOP 1 tst.transaction_id \n" +
-			"                 FROM sys.dm_tran_session_transactions tst \n" +
-			"                 WHERE tst.session_id = p1.spid) \n" +
-			"    ,tran_name= (SELECT TOP 1 tat.name \n" +
-			"                 FROM       sys.dm_tran_session_transactions tst \n" +
-	        "                 INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
-	        "                 WHERE tst.session_id = p1.spid) \n" +
+			"    ,tran_id         = (SELECT TOP 1 tst.transaction_id \n" +
+			"                        FROM sys.dm_tran_session_transactions tst \n" +
+			"                        WHERE tst.session_id = p1.spid) \n" +
+			"    ,tran_begin_time = (SELECT TOP 1 tat.transaction_begin_time \n" +
+			"                        FROM       sys.dm_tran_session_transactions tst \n" +
+	        "                        INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
+	        "                        WHERE tst.session_id = p1.spid) \n" +
+			"    ,tran_name       = (SELECT TOP 1 tat.name \n" +
+			"                        FROM       sys.dm_tran_session_transactions tst \n" +
+	        "                        INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
+	        "                        WHERE tst.session_id = p1.spid) \n" +
 			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = -1 \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
@@ -536,9 +541,9 @@ extends CountersModel
 			"    ,UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END  \n" +
 			"    ,p1.program_name                              --des.[program_name] \n" +
 			      contextInfoStr2 +
-			"    ,p1.waittype                                  --der.wait_type \n" +
+			"    ,p1.lastwaittype                              --der.wait_type \n" +  // p1.waittype -- is 'binary(2)' -- Description='Reserved.' ... so 'lastwaittype' seems better
 			"    ,p1.waittime                                  --der.wait_time \n" +
-			"    ,p1.waittype                                  --der.last_wait_type \n" +
+			"    ,p1.lastwaittype                              --der.last_wait_type \n" +
 			"    ,p1.waitresource                              --der.wait_resource \n" +
 			"    ,'unknown' \n" +
 //			"--    ,CASE des.transaction_isolation_level \n" +
@@ -579,15 +584,39 @@ extends CountersModel
 //			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
 //			"";
 
-		String sql2 = 
-			"SELECT DISTINCT /* ${cmCollectorName} */  \n" +
-			sql2_cols +
-			"FROM sys.sysprocesses p1 \n" +
-			"JOIN sys.sysprocesses p2 ON p1.spid = p2.spid AND p2.blocked > 0 \n" +
-			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
-			"WHERE 1 = 1 \n" + 
-			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
-			"";
+		//-----------------------------------------------------------------------
+		// do we REALLY NEED section 2 "BLOCKER" in SQL Server...
+		// DEFAULT: do NOT sample... if we need it it can be enabled with config: CmActiveStatements.sample.BLOCKER
+		//
+		String sql2 = ""; 
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("CmActiveStatements.sample.BLOCKER", false))
+		{
+			sql2 = 
+				"\n" +
+				"UNION ALL \n" +
+				"\n" +
+					
+				"SELECT DISTINCT /* ${cmCollectorName} */  \n" +
+				sql2_cols +
+				"FROM sys.sysprocesses p1 \n" +
+				"JOIN sys.sysprocesses p2 ON p1.spid = p2.spid AND p2.blocked > 0 \n" +
+				"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
+				"WHERE 1 = 1 \n" + 
+				"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
+				"";
+		}
+		else
+		{
+			sql2 = 
+					"\n" +
+					"\n" +
+					"/*----------------------------------------------------------------------------------------------------------------------------------*/ \n" +
+					"/* NOTE: The 'BLOCKER' Section is disabled, but can be enabled using Configuration Property: CmActiveStatements.sample.BLOCKER=true */ \n" +
+					"/*----------------------------------------------------------------------------------------------------------------------------------*/ \n" +
+					"\n" +
+					"";
+		}
+
 		
 
 		//-----------------------------------------------------------------------
@@ -599,31 +628,29 @@ extends CountersModel
 			String cols = sql2_cols;
 			cols = cols.replace("'BLOCKER'", "'HOLDING-LOCKS'");
 
-			sql3 = 	"\n" +
-					"UNION ALL \n" +
-					"\n" +
-					
-			"SELECT /* ${cmCollectorName} */  \n" +
-			cols +
-			"FROM sys.sysprocesses p1 \n" +
-			"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
-			"WHERE p1.open_tran > 0 \n" + 
-			"  AND p1.status    = 'sleeping' \n" +  
-			"  AND p1.cmd       = 'AWAITING COMMAND' \n" +  
-			"  AND exists (SELECT * FROM sys.dm_tran_locks WHERE request_session_id = p1.spid AND resource_type != 'DATABASE') \n" + 
-//			"  AND p1.spid in (select session_id from sys.dm_tran_session_transactions) \n" + 
-			"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
-			"";
+			sql3 = 	
+				"\n" +
+				"UNION ALL \n" +
+				"\n" +
+
+				"SELECT /* ${cmCollectorName} */  \n" +
+				cols +
+				"FROM sys.sysprocesses p1 \n" +
+				"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
+				"WHERE p1.open_tran > 0 \n" + 
+				"  AND p1.status    = 'sleeping' \n" +  
+				"  AND p1.cmd       = 'AWAITING COMMAND' \n" +  
+				"  AND exists (SELECT * FROM sys.dm_tran_locks WHERE request_session_id = p1.spid AND resource_type != 'DATABASE') \n" + 
+//				"  AND p1.spid in (select session_id from sys.dm_tran_session_transactions) \n" + 
+				"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
+				"";
 		}
 
 		return 
 			sql1 +
-				"\n" +
-				"UNION ALL \n" +
-				"\n" +
 			sql2 +
 			sql3 +
-				"";
+			"";
 	}
 
 
@@ -1052,7 +1079,10 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 			_logger.debug("Can't find the position for columns ('HasBlockedSpidsInfo'="+pos_HasBlockedSpidsInfo+")");
 			return;
 		}
-		
+
+		// Used to NOT lookup AFTER first time it happened in THIS loop
+		int getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId = -1;
+
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
 		{
@@ -1125,16 +1155,25 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 				if (getSpidLocks)
 				{
 					List<LockRecord> lockList = null;
-					try
+
+					if (getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId != -1)
 					{
-						lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid);
-						spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
-						if (spidLocks == null)
-							spidLocks = "No Locks found";
+						spidLocks = "Timeout - on rowId=" + getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId + ", so skipping LockSummary for this ActiveStatement (spid=" + spid + ")";
 					}
-					catch (TimeoutException ex)
+					else
 					{
-						spidLocks = "Timeout - when getting lock information";
+						try
+						{
+							lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid, this);
+							spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
+							if (spidLocks == null)
+								spidLocks = "No Locks found";
+						}
+						catch (TimeoutException ex)
+						{
+							spidLocks = "Timeout - when getting lock information: " + ex.getMessage();
+							getLockSummaryForSpid_timeoutOnPrevoisLookup_rowId = rowId;
+						}
 					}
 					
 					spidLockCount = 0;

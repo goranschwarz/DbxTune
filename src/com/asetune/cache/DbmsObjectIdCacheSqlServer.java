@@ -244,6 +244,12 @@ extends DbmsObjectIdCache
 				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + "): Problems getting schema/table/index name. The query has timed out (after " + execTime + " ms). But the lock information will still be returned (but without the schema/table/index name.");
 				throw new TimeoutException();
 			}
+			// Msg 208, Text='Invalid object name '${dbname}.sys.objects'.'
+			else if ( ex.getErrorCode() == 208 )
+			{
+				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + "): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "', execTime=" + execTime + " ms. Clear the ObjectIdCache for dbid=" + dbid, ex);
+				clearCacheForDbid(dbid);
+			}
 			else
 			{
 				_logger.warn("DbmsObjectIdCacheSqlServer.get(conn, lookupType=" + lookupType + ", dbid=" + dbid + " [dbname=" + dbname + "], lookupId=" + lookupId + ")): Problems when executing sql: " + sql + ". SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "', execTime=" + execTime + " ms.", ex);

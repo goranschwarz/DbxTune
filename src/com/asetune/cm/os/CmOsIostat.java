@@ -43,6 +43,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.gui.CmOsIostatPanel;
 import com.asetune.cm.os.gui.IoStatDeviceMapperDialog;
+import com.asetune.cm.sqlserver.CmDatabases;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
@@ -337,6 +338,44 @@ extends CounterModelHostMonitor
 			-1);   // minimum height
 	}
 	
+	private String resolveWindowsDriveToLabel(String diskName)
+	{
+		if (StringUtil.isNullOrBlank(diskName))
+			return diskName;
+
+		if ("_Total".equals(diskName))
+			return diskName;
+
+		CountersModel tmpCm;
+		
+		// Test first to get info from 'CmOsDiskSpace' that should hold ALL Disks
+		// 'sqlserver.CmDatabases' only holds disk that are involved with SQL Server
+		tmpCm = getCounterController().getCmByName(CmOsDiskSpace.CM_NAME);
+		if (tmpCm != null)
+		{
+			CmOsDiskSpace cmOsDiskSpace = (CmOsDiskSpace) tmpCm;
+			
+			String label = cmOsDiskSpace.getDiskDescription(diskName, false);
+			
+			// If any label was found, return it as "a formated entry"
+			if ( ! diskName.equals(label) )
+				return diskName + " [" + label + "]";
+				// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< RETURN 
+		}
+
+		// Get info from: sqlserver.CmDatabases
+		tmpCm = getCounterController().getCmByName(com.asetune.cm.sqlserver.CmDatabases.CM_NAME);
+		if (tmpCm != null)
+		{
+			CmDatabases sqlServerCmDatabases = (CmDatabases) tmpCm;
+			
+			return sqlServerCmDatabases.getDiskDescription(diskName, true);
+			// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< RETURN 
+		}
+
+		return diskName;
+	}
+
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
@@ -361,7 +400,9 @@ extends CounterModelHostMonitor
 					Double avgDiskSecRead  = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read" , 0d); // 0 as default
 					Double avgDiskSecWrite = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write", 0d); // 0 as default
 
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 //					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Transfer") / 1000d; // make this into MILLISEC instead of SEC
 					dArray[i] = (avgDiskSecRead + avgDiskSecWrite) * 1000d; // make this into MILLISEC instead of SEC
 				}
@@ -461,7 +502,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Read", 0d) * 1000d; // make this into MILLISEC instead of SEC
 				}
 
@@ -533,7 +576,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Write", 0d) * 1000d; // make this into MILLISEC instead of SEC
 				}
 
@@ -605,7 +650,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk sec/Transfer", 0d) * 1000d; // make this into MILLISEC instead of SEC
 				}
 
@@ -684,7 +731,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Avg. Disk Queue Length", 0d);
 				}
 
@@ -766,7 +815,9 @@ extends CounterModelHostMonitor
 					Double idleTimePct = this.getAbsValueAsDouble(i, "% Idle Time", 0d);
 					Double busyTimePct = 100d - idleTimePct;
 
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 				//	dArray[i] = this.getAbsValueAsDouble(i, "% Disk Time");
 					dArray[i] = busyTimePct;
 				}
@@ -849,7 +900,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Disk Transfers/sec", 0d);
 				}
 
@@ -931,10 +984,12 @@ extends CounterModelHostMonitor
 			{
 				Double[] dArray = new Double[this.getRowCount()];
 				String[] lArray = new String[dArray.length];
-
+				
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Disk Reads/sec", 0d);
 				}
 
@@ -1012,7 +1067,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Disk Writes/sec", 0d);
 				}
 
@@ -1090,7 +1147,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 				}
 
@@ -1168,7 +1227,9 @@ extends CounterModelHostMonitor
 
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 				}
 
@@ -1249,7 +1310,9 @@ extends CounterModelHostMonitor
 					Double diskReadsSec   = this.getAbsValueAsDouble(i, "Disk Reads/sec", 0d);
 					Double diskReadKbSec  = this.getAbsValueAsDouble(i, "Disk Read Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = diskReadsSec <= 0d ? 0d : NumberUtils.round(diskReadKbSec / diskReadsSec, 1);
 				}
 
@@ -1330,7 +1393,9 @@ extends CounterModelHostMonitor
 					Double diskWritesSec  = this.getAbsValueAsDouble(i, "Disk Writes/sec", 0d);
 					Double diskWriteKbSec = this.getAbsValueAsDouble(i, "Disk Write Bytes/sec", 0d) / 1024d; // transform from bytes to KB
 
-					lArray[i] = this.getAbsString       (i, "Instance");
+					String labelValue = resolveWindowsDriveToLabel(this.getAbsString(i, "Instance"));
+
+					lArray[i] = labelValue;
 					dArray[i] = diskWritesSec <= 0d ? 0d : NumberUtils.round(diskWriteKbSec / diskWritesSec, 1);
 				}
 

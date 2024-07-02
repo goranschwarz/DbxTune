@@ -37,7 +37,6 @@ import org.apache.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.asetune.Version;
-import com.asetune.cache.DbmsObjectIdCache.ObjectType;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -401,6 +400,21 @@ public abstract class DbmsObjectIdCache
 		_dbid_objectId_dbmsLookupNotFoundCounter = new HashMap<>();
 		
 		_statResetCalls++;
+	}
+
+	/**
+	 * Remove cached objects for a specific database id
+	 * 
+	 * @param dbid
+	 */
+	public void clearCacheForDbid(long dbid)
+	{
+		if (_dbNamesMap       != null) _dbNamesMap       .remove(dbid);
+		if (_dbid_objectId    != null) _dbid_objectId    .remove(dbid);
+		if (_dbid_partitionId != null) _dbid_partitionId .remove(dbid);
+		if (_dbid_hobtId      != null) _dbid_hobtId      .remove(dbid);
+
+		if (_dbid_objectId_dbmsLookupNotFoundCounter != null) _dbid_objectId_dbmsLookupNotFoundCounter.remove(dbid);
 	}
 
 	/**

@@ -1874,9 +1874,18 @@ extends CountersModel
 			if (requestsWaitingForWorkers > threshold)
 			{
 				String extendedDescText = "";
-				String extendedDescHtml = getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
+				String extendedDescHtml =        getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
 				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS);
+				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
 				
+				CountersModel cmWaitStats = getCounterController().getCmByName(CmWaitStats.CM_NAME);
+				if (cmWaitStats != null)
+				{
+					extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TIME);
+					extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_COUNT);
+					extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TPW);
+				}
+
 				AlarmEvent ae = new AlarmEventOutOfWorkerThreads(cm, threshold, requestsWaitingForWorkers);
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				

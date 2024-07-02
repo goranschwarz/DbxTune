@@ -20,7 +20,9 @@
  ******************************************************************************/
 package com.asetune.cm.postgres;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,17 +42,20 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.postgres.gui.CmPgReplicationPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
-import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFramePostgres;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
 /**
@@ -154,17 +159,46 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-//	private static final String PROP_PREFIX                         = CM_NAME;
-                                                                    
+	private static final String PROP_PREFIX                          = CM_NAME;
+
+	public static final String  PROPKEY_update_primary               = PROP_PREFIX + ".update.primary";
+	public static final boolean DEFAULT_update_primary               = true;
+
+	public static final String  PROPKEY_update_primaryIntervalInSec  = PROP_PREFIX + ".update.primary.intervalInSec";
+	public static final long    DEFAULT_update_primaryIntervalInSec  = 300;
+
+
 	public static final String GRAPH_NAME_TOTAL_LAG       = "TotalLag";
 	public static final String GRAPH_NAME_REP_AGE_SECONDS = "RepAgeSec";
 	
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmPgReplicationPanel(this);
-//	}
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmPgReplicationPanel(this);
+	}
 	
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_update_primary              , DEFAULT_update_primary);
+		Configuration.registerDefaultValue(PROPKEY_update_primaryIntervalInSec , DEFAULT_update_primaryIntervalInSec);
+	}
+	
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Update Primary Instance",          PROPKEY_update_primary              , Boolean.class, conf.getBooleanProperty(PROPKEY_update_primary               , DEFAULT_update_primary               ), DEFAULT_update_primary              , "Update Active Instance" ));
+		list.add(new CmSettingsHelper("Update Primary Instance Interval", PROPKEY_update_primaryIntervalInSec , Long   .class, conf.getLongProperty   (PROPKEY_update_primaryIntervalInSec  , DEFAULT_update_primaryIntervalInSec  ), DEFAULT_update_primaryIntervalInSec , "Update Active Instance, Every X second." ));
+
+		return list;
+	}
+
 	@Override
 	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
@@ -392,6 +426,157 @@ extends CountersModel
 		}
 	}
 
+	/**
+	 * Hook into the refresh and BEFORE we refresh data, try to update data...
+	 */
+	@Override
+	protected int refreshGetData(DbxConnection conn) throws Exception
+	{
+		updatePrimaryInstance(conn);
+
+		// Now call super that does *all* work of refreshing data
+		return super.refreshGetData(conn);
+	}
+
+	/**
+	 * Update a table 'postgrestune_ha_dummy_update' if the is a primary/Active Instance.
+	 * <p>
+	 * <b>NOTE:</b> Since Postgres saves tables with "all lowercase"... the table name should be mentioned in LOWERCASE, especially when checking for existence
+	 * @param conn
+	 */
+	private void updatePrimaryInstance(DbxConnection conn)
+	{
+		boolean updateActive           = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_update_primary,              DEFAULT_update_primary);
+		long updateActiveIntervalInSec = Configuration.getCombinedConfiguration().getLongProperty   (PROPKEY_update_primaryIntervalInSec, DEFAULT_update_primaryIntervalInSec);
+
+		// How many seconds since last update...
+		long secondsSinceLastActiveUpdate = TimeUtils.msDiffNow(_lastUpdateOfActive) / 1000;
+		
+		
+		if (updateActive && secondsSinceLastActiveUpdate > updateActiveIntervalInSec)
+		{
+			String sql;
+			_lastUpdateOfActive = System.currentTimeMillis();
+			
+			boolean isInRwMode     = false;
+			boolean hasSubscribers = false;
+			boolean tableExists    = false;
+
+			// Check if this instance is in RW mode
+			// Check if We have any subscribers (or replication destinations)
+			// Check if the table exists, if not create it (if we have the correct authorization to do so)
+			sql = ""
+			    + "select \n"
+			    + "      pg_is_in_recovery() as pg_is_in_recovery \n"
+			    + "    , (select count(*) from pg_stat_replication) as repl_dest_count \n"
+			    + "    , (select count(*) from pg_class where relname = 'postgrestune_ha_dummy_update' and relkind in('r', 'v') ) as do_table_exist \n"
+			    + "";
+
+			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					isInRwMode     = rs.getBoolean(1) == false;
+					hasSubscribers = rs.getInt    (2) > 0;
+					tableExists    = rs.getInt    (3) > 0;
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting status information (pg_is_in_recovery, pg_stat_replication, check-if-table-exists) from DBMS. Skipping 'updatePrimaryInstance'. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+sql);
+				return;
+				// <<<<<<<<<<<<<<<<<< return <<<<<<<<<<<<<<<<<<<<<
+			}
+
+			if ( ! hasSubscribers )
+			{
+				_logger.debug("Current DBMS Instance has NO subscribers (or replication destinations). Skipping 'updatePrimaryInstance'.");
+				return;
+				// <<<<<<<<<<<<<<<<<< return <<<<<<<<<<<<<<<<<<<<<
+			}
+			
+			if ( ! isInRwMode )
+			{
+				_logger.info("Current DBMS Instance is NOT in Read/Write mode. Skipping 'updatePrimaryInstance'.");
+				return;
+				// <<<<<<<<<<<<<<<<<< return <<<<<<<<<<<<<<<<<<<<<
+			}
+
+			// If the table 'postgrestune_ha_dummy_update' DO NOT exists, create it (if we have the correct authorization to do so)
+			String createTableSql = "CREATE TABLE IF NOT EXISTS postgrestune_ha_dummy_update(id varchar(36), primaryServerName varchar(80), ts timestamptz, primary key(id)); \n";
+			String grantTableSql  = "GRANT SELECT, INSERT, UPDATE, DELETE ON postgrestune_ha_dummy_update to public; \n";
+
+			if ( ! tableExists )
+			{
+				sql = createTableSql + grantTableSql;
+				try ( Statement stmnt = conn.createStatement() )
+				{
+					_logger.info("updatePrimaryInstance: Table 'postgrestune_ha_dummy_update' did NOT exist, createing the table.");
+					stmnt.executeUpdate(sql);
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn("Problems creating/granting table 'postgrestune_ha_dummy_update'. Skipping 'updatePrimaryInstance'. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+sql);
+
+					ConnectionProp connProps = conn.getConnProp();
+					String curentUsername = connProps == null ? "-unknown-" : connProps.getUsername();
+
+					_logger.error("Current user '" + curentUsername + "' may not be authorized to create the table 'postgrestune_ha_dummy_update' at server '" + conn.getDbmsServerNameNoThrow() + "'. To woraround this issue create the table manually using the following SQL Statements: \n"
+							+ createTableSql + " \n"
+							+ grantTableSql  + " \n"
+							);
+					return;
+					// <<<<<<<<<<<<<<<<<< return <<<<<<<<<<<<<<<<<<<<<
+				}
+			}
+			
+			// Finally: update the table 'postgrestune_ha_dummy_update'
+			String selectData = "SELECT CAST(gen_random_uuid() AS varchar(36)), inet_server_addr()||':'||inet_server_port(), now(); \n";
+			if (conn.getDbmsVersionNumber() >= Ver.ver(9, 5))
+				selectData = "SELECT CAST(gen_random_uuid() AS varchar(36)), inet_server_addr()||':'||inet_server_port()||', cluster_name='''||current_setting('cluster_name')||'''', now(); \n";
+
+			String updateTable = 
+					"DELETE FROM postgrestune_ha_dummy_update; \n" +
+					" \n" +
+					"INSERT INTO postgrestune_ha_dummy_update(id, primaryServerName, ts) \n" +
+					selectData +
+					"";
+
+			try ( Statement stmnt = conn.createStatement() )
+			{
+				_logger.debug("updating 'postgrestune_ha_dummy_update'.");
+				stmnt.executeUpdate(updateTable);
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems updating dummy table 'postgrestune_ha_dummy_update'. But continuing with next step. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "', SQL=" + updateTable);
+				
+				// Msg 42501 -- "Error 42501" or "Permission Denied"
+				if (ex.getErrorCode() == 42501 || ex.getMessage().toLowerCase().contains("permission denied"))
+				{
+					ConnectionProp connProps = conn.getConnProp();
+					String curentUsername = connProps == null ? "-unknown-" : connProps.getUsername();
+
+					_logger.error("Current user '" + curentUsername + "' are not authorized to delete/insert on table 'postgrestune_ha_dummy_update' at server '" + conn.getDbmsServerNameNoThrow() + "'. To woraround this issue create the table manually using the following SQL Statements: \n"
+							+ createTableSql + " \n"
+							+ grantTableSql  + " \n"
+							);
+				}
+			}
+		} // end: updateActive
+	}
+	private long _lastUpdateOfActive = 0;
+
+
+
+
+
+
+
+	/*----------------------------------------------------------------------------------------------
+	 * ALARM Handling
+	 *----------------------------------------------------------------------------------------------
+	 */
 	@Override
 	public void sendAlarmRequest()
 	{

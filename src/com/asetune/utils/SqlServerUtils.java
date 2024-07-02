@@ -42,6 +42,7 @@ import com.asetune.ICounterController.DbmsOption;
 import com.asetune.Version;
 import com.asetune.cache.DbmsObjectIdCache;
 import com.asetune.cache.DbmsObjectIdCache.ObjectInfo;
+import com.asetune.cm.CountersModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 
@@ -448,10 +449,11 @@ public class SqlServerUtils
 	 * 
 	 * @param conn           The connection to use 
 	 * @param spid           The SPID we want to get locks for
+	 * @param cmSource       This can be null. If not null, the name will be added in error messages.
 	 * @return List&lt;LockRecord&gt; never null
 	 * @throws TimeoutException 
 	 */
-	public static List<LockRecord> getLockSummaryForSpid(DbxConnection conn, int spid) 
+	public static List<LockRecord> getLockSummaryForSpid(DbxConnection conn, int spid, CountersModel cmSource) 
 	throws TimeoutException
 	{
 
@@ -520,20 +522,51 @@ public class SqlServerUtils
 //			    + "                  END \n"
 			    + "    ,lockCount  = count(*) \n"
 			    + "from master.dbo.syslockinfo WITH (READUNCOMMITTED) \n"
-			    + "where rsc_type != 2 -- DB \n"
-			    + "  and (req_spid = ? OR req_status = 3) -- req_status=3 is 'WAIT' \n"
+			    + "where rsc_type != 2  /* rsc_type=2 is 'DB' */ \n"
+			    + "  and (req_spid = ? OR req_status = 3)  /* req_status=3 is 'WAIT' */ \n"
 			    + "group by req_spid, rsc_dbid, rsc_objid, rsc_indid, rsc_type, req_mode, req_status \n"
 			    + "";
 
+		// Below are a POSSIBLE SQL for 'sys.dm_tran_locks'
+		// BUT: It doesn't work with 'index_id' (see comments below)
+//		String sql = ""
+//			    + "select \n"
+//			    + "     spid       = request_session_id \n"
+//			    + "    ,dbid       = resource_database_id \n"
+//			    + "    ,objectid   = resource_associated_entity_id  -- id or hobt \n"
+//			    + "--    ,indexId    = rsc_indid  -- THIS IS NOT AVAILABLE IN 'dm_tran_locks' it needs to be derived from 'resource_associated_entity_id' (which may be a HOBT -- that can be checked against: select * from sys.partitions p where p.hobt_id = 72057784525783040 ...) \n"
+//			    + "--								+----------------------+-----------+--------+----------------+----------------------+---------+-----------------------+----------------+---------------------+ \n"
+//			    + "--								|partition_id          |object_id  |index_id|partition_number|hobt_id               |rows     |filestream_filegroup_id|data_compression|data_compression_desc| \n"
+//			    + "--								+----------------------+-----------+--------+----------------+----------------------+---------+-----------------------+----------------+---------------------+ \n"
+//			    + "--								|72 057 784 525 783 040|242 153 994|       1|               1|72 057 784 525 783 040|4 301 078|                      0|               0|NONE                 | \n"
+//			    + "--								+----------------------+-----------+--------+----------------+----------------------+---------+-----------------------+----------------+---------------------+ \n"
+//			    + "    ,resource_type \n"
+//			    + "    ,request_mode \n"
+//			    + "    ,request_status \n"
+//			    + "    ,lockCount  = count(*) \n"
+//			    + "from sys.dm_tran_locks WITH (READUNCOMMITTED) \n"
+//			    + "where resource_type not in('DATABASE') \n"
+//			    + "  and (request_session_id = 62 OR request_status = 'WAIT') -- req_status=3 is 'WAIT' \n"
+//			    + "group by request_session_id, resource_database_id, resource_associated_entity_id/*, rsc_indid*/, resource_type, request_mode, request_status ; \n"
+//			    + "";
+
+		// Here is another resource to look at 'WhatsUpLocks'
+		// https://github.com/erikdarlingdata/DarlingData/blob/07393ce85488b1bb237e276fa34e83d0c7a47858/Helper%20Views/WhatsUpLocks.sql
+		// This NEEDS current database context... So 'syslockinfo' might still be better...
+		
 		List<LockRecord> lockList = new ArrayList<>();
 		List<LockRecord> otherSpidsWaiting = null;
 
+//		int stmntTimeout = Configuration.getCombinedConfiguration().getIntProperty("SqlServerUtils.getLockSummaryForSpid.timeout.seconds", 1);
+		
+		// This can be a bit higher if we in caller gives up after FIRST timeout (consequent calls WILL probably timeout) 
+		int stmntTimeout = Configuration.getCombinedConfiguration().getIntProperty("SqlServerUtils.getLockSummaryForSpid.timeout.seconds", 3);
 		long execStartTime = System.currentTimeMillis();
 
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql)) // Auto CLOSE
 		{
-			// Timeout after 1 second --- if we get blocked when doing: object_name()
-			pstmnt.setQueryTimeout(1);
+			// Timeout after X second --- if we get blocked when doing: object_name()
+			pstmnt.setQueryTimeout(stmntTimeout);
 			
 			// set SPID
 			pstmnt.setInt(1, spid);
@@ -614,8 +647,9 @@ public class SqlServerUtils
 
 			if (ex.getMessage() != null && ex.getMessage().contains("query has timed out"))
 			{
-				_logger.warn("getLockSummaryForSpid: Problems getting Lock List (from syslockinfo). The query has timed out after execTimeInMs=" + execTime + ".");
-				throw new TimeoutException();
+				String msg = "getLockSummaryForSpid: Problems getting Lock List (from syslockinfo). from '" + (cmSource == null ? "-unknown-" : cmSource.getName()) + "'. The query has timed out after execTimeInMs=" + execTime + ". Consequent lookups might be skipped.";
+				_logger.warn(msg);
+				throw new TimeoutException(msg);
 			}
 			else
 			{
@@ -829,15 +863,16 @@ public class SqlServerUtils
 	 * 
 	 * @param conn           The connection to use 
 	 * @param spid           The SPID we want to get locks for
+	 * @param cmSource       This can be null. If not null, the name will be added in error messages.
 	 * @param asHtml         Produce a HTML table (if false a ASCII table will be produced)
 	 * @param htmlBeginEnd   (if asHtml=true) should we wrap the HTML with begin/end tags
 	 * @return
 	 * @throws TimeoutException 
 	 */
-	public static String getLockSummaryForSpid(DbxConnection conn, int spid, boolean asHtml, boolean htmlBeginEnd) 
+	public static String getLockSummaryForSpid(DbxConnection conn, int spid, CountersModel cmSource, boolean asHtml, boolean htmlBeginEnd) 
 	throws TimeoutException
 	{
-		List<LockRecord> lockList = getLockSummaryForSpid(conn, spid);
+		List<LockRecord> lockList = getLockSummaryForSpid(conn, spid, cmSource);
 
 		return getLockSummaryForSpid(lockList, asHtml, htmlBeginEnd);
 	}
