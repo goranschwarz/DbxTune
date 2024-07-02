@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -183,6 +184,9 @@ extends CounterModelHostMonitor
 
 		int usedPct_pos     = newSample.findColumn("UsedPct");
 
+		int filesystem_pos  = newSample.findColumn("Filesystem");
+		int mountedOn_pos   = newSample.findColumn("MountedOn");
+
 		if (sizeKB_pos == -1 || usedKB_pos == -1 || availableKB_pos == -1 || sizeMB_pos == -1 || usedMB_pos == -1 || availableMB_pos == -1 || usedPct_pos == -1)
 		{
 			_logger.warn("Column position not available. sizeKB_pos=" + sizeKB_pos + ", usedKB_pos=" + usedKB_pos + ", availableKB_pos=" + availableKB_pos + ", sizeMB_pos=" + sizeMB_pos + ", usedMB_pos=" + usedMB_pos + ", availableMB_pos=" + availableMB_pos + ", usedPct_pos=" + usedPct_pos + ".");
@@ -217,6 +221,100 @@ extends CounterModelHostMonitor
 					newSample.setValueAt(bd, r, usedPct_pos);
 				}
 			}
+			
+			if (filesystem_pos != -1 && mountedOn_pos != -1)
+			{
+				String filesystem = (String) newSample.getValueAt(r, filesystem_pos);
+				String mountedOn  = (String) newSample.getValueAt(r, mountedOn_pos);
+				setDiskDescription(filesystem, mountedOn);
+			}
+		} // end: loop rows
+	} // end: method
+
+
+	/** A map (specific for Windows machines. Map&lt;DiskDrive, DiskLabel&gt; */
+	private Map<String, String> _diskIdToLabel = new ConcurrentHashMap<>();
+	
+	private void setDiskDescription(String driveName, String labelName)
+	{
+		if (_diskIdToLabel == null)
+			return;
+
+		// Table typically looks like
+		// +----------+-------------+-------+------------+---------+-------+------------+-------+-----------------+
+		// |Filesystem|Size-KB      |Used-KB|Available-KB|Size-MB  |Used-MB|Available-MB|UsedPct|MountedOn        |
+		// +----------+-------------+-------+------------+---------+-------+------------+-------+-----------------+
+		// |C:        |  104 292 348|      8|           0|  101 847|      0|           0|   73,2|C:               |
+		// |D:        |2 097 148 924|      0|           0|2 047 996|      0|           0|    1,2|D: [SQL Data]    |
+		// |E:        |  209 712 124|      0|           0|  204 796|      0|           0|   61,5|E: [SQL Log]     |
+		// |F:        |  524 284 924|      0|           0|  511 996|      0|           0|   35,8|F: [SQL Backup]  |
+		// |G:        |  104 854 524|      0|           0|  102 396|      0|           0|   41,4|G: [Temp DB Data]|
+		// |H:        |   10 482 684|      0|           0|   10 236|      0|           0|   86,2|H: [Temp DB Log] |
+		// |I:        |3 145 709 564|      0|           0|3 071 981|      0|           0|     76|I: [Data]        |
+		// +----------+-------------+-------+------------+---------+-------+------------+-------+-----------------+
+
+		// get DRIVE-NAME
+		String tmpDriveName = driveName.trim();
+		if (tmpDriveName.endsWith(":"))
+		{
+			tmpDriveName = tmpDriveName.substring(0, tmpDriveName.length()-1); // looks like "D:"  -- remove last ":"
+			tmpDriveName = tmpDriveName.trim();
+		}
+
+
+		// get LABEL-NAME
+		String tmpLabelName = labelName.trim();
+		if (tmpLabelName.indexOf('[') != -1 && tmpLabelName.indexOf(']') != -1)
+		{
+			tmpLabelName = StringUtil.substringBetweenTwoChars(tmpLabelName, "[", "]");
+			tmpLabelName = tmpLabelName.trim();
+		}
+		
+		_diskIdToLabel.put(tmpDriveName, tmpLabelName);
+	}
+	/**
+	 * Get a "Label" for a specific disk drive
+	 * @param driveName       Name of the drive, for example "D", "D:", "D:\", "1 D:"
+	 * @param doFormat        If you want to format in the following way: "$driveName [$label]"
+	 * 
+	 * @return 
+	 * <ul>
+	 *   <li>The label name of the driveName</li>
+	 *   <li>or if doFormat=true "$driveName [$label]"</li>
+	 *   <li>If the driveName can't be resolved, simply return the inputed "driveName"</li>
+	 * </ul>
+	 * 
+	 * This may typically be called from: CmOsIoStat -- to Resolve "1 D:" --> "1 D: [labelName]"
+	 */
+	public String getDiskDescription(String driveName, boolean doFormat)
+	{
+		if (StringUtil.isNullOrBlank(driveName))
+			return driveName;
+
+		if (_diskIdToLabel == null)
+			return driveName;
+		
+		if (_diskIdToLabel.isEmpty())
+			return driveName;
+		
+		// 
+		String tmpDriveName = driveName.trim();
+		if (tmpDriveName.matches("^[0-9] .*")) tmpDriveName = tmpDriveName.substring(2);                          // looks like "1 D:" -- remove "1 "
+		if (tmpDriveName.endsWith("\\"))       tmpDriveName = tmpDriveName.substring(0, tmpDriveName.length()-1); // looks like "D:\"  -- remove last "\"
+		if (tmpDriveName.endsWith(":"))        tmpDriveName = tmpDriveName.substring(0, tmpDriveName.length()-1); // looks like "D:"   -- remove last ":"
+
+		String labelName = _diskIdToLabel.get(tmpDriveName);
+		if (labelName == null)
+		{
+			// NOT Found, return input...
+			return driveName;
+		}
+		else
+		{
+			if (doFormat)
+				return driveName + " [" + labelName + "]";
+
+			return labelName;
 		}
 	}
 

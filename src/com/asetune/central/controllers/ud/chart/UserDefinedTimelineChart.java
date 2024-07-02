@@ -76,7 +76,7 @@ extends UserDefinedChartAbstract
 	@Override
 	public String[] getKnownParameters()
 	{
-		return new String[] {"startTime", "endTime", "showKeys", "keyTransform", "minDurationInSeconds", "keepNames", "skipNames", "fillEnd", "generateDummyRows", "useDefaultTooltip"};
+		return new String[] {"startTime", "endTime", "showKeys", "keyTransform", "minDurationInSeconds", "keepNames", "skipNames", "fillEnd", "generateDummyRows", "useDefaultTooltip", "onlyLevelZero"};
 	}
 
 	@Override
@@ -149,7 +149,11 @@ extends UserDefinedChartAbstract
 		map.put("useDefaultTooltip",    "Fallback to use the components default tooltip instead of the 'enhanced' one.<br>"
 		                                    + "<br>"
 		                                    + "<b>Default</b>: <code>false</code>");
-		
+
+		map.put("onlyLevelZero",        "Only show Level Zero, this to get a high level overview of the executed work.<br>"
+		                                    + "<br>"
+		                                    + "<b>Default</b>: <code>false</code>");
+
 		return map;
 	}
 
@@ -161,6 +165,7 @@ extends UserDefinedChartAbstract
 				+ "&srvName=" + getDbmsServerName()
 				+ ( getRefresh() <= 0 ? "" : "&refresh=" + getRefresh() )
 				+ "&showKeys=false"
+				+ "&onlyLevelZero=false"
 				+ "&startTime="+_defaultStartTime;
 	}
 
@@ -363,6 +368,12 @@ extends UserDefinedChartAbstract
 
 		// get 'parameters'
 		Map<String, String> urlParams = getUrlParameters();
+
+		// >>> onlyLevelZero
+		boolean onlyLevelZero = false;
+		tmpParamStr  = urlParams.get("onlyLevelZero");
+		if (tmpParamStr != null && tmpParamStr.equalsIgnoreCase("true"))
+			onlyLevelZero = true;
 
 		// >>> showKeys
 		boolean showKeys = true;
@@ -572,6 +583,13 @@ extends UserDefinedChartAbstract
 					// Remember the previous row start/end Timestamps (if we need them at next row loop)
 					prevRowStartTs = startTs;
 					prevRowEndTs   = endTs;
+
+					// If the "onlyLevelZero", the "barText" must start with "[0] "
+					if (onlyLevelZero)
+					{
+						if ( ! barText.startsWith("[0] ") )
+							continue;
+					}
 
 					// If the "duration" is not long enough, skip this record!
 					if (minDurationInSeconds != -1 && startTs != null && endTs != null)

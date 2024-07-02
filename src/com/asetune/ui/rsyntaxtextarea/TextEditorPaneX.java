@@ -70,10 +70,11 @@ public class TextEditorPaneX extends TextEditorPane
 
 
 
-    public static final String formatSql   = "format-sql";
-    public static final String toUpperCase = "to-upper-case";
-    public static final String toLowerCase = "to-lower-case";
+//    public static final String formatSql   = "format-sql";
+//    public static final String toUpperCase = "to-upper-case";
+//    public static final String toLowerCase = "to-lower-case";
 
+	
     /**
 	 * initialize this class
 	 */

@@ -5791,11 +5791,26 @@ if (_guiOwner == null)
 	{
 		List<JMenu> list = new ArrayList<>();
 		
+//		list.add(createExtraOptions());
 		list.add(createGenerateSqlMenu());
 		list.add(createGenerateJavaMenu());
 		
 		return list;
 	}
+
+//	public JMenu createExtraOptions()
+//	{
+//		JMenu top = new JMenu("Editor Options");
+//
+////		JMenuItem markAllTextOnDoubleClick = new JCheckBoxMenuItem("Double Click, mark all Occurrences");
+//		JMenuItem markAllTextOnDoubleClick = new JCheckBoxMenuItem(new MarkOccurencesAction("Double Click, mark all Occurrences"));
+//		
+//		
+//		top.add(markAllTextOnDoubleClick);
+//		
+//		return top;
+//	}
+	
 
 	/*----------------------------------------------------------------------
 	**----------------------------------------------------------------------
@@ -6262,6 +6277,34 @@ if (_guiOwner == null)
 	/*----------------------------------------------------------------------
 	** END: Generate SQL Menu
 	**----------------------------------------------------------------------*/ 	
+	
+//	private class MarkOccurencesAction extends TextAction
+//	{
+//		private static final long serialVersionUID = 1L;
+//
+//		public MarkOccurencesAction(String name)
+//		{
+//			super(name);
+//		}
+//
+//		@Override
+//		public void actionPerformed(ActionEvent e)
+//		{
+//			JTextComponent textComp = getTextComponent(e);
+//
+//			System.out.println("MarkOccurencesAction: actionPerformed(): e.getSource()=" + e.getSource());
+//			System.out.println("MarkOccurencesAction: actionPerformed(): e=" + e);
+//
+//			if (textComp instanceof RSyntaxTextAreaX)
+//			{
+//				System.out.println("MarkOccurencesAction: --- IS -- RSyntaxTextAreaXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+//				RSyntaxTextAreaX rta = (RSyntaxTextAreaX) textComp;
+////				rta.setHiglightWordModeEnabled();
+//				System.out.println("MarkOccurencesAction: --- setHiglightWordModeEnabled()=" + rta.isHiglightWordModeEnabled());
+//			}
+//		}
+//	}
+	
 }
 
 

@@ -52,11 +52,13 @@ import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.gui.swing.ClickListener;
 import com.asetune.gui.swing.DeferredCaretListener;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.FormatSqlAction;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.MarkWordOnDoubleClickAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.NextWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.PreviousWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.SelectWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToLowerCaseAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToUpperCaseAction;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -65,6 +67,10 @@ extends RSyntaxTextArea
 {
 	private static final long	serialVersionUID	= 1L;
 
+	public static final String PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED = "RSyntaxTextAreaX.isHiglightWordMode.enabled";
+	public static final String PROPKEY_IS_IN_WORD_HIGLIGH_TMODE      = "RSyntaxTextAreaX.isInWordHiglightMode";
+
+	
 	/**
 	 * Constructor.
 	 */
@@ -158,6 +164,7 @@ extends RSyntaxTextArea
 		localInit(this);
 	}
 
+    public static final String markAllWordsOnDoubleClick = "mark-all-words-on-double-click";
     public static final String formatSql   = "format-sql";
     public static final String toUpperCase = "to-upper-case";
     public static final String toLowerCase = "to-lower-case";
@@ -177,10 +184,13 @@ extends RSyntaxTextArea
 		am.put(RTextAreaEditorKit.rtaIncreaseFontSizeAction,   new RSyntaxTextAreaEditorKit.IncreaseFontSizeAction());
 		am.put(RTextAreaEditorKit.rtaDecreaseFontSizeAction,   new RSyntaxTextAreaEditorKit.DecreaseFontSizeAction());
 
-		am.put(formatSql,   new FormatSqlAction(formatSql));
+//		am.put(onDoubleClick_markAllOccurrences, new MarkOccurencesAction(onDoubleClick_markAllOccurrences));
+
+		am.put(markAllWordsOnDoubleClick, new MarkWordOnDoubleClickAction(markAllWordsOnDoubleClick));
+		am.put(formatSql,                 new FormatSqlAction(formatSql));
 		
-		am.put(toUpperCase, new ToUpperCaseAction(toUpperCase));
-		am.put(toLowerCase, new ToLowerCaseAction(toLowerCase));
+		am.put(toUpperCase,               new ToUpperCaseAction(toUpperCase));
+		am.put(toLowerCase,               new ToLowerCaseAction(toLowerCase));
 
 		// FIXME: the am.put(), doesn't seems to work... I don't know what the issue is, need to dig into this later
 		// Add Ctrl+/ to comment un-comment lines
@@ -291,6 +301,9 @@ extends RSyntaxTextArea
 			@Override
 			public void doubleClick(MouseEvent e)
 			{
+				if ( ! isHiglightWordModeEnabled(textArea) )
+					return;
+
 				String str = textArea.getSelectedText();
 				if (StringUtil.hasValue(str) && str.length() > 1)
 				{
@@ -300,14 +313,17 @@ extends RSyntaxTextArea
 					context.setWholeWord(true);
 					SearchEngine.markAll(textArea, context);
 
-					textArea.putClientProperty("RSyntaxTextAreaX.isInWordHiglightMode", true);
+					textArea.putClientProperty(PROPKEY_IS_IN_WORD_HIGLIGH_TMODE, true);
 				}
 			}
 			@Override
 			public void singleClick(MouseEvent e)
 			{
+//				if ( ! isHiglightWordModeEnabled(textArea) )
+//					return;
+
 				// If we are NOT in highlight mode EXIT
-				Object isInWordHiglightMode = textArea.getClientProperty("RSyntaxTextAreaX.isInWordHiglightMode");
+				Object isInWordHiglightMode = textArea.getClientProperty(PROPKEY_IS_IN_WORD_HIGLIGH_TMODE);
 				if (isInWordHiglightMode != null && isInWordHiglightMode instanceof Boolean && (Boolean)isInWordHiglightMode == false)
 					return;
 				
@@ -316,6 +332,8 @@ extends RSyntaxTextArea
 				context.setMatchCase(true);
 				context.setWholeWord(true);
 				SearchEngine.markAll(textArea, context);
+
+				textArea.putClientProperty(PROPKEY_IS_IN_WORD_HIGLIGH_TMODE, false);
 			}
 		});
 		
@@ -325,6 +343,9 @@ extends RSyntaxTextArea
 			@Override
 			public void stopMoveWithSelection(CaretEvent e, String selectedText)
 			{
+				if ( ! isHiglightWordModeEnabled(textArea) )
+					return;
+
 				if (StringUtil.isNullOrBlank(selectedText))
 					return;
 				if (selectedText.length() <= 1)
@@ -341,7 +362,7 @@ extends RSyntaxTextArea
     				SearchResult sr = SearchEngine.markAll(textArea, context);
 //System.out.println("caretListener-searchResult: getCount()="+sr.getCount()+", getMarkedCount()="+sr.getMarkedCount());
 
-    				textArea.putClientProperty("RSyntaxTextAreaX.isInWordHiglightMode", true);
+    				textArea.putClientProperty(PROPKEY_IS_IN_WORD_HIGLIGH_TMODE, true);
 				}
 			}
 		});
@@ -350,7 +371,6 @@ extends RSyntaxTextArea
 		textArea.setMarkOccurrencesDelay(350);
 	}
 //	private static final Color SELECTION_MARK_COLOR   = new Color(238, 221, 130); // Light Goldenrod
-	
 
 	/** 
 	 * String that holds characters allowed in words<br>
@@ -473,4 +493,26 @@ super.setUseFocusableTips(false);
 		return text;
 	}
 	
+	public static boolean isHiglightWordModeEnabled(RSyntaxTextArea rsta)
+	{
+		Object isHiglightWordModeEnabled = rsta.getClientProperty(PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED);
+
+		if (isHiglightWordModeEnabled != null && isHiglightWordModeEnabled instanceof Boolean && (Boolean)isHiglightWordModeEnabled == false)
+			return false;
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		return conf.getBooleanProperty(PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED, true);
+
+	}
+	public static void setHiglightWordModeEnabled(RSyntaxTextArea rsta, boolean enable)
+	{
+		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+		if (tmpConf != null)
+		{
+			tmpConf.setProperty(PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED, enable);
+			tmpConf.save();
+		}
+		
+		rsta.putClientProperty(PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED, enable);
+	}
 }

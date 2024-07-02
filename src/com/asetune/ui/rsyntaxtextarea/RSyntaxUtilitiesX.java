@@ -135,12 +135,31 @@ public class RSyntaxUtilitiesX
 		menu.addSeparator();
 
 		//--------------------------------
+		// Mark Text on Double Click
+		if (syntaxTextArea != null)
+		{
+			mi = new JCheckBoxMenuItem(new RSyntaxTextAreaEditorKitX.MarkWordOnDoubleClickAction(RSyntaxTextAreaX.markAllWordsOnDoubleClick));
+			mi.setText("Mark all Words, on Double Click");
+//			mi = new JCheckBoxMenuItem("Mark all Words, on Double Click", RSyntaxTextAreaX.isHiglightWordModeEnabled(syntaxTextArea));
+			mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+//			mi.addActionListener(new ActionListener()
+//			{
+//				@Override
+//				public void actionPerformed(ActionEvent e)
+//				{
+//					RSyntaxTextAreaX.setHiglightWordModeEnabled(syntaxTextArea, ! RSyntaxTextAreaX.isHiglightWordModeEnabled(syntaxTextArea) );
+//				}
+//			});
+			menu.add(mi);
+		}
+
+		//--------------------------------
 		// Format SQL
 		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.FormatSqlAction(RSyntaxTextAreaX.formatSql));
 		mi.setText("Format SQL");
 		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | InputEvent.SHIFT_DOWN_MASK));
 		menu.add(mi);
-
+		
 		//--------------------------------
 		// Change Case
 		m = new JMenu("Change Case");
