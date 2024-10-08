@@ -21,7 +21,11 @@
 package com.asetune;
 
 import java.sql.Timestamp;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 
@@ -30,6 +34,8 @@ import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
+import com.asetune.cm.CmSummaryAbstract;
+import com.asetune.cm.CountersModel;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -44,16 +50,21 @@ extends Thread
 {
 	private static Logger _logger = Logger.getLogger(CounterCollectorThreadAbstract.class);
 
-	public static final String PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = "asetune.memory.monitor.threshold.low_on_memory.mb"; 
-	public static final int    DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = 130; 
+	public static final String PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = "dbxtune.memory.monitor.threshold.low_on_memory.mb"; 
+	public static final int    DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB  = 130; 
 
-	public static final String PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = "asetune.memory.monitor.threshold.out_of_memory.mb";
-	public static final int    DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = 30; 
+	public static final String PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = "dbxtune.memory.monitor.threshold.out_of_memory.mb";
+	public static final int    DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB  = 30; 
+
+	public static final String  PROPKEY_PRINT_CM_REFRESH_TIME                = "dbxtune.print.cm.refresh.time";
+//	public static final boolean DEFAULT_PRINT_CM_REFRESH_TIME                = false; 
+	public static final boolean DEFAULT_PRINT_CM_REFRESH_TIME                = true; 
 
 	static
 	{
 		Configuration.registerDefaultValue(PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB);
 		Configuration.registerDefaultValue(PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB);
+		Configuration.registerDefaultValue(PROPKEY_PRINT_CM_REFRESH_TIME                , DEFAULT_PRINT_CM_REFRESH_TIME);
 	}
 
 	public static final int MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = Configuration.getCombinedConfiguration().getIntProperty(PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB);
@@ -235,6 +246,69 @@ extends Thread
 
 		
 		return alarmEventSrvDown;
+	}
+
+	/**
+	 * Update some graphs that needs to be done AFTER ALL CM's are refreshed<br>
+	 * Typically CmSummary -- CmRefreshTime
+	 * @param refreshedCms 
+	 */
+	protected void postRefreshUpdateGraphData(LinkedHashMap<String, CountersModel> refreshedCms)
+	{
+		CmSummaryAbstract cmSummary = getCounterController().getSummaryCm();
+		if (cmSummary != null)
+		{
+			cmSummary.postAllRefreshUpdateGraphData(refreshedCms);
+		}
+	}
+
+	/**
+	 * Print out how long it took to do refresh of each CM took
+	 */
+	protected void printCmRefreshTimes()
+	{
+		boolean printRefreshTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_PRINT_CM_REFRESH_TIME, DEFAULT_PRINT_CM_REFRESH_TIME);
+		if ( ! printRefreshTime )
+			return;
+
+		long timeLimitInMs = 0;
+		
+		Map<String, Long> refreshTimeMap = new LinkedHashMap<>();
+		String maxCmName = "";
+		long   maxCmMs   = 0;
+		long   totalMs   = 0;
+//		long   cmCount   = 0;
+		for (CountersModel cm : getCounterController().getCmList())
+		{
+			if ( cm == null )
+				continue;
+
+			long refreshTimeMs = cm.getSqlRefreshTime() + cm.getLcRefreshTime();
+			refreshTimeMap.put(cm.getName(), refreshTimeMs);
+
+			totalMs += refreshTimeMs;
+//			cmCount++;
+
+			// Save MAX value
+			if (refreshTimeMs > maxCmMs)
+			{
+				maxCmName = cm.getName();
+				maxCmMs   = refreshTimeMs;
+			}
+		}
+		
+		// Sort by refreshTime
+		Map<String,Long> refreshTimeMapSorted = refreshTimeMap.entrySet().stream()
+				.sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
+//				.limit(10) // Only the top 10
+				.filter(entry -> entry.getValue() > timeLimitInMs)  // Only refreshTime above # ms
+				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
+		// Map to CSV
+		String sortedByRefreshTimeStr = StringUtil.toCommaStr(refreshTimeMapSorted);
+		
+//		_logger.info("RefreshTime: Total=" + totalMs + " ms, CmCount=" + cmCount + ", Max=[" + maxCmName + "=" + maxCmMs + "], sortedByRefreshTime=[" + sortedByRefreshTimeStr + "].   Note: to-disable-this: " + PROPKEY_PRINT_CM_REFRESH_TIME + "=false");
+		_logger.info("RefreshTime: Total=" + totalMs + " ms, Max=[" + maxCmName + "=" + maxCmMs + "], sortedByRefreshTime=[" + sortedByRefreshTimeStr + "].   Note: to-disable-this: " + PROPKEY_PRINT_CM_REFRESH_TIME + "=false");
 	}
 
 }

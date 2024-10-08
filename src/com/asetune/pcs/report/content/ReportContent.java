@@ -36,7 +36,9 @@ public class ReportContent
 	private String _serverName;
 //	private String _contentText = "";
 	private String _contentShortMessage; // used for Mail message or other "short messages"
+	private String _contentMinimalMessage; // used for Mail message or other EVEN SHORTER messages
 	private boolean _isShortMessageHtml = true;
+	private boolean _isMinimalMessageHtml = true;
 	private String _contentHtml;
 	private File   _contentFile;
 	private File   _lastSavedReportFile;
@@ -124,6 +126,50 @@ public class ReportContent
 	{
 		_isShortMessageHtml = isShortMessageHtml;
 	}
+
+
+	/**
+	 * Get MINIMAL message that can be used for email message and other SHORTER messages writers (for example as fallback messages, when the "getShortMessage()" is to big...
+	 * <p>
+	 * NOTE: The full Report content can still be attached in emails etc...<br>
+	 * use <code>getReportFile()</code> to get a handle to the full report
+	 * 
+	 * @param message
+	 * @return never null, if short report is not available, then "" will be returned. 
+	 */
+	public String getMinimalMessage()
+	throws IOException
+	{
+		if (_contentMinimalMessage == null)
+			return "";
+
+		return _contentMinimalMessage;
+	}
+
+	/**
+	 * Set any MINIMAL message that can be used for email message and other shorter messages writers
+	 * <p>
+	 * NOTE: The full Report content can still be attached in emails etc...
+	 * 
+	 * @param message
+	 */
+	public void setMinimalMessage(String message)
+	{
+		_contentMinimalMessage = message;
+	}
+
+	/** Does the MINIMAL message (if we have any" is of HTML Content */
+	public boolean isMinimalMessageOfHtml()
+	{
+		return _isMinimalMessageHtml;
+	}
+
+	/** Indicate the the MINIMAL message (if we have any" is of HTML Content */
+	public void setMinimalMessageOfHtml(boolean isMinimalMessageHtml)
+	{
+		_isMinimalMessageHtml = isMinimalMessageHtml;
+	}
+
 
 
 

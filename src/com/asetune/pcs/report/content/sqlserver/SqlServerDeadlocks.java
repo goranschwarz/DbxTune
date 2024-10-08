@@ -52,6 +52,12 @@ extends SqlServerAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		return true;

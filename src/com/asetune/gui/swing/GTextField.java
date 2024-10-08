@@ -252,7 +252,12 @@ implements ContentAssistable // Not sure how this is used.
 		setAutoCompleteEnabled(true);
 
 		for (int c=0; c<table.getColumnCount(); c++)
-			addCompletion( table.getColumnName(c) );
+		{
+			String colName = table.getColumnName(c);
+			if (colName.contains(" "))
+				colName = "[" + colName + "]";
+			addCompletion( colName );
+		}
 		
 //		table.addPropertyChangeListener(new PropertyChangeListener()
 //		{

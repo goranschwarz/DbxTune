@@ -613,10 +613,12 @@ extends PersistWriterBase
 	public static final boolean DEFAULT_errorSendAlarm                    = true;
 
 	public static final String  PROPKEY_errorSendAlarmThresholdInSec      = "{CLASSNAME}.{KEY}.error.sendAlarm.thresholdInSec";
-//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 30; // 30 minutes
-//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 60; // 1 Hour
-//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 90; // 1.5 Hour
-	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 120; // 2 Hour
+//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 30;  // 30  minutes
+//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 60;  // 1   Hour
+//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 90;  // 1.5 Hour
+//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 120; // 2   Hour
+//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 150; // 2.5 Hour
+	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 180; // 3   Hour
 
 	
 	public static final String  PROPKEY_errorSaveToDisk                   = "{CLASSNAME}.{KEY}.error.saveToDisk";

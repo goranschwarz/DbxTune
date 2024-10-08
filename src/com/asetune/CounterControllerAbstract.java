@@ -45,6 +45,7 @@ import javax.swing.JPanel;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cm.CmSummaryAbstract;
 import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
@@ -169,7 +170,8 @@ implements ICounterController
 //	// 20 extra for init time of XX seconds or so
 
 	
-	private CountersModel _summaryCm     = null;
+//	private CountersModel _summaryCm     = null;
+	private CmSummaryAbstract _summaryCm     = null;
 	private String        _summaryCmName = null;
 	private ISummaryPanel _summaryPanel  = null;
 
@@ -266,13 +268,15 @@ implements ICounterController
 	}
 
 	@Override
-	public CountersModel getSummaryCm()
+//	public CountersModel getSummaryCm()
+	public CmSummaryAbstract getSummaryCm()
 	{
 		return _summaryCm;
 	}
 
 	@Override
-	public void setSummaryCm(CountersModel cm)
+//	public void setSummaryCm(CountersModel cm)
+	public void setSummaryCm(CmSummaryAbstract cm)
 	{
 		_summaryCm = cm;
 		_summaryCmName = cm == null ? null : cm.getName();

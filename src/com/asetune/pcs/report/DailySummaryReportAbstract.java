@@ -385,6 +385,27 @@ implements IDailySummaryReport
 		return _recordingInfo.getDbmsVersionStr();
 	}
 
+	/** Get the DBMS Version string stored by any of the DbxTune collectors (The minimum value, if changed during the day) */
+	public String getDbmsVersionStrMin()
+	{
+		initialize();
+		return _recordingInfo.getDbmsVersionStrMin();
+	}
+
+	/** Get the DBMS Version string stored by any of the DbxTune collectors  (The maximum value, if changed during the day) */
+	public String getDbmsVersionStrMax()
+	{
+		initialize();
+		return _recordingInfo.getDbmsVersionStrMax();
+	}
+
+	/** If the DBMS Version String changed during the day... This is the TimeStamp it likely happened */
+	public Timestamp getDbmsVersionStrChangeTime()
+	{
+		initialize();
+		return _recordingInfo.getDbmsVersionStrChangeTime();
+	}
+
 	/** Get the DBMS Version string stored by any of the DbxTune collectors, and then parse it into a number */
 	public long getDbmsVersionNum()
 	{

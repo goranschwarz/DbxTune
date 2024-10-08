@@ -229,6 +229,7 @@ extends CountersModel
 	
 	public static final String GRAPH_NAME_COLUMNSTORE_ALL           = "ColumnStoreAll"; // This will PROBABLY have to be split up in sections... But for now at least have SOMETHING for Column Store
 	
+	public static final String GRAPH_NAME_SQL_ERRORS                = "SqlErrors";
 	
 	private void addTrendGraphs()
 	{
@@ -784,7 +785,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_STOLEN,
 			"Stolen Server Memory, from Buffer Pool", // Menu CheckBox text
 			"Stolen Server Memory, from Buffer Pool ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Stolen Server Memory, in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -895,6 +896,24 @@ extends CountersModel
 			Ver.ver(2016), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);           // minimum height
 
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_ERRORS,
+			"SQL Errors", // Menu CheckBox text
+			"SQL Errors ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { 
+					"Total", 
+					"Info Errors", 
+					"User Errors", 
+					"Kill Connection Errors", 
+					"DB Offline Errors" 
+			}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OTHER,
+			false,         // is Percent Graph
+			false,         // visible at start
+			0,             // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);           // minimum height
 	}
 
 	@Override
@@ -2508,6 +2527,53 @@ extends CountersModel
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
 					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"', '"+pk6+"'='"+val6+"', '"+pk7+"'='"+val7+"', '"+pk8+"'='"+val8+"', '"+pk9+"'='"+val9+"', '"+pk10+"'='"+val10+"', '"+pk11+"'='"+val11+"'.");
+			}
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_ERRORS.equals(tgdp.getName()))
+		{
+			// +-----------+------------+----------------------+----------------+---------------+----------+-----------------------+
+			// |object_name|counter_name|instance_name         |calculated_value|cntr_type_desc |cntr_value|cntr_type_name         |
+			// +-----------+------------+----------------------+----------------+---------------+----------+-----------------------+
+			// |:SQL Errors|Errors/sec  |User Errors           |               0|rate per second|         0|PERF_COUNTER_BULK_COUNT|
+			// |:SQL Errors|Errors/sec  |Kill Connection Errors|               0|rate per second|         0|PERF_COUNTER_BULK_COUNT|
+			// |:SQL Errors|Errors/sec  |Info Errors           |            0,23|rate per second|         2|PERF_COUNTER_BULK_COUNT|
+			// |:SQL Errors|Errors/sec  |DB Offline Errors     |               0|rate per second|         0|PERF_COUNTER_BULK_COUNT|
+			// |:SQL Errors|Errors/sec  |_Total                |            0,23|rate per second|         2|PERF_COUNTER_BULK_COUNT|
+			// +-----------+------------+----------------------+----------------+---------------+----------+-----------------------+
+			
+			Double[] arr = new Double[5];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1  = createPkStr(":SQL Errors", "Errors/sec" , "_Total");
+			String pk2  = createPkStr(":SQL Errors", "Errors/sec" , "Info Errors");
+			String pk3  = createPkStr(":SQL Errors", "Errors/sec" , "User Errors");
+			String pk4  = createPkStr(":SQL Errors", "Errors/sec" , "Kill Connection Errors");
+			String pk5  = createPkStr(":SQL Errors", "Errors/sec" , "DB Offline Errors");
+			
+			Double val1  = this.getAbsValueAsDouble(pk1, "calculated_value");
+			Double val2  = this.getAbsValueAsDouble(pk2, "calculated_value");
+			Double val3  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val4  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			Double val5  = this.getAbsValueAsDouble(pk3, "calculated_value");
+			
+			if (val1 != null && val2 != null && val3 != null && val4 != null && val5 != null)
+			{
+				arr[0]  = val1;
+				arr[1]  = val2;
+				arr[2]  = val3;
+				arr[3]  = val4;
+				arr[4]  = val5;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
 			}
 		}
 	}

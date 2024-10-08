@@ -27,10 +27,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.naming.NameNotFoundException;
 
@@ -1468,172 +1470,6 @@ extends CountersModel
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
-//		//-------------------------------------------------------
-//		// errorCount
-//		//-------------------------------------------------------
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("errorCount"))
-//		{
-//			// SUM all rows for 'errorCount' column
-//			Double errorCountPerSec = cm.getRateValueSum("errorCount");
-//
-//			if (errorCountPerSec != null)
-//			{
-//				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ErrorCountPerSec, DEFAULT_alarm_ErrorCountPerSec);
-//
-//				if (debugPrint || _logger.isDebugEnabled())
-//					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", errorCountPerSec='"+errorCountPerSec+"'.");
-//
-//				if (errorCountPerSec.intValue() > threshold)
-//				{
-//					// BEGIN: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
-//					Map<Integer, Double> sumRateMap = new HashMap<>();
-//
-//					CounterSample rateData = cm.getCounterSampleRate();
-//					int errorMsgCountMap_pos = rateData.findColumn("errorMsgCountMap");
-//
-//					@SuppressWarnings("serial")
-//					java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Double>>(){}.getType();
-//					Gson gson = new Gson();
-//
-//					if (errorMsgCountMap_pos != -1)
-//					{
-//						for (int r=0; r<rateData.getRowCount(); r++)
-//						{
-//							String jsonSrc = rateData.getValueAsString(r, errorMsgCountMap_pos);
-//							if (StringUtil.isNullOrBlank(jsonSrc))
-//								continue;
-//
-//							Map<Integer, Double> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
-//
-//							for (Entry<Integer, Double> e : errorMsgCountMap.entrySet())
-//							{
-//								Double sumRateValue = sumRateMap.get(e.getKey());
-//								if (sumRateValue == null)
-//									sumRateValue = 0.0;
-//								
-//								sumRateValue += e.getValue();
-//
-//								sumRateMap.put(e.getKey(), round1(sumRateValue));
-//							}
-//						}
-//					}
-//
-//					String errorMsgInfoJson = "";
-//					String errorMsgInfoTxt  = "";
-//					String errorMsgInfoHtml = "";
-//
-//					// JSON
-//					if ( ! sumRateMap.isEmpty() )
-//						errorMsgInfoJson = gson.toJson(sumRateMap);
-//					
-//					// TXT
-//					
-//					for (Entry<Integer, Double> e : sumRateMap.entrySet())
-//						errorMsgInfoTxt += "Msg=" + e.getKey() + ", ErrorsPerSec=" + e.getValue() + ", Description='" + AseErrorMessageDictionary.getInstance().getDescription(e.getKey()) + "\n";
-//
-//					// HTML
-//					errorMsgInfoHtml += "<table border=1>\n";
-//					errorMsgInfoHtml += "<tr> <th>Msg</th> <th>ErrorsPerSec</th> <th>Description</th> </tr>\n";
-//					for (Entry<Integer, Double> e : sumRateMap.entrySet())
-//						errorMsgInfoHtml += "<tr> <td>" + e.getKey() + "</td> <td>" + e.getValue() + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(e.getKey()) + "</td> </tr>\n";
-//					errorMsgInfoHtml += "</table>\n";
-//					
-//					// END: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
-//
-////					System.out.println("--------------------------------------------------------------------------------------");
-////					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoJson="+errorMsgInfoJson);
-////					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoTxt ="+errorMsgInfoTxt);
-////					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoHtml="+errorMsgInfoHtml);
-//
-//					// Create Alarm
-//					AlarmEvent alarm = new AlarmEventClientErrorMsgRate(cm, round1(errorCountPerSec), errorMsgInfoJson, threshold);
-//					
-//					// Set the Error Info
-//					alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
-//					
-//					// Add the Alarm
-//					AlarmHandler.getInstance().addAlarm(alarm);
-//				}
-//			}
-//		} //end: errorCount
-//
-//		//-------------------------------------------------------
-//		// ErrorNumber
-//		//-------------------------------------------------------
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("ErrorNumbers"))
-//		{
-//			// BEGIN: construct a summary Map of all DIFF errors, and set it to a JSON String... errorMsgInfo
-//			Map<Integer, Long> sumDiffMap = new HashMap<>();
-//
-//			CounterSample diffData = cm.getCounterSampleDiff();
-//			int errorMsgCountMap_pos = diffData.findColumn("errorMsgCountMap");
-//
-//			if (errorMsgCountMap_pos != -1)
-//			{
-//				@SuppressWarnings("serial")
-//				java.lang.reflect.Type mapIntLongType = new TypeToken<Map<Integer, Long>>(){}.getType();
-//				Gson gson = new Gson();
-//
-//				for (int r=0; r<diffData.getRowCount(); r++)
-//				{
-//					String jsonSrc = diffData.getValueAsString(r, errorMsgCountMap_pos);
-//					if (StringUtil.isNullOrBlank(jsonSrc))
-//						continue;
-//
-//					Map<Integer, Long> errorMsgCountMap = gson.fromJson(jsonSrc, mapIntLongType);
-//
-//					for (Entry<Integer, Long> e : errorMsgCountMap.entrySet())
-//					{
-//						Long sumDiffValue = sumDiffMap.get(e.getKey());
-//						if (sumDiffValue == null)
-//							sumDiffValue = 0L;
-//						
-//						sumDiffValue += e.getValue();
-//
-//						sumDiffMap.put(e.getKey(), sumDiffValue);
-//					}
-//				}
-//			}
-//			
-////			Map<Integer, Integer> _alarmErrorMap = new HashMap<>();
-////			_alarmErrorMap.put(1105, 0);
-////			_alarmErrorMap.put(1205, 0);
-//			if ( ! sumDiffMap.isEmpty() )
-//			{
-//				// loop ErrorNumbers and check if we got any matching entries
-//				for (Entry<Integer, Integer> e : _map_alarm_ErrorNumbers.entrySet())
-//				{
-//					Integer alarmErrorNum  = e.getKey();
-//					Integer alarmThreshold = e.getValue();
-//
-//					if (sumDiffMap.containsKey(alarmErrorNum))
-//					{
-//						Long errorCount = sumDiffMap.getOrDefault(alarmErrorNum, 0L);
-//						
-//						if (errorCount > alarmThreshold)
-//						{
-//							String errorDesc = AseErrorMessageDictionary.getInstance().getDescription(alarmErrorNum);
-//							
-//							if (debugPrint || _logger.isDebugEnabled())
-//								System.out.println("##### sendAlarmRequest("+cm.getName()+"): ErrorNumber="+alarmErrorNum+", Count="+errorCount+", is above threshold="+alarmThreshold+".)");
-//
-//							// Create Alarm
-//							AlarmEvent alarm = new AlarmEventClientErrorMsg(cm, alarmErrorNum, errorCount, errorDesc, alarmThreshold);
-//							
-//							// Set the Error Info
-//							String errorMsgInfoTxt  = "Msg=" + alarmErrorNum + ", DiffErrorCount=" + errorCount + ", Description='" + errorDesc + "'";
-//							String errorMsgInfoHtml = errorMsgInfoTxt;
-//
-//							alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
-//							
-//							// Add the Alarm
-//							AlarmHandler.getInstance().addAlarm(alarm);
-//						}
-//					}
-//				}
-//			}
-//		} //end: ErrorNumber
-		
 		//-------------------------------------------------------
 		// errorCount
 		//-------------------------------------------------------
@@ -1641,7 +1477,7 @@ extends CountersModel
 		{
 			// SUM all rows for 'errorCount' column
 			Double errorCountPerSec = cm.getRateValueSum("errorCount");
-
+			
 			if (errorCountPerSec != null)
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ErrorCountPerSec, DEFAULT_alarm_ErrorCountPerSec);
@@ -1656,7 +1492,7 @@ extends CountersModel
 					Map<Integer, Map<String,Double>> sumDbRateMap = new HashMap<>();
 
 					CounterSample rateData = cm.getCounterSampleRate();
-					int errorMsgCountMap_pos = rateData.findColumn("errorMsgCountMap");
+					int errorMsgCountMap_pos = rateData.findColumn("errorMsgCountMap"); // The JSON Representation of all different error messages '{"error#":{"dbname":count}}',  example: '{"2601":{"tempdb":163}}'
 
 					@SuppressWarnings("serial")
 					java.lang.reflect.Type mapType = new TypeToken<Map<Integer, Map<String,Double>>>(){}.getType();
@@ -1664,6 +1500,7 @@ extends CountersModel
 
 					if (errorMsgCountMap_pos != -1)
 					{
+						// Each "time intervall" has it's own row, so we need to loop ALL rows
 						for (int r=0; r<rateData.getRowCount(); r++)
 						{
 							String jsonSrc = rateData.getValueAsString(r, errorMsgCountMap_pos);
@@ -1684,7 +1521,7 @@ extends CountersModel
 									String dbname  = dbe.getKey();
 									Double rateVal = dbe.getValue();
 
-									// Sum on ErrorMumber per DBName
+									// Sum on ErrorNumber per DBName
 									Map<String, Double> sumDbMap = sumDbRateMap.get(errorNum);
 									if (sumDbMap == null)
 									{
@@ -1698,73 +1535,141 @@ extends CountersModel
 
 									sumDbRateValue += rateVal;
 									dbMap.put(dbname, sumDbRateValue);
-									
+
+									// Add the info to the SUM Map
 									sumDbRateMap.put(errorNum, dbMap);
-									
 								}
 							}
 						}
 					}
 
-					String errorMsgInfoJson = "";
-					String errorMsgInfoTxt  = "";
-					String errorMsgInfoHtml = "";
+					// calculate: filteredErrorCountPerSec (if we need to filter out any errors)
+					Double errorCountPerSec_afterFilter     = 0d;
+					Double errorCountPerSec_removedByFilter = 0d;
 
-					// JSON
-					if ( ! sumDbRateMap.isEmpty() )
-						errorMsgInfoJson = gson.toJson(sumDbRateMap);
-					
-					// TXT
-					for (Entry<Integer, Map<String, Double>> e : sumDbRateMap.entrySet())
+					// If we should FILTER OUT some error numbers, lets do it here
+					// And then check AGAIN if we exceeds the Alarm Threshold
+					String skipMsgNumberCsv = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ErrorCountPerSec_skipMsgNumberCsv, DEFAULT_alarm_ErrorCountPerSec_skipMsgNumberCsv);
+					if (StringUtil.hasValue(skipMsgNumberCsv))
 					{
-						Integer errorNum = e.getKey();
-						Map<String, Double> dbMap = e.getValue();
-
-						for (Entry<String, Double> dbe : dbMap.entrySet())
+						// Turn the CSV into a Set<Integer>
+						Set<Integer> skipMsgNumberSet = new LinkedHashSet<>();
+						for (String msgNumStr : StringUtil.parseCommaStrToSet(skipMsgNumberCsv, true))
 						{
-							String dbname  = dbe.getKey();
-							Double rateVal = dbe.getValue();
-							
-							errorMsgInfoTxt += "Msg=" + errorNum + ", DBName='" + dbname + "', ErrorsPerSec=" + rateVal + ", Description='" + AseErrorMessageDictionary.getInstance().getDescription(errorNum) + "\n";
+							skipMsgNumberSet.add(StringUtil.parseInt(msgNumStr, -1));
+						}
+
+						// Loop the 'sumDbRateMap' and calculate a new value for 'filteredErrorCountPerSec'
+						for (Entry<Integer, Map<String, Double>> e : sumDbRateMap.entrySet())
+						{
+							Integer errorNum = e.getKey();
+							Map<String, Double> dbMap = e.getValue();
+
+							if (skipMsgNumberSet.contains(errorNum))
+							{
+								for (Entry<String, Double> dbe : dbMap.entrySet())
+								{
+									String dbname  = dbe.getKey();
+									Double rateVal = dbe.getValue();
+
+									_logger.info("Alarm Check for 'errorCount', Skipping ErrorNumber=" + errorNum + ", with has an errorRate=" + rateVal + " for dbname='" + dbname + "'.");
+									errorCountPerSec_removedByFilter += rateVal;
+								}
+							}
+							else
+							{
+								for (Entry<String, Double> dbe : dbMap.entrySet())
+								{
+								//	String dbname  = dbe.getKey();
+									Double rateVal = dbe.getValue();
+
+									errorCountPerSec_afterFilter += rateVal;
+								}
+							}
+						}
+
+						// Remove the SKIPPED error messages from the "report map"
+						for (Integer msgNumber : skipMsgNumberSet)
+						{
+							sumDbRateMap.remove(msgNumber);
 						}
 					}
 
-					// HTML
-					errorMsgInfoHtml += "<table border=1>\n";
-					errorMsgInfoHtml += "<tr> <th>Msg</th> <th>DBName</th> <th>ErrorsPerSec</th> <th>Description</th> </tr>\n";
-					for (Entry<Integer, Map<String, Double>> e : sumDbRateMap.entrySet())
+					// After filtered: check if we still needs to do alarm
+					boolean doAlarm = true;
+					if (errorCountPerSec_removedByFilter > 0d)
 					{
-						Integer errorNum = e.getKey();
-						Map<String, Double> dbMap = e.getValue();
-
-						for (Entry<String, Double> dbe : dbMap.entrySet())
+						doAlarm = errorCountPerSec_afterFilter.intValue() > threshold;
+						if ( ! doAlarm )
 						{
-							String dbname  = dbe.getKey();
-							Double rateVal = dbe.getValue();
-							
-							errorMsgInfoHtml += "<tr> <td>" + errorNum + "</td> <td>" + dbname + "</td> <td>" + rateVal + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(errorNum) + "</td> </tr>\n";
+							_logger.info("Skipped alarm for 'errorCount'. errorCountPerSec=" + errorCountPerSec + ", errorCountPerSec_afterFilter=" + errorCountPerSec_afterFilter + ", errorCountPerSec_removedByFilter=" + errorCountPerSec_removedByFilter + ", skipMsgNumberCsv='" + skipMsgNumberCsv + "'.");
 						}
+						errorCountPerSec = errorCountPerSec_afterFilter;
 					}
-					errorMsgInfoHtml += "</table>\n";
-					
-					// END: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
 
-//					System.out.println("--------------------------------------------------------------------------------------");
-//					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoJson="+errorMsgInfoJson);
-//					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoTxt ="+errorMsgInfoTxt);
-//					System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoHtml="+errorMsgInfoHtml);
+					// If we STILL wants to DO-ALARM
+					if (doAlarm)
+					{
+						String errorMsgInfoJson = "";
+						String errorMsgInfoTxt  = "";
+						String errorMsgInfoHtml = "";
 
-					errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT);
-					errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_SEC);
-					
-					// Create Alarm
-					AlarmEvent alarm = new AlarmEventClientErrorMsgRate(cm, round1(errorCountPerSec), errorMsgInfoJson, threshold);
-					
-					// Set the Error Info
-					alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
-					
-					// Add the Alarm
-					AlarmHandler.getInstance().addAlarm(alarm);
+						// JSON
+						if ( ! sumDbRateMap.isEmpty() )
+							errorMsgInfoJson = gson.toJson(sumDbRateMap);
+						
+						// TXT
+						for (Entry<Integer, Map<String, Double>> e : sumDbRateMap.entrySet())
+						{
+							Integer errorNum = e.getKey();
+							Map<String, Double> dbMap = e.getValue();
+
+							for (Entry<String, Double> dbe : dbMap.entrySet())
+							{
+								String dbname  = dbe.getKey();
+								Double rateVal = dbe.getValue();
+								
+								errorMsgInfoTxt += "Msg=" + errorNum + ", DBName='" + dbname + "', ErrorsPerSec=" + rateVal + ", Description='" + AseErrorMessageDictionary.getInstance().getDescription(errorNum) + "\n";
+							}
+						}
+
+						// HTML
+						errorMsgInfoHtml += "<table border=1>\n";
+						errorMsgInfoHtml += "<tr> <th>Msg</th> <th>DBName</th> <th>ErrorsPerSec</th> <th>Description</th> </tr>\n";
+						for (Entry<Integer, Map<String, Double>> e : sumDbRateMap.entrySet())
+						{
+							Integer errorNum = e.getKey();
+							Map<String, Double> dbMap = e.getValue();
+
+							for (Entry<String, Double> dbe : dbMap.entrySet())
+							{
+								String dbname  = dbe.getKey();
+								Double rateVal = dbe.getValue();
+								
+								errorMsgInfoHtml += "<tr> <td>" + errorNum + "</td> <td>" + dbname + "</td> <td>" + rateVal + "</td> <td>" + AseErrorMessageDictionary.getInstance().getDescription(errorNum) + "</td> </tr>\n";
+							}
+						}
+						errorMsgInfoHtml += "</table>\n";
+						
+						// END: construct a summary Map (for 'error info' to Alarm) of all RATE errors, and set it to a JSON String...
+
+//						System.out.println("--------------------------------------------------------------------------------------");
+//						System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoJson="+errorMsgInfoJson);
+//						System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoTxt ="+errorMsgInfoTxt);
+//						System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoHtml="+errorMsgInfoHtml);
+
+						errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT);
+						errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_SEC);
+						
+						// Create Alarm
+						AlarmEvent alarm = new AlarmEventClientErrorMsgRate(cm, round1(errorCountPerSec), errorMsgInfoJson, threshold);
+						
+						// Set the Error Info
+						alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
+						
+						// Add the Alarm
+						AlarmHandler.getInstance().addAlarm(alarm);
+					}
 				}
 			}
 		} //end: errorCount
@@ -2007,14 +1912,17 @@ extends CountersModel
 	// Updated by: CounterSamplePrivate.getSample(); used to detect if the "SQL Capture Thread" is still alive and delivers statistics
 	private long _sqlCaptureLastUpdateTime = -1;
 
-	public static final String  PROPKEY_alarm_ErrorCountPerSec   = CM_NAME + ".alarm.system.if.errorCount.gt";
-	public static final int     DEFAULT_alarm_ErrorCountPerSec   = 20;
+	public static final String  PROPKEY_alarm_ErrorCountPerSec                  = CM_NAME + ".alarm.system.if.errorCount.gt";
+	public static final int     DEFAULT_alarm_ErrorCountPerSec                  = 20;
 	
-	public static final String  PROPKEY_alarm_ErrorNumbers       = CM_NAME + ".alarm.system.if.errorNumber";
-	public static final String  DEFAULT_alarm_ErrorNumbers       = "701=0, 713=0, 971=5, 1105=0, 1204=0, 1205=5";
+	public static final String  PROPKEY_alarm_ErrorCountPerSec_skipMsgNumberCsv = CM_NAME + ".alarm.system.if.errorCount.skipMsgNumberCsv";
+	public static final String  DEFAULT_alarm_ErrorCountPerSec_skipMsgNumberCsv = "";
+	
+	public static final String  PROPKEY_alarm_ErrorNumbers                      = CM_NAME + ".alarm.system.if.errorNumber";
+	public static final String  DEFAULT_alarm_ErrorNumbers                      = "701=0, 713=0, 971=5, 1105=0, 1204=0, 1205=5";
 
-	public static final String  PROPKEY_alarm_SqlCapUpdateAgeSec = CM_NAME + ".alarm.system.if.SqlCapture.lastUpdate.ageInSec.gt";
-	public static final int     DEFAULT_alarm_SqlCapUpdateAgeSec = 600; // 10 minutes
+	public static final String  PROPKEY_alarm_SqlCapUpdateAgeSec                = CM_NAME + ".alarm.system.if.SqlCapture.lastUpdate.ageInSec.gt";
+	public static final int     DEFAULT_alarm_SqlCapUpdateAgeSec                = 600; // 10 minutes
 
 //	Error=701   , Severity=17 , Message="There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.");
 //	Error=713   , Severity=16 , Message="Sort failed because there is insufficient procedure cache for the configured number of sort buffers. Please retry the query after configuring lesser number of sort buffers.");
@@ -2031,9 +1939,12 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
-		list.add(new CmSettingsHelper("errorCount"   , isAlarmSwitch, PROPKEY_alarm_ErrorCountPerSec,   Integer.class, conf.getIntProperty(PROPKEY_alarm_ErrorCountPerSec  , DEFAULT_alarm_ErrorCountPerSec  ), DEFAULT_alarm_ErrorCountPerSec  , "If 'errorCount' is greater than ## per second then send 'AlarmEventErrorMsgRate'." ));
-		list.add(new CmSettingsHelper("ErrorNumbers" , isAlarmSwitch, PROPKEY_alarm_ErrorNumbers,       String .class, conf.getProperty   (PROPKEY_alarm_ErrorNumbers      , DEFAULT_alarm_ErrorNumbers      ), DEFAULT_alarm_ErrorNumbers      , "If 'DiffErrorCount' for 'ErrorMsg' is greater than ## then send 'AlarmEventClientErrorMsg'.format: 1105=#, 1205=#, 1234=# (check sysmessages for descriptions)", new MapNumberValidator()));
-		list.add(new CmSettingsHelper("SqlCaptureAge", isAlarmSwitch, PROPKEY_alarm_SqlCapUpdateAgeSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_SqlCapUpdateAgeSec, DEFAULT_alarm_SqlCapUpdateAgeSec), DEFAULT_alarm_SqlCapUpdateAgeSec, "If 'SQL Capture Thread' hasn't been updated it's statistics in ## seconds then send 'AlarmEventSqlCaptureOldData'."));
+		list.add(new CmSettingsHelper("errorCount"   , isAlarmSwitch, PROPKEY_alarm_ErrorCountPerSec,                  Integer.class, conf.getIntProperty(PROPKEY_alarm_ErrorCountPerSec                 , DEFAULT_alarm_ErrorCountPerSec                 ), DEFAULT_alarm_ErrorCountPerSec                 , "If 'errorCount' is greater than ## per second then send 'AlarmEventErrorMsgRate'." ));
+		list.add(new CmSettingsHelper("errorCount SkipMsgNumberCsv",  PROPKEY_alarm_ErrorCountPerSec_skipMsgNumberCsv, String .class, conf.getProperty   (PROPKEY_alarm_ErrorCountPerSec_skipMsgNumberCsv, DEFAULT_alarm_ErrorCountPerSec_skipMsgNumberCsv), DEFAULT_alarm_ErrorCountPerSec_skipMsgNumberCsv, "If 'errorCount' is true: Discard Msg Numbers (use a comma separated list of numbers)." ));
+
+		list.add(new CmSettingsHelper("ErrorNumbers" , isAlarmSwitch, PROPKEY_alarm_ErrorNumbers,                      String .class, conf.getProperty   (PROPKEY_alarm_ErrorNumbers      , DEFAULT_alarm_ErrorNumbers      ), DEFAULT_alarm_ErrorNumbers      , "If 'DiffErrorCount' for 'ErrorMsg' is greater than ## then send 'AlarmEventClientErrorMsg'.format: 1105=#, 1205=#, 1234=# (check sysmessages for descriptions)", new MapNumberValidator()));
+
+		list.add(new CmSettingsHelper("SqlCaptureAge", isAlarmSwitch, PROPKEY_alarm_SqlCapUpdateAgeSec,                Integer.class, conf.getIntProperty(PROPKEY_alarm_SqlCapUpdateAgeSec, DEFAULT_alarm_SqlCapUpdateAgeSec), DEFAULT_alarm_SqlCapUpdateAgeSec, "If 'SQL Capture Thread' hasn't been updated it's statistics in ## seconds then send 'AlarmEventSqlCaptureOldData'."));
 
 		return list;
 	}

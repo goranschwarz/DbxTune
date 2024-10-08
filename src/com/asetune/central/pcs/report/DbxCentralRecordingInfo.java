@@ -112,6 +112,12 @@ extends ReportEntryAbstract
 	public String    getAsrStartDay()            { return _asr_startDay;    } 
 	
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return true;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		return true;

@@ -82,6 +82,12 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		if (ReportType.CPU_TIME.equals(_reportType))
@@ -913,7 +919,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						}
 						
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
-						String tableInfo = getDbmsTableInformationFromSqlText(conn, query, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, query, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table and index information 
@@ -1037,7 +1043,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //  ------------------------------ ------------- --------------------------------------------------
 //  InstanceID                     tinyint       (Cluster environments only) ID of an instance in a shared-disk cluster.
 //  SSQLID                         int           Unique identifier for each cached statement. This value is treated as a primary key for monCachedStatement, and is used in functions. show_cached_text uses SSQLID to refer to individual statements in the cache.
-//  Hashkey                        int           Hash value of the SQL text of the cached statement. A hash key is generated based on a statement’s text, and can be used as an approximate key for searching other monitoring tables.
+//  Hashkey                        int           Hash value of the SQL text of the cached statement. A hash key is generated based on a statementï¿½s text, and can be used as an approximate key for searching other monitoring tables.
 //  StmtType                       tinyint       
 //  UserID                         int           User ID of the user who initiated the statement that has been cached.
 //  SUserID                        int           Server ID of the user who initiated the cached statement.
@@ -1047,14 +1053,14 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //  MinPlanSizeKB                  int           Size of the plan when it is not in use, in kilobytes.
 //  MaxPlanSizeKB                  int           Size of the plan when it is in use, in kilobytes.
 //  CurrentUsageCount              int           Number of concurrent users of the cached statement. Attribute is counter.
-//  MaxUsageCount                  int           Maximum number of times the cached statement’s text was simultaneously accessed. Attribute is counter.
+//  MaxUsageCount                  int           Maximum number of times the cached statementï¿½s text was simultaneously accessed. Attribute is counter.
 //  NumRecompilesSchemaChanges     int           Number of times the statement was recompiled due to schema changes. Running update statistics on a table may result in changes to the best plan. This change is treated as a minor schema change. Recompiling a statement many times indicates that it is not effective to cache this particular statement, and that you may want to delete the statement from the statement cache to make space for some other, more stable, statement. Attribute is counter.
 //  NumRecompilesPlanFlushes       int           Number of times the cached statement was recompiled because a plan was not found in the cache. Attribute is counter.
-//  HasAutoParams                  tinyint       “true” if the statement has any parameterized literals, “false” if it does not.
+//  HasAutoParams                  tinyint       ï¿½trueï¿½ if the statement has any parameterized literals, ï¿½falseï¿½ if it does not.
 //  ParallelDegree                 tinyint       Degree of parallelism used by the query that is stored for this statement
 //  QuotedIdentifier               tinyint       Specifies whether the plan compiled with set quoted_identifier is enabled.
 //  TransactionIsolationLevel      tinyint       Transaction isolation level for which the statement was compiled.
-//  TransactionMode                tinyint       Specifies whether “chained transaction mode” is enabled for the statement.
+//  TransactionMode                tinyint       Specifies whether ï¿½chained transaction modeï¿½ is enabled for the statement.
 //  SAAuthorization                tinyint       Specifies whether the plan was compiled with sa_role authorization.
 //  SystemCatalogUpdate            tinyint       Specifies whether allow catalog updates was enabled when the plan was compiled.
 //  MetricsCount                   int           Number of times metrics were aggregated for this statement.

@@ -47,6 +47,7 @@ import com.asetune.alarm.events.sqlserver.AlarmEventSuspectPages;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.asetune.cm.CmSummaryAbstract;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -70,7 +71,8 @@ import com.asetune.utils.Ver;
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmSummary
-extends CountersModel
+//extends CountersModel
+extends CmSummaryAbstract
 {
 	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
 	private static final long    serialVersionUID = 1L;
@@ -145,6 +147,7 @@ extends CountersModel
 		counterController.setSummaryCm(this);
 		
 		addTrendGraphs();
+		addPostRefreshTrendGraphs();
 
 		CounterSetTemplates.register(this);
 	}
@@ -749,7 +752,7 @@ extends CountersModel
 				"select @maxSqlExecTimeInSec = max(isnull(datediff(ss, start_time, getdate()),0))  \n" +
 				"                             from sys.dm_exec_requests x  \n" +
 				"                             where x.connection_id is not null \n" +
-				"                               and x.transaction_id > 0 \n" +
+//				"                               and x.transaction_id > 0 \n" +  // DBCC SHRINKDATABASE(...) is not always in a transaction...
 				"select @fullTranslogCount   = 0 \n" +
 				" \n" +
 				"/* Output the data */\n" +
@@ -1549,6 +1552,12 @@ extends CountersModel
 
 		
 		//-------------------------------------------------------
+		// DbmsVersionStringChanged
+		//-------------------------------------------------------
+		doAlarmIfDbmsVersionStringWasChanged("srvVersion");
+
+
+		//-------------------------------------------------------
 		// Blocking Locks
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("LockWaits"))
@@ -1864,14 +1873,16 @@ extends CountersModel
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("requestsWaitingForWorkers"))
 		{
-			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_requestsWaitingForWorkers, DEFAULT_alarm_requestsWaitingForWorkers);
+			int threshold                 = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_requestsWaitingForWorkers, DEFAULT_alarm_requestsWaitingForWorkers);
+			int availableWorkersThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_availableWorkers         , DEFAULT_alarm_availableWorkers);
 
-			long requestsWaitingForWorkers  = cm.getAbsValueAsLong(0, "requestsWaitingForWorkers", false, -1L);
+			int requestsWaitingForWorkers = cm.getAbsValueAsInteger(0, "requestsWaitingForWorkers", false, -1);
+			int availableWorkers          = cm.getAbsValueAsInteger(0, "availableWorkers"         , false, -1);
 
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", requestsWaitingForWorkers="+requestsWaitingForWorkers+".");
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", requestsWaitingForWorkers=" + requestsWaitingForWorkers + ", availableWorkers=" + availableWorkers + ", availableWorkersThreshold=" + availableWorkersThreshold);
 
-			if (requestsWaitingForWorkers > threshold)
+			if (requestsWaitingForWorkers > threshold && availableWorkers <= availableWorkersThreshold)
 			{
 				String extendedDescText = "";
 				String extendedDescHtml =        getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
@@ -1881,9 +1892,9 @@ extends CountersModel
 				CountersModel cmWaitStats = getCounterController().getCmByName(CmWaitStats.CM_NAME);
 				if (cmWaitStats != null)
 				{
-					extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TIME);
-					extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_COUNT);
-					extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TPW);
+					extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TIME);
+					extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_COUNT);
+					extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TPW);
 				}
 
 				AlarmEvent ae = new AlarmEventOutOfWorkerThreads(cm, threshold, requestsWaitingForWorkers);
@@ -2011,6 +2022,7 @@ extends CountersModel
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
+		addAlarmSettings_DbmsVersionStringChanged(list, "srvVersion");
 		list.add(new CmSettingsHelper("LockWaits",                        isAlarmSwitch, PROPKEY_alarm_LockWaits                        , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaits                        , DEFAULT_alarm_LockWaits                        ), DEFAULT_alarm_LockWaits                        , "If 'LockWaits' (number of spid's that has waited more than the threshold) is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
 		list.add(new CmSettingsHelper("LockWaits TimeThreshold",                         PROPKEY_alarm_LockWaitsThresholdSec            , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaitsThresholdSec            , DEFAULT_alarm_LockWaitsThresholdSec            ), DEFAULT_alarm_LockWaitsThresholdSec            , "Number of seconds before we start to count 'LockWaits', which makes it a threshold input to when 'LockWaits' will fire." ));
 		list.add(new CmSettingsHelper("DeadlockCount",                    isAlarmSwitch, PROPKEY_alarm_DeadlockCount                    , Double .class, conf.getDoubleProperty(PROPKEY_alarm_DeadlockCount                    , DEFAULT_alarm_DeadlockCount                    ), DEFAULT_alarm_DeadlockCount                    , "If 'DeadlockCount' (Number of Deadlocks in last sample) is greater than ## then send 'AlarmEventDeadlockAlarm'." ));

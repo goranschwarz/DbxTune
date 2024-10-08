@@ -61,6 +61,12 @@ public class OsCpuUsageOverview extends OsAbstract
 	}
 	
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return true;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		return true;

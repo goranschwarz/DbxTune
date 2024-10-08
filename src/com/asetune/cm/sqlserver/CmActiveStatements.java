@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
@@ -60,6 +61,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.SqlServerUtils.LockRecord;
 import com.asetune.utils.StringUtil;
@@ -111,6 +113,9 @@ extends CountersModel
 		"exec_reads",
 		"exec_logical_reads",
 		"exec_writes",
+		"exec_phys_reads_mb",
+		"exec_logical_reads_mb",
+		"exec_writes_mb",
 		"sess_cpu_time",
 		"sess_reads",
 		"sess_logical_reads",
@@ -188,6 +193,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_spidWaits          = PROP_PREFIX + ".sample.spidWaits";
 	public static final boolean DEFAULT_sample_spidWaits          = true;
 
+	public static final String  PROPKEY_sample_spidInputBuffer    = PROP_PREFIX + ".sample.spidInputBuffer";
+	public static final boolean DEFAULT_sample_spidInputBuffer    = true;
+
 	
 	private void addTrendGraphs()
 	{
@@ -214,6 +222,8 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("ImBlockedBySessionId",      "<html>This session_id is blocked by some other session_id</html>");
 		setLocalToolTipTextOnTableColumnHeader("ImBlockingOtherSessionIds", "<html>This session_id is <b>blocking</b> other session_id's, This is a list of This session_id is blocked by some other session_id's which this This session_id is blocked by some other session_id is blocking.</html>");
 		setLocalToolTipTextOnTableColumnHeader("ImBlockingOthersMaxTimeInSec", "Max Time in Seconds this session_id has been Blocking other session_id's from executing, because this session_id hold lock(s), that some other session_id wants to grab.");
+		setLocalToolTipTextOnTableColumnHeader("HasBufferSqlText",          "<html>Checkbox to indicate that 'BufferSqlText' column has a value<br><b>Note:</b> Hower over this cell to see the SQL Statement.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LastBufferSqlText",         "<html>The SQL Text sent by the client, fetched from 'sys.dm_exec_input_buffer(session_id, NULL)'</html>");
 		setLocalToolTipTextOnTableColumnHeader("HasSqlText",                "<html>Checkbox to indicate that 'lastKnownSql' column has a value<br><b>Note:</b> Hower over this cell to see the SQL Statement.</html>");
 		setLocalToolTipTextOnTableColumnHeader("HasQueryplan",              "<html>Checkbox to indicate that 'query_plan' column has a value<br><b>Note:</b> Hower over this cell to see the Query plan.</html>");
 		setLocalToolTipTextOnTableColumnHeader("HasLiveQueryplan",          "<html>Checkbox to indicate that 'live_query_plan' column has a value<br><b>Note:</b> Hower over this cell to see the Query plan.</html>");
@@ -273,8 +283,9 @@ extends CountersModel
 		if (map == null)
 		{
 			map = new HashMap<>();
-			map.put("lastKnownSql", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
-			map.put("query_plan"  , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("LastBufferSqlText", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("lastKnownSql"     , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("query_plan"       , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
 
 			// Set the map in the super
 			setPcsColumnOptions(map);
@@ -332,6 +343,32 @@ extends CountersModel
 //		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(nvarchar(max), 'No live query plan available. Only in 2016 SP1 and above')";
 		String LiveQueryPlanActive  = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
 		String LiveQueryPlanBlocked = "    ,LiveQueryPlan = convert(nvarchar(max), null) \n";
+
+
+		String HasBufferSqlText_1  = "";
+		String LastBufferSqlText_1 = "";
+		String HasBufferSqlText_2  = "";
+		String LastBufferSqlText_2 = "";
+		if (srvVersion >= Ver.ver(2014))
+		{
+			boolean getSpidInputBuffer = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_spidInputBuffer, DEFAULT_sample_spidInputBuffer);
+
+			// First SQL Statement (added to variable: sql1)
+			HasBufferSqlText_1  = "    ,HasBufferSqlText    = convert(bit,0) \n";
+			LastBufferSqlText_1 = "    ,LastBufferSqlText = (select 'type=''' + eib.event_type + ''', params=' + cast(eib.parameters as nvarchar(10)) + ': ' + char(10) + eib.event_info from sys.dm_exec_input_buffer(der.session_id, der.request_id) eib) \n"; 
+
+			// Second SQL Statement (added to variable: sql2_cols)
+			HasBufferSqlText_2  = HasBufferSqlText_1;
+			LastBufferSqlText_2 = LastBufferSqlText_1.replace("dm_exec_input_buffer(der.session_id, der.request_id)", "dm_exec_input_buffer(p1.spid, NULL)");
+
+			// if NOT enabled... keep the columns, but make them "empty"
+			if ( ! getSpidInputBuffer )
+			{
+				LastBufferSqlText_1 = "    ,LastBufferSqlText = convert(nvarchar(max), null) /* enable 'dm_exec_input_buffer(...)' with property: " + PROPKEY_sample_spidInputBuffer + " = true */ \n";
+				LastBufferSqlText_2 = LastBufferSqlText_1;
+			}
+		}
+
 //		
 //		if (srvVersion >= Ver.ver(2016,0,0, 1)) // 2016 SP1 (or check if the table exists; select 1 from sys.all_tables where name = 'dm_exec_query_statistics_xml'
 //		{
@@ -371,7 +408,51 @@ extends CountersModel
 		{
 			whereIsUserSpid = "  AND (des.is_user_process = 1 OR (des.is_user_process = 0 AND des.status != 'sleeping')) \n ";
 		}
+
+// PREPARATIONS for better handling of "transaction info"
+		String sql_preDrop = ""
+			    + "-- Drop any of the old temporary tables if they still exists \n" 
+			    + "if (object_id('tempdb..#tran_info') is not null) drop table #tran_info \n" 
+			    + "go \n"
+			    + " \n"
+			    + "";
 		
+		String sql_postDrop = ""
+			    + "\n"
+			    + "\n"
+			    + "-- Drop temporary tables \n" 
+			    + "drop table #tran_info \n" 
+			    + "";
+		
+		String sql_tranInfo_populate = ""
+			    + "-- Populate some temptables \n" 
+			    + "SELECT  /* ${cmCollectorName} */ \n"
+			    + "     st.session_id \n"
+			    + "    ,tran_id         = MAX(st.transaction_id) \n"
+			    + "    ,tran_begin_time = MIN(tat.transaction_begin_time) \n"
+			    + "    ,tran_name       = MAX(tat.name) \n"
+			    + "    ,COALESCE(SUM(dbt.database_transaction_log_record_count  ), 0)        as wal_record_count \n"
+			    + "    ,COALESCE(SUM(dbt.database_transaction_log_bytes_used    ), 0) / 1024 as wal_kb_used \n"
+			    + "INTO #tran_info \n"
+			    + "FROM sys.dm_tran_session_transactions st \n"
+			    + "INNER JOIN sys.dm_tran_database_transactions dbt ON st.transaction_id = dbt.transaction_id \n"
+			    + "INNER JOIN sys.dm_tran_active_transactions   tat ON st.transaction_id = tat.transaction_id \n"
+			    + "GROUP BY st.session_id \n"
+			    + "\n"
+			    + "\n";
+
+		String sql_tranInfo_join_1                = "LEFT OUTER JOIN #tran_info ON des.session_id = #tran_info.session_id \n";
+		String sql_tranInfo_join_2                = "LEFT OUTER JOIN #tran_info ON p1.spid = #tran_info.session_id \n";
+		String sql_tranInfo_join_3                = sql_tranInfo_join_2;
+
+		String sql_tranInfo_col__tran_id          = "    ,tran_id                   = #tran_info.tran_id \n";
+		String sql_tranInfo_col__tran_begin_time  = "    ,tran_begin_time           = #tran_info.tran_begin_time \n";
+		String sql_tranInfo_col__tran_name        = "    ,tran_name                 = #tran_info.tran_name \n";
+		String sql_tranInfo_col__wal_kb_used      = "    ,wal_record_count          = #tran_info.wal_record_count \n";
+		String sql_tranInfo_col__wal_record_count = "    ,wal_kb_used               = #tran_info.wal_kb_used \n";
+
+
+
 		String sql1 =
 			"SELECT /* ${cmCollectorName} */  \n" +
 			"     monSource    = convert(varchar(20), 'ACTIVE') \n" +
@@ -384,14 +465,19 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
 			"    ,des.status \n" +
 			"    ,der.command \n" +
-			"    ,tran_id         = der.transaction_id \n" +
-			"    ,tran_begin_time = (SELECT TOP 1 tat.transaction_begin_time FROM sys.dm_tran_active_transactions tat WHERE tat.transaction_id = der.transaction_id) \n" +
-			"    ,tran_name       = (SELECT TOP 1 tat.name \n" +
-			"                        FROM       sys.dm_tran_session_transactions tst \n" +
-	        "                        INNER JOIN sys.dm_tran_active_transactions  tat ON tst.transaction_id = tat.transaction_id \n" + 
-	        "                        WHERE tst.session_id = des.session_id) \n" +
-			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
-			"    ,StmntStart          = der.statement_start_offset \n" +
+//			"    ,tran_id                   = der.transaction_id \n" +
+//			"    ,tran_begin_time           = (SELECT TOP 1 tat.transaction_begin_time FROM sys.dm_tran_active_transactions tat WHERE tat.transaction_id = der.transaction_id) \n" +
+//			"    ,tran_name                 = (SELECT TOP 1 tat.name \n" +
+//			"                                  FROM       sys.dm_tran_session_transactions tst \n" +
+//	        "                                  INNER JOIN sys.dm_tran_active_transactions  tat ON tst.transaction_id = tat.transaction_id \n" + 
+//	        "                                  WHERE tst.session_id = des.session_id) \n" +
+			sql_tranInfo_col__tran_id + 
+			sql_tranInfo_col__tran_begin_time + 
+			sql_tranInfo_col__tran_name + 
+			sql_tranInfo_col__wal_kb_used + 
+			sql_tranInfo_col__wal_record_count + 
+			"    ,ProcName                  = isnull(object_schema_name(dest.objectid, dest.dbid),'') + '.' + object_name(dest.objectid, dest.dbid) \n" +
+			"    ,StmntStart                = der.statement_start_offset \n" +
 			"    ,des.[HOST_NAME] \n" +
 //			"    ,TempdbUsageMb       = (select \n" + 
 //			"                            CAST( ( \n" + // The below calculations also used in: CmTempdbSpidUsage
@@ -402,28 +488,32 @@ extends CountersModel
 //			"                            from tempdb.sys.dm_db_session_space_usage ts \n" + 
 //			"                            where ts.session_id = des.session_id \n" +
 //			"                           ) \n" +
-			"    ,TempdbUsageMb          = convert(numeric(12,1), NULL)  \n" +
-			"    ,TempdbUsageMbUser      = convert(numeric(12,1), NULL)  \n" +
-			"    ,TempdbUsageMbInternal  = convert(numeric(12,1), NULL)  \n" +
-			"    ,HasSqlText          = convert(bit,0) \n" +
-			"    ,HasQueryplan        = convert(bit,0) \n" +
-			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
-			"    ,HasSpidLocks        = convert(bit,0) \n" +
-			"    ,HasBlockedSpidsInfo = convert(bit,0) \n" +
-			"    ,SpidLockCount       = convert(int,-1) \n" +
-			"    ,HasSpidWaitInfo     = convert(bit   , 0) \n"  +             // filled in with 'localCalculation(...)' with values from CmSpidWait
-//			"    ,DB_NAME(der.database_id) AS database_name \n" +
-			"    ,(select db.name from sys.databases db where db.database_id = der.database_id) AS database_name \n" +
-			"    ,SpidWaitCountSum    = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait
-			"    ,SpidWaitTimeMsSum   = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait 
-			"    ,exec_cpu_time       = der.cpu_time \n" +
-			"    ,exec_reads          = der.reads \n" +
-			"    ,exec_logical_reads  = der.logical_reads \n" +
-			"    ,exec_writes         = der.writes \n" +
-			"    ,sess_cpu_time       = des.cpu_time \n" +
-			"    ,sess_reads          = des.reads \n" +
-			"    ,sess_logical_reads  = des.logical_reads \n" +
-			"    ,sess_writes         = des.writes \n" +
+			"    ,TempdbUsageMb             = convert(numeric(12,1), NULL)  \n" +
+			"    ,TempdbUsageMbUser         = convert(numeric(12,1), NULL)  \n" +
+			"    ,TempdbUsageMbInternal     = convert(numeric(12,1), NULL)  \n" +
+			HasBufferSqlText_1 +
+			"    ,HasSqlText                = convert(bit,0) \n" +
+			"    ,HasQueryplan              = convert(bit,0) \n" +
+			"    ,HasLiveQueryplan          = convert(bit,0) \n" +
+			"    ,HasSpidLocks              = convert(bit,0) \n" +
+			"    ,HasBlockedSpidsInfo       = convert(bit,0) \n" +
+			"    ,SpidLockCount             = convert(int,-1) \n" +
+			"    ,HasSpidWaitInfo           = convert(bit   , 0) \n"  +             // filled in with 'localCalculation(...)' with values from CmSpidWait
+			"    ,DB_NAME(der.database_id) AS database_name \n" +
+//			"    ,(select db.name from sys.databases db where db.database_id = der.database_id) AS database_name \n" +
+			"    ,SpidWaitCountSum          = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait
+			"    ,SpidWaitTimeMsSum         = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait 
+			"    ,exec_cpu_time             = der.cpu_time \n" +
+			"    ,exec_reads                = der.reads \n" +
+			"    ,exec_logical_reads        = der.logical_reads \n" +
+			"    ,exec_writes               = der.writes \n" +
+			"    ,exec_phys_reads_mb        = CAST(der.reads         / 128.0 AS numeric(10,1)) \n" +
+			"    ,exec_logical_reads_mb     = CAST(der.logical_reads / 128.0 AS numeric(10,1)) \n" +
+			"    ,exec_writes_mb            = CAST(der.writes        / 128.0 AS numeric(10,1)) \n" +
+			"    ,sess_cpu_time             = des.cpu_time \n" +
+			"    ,sess_reads                = des.reads \n" +
+			"    ,sess_logical_reads        = des.logical_reads \n" +
+			"    ,sess_writes               = des.writes \n" +
 			"    ,memory_grant_requested    = CASE WHEN dem.session_id IS NULL THEN convert(bit,0) ELSE convert(bit,1) END \n" +
 			"    ,memory_grant_wait_time_ms = dem.wait_time_ms \n" +
 			"    ,requested_memory_kb       = dem.requested_memory_kb \n" +
@@ -432,8 +522,8 @@ extends CountersModel
 			"    ,used_memory_pct           = convert(numeric(9,1), (dem.used_memory_kb*1.0) / (dem.granted_memory_kb*1.0) * 100.0) \n" +
 //			"    ,dec.last_write \n" +
 			"    ,der.start_time \n" +
-			"    ,ExecTimeInMs        = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-			"    ,UsefullExecTime     = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,ExecTimeInMs              = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,UsefullExecTime           = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 			"    ,des.[program_name] \n" +
 			     contextInfoStr1 +
 			"    ,der.wait_type \n" +
@@ -452,12 +542,21 @@ extends CountersModel
 			"    ,des.is_user_process \n" +
 			"    ,der.percent_complete \n" +
 			"    ,der.estimated_completion_time \n" +
-			"	 ,estimated_finish_time = CASE WHEN estimated_completion_time > 0 \n" + 
-			"                                  THEN cast(cast(dateadd(ms,der.estimated_completion_time, getdate()) as time) as varchar(8)) \n" +
-			"	                               ELSE NULL \n" +
-			"	                          END \n" +
+			"    ,estimated_compl_time_dhms = cast('' as varchar(20)) \n" +
+//			"	 ,estimated_finish_time = CASE WHEN estimated_completion_time > 0 \n" + 
+//			"                                  THEN cast(cast(dateadd(ms,der.estimated_completion_time, getdate()) as time) as varchar(8)) \n" +
+//			"	                               ELSE NULL \n" +
+//			"	                          END \n" +
+			"    ,estimated_finish_time = CASE WHEN estimated_completion_time > 0 \n" +
+			"                                  THEN iif( datediff(day, getdate(), dateadd(ms,der.estimated_completion_time, getdate())) = 0 \n" +       // if within SINGLE Day
+			"                                           ,convert(varchar(8),  cast(dateadd(ms,der.estimated_completion_time, getdate()) as time)) \n" + // Short: hh:mm:ss
+			"                                           ,convert(varchar(19), dateadd(ms,der.estimated_completion_time, getdate()), 121) \n" +          // Long:  YYYY-MM-DD hh:mm:ss
+			"                                          ) \n" +
+			"                                  ELSE NULL \n" +
+			"                             END \n" +
 //			"    ,OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME \n" +
 			"    ,der.sql_handle \n" +
+			LastBufferSqlText_1 +
 			"    ,SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
 			"        ( CASE WHEN der.statement_end_offset = -1  \n" +
 			"               THEN DATALENGTH(dest.text)  \n" +
@@ -472,6 +571,7 @@ extends CountersModel
 			"JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
 			"LEFT JOIN sys." + dm_exec_query_memory_grants + " dem ON des.session_id = dem.session_id \n" +
 //			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
+			sql_tranInfo_join_1 +
 			"OUTER APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
 			"OUTER APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +
 			"WHERE des.session_id != @@spid \n " +
@@ -494,23 +594,29 @@ extends CountersModel
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
 			"    ,p1.status                                    --des.status \n" +
 			"    ,p1.cmd                                       --der.command \n" +
-			"    ,tran_id         = (SELECT TOP 1 tst.transaction_id \n" +
-			"                        FROM sys.dm_tran_session_transactions tst \n" +
-			"                        WHERE tst.session_id = p1.spid) \n" +
-			"    ,tran_begin_time = (SELECT TOP 1 tat.transaction_begin_time \n" +
-			"                        FROM       sys.dm_tran_session_transactions tst \n" +
-	        "                        INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
-	        "                        WHERE tst.session_id = p1.spid) \n" +
-			"    ,tran_name       = (SELECT TOP 1 tat.name \n" +
-			"                        FROM       sys.dm_tran_session_transactions tst \n" +
-	        "                        INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
-	        "                        WHERE tst.session_id = p1.spid) \n" +
-			"    ,ProcName            = object_name(dest.objectid, dest.dbid) \n" +
+//			"    ,tran_id         = (SELECT TOP 1 tst.transaction_id \n" +
+//			"                        FROM sys.dm_tran_session_transactions tst \n" +
+//			"                        WHERE tst.session_id = p1.spid) \n" +
+//			"    ,tran_begin_time = (SELECT TOP 1 tat.transaction_begin_time \n" +
+//			"                        FROM       sys.dm_tran_session_transactions tst \n" +
+//	        "                        INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
+//	        "                        WHERE tst.session_id = p1.spid) \n" +
+//			"    ,tran_name       = (SELECT TOP 1 tat.name \n" +
+//			"                        FROM       sys.dm_tran_session_transactions tst \n" +
+//	        "                        INNER join sys.dm_tran_active_transactions  tat on tst.transaction_id = tat.transaction_id \n" + 
+//	        "                        WHERE tst.session_id = p1.spid) \n" +
+			sql_tranInfo_col__tran_id + 
+			sql_tranInfo_col__tran_begin_time + 
+			sql_tranInfo_col__tran_name + 
+			sql_tranInfo_col__wal_kb_used + 
+			sql_tranInfo_col__wal_record_count + 
+			"    ,ProcName            = isnull(object_schema_name(dest.objectid, dest.dbid),'') + '.' + object_name(dest.objectid, dest.dbid) \n" +
 			"    ,StmntStart          = -1 \n" +
 			"    ,p1.hostname                                  --des.[HOST_NAME] \n" +
 			"    ,TempdbUsageMb          = convert(numeric(12,1), NULL)  \n" +
 			"    ,TempdbUsageMbUser      = convert(numeric(12,1), NULL)  \n" +
 			"    ,TempdbUsageMbInternal  = convert(numeric(12,1), NULL)  \n" +
+			HasBufferSqlText_2 +
 			"    ,HasSqlText          = convert(bit,0)  \n" +
 			"    ,HasQueryplan        = convert(bit,0)  \n" +
 			"    ,HasLiveQueryplan    = convert(bit,0) \n" +
@@ -518,14 +624,17 @@ extends CountersModel
 			"    ,HasBlockedSpidsInfo = convert(bit,0) \n" +
 			"    ,SpidLockCount       = convert(int,-1) \n" +
 			"    ,HasSpidWaitInfo     = convert(bit   , 0) \n"  +             // filled in with 'localCalculation(...)' with values from CmSpidWait
-//			"    ,DB_NAME(p1.dbid) AS database_name  \n" +
-			"    ,(SELECT db.name FROM sys.databases db WHERE db.database_id = p1.dbid) AS database_name \n" +
+			"    ,DB_NAME(p1.dbid) AS database_name  \n" +
+//			"    ,(SELECT db.name FROM sys.databases db WHERE db.database_id = p1.dbid) AS database_name \n" +
 			"    ,SpidWaitCountSum    = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait
 			"    ,SpidWaitTimeMsSum   = convert(bigint, -1) \n" +             // filled in with 'localCalculation(...)' with values from CmSpidWait 
 			"    ,p1.cpu                                       --der.cpu_time \n" +
 			"    ,0                                            --der.reads   \n" +
 			"    ,0                                            --der.logical_reads   \n" +
 			"    ,0                                            --der.writes   \n" +
+			"    ,CAST(0 AS numeric(10,1))                     --exec_phys_reads_mb    \n" +
+			"    ,CAST(0 AS numeric(10,1))                     --exec_logical_reads_mb \n" +
+			"    ,CAST(0 AS numeric(10,1))                     --exec_writes_mb        \n" +
 			"    ,0                                            --des.cpu_time \n" +
 			"    ,0                                            --des.reads   \n" +
 			"    ,0                                            --des.logical_reads   \n" +
@@ -562,10 +671,12 @@ extends CountersModel
 //			"--               ELSE der.statement_end_offset   \n" +
 //			"--          END - der.statement_start_offset ) / 2 +2) AS [lastKnownSql] \n" +
 			"    ,is_user_process           = CASE WHEN p1.sid != 0x01 THEN convert(bit, 1) ELSE convert(bit, 0) END \n" +
-			"    ,percent_complete          = -1\n" +
-			"    ,estimated_completion_time = -1\n" +
+			"    ,percent_complete          = -1 \n" +
+			"    ,estimated_completion_time = -1 \n" +
+			"    ,estimated_compl_time_dhms = NULL \n" +
 			"    ,estimated_finish_time     = NULL \n" + 
 			"    ,p1.sql_handle \n" +
+			LastBufferSqlText_2 +
 			"    ,dest.text \n" +
 			"    ,SpidLocks        = convert(varchar(max),null) \n" +
 			"    ,BlockedSpidsInfo = convert(varchar(max),null) \n" +
@@ -600,6 +711,7 @@ extends CountersModel
 				sql2_cols +
 				"FROM sys.sysprocesses p1 \n" +
 				"JOIN sys.sysprocesses p2 ON p1.spid = p2.spid AND p2.blocked > 0 \n" +
+				sql_tranInfo_join_2 +
 				"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 				"WHERE 1 = 1 \n" + 
 				"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
@@ -636,6 +748,7 @@ extends CountersModel
 				"SELECT /* ${cmCollectorName} */  \n" +
 				cols +
 				"FROM sys.sysprocesses p1 \n" +
+				sql_tranInfo_join_3 +
 				"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 				"WHERE p1.open_tran > 0 \n" + 
 				"  AND p1.status    = 'sleeping' \n" +  
@@ -646,11 +759,17 @@ extends CountersModel
 				"";
 		}
 
-		return 
-			sql1 +
-			sql2 +
-			sql3 +
-			"";
+		String sql_prePopuate = ""
+				+ sql_tranInfo_populate;
+
+		return ""
+			+ sql_preDrop
+			+ sql_prePopuate
+			+ sql1
+			+ sql2
+			+ sql3
+			+ sql_postDrop
+			;
 	}
 
 
@@ -662,6 +781,21 @@ extends CountersModel
 		if ("lastKnownSql".equals(colName))
 		{
 			return cellValue == null ? null : toHtmlString( cellValue.toString() );
+		}
+
+		// 'HasBufferSqlText' STUFF
+		if ("HasBufferSqlText".equals(colName))
+		{
+			// Find 'MonSqlText' column, is so get it and set it as the tool tip
+			int pos_sqlText = findColumn("LastBufferSqlText");
+			if (pos_sqlText > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_sqlText);
+				if (cellVal instanceof String)
+				{
+					return toHtmlString((String) cellVal);
+				}
+			}
 		}
 
 		// 'HasSqlText' STUFF
@@ -795,13 +929,14 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Sample System SPIDs"      , PROPKEY_sample_systemSpids  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids  , DEFAULT_sample_systemSpids  ), DEFAULT_sample_systemSpids  , "Sample System SPID's" ));
-		list.add(new CmSettingsHelper("Get Query Plan"           , PROPKEY_sample_showplan     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan     , DEFAULT_sample_showplan     ), DEFAULT_sample_showplan     , "Also get queryplan" ));
-		list.add(new CmSettingsHelper("Get SQL Text"             , PROPKEY_sample_monSqlText   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText   , DEFAULT_sample_monSqlText   ), DEFAULT_sample_monSqlText   , "Also get SQL Text"  ));
-		list.add(new CmSettingsHelper("Get Live Query Plan"      , PROPKEY_sample_liveQueryPlan, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan, DEFAULT_sample_liveQueryPlan), DEFAULT_sample_liveQueryPlan, "Also get LIVE queryplan" ));
-		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks , DEFAULT_sample_holdingLocks ), DEFAULT_sample_holdingLocks , "Include SPID's that holds locks even if that are not active in the server." ));
-		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks    , DEFAULT_sample_spidLocks    ), DEFAULT_sample_spidLocks    , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
-		list.add(new CmSettingsHelper("Get SPID Waits"           , PROPKEY_sample_spidWaits    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidWaits    , DEFAULT_sample_spidWaits    ), DEFAULT_sample_spidWaits    , "Get info from CmSpidWait/dm_exec_session_wait_stats. This will help us to diagnose in detail what we have been waiting on since the last sample. NOTE: CmSpidWait needs to be enabled"));
+		list.add(new CmSettingsHelper("Sample System SPIDs"      , PROPKEY_sample_systemSpids    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids    , DEFAULT_sample_systemSpids    ), DEFAULT_sample_systemSpids    , "Sample System SPID's" ));
+		list.add(new CmSettingsHelper("Get Query Plan"           , PROPKEY_sample_showplan       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan       , DEFAULT_sample_showplan       ), DEFAULT_sample_showplan       , "Also get queryplan" ));
+		list.add(new CmSettingsHelper("Get SQL Text"             , PROPKEY_sample_monSqlText     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText     , DEFAULT_sample_monSqlText     ), DEFAULT_sample_monSqlText     , "Also get SQL Text"  ));
+		list.add(new CmSettingsHelper("Get Live Query Plan"      , PROPKEY_sample_liveQueryPlan  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan  , DEFAULT_sample_liveQueryPlan  ), DEFAULT_sample_liveQueryPlan  , "Also get LIVE queryplan" ));
+		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks   , DEFAULT_sample_holdingLocks   ), DEFAULT_sample_holdingLocks   , "Include SPID's that holds locks even if that are not active in the server." ));
+		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks      , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+		list.add(new CmSettingsHelper("Get SPID Waits"           , PROPKEY_sample_spidWaits      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidWaits      , DEFAULT_sample_spidWaits      ), DEFAULT_sample_spidWaits      , "Get info from CmSpidWait/dm_exec_session_wait_stats. This will help us to diagnose in detail what we have been waiting on since the last sample. NOTE: CmSpidWait needs to be enabled"));
+		list.add(new CmSettingsHelper("Get SPID Input Buffer"    , PROPKEY_sample_spidInputBuffer, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidInputBuffer, DEFAULT_sample_spidInputBuffer), DEFAULT_sample_spidInputBuffer, "Get info from sys.dm_exec_input_buffer. This will help us to diagnose what SQL Text the client sent to SQL Server"));
 
 		return list;
 	}
@@ -813,7 +948,8 @@ extends CountersModel
 		// use CHECKBOX for some columns of type bit/Boolean
 		String colName = getColumnName(columnIndex);
 
-		if      ("HasSqlText"         .equals(colName)) return Boolean.class;
+		if      ("HasBufferSqlText"   .equals(colName)) return Boolean.class;
+		else if ("HasSqlText"         .equals(colName)) return Boolean.class;
 		else if ("HasQueryplan"       .equals(colName)) return Boolean.class;
 		else if ("HasLiveQueryplan"   .equals(colName)) return Boolean.class;
 		else if ("HasSpidLocks"       .equals(colName)) return Boolean.class;
@@ -835,7 +971,9 @@ extends CountersModel
 
 		boolean getTempdbSpidUsage = Configuration.getCombinedConfiguration().getBooleanProperty(CmSummary.PROPKEY_sample_tempdbSpidUsage, CmSummary.DEFAULT_sample_tempdbSpidUsage);
 
-		int pos_SPID               = newSample.findColumn("session_id");
+		int pos_SPID                      = newSample.findColumn("session_id");
+		int pos_estimated_completion_time = newSample.findColumn("estimated_completion_time");
+		int pos_estimated_compl_time_dhms = newSample.findColumn("estimated_compl_time_dhms");
 		
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
@@ -865,6 +1003,36 @@ extends CountersModel
 					}
 				}
 			}
+			
+			// set: "estimated_completion_time" to: "#d #h #m #s"
+			if (pos_estimated_completion_time != -1 && pos_estimated_compl_time_dhms != -1)
+			{
+				// Get value if Milliseconds
+				int estimated_completion_time = newSample.getValueAsInteger(rowId, pos_estimated_completion_time, 0);
+
+				String newValue_estimated_compl_time_dhms = "";
+				if (estimated_completion_time > 0)
+				{
+					//String newValue_estimated_compl_time_dhms = TimeUtils.msToTimeStrDHMS(estimated_completion_time);
+					long days    = TimeUnit.MILLISECONDS.toDays   (estimated_completion_time);
+					long hours   = TimeUnit.MILLISECONDS.toHours  (estimated_completion_time) - TimeUnit.DAYS   .toHours(  TimeUnit.MILLISECONDS.toDays   (estimated_completion_time));
+					long minutes = TimeUnit.MILLISECONDS.toMinutes(estimated_completion_time) - TimeUnit.HOURS  .toMinutes(TimeUnit.MILLISECONDS.toHours  (estimated_completion_time));
+					long seconds = TimeUnit.MILLISECONDS.toSeconds(estimated_completion_time) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(estimated_completion_time));
+				//	long millis  = TimeUnit.MILLISECONDS.toMillis (estimated_completion_time) - TimeUnit.SECONDS.toMillis( TimeUnit.MILLISECONDS.toSeconds(estimated_completion_time));
+
+					// Build expected string
+					if ( days    > 0 ) newValue_estimated_compl_time_dhms += days    + "d" + " ";
+					if ( hours   > 0 ) newValue_estimated_compl_time_dhms += hours   + "h" + " ";
+					if ( minutes > 0 ) newValue_estimated_compl_time_dhms += minutes + "m" + " ";
+					if ( seconds > 0 ) newValue_estimated_compl_time_dhms += seconds + "s" + " ";
+
+					// Get rid of trailing spaces
+					newValue_estimated_compl_time_dhms = newValue_estimated_compl_time_dhms.trim();
+				}
+				
+				// Set value
+				newSample.setValueAt(newValue_estimated_compl_time_dhms, rowId, pos_estimated_compl_time_dhms);
+			}
 		}
 	}
 
@@ -882,26 +1050,28 @@ extends CountersModel
 //		long startTime = System.currentTimeMillis();
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean getShowplan       = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_showplan,       DEFAULT_sample_showplan);
-		boolean getMonSqltext     = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_monSqlText,     DEFAULT_sample_monSqlText);
-//		boolean getDbccSqltext    = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false);
-//		boolean getProcCallStack  = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true);
-//		boolean getDbccStacktrace = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false);
-		boolean getLiveQueryPlan  = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan,  DEFAULT_sample_liveQueryPlan);
-		boolean getSpidLocks      = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidLocks,      DEFAULT_sample_spidLocks);
-		boolean getSpidWaits      = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidWaits,      DEFAULT_sample_spidWaits);
+		boolean getShowplan        = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_showplan,        DEFAULT_sample_showplan);
+		boolean getMonSqltext      = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_monSqlText,      DEFAULT_sample_monSqlText);
+//		boolean getDbccSqltext     = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false);
+//		boolean getProcCallStack   = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true);
+//		boolean getDbccStacktrace  = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false);
+		boolean getLiveQueryPlan   = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan,   DEFAULT_sample_liveQueryPlan);
+		boolean getSpidLocks       = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidLocks,       DEFAULT_sample_spidLocks);
+		boolean getSpidWaits       = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidWaits,       DEFAULT_sample_spidWaits);
+		boolean getSpidInputBuffer = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidInputBuffer, DEFAULT_sample_spidInputBuffer);
 
 		// Where are various columns located in the Vector 
 		int pos_SPID = -1;
-//		int pos_WaitEventID         = -1, pos_WaitEventDesc    = -1, pos_WaitClassDesc = -1;
-		int pos_HasShowPlan         = -1, pos_ShowPlanText     = -1;
-		int pos_HasMonSqlText       = -1, pos_MonSqlText       = -1;
-//		int pos_HasDbccSqlText      = -1, pos_DbccSqlText      = -1;
-//		int pos_HasProcCallStack    = -1, pos_ProcCallStack    = -1;
-//		int pos_HasStacktrace       = -1, pos_DbccStacktrace   = -1;
-		int pos_HasLiveQueryPlan    = -1, pos_LiveQueryPlan    = -1;
-		int pos_HasSpidLocks        = -1, pos_SpidLocks        = -1, pos_SpidLockCount = -1;
-		int pos_HasBlockedSpidsInfo = -1, pos_BlockedSpidsInfo = -1;
+//		int pos_WaitEventID         = -1, pos_WaitEventDesc     = -1, pos_WaitClassDesc = -1;
+		int pos_HasShowPlan         = -1, pos_ShowPlanText      = -1;
+		int pos_HasMonSqlText       = -1, pos_MonSqlText        = -1;
+		int pos_HasBufferSqlText    = -1, pos_LastBufferSqlText = -1;
+//		int pos_HasDbccSqlText      = -1, pos_DbccSqlText       = -1;
+//		int pos_HasProcCallStack    = -1, pos_ProcCallStack     = -1;
+//		int pos_HasStacktrace       = -1, pos_DbccStacktrace    = -1;
+		int pos_HasLiveQueryPlan    = -1, pos_LiveQueryPlan     = -1;
+		int pos_HasSpidLocks        = -1, pos_SpidLocks         = -1, pos_SpidLockCount = -1;
+		int pos_HasBlockedSpidsInfo = -1, pos_BlockedSpidsInfo  = -1;
 
 		int pos_SpidWaitCountSum    = -1;
 		int pos_SpidWaitTimeMsSum   = -1;
@@ -944,6 +1114,8 @@ extends CountersModel
 			else if (colName.equals("session_id"))                   pos_SPID                       = colId;
 			else if (colName.equals("HasQueryplan"))                 pos_HasShowPlan                = colId;
 			else if (colName.equals("query_plan"))                   pos_ShowPlanText               = colId;
+			else if (colName.equals("HasBufferSqlText"))             pos_HasBufferSqlText           = colId;
+			else if (colName.equals("LastBufferSqlText"))            pos_LastBufferSqlText          = colId;
 			else if (colName.equals("HasSqlText"))                   pos_HasMonSqlText              = colId;
 			else if (colName.equals("lastKnownSql"))                 pos_MonSqlText                 = colId;
 			else if (colName.equals("HasLiveQueryplan"))             pos_HasLiveQueryPlan           = colId;
@@ -1195,6 +1367,13 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 					}
 					else
 					{
+						int dop = -1;
+						int dop_pos = counters.findColumn("dop");
+						if (dop_pos != -1)
+						{
+							dop = counters.getValueAsInteger(rowId, dop_pos, 0);
+						}
+						
 						CountersModel cmSpidWait = getCounterController().getCmByName(CmSpidWait.CM_NAME);
 						if (cmSpidWait != null && cmSpidWait.isActive())
 						{
@@ -1245,6 +1424,13 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 									double abs_spidWaitTimePerCount  = abs_waiting_tasks_count  <= 0 ? 0D : ( abs_wait_time_ms*1.0) / ( abs_waiting_tasks_count*1.0);
 									double diff_spidWaitTimePerCount = diff_waiting_tasks_count <= 0 ? 0D : (diff_wait_time_ms*1.0) / (diff_waiting_tasks_count*1.0);
 
+									String diff_wait_time_pct = "n/a";
+									if (cmSpidWait_sampleInterval > 0 && diff_wait_time_ms > 0)
+									{
+										double calc = NumberUtils.round( ((diff_wait_time_ms*1.0) / (cmSpidWait_sampleInterval*1.0)) * 100.0, 1);
+										diff_wait_time_pct = calc + " %";
+									}
+									
 //System.out.println("            >>>>>>>>> : spid=" + spid + ", spidWaitRowId=" + spidWaitRowId + ", wait_type='" + StringUtil.left(wait_type, 40) + "', WaitClass='" + StringUtil.left(WaitClass, 15) + "', abs_waiting_tasks_count=" + abs_waiting_tasks_count + ", diff_waiting_tasks_count=" + diff_waiting_tasks_count + ", abs_wait_time_ms=" + abs_wait_time_ms + ", diff_wait_time_ms=" + diff_wait_time_ms + ".");
 									// Add to SUM
 									abs_spidWaitCountSum   += abs_waiting_tasks_count;
@@ -1259,6 +1445,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 									{
 										abs_waitInfoTable += "<tr>"
 												+ "<td>" + spid                                              + "</td>"
+												+ (dop_pos == -1 ? "" : "<td>" + dop                         + "</td>")
 												+ "<td>" + wait_type                                         + "</td>"
 												+ "<td>" + WaitClass                                         + "</td>"
 												+ "<td align='right'>" + nf.format(abs_waiting_tasks_count)  + "</td>"
@@ -1272,10 +1459,12 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 									{
 										diff_waitInfoTable += "<tr>"
 												+ "<td>" + spid                                               + "</td>"
+												+ (dop_pos == -1 ? "" : "<td>" + dop                          + "</td>")
 												+ "<td>" + wait_type                                          + "</td>"
 												+ "<td>" + WaitClass                                          + "</td>"
 												+ "<td align='right'>" + nf.format(diff_waiting_tasks_count)  + "</td>"
 												+ "<td align='right'>" + nf.format(diff_wait_time_ms)         + "</td>"
+												+ "<td align='right'>" +           diff_wait_time_pct         + "</td>"
 												+ "<td align='right'>" + nf.format(diff_spidWaitTimePerCount) + "</td>"
 												+ "</tr> \n";
 									}
@@ -1285,6 +1474,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 									{
 										rate_waitInfoTable += "<tr>"
 												+ "<td>" + spid                                               + "</td>"
+												+ (dop_pos == -1 ? "" : "<td>" + dop                          + "</td>")
 												+ "<td>" + wait_type                                          + "</td>"
 												+ "<td>" + WaitClass                                          + "</td>"
 												+ "<td align='right'>" + nf.format(rate_waiting_tasks_count)  + "</td>"
@@ -1292,6 +1482,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 												+ "<td align='right'>" + nf.format(cmSpidWait_sampleInterval) + "</td>" 
 												+ "<td align='right'>" + nf.format(diff_waiting_tasks_count)  + "</td>"
 												+ "<td align='right'>" + nf.format(diff_wait_time_ms)         + "</td>" 
+												+ "<td align='right'>" +           diff_wait_time_pct         + "</td>"
 												+ "<td align='right'>" + nf.format(diff_spidWaitTimePerCount) + "</td>"
 												+ "</tr> \n";
 									}
@@ -1311,6 +1502,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 									String strVal = "<table class='dbx-table-basic tablesorter' border='1'> \n"
 											+ "<tr>"
 											+ " <th>spid</th>"
+											+ (dop_pos == -1 ? "" : "<th>dop</th>")
 											+ " <th>wait_type</th>"
 											+ " <th>WaitClass</th>"
 											+ " <th>ABS: waiting_tasks_count</th>"
@@ -1329,10 +1521,12 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 									String strVal = "<table class='dbx-table-basic tablesorter' border='1'> \n"
 											+ "<tr>"
 											+ " <th>spid</th>"
+											+ (dop_pos == -1 ? "" : "<th>dop</th>")
 											+ " <th>wait_type</th>"
 											+ " <th>WaitClass</th>"
 											+ " <th>DIFF: waiting_tasks_count</th>"
 											+ " <th>DIFF: wait_time_ms</th>"
+											+ " <th>DIFF: WaitTimePct</th>"
 											+ " <th>DIFF: WaitTimePerCount</th>"
 											+ "</tr> \n" 
 											+ diff_waitInfoTable
@@ -1347,6 +1541,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 									String strVal = "<table class='dbx-table-basic tablesorter' border='1'> \n"
 											+ "<tr>"
 											+ " <th>spid</th>"
+											+ (dop_pos == -1 ? "" : "<th>dop</th>")
 											+ " <th>wait_type</th>"
 											+ " <th>WaitClass</th>"
 											+ " <th>RATE: waiting_tasks_count</th>"
@@ -1354,6 +1549,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 											+ " <th>CmSpidWait: SampleInterval Ms</th>"
 											+ " <th>DIFF: waiting_tasks_count</th>"
 											+ " <th>DIFF: wait_time_ms</th>"
+											+ " <th>DIFF: WaitTimePct</th>"
 											+ " <th>DIFF: WaitTimePerCount</th>"
 											+ "</tr> \n" 
 											+ rate_waitInfoTable
@@ -1449,6 +1645,15 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 
 				boolean b;
 				Object obj;
+
+				// Buffer SQL-Text check box
+//				if (getSpidInputBuffer && pos_HasBufferSqlText != -1 && pos_LastBufferSqlText != -1)
+				if (pos_HasBufferSqlText != -1 && pos_LastBufferSqlText != -1)
+				{
+					obj = counters.getValueAt(rowId, pos_LastBufferSqlText);
+					b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
+					counters.setValueAt(new Boolean(b), rowId, pos_HasBufferSqlText);
+				}
 
 				// SQL-Text check box
 				obj = counters.getValueAt(rowId, pos_MonSqlText);
@@ -2015,7 +2220,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipUsername",                   PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipUsername             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out user      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(user1|user2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipHostname",                   PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipHostname             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out host      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '.*(dev|test).*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipDbname",                     PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipDbname               , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out database  names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(db1|db2)'      or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec Progname",                       PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out program   names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of 'Report Server'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipProgname",                   PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProgname             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out program   names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of 'Report Server'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec SkipProcname",                   PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             , String .class, conf.getProperty       (PROPKEY_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             , DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             ), DEFAULT_alarm_ImBlockingOthersMaxTimeInSecSkipProcname             , "If 'ImBlockingOthersMaxTimeInSec' is true; then we can filter out procedure names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(proc1|proc2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 
 		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec"    , isAlarmSwitch, PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec             , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec             ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec             , "If Client is HOLDING-LOCKS at DBMS and 'ExecTimeInMs' is greater than ## seconds then send 'AlarmEventHoldingLocksWhileWaitForClientInput'." ));
@@ -2023,7 +2228,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipUsername",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipUsername , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out user      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(user1|user2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipHostname",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipHostname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out host      names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '.*(dev|test).*' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipDbname",         PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipDbname   , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out database  names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(db1|db2)'      or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec Progname",           PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out program   names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of 'Report Server'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipProgname",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProgname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out program   names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of 'Report Server'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipProcname",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out procedure names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(proc1|proc2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 
 		list.add(new CmSettingsHelper("TempdbUsageMb"                               , isAlarmSwitch, PROPKEY_alarm_TempdbUsageMb                                        , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TempdbUsageMb                                        , DEFAULT_alarm_TempdbUsageMb                                        ), DEFAULT_alarm_TempdbUsageMb                                        , "If 'TempdbUsageMb' is greater than ## then send 'AlarmEventExtensiveUsage'." ));

@@ -498,7 +498,10 @@ super.setUseFocusableTips(false);
 		Object isHiglightWordModeEnabled = rsta.getClientProperty(PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED);
 
 		if (isHiglightWordModeEnabled != null && isHiglightWordModeEnabled instanceof Boolean && (Boolean)isHiglightWordModeEnabled == false)
+		{
+			System.out.println("isHiglightWordModeEnabled():     <<<<---- return FALSE");
 			return false;
+		}
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 		return conf.getBooleanProperty(PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED, true);

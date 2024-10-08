@@ -42,6 +42,7 @@ import com.asetune.pcs.report.content.postgres.PostgresConfig;
 import com.asetune.pcs.report.content.postgres.PostgresConfiguration;
 import com.asetune.pcs.report.content.postgres.PostgresDbSize;
 import com.asetune.pcs.report.content.postgres.PostgresLongRunningStmnts;
+import com.asetune.pcs.report.content.postgres.PostgresSrvIoStats;
 import com.asetune.pcs.report.content.postgres.PostgresSrvWaitStats;
 import com.asetune.pcs.report.content.postgres.PostgresStatementsPerDb;
 import com.asetune.pcs.report.content.postgres.PostgresTopDeadRows;
@@ -63,6 +64,7 @@ extends DailySummaryReportDefault
 
 		// CPU / Waits
 		addReportEntry( new OsCpuUsageOverview    (this) );
+		addReportEntry( new PostgresSrvIoStats    (this) );
 		addReportEntry( new PostgresSrvWaitStats  (this) );
 
 		// Statements

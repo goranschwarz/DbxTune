@@ -34,6 +34,9 @@ public interface IReportEntry
 {
 	public enum MessageType
 	{
+		/** This will typically be a Abbreviated Mail Message, not holding ALL the information (for example if a Short Message even gets to big) */
+		MINIMAL_MESSAGE,
+		
 		/** This will typically be a Mail Message, not holding ALL the information */
 		SHORT_MESSAGE,
 		
@@ -41,12 +44,18 @@ public interface IReportEntry
 		FULL_MESSAGE
 	};
 
+	/** Check if current message type is MessageType.MINIMAL_MESSAGE */ 
+	boolean isMinimalMessageType();
+
 	/** Check if current message type is MessageType.SHORT_MESSAGE */ 
 	boolean isShortMessageType();
+
 	/** Check if current message type is MessageType.FULL_MESSAGE */ 
 	boolean isFullMessageType();
+
 	/** Set the current message type */
 	void setCurrentMessageType(MessageType messageType);
+
 	/** Get the current message type */
 	MessageType getCurrentMessageType();
 	
@@ -65,6 +74,13 @@ public interface IReportEntry
 	 */
 	void writeMessageText(Writer writer, MessageType messageType) throws IOException;
 
+
+	/**
+	 * if we should produce any "minimal message", which can be used for sending "fallback" or "abbreviated" mail messages etc...
+	 * 
+	 * @return
+	 */
+	boolean hasMinimalMessageText();
 
 	/**
 	 * if we should produce any "short message", which can be used for sending mail messages etc...

@@ -42,13 +42,16 @@ public class MonRecordingInfo
 
 	public Timestamp _sessionStartTime = null;
 	
-//	private String    _recAppName        = "";
-//	private String    _recBuildString    = "";
-//	private String    _recVersionString  = "";
-	private String    _dbmsVersionString = "";
-	private long      _dbmsVersionNum    = -1;
-	private String    _dbmsServerName    = "";
-	private Timestamp _dbmsStartTime     = null;
+//	private String    _recAppName           = "";
+//	private String    _recBuildString       = "";
+//	private String    _recVersionString     = "";
+	private String    _dbmsVersionString    = "";
+	private String    _dbmsVersionStringMin = "";
+	private String    _dbmsVersionStringMax = "";
+	private Timestamp _dbmsVersionStringChangeTime = null;
+	private long      _dbmsVersionNum       = -1;
+	private String    _dbmsServerName       = "";
+	private Timestamp _dbmsStartTime        = null;
 
 	private MonVersionInfo _monVersionInfo = null;
 
@@ -65,6 +68,24 @@ public class MonRecordingInfo
 	public String getDbmsVersionStr()
 	{
 		return _dbmsVersionString;
+	}
+
+	/** Get the DBMS Version string stored by any of the DbxTune collectors (The minimum value, if changed during the day) */
+	public String getDbmsVersionStrMin()
+	{
+		return _dbmsVersionStringMin;
+	}
+
+	/** Get the DBMS Version string stored by any of the DbxTune collectors  (The maximum value, if changed during the day) */
+	public String getDbmsVersionStrMax()
+	{
+		return _dbmsVersionStringMax;
+	}
+
+	/** If the DBMS Version String changed during the day... This is the TimeStamp it likely happened */
+	public Timestamp getDbmsVersionStrChangeTime()
+	{
+		return _dbmsVersionStringChangeTime;
 	}
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors, and then parse it into a number */
@@ -181,9 +202,13 @@ public class MonRecordingInfo
 		else if ("Db2Tune"      .equalsIgnoreCase(appName)) { dbmsVersionColName = "VERSION";     dbmsSrvNameColName = "DATABASE_NAME";  dbmsStartDateColName = null;            tabName = "CmSummary_abs"; }
 		else if ("HanaTune"     .equalsIgnoreCase(appName)) { dbmsVersionColName = "VERSION";     dbmsSrvNameColName = "DATABASE_NAME";  dbmsStartDateColName = null;            tabName = "CmSummary_abs"; }
 
-		String sqlVersion = "'' as [Version]";
+		String minSqlVersion = "'' as [Version]";
 		if (StringUtil.hasValue(dbmsVersionColName))
-			sqlVersion = "max([" + dbmsVersionColName + "])";
+			minSqlVersion = "min([" + dbmsVersionColName + "])";
+		
+		String maxSqlVersion = "'' as [Version]";
+		if (StringUtil.hasValue(dbmsVersionColName))
+			maxSqlVersion = "max([" + dbmsVersionColName + "])";
 		
 		String sqlSrvName = "'' as [SrvName]";
 		if (StringUtil.hasValue(dbmsSrvNameColName))
@@ -194,12 +219,15 @@ public class MonRecordingInfo
 			sqlStartDate = "max([" + dbmsStartDateColName + "])";
 		
 		// Construct SQL and get the version string
-		String sql = "select " + sqlVersion + ", " + sqlSrvName + ", " + sqlStartDate 
+		String sql = "select " + minSqlVersion + ", " + maxSqlVersion + ", " + sqlSrvName + ", " + sqlStartDate 
 				+ " from [" + tabName + "]";
 		
-		String    dbmsVersionString = "";
-		String    dbmsSrvName       = "";
-		Timestamp dbmsStartTime     = null;
+		String    dbmsVersionString           = "";
+		String    dbmsVersionStringMin        = "";
+		String    dbmsVersionStringMax        = "";
+		Timestamp dbmsVersionStringChangeTime = null;
+		String    dbmsSrvName                 = "";
+		Timestamp dbmsStartTime               = null;
 		
 		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement() )
@@ -210,9 +238,12 @@ public class MonRecordingInfo
 			{
 				while(rs.next())
 				{
-					dbmsVersionString = rs.getString   (1);
-					dbmsSrvName       = rs.getString   (2);
-					dbmsStartTime     = rs.getTimestamp(3);
+					dbmsVersionStringMin = rs.getString   (1);
+					dbmsVersionStringMax = rs.getString   (2);
+					dbmsSrvName          = rs.getString   (3);
+					dbmsStartTime        = rs.getTimestamp(4);
+					
+					dbmsVersionString    = dbmsVersionStringMax;
 				}
 			}
 		}
@@ -221,6 +252,34 @@ public class MonRecordingInfo
 			_logger.warn("Problems getting version string using SQL '"+sql+"'. Caught: " + ex);
 		}
 
+		// If the DBMS Version String was changed... when did it happen
+		if (StringUtil.hasValue(dbmsVersionStringMin) && StringUtil.hasValue(dbmsVersionStringMax))
+		{
+			if ( ! dbmsVersionStringMin.equals(dbmsVersionStringMax) )
+			{
+				sql = " select min([SessionSampleTime]) " 
+					+ " from [" + tabName + "]"
+					+ " where [" + dbmsVersionColName + "] = '" + dbmsVersionStringMax + "'";
+
+				sql = conn.quotifySqlString(sql);
+				try ( Statement stmnt = conn.createStatement() )
+				{
+					// Unlimited execution time
+					stmnt.setQueryTimeout(0);
+					try ( ResultSet rs = stmnt.executeQuery(sql) )
+					{
+						while(rs.next())
+						{
+							dbmsVersionStringChangeTime = rs.getTimestamp(1);
+						}
+					}
+				}
+				catch(SQLException ex)
+				{
+					_logger.warn("Problems getting MIN(SessionSampleTime) from CHANGED DBMS Version String using SQL '"+sql+"'. Caught: " + ex);
+				}
+			}
+		}
 		
 		// Parse the Version String into a number
 		long ver = 0; 
@@ -236,11 +295,14 @@ public class MonRecordingInfo
 		else if ("Db2Tune"      .equalsIgnoreCase(appName)) { ver = Ver.db2VersionStringToNumber      (dbmsVersionString); }
 		else if ("HanaTune"     .equalsIgnoreCase(appName)) { ver = Ver.hanaVersionStringToNumber     (dbmsVersionString); }
 
-		_sessionStartTime  = _monVersionInfo._sessionStartTime;
-//		_recAppName        = appName;
-		_dbmsVersionString = dbmsVersionString;
-		_dbmsServerName    = dbmsSrvName;
-		_dbmsVersionNum    = ver;
-		_dbmsStartTime     = dbmsStartTime;
+		_sessionStartTime            = _monVersionInfo._sessionStartTime;
+//		_recAppName                  = appName;
+		_dbmsVersionString           = dbmsVersionString;
+		_dbmsVersionStringMin        = dbmsVersionStringMin;
+		_dbmsVersionStringMax        = dbmsVersionStringMax;
+		_dbmsVersionStringChangeTime = dbmsVersionStringChangeTime;
+		_dbmsServerName              = dbmsSrvName;
+		_dbmsVersionNum              = ver;
+		_dbmsStartTime               = dbmsStartTime;
 	}
 }

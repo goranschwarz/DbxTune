@@ -100,6 +100,10 @@ extends ReportChartAbstract
 	}
 
 
+//	public String  getGraphName() { return _graphName; }
+	public int     getMaxValue()  { return _maxValue; }
+	public boolean isSorted()     { return _isSorted; }
+	public String  getSkipNames() { return _skipNames; }
 
 	//----------------------------------------------------------
 	// Below are code for creating Graph/Chart images that can be included in the HTML Report

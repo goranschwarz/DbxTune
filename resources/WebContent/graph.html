@@ -1478,7 +1478,7 @@ at pc:
 			//$('#dbx-view-ssShowplan-content',  this).text(data.tooltip);
 			$('#dbx-view-ssShowplan-content',    this).text("Waiting for the plain to be loaded... Hold on for a few seconds.");
 			$('#dbx-view-ssShowplan-xmlContent', this).text(formatXml(data.tooltip));
-			$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql());
+			$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql(data.sqltext));
 			ssShowplanGetParameters(); // sets both Compile and Runtime parameters in there fields
 		});
 
@@ -1581,12 +1581,17 @@ at pc:
 			document.body.removeChild(textArea);
 		}
 		//------------------------------------------------------------------------------------------
-		function ssShowplanGetSql()
+		function ssShowplanGetSql(fallbackSqlText)
 		{
 			let ssShowplanXmlText = $("#dbx-view-ssShowplan-xmlContent").text();
 
 			// In case of the below does NOT work, simply empty the SQL Text
-			$('#dbx-view-ssShowplan-sqlContent').text("-- No SQL StatementText was found in the XML Plan.");
+			let tmpSqlText = "";
+			tmpSqlText += "----------------------------------------------------------------------------------------------- \n";
+			tmpSqlText += "-- No SQL StatementText was found in the XML Plan. The below SQL is from column 'lastKnownSql': \n";
+			tmpSqlText += "----------------------------------------------------------------------------------------------- \n";
+			tmpSqlText += fallbackSqlText;
+			$('#dbx-view-ssShowplan-sqlContent').text(tmpSqlText);
 
 
 			let xmlDoc = $.parseXML(ssShowplanXmlText);

@@ -447,7 +447,25 @@ public class ResultSetTableModel
 		}
 		// Yes this looks a bit ODD, but lets do it better later
 		//---------------------------------------------------
-			
+
+		//---------------------------------------------------
+		// Special thing for SQL-Server and if noData==true && it's a ResultSet from 'set statistics profile on'
+		// Then we still want to show the output from 'set statistics profile on'
+		if (noData && _rsmdColumnLabel.size() >= 5)
+		{
+			// The ResultSet always starts with columns: Rows, Executes, StmtText, StmtId, NodeId
+			if (    "Rows"    .equals(_rsmdColumnLabel.get(0))
+			     && "Executes".equals(_rsmdColumnLabel.get(1))
+			     && "StmtText".equals(_rsmdColumnLabel.get(2))
+			     && "StmtId"  .equals(_rsmdColumnLabel.get(3))
+			     && "NodeId"  .equals(_rsmdColumnLabel.get(4))
+			   )
+			{
+				noData = false;
+			}
+		}
+
+		
 		_readCount = 0;
 		int rowCount = 0;
 		
@@ -4769,6 +4787,25 @@ public class ResultSetTableModel
      * Rows 2
 	 * </pre>
 	 * 
+	 * <p>
+	 * Note: <b>This implementation can't handle "multi line" records... for the moment...</b><br> 
+	 * For example:<br>
+	 * <pre>
+     * +--+----------------+-----------------------------------+-------------------+
+     * |id|column_1        |column_2                           |column_3           |
+     * +--+----------------+-----------------------------------+-------------------+
+     * |1 |row1-c1         |row with many rows or newlines     |data               |
+     * |  |                |still same column data             |                   |
+     * |  |                |yet another "row" for this column  |                   |
+     * +--+----------------+-----------------------------------+-------------------+
+     * |2 |row2-c1         |column data for id 2               |data               |
+     * +--+----------------+-----------------------------------+-------------------+
+     * |3 |row3-c1         |column data for id 3               |data               |
+     * +--+----------------+-----------------------------------+-------------------+
+     * Rows 3
+	 * </pre>
+	 * </p>
+	 * 
 	 * @param textTableList  and since it's a list, one row for each line
 	 * @return a list of ResultSetTableModel
 	 * @throws IllegalArgumentException in case of problems with input or parsing
@@ -4781,6 +4818,11 @@ public class ResultSetTableModel
 
 		List<ResultSetTableModel> rstmList = new ArrayList<>();
 		ResultSetTableModel rstm = null;
+		
+		// TODO: To handle "multi line records" we probably need to "pre-parse" the input in a better way
+		//       Like: Looking for "Rows #" -- to find a table "end"
+		//         or: parse the string to find "records" that *looks* like a "multi line" record (most columns is "empty")
+//		boolean isMultiLineTable = false;
 		
 		int rstmCount = 0;
 		int hrCount = 0;

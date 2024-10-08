@@ -42,6 +42,7 @@ import org.apache.log4j.PropertyConfigurator;
 import com.asetune.central.DbxTuneCentral;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.FileUtils;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -83,8 +84,11 @@ extends Task
 	public static final String  PROPKEY_printSpaceInfo = "DataDirectoryCleaner.print.space.info";
 	public static final boolean DEFAULT_printSpaceInfo = true;
 
-	public static final String  PROPKEY_maxHistoricalSpaceUsageInGb = "DataDirectoryCleaner.max.historical.space.usage.GB";
-	public static final int     DEFAULT_maxHistoricalSpaceUsageInGb = -1; // -1 == DISABLED
+	public static final String  PROPKEY_maxHistoricalSpaceUsageInGb  = "DataDirectoryCleaner.max.historical.space.usage.GB";
+	public static final int     DEFAULT_maxHistoricalSpaceUsageInGb  = -1; // -1 == DISABLED
+
+	public static final String  PROPKEY_maxHistoricalSpaceUsageInPct = "DataDirectoryCleaner.max.historical.space.usage.pct";
+	public static final double  DEFAULT_maxHistoricalSpaceUsageInPct = 94.0; // -1 == DISABLED
 
 	public static final String  PROPKEY_LOG_FILE_PATTERN = "DataDirectoryCleaner.log.file.pattern";
 	public static final String  DEFAULT_LOG_FILE_PATTERN    = "%d - %-5p - %m%n";
@@ -105,6 +109,8 @@ extends Task
 	private static long _lastExec = 0;
 	private static long _lastExecThreshold = 300*1000; // 5 minutes 
 
+	private static String _lastExecShortReport = "";
+	
 	private Configuration _savedFileInfo = null;
 
 	public static long getH2RecodingFileSizeMb()
@@ -272,7 +278,8 @@ extends Task
 	{
 		private File _file; 
 		private Path _path; 
-		private long _savedFileSize;
+		private long _savedFileSize; // This is information from the "_savedFileInfo" or the properties file where we save the file size before DB is compacted
+		private long _actualFileSize;
 		
 		/** Create a new FileInfo */
 		public FileInfo(File f)
@@ -304,6 +311,7 @@ extends Task
 				_file = p.toFile();
 			
 			_savedFileSize = -1;
+			_actualFileSize = _file.length();
 
 			if (_file.exists() && _savedFileInfo != null)
 			{
@@ -340,30 +348,70 @@ extends Task
 			return Math.max(_savedFileSize, _file.length());
 		}
 		
+		/**
+		 * Simply calls <code>_file.length()</code>
+		 * @return
+		 */
 		public long getFileSize()
 		{
 			return _file.length();
 		}
+		/**
+		 * Returns information from the "_savedFileInfo" or the properties file where we save the file size before DB is compacted
+		 * @return
+		 */
 		public long getSavedSize()
 		{
 			return _savedFileSize;
 		}
+		/**
+		 * Get file size (how big was the file, _file.length()) when this object was created
+		 * @return
+		 */
+		public long getActualFileSize()
+		{
+			return _actualFileSize;
+		}
 	}
 	
+	public static String getLastExecShortReport()
+	{
+		if (_lastExecShortReport == null)
+			return "";
+
+		return _lastExecShortReport;
+	}
+
+	public static void clearLastExecShortReport()
+	{
+		_lastExecShortReport = "";
+	}
+
+	private static void appendToLastExecShortReport(String str)
+	{
+		if (_lastExecShortReport == null)
+			_lastExecShortReport = "";
+
+		_lastExecShortReport += str + "\n";
+	}
+
 	@Override
 	public void execute(TaskExecutionContext context) throws RuntimeException
 	{
 		long timeSinceLastExec = System.currentTimeMillis() - _lastExec;
 		if (timeSinceLastExec < _lastExecThreshold)
 		{
-			_logger.info("Skipping 'Data Directory Cleanup' task since it was only "+TimeUtils.msToTimeStr("%MM:%SS", timeSinceLastExec)+" (MM:SS) since last cleanup. Minimum time between cleanups is "+TimeUtils.msToTimeStr("%MM:%SS", _lastExecThreshold)+" (MM:SS).");
+			_logger.info("Skipping 'Data Directory Cleanup' task since it was only " + TimeUtils.msToTimeStr("%MM:%SS", timeSinceLastExec) + " (MM:SS) since last cleanup. Minimum time between cleanups is " + TimeUtils.msToTimeStr("%MM:%SS", _lastExecThreshold) + " (MM:SS).");
 			return;
 		}
 
+		// Reset "Last Small Report" (used by the Daily Summary Report)
+		_lastExecShortReport = "";
 
-		_logger.info("");
-		_logger.info("#############################################################################################");
-		_logger.info("Begin task: Data Directory Cleanup");
+		_logger.info(               "");
+		_logger.info(               "#############################################################################################");
+		_logger.info(               "Begin task: Data Directory Cleanup");
+		appendToLastExecShortReport("Begin task: Data Directory Cleanup");
 		
 		check(_dryRun);
 		_lastExec = System.currentTimeMillis();
@@ -381,11 +429,13 @@ extends Task
 		//     if(os instanceof UnixOperatingSystemMXBean)
 		//         System.out.println("Number of open fd: " + ((UnixOperatingSystemMXBean) os).getOpenFileDescriptorCount());
 
-		_logger.info("End task: Data Directory Cleanup");
+		_logger.info(               "End task: Data Directory Cleanup");
+		appendToLastExecShortReport("End task: Data Directory Cleanup");
 	}
 
 	private void check(boolean dryRun)
 	{
+		String logMsg;
 		File dataDir = new File(DATA_DIR);
 		File dataDirRes  = dataDir;
 		try { dataDirRes = dataDir.toPath().toRealPath().toFile(); } catch(IOException ex) { _logger.warn("Problems resolving File->Path->File");}
@@ -393,13 +443,16 @@ extends Task
 		// How many GB could the historical Databases take
 		// -1 == DISABLED
 		boolean doCleanupDueToExceedingMaxHistorySpace = false;
-		long needSpaceInMb_forExceedingMaxHistorySpace  = 0;
-		long maxHistorySpaceUsageInGb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_maxHistoricalSpaceUsageInGb, DEFAULT_maxHistoricalSpaceUsageInGb);
+		long    needSpaceInMb_forExceedingMaxHistorySpace = 0;
+		long    cfg_maxHistorySpaceUsageInGb  = Configuration.getCombinedConfiguration().getIntProperty   (PROPKEY_maxHistoricalSpaceUsageInGb , DEFAULT_maxHistoricalSpaceUsageInGb);
+		double  cfg_maxHistorySpaceUsageInPct = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_maxHistoricalSpaceUsageInPct, DEFAULT_maxHistoricalSpaceUsageInPct);
 
 		// Create a new Configuration object, which holds entries for 'SavedFileInfo'
 		String fileName = dataDirRes.getAbsolutePath() + File.separatorChar + Configuration.getCombinedConfiguration().getProperty(PROPKEY_savedFileInfo_filename, DEFAULT_savedFileInfo_filename);
 		_savedFileInfo = new Configuration(fileName);
-		_logger.info(_prefix + "Using file '"+_savedFileInfo.getFilename()+"' to store File Size Information, with "+_savedFileInfo.size()+" entries.");
+		logMsg = "Using file '" + _savedFileInfo.getFilename() + "' to store File Size Information, with " + _savedFileInfo.size() + " entries.";
+		_logger.info(_prefix + logMsg);
+		appendToLastExecShortReport(logMsg);
 
 		// Save the props file
 		//_savedFileInfo.save(); // Why should we save it just after loading it???
@@ -410,43 +463,92 @@ extends Task
 		double totalGb        = totalMb / 1024.0;
 		double beforePctUsed  = 100.0 - (beforeFreeMb / 1024.0 / totalGb * 100.0);
 		
-		_logger.info(String.format(_prefix + "File system usage at '%s', resolved to '%s'. Free = %.0f MB (%.1f GB), Total = %.0f MB (%.1f GB), Percent Used = %.1f %%", 
+		logMsg = String.format("File system usage at '%s', resolved to '%s'. Free = %.0f MB (%.1f GB), Total = %.0f MB (%.1f GB), Percent Used = %.1f %%", 
 				dataDir.getAbsolutePath(), 
 				dataDirRes.getAbsolutePath(),
 				beforeFreeMb, beforeFreeMb/1024.0, 
 				totalMb, totalMb / 1024.0, 
-				beforePctUsed));
+				beforePctUsed);
+
+		_logger.info(_prefix + logMsg);
+		appendToLastExecShortReport(logMsg);
+
 		
 		// read a bunch of DB files
 		Map<String, List<FileInfo>> srvMap  = getFilesByServerName();
 		Map<String, List<FileInfo>> dateMap = getFilesByTimeStamp();
 
-		long sumHistoryDbFileUsageGb = getSumSizeMb(srvMap, SizeType.FILE_INFO) / 1024;
-		_logger.info(_prefix + "Summary of Saved Historical Recordings is " + sumHistoryDbFileUsageGb + " GB."); 
+		long sumHistoryDbFileUsageMb = getSumSizeMb(srvMap, SizeType.FILE_INFO);
+		long sumHistoryDbFileUsageGb = sumHistoryDbFileUsageMb / 1024;
+		logMsg = "Summary of Saved Historical Recordings is " + sumHistoryDbFileUsageGb + " GB.  (" + sumHistoryDbFileUsageMb + " MB)"; 
+		_logger.info(_prefix + logMsg);
+		appendToLastExecShortReport(logMsg);
 
 		// Check if we exceed 'saved historical recordings' threshold
-		if (maxHistorySpaceUsageInGb > 0)
+		if (cfg_maxHistorySpaceUsageInGb > 0)
 		{
-			_logger.info(_prefix + "Max space usage in GB for historical recordings is ENABLED. The value is set to " + maxHistorySpaceUsageInGb + "GB.");
-			if (sumHistoryDbFileUsageGb > maxHistorySpaceUsageInGb)
+			logMsg = "Max space usage in GB for historical recordings is ENABLED. The value is set to " + cfg_maxHistorySpaceUsageInGb + "GB.";
+			_logger.info(_prefix + logMsg);
+			appendToLastExecShortReport(logMsg);
+
+			if (sumHistoryDbFileUsageGb > cfg_maxHistorySpaceUsageInGb)
 			{
 				doCleanupDueToExceedingMaxHistorySpace    = true;
-				needSpaceInMb_forExceedingMaxHistorySpace = (sumHistoryDbFileUsageGb - maxHistorySpaceUsageInGb) * 1024;
-				_logger.info(_prefix + "Cleanup will be attempted due to 'saved historical recordings' of " + sumHistoryDbFileUsageGb + " GB exceeds the max limit of " + maxHistorySpaceUsageInGb + " GB. (specified by property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "')");
-				_logger.info(_prefix + "At least " + needSpaceInMb_forExceedingMaxHistorySpace + " MB ("+(needSpaceInMb_forExceedingMaxHistorySpace/1024)+" GB) will be deleted.");
+				needSpaceInMb_forExceedingMaxHistorySpace = (sumHistoryDbFileUsageGb - cfg_maxHistorySpaceUsageInGb) * 1024;
+
+				logMsg = "Cleanup will be attempted due to 'saved historical recordings' of " + sumHistoryDbFileUsageGb + " GB exceeds the max limit of " + cfg_maxHistorySpaceUsageInGb + " GB. (specified by property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "')";
+				_logger.info(_prefix + logMsg);
+				appendToLastExecShortReport(logMsg);
+
+				logMsg = "At least " + needSpaceInMb_forExceedingMaxHistorySpace + " MB (" + (needSpaceInMb_forExceedingMaxHistorySpace/1024) + " GB) will be deleted.";
+				_logger.info(_prefix + logMsg);
+				appendToLastExecShortReport(logMsg);
 			}
 		}
 		else
 		{
-			_logger.info(_prefix + "Max space usage in GB for historical recordings is NOT enabled. This can be enabled by setting property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "'.");
+			logMsg = "Max space usage in GB for historical recordings is NOT enabled. This can be enabled by setting property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "=###'.";
+			_logger.info(_prefix + logMsg);
+			appendToLastExecShortReport(logMsg);
+
+			// Check for PERCENT Usage
+			if (cfg_maxHistorySpaceUsageInPct > 0)
+			{
+				logMsg = "Max space usage in PERCENT for historical recordings is ENABLED. The value is set to " + cfg_maxHistorySpaceUsageInPct + " Percent.";
+				_logger.info(_prefix + logMsg);
+				appendToLastExecShortReport(logMsg);
+
+				if (beforePctUsed > cfg_maxHistorySpaceUsageInPct)
+				{
+					long maxHistorySpaceUsageInMb_basedOnPct = (long) (totalMb * (cfg_maxHistorySpaceUsageInPct / 100.0));
+
+					doCleanupDueToExceedingMaxHistorySpace    = true;
+//					needSpaceInMb_forExceedingMaxHistorySpace = (sumHistoryDbFileUsageMb - maxHistorySpaceUsageInMb_basedOnPct);
+					needSpaceInMb_forExceedingMaxHistorySpace = (maxHistorySpaceUsageInMb_basedOnPct - sumHistoryDbFileUsageMb);
+
+					logMsg = "Cleanup will be attempted due to 'saved historical recordings' of " + NumberUtils.round(beforePctUsed, 2) + " Percent exceeds the max limit of " + cfg_maxHistorySpaceUsageInPct + " Percent. (specified by property '" + PROPKEY_maxHistoricalSpaceUsageInPct + "')";
+					_logger.info(_prefix + logMsg);
+					appendToLastExecShortReport(logMsg);
+
+					logMsg = "At least " + needSpaceInMb_forExceedingMaxHistorySpace + " MB (" + (needSpaceInMb_forExceedingMaxHistorySpace/1024) + " GB) will be deleted.";
+					_logger.info(_prefix + logMsg);
+					appendToLastExecShortReport(logMsg);
+				}
+			}
+			else
+			{
+				logMsg = "Max space usage in PERCENT for historical recordings is NOT enabled. This can be enabled by setting property '" + PROPKEY_maxHistoricalSpaceUsageInPct + "=##.#'.";
+				_logger.info(_prefix + logMsg);
+				appendToLastExecShortReport(logMsg);
+			}
 		}
 
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug(_prefix + "getFilesByServerName: "+srvMap);
-			_logger.debug(_prefix + "getFilesByTimeStamp:  "+dateMap);
-			_logger.debug(_prefix + "srvMap .getMaxSizeMb: "+getMaxSizeMb(srvMap,  SizeType.MAX_FILE_OR_SAVED));
-			_logger.debug(_prefix + "dateMap.getMaxSizeMb: "+getMaxSizeMb(dateMap, SizeType.MAX_FILE_OR_SAVED));
+			_logger.debug(_prefix + "getFilesByServerName: " + srvMap);
+			_logger.debug(_prefix + "getFilesByTimeStamp:  " + dateMap);
+			_logger.debug(_prefix + "srvMap .getMaxSizeMb: " + getMaxSizeMb(srvMap,  SizeType.MAX_FILE_OR_SAVED));
+			_logger.debug(_prefix + "dateMap.getMaxSizeMb: " + getMaxSizeMb(dateMap, SizeType.MAX_FILE_OR_SAVED));
 		}
 
 		double multiplyFactor = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_multiplyFactor, DEFAULT_multiplyFactor);
@@ -456,13 +558,15 @@ extends Task
 		BigDecimal dateMapMaxSizeGb = new BigDecimal( dateMapMaxSize/1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 		BigDecimal needSpaceInGb    = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
-		_logger.info(_prefix + "Calculated/Esitimated Space Usage for next " + multiplyFactor + " Days is " + needSpaceInMb + " MB (" + needSpaceInGb + " GB). Maximum date-range-space-usage is " + dateMapMaxSize + " MB (" + dateMapMaxSizeGb + " GB). Number of days to reserve space for can be changed by setting property '" + PROPKEY_multiplyFactor + "'.");
+		logMsg = "Calculated/Esitimated Space Usage for next " + multiplyFactor + " Days is " + needSpaceInMb + " MB (" + needSpaceInGb + " GB). Maximum date-range-space-usage is " + dateMapMaxSize + " MB (" + dateMapMaxSizeGb + " GB). Number of days to reserve space for can be changed by setting property '" + PROPKEY_multiplyFactor + "=#.#'.";
+		_logger.info(_prefix + logMsg);
+		appendToLastExecShortReport(logMsg);
 
 		// Should we deduct 'beforeFreeMb' from 'needSpaceInGb'
 //		needSpaceInMb = needSpaceInMb - beforeFreeMb;
 //		needSpaceInGb = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 //		BigDecimal beforeFreeGb = new BigDecimal( beforeFreeMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//		_logger.info(_prefix + "Calculated/Esitimated space to remove is "+needSpaceInMb + " MB ("+needSpaceInGb+" GB), when Free File System usage of "+beforeFreeMb+" MB ("+beforeFreeGb+" GB) was subtracted.");
+//		_logger.info(_prefix + "Calculated/Esitimated space to remove is " + needSpaceInMb + " MB (" + needSpaceInGb + " GB), when Free File System usage of " + beforeFreeMb + " MB (" + beforeFreeGb + " GB) was subtracted.");
 
 
 		// Should we do cleanup
@@ -512,6 +616,10 @@ extends Task
 			_logger.info(_prefix + "---------------------------");
 			_logger.info(_prefix + "NO Cleanup was done");
 			_logger.info(_prefix + "---------------------------");
+			
+			appendToLastExecShortReport("---------------------------");
+			appendToLastExecShortReport("NO Cleanup was done");
+			appendToLastExecShortReport("---------------------------");
 		}
 		else
 		{
@@ -533,7 +641,10 @@ extends Task
 //					break;
 			}
 			
-			_logger.info(_prefix + "CLEANUP will be executed, files will be removed for: "+removeMap.keySet());
+			logMsg = "CLEANUP will be executed, files will be removed for " + removeMap.size() + " days: " + removeMap.keySet();
+			_logger.info(_prefix + logMsg);
+			appendToLastExecShortReport(logMsg);
+
 			List<FileInfo> deletedList = new ArrayList<>();
 			for (Entry<String, List<FileInfo>> removeEntry : removeMap.entrySet())
 			{
@@ -550,17 +661,17 @@ extends Task
 //					FileInfo fileInfoPath = new FileInfo(Paths.get( dbPath._path.toAbsolutePath().toString().replace(".mv.db", ".mv.db.savedFileInfo") ) );
 					
 					// Maybe: add spillover files to a separate list
-					// ...  matches(".*-SPILL-OVER-DB-[0-9]+")) ...
+					// ...  matches(".*-SPILL-OVER-DB-[0-9] + ")) ...
 
 					
 					try
 					{
 						if (_logger.isDebugEnabled())
 						{
-							_logger.debug(_prefix + "Removing file:             "+dbPath      ._path.toAbsolutePath());
-							_logger.debug(_prefix + "Removing file (if exists): "+tracePath   ._path.toAbsolutePath());
-							_logger.debug(_prefix + "Removing file (if exists): "+tempFilePath._path.toAbsolutePath());
-//							_logger.debug(_prefix + "Removing file (if exists): "+fileInfoPath._path.toAbsolutePath());
+							_logger.debug(_prefix + "Removing file:             " + dbPath      ._path.toAbsolutePath());
+							_logger.debug(_prefix + "Removing file (if exists): " + tracePath   ._path.toAbsolutePath());
+							_logger.debug(_prefix + "Removing file (if exists): " + tempFilePath._path.toAbsolutePath());
+//							_logger.debug(_prefix + "Removing file (if exists): " + fileInfoPath._path.toAbsolutePath());
 						}
 
 						if (dryRun) // Dry run do not do deletes
@@ -572,6 +683,17 @@ extends Task
 						}
 						else 
 						{
+							// NOTE: At least on Linux/Unix the file may not be deleted at once (especially if "anyone" has the file open)
+							//       So a possible workaround may be to: open and "empty" the file (write a single byte)
+							//       THEN: The file size will shrink, and be removed "later" when ALL open processes has closed it's handles
+							//             On the other hand: The processes which has a open handle will probably "feel bad" when it's an "empty" file...
+							//             and it might possibly produce some "bad" output... So should we do this or not...
+							boolean emptyTheFileBeforeDelete = false;
+							if (emptyTheFileBeforeDelete)
+							{
+								// TODO: Possibly implement this...
+							}
+
 							// Delete the trace file if it exists
 							if (Files.deleteIfExists(tracePath._path))    deletedList.add(tracePath);
 							if (Files.deleteIfExists(tempFilePath._path)) deletedList.add(tempFilePath);
@@ -587,7 +709,9 @@ extends Task
 					}
 					catch (IOException e)
 					{
-						_logger.warn(_prefix + "Problems deleting file '"+dbPath._path.toAbsolutePath()+"'. Skipping and continuing with next. Caught: "+e);
+						logMsg = "Problems deleting file '" + dbPath._path.toAbsolutePath() + "'. Skipping and continuing with next. Caught: " + e;
+						_logger.info(_prefix + logMsg);
+						appendToLastExecShortReport(logMsg);
 					}
 				}
 			}
@@ -596,25 +720,49 @@ extends Task
 			for (FileInfo fi : deletedList)
 				maxDelPathLength = Math.max(maxDelPathLength, fi._path.toString().length());
 
+			double deletedFilesSizeMbSum = 0;
 			if (dryRun)
 			{
-//				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted: "+deletedList);
 				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted:");
 				for (FileInfo fi : deletedList)
-					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+StringUtil.right(FileUtils.byteToMb(fi.getSavedSize())+"",6)+" MB, "+StringUtil.right(FileUtils.byteToKb(fi.getSavedSize())+"",9)+" KB]");
+				{
+//					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: " + StringUtil.left(fi._path.toString(), maxDelPathLength) + "     [" + FileUtils.byteToGb(fi.getSavedSize()) + " GB, " + StringUtil.right(FileUtils.byteToMb(fi.getSavedSize()) + "",6) + " MB, " + StringUtil.right(FileUtils.byteToKb(fi.getSavedSize()) + "",9) + " KB]");
+					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: " + StringUtil.left(fi._path.toString(), maxDelPathLength) + "     [" + FileUtils.byteToGb(fi.getActualFileSize()) + " GB, " + StringUtil.right(FileUtils.byteToMb(fi.getActualFileSize()) + "",6) + " MB, " + StringUtil.right(FileUtils.byteToKb(fi.getActualFileSize()) + "",9) + " KB]");
+				}
 			}
 			else
 			{
-//				_logger.info(_prefix + "Deleted the following list of files: "+deletedList);
 				_logger.info(_prefix + "Deleted the following list of files:");
 				for (FileInfo fi : deletedList)
-					_logger.info(_prefix + "  -- deleted-file: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+StringUtil.right(FileUtils.byteToMb(fi.getSavedSize())+"",6)+" MB, "+StringUtil.right(FileUtils.byteToKb(fi.getSavedSize())+"",9)+" KB]");
-			}
-				
+				{
+//					logMsg = "  -- deleted-file: " + StringUtil.left(fi._path.toString(), maxDelPathLength) + "     [" + FileUtils.byteToGb(fi.getSavedSize()) + " GB, " + StringUtil.right(FileUtils.byteToMb(fi.getSavedSize()) + "",6) + " MB, " + StringUtil.right(FileUtils.byteToKb(fi.getSavedSize()) + "",9) + " KB]";
+					logMsg = "  -- deleted-file: " + StringUtil.left(fi._path.toString(), maxDelPathLength) + "     [" + FileUtils.byteToGb(fi.getActualFileSize()) + " GB, " + StringUtil.right(FileUtils.byteToMb(fi.getActualFileSize()) + "",6) + " MB, " + StringUtil.right(FileUtils.byteToKb(fi.getActualFileSize()) + "",9) + " KB]";
+					_logger.info(_prefix + logMsg);
+					appendToLastExecShortReport(logMsg);
+					
+//					deletedFilesSizeMbSum += FileUtils.byteToMb(fi.getFileSize());
+					deletedFilesSizeMbSum += FileUtils.byteToMb(fi.getActualFileSize());
+				}
 
-//			double afterFreeMb   = dataDir.getFreeSpace() / 1024.0 / 1024.0;
-			double afterFreeMb   = dataDir.getUsableSpace() / 1024.0 / 1024.0;
-			double afterPctUsed  = 100.0 - (afterFreeMb / 1024.0 / totalGb * 100.0);
+				// Write how much we deleted...
+				logMsg = "Summary of all deleted files deleted was " + NumberUtils.round(deletedFilesSizeMbSum, 1) + " MB (" + NumberUtils.round(deletedFilesSizeMbSum*1.0/1024.0, 1)+ " GB).";
+				_logger.info(_prefix + logMsg);
+				appendToLastExecShortReport(logMsg);
+
+				// Sleep for a few seconds, hoping that the underlying OS will/has removed/cleanup the file and released disk space...
+				long postDeleteSleepSeconds = 10;
+				if (postDeleteSleepSeconds > 0)
+				{
+					logMsg = "Sleeping for " + postDeleteSleepSeconds + " seconds, to let the underlying OS do deferred cleanup disk space, before we check for 'free space'...";
+					_logger.info(_prefix + logMsg);
+					appendToLastExecShortReport(logMsg);
+				}
+			}
+
+
+//			double afterFreeMb  = dataDir.getFreeSpace() / 1024.0 / 1024.0;
+			double afterFreeMb  = dataDir.getUsableSpace() / 1024.0 / 1024.0;
+			double afterPctUsed = 100.0 - (afterFreeMb / 1024.0 / totalGb * 100.0);
 
 			// Sum H2 recording databases, size AFTER Cleanup 
 			Map<String, List<FileInfo>> afterSrvMap = getFilesByServerName();
@@ -623,26 +771,39 @@ extends Task
 
 			
 			_logger.info(_prefix + "---------------------------");
-			_logger.info(String.format(_prefix + "After cleanup. File system usage at '%s', resolved to '%s'. Free = %.0f MB (%.1f GB). %.0f MB (%.1f GB) was removed/deleted. Space Usage in Percent is now %.1f %%", 
+			logMsg = String.format("After cleanup. File system usage at '%s', resolved to '%s'. Free = %.0f MB (%.1f GB). %.0f MB (%.1f GB) was removed/deleted. Space Usage in Percent is now %.1f %%", 
 					dataDir.getAbsolutePath(), 
 					dataDirRes.getAbsolutePath(), 
 					afterFreeMb, afterFreeMb/1024.0,  
 					afterFreeMb - beforeFreeMb, (afterFreeMb - beforeFreeMb) / 1024.0, 
-					afterPctUsed));
-			_logger.info(_prefix + "After cleanup. Summary of Saved Historical Recordings is " + afterSumHistoryDbFileUsageMb + " MB (" + afterSumHistoryDbFileUsageGb + " GB)."); 
+					afterPctUsed);
+			_logger.info(_prefix + logMsg);
+			appendToLastExecShortReport(logMsg);
+
+			logMsg = "After cleanup. Summary of Saved Historical Recordings is " + afterSumHistoryDbFileUsageMb + " MB (" + afterSumHistoryDbFileUsageGb + " GB)."; 
+			_logger.info(_prefix + logMsg);
+			appendToLastExecShortReport(logMsg);
 			_logger.info(_prefix + "---------------------------");
 
 			// If we did NOT succeed (in freeing enough space), then write some extra info
 			if( needSpaceInMb > afterFreeMb )
 			{
-				_logger.warn(String.format(_prefix + "Cleanup failed to remove enough space. Calculated/Esitimated space was %.0f MB. After cleanup there was only %.0f MB of free space. Problems when storing recordings may occur.",
-						needSpaceInMb, afterFreeMb));
+				logMsg = String.format("Cleanup failed to remove enough space. Calculated/Esitimated space was %.0f MB. After cleanup there was only %.0f MB of free space. Problems when storing recordings may occur.", needSpaceInMb, afterFreeMb);
+				_logger.warn(_prefix + logMsg);
+				appendToLastExecShortReport("WARNING: " + logMsg);
+
 				_logger.info(_prefix + "---------------------------");
 			}
 		} // end: doCleanup
 
+		// Cleanup the content in "Saving File Size Information file" -- Remove entries that EXISTS in the properties file, but DOES NOT have a physical file.
+		// TODO: Implement this
+
 		// Save the props file, and throw away the object
-		_logger.info(_prefix + "Saving File Size Information in file '"+_savedFileInfo.getFilename()+"', with "+_savedFileInfo.size()+" entries.");
+		logMsg = "Saving File Size Information in file '" + _savedFileInfo.getFilename() + "', with " + _savedFileInfo.size() + " entries.";
+		_logger.info(_prefix + logMsg);
+		appendToLastExecShortReport(logMsg);
+
 		_savedFileInfo.save();
 		_savedFileInfo = null; // It will be read up on next call (we might change it manually...)
 	}
@@ -663,10 +824,10 @@ extends Task
 //		Map<String, List<FileInfo>> srvMap = t.getFilesByServerName();
 //		Map<String, List<FileInfo>> tsMap = t.getFilesByTimeStamp();
 //		
-//		System.out.println("getFilesByServerName: "+srvMap);
-//		System.out.println("getFilesByTimeStamp:  "+tsMap);
-//		System.out.println("srvMap.getMaxSize: "+t.getMaxSizeMb(srvMap));
-//		System.out.println("tsMap .getMaxSize: "+t.getMaxSizeMb(tsMap));
+//		System.out.println("getFilesByServerName: " + srvMap);
+//		System.out.println("getFilesByTimeStamp:  " + tsMap);
+//		System.out.println("srvMap.getMaxSize: " + t.getMaxSizeMb(srvMap));
+//		System.out.println("tsMap .getMaxSize: " + t.getMaxSizeMb(tsMap));
 		
 		
 		// - Get file-system freeSpace

@@ -71,10 +71,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>NO GUI Mode: -u|--sshUser has an "extended format "userName:userNameToLookup" where 'userNameToLookup' is the key in the ~.passwd.enc file (this so we can have different passwords on a DBMS user and a OS User)</LI>
 		<LI>Configuration File changes (if the underlying file change) now also supports change notifications if the config file is a soft link</LI>
 		<LI>Configuration command line utility to "create" a encrypted property field from cmdline (so we can paste the value into a property file manually)</LI>
+		<LI>Print out CM Refresh time after each collection has been made (this can be disabled by: dbxtune.print.cm.refresh.time = false)</LI>
+		<LI>A Graph on CM Refresh time has also been created</LI>
+		<LI>PCS: DataDirectoryCleaner -- New config to cleanup on Disk PCT Used 'DataDirectoryCleaner.max.historical.space.usage.pct=94.0'</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
 				<LI>New: AlarmEventOsSwapThrashing -- When we are swapping both in and out at the same time... Linux(vmstat, column 'pi' and 'po'), Windows(column 'Pages Input/sec' AND 'Pages Output/sec')</LI>
+				<LI>New: AlarmEventDbmsVersionString -- If the version string changes during collection, then make a short Information Alarm about this.</LI>
 				
 				<LI>Changed: AlarmEventOsSwapping             -- From Severity 'WARNING' to 'INFO'</LI>
 				<LI>Changed: AlarmEventConfigChanges          -- small change to include log timestamp in alarm message</LI>
@@ -104,6 +108,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>When generating SparcLines, introduced a timeout of 10 minutes... and prints SQL for easier debugging.</LI>
 				<LI>In the 'Exec/Creation time for each Report Section' also print aprox how many bytes we have written to each section</LI>
 				<LI>In the header added "OS Core Count" and "OS Physical Memory" information.</LI>
+				<LI>Under "recording info" I'll try to print out (in red) if the DBMS Version String has changed during that day </LI>
+				<LI>Added section 'Counter Models Refresh Info' so we can see what CM's that are taking a long time to refresh (and therefor are interesting to look at... or rewrite/enhance)</LI>
+				<LI>Only print "table information" about tables in current database. Config: DailySummaryReport.top.statements.onlyListObjectsInCurrentDatabase={*true*|false}. NOTE: There are room for improvements here (a better parsing of the query should be done to look if the object are lokal or not... I'll revisit that at a later stage)</LI>
+				<LI>ReportSenderToMail -- On failures "Exception: 552 5.3.4 Error:" or "message file too big", now tries to "recreate" the message with a *smaller* content and send again. FULL -> SMALL -> OnlyAttchemnt -> Minimal</LI>
+				<LI>Implementing 'minimal' output, used as a fallback in case "previous" output was to large (ex: for mail if the send failed, due to "to large")</LI>
 			</UL>
 		</LI>
 
@@ -171,7 +180,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<li>xxx</li>
+		<li>Changing 'RangeSlider' from 'com.jidesoft.swing.RangeSlider' to a "home made" (which is ugly but works). The JIDE did not work under Java 17 (we will se in the future if I change back)<br>
+		    Note: This is only used in: Capture SQL, Offline View</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -191,6 +201,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<b>CmOpenDatabases - tab: Databases</b><br>
 		<ul>
 			<li>OldestTranInSeconds:AlarmEventLongRunningTransaction -- Added som more details "Last Known SQL Text for 'Oldest Open Tran' SPID"</li>
+			<li>Add column 'DBCreateTime', so we can see when a database was created.</li>
 		</ul>
 		</LI>
 
@@ -224,6 +235,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>added column 'AvgReadEfficiancy'   -- A Percent Calculation of AvgScanRows and AvgQualifyingReadRows</li>
 			<li>added column 'AvgWriteEfficiancy'  -- A Percent Calculation of AvgScanRows and AvgQualifyingWriteRows</li>
+		</ul>
+		</LI>
+
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmSqlStatement - tab: SQL Statements</b><br>
+		<ul>
+			<li>Add filter to alarm 'errorCount' so we can "skip" some error numbers. 'CmSqlStatement.alarm.system.if.errorCount.skipMsgNumberCsv=1111, 1112, 1113'</li>
 		</ul>
 		</LI>
 
@@ -317,6 +337,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added Alarm: <b>AlarmEventOutOfWorkerThreads</b> -- which will be raised when we have no more "worker threads" available (called from CmSummary)</LI>
 		<LI>Added Alarm: <b>AlarmEventToxicWait         </b> -- which will be raised when checking "Server Wait Time", wait events (called from CmWaitStats)</LI>
 		<LI>Added Alarm: <b>AlarmEventDeadlock          </b> -- if we had any deadlocks... (within a MovingAverage over 10 minutes), (called from CmSummary)</LI>
+		<LI>Added Alarm: <b>MemoryClerkWarning          </b> -- when a Memory Clerk goes above threshold and possibly needs attention (called from CmMemoryClerks)</LI>
 
 		<LI>Added CM: <b>CmExecQueryStatPerDb </b> - Activity Grouped by Database -- Information is fetched from dm_exec_query_stats</LI>
 		<LI>Added CM: <b>CmMemoryGrantsSum    </b> - A Memory Grant Summary (from: dm_exec_query_resource_semaphores)</LI>
@@ -343,6 +364,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - Added column 'sql_handle' to better track "multiSampled" SPID/row</LI>
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_begin_time' -- If we have a long running statement we may also want to see the 'tran_begin_time'</LI>
 		<LI><b>CmActiveStatements   </b> - Changed logic for 'getLockSummaryForSpid', to handle timeouts in another way</LI>
+		<LI><b>CmActiveStatements   </b> - Added columns 'exec_phys_reads_mb', 'exec_logical_reads_mb', 'exec_writes_mb', which is just a recalculation of pages into MB</LI>
+		<LI><b>CmActiveStatements   </b> - Added column 'HasBufferSqlText'. 'LastBufferSqlText', which shows the SQL Statement in the "input buffer" </LI>
+		<LI><b>CmActiveStatements   </b> - Added column 'wal_record_count', 'wal_kb_used' to see how much WAL (Write Ahead Log or Transaction log) is used by any DML opterations.</LI>
+		<LI><b>CmActiveStatements   </b> - Added column 'estimated_compl_time_dhms', which will display in '#days #hours #minutes #seconds' until the command is completed</LI>
+		<LI><b>CmActiveStatements   </b> - Added some output to tooltip on 'wait info' (like: 'dop' and 'WaitTimePct')</LI>
 		
 		<LI><b>CmAlwaysOn           </b> - Performance enhancement</LI>
 
@@ -353,6 +379,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases          </b> - if database is in status "SINGLE_USER", (it wont be investigated), then set Alarm "Time To Live" to 10 minutes, so we don't CANCEL/RASE the alarm to often!</LI>
 		<LI><b>CmDatabases          </b> - On Windows add the 'disk label' to the 'drive name' for easier determination of what the disk may be used for</LI>
 		<LI><b>CmDatabases          </b> - Changed logic for 'getLockSummaryForSpid', to handle timeouts in another way</LI>
+		<LI><b>CmDatabases          </b> - Rewrite of 'sp_MSforeachdb' into a cursor loop, that execute all SQL Statements that needs "database context"</LI>
+		<LI><b>CmDatabases          </b> - Rewrite from 'sys.dm_db_file_space_usage' into "FILEPROPERTY(name, 'SpaceUsed')" which seems much cheaper</LI>
+		<LI><b>CmDatabases          </b> - Added column 'create_date' so we can see when the database was created.</LI>
 
 		<LI><b>CmDeviceIo           </b> - LogicalName - is now based om dbname and file_id (instead of master_files.name, which may not be unique enough)</LI>
 		<LI><b>CmDeviceIo           </b> - added new columns 'lname' (master_files.name), which is the 'old' LogicaName.</LI>
@@ -367,16 +396,22 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmExecQueryStatPerDb </b> - If we get 10 sequential "timeouts" when getting data, then disable this CM, until a new recording period starts</LI>
 
+		<LI><b>CmMemoryClerks       </b> - If the Clerk 'USERSTORE_TOKENPERM' is above '2048' (2GB), then raise Alarm 'MemoryClerkWarning'. config: <code>CmMemoryClerks.alarm.system.if.USERSTORE_TOKENPERM.gt=####</code></LI>
+
 		<LI><b>CmMemoryGrantsSum    </b> - For alarm AlarmEventMemoryGrantWait, attach details from CmMemoryGrants</LI>
 
 		<LI><b>CmOpenTransactions   </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 		<LI><b>CmOpenTransactions   </b> - Changed logic for 'getLockSummaryForSpid', to handle timeouts in another way</LI>
+
+		<LI><b>CmOptimizer          </b> - Add column 'pct', which calculates the percent of "some" keys.</LI>
+		<LI><b>CmOptimizer          </b> - Add Graph "Optimizer Statistics by Key per Second"</LI>
 
 		<LI><b>CmPerfCounters       </b> - Added Chart 'Stolen Server Memory, from Buffer Pool'</LI>
 		<LI><b>CmPerfCounters       </b> - Added Chart 'DeadlockDetails'</LI>
 		<LI><b>CmPerfCounters       </b> - Added Chart 'ColumnStoreAll'</LI>
 		<LI><b>CmPerfCounters       </b> - Changed NEGATIVE_DIFF_COUNTERS_TO_ZERO from false to true</LI>
 		<LI><b>CmPerfCounters       </b> - new chart 'CachePhyReadAheadPct' -- Buffer Cache Physical Readahead Percent</LI>
+		<LI><b>CmPerfCounters       </b> - new chart 'SQL Errors' -- with lines: 'Total', 'Info Errors', 'User Errors', 'Kill Connection Errors', 'DB Offline Errors'</LI>
 
 		<LI><b>CmSchedulers         </b> - Changed NEGATIVE_DIFF_COUNTERS_TO_ZERO from false to true</LI>
 
@@ -416,7 +451,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmWho                </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
 
-		<LI>DDL Lookup: xxx</LI>
+		<LI><b>DDL Lookup           </b> - In "Object Lookup Inspection" added 'hasEagerIndexSpool'</LI>
 		
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
@@ -477,6 +512,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPgDatabase         </b> - Alarm 'PgChecksumFailure' if 'checksum_failures' has accured. (and in the GUI also light them up as RED cells)</LI>
 		<LI><b>CmPgDatabase         </b> - Only get databases size if we are authorized to access the database (this is mostly if we are monitoring with a user that do not have access to all databases, like in "the cloud")</LI>
 
+		<LI><b>CmPgIo               </b> - new Collector -- IO Statistics by each backend type in the Postgres Instance. (from pg_stat_io), available from PG Version 16</LI>
 		<LI><b>CmPgPidWait          </b> - new Collector -- What are the PID's waiting for (uses extension pg_wait_sampling)</LI>
 		<LI><b>CmPgSrvWait          </b> - new Collector -- What are the server waiting for (uses extension pg_wait_sampling)</LI>
 
@@ -524,7 +560,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Daily Summary Report </b> - In the 'Recording info', Print if the DBMS is in 'Recovery/Standby Mode' or in 'Normal (r/w) Mode'</LI>
 		<LI><b>Daily Summary Report </b> - SQL Statement Information table now also holds information about 'Functions', 'Procedures', 'Remote Tables' (DDL Information and what tables they references, statistics on those tables)</LI>
 		<LI><b>Daily Summary Report </b> - Long Running Statements -- Content changes and adjustment for MS Outlook</LI>
-		<LI><b>Daily Summary Report </b> - Added section for Server Wait Stats</LI>
+		<LI><b>Daily Summary Report </b> - Added section for 'Server Wait Stats'</LI>
+		<LI><b>Daily Summary Report </b> - Added section for 'IO Statistics' (from pg_stat_io)</LI>
 
 		<br>
 		<LI><b>Alarm                </b> - Added AlarmEventPgChecksumFailure -- Fired from CmErrorLog and CmPgDatabase</LI>
@@ -570,7 +607,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Code Completion (for Postgres do not add *known* schema names, it just clutters the code)</LI>
 		<LI>command 'toparquet' -- a first attempt to writet to Parquet Files  (not implemented yet)</LI>
 		<LI>right click menu -- "Get Foreign Key ***Child*** rows for selected rows(s)"</LI>
-		<LI>right click menu -- "Mark all Words, on Double Click" (note: this needs more work)</LI>
+		<LI>right click menu -- "Mark all Words, on Double Click"</LI>
+		<LI>In SQL Server, when doing 'go nodata' when 'set statistics profile on'... Then still show the ResultSet for 'statistics profile'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

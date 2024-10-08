@@ -1684,6 +1684,18 @@ if (_gui && startEvenIfGui_justToTestTheService)
 					{
 						_logger.warn("Problem setting the Look And Feel to 'getSystemLookAndFeelClassName()'.", e);
 					}
+
+//					try
+//					{
+//						// Workaround for error in Java (with modules): Unhandled Execption in SWING EventDispatchThread when dispatching an event. Caught: java.lang.IllegalAccessError: class com.jidesoft.plaf.LookAndFeelFactory (in unnamed module @0x2145b572) cannot access class com.sun.java.swing.plaf.windows.WindowsLookAndFeel (in module java.desktop) because module java.desktop does not export com.sun.java.swing.plaf.windows to unnamed module @0x2145b572
+//						// Note: This is only for "Jide components"
+//						// The below did NOT work... trying to use jvm switch '-Djide.defaultStyle=1' instead
+//						LookAndFeelFactory.installJideExtension(LookAndFeelFactory.EXTENSION_STYLE_VSNET);
+//					}
+//					catch (Exception e)
+//					{
+//						_logger.warn("Problem setting the Look And Feel for JIDE Components. LookAndFeelFactory.installJideExtension(LookAndFeelFactory.EXTENSION_STYLE_VSNET);", e);
+//					}
 					
 					// Disable save properties during startup, lets see if this can make the startup faster.
 					Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);

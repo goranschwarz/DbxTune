@@ -769,6 +769,16 @@ extends CounterCollectorThreadAbstract
 				}
 
 
+				// Update some graphs that needs to be done AFTER ALL CM's are refreshed
+				// Typically CmSummary -- CmRefreshTime
+				postRefreshUpdateGraphData(refreshedCms);
+				
+
+				// Print out how long it took to do refresh of each CM took
+				// Note: config "dbxtune.print.cm.refresh.time = true" needs to be enabled.
+				printCmRefreshTimes();
+
+
 				//---------------------------------------------------
 				// POSTPROCESSING - setFirstSample(false)
 				//---------------------------------------------------

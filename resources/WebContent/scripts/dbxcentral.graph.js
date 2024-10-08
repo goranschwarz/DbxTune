@@ -1461,12 +1461,13 @@ function dbxTuneGraphSubscribe()
 	
 		return div;
 	}
-	function createSqlServerQueryPlanToolTipDiv(data)
+	function createSqlServerQueryPlanToolTipDiv(data, rowData)
 	{
 		// FIXME: create a modal-div that can show a SQL Server Showplan (using https://github.com/JustinPealing/html-query-plan)
 		//return createActiveStatementToolTipDiv(data);
 
 		const dataVal = data;
+		const lastKnownSql = rowData.hasOwnProperty('lastKnownSql') ? rowData.lastKnownSql : "";
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
@@ -1475,6 +1476,7 @@ function dbxTuneGraphSubscribe()
 		div.setAttribute("data-target"     , '#dbx-view-ssShowplan-dialog');
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
+		div.setAttribute("data-sqltext"    , lastKnownSql);
 	
 		return div;
 	}
@@ -1614,12 +1616,13 @@ function dbxTuneGraphSubscribe()
 				}
 				else if ("SqlServerTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
-					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('lastKnownSql')     && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(   rowData.lastKnownSql, 'tsql') ); }
-					if (metaData.columnName === "HasQueryplan"        && rowData.hasOwnProperty('query_plan')       && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan          ) ); }
-					if (metaData.columnName === "HasLiveQueryplan"    && rowData.hasOwnProperty('LiveQueryPlan')    && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan       ) ); }
-					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidLocks       ,'Lock Table'       ) ); }
-					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.BlockedSpidsInfo,'Blocked SPID Info') ); }
-					if (metaData.columnName === "HasSpidWaitInfo"     && rowData.hasOwnProperty('SpidWaitInfo')     && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidWaitInfo    ,'SPID Wait Info'   ) ); }
+					if (metaData.columnName === "HasBufferSqlText"    && rowData.hasOwnProperty('LastBufferSqlText') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(   rowData.LastBufferSqlText, 'tsql') ); }
+					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('lastKnownSql')      && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(   rowData.lastKnownSql     , 'tsql') ); }
+					if (metaData.columnName === "HasQueryplan"        && rowData.hasOwnProperty('query_plan')        && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan       , rowData ) ); }
+					if (metaData.columnName === "HasLiveQueryplan"    && rowData.hasOwnProperty('LiveQueryPlan')     && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan    , rowData ) ); }
+					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidLocks       ,'Lock Table'       ) ); }
+					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.BlockedSpidsInfo,'Blocked SPID Info') ); }
+					if (metaData.columnName === "HasSpidWaitInfo"     && rowData.hasOwnProperty('SpidWaitInfo')      && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidWaitInfo    ,'SPID Wait Info'   ) ); }
 				}
 				else if ("PostgresTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{

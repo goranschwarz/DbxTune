@@ -29,6 +29,7 @@ import javax.swing.JPanel;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSummaryAbstract;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -41,7 +42,8 @@ import com.asetune.sql.conn.info.DbmsVersionInfo;
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmSummary
-extends CountersModel
+//extends CountersModel
+extends CmSummaryAbstract
 {
 //	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
 	private static final long    serialVersionUID = 1L;
@@ -109,6 +111,7 @@ extends CountersModel
 		counterController.setSummaryCm(this);
 		
 		addTrendGraphs();
+		addPostRefreshTrendGraphs();
 
 		CounterSetTemplates.register(this);
 	}

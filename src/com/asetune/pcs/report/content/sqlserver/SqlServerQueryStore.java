@@ -79,6 +79,12 @@ extends SqlServerAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 //		return false;
@@ -1514,7 +1520,7 @@ extends SqlServerAbstract
 						sqlText = entry.sqlText;
 
 					// Parse the 'sqlText' and extract Table Names, then get various table and index information
-					String tableInfo = getDbmsTableInformationFromSqlText(conn, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
+					String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
 
 //					// Parse the 'sqlText' and extract Table Names..
 //					// - then get table information (like we do in 'AseTopCmObjectActivity')

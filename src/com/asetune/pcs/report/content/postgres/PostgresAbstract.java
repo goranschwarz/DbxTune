@@ -44,6 +44,7 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.HtmlTableProducer;
 import com.asetune.utils.MathUtils;
@@ -181,7 +182,7 @@ extends ReportEntryAbstract
 	 * @return
 	 */
 	@Override
-	public String getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname)
+	public String getDbmsTableInfoAsHtmlTable(DbxConnection conn, String currentDbname, Set<String> tableList, boolean includeIndexInfo, String classname)
 	{
 		// Get tables/indexes
 		Set<PgTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
@@ -189,36 +190,37 @@ extends ReportEntryAbstract
 			return "";
 
 		// And make it into a HTML table with various information about the table and indexes 
-		return getTableInfoAsHtmlTable(tableInfoSet, tableList, includeIndexInfo, classname);
+		return getTableInfoAsHtmlTable(currentDbname, tableInfoSet, tableList, includeIndexInfo, classname);
 	}
 
 	
+//	/**
+//	 * 
+//	 * @param dbname1 
+//	 * @param dbname2
+//	 * @return
+//	 */
+//	private String markIfDifferent(String dbname1, String dbname2)
+//	{
+//		if (StringUtil.isNullOrBlank(dbname1) || StringUtil.isNullOrBlank(dbname2))
+//			return dbname1;
+//		
+//		if (dbname1.equals(dbname2))
+//			return dbname1;
+//		
+////		return "<mark>" + dbname1 + "</mark>";
+//		return "<span style='background-color: yellow'>" + dbname1 + "</span>";
+//	}
 	/**
 	 * 
-	 * @param dbname1 
-	 * @param dbname2
-	 * @return
-	 */
-	private String markIfDifferent(String dbname1, String dbname2)
-	{
-		if (StringUtil.isNullOrBlank(dbname1) || StringUtil.isNullOrBlank(dbname2))
-			return dbname1;
-		
-		if (dbname1.equals(dbname2))
-			return dbname1;
-		
-//		return "<mark>" + dbname1 + "</mark>";
-		return "<span style='background-color: yellow'>" + dbname1 + "</span>";
-	}
-	/**
-	 * 
+	 * @param currentDbname
 	 * @param tableInfoList
 	 * @param tableList
 	 * @param includeIndexInfo
 	 * @param classname
 	 * @return
 	 */
-	public String getTableInfoAsHtmlTable(Set<PgTableInfo> tableInfoList, Set<String> tableList, boolean includeIndexInfo, String classname)
+	public String getTableInfoAsHtmlTable(String currentDbname, Set<PgTableInfo> tableInfoList, Set<String> tableList, boolean includeIndexInfo, String classname)
 	{
 		// Exit early: if no data
 		if (tableInfoList == null)   return "";
@@ -278,11 +280,24 @@ extends ReportEntryAbstract
 
 		NumberFormat nf = NumberFormat.getInstance();
 
+		boolean onlyShowObjectInCurrentDatabase = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE, DEFAULT_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE);
+		int     numOfObjectNotInCurrentDatabase = 0;
+
 		//--------------------------------------------------------------------------
 		// Table BODY
 		sb.append("<tbody> \n");
 		for (PgTableInfo entry : tableInfoList)
 		{
+			// "list-objects-only-in-current-database"
+			if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase)
+			{
+				if (StringUtil.hasValue(entry.getDbName()) && ! currentDbname.equalsIgnoreCase(entry.getDbName()))
+				{
+					numOfObjectNotInCurrentDatabase++;
+					continue;
+				}
+			}
+
 			LinkedHashMap<String, String> tableInfoMap = new LinkedHashMap<>();
 
 			if (entry.isView())
@@ -370,9 +385,19 @@ extends ReportEntryAbstract
 				{
 					indexInfo += "Referenced Tables in this View: \n";
 					indexInfo += "<ul> \n";
-					for (String ref : entry.getViewReferences())
+					for (String viewRef : entry.getViewReferences())
 					{
-						indexInfo += "<li>" + ref + "</li> \n";
+//						// Remove objects that are NOT part of "Current Database"
+//						if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase)
+//						{
+//							if (StringUtil.hasValue(viewRef) && ! viewRef.contains(currentDbname))
+//							{
+//								numOfObjectNotInCurrentDatabase++;
+//								continue;
+//							}
+//						}
+
+						indexInfo += "<li>" + viewRef + "</li> \n";
 					}
 					indexInfo += "</ul> \n";
 				}
@@ -485,6 +510,15 @@ extends ReportEntryAbstract
 //		sb.append("</tfoot> \n");
 
 		sb.append("</table> \n");
+		
+		// If we have SKIPPED dependent object (NOT in current database), then write some info about that!
+		if (onlyShowObjectInCurrentDatabase && numOfObjectNotInCurrentDatabase > 0)
+		{
+			sb.append("<p> \n");
+			sb.append("<b>NOTE:</b> " + numOfObjectNotInCurrentDatabase + " objects was found in the PCS, which will <b>NOT</b> be displayed, due to not matching currentDbname='" + currentDbname + "'.<br> \n");
+			sb.append("This can be changed with config property '" + PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE + "=false' \n");
+			sb.append("</p> \n");
+		}
 		
 		return sb.toString();
 	}

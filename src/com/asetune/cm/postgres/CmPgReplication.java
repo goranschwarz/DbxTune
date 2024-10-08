@@ -55,6 +55,7 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
@@ -392,7 +393,8 @@ extends CountersModel
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getAbsString       (i, "client_addr");
+//				lArray[i] = this.getAbsString       (i, "client_addr");
+				lArray[i] = getAndResolve_client_addr(i);
 				dArray[i] = this.getAbsValueAsDouble(i, "total_lag_kb");
 			}
 
@@ -409,7 +411,8 @@ extends CountersModel
 				String[] lArray = new String[dArray.length];
 				for (int i = 0; i < dArray.length; i++)
 				{
-					lArray[i] = this.getAbsString       (i, "client_addr");
+//					lArray[i] = this.getAbsString       (i, "client_addr");
+					lArray[i] = getAndResolve_client_addr(i);
 					dArray[i] = this.getAbsValueAsDouble(i, "reply_time_seconds");
 				}
 
@@ -424,6 +427,32 @@ extends CountersModel
 					tg.setWarningLabel("Depends on column 'reply_time_seconds' which wasn't found in current CM.");
 			}
 		}
+	}
+	
+	private String getAndResolve_client_addr(int rowId)
+	{
+		String client_addr = this.getAbsString(rowId, "client_addr");
+
+		// In some cases the "client_addr" may be blank/null
+		//   - It's probably pg_basebackup
+		// So try to make (the label) into something smarter
+		if (StringUtil.isNullOrBlank(client_addr))
+		{
+			String application_name = this.getAbsString(rowId, "application_name", true, "");
+			if (StringUtil.hasValue(application_name))
+			{
+				client_addr = "local:" + application_name;
+			}
+		}
+		
+//		if (StringUtil.hasValue(client_addr) && itLooksLikeAnIp)
+//		{
+//			// TODO: Lookup the IP and resolve it into a hostname
+//			//       Check if 'client_hostname' is NOT NULL, then we can use that
+//			//       CAUTION: This may take time... so probably cache the result (I do that in some other place, so it may be reused)
+//		}
+		
+		return client_addr;
 	}
 
 	/**
@@ -531,8 +560,8 @@ extends CountersModel
 			}
 			
 			// Finally: update the table 'postgrestune_ha_dummy_update'
-			String selectData = "SELECT CAST(gen_random_uuid() AS varchar(36)), inet_server_addr()||':'||inet_server_port(), now(); \n";
-			if (conn.getDbmsVersionNumber() >= Ver.ver(9, 5))
+			String selectData = "SELECT CAST(md5(random()::text) AS varchar(36)), inet_server_addr()||':'||inet_server_port(), now(); \n";
+			if (conn.getDbmsVersionNumber() >= Ver.ver(13))
 				selectData = "SELECT CAST(gen_random_uuid() AS varchar(36)), inet_server_addr()||':'||inet_server_port()||', cluster_name='''||current_setting('cluster_name')||'''', now(); \n";
 
 			String updateTable = 

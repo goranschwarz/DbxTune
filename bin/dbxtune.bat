@@ -337,7 +337,6 @@ rem --- set DEBUG_OPTIONS=-agentlib:hprof=cpu=times
 set DEBUG_OPTIONS=
 
 
-
 rem ------------------------------------------------------------------------
 rem --- if environment is not properly set, do something about it
 rem --- this might mean goto an exit point
@@ -367,6 +366,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\log4j-1.2.17.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-SNAPSHOT.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-1.4.200.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-2.1.214.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-2.3.232.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\wizard.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-swing-5.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-core-5.2.jar
@@ -411,7 +411,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jul-to-slf4j-1.7.29.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\slf4j-api-1.7.29.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\slf4j-log4j12-1.7.29.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\velocity-engine-core-2.0.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jide-oss-3.6.18.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jide-oss-3.7.15.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-annotations-2.9.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-core-2.9.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-databind-2.9.2.jar

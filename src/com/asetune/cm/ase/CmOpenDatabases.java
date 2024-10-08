@@ -891,7 +891,7 @@ extends CountersModel
 			OldestTranLocks        = "OldestTranLocks        = convert(text, null), \n";
 		}
 
-		cols1 += "od.DBName, od.DBID, " + ceDbRecoveryStatus + "od.AppendLogRequests, od.AppendLogWaits, \n" +
+		cols1 += "od.DBName, od.DBID, DBCreateTime = d.crdate, " + ceDbRecoveryStatus + "od.AppendLogRequests, od.AppendLogWaits, \n" +
 		         "AppendLogContPct = CASE \n" +
 		         "                      WHEN od.AppendLogRequests > 0 \n" +
 		         "                      THEN convert(numeric(10,2), ((od.AppendLogWaits+0.0)/od.AppendLogRequests)*100.0) \n" +
@@ -925,7 +925,8 @@ extends CountersModel
 		         Tables + RowCountSum + OamPages + AllocationUnits + nl_160 + 
 		         DataPages + IndexPages + nl_160 +
 		         DataMb + IndexMb + nl_160 +
-		         "SrvPageSize = @@maxpagesize, od.BackupInProgress, od.LastBackupFailed, \n" +
+		         "SrvPageSize = @@maxpagesize, \n" +
+		         "od.BackupInProgress, od.LastBackupFailed, \n" +
 		         "od.BackupStartTime, LastDbBackupAgeInHours = isnull(datediff(hour, od.BackupStartTime, getdate()),-1), \n";
 		cols2 += "";
 		cols3 += QuiesceTag + RawSpaceUsage + nl_160 

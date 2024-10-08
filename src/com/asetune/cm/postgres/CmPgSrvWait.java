@@ -219,8 +219,12 @@ extends CountersModel
 //		if (skipList.size() > 0 && Configuration.getCombinedConfiguration().getBooleanProperty(CmPgSrvWait.PROPKEY_sqlSkipFilterEnabled, CmPgSrvWait.DEFAULT_sqlSkipFilterEnabled))
 //			skipWaitTypes = "  and wait_type NOT IN (" + StringUtil.toCommaStrQuoted("'", skipList) + ")";
 
+		int tmp_pgWaitSampling_profilePeriod = _pgWaitSampling_profilePeriod;
+		if (conn == null)
+			tmp_pgWaitSampling_profilePeriod = 10;
+
 		// Get Configuration for 'pg_wait_sampling.profile_period'
-		if (_pgWaitSampling_profilePeriod < 0)
+		if (tmp_pgWaitSampling_profilePeriod < 0 && conn != null)
 		{
 			// Get config from pg_wait_sampling
 			String sql = "select cast(setting as int) as setting from pg_settings where name = 'pg_wait_sampling.profile_period'";
@@ -229,12 +233,14 @@ extends CountersModel
 				while(rs.next())
 				{
 					_pgWaitSampling_profilePeriod = rs.getInt(1);
+					tmp_pgWaitSampling_profilePeriod = _pgWaitSampling_profilePeriod;
 					_logger.info(CM_NAME + ": Configuration for 'pg_wait_sampling.profile_period' is set to: " + _pgWaitSampling_profilePeriod);
 				}
 			}
 			catch (SQLException ex)
 			{
 				_pgWaitSampling_profilePeriod = 10;
+				tmp_pgWaitSampling_profilePeriod = _pgWaitSampling_profilePeriod;
 				_logger.error("Problems getting configuration for 'pg_wait_sampling.profile_period', setting the value to '10'. continuing. SQL=|" + sql + "|.", ex);
 			}
 		}
@@ -244,7 +250,7 @@ extends CountersModel
 			    + "     CAST(event_type as varchar(128)) AS event_type \n"
 			    + "    ,CAST(event      as varchar(128)) AS event \n"
 			    + "    ,CAST(SUM(count) as BIGINT)       AS wait_count \n"
-			    + "    ,CAST(SUM(count) as BIGINT) * " + _pgWaitSampling_profilePeriod + " AS est_wait_time_ms /* pg_wait_sampling.profile_period = " + _pgWaitSampling_profilePeriod + " */\n"
+			    + "    ,CAST(SUM(count) as BIGINT) * " + tmp_pgWaitSampling_profilePeriod + " AS est_wait_time_ms /* pg_wait_sampling.profile_period = " + _pgWaitSampling_profilePeriod + " */\n"
 			    + "    ,CAST(-1 as NUMERIC(6,1))         AS wait_count_pct \n"
 			    + "FROM pg_wait_sampling_profile \n"
 			    + "WHERE 1 = 1 \n"

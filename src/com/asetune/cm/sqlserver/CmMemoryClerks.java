@@ -21,6 +21,7 @@
 package com.asetune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,10 +29,16 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.sqlserver.AlarmEventMemoryClerkWarning;
 import com.asetune.central.pcs.CentralPersistReader;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -47,6 +54,7 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
+import com.asetune.utils.Configuration;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -54,7 +62,7 @@ import com.asetune.sql.conn.info.DbmsVersionInfo;
 public class CmMemoryClerks
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmTempdbUsage.class);
+	private static Logger        _logger          = Logger.getLogger(CmMemoryClerks.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmMemoryClerks.class.getSimpleName();
@@ -430,5 +438,72 @@ extends CountersModel
 
 		
 		return null;
+	}
+
+
+
+
+
+	//--------------------------------------------------------------------------------------
+	//--------------------------------------------------------------------------------------
+	//-- Alarm Handling
+	//--------------------------------------------------------------------------------------
+	//--------------------------------------------------------------------------------------
+	@Override
+	public void sendAlarmRequest()
+	{
+//		if ( ! hasDiffData() )
+//			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		
+		//-------------------------------------------------------
+		// USERSTORE_TOKENPERM 
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("USERSTORE_TOKENPERM"))
+		{
+			int sizeMb = cm.getAbsValueAsInteger("USERSTORE_TOKENPERM", "SizeMb", -1);
+			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_USERSTORE_TOKENPERM, DEFAULT_alarm_USERSTORE_TOKENPERM);
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", sizeMb='" + sizeMb);
+
+			if (sizeMb > threshold)
+			{
+				String extendedDescText = "Possibly resolved by executing: DBCC FREESYSTEMCACHE('TokenAndPermUserStore'), also you may look at Startup traceflag: 4610, 4618";
+				String extendedDescHtml = extendedDescText;
+
+				// Create the alarm
+				AlarmEvent ae = new AlarmEventMemoryClerkWarning(cm, threshold, sizeMb, "USERSTORE_TOKENPERM");
+
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				
+				alarmHandler.addAlarm( ae );
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_USERSTORE_TOKENPERM  = CM_NAME + ".alarm.system.if.USERSTORE_TOKENPERM.gt";
+	public static final int     DEFAULT_alarm_USERSTORE_TOKENPERM  = 2 * 1024;
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("USERSTORE_TOKENPERM", isAlarmSwitch, PROPKEY_alarm_USERSTORE_TOKENPERM, Integer.class, conf.getIntProperty(PROPKEY_alarm_USERSTORE_TOKENPERM, DEFAULT_alarm_USERSTORE_TOKENPERM), DEFAULT_alarm_USERSTORE_TOKENPERM, "If 'SizeMB' for type='USERSTORE_TOKENPERM', name='TokenAndPermUserStore' is greater than ## then send 'AlarmEventMemoryClerkWarning'." ));
+
+		return list;
 	}
 }

@@ -55,6 +55,7 @@ import com.asetune.cm.postgres.CmPgDatabase;
 import com.asetune.cm.postgres.CmPgFunctions;
 import com.asetune.cm.postgres.CmPgIndexes;
 import com.asetune.cm.postgres.CmPgIndexesIo;
+import com.asetune.cm.postgres.CmPgIo;
 import com.asetune.cm.postgres.CmPgLocks;
 import com.asetune.cm.postgres.CmPgPidWait;
 import com.asetune.cm.postgres.CmPgProgAnalyze;
@@ -134,6 +135,7 @@ extends CounterControllerAbstract
 		CmPgDatabase        .create(counterController, guiController);
 		CmPgSrvWait         .create(counterController, guiController);
 		CmPgBgWriter        .create(counterController, guiController);
+		CmPgIo              .create(counterController, guiController);
 		CmPgWal             .create(counterController, guiController);
 		CmPgArchiver        .create(counterController, guiController);
 		CmErrorLog          .create(counterController, guiController);

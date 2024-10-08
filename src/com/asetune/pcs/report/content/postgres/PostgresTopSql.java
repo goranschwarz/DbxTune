@@ -75,6 +75,12 @@ extends PostgresAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		return true;
@@ -769,7 +775,7 @@ extends PostgresAbstract
 					}
 					
 					// Parse the 'sqlText' and extract Table Names, then get various table and index information
-					String tableInfo = getDbmsTableInformationFromSqlText(conn, sqlText, DbUtils.DB_PROD_NAME_POSTGRES);
+					String tableInfo = getDbmsTableInformationFromSqlText(conn, datname, sqlText, DbUtils.DB_PROD_NAME_POSTGRES);
 
 					// SQL Text
 					sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;

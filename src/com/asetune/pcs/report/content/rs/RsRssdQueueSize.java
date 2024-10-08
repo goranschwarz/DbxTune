@@ -40,6 +40,12 @@ public class RsRssdQueueSize extends AseAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return true;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		return true;

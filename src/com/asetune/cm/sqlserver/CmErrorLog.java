@@ -404,10 +404,13 @@ extends CountersModelAppend
 							if (endPos != -1)
 								configName = errorTxt.substring(startPos, endPos);
 						}
-						
+
+						// TODO: POSSIBLY get column 'ProcessInfo', which holds 'spid###', then get ALL info for that SPID from: CmSessions
+						//       This so we can see from what: login, hostname etc, that the re-config was made from...
+
 						AlarmEvent ae = new AlarmEventConfigChanges(this, configName, errorTxt, errorlogTs);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-							
+
 						alarmHandler.addAlarm( ae );
 					}
 				}

@@ -20,18 +20,27 @@
  ******************************************************************************/
 package com.asetune.cm.sqlserver;
 
+import java.awt.event.MouseEvent;
+import java.math.BigDecimal;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.central.pcs.CentralPersistReader;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.SqlServerOptimizerCounterDictionary;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -39,14 +48,14 @@ import com.asetune.sql.conn.info.DbmsVersionInfoSqlServer;
 public class CmOptimizer
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmServiceMemory.class);
+//	private static Logger        _logger          = Logger.getLogger(CmOptimizer.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmOptimizer.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Optimizer Info";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<p>Optimizer Statistic Information</p>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -59,10 +68,12 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] {
+		"pct"
+	};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"occurrence"
-		};
+	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -112,15 +123,110 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String[] NON_PCT_COUNTERS_CSV = {
+		"optimizations", 
+		"elapsed time", 
+		"final cost", 
+		"tasks", 
+		"search 0 time", 
+		"search 0 tasks", 
+		"search 1 time", 
+		"search 1 tasks", 
+		"search 2 time", 
+		"search 2 tasks", 
+		"gain stage 0 to stage 1", 
+		"gain stage 1 to stage 2", 
+		"unnest failed", 
+		"tables", 
+		"maximum DOP", 
+		"maximum recursion level"
+	};
+	public static final String PROPKEY_nonPctCounters_csv = CM_NAME + ".nonPctCounters.csv";
+	public static final String DEFAULT_nonPctCounters_csv = StringUtil.toCommaStr(NON_PCT_COUNTERS_CSV);
+
+	private static final String[] DEFAULT_GRAPH_OPTIMIZER_STAT_KEYS = {
+			"optimizations", 
+			"trivial plan",
+			"search 0",
+			"search 1",
+			"search 2",
+			"timeout",
+			"memory limit exceeded",
+			"insert stmt",
+			"delete stmt",
+			"update stmt",
+			"merge stmt",
+			"contains subquery",
+			"hints",
+			"order hint",
+			"join hint",
+			"remote query",
+			"indexed views loaded",
+			"indexed views matched",
+			"indexed views used",
+			"indexed views updated",
+			"dynamic cursor request",
+			"fast forward cursor request"
+		};
+	public static final String PROPKEY_graph_OptimizerStatKeys_csv = CM_NAME + ".graph.OptimizerStatKeys.csv";
+	public static final String DEFAULT_graph_OptimizerStatKeys_csv = StringUtil.toCommaStr(DEFAULT_GRAPH_OPTIMIZER_STAT_KEYS);
+
+	public static final String GRAPH_NAME_OPTIMIZER_STAT_KEY = "OptimizerStatKey";
 	
 	private void addTrendGraphs()
 	{
+		addTrendGraph(GRAPH_NAME_OPTIMIZER_STAT_KEY,
+				"Optimizer Statistics by Key per Second",        // Menu CheckBox text
+				"Optimizer Statistics by Key per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				null, 
+				LabelType.Dynamic,
+				TrendGraphDataPoint.Category.SPACE,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 	}
 
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_OPTIMIZER_STAT_KEY.equals(tgdp.getName()))
+		{
+			String[] keys = DEFAULT_GRAPH_OPTIMIZER_STAT_KEYS;
+
+			// Get what "lines" we want to have in the graph
+			// Note: reuse DEFAULT_GRAPH_XXX_VALUES if not changed
+			String keysConfigStr = Configuration.getCombinedConfiguration().getProperty(PROPKEY_graph_OptimizerStatKeys_csv, DEFAULT_graph_OptimizerStatKeys_csv);
+			if ( ! keysConfigStr.equals(DEFAULT_graph_OptimizerStatKeys_csv) )
+			{
+				List<String> configList = StringUtil.parseCommaStrToList(keysConfigStr);
+				keys = configList.stream().toArray(String[]::new);
+			}
+			
+			// Write 1 "line" for each "key"
+			Double[] dArray = new Double[keys.length];
+			String[] lArray = new String[keys.length];
+
+			int a = 0;
+			for (String key : keys)
+			{
+				Double dvalue = this.getRateValueAsDouble(key, "occurrence", 0d);
+
+				lArray[a] = key;
+				dArray[a] = dvalue;
+				a++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+	}
+	
 //	@Override
 //	protected TabularCntrPanel createGui()
 //	{
-//		return new CmRaSysmonPanel(this);
+//		return new CmOptimizerPanel(this);
 //	}
 
 	@Override
@@ -148,10 +254,70 @@ extends CountersModel
 		
 		if (ssVersionInfo.isAzureSynapseAnalytics())
 			dm_exec_query_optimizer_info = "dm_pdw_nodes_exec_query_optimizer_info";
+
+		List<String> nonPctCounters = StringUtil.parseCommaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_nonPctCounters_csv, DEFAULT_nonPctCounters_csv));
 		
-		String sql = "select *     /* ${cmCollectorName} */ \n" 
-		           + "from sys." + dm_exec_query_optimizer_info;
+//		String sql = "select *     /* ${cmCollectorName} */ \n" 
+//		           + "from sys." + dm_exec_query_optimizer_info;
+
+		String sql = ""
+			    + "DECLARE @occurrences bigint =  (SELECT occurrence FROM sys." + dm_exec_query_optimizer_info + " WHERE counter = 'optimizations') \n"
+			    + "SELECT \n"
+			    + "     counter \n"
+			    + "    ,occurrence \n"
+			    + "    ,value \n"
+//			    + "    ,pct = CAST((occurrence * 100.00)/@occurrences AS DECIMAL(10,1)) \n"
+			    + "           /* Do NOT do Percent Calculation on the below 'counters' */ \n"
+			    + "           /* This can be changed with: " + PROPKEY_nonPctCounters_csv + " = c1, c2, c3, c4 */ \n"
+			    + "    ,pct = CASE WHEN counter IN (" + StringUtil.toCommaStrQuoted("'", nonPctCounters) + ") \n"
+			    + "                   THEN NULL \n"
+			    + "                   ELSE CAST((occurrence * 100.0)/@occurrences AS DECIMAL(10,1)) \n"
+			    + "              END \n"
+			    + "FROM sys." + dm_exec_query_optimizer_info + " \n"
+			    + "";
 
 		return sql;
+	}
+
+	@Override
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	{
+		int pos_occurrence = diffData.findColumn("occurrence");
+		int pos_pct        = diffData.findColumn("pct");
+
+		int pkRowId = diffData.getRowNumberForPkValue("optimizations");
+		if (pkRowId == -1)
+			return;
+//		Long totalOccurrences = diffData.getValueAsLong(createPkStr("optimizations"), "occurrence");
+		Long totalOccurrences = diffData.getValueAsLong(pkRowId, pos_occurrence);
+		
+		if (totalOccurrences == null) return;
+		if (totalOccurrences <= 0   ) return;
+
+		// Loop on all diffData rows
+		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+		{
+			Double val_pct = diffData.getValueAsDouble(rowId, pos_pct, null);
+			if (val_pct != null)
+			{
+				Long occurrence = diffData.getValueAsLong(rowId, pos_occurrence);
+				
+				double calc = (occurrence * 100.0) / (totalOccurrences * 1.0);
+				BigDecimal calcValue = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				
+				diffData.setValueAt(calcValue, rowId, pos_pct);
+			}
+		}
+	}
+	
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+	{
+		if ("counter".equals(colName) && cellValue instanceof String)
+		{
+			return SqlServerOptimizerCounterDictionary.getInstance().getDescriptionHtml((String) cellValue);
+		}
+		
+		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 }
