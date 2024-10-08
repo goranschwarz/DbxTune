@@ -48,7 +48,6 @@ import org.jfree.data.time.TimeSeriesDataItem;
 
 import com.asetune.graph.TrendGraphColors;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.utils.CountingWriter;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -889,7 +888,7 @@ public abstract class ReportChartAbstract implements IReportChart
 			// Extract "data" from the "data set" into the below Map's
 			LinkedHashMap<String, List<Long>>   seriesDataTs  = new LinkedHashMap<>();
 			LinkedHashMap<String, List<Number>> seriesDataVal = new LinkedHashMap<>();
-			List<Long> dataTsToUse = null;
+			List<Long> dataTsMaxSerie = null;
 
 			// Loop all series and fill: above Map's
 			for (int s=0; s<tsDataset.getSeriesCount(); s++)
@@ -913,12 +912,12 @@ public abstract class ReportChartAbstract implements IReportChart
 				}
 
 				// Remember the **largest** TimeStamp series, first stage (protecting from null's)
-				if (dataTsToUse == null)
-					dataTsToUse = dataTs;
+				if (dataTsMaxSerie == null)
+					dataTsMaxSerie = dataTs;
 
 				// Remember the **largest** TimeStamp series
-				if (dataTs.size() > dataTsToUse.size())
-					dataTsToUse = dataTs;
+				if (dataTs.size() > dataTsMaxSerie.size())
+					dataTsMaxSerie = dataTs;
 			}
 
 			// If we have "size issues" -- which I'm describing at the "top" of this method
@@ -926,16 +925,19 @@ public abstract class ReportChartAbstract implements IReportChart
 			for (Entry<String, List<Number>> entry : seriesDataVal.entrySet())
 			{
 				String       sName = entry.getKey();
+				List<Long>   sTs   = seriesDataTs.get(sName);
 				List<Number> sData = entry.getValue();
 
 				// if: current serie has less entries, then "pad" the start with "null" values
-				if (sData.size() < dataTsToUse.size())
+				if (sData.size() < dataTsMaxSerie.size())
 				{
-					if (_logger.isDebugEnabled())
-						_logger.debug(">>>>>>>>>> writeAsChartJsLineChart(): PADDING >>Start<< with " + (dataTsToUse.size() - sData.size()) + " 'null' entries. cmName='" + _cmName + "', graphName='" + _graphName + "', serieName='" + sName + "', graphTitle='" + _graphTitle + "'.");
+//					if (_logger.isDebugEnabled())
+//						_logger.debug(">>>>>>>>>> writeAsChartJsLineChart(): PADDING >>Start<< with " + (dataTsMaxSerie.size() - sData.size()) + " 'null' entries. cmName='" + _cmName + "', graphName='" + _graphName + "', serieName='" + sName + "', graphTitle='" + _graphTitle + "'.");
 
-					while(sData.size() < dataTsToUse.size())
-						sData.add(0, null);
+					Number defaultDataValue = 0;
+					fillMissingEntriesForSerie(sName, dataTsMaxSerie, sTs, sData, defaultDataValue);
+//					while(sData.size() < dataTsMaxSerie.size())
+//						sData.add(0, null);
 				}
 			}
 			
@@ -944,8 +946,8 @@ public abstract class ReportChartAbstract implements IReportChart
 			//   - all series "last" TS should be the same
 			for (String sName : seriesDataVal.keySet())
 			{
-				int  xValCnt = dataTsToUse.size();
-				long xLastTs = dataTsToUse.get(dataTsToUse.size()-1); // get LAST entry
+				int  xValCnt = dataTsMaxSerie.size();
+				long xLastTs = dataTsMaxSerie.get(dataTsMaxSerie.size()-1); // get LAST entry
 
 				int  sValCnt = seriesDataVal.get(sName).size();
 				long sLastTs = seriesDataTs .get(sName).get(seriesDataTs.get(sName).size()-1); // get LAST entry
@@ -960,8 +962,8 @@ public abstract class ReportChartAbstract implements IReportChart
 			// Convert all Time-stamps <Long> into Strings with format "Iso8601" (example: 2022-11-02T20:59:47.040+01:00)
 			// For Chart.js it will be used as 'labels', see description at the "top" of this method
 			List<String> dataTsStr = new ArrayList<>();
-				for (Long ts : dataTsToUse)
-					dataTsStr.add( "'" + TimeUtils.toStringIso8601(ts) + "'");
+			for (Long ts : dataTsMaxSerie)
+				dataTsStr.add( "'" + TimeUtils.toStringIso8601(ts) + "'");
 
 			// Write the HTML and JavaScript code
 			writeAsChartJsHtmlAndJsCode(writer, ChartType.LINE, dataTsStr, seriesDataVal);
@@ -972,6 +974,77 @@ public abstract class ReportChartAbstract implements IReportChart
 			_logger.warn(">>>>>>>>>> writeAsChartJsLineChart(): dataset is NOT instanceof 'TimeSeriesCollection', it is '" + datasetClassName + "' . cmName='" + _cmName + "', graphName='" + _graphName + "', graphTitle='" + _graphTitle + "'.");
 		}
 	}
+
+	/**
+	 * Fill a series with data "null" values where the  
+	 * @param serieName        Just for debugging
+	 * @param templateTsList   The "template" TimeStamp List which we want to use as the "solution" (or how the adjusted lists *should* look like)
+	 * @param tsList
+	 * @param dataList
+	 * @param defaultDataValue What data value to insert on the "missing" TimeStamp position
+	 */
+	private static void fillMissingEntriesForSerie(String serieName, List<Long> templateTsList, List<Long> tsList, List<Number> dataList, Number defaultDataValue)
+	{
+		if (templateTsList == null) throw new RuntimeException("fillMissingEntriesForSerie: templateTsList can't be null");
+		if (tsList         == null) throw new RuntimeException("fillMissingEntriesForSerie: tsList can't be null");
+		if (dataList       == null) throw new RuntimeException("fillMissingEntriesForSerie: dataList can't be null");
+
+		for (int p=0; p<templateTsList.size(); p++)
+		{
+			Long   templateTs = templateTsList.get(p);
+			Long   sTs        = tsList.size() <= p ? Long.MAX_VALUE : tsList.get(p); // if "tsList" is smaller, then assume a HIGHT TimeStamp
+//			Number sData      = dataList      .get(p);
+
+			if (templateTs < sTs)
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("fillMissingEntriesForSerie: serieName='" + serieName + "', inserting defaultDataValue='" + defaultDataValue + "' at pos=" + p + ". templateTs=" + templateTs + " (" + TimeUtils.toString(templateTs) + "), sTs=" + sTs + " (" + TimeUtils.toString(sTs) + ")");
+
+				tsList  .add(p, templateTs);
+				dataList.add(p, defaultDataValue);
+			}
+		}
+		
+		if (_logger.isDebugEnabled())
+			_logger.debug("fillMissingEntriesForSerie: serieName='" + serieName + "', templateTsList.size=" + templateTsList.size() + ", tsList.size=" + tsList.size() + ", dataList.size=" + dataList.size());
+	}
+
+
+//	public static void main(String[] args)
+//	{
+//		String       testSerie;
+//		List<Long>   templateTsList;
+//		List<Long>   tsList;
+//		List<Number> dataList;
+//
+//		// Test-1 -----------------------------------------------
+//		testSerie      = "test-1";
+//		templateTsList = new ArrayList<>(Arrays.asList(new Long[]{1L, 2L, 3L}));
+//		tsList         = new ArrayList<>(Arrays.asList(new Long[]{    2L, 3L}));
+//		dataList       = new ArrayList<>(Arrays.asList(new Long[]{    2L, 3L}));
+//		
+//		fillMissingEntriesForSerie(testSerie, templateTsList, tsList, dataList, null);
+//		System.out.println(testSerie + ": templateTsList=" + templateTsList + ", tsList=" + tsList + ", dataList=" + dataList);
+//
+//		// Test-2 -----------------------------------------------
+//		testSerie      = "test-2";
+//		templateTsList = new ArrayList<>(Arrays.asList(new Long[]{1L, 2L, 3L}));
+//		tsList         = new ArrayList<>(Arrays.asList(new Long[]{    2L}));
+//		dataList       = new ArrayList<>(Arrays.asList(new Long[]{    2L}));
+//		
+//		fillMissingEntriesForSerie(testSerie, templateTsList, tsList, dataList, null);
+//		System.out.println(testSerie + ": templateTsList=" + templateTsList + ", tsList=" + tsList + ", dataList=" + dataList);
+//
+//		// Test-2 -----------------------------------------------
+//		testSerie      = "test-3";
+//		templateTsList = new ArrayList<>(Arrays.asList(new Long[]{1L, 2L, 3L}));
+//		tsList         = new ArrayList<>(Arrays.asList(new Long[]{}));
+//		dataList       = new ArrayList<>(Arrays.asList(new Long[]{}));
+//		
+//		fillMissingEntriesForSerie(testSerie, templateTsList, tsList, dataList, null);
+//		System.out.println(testSerie + ": templateTsList=" + templateTsList + ", tsList=" + tsList + ", dataList=" + dataList);
+//
+//	}
 
 	public void writeAsHtmlInlineImage(Writer writer)
 	throws IOException

@@ -85,6 +85,7 @@ import com.asetune.gui.swing.GButton;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTableFilter;
+import com.asetune.gui.swing.RangeSlider;        // <<<<<-----  Replaces 'com.jidesoft.swing.RangeSlider' until it has support for java 17
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.IPersistWriter;
@@ -105,9 +106,11 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.asetune.xmenu.TablePopupFactory;
-import com.jidesoft.swing.RangeSlider;
 
 import net.miginfocom.swing.MigLayout;
+
+//import com.jidesoft.swing.RangeSlider;
+
 
 public class SqlCaptureOfflineView
 extends JFrame
@@ -1777,7 +1780,7 @@ implements ActionListener, ChangeListener//, MouseListener
 				+ "select \n"
 				+ "    [records] \n"
 //				+ "    (select [colVal] from [" + tabName + "$dcc$SQLText] where [hashId] = [SQLText$dcc$]) AS [SQLText] \n"
-				+ "    " + DictCompression.getRewriteForColumnName(tabName, col_SQLText_dcc, null) + " \n"
+				+ "   ," + DictCompression.getRewriteForColumnName(tabName, col_SQLText_dcc, null) + " \n"
 				+ "from [tmp] \n"
 				+ "order by [records] desc \n"
 				+ "";

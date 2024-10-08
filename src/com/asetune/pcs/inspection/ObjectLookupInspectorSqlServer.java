@@ -165,6 +165,7 @@ extends ObjectLookupInspectorAbstract
 					boolean hasMissingIndexes          = false;
 					boolean hasCursor                  = false;
 					boolean hasUserDefinedFunction     = false;
+					boolean hasEagerIndexSpool         = false;
 
 					if (xmlPlan.contains("<Warnings>"))
 					{
@@ -208,6 +209,89 @@ extends ObjectLookupInspectorAbstract
 						hasUserDefinedFunction = true;
 					}
 					
+					// TODO: Possibly check for 'Eager Index Spools' 
+					//       Check out:
+					//           - https://techcommunity.microsoft.com/t5/azure-database-support-blog/fixing-problematic-index-spools/ba-p/3290046
+					//           - https://erikdarling.com/starting-sql-eager-index-spools/
+					//           - https://erikdarling.com/indexing-sql-server-queries-for-performance-fixing-an-eager-index-spool/
+					//           - https://www.brentozar.com/blitzcache/eager-index-spools/
+					//       - We should instead create a *real* index (instead of doing that *every time*)
+					//       - NOTE: The other kind of lousy thing about them is that there's no missing index request generated, even though the optimizer thinks it'll be cheaper to MAKE ITS OWN INDEX and then run your query
+					if (xmlPlan.contains("PhysicalOp=\"Index Spool\" LogicalOp=\"Eager Spool\""))
+					{
+						hasEagerIndexSpool = true;
+						
+						//-----------------------------------------
+						// TODO: Trying to construct an index definition
+						//       CREATE INDEX gorans_fix1 ON ${dbname}.${schemaName}.${tableName}(...) INCLUDE(...) WITH (SORT_IN_TEMPDB=ON, DATA_COMPRESSION=PAGE)
+						//-----------------------------------------
+						
+						// Get "Output List"
+						// Get "Seek Predicates"
+
+						//-----------------------------------------
+						// Below is example of a formatted XML 
+						//-----------------------------------------
+						// Get <OutputList> -->> which be used as the INCLUDE Statement for the index
+						// Get <SeekKeys>   -->> should be the columns to index on 
+						//-----------------------------------------
+    					// <RelOp NodeId="28" PhysicalOp="Index Spool" LogicalOp="Eager Spool" EstimateRows="1.00065" EstimateIO="3.41853" EstimateCPU="0.0754381" AvgRowSize="42" EstimatedTotalSubtreeCost="3583.18" Parallel="0" EstimateRebinds="1.38603e+07" EstimateRewinds="22.1349" EstimatedExecutionMode="Row">
+        				// 	<OutputList>
+        				//INCLUDE: <ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="AvtalsNr"/>
+        				//INCLUDE: <ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="StartDatum"/>
+        				//INCLUDE: <ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="Ersattningsmodell"/>
+        				// 	</OutputList>
+        				// 	<Spool>
+        				// 		<SeekPredicateNew>
+        				// 			<SeekKeys>
+        				// 				<Prefix ScanType="EQ">
+        				// 					<RangeColumns>
+        				//INDEX-KEY:			<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="ForsakringsbolagID"/>
+        				//INDEX-KEY:			<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="AvtalsNr"/>
+        				// 					</RangeColumns>
+        				// 					<RangeExpressions>
+        				// 						<ScalarOperator ScalarString="[Datawarehouse].[dim].[Forsakring].[ForsakringsbolagID] as [f].[ForsakringsbolagID]">
+        				// 							<Identifier>
+        				// 								<ColumnReference Database="[Datawarehouse]" Schema="[dim]" Table="[Forsakring]" Alias="[f]" Column="ForsakringsbolagID"/>
+        				// 							</Identifier>
+        				// 						</ScalarOperator>
+        				// 						<ScalarOperator ScalarString="[Datawarehouse].[dim].[Forsakring].[Avtalsnr] as [f].[Avtalsnr]">
+        				// 							<Identifier>
+        				// 								<ColumnReference Database="[Datawarehouse]" Schema="[dim]" Table="[Forsakring]" Alias="[f]" Column="Avtalsnr"/>
+        				// 							</Identifier>
+        				// 						</ScalarOperator>
+        				// 					</RangeExpressions>
+        				// 				</Prefix>
+        				// 			</SeekKeys>
+        				// 		</SeekPredicateNew>
+        				// 		<RelOp NodeId="29" PhysicalOp="Table Scan" LogicalOp="Table Scan" EstimateRows="75180" EstimatedRowsRead="75180" EstimateIO="0.672755" EstimateCPU="0.082855" AvgRowSize="46" EstimatedTotalSubtreeCost="0.75561" TableCardinality="75180" Parallel="0" EstimateRebinds="0" EstimateRewinds="0" EstimatedExecutionMode="Row">
+        				// 			<OutputList>
+        				// 				<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="AvtalsNr"/>
+        				// 				<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="ForsakringsbolagID"/>
+        				// 				<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="StartDatum"/>
+        				// 				<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="Ersattningsmodell"/>
+        				// 			</OutputList>
+        				// 			<TableScan Ordered="0" ForcedIndex="0" ForceScan="0" NoExpandHint="0" Storage="RowStore">
+        				// 				<DefinedValues>
+        				// 					<DefinedValue>
+        				// 						<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="AvtalsNr"/>
+        				// 					</DefinedValue>
+        				// 					<DefinedValue>
+        				// 						<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="ForsakringsbolagID"/>
+        				// 					</DefinedValue>
+        				// 					<DefinedValue>
+        				// 						<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="StartDatum"/>
+        				// 					</DefinedValue>
+        				// 					<DefinedValue>
+        				// 						<ColumnReference Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" Column="Ersattningsmodell"/>
+        				// 					</DefinedValue>
+        				// 				</DefinedValues>
+        				// 				<Object Database="[Datawarehouse]" Schema="[dw]" Table="[Avtal]" Alias="[av]" IndexKind="Heap" Storage="RowStore"/>
+        				// 			</TableScan>
+        				// 		</RelOp>
+        				// 	</Spool>
+        				// </RelOp>
+					}
 
 					// Others we might want to look for: 
 					//  -- Queries_with_Index_Scans_Due_to_Implicit_Conversions
@@ -262,6 +346,12 @@ extends ObjectLookupInspectorAbstract
 						if (hasUserDefinedFunction)
 						{
 							sb.append(comma).append("\"hasUserDefinedFunction\": true");
+							comma = ", ";
+						}
+						
+						if (hasEagerIndexSpool)
+						{
+							sb.append(comma).append("\"hasEagerIndexSpool\": true");
 							comma = ", ";
 						}
 

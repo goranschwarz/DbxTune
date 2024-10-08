@@ -37,6 +37,7 @@ import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSummaryAbstract;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -53,7 +54,8 @@ import com.asetune.utils.Ver;
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmSummary
-extends CountersModel
+//extends CountersModel
+extends CmSummaryAbstract
 {
 	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
 	private static final long    serialVersionUID = 1L;
@@ -121,6 +123,7 @@ extends CountersModel
 		counterController.setSummaryCm(this);
 		
 		addTrendGraphs();
+		addPostRefreshTrendGraphs();
 
 		CounterSetTemplates.register(this);
 	}
@@ -597,6 +600,11 @@ extends CountersModel
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
+		// DbmsVersionStringChanged
+		//-------------------------------------------------------
+		doAlarmIfDbmsVersionStringWasChanged("version");
+
+		//-------------------------------------------------------
 		// BlockingLockCount
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("BlockingLockCount"))
@@ -687,12 +695,13 @@ extends CountersModel
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
-		
-		list.add(new CmSettingsHelper("BlockingLockCount",                isAlarmSwitch, PROPKEY_alarm_BlockingLockCount               , Integer.class, conf.getIntProperty   (PROPKEY_alarm_BlockingLockCount               , DEFAULT_alarm_BlockingLockCount               ), DEFAULT_alarm_BlockingLockCount               , "If 'BlockingLockCount' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
-		list.add(new CmSettingsHelper("BlockingLockCount MinWaitTime",                   PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, Double .class, conf.getDoubleProperty(PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, DEFAULT_alarm_BlockingLockCount_minWaitTimeSec), DEFAULT_alarm_BlockingLockCount_minWaitTimeSec, "If 'BlockingLockCount' is true; then we can filter on 'blocking_lock_wait_in_sec' (only if Postgres is version 14 or above)"));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec",              isAlarmSwitch, PROPKEY_alarm_oldestOpenTranInSec             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_oldestOpenTranInSec             , DEFAULT_alarm_oldestOpenTranInSec             ), DEFAULT_alarm_oldestOpenTranInSec             , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
-//		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipTranName",                PROPKEY_alarm_oldestOpenTranInSecSkipTranName , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipTranName , DEFAULT_alarm_oldestOpenTranInSecSkipTranName ), DEFAULT_alarm_oldestOpenTranInSecSkipTranName , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
-		list.add(new CmSettingsHelper("oldestStatementInSec",             isAlarmSwitch, PROPKEY_alarm_oldestStatementInSec            , Integer.class, conf.getIntProperty   (PROPKEY_alarm_oldestStatementInSec            , DEFAULT_alarm_oldestStatementInSec            ), DEFAULT_alarm_oldestStatementInSec            , "If 'oldestStatementInSec' is greater than ## then send 'AlarmEventLongRunningStatement'." ));
+
+		addAlarmSettings_DbmsVersionStringChanged(list, "version");
+		list.add(new CmSettingsHelper("BlockingLockCount",                isAlarmSwitch, PROPKEY_alarm_BlockingLockCount               , Integer.class, conf.getIntProperty    (PROPKEY_alarm_BlockingLockCount               , DEFAULT_alarm_BlockingLockCount               ), DEFAULT_alarm_BlockingLockCount               , "If 'BlockingLockCount' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("BlockingLockCount MinWaitTime",                   PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, Double .class, conf.getDoubleProperty (PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, DEFAULT_alarm_BlockingLockCount_minWaitTimeSec), DEFAULT_alarm_BlockingLockCount_minWaitTimeSec, "If 'BlockingLockCount' is true; then we can filter on 'blocking_lock_wait_in_sec' (only if Postgres is version 14 or above)"));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec",              isAlarmSwitch, PROPKEY_alarm_oldestOpenTranInSec             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_oldestOpenTranInSec             , DEFAULT_alarm_oldestOpenTranInSec             ), DEFAULT_alarm_oldestOpenTranInSec             , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
+//		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipTranName",                PROPKEY_alarm_oldestOpenTranInSecSkipTranName , String .class, conf.getProperty       (PROPKEY_alarm_oldestOpenTranInSecSkipTranName , DEFAULT_alarm_oldestOpenTranInSecSkipTranName ), DEFAULT_alarm_oldestOpenTranInSecSkipTranName , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("oldestStatementInSec",             isAlarmSwitch, PROPKEY_alarm_oldestStatementInSec            , Integer.class, conf.getIntProperty    (PROPKEY_alarm_oldestStatementInSec            , DEFAULT_alarm_oldestStatementInSec            ), DEFAULT_alarm_oldestStatementInSec            , "If 'oldestStatementInSec' is greater than ## then send 'AlarmEventLongRunningStatement'." ));
 
 		return list;
 	}

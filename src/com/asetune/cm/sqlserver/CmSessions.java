@@ -819,6 +819,16 @@ extends CountersModel
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp     ))); // NO match in the SKIP Cmd      regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
 
+						// NOTE: DBCC SHRINKDATABASE/SHRINKFILE tends to "change" database name from "the db to shrink" to "tempdb" A LOT
+						// So can we do anything about that ... 
+						//    - if we simply doAlarm=false, if it's in "tempdb" then alarm will still be cancelled... (which we don't want)  
+						//    - if we Change the DBName to "-shrink-" then it will be hard to "track" in what database we have a long running transaction
+						//    - we could check what active alarms we have and grab the DBName from there (but if first Alarm is in tempdb... then what...)
+						//    - or just DISABLE this alarm for "DbccFilesCompact" ::: if (doAlarm && "DbccFilesCompact".equals(Command)) { doAlarm = false; }
+						//    - or we just have to live with "flickering" between RAISE/CANCEL
+						// For now: last option: live with it...
+							
+
 						// NO match in the SKIP regEx
 						if (doAlarm)
 						{

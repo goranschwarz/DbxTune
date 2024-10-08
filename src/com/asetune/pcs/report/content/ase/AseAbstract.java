@@ -195,7 +195,7 @@ extends ReportEntryAbstract
 	 * @return
 	 */
 	@Override
-	public String getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname)
+	public String getDbmsTableInfoAsHtmlTable(DbxConnection conn, String currentDbname, Set<String> tableList, boolean includeIndexInfo, String classname)
 	{
 		// Get tables/indexes
 		Set<AseTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
@@ -203,10 +203,10 @@ extends ReportEntryAbstract
 			return "";
 
 		// And make it into a HTML table with various information about the table and indexes 
-		return getTableInfoAsHtmlTable(tableInfoSet, tableList, includeIndexInfo, classname);
+		return getTableInfoAsHtmlTable(currentDbname, tableInfoSet, tableList, includeIndexInfo, classname);
 	}
 
-	public String getTableInfoAsHtmlTable(Set<AseTableInfo> tableInfoList, Set<String> tableList, boolean includeIndexInfo, String classname)
+	public String getTableInfoAsHtmlTable(String currentDbname, Set<AseTableInfo> tableInfoList, Set<String> tableList, boolean includeIndexInfo, String classname)
 	{
 		// Exit early: if no data
 		if (tableInfoList == null)   return "";
@@ -259,39 +259,52 @@ extends ReportEntryAbstract
 
 		NumberFormat nf = NumberFormat.getInstance();
 
+		boolean onlyShowObjectInCurrentDatabase = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE, DEFAULT_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE);
+		int     numOfObjectNotInCurrentDatabase = 0;
+
 		//--------------------------------------------------------------------------
 		// Table BODY
 		sb.append("<tbody> \n");
 		for (AseTableInfo entry : tableInfoList)
 		{
+			// "list-objects-only-in-current-database"
+			if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase)
+			{
+				if (StringUtil.hasValue(entry.getDbName()) && ! currentDbname.equalsIgnoreCase(entry.getDbName()))
+				{
+					numOfObjectNotInCurrentDatabase++;
+					continue;
+				}
+			}
+
 			LinkedHashMap<String, String> tableInfoMap = new LinkedHashMap<>();
 
 			if (entry.isView())
 			{
-				tableInfoMap.put("Type"       ,            "<b>VIEW</b>"              );
-				tableInfoMap.put("DBName"     ,            entry.getDbName()          );
-				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
-				tableInfoMap.put("View"       ,            entry.getTableName()       );
-				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
-//				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
-				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_SYBASE_ASE));
+				tableInfoMap.put("Type"       ,                 "<b>VIEW</b>"              );
+				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
+				tableInfoMap.put("Schema"     ,                 entry.getSchemaName()      );
+				tableInfoMap.put("View"       ,                 entry.getTableName()       );
+				tableInfoMap.put("Created"    ,                 entry.getCrDate()+""       );
+//				tableInfoMap.put("References" ,                 entry.getViewReferences()+""); // instead show this in the: Index Info section
+				tableInfoMap.put("DDL"        ,                 getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_SYBASE_ASE));
 			}
 			else // Any table
 			{
-				tableInfoMap.put("DBName"     ,            entry.getDbName()     );
-				tableInfoMap.put("Schema"     ,            entry.getSchemaName() );
-				tableInfoMap.put("Table"      ,            entry.getTableName()  );
-				tableInfoMap.put("Rowcount"   , nf.format( entry.getRowTotal()  ));
-				tableInfoMap.put("Total MB"   , nf.format( entry.getSizeMb()    ));
-				tableInfoMap.put("Data MB"    , nf.format( entry.getDataMb()    ));
-				tableInfoMap.put("Data Pages" , nf.format( entry.getDataPages() ));
-				tableInfoMap.put("Index MB"   , nf.format( entry.getIndexMb()   ));
+				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
+				tableInfoMap.put("Schema"     ,                 entry.getSchemaName() );
+				tableInfoMap.put("Table"      ,                 entry.getTableName()  );
+				tableInfoMap.put("Rowcount"   , nf.format(      entry.getRowTotal()  ));
+				tableInfoMap.put("Total MB"   , nf.format(      entry.getSizeMb()    ));
+				tableInfoMap.put("Data MB"    , nf.format(      entry.getDataMb()    ));
+				tableInfoMap.put("Data Pages" , nf.format(      entry.getDataPages() ));
+				tableInfoMap.put("Index MB"   , nf.format(      entry.getIndexMb()   ));
 				tableInfoMap.put("LOB MB"     , entry.getLobMb() == -1 ? "-no-lob-" : nf.format( entry.getLobMb() ));
-				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
-				tableInfoMap.put("Sampled"    ,            entry.getSampleTime()+""   );
-				tableInfoMap.put("Lock Scheme",            entry.getLockScheme() );
+				tableInfoMap.put("Created"    ,                entry.getCrDate()+""       );
+				tableInfoMap.put("Sampled"    ,                entry.getSampleTime()+""   );
+				tableInfoMap.put("Lock Scheme",                entry.getLockScheme() );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"   ,            getTextAsTooltipDiv(entry._objectText, "Table Info"));
+				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(entry._objectText, "Table Info"));
 				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info"));
 			}
 			
@@ -308,6 +321,16 @@ extends ReportEntryAbstract
 					indexInfo += "<ul>";
 					for (String viewRef : entry.getViewReferences())
 					{
+//						// Remove objects that are NOT part of "Current Database"
+//						if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase)
+//						{
+//							if (StringUtil.hasValue(viewRef) && ! viewRef.contains(currentDbname))
+//							{
+//								numOfObjectNotInCurrentDatabase++;
+//								continue;
+//							}
+//						}
+
 						indexInfo += "<li>" + viewRef + "</li>";
 					}
 					indexInfo += "</ul>";
@@ -341,6 +364,15 @@ extends ReportEntryAbstract
 //		sb.append("</tfoot> \n");
 
 		sb.append("</table> \n");
+		
+		// If we have SKIPPED dependent object (NOT in current database), then write some info about that!
+		if (onlyShowObjectInCurrentDatabase && numOfObjectNotInCurrentDatabase > 0)
+		{
+			sb.append("<p> \n");
+			sb.append("<b>NOTE:</b> " + numOfObjectNotInCurrentDatabase + " objects was found in the PCS, which will <b>NOT</b> be displayed, due to not matching currentDbname='" + currentDbname + "'.<br> \n");
+			sb.append("This can be changed with config property '" + PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE + "=false' \n");
+			sb.append("</p> \n");
+		}
 		
 		return sb.toString();
 	}

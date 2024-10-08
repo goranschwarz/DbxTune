@@ -881,6 +881,9 @@ extends DbmsConfigAbstract
 		map.put("allow filesystem enumeration",       1);
 		map.put("polybase enabled",                   0);
 
+		// SQL-Server 2019 (CU 26)
+		map.put("max RPC request params (KB)",        0);
+		
 		// Azure SQL Database... seems to have the following extra values
 		map.put("Data processed daily limit in TB",   2_147_483_647);
 		map.put("Data processed weekly limit in TB",  2_147_483_647);
@@ -1102,6 +1105,9 @@ extends DbmsConfigAbstract
 		map.put("allow filesystem enumeration",       SECTION_UNSPECIFIED);
 		map.put("polybase enabled",                   SECTION_UNSPECIFIED);
 		
+		// SQL-Server 2019 (CU 26)
+		map.put("max RPC request params (KB)",        SECTION_UNSPECIFIED);
+		
 		// Azure SQL Database... seems to have the following extra values
 		map.put("Data processed daily limit in TB",   SECTION_UNSPECIFIED);
 		map.put("Data processed weekly limit in TB",  SECTION_UNSPECIFIED);
@@ -1199,7 +1205,7 @@ extends DbmsConfigAbstract
 		map.put("query wait (s)",                     NO_COMMENT);
 		map.put("recovery interval (min)",            NO_COMMENT);
 		map.put("remote access",                      NO_COMMENT);
-		map.put("remote admin connections",           "The default is Off (0) here. I like it on (1) so I can connect to a client’s instance with a remote administrator connection without having to restart. Helps in the rarest of rare situations but it is a nice tool to have.");
+		map.put("remote admin connections",           "The default is Off (0) here. I like it on (1) so I can connect to a clientï¿½s instance with a remote administrator connection without having to restart. Helps in the rarest of rare situations but it is a nice tool to have.");
 		map.put("remote login timeout (s)",           NO_COMMENT);
 		map.put("remote proc trans",                  NO_COMMENT);
 		map.put("remote query timeout (s)",           NO_COMMENT);
@@ -1240,6 +1246,9 @@ extends DbmsConfigAbstract
 		map.put("version low part of SQL Server",     NO_COMMENT);
 		map.put("allow filesystem enumeration",       NO_COMMENT);
 		map.put("polybase enabled",                   NO_COMMENT);
+		
+		// SQL-Server 2019 (CU 26)
+		map.put("max RPC request params (KB)",        NO_COMMENT);
 		
 		// Azure SQL Database... seems to have the following extra values
 		map.put("Data processed daily limit in TB",   NO_COMMENT);

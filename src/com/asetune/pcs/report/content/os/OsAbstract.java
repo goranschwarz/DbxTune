@@ -36,7 +36,7 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	protected String getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname)
+	protected String getDbmsTableInfoAsHtmlTable(DbxConnection conn, String currentDbname, Set<String> tableList, boolean includeIndexInfo, String classname)
 	{
 		return "";
 	}

@@ -37,6 +37,7 @@ import com.asetune.central.DbxTuneCentral;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralH2Defrag.H2StorageInfo;
 import com.asetune.central.cleanup.CentralPcsJdbcCleaner;
+import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.controllers.OverviewServlet;
 import com.asetune.central.controllers.OverviewServlet.H2DbFileType;
 import com.asetune.central.pcs.H2WriterStat;
@@ -68,6 +69,12 @@ extends ReportEntryAbstract
 	public DbxCentralDbInfo(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
+	}
+
+	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return true;
 	}
 
 	@Override
@@ -118,6 +125,22 @@ extends ReportEntryAbstract
 			out.println("</p>");
 
 			out.println( _recordings.toHtmlTableString("sortable") );
+		}
+		
+		// Last Cleanup Report of -- DbxCollector Recording Databases
+		String dbxCollectorDataFileCleanupShortReport = DataDirectoryCleaner.getLastExecShortReport();
+		if (StringUtil.hasValue(dbxCollectorDataFileCleanupShortReport))
+		{
+			out.println("<br>");
+			out.println("<br>");
+			out.println("<p>");
+			out.println("<b>DbxCentral: Last Cleanup Report of -- DbxCollector Recording Databases<br>");
+			out.println("</p>");
+
+			// Use '<pre>' here or do we need to translate '\n' --> '<br>\n'
+			out.println("<pre>");
+			out.println(dbxCollectorDataFileCleanupShortReport);
+			out.println("</pre>");
 		}
 
 

@@ -1639,7 +1639,7 @@ extends CountersModel
 		long srvVersion = ssVersionInfo.getLongVersion();
 
 		// Table names are probably different in Normal SQL-Server and Azure SQL-Server
-		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
+//		String dm_db_file_space_usage        = "sys.dm_db_file_space_usage";
 		String dm_db_log_space_usage         = "sys.dm_db_log_space_usage";
 		String dm_exec_sessions              = "sys.dm_exec_sessions";
 		String dm_exec_connections           = "sys.dm_exec_connections";
@@ -1676,18 +1676,167 @@ extends CountersModel
 //			databases                    = "sys.databases";                           // same as Normal SQL-Server
 //			backupset                    = "msdb.dbo.backupset";                      // same as Normal SQL-Server
 //		}
-
-		//TODO; // Look at 'sp_ineachdb' and how a similar approach can be used instead of 'sp_MSforeachdb' 
-		String foreachDbBegin = "EXEC sp_MSforeachdb ' \n"; // NOTE: possibly use 'sp_ineachdb' from Brent Ozar instead, it's safer (but it needs to be *installed*)
-		String foreachDbEnd   = "FROM [?].${TABLE_NAME}' \n";
-
 		
-		// Special thing for Azure SQL Database
-		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
+		// T-SQL Variables (using a cursor to get database context, see: sql_cursorLoopAllDbs)
+		String sql_topDeclareSqlVariables = ""
+			    + "\n"
+				+ "/** declare some variables **/ \n"
+			    + "declare @c_dbname        sysname \n"
+			    + "declare @sql_execFull    nvarchar(max) = '' \n"
+			    + "declare @sql_dataSizeMb  varchar(max) = '' \n"
+			    + "declare @sql_logSizeMb   varchar(max) = '' \n"
+			    + "declare @sql_queryStore  varchar(max) = '' \n"
+			    + "";
+		
+		// Get DB Size Information (using a cursor to get database context, see: sql_cursorLoopAllDbs)
+		String sql_dataSizeMb = ""
+			    + "\n"
+			    + "\n"
+			    + "--------------------------- \n"
+			    + "-- DATA SIZE MB \n"
+			    + "--------------------------- \n"
+			    + "CREATE TABLE #dataSizeMb (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+			    + "set @sql_dataSizeMb = ' \n"
+			    + ";WITH dbsize AS ( /*  ${cmCollectorName} */ \n"
+			    + "    SELECT \n"
+			    + "         database_id    = DB_ID() \n"
+			    + "        ,fileGroupCount = COUNT(*) \n"
+			    + "        ,totalMb        = SUM(size) / 128.0 \n"
+			    + "        ,allocatedMb    = SUM(CAST(FILEPROPERTY(name, ''SpaceUsed'') AS bigint) / 128.0) \n"
+			    + "        ,unallocatedMb  = SUM(size / 128.0) - SUM(CAST(FILEPROPERTY(name, ''SpaceUsed'') AS bigint) / 128.0) \n"
+			    + "    FROM sys.database_files \n"
+			    + "    WHERE type_desc IN (''ROWS'') \n"
+			    + ") \n"
+			    + "INSERT INTO #dataSizeMb \n"
+			    + "SELECT \n"
+			    + "     database_id \n"
+			    + "    ,fileGroupCount \n"
+			    + "    ,totalMb \n"
+			    + "    ,allocatedMb \n"
+			    + "    ,unallocatedMb \n"
+			    + "    ,usedPct        = allocatedMb   / totalMb * 100.0 \n"
+			    + "    ,freePct        = unallocatedMb / totalMb * 100.0 \n"
+			    + "FROM dbsize; \n"
+			    + "' \n"
+			    + "";
+		
+		// Get LOG Size Information (using a cursor to get database context, see: sql_cursorLoopAllDbs)
+		String sql_logSizeMb = ""
+			    + "\n"
+			    + "\n"
+			    + "--------------------------- \n"
+			    + "-- LOG SIZE MB \n"
+			    + "--------------------------- \n"
+			    + "CREATE TABLE #logSizeMb (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
+			    + "set @sql_logSizeMb = ' \n"
+			    + "INSERT INTO #logSizeMb \n"
+			    + "SELECT /*  ${cmCollectorName} */ \n"
+			    + "     database_id \n"
+			    + "    ,total_log_size_in_bytes/1024/1024 \n"
+			    + "    ,used_log_space_in_bytes/1024/1024 \n"
+			    + "    ,used_log_space_in_percent \n"
+			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
+			    + "FROM " + dm_db_log_space_usage + "; \n"
+			    + "' \n"
+			    + "";
+
+		// Get Query Store Information (using a cursor to get database context, see: sql_cursorLoopAllDbs)
+		String sql_queryStore = "";
+		if (srvVersion >= Ver.ver(2016))
 		{
-			foreachDbBegin = "";
-			foreachDbEnd   = "FROM ${TABLE_NAME} \n";
+			sql_queryStore = ""
+			    + "\n"
+			    + "\n"
+			    + "--------------------------- \n"
+			    + "-- Query Store \n"
+			    + "--------------------------- \n"
+			    + "CREATE TABLE #queryStore (database_id int, is_enabled bit, state_is_ok varchar(3), desired_state_desc varchar(60), actual_state_desc varchar(60), max_storage_size_mb bigint, current_storage_size_mb bigint, usedPct numeric(10,1), readonly_reason int) \n"
+			    + "set @sql_queryStore = ' \n"
+			    + "INSERT INTO #queryStore \n"
+			    + "SELECT /*  ${cmCollectorName} */ \n"
+			    + "     DB_ID() as database_id \n"
+			    + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
+			    + "    ,CASE WHEN (desired_state = actual_state) THEN ''YES''        ELSE ''NO''         END as state_is_ok \n"
+			    + "    ,desired_state_desc \n"
+			    + "    ,actual_state_desc \n"
+			    + "    ,max_storage_size_mb \n"
+			    + "    ,current_storage_size_mb \n"
+			    + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
+			    + "    ,readonly_reason \n"
+			    + "FROM sys.database_query_store_options \n"
+			    + "OPTION(RECOMPILE);  \n"
+			    + "' \n"
+			    + "-- Note: Sometimes: 'actual_state' shows WRONG value WITHOUT OPTION(RECOMPILE) \n"
+			    + "";
 		}
+
+		// With the below construct: we can STOP using 'sp_MSforeachdb', and possibly remove all that code
+		String sql_cursorLoopAllDbs = ""
+			    + "\n"
+			    + "\n"
+			    + "--------------------------- \n"
+			    + "-- Loop all databases and execute anything that needs database context: @sql_dataSizeMb, @sql_logSizeMb, @sql_queryStore **/ \n"
+			    + "--------------------------- \n"
+			    + "DECLARE c_dbnames CURSOR LOCAL FAST_FORWARD \n"
+			    + "FOR \n"
+			    + "    SELECT /*  ${cmCollectorName} */ \n"
+			    + "        QUOTENAME(name) AS dbname \n"
+			    + "    FROM sys.databases \n"
+			    + "    WHERE HAS_DBACCESS(name) = 1; \n"
+			    + " \n"
+			    + "OPEN c_dbnames; \n"
+			    + " \n"
+			    + "WHILE (1=1) \n"
+			    + "BEGIN \n"
+			    + "    FETCH NEXT FROM c_dbnames INTO @c_dbname; \n"
+			    + " \n"
+			    + "    IF (@@fetch_status <> 0) \n"
+			    + "        BREAK; \n"
+			    + " \n"
+			    + "     SET @sql_execFull = 'USE ' + @c_dbname + ';' + CHAR(10) \n"
+			    + "         + @sql_dataSizeMb + @sql_logSizeMb + @sql_queryStore; \n"
+			    + " \n"
+			    + "    /* change context to each database and collect database properties into temp table */ \n"
+			    + "    BEGIN TRY \n"
+			    + "        EXEC sys.sp_executesql @sql_execFull; \n"
+			    + "    END TRY \n"
+			    + "    BEGIN CATCH \n"
+			    + "        /* silenty ignore certain transient database access errors and continue the loop */ \n"
+			    + "        IF error_number() NOT IN (911, 916, 922, 927, 941, 942, 952, 976, 978, 40863, 1222) \n"
+			    + "            THROW; \n"
+			    + "    END CATCH; \n"
+			    + "END; \n"
+			    + "CLOSE c_dbnames; \n"
+			    + "DEALLOCATE c_dbnames; \n"
+			    + "\n"
+			    + "\n"
+			    + "";
+			    //------------------------------------------------------
+			    // Description of "catch" error messages
+			    //------------------------------------------------------
+			    // 911   = Database '%.*ls' does not exist. Make sure that the name is entered correctly.
+			    // 916   = The server principal "%.*ls" is not able to access the database "%.*ls" under the current security context.
+			    // 922   = Database '%.*ls' is being recovered. Waiting until recovery is finished.
+			    // 927   = Database '%.*ls' cannot be opened. It is in the middle of a restore.
+			    // 941   = Database '%.*ls' cannot be opened because it is not started. Retry when the database is started.
+			    // 942   = Database '%.*ls' cannot be opened because it is offline.
+			    // 952   = Database '%.*ls' is in transition. Try the statement later.
+			    // 976   = The target database, '%.*ls', is participating in an availability group and is currently not accessible for queries. Either data movement is suspended or the availability replica is not enabled for read access. To allow read-only access to this and other databases in the availability group, enable read access to one or more secondary availability replicas in the group. For more information, see the ALTER AVAILABILITY GROUP statement in SQL Server Books Online.
+			    // 978   = The target database ('%.*ls') is in an availability group and is currently accessible for connections when the application intent is set to read only. For more information about application intent, see SQL Server Books Online.
+			    // 40863 = Connections to this database are no longer allowed.
+			    // 1222  = Lock request time out period exceeded.
+		
+		//TODO; // Look at 'sp_ineachdb' and how a similar approach can be used instead of 'sp_MSforeachdb' 
+//		String foreachDbBegin = "EXEC sp_MSforeachdb ' \n"; // NOTE: possibly use 'sp_ineachdb' from Brent Ozar instead, it's safer (but it needs to be *installed*)
+//		String foreachDbEnd   = "FROM [?].${TABLE_NAME}' \n";
+//
+//		
+//		// Special thing for Azure SQL Database
+//		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
+//		{
+//			foreachDbBegin = "";
+//			foreachDbEnd   = "FROM ${TABLE_NAME} \n";
+//		}
 
 		// ----- SQL-Server 2012 and above
 		String availabilityGroupName          = "";
@@ -1711,7 +1860,7 @@ extends CountersModel
 //		}
 
 		// ----- SQL-Server 2016 and above
-		String queryStoreCreateTempTable   = "";
+//		String queryStoreCreateTempTable   = "";
 		String queryStoreColumns           = "";
 		String queryStoreJoin              = "";
 		String queryStoreDropTempTable1    = "";
@@ -1719,33 +1868,33 @@ extends CountersModel
 
 		if (srvVersion >= Ver.ver(2016))
 		{
-			String foreachDbId   = "     DB_ID(''?'')            as database_id \n";
-			String foreachDbSq   = "''"; // sq == SingleQuote
-			if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
-			{
-				foreachDbId   = "     DB_ID()   as database_id \n";
-				foreachDbSq   = "'";
-			}
+//			String foreachDbId   = "     DB_ID(''?'')            as database_id \n";
+//			String foreachDbSq   = "''"; // sq == SingleQuote
+//			if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
+//			{
+//				foreachDbId   = "     DB_ID()   as database_id \n";
+//				foreachDbSq   = "'";
+//			}
 
-			queryStoreCreateTempTable   = "--------------------------- \n"
-			                            + "-- Query Store \n"
-			                            + "--------------------------- \n"
-			                            + "CREATE TABLE #queryStore (database_id int, is_enabled bit, state_is_ok varchar(3), desired_state_desc varchar(60), actual_state_desc varchar(60), max_storage_size_mb bigint, current_storage_size_mb bigint, usedPct numeric(10,1), readonly_reason int) \n"
-			                            + "INSERT INTO #queryStore \n"
-			                            + foreachDbBegin
-			                            + "SELECT /* ${cmCollectorName} */ \n"
-			                            + foreachDbId
-//			                            + foreachDbName
-			                            + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
-			                            + "    ,CASE WHEN (desired_state = actual_state) THEN #YES#        ELSE #NO#         END as state_is_ok \n".replace("#", foreachDbSq)
-			                            + "    ,desired_state_desc \n"
-			                            + "    ,actual_state_desc \n"
-			                            + "    ,max_storage_size_mb \n"
-			                            + "    ,current_storage_size_mb \n"
-			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
-			                            + "    ,readonly_reason \n"
-			                            + foreachDbEnd.replace("${TABLE_NAME}", "sys.database_query_store_options \nOPTION(RECOMPILE)") // Sometimes: 'actual_state' shows WRONG value WITHOUT OPTION(RECOMPILE)
-			                            + " \n";
+//			queryStoreCreateTempTable   = "--------------------------- \n"
+//			                            + "-- Query Store \n"
+//			                            + "--------------------------- \n"
+//			                            + "CREATE TABLE #queryStore (database_id int, is_enabled bit, state_is_ok varchar(3), desired_state_desc varchar(60), actual_state_desc varchar(60), max_storage_size_mb bigint, current_storage_size_mb bigint, usedPct numeric(10,1), readonly_reason int) \n"
+//			                            + "INSERT INTO #queryStore \n"
+//			                            + foreachDbBegin
+//			                            + "SELECT /* ${cmCollectorName} */ \n"
+//			                            + foreachDbId
+////			                            + foreachDbName
+//			                            + "    ,CASE WHEN (desired_state = 0 /*0=OFF*/ ) THEN cast(0 as bit) ELSE cast(1 as bit) END as is_enabled \n"
+//			                            + "    ,CASE WHEN (desired_state = actual_state) THEN #YES#        ELSE #NO#         END as state_is_ok \n".replace("#", foreachDbSq)
+//			                            + "    ,desired_state_desc \n"
+//			                            + "    ,actual_state_desc \n"
+//			                            + "    ,max_storage_size_mb \n"
+//			                            + "    ,current_storage_size_mb \n"
+//			                            + "    ,cast(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) as usedPct \n"
+//			                            + "    ,readonly_reason \n"
+//			                            + foreachDbEnd.replace("${TABLE_NAME}", "sys.database_query_store_options \nOPTION(RECOMPILE)") // Sometimes: 'actual_state' shows WRONG value WITHOUT OPTION(RECOMPILE)
+//			                            + " \n";
 
 			queryStoreColumns           = "    ,QsIsEnabled              = qs.is_enabled \n"
 			                            + "    ,QsIsOk                   = qs.state_is_ok \n"
@@ -1956,39 +2105,54 @@ extends CountersModel
 			    + queryStoreDropTempTable1
 			    + "go \n"
 			    + " \n"
-			    + "--------------------------- \n"
-			    + "-- DATA SIZE MB \n"
-			    + "--------------------------- \n"
-			    + "CREATE TABLE #dataSizeMb (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
-			    + "INSERT INTO #dataSizeMb \n"
-			    + foreachDbBegin
-			    + "SELECT /* ${cmCollectorName} */ \n"
-			    + "     database_id \n"
-			    + "    ,fileGroupCount = count(*) \n"
-			    + "    ,totalMb        = sum(total_page_count) / 128.0 \n"
-			    + "    ,allocatedMb    = sum(allocated_extent_page_count) / 128.0 \n"
-			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
-			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
-			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
-			    + foreachDbEnd.replace("${TABLE_NAME}", dm_db_file_space_usage + " GROUP BY database_id")
-			    + " \n"
-			    + "--------------------------- \n"
-			    + "-- LOG SIZE MB \n"
-			    + "--------------------------- \n"
-			    + "CREATE TABLE #logSizeMb (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
-			    + "INSERT INTO #logSizeMb \n"
-			    + foreachDbBegin
-			    + "SELECT /* ${cmCollectorName} */ \n"
-			    + "     database_id \n"
-			    + "    ,total_log_size_in_bytes/1024/1024 \n"
-			    + "    ,used_log_space_in_bytes/1024/1024 \n"
-			    + "    ,used_log_space_in_percent \n"
-			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
-			    + foreachDbEnd.replace("${TABLE_NAME}", dm_db_log_space_usage)
-			    + " \n"
-			    
-			    // Query Store (if 2016 or above)
-			    + queryStoreCreateTempTable
+//			    + "--------------------------- \n"
+//			    + "-- DATA SIZE MB \n"
+//			    + "--------------------------- \n"
+//			    + "CREATE TABLE #dataSizeMb (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+//			    + "INSERT INTO #dataSizeMb \n"
+//			    + foreachDbBegin
+//			    + "SELECT /* ${cmCollectorName} */ \n"
+//			    + "     database_id \n"
+//			    + "    ,fileGroupCount = count(*) \n"
+//			    + "    ,totalMb        = sum(total_page_count) / 128.0 \n"
+//			    + "    ,allocatedMb    = sum(allocated_extent_page_count) / 128.0 \n"
+//			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
+//			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+//			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+//			    + foreachDbEnd.replace("${TABLE_NAME}", dm_db_file_space_usage + " GROUP BY database_id")
+//			    + " \n"
+//			    + "--------------------------- \n"
+//			    + "-- LOG SIZE MB \n"
+//			    + "--------------------------- \n"
+//			    + "CREATE TABLE #logSizeMb (database_id int, totalLogSizeMb int, usedLogSpaceInMb int, usedLogSpaceInPct numeric(5,1), logSpaceInMbSinceLastBackup int) \n"
+//			    + "INSERT INTO #logSizeMb \n"
+//			    + foreachDbBegin
+//			    + "SELECT /* ${cmCollectorName} */ \n"
+//			    + "     database_id \n"
+//			    + "    ,total_log_size_in_bytes/1024/1024 \n"
+//			    + "    ,used_log_space_in_bytes/1024/1024 \n"
+//			    + "    ,used_log_space_in_percent \n"
+//			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
+//			    + foreachDbEnd.replace("${TABLE_NAME}", dm_db_log_space_usage)
+//			    + " \n"
+//			    
+//			    // Query Store (if 2016 or above)
+//			    + queryStoreCreateTempTable
+
+			    // Some basic T-SQL Variables, if we need to use Cursor for DB Context sensitive information
+			    + sql_topDeclareSqlVariables
+
+			    // DATA Size (by cursor)
+			    + sql_dataSizeMb
+
+			    // LOG Size (by cursor)
+			    + sql_logSizeMb
+
+			    // Query Store Info (by cursor)
+			    + sql_queryStore
+
+			    // Loop all databases where we need DB Context sensitive information
+			    + sql_cursorLoopAllDbs
 
 			    // Backup information
 			    + backupInfo
@@ -2059,6 +2223,7 @@ extends CountersModel
 //			    + "    ,updateability            = CASE WHEN d.is_read_only = 1 THEN 'READ_ONLY' ELSE 'READ_WRITE' END \n" // use above 'is_read_only' instead it was more "visual"
 			    + "    ,d.state_desc \n"
 			    + "    ,d.recovery_model_desc \n"
+			    + "    ,d.create_date \n"
 			    + availabilityGroupName
 			    + availabilityGroupRole
 			    + availabilityGroupPrimaryServer

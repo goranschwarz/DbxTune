@@ -57,6 +57,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -140,6 +141,10 @@ public class RSyntaxUtilitiesX
 		{
 			mi = new JCheckBoxMenuItem(new RSyntaxTextAreaEditorKitX.MarkWordOnDoubleClickAction(RSyntaxTextAreaX.markAllWordsOnDoubleClick));
 			mi.setText("Mark all Words, on Double Click");
+
+			// Set initial value for Context Menu "Mark all Words, on Double Click"... 
+			mi.setSelected(Configuration.getCombinedConfiguration().getBooleanProperty(RSyntaxTextAreaX.PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED, true));
+
 //			mi = new JCheckBoxMenuItem("Mark all Words, on Double Click", RSyntaxTextAreaX.isHiglightWordModeEnabled(syntaxTextArea));
 			mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 //			mi.addActionListener(new ActionListener()

@@ -90,6 +90,12 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		if (ReportType.CPU_TIME.equals(_reportType))
@@ -738,7 +744,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						}
 						
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
-						String tableInfo = getDbmsTableInformationFromSqlText(conn, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						String tableInfo = getDbmsTableInformationFromSqlText(conn, null, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table information (like we do in 'AseTopCmObjectActivity')

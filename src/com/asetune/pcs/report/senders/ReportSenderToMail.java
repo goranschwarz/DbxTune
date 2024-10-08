@@ -43,6 +43,9 @@ extends ReportSenderAbstract
 {
 	private static Logger _logger = Logger.getLogger(ReportSenderToMail.class);
 
+	/** Used to save the "attachment file", so we dont have to pass it between methods */
+	private File _attachmentFile = null;
+
 	/**
 	 * Since we send mail from 2 places... use this to "create and setup" a basic email message
 	 * 
@@ -162,6 +165,8 @@ extends ReportSenderAbstract
 			msgFile      = reportContent.getReportFile();
 			attachSizeKb = reportContent.getReportFile().length() / 1024;
 			attachSizeMb = reportContent.getReportFile().length() / 1024 / 1024;
+			
+			_attachmentFile = msgFile;
 		}
 
 		try 
@@ -222,6 +227,7 @@ extends ReportSenderAbstract
 						
 						msgFile = zipFile;
 						zipAttachment = true;
+						_attachmentFile = msgFile; // reassign this, so we have the ZIP version
 						
 						zipSaveMb = (attachSizeKb - (zipFile.length() / 1024)) / 1024;
 
@@ -269,7 +275,7 @@ extends ReportSenderAbstract
 			// This will of course only work if the mail is setup correctly... 
 			// Typically this will be send for:
 			//   * message file too big (when the mail server says the content is to *big*
-			sendExceptionMail(toList, serverName, msg, ex);
+			sendExceptionMail(toList, "(full mail)", serverName, msg, ex);
 			
 			//-------------------------------------------------------------------------
 			// Below is a typical Exception, where the mail is TO BIG
@@ -306,7 +312,7 @@ extends ReportSenderAbstract
 			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
 			{
 				// Possibly send mail again without any attachment
-				sendNoAttachmentMail(toList, msgSubject, msgBody, reportContent.isShortMessageOfHtml());
+				sendNoAttachmentMail(reportContent, toList, msgSubject, msgBody, reportContent.isShortMessageOfHtml());
 			}
 			
 		}
@@ -318,7 +324,13 @@ extends ReportSenderAbstract
 		}
 	}
 
-	private void sendNoAttachmentMail(List<String> toList, String subject, String msgBody, boolean isMsgHtml)
+	// More level of fallbacks...
+	//  1 - Normal -- Everything works
+	//  2 - FAIL ("message file too big") --> SendInfoMail; retry with NO Attachment.
+	//  3 - FAIL(on above retry) ("message file too big") --> SendInfoMail; retry with (what's the smallest size. MAIL-MESSAGE or ATTACHMENT-SIZE... send the smallest).
+	//  4 - FAIL(on above retry) ("message file too big") --> SendInfoMail; retry with (MINIMUM INFO content... probably just the top/header section).
+	
+	private void sendNoAttachmentMail(DailySummaryReportContent reportContent, List<String> toList, String subject, String msgBody, boolean isMsgHtml)
 	{
 		String msgSubject  = subject + " (fallback: no-attachment)";
 
@@ -348,23 +360,180 @@ extends ReportSenderAbstract
 		}
 		catch (Exception ex)
 		{
-			String msg = "Problems sending DSR FALLBACK Error mail. Subject: " + msgSubject;
+			String msg = "Problems sending DSR FALLBACK(no-attachement) Error mail. Subject: " + msgSubject;
 			_logger.error(msg, ex);
+
+			// Fallback: Send mail (if possible) with the error information!
+			// This will of course only work if the mail is setup correctly... 
+			// Typically this will be send for:
+			//   * message file too big (when the mail server says the content is to *big*
+			sendExceptionMail(toList, "(full mail)", reportContent.getDisplayOrServerName(), msg, ex);
+
+
+			// Should we try to send this once again, WITHOUT any ???
+			// Note: do not trust 'message file too big' the message may be localized
+			String exStr = StringUtil.exceptionToString(ex); 
+			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+			{
+				if (_attachmentFile != null)
+				{
+					// Possibly send mail again without any attachment
+					sendOnlyAttachmentMail(reportContent, toList, subject);
+				}
+				else
+				{
+					// Possibly send mail again without MINIMAL message
+					sendMinimalMail(reportContent, toList, subject);
+				}
+			}
 		}
-		
+	}
+
+	private void sendOnlyAttachmentMail(DailySummaryReportContent reportContent, List<String> toList, String subject)
+	{
+		String msgSubject  = subject + " (fallback: ONLY-attachment)";
+
+		try
+		{
+			// Create basic mail object (setup "basic info")
+			HtmlEmail email = createAndSetupMailObject(toList);
+			
+			// SUBJECT
+			email.setSubject(msgSubject);
+
+			boolean isMsgHtml = true;
+			String msgBody = ""
+					+ "<html>"
+					+ "Trying to send the Daily Summary Report, but with: only the Attachemnt..."
+					+ "</html>";
+			
+			// CONTENT HTML or PLAIN
+			if (isMsgHtml)
+			{
+				email.setHtmlMsg(msgBody);
+
+				// Client do not have HTML support
+				email.setTextMsg("Your email client does not support HTML messages, see DbxCentral to read the report!");
+			}
+			else
+			{
+				email.setTextMsg(msgBody);
+			}
+			
+			// If we also should attach the FULL Report as an ATTACHMENT
+			// It should already be Compressed... (if that was specified)
+			if (_attachmentFile != null)
+			{
+				email.attach(_attachmentFile);
+			}
+
+			// SEND
+			email.send();
+		}
+		catch (Exception ex)
+		{
+			String msg = "Problems sending DSR FALLBACK(only-attachement) Error mail. Subject: " + msgSubject;
+			_logger.error(msg, ex);
+
+			// Fallback: Send mail (if possible) with the error information!
+			// This will of course only work if the mail is setup correctly... 
+			// Typically this will be send for:
+			//   * message file too big (when the mail server says the content is to *big*
+			sendExceptionMail(toList, "(only-attachement)", reportContent.getDisplayOrServerName(), msg, ex);
+
+			// Should we try to send this once again, WITHOUT any ???
+			// Note: do not trust 'message file too big' the message may be localized
+			String exStr = StringUtil.exceptionToString(ex); 
+			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+			{
+				// Possibly send mail again: MINIMAL Mail
+				sendMinimalMail(reportContent, toList, subject);
+			}
+		}
+	}
+
+	private void sendMinimalMail(DailySummaryReportContent reportContent, List<String> toList, String subject)
+	{
+		String msgSubject  = subject + " (fallback: MINIMAL)";
+
+		try
+		{
+			// Create basic mail object (setup "basic info")
+			HtmlEmail email = createAndSetupMailObject(toList);
+			
+			// SUBJECT
+			email.setSubject(msgSubject);
+
+			boolean isMsgHtml = true;
+			String msgBody = ""
+					+ "<html>"
+					+ "Trying to send the Daily Summary Report, with a MINIMAL Content..."
+					+ "</html>";
+
+			try 
+			{
+				// SET THE MINIMAL CONTENT
+				msgBody = reportContent.getMinimalMessage();
+			} 
+			catch (IOException ex) 
+			{
+				_logger.error("Problems reading Report Content.", ex);
+			}
+			
+			// CONTENT HTML or PLAIN
+			if (isMsgHtml)
+			{
+				email.setHtmlMsg(msgBody);
+
+				// Client do not have HTML support
+				email.setTextMsg("Your email client does not support HTML messages, see DbxCentral to read the report!");
+			}
+			else
+			{
+				email.setTextMsg(msgBody);
+			}
+
+			// SEND
+			email.send();
+		}
+		catch (Exception ex)
+		{
+			String msg = "Problems sending DSR FALLBACK(minimal-content) Error mail. Subject: " + msgSubject;
+			_logger.error(msg, ex);
+
+			// Fallback: Send mail (if possible) with the error information!
+			// This will of course only work if the mail is setup correctly... 
+			// Typically this will be send for:
+			//   * message file too big (when the mail server says the content is to *big*
+			sendExceptionMail(toList, "(minimal-content)", reportContent.getDisplayOrServerName(), msg, ex);
+
+//			// Should we try to send this once again, WITHOUT any ???
+//			// Note: do not trust 'message file too big' the message may be localized
+//			String exStr = StringUtil.exceptionToString(ex); 
+//			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+//			{
+//				// Possibly send mail again: Just a short message that even "minimal" failed
+//				sendXxxMail(reportContent, toList, subject);
+//			}
+		}
 	}
 
 	/**
 	 * If we had problems sending the Daily Summary Mail... use this to <b>try</b> to send a mail informing about the error...
 	 * 
 	 * @param toList             To the following addresses
+	 * @param levelStr           A String describing at what "level" we had problems (can be blank or null)
 	 * @param serverName         Name of the DBMS server name we tried to send message for
 	 * @param problemDesc        Short info about sizes etc
 	 * @param problemException   The Exception originally grabbed when sending mail
 	 */
-	private void sendExceptionMail(List<String> toList, String serverName, String problemDesc, Exception problemException)
+	private void sendExceptionMail(List<String> toList, String levelStr, String serverName, String problemDesc, Exception problemException)
 	{
-		String msgSubject      = "Problems sending DSR email for '" + serverName + "'.";
+		// If level String does NOT end with a space... add one
+		if (StringUtil.hasValue(levelStr) && !levelStr.endsWith(" "))
+			levelStr += " ";
+		
+		String msgSubject      = "Problems " + levelStr + "sending DSR email for '" + serverName + "'.";
 
 		String msgPlainContent = ""
 				+ "ProblemDesc: " + problemDesc      + "\n"

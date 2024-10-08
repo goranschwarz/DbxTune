@@ -47,6 +47,7 @@ import com.asetune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSummaryAbstract;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -72,7 +73,8 @@ import com.asetune.utils.Ver;
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmSummary
-extends CountersModel
+//extends CountersModel
+extends CmSummaryAbstract
 {
 	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
 	private static final long    serialVersionUID = 1L;
@@ -146,6 +148,7 @@ extends CountersModel
 		counterController.setSummaryCm(this);
 		
 		addTrendGraphs();
+		addPostRefreshTrendGraphs();
 
 		CounterSetTemplates.register(this);
 	}
@@ -1299,6 +1302,11 @@ extends CountersModel
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		//-------------------------------------------------------
+		// DbmsVersionStringChanged
+		//-------------------------------------------------------
+		doAlarmIfDbmsVersionStringWasChanged("srvVersion");
+
+		//-------------------------------------------------------
 		// CPU Usage
 		//-------------------------------------------------------
 		if (    isSystemAlarmsForColumnEnabledAndInTimeRange("TotalCPUTime") 
@@ -1661,6 +1669,7 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
+		addAlarmSettings_DbmsVersionStringChanged(list, "srvVersion");
 		list.add(new CmSettingsHelper("TotalCPUTime",                     isAlarmSwitch, PROPKEY_alarm_TotalCPUTime                    , Double .class, conf.getDoubleProperty(PROPKEY_alarm_TotalCPUTime                    , DEFAULT_alarm_TotalCPUTime                   ), DEFAULT_alarm_TotalCPUTime                   , "If 'TotalCPUTime' (user+io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
 		list.add(new CmSettingsHelper("UserCPUTime",                      isAlarmSwitch, PROPKEY_alarm_UserCPUTime                     , Double .class, conf.getDoubleProperty(PROPKEY_alarm_UserCPUTime                     , DEFAULT_alarm_UserCPUTime                    ), DEFAULT_alarm_UserCPUTime                    , "If 'UserCPUTime' (user cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
 		list.add(new CmSettingsHelper("IoCPUTime",                        isAlarmSwitch, PROPKEY_alarm_IoCPUTime                       , Double .class, conf.getDoubleProperty(PROPKEY_alarm_IoCPUTime                       , DEFAULT_alarm_IoCPUTime                      ), DEFAULT_alarm_IoCPUTime                      , "If 'IoCPUTime' (io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'. Note: for ASE 15.7 or above, in threaded-kernel-mode. IO counter is incremented a bit faulty (all engines get IO ticks, while the IO-Controller-thread does the IO. This is CR# 757246)" ));

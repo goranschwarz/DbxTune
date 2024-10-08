@@ -66,6 +66,12 @@ public class OsIoStatSlowIo extends OsAbstract
 	}
 	
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		return false;

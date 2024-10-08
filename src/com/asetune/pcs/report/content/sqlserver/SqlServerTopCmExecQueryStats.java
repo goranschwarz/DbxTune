@@ -99,6 +99,12 @@ extends SqlServerAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		if (ReportType.CPU_TIME.equals(_reportType)) 
@@ -1135,7 +1141,7 @@ extends SqlServerAbstract
 						String sqlText    = _shortRstm.getValueAsString    (r, pos_query);
 						
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
-						String tableInfo = getDbmsTableInformationFromSqlText(conn, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
+						String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
 
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table information (like we do in 'AseTopCmObjectActivity')

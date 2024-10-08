@@ -48,6 +48,12 @@ extends ReportEntryAbstract
 	}
 
 	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return true;
+	}
+
+	@Override
 	public boolean hasShortMessageText()
 	{
 		return true;
@@ -84,7 +90,7 @@ extends ReportEntryAbstract
 			sb.append(toHtmlTable(_shortRstm));
 			
 //			if (isFullMessageType() && _fullRstm != null)
-			if (_fullRstm != null)
+			if (_fullRstm != null && !isMinimalMessageType())
 			{
 				// Make output more readable, in a 2 column table
 				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns

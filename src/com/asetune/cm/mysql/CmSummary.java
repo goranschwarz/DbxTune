@@ -31,7 +31,10 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
 import com.asetune.central.pcs.CentralPersistReader;
+import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSummaryAbstract;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -45,7 +48,8 @@ import com.asetune.sql.conn.info.DbmsVersionInfo;
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmSummary
-extends CountersModel
+//extends CountersModel
+extends CmSummaryAbstract
 {
 	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
 	private static final long    serialVersionUID = 1L;
@@ -113,6 +117,7 @@ extends CountersModel
 		counterController.setSummaryCm(this);
 		
 		addTrendGraphs();
+		addPostRefreshTrendGraphs();
 
 		CounterSetTemplates.register(this);
 	}
@@ -243,6 +248,29 @@ extends CountersModel
 //			tgdp.setDate(this.getTimestamp());
 //			tgdp.setData(arr);
 //		}
+	}
 
+
+
+	//----------------------------------------------------------------
+	// ALARMS
+	//----------------------------------------------------------------
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		//-------------------------------------------------------
+		// DbmsVersionStringChanged
+		//-------------------------------------------------------
+		doAlarmIfDbmsVersionStringWasChanged("version");
+
+	}
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		return addAlarmSettings_DbmsVersionStringChanged(null, "version");
 	}
 }

@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+import com.asetune.cm.CmSummaryAbstract;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.swing.GTable.ITableTooltip;
@@ -142,8 +143,10 @@ public interface ICounterController
 	/**
 	 * Get CountersModel for the Summary
 	 */
-	public CountersModel getSummaryCm();
-	public void          setSummaryCm(CountersModel cm);
+//	public CountersModel getSummaryCm();
+//	public void          setSummaryCm(CountersModel cm);
+	public CmSummaryAbstract getSummaryCm();
+	public void          setSummaryCm(CmSummaryAbstract cm);
 
 	public ISummaryPanel getSummaryPanel();
 	public void          setSummaryPanel(ISummaryPanel summaryPanel);

@@ -97,7 +97,6 @@
 			<attribute name="javadoc_location" value="http://velocity.apache.org/engine/2.0/apidocs/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/jide-oss-3.6.18.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1605637792987/source/jide-oss-3.6.18-sources-1605719684373.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.9.2.jar" sourcepath="3pp/jackson-core-2.9.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.9.2.jar" sourcepath="3pp/jackson-databind-2.9.2-sources.jar"/>
@@ -128,5 +127,6 @@
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-12.5.0-SNAPSHOT.jre8-preview.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.54.v20240208-uber.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-0.2.17.jar" sourcepath="3pp/jsch-0.2.17-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jide-oss-3.7.15.jar" sourcepath="3pp/jide-oss-3.7.15-sources.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

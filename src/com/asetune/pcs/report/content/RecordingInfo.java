@@ -57,11 +57,14 @@ extends ReportEntryAbstract
 
 	private Exception _problem     = null;
 
-	private String _dbmsVersionString;
-	private String _dbmsServerName;
-	private String _dbmsDisplayName;
-	private String _dbmsStartTimeStr;
-	private String _dbmsStartTimeInDaysStr;
+	private String    _dbmsVersionString;
+	private String    _dbmsVersionStringMin;
+	private String    _dbmsVersionStringMax;
+	private Timestamp _dbmsVersionStringChangeTime;
+	private String    _dbmsServerName;
+	private String    _dbmsDisplayName;
+	private String    _dbmsStartTimeStr;
+	private String    _dbmsStartTimeInDaysStr;
 
 	private Map<String, String> _dbmsOtherInfoMap;
 	
@@ -91,6 +94,12 @@ extends ReportEntryAbstract
 	public String    getDbmsServerName()      { return _dbmsServerName; } 
 	public String    getDbmsDisplayName()     { return _dbmsDisplayName; } 
 	
+	@Override
+	public boolean hasMinimalMessageText()
+	{
+		return true;
+	}
+
 	@Override
 	public boolean hasShortMessageText()
 	{
@@ -164,6 +173,16 @@ extends ReportEntryAbstract
 				sb.append("  <tr> " + tdBullet +" <td><b>DBMS Display Name:      </b></td> <td>" + _dbmsDisplayName        + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Version String:        </b></td> <td>" + _dbmsVersionString      + "</td> </tr>\n");
 
+			// If the version String was changed during the recording...
+			// So we experienced an UPGRADE... Lets make a notice about that...
+			if (_dbmsVersionStringChangeTime != null)
+			{
+				sb.append(blankTableRow);
+				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS Version String CHANGE Time: </b></td> <td>" + _dbmsVersionStringChangeTime + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS MIN Version String:         </b></td> <td>" + _dbmsVersionStringMin        + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS MAX Version String:         </b></td> <td>" + _dbmsVersionStringMax        + "</td> </tr>\n");
+			}
+			
 			sb.append(blankTableRow);
    			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart at Time:  </b></td> <td>" + _dbmsStartTimeStr       + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart in Days:  </b></td> <td>" + _dbmsStartTimeInDaysStr + "</td> </tr>\n");
@@ -324,6 +343,9 @@ extends ReportEntryAbstract
 		{
 			DailySummaryReportAbstract dsr = getReportingInstance();
 			_dbmsVersionString      = dsr.getDbmsVersionStr();
+			_dbmsVersionStringMin   = dsr.getDbmsVersionStrMin();
+			_dbmsVersionStringMax   = dsr.getDbmsVersionStrMax();
+			_dbmsVersionStringChangeTime = dsr.getDbmsVersionStrChangeTime();
 			_dbmsServerName         = dsr.getDbmsServerName();
 			_dbmsStartTimeStr       = dsr.getDbmsStartTime()       == null ? "-unknown-" : dsr.getDbmsStartTime().toString();
 			_dbmsStartTimeInDaysStr = dsr.getDbmsStartTimeInDays()     < 0 ? "-unknown-" : dsr.getDbmsStartTimeInDays()+"";
@@ -333,7 +355,7 @@ extends ReportEntryAbstract
 			if (dsr.getReportContent() != null)
 				_dbmsDisplayName = dsr.getReportContent().getDisplayOrServerName();
 		}
-
+		
 		//-----------------------------------------
 		// Get "sample time" for the recording
 		//-----------------------------------------

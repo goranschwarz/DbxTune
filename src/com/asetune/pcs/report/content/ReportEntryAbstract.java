@@ -66,6 +66,9 @@ implements IReportEntry
 {
 	private static Logger _logger = Logger.getLogger(ReportEntryAbstract.class);
 
+	public static final String  PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE = "DailySummaryReport.top.statements.onlyListObjectsInCurrentDatabase";
+	public static final boolean DEFAULT_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE = true;
+
 	private   Exception _problemEx;
 	private   String    _problemMsg;
 	private   List<String> _warningMsgList;
@@ -87,8 +90,9 @@ implements IReportEntry
 	@Override public long getExecStartTime()   { return _execStartTime; }
 	@Override public long getExecEndTime()     { return _execEndTime; }
 
-	@Override public boolean isShortMessageType() { return MessageType.SHORT_MESSAGE.equals(getCurrentMessageType()); }
-	@Override public boolean isFullMessageType() { return MessageType.FULL_MESSAGE.equals(getCurrentMessageType()); }
+	@Override public boolean isMinimalMessageType() { return MessageType.MINIMAL_MESSAGE.equals(getCurrentMessageType()); }
+	@Override public boolean isShortMessageType()   { return MessageType.SHORT_MESSAGE  .equals(getCurrentMessageType()); }
+	@Override public boolean isFullMessageType()    { return MessageType.FULL_MESSAGE   .equals(getCurrentMessageType()); }
 	@Override public void setCurrentMessageType(MessageType messageType) { _currentMessageType = messageType; }
 	@Override public MessageType getCurrentMessageType() { return _currentMessageType; }
 	
@@ -1652,11 +1656,12 @@ implements IReportEntry
 	 * NOTE: This is a wrapper for any *real* implementation, which uses: {@link #getDbmsTableInfoAsHtmlTable(DbxConnection, Set<String>, boolean, String)}
 	 * 
 	 * @param conn             Connection to the PCS -- Persistent Counter Storage
+	 * @param currentDbname    Name of the current database we search for (This can be empty or null)
 	 * @param sqlText          The SQL Text we will parse for table names (which table names to lookup)
 	 * @param dbmsVendor       The DBMS Vendor the above SQL Text was executed in (SQL Dialect). If null or "" (a <i>standard</i> SQL type will be used)
 	 * @return                 HTML Text (table) with detailed information about the Table and Indexes used by the SQL Text
 	 */
-	public String getDbmsTableInformationFromSqlText(DbxConnection conn, String sqlText, String dbmsVendor)
+	public String getDbmsTableInformationFromSqlText(DbxConnection conn, String currentDbname, String sqlText, String dbmsVendor)
 	{
 		// Possibly get from configuration
 		boolean parseSqlText = true;
@@ -1686,7 +1691,7 @@ implements IReportEntry
 //-------------------------------------------------
 
 		// Get information about ALL tables in list 'tableList' from the DDL Storage
-		tableInfo = getDbmsTableInfoAsHtmlTable(conn, tableList, true, "dsr-sub-table-tableinfo");
+		tableInfo = getDbmsTableInfoAsHtmlTable(conn, currentDbname, tableList, true, "dsr-sub-table-tableinfo");
 		if (StringUtil.isNullOrBlank(tableInfo))
 		{
 			for (String tabName : tableList)
@@ -1727,9 +1732,9 @@ implements IReportEntry
 	 * @param classname
 	 * @return
 	 */
-	protected String getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname)
+	protected String getDbmsTableInfoAsHtmlTable(DbxConnection conn, String currentDbname, Set<String> tableList, boolean includeIndexInfo, String classname)
 	{
-		throw new RuntimeException("getDbmsTableInfoAsHtmlTable(DbxConnection conn, Set<String> tableList, boolean includeIndexInfo, String classname) -- Must be implemented by any subclass.");
+		throw new RuntimeException("getDbmsTableInfoAsHtmlTable(DbxConnection conn, String currentDbname, Set<String> tableList, boolean includeIndexInfo, String classname) -- Must be implemented by any subclass.");
 	}
 
 	public String getFormattedSqlAsTooltipDiv(String sql, String labelText, String vendor)
@@ -1926,6 +1931,24 @@ implements IReportEntry
 			_logger.error("getCharsWrittenKb(): Unhandled messageType='" + messageType + "'.");
 			return -1;
 		}
+	}
+
+	/**
+	 * Mark with a yellow HTML label if input DIFFERS
+	 * @param dbname1 
+	 * @param dbname2
+	 * @return
+	 */
+	public String markIfDifferent(String dbname1, String dbname2)
+	{
+		if (StringUtil.isNullOrBlank(dbname1) || StringUtil.isNullOrBlank(dbname2))
+			return dbname1;
+		
+		if (dbname1.equals(dbname2))
+			return dbname1;
+		
+//		return "<mark>" + dbname1 + "</mark>";
+		return "<span style='background-color: yellow'>" + dbname1 + "</span>";
 	}
 }
 

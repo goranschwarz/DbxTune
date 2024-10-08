@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -44,6 +43,7 @@ import com.asetune.pcs.report.IProgressReporter.State;
 import com.asetune.pcs.report.content.AlarmsActive;
 import com.asetune.pcs.report.content.AlarmsHistory;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
+import com.asetune.pcs.report.content.DbxTuneCmRefreshInfo;
 import com.asetune.pcs.report.content.DbxTuneErrors;
 import com.asetune.pcs.report.content.DbxTunePcsTablesSize;
 import com.asetune.pcs.report.content.IReportEntry;
@@ -174,6 +174,12 @@ extends DailySummaryReportAbstract
 		Writer shortMessageWriter = new CountingWriter(shortMessageStringWriter);
 		createShortMessage(shortMessageWriter);
 		
+
+		// Create the "MinimalMessage" used for email messages etc
+		StringWriter minimalMessageStringWriter = new StringWriter();
+		Writer minimalMessageWriter = new CountingWriter(minimalMessageStringWriter);
+		createMinimalMessage(minimalMessageWriter);
+		
 		
 //		// When creating a Text Table, it may be large...
 //		// So if the HTML Output is Large... lets not create a Text Table. We will probably get an OutOfMemory Error
@@ -192,6 +198,10 @@ extends DailySummaryReportAbstract
 		// Set Short Message in content
 		content.setShortMessage(shortMessageStringWriter.toString());
 		content.setShortMessageOfHtml(true);
+
+		// Set Minimal Message in content
+		content.setMinimalMessage(minimalMessageStringWriter.toString());
+		content.setMinimalMessageOfHtml(true);
 
 		boolean hasIssueToReport = hasIssueToReport();
 		content.setNothingToReport( ! hasIssueToReport );
@@ -233,6 +243,7 @@ extends DailySummaryReportAbstract
 	{
 		addReportEntry( new DbxTuneErrors(this) );
 		addReportEntry( new DbxTunePcsTablesSize(this) );
+		addReportEntry( new DbxTuneCmRefreshInfo(this) );
 	}
 
 	@Override
@@ -1323,6 +1334,209 @@ extends DailySummaryReportAbstract
 	}
 	//-------------------------------------------------------------------------------------------
 	// END: Short Message 
+	//-------------------------------------------------------------------------------------------
+	
+	
+	//-------------------------------------------------------------------------------------------
+	// BEGIN: Minimal Message 
+	//-------------------------------------------------------------------------------------------
+	public void createMinimalMessageHead(Writer w)
+	throws IOException
+	{
+		w.append("\n");
+		w.append("<head> \n");
+
+//		w.append("    <title>DSR: ").append(getServerName()).append(titleReportPeriod).append("</title> \n");
+//		w.append("    <link href='data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4QwQDwcpgoqRjwAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAABoklEQVQ4y72SP2haURTGv/veS8HFJWOGhgwNiNsli5uQISkIpkUi+GfJI1vALbg1cTFBBPeCkMHqkIzJG5QQxOlZQRqEdpA45Fk1BN7yNt+XyZTEPy2l9Gznu9/9nXPPucC/CsuyHnVdZzab5SJfv99vttvtaU+5XKaUklLKhYBgMEgpJWu1GgFAmxxEo1GRTqepqiq+/tz9BdkOAlfXz6njnAMAhBALyqyc8KJHtmwSusmWTV70SKyccjQabXY6necCszG6Of8Znzde3NHq9TpLpRJisRg0TcPt7TfoX+6B7z8AElAUwHUBIYD1d9PARCJBKSVDoRAN44oAsHdwSJJ8sB0aN00+2A5Jcu/gcKozJR6Pw+fzIZVKYWtrWwAAxy4AYNnrgfZmCcteDyZ6JnNM0zRZqVQ4GAyyM2fw/mOS3bseCEJVVIzdMQQE1lbf4vL8TEQiEXa7XQQCgfmLyOVycwdZKBQopWQ+n5/tGQ6H+8VikX/1pQ3DYDgcZrVa/SOA+lqwbfuTZVkgXTQajaPfAZTXQjKZhN/vx87OB/yXeAKvTsN3xZdB4gAAAABJRU5ErkJggg==' rel='icon' type='image/x-icon' /> \n");
+//		w.append("\n");
+		w.append("    <meta charset='utf-8'/> \n");
+		w.append("    <meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'> \n");
+		w.append("    <meta name='x-apple-disable-message-reformatting' /> \n");
+
+		createDbxTuneCss(w);
+		
+		w.append("</head> \n");
+		w.append("\n");
+	}
+
+	public void createMinimalMessageBody(Writer w)
+	throws IOException
+	{
+		w.append("<body>\n");
+		w.append("\n");
+		
+		// Normal HTML - H2 heading
+		w.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+
+		w.append( createDbxCentralLink(false) );
+
+		//--------------------------------------------------
+		// TOC
+		w.append("<br> \n");
+		w.append("Links to Report Sections. \n");
+		w.append("<ul> \n");
+		for (IReportEntry entry : _reportEntries)
+		{
+			// Skip if "section" should not be part of the Minimal Message
+			if ( ! entry.hasMinimalMessageText() )
+				continue;
+
+			String tocSubject = entry.getSubject();
+			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
+
+			// Strip off parts that may be details
+			int firstLeftParentheses = tocSubject.indexOf("(");
+			if (firstLeftParentheses != -1)
+				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+
+			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+			
+			w.append("<li>").append(liContent).append("</li> \n");
+		}
+		w.append("</ul> \n");
+		w.append("\n<br>");
+
+		//--------------------------------------------------
+		// ALL REPORTS
+		for (IReportEntry entry : _reportEntries)
+		{
+			// Skip if "section" should not be part of the Minimal Message
+			if ( ! entry.hasMinimalMessageText() )
+				continue;
+
+			// So we can gather some statistics
+			entry.beginWriteEntry(w, MessageType.MINIMAL_MESSAGE);
+
+			String tocSubject = entry.getSubject();
+			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
+
+			// Add a section header
+			w.append("\n");
+			w.append("\n");
+			w.append("<!-- ================================================================================= -->\n");
+			w.append("<!-- " + entry.getSubject()                                                        + " -->\n");
+			w.append("<!-- ================================================================================= -->\n");
+
+			// Section HEADER
+			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+
+			if (entry.isEnabled())
+			{
+				try
+				{
+					entry.setCurrentMessageType(MessageType.MINIMAL_MESSAGE);
+
+					// Warning messages
+					if (entry.hasWarningMsg())
+						w.append(entry.getWarningMsg());
+
+					// Get the message text
+					if ( ! entry.hasProblem() )
+						entry.writeMessageText(w, entry.getCurrentMessageType());
+					
+					// If the entry indicates that it has a problem... then print that.
+					if ( entry.hasProblem() )
+						w.append(entry.getProblemText());
+					
+					// if we should append anything after an entry... Possibly '<br>\n'
+					w.append(entry.getEndOfReportText());
+
+					// Notes for how to: Disable this entry
+					if (entry.canBeDisabled())
+					{
+						w.append("<br>");
+						w.append("<i>To disable this report entry, put the following in the configuration file. ");
+						w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
+					}
+				}
+				catch (RuntimeException rte)
+				{
+					w.append("Problems 'writing' the HTML report text for section '" + entry.getSubject() + "'. Caught: " + rte + "\n");
+					w.append("Continuing with next report section... <br> \n");
+					w.append("Exception: <br> \n");
+					w.append("<pre><code> \n");
+					w.append(StringUtil.exceptionToString(rte));
+					w.append("</code></pre> \n");
+				}
+				finally
+				{
+					entry.setCurrentMessageType(null);
+				}
+			}
+			else
+			{
+				String reason = entry.getDisabledReason();
+				if (StringUtil.hasValue(reason))
+				{
+					// Entry is DISABLED
+					w.append("This entry is <b>disabled</b>, reason:<br>");
+					w.append(reason);
+					w.append("<br>");
+				}
+				else
+				{
+					// Entry is DISABLED
+					w.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
+					w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+				}
+			}
+
+			// Section FOOTER
+
+			
+			// So we can gather some statistics
+			entry.endWriteEntry(w, MessageType.MINIMAL_MESSAGE);
+
+		}
+		w.append("\n<br>");
+
+		//--------------------------------------------------
+		// DEBUG - Write time it too to create each report entry
+//		printExecTimeReport(w, MessageType.MINIMAL_MESSAGE);
+
+		//--------------------------------------------------
+		// END
+		w.append("\n<br>");
+		w.append("\n<br>");
+		w.append("\n<code>--end-of-short-report--</code> \n");
+
+		w.append("\n");
+		w.append("</body> \n");
+	}
+
+	/**
+	 * Create a Minimal message, that for example can be used as a mail message
+	 * 
+	 * @param writer
+	 * @throws IOException
+	 */
+	public void createMinimalMessage(Writer writer) 
+	throws IOException
+	{
+//		writer.append("<html>\n");
+		writer.append("<!doctype html>  \n");
+		writer.append("<html lang='en'> \n");
+
+		try
+		{
+			createMinimalMessageHead(writer);
+			createMinimalMessageBody(writer);
+		}
+		catch (RuntimeException rte)
+		{
+			writer.append("<b>Problems creating Minimal Message report</b>, Caught RuntimeException: ").append(rte.toString()).append("<br> \n");
+			writer.append("<pre>\n");
+			writer.append(StringUtil.exceptionToString(rte));
+			writer.append("</pre>\n");
+			
+			_logger.warn("Problems creating Daily Summary Report (MinimalMessage). Caught: "+rte, rte);
+		}
+
+		writer.append("</html> \n");
+		writer.flush();
+	}
+	//-------------------------------------------------------------------------------------------
+	// END: Minimal Message 
 	//-------------------------------------------------------------------------------------------
 	
 	
