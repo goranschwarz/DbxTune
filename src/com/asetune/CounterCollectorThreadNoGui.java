@@ -1629,7 +1629,7 @@ implements Memory.MemoryListener
 
 				// Print out how long it took to do refresh of each CM took
 				// Note: config "dbxtune.print.cm.refresh.time = true" needs to be enabled.
-				printCmRefreshTimes();
+				printCmRefreshTimes(refreshedCms);
 
 
 				//---------------------------------------------------

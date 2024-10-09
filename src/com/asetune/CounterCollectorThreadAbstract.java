@@ -21,6 +21,7 @@
 package com.asetune;
 
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -265,12 +266,14 @@ extends Thread
 	/**
 	 * Print out how long it took to do refresh of each CM took
 	 */
-	protected void printCmRefreshTimes()
+	protected void printCmRefreshTimes(LinkedHashMap<String, CountersModel> refreshedCms)
 	{
 		boolean printRefreshTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_PRINT_CM_REFRESH_TIME, DEFAULT_PRINT_CM_REFRESH_TIME);
 		if ( ! printRefreshTime )
 			return;
 
+		Collection<CountersModel> cmList = refreshedCms != null ? refreshedCms.values() : getCounterController().getCmList();
+		
 		long timeLimitInMs = 0;
 		
 		Map<String, Long> refreshTimeMap = new LinkedHashMap<>();
@@ -278,11 +281,15 @@ extends Thread
 		long   maxCmMs   = 0;
 		long   totalMs   = 0;
 //		long   cmCount   = 0;
-		for (CountersModel cm : getCounterController().getCmList())
+
+		for (CountersModel cm : cmList)
 		{
 			if ( cm == null )
 				continue;
 
+			if ( ! cm.isActive() )
+				continue;
+			
 			long refreshTimeMs = cm.getSqlRefreshTime() + cm.getLcRefreshTime();
 			refreshTimeMap.put(cm.getName(), refreshTimeMs);
 

@@ -64,6 +64,10 @@ public class DbxCentralServerLayout
 	public void setText    (String  text)                         { _text    = text; }
 	public void setEntries (List<DbxCentralServerLayout> entries) { _entries = entries; }
 	public void setSrvSession(DbxCentralSessions srvSession)      { _srvSession = srvSession; }
+
+	public boolean isGroupEntry()  { return "group" .equals(_type); }
+	public boolean isLabelEntry()  { return "label" .equals(_type); }
+	public boolean isServerEntry() { return "server".equals(_type); }
 	
 	private DbxCentralServerLayout(String type, Map<String, String> options, String text, List<DbxCentralServerLayout> entries, DbxCentralSessions srvSession)
 	{
@@ -98,6 +102,34 @@ public class DbxCentralServerLayout
 //		return getFromFile(null);
 //	}
 
+	/**
+	 * Get ALL Server Sessions (from the 'root'), in the order they were added. 
+	 * @param root  The "root" entry from where we want to traverse the tree structure
+	 * @return A list of DbxCentralSessions ordered in the "correct" order...
+	 */
+	public static List<DbxCentralSessions> getServerSessions(List<DbxCentralServerLayout> root)
+	{
+		List<DbxCentralSessions> list = new ArrayList<>();
+
+		for (DbxCentralServerLayout layoutEntry : root)
+		{
+			if (layoutEntry.isGroupEntry())
+			{
+				list.addAll( getServerSessions(layoutEntry.getEntries()) );
+			}
+			else if (layoutEntry.isLabelEntry())
+			{
+				
+			}
+			else if (layoutEntry.isServerEntry())
+			{
+				list.add( layoutEntry.getSrvSession() );
+			}
+		}
+		
+		return list;
+	}
+	
 	/**
 	 * Returns all entries from file 'conf/SERVER_LIST' as a Map in the order of the file.
 	 * @param filename

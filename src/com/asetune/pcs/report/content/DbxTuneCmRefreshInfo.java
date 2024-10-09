@@ -99,10 +99,25 @@ extends ReportEntryAbstract
 			w.append(toHtmlTable(_rstm2));
 		}
 
-		if (_cm_sqlRefreshTimeGraph != null)
+		boolean printGraph_MonSessionSampleDetailes = Configuration.getCombinedConfiguration().getBooleanProperty("CmRefreshInfo.print.graph.MonSessionSampleDetailes", false);
+		boolean printGraph_CmSummary_CmRefreshTime  = Configuration.getCombinedConfiguration().getBooleanProperty("CmRefreshInfo.print.graph.CmSummary_CmRefreshTime" , true);
+
+//		if (_cm_sqlRefreshTimeGraph_MonSessionSampleDetailes == null)
+//			printGraph_CmSummary_CmRefreshTime = true;
+		
+		if (_cm_sqlRefreshTimeGraph_CmSummary_CmRefreshTime == null)
+			printGraph_MonSessionSampleDetailes = true;
+		
+		if (_cm_sqlRefreshTimeGraph_MonSessionSampleDetailes != null && printGraph_MonSessionSampleDetailes)
 		{
 			w.append("<br><br>\n");
-			_cm_sqlRefreshTimeGraph.writeHtmlContent(w, null, null);
+			_cm_sqlRefreshTimeGraph_MonSessionSampleDetailes.writeHtmlContent(w, null, null);
+		}
+
+		if (_cm_sqlRefreshTimeGraph_CmSummary_CmRefreshTime != null && printGraph_CmSummary_CmRefreshTime)
+		{
+			w.append("<br><br>\n");
+			_cm_sqlRefreshTimeGraph_CmSummary_CmRefreshTime.writeHtmlContent(w, null, null);
 		}
 	}
 
@@ -215,11 +230,19 @@ extends ReportEntryAbstract
 		String skipNames  = null;
 		String graphTitle = "Counter Models Refresh Time (in ms)";
 		
-		_cm_sqlRefreshTimeGraph =  new ReportChartTimeSeriesLine_CmSqlRefreshTime(this, conn, schemaName, cmName, graphName, maxValue, sorted, skipNames, graphTitle);
+		_cm_sqlRefreshTimeGraph_MonSessionSampleDetailes = new ReportChartTimeSeriesLine_CmSqlRefreshTime(this, conn, schemaName, cmName, graphName, maxValue, sorted, skipNames, graphTitle);
+
+		
+		// OR: Should we get data from: cmName="CmSummary", graphName="CmRefreshTime"
+		//     That would also include "Total"...
+		String schema = getReportingInstance().getDbmsSchemaName();
+
+		_cm_sqlRefreshTimeGraph_CmSummary_CmRefreshTime = createTsLineChart(conn, schema, "CmSummary", "CmRefreshTime", -1, true, null, "Counter Models Refresh Time (in ms)");
 	}
 
 
-	private IReportChart _cm_sqlRefreshTimeGraph;
+	private IReportChart _cm_sqlRefreshTimeGraph_MonSessionSampleDetailes;
+	private IReportChart _cm_sqlRefreshTimeGraph_CmSummary_CmRefreshTime;
 	
 
 

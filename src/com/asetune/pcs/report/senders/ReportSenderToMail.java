@@ -367,7 +367,7 @@ extends ReportSenderAbstract
 			// This will of course only work if the mail is setup correctly... 
 			// Typically this will be send for:
 			//   * message file too big (when the mail server says the content is to *big*
-			sendExceptionMail(toList, "(full mail)", reportContent.getDisplayOrServerName(), msg, ex);
+			sendExceptionMail(toList, "(no-attachement)", reportContent.getDisplayOrServerName(), msg, ex);
 
 
 			// Should we try to send this once again, WITHOUT any ???

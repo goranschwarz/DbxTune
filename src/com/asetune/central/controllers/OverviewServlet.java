@@ -65,6 +65,7 @@ import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.controllers.ud.chart.IUserDefinedChart;
 import com.asetune.central.controllers.ud.chart.UserDefinedChartManager;
 import com.asetune.central.pcs.CentralPersistReader;
+import com.asetune.central.pcs.objects.DbxCentralServerLayout;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.sql.conn.DbxConnection;
@@ -431,6 +432,64 @@ public class OverviewServlet extends HttpServlet
 			return ex.getMessage();
 		}
 	}
+
+	/**
+	 * Print "Collector Refresh Time" *BUTTONS* <br>
+	 * Note: This is called recursively... 
+	 * 
+	 * @param out
+	 * @param root
+	 * @throws IOException
+	 */
+	private void printServerLayout_CmRefreshButtons(ServletOutputStream out, List<DbxCentralServerLayout> root) 
+	throws IOException
+	{
+		for (DbxCentralServerLayout layoutEntry : root)
+		{
+			if (layoutEntry.isGroupEntry())
+			{
+				String labelText = layoutEntry.getText();
+
+				out.println("<br>");
+				out.println(labelText);
+
+				if ( ! labelText.trim().toUpperCase().endsWith("<BR>")) // NOTE: This do NOT seems to work (I don't know why an extra <br> is added in some cases)
+					out.println("<br>");
+
+				printServerLayout_CmRefreshButtons(out, layoutEntry.getEntries());
+			}
+			else if (layoutEntry.isLabelEntry())
+			{
+				String labelText = layoutEntry.getText();
+
+				out.println("<br>");
+				if (StringUtil.hasValue(labelText))
+				{
+					out.println(labelText);
+
+					if ( ! labelText.trim().toUpperCase().endsWith("<BR>")) // NOTE: This do NOT seems to work (I don't know why an extra <br> is added in some cases)
+						out.println("<br>");
+				}
+			}
+			else if (layoutEntry.isServerEntry())
+			{
+				DbxCentralSessions srvEntry = layoutEntry.getSrvSession();
+
+				String srvName   = srvEntry.getServerName();
+				String dbxType   = "dbx-button-" + srvEntry.getProductString().toLowerCase(); // dbx-button-asetune
+
+				// NOTE: If the below text is CHANGED, ALSO Change in method: doGet(...) --> 'CM Refresh Time'
+				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 mr-2' role='button'>" + srvName + "</a>";
+				
+				out.println(button);
+			}
+			else
+			{
+				_logger.warn("---UNKNOWN---ENTRY: type=|" + layoutEntry.getType() + "|, text=|" + layoutEntry.getText() + "|.");
+			}
+		}
+	}
 	
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) 
@@ -509,6 +568,7 @@ public class OverviewServlet extends HttpServlet
 
 		out.println("<p>Sections");
 		out.println("<ul>");
+		out.println("  <li><a href='#cm-refresh-time'   >Collector Refresh Time                        </a> </li>");
 		out.println("  <li><a href='#ud-content'        >User Defined Content                          </a> </li>");
 		out.println("  <li><a href='#active'            >Active Recordings                             </a> </li>");
 		out.println("  <li><a href='#alarms'            >Active Alarms                                 </a> </li>");
@@ -611,7 +671,117 @@ public class OverviewServlet extends HttpServlet
 		}
 
 
+		// -----------------------------------------------------------
+		// get entries from the Persist Reader (in the same ORDER as the "Landing page" 
+		boolean orderedAsLandingPage = true;
+		List<DbxCentralSessions>     orderedSessionList  = null;
+		List<DbxCentralServerLayout> orderedServerLayout = null;
+		if (orderedAsLandingPage)
+		{
 
+			String filename = StringUtil.hasValue(DbxTuneCentral.getAppConfDir()) ? DbxTuneCentral.getAppConfDir() + "/SERVER_LIST" : "conf/SERVER_LIST";
+			File f = new File(filename);
+			if (f.exists())
+			{
+				try 
+				{
+					orderedServerLayout = DbxCentralServerLayout.getFromFile(filename, CentralPersistReader.getInstance());
+					orderedSessionList  = DbxCentralServerLayout.getServerSessions(orderedServerLayout);
+				}
+				catch (IOException ex)
+				{
+					_logger.warn("Problems reading file '" + f + "'. This is used to sort the 'sessions list'. Skipping this... Caught: " + ex);
+				}
+				catch(SQLException ex) 
+				{
+					out.println("Problems reading from PersistReader. Caught: " + ex);
+				}
+			}
+			else
+			{
+				_logger.info("Sorting sessions will not be done. file '" + f + "' do not exist.");
+			}
+		}
+			
+
+		//----------------------------------------------------
+		// CM Refresh Time
+		//----------------------------------------------------
+		if (true)
+		{
+			out.println("<div id='cm-refresh-time' class='card border-dark mb-3'>");
+			out.println("<h5 class='card-header'>Collector Refresh Time</h5>");
+			out.println("<div class='card-body'>");
+
+			out.println("<p>");
+			out.println("Below is charts on <b><i>Refresh Time</i></b> for each individual DbxTune Collector<br>");
+			out.println("<i>This may be used to check/enhance which CM's that may be suboptimal, and may need enhancements...<br>");
+			out.println("   or how heavy DBMS Server load may impact in CM Refresh Time.</i>");
+			out.println("</p>");
+
+			// Choose what list to traverse
+			List<DbxCentralSessions> sessionList = centralSessionList;
+			if (orderedSessionList != null)
+				sessionList = orderedSessionList;
+			
+			// Create "ALL" servers
+			if (true)
+			{
+				List<String> allSrvList = new ArrayList<>();
+				for (DbxCentralSessions session : sessionList)
+				{
+					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
+					{
+						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+						continue;
+					}
+
+					String srvName   = session.getServerName();
+					allSrvList.add(srvName);
+				}
+
+				// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
+				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + StringUtil.toCommaStr(allSrvList, ",") + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary mb-2 mr-2' role='button'>ALL Servers</a>";
+
+				out.println(button);
+				out.println("<br>");
+			}
+			
+			
+			// And the "individual servers"
+			if (orderedServerLayout != null)
+			{
+				printServerLayout_CmRefreshButtons(out, orderedServerLayout);
+			}
+			else
+			{
+				out.println("<br>");
+				out.println("<b>Individual Servers</b>");
+				
+				for (DbxCentralSessions session : sessionList)
+				{
+					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
+					{
+						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+						continue;
+					}
+	
+					String srvName   = session.getServerName();
+					String dbxType   = "dbx-button-" + session.getProductString().toLowerCase(); // dbx-button-asetune
+	
+					// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
+					String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+					String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 mr-2' role='button'>" + srvName + "</a>";
+	
+					out.println(button);
+				}
+			}
+			
+			out.println("</div>"); // end: card-body
+			out.println("</div>"); // end: card
+		}
+			
 		//----------------------------------------------------
 		// User Defined Charts
 		//----------------------------------------------------
