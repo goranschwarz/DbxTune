@@ -176,9 +176,9 @@ extends CountersModel
 	private void addTrendGraphs()
 	{
 		addTrendGraph(GRAPH_NAME_OPTIMIZER_STAT_KEY,
-				"Optimizer Statistics by Key per Second",        // Menu CheckBox text
-				"Optimizer Statistics by Key per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				"Optimizer Statistics by Type per Second",        // Menu CheckBox text
+				"Optimizer Statistics by Type per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.SPACE,

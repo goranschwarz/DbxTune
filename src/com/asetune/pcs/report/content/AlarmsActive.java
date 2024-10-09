@@ -82,7 +82,7 @@ extends ReportEntryAbstract
 			sb.append("Active Alarm Count: " + _fullRstm.getRowCount() + "<br>\n");
 			sb.append(toHtmlTable(_shortRstm));
 
-			if (_fullRstm != null && !isMinimalMessageType()) 
+			if (_fullRstm != null && isFullMessageType()) 
 			{
 				// Make output more readable, in a 2 column table
 				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns

@@ -128,11 +128,15 @@ extends CountersModel
 				slotCount++;
 			}
 
+			// Add ONE slot for "Total"
+			slotCount++;
+			long totalMs = 0;
+			
 			
 			Double[] data  = new Double[ slotCount ];
 			String[] label = new String[ slotCount ];
 
-			int i = 0;
+			int i = 1; // Start at 1, saving Slot[0] for 'Total'
 			for (CountersModel cm : cmList)
 			{
 				if ( cm == null )
@@ -146,9 +150,14 @@ extends CountersModel
 				label[i] = cm.getName();
 				data [i] = new Double(refreshTimeMs);
 
+				totalMs += refreshTimeMs;
 				i++;
 			}
-			
+
+			// Add "Total" at slot[0]
+			label[0] = "Total";
+			data [0] = new Double(totalMs);
+
 			// Set the values
 			cmRefrshTimeTgdp.setDataPoint(this.getTimestamp(), label, data);
 		}

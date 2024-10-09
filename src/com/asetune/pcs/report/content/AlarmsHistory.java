@@ -90,7 +90,7 @@ extends ReportEntryAbstract
 			sb.append(toHtmlTable(_shortRstm));
 			
 //			if (isFullMessageType() && _fullRstm != null)
-			if (_fullRstm != null && !isMinimalMessageType())
+			if (_fullRstm != null && isFullMessageType())
 			{
 				// Make output more readable, in a 2 column table
 				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
