@@ -1873,6 +1873,10 @@ implements IReportEntry
 			{
 				_bytesWrittenAtStart_shortMessage = countingWriter.getCharsWritten();
 			}
+			else if (MessageType.MINIMAL_MESSAGE.equals(messageType))
+			{
+				_bytesWrittenAtStart_minimalMessage = countingWriter.getCharsWritten();
+			}
 			else
 			{
 				_logger.error("beginWriteEntry(): Unhandled messageType='" + messageType + "'.");
@@ -1902,6 +1906,11 @@ implements IReportEntry
 				_bytesWrittenAtEnd_shortMessage = countingWriter.getCharsWritten();
 				_bytesWritten_shortMessage = _bytesWrittenAtEnd_shortMessage - _bytesWrittenAtStart_shortMessage;
 			}
+			else if (MessageType.MINIMAL_MESSAGE.equals(messageType))
+			{
+				_bytesWrittenAtEnd_minimalMessage = countingWriter.getCharsWritten();
+				_bytesWritten_minimalMessage = _bytesWrittenAtEnd_minimalMessage - _bytesWrittenAtStart_minimalMessage;
+			}
 			else
 			{
 				_logger.error("endWriteEntry(): Unhandled messageType='" + messageType + "'.");
@@ -1910,10 +1919,13 @@ implements IReportEntry
 	}
 	private long _bytesWrittenAtStart_fullMessage;
 	private long _bytesWrittenAtStart_shortMessage;
+	private long _bytesWrittenAtStart_minimalMessage;
 	private long _bytesWrittenAtEnd_fullMessage;
 	private long _bytesWrittenAtEnd_shortMessage;
+	private long _bytesWrittenAtEnd_minimalMessage;
 	private long _bytesWritten_fullMessage  = -1;
 	private long _bytesWritten_shortMessage = -1;
+	private long _bytesWritten_minimalMessage = -1;
 
 	@Override
 	public long getCharsWrittenKb(MessageType messageType)
@@ -1925,6 +1937,10 @@ implements IReportEntry
 		else if (MessageType.SHORT_MESSAGE.equals(messageType))
 		{
 			return _bytesWritten_shortMessage == -1 ? -1 : _bytesWritten_shortMessage / 1024;
+		}
+		else if (MessageType.MINIMAL_MESSAGE.equals(messageType))
+		{
+			return _bytesWritten_minimalMessage == -1 ? -1 : _bytesWritten_minimalMessage / 1024;
 		}
 		else
 		{
