@@ -179,7 +179,7 @@ public class DailySummaryReportTest
 				openInBrowser(report);
 			}
 		}
-		catch(Exception ex)
+		catch(Throwable ex)
 		{
 			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
 		}
