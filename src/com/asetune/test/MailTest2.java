@@ -35,6 +35,9 @@ import com.asetune.utils.StringUtil;
 
 public class MailTest2
 {
+	//---------------------------------------------------------------------------------------
+	// Example: C:\projects\DbxTune\bin>dbxtune.bat mailtest2 C:\tmp\mailtest2.props
+	//---------------------------------------------------------------------------------------
 	public static void main(String[] args)
 	{
 		if (args.length != 1)

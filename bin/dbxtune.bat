@@ -355,7 +355,6 @@ for %%c in (%*) do (
 	echo(%%c|findstr /r /c:"^--noGui.*" >nul && ( set SPLASH= )
 )
 
-
 rem ------------------------------------------------------------------------
 rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
@@ -373,55 +372,89 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-core-5.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\swingx-all-1.6.5-1.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jchart2d-3.3.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\planviewer.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-text-1.9.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-lang3-3.7.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-io-2.6.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-csv-1.5.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-cli-1.4.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-codec-1.10.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-text-1.9.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-text-1.12.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-lang3-3.7.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-lang3-3.17.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-io-2.6.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-io-2.17.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-csv-1.5.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-csv-1.12.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-cli-1.4.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-cli-1.9.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-codec-1.10.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-codec-1.17.1.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-email-1.4.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-email-1.6.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javax.mail.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javax.mail-1.6.2.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jakarta.mail-1.6.7.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jakarta.activation-2.0.1.jar
+
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole_20131209.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-0.2.17.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\language_support.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jcommon-1.0.21.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jfreechart-1.5.1.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole-1.1.5.jar     -----------------------------
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-0.2.17.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-0.2.20.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea-3.5.1.jar
+rem    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea-3.3.4.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete-3.3.1.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui-3.3.1.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\language_support.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\languagesupport-3.3.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jcommon-1.0.21.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jcommon-1.0.24.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jfreechart-1.5.1.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jfreechart-1.5.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\antlr-4.0-complete.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\juniversalchardet-2.3.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\juniversalchardet-2.3.0.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\juniversalchardet-2.5.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\DDLGen.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\simplemagic-1.17.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsqlparser-4.5.jar
+rem    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsqlparser-4.9.jar            ---------------------------
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\gsp.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\bcprov-jdk15on-157.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\bcprov-jdk18on-1.72.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-compiler-3.0.7.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\janino-3.0.7.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-compiler-3.0.7.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-compiler-3.1.12.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\janino-3.0.7.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\janino-3.1.12.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\balloontip-1.2.4.1.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\reflections-0.9.11.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\guava-20.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\guava-20.0.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\guava-33.3.1-jre.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javassist-3.21.0-GA.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cloning-1.9.6.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\objenesis-2.6.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\syslog-java-client-1.1.0.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javax.mail.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-email-1.4.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\syslog-java-client-1.1.0.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\syslog-java-client-1.1.7.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsendnsca-2.1.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jul-to-slf4j-1.7.29.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\slf4j-api-1.7.29.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\slf4j-log4j12-1.7.29.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\velocity-engine-core-2.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\velocity-engine-core-2.0.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\velocity-engine-core-2.4.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jide-oss-3.7.15.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-annotations-2.9.2.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-core-2.9.2.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-databind-2.9.2.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\gson-2.8.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-annotations-2.9.2.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-core-2.9.2.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-databind-2.9.2.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-annotations-2.18.0.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-core-2.18.0.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-databind-2.18.0.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\gson-2.8.0.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\gson-2.11.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jetty\*
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javax.servlet-api-3.1.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron4j-2.2.5.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-7.0.6.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-7.0.6.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-9.2.1.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\schemacrawler-16.2.4.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\sql-formatter-2.0.3.jar
+rem    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\schemacrawler-16.22.2.jar  --------------------------------
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\sql-formatter-2.0.3.jar
+    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\sql-formatter-2.0.5.jar
 
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\tomcat\*
 
@@ -443,7 +476,12 @@ rem echo CLASSPATH=%CLASSPATH%
 rem ------------------------------------------------------------------------
 rem --- set PATH, just add JAVA_HOME at the start
 rem ------------------------------------------------------------------------
-set PATH=%DBXTUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH%
+set PATH=%DBXTUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%DBXTUNE_HOME%\lib\jdbc_drivers\sqlserver_auth\x64;%PATH%
+
+rem ------------------------------------------------------------------------
+rem --- set PATH, to include the SQL Server Windows Authentication
+rem ------------------------------------------------------------------------
+set PATH=%DBXTUNE_HOME%\lib\jdbc_drivers\sqlserver_auth\x64;%PATH%
 
 
 echo .

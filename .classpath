@@ -19,22 +19,6 @@
 			<attribute name="javadoc_location" value="http://logging.apache.org/log4j/1.2/apidocs"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1649280674177/source/rsyntaxtextarea-3.0.2-sources-1649285397030.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/rsyntaxtextarea"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/autocomplete.jar" sourcepath="3pp/autocomplete-3.0.0-sources.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/autocomplete"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/rstaui.jar" sourcepath="3pp/rstaui-2.6.0-src.zip"/>
-	<classpathentry kind="lib" path="lib/jcommon-1.0.21.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1599849934182/source/jcommon-1.0.21-sources.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://www.jfree.org/jcommon/api/"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="lib/swingx-all-1.6.5-1.jar" sourcepath="3pp/swingx-all-1.6.5-1-sources.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/swingx-all-1.6.5-1-javadoc.jar!/"/>
@@ -55,78 +39,68 @@
 			<attribute name="javadoc_location" value="http://antlr4.org/api/Java/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/commons-cli-1.4.jar" sourcepath="3pp/commons-cli-1.4-src.zip">
-		<attributes>
-			<attribute name="javadoc_location" value="http://commons.apache.org/cli/api-release/index.html"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/commons-csv-1.5.jar" sourcepath="3pp/commons-csv-1.5-sources.jar"/>
-	<classpathentry kind="lib" path="lib/commons-io-2.6.jar" sourcepath="3pp/commons-io-2.6-sources.jar"/>
-	<classpathentry kind="lib" path="lib/commons-lang3-3.7.jar" sourcepath="3pp/commons-lang3-3.7-sources.jar"/>
 	<classpathentry kind="lib" path="lib/DDLGen.jar"/>
-	<classpathentry kind="lib" path="lib/commons-codec-1.10.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1604159846646/source/commons-codec-1.10-sources-1604249388994.jar"/>
-	<classpathentry kind="lib" path="lib/janino-3.0.7.jar" sourcepath="3pp/janino-3.0.7-sources.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/janino-3.0.7-javadoc.jar!/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/commons-compiler-3.0.7.jar" sourcepath="3pp/commons-compiler-3.0.7-sources.jar"/>
-	<classpathentry kind="lib" path="lib/language_support.jar" sourcepath="C:/projects/AseTune/3pp/NEW/language_support-2.6.0-src/src/main/java"/>
 	<classpathentry kind="lib" path="lib/balloontip-1.2.4.1.jar" sourcepath="3pp/balloontip-1.2.4.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/reflections-0.9.11.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="https://static.javadoc.io/org.reflections/reflections/0.9.10/index.html"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/guava-20.0.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.21.0-GA.jar"/>
-	<classpathentry kind="lib" path="lib/syslog-java-client-1.1.0.jar" sourcepath="3pp/syslog-java-client-1.1.0-sources.jar"/>
-	<classpathentry kind="lib" path="lib/javax.mail.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1673477123659/source/javax.mail-1.5.6-sources-1673619351149.jar"/>
 	<classpathentry kind="lib" path="lib/jsendnsca-2.1.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="http://jsendnsca.github.io/jsendnsca/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/commons-email-1.4.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1673477123659/source/commons-email-1.4-sources-1673619233509.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="https://commons.apache.org/proper/commons-email/javadocs/api-release/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/velocity-engine-core-2.0.jar" sourcepath="C:/tmp/java/velocity/velocity-engine-core-2.0-sources.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://velocity.apache.org/engine/2.0/apidocs/"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-	<classpathentry kind="lib" path="lib/jackson-core-2.9.2.jar" sourcepath="3pp/jackson-core-2.9.2-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jackson-databind-2.9.2.jar" sourcepath="3pp/jackson-databind-2.9.2-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jackson-annotations-2.9.2.jar"/>
-	<classpathentry kind="lib" path="lib/gson-2.8.0.jar" sourcepath="3pp/gson-gson-parent-2.8.0.zip"/>
 	<classpathentry kind="lib" path="lib/cron4j-2.2.5.jar" sourcepath="3pp/cron4j-2.2.5-sources.jar"/>
-	<classpathentry kind="lib" path="lib/cron-utils-7.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/jchart2d-3.3.2.jar" sourcepath="3pp/jchart2d-3.3.2-sources.jar"/>
-	<classpathentry kind="lib" path="lib/juniversalchardet-2.3.0.jar"/>
 	<classpathentry kind="lib" path="lib/miglayout-core-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/miglayout-swing-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.7.29.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.7.29.jar"/>
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.7.29.jar"/>
-	<classpathentry kind="lib" path="lib/schemacrawler-16.2.4.jar" sourcepath="3pp/SchemaCrawler-16.2.4.zip"/>
-	<classpathentry kind="lib" path="lib/jfreechart-1.5.1.jar" sourcepath="3pp/jfreechart-1.5.1-sources.jar"/>
-	<classpathentry kind="lib" path="lib/commons-text-1.9.jar" sourcepath="3pp/commons-text-1.9-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/geronimo-jaspi-2.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.security.auth.message-1.0.0.v201108011116.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.servlet-api-3.1.0.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1702070598402/source/javax.servlet-api-3.1.0-sources-1702158022404.jar"/>
 	<classpathentry kind="lib" path="lib/jconn42.jar"/>
-	<classpathentry kind="lib" path="lib/sql-formatter-2.0.3.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1645375698757/source/sql-formatter-2.0.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/h2-2.1.214.jar"/>
-	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.72.jar" sourcepath="3pp/bcprov-jdk18on-1.72-sources.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-12.5.0-SNAPSHOT.jre8-preview.jar"/>
-	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.54.v20240208-uber.jar"/>
-	<classpathentry kind="lib" path="lib/jsch-0.2.17.jar" sourcepath="3pp/jsch-0.2.17-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jide-oss-3.7.15.jar" sourcepath="3pp/jide-oss-3.7.15-sources.jar"/>
+	<classpathentry kind="lib" path="lib/commons-codec-1.17.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-email-1.6.0.jar" sourcepath="3pp/commons-email-1.6.0-sources.jar"/>
+	<classpathentry kind="lib" path="lib/commons-io-2.17.0.jar"/>
+	<classpathentry kind="lib" path="lib/commons-lang3-3.17.0.jar"/>
+	<classpathentry kind="lib" path="lib/commons-text-1.12.0.jar"/>
+	<classpathentry kind="lib" path="lib/jakarta.activation-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/jakarta.mail-1.6.7.jar" sourcepath="3pp/jakarta.mail-1.6.7-sources.jar"/>
+	<classpathentry kind="lib" path="lib/autocomplete-3.3.1.jar"/>
+	<classpathentry kind="lib" path="lib/languagesupport-3.3.0.jar"/>
+	<classpathentry kind="lib" path="lib/rstaui-3.3.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-cli-1.9.0.jar"/>
+	<classpathentry kind="lib" path="lib/commons-compiler-3.1.12.jar"/>
+	<classpathentry kind="lib" path="lib/commons-csv-1.12.0.jar"/>
+	<classpathentry kind="lib" path="lib/cron-utils-9.2.1.jar" sourcepath="3pp/cron-utils-9.2.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/guava-33.3.1-jre.jar"/>
+	<classpathentry kind="lib" path="lib/gson-2.11.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-annotations-2.18.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-core-2.18.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-databind-2.18.0.jar"/>
+	<classpathentry kind="lib" path="lib/janino-3.1.12.jar"/>
+	<classpathentry kind="lib" path="lib/jcommon-1.0.24.jar"/>
+	<classpathentry kind="lib" path="lib/jfreechart-1.5.5.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-0.2.20.jar"/>
+	<classpathentry kind="lib" path="lib/juniversalchardet-2.5.0.jar"/>
+	<classpathentry kind="lib" path="lib/sql-formatter-2.0.5.jar"/>
+	<classpathentry kind="lib" path="lib/syslog-java-client-1.1.7.jar"/>
+	<classpathentry kind="lib" path="lib/schemacrawler-16.2.4.jar"/>
+	<classpathentry kind="lib" path="lib/velocity-engine-core-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
+	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-12.8.1.jre8.jar"/>
+	<classpathentry kind="lib" path="lib/rsyntaxtextarea-3.5.1.jar" sourcepath="3pp/rsyntaxtextarea-3.5.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.56.v20240826-uber.jar"/>
 	<classpathentry kind="output" path="classes"/>
+	<referencedentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="3pp/NEW/apache-mail/new/rsyntaxtextarea-3.5.1-sources.jar"/>
 </classpath>
