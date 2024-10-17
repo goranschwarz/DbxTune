@@ -5267,7 +5267,7 @@ public class PersistWriterJdbc
 
 			_logger.info("Total execution time for the Daily Summary Report was: " + TimeUtils.msDiffNowToTimeStr(startTime) + "  (HH:MM:SS.ms) ");
 		}
-		catch(Exception ex)
+		catch(Throwable ex)
 		{
 			_logger.error("Problems Sending Daily Summary Report. Caught: " + ex, ex);
 		}
