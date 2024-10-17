@@ -974,9 +974,10 @@ public abstract class DbxTune
 			// If no password, try to grab a password from the file '~/.passwd.enc'
 			if ( ! storeConfigProps.hasProperty("conn.dbmsPassword") )
 			{
+				String defaultNullValue = null;
 //				String aseUser   = cmd.getOptionValue('U', "sa");
 				String aseUser   = storeConfigProps.getProperty("conn.dbmsUsername", "sa");
-				String aseServer = plainAseServerName ? cmd.getOptionValue('S', null) : dbmsCmdLineSwitchHostname;
+				String aseServer = plainAseServerName ? cmd.getOptionValue('S', defaultNullValue) : dbmsCmdLineSwitchHostname;
 
 				// if we have an alias/alternate server name
 				if (cmd.hasOption('A'))

@@ -5251,6 +5251,19 @@ public class QueryWindow
 		finally
 		{
 			_saveCaretPositionForFile = true;
+
+			// In RSyntaxtTextArea 3.5.1 -- The LineNumbers "gutter" is to small (not wide enough) when you have larger files (more than 100 or 1000 rows)
+			// So this is a temporary fix... set OFF/ON which fixes the issue...
+			_queryScroll.setLineNumbersEnabled( ! _queryScroll.getLineNumbersEnabled() );
+			Runnable doLater = new  Runnable()
+			{
+				@Override
+				public void run()
+				{
+					_queryScroll.setLineNumbersEnabled( ! _queryScroll.getLineNumbersEnabled() );
+				}
+			};
+			SwingUtilities.invokeLater(doLater);
 		}
 	}
 

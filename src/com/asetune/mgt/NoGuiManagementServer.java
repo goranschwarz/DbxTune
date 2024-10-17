@@ -164,7 +164,8 @@ public class NoGuiManagementServer
 				{
 					String authUser   = "admin";
 				//	String authPasswd = UUID.randomUUID().toString();
-					String authPasswd = RandomStringUtils.randomAlphanumeric(32);
+//					String authPasswd = RandomStringUtils.randomAlphanumeric(32);      // Deprecated
+					String authPasswd = RandomStringUtils.secure().nextAlphabetic(32); // this may work on: commons-lang3-3.17.0.jar
 
 					String encodeThis = authUser + ":" + authPasswd;
 					String base64 = Base64.getEncoder().encodeToString(encodeThis.getBytes());

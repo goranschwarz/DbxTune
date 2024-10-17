@@ -24,6 +24,7 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.UncheckedIOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -6143,7 +6144,7 @@ if (_guiOwner == null)
 		// Get a list, one entry for each row
 		List<String> lines;
 		try { lines = IOUtils.readLines(new StringReader(inputStr)); }
-		catch(IOException e) { return null; }
+		catch(UncheckedIOException e) { return null; }
 
 		// Get max width
 		int maxStrLen = 0;
@@ -6245,7 +6246,7 @@ if (_guiOwner == null)
 				// Get a list, one entry for each row
 				List<String> lines;
 				try { lines = IOUtils.readLines(new StringReader(text)); }
-				catch(IOException ignore) { return; }
+				catch(UncheckedIOException ignore) { return; }
 
 				StringBuilder sb = new StringBuilder();
 				
