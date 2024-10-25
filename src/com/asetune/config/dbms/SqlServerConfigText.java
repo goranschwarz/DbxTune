@@ -1522,6 +1522,9 @@ public abstract class SqlServerConfigText
 
 				int skipPriorityAbove = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_skipPriorityAbove, DEFAULT_skipPriorityAbove);
 
+				// Make rstm.getValueAs* return default value if column NOT found in ResultSet instead of throwing: RuntimeException("Can't find column...
+				rstm.setHandleColumnNotFoundAsNullValueInGetValues(true);
+
 				// RS> Col# Label             JDBC Type Name              Guessed DBMS type Source Table
 				// RS> ---- ----------------- --------------------------- ----------------- ------------
 				// RS> 1    Priority          java.sql.Types.TINYINT      tinyint           -none-      
@@ -1543,12 +1546,24 @@ public abstract class SqlServerConfigText
 					String details           = rstm.getValueAsString (r, "Details"          , false, "");
 //					String queryPlan         = rstm.getValueAsString (r, "QueryPlan"        , false, "");
 //					String queryPlanFiltered = rstm.getValueAsString (r, "QueryPlanFiltered", false, "");
-//					int    checkID           = rstm.getValueAsInteger(r, "CheckID"          , false, -1);
-					
-					// Skip some severities
-					if (priority <= 0  ) continue;
-					if (priority >= skipPriorityAbove) continue; // Default 200
+					int    checkID           = rstm.getValueAsInteger(r, "CheckID"          , false, -1);
 
+					// Skip some severities
+					boolean skip = false;
+					if (priority <= 0  )               skip = true;
+					if (priority >= skipPriorityAbove) skip = true; // Default 200
+
+					// Outdated sp_Blitz --- sp_Blitz is Over 6 Months Old
+					if (checkID == 155)
+					{
+						// CheckId 155 has priority=0... But we still want to KEEP/Inform about the issue 
+						skip = false;
+						details = "Download the latest version at: http://FirstResponderKit.org/ or https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/tree/main";
+					}
+					
+					if (skip)
+						continue;
+					
 					String keyDbname = StringUtil.hasValue(databaseName) ? databaseName : "-srv-level-";
 					String key = "DbmsConfigIssue." + srvName + ".sp_blitz." + findingsGroup.toLowerCase() + "." + keyDbname + "." + finding.replace(' ', '-');
 
@@ -1559,6 +1574,7 @@ public abstract class SqlServerConfigText
 					Severity severity             = Severity.ERROR;   // severity = 1
 					if (priority > 1)    severity = Severity.WARNING; // between: 2 and 99  
 					if (priority >= 100) severity = Severity.INFO;    // between: 100 and above
+					if (checkID == 155)  severity = Severity.INFO;    // Special for 'Outdated/old sp_blitz version'
 
 					// Finally create the "config issue" and add it...
 					DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "sp_blitz", severity, 
@@ -1566,7 +1582,6 @@ public abstract class SqlServerConfigText
 							url);
 
 					DbmsConfigManager.getInstance().addConfigIssue(issue);
-					
 				}
 			}
 		}

@@ -21,11 +21,14 @@
 package com.asetune.gui;
 
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.sql.SQLException;
 import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 
 import org.apache.log4j.Logger;
 
@@ -43,6 +46,8 @@ import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.hostmon.HostMonitorConnection;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.tools.sqlw.QueryWindow;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
 public class MainFrameSqlServer 
@@ -234,4 +239,347 @@ extends MainFrame
 	{
 		return new DbmsVersionPanelSqlServer(showCmPropertiesDialog);
 	}
+
+
+
+
+	private JMenu               _installProcs_m;
+
+	@Override
+	protected JMenu createToolsMenu()
+	{
+		JMenu menu = super.createToolsMenu();
+
+		_installProcs_m               = createInstallProcsMenu(this);
+
+		if (_installProcs_m != null) 
+			menu.add(_installProcs_m,      7);
+
+		return menu;
+	}
+
+	@Override
+	public void setMenuMode(int status)
+	{
+		super.setMenuMode(status);
+
+		if (status == ST_CONNECT)
+		{
+			// TOOLBAR
+
+			// File
+
+			// View
+//			_aseConfigView_mi             .setEnabled(true);
+			
+			// Tools
+			_installProcs_m              .setEnabled(true);
+
+			// Help
+		}
+		else if (status == ST_OFFLINE_CONNECT)
+		{
+			// TOOLBAR
+
+			// File
+
+			// View
+//			_aseConfigView_mi             .setEnabled(true);
+
+			// Tools
+			_installProcs_m              .setEnabled(false);
+
+			// Help
+		}
+		else if (status == ST_DISCONNECT)
+		{
+			// TOOLBAR
+
+			// File
+
+			// View
+//			_aseConfigView_mi             .setEnabled(false);
+
+			// Tools
+			_installProcs_m              .setEnabled(false);
+
+			// Help
+		}
+	}
+
+
+
+
+
+	private static String propPrefix(int item)
+	{
+		return "system.install.sql." + String.format("%03d", item);
+	}
+
+	public static JMenu createInstallProcsMenu(final Object callerInstance)
+	{
+		_logger.debug("createInstallProcsMenu(): called.");
+
+		final JMenu menu = new JMenu("<html>Install some extra <i>system</i> stored procedures</html>");
+		menu.setToolTipText("<html>Install some Extra stored procedures...<br>The user you are logged in as need to have the correct priviliges to create procedues in the master database.</html>");;
+		menu.setIcon(SwingUtils.readImageIcon(Version.class, "images/pre_defined_sql_statement.png"));
+
+		Configuration systmp = new Configuration();
+		
+		int item;
+		//------------------------------------------------------------------
+		item = 0;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Adam Machanic -- sp_WhoIsActive</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/amachanic/sp_whoisactive/refs/heads/master/sp_WhoIsActive.sql");
+
+		//------------------------------------------------------------------
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "separator");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- Install-All-Scripts</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/Install-All-Scripts.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- ONLY: sp_Blitz</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/sp_Blitz.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- ONLY: sp_BlitzCache</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/sp_BlitzCache.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- ONLY: sp_BlitzFirst</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/sp_BlitzFirst.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- ONLY: sp_BlitzIndex</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/sp_BlitzIndex.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- ONLY: sp_BlitzLock</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/sp_BlitzLock.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- ONLY: sp_BlitzWho</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/sp_BlitzWho.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- Uninstall-All</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/main/Uninstall.sql");
+
+		// NOTE: dev/Install-All-Scripts.sql is NOT Updated... Only the individual sp_xxx ... So no Really need for this...
+//		item++;
+//		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Brent Ozar -- Install-All-Scripts</b> - <i><font color=\"green\">DEVELOPMENT branch</font></i></html>");
+//		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+//		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/BrentOzarULTD/SQL-Server-First-Responder-Kit/refs/heads/dev/Install-All-Scripts.sql");
+
+		//------------------------------------------------------------------
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "separator");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Erik Darling -- Install-All</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/erikdarlingdata/DarlingData/refs/heads/main/Install-All/DarlingData.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Erik Darling -- ONLY: sp_QuickieStore</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/erikdarlingdata/DarlingData/refs/heads/main/sp_QuickieStore/sp_QuickieStore.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Erik Darling -- ONLY: sp_PressureDetector</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/erikdarlingdata/DarlingData/refs/heads/main/sp_PressureDetector/sp_PressureDetector.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Erik Darling -- ONLY: sp_HumanEvents</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/erikdarlingdata/DarlingData/refs/heads/main/sp_HumanEvents/sp_HumanEvents.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Erik Darling -- ONLY: sp_HealthParser</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/erikdarlingdata/DarlingData/refs/heads/main/sp_HealthParser/sp_HealthParser.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Erik Darling -- ONLY: sp_LogHunter</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/erikdarlingdata/DarlingData/refs/heads/main/sp_LogHunter/sp_LogHunter.sql");
+
+		//------------------------------------------------------------------
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "separator");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- Install-All</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/MaintenanceSolution.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- ONLY: Database Backup</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/DatabaseBackup.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- ONLY: Database Integrity Check</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/DatabaseIntegrityCheck.sql");
+
+		item++;
+		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- ONLY: Index and Statistics Maintenance</b> - <i><font color=\"green\">main branch</font></i></html>");
+		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/IndexOptimize.sql");
+
+		
+		createPredefinedSqlMenu(menu, "system.install.sql.", systmp, callerInstance);
+		createPredefinedSqlMenu(menu, "user.install.sql.",   null,   callerInstance);
+
+		if ( menu.getMenuComponentCount() == 0 )
+		{
+			_logger.warn("No Menuitems has been assigned for the '"+menu.getText()+"'.");
+			return null;
+
+//			JMenuItem empty = new JMenuItem("No Predefined SQL Statements available.");
+//			empty.setEnabled(false);
+//			menu.add(empty);
+//
+//			return menu;
+		}
+		else
+			return menu;
+	}
+
+	/**
+	 * 
+	 * @param menu   if null a new JMenuPopup will be created otherwise it will be appended to it
+	 * @param prefix prefix of the property string. Should contain a '.' at the end
+	 * @param conf
+	 * @param sqlWindowInstance can be null
+	 * @return
+	 */
+	protected static JMenu createPredefinedSqlMenu(JMenu menu, String prefix, Configuration conf, final Object callerInstance)
+	{
+		if (prefix == null)           throw new IllegalArgumentException("prefix cant be null.");
+		if (prefix.trim().equals("")) throw new IllegalArgumentException("prefix cant be empty.");
+		prefix = prefix.trim();
+		if ( ! prefix.endsWith(".") )
+			prefix = prefix + ".";
+
+		if (conf == null)
+			conf = Configuration.getCombinedConfiguration();
+
+		_logger.debug("createMenu(): prefix='"+prefix+"'.");		
+
+		//Create the menu, if it didnt exists. 
+		if (menu == null)
+			menu = new JMenu();
+
+		boolean firstAdd = true;
+		for (String prefixStr : conf.getUniqueSubKeys(prefix, true))
+		{
+			_logger.debug("createPredefinedSqlMenu(): found prefix '"+prefixStr+"'.");
+
+			// Read properties
+			final String menuItemName      = conf.getProperty(    prefixStr + ".name");
+			final String dbname            = conf.getProperty(    prefixStr + ".install.dbname"); 
+			final String scriptLocationStr = conf.getProperty(    prefixStr + ".install.scriptLocation"); 
+
+			if ("separator".equalsIgnoreCase(menuItemName))
+			{
+				menu.addSeparator();
+			}
+			
+			//---------------------------------------
+			// Check that we got everything we needed
+			//---------------------------------------
+			if (menuItemName == null)
+			{
+				_logger.warn("Missing property '"+prefixStr+".name'");
+				continue;
+			}
+			if (scriptLocationStr == null)
+			{
+				_logger.warn("Missing property '"+prefixStr+".install.scriptLocation'");
+				continue;
+			}
+
+			//---------------------------------------
+			// Create the executor class
+			//---------------------------------------
+			ActionListener action = new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					DbxConnection conn = null;
+
+					QueryWindow queryWindowInstance = null;
+					MainFrame   dbxTuneInstance     = null;
+					
+					if (callerInstance != null)
+					{
+						if (callerInstance instanceof QueryWindow) queryWindowInstance = (QueryWindow) callerInstance;
+						if (callerInstance instanceof MainFrame)   dbxTuneInstance     = (MainFrame) callerInstance;
+
+						if (dbxTuneInstance != null)
+						{
+							// Check that we are connected
+//							if ( ! AseTune.getCounterCollector().isMonConnected(true, true) )
+							if ( ! CounterController.getInstance().isMonConnected(true, true) )
+							{
+								SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
+								return;
+							}
+							// Get a new connection
+							conn = dbxTuneInstance.getNewConnection(Version.getAppName()+"-InstallProc");
+						
+							// Open A dialog
+							InstallSqlFromUrlDialog installer = new InstallSqlFromUrlDialog(dbxTuneInstance, "", dbname, menuItemName, scriptLocationStr);
+							installer.setConnection(conn);
+							installer.setVisible(true);
+						}
+
+						if (queryWindowInstance != null)
+						{
+							// Get the Connection used by sqlWindow
+							conn = queryWindowInstance.getConnection();
+//							conn = queryWindowInstance.getNewConnection(Version.getAppName()+"-InstallProc");
+
+							// Open A dialog
+							InstallSqlFromUrlDialog installer = new InstallSqlFromUrlDialog(queryWindowInstance.getWindow(), "", dbname, menuItemName, scriptLocationStr);
+							installer.setConnection(conn);
+							installer.setVisible(true);
+						}
+					}
+				}
+			};
+
+			JMenuItem menuItem = new JMenuItem(menuItemName);
+			menuItem.addActionListener(action);
+
+			if ( firstAdd )
+			{
+				firstAdd = false;
+				if (menu.getMenuComponentCount() > 0)
+					menu.addSeparator();
+			}
+			menu.add(menuItem);
+		}
+
+//		menu.addPopupMenuListener( createPopupMenuListener() );
+
+		return menu;
+	}
+
 }

@@ -85,9 +85,11 @@ extends CountersModel
 			"n_tup_upd",
 			"n_tup_del",
 			"n_tup_hot_upd",
+			"n_tup_newpage_upd",
 			"n_live_tup",
 			"n_dead_tup",
 			"n_mod_since_analyze",
+			"n_ins_since_vacuum",
 			"vacuum_count",
 			"autovacuum_count",
 			"analyze_count",
@@ -317,14 +319,14 @@ extends CountersModel
 
 		return 
 			"select \n" +
-			"    current_database() as dbname, \n" +
-			"    cast(100.0 * coalesce(seq_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) as table_scan_pct, \n" + 
-			"    cast(100.0 * coalesce(idx_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) as index_usage_pct, \n" +
+			"    current_database() AS dbname, \n" +
+			"    cast(100.0 * coalesce(seq_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS table_scan_pct, \n" + 
+			"    cast(100.0 * coalesce(idx_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS index_usage_pct, \n" +
 			"    pg_total_relation_size(relid)/1024 AS total_kb, \n" +
 			"    pg_table_size         (relid)/1024 AS data_kb, \n" +
 			"    pg_indexes_size       (relid)/1024 AS index_kb, \n" +
-			"    cast(CASE WHEN seq_scan > 0 THEN (seq_tup_read  * 1.0) / seq_scan ELSE 0 END as numeric(15,1)) as seq_tup_read_per_scan, \n" +
-			"    cast(CASE WHEN idx_scan > 0 THEN (idx_tup_fetch * 1.0) / idx_scan ELSE 0 END as numeric(15,1)) as idx_tup_fetch_per_scan, \n" +
+			"    cast(CASE WHEN seq_scan > 0 THEN (seq_tup_read  * 1.0) / seq_scan ELSE 0 END as numeric(15,1)) AS seq_tup_read_per_scan, \n" +
+			"    cast(CASE WHEN idx_scan > 0 THEN (idx_tup_fetch * 1.0) / idx_scan ELSE 0 END as numeric(15,1)) AS idx_tup_fetch_per_scan, \n" +
 			"    * \n" +
 //			"    ,pg_relation_filepath(relid) as table_file_path \n" +
 			"from " + tabName + "\n" +

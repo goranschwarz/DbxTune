@@ -65,6 +65,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -217,6 +218,7 @@ import com.asetune.gui.JdbcMetaDataInfoDialog;
 import com.asetune.gui.JvmMemorySettingsDialog;
 import com.asetune.gui.Log4jViewer;
 import com.asetune.gui.MainFrameAse;
+import com.asetune.gui.MainFrameSqlServer;
 import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetMetaDataViewDialog;
@@ -225,6 +227,7 @@ import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.DeferredChangeListener;
 import com.asetune.gui.swing.EventQueueProxy;
+import com.asetune.gui.swing.GPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.RXTextUtilities;
@@ -255,6 +258,7 @@ import com.asetune.sql.pipe.PipeCommandLinkedQuery;
 import com.asetune.sql.pipe.PipeCommandToFile;
 import com.asetune.sql.pipe.PipeCommandToParquet;
 import com.asetune.sql.showplan.ShowplanHtmlView;
+import com.asetune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.WindowType;
@@ -339,6 +343,8 @@ import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 import com.asetune.utils.WatchdogIsFileChanged;
+import com.asetune.xmenu.AzureDataStudio;
+import com.asetune.xmenu.SqlSentryPlanExplorer;
 import com.asetune.xmenu.TablePopupFactory;
 import com.microsoft.sqlserver.jdbc.ISQLServerMessage;
 import com.microsoft.sqlserver.jdbc.ISQLServerMessageHandler;
@@ -1166,6 +1172,11 @@ public class QueryWindow
 	public QueryWindow(DbxConnection conn, String sql, boolean doExecSql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
 		init(conn, sql, doExecSql, inputFile, closeConnOnExit, winType, conf);
+	}
+
+	public Window getWindow()
+	{
+		return _window;
 	}
 
 	private void init(DbxConnection conn, final String sql, boolean doExecSql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
@@ -11074,6 +11085,23 @@ checkPanelSize(_resPanel, comp);
 //			p.add(tab,                  "wrap");
 		}
 	}
+
+	protected static File createTempFile(String prefix, String suffix, byte[] bytes)
+	throws IOException
+	{
+		// add "." if the suffix doesn't have that
+		if (StringUtil.hasValue(suffix) && !suffix.startsWith("."))
+			suffix = "." + suffix;
+
+		File tmpFile = File.createTempFile(prefix, suffix);
+		tmpFile.deleteOnExit();
+		FileOutputStream fos = new FileOutputStream(tmpFile);
+		fos.write(bytes);
+		fos.close();
+		
+		return tmpFile;
+	}
+
 	private JComponent createTablePanel(JTableResultSet jtrs, boolean asTabbedPane, String jTableFilterText)
 	{
 		ResultSetJXTable tab = new ResultSetJXTable(jtrs.getResultSetTableModel());
@@ -11100,7 +11128,7 @@ checkPanelSize(_resPanel, comp);
 			}
 		}
 
-		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+		GPanel p = new GPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
 
 		if (doConvertToXmlOrJsonTextPane(tab))
 		{
@@ -11114,8 +11142,40 @@ checkPanelSize(_resPanel, comp);
 				
 				if (originTextStr.startsWith("<ShowPlanXML ") && Desktop.isDesktopSupported())
 				{
-					JButton showplanInExtrenalBrowser = new JButton("View SQL-Server Showplan in External HTML Browser");
-					showplanInExtrenalBrowser.addActionListener(new ActionListener()
+					//---------------------------------------------------------------
+					// Set Panel Tooltip -- A Stripped down HTML4 version of the Showplan
+					//---------------------------------------------------------------
+					if (true)
+					{
+						StringBuilder sb = new StringBuilder();
+						sb.append("<html>");
+
+						SqlServerShowPlanXmlTransformer t = new SqlServerShowPlanXmlTransformer();
+						try
+						{
+							sb.append(t.toHtmlSimpleUl(originTextStr));
+						}
+						catch (Exception ex)
+						{
+							String msg = "Could not translate SQL-Server ShowPlanXML to HTML text. Caught: " + ex;
+							_logger.error(msg);
+							sb.append(msg);
+						}
+						sb.append("</html>");
+						
+						p.setToolTipText(sb.toString());
+//System.out.println("");
+//System.out.println("-----------------------------------------------------------------------------------------------------------\n");
+//System.out.println(sb.toString());
+//System.out.println("-----------------------------------------------------------------------------------------------------------\n");
+					}
+
+					//---------------------------------------------------------------
+					// View Showplan in: External HTML Browser
+					//---------------------------------------------------------------
+					JButton showplanIn__ExtrenalBrowser = new JButton("View Showplan in: External HTML Browser");
+					showplanIn__ExtrenalBrowser.setToolTipText("Create a temporary HTML file, and Open the Registered Browser.");
+					showplanIn__ExtrenalBrowser.addActionListener(new ActionListener()
 					{
 						@Override
 						public void actionPerformed(ActionEvent e)
@@ -11130,12 +11190,88 @@ checkPanelSize(_resPanel, comp);
 							}
 							catch (Exception ex)
 							{
-								SwingUtils.showErrorMessage(_window, "Problems when open the SQL-Server Showplan", "Problems when open the SQL-Server Showplan. Caught: "+ex, ex);
+								SwingUtils.showErrorMessage(_window, "Problems when open the SQL-Server Showplan", "Problems when open the SQL-Server Showplan. Caught: " + ex, ex);
 							}
 						}
 					});
 					// Add the Button
-					p.add(showplanInExtrenalBrowser, "wrap");
+					p.add(showplanIn__ExtrenalBrowser, "wrap");
+
+					//---------------------------------------------------------------
+					// View Showplan in: Sentry One Plan Explorer
+					//---------------------------------------------------------------
+					JButton showplanIn__SentryOnePlanExplorer = new JButton("View Showplan in: Sentry One Plan Explorer");
+					showplanIn__SentryOnePlanExplorer.setToolTipText("Create a temporary XML file 'sqlSrvPlan_*.xml', and Open Sentry One Plan Explorer.");
+					showplanIn__SentryOnePlanExplorer.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							try
+							{
+								File tmpFile = createTempFile("sqlSrvPlan_", ".xml", originTextStr.getBytes());
+								SqlSentryPlanExplorer.openSqlPlanExplorer(tmpFile);
+							}
+							catch (IOException ex)
+							{
+								SwingUtils.showErrorMessage(_window, "Problems when open the SQL-Server Showplan", "Problems when open the SQL-Server Showplan. Caught: " + ex, ex);
+							}
+						}
+					});
+					// Add the Button
+					p.add(showplanIn__SentryOnePlanExplorer, "wrap");
+
+					//---------------------------------------------------------------
+					// View Showplan in: Azure Data Studio
+					//---------------------------------------------------------------
+					JButton showplanIn__AzureDataStudio = new JButton("View Showplan in: Azure Data Studio");
+					showplanIn__AzureDataStudio.setToolTipText("Create a temporary XML file 'sqlSrvPlan_*.sqlplan', and Open Azure Data Studio.");
+					showplanIn__AzureDataStudio.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							try
+							{
+//								File tmpFile = createTempFile("sqlSrvPlan_", ".xml", originTextStr.getBytes());
+								File tmpFile = createTempFile("sqlSrvPlan_", ".sqlplan", originTextStr.getBytes());
+								AzureDataStudio.open(tmpFile);
+							}
+							catch (IOException ex)
+							{
+								SwingUtils.showErrorMessage(_window, "Problems when open the SQL-Server Showplan", "Problems when open the SQL-Server Showplan. Caught: " + ex, ex);
+							}
+						}
+					});
+					// Add the Button
+					p.add(showplanIn__AzureDataStudio, "wrap");
+
+					//---------------------------------------------------------------
+					// View Showplan in: SSMS
+					//---------------------------------------------------------------
+					JButton showplanIn__SSMS = new JButton("View Showplan in: SSMS");
+					showplanIn__SSMS.setToolTipText("Create a temporary XML file 'sqlSrvPlan_*.sqlplan', and Open the Registered Application, for file extention '.sqlplan'");
+					showplanIn__SSMS.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							try
+							{
+								File tmpFile = createTempFile("sqlSrvPlan_", ".sqlplan", originTextStr.getBytes());
+
+								Desktop desktop = Desktop.getDesktop();
+								if ( desktop.isSupported(Desktop.Action.BROWSE) )
+									desktop.browse(tmpFile.toURI());
+							}
+							catch (IOException ex)
+							{
+								SwingUtils.showErrorMessage(_window, "Problems when open the SQL-Server Showplan", "Problems when open the SQL-Server Showplan. Caught: " + ex, ex);
+							}
+						}
+					});
+					// Add the Button
+					p.add(showplanIn__SSMS, "wrap");
 				}
 			}
 
@@ -13333,6 +13469,32 @@ checkPanelSize(_resPanel, comp);
 				"kill ### where dbid = db_id()", 
 				"Generate 'kill ###' SQL Text"));
 
+		// SQL Server
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_who",                                        "", "Who is logged in on the system"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_WhoIsActive",                                "", "Who is Active (doing stuff right now)"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_WhoIsActive @get_locks=1",                   "", "Who is Active -- with: Locks"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_WhoIsActive @get_plans=1, @get_locks=1",     "", "Who is Active -- with: Execution Plans &amp; Locks"));
+		commandList.add(FavoriteCommandEntry.addSeparator());
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_blitz @CheckUserDatabaseObjects=0, @CheckServerInfo=1", "", "Quick Health Assessment"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzFirst @Seconds=5",                      "", "Performance Check"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzFirst @SinceStartup=1",                 "", "Performance Check -- Since SQL Server started"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzCache",                                 "", "Finding Queries causing the waits"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzCache @ExpertMode=1",                   "", "Finding Queries causing the waits"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzIndex",                                 "", "Check indexes that could help queries"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzIndex @mode=2, @SortOrder='size'",      "", "Get tables order by size"));
+//		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzIndex @ObjectName='${selectedText}'",   "", "Check indexes for a table (selected text)"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "declare @objName  nvarchar(128) = '${selectedText}' \ndeclare @dbname nvarchar(128) = parsename(@objName, 3), @schName nvarchar(128) = parsename(@objName, 2), @tabName nvarchar(128) = parsename(@objName, 1) \nexec sp_BlitzIndex @DatabaseName=@dbname, @SchemaName=@schName, @TableName=@tabName", "sp_BlitzIndex @ObjectName='${selectedText}'", "Check indexes for a table (selected text)"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzLock",                                  "", "Analyzing Deadlocks"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzWho",                                   "", "What's running now"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_BlitzBackups",                               "", "Analyze your msdb backup tables"));
+		commandList.add(FavoriteCommandEntry.addSeparator());
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_PressureDetector",                           "", "Erik Darlings -- Pressure Detector"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_QuickieStore",                               "", "Erik Darlings -- Query Store Analyzer"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_HumanEvents @event_type='recompilations', @seconds_sample=30",                               "", "Erik Darling - Recompilations"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_HumanEvents @event_type='blocking', @seconds_sample=30",                               "", "Erik Darling - Blocking Lock"));
+		commandList.add(new FavoriteCommandEntry(VendorType.MSSQL,   "sp_HealthParser",                               "", "Erik Darling - Find Various Health Issues"));
+
+
 		// ORACLE Commands
 		commandList.add(new FavoriteCommandEntry(VendorType.ORACLE,  "select OWNER, NAME, TYPE, SEQUENCE, LINE, POSITION, TEXT, ATTRIBUTE,MESSAGE_NUMBER from ALL_ERRORS where OWNER = USER order by SEQUENCE\ngo plain", "Show Errors", "simular to sqlPlus SHOW ERRORS"));
 		commandList.add(new FavoriteCommandEntry(VendorType.ORACLE,  "select * from SYS.NLS_DATABASE_PARAMETERS",     "Database Parameters", "Show - Database Parameters"));
@@ -13387,10 +13549,15 @@ checkPanelSize(_resPanel, comp);
 		
 		// add Predefined SQL from AseTune
 		JMenu preDefinedSql = MainFrameAse.createPredefinedSqlMenu(QueryWindow.this);
-//		preDefinedSql.setText("<html>Predefined SQL Statements (same as in AseTune)</html>");
 		preDefinedSql.setText("<html>Execute some extra <i>system</i> stored procedures. <i>(if not exist; create it)</i></html>");
 		preDefinedSql.putClientProperty(FavoriteCommandDialog.PROPKEY_VENDOR_TYPE, VendorType.ASE);
 		popupMenu.add(preDefinedSql);
+		
+		// add INSTALL Some Procs for SQL Server
+		JMenu mssqlInstallProcs = MainFrameSqlServer.createInstallProcsMenu(QueryWindow.this);
+		mssqlInstallProcs.setText("<html>Install some extra <i>system</i> stored procedures.</html>");
+		mssqlInstallProcs.putClientProperty(FavoriteCommandDialog.PROPKEY_VENDOR_TYPE, VendorType.MSSQL);
+		popupMenu.add(mssqlInstallProcs);
 		
 		// add SEPARATOR
 		popupMenu.add( new JSeparator() );

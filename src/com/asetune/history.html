@@ -377,6 +377,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>DBMS Configuration </b> - (if windows) Check if AllocationUnitSize is smaller than 64K (this is done via OS Command 'powershell "Get-Volume | Select-Object DriveLetter, AllocationUnitSize, FileSystemType, FileSystemLabel | ConvertTo-Json"')</LI>
 		<LI><b>DBMS Configuration </b> - Added 'sp_blitz' -- which is a Stored Proc from Brent Ozar that does various "healthchecks" on the server. (it's only executed if it's installed in the SQL Server)</LI>
 		<LI><b>DBMS Configuration </b> - Scoped configurations was only comming from current database (master)</LI>
+		<LI><b>DBMS Configuration </b> - If sp_Blitz is older than 6 month, raise a DbmsConfigIssue</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>
@@ -555,6 +556,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmPgRepSlots         </b> - New CM to check 'pg_replication_slots', which raises AlarmEventPgReplicationLag when 'lag_kb' is greater than 100MB (config with: CmPgRepSlots.alarm.system.if.lag_kb.gt)</LI>
 
+		<LI><b>CmPgTables           </b> - Added columns (for Diff calculation): n_tup_newpage_upd, n_ins_since_vacuum </LI>
+
 		<LI><b>CmPgWalReceiver      </b> - New CM to check 'pg_stat_wal_receiver' </LI>
 
 		<LI><b>CmPgWall             </b> - new chart: WAL KB Written per Second</LI>
@@ -589,6 +592,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Daily Summary Report </b> - Long Running Statements -- Content changes and adjustment for MS Outlook</LI>
 		<LI><b>Daily Summary Report </b> - Added section for 'Server Wait Stats'</LI>
 		<LI><b>Daily Summary Report </b> - Added section for 'IO Statistics' (from pg_stat_io)</LI>
+		<LI><b>Daily Summary Report </b> - Top TABLE/INDEX Activity -- Added some charts for: n_tup_ins__chart, n_tup_upd__chart, n_tup_hot_upd__chart, n_tup_newpage_upd__chart, n_ins_since_vacuum__chart</LI>
 
 		<br>
 		<LI><b>Alarm                </b> - Added AlarmEventPgChecksumFailure -- Fired from CmErrorLog and CmPgDatabase</LI>
@@ -636,6 +640,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>right click menu -- "Get Foreign Key ***Child*** rows for selected rows(s)"</LI>
 		<LI>right click menu -- "Mark all Words, on Double Click"</LI>
 		<LI>In SQL Server, when doing 'go nodata' when 'set statistics profile on'... Then still show the ResultSet for 'statistics profile'</LI>
+		<LI>for SQL Server -- Added 'Install some extra "system" procedures' (downloads from github)... Adam Machanic: Sp_WhoIsActive, Brent Ozar: Sp_Blitz*, Erik Darling: sp_*, Ola Hallengren: Maintenance Solution</LI>
+		<LI>for SQL Server -- Added some shortcuts for the above procedures</LI>
+		<LI>for SQL Server -- Showplan info: copy/save XML Plan formatted</LI>
+		<LI>for SQL Server -- Showplan info: Now also holds "Execution Time" (if Available), "Cardinality Actual/Estimated Calculation" (if Available)</LI>
+		<LI>for SQL Server -- Showplan info: Mark "Index Spool - Eager Spool" in color red... to highligt them a bit</LI>
+		<LI>Adjusted tabSize to be 4 (it looked like it was 5 previously)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

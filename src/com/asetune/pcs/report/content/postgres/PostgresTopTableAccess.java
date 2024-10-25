@@ -34,6 +34,7 @@ import com.asetune.pcs.report.content.SparklineHelper.DataSource;
 import com.asetune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class PostgresTopTableAccess 
 extends PostgresAbstract
@@ -267,10 +268,15 @@ extends PostgresAbstract
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 
 		// n_mod_since_analyze - added in 9.3
-		String n_mod_since_analyze_SUM = dummyRstm.findColumnNoCase("n_mod_since_analyze") == -1 ? "" : "    ,sum([n_mod_since_analyze])                                 as [n_mod_since_analyze_SUM] \n";
+		String n_mod_since_analyze_SUM   = dummyRstm.findColumnNoCase("n_mod_since_analyze") == -1 ? "" : "    ,sum([n_mod_since_analyze])                                 as [n_mod_since_analyze_SUM] \n";
 
 		// n_ins_since_vacuum - added in 13
-		String n_ins_since_vacuum_SUM = dummyRstm.findColumnNoCase("n_ins_since_vacuum")   == -1 ? "" : "    ,sum([n_ins_since_vacuum])                                  as [n_ins_since_vacuum_SUM] \n";
+		String n_ins_since_vacuum_SUM    = dummyRstm.findColumnNoCase("n_ins_since_vacuum")  == -1 ? "" : "    ,sum([n_ins_since_vacuum])                                  as [n_ins_since_vacuum_SUM] \n";
+		String n_ins_since_vacuum__chart = dummyRstm.findColumnNoCase("n_ins_since_vacuum")  == -1 ? "" : "    ,cast('' as varchar(512))                                   as [n_ins_since_vacuum__chart] \n";
+
+		// n_tup_newpage_upd - added in 16
+		String n_tup_newpage_upd_SUM     = dummyRstm.findColumnNoCase("n_tup_newpage_upd")   == -1 ? "" : "    ,sum([n_tup_newpage_upd])                                   as [n_tup_newpage_upd_SUM] \n";
+		String n_tup_newpage_upd__chart  = dummyRstm.findColumnNoCase("n_tup_newpage_upd")   == -1 ? "" : "    ,cast('' as varchar(512))                                   as [n_tup_newpage_upd__chart] \n";
 
 		
 		String sql = getCmDiffColumnsAsSqlComment("CmPgTables")
@@ -296,14 +302,21 @@ extends PostgresAbstract
 			    + "    ,sum([idx_scan])                                            as [idx_scan_SUM] \n"
 			    + "    ,sum([idx_tup_fetch])                                       as [idx_tup_fetch_SUM] \n"
 			    + "    ,CAST( avg([idx_tup_fetch_per_scan]) as bigint )            as [idx_tup_fetch_per_scan_AVG] \n"
+			    + "    ,cast('' as varchar(512))                                   as [n_tup_ins__chart] \n"
+			    + "    ,cast('' as varchar(512))                                   as [n_tup_upd__chart] \n"
+			    + "    ,cast('' as varchar(512))                                   as [n_tup_hot_upd__chart] \n"
+			    + n_tup_newpage_upd__chart
+			    + "    ,cast('' as varchar(512))                                   as [n_tup_del__chart] \n"
 			    + "    ,sum([n_tup_ins])                                           as [n_tup_ins_SUM] \n"
 			    + "    ,sum([n_tup_upd])                                           as [n_tup_upd_SUM] \n"
-			    + "    ,sum([n_tup_del])                                           as [n_tup_del_SUM] \n"
 			    + "    ,sum([n_tup_hot_upd])                                       as [n_tup_hot_upd_SUM] \n"
+			    + n_tup_newpage_upd_SUM
+			    + "    ,sum([n_tup_del])                                           as [n_tup_del_SUM] \n"
 			    + "    ,sum([n_live_tup])                                          as [n_live_tup_SUM] \n"
 			    + "    ,sum([n_dead_tup])                                          as [n_dead_tup_SUM] \n"
 			    + n_mod_since_analyze_SUM
 			    + n_ins_since_vacuum_SUM
+			    + n_ins_since_vacuum__chart
 			    + "    ,max([last_vacuum])                                         as [last_vacuum_MAX] \n"
 			    + "    ,max([last_autovacuum])                                     as [last_autovacuum_MAX] \n"
 			    + "    ,max([last_analyze])                                        as [last_analyze_MAX] \n"
@@ -362,6 +375,7 @@ extends PostgresAbstract
 			rstm.setColumnDescription("n_tup_upd_SUM"             , "Number of rows updated");
 			rstm.setColumnDescription("n_tup_del_SUM"             , "Number of rows deleted");
 			rstm.setColumnDescription("n_tup_hot_upd_SUM"         , "Number of rows HOT updated (i.e., with no separate index update required)");
+			rstm.setColumnDescription("n_tup_newpage_upd_SUM"     , "Number of rows updated where the successor version goes onto a new heap page, leaving behind an original version with a t_ctid field that points to a different heap page. These are always non-HOT updates. NOTE: If the counter value is too high, you may want to consider reducing the fillfactor value for the table. By reserving more page space, you increase the chances for HOT optimization to work.");
 			rstm.setColumnDescription("n_live_tup_SUM"            , "Estimated number of live rows");
 			rstm.setColumnDescription("n_dead_tup_SUM"            , "Estimated number of dead rows");
 			rstm.setColumnDescription("n_mod_since_analyze_SUM"   , "Estimated number of rows modified since this table was last analyzed");
@@ -412,6 +426,78 @@ extends PostgresAbstract
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.setSparklineTooltipPostfix  ("Average of 'idx_tup_fetch_per_scan' in below period")
 					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("n_tup_ins__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("n_tup_ins")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'n_tup_ins' in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("n_tup_upd__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("n_tup_upd")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'n_tup_upd' in below period")
+					.validate()));
+
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("n_tup_hot_upd__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("n_tup_hot_upd")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'n_tup_hot_upd' in below period")
+					.validate()));
+
+			if (StringUtil.hasValue(n_tup_newpage_upd__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("n_tup_newpage_upd__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("n_tup_newpage_upd")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'n_tup_newpage_upd' in below period")
+					.validate()));
+			}
+			
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("n_tup_del__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("n_tup_del")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'n_tup_del' in below period")
+					.validate()));
+
+			if (StringUtil.hasValue(n_ins_since_vacuum__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, rstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("n_ins_since_vacuum__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("n_ins_since_vacuum")
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setSparklineTooltipPostfix  ("Number of 'n_ins_since_vacuum' in below period")
+					.validate()));
+			}
 		}
 		return rstm;
 	}

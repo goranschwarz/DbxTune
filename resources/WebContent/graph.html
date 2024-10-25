@@ -1553,9 +1553,14 @@ at pc:
 			let ssPlanName        = $("#dbx-view-ssShowplan-objectName").text();
 
 			if (ssPlanName === "")
+			{
 				ssPlanName = "name";
+			}
 			else
-				ssPlanName = "for_QueryPlanHash_" + ssPlanName;
+			{
+				ssPlanName = ssPlanName.replace(", ", "__");
+				ssPlanName = "for_" + ssPlanName;
+			}
 
 			const link = document.createElement("a");
 			const file = new Blob([ssShowplanXmlText], { type: 'text/plain' });
@@ -1599,10 +1604,13 @@ at pc:
 
 			let sqlText          = "";
 			let sqlTextArr       = [];
+			let queryHash        = "";
+			let queryHashArr     = [];
 			let queryPlanHash    = "";
 			let queryPlanHashArr = [];
 			$(xmlDoc).find("StmtSimple").each(function(i,e) {
 				sqlTextArr      .push($(e).attr("StatementText"));
+				queryHashArr    .push($(e).attr("QueryHash"));
 				queryPlanHashArr.push($(e).attr("QueryPlanHash"));
 			});
 
@@ -1628,10 +1636,15 @@ at pc:
 			if (queryPlanHashArr.length > 0)
 			{
 				queryPlanHash = queryPlanHashArr[0];
+
+				if (queryHashArr.length > 0)
+				{
+					queryHash = queryHashArr[0];
+				}
 				
 				if ( $('#dbx-view-ssShowplan-objectName').text() === "" )
 				{
-					$('#dbx-view-ssShowplan-objectName').text("QueryPlanHash=" + queryPlanHash);
+					$('#dbx-view-ssShowplan-objectName').text("QueryHash=" + queryHash + ", QueryPlanHash=" + queryPlanHash);
 				}
 			}
 			

@@ -56,6 +56,7 @@ public class ColumnHeaderPropsEntry
 	protected String    _colName      = null;
 	protected int       _modelPos     = -1;
 	protected int       _viewPos      = -1;
+//	protected String    _afterColName = null;
 	protected boolean   _isVisible    = true;
 	protected SortOrder _sortOrder    = SortOrder.UNSORTED;
 	protected int       _sortOrderPos = -1;
@@ -78,6 +79,12 @@ public class ColumnHeaderPropsEntry
 		_colName      = name;
 		_viewPos      = viewPos;
 	}
+//	public ColumnHeaderPropsEntry(String name, int viewPos, String afterColumnName)
+//	{
+//		_colName      = name;
+//		_viewPos      = viewPos;
+//		_afterColName = afterColumnName;
+//	}
 
 	public ColumnHeaderPropsEntry(String name, int viewPos, SortOrder sortOrder)
 	{
@@ -189,6 +196,11 @@ public class ColumnHeaderPropsEntry
 					throw new ParseException("The value '"+val+"' for key '"+key+"' is not a number.", 0);
 				}
 			}
+//			else if (key.equals("afterColName"))
+//			{
+//				if (StringUtil.hasValue(val))
+//					e._afterColName = val;
+//			}
 			else
 				throw new ParseException("Unknown key value of '"+key+"' was found in the string '"+valStr+"'.", 0);
 		}
@@ -216,6 +228,7 @@ public class ColumnHeaderPropsEntry
 			+ ",isVisible="+ _isVisible
 			+ ",sortOrder="+ ((_sortOrder == SortOrder.UNSORTED) ? _sortOrder : _sortOrderPos+":"+_sortOrder)
 			+ ",width="    + _width
+//			+ ( StringUtil.isNullOrBlank(_afterColName) ? "" : ",afterColName=" + _afterColName )
 			+"}";
 	}
 

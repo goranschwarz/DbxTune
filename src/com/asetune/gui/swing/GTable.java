@@ -1101,6 +1101,12 @@ extends JXTable
 		if (colProps.isEmpty())
 			return 0;
 
+//if ("CmActiveStPlanStats".equals(getName()))
+//{
+//	System.out.println("loadColumnLayout(): colProps=" + colProps);
+//	new Exception("Dummy...").printStackTrace();	
+//}
+		
 		int fixCount = 0;
 		TableColumnModelExt tcmx = (TableColumnModelExt)getColumnModel();
 		for (Map.Entry<String,ColumnHeaderPropsEntry> entry : colProps.entrySet()) 
@@ -1132,7 +1138,30 @@ extends JXTable
 			try {colViewPos = tcmx.getColumnIndex(colName);}
 			catch (IllegalArgumentException ignore) {}
 			
-			int propViewPos = chpe._viewPos; 
+			int propViewPos = chpe._viewPos;
+//if ("CmActiveStPlanStats".equals(getName()))
+//	System.out.println("------------- chpe._viewPos=" + chpe._viewPos + ", chpe._afterColName=|" + chpe._afterColName + "|, colName=|" + colName + "|, getName()=|" + getName() + "|");
+//			// TODO: This doesn't seem to work... But I don't have time to dig into it right now... 
+//			if (StringUtil.hasValue(chpe._afterColName))
+//			{
+//				String afterColName = chpe._afterColName;
+//				boolean addBefore = false;
+//				if (afterColName.startsWith("-"))
+//				{
+//					afterColName = afterColName.substring(1);
+//					addBefore = true;
+//				}
+//				else if (afterColName.startsWith("+"))
+//				{
+//					afterColName = afterColName.substring(1);
+//					addBefore = false;
+//				}
+//				int tmp = findViewColumn(chpe._afterColName);
+//				if (tmp != -1)
+//					propViewPos = tmp + (addBefore ? 0 : 1);
+//if ("CmActiveStPlanStats".equals(getName()))
+//	System.out.println("          >>> chpe._viewPos=" + chpe._viewPos + ", chpe._afterColName=|" + chpe._afterColName + "|, propViewPos=" + propViewPos);
+//			}
 
 			_logger.trace("loadColumnLayout() cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' colViewPos(from)='"+colViewPos+"', chpe._viewPos(to)='"+chpe._viewPos+"'.");
 			if (colViewPos >= 0 && propViewPos >= 0)
@@ -1290,6 +1319,7 @@ extends JXTable
 						chpe._sortOrder    = prefEntry._sortOrder;
 						chpe._sortOrderPos = prefEntry._sortOrderPos;
 						chpe._width        = prefEntry._width;
+//						chpe._afterColName = prefEntry._afterColName;
 					}
 				}
 			}

@@ -87,6 +87,8 @@ public class SqlServerShowPlanXmlTransformer
 //		return transformUsingXslt(xsltIs, xmlPlan);
 
 		URL xsltUrl = SqlServerShowPlanXmlTransformer.class.getResource(xsltFile);
+//		URL xsltUrl = new URL("file:///C:/projects/DbxTune/src/com/asetune/sql/showplan/transform/qp_simple_ul.xslt");
+//System.out.println("########################### REMOVE: The hardcoded file reference to: " + xsltUrl);
 		if (xsltUrl == null)
 			throw new FileNotFoundException("File '" + xsltFile + "' in class '" + this.getClass().getName() + "' at classpath could not be located.");
 

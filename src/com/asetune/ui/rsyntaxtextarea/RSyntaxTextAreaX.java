@@ -67,9 +67,14 @@ extends RSyntaxTextArea
 {
 	private static final long	serialVersionUID	= 1L;
 
-	public static final String PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED = "RSyntaxTextAreaX.isHiglightWordMode.enabled";
-	public static final String PROPKEY_IS_IN_WORD_HIGLIGH_TMODE      = "RSyntaxTextAreaX.isInWordHiglightMode";
+	public static final String  PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED = "RSyntaxTextAreaX.isHiglightWordMode.enabled";
+	public static final String  PROPKEY_IS_IN_WORD_HIGLIGH_TMODE      = "RSyntaxTextAreaX.isInWordHiglightMode";
 
+	public static final String  PROPKEY_TAB_SIZE                      = "RSyntaxTextAreaX.tabSize";
+	public static final int     DEFAULT_TAB_SIZE                      = 4;
+	
+	public static final String  PROPKEY_TAB_TO_SPACES                 = "RSyntaxTextAreaX.tabToSpaces";
+	public static final boolean DEFAULT_TAB_TO_SPACES                 = false;
 	
 	/**
 	 * Constructor.
@@ -164,10 +169,12 @@ extends RSyntaxTextArea
 		localInit(this);
 	}
 
-    public static final String markAllWordsOnDoubleClick = "mark-all-words-on-double-click";
-    public static final String formatSql   = "format-sql";
-    public static final String toUpperCase = "to-upper-case";
-    public static final String toLowerCase = "to-lower-case";
+	public static final String markAllWordsOnDoubleClick = "mark-all-words-on-double-click";
+	public static final String formatSql                 = "format-sql";
+//	public static final String convertTabsToSpaces       = "convert-tabs-to-spaces";
+//	public static final String convertSpacesToTabs       = "convert-spaces-to-tabs";
+	public static final String toUpperCase               = "to-upper-case";
+	public static final String toLowerCase               = "to-lower-case";
 
     /**
 	 * initialize this class
@@ -188,6 +195,9 @@ extends RSyntaxTextArea
 
 		am.put(markAllWordsOnDoubleClick, new MarkWordOnDoubleClickAction(markAllWordsOnDoubleClick));
 		am.put(formatSql,                 new FormatSqlAction(formatSql));
+
+//		am.put(convertTabsToSpaces,       new ConvertTabsToSpaces(convertTabsToSpaces));
+//		am.put(convertSpacesToTabs,       new ConvertSpacesToTabs(convertSpacesToTabs));
 		
 		am.put(toUpperCase,               new ToUpperCaseAction(toUpperCase));
 		am.put(toLowerCase,               new ToLowerCaseAction(toLowerCase));
@@ -215,6 +225,16 @@ extends RSyntaxTextArea
 		// Increase/Decrease font size with keyboard Ctrl+ and Ctrl-
 		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_PLUS,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), RTextAreaEditorKit.rtaIncreaseFontSizeAction);
 		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), RTextAreaEditorKit.rtaDecreaseFontSizeAction);
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		// I want "tabs", but I want them to be 4 virtual spaces
+		int tabSize = conf.getIntProperty(PROPKEY_TAB_SIZE, DEFAULT_TAB_SIZE);
+		textArea.setTabSize(tabSize);
+
+		// Insert "blank spaces" instead of a tab
+		boolean tabToSpaces = conf.getBooleanProperty(PROPKEY_TAB_TO_SPACES, DEFAULT_TAB_TO_SPACES);
+		textArea.setTabsEmulated(tabToSpaces);
 
 //System.out.println("UIManager.getLookAndFeel()="+UIManager.getLookAndFeel());
 //com.sun.java.swing.plaf.windows.WindowsLookAndFeel

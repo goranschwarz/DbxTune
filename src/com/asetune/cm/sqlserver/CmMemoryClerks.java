@@ -443,6 +443,22 @@ extends CountersModel
 
 
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_MEMORY_CLERKS_TOP       .equals(name)) return true;
+		if (GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
 
 	//--------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------
@@ -480,6 +496,10 @@ extends CountersModel
 			{
 				String extendedDescText = "Possibly resolved by executing: DBCC FREESYSTEMCACHE('TokenAndPermUserStore'), also you may look at Startup traceflag: 4610, 4618";
 				String extendedDescHtml = extendedDescText;
+
+				// Possibly: Create a dedicated graph for 'USERSTORE_TOKENPERM' (if 'USERSTORE_TOKENPERM' is NOT part of the top clerks)
+				extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_CLERKS_TOP, "USERSTORE_TOKENPERM");
+				extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS);
 
 				// Create the alarm
 				AlarmEvent ae = new AlarmEventMemoryClerkWarning(cm, threshold, sizeMb, "USERSTORE_TOKENPERM");

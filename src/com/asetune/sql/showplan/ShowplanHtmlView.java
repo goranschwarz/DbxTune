@@ -74,7 +74,7 @@ public abstract class ShowplanHtmlView
 		}
 		else if (Type.ASE.equals(type))
 		{
-			System.out.println("ASE-XML-SHOWPLAN: \n"+xmlPlan);
+			System.out.println("ASE-XML-SHOWPLAN: \n" + xmlPlan);
 			throw new RuntimeException("Sybase ASE Showplan HTML Viewer has not yet been implemented.");
 //			ShowplanAseExternalHtmlView asePlan = new ShowplanAseExternalHtmlView();
 //			asePlan.show(xmlPlan);
@@ -116,7 +116,7 @@ public abstract class ShowplanHtmlView
 		}
 		else if (Type.ASE.equals(type))
 		{
-			System.out.println("ASE-XML-SHOWPLAN: \n"+xmlPlan);
+			System.out.println("ASE-XML-SHOWPLAN: \n" + xmlPlan);
 			throw new RuntimeException("Sybase ASE Showplan HTML Viewer has not yet been implemented.");
 //			ShowplanAseExternalHtmlView asePlan = new ShowplanAseExternalHtmlView();
 //			asePlan.show(xmlPlan);
@@ -175,53 +175,90 @@ public abstract class ShowplanHtmlView
 	protected void validateTempDir() 
 	throws IOException
 	{
-		File tmpBaseDir = new File(getTmpShowplanPath());
-		File destDir    = new File(getTmpShowplanPath() + getTemplateJarDir());
-		File distDir    = new File(getTmpShowplanPath() + getTemplateJarDir() + "/dist");
-		File cssDir     = new File(getTmpShowplanPath() + getTemplateJarDir() + "/css");
+		File tmpBaseDir  = new File(getTmpShowplanPath());
+		File destDir     = new File(getTmpShowplanPath() + getTemplateJarDir());
+		File distDir     = new File(getTmpShowplanPath() + getTemplateJarDir() + "/dist");
+		File cssDir      = new File(getTmpShowplanPath() + getTemplateJarDir() + "/css");
+		File qpCssFile   = new File(getTmpShowplanPath() + getTemplateJarDir() + "/css/qp.css");
+		File qpJsFile    = new File(getTmpShowplanPath() + getTemplateJarDir() + "/dist/qp.js");
+		File qpJsMinFile = new File(getTmpShowplanPath() + getTemplateJarDir() + "/dist/qp.min.js");
 
 		boolean populate = false;
 		
 		// Create the BASE TEMP DIR
 		if (tmpBaseDir.exists() && tmpBaseDir.isDirectory())
 		{
-			_logger.info("Already exists: BASE temp directory for DBMS HTML Showplan Viewer. Location '"+tmpBaseDir+"'.");
+			_logger.info("Already exists: BASE temp directory for DBMS HTML Showplan Viewer. Location '" + tmpBaseDir + "'.");
 		}
 		else
 		{
 			if ( ! tmpBaseDir.mkdir() )
-				_logger.error("Failed to create BASE temp directory for DBMS HTML Showplan Viewer at Location '"+tmpBaseDir+"'.");
+				_logger.error("Failed to create BASE temp directory for DBMS HTML Showplan Viewer at Location '" + tmpBaseDir + "'.");
 
-			_logger.info("Created BASE temp directory for DBMS HTML Showplan Viewer at Location '"+tmpBaseDir+"'.");
+			_logger.info("Created BASE temp directory for DBMS HTML Showplan Viewer at Location '" + tmpBaseDir + "'.");
 		}
 
 		// Create the Product(SQL-Server|ASE) TEMP DIR
 		if (destDir.exists() && destDir.isDirectory())
 		{
-			_logger.info("Already exists: temp directory for DBMS HTML Showplan Viewer. Location '"+destDir+"'.");
+			_logger.info("Already exists: temp directory for DBMS HTML Showplan Viewer. Location '" + destDir + "'.");
 		}
 		else
 		{
 			if ( ! destDir.mkdir() )
-				_logger.error("Failed to create temp directory for DBMS HTML Showplan Viewer at Location '"+destDir+"'.");
+				_logger.error("Failed to create temp directory for DBMS HTML Showplan Viewer at Location '" + destDir + "'.");
 
-			_logger.info("Created temp directory for DBMS HTML Showplan Viewer at Location '"+destDir+"'.");
+			_logger.info("Created temp directory for DBMS HTML Showplan Viewer at Location '" + destDir + "'.");
 
 			populate = true;
 		}
 
 		if ( ! distDir.exists() )
 		{
-			_logger.info("DBMS HTML Showplan Viewer '/dist' did NOT exist. Populating it again at Location '"+distDir+"'.");
+			_logger.info("DBMS HTML Showplan Viewer '/dist' directory did NOT exist. Populating it again at Location '" + distDir + "'.");
 			populate = true;
+		}
+		else
+		{
+			if ( ! qpJsFile.exists() )
+			{
+				_logger.info("DBMS HTML Showplan Viewer '/dist/qp.js' file did NOT exist. Populating it again at Location '" + distDir + "'.");
+				populate = true;
+			}
+			if ( ! qpJsMinFile.exists() )
+			{
+				_logger.info("DBMS HTML Showplan Viewer '/dist/qp.min.js' file did NOT exist. Populating it again at Location '" + distDir + "'.");
+				populate = true;
+			}
 		}
 
 		if ( ! cssDir.exists() )
 		{
-			_logger.info("DBMS HTML Showplan Viewer '/css' did NOT exist. Populating it again at Location '"+cssDir+"'.");
+			_logger.info("DBMS HTML Showplan Viewer '/css' directory did NOT exist. Populating it again at Location '" + cssDir + "'.");
 			populate = true;
 		}
+		else
+		{
+			if ( ! qpCssFile.exists() )
+			{
+				_logger.info("DBMS HTML Showplan Viewer '/css/qp.css' file did NOT exist. Populating it again at Location '" + cssDir + "'.");
+				populate = true;
+			}
+		}
 
+		// If Dir is to old, recreate it...
+		File checkDir = cssDir;
+		if (checkDir.exists() && checkDir.isDirectory())
+		{
+			long ageInHours = System.currentTimeMillis() - checkDir.lastModified() / 1000 / 60 / 60;
+			long ageInHoursLimit = 24 * 7;
+			if (ageInHours >= ageInHoursLimit)
+			{
+				_logger.info("DBMS HTML Showplan Viewer. The Showplan dir is OLDER than " + ageInHoursLimit + " hours, Recreating it. Location '" + checkDir + "'.");
+				populate = true;
+			}
+		}
+		
 		
 		if (populate)
 		{
@@ -246,7 +283,7 @@ public abstract class ShowplanHtmlView
 		URL url = this.getClass().getResource(getTemplateJarDir());
 		
    		final URLConnection urlConnection = url.openConnection();
-   		_logger.debug("populateTempDir: urlConnection="+urlConnection);
+   		_logger.debug("populateTempDir: urlConnection=" + urlConnection);
    		
    		if (urlConnection instanceof JarURLConnection) 
    		{
@@ -271,7 +308,7 @@ public abstract class ShowplanHtmlView
 	public void copyJarResourcesRecursively(File destination, JarURLConnection jarConnection) 
 	throws IOException
 	{
-		_logger.debug("copyJarResourcesRecursively(): destination='"+destination+"'.");
+		_logger.debug("copyJarResourcesRecursively(): destination='" + destination + "'.");
 		JarFile jarFile = jarConnection.getJarFile();
 		for (final Enumeration<JarEntry> e = jarFile.entries(); e.hasMoreElements();)
 		{
@@ -287,7 +324,7 @@ public abstract class ShowplanHtmlView
 					FileOutputStream fileOutputStream = null;
 					try
 					{
-						_logger.debug("COPY JAR entry: destination='"+destination+", 'filename='"+fileName+"'. entry="+entry);
+						_logger.debug("COPY JAR entry: destination='" + destination + ", 'filename='" + fileName + "'. entry=" + entry);
 						entryInputStream = jarFile.getInputStream(entry);
 						fileOutputStream = new FileOutputStream(new File(destination, fileName));
 //						FileUtils.copyStream(entryInputStream, fileOutputStream);
@@ -301,7 +338,7 @@ public abstract class ShowplanHtmlView
 				}
 				else
 				{
-					_logger.debug("CREATE DIR JAR entry: destination='"+destination+", 'filename='"+fileName+"'. entry="+entry);
+					_logger.debug("CREATE DIR JAR entry: destination='" + destination + ", 'filename='" + fileName + "'. entry=" + entry);
 					FileUtils.ensureDirectoryExists(new File(destination, fileName));
 				}
 			}
@@ -500,6 +537,7 @@ public abstract class ShowplanHtmlView
 			out.write("    <link rel='stylesheet' type='text/css' href='css/qp.css'>             \n");
 //			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");
 			out.write("    <script src='dist/qp.js' type='text/javascript'></script>             \n");
+			out.write("    <script src='https://code.jquery.com/jquery-3.7.1.min.js' integrity='sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=' crossorigin='anonymous'></script>  \n");
 			out.write("</head>                                                                   \n");
 			out.write("                                                                          \n");
 			out.write("<body>                                                                    \n");
@@ -509,6 +547,9 @@ public abstract class ShowplanHtmlView
 			out.write("For example the online tool: <a target='_blank' href='http://www.supratimas.com/'>http://www.supratimas.com/</a><br> \n");
 			out.write("<button onclick='copyShowplanToClipboard()'>Copy Showplan</button>        \n");
 			out.write("<button onclick='downloadShowplan()'>Download Showplan</button>           \n");
+			out.write("<br>                                                                      \n");
+			out.write("<button onclick='copyShowplanFormattedToClipboard()'>Copy Showplan (formatted)</button> \n");
+			out.write("<button onclick='downloadShowplanFormatted()'>Download Showplan (formatted)</button> \n");
 			out.write("<div id='copy-done'></div>                                                \n");
 			out.write("<br>                                                                      \n");
 			out.write("<hr>                                                                      \n");
@@ -533,7 +574,103 @@ public abstract class ShowplanHtmlView
 //			out.write("{                                                                         \n");
 //			out.write("    window.prompt('Copy to clipboard: Ctrl+C, Enter', showplanText);      \n");
 //			out.write("}                                                                         \n");
+			
 			out.write("                                                                          \n");
+			out.write("function formatXml(xml) {                                                 \n");
+			out.write("    var formatted = '';                                                   \n");
+			out.write("    var reg = /(>)(<)(\\/*)/g;                                            \n");
+			out.write("    xml = xml.replace(reg, '$1\\r\\n$2$3');                               \n");
+			out.write("    var pad = 0;                                                          \n");
+			out.write("    jQuery.each(xml.split('\\r\\n'), function(index, node) {              \n");
+			out.write("        var indent = 0;                                                   \n");
+			out.write("        if (node.match( /.+<\\/\\w[^>]*>$/ )) {                           \n");
+			out.write("            indent = 0;                                                   \n");
+			out.write("        } else if (node.match( /^<\\/\\w/ )) {                            \n");
+			out.write("            if (pad != 0) {                                               \n");
+			out.write("                pad -= 1;                                                 \n");
+			out.write("            }                                                             \n");
+			out.write("        } else if (node.match( /^<\\w[^>]*[^\\/]>.*$/ )) {                \n");
+			out.write("            indent = 1;                                                   \n");
+			out.write("        } else {                                                          \n");
+			out.write("            indent = 0;                                                   \n");
+			out.write("        }                                                                 \n");
+			out.write("                                                                          \n");
+			out.write("        var padding = '';                                                 \n");
+			out.write("        for (var i = 0; i < pad; i++) {                                   \n");
+			out.write("            padding += '  ';                                              \n");
+			out.write("        }                                                                 \n");
+			out.write("                                                                          \n");
+			out.write("        formatted += padding + node + '\\r\\n';                           \n");
+			out.write("        pad += indent;                                                    \n");
+			out.write("    });                                                                   \n");
+			out.write("                                                                          \n");
+			out.write("    return formatted;                                                     \n");
+			out.write("}                                                                         \n");
+			out.write("                                                                          \n");
+
+			// get Query/Plan Hash from XML:   QueryHash="0xE0245C01AFBDBF7E" QueryPlanHash="0xE984CF727B712DF9"
+			out.write("                                                                          \n");
+			out.write("function getFileNameFromXmlPlan(xml)                                      \n");
+			out.write("{                                                                         \n");
+			out.write("    let filename = 'unknown';                                             \n");
+			out.write("    try                                                                   \n");
+			out.write("    {                                                                     \n");
+			out.write("        let startPos      = -1;                                           \n");
+			out.write("        let endPos        = -1;                                           \n");
+			out.write("        let queryHash     = '';                                           \n");
+			out.write("        let queryPlanHash = '';                                           \n");
+			out.write("                                                                          \n");
+			out.write("        startPos = xml.indexOf('QueryHash=\"0x');                         \n");
+			out.write("        endPos   = xml.indexOf(' ', startPos);                            \n");
+			out.write("        if (startPos != -1 && endPos != -1)                               \n");
+			out.write("        {                                                                 \n");
+			out.write("            queryHash = xml.substring(startPos, endPos).replaceAll('\"', '').replace('QueryHash=', '');  \n");
+			out.write("        }                                                                 \n");
+			out.write("                                                                          \n");
+			out.write("        startPos = xml.indexOf('QueryPlanHash=\"0x');                     \n");
+			out.write("        endPos   = xml.indexOf(' ', startPos);                            \n");
+			out.write("        if (startPos != -1 && endPos != -1)                               \n");
+			out.write("        {                                                                 \n");
+			out.write("            queryPlanHash = xml.substring(startPos, endPos).replaceAll('\"', '').replace('QueryPlanHash=', '');  \n");
+			out.write("        }                                                                 \n");
+			out.write("                                                                          \n");
+			out.write("        if (queryHash.length > 0 && queryPlanHash.length > 0)             \n");
+			out.write("        {                                                                 \n");
+			out.write("            filename = 'QueryHash=' + queryHash + '__QueryPlanHash=' + queryPlanHash; \n");
+			out.write("        }                                                                 \n");
+			out.write("                                                                          \n");
+//			out.write("        let xmlDoc   = $.parseXML(xml);                                   \n");
+//			out.write("                                                                          \n");
+//			out.write("        let queryHash        = '';                                        \n");
+//			out.write("        let queryHashArr     = [];                                        \n");
+//			out.write("        let queryPlanHash    = '';                                        \n");
+//			out.write("        let queryPlanHashArr = [];                                        \n");
+//			out.write("        $(xmlDoc).find('StmtSimple').each(function(i,e) {                 \n");
+//			out.write("            queryHashArr    .push($(e).attr('QueryHash'));                \n");
+//			out.write("            queryPlanHashArr.push($(e).attr('QueryPlanHash'));            \n");
+//			out.write("        });                                                               \n");
+//			out.write("                                                                          \n");
+//			out.write("        if (queryPlanHashArr.length > 0)                                  \n");
+//			out.write("        {                                                                 \n");
+//			out.write("            queryPlanHash = queryPlanHashArr[0];                          \n");
+//			out.write("                                                                          \n");
+//			out.write("            if (queryHashArr.length > 0)                                  \n");
+//			out.write("            {                                                             \n");
+//			out.write("                queryHash = queryHashArr[0];                              \n");
+//			out.write("            }                                                             \n");
+//			out.write("        }                                                                 \n");
+//			out.write("                                                                          \n");
+//			out.write("        filename = 'QueryHash=' + queryHash + '__QueryPlanHash=' + queryPlanHash; \n");
+			out.write("    }                                                                     \n");
+			out.write("    catch (error)                                                         \n");
+			out.write("    {                                                                     \n");
+			out.write("        console.error(error);                                             \n");
+			out.write("    }                                                                     \n");
+			out.write("                                                                          \n");
+			out.write("    return filename;                                                      \n");
+			out.write("}                                                                         \n");
+			out.write("                                                                          \n");
+
 			out.write("function copyShowplanToClipboard()                                        \n");
 			out.write("{                                                                         \n");
 			out.write("    var copyFeedback = document.getElementById('copy-done');              \n");
@@ -551,6 +688,25 @@ public abstract class ShowplanHtmlView
 			out.write("    }, 3000);                                                             \n");
 			out.write("}                                                                         \n");
 			out.write("                                                                          \n");
+
+			out.write("function copyShowplanFormattedToClipboard()                               \n");
+			out.write("{                                                                         \n");
+			out.write("    var copyFeedback = document.getElementById('copy-done');              \n");
+			out.write("                                                                          \n");
+			out.write("    // Set feedback                                                       \n");
+			out.write("    copyFeedback.innerHTML     = 'The Query Plan was copied to Clipboard';\n");
+			out.write("    copyFeedback.style.display = 'block';                                 \n");
+			out.write("                                                                          \n");
+			out.write("    // Copy to clipboard                                                  \n");
+			out.write("    copyStringToClipboard(formatXml(showplanText));                       \n");
+			out.write("                                                                          \n");
+			out.write("    // Hide feedback                                                      \n");
+			out.write("    setTimeout( function(){                                               \n");
+			out.write("        copyFeedback.style.display = 'none';                              \n");
+			out.write("    }, 3000);                                                             \n");
+			out.write("}                                                                         \n");
+			out.write("                                                                          \n");
+
 			out.write("function copyStringToClipboard (string) {                                 \n");
 			out.write("    function handler (event)                                              \n");
 			out.write("    {                                                                     \n");
@@ -562,6 +718,7 @@ public abstract class ShowplanHtmlView
 			out.write("    document.addEventListener('copy', handler, true);                     \n");
 			out.write("    document.execCommand('copy');                                         \n");
 			out.write("}                                                                         \n");
+
 			out.write("                                                                          \n");
 			out.write("function downloadShowplan()                                               \n");
 			out.write("{                                                                         \n");
@@ -570,7 +727,21 @@ public abstract class ShowplanHtmlView
 			out.write("                                                                          \n");
 			out.write("    hiddenElement.href     = 'data:attachment/text,' + encodeURI(textToSave); \n");
 			out.write("    hiddenElement.target   = '_blank';                                    \n");
-			out.write("    hiddenElement.download = 'showplan_xxx.xml'                           \n");
+//			out.write("    hiddenElement.download = 'showplan_xxx.xml'                           \n");
+			out.write("    hiddenElement.download = 'showplan__' + getFileNameFromXmlPlan(showplanText) + '.xml.sqlplan' \n");
+			out.write("    hiddenElement.click();                                                \n");
+			out.write("}                                                                         \n"); 
+
+			out.write("                                                                          \n");
+			out.write("function downloadShowplanFormatted()                                      \n");
+			out.write("{                                                                         \n");
+			out.write("    var textToSave = formatXml(showplanText);                             \n");
+			out.write("    var hiddenElement = document.createElement('a');                      \n");
+			out.write("                                                                          \n");
+			out.write("    hiddenElement.href     = 'data:attachment/text,' + encodeURI(textToSave); \n");
+			out.write("    hiddenElement.target   = '_blank';                                    \n");
+//			out.write("    hiddenElement.download = 'showplan_xxx.xml'                           \n");
+			out.write("    hiddenElement.download = 'showplan__' + getFileNameFromXmlPlan(showplanText) + '.xml.sqlplan' \n");
 			out.write("    hiddenElement.click();                                                \n");
 			out.write("}                                                                         \n"); 
 			out.write("</script>                                                                 \n");
@@ -635,7 +806,7 @@ public abstract class ShowplanHtmlView
 				}
 				catch (Exception ex)
 				{
-					showError("Problems when open the URL '"+filename+"'. Caught: "+ex, ex);
+					showError("Problems when open the URL '" + filename + "'. Caught: " + ex, ex);
 				}
 			}
 		}
