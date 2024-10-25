@@ -171,6 +171,18 @@ public class RSyntaxUtilitiesX
 		menu.add(m);
 
 		//--------------------------------
+		// Convert Tabs to Spaces
+//		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.FormatSqlAction(RSyntaxTextAreaX.convertTabsToSpaces));
+//		mi.setText("Convert Tabs to Spaces");
+//		menu.add(mi);
+		
+		//--------------------------------
+		// Convert Spaces to Tabs
+//		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.FormatSqlAction(RSyntaxTextAreaX.convertSpacesToTabs));
+//		mi.setText("Convert Spaces to Tabs");
+//		menu.add(mi);
+		
+		//--------------------------------
 		// Offline DDL View
 		mi = new JMenuItem();
 		mi.setText("Offline DDL Viewer...");

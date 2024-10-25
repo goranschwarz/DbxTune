@@ -191,19 +191,24 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("completed_pct", 7)); // after "row_count"
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_count_abs", 7)); // after "row_count"
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_count_abs"     , 6)); // after "???"
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("estimate_row_count", 7)); // after "???"
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("completed_pct"     , 8)); // after "???"
+//		// TODO: Make the below "add after column name" work...
+//		addPreferredColumnOrder(new ColumnHeaderPropsEntry("completed_pct"     , 6, "task_address"));     // after "row_count", the second param/number is just a fallback
+//		addPreferredColumnOrder(new ColumnHeaderPropsEntry("estimate_row_count", 6, "task_address")); // after "row_count", the second param/number is just a fallback
+//		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_count_abs"     , 6, "task_address"));  // after "task_address", the second param/number is just a fallback
 
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("index_name",    21));
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("object_name",   21));
-		addPreferredColumnOrder(new ColumnHeaderPropsEntry("schema_name",   21));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("database_name", 21)); // before "database_id" (or close)
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("schema_name",   22));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("object_name",   23));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("index_name",    24));
 
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("plan_handle",   ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("sql_handle",    ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN));
 
 		String sql = ""
-			    + "SELECT /* ${cmCollectorName} */ \n"
+				+ "SELECT /* ${cmCollectorName} */ \n"
 				+ "     * \n"
 				+ "    ,row_count AS row_count_abs \n"
 				+ "    ,CAST(-1 as numeric(12,1)) AS completed_pct \n"
@@ -213,9 +218,10 @@ extends CountersModel
 				+ "    ,CAST('' as varchar(128))  AS object_name \n"
 				+ "    ,CAST('' as varchar(128))  AS index_name \n"
 				
-			    + "FROM sys.dm_exec_query_profiles \n"
-			    + "WHERE session_id != @@spid \n"
-			    + "";
+				+ "FROM sys.dm_exec_query_profiles \n"
+				+ "WHERE session_id != @@spid \n"
+				+ "ORDER BY session_id, node_id, thread_id \n"
+				+ "";
 
 		return sql;
 	}

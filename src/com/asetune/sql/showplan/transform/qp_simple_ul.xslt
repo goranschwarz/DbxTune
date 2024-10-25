@@ -92,9 +92,11 @@
 	<ul>
 		<li>
 <!--		<xsl:call-template name="NodeIcon" /> -->
-			                   <b> <xsl:apply-templates select="." mode="NodeLabel" />     </b> &#160;
-                            <code> <xsl:apply-templates select="." mode="NodeLabel2" />    </code> &#160;
-            <i><font color="gray"> <xsl:apply-templates select="." mode="NodeCostLabel" /> </font> </i> &#160;
+			                   <b>   <xsl:apply-templates select="." mode="NodeLabel" />     </b> &#160;
+                            <code>   <xsl:apply-templates select="." mode="NodeLabel2" />    </code> &#160;
+            <i><font color="gray">   <xsl:apply-templates select="." mode="NodeCostLabel" /> </font> </i> &#160;
+            <i><font color="orange"> <xsl:apply-templates select="." mode="NodeTimeLabel" /> </font> </i> &#160;
+               <font color="gray">   <xsl:apply-templates select="." mode="NodeCardinalityLabel" /> </font> &#160;
 <!--		<xsl:call-template name="ToolTip" />-->
 
 			<xsl:apply-templates select="*/*" mode="QpTr" />
@@ -449,6 +451,32 @@
     <!--<div>Cost: 0%</div>-->
   </xsl:template>
 
+  <!-- Displays the node TIME label. -->
+  <xsl:template match="s:RelOp" mode="NodeTimeLabel">
+    <xsl:if test="s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualElapsedms">
+<!--      <xsl:variable name="NodeTimeMs"><xsl:value-of select="max(s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualElapsedms)" /></xsl:variable>-->
+      <!-- get MAX value for 'ActualElapsedms', if we are using a Parallel Plan -->
+      <xsl:variable name="NodeTimeMs">
+	    <xsl:for-each select="s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualElapsedms">
+          <xsl:sort select="number(.)" data-type="number" order="descending"/>
+          <xsl:if test="position() = 1">
+            <xsl:value-of select="."/>
+          </xsl:if>
+        </xsl:for-each>
+      </xsl:variable>
+      <!--<div>-->Time: <xsl:value-of select="format-number(number($NodeTimeMs) div number(1000), '0.000')" /> s<!--</div>-->
+    </xsl:if>
+  </xsl:template>
+
+  <!-- Displays the node CARDINALITY label. -->
+  <xsl:template match="s:RelOp" mode="NodeCardinalityLabel">
+    <xsl:if test="s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualRows">
+      <xsl:variable name="EstimateRows"><xsl:value-of select="@EstimateRows" /></xsl:variable>
+      <xsl:variable name="ActualRows"><xsl:value-of select="sum(s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualRows)" /></xsl:variable>
+      <!--<div>-->A=<xsl:value-of select="format-number(number($ActualRows), '###,###,###,###')"/> of E=<xsl:value-of select="format-number(number($EstimateRows), '###,###,###,###')"/> (<xsl:value-of select="format-number(number($ActualRows) div number($EstimateRows), '0%')"/>)<!--</div>-->
+    </xsl:if>
+  </xsl:template>
+
   <!-- 
   ================================
   Tool tip detail sections
@@ -704,7 +732,14 @@
 
   <!-- Display the logical operation for any node where it is not the same as the physical operation. -->
   <xsl:template match="s:RelOp[@LogicalOp != @PhysicalOp]" mode="NodeLabel2">
-    <!--<div>-->(<xsl:value-of select="@LogicalOp" />)<!--</div>-->
+    <xsl:choose>
+      <xsl:when test="@PhysicalOp = 'Index Spool' and @LogicalOp = 'Eager Spool'">
+        <!--<div class="qp-node-label-2-warning">--><font color="red">(<xsl:value-of select="@LogicalOp" />)</font><!--</div>-->
+      </xsl:when> 
+      <xsl:otherwise>
+        <!--<div>-->(<xsl:value-of select="@LogicalOp" />)<!--</div>-->
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!-- Disable the default template -->

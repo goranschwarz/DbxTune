@@ -728,7 +728,7 @@ extends MainFrame
 		_logger.debug("createPredefinedSqlMenu(): called.");
 
 		final JMenu menu = new JMenu("Predefined SQL Statements");
-		menu.setToolTipText("<html>This is a bunch of stored procedures...<br>If the prcocedure doesn't exist. It will be created.<br>The user you are logged in as need to have the correct priviliges to create procedues in sybsystemprocs.</html>");;
+		menu.setToolTipText("<html>This is a bunch of stored procedures...<br>If the procedure doesn't exist. It will be created.<br>The user you are logged in as need to have the correct priviliges to create procedues in sybsystemprocs.</html>");
 		menu.setIcon(SwingUtils.readImageIcon(Version.class, "images/pre_defined_sql_statement.png"));
 
 		Configuration systmp = new Configuration();

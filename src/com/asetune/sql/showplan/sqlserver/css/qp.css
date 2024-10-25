@@ -5,6 +5,10 @@
     border: 1px solid black;
 }
 
+div.qp-node-label-2-warning {
+    color: red;
+}
+
 div.qp-node,
 div.qp-tt {
     font-size: 11px;

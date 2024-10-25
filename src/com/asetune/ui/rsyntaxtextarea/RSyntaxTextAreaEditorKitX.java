@@ -319,6 +319,117 @@ ex.printStackTrace();
 	}
 
 	/**
+	 * ConvertTabsToSpaces
+	 */
+	@SuppressWarnings("serial")
+	public static class ConvertTabsToSpaces extends RecordableTextAction
+	{
+		protected ConvertTabsToSpaces(String name)
+		{
+			super(name);
+		}
+
+		@Override
+		public void actionPerformedImpl(ActionEvent e, RTextArea textArea)
+		{
+			if (!textArea.isEditable() || !textArea.isEnabled())
+			{
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+
+			// Note: This does the WHOLE document
+			System.out.println("ConvertTabsToSpaces -- NOT YET IMPLEMENTED");
+
+//			textArea.convertTabsToSpaces();
+			
+//			String str = textArea.getSelectedText();
+//			if (str != null)
+//			{
+//				textArea.beginAtomicEdit();
+//				try 
+//				{
+//					System.out.println("ConvertTabsToSpaces -- NOT YET IMPLEMENTED");
+//
+////					int selStart = textArea.getSelectionStart();
+////					int selEnd   = textArea.getSelectionEnd();
+////
+////					str = str.toUpperCase();
+////					textArea.replaceSelection(str);
+////					
+////					textArea.setSelectionStart(selStart);
+////					textArea.setSelectionEnd  (selEnd);
+//				}
+//				finally 
+//				{
+//					textArea.endAtomicEdit(); 
+//				}
+//			}
+		}
+
+		@Override
+		public final String getMacroID()
+		{
+			return getName();
+		}
+	}
+
+	/**
+	 * ConvertSpacesToTabs
+	 */
+	@SuppressWarnings("serial")
+	public static class ConvertSpacesToTabs extends RecordableTextAction
+	{
+		protected ConvertSpacesToTabs(String name)
+		{
+			super(name);
+		}
+
+		@Override
+		public void actionPerformedImpl(ActionEvent e, RTextArea textArea)
+		{
+			if (!textArea.isEditable() || !textArea.isEnabled())
+			{
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+
+			System.out.println("ConvertSpacesToTabs -- NOT YET IMPLEMENTED");
+
+			// Note: This does the WHOLE document
+			textArea.convertSpacesToTabs();
+						
+//			String str = textArea.getSelectedText();
+//			if (str != null)
+//			{
+//				textArea.beginAtomicEdit();
+//				try 
+//				{
+//					System.out.println("ConvertSpacesToTabs -- NOT YET IMPLEMENTED");
+////					int selStart = textArea.getSelectionStart();
+////					int selEnd   = textArea.getSelectionEnd();
+////
+////					str = str.toUpperCase();
+////					textArea.replaceSelection(str); 
+////					
+////					textArea.setSelectionStart(selStart);
+////					textArea.setSelectionEnd  (selEnd);
+//				}
+//				finally 
+//				{
+//					textArea.endAtomicEdit(); 
+//				}
+//			}
+		}
+
+		@Override
+		public final String getMacroID()
+		{
+			return getName();
+		}
+	}
+
+	/**
 	 * to uppercase
 	 */
 	@SuppressWarnings("serial")
