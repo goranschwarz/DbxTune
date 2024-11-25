@@ -569,8 +569,8 @@ extends CountersModel
 			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
 			"JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
-			"LEFT JOIN sys." + dm_exec_query_memory_grants + " dem ON des.session_id = dem.session_id \n" +
-//			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
+			"LEFT OUTER JOIN sys." + dm_exec_query_memory_grants + " dem ON des.session_id = dem.session_id \n" +
+//			"LEFT OUTER JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
 			sql_tranInfo_join_1 +
 			"OUTER APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
 			"OUTER APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +

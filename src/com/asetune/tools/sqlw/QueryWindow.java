@@ -461,6 +461,9 @@ public class QueryWindow
 	public final static String  PROPKEY_replaceFakeQuotedIdent = PROPKEY_APP_PREFIX + "replaceFakeQuotedIdentifiers";
 	public final static boolean DEFAULT_replaceFakeQuotedIdent = false;
 
+	public final static String  PROPKEY_replaceFakeNewlines    = PROPKEY_APP_PREFIX + "replaceFakeNewlines";
+	public final static boolean DEFAULT_replaceFakeNewlines    = false;
+
 	public final static String  PROPKEY_lastFileNameSaveMax    = "LastFileList.saveSize";
 	public final static int     DEFAULT_lastFileNameSaveMax    = 20;
 
@@ -487,6 +490,9 @@ public class QueryWindow
 	
 	public final static String  PROPKEY_checkForOversizedResults = PROPKEY_APP_PREFIX + "check.for.oversized.results";
 	public final static boolean DEFAULT_checkForOversizedResults = false;
+
+	public final static String  PROPKEY_sqlserverShowplan_useEditorText = PROPKEY_APP_PREFIX + "sqlserver.showplan.use.editor.text";
+	public final static boolean DEFAULT_sqlserverShowplan_useEditorText = true;
 
 	static
 	{
@@ -606,6 +612,7 @@ public class QueryWindow
 	private JMenuItem         _sqlBatchTermDialog_mi      = new JMenuItem        ("Change SQL Batch Terminator");
 	private JCheckBoxMenuItem _sendCommentsOnly_chk       = new JCheckBoxMenuItem("Send SQL if only comments", DEFAULT_sendCommentsOnly);
 	private JCheckBoxMenuItem _replaceFakeQuotedId_chk    = new JCheckBoxMenuItem("Replace Fake Quoted Identifiers", DEFAULT_replaceFakeQuotedIdent);
+	private JCheckBoxMenuItem _replaceFakeNewlines_chk    = new JCheckBoxMenuItem("Replace all Faked newlines '\\n' with a real/actual newline", DEFAULT_replaceFakeNewlines);
 	private JCheckBoxMenuItem _tableTooltipOnCells_chk    = new JCheckBoxMenuItem("Use Table Tooltip on Cells", ResultSetJXTable.DEFAULT_TABLE_TOOLTIP_SHOW_ALL_COLUMNS);
 
 	private JButton           _appOptions_but             = new JButton("Options");
@@ -1976,6 +1983,11 @@ public class QueryWindow
 				"Before Execution: Replaces Fake Quoted Identifiers '[' and ']' into DBMS Vendor specific characters.<br>" +
 				"Note: Used 'Print Sent SQL Statement' to view the actual text sent to the DBMS.<br>" +
 				"</html>");
+		_replaceFakeNewlines_chk.setToolTipText(
+				"<html>" +
+				"Before Execution: Replaces '\\n' characters into any real newline characters.<br>" +
+				"Note: Used 'Print Sent SQL Statement' to view the actual text sent to the DBMS.<br>" +
+				"</html>");
 		_sqlBatchTermDialog_mi.setToolTipText(
 				"<html>" +
 				"Open a dialog where you can change the string used to send a SQL Batch to the server." +
@@ -2009,7 +2021,8 @@ public class QueryWindow
 
 		_query_txt.setMarkOccurrences(true);
 //		_query_txt.setMarkOccurrencesColor(color)
-		
+_queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaround (RsyntaxtTextAre freezes when updating all entries for ',' in the error strip)
+
 		// To set all RSyntaxTextAreaX components to use "_"
 		RSyntaxUtilitiesX.setCharsAllowedInWords("_");
 		// To set all _query_txt components to use "_", this since it's of TextEditorPane, which extends RSyntaxTextArea
@@ -2802,6 +2815,7 @@ public class QueryWindow
 		_sendCommentsOnly_chk       .setSelected( conf.getBooleanProperty(PROPKEY_sendCommentsOnly,                                DEFAULT_sendCommentsOnly) );
 		_rsInTabs_chk               .setSelected( conf.getBooleanProperty(PROPKEY_rsInTabs,                                        DEFAULT_rsInTabs) );
 		_replaceFakeQuotedId_chk    .setSelected( conf.getBooleanProperty(PROPKEY_replaceFakeQuotedIdent,                          DEFAULT_replaceFakeQuotedIdent) );
+		_replaceFakeNewlines_chk    .setSelected( conf.getBooleanProperty(PROPKEY_replaceFakeNewlines,                             DEFAULT_replaceFakeNewlines) );
 		_tableTooltipOnCells_chk    .setSelected( conf.getBooleanProperty(ResultSetJXTable.PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS, ResultSetJXTable.DEFAULT_TABLE_TOOLTIP_SHOW_ALL_COLUMNS) );
 
 		_cmdHistoryFilename     = conf.getProperty(PROPKEY_historyFileName,        DEFAULT_historyFileName);
@@ -2854,6 +2868,7 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_sendCommentsOnly,                                _sendCommentsOnly_chk       .isSelected());
 		conf.setProperty(PROPKEY_rsInTabs,                                        _rsInTabs_chk               .isSelected());
 		conf.setProperty(PROPKEY_replaceFakeQuotedIdent,                          _replaceFakeQuotedId_chk    .isSelected());
+		conf.setProperty(PROPKEY_replaceFakeNewlines,                             _replaceFakeNewlines_chk    .isSelected());
 		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS, _tableTooltipOnCells_chk.isSelected());
 		
 		conf.setProperty(PROPKEY_historyFileName,                                 _cmdHistoryFilename);
@@ -4273,7 +4288,8 @@ public class QueryWindow
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderSqlServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-				//_compleationProviderAbstract.setCreateLocalConnection(true); // POSSIBLE: true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
+				_compleationProviderAbstract.setCreateLocalConnection(true); // POSSIBLE: true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
+				// Testing setCreateLocalConnection(true) ... so a LOCAL Connection, since errors: CompletionProviderAbstractSql  - Problems when getting SQL Tables/columns, continuing with next lookup. Caught: com.microsoft.sqlserver.jdbc.SQLServerException: The prepared statement handle 2 is not valid in this context.  Please verify that current database, user default schema, and ANSI_NULLS and QUOTED_IDENTIFIER set options are not changed since the handle is prepared.
 
 				// Sortorder & charset
 				//_connectedSrvCharset   = DbUtils.getMsSqlCharset(_conn);
@@ -7673,6 +7689,17 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		ddlGenMenu.add(ddlGenMenuUpdate);
 		ddlGenMenu.add(ddlGenMenuDelete);
 		
+		JMenuItem configure = new JMenuItem("Config...");
+		ddlGenMenu.add(configure);
+		configure.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				CrudDmlConfigDialog.showDialog(_window);
+			}
+		});
+
 		JMenuItem toClipboard = new JMenuItem("To Clipboard");
 //		JMenuItem toEditor = new JMenuItem("To Editors Current Location");
 //		JMenuItem toWindow = new JMenuItem("To Separate Window");
@@ -8747,6 +8774,12 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				if ( StringUtil.hasValue(sql) && _conn != null && (_replaceFakeQuotedId_chk.isSelected() || sr.getOption_replaceFakeQuotedIdent()) )
 				{
 					sql = _conn.quotifySqlString(sql);
+				}
+
+				// Replace FAKE newlines with REAL newlines 
+				if ( StringUtil.hasValue(sql) && (_replaceFakeNewlines_chk.isSelected() || sr.getOption_replaceNewlines()) )
+				{
+					sql = sql.replace("\\n", "\n");
 				}
 
 				progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of "+batchCount+", starting at row "+(sr.getSqlBatchStartLine()+1) );
@@ -11127,6 +11160,9 @@ checkPanelSize(_resPanel, comp);
 				}
 			}
 		}
+		
+		// Add the completion provider so we can use it for Cell ToolTip
+		tab.setCompleationProvider(_compleationProviderAbstract);
 
 		GPanel p = new GPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
 
@@ -11180,9 +11216,21 @@ checkPanelSize(_resPanel, comp);
 						@Override
 						public void actionPerformed(ActionEvent e)
 						{
+							String localText = originTextStr;
+							// Lets get "rsta" selected text or ALL... so we can "paste" a XML Showplan and then open the Browser or APP
+							// Note: The XML Pretty-print may produce "not 100%" the same as the origin XML...
+							//       So if this happens, then we can switch to using the "original" XML text, which is done with:  PROPKEY_sqlserverShowplan_useEditorText = true|false
+							boolean useTextInEditor = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sqlserverShowplan_useEditorText, DEFAULT_sqlserverShowplan_useEditorText);
+							if (useTextInEditor)
+							{
+								localText = rsta.getText();
+								if (StringUtil.hasValue(rsta.getSelectedText()))
+									localText = rsta.getSelectedText();
+							}
+							
 							try
 							{
-								File tmpFile = ShowplanHtmlView.createHtmlFile(ShowplanHtmlView.Type.SQLSERVER, originTextStr);
+								File tmpFile = ShowplanHtmlView.createHtmlFile(ShowplanHtmlView.Type.SQLSERVER, localText);
 								
 								Desktop desktop = Desktop.getDesktop();
 								if ( desktop.isSupported(Desktop.Action.BROWSE) )
@@ -11207,9 +11255,22 @@ checkPanelSize(_resPanel, comp);
 						@Override
 						public void actionPerformed(ActionEvent e)
 						{
+							String localText = originTextStr;
+
+							// Lets get "rsta" selected text or ALL... so we can "paste" a XML Showplan and then open the Browser or APP
+							// Note: The XML Pretty-print may produce "not 100%" the same as the origin XML...
+							//       So if this happens, then we can switch to using the "original" XML text, which is done with:  PROPKEY_sqlserverShowplan_useEditorText = true|false
+							boolean useTextInEditor = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sqlserverShowplan_useEditorText, DEFAULT_sqlserverShowplan_useEditorText);
+							if (useTextInEditor)
+							{
+								localText = rsta.getText();
+								if (StringUtil.hasValue(rsta.getSelectedText()))
+									localText = rsta.getSelectedText();
+							}
+
 							try
 							{
-								File tmpFile = createTempFile("sqlSrvPlan_", ".xml", originTextStr.getBytes());
+								File tmpFile = createTempFile("sqlSrvPlan_", ".xml", localText.getBytes());
 								SqlSentryPlanExplorer.openSqlPlanExplorer(tmpFile);
 							}
 							catch (IOException ex)
@@ -11231,10 +11292,22 @@ checkPanelSize(_resPanel, comp);
 						@Override
 						public void actionPerformed(ActionEvent e)
 						{
+							String localText = originTextStr;
+
+							// Lets get "rsta" selected text or ALL... so we can "paste" a XML Showplan and then open the Browser or APP
+							// Note: The XML Pretty-print may produce "not 100%" the same as the origin XML...
+							//       So if this happens, then we can switch to using the "original" XML text, which is done with:  PROPKEY_sqlserverShowplan_useEditorText = true|false
+							boolean useTextInEditor = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sqlserverShowplan_useEditorText, DEFAULT_sqlserverShowplan_useEditorText);
+							if (useTextInEditor)
+							{
+								localText = rsta.getText();
+								if (StringUtil.hasValue(rsta.getSelectedText()))
+									localText = rsta.getSelectedText();
+							}
+
 							try
 							{
-//								File tmpFile = createTempFile("sqlSrvPlan_", ".xml", originTextStr.getBytes());
-								File tmpFile = createTempFile("sqlSrvPlan_", ".sqlplan", originTextStr.getBytes());
+								File tmpFile = createTempFile("sqlSrvPlan_", ".sqlplan", localText.getBytes());
 								AzureDataStudio.open(tmpFile);
 							}
 							catch (IOException ex)
@@ -11256,9 +11329,22 @@ checkPanelSize(_resPanel, comp);
 						@Override
 						public void actionPerformed(ActionEvent e)
 						{
+							String localText = originTextStr;
+
+							// Lets get "rsta" selected text or ALL... so we can "paste" a XML Showplan and then open the Browser or APP
+							// Note: The XML Pretty-print may produce "not 100%" the same as the origin XML...
+							//       So if this happens, then we can switch to using the "original" XML text, which is done with:  PROPKEY_sqlserverShowplan_useEditorText = true|false
+							boolean useTextInEditor = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sqlserverShowplan_useEditorText, DEFAULT_sqlserverShowplan_useEditorText);
+							if (useTextInEditor)
+							{
+								localText = rsta.getText();
+								if (StringUtil.hasValue(rsta.getSelectedText()))
+									localText = rsta.getSelectedText();
+							}
+
 							try
 							{
-								File tmpFile = createTempFile("sqlSrvPlan_", ".sqlplan", originTextStr.getBytes());
+								File tmpFile = createTempFile("sqlSrvPlan_", ".sqlplan", localText.getBytes());
 
 								Desktop desktop = Desktop.getDesktop();
 								if ( desktop.isSupported(Desktop.Action.BROWSE) )
@@ -11272,6 +11358,53 @@ checkPanelSize(_resPanel, comp);
 					});
 					// Add the Button
 					p.add(showplanIn__SSMS, "wrap");
+
+					//---------------------------------------------------------------
+					// Set what value to send to: Showplan Viewers
+					//---------------------------------------------------------------
+					final JComboBox<String> sendEditorOrOriginText = new JComboBox<String>(new String[] {
+							"Send Formatted XML in below editor to the Above Showplan Viewers",
+							"Send Original XML to the Above Showplan Viewers"}
+					);
+					sendEditorOrOriginText.setToolTipText("What 'type' of XML do you want to send to the above Showplan Viewers.");
+
+					// Set what we are using for the moment
+					boolean useTextInEditor = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sqlserverShowplan_useEditorText, DEFAULT_sqlserverShowplan_useEditorText);
+					if (useTextInEditor)
+						sendEditorOrOriginText.setSelectedIndex(0);
+					else
+						sendEditorOrOriginText.setSelectedIndex(1);
+						
+					sendEditorOrOriginText.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							int selectedIndex = sendEditorOrOriginText.getSelectedIndex();
+							boolean useEditorText = selectedIndex == 0;
+
+							Configuration tmpCfg = Configuration.getInstance(Configuration.USER_TEMP);
+							tmpCfg.setProperty(PROPKEY_sqlserverShowplan_useEditorText, useEditorText);
+						}
+					});
+					// Add the Button
+					p.add(sendEditorOrOriginText, "wrap");
+
+					//---------------------------------------------------------------
+					// Copy Origin XML Plan
+					//---------------------------------------------------------------
+					JButton showplanCopyUnformatted = new JButton("Copy Unformatted/Origin Plan");
+					showplanCopyUnformatted.setToolTipText("Copy the Unformatted/Origin Execution plan into the copy paste buffer.");
+					showplanCopyUnformatted.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							SwingUtils.setClipboardContents(originTextStr);
+						}
+					});
+					// Add the Button
+					p.add(showplanCopyUnformatted, "wrap");
 				}
 			}
 
@@ -12720,6 +12853,7 @@ checkPanelSize(_resPanel, comp);
 		SHOW_PROC_TEXT_ON_ERROR,
 		SEND_EMTY_SQL_BATCHES,
 		REPLACE_FAKE_QUOTED_IDENTIFIERS,
+		REPLACE_FAKE_NEWLINES,
 		USE_TOOLTIP_ON_CELLS
 	};
 	
@@ -12743,6 +12877,7 @@ checkPanelSize(_resPanel, comp);
     		case SHOW_PROC_TEXT_ON_ERROR            : _getObjectTextOnError_chk  .setSelected(b);  break;
     		case SEND_EMTY_SQL_BATCHES              : _sendCommentsOnly_chk      .setSelected(b);  break;
     		case REPLACE_FAKE_QUOTED_IDENTIFIERS    : _replaceFakeQuotedId_chk   .setSelected(b);  break;
+    		case REPLACE_FAKE_NEWLINES              : _replaceFakeNewlines_chk   .setSelected(b);  break;
     		case USE_TOOLTIP_ON_CELLS               : _tableTooltipOnCells_chk   .setSelected(b);  break;
 		}
 	}
@@ -12785,6 +12920,7 @@ checkPanelSize(_resPanel, comp);
 		_sendCommentsOnly_chk      .setText("<html><b>Send <i>empty</i> SQL Batches</b>  - <i><font color='green'>If SQL is only comments, do send it to the server.</font></i></html>");
 		_sqlBatchTermDialog_mi     .setText("SET_LATER: _sqlBatchTermDialog_mi");
 		_replaceFakeQuotedId_chk   .setText("<html><b>Replace Fake Quoted Identifiers</b> - <i><font color='green'>Replaces '[' and ']' chars into DBMS Specific.</font></i> 'go rfqi'</html>");
+		_replaceFakeNewlines_chk   .setText("<html><b>Replace Fake Newlines</b>           - <i><font color='green'>Replaces faked newlines '\\n' with real/actual newlines.</font></i> 'go rnl'</html>");
 		_tableTooltipOnCells_chk   .setText("<html><b>Use Table Tooltip on Cells</b>      - <i><font color='green'>Display all columns in a table tooltip when hovering over a cell.</font></i></html>");
 
 		// For dialogs set special icon
@@ -12810,6 +12946,7 @@ checkPanelSize(_resPanel, comp);
 //		popupMenu.add(_jdbcAutoCommit_chk);
 		popupMenu.add(_sendCommentsOnly_chk);
 		popupMenu.add(_replaceFakeQuotedId_chk);
+		popupMenu.add(_replaceFakeNewlines_chk);
 		popupMenu.add(_tableTooltipOnCells_chk);
 //		popupMenu.add(new JSeparator());
 		
@@ -12900,6 +13037,16 @@ checkPanelSize(_resPanel, comp);
 		
 		// Action CheckBox: _replaceFakeQuotedId_chk
 		_replaceFakeQuotedId_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
+			}
+		});
+		
+		// Action CheckBox: _replaceFakeNewlines_chk
+		_replaceFakeNewlines_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)

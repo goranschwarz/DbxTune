@@ -194,6 +194,8 @@ extends CountersModel
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_count_abs"     , 6)); // after "???"
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("estimate_row_count", 7)); // after "???"
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("completed_pct"     , 8)); // after "???"
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("elapsed_time_ms"   , 9)); // after "???"
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("cpu_time_ms"       , 10)); // after "???"
 //		// TODO: Make the below "add after column name" work...
 //		addPreferredColumnOrder(new ColumnHeaderPropsEntry("completed_pct"     , 6, "task_address"));     // after "row_count", the second param/number is just a fallback
 //		addPreferredColumnOrder(new ColumnHeaderPropsEntry("estimate_row_count", 6, "task_address")); // after "row_count", the second param/number is just a fallback

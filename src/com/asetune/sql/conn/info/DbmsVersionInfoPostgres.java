@@ -21,11 +21,18 @@
  ******************************************************************************/
 package com.asetune.sql.conn.info;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import org.apache.log4j.Logger;
+
 import com.asetune.sql.conn.DbxConnection;
 
 public class DbmsVersionInfoPostgres
 extends DbmsVersionInfo
 {
+	private static Logger _logger = Logger.getLogger(DbmsVersionInfoPostgres.class);
 
 	public DbmsVersionInfoPostgres(DbxConnection conn)
 	{
@@ -44,6 +51,33 @@ extends DbmsVersionInfo
 	 */
 	private void create(DbxConnection conn)
 	{
-	}
+		String sql;
 
+		//---------------------------------------------------
+		// Check if it looks like a GCP, AWS, Azure Managed DBMS Instance
+		//---------------------------------------------------
+		_isGcpManagedDbms   = false;
+		_isAwsManagedDbms   = false;
+		_isAzureManagedDbms = false;
+
+		sql = "SELECT rolname FROM pg_roles WHERE rolname IN ('cloudsqlsuperuser', 'rds_superuser', 'rdsadmin', 'azure_pg_admin')";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				String rolename = rs.getString(1);
+
+				if (rolename == null)
+					continue;
+
+				if      (rolename.startsWith("cloudsql")) _isGcpManagedDbms   = true;
+				else if (rolename.startsWith("rds"     )) _isAwsManagedDbms   = true;
+				else if (rolename.startsWith("azure"   )) _isAzureManagedDbms = true;
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.error("Problems checking if the Postgres Connection is a GCP/AWS/Azure Managed DBMS Instance. ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message='" + ex.getMessage() + "', sql=|" + sql + "|.", ex);
+		}
+	}
 }

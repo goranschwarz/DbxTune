@@ -117,10 +117,12 @@ extends HttpServlet
 				"     \n" +
 
 				// Possibly use local install:
-				"    <script src='https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js'></script> \n" +
+//				"    <script src='https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js'></script> \n" +
+				"    <script src='https://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n" +
 
 				// Possibly use local install:
-				"    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/css/qp.min.css' /> \n" +
+//				"    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/css/qp.min.css' /> \n" +
+				"    <link rel='stylesheet' type='text/css' href='https://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n" +
 
 				"</head> \n" +
 				" \n" +

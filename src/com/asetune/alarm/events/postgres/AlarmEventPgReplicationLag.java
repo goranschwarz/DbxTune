@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', total_lag_kb=" + total_lag_kb + ". (thresholdKb="+thresholdKb+")",
+				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', total_lag_kb=" + total_lag_kb + ", mb=" + (total_lag_kb / 1024) + ". (thresholdKb=" + thresholdKb + ", mb=" + (thresholdKb / 1024) + ")",
 				thresholdKb
 				);
 

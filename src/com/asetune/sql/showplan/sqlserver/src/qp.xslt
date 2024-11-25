@@ -27,30 +27,93 @@
   <xsl:template match="s:BatchSequence/s:Batch/s:Statements/*" mode="Statement">
     <div class="qp-statement-header">
       <div class="qp-statement-header-row">
-        <div><xsl:value-of select="@StatementText" /></div>
+        <div>
+          <xsl:attribute name="title">
+            <xsl:value-of select="@StatementText" />
+          </xsl:attribute>
+          <xsl:value-of select="@StatementText" />
+        </div>
       </div>
       <xsl:apply-templates select="s:QueryPlan/s:MissingIndexes/s:MissingIndexGroup" mode="MissingIndex" />
+      <xsl:apply-templates select="." mode="MissingIndexForEagerIndexSpool" />
     </div>
     <xsl:apply-templates select="." mode="QpTr" />
   </xsl:template>
 
   <xsl:template match="s:MissingIndexGroup" mode="MissingIndex">
     <div class="qp-statement-header-row missing-index">
-      <div>Missing Index (Impact <xsl:value-of select="@Impact" />): <xsl:apply-templates select="s:MissingIndex" mode="CreateIndex" /></div>
+      <div>
+        <xsl:attribute name="title">
+          <xsl:apply-templates select="s:MissingIndex" mode="CreateIndex" />
+        </xsl:attribute>
+        Missing Index (Impact <xsl:value-of select="@Impact" />): <xsl:apply-templates select="s:MissingIndex" mode="CreateIndex" />
+      </div>
     </div>
   </xsl:template>
 
   <!-- This template produces the "CREATE INDEX ..." text -->
   <xsl:template match="s:MissingIndex" mode="CreateIndex">CREATE NONCLUSTERED INDEX [&lt;Name of Missing Index, sysname,>] ON <xsl:value-of select="@Schema" />.<xsl:value-of select="@Table" /> (<xsl:for-each select="s:ColumnGroup[@Usage!='INCLUDE']/s:Column">
   <xsl:value-of select="@Name" />
-  <xsl:if test="position() != last()">,</xsl:if>
+  <xsl:if test="position() != last()">, </xsl:if>
 </xsl:for-each>)
 <xsl:if test="s:ColumnGroup[@Usage='INCLUDE']"> INCLUDE (<xsl:for-each select="s:ColumnGroup[@Usage='INCLUDE']/s:Column">
   <xsl:value-of select="@Name" />
-  <xsl:if test="position() != last()">,</xsl:if>
+  <xsl:if test="position() != last()">, </xsl:if>
 </xsl:for-each>)</xsl:if>
+  -- WITH (SORT_IN_TEMPDB=ON, DATA_COMPRESSION=PAGE)
   </xsl:template>
-  
+
+
+  <!-- MissingIndexForEagerIndexSpool - Match each RelOp with PhysicalOp="Index Spool" and LogicalOp="Eager Spool" -->
+  <xsl:template match="s:RelOp[@PhysicalOp='Index Spool' and @LogicalOp='Eager Spool']" mode="MissingIndexForEagerIndexSpool">
+    <div class="qp-statement-header-row missing-index">
+
+    <xsl:variable name="NodeId" select="@NodeId"/>
+
+    <!-- Extract schema and table names from the first ColumnReference in OutputList -->
+    <xsl:variable name="schema" select="s:OutputList/s:ColumnReference[1]/@Schema"/>
+    <xsl:variable name="table" select="s:OutputList/s:ColumnReference[1]/@Table"/>
+
+    <!-- Extract key columns from SeekPredicate in the Spool operation -->
+<!--    <xsl:variable name="keyColumns" select="s:Spool/s:SeekPredicateNew/s:SeekKeys/s:Prefix/s:RangeExpressions/s:ScalarOperator/s:Identifier/s:ColumnReference/@Column"/>-->
+    <xsl:variable name="keyColumns" select="s:Spool/s:SeekPredicateNew/s:SeekKeys/s:Prefix/s:RangeColumns/s:ColumnReference/@Column"/>
+
+    <!-- Extract included columns from OutputList in the Spool operation -->
+    <xsl:variable name="includeColumns" select="s:OutputList/s:ColumnReference/@Column"/>
+
+    <!-- Generate SQL CREATE INDEX statement with schema, table, key columns, and included columns -->
+<!--    <xsl:text>Missing Index (for "Eager Index Spool", at nodeId=</xsl:text>-->
+    <xsl:text>Found "Eager Index Spool", at nodeId=</xsl:text>
+	<xsl:value-of select="$NodeId"/>
+    <xsl:text>: </xsl:text>
+    <xsl:text>CREATE NONCLUSTERED INDEX &lt;Name of Missing Index&gt; ON </xsl:text>
+    <xsl:value-of select="$schema"/>
+    <xsl:text>.</xsl:text>
+    <xsl:value-of select="$table"/>
+    <xsl:text> (</xsl:text>
+    <xsl:for-each select="$keyColumns">
+      <xsl:value-of select="."/>
+      <xsl:if test="position() != last()">, </xsl:if>
+    </xsl:for-each>
+    <xsl:text>)</xsl:text>
+
+    <!-- Include additional columns if any are found in the OutputList -->
+    <xsl:if test="count($includeColumns) &gt; 0">
+      <xsl:text>&#10;INCLUDE (</xsl:text>
+      <xsl:for-each select="$includeColumns">
+        <xsl:value-of select="."/>
+        <xsl:if test="position() != last()">, </xsl:if>
+      </xsl:for-each>
+      <xsl:text>)</xsl:text>
+    </xsl:if>
+    <xsl:text>&#10;</xsl:text>
+    <xsl:text>-- WITH (SORT_IN_TEMPDB=ON, DATA_COMPRESSION=PAGE) &#10;</xsl:text>
+
+    </div>
+  </xsl:template>
+
+
+
   <!-- Each node has a parent qp-tr element which contains / positions the node and its children -->
   <xsl:template match="s:RelOp|s:StmtSimple|s:StmtUseDb|s:StmtCond|s:StmtCursor|s:Operation" mode="QpTr">
     <div class="qp-tr">
@@ -64,6 +127,7 @@
               <xsl:attribute name="data-node-id"><xsl:value-of select="@NodeId" /></xsl:attribute>
             </xsl:if>
             <xsl:call-template name="NodeIcon" />
+			<div class="qp-node-id"><xsl:value-of select="@NodeId" /></div>
             <div><xsl:apply-templates select="." mode="NodeLabel" /></div>
             <xsl:apply-templates select="." mode="NodeLabel2" />
             <xsl:apply-templates select="." mode="NodeCostLabel" />
@@ -414,14 +478,14 @@
   <xsl:template match="s:RelOp" mode="NodeCostLabel">
     <xsl:variable name="EstimatedOperatorCost"><xsl:call-template name="EstimatedOperatorCost" /></xsl:variable>
     <xsl:variable name="TotalCost"><xsl:value-of select="ancestor::s:QueryPlan/s:RelOp/@EstimatedTotalSubtreeCost" /></xsl:variable>
-    <div>Cost: <xsl:value-of select="format-number(number($EstimatedOperatorCost) div number($TotalCost), '0%')" /></div>
+    <div class="qp-node-label-cost">Cost: <xsl:value-of select="format-number(number($EstimatedOperatorCost) div number($TotalCost), '0%')" /></div>
   </xsl:template>
 
   <!-- Dont show the node cost for statements. -->
   <xsl:template match="s:StmtSimple|s:StmtUseDb" mode="NodeCostLabel" />
 
   <xsl:template match="s:StmtCursor|s:Operation|s:StmtCond" mode="NodeCostLabel">
-    <div>Cost: 0%</div>
+    <div class="qp-node-label-cost">Cost: 0%</div>
   </xsl:template>
 
   <!-- Displays the node TIME label. -->
@@ -437,7 +501,28 @@
           </xsl:if>
         </xsl:for-each>
       </xsl:variable>
-      <!--<div>-->Time: <xsl:value-of select="format-number(number($NodeTimeMs) div number(1000), '0.000')" /> s<!--</div>-->
+      <div class="qp-node-label-time">Time: <xsl:value-of select="format-number(number($NodeTimeMs) div number(1000), '0.000')" /> s</div>
+    </xsl:if>
+  </xsl:template>
+
+  <!-- Displays the node TIME label (at Statement level). -->
+  <xsl:template match="s:StmtSimple" mode="NodeTimeLabel">
+    <xsl:if test="s:QueryPlan/s:QueryTimeStats/@ElapsedTime">
+      <xsl:variable name="ElapsedTime">   <xsl:value-of select="s:QueryPlan/s:QueryTimeStats/@ElapsedTime" /></xsl:variable>
+      <xsl:variable name="CpuTime">       <xsl:value-of select="s:QueryPlan/s:QueryTimeStats/@CpuTime" /></xsl:variable>
+      <xsl:variable name="UdfElapsedTime"><xsl:value-of select="s:QueryPlan/s:QueryTimeStats/@UdfElapsedTime" /></xsl:variable>
+      <xsl:variable name="UdfCpuTime">    <xsl:value-of select="s:QueryPlan/s:QueryTimeStats/@UdfCpuTime" /></xsl:variable>
+      <div class="qp-node-label-time">
+        Time: <xsl:value-of select="format-number(number($ElapsedTime) div number(1000), '0.000')" /> s 
+        <br />
+        CPU Time: <xsl:value-of select="format-number(number($CpuTime) div number(1000), '0.000')" /> s 
+        <xsl:if test="not($UdfElapsedTime = '')">
+          UDF Time: <xsl:value-of select="format-number(number($UdfElapsedTime) div number(1000), '0.000')" /> s 
+        </xsl:if>
+        <xsl:if test="not($UdfCpuTime = '')">
+          UDF CPU Time: <xsl:value-of select="format-number(number($UdfCpuTime) div number(1000), '0.000')" /> s 
+        </xsl:if>
+      </div>
     </xsl:if>
   </xsl:template>
 
@@ -446,7 +531,20 @@
     <xsl:if test="s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualRows">
       <xsl:variable name="EstimateRows"><xsl:value-of select="@EstimateRows" /></xsl:variable>
       <xsl:variable name="ActualRows"><xsl:value-of select="sum(s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualRows)" /></xsl:variable>
-      <div>A=<xsl:value-of select="format-number(number($ActualRows), '###,###,###,###')"/> of E=<xsl:value-of select="format-number(number($EstimateRows), '###,###,###,###')"/> (<xsl:value-of select="format-number(number($ActualRows) div number($EstimateRows), '0%')"/>)</div>
+      <xsl:variable name="CardinalityPct"><xsl:value-of select="number($ActualRows) div number($EstimateRows)" /></xsl:variable>
+      <div class="qp-node-label-cardinality">
+        A=<xsl:value-of select="format-number(number($ActualRows), '###,###,###,###')"/> of 
+        <br />
+        E=<xsl:value-of select="format-number(number($EstimateRows), '###,###,###,###')"/> 
+        <span>
+          <!-- if Cardinality is 100 times higher ($CardinalityPct is 1.0 at 100%) than expected, them MARK it as a WARNING -->
+          <!-- possibly add 'and $ActualRows &gt; 10000' to discard warning if "not that many actual rows" -->
+          <xsl:if test="$CardinalityPct &gt; 100 and $ActualRows &gt; 5000"> 
+            <xsl:attribute name="class">qp-node-label-cardinality-waring</xsl:attribute>
+          </xsl:if>
+		  (<xsl:value-of select="format-number($CardinalityPct, '0%')"/>)
+        </span>
+      </div>
     </xsl:if>
   </xsl:template>
 
@@ -535,7 +633,7 @@
   Seek Predicates Tooltip
   -->
 
-  <xsl:template match="s:SeekPredicates" mode="ToolTipDetails">
+  <xsl:template match="s:SeekPredicates | s:Spool" mode="ToolTipDetails">
     <div class="qp-bold">Seek Predicates</div>
     <div>
       <xsl:for-each select="s:SeekPredicateNew/s:SeekKeys">
@@ -581,7 +679,45 @@
         </xsl:for-each>
       </div>
     </xsl:if>
+
+    <!-- Wait Statistics (at the Statement level), IF Available -->
+    <xsl:if test="s:WaitStats">
+      <div class="qp-bold">Top 10 Waits</div>
+      <div class="qp-tt-wait">
+        <table>
+          <thead><tr> <th>Type</th> <th>Ms</th> <th>Count</th> <th>Ms/Count</th> </tr></thead>
+          <tbody>
+          <xsl:for-each select="s:WaitStats/s:Wait">
+            <xsl:sort select="number(@WaitTimeMs)" data-type="number" order="descending"/>
+            <tr> 
+              <td><xsl:value-of select="@WaitType" /></td> 
+              <td><xsl:value-of select="@WaitTimeMs" /></td> 
+              <td><xsl:value-of select="@WaitCount" /></td> 
+              <td><xsl:value-of select="format-number(number(@WaitTimeMs) div number(@WaitCount), '0.###')" /></td> 
+            </tr>
+          </xsl:for-each>
+          </tbody>
+        </table>
+      </div>
+    </xsl:if>
+
+    <!-- Parameters Compile and Runtime (at the Statement level), IF Available -->
+    <xsl:if test="s:ParameterList">
+      <div class="qp-bold">Compile and Runtime Parameters</div>
+      <div class="qp-tt-params">
+        <table>
+          <thead> <tr> <th>Name</th> <th>DataType</th> <th>Compiled Value</th> <th>Runtime Value</th> </tr> </thead>
+          <tbody>
+          <xsl:for-each select="s:ParameterList/s:ColumnReference">
+            <xsl:sort select="@Column"/>
+            <tr> <td><xsl:value-of select="@Column" /></td> <td><xsl:value-of select="@ParameterDataType" /></td> <td><xsl:value-of select="@ParameterCompiledValue" /></td> <td><xsl:value-of select="@ParameterRuntimeValue" /></td> </tr>
+          </xsl:for-each>
+          </tbody>
+        </table>
+      </div>
+    </xsl:if>
   </xsl:template>
+
 
   <xsl:template name="SeekKeyDetail">
     <xsl:param name="position" />Seek Keys[<xsl:value-of select="$position" />]: <xsl:for-each select="s:Prefix|s:StartRange|s:EndRange">

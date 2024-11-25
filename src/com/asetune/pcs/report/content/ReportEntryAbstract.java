@@ -47,6 +47,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.DictCompression;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
+import com.asetune.pcs.report.DailySummaryReportDefault;
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.asetune.sql.SqlParserUtils;
@@ -1966,5 +1967,69 @@ implements IReportEntry
 //		return "<mark>" + dbname1 + "</mark>";
 		return "<span style='background-color: yellow'>" + dbname1 + "</span>";
 	}
+
+
+	/**
+	 * BEGIN A subsection of a report
+	 * 
+	 * @param w
+	 * @param title
+	 * @param id
+	 * @throws IOException
+	 */
+	public void beginHtmlSubSection(Writer w, String title, String id)
+	throws IOException
+	{
+		id = id.replace(' ', '_');
+
+		boolean useBootstrap = true;
+		if (getReportingInstance() instanceof DailySummaryReportDefault)
+			useBootstrap = ((DailySummaryReportDefault)getReportingInstance()).useBootstrap();
+
+		if (useBootstrap)
+		{
+			// Bootstrap "card" - BEGIN
+			w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+			w.append("<div id='" + id + "' class='card border-dark mb-3'>");
+			w.append("<h5 class='card-header'><b>" + title + "</b></h5>");
+			w.append("<div class='card-body'>");
+			w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+		
+			w.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+			w.append("<br>\n");
+			w.append("<h3 id='" + id + "'>" + title + "</h3> \n");
+			w.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+		}
+		else
+		{
+			w.append("<br>\n");
+			w.append("<h3 id='" + id + "'>" + title + "</h3> \n");
+		}
+	}
+
+	/**
+	 * END a subsection
+	 * 
+	 * @param w
+	 * @throws IOException
+	 */
+	public void endHtmlSubSection(Writer w) 
+	throws IOException
+	{
+		boolean useBootstrap = true;
+		if (getReportingInstance() instanceof DailySummaryReportDefault)
+			useBootstrap = ((DailySummaryReportDefault)getReportingInstance()).useBootstrap();
+
+		// Section FOOTER
+		if (useBootstrap)
+		{
+			// Bootstrap "card" - END
+			w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+			w.append("</div>"); // end: card-body
+			w.append("</div>"); // end: card
+			w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+		}
+	}
+
 }
 

@@ -354,8 +354,16 @@ extends DailySummaryReportAbstract
 	{
 		for (IReportEntry entry : _reportEntries)
 		{
-			if ( entry.hasIssueToReport() )
-				return true;
+			try
+			{
+				if ( entry.hasIssueToReport() )
+					return true;
+			} 
+			catch (RuntimeException rte) 
+			{
+				// This may happen if the ReportEntry has problems (for example NullPointerException in hasIssueToReport()...
+				_logger.warn("Problems checking for hasIssueToReport() for ReportEntry for '" + entry.getClass().getSimpleName() + "'. Caught RuntimeException, skipping this and checking next entry.", rte);
+			}
 		}
 		return false;
 	}
@@ -479,6 +487,16 @@ extends DailySummaryReportAbstract
 		w.append("        h3 { \n");
 		w.append("            border-bottom: 1px solid black; \n");
 		w.append("            border-top: 1px solid black; \n");
+		w.append("            margin-bottom: 3px; \n");
+		w.append("        } \n");
+		w.append("        h4 { \n");
+		w.append("            border-bottom: 1px solid black; \n");
+//		w.append("            border-top: 1px solid black; \n");
+		w.append("            margin-bottom: 3px; \n");
+		w.append("        } \n");
+		w.append("        h5 { \n");
+		w.append("            border-bottom: 1px solid black; \n");
+//		w.append("            border-top: 1px solid black; \n");
 		w.append("            margin-bottom: 3px; \n");
 		w.append("        } \n");
 		w.append("\n");

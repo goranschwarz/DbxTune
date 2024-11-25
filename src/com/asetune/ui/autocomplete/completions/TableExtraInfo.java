@@ -30,12 +30,14 @@ public class TableExtraInfo
 	public static final String TableInRowSizeInKb        = "TableInRowSizeInKb"; /* mostly for SQL Server */
 	public static final String TableOverflowRowSizeInKb  = "TableOverflowRowSizeInKb"; /* mostly for SQL Server */
 	public static final String TableIndexSizeInKb        = "TableIndexSizeInKb";
+	public static final String TableIndexCount           = "TableIndexCount";
 	public static final String TableLobSizeInKb          = "TableLobSizeInKb";
 
 	public static final String TableLockScheme           = "TableLockScheme";
 
 	public static final String TablePartitionCount       = "TablePartitionCount";
 
+	public static final String IndexType                 = "IndexType";
 	public static final String IndexExtraInfo            = "IndexExtraInfo";
 	public static final String IndexExtraInfoDescription = "IndexExtraInfoDescription";
 

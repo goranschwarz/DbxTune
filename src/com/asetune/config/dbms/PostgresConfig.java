@@ -186,7 +186,7 @@ extends DbmsConfigAbstract
 		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Configuration Group"},
 		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Run-time configuration parameter name."},
 		{CONFIG_TYPE,          true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "What type of parameter is this."},
-		{CURENT_VALUE,         true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Value of the configuration."},
+		{CURENT_VALUE,         true,     String .class, Types.VARCHAR, 1024,       -1,        /* "varchar(255)",  */ "Value of the configuration."},
 		{CURENT_VALUE_IN_MB,   true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Value of the configuration as MB. Formula: if (8kb) CurrentValue/128; if (kb) CurrentValue/1024; "},
                                                                                                                   
 		{CONTEXT,              true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ CONTEXT_TOOLTIP},

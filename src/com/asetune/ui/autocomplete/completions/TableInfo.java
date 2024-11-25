@@ -36,6 +36,7 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -65,6 +66,8 @@ implements Serializable
 	public ResultSetTableModel         _mdFkIn  = null;
 	
 	public List<String> _viewReferences = null;
+	
+	public String _refreshedWithDbmsProductName = "";
 
 	public void addColumn(TableColumnInfo ci)
 	{
@@ -148,6 +151,8 @@ implements Serializable
 				return;
 
 			DatabaseMetaData dbmd = conn.getMetaData();
+			
+			_refreshedWithDbmsProductName = conn.getDatabaseProductName();
 
 			ResultSet rs = dbmd.getColumns(_tabCat, _tabSchema, _tabName, "%");
 			ResultSetTableModel rstm = new ResultSetTableModel(rs, "getColumns");
@@ -415,6 +420,7 @@ implements Serializable
 		sb.append("<table BORDER=0 CELLSPACING=0 CELLPADDING=1>");
 		for (TableExtraInfo ei : _extraInfo.values())
 		{
+			if (TableExtraInfo.IndexType                .equals(ei.getName())) continue;
 			if (TableExtraInfo.IndexExtraInfo           .equals(ei.getName())) continue;
 			if (TableExtraInfo.IndexExtraInfoDescription.equals(ei.getName())) continue;
 			if (TableExtraInfo.IndexIncludeColumns      .equals(ei.getName())) continue;
@@ -454,11 +460,15 @@ implements Serializable
 			String  columnName     = md.getValueAsString (r, "COLUMN_NAME",      false);
 			String  ascOrDesc      = md.getValueAsString (r, "ASC_OR_DESC",      false);
 //			String  indexQualifier = md.getValueAsString (r, "INDEX_QUALIFIER",  false);
+			String  tableSchema    = md.getValueAsString (r, "TABLE_SCHEM",      false);
 			String  tableName      = md.getValueAsString (r, "TABLE_NAME",       false);
 //System.out.println("getIndexDesc(): indexName='"+indexName+"', nonUnique="+nonUnique+", ordinalPos="+ordinalPos+", columnName='"+columnName+"', ascOrDesc='"+ascOrDesc+"', indexQualifier='"+indexQualifier+"'.");
 
 			if (StringUtil.isNullOrBlank(indexName))
 				continue;
+			
+			if (StringUtil.hasValue(tableSchema))
+				tableName = tableSchema + "." + tableName;
 
 			Index ind = indexes.get(indexName);
 			if (ind == null)
@@ -505,7 +515,8 @@ implements Serializable
 		{
 			boolean indexExtraInfoDescriptionHasClustered    = false;
 //			boolean indexExtraInfoDescriptionHasNonClustered = false;
-			String indexIncludeColumns = null;;
+			String indexIncludeColumns = null;
+			String indexType = "";
 			
 			// If we have some extra information on the index name, print that as well
 			StringBuilder comment = new StringBuilder();
@@ -576,28 +587,64 @@ implements Serializable
 							indexIncludeColumns = indexExtraInfo;
 						}
 					}
+					
+					if ( TableExtraInfo.IndexType.equals(ei.getName()) )
+					{
+						@SuppressWarnings("unchecked")
+						Map<String, String> indexTypeMap = (Map<String, String>) ei.getValue();
+						String value = indexTypeMap.get(_name);
+						if (value != null)
+						{
+							indexType = value;
+						}
+					}
+				}
+			}
+			
+			// NOTE: For some DBMS (Postgres) also has the INCLUDE columns from dbmd.getIndexInfo() in the ResultSet
+			//       So lets REMOVE those from the KEY Columns...
+			if (StringUtil.hasValue(indexIncludeColumns))
+			{
+				if (DbUtils.isProductName(_refreshedWithDbmsProductName, DbUtils.DB_PROD_NAME_POSTGRES))
+				{
+					List<String> includedColumnsList = StringUtil.parseCommaStrToList(indexIncludeColumns);
+					for (String includeColumn : includedColumnsList)
+					{
+						if (_columns.remove(includeColumn))
+							_logger.info("TableInfo: for table '" + _qualifier + "', index '" + _name + "', removed key column '" + includeColumn + "' since it's part of the include column specification. (DbmsProductName='" + _refreshedWithDbmsProductName + "')");
+					}
 				}
 			}
 
 			// Now build the DDL text
-			StringBuilder sb = new StringBuilder("create ");
+			StringBuilder sb = new StringBuilder("CREATE ");
 
 			if (_isUnique)
-				sb.append("<FONT color='blue'>unique</FONT> ");
+				sb.append("<FONT color='blue'>UNIQUE</FONT> ");
 
 			if (_type == DatabaseMetaData.tableIndexClustered || indexExtraInfoDescriptionHasClustered)
-				sb.append("<FONT color='blue'>clustered</FONT> ");
+				sb.append("<FONT color='blue'>CLUSTERED</FONT> ");
+
+			// SQL Server specific
+			if (StringUtil.hasValue(indexType) && indexType.contains("COLUMNSTORE"))
+			{
+				// if it's a 'CLUSTERED COLUMNSTORE', remove the 'CLUSTERED' part since it has already been added by the above... _type == DatabaseMetaData.tableIndexClustered
+				if (indexType.equals("CLUSTERED COLUMNSTORE"))
+					indexType = "COLUMNSTORE";
+				
+				sb.append("<FONT color='blue'>" + indexType + "</FONT> ");
+			}
 			
-			sb.append("index ").append(_name).append(" on ").append(_qualifier);
+			sb.append("INDEX ").append(_name).append(" <FONT color='blue'>ON</FONT> ").append(_qualifier);
 			sb.append("(<FONT color='blue'>");
 			sb.append(StringUtil.toCommaStr(_columns));
 			sb.append("</FONT>)");
 			
 			if (StringUtil.hasValue(indexIncludeColumns))
-				sb.append(" include(<FONT color=#9900cc>").append(indexIncludeColumns).append("</FONT>)");
+				sb.append(" INCLUDE(<FONT color=#9900cc>").append(indexIncludeColumns).append("</FONT>)");
 
 			if (_type == DatabaseMetaData.tableIndexHashed)
-				sb.append(" -- hashed");
+				sb.append(" -- HASHED");
 
 			// Add any comments from 'IndexExtraInfoDescription' and 'IndexExtraInfo'
 			sb.append(comment.toString());
@@ -646,6 +693,9 @@ implements Serializable
 			fk.addFkColumn(FKCOLUMN_NAME);
 			fk.addPkColumn(PKCOLUMN_NAME);
 		}
+		
+//		TODO; // Can we somehow check (using getIndexInfo()) if the -->> FK Table has indexes to support the Outbound FK
+//		TODO; // Can we somehow check (using getIndexInfo()) if the <<-- FK Table has indexes On "this" table...
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append("<UL>\n");
@@ -718,17 +768,17 @@ implements Serializable
 			// constraint fk_AppServer    foreign key(versionId, resourceAppServer) references Resources_AppServer(versionId, resourceName),
 			// alter table XXX add constraint XXX foreign key(c1,c2) references XXX(c1,c2)
 			StringBuilder sb = new StringBuilder();
-			sb.append("alter table ").append(objName(_fkTabCat, _fkTabSchema, _fkTabName));
-			sb.append(" add constraint ").append(_fkName);
-			sb.append(" foreign key(<FONT color='blue'>").append(StringUtil.toCommaStr(_fkColumns)).append("</FONT>)");
+			sb.append("ALTER TABLE ").append(objName(_fkTabCat, _fkTabSchema, _fkTabName));
+			sb.append(" ADD CONSTRAINT ").append(_fkName);
+			sb.append(" FOREIGN KEY(<FONT color='blue'>").append(StringUtil.toCommaStr(_fkColumns)).append("</FONT>)");
 			sb.append("<BR>");
-			sb.append(" references ").append(objName(_pkTabCat, _pkTabSchema, _pkTabName)).append("(<FONT color='blue'>").append(StringUtil.toCommaStr(_pkColumns)).append("</FONT>)");
+			sb.append(" REFERENCES ").append(objName(_pkTabCat, _pkTabSchema, _pkTabName)).append("(<FONT color='blue'>").append(StringUtil.toCommaStr(_pkColumns)).append("</FONT>)");
 			
 			sb.append("<BR>");
 			sb.append("<FONT color='green'>");
 			sb.append(" -- ");
-			sb.append(" on update ").append(_updateRule);
-			sb.append(" on delete ").append(_deleteRule);
+			sb.append(" ON UPDATE ").append(_updateRule);
+			sb.append(" ON DELETE ").append(_deleteRule);
 			sb.append("</FONT>");
 			
 			return sb.toString();

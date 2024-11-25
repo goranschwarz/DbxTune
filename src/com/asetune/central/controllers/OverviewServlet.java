@@ -568,8 +568,8 @@ public class OverviewServlet extends HttpServlet
 
 		out.println("<p>Sections");
 		out.println("<ul>");
-		out.println("  <li><a href='#cm-refresh-time'   >Collector Refresh Time                        </a> </li>");
 		out.println("  <li><a href='#ud-content'        >User Defined Content                          </a> </li>");
+		out.println("  <li><a href='#cm-refresh-time'   >Collector Refresh Time                        </a> </li>");
 		out.println("  <li><a href='#active'            >Active Recordings                             </a> </li>");
 		out.println("  <li><a href='#alarms'            >Active Alarms                                 </a> </li>");
 		out.println("  <li><a href='#logfiles'          >All file(s) in the LOG Directory              </a> </li>");
@@ -704,84 +704,7 @@ public class OverviewServlet extends HttpServlet
 		}
 			
 
-		//----------------------------------------------------
-		// CM Refresh Time
-		//----------------------------------------------------
-		if (true)
-		{
-			out.println("<div id='cm-refresh-time' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>Collector Refresh Time</h5>");
-			out.println("<div class='card-body'>");
 
-			out.println("<p>");
-			out.println("Below is charts on <b><i>Refresh Time</i></b> for each individual DbxTune Collector<br>");
-			out.println("<i>This may be used to check/enhance which CM's that may be suboptimal, and may need enhancements...<br>");
-			out.println("   or how heavy DBMS Server load may impact in CM Refresh Time.</i>");
-			out.println("</p>");
-
-			// Choose what list to traverse
-			List<DbxCentralSessions> sessionList = centralSessionList;
-			if (orderedSessionList != null)
-				sessionList = orderedSessionList;
-			
-			// Create "ALL" servers
-			if (true)
-			{
-				List<String> allSrvList = new ArrayList<>();
-				for (DbxCentralSessions session : sessionList)
-				{
-					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
-					{
-						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
-						continue;
-					}
-
-					String srvName   = session.getServerName();
-					allSrvList.add(srvName);
-				}
-
-				// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
-				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + StringUtil.toCommaStr(allSrvList, ",") + "&graphList=CmSummary_CmRefreshTime&gcols=1";
-				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary mb-2 mr-2' role='button'>ALL Servers</a>";
-
-				out.println(button);
-				out.println("<br>");
-			}
-			
-			
-			// And the "individual servers"
-			if (orderedServerLayout != null)
-			{
-				printServerLayout_CmRefreshButtons(out, orderedServerLayout);
-			}
-			else
-			{
-				out.println("<br>");
-				out.println("<b>Individual Servers</b>");
-				
-				for (DbxCentralSessions session : sessionList)
-				{
-					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
-					{
-						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
-						continue;
-					}
-	
-					String srvName   = session.getServerName();
-					String dbxType   = "dbx-button-" + session.getProductString().toLowerCase(); // dbx-button-asetune
-	
-					// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
-					String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
-					String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 mr-2' role='button'>" + srvName + "</a>";
-	
-					out.println(button);
-				}
-			}
-			
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
-		}
-			
 		//----------------------------------------------------
 		// User Defined Charts
 		//----------------------------------------------------
@@ -897,6 +820,87 @@ public class OverviewServlet extends HttpServlet
 			out.println("</div>"); // end: card-body
 			out.println("</div>"); // end: card
 		}
+
+
+
+		//----------------------------------------------------
+		// CM Refresh Time
+		//----------------------------------------------------
+		if (true)
+		{
+			out.println("<div id='cm-refresh-time' class='card border-dark mb-3'>");
+			out.println("<h5 class='card-header'>Collector Refresh Time</h5>");
+			out.println("<div class='card-body'>");
+
+			out.println("<p>");
+			out.println("Below is charts on <b><i>Refresh Time</i></b> for each individual DbxTune Collector<br>");
+			out.println("<i>This may be used to check/enhance which CM's that may be suboptimal, and may need enhancements...<br>");
+			out.println("   or how heavy DBMS Server load may impact in CM Refresh Time.</i>");
+			out.println("</p>");
+
+			// Choose what list to traverse
+			List<DbxCentralSessions> sessionList = centralSessionList;
+			if (orderedSessionList != null)
+				sessionList = orderedSessionList;
+			
+			// Create "ALL" servers
+			if (true)
+			{
+				List<String> allSrvList = new ArrayList<>();
+				for (DbxCentralSessions session : sessionList)
+				{
+					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
+					{
+						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+						continue;
+					}
+
+					String srvName   = session.getServerName();
+					allSrvList.add(srvName);
+				}
+
+				// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
+				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + StringUtil.toCommaStr(allSrvList, ",") + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary mb-2 mr-2' role='button'>ALL Servers</a>";
+
+				out.println(button);
+				out.println("<br>");
+			}
+			
+			
+			// And the "individual servers"
+			if (orderedServerLayout != null)
+			{
+				printServerLayout_CmRefreshButtons(out, orderedServerLayout);
+			}
+			else
+			{
+				out.println("<br>");
+				out.println("<b>Individual Servers</b>");
+				
+				for (DbxCentralSessions session : sessionList)
+				{
+					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
+					{
+						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+						continue;
+					}
+	
+					String srvName   = session.getServerName();
+					String dbxType   = "dbx-button-" + session.getProductString().toLowerCase(); // dbx-button-asetune
+	
+					// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
+					String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+					String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 mr-2' role='button'>" + srvName + "</a>";
+	
+					out.println(button);
+				}
+			}
+			
+			out.println("</div>"); // end: card-body
+			out.println("</div>"); // end: card
+		}
+
 
 
 		//----------------------------------------------------

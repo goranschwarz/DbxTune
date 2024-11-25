@@ -28,8 +28,8 @@ import javax.swing.text.Document;
 
 import org.fife.rsta.ui.ContentAssistable;
 import org.fife.rsta.ui.search.AbstractSearchDialog;
+import org.fife.ui.autocomplete.AbstractCompletion;
 import org.fife.ui.autocomplete.AutoCompletion;
-import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -230,7 +230,7 @@ implements ContentAssistable // Not sure how this is used.
 	/**
 	 * Adds the completion text known to this text field.
 	 */
-	public void addCompletion(String text)
+	public void addCompletion(String searchFor, String replaceWith)
 	{
 //System.out.println("GTextField.addCompletion(): text='"+text+"'.");
 		setAutoCompleteEnabled(true);
@@ -238,7 +238,8 @@ implements ContentAssistable // Not sure how this is used.
 		if (_provider instanceof DefaultCompletionProvider)
 		{
 			DefaultCompletionProvider p = (DefaultCompletionProvider) _provider;
-			p.addCompletion( new BasicCompletion(_provider, text) );
+//			p.addCompletion( new BasicCompletion(_provider, text) );
+			p.addCompletion( new ColumnNameCompletion(_provider, searchFor, replaceWith) );
 		}
 		else
 		{
@@ -253,10 +254,12 @@ implements ContentAssistable // Not sure how this is used.
 
 		for (int c=0; c<table.getColumnCount(); c++)
 		{
-			String colName = table.getColumnName(c);
-			if (colName.contains(" "))
-				colName = "[" + colName + "]";
-			addCompletion( colName );
+			String searchFor   = table.getColumnName(c);
+			String replaceWith = searchFor;
+			if (replaceWith.contains(" "))
+				replaceWith = "[" + replaceWith + "]";
+
+			addCompletion(searchFor, replaceWith);
 		}
 		
 //		table.addPropertyChangeListener(new PropertyChangeListener()
@@ -365,6 +368,41 @@ implements ContentAssistable // Not sure how this is used.
 			{
 				firePropertyChange(prop, null, null);
 			}
+		}
+	}
+
+	/**
+	 * Local Completion class for Column Names
+	 */
+	private static class ColumnNameCompletion
+	extends AbstractCompletion
+	{
+		private String _searchForText;
+		private String _replacementText;
+		
+		protected ColumnNameCompletion(CompletionProvider provider, String searchForText, String replacementText)
+		{
+			super(provider);
+			_searchForText = searchForText;
+			_replacementText = replacementText;
+		}
+
+		@Override
+		public String getInputText()
+		{
+			return _searchForText;
+		}
+
+		@Override
+		public String getReplacementText()
+		{
+			return _replacementText;
+		}
+
+		@Override
+		public String getSummary()
+		{
+			return null;
 		}
 	}
 	//////////////////////////////////////////////////////////////////////////

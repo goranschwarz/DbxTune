@@ -1725,8 +1725,11 @@ finally
 			
 			if (StringUtil.hasValue(jdbcAppNamePropName))
 			{
-				props .put(jdbcAppNamePropName, jdbcAppNamePropVal);
-				props2.put(jdbcAppNamePropName, jdbcAppNamePropVal);
+				if ( ! props.containsKey(jdbcAppNamePropName) )
+				{
+					props .put(jdbcAppNamePropName, jdbcAppNamePropVal);
+					props2.put(jdbcAppNamePropName, jdbcAppNamePropVal);
+				}
 			}
 
 

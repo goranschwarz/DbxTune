@@ -1484,6 +1484,14 @@ Active Alarms
 //				}
 				const ccMgtButton = '    <a class="dropdown-item" href="/config.html?srvName='+serverName+'" target="_blank"><b>View</b>/Change Collector <b>Configuration</b></a>'
 
+				let collectorMenuOptions = '';
+//				if (srvSession.productString === 'SqlServerTune')
+//				{
+//					collectorMenuOptions = ''
+//						+ '    <a class="dropdown-item" href="/report?op=sqlScheduler&name='+serverName+'" target="_blank">View SQL Agent/Scheduler statistics</a>'
+//						+ '    <div class="dropdown-divider"></div>';
+//				}
+
 				html += ''
 						+ '<div class="btn-group">'
 						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
@@ -1498,6 +1506,7 @@ Active Alarms
 						+ '    <a class="dropdown-item" href="/overview#dsr-srv-'+serverName+'" target="_blank">View <b>List</b> of <b>all</b> Daily Summary Report for this Server</a>'
 						+ '    <a class="dropdown-item" href="/overview?op=dsr-current-srv&srv='+serverName+'" target="_blank"><b>Create</b> Daily Summary Report on Current Recording</a>'
 						+ '    <div class="dropdown-divider"></div>'
+						+ collectorMenuOptions
 						+ '    <a class="dropdown-item" href="/overview#offline-srv-'+serverName+'" target="_blank">View <b>List</b> of all <b>Recordings</b> for this Server</a>'
 						+ '    <div class="dropdown-divider"></div>'
 						+ '    <a class="dropdown-item" href="/log?name='+serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'

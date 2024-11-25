@@ -101,6 +101,7 @@ public class AseSqlScriptReader
 	private List<Integer>   _skipRs                = null; // option 'skiprs #[,#...]'
 	private String          _filterText            = null; // option 'filter someText'
 	private int             _replaceFakeQuotedId   = -1;   // option 'rfqi'
+	private int             _replaceNewlines       = -1;   // option 'rnl'
 
 	
 	/** keep track of where in the file we are */
@@ -658,6 +659,7 @@ public class AseSqlScriptReader
 	public boolean hasOption_skipRs()                 { return _skipRs != null && _skipRs.size() > 0; }
 	public boolean hasOption_filterText()             { return _filterText != null; }
 	public boolean hasOption_replaceFakeQuotedIdent() { return _replaceFakeQuotedId > 0; }
+	public boolean hasOption_replaceNewlines()        { return _replaceNewlines > 0; }
 
 	// Below boolean methods, yes we use "int opt = -1" as "not specified"
 	public List<String>  getOption_foreachDb()              { return _foreachdb; }
@@ -676,6 +678,7 @@ public class AseSqlScriptReader
 	public List<Integer> getOption_skipRs()                 { return _skipRs; }
 	public String        getOption_filterText()             { return _filterText; }
 	public boolean       getOption_replaceFakeQuotedIdent() { return _replaceFakeQuotedId > 0; }
+	public boolean       getOption_replaceNewlines()        { return _replaceNewlines > 0; }
 
 
 	/**
@@ -721,6 +724,7 @@ public class AseSqlScriptReader
 		_skipRs              = null;
 		_filterText          = null;
 		_replaceFakeQuotedId = -1;
+		_replaceNewlines     = -1;
 
 		// Get lines from the reader
 		String row;
@@ -1015,6 +1019,12 @@ public class AseSqlScriptReader
 										if (StringUtil.hasValue(word2))
 											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
 									}
+									else if ("rnl".equalsIgnoreCase(word1))
+									{
+										_replaceNewlines = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
 									else
 									{
 										error = "Unknown sub command '"+word1+"'.";
@@ -1032,7 +1042,7 @@ public class AseSqlScriptReader
 										String desc = 
 											error +" \n" +
 											"\n" +
-											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,foreachdb [db1:db2:db3]] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time] [,mrs] [,keeprs #5[:#5]] [,skiprs #5[:#5]] [,filter str]'\n" +
+											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,foreachdb [db1:db2:db3]] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time] [,mrs] [,keeprs #5[:#5]] [,skiprs #5[:#5]] [,filter str] [,rfqi] [,rnl]'\n" +
 											"\n" +
 											"#1 = Number of times to repeat the command\n" +
 											"#2 = Rows to read from a ResultSet.\n" +
@@ -1057,6 +1067,8 @@ public class AseSqlScriptReader
 											"skiprs    - If you have multiple ResultSet, skip some ResultSet(s) (starting at 1). Example skip rs   1 and 2: go keeprs 1:2\n" +
 											"keeprs    - If you have multiple ResultSet, keep only ResultSet(s) (starting at 1). Example Keep only 2 : go keeprs 2\n" +
 											"filter    - Set a filter text on the ResultSet filter dialog. Example: filter \"where col like 'val%'\" \n" +
+											"rfqi      - Replace 'Faked Quoted Identifier' [] with the DBMS specific character\n" +
+											"rnl       - Replace any newlines (\\n) with a 'real' newline characters before sending SQL to server. \n" +
 											"\n" +
 											"Example:\n" +
 											"select * from tabName where ...\n" +

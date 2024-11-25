@@ -30,7 +30,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -42,6 +44,8 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPool;
 import com.asetune.sql.conn.DbxConnectionPoolMap;
 import com.asetune.utils.AseSqlScript;
+import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
 public class CounterSampleCatalogIteratorPostgres 
@@ -54,7 +58,9 @@ extends CounterSampleCatalogIterator
 	private List<String> _fallbackList = null;
 
 //	private static DbxConnectionPoolMap _cpm;
-	
+
+	private static Set<String> _dbSkipSet = new HashSet<>();
+
 
 	public static void closeConnPool()
 	{
@@ -66,6 +72,9 @@ extends CounterSampleCatalogIterator
 			DbxConnectionPoolMap.getInstance().close();
 			DbxConnectionPoolMap.setInstance(null);
 		}
+		
+		// Reset some other locals
+		_dbSkipSet = new HashSet<>();
 	}
 
 	/**
@@ -114,6 +123,11 @@ extends CounterSampleCatalogIterator
 			if (_fallbackList != null)
 				list.addAll(_fallbackList);
 		}
+		
+		if ( ! _dbSkipSet.isEmpty() )
+		{
+			list.removeAll(_dbSkipSet);
+		}
 
 		return list;
 	}
@@ -137,7 +151,7 @@ extends CounterSampleCatalogIterator
 
 		DbxConnectionPoolMap cpm = DbxConnectionPoolMap.getInstance();
 		
-		// reuse a connction if one exists
+		// reuse a connection if one exists
 //		if (_cpm.hasMapping(dbname))
 		if (cpm.hasMapping(dbname))
 		{
@@ -181,20 +195,54 @@ extends CounterSampleCatalogIterator
 		if (cm != null && cm.getGuiController() != null)
 			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Connecting to db '"+dbname+"'");
 
-		// grab a new connection.
-		DbxConnection dbConn = cp.getConnection(guiOwner);
+		try
+		{
+			// grab a new connection.
+			DbxConnection dbConn = cp.getConnection(guiOwner);
 
-		_logger.info("Created a new Connection for db '"+dbname+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
+			_logger.info("Created a new Connection for db '"+dbname+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
 
-		// Make the same settings as for a new Monitor Connection
-		if (CounterController.hasInstance())
-			CounterController.getInstance().onMonConnect(dbConn);
+			// Make the same settings as for a new Monitor Connection
+			if (CounterController.hasInstance())
+				CounterController.getInstance().onMonConnect(dbConn);
 
-		// when first connection is successful, add the connection pool to the MAP
-//		_cpm.setPool(dbname, cp);
-		cpm.setPool(dbname, cp);
-		
-		return dbConn;
+			// when first connection is successful, add the connection pool to the MAP
+//			_cpm.setPool(dbname, cp);
+			cpm.setPool(dbname, cp);
+			
+			return dbConn;
+		}
+		catch (SQLException ex)
+		{
+			String msg = ex.getMessage();
+			if (StringUtil.isNullOrBlank(msg))
+				throw ex;
+				
+			// Check the problem... In some cases we might want to add the database to the "skip list"
+			
+			// For example in GCP - Google Cloud Platform, we MIGHT not have access to the database 'cloudsqladmin', which seems like it's protected by 'pg_hba.conf'
+			if (msg.contains("FATAL: pg_hba.conf rejects connection"))
+			{
+				_logger.error("When trying to connect to database '" + dbname + "' we got rejected from HBA Conf subsystem. Adding this database to the 'skip list'...");
+				_dbSkipSet.add(dbname);
+
+				if (guiOwner != null)
+				{
+					SwingUtils.showErrorMessage(guiOwner, 
+							"Problems Connecting to '" + dbname + "'.", 
+							"<html>"
+							+ "Problems connecting to database '" + dbname + "'.<br>"
+							+ "Adding this database to a <b>skip list</b>, so we wont try do connect at next sample...<br>"
+							+ "<br>"
+							+ "Current Skip list: " + _dbSkipSet + "<br>"
+							+ "</html>"
+							, ex);
+				}
+			}
+			
+			throw ex;
+			
+		}
 	}
 
 	/**

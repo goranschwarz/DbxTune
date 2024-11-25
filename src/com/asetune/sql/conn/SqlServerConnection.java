@@ -24,11 +24,13 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -409,6 +411,16 @@ extends DbxConnection
 			
 		//--------------------------------------------
 		// GET OBJECT TEXT
+		// 
+		// TODO: Probably use 'sys.sql_modules' instead
+		// select definition from ${dbname}.sys.sql_modules where object_id = object_id('schema.objname')
+		// +-----------+--------------------------------------------------------------+---------------+----------------------+---------------+-----------------------+-------------+------------------+-----------------------+-----------------------+-----------+-------------+
+		// |object_id  |definition                                                    |uses_ansi_nulls|uses_quoted_identifier|is_schema_bound|uses_database_collation|is_recompiled|null_on_null_input|execute_as_principal_id|uses_native_compilation|inline_type|is_inlineable|
+		// +-----------+--------------------------------------------------------------+---------------+----------------------+---------------+-----------------------+-------------+------------------+-----------------------+-----------------------+-----------+-------------+
+		// |814625945  |CREATE PROCEDURE Sequences.ReseedSequenceBeyondTableValues ...|true           |true                  |false          |false                  |false        |false             |(NULL)                 |false                  |false      |false        |
+		// +-----------+--------------------------------------------------------------+---------------+----------------------+---------------+-----------------------+-------------+------------------+-----------------------+-----------------------+-----------+-------------+
+
+
 		String sql = dbnameStr + "sp_helptext '" + owner + objectName + "'";
 
 		try
@@ -440,45 +452,338 @@ extends DbxConnection
 	@Override
 	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
 	{
+		String catOrigin    = cat;
+//		String schemaOrigin = schema;
+//		String tableOrigin  = table;
+
 		LinkedHashMap<String, TableExtraInfo> extraInfo = new LinkedHashMap<>();
 
 		cat    = StringUtil.isNullOrBlank(cat)    ? "" : cat    + ".";
 		schema = StringUtil.isNullOrBlank(schema) ? "" : schema + ".";
 
+		int indexCount = 0;
+		
 		boolean getIndexTypeInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_getIndexTypeInfo, DEFAULT_getTableExtraInfo_getIndexTypeInfo);
 		if (getIndexTypeInfo)
 		{
-			String sql = "exec "+cat+".sp_helpindex '" + schema + table + "'";
-			try
-			{
-				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
-				
-				if (rstmList.size() >= 1)
-				{
-					ResultSetTableModel indexInfo = rstmList.get(0);
-					
-					Map<String, String> extIndexInfo = new HashMap<>(); // <indexName, description>
-					for (int r=0; r<indexInfo.getRowCount(); r++)
-					{
-						String indexName        = indexInfo.getValueAsString(r, "index_name",        false, "");
-					//	String indexKeys        = indexInfo.getValueAsString(r, "index_keys",        false, "");
-						String indexDescription = indexInfo.getValueAsString(r, "index_description", false, "");
-						
-						// SYBASE also has: index_max_rows_per_page, index_fillfactor, index_reservepagegap, index_created, index_local
-						// But we do not read that... for the moment!
+			// TODO; Add OTHER information here:
+			//        * Definition: [Property] ...         -- [CX] [1 KEY]    ...   
+			//        * Usage Stats                        -- Reads: 14 (13 scan 1 lookup) Writes: 12
+			//        * Op Stats                           -- 38,205 singleton lookups; 10 scans/seeks; 0 deletes; 0 updates;
+			//        * Size                               -- 35,908,423 rows; 1.1GB
+			//        * Compression Type                   -- Partition 1 uses PAGE
+			//        * Lock Waits                         -- 0 lock waits;
+			//        * Referenced by FK?                  -- false
+			//        * FK Covered by Index?               -- 
+			//        * Last User Seek                     -- 2024-11-21 05:33:15.88
+			//        * Last User Scan                     -- (NULL)
+			//        * Last User Lookup                   -- (NULL)
+			//        * Last User Write                    -- (NULL)
+			//        * Created                            -- 2019-09-08 20:35:26.693
+			//        * Last Modified                      -- 2024-11-21 14:55:13.41
+			//        * Page Latch Wait Count              -- 1 432
+			//        * Page Latch Wait Time (D:H:M:S)     -- 0:00:00:00
+			//        * Page IO Latch Wait Count           -- 3
+			//        * Page IO Latch Wait Time (D:H:M:S)  -- 0:00:00:00
+			//      The above is from sp_BlitzIndex ... probably to much to get into here... But lets get SOME additional info
+			//        * Definition:       -- from ??? but should contain: HEAP / CLIX / IX-VIEW / XML / SPATIAL / COLUMNSTORE / IN-MEMORY / DISABLED / UNIQUE / UNIQUE CONSTRAINT / FILTER 
+			//        * Usage Stats       -- from: sys.dm_db_index_usage_stats
+			//        * Op Stats          -- from: sys.dm_db_index_operational_stats
+			//        * Size              -- from: sys.dm_db_partition_stats
+			//        * Compression Type  -- from: sys.partitions
+			//        * ??? Missing Indexes...
 
-						extIndexInfo.put(indexName, "Desc=["+indexDescription+"]");
+			boolean getExtendedIndexInfo = true;
+			boolean getExtendedIndexInfoOperationalDetails = true;
+			if (getExtendedIndexInfo)
+			{
+				// SELECT * FROM sys.indexes                   WHERE object_id = @objid
+				// +----------+-----------------+--------+----+------------+---------+-------------+--------------+--------------+--------------------+-----------+---------+-----------+---------------+--------------------------+---------------+----------------+----------+-----------------+-----------------+-------------------------+------------+---------------------------+
+				// |object_id |name             |index_id|type|type_desc   |is_unique|data_space_id|ignore_dup_key|is_primary_key|is_unique_constraint|fill_factor|is_padded|is_disabled|is_hypothetical|is_ignored_in_optimization|allow_row_locks|allow_page_locks|has_filter|filter_definition|compression_delay|suppress_dup_key_messages|auto_created|optimize_for_sequential_key|
+				// +----------+-----------------+--------+----+------------+---------+-------------+--------------+--------------+--------------------+-----------+---------+-----------+---------------+--------------------------+---------------+----------------+----------+-----------------+-----------------+-------------------------+------------+---------------------------+
+				// |72 853 680|idx_Kapital_Datum|       7|   2|NONCLUSTERED|false    |            1|false         |false         |false               |          0|false    |false      |false          |false                     |true           |true            |false     |(NULL)           |(NULL)           |false                    |false       |false                      |
+				// |72 853 680|gorans_fix1      |      18|   2|NONCLUSTERED|false    |            1|false         |false         |false               |          0|false    |false      |false          |false                     |true           |true            |false     |(NULL)           |(NULL)           |false                    |false       |false                      |
+				// +----------+-----------------+--------+----+------------+---------+-------------+--------------+--------------+--------------------+-----------+---------+-----------+---------------+--------------------------+---------------+----------------+----------+-----------------+-----------------+-------------------------+------------+---------------------------+
+				// 
+				// SELECT * FROM sys.partitions                WHERE object_id = @objid
+				// +----------------------+----------+--------+----------------+----------------------+-----------+-----------------------+----------------+---------------------+
+				// |partition_id          |object_id |index_id|partition_number|hobt_id               |rows       |filestream_filegroup_id|data_compression|data_compression_desc|
+				// +----------------------+----------+--------+----------------+----------------------+-----------+-----------------------+----------------+---------------------+
+				// |72 057 710 507 393 024|72 853 680|       7|               1|72 057 710 507 393 024|395 683 243|                      0|               0|NONE                 |
+				// |72 057 710 507 786 240|72 853 680|      18|               1|72 057 710 507 786 240|395 683 243|                      0|               0|NONE                 |
+				// +----------------------+----------+--------+----------------+----------------------+-----------+-----------------------+----------------+---------------------+
+				// 
+				// SELECT * FROM sys.dm_db_partition_stats     WHERE object_id = @objid
+				// +----------------------+----------+--------+----------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+---------------+-------------------+-----------+
+				// |partition_id          |object_id |index_id|partition_number|in_row_data_page_count|in_row_used_page_count|in_row_reserved_page_count|lob_used_page_count|lob_reserved_page_count|row_overflow_used_page_count|row_overflow_reserved_page_count|used_page_count|reserved_page_count|row_count  |
+				// +----------------------+----------+--------+----------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+---------------+-------------------+-----------+
+				// |72 057 710 507 393 024|72 853 680|       7|               1|               831 269|               833 827|                   834 000|                  0|                      0|                           0|                               0|        833 827|            834 000|395 683 243|
+				// |72 057 710 507 786 240|72 853 680|      18|               1|             4 631 647|             4 660 299|                 4 660 535|                  0|                      0|                           0|                               0|      4 660 299|          4 660 535|395 683 243|
+				// +----------------------+----------+--------+----------------+----------------------+----------------------+--------------------------+-------------------+-----------------------+----------------------------+--------------------------------+---------------+-------------------+-----------+
+				// 
+				// SELECT * FROM sys.dm_db_index_usage_stats   WHERE object_id = @objid
+				// +-----------+----------+--------+----------+----------+------------+------------+-----------------------+-----------------------+----------------+-----------------------+------------+------------+--------------+--------------+----------------+-----------------------+------------------+------------------+
+				// |database_id|object_id |index_id|user_seeks|user_scans|user_lookups|user_updates|last_user_seek         |last_user_scan         |last_user_lookup|last_user_update       |system_seeks|system_scans|system_lookups|system_updates|last_system_seek|last_system_scan       |last_system_lookup|last_system_update|
+				// +-----------+----------+--------+----------+----------+------------+------------+-----------------------+-----------------------+----------------+-----------------------+------------+------------+--------------+--------------+----------------+-----------------------+------------------+------------------+
+				// |         15|72 853 680|       7|        11|         0|           0|           4|2024-11-21 03:55:49.813|(NULL)                 |(NULL)          |2024-11-20 08:31:19.917|           0|           0|             0|             0|(NULL)          |(NULL)                 |(NULL)            |(NULL)            |
+				// |         15|72 853 680|      18|        15|         0|           0|           4|2024-11-21 06:32:45.75 |(NULL)                 |(NULL)          |2024-11-20 08:31:19.917|           0|           0|             0|             0|(NULL)          |(NULL)                 |(NULL)            |(NULL)            |
+				// +-----------+----------+--------+----------+----------+------------+------------+-----------------------+-----------------------+----------------+-----------------------+------------+------------+--------------+--------------+----------------+-----------------------+------------------+------------------+
+				// 
+				// SELECT * FROM sys.dm_db_index_operational_stats(@dbid, @objid, null, null)
+				// +-----------+----------+--------+----------------+----------------------+-----------------+-----------------+-----------------+----------------+--------------------+--------------------+--------------------+---------------------+------------------------+---------------------+------------------------+----------------+----------------------+---------------------+------------------+------------------+-----------------------+-----------------------+---------------------------+---------------------------+-------------------------------+------------------------------+--------------+-------------------+-------------------+---------------+--------------------+--------------------+----------------------------------+--------------------------+---------------------+---------------------+------------------------+------------------------+--------------------------+--------------------------+-----------------------------+-----------------------------+------------------------------+------------------------------+-----------------------+------------------------+-------------------+--------------------+-------------------------------+--------------------------------+
+				// |database_id|object_id |index_id|partition_number|hobt_id               |leaf_insert_count|leaf_delete_count|leaf_update_count|leaf_ghost_count|nonleaf_insert_count|nonleaf_delete_count|nonleaf_update_count|leaf_allocation_count|nonleaf_allocation_count|leaf_page_merge_count|nonleaf_page_merge_count|range_scan_count|singleton_lookup_count|forwarded_fetch_count|lob_fetch_in_pages|lob_fetch_in_bytes|lob_orphan_create_count|lob_orphan_insert_count|row_overflow_fetch_in_pages|row_overflow_fetch_in_bytes|column_value_push_off_row_count|column_value_pull_in_row_count|row_lock_count|row_lock_wait_count|row_lock_wait_in_ms|page_lock_count|page_lock_wait_count|page_lock_wait_in_ms|index_lock_promotion_attempt_count|index_lock_promotion_count|page_latch_wait_count|page_latch_wait_in_ms|page_io_latch_wait_count|page_io_latch_wait_in_ms|tree_page_latch_wait_count|tree_page_latch_wait_in_ms|tree_page_io_latch_wait_count|tree_page_io_latch_wait_in_ms|page_compression_attempt_count|page_compression_success_count|version_generated_inrow|version_generated_offrow|ghost_version_inrow|ghost_version_offrow|insert_over_ghost_version_inrow|insert_over_ghost_version_offrow|	
+				// +-----------+----------+--------+----------------+----------------------+-----------------+-----------------+-----------------+----------------+--------------------+--------------------+--------------------+---------------------+------------------------+---------------------+------------------------+----------------+----------------------+---------------------+------------------+------------------+-----------------------+-----------------------+---------------------------+---------------------------+-------------------------------+------------------------------+--------------+-------------------+-------------------+---------------+--------------------+--------------------+----------------------------------+--------------------------+---------------------+---------------------+------------------------+------------------------+--------------------------+--------------------------+-----------------------------+-----------------------------+------------------------------+------------------------------+-----------------------+------------------------+-------------------+--------------------+-------------------------------+--------------------------------+
+				// |         15|72 853 680|       7|               1|72 057 710 507 393 024|        1 845 114|                0|                0|               0|               3 876|                   0|                   0|                    0|                      24|                    0|                       0|               6|                     0|                    0|                 0|                 0|                      0|                      0|                          0|                          0|                              0|                             0|             0|                  0|                  0|        831 514|                   0|                   0|                                 6|                         0|              115 302|                  512|                     185|                   2 472|                   115 302|                       512|                          184|                        2 438|                             0|                             0|                      0|                       0|                  0|                   0|                              0|                               0|
+				// |         15|72 853 680|      18|               1|72 057 710 507 786 240|        1 845 114|                0|                0|               0|              12 309|                   0|                   0|                    0|                      24|                    0|                       0|          20 416|                     0|                    0|                 0|                 0|                      0|                      0|                          0|                          0|                              0|                             0|     2 845 314|                  0|                  0|         52 953|                   0|                   0|                                 5|                         1|                  601|                    4|                  24 245|                 377 229|                       601|                         4|                       24 225|                      374 963|                             0|                             0|                      0|                       0|                  0|                   0|                              0|                               0|
+				// +-----------+----------+--------+----------------+----------------------+-----------------+-----------------+-----------------+----------------+--------------------+--------------------+--------------------+---------------------+------------------------+---------------------+------------------------+----------------+----------------------+---------------------+------------------+------------------+-----------------------+-----------------------+---------------------------+---------------------------+-------------------------------+------------------------------+--------------+-------------------+-------------------+---------------+--------------------+--------------------+----------------------------------+--------------------------+---------------------+---------------------+------------------------+------------------------+--------------------------+--------------------------+-----------------------------+-----------------------------+------------------------------+------------------------------+-----------------------+------------------------+-------------------+--------------------+-------------------------------+--------------------------------+
+
+				// Get info info in 2 different steps (due to dm_db_* requires 'VIEW DATABASE PERFORMANCE STATE') which most users do not have
+				List<ResultSetTableModel> extIxInfoList1 = Collections.emptyList();
+				List<ResultSetTableModel> extIxInfoList2 = Collections.emptyList();
+				
+				boolean success_extIxInfoList1 = true;
+				boolean success_extIxInfoList2 = true;
+
+				String sql  = "";
+				String sql1 = ""
+						+ "DECLARE @dbid  int = COALESCE(db_id('" + catOrigin + "'), db_id()) \n"
+						+ "DECLARE @objid int = OBJECT_ID('" + schema + table + "') \n"
+						+ "\n"
+						+ "SELECT * FROM sys.indexes                   WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+						+ "SELECT * FROM sys.partitions                WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+						+ "SELECT "
+						+ "     p.index_id \n"
+						+ "    ,total_pages = sum(a.total_pages) \n"
+						+ "    ,used_pages  = sum(a.used_pages) \n"
+						+ "    ,data_pages  = sum(a.data_pages) \n"
+						+ "FROM sys.partitions p \n"
+						+ "INNER join sys.allocation_units a ON p.partition_id = a.container_id \n"
+						+ "WHERE p.object_id = @objid \n"
+						+ "GROUP BY p.index_id \n"
+						+ "ORDER BY index_id \n"
+						;                                                                             
+
+				String sql2 = ""
+						+ "DECLARE @dbid  int = COALESCE(db_id('" + catOrigin + "'), db_id()) \n"
+						+ "DECLARE @objid int = OBJECT_ID('" + schema + table + "') \n"
+						+ "\n"
+						+ "SELECT * FROM sys.dm_db_partition_stats     WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+						+ "SELECT * FROM sys.dm_db_index_usage_stats   WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+						+ "SELECT * FROM sys.dm_db_index_operational_stats(@dbid, @objid, null, null) WHERE index_id > 0  ORDER BY index_id \n"
+						;                                                                             
+
+				sql = sql1; 
+				try { extIxInfoList1 = DbUtils.exec(_conn, sql, 1); }
+				catch (SQLException ex)
+				{
+					success_extIxInfoList1 = false;
+					_logger.warn("Problems getting 'Table INDEX Extra Info, step 1'. ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message='" + ex.getMessage() + "'. sql=|" + sql + "|, Caught: " + ex);
+				}
+
+				sql = sql2; 
+				try	{ extIxInfoList2 = DbUtils.exec(_conn, sql, 1); }
+				catch (SQLException ex)
+				{
+					success_extIxInfoList2 = false;
+					_logger.warn("Problems getting 'Table INDEX Extra Info, step 2'. ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message='" + ex.getMessage() + "'. sql=|" + sql + "|, Caught: " + ex);
+				}
+
+				ResultSetTableModel indexInfo                 = success_extIxInfoList1 ? extIxInfoList1.get(0) : ResultSetTableModel.createEmpty("indexInfo");
+				ResultSetTableModel partitionInfo             = success_extIxInfoList1 ? extIxInfoList1.get(1) : ResultSetTableModel.createEmpty("partitionInfo");
+				ResultSetTableModel partitionInfoSpace        = success_extIxInfoList1 ? extIxInfoList1.get(2) : ResultSetTableModel.createEmpty("partitionInfoSpace");
+
+				ResultSetTableModel dmDbPartitionStats        = success_extIxInfoList2 ? extIxInfoList2.get(0) : ResultSetTableModel.createEmpty("dmDbPartitionStats");
+				ResultSetTableModel dmDbIndexUsageStats       = success_extIxInfoList2 ? extIxInfoList2.get(1) : ResultSetTableModel.createEmpty("dmDbIndexUsageStats");
+				ResultSetTableModel dmDbIndexOperationalStats = success_extIxInfoList2 ? extIxInfoList2.get(2) : ResultSetTableModel.createEmpty("dmDbIndexOperationalStats");
+
+				// Return NULL (or default value) if column was not found...
+				indexInfo                .setHandleColumnNotFoundAsNullValueInGetValues(true);
+				partitionInfo            .setHandleColumnNotFoundAsNullValueInGetValues(true);
+				partitionInfoSpace       .setHandleColumnNotFoundAsNullValueInGetValues(true);
+				dmDbPartitionStats       .setHandleColumnNotFoundAsNullValueInGetValues(true);
+				dmDbIndexUsageStats      .setHandleColumnNotFoundAsNullValueInGetValues(true);
+				dmDbIndexOperationalStats.setHandleColumnNotFoundAsNullValueInGetValues(true);
+
+//				// Return NULL (or default value) if row was OutOfBounds...
+//				indexInfo                .setHandleRowOutOfBoundInGetValues(true);
+//				partitionInfo            .setHandleRowOutOfBoundInGetValues(true);
+//				partitionInfoSpace       .setHandleRowOutOfBoundInGetValues(true);
+//				dmDbPartitionStats       .setHandleRowOutOfBoundInGetValues(true);
+//				dmDbIndexUsageStats      .setHandleRowOutOfBoundInGetValues(true);
+//				dmDbIndexOperationalStats.setHandleRowOutOfBoundInGetValues(true);
+
+				
+				Map<String, String> extIndexInfo = new HashMap<>(); // <indexName, description>
+				Map<String, String> extIndexType = new HashMap<>(); // <indexName, indexType>
+
+				List<Integer> rowIds;
+				int indexIdRow;
+				
+				// Now loop the INDEX Part (which SHOULD be available for less authorized users as well)
+				for (int r=0; r<indexInfo.getRowCount(); r++)
+				{
+					indexCount++;
+
+					//----------------------------------------------------
+					String  index_name                 = indexInfo.getValueAsString (r, "name");
+					String  type_desc                  = indexInfo.getValueAsString (r, "type_desc");
+					Integer index_id                   = indexInfo.getValueAsInteger(r, "index_id");
+//					boolean is_unique                  = indexInfo.getValueAsBoolean(r, "is_unique");
+					boolean ignore_dup_key             = indexInfo.getValueAsBoolean(r, "ignore_dup_key");
+					boolean is_primary_key             = indexInfo.getValueAsBoolean(r, "is_primary_key");
+					boolean is_unique_constraint       = indexInfo.getValueAsBoolean(r, "is_unique_constraint");
+					Integer fill_factor                = indexInfo.getValueAsInteger(r, "fill_factor");
+					boolean is_disabled                = indexInfo.getValueAsBoolean(r, "is_disabled");
+					boolean has_filter                 = indexInfo.getValueAsBoolean(r, "has_filter");
+					String  filter_definition          = indexInfo.getValueAsString (r, "filter_definition");
+
+
+					//----------------------------------------------------
+					rowIds = partitionInfo.getRowIdsWhere("index_id", index_id);
+					indexIdRow = rowIds.isEmpty() ? -1 : rowIds.get(0);
+//					if (rowIds.size() > 1)
+//						_logger.warn("IndexExtraInfo: found more than one row in 'partitionInfo' for index_id=" + index_id + ", index_name='" + index_name + "'. Table/Index is probably Partitioned, which is NOT yet handled. Just using first entry.");
+
+					String  data_compression_desc      = indexIdRow < 0 ? "UNKNOWN" : partitionInfo.getValueAsString(indexIdRow, "data_compression_desc");
+					Integer row_count                  = indexIdRow < 0 ? -1 : partitionInfo.getValueAsIntegerRowIdsSum(rowIds, "rows");
+
+
+					//----------------------------------------------------
+					rowIds = partitionInfoSpace.getRowIdsWhere("index_id", index_id);
+					indexIdRow = rowIds.isEmpty() ? -1 : rowIds.get(0);
+//					if (rowIds.size() > 1)
+//						_logger.warn("IndexExtraInfo: found more than one row in 'partitionInfoSpace' for index_id=" + index_id + ", index_name='" + index_name + "'. Table/Index is probably Partitioned, which is NOT yet handled. Just using first entry.");
+
+					Integer   used_page_count          = indexIdRow < 0 ? -1 : partitionInfoSpace.getValueAsIntegerRowIdsSum(rowIds, "used_pages");
+					Integer   reserved_page_count      = indexIdRow < 0 ? -1 : partitionInfoSpace.getValueAsIntegerRowIdsSum(rowIds, "total_pages");
+
+
+					//----------------------------------------------------
+					if (success_extIxInfoList2)
+					{
+						rowIds = dmDbPartitionStats.getRowIdsWhere("index_id", index_id);
+						indexIdRow = rowIds.isEmpty() ? -1 : rowIds.get(0);
+//						if (rowIds.size() > 1)
+//							_logger.warn("IndexExtraInfo: found more than one row in 'dmDbPartitionStats' for index_id=" + index_id + ", index_name='" + index_name + "'. Table/Index is probably Partitioned, which is NOT yet handled. Just using first entry.");
+
+						used_page_count          = indexIdRow < 0 ? -1 : dmDbPartitionStats.getValueAsIntegerRowIdsSum(rowIds, "used_page_count");
+						reserved_page_count      = indexIdRow < 0 ? -1 : dmDbPartitionStats.getValueAsIntegerRowIdsSum(rowIds, "reserved_page_count");
+//						row_count                = indexIdRow < 0 ? -1 : dmDbPartitionStats.getValueAsIntegerRowIdsSum(rowIds, "row_count");
 					}
 
-					// ADD INFO
-					extraInfo.put(TableExtraInfo.IndexExtraInfoDescription, new TableExtraInfo(TableExtraInfo.IndexExtraInfoDescription, "IndexInfoDescription", extIndexInfo, "extended Index Description Information", null));
+
+					//----------------------------------------------------
+					rowIds = dmDbIndexUsageStats.getRowIdsWhere("index_id", index_id);
+					indexIdRow = rowIds.isEmpty() ? -1 : rowIds.get(0);
+//					if (rowIds.size() > 1)
+//						_logger.warn("IndexExtraInfo: found more than one row in 'dmDbIndexUsageStats' for index_id=" + index_id + ", index_name='" + index_name + "'. Table/Index is probably Partitioned, which is NOT yet handled. Just using first entry.");
+
+					Integer   user_seeks               = indexIdRow < 0 ? -1   : dmDbIndexUsageStats.getValueAsIntegerRowIdsSum  (rowIds, "user_seeks");
+					Integer   user_scans               = indexIdRow < 0 ? -1   : dmDbIndexUsageStats.getValueAsIntegerRowIdsSum  (rowIds, "user_scans");
+					Integer   user_lookups             = indexIdRow < 0 ? -1   : dmDbIndexUsageStats.getValueAsIntegerRowIdsSum  (rowIds, "user_lookups");
+					Integer   user_updates             = indexIdRow < 0 ? -1   : dmDbIndexUsageStats.getValueAsIntegerRowIdsSum  (rowIds, "user_updates");
+//					Timestamp last_user_seek           = indexIdRow < 0 ? null : dmDbIndexUsageStats.getValueAsTimestamp(indexIdRow, "last_user_seek");
+//					Timestamp last_user_scan           = indexIdRow < 0 ? null : dmDbIndexUsageStats.getValueAsTimestamp(indexIdRow, "last_user_scan");
+//					Timestamp last_user_lookup         = indexIdRow < 0 ? null : dmDbIndexUsageStats.getValueAsTimestamp(indexIdRow, "last_user_lookup");
+					Timestamp last_user_update         = indexIdRow < 0 ? null : dmDbIndexUsageStats.getValueAsTimestamp(indexIdRow, "last_user_update");
+
+
+					//----------------------------------------------------
+					rowIds = dmDbIndexOperationalStats.getRowIdsWhere("index_id", index_id);
+					indexIdRow = rowIds.isEmpty() ? -1 : rowIds.get(0);
+//					if (rowIds.size() > 1)
+//						_logger.warn("IndexExtraInfo: found more than one row in 'dmDbIndexOperationalStats' for index_id=" + index_id + ", index_name='" + index_name + "'. Table/Index is probably Partitioned, which is NOT yet handled. Just using first entry.");
+
+					Integer   range_scan_count         = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "range_scan_count");
+					Integer   singleton_lookup_count   = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "singleton_lookup_count");
+					Integer   forwarded_fetch_count    = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "forwarded_fetch_count");
+//					Integer   page_latch_wait_count    = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_latch_wait_count");
+//					Integer   page_latch_wait_in_ms    = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_latch_wait_in_ms");
+					Integer   page_io_latch_wait_count = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_io_latch_wait_count");
+//					Integer   page_io_latch_wait_in_ms = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_io_latch_wait_in_ms");
+
+
+					String ixDesc = "<BR>";
+					List<String> prefixes = new ArrayList<>();
+					
+					if (is_disabled)                            prefixes.add("<FONT color='red'>DISABLED</FONT>");
+					if ( ! StringUtil.equalsAny(type_desc, "CLUSTERED", "NONCLUSTERED") ) prefixes.add("type=" + type_desc);
+					if (ignore_dup_key)                         prefixes.add("IGNORE_DUP_KEY");
+					if (is_primary_key)                         prefixes.add("PRIMARY KEY");
+					if (is_unique_constraint)                   prefixes.add("UNIQUE CONSTRAINT");
+					if (fill_factor != null && fill_factor > 0) prefixes.add("FILLFACTOR=" + fill_factor);
+					if (has_filter)                             prefixes.add("FILTER='" + filter_definition + "'");
+
+					if ( ! prefixes.isEmpty() )
+						ixDesc += StringUtil.toCommaStr(prefixes) + ", ";
+					
+					int freeMb = (reserved_page_count - used_page_count) / 128;
+
+					ixDesc += "SizeMb="          + (reserved_page_count / 128);
+//					ixDesc += ", UsedMb="        + (used_page_count / 128);
+					if (freeMb > 0)
+						ixDesc += ", FreeMb="    + freeMb;
+					ixDesc += ", Rows="          + row_count;
+					ixDesc += ", IndexId="       + index_id;
+					ixDesc += ", Compression="   + data_compression_desc;
+					if (getExtendedIndexInfoOperationalDetails && success_extIxInfoList2)
+					{
+						if (dmDbIndexUsageStats.hasRows())
+						{
+							String unused = "";
+							if (user_seeks == 0 && user_scans == 0 && user_lookups == 0)
+								unused = "<FONT color='red'>UNUSED</FONT>: </b>";
+
+							ixDesc += "<BR>Usage[" + unused + "seeks=" + user_seeks + ", scans=" + user_scans + ", lookups=" + user_lookups + ", updates=" + user_updates + ", last_update=" + last_user_update + "]";
+						}
+
+						if (dmDbIndexOperationalStats.hasRows())
+							ixDesc += "<BR>OP[range_scan=" + range_scan_count + ", singleton_lookup=" + singleton_lookup_count + ", forwarded_fetch=" + forwarded_fetch_count + ", page_io_latch_wait_count=" + page_io_latch_wait_count + "]";
+					}
+					
+
+					extIndexInfo.put(index_name, ixDesc);
+					extIndexType.put(index_name, type_desc);
 				}
+				
+				// ADD INFO
+				extraInfo.put(TableExtraInfo.IndexExtraInfoDescription, new TableExtraInfo(TableExtraInfo.IndexExtraInfoDescription, "IndexInfoDescription", extIndexInfo, "extended Index Description Information", null));
+				extraInfo.put(TableExtraInfo.IndexType                , new TableExtraInfo(TableExtraInfo.IndexType                , "IndexType"           , extIndexType, "Index Type"                            , null));
 			}
-			catch (SQLException ex)
+			else
 			{
-				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
-				if (_logger.isDebugEnabled())
-					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				String sql = "exec " + cat + ".sp_helpindex '" + schema + table + "'";
+				try
+				{
+					List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
+					
+					if (rstmList.size() >= 1)
+					{
+						ResultSetTableModel indexInfo = rstmList.get(0);
+						
+						Map<String, String> extIndexInfo = new HashMap<>(); // <indexName, description>
+						for (int r=0; r<indexInfo.getRowCount(); r++)
+						{
+							String indexName        = indexInfo.getValueAsString(r, "index_name",        false, "");
+						//	String indexKeys        = indexInfo.getValueAsString(r, "index_keys",        false, "");
+							String indexDescription = indexInfo.getValueAsString(r, "index_description", false, "");
+							
+							// SYBASE also has: index_max_rows_per_page, index_fillfactor, index_reservepagegap, index_created, index_local
+							// But we do not read that... for the moment!
+
+							extIndexInfo.put(indexName, "Desc=["+indexDescription+"]");
+						}
+
+						// ADD INFO
+						extraInfo.put(TableExtraInfo.IndexExtraInfoDescription, new TableExtraInfo(TableExtraInfo.IndexExtraInfoDescription, "IndexInfoDescription", extIndexInfo, "extended Index Description Information", null));
+					}
+				}
+				catch (SQLException ex)
+				{
+					_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+					if (_logger.isDebugEnabled())
+						_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				}
 			}
 		}
 		
@@ -492,6 +797,7 @@ extends DbxConnection
 				    + "INNER JOIN " + cat + "sys.columns        c ON c .object_id = ic.object_id AND c .column_id = ic.column_id \n"
 				    + "WHERE i.object_id = object_id('" + cat + schema + table + "') \n"
 				    + "  AND ic.is_included_column = 1 \n"
+				    + "  AND  i.type_desc NOT LIKE '%COLUMNSTORE%' \n"
 				    + "ORDER BY ic.index_id, ic.index_column_id \n"
 				    + "";
 			try
@@ -591,9 +897,9 @@ extends DbxConnection
 					+ "FROM " + cat + "sys.dm_db_partition_stats \n"
 					+ "WHERE object_id=OBJECT_ID('" + cat + schema + table + "') \n"
 				    + "AND (index_id=0 or index_id=1) \n"
-				    
+
 				    + "UNION ALL \n"
-				    
+
 				    + "SELECT \n"
 				    + "     'INDEX'                                  as type \n"
 				    + "    ,SUM(in_row_data_page_count)*8            as in_row_data_kb \n"
@@ -681,6 +987,7 @@ extends DbxConnection
 				extraInfo.put(TableExtraInfo.TableOverflowRowSizeInKb,  new TableExtraInfo(TableExtraInfo.TableOverflowRowSizeInKb, "Row Overflow In KB", row_overflow_reserved_kb        , "Details: row_overflow_used_kb=" + nf.format(row_overflow_used_kb) + ", row_overflow_reserved_kb=" + nf.format(row_overflow_unused_kb) + ", index_unused_kb=" + nf.format(row_overflow_unused_kb) + ".", null));
 				extraInfo.put(TableExtraInfo.TableLobSizeInKb,          new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,         "LOB Size In KB",     lob_reserved_kb                 , "Details: lob_used_kb=" + nf.format(lob_used_kb) + ", lob_reserved_kb=" + nf.format(lob_reserved_kb) + ", lob_unused_kb=" + nf.format(lob_unused_kb) + ".", null));
 				extraInfo.put(TableExtraInfo.TableIndexSizeInKb,        new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,       "Index Size In KB",   index_reserved_kb               , "Details: index_used_kb=" + nf.format(index_used_kb) + ", index_reserved_kb=" + nf.format(index_reserved_kb) + ", index_unused_kb=" + nf.format(index_unused_kb) + ".", null));
+				extraInfo.put(TableExtraInfo.TableIndexCount,           new TableExtraInfo(TableExtraInfo.TableIndexCount,          "Index Count",        indexCount                      , "Number of indexes on the table", null));
 				extraInfo.put(TableExtraInfo.TablePartitionCount,       new TableExtraInfo(TableExtraInfo.TablePartitionCount,      "Partition Count",    partition_cnt                   , "Number of table partition(s). From: dm_db_partition_stats", null));
 			}
 			catch (SQLException ex)
@@ -710,6 +1017,7 @@ extends DbxConnection
 					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index  , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
 					extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data        , "From 'sp_spaceued', column 'data'.", null));
 					extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", index       , "From 'sp_spaceued', column 'index_size'.", null));
+					extraInfo.put(TableExtraInfo.TableIndexCount,    new TableExtraInfo(TableExtraInfo.TableIndexCount,    "Index Count",      indexCount  , "Number of indexes on the table", null));
 					//extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize  , "From 'sp_spaceued', index section, 'size' of columns name 't"+table+"'. Details: size="+nf.format(sumLobSize)+" KB, reserved="+nf.format(sumLobReserved)+" KB, unused="+nf.format(sumLobUnused)+" KB", null));
 				}
 				catch (SQLException ex2)

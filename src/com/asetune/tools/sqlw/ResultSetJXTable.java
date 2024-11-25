@@ -59,7 +59,9 @@ import javax.swing.table.TableModel;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.fife.ui.autocomplete.Completion;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
@@ -81,6 +83,10 @@ import com.asetune.gui.focusabletip.ResolverReturn;
 import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.gui.swing.DeferredMouseMotionListener;
 import com.asetune.gui.swing.GTableSortController;
+import com.asetune.sql.SqlObjectName;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.ui.autocomplete.CompletionProviderAbstract;
+import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.JsonUtils;
@@ -131,12 +137,48 @@ implements ToolTipHyperlinkResolver
 	public static final int     DEFAULT_TABLE_CELL_MAX_PREFERRED_WIDTH       = 1000;
 
 
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE       = "ResultSetJXTable.generate.rows.to.sql.newline.replace";
+	public static final boolean DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE       = true;
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE_STR   = "ResultSetJXTable.generate.rows.to.sql.newline.replace.str";
+	public static final String  DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE_STR   = "\\n";
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM       = "ResultSetJXTable.generate.rows.to.sql.statement.terminator";
+	public static final boolean DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM       = true;
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM_STR   = "ResultSetJXTable.generate.rows.to.sql.statement.terminator.str";
+	public static final String  DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM_STR   = ";";
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE     = "ResultSetJXTable.generate.rows.to.sql.null.replace";
+	public static final boolean DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE     = true;
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE_STR = "ResultSetJXTable.generate.rows.to.sql.null.replace.str";
+	public static final String  DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE_STR = "NULL";
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_DBNAME   = "ResultSetJXTable.generate.rows.to.sql.include.dbname";
+	public static final boolean DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_DBNAME   = false;
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_SCHEMA   = "ResultSetJXTable.generate.rows.to.sql.include.schema";
+	public static final boolean DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_SCHEMA   = true;
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI           = "ResultSetJXTable.generate.rows.to.sql.add.quotedIdentifier";
+	public static final boolean DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI           = true;
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_BEGIN_STR = "ResultSetJXTable.generate.rows.to.sql.add.quotedIdentifier.begin.str";
+	public static final String  DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_BEGIN_STR = "[";
+
+	public static final String  PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_END_STR   = "ResultSetJXTable.generate.rows.to.sql.add.quotedIdentifier.end.str";
+	public static final String  DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_END_STR   = "]";
+
 	private Point _lastMouseClick = null;
 
 	private boolean      _tabHeader_useFocusableTips   = true;
 	private boolean      _cellContent_useFocusableTips = true;
 	private FocusableTip _focusableTip                 = null;
 
+	private CompletionProviderAbstract _compleationProvider;
+	
 	public Point getLastMouseClickPoint()
 	{
 		return _lastMouseClick;
@@ -610,6 +652,67 @@ implements ToolTipHyperlinkResolver
 						return null;
 					String cellStr = cellValue.toString();
 
+					// Show special tooltip for special column names
+					String colName = rstm.getColumnName(mcol);
+					if (colName != null && StringUtil.equalsAnyIgnoreCase(colName, "tablename", "table_name", "objectname", "object_name"))
+					{
+						// Reuse the tooltip in the SQL editor (CompletionProvider)
+						if (_logger.isDebugEnabled())
+							_logger.debug("SHOW TABLE TOOLTIP FOR: cellStr=|" + cellStr + "|");
+						
+						if (_compleationProvider != null && _compleationProvider instanceof CompletionProviderAbstractSql)
+						{
+							CompletionProviderAbstractSql compleationProviderSql = (CompletionProviderAbstractSql) _compleationProvider;
+
+							DbxConnection conn = compleationProviderSql.getConnectionProvider().getConnection();
+							SqlObjectName sqlObjName = new SqlObjectName(conn, cellStr);
+							
+							String dbname       = sqlObjName.getCatalogNameNull();
+							String tabOwnerName = sqlObjName.getSchemaNameNull();
+							String objectName   = sqlObjName.getObjectName();
+
+							if (_logger.isDebugEnabled())
+								_logger.debug("SHOW TABLE TOOLTIP FOR: cellStr=|" + cellStr + "|, dbname=|" + dbname + "|, tabOwnerName=|" + tabOwnerName + "|, objectName=|" + objectName + "|.");
+
+							List<Completion> list = compleationProviderSql.getTableListWithGuiProgress(conn, dbname, tabOwnerName, objectName);
+
+							if (_logger.isDebugEnabled())
+								_logger.debug("compleationProviderSql.getTableListWithGuiProgress(ObjectName): dbname='" + dbname + "', ownerName='" + tabOwnerName + "', objectName='" + objectName + "'. list.size()=" + (list == null ? "-null-" : list.size()) + ".");
+
+							if ( list != null )
+							{
+								if      (list.size() == 0) 
+								{
+									tooltip = "No table information found for table '" + tabOwnerName + "." + objectName + "' in database '" + dbname + "'.";
+								}
+								else if (list.size() == 1) 
+								{
+									tooltip = list.get(0).getSummary();
+								}
+								else
+								{
+									String names = "";
+									String firstEntry = list.get(0).getSummary();
+									for (Completion completion : list)
+									{
+										names += "<li><code>" + completion.getReplacementText() + "</code><br></li>";
+									}
+									tooltip = "<FONT COLOR='red'>"
+											+ "Found table information, but I found MORE than 1 table, count=" + list.size() + ". <br>"
+											+ "I can only show info for 1 table. (database='" + dbname + "', table='" + tabOwnerName + "." + objectName + "'): <br>"
+											+ "<ul>" 
+											+ names
+											+ "</ul>"
+											+ "<br>"
+											+ "<b>Here is the FIRST Entry</b><br>"
+											+ "<hr><br>"
+											+ "</FONT>"
+											+ firstEntry;
+								}
+							}
+						}
+					}
+					
 					// Special logic if it's a SQL-Server "showplan" XML
 					if (cellStr.startsWith("<ShowPlanXML xmlns="))
 					{
@@ -743,6 +846,15 @@ implements ToolTipHyperlinkResolver
 		}
 
 		return ResolverReturn.createOpenInCurrentTooltipWindow(event);
+	}
+
+	/**
+	 * 
+	 * @param compleationProviderAbstract
+	 */
+	public void setCompleationProvider(CompletionProviderAbstract compleationProvider)
+	{
+		_compleationProvider = compleationProvider;
 	}
 
 	/**
@@ -1673,37 +1785,90 @@ implements ToolTipHyperlinkResolver
 	};
 	public String getDmlForSelectedRows(DmlOperation dmlOperation)
 	{
+		boolean doReplaceNewline   = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE      , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE);
+		String  replaceNewlineStr  = Configuration.getCombinedConfiguration().getProperty       (PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE_STR  , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NL_REPLACE_STR);
+
+		boolean doStmntTerminator  = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM      , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM);
+		String  stmntTerminatorStr = Configuration.getCombinedConfiguration().getProperty       (PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM_STR  , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_STMNT_TERM_STR);
+
+		boolean doReplaceNull      = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE    , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE);
+		String  replaceNullStr     = Configuration.getCombinedConfiguration().getProperty       (PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE_STR, DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_NULL_REPLACE_STR);
+
+		boolean includeDbname      = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_DBNAME  , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_DBNAME);
+		boolean includeSchema      = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_SCHEMA  , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_INCLUDE_SCHEMA);
+
+		boolean addQuotedIdent     = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI          , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI);
+		String  qiBeginStr         = Configuration.getCombinedConfiguration().getProperty       (PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_BEGIN_STR, DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_BEGIN_STR);
+		String  qiEndStr           = Configuration.getCombinedConfiguration().getProperty       (PROPKEY_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_END_STR  , DEFAULT_TABLE_GENERATE_ROWS_TO_SQL_ADD_QI_END_STR);
+
+		String q1 = "";
+		String q2 = "";
+		if (addQuotedIdent)
+		{
+			q1 = qiBeginStr;
+			q2 = qiEndStr;
+		}
+		
 		int[] selRows = getSelectedRows();
 
-		String tabname = "SOME_TABLE_NAME";
+		String sqlname = "SOME_TABLE_NAME";
 		TableModel tm = getModel();
 		if (tm instanceof ResultSetTableModel)
 		{
 			ResultSetTableModel rstm = (ResultSetTableModel) tm;
 			List<String> uniqueTables = rstm.getRsmdReferencedTableNames();
 			if (uniqueTables.size() == 1)
-				tabname = uniqueTables.get(0);
+				sqlname = uniqueTables.get(0);
 			else
 			{
 //				for (String tab : uniqueTables)
 //					tabname = tabname + "/" + tab;
-				tabname = "QUERY_REFERENCED_" + uniqueTables.size() + "_TABLES";
+				sqlname = "QUERY_REFERENCED_" + uniqueTables.size() + "_TABLES";
 			}
 		}
-		if (tabname.startsWith("/"))
-			tabname = tabname.substring(1); // Remove first "/"
+		if (sqlname.startsWith("/"))
+			sqlname = sqlname.substring(1); // Remove first "/"
+
+		// Parse the table and break it up into: dbname.schema.table
+//		SqlObjectName sqlObj = new SqlObjectNameSimple(tabname);
+		String dbname  = "";
+		String schname = "";
+		String tabname = "";
+		String[] sa = sqlname.split("\\.");
+		if      (sa.length >= 3) { dbname = sa[sa.length - 3];  schname = sa[sa.length - 2]; tabname = sa[sa.length - 1]; }
+		else if (sa.length >= 2) { dbname = "";                 schname = sa[sa.length - 2]; tabname = sa[sa.length - 1]; } 
+		else if (sa.length >= 1) { dbname = "";                 schname = "";                tabname = sa[sa.length - 1]; }
+
+		if ("-none-".equals(tabname) || "".equals(tabname))
+			tabname = "-tablename-";
+
+		sqlname = q1 + tabname + q2;
+		if (includeSchema && StringUtil.hasValue(schname)) sqlname = q1 + schname + q2 + '.' + q1 + sqlname + q2;
+		if (includeDbname && StringUtil.hasValue(dbname )) sqlname = q1 + dbname  + q2 + '.' + sqlname;
+
+		// If sqlname name contains dbname/schema
+//		sqlname = sqlname.replace(".", "].[");
+
+		// add "generic" quoted identifiers (in Sybase and SQL Server format... which will be replaced at execution with the DBMS specific chars)
+//		sqlname = "[" + sqlname + "]";
 		
 		StringBuilder sb = new StringBuilder();
-		sb.append("insert into ").append(tabname).append("(");
+		sb.append("INSERT INTO ").append(sqlname).append(" (");
 		for (int c=0; c<getColumnCount(); c++)
 		{
 			String colName = getColumnName(c);
-			// Should we "[Quotify]" the column names
-			colName = "[" + colName.replace("]", "]]") + "]";  // add '[' and ']' AROUND the column, if colName contains ']' escape that with a "]]"
+			if (addQuotedIdent)
+			{
+				// If we are using '[]' as Quoted Identifier, escape ']' into ']]'
+				if ("]".equals(q2))
+					colName.replace("]", "]]");
+
+				colName = q1 + colName + q2;  // add '[' and ']' AROUND the column, if colName contains ']' escape that with a "]]"
+			}
 			sb.append(colName).append(", ");
 		}
 		sb.replace(sb.length()-2, sb.length(), ""); // remove last comma
-		sb.append(") values(");
+		sb.append(") VALUES(");
 		
 		String insIntoStr = sb.toString();
 		sb.setLength(0);
@@ -1718,10 +1883,32 @@ implements ToolTipHyperlinkResolver
 				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(val))
 					val = null;
 
-				colMaxLen[c] = Math.max(colMaxLen[c], String.valueOf(val).length() ); 
+				String nullStr = "NULL";
+				if (doReplaceNull)
+					nullStr = replaceNullStr;
+
+				if (val == null)
+					val = nullStr;
+
+				int adjustLength = 0;
+//				if (needsQuotes(r, c, val))
+//					adjustLength = 2;
+				if (val instanceof String)
+				{
+					adjustLength += StringUtils.countMatches((String)val, "'");
+					if (doReplaceNewline)
+					{
+						int nlCnt = 0;
+						nlCnt += StringUtils.countMatches((String)val, "\r");
+						nlCnt += StringUtils.countMatches((String)val, "\n");
+						adjustLength += nlCnt * replaceNewlineStr.length();
+					}
+				}
+				
+				colMaxLen[c] = Math.max(colMaxLen[c], (String.valueOf(val).length() + adjustLength) ); 
 			}
 		}
-		
+
 		for (int r : selRows)
 		{
 			sb.append(insIntoStr);
@@ -1730,24 +1917,53 @@ implements ToolTipHyperlinkResolver
 				Object val = getValueAt(r, c);
 				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(val))
 					val = null;
+
+				int adjustLength = 0;
+				if (needsQuotes(r, c, val))
+					adjustLength = 2;
+
 				if (val != null && needsQuotes(r, c, val))
 				{
 					if (val instanceof String)
 					{
+						// Escape ' into ''
 						val = val.toString().replace("'", "''");
+						if (doReplaceNewline)
+						{
+							val = val.toString().replace("\r\n", replaceNewlineStr);
+							val = val.toString().replace("\n",   replaceNewlineStr);
+						}
 					}
 					int spaceCnt = colMaxLen[c] - String.valueOf(val).length();
 					sb.append("'").append(val).append("'").append(", ").append(StringUtil.fillSpace(spaceCnt));
 				}
 				else
 				{
+					String nullStr = "NULL";
+					if (doReplaceNull)
+						nullStr = replaceNullStr;
+
+					if (val == null)
+						val = nullStr;
+
 					int spaceCnt = colMaxLen[c] - String.valueOf(val).length();
-					sb.append( val == null ? "NULL" : val).append(", ").append(StringUtil.fillSpace(spaceCnt));
+					sb.append(val).append(", ").append(StringUtil.fillSpace(spaceCnt + adjustLength));
 				}
 			}
 			int lastCommaPos = sb.lastIndexOf(", ");
 			sb.replace(lastCommaPos, sb.length(), ""); // remove last comma
-			sb.append(")\n");
+			sb.append(")");
+			
+			if (doStmntTerminator)
+			{
+				String tmpStmntTerminatorStr = stmntTerminatorStr;
+				if (stmntTerminatorStr.startsWith("\\n"))
+					tmpStmntTerminatorStr = stmntTerminatorStr.substring(2);
+				sb.append(tmpStmntTerminatorStr);
+			}
+
+			// Simply end with a newline
+			sb.append("\n");
 		}
 		return sb.toString();
 	}

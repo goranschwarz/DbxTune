@@ -509,6 +509,8 @@ extends CounterCollectorThreadAbstract
 				{
 					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Initializing all counters...");
 
+					MonTablesDictionaryManager.getInstance().initialize(getCounterController().getMonConnection(), true);
+
 					getCounterController().initCounters(
 						getCounterController().getMonConnection(),
 						true,
