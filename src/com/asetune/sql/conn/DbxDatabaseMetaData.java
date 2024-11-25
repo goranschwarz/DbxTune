@@ -28,6 +28,8 @@ import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.utils.DbUtils;
+
 public class DbxDatabaseMetaData implements DatabaseMetaData
 {
 	private static Logger _logger = Logger.getLogger(DbxDatabaseMetaData.class);
@@ -37,7 +39,25 @@ public class DbxDatabaseMetaData implements DatabaseMetaData
 		if (dbmd == null)
 			throw new IllegalArgumentException("create(): dbmd can't be null");
 
-		return new DbxDatabaseMetaData(dbmd);
+		String dbmsProductName = "UNKNOWN";
+		try 
+		{
+			dbmsProductName = dbmd.getDatabaseProductName();
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems calling dbmd.getDatabaseProductName(). dbmsProductName='" + dbmsProductName + "', errorCode=" + ex.getErrorCode() + ", sqlState=" + ex.getSQLState() + ", Message='" + ex.getMessage() + "'. Caught: " + ex);
+		}
+		
+		// Create DBMS Specific implementations of the DbxDatabaseMetaData
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
+		{
+			return new DbxDatabaseMetaDataSqlServer(dbmd);
+		}
+		else
+		{
+			return new DbxDatabaseMetaData(dbmd);
+		}
 	}
 
 	public DbxDatabaseMetaData(DatabaseMetaData dbmd)

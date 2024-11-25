@@ -135,7 +135,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 3.3.1            Component: autocomplete    (RSyntaxTextArea)</li>
 	 			<li>To version 3.3.0            Component: languagesupport (RSyntaxTextArea)</li>
 	 			<li>To version 3.3.1            Component: rstaui          (RSyntaxTextArea)</li>
-	 			<li>To version 3.5.1            Component: rsyntaxtextarea</li>
+	 			<li>To version 3.5.2            Component: rsyntaxtextarea</li>
 	 			<li>To version 1.9.0            Component: commons-cli</li>
 	 			<li>To version 3.1.12           Component: commons-compiler</li>
 	 			<li>To version 1.12.0           Component: commons-csv</li>
@@ -358,6 +358,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>a bunch of cm's -- Get 'context_info' from 'dm_exec_requests' instead of 'dm_exec_connections'</LI>
 		<LI>DbmsObjectIdCache -- on "Msg 208, Text='Invalid object name 'xxxx'.'" simply clear the cache for that dbid</LI>
 		<LI>UserDefinedTimelineChart -- new option: onlyLevelZero={true|false} to only show "top" levels for 'SQL Agent Jobs'</LI>
+		<LI>Modified 'html-query-plan' to show some more information (the developer at https://github.com/JustinPealing/html-query-plan didn't respond to any issues, so I cloned the repo and made changes... Trying to get them to accept a Pull Request)</LI>
+		<LI>Switch from getting 'html-query-plan' from 'cdn.jsdelivr.net' to 'www.dbxtune.com' so I can use my changed/enhanced version.</LI>
 
 		<LI>Added Alarm: <b>AlarmEventMemoryGrantWait   </b> -- Used by CM 'CmMemoryGrantsSum' to alarm if we have anyone waiting to grab a memory grant.</LI>
 		<LI>Added Alarm: <b>AlarmEventLowOnWorkerThreads</b> -- which will be raised when we have 20 or less "worker threads" available (called from CmSummary)</LI>
@@ -410,6 +412,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases          </b> - Rewrite of 'sp_MSforeachdb' into a cursor loop, that execute all SQL Statements that needs "database context"</LI>
 		<LI><b>CmDatabases          </b> - Rewrite from 'sys.dm_db_file_space_usage' into "FILEPROPERTY(name, 'SpaceUsed')" which seems much cheaper</LI>
 		<LI><b>CmDatabases          </b> - Added column 'create_date' so we can see when the database was created.</LI>
+		<LI><b>CmDatabases          </b> - Added columns 'rcsi', 'si_state' and 'adr' so its' easier to se if ReadCommittedSnapShot/SnapshotIsolation/AcceleradeDatabaseRecovery has been enabled for a specific database.</LI>
+		<LI><b>CmDatabases          </b> - in GUI Mode: If 'LogSizeOnMb' is larger than 'DatabaseSizeInMb' then mark that cell as RED</LI>
 
 		<LI><b>CmDeviceIo           </b> - LogicalName - is now based om dbname and file_id (instead of master_files.name, which may not be unique enough)</LI>
 		<LI><b>CmDeviceIo           </b> - added new columns 'lname' (master_files.name), which is the 'old' LogicaName.</LI>
@@ -499,6 +503,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>in the "DB Information", If collation is not the same as tempdb, mark it as red</li>
 			<li>Fixed bug that skipped the "summary" section for ALL databases that has Query Store Enabled</li>
 			<li>Added chart 'CmOsIostat_IoBusyPct' to the "summary" section</li>
+			<li>Added Report Section for: Job Agent/Scheduler Information for the full day (origin: msdb.dbo.sysjobs, sysjobsteps, sysjobhistory)</li>
 		</ul>
 		</LI>
 	</UL>
@@ -510,7 +515,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>Added a new Collector Group 'Progress' with the following collectors: CmPgProgCluster, CmPgProgVacuum, CmPgProgAnalyze, CmPgProgIndex, CmPgProgCopy, CmPgProgBaseBackup</LI>
-		
+		<LI>BugFix: CatalogIterator -- Now skipps databases that we dont have access to (this was discovered when trying to use a GCP instance where some GCP database was protected by the 'pg_hba.conf' file</LI>
 		<br>
 
 		<LI><b>CmActiveStatements   </b> - added new columns 'pid_exlock_count' -- How many Exclusive locks does this PID hold</LI>
@@ -644,8 +649,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>for SQL Server -- Added some shortcuts for the above procedures</LI>
 		<LI>for SQL Server -- Showplan info: copy/save XML Plan formatted</LI>
 		<LI>for SQL Server -- Showplan info: Now also holds "Execution Time" (if Available), "Cardinality Actual/Estimated Calculation" (if Available)</LI>
-		<LI>for SQL Server -- Showplan info: Mark "Index Spool - Eager Spool" in color red... to highligt them a bit</LI>
+		<LI>for SQL Server -- Showplan info: Mark "Index Spool - Eager Spool" in color red... to highlight them a bit</LI>
 		<LI>Adjusted tabSize to be 4 (it looked like it was 5 previously)</LI>
+		<LI>For SQL Server: Code Completion -- Summary Information -- Did not show indexes for COLUMNSSTORE Indexes</LI>
+		<LI>For Postgres:  Code Completion -- Summary Information -- Did not show an accurate INCLUDE list for indexes</LI>
+		<LI>A better implementation of 'Generate INSERT' for ResultSet selected rows</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

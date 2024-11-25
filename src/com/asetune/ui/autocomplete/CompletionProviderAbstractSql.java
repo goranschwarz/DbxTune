@@ -268,7 +268,7 @@ extends CompletionProviderAbstract
 		}
 		catch(SQLException ex) 
 		{ 
-			_logger.error("Problems setting catalog name to '"+_localCatalogName+"'. Caught: "+ex);
+			_logger.error("Problems setting catalog name to '"+_localCatalogName+"'. ErrorCode=" + ex.getErrorCode() + ", SqlState=" +  ex.getSQLState() + ", Text=|" + ex.getMessage() + "|. Caught: "+ex);
 		}
 	}
 
@@ -2763,7 +2763,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			}
 			catch (SQLException sqle)
 			{
-				_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. Caught: "+sqle);
+				_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
 			}
 		}
 	}
@@ -3024,7 +3024,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	protected List<TableInfo> refreshCompletionForTables(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
-		return refreshCompletionForTables(conn, waitDialog, null, null, null);
+//		return refreshCompletionForTables(conn, waitDialog, null, null, null);
+		return refreshCompletionForTables(conn, waitDialog, _currentCatalog, null, null);
 	}
 	protected List<TableInfo> refreshCompletionForTables(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String tableName)
 	throws SQLException
@@ -3402,7 +3403,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	protected List<FunctionInfo> refreshCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
-		return refreshCompletionForFunctions(conn, waitDialog, null, null, null);
+//		return refreshCompletionForFunctions(conn, waitDialog, null, null, null);
+		return refreshCompletionForFunctions(conn, waitDialog, _currentCatalog, null, null);
 	}
 	protected List<FunctionInfo> refreshCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String functionName)
 	throws SQLException
@@ -3472,7 +3474,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			                        fi._funcCat     = StringUtils.trim( rs.getString("FUNCTION_CAT"));
 			                        fi._funcSchema  = StringUtils.trim( rs.getString("FUNCTION_SCHEM"));
 			                        fi._funcName    = removeSystemChars(rs.getString("FUNCTION_NAME"));
-			if (getTypeInt) { try { fi._funcTypeInt =                   rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions(), Caught: '"+ex+"', for: FUNCTION_CAT='"+fi._funcCat+"', FUNCTION_SCHEM='"+fi._funcSchema+"', FUNCTION_NAME='"+fi._funcName+"'."); }	}
+			if (getTypeInt) { try { fi._funcTypeInt =                   rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions(), ErrorCode=" + ex.getErrorCode() + ", SqlState=" +  ex.getSQLState() + ", Text=|" + ex.getMessage() + "|. Caught: '"+ex+"', for: FUNCTION_CAT='"+fi._funcCat+"', FUNCTION_SCHEM='"+fi._funcSchema+"', FUNCTION_NAME='"+fi._funcName+"'."); }	}
 			                        fi._funcRemark  = StringUtils.trim( rs.getString("REMARKS"));
 //			                        fi._specificName= StringUtils.trim( rs.getString("SPECIFIC_NAME"));
 
@@ -3782,7 +3784,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
-		return refreshCompletionForProcedures(conn, waitDialog, null, null, null);
+//		return refreshCompletionForProcedures(conn, waitDialog, null, null, null);
+		return refreshCompletionForProcedures(conn, waitDialog, _currentCatalog, null, null);
 	}
 	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName)
 	throws SQLException
@@ -4183,8 +4186,8 @@ if (_guiOwner == null)
 					}
 					catch(SQLException sqle)
 					{
-						_logger.info ("Problems when getting Mandatory Info, continuing with next lookup. Caught: "+sqle);
-						_logger.debug("Problems when getting Mandatory Info, continuing with next lookup. Caught: "+sqle, sqle);
+						_logger.info ("Problems when getting Mandatory Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
+						_logger.debug("Problems when getting Mandatory Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
 					}
 
 					//----------------------------------------------------------
@@ -4208,8 +4211,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting Miscelenious Info, continuing with next lookup. Caught: "+sqle);
-							_logger.debug("Problems when getting Miscelenious Info, continuing with next lookup. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting Miscelenious Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
+							_logger.debug("Problems when getting Miscelenious Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
 						}
 					}
 
@@ -4241,8 +4244,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting Database/Catalog info, continuing with next lookup. Caught: "+sqle);
-							_logger.debug("Problems when getting Database/Catalog info, continuing with next lookup. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting Database/Catalog info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
+							_logger.debug("Problems when getting Database/Catalog info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
 						}
 					}
 
@@ -4300,8 +4303,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting SQL Tables/columns, continuing with next lookup. Caught: "+sqle);
-							_logger.debug("Problems when getting SQL Tables/columns, continuing with next lookup. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting SQL Tables/columns, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
+							_logger.debug("Problems when getting SQL Tables/columns, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
 						}
 					}
 
@@ -4351,8 +4354,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting SQL Functions/params, continuing with next lookup. Caught: "+sqle);
-							_logger.debug("Problems when getting SQL Functions/params, continuing with next lookup. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting SQL Functions/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
+							_logger.debug("Problems when getting SQL Functions/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
 						}
 					}
 
@@ -4383,8 +4386,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting SQL Procedures/params, continuing with next lookup. Caught: "+sqle);
-							_logger.debug("Problems when getting SQL Procedures/params, continuing with next lookup. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting SQL Procedures/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
+							_logger.debug("Problems when getting SQL Procedures/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
 						}
 					}
 
@@ -4418,8 +4421,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting SQL System Procedures, continuing with next lookup. Caught: "+sqle);
-							_logger.debug("Problems when getting SQL System Procedures, continuing with next lookup. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting SQL System Procedures, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
+							_logger.debug("Problems when getting SQL System Procedures, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
 						}
 					}
 
@@ -5709,7 +5712,7 @@ if (_guiOwner == null)
 			}
 			catch (SQLException e)
 			{
-				_logger.info("Installing Completion Provider for JDBC, problems getting Database Product Name. Caught: "+e);
+				_logger.info("Installing Completion Provider for JDBC, problems getting Database Product Name. ErrorCode=" + e.getErrorCode() + ", SqlState=" +  e.getSQLState() + ", Text=|" + e.getMessage() + "|. Caught: "+e);
 				provider = CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
 			}
 		}

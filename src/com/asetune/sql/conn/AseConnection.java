@@ -247,6 +247,7 @@ extends TdsConnection
 
 					NumberFormat nf = NumberFormat.getInstance();
 
+					int indexCount       = 0;
 					int sumIndexSize     = 0;
 					int sumIndexReserved = 0;
 					int sumIndexUnused   = 0;
@@ -260,6 +261,8 @@ extends TdsConnection
 						Map<String, String> extIndexInfo = new HashMap<>();
 						for (int r=0; r<indexInfo.getRowCount(); r++)
 						{
+							indexCount++;
+
 							String index_name = indexInfo.getValueAsString (r, "index_name", true, "");
 							if (index_name.equalsIgnoreCase("t"+table))
 							{
@@ -297,6 +300,7 @@ extends TdsConnection
 					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index   , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
 					extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data         , "From 'sp_spaceued', columns 'data'.", null));
 					extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", sumIndexSize , "From 'sp_spaceued', index section, sum of 'size'. Details: size="+nf.format(sumIndexSize)+" KB, reserved="+nf.format(sumIndexReserved)+" KB, unused="+nf.format(sumIndexUnused)+" KB", null));
+					extraInfo.put(TableExtraInfo.TableIndexCount,    new TableExtraInfo(TableExtraInfo.TableIndexCount,    "Index Count",      indexCount   , "", null));
 					extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize   , "From 'sp_spaceued', index section, 'size' of columns name 't"+table+"'. Details: size="+nf.format(sumLobSize)+" KB, reserved="+nf.format(sumLobReserved)+" KB, unused="+nf.format(sumLobUnused)+" KB", null));
 					extraInfo.put(TableExtraInfo.TableLockScheme,    new TableExtraInfo(TableExtraInfo.TableLockScheme,    "Locking Scheme",   lockingScheme, "Table locking Scheme (allpages, datapages, datarows)", null));
 				}

@@ -26,6 +26,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,11 +34,13 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.info.DbmsVersionInfo;
 import com.asetune.sql.conn.info.DbmsVersionInfoPostgres;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoPostgres;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -179,6 +182,10 @@ public class PostgresConnection extends DbxConnection
 	@Override
 	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
 	{
+//		String catOrigin    = cat;
+		String schemaOrigin = schema;
+		String tableOrigin  = table;
+		
 		LinkedHashMap<String, TableExtraInfo> extraInfo = new LinkedHashMap<>();
 		
 		String qic = "\"";
@@ -249,7 +256,72 @@ public class PostgresConnection extends DbxConnection
 					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
 			}
 		}
-		
+
+		// Get included indexes...
+		// NOTE: JDBC MetaData getIndexInfo(...) already includes the include columns, but as "keys" (there is no way to see that it's a INCLUDED column)
+		//       So we need to do this a bit different...
+		boolean getIndexInclude = true;
+		if (getIndexInclude)
+		{
+			sql = ""
+				    + "WITH index_columns AS \n"
+				    + "( \n"
+				    + "    SELECT \n"
+				    + "        i.relname AS index_name, \n"
+				    + "        a.attname AS column_name, \n"
+				    + "        a.attnum  AS column_pos, \n"
+				    + "        CASE WHEN x.indisunique             THEN 'UNIQUE' ELSE 'NON-UNIQUE' END AS index_type, \n"
+				    + "        CASE WHEN a.attnum <= x.indnkeyatts THEN 'KEY'    ELSE 'INCLUDED'   END AS column_role \n"
+				    + "    FROM pg_index x \n"
+				    + "    JOIN pg_class i ON i.oid = x.indexrelid \n"
+				    + "    JOIN pg_class t ON t.oid = x.indrelid \n"
+				    + "    JOIN pg_attribute a ON a.attrelid = i.oid AND a.attnum > 0 \n"
+				    + "    JOIN pg_namespace n ON n.oid = t.relnamespace \n"
+				    + "    WHERE 1 = 1 \n"
+				    + "      AND n.nspname = " + DbUtils.safeStr(schemaOrigin) + " \n"
+				    + "      AND t.relname = " + DbUtils.safeStr(tableOrigin)  + " \n"
+				    + "    ORDER BY i.relname, column_pos, column_role \n"
+				    + ") \n"
+				    + "SELECT * \n"
+				    + "FROM index_columns \n"
+				    + "WHERE column_role = 'INCLUDED' \n"
+				    + "";
+			try
+			{
+				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
+
+				if (rstmList.size() >= 1)
+				{
+					ResultSetTableModel indexInfo = rstmList.get(0);
+					
+					Map<String, String> extIndexInfo = new HashMap<>(); // <indexName, colName(s)>
+				//	Map<String, List<String>> extIndexInfo = new HashMap<>(); // <indexName, colName(s)> // Maybe we can have this as a List instead of a CSV String...
+					for (int r=0; r<indexInfo.getRowCount(); r++)
+					{
+						String indexName   = indexInfo.getValueAsString(r, "index_name",  false, "");
+						String indexColumn = indexInfo.getValueAsString(r, "column_name", false, "");
+
+						String includeColumns = extIndexInfo.get(indexName);
+						if (includeColumns == null)
+							includeColumns = indexColumn;
+						else
+							includeColumns += ", " + indexColumn;
+
+						extIndexInfo.put(indexName, includeColumns);
+					}
+
+					// ADD INFO
+					extraInfo.put(TableExtraInfo.IndexIncludeColumns, new TableExtraInfo(TableExtraInfo.IndexIncludeColumns, "IndexIncludeColumns", extIndexInfo, "Index Include Columns", null));
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				if (_logger.isDebugEnabled())
+					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+			}
+		}
+
 		return extraInfo;
 	}
 

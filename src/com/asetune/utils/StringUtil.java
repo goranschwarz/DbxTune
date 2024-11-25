@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -48,6 +49,7 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.JComboBox;
@@ -56,12 +58,14 @@ import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
@@ -1542,6 +1546,9 @@ public class StringUtil
 
 	public static String fillSpace(int spaceCnt)
 	{
+		if (spaceCnt <= 0)
+			return "";
+
 		StringBuilder sb = new StringBuilder(spaceCnt);
 		for (int i=0; i<spaceCnt; i++)
 			sb.append(' ');
@@ -2650,7 +2657,9 @@ public class StringUtil
 			xml = xml.substring(xmlStart);
 		
 //		return prettyFormat1(xml, 2);
-		return prettyFormat2(xml);
+//		return prettyFormat2(xml);
+		return prettyFormat3(xml);
+//		return prettyFormat4(xml);
 	}
 
 	// https://www.journaldev.com/71/java-xml-formatter-document-xml
@@ -2705,6 +2714,169 @@ public class StringUtil
 			throw new RuntimeException(e);
 		}
 	}
+	private static String prettyFormat3(String inputStr)
+	{
+		String  xmlString = inputStr;
+
+		int     indent            = 4;
+		boolean ignoreDeclaration = true;
+		try 
+		{
+			InputSource src = new InputSource(new StringReader(xmlString));
+			Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(src);
+
+			String xslt = ""
+					+ "<xsl:stylesheet version='1.0' xmlns:xsl='http://www.w3.org/1999/XSL/Transform'> \n"
+					+ "    <xsl:strip-space elements='*'/> \n"
+					+ "    <xsl:output method='xml' encoding='UTF-8'/> \n"
+					+ "\n"
+					+ "    <xsl:template match='@*|node()'> \n"
+					+ "        <xsl:copy> \n"
+					+ "            <xsl:apply-templates select='@*|node()'/> \n"
+					+ "        </xsl:copy> \n"
+					+ "    </xsl:template> \n"
+					+ "\n"
+					+ "</xsl:stylesheet> \n"
+					;
+			
+			TransformerFactory transformerFactory = TransformerFactory.newInstance();
+			transformerFactory.setAttribute("indent-number", indent);
+//			Transformer transformer = transformerFactory.newTransformer();
+			Transformer transformer = transformerFactory.newTransformer(new StreamSource(new StringReader(xslt)));
+			transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, ignoreDeclaration ? "yes" : "no");
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+
+			Writer out = new StringWriter();
+			transformer.transform(new DOMSource(document), new StreamResult(out));
+			return out.toString();
+		}
+		catch (Exception e) 
+		{
+			throw new RuntimeException("Error occurs when pretty-printing xml:\n" + xmlString, e);
+		}
+	}
+
+//	private static String prettyFormat4(String inputStr)
+//	{
+//		String  xmlString = inputStr;
+//		StringBuilder sb = new StringBuilder();
+//
+//		try 
+//		{
+//			InputSource src = new InputSource(new StringReader(xmlString));
+//			Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(src);
+//
+//			printNode(document, sb, 0);
+//		}
+//		catch (Exception e) 
+//		{
+//			throw new RuntimeException("Error occurs when pretty-printing xml:\n" + xmlString + "\nCaught: " + e, e);
+//		}
+//		
+//		return sb.toString();
+//	}
+//	private static void printNode(Node node, StringBuilder sb, int iterLevel) 
+//	{
+//		String prefix = iterLevel <= 0 ? "" : String.format("%" + (iterLevel*2) + "s", ""); // "%4s" --> "    " 
+//		System.out.println(prefix + serializeNode(node));
+////		System.out.println(prefix + serializeNode(node));
+//		sb.append(prefix).append(serializeNode(node)).append("\n");
+//
+//		NodeList nodeList = node.getChildNodes();
+//		for (int i = 0; i < nodeList.getLength(); i++) 
+//		{
+//			Node currentNode = nodeList.item(i);
+//			if (currentNode.getNodeType() == Node.ELEMENT_NODE) 
+//			{
+//				//calls this method for all the children which is Element
+//				printNode(currentNode, sb, iterLevel + 1);
+//			}
+//		}
+//	}
+//	private static String serializeNode(Node node)
+//	{
+//		String s = "";
+//		if ( node.getNodeName().equals("#text") ) 
+//			return node.getTextContent();
+//
+//		s+= "<" + node.getNodeName() + " ";
+//		NamedNodeMap attributes = node.getAttributes();
+//		if( attributes!= null )
+//		{
+//			for (int i=0; i<attributes.getLength(); i++)
+//			{
+//				s += attributes.item(i).getNodeName() + "=\"" + attributes.item(i).getNodeValue() + "\"";
+//			}
+//		}
+//		NodeList childs = node.getChildNodes();
+//		if( childs == null || childs.getLength() == 0 )
+//		{
+//			s += "/>";
+//			return s;
+//		}
+//		s+=">";
+//		for( int i=0; i<childs.getLength(); i++)
+//		{
+//			s += serializeNode(childs.item(i));
+//		}
+//		s+= "</" + node.getNodeName() + ">";
+//		return s;
+//	}
+
+	/**
+	 * This one is using regex<br>
+	 * it's the "same" as I use in JavaScript to format...<br>
+	 * Is do *not* touch the content or reorder attributes, which is good.<br> 
+	 * But it closes tags on a new row (with a </close> tag instead of at the same row '/>' if it's a single row tag)<br> 
+	 *  
+	 * @param xml
+	 * @return
+	 */
+	public static String prettyFormat4(String xml) 
+	{
+		StringBuilder formatted = new StringBuilder();
+		Pattern reg = Pattern.compile("(>)(<)(\\/*)");
+		Matcher matcher = reg.matcher(xml);
+		xml = matcher.replaceAll("$1\r\n$2$3");
+		int pad = 0;
+
+		String[] nodes = xml.split("\r\n");
+		for (String node : nodes) 
+		{
+			int indent = 0;
+			if (node.matches(".+<\\/\\w[^>]*>$")) 
+			{
+				indent = 0;
+			} 
+			else if (node.matches("^<\\/\\w")) 
+			{
+				if (pad != 0) 
+				{
+					pad -= 1;
+				}
+			} 
+			else if (node.matches("^<\\w[^>]*[^\\/]>.*$")) 
+			{
+				indent = 1;
+			} 
+			else 
+			{
+				indent = 0;
+			}
+
+			StringBuilder padding = new StringBuilder();
+			for (int i = 0; i < pad; i++) 
+			{
+				padding.append("    ");
+			}
+
+			formatted.append(padding).append(node).append("\r\n");
+			pad += indent;
+		}
+
+		return formatted.toString();
+	}	
 
 	/**
 	 * if input string has \t, \f, \n or \r they will be escaped into \\t, \\f, \\n, \\r

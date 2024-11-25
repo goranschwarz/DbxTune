@@ -710,6 +710,9 @@ extends CountersModel
 //			mtd.addColumn(cmName, "updateability"           ,"<html>Is database in read-only or read-write mode... Can be 'READ_ONLY' or 'READ_WRITE' (uses: sys.database.is_read_only)</html>");
 			mtd.addColumn(cmName, "state_desc"              ,"<html>Description of the database state: ONLINE, RESTORING, RECOVERING, RECOVERY_PENDING, SUSPECT, EMERGENCY, OFFLINE, COPYING, OFFLINE_SECONDARY (same as sys.database.state_desc)</html>");
 			mtd.addColumn(cmName, "recovery_model_desc"     ,"<html>Description of recovery model selected: FULL, BULK_LOGGED, SIMPLE. (same as sys.database.recovery_model_desc)</html>");
+			mtd.addColumn(cmName, "rcsi"                    ,"<html>Is RCSI (Read Comitted Snapshot Isolation) enabled on this database (same as MVCC -- Multi Version Concurrency Control on most other DBMS).<br> <code>ALTER DATABASE dbname SET READ_COMMITTED_SNAPSHOT ON/OFF</code><br> (column name sys.database.is_read_committed_snapshot_on)</html>");
+			mtd.addColumn(cmName, "si_state"                ,"<html>Is SI (Snapshot Isolation) enabled on this database (so you can '<b>opt-in</b>' on RCSI when you need it).<br> <code>ALTER DATABASE dbname SET ALLOW_SNAPSHOT_ISOLATION ON/OFF</code><br> (column name sys.database.snapshot_isolation_state_desc)</html>");
+			mtd.addColumn(cmName, "adr"                     ,"<html>Is ADR (Accelerated Database Recovery) enabled on this database (you should also have RCSI enabled).<br> <code>ALTER DATABASE dbname SET ACCELERATED_DATABASE_RECOVERY ON/OFF</code><br> (column name sys.database.is_accelerated_database_recovery_on)<br>Note: From SQL Server 2019 and above.</html>");
 			mtd.addColumn(cmName, "ag_name"                 ,"<html>Availability Group Name</html>");
 			mtd.addColumn(cmName, "ag_role"                 ,"<html>Availability Group Role</html>");
 			mtd.addColumn(cmName, "ag_primary_server"       ,"<html>Primary Server of the Availability Group (null if none)</html>");
@@ -1932,6 +1935,13 @@ extends CountersModel
 			contextInfoStr_2 = "    ,OldestTranContextInfoStr = oti.context_info_str /* " + SqlServerCmUtils.HELPTEXT_howToDisable__context_info_str + " */ \n";
 		}
 		
+		// ----- SQL-Server 2019 and above
+		String adr_column = ""; // ADR - Accelerated Database Recovery
+		if (srvVersion >= Ver.ver(2019))
+		{
+			adr_column = "    ,adr                      = d.is_accelerated_database_recovery_on \n";
+		}
+
 		// ---- BACKUP INFORMATION
 		String backupInfo = ""
 				+ "--------------------------- \n"
@@ -2223,6 +2233,9 @@ extends CountersModel
 //			    + "    ,updateability            = CASE WHEN d.is_read_only = 1 THEN 'READ_ONLY' ELSE 'READ_WRITE' END \n" // use above 'is_read_only' instead it was more "visual"
 			    + "    ,d.state_desc \n"
 			    + "    ,d.recovery_model_desc \n"
+			    + "    ,rcsi                     = d.is_read_committed_snapshot_on \n"
+			    + "    ,si_state                 = d.snapshot_isolation_state_desc \n"
+			    + adr_column
 			    + "    ,d.create_date \n"
 			    + availabilityGroupName
 			    + availabilityGroupRole

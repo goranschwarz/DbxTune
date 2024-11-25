@@ -5,14 +5,48 @@
     border: 1px solid black;
 }
 
-div.qp-node-label-2-warning {
+div.qp-node-label-cost {
+}
+
+div.qp-node-label-time {
+    color: orange;
+}
+
+div.qp-node-label-cardinality {
+    color: gray;
+}
+
+span.qp-node-label-cardinality-waring {
     color: red;
+}
+
+div.qp-node-label-2-warning {
+    background: red;
+}
+
+div.qp-node-id {
+	display: none;
+    color: gray;
+	position: absolute;
+	top: 0;
+	right: 0;
+	padding-top: 3px;
+	padding-right: 5px;
 }
 
 div.qp-node,
 div.qp-tt {
     font-size: 11px;
     line-height: normal;
+}
+
+/*
+div.qp-node:hover div.qp-node-id {
+	display: block;
+}
+*/
+div.qp-tr:hover div.qp-node-id {
+	display: block;
 }
 
 .qp-statement-header {
@@ -96,9 +130,33 @@ div[class|='qp-icon'] {
     text-align: left;
 }
 
-.qp-bold,
+.qp-tt-wait td {
+    text-align: left;
+    padding-left: 2px;
+}
+
+.qp-tt-wait th {
+    text-align: left;
+}
+
+.qp-tt-params td {
+    text-align: left;
+    padding-left: 2px;
+}
+
+.qp-tt-params th {
+    text-align: left;
+}
+
 .qp-tt-header {
     font-weight: bold;
+	margin-bottom: 1px;
+}
+
+.qp-bold {
+    font-weight: bold;
+	margin-top: 7px;
+	margin-bottom: 1px;
 }
 
 .qp-tt-header {

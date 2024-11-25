@@ -206,6 +206,7 @@ public class ResultSetTableModel
 //	private IDbmsDdlResolver             _dbmsDdlResolver;
 	
 	private boolean _handleColumnNotFoundAsNullValueInGetValues = false;
+	private boolean _handleRowOutOfBoundInGetValues = false;
 
 	/** Set the name of this table model, could be used for debugging or other tracking purposes */
 	public void setName(String name) { _name = name; }
@@ -228,6 +229,9 @@ public class ResultSetTableModel
 	public void    setHandleColumnNotFoundAsNullValueInGetValues(boolean b) { _handleColumnNotFoundAsNullValueInGetValues = b; }
 	public boolean isHandleColumnNotFoundAsNullValueInGetValues()           { return _handleColumnNotFoundAsNullValueInGetValues; }
 	
+	public void    setHandleRowOutOfBoundInGetValues(boolean b) { _handleRowOutOfBoundInGetValues = b; }
+	public boolean isHandleRowOutOfBoundInGetValues()           { return _handleRowOutOfBoundInGetValues; }
+
 	
 	/**
 	 * INTERNAL: used by: <code>public static String getResultSetInfo(ResultSetTableModel rstm)</code>
@@ -1864,14 +1868,17 @@ public class ResultSetTableModel
 	@Override
 	public Object getValueAt(int r, int c)
 	{
+//		ArrayList<Object> row = _rows.get(r);
+//		Object o = row.get(c);
+//		return (o != null) ? o : NULL_REPLACE;
+		return getValueAt(r, c, NULL_REPLACE);
+	}
+
+	public Object getValueAt(int r, int c, Object nullReplacement)
+	{
 		ArrayList<Object> row = _rows.get(r);
 		Object o = row.get(c);
-//		Object o = _rows.get(r).get(c);
-		return (o != null) ? o : NULL_REPLACE;
-//		if (o == null)
-//			return null;//return "(NULL)";
-//		else
-//			return o.toString(); // Convert it to a string
+		return (o != null) ? o : nullReplacement;
 	}
 
 	// Table can be editable, but only for copy+paste use...
@@ -2458,7 +2465,18 @@ public class ResultSetTableModel
 		return sb.toString();
 	}
 
-	/** renderer used in toHtmlTableString() */
+	/**
+	 * renderer used in toHtmlTableString() 
+	 * Use/Override methods
+	 * <table>
+	 *   <tr> <td><code>tagTableAttr </code></td> <td>To set attributes on the table tag                  </td> </tr>
+	 *   <tr> <td><code>tagTrAttr    </code></td> <td>To set attributes on the tables 'TR' tag            </td> </tr>
+	 *   <tr> <td><code>tagThAttr    </code></td> <td>To set attributes on the tables 'TH' tag            </td> </tr>
+	 *   <tr> <td><code>tagTdAttr    </code></td> <td>To set attributes on the tables 'TD' tag            </td> </tr>
+	 *   <tr> <td><code>cellValue    </code></td> <td>To set attributes on the tables cell value/content  </td> </tr>
+	 *   <tr> <td><code>cellToolTip  </code></td> <td>To set attributes on the tables 'TD title' attribute</td> </tr>
+	 * </table> 
+	 */
 	public interface TableStringRenderer
 	{
 		/** called to create Attributes for any TABLE attribute */
@@ -3480,6 +3498,46 @@ public class ResultSetTableModel
 	}
 
 	//-------------------------
+	//---- BOOLEAN
+	//-------------------------
+	public boolean getValueAsBoolean(int mrow, String colName)
+	{
+		return getValueAsBoolean(mrow, colName, true);
+	}
+	public boolean getValueAsBoolean(int mrow, String colName, boolean caseSensitive)
+	{
+		return getValueAsBoolean(mrow, colName, caseSensitive, false);
+	}
+	public boolean getValueAsBoolean(int mrow, String colName, boolean caseSensitive, boolean defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? false : defaultNullValue;
+
+		if (o instanceof Number)
+			return ((Number)o).longValue() > 0;
+
+		return Boolean.parseBoolean(o.toString());
+	}
+	public boolean getValueAsBoolean(int mrow, int mcol)
+	{
+		return getValueAsBoolean(mrow, mcol, false);
+	}
+	public boolean getValueAsBoolean(int mrow, int mcol, boolean defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, mcol);
+
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? false : defaultNullValue;
+
+		if (o instanceof Number)
+			return ((Number)o).longValue() > 0;
+
+		return Boolean.parseBoolean(o.toString());
+	}
+
+	//-------------------------
 	//---- SHORT
 	//-------------------------
 	public Short getValueAsShort(int mrow, String colName)
@@ -3618,6 +3676,26 @@ public class ResultSetTableModel
 			}
 		}
 	}
+	public Integer getValueAsIntegerRowIdsSum(List <Integer> rowIds, String colName)
+	{
+		int mcol = findColumn(colName);
+		if ( mcol == -1 )
+			return 0;
+		
+		return getValueAsIntegerRowIdsSum(rowIds, mcol);
+	}
+	public Integer getValueAsIntegerRowIdsSum(List <Integer> rowIds, int mcol)
+	{
+		int sum = 0;
+		for (Integer mrow : rowIds)
+		{
+			int val = getValueAsInteger(mrow, mcol, -1);
+			if (val > 0)
+				sum += val;
+		}
+		return sum;
+	}
+
 
 	//-------------------------
 	//---- LONG
@@ -3921,7 +3999,23 @@ public class ResultSetTableModel
 		}
 		
 //System.out.println("getValueAsObject(mrow="+mrow+", colName='"+colName+"'): col_pos="+col_pos+", mrow="+mrow+", mcol="+mcol+".");
-		Object o = tm.getValueAt(mrow, mcol);
+		Object o = null;
+		try
+		{
+			o = tm.getValueAt(mrow, mcol);
+		}
+		catch (IndexOutOfBoundsException ex)
+		{
+			if (_handleRowOutOfBoundInGetValues)
+			{
+				_logger.warn("Discarding IndexOutOfBoundsException: getValueAsObject(mrow=" + mrow + ", colName='" + colName + "', caseSensitive=" + caseSensitive + "): _handleRowOutOfBoundInGetValues=true. returning null. Caught: " + ex);
+				return null;
+			}
+			else
+			{
+				throw ex;
+			}
+		}
 
 		if (tm instanceof ResultSetTableModel)
 		{
@@ -3937,7 +4031,24 @@ public class ResultSetTableModel
 	{
 		TableModel tm = this;
 
-		Object o = tm.getValueAt(mrow, mcol);
+		Object o = null;
+		try
+		{
+			o = tm.getValueAt(mrow, mcol);
+		}
+		catch (IndexOutOfBoundsException ex)
+		{
+			if (_handleRowOutOfBoundInGetValues)
+			{
+				_logger.warn("Discarding IndexOutOfBoundsException: getValueAsObject(mrow=" + mrow + ", mcol='" + mcol + "'): _handleRowOutOfBoundInGetValues=true. returning null. Caught: " + ex);
+				return null;
+			}
+			else
+			{
+				throw ex;
+			}
+		}
+
 		if (tm instanceof ResultSetTableModel)
 		{
 			if (o != null && o instanceof String)
@@ -4677,8 +4788,9 @@ public class ResultSetTableModel
 //		if (! StringUtil.startsWithIgnoreBlankIgnoreCase(textTable, "+-"))
 //			throw new IllegalArgumentException("textTable must start with '+-'.");
 		
-		List<ResultSetTableModel> rstmList = parseTextTables( StringUtil.readLines(textTable) );
-
+//		List<ResultSetTableModel> rstmList = parseTextTables( StringUtil.readLines(textTable) );
+		List<ResultSetTableModel> rstmList = parseTextTables( StringUtil.readLines(textTable, false, false) );
+		
 		if (rstmList == null)
 			return null;
 		
@@ -4761,7 +4873,8 @@ public class ResultSetTableModel
 //		if (! StringUtil.startsWithIgnoreBlankIgnoreCase(textTable, "+-"))
 //			throw new IllegalArgumentException("textTable must start with '+-'.");
 		
-		return parseTextTables( StringUtil.readLines(textTable));
+//		return parseTextTables( StringUtil.readLines(textTable) );
+		return parseTextTables( StringUtil.readLines(textTable, false, false) );
 	}
 
 	/**
@@ -4788,7 +4901,7 @@ public class ResultSetTableModel
 	 * </pre>
 	 * 
 	 * <p>
-	 * Note: <b>This implementation can't handle "multi line" records... for the moment...</b><br> 
+	 * Note: <b>This implementation now also handle "multi line" records...</b><br> 
 	 * For example:<br>
 	 * <pre>
      * +--+----------------+-----------------------------------+-------------------+
@@ -4817,13 +4930,244 @@ public class ResultSetTableModel
 		if (textTableList.isEmpty()) throw new IllegalArgumentException("textTableList can't be empty.");
 
 		List<ResultSetTableModel> rstmList = new ArrayList<>();
+		
+		// Pre-parsing of table(s) to figure out:
+		// * If the table contains multi-line rows, or just single-line rows
+		// * How may tables that are in the string
+		List<List<String>> tables = new ArrayList<>();
+		List<Boolean> tableIsMultiLine = new ArrayList<>();
+
+		int tableStart = -1;
+		int tableEnd   = -1;
+		int hrCount    = 0;  // Horizontal Rule/Row Count  "+-"
+		int lastLineNum = textTableList.size() - 1;
+
+		for (int l=0; l<textTableList.size(); l++)
+		{
+			String line = textTableList.get(l);
+			boolean closeTable = false;
+
+			//System.out.println("LINE["+l+"]: line >>>" + line + "<<<");
+			
+			// Any "Horizontal Rule/Row" OR any DATA ROW
+			if (line.startsWith("+-") || line.startsWith("|"))
+			{
+				if (tableStart == -1)
+					tableStart = l;
+
+				if (line.startsWith("+-"))
+					hrCount++;
+
+//				if (line.startsWith("|"))
+//					drCount++;
+				
+//				if (hrCount == 1 && drCount == 1)
+//					lblRow = l;
+			}
+			else
+			{
+				// If we find "something else than "+-" or "|" then it's time to close this table (single or multi-line)
+				if (tableStart >= 0)
+				{
+					tableEnd = l;
+					closeTable = true;
+				}
+				else
+				{
+//					System.out.println(">>>>>>> NOT-IN-TABLE--DO-DISCARD >>>>>>> line[" + l + "] = >>>" + line +"<<<");
+				}
+			}
+			
+			// If we are at "last row" --- also close the table
+			if (l == lastLineNum)
+			{
+				tableEnd = l + 1;
+				closeTable = true;
+			}
+
+			if (closeTable && tableStart != -1)
+			{
+				// Copy Rows 
+				List<String> tableRows = new ArrayList<>();
+				for (int r=tableStart; r<tableEnd; r++)
+				{
+					tableRows.add( textTableList.get(r) );
+				}
+				tables.add(tableRows);
+
+				// Is this a table with MultiLine data rows 
+				boolean isMultiLineTable = false;
+				if (hrCount > 3)
+					isMultiLineTable = true;
+
+				tableIsMultiLine.add(isMultiLineTable);
+				
+				// Reset all "outer" variables
+				tableStart = -1;
+				tableEnd   = -1;
+				hrCount    = 0;  // Horizontal Rule/Row Count  "+-"
+			}
+		}
+
+		if (_logger.isDebugEnabled())
+		{
+			for (int i=0; i<tables.size(); i++)
+			{
+				_logger.debug("--------------------------------------------------------------------");
+				_logger.debug("MTR["+i+"]=" + tableIsMultiLine.get(i));
+				
+				List<String> table = tables.get(i);
+				_logger.debug("TABLE["+i+"]: rows=" + table.size());
+				for (int r=0; r<table.size(); r++)
+				{
+					_logger.debug("     ROW["+r+"]: " + table.get(r));
+				}
+			}
+		}
+		
+		// Add the individual tables to a ResultSetTableModel
+		for (int i=0; i<tables.size(); i++)
+		{
+			List<String> table = tables.get(i);
+			boolean isMultiLineTable = tableIsMultiLine.get(i);
+			
+			ResultSetTableModel rstm = parseTextTable_singelTable(table, isMultiLineTable, "rstm-" + i);
+			rstmList.add(rstm);
+		}
+		
+		return rstmList;
+	}
+
+	public static ResultSetTableModel parseTextTable_singelTable(List<String> textTableList, boolean isMultiLineTable, String rstmName)
+	throws IllegalArgumentException
+	{
+		if (textTableList == null)   throw new IllegalArgumentException("textTableList can't be null.");
+		if (textTableList.isEmpty()) throw new IllegalArgumentException("textTableList can't be empty.");
+
+		ResultSetTableModel rstm = new ResultSetTableModel(rstmName);
+		
+		List<List<Object>> multiLineRowsBuffer = new ArrayList<>();
+		
+		int hrCount = 0;  // Horizontal Rule/Row Count  "+-"
+		int drCount = 0;  // Data Row Count             "|"
+		for (int l=0; l<textTableList.size(); l++)
+		{
+			String line = textTableList.get(l);
+			
+			if (line.startsWith("+-") || line.startsWith("|"))
+			{
+				if (line.startsWith("+-")) hrCount++;
+				if (line.startsWith("|"))  drCount++;
+
+				// If it's a "Column Names" entry line
+				if (hrCount == 1 && drCount == 1)
+				{
+					// Read the column headers
+					String[] sa = line.split("\\|");
+
+					// Add columns (skip first, since it's empty)
+					for (int c=1; c<sa.length; c++)
+						rstm.addColumn(sa[c].trim(), c-1, Types.VARCHAR, "varchar", "varchar(16389)", 16389, -1, "", String.class);
+				}
+
+				// DATA ROW
+				if (line.startsWith("|") && drCount > 1)
+				{
+					// Read data and add it to RSTM
+					String[] sa = line.split("\\|");
+					if (rstm.getColumnCount() != sa.length-1) // -1 to skip slot 0, since it will be blank
+					{
+						_logger.warn("parseTextTable(): skipping line[" + l + "] >>>" + line + "<<<. Reason: rstm.getColumnCount=" + rstm.getColumnCount() + " is NOT equal parsedColumns=" + sa.length);
+						continue;
+					}
+
+					// Create a row, and add it to the RSTM
+					ArrayList<Object> row = new ArrayList<>(sa.length);
+					for (int c=1; c<sa.length; c++)
+					{
+						String str = sa[c].trim();
+						if (NULL_REPLACE.equals(str))
+							str = null;
+						row.add( str );
+					}
+					
+					if (isMultiLineTable)
+					{
+						multiLineRowsBuffer.add( row );
+					}
+					else
+					{
+						rstm.addRow( row );
+					}
+				}
+
+				// CLOSE MultiLine ROW
+				if (isMultiLineTable && line.startsWith("+-") && drCount > 1)
+				{
+					ArrayList<Object> newRow = new ArrayList<>(rstm.getColumnCount());
+
+					// Initialize the destination List: newRow
+					for (int c=0; c<rstm.getColumnCount(); c++)
+						newRow.add("");
+
+					// Loop MultiLine rows and "concatenate" them into a Single line
+					for (List<Object> multiLineRow : multiLineRowsBuffer)
+					{
+						for (int c=0; c<multiLineRow.size(); c++)
+						{
+							String prevColVal = (String) newRow.get(c);
+							String thisColVal = (String) multiLineRow.get(c);
+
+							String newColVal = prevColVal + "\n" + thisColVal;
+							newRow.set(c, newColVal);
+						}
+					}
+
+					// Remove Trailing spaces (newlines at the end)
+					for (int c=0; c<newRow.size(); c++)
+					{
+						String colVal = (String) newRow.get(c);
+
+//						newRow.set(c, StringUtil.rtrim(colVal));
+						newRow.set(c, StringUtil.trim(colVal));
+					}
+
+					// Finally add the row
+					rstm.addRow( newRow );
+					
+					// Reset the: multiLineRowsBuffer
+					multiLineRowsBuffer = new ArrayList<>();
+				}
+
+			}
+			else
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("parseTextTable(): skipping line[" + l + "] >>>" + line + "<<<. Reason: a 'parseTextTables' line should start with '+-' or '|'.");
+			}
+
+		}
+		
+		return rstm;
+	}
+
+	public static List<ResultSetTableModel> parseTextTables_OLD(List<String> textTableList)
+	throws IllegalArgumentException
+	{
+		if (textTableList == null)   throw new IllegalArgumentException("textTableList can't be null.");
+		if (textTableList.isEmpty()) throw new IllegalArgumentException("textTableList can't be empty.");
+
+		List<ResultSetTableModel> rstmList = new ArrayList<>();
 		ResultSetTableModel rstm = null;
 		
 		// TODO: To handle "multi line records" we probably need to "pre-parse" the input in a better way
 		//       Like: Looking for "Rows #" -- to find a table "end"
 		//         or: parse the string to find "records" that *looks* like a "multi line" record (most columns is "empty")
-//		boolean isMultiLineTable = false;
 		
+		// Possibly count number of lines starting with "+-" (and "|") before we reach a line that DO NOT start with "+-" (or "|")
+		// then we can hopefully "predict" how many rows... and if it contains any "multi line" rows...
+//		boolean isMultiLineTable = false;
+
 		int rstmCount = 0;
 		int hrCount = 0;
 		for (int l=0; l<textTableList.size(); l++)
@@ -5539,7 +5883,7 @@ public class ResultSetTableModel
 	// END: Some static methods to execute sql etc
 	//-------------------------------------------------------------------------------------------------------------
 	
-	public static void main_XXX(String[] args)
+	public static void main(String[] args)
 	{
 		Properties log4jProps = new Properties();
 		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
@@ -5559,6 +5903,19 @@ public class ResultSetTableModel
     		+ "+------+----------------+-----------------------------------+-----+-------------------+----------------+\n"
     		+ "Rows 3\n"
     		+ "\n"
+    		+ "\n"
+    		+ "+--+----------------+-----------------------------------+-------------------+\n"
+    	    + "|id|column_1        |column_2                           |column_3           |\n"
+    	    + "+--+----------------+-----------------------------------+-------------------+\n"
+    	    + "|1 |row1-c1         |row with many rows or newlines     |data               |\n"
+    	    + "|  |                |still same column data             |                   |\n"
+    	    + "|  |                |yet another 'row' for this column  |                   |\n"
+    	    + "+--+----------------+-----------------------------------+-------------------+\n"
+    	    + "|2 |row2-c1         |column data for id 2               |data               |\n"
+    	    + "+--+----------------+-----------------------------------+-------------------+\n"
+    	    + "|3 |row3-c1         |column data for id 3               |data               |\n"
+    	    + "+--+----------------+-----------------------------------+-------------------+\n"
+    		+ "\n"
     		+ "+------+----------------+\n"
     		+ "|dbname|configuration_id|\n"
     		+ "+------+----------------+\n"
@@ -5567,18 +5924,50 @@ public class ResultSetTableModel
     		+ "+------+----------------+\n"
     		+ "Rows 2\n"
     		+"";
+		
+		// Note: the below is output from sp_help on SQL Server, it's not a MultiLine (because no extra separator)
+		//       how should it be parsed?... for the moment it will be 5 rows... (with empty columns at the starting columns)
+		String test2 = ""
+			+ "+-------------------------------------------------------------+---------------------------------------------------+---------------------------+   \n"                                                       
+			+ "|index_name                                                   |index_description                                  |index_keys                 |   \n"                                  
+			+ "+-------------------------------------------------------------+---------------------------------------------------+---------------------------+   \n"                               
+			+ "|INDEX_Kund_till_Kontaktperson_relation__Kontaktperson_ref__FK|nonclustered located on PRIMARY                    |Kontaktperson_ref          |   \n"                               
+			+ "|INDEX_Kund_till_Kontaktperson_relation__Kund_ref__FK         |nonclustered located on PRIMARY                    |Kund_ref                   |   \n"                               
+			+ "|UQ__Kund_til__163119BDDC9E2531                               |nonclustered, unique, unique key located on PRIMARY|Kund_ref, Kontaktperson_ref|   \n"                               
+			+ "+-------------------------------------------------------------+---------------------------------------------------+---------------------------+   \n"                               
+			+ "Rows 3                                                                                                                                            \n"                                                    
+			+ "                                                                                                                                                  \n"                                                    
+			+ "+----------------------+-----------------------------------------------------------------+-------------+-------------+--------------+----------------------+---------------------------------------+\n"  
+			+ "|constraint_type       |constraint_name                                                  |delete_action|update_action|status_enabled|status_for_replication|constraint_keys                        |\n"  
+			+ "+----------------------+-----------------------------------------------------------------+-------------+-------------+--------------+----------------------+---------------------------------------+\n"  
+			+ "|FOREIGN KEY           |CONSTRAINT_Kund_till_Kontaktperson_relation__Kontaktperson_ref_FK|No Action    |No Action    |Enabled       |Is_For_Replication    |Kontaktperson_ref                      |\n"  
+			+ "|                      |                                                                 |             |             |              |                      |REFERENCES kyc.dbo.Personuppgifter (Id)|\n"  
+			+ "|FOREIGN KEY           |CONSTRAINT_Kund_till_Kontaktperson_relation__Kund_ref_FK         |No Action    |No Action    |Enabled       |Is_For_Replication    |Kund_ref                               |\n"  
+			+ "|                      |                                                                 |             |             |              |                      |REFERENCES kyc.dbo.Kund (Id)           |\n"  
+			+ "|UNIQUE (non-clustered)|UQ__Kund_til__163119BDDC9E2531                                   |(n/a)        |(n/a)        |(n/a)         |(n/a)                 |Kund_ref, Kontaktperson_ref            |\n"  
+			+ "+----------------------+-----------------------------------------------------------------+-------------+-------------+--------------+----------------------+---------------------------------------+\n"  
+			+ "Rows 5                                                                                                                                                                                              \n"  
+			+ "                                                                                                                                                                                                    \n"  
+			+ "No foreign keys reference table 'dbo.Kund_till_Kontaktperson_relation', or you do not have permissions on referencing tables.                                                                       \n"  
+			+ "No views with schema binding reference table 'dbo.Kund_till_Kontaktperson_relation'.                                                                                                                \n"  
+    		+"";
+
 		List<ResultSetTableModel> rstmList = parseTextTables(str);
+//		List<ResultSetTableModel> rstmList = parseTextTables(str + test2);
 		System.out.println("rstmList.size=" + rstmList.size());
 
 		for (ResultSetTableModel rstm : rstmList)
 		{
+			System.out.println("");
+			System.out.println("##############################################################################");
 			System.out.println("name='" + rstm.getName() + "', colCount=" + rstm.getColumnCount() + ", rowCount=" + rstm.getRowCount() + ", columns=" + rstm.getColumnNames() + ".");
 			for (int r=0; r<rstm.getRowCount(); r++)
 				System.out.println("    ROW[" + r + "] >> " + rstm.getRowList(r));
 		}
 		
 	}
-	public static void main(String[] args)
+
+	public static void main_YYY(String[] args)
 	{
 		Properties log4jProps = new Properties();
 		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");

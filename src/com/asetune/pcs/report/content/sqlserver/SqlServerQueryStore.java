@@ -116,7 +116,7 @@ extends SqlServerAbstract
 				w.append("ALTER DATABASE [dbname] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, MAX_STORAGE_SIZE_MB = 2048) \n");
 				w.append("go \n");
 				w.append("--or if you want a bit more fine grained options/controll before we starts to persists to the Query Store: \n");
-				w.append("--ALTER DATABASE [gs1] \n");
+				w.append("--ALTER DATABASE [dbname] \n");
 				w.append("--SET QUERY_STORE  \n");
 				w.append("--( \n");
 				w.append("--	OPERATION_MODE = READ_WRITE,  \n");
@@ -138,8 +138,8 @@ extends SqlServerAbstract
 				w.append("--) \n");
 				w.append("go \n");
 				w.append("-- Check below URLs for more information about Query Store \n");
-				w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/monitoring-performance-by-using-the-query-store?view=sql-server-ver15 \n");
-				w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/how-query-store-collects-data?view=sql-server-ver15 \n");
+				w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/monitoring-performance-by-using-the-query-store \n");
+				w.append("https://docs.microsoft.com/en-us/sql/relational-databases/performance/how-query-store-collects-data \n");
 				w.append("</pre>\n");
 				w.append("<br>\n");
 			}

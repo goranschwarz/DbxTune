@@ -197,6 +197,30 @@ extends TabularCntrPanel
 //				return false;
 //			}
 //		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+		// RED (or 1 cell) = LOG Size is LARGER than the DATA Size
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.wal.is.larger.than.data.size");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				int logSizeInMb_mpos  = adapter.getColumnIndex("LogSizeInMb");
+				
+				// If CURRENT cell IS "LogSizeInMb"
+				int mcol = adapter.convertColumnIndexToModel(adapter.column);
+				if (mcol == logSizeInMb_mpos)
+				{
+					int dataSizeInMb_mpos = adapter.getColumnIndex("DataSizeInMb");
+
+					Number logSizeInMb  = (Number) adapter.getValue(logSizeInMb_mpos);
+					Number dataSizeInMb = (Number) adapter.getValue(dataSizeInMb_mpos);
+					
+					return logSizeInMb != null && dataSizeInMb != null && logSizeInMb.intValue() > dataSizeInMb.intValue();
+				}
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
 	private CategoryDataset createDatasetForLog(GTable dataTable)

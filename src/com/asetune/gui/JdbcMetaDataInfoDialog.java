@@ -58,6 +58,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
+import org.apache.log4j.Logger;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -70,8 +71,10 @@ import org.jdesktop.swingx.sort.RowFilters;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.sql.SqlPickList;
+import com.asetune.sql.conn.DbxDatabaseMetaDataSqlServer;
 import com.asetune.tools.sqlw.ResultSetJXTable;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -80,7 +83,7 @@ import net.miginfocom.swing.MigLayout;
 public class JdbcMetaDataInfoDialog
 extends JDialog
 {
-//	private static Logger _logger = Logger.getLogger(JdbcMetaDataInfoDialog.class);
+	private static Logger _logger = Logger.getLogger(JdbcMetaDataInfoDialog.class);
 	private static final long serialVersionUID = 1L;
 
 	@SuppressWarnings("unused")
@@ -202,15 +205,16 @@ extends JDialog
 	private JCheckBox              _br_nullable_chk = new JCheckBox("include columns that are nullable.", true);
 	private JLabel                 _br_api_lbl = new JLabel("Press button to call getBestRowIdentifier(catalog, schema, tableName, scope, nullable)");
 
-	private JLabel                 _ix_cat_lbl = new JLabel("Catalog: ");
-	private JTextField             _ix_cat_txt = new JTextField("null");
-	private JLabel                 _ix_sch_lbl = new JLabel("Schema Pattern: ");
-	private JTextField             _ix_sch_txt = new JTextField("null");
-	private JLabel                 _ix_val_lbl = new JLabel("Table Name: ");
-	private JTextField             _ix_val_txt = new JTextField("");
-	private JCheckBox              _ix_unique_chk = new JCheckBox("When true, return only indices for unique values; when false, return indices regardless of whether unique or not");
-	private JCheckBox              _ix_approx_chk = new JCheckBox("When true, result is allowed to reflect approximate or out of data values; when false, results are requested to be accurate", true);
-	private JLabel                 _ix_api_lbl = new JLabel("Press button to call getIndexInfo(catalog, schemaPattern, tableNamePattern, unique, approximate)");
+	private JLabel                 _ix_cat_lbl       = new JLabel("Catalog: ");
+	private JTextField             _ix_cat_txt       = new JTextField("null");
+	private JLabel                 _ix_sch_lbl       = new JLabel("Schema Pattern: ");
+	private JTextField             _ix_sch_txt       = new JTextField("null");
+	private JLabel                 _ix_val_lbl       = new JLabel("Table Name: ");
+	private JTextField             _ix_val_txt       = new JTextField("");
+	private JCheckBox              _ix_unique_chk    = new JCheckBox("When true, return only indices for unique values; when false, return indices regardless of whether unique or not");
+	private JCheckBox              _ix_approx_chk    = new JCheckBox("When true, result is allowed to reflect approximate or out of data values; when false, results are requested to be accurate", true);
+	private JCheckBox              _ix_useOrigin_chk = new JCheckBox("Use Origin JDBC Driver impementation instead of the 'modified' for DbxConnection.", false);
+	private JLabel                 _ix_api_lbl       = new JLabel("Press button to call getIndexInfo(catalog, schemaPattern, tableNamePattern, unique, approximate)");
 
 	private JLabel                 _ik_cat_lbl = new JLabel("Catalog: ");
 	private JTextField             _ik_cat_txt = new JTextField("null");
@@ -1047,13 +1051,16 @@ extends JDialog
 				+ "<b>Below information is from <code>Connection.getMetaData().getIndexInfo(catalog, schemaPattern, TablePattern, unique, approximate)</code></b><br>"
 				+ "</html>";
 		
-		_ix_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
-		_ix_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+		_ix_filter_txt   .setToolTipText("Filter that does regular expression on all table cells using this value");
+		_ix_filter_cnt   .setToolTipText("Visible rows / actual rows in the GUI Table");
 
-		_ix_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
-		_ix_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
-		_ix_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
-
+		_ix_cat_txt      .setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_ix_sch_txt      .setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_ix_val_txt      .setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+		_ix_useOrigin_chk.setToolTipText("<html>For some JDBC Drivers, we have 'overridden' the 'getIndexInfo' method to get some more information.<br>"
+				+ "For example in SQL Server, the JDBC Driver does NOT include COLUMNSTORE indexes in the ResultSet<br>"
+				+ "</html>");
+		
 		JPanel p1 = new JPanel(new MigLayout());
 		p1.add(_ix_cat_lbl,              "");
 		p1.add(_ix_cat_txt,              "growx, pushx, wrap");
@@ -1067,7 +1074,25 @@ extends JDialog
 
 		p1.add(refresh_but,              "skip 1, split");
 		p1.add(_ix_api_lbl,              "wrap 10");
+		
+		p1.add(_ix_useOrigin_chk,        "skip 1, hidemode 3, wrap 10");
 
+		// HIDE '_ix_useOrigin_chk' on most DBMS (except where we have a DbxConnection implementation of DatabadseMetaData
+		String dbmsProductName = "UNKNOWN";
+		try 
+		{
+			dbmsProductName = _conn.getMetaData().getDatabaseProductName();
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems calling dbmd.getDatabaseProductName(). dbmsProductName='" + dbmsProductName + "', errorCode=" + ex.getErrorCode() + ", sqlState=" + ex.getSQLState() + ", Message='" + ex.getMessage() + "'. Caught: " + ex);
+		}
+		_ix_useOrigin_chk.setVisible(false);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
+		{
+			_ix_useOrigin_chk.setVisible(true);
+		}
+		
 
 		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
 
@@ -2526,6 +2551,13 @@ extends JDialog
 		
 		String apiCall = "parameters to getIndexInfo("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+unique+", "+approximate+")";
 		_ix_api_lbl.setText(apiCall);
+
+		if (_ix_useOrigin_chk.isVisible())
+		{
+			boolean useOriginImpl = _ix_useOrigin_chk.isSelected();
+			
+			System.setProperty(DbxDatabaseMetaDataSqlServer.PROPKEY_useOriginImpementation_getIndexInfo, useOriginImpl + "");
+		}
 
 		try
 		{

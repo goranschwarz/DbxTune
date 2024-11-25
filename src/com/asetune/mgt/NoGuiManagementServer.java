@@ -156,6 +156,13 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new NoGuiRestartServlet())   , "/restart");
 				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())   , "/refresh");
 
+				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
+				// AND: I guess the below implementations will just "stream" over HTML as the "end-result", or how should we do it ???
+				//      Should we have some SSE for feedback (during report creation) or should we just stream the HTML ???
+				// I want the COLLECTORS doing the main work, since they have the "user/password" to the DBMS
+//				context.addServlet(new ServletHolder(new SqlServerJobSchedulerReport())  , "/reports/sqlserver/job-scheduler-report");   // Like the DSR but just get midnight until now
+//				context.addServlet(new ServletHolder(new SqlServerJobSchedulerActivity()), "/reports/sqlserver/job-scheduler-activity"); // This would replace the User Defined Chart - SqlServerAgentJobs
+				
 				_logger.info("Trying to start NO-GUI Management Server at address '" + listnerAddress + "', port " + port + ".");
 				server.start();
 

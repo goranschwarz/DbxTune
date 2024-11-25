@@ -109,7 +109,7 @@ public class DbxTuneReportsServlet extends HttpServlet
 				out.println("File '" + f + "' didn't exist.");
 			}
 		}
-		if ("viewLatest".equalsIgnoreCase(operation))
+		else if ("viewLatest".equalsIgnoreCase(operation))
 		{
 			resp.setContentType("text/html");
 			resp.setCharacterEncoding("UTF-8");

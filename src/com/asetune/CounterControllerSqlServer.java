@@ -103,6 +103,7 @@ import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.pcs.PersistWriterJdbc;
+import com.asetune.pcs.SqlServerJobSchedulerExtractor;
 import com.asetune.pcs.SqlServerQueryStoreDdlExtractor;
 import com.asetune.pcs.SqlServerQueryStoreExtractor;
 import com.asetune.sql.conn.ConnectionProp;
@@ -145,6 +146,12 @@ extends CounterControllerAbstract
 	
 	public static final String  PROPKEY_onPcsDatabaseRollover_captureQueryStore_daysToCopy = "SqlServerTune.onPcsDatabaseRollover.captureQueryStore.daysToCopy";
 	public static final int     DEFAULT_onPcsDatabaseRollover_captureQueryStore_daysToCopy = 1; // -1=ALL, 1=OneDay, 2=TwoDays...
+
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureJobScheduler = "SqlServerTune.onPcsDatabaseRollover.captureJobScheduler";
+	public static final boolean DEFAULT_onPcsDatabaseRollover_captureJobScheduler = true;
+
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureJobScheduler_daysToCopy = "SqlServerTune.onPcsDatabaseRollover.captureJobScheduler.daysToCopy";
+	public static final int     DEFAULT_onPcsDatabaseRollover_captureJobScheduler_daysToCopy = 1; // -1=ALL, 1=OneDay, 2=TwoDays...
 
 
 	public static final String  PROPKEY_NoGui_AutoEnable_TraceFlag_LastQueryPlanStats = "SqlServerTune.nogui.autoEnable.traceflag.lastQueryPlanStats";
@@ -1109,6 +1116,10 @@ extends CounterControllerAbstract
 		deadlockExtractor(pcsConn, srvName);
 
 
+		// Get info from the Job Scheduler (jobs that takes longer that usual)
+		jobSchedulerExtractor(pcsConn, srvName);
+
+
 		//---------------------------------------------------------
 		// BEGIN: DbxTune - Specific Extended Event Sessions
 		//---------------------------------------------------------
@@ -1369,6 +1380,160 @@ extends CounterControllerAbstract
 		}
 	}
 
+	//------------------------------------------------------------------
+	// Job Scheduler - Extractor
+	//------------------------------------------------------------------
+	private void jobSchedulerExtractor(DbxConnection pcsConn, String srvName)
+	{
+		int daysToCopy = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_onPcsDatabaseRollover_captureJobScheduler_daysToCopy, DEFAULT_onPcsDatabaseRollover_captureJobScheduler_daysToCopy);
+		
+		// Check if Capture Query Store is DISABLED 
+		boolean captureQueryStore = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_onPcsDatabaseRollover_captureJobScheduler, DEFAULT_onPcsDatabaseRollover_captureJobScheduler);
+		if ( ! captureQueryStore)
+		{
+			_logger.info("On PCS Database Rollover: Skipping 'Capture Job Scheduler', due to Configuration '" + PROPKEY_onPcsDatabaseRollover_captureJobScheduler + "' is set to FALSE.");
+			return;
+		}
+		
+//		// Check if Capture Query Store is DISABLED for a specific server 
+//		String captureQueryStoreSkipServer = Configuration.getCombinedConfiguration().getProperty(PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer, DEFAULT_onPcsDatabaseRollover_captureQueryStore_skipServer);
+//		if (StringUtil.hasValue(captureQueryStoreSkipServer) && StringUtil.hasValue(srvName))
+//		{
+//			try
+//			{
+//				if ( srvName.matches(captureQueryStoreSkipServer) )
+//				{
+//					_logger.info("On PCS Database Rollover: Skipping 'Capture Query Store' for Server Name '" + srvName + "', due to Configuration '" + PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer + "' is set to '" + captureQueryStoreSkipServer + "'.");
+//				}
+//			}
+//			catch (PatternSyntaxException ex) 
+//			{
+//				_logger.error("On PCS Database Rollover: Problems with regular expression '" + captureQueryStoreSkipServer + "' in cofiguration '" + PROPKEY_onPcsDatabaseRollover_captureQueryStore_skipServer + "'. Skipping this and Continuing...", ex);
+//			}
+//		}
+		
+		// Open a new connection to the monitored server
+		ConnectionProp connProp = getMonConnection().getConnPropOrDefault();
+		DbxConnection conn = null;
+		try
+		{
+			_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName + "' for extracting 'Job Scheduler' information.");
+			conn = DbxConnection.connect(null, connProp);
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Failed to establish a new connection to server '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.", ex);
+			return;
+		}
+
+		// Check if 'SQL Agent' is running...
+		if (true)
+		{
+			String sql = ""
+					+ "SELECT status_desc \n"
+					+ "FROM sys.dm_server_services \n"
+					+ "WHERE servicename like 'SQL Server Agent%' \n"
+					+ "";
+			
+			String statusDesc = "";
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					statusDesc = rs.getString(1);
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("On PCS Database Rollover: Problems when getting 'server services' on '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.", ex);
+				return;
+			}
+			
+			if ( ! "Running".equalsIgnoreCase(statusDesc) )
+			{
+				_logger.info("On PCS Database Rollover: 'SQL Server Agent' on '" + srvName + " is NOT enabled or running'. SKIPPING 'Job Scheduler' extraction.");
+				return;
+			}
+		}
+		
+		// Check if 'msdb' exists... and that we have access to it
+		if (true)
+		{
+			String sql = ""
+					+ "SELECT hasDbAccess = HAS_DBACCESS(name), name \n"
+					+ "FROM sys.databases \n"
+					+ "WHERE name = 'msdb'";
+
+			int    hasDbAccess = -1;
+			String dbname      = "";
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					hasDbAccess = rs.getInt(1);
+					dbname = rs.getString(2);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("On PCS Database Rollover: Problems when checking if dbname 'msdb' exists on '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.", ex);
+				return;
+			}
+			
+			if ( ! "msdb".equalsIgnoreCase(dbname) )
+			{
+				_logger.info("On PCS Database Rollover: Database 'msdb' does not exist on '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.");
+				return;
+			}
+
+			if ( hasDbAccess != 1 )
+			{
+				_logger.info("On PCS Database Rollover: Database 'msdb' is not accessible on '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.");
+				return;
+			}
+		}
+
+		
+		// Check if we can do select on 'msdb.dbo.sysjobhistory'... 
+		if (true)
+		{
+			String sql = ""
+					+ "SELECT 1 \n"
+					+ "FROM msdb.dbo.sysjobhistory \n"
+					+ "WHERE 1 = 2";
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					; // do not read data... we just want to check for errors
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("On PCS Database Rollover: Problems when selecting from 'msdb.dbo.sysjobhistory' on '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.", ex);
+				return;
+			}
+		}
+
+		
+		// EXTRACT
+		_logger.info("On PCS Database Rollover: Extracting 'Job Scheduler' information On server '" + srvName+ "'.");
+		try
+		{
+			SqlServerJobSchedulerExtractor jse = new SqlServerJobSchedulerExtractor(daysToCopy, conn, pcsConn);
+			jse.transfer();
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Problems extracting 'Job Scheduler' information from server '" + srvName + "'.", ex);
+		}
+		
+		// Close
+		if (conn != null)
+		{
+			_logger.info("On PCS Database Rollover: Job Scheduler Extractor - Closing connection to server '" + srvName + "'..");
+			conn.closeNoThrow();
+		}
+	}
+
 
 	//==================================================================
 	// BEGIN: NO-GUI methods
@@ -1472,24 +1637,24 @@ extends CounterControllerAbstract
 		// +----------+-----------+--------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 		// |message_id|language_id|severity|is_event_logged|text                                                                                                                                                                 |
 		// +----------+-----------+--------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-		// |    18 401|      1 033|      14|true           |Login failed for user '%.*ls'. Reason: Server is in script upgrade mode. Only administrator can connect at this time.%.*ls                                           |
-		// |    18 451|      1 033|      14|true           |Login failed for user '%.*ls'. Only administrators may connect at this time.%.*ls                                                                                    |
-		// |    18 456|      1 033|      14|true           |Login failed for user '%.*ls'.%.*ls%.*ls                                                                                                                             |
-		// |    18 461|      1 033|      14|true           |Login failed for user '%.*ls'. Reason: Server is in single user mode. Only one administrator can connect at this time.%.*ls                                          |
-		// |    18 462|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The password for the user is too recent to change. %.*ls                                              |
-		// |    18 463|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The password cannot be used at this time. %.*ls                                                       |
-		// |    18 464|      1 033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is too short.%.*ls         |
-		// |    18 465|      1 033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is too long.%.*ls          |
-		// |    18 466|      1 033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is not complex enough.%.*ls|
-		// |    18 467|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The password does not meet the requirements of the password filter DLL. %.*ls                         |
-		// |    18 468|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. An unexpected error occurred during password validation. %.*ls                                        |
-		// |    18 470|      1 033|      14|true           |Login failed for user '%.*ls'. Reason: The account is disabled.%.*ls                                                                                                 |
-		// |    18 471|      1 033|      14|false          |The login failed for user "%.*ls". The password change failed. The user does not have permission to change the password. %.*ls                                       |
-		// |    18 486|      1 033|      14|true           |Login failed for user '%.*ls' because the account is currently locked out. The system administrator can unlock it. %.*ls                                             |
-		// |    18 487|      1 033|      14|true           |Login failed for user '%.*ls'.  Reason: The password of the account has expired.%.*ls                                                                                |
-		// |    18 488|      1 033|      14|true           |Login failed for user '%.*ls'.  Reason: The password of the account must be changed.%.*ls                                                                            |
-		// |    40 620|      1 033|      16|false          |The login failed for user "%.*ls". The password change failed. Password change during login is not supported in this version of SQL Server.                          |
-		// |    40 697|      1 033|      16|false          |Login failed for user '%.*ls'.                                                                                                                                       |
+		// |    18ï¿½401|      1ï¿½033|      14|true           |Login failed for user '%.*ls'. Reason: Server is in script upgrade mode. Only administrator can connect at this time.%.*ls                                           |
+		// |    18ï¿½451|      1ï¿½033|      14|true           |Login failed for user '%.*ls'. Only administrators may connect at this time.%.*ls                                                                                    |
+		// |    18ï¿½456|      1ï¿½033|      14|true           |Login failed for user '%.*ls'.%.*ls%.*ls                                                                                                                             |
+		// |    18ï¿½461|      1ï¿½033|      14|true           |Login failed for user '%.*ls'. Reason: Server is in single user mode. Only one administrator can connect at this time.%.*ls                                          |
+		// |    18ï¿½462|      1ï¿½033|      14|false          |The login failed for user "%.*ls". The password change failed. The password for the user is too recent to change. %.*ls                                              |
+		// |    18ï¿½463|      1ï¿½033|      14|false          |The login failed for user "%.*ls". The password change failed. The password cannot be used at this time. %.*ls                                                       |
+		// |    18ï¿½464|      1ï¿½033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is too short.%.*ls         |
+		// |    18ï¿½465|      1ï¿½033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is too long.%.*ls          |
+		// |    18ï¿½466|      1ï¿½033|      14|false          |Login failed for user '%.*ls'. Reason: Password change failed. The password does not meet operating system policy requirements because it is not complex enough.%.*ls|
+		// |    18ï¿½467|      1ï¿½033|      14|false          |The login failed for user "%.*ls". The password change failed. The password does not meet the requirements of the password filter DLL. %.*ls                         |
+		// |    18ï¿½468|      1ï¿½033|      14|false          |The login failed for user "%.*ls". The password change failed. An unexpected error occurred during password validation. %.*ls                                        |
+		// |    18ï¿½470|      1ï¿½033|      14|true           |Login failed for user '%.*ls'. Reason: The account is disabled.%.*ls                                                                                                 |
+		// |    18ï¿½471|      1ï¿½033|      14|false          |The login failed for user "%.*ls". The password change failed. The user does not have permission to change the password. %.*ls                                       |
+		// |    18ï¿½486|      1ï¿½033|      14|true           |Login failed for user '%.*ls' because the account is currently locked out. The system administrator can unlock it. %.*ls                                             |
+		// |    18ï¿½487|      1ï¿½033|      14|true           |Login failed for user '%.*ls'.  Reason: The password of the account has expired.%.*ls                                                                                |
+		// |    18ï¿½488|      1ï¿½033|      14|true           |Login failed for user '%.*ls'.  Reason: The password of the account must be changed.%.*ls                                                                            |
+		// |    40ï¿½620|      1ï¿½033|      16|false          |The login failed for user "%.*ls". The password change failed. Password change during login is not supported in this version of SQL Server.                          |
+		// |    40ï¿½697|      1ï¿½033|      16|false          |Login failed for user '%.*ls'.                                                                                                                                       |
 		// +----------+-----------+--------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 		
 		if (msg.contains("Login failed for user"))

@@ -150,14 +150,14 @@ extends CompletionProviderAbstractSql
 				" \n" +
 				"while (1=1)  \n" +
 				"begin \n" +
-				"    -- get row into variables \n" +
+				"    /* get row into variables */ \n" +
 				"	 FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
 				" \n" +
-				"    -- get out of here if no more rows \n" +
+				"    /* get out of here if no more rows */ \n" +
 				"    if (@@fetch_status != 0) \n" +
 				"        break \n" +
 				" \n" +
-				"	 -- Do something... \n" +
+				"	 /* Do something... */ \n" +
 				"end \n" +
 				"CLOSE <CURSOR_NAME> \n" +
 				"DEALLOCATE cursor <CURSOR_NAME> \n" +

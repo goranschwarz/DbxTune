@@ -39,6 +39,7 @@ import com.asetune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerDbSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerDeadlocks;
+import com.asetune.pcs.report.content.sqlserver.SqlServerJobScheduler;
 import com.asetune.pcs.report.content.sqlserver.SqlServerMissingIndexes;
 import com.asetune.pcs.report.content.sqlserver.SqlServerPlanCacheHistory;
 import com.asetune.pcs.report.content.sqlserver.SqlServerQueryStore;
@@ -74,6 +75,9 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerWaitStats(this)          );
 		addReportEntry( new OsCpuUsageOverview(this)          );
 		
+		// Job Agent/Scheduler
+		addReportEntry( new SqlServerJobScheduler           (this));
+
 		// SQL
 		addReportEntry( new SqlServerPlanCacheHistory       (this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
 		addReportEntry( new SqlServerDeadlocks              (this));
