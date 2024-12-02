@@ -1856,7 +1856,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 
 		sb.append("<TABLE BORDER=1 class='dbx-table-basic'>\n");
 //		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>LockInfo</TH> <TH>XML Showplan</TH> </TR>\n");
-		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>LockInfo</TH> </TR>\n");
+		sb.append("  <TR> <TH>Blocked SPID</TH> <TH>MonSqlText</TH> <TH>LockInfo</TH> <TH>ExtraInfo</TH> </TR>\n");
 		
 		int addCount = 0;
 		
@@ -1883,6 +1883,36 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 				String lockInfo   = o_lockInfo   == null ? "" : o_lockInfo  .toString();
 //				String liveQp     = o_liveQp     == null ? "" : o_liveQp    .toString();
 //				String showplan   = o_showplan   == null ? "" : o_showplan  .toString();
+
+				// Get extra info in 1 cell:
+				//  - login_name 
+				//  - command 
+				//  - tran_begin_time
+				//  - tran_name 
+				//  - ProcName 
+				//  - HOST_NAME 
+				//  - SpidLockCount 
+				//  - database_name 
+				//  - program_name 
+				//  - context_info_str 
+				//  - wait_time 
+				//  - wait_resource 
+				String extraInfo = "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=1 class='dbx-table-basic'>";
+				if (counters.findColumn("login_name")       != -1) extraInfo += "<TR> <TD><B>login_name      </B></TD> <TD>" + counters.getValueAsString(rowId, "login_name"      ) + "</TD> </TR>";
+				if (counters.findColumn("program_name")     != -1) extraInfo += "<TR> <TD><B>program_name    </B></TD> <TD>" + counters.getValueAsString(rowId, "program_name"    ) + "</TD> </TR>";
+				if (counters.findColumn("context_info_str") != -1) extraInfo += "<TR> <TD><B>context_info_str</B></TD> <TD>" + counters.getValueAsString(rowId, "context_info_str") + "</TD> </TR>";
+				if (counters.findColumn("HOST_NAME")        != -1) extraInfo += "<TR> <TD><B>HOST_NAME       </B></TD> <TD>" + counters.getValueAsString(rowId, "HOST_NAME"       ) + "</TD> </TR>";
+				if (counters.findColumn("ProcName")         != -1) extraInfo += "<TR> <TD><B>ProcName        </B></TD> <TD>" + counters.getValueAsString(rowId, "ProcName"        ) + "</TD> </TR>";
+
+				if (counters.findColumn("command")          != -1) extraInfo += "<TR> <TD><B>command         </B></TD> <TD>" + counters.getValueAsString(rowId, "command"         ) + "</TD> </TR>";
+				if (counters.findColumn("tran_begin_time")  != -1) extraInfo += "<TR> <TD><B>tran_begin_time </B></TD> <TD>" + counters.getValueAsString(rowId, "tran_begin_time" ) + "</TD> </TR>";
+				if (counters.findColumn("tran_name")        != -1) extraInfo += "<TR> <TD><B>tran_name       </B></TD> <TD>" + counters.getValueAsString(rowId, "tran_name"       ) + "</TD> </TR>";
+				if (counters.findColumn("SpidLockCount")    != -1) extraInfo += "<TR> <TD><B>SpidLockCount   </B></TD> <TD>" + counters.getValueAsString(rowId, "SpidLockCount"   ) + "</TD> </TR>";
+				if (counters.findColumn("database_name")    != -1) extraInfo += "<TR> <TD><B>database_name   </B></TD> <TD>" + counters.getValueAsString(rowId, "database_name"   ) + "</TD> </TR>";
+				if (counters.findColumn("wait_time")        != -1) extraInfo += "<TR> <TD><B>wait_time       </B></TD> <TD>" + counters.getValueAsString(rowId, "wait_time"       ) + "</TD> </TR>";
+				if (counters.findColumn("wait_resource")    != -1) extraInfo += "<TR> <TD><B>wait_resource   </B></TD> <TD>" + counters.getValueAsString(rowId, "wait_resource"   ) + "</TD> </TR>";
+				extraInfo += "</TABLE>\n";
+				
 
 //				// Prefer a LIVE Plan before a "long" XML Plan
 //				String finalShowPlan = showplan;
@@ -1916,6 +1946,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 				sb.append("    <TD><B>")  .append(blockedSpid  ).append("</B></TD>\n");
 				sb.append("    <TD>"   )  .append(monSqlText   ).append("</TD>\n");
 				sb.append("    <TD>"   )  .append(lockInfo     ).append("</TD>\n");
+				sb.append("    <TD>"   )  .append(extraInfo    ).append("</TD>\n");
 //				sb.append("    <TD><xmp>").append(showplan     ).append("</xmp></TD>\n");
 //				sb.append("    <TD><xmp>").append(finalShowPlan).append("</xmp></TD>\n");
 				sb.append("  </TR>\n");

@@ -89,7 +89,15 @@ extends AlarmEvent
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
 
-		// Set the raw data carier: current cpu usage
+		// When message is ErrorNumber=7413 -- Message=|1 task(s) are sleeping waiting for space to become available in the segment 'logsegment' for database 'xxx'.|
+		// This message is repeated every minute (or so)... (and if we are sampling every 30 seconds, we will get a LOT of CANCEL/RAISE messages) 
+		// So set the TimeToLive to 2 minutes
+		long minTtl = 2 * 60 * 1000;
+		long ttl = getTimeToLive();
+		if (ttl < minTtl)
+			setTimeToLive(minTtl);
+
+		// Set the raw data carrier
 		setData(dbname);
 	}
 }

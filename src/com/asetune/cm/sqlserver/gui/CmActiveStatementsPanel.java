@@ -40,6 +40,7 @@ import com.asetune.graph.TrendGraphColors;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -101,11 +102,14 @@ extends TabularCntrPanel
 			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
-				String memory_grant_wait_time_ms = adapter.getString(adapter.getColumnIndex("memory_grant_wait_time_ms"));
-				if (memory_grant_wait_time_ms != null)
-					memory_grant_wait_time_ms = memory_grant_wait_time_ms.trim();
-				if ( ! "0".equals(memory_grant_wait_time_ms))
-					return true;
+				String memory_grant_wait_time_ms__str = adapter.getString(adapter.getColumnIndex("memory_grant_wait_time_ms"));
+				if (memory_grant_wait_time_ms__str != null)
+				{
+					memory_grant_wait_time_ms__str = memory_grant_wait_time_ms__str.trim();
+					int memory_grant_wait_time_ms = StringUtil.parseInt(memory_grant_wait_time_ms__str, -1);
+					if (memory_grant_wait_time_ms > 0)
+						return true;
+				}
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, TrendGraphColors.LIGHT_BLUE), null));

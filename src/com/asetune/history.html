@@ -399,6 +399,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmActiveStatements   </b> - Added column 'wal_record_count', 'wal_kb_used' to see how much WAL (Write Ahead Log or Transaction log) is used by any DML opterations.</LI>
 		<LI><b>CmActiveStatements   </b> - Added column 'estimated_compl_time_dhms', which will display in '#days #hours #minutes #seconds' until the command is completed</LI>
 		<LI><b>CmActiveStatements   </b> - Added some output to tooltip on 'wait info' (like: 'dop' and 'WaitTimePct')</LI>
+		<LI><b>CmActiveStatements   </b> - Blocking Lock's... Adding more info to 'BlockedSpidsInfo'. ExtraInfo: login_name, program_name, context_info_str, HOST_NAME, ProcName, command, tran_begin_time, tran_name, SpidLockCount, database_name, wait_time, wait_resource</LI>
 		
 		<LI><b>CmAlwaysOn           </b> - Performance enhancement</LI>
 
@@ -654,6 +655,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>For SQL Server: Code Completion -- Summary Information -- Did not show indexes for COLUMNSSTORE Indexes</LI>
 		<LI>For Postgres:  Code Completion -- Summary Information -- Did not show an accurate INCLUDE list for indexes</LI>
 		<LI>A better implementation of 'Generate INSERT' for ResultSet selected rows</LI>
+		<LI>in 'go nodata' option: Still present 'XML Showplan'</LI>
+		<LI>RepServer: new "RCL command" -- alter connection to ${selectedText} set dsi_log_cmds to 'on/off'</LI>
+		<LI>Tooltip on ResultSet tables, added "object lookup" on column name 'objectname|object_name|object name|tablename|table_name|table name'.<br>
+		    AND: If columns 'dbname|databasename|database_name|database name' and 'schemaname|schema_name|schema name' exists the will be used to "fully qualify" the objectname</LI>
+		<LI></LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

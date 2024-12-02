@@ -1555,7 +1555,7 @@ extends CountersModel
 												extendedDescHtml += "<br><br>" + cmProcessActivity.toHtmlTableString(DATA_ABS, blockedSpidRowId, true, false, false);
 
 												// Get 'LastKnownSqlText'
-												if (true)
+												if (true && PersistentCounterHandler.hasInstance() )
 												{
 													ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
 													if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)

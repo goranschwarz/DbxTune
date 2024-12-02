@@ -139,7 +139,7 @@ extends CmToolTipSupplierDefault
 						{
 							String tabOwnerName = AseConnectionUtils.getObjectOwner(conn, dbName, tabObjId);
 							
-							List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName);
+							List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName, false);
 
 							if (_logger.isDebugEnabled())
 								_logger.debug("ToolTipSupplierAse.getToolTipTextOnTableCell(ObjectName): dbName='"+dbName+"', ownerName='"+tabOwnerName+"', objectName='"+objectName+"', cm='"+_cm.getName()+"'. list.size()="+(list==null?"-null-":list.size())+".");

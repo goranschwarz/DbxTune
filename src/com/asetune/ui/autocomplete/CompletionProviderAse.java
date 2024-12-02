@@ -1079,10 +1079,10 @@ extends CompletionProviderAbstractSql
 	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
-		return refreshCompletionForProcedures(conn, waitDialog, null, null, null);
+		return refreshCompletionForProcedures(conn, waitDialog, null, null, null, isWildcatdMath());
 	}
 	@Override
-	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName)
+	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName, boolean wildcardSearch)
 	throws SQLException
 	{
 //System.out.println("ASE: refreshCompletionForProcedures()");
@@ -1114,7 +1114,8 @@ extends CompletionProviderAbstractSql
 		else
 		{
 			procName = procName.replace('*', '%').trim();
-			if ( ! procName.endsWith("%") )
+//			if ( ! procName.endsWith("%") )
+			if (wildcardSearch && ! procName.endsWith("%") )
 				procName += "%";
 			procName = " and name like '"+procName+"'";
 		}

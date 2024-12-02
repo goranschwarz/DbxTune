@@ -453,17 +453,26 @@ public class ResultSetTableModel
 		//---------------------------------------------------
 
 		//---------------------------------------------------
-		// Special thing for SQL-Server and if noData==true && it's a ResultSet from 'set statistics profile on'
-		// Then we still want to show the output from 'set statistics profile on'
-		if (noData && _rsmdColumnLabel.size() >= 5)
+		// Special thing for SQL-Server and if noData==true && it's a ResultSet from 'set statistics profile/XML on'
+		if (noData)
 		{
+			// Then we still want to show the output from 'set statistics profile on'
 			// The ResultSet always starts with columns: Rows, Executes, StmtText, StmtId, NodeId
-			if (    "Rows"    .equals(_rsmdColumnLabel.get(0))
+			if (    _rsmdColumnLabel.size() >= 5
+			     && "Rows"    .equals(_rsmdColumnLabel.get(0))
 			     && "Executes".equals(_rsmdColumnLabel.get(1))
 			     && "StmtText".equals(_rsmdColumnLabel.get(2))
 			     && "StmtId"  .equals(_rsmdColumnLabel.get(3))
 			     && "NodeId"  .equals(_rsmdColumnLabel.get(4))
 			   )
+			{
+				noData = false;
+			}
+
+			//---------------------------------------------------
+			// If the column name is 'Microsoft SQL Server 2005 XML Showplan'
+			// Then we still want to show the output from 'set statistics XML on'
+			if (_rsmdColumnLabel.size() == 1 && "Microsoft SQL Server 2005 XML Showplan".equals(_rsmdColumnLabel.get(0)))
 			{
 				noData = false;
 			}

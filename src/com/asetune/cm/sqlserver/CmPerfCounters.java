@@ -2458,6 +2458,27 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), larr, darr);
 		}
 
+//		// -----------------------------------------------------------------------------------------
+//		if (GRAPH_NAME_XXX.equals(tgdp.getName()))
+//		{
+//			// +---------------------+------------------------------+------------------------+----------+-----------+
+//			// |object_name          |counter_name                  |instance_name           |cntr_value|cntr_type  |
+//			// +---------------------+------------------------------+------------------------+----------+-----------+
+//			// |:Memory Broker Clerks|Internal benefit              |Buffer Pool             |         0|     65 792|
+//			// |:Memory Broker Clerks|Internal benefit              |Column store object pool|         0|     65 792|
+//			// |:Memory Broker Clerks|Memory broker clerk size      |Buffer Pool             | 8 143 501|     65 792|
+//			// |:Memory Broker Clerks|Memory broker clerk size      |Column store object pool|     2 652|     65 792|
+//			// |:Memory Broker Clerks|Periodic evictions (pages)    |Buffer Pool             |         0|     65 792|
+//			// |:Memory Broker Clerks|Periodic evictions (pages)    |Column store object pool|         0|     65 792|
+//			// |:Memory Broker Clerks|Pressure evictions (pages/sec)|Buffer Pool             |         0|272 696 576|
+//			// |:Memory Broker Clerks|Pressure evictions (pages/sec)|Column store object pool|15 050 839|272 696 576|
+//			// |:Memory Broker Clerks|Simulation benefit            |Buffer Pool             |         0|     65 792|
+//			// |:Memory Broker Clerks|Simulation benefit            |Column store object pool|         0|     65 792|
+//			// |:Memory Broker Clerks|Simulation size               |Buffer Pool             | 2 033 627|     65 792|
+//			// |:Memory Broker Clerks|Simulation size               |Column store object pool|       150|     65 792|
+//			// +------------------------------+------------------------------+------------------------+----------+-----------+
+//		}
+		
 		// -----------------------------------------------------------------------------------------
 		if (GRAPH_NAME_COLUMNSTORE_ALL.equals(tgdp.getName()))
 		{

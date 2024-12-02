@@ -1832,7 +1832,7 @@ extends CountersModel
 
 							// Get 'LastKnownSqlText'
 							boolean getLastKnownSqlText = true;
-							if (getLastKnownSqlText)
+							if (getLastKnownSqlText && PersistentCounterHandler.hasInstance())
 							{
 								ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
 								if (sqlCaptureBroker != null && sqlCaptureBroker instanceof SqlCaptureBrokerAse)
