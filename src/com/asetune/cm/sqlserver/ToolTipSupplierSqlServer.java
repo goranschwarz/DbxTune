@@ -117,7 +117,7 @@ extends CmToolTipSupplierDefault
 					if (StringUtil.isNullOrBlank(tabOwnerName))
 						tabOwnerName = getObjectSchema(conn, dbName, objectName);
 					
-					List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName);
+					List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName, false);
 
 					if (_logger.isDebugEnabled())
 						_logger.debug("ToolTipSupplierSqlServer.getToolTipTextOnTableCell(ObjectName): dbName='"+dbName+"', ownerName='"+tabOwnerName+"', objectName='"+objectName+"', cm='"+_cm.getName()+"'. list.size()="+(list==null?"-null-":list.size())+".");

@@ -654,7 +654,7 @@ implements ToolTipHyperlinkResolver
 
 					// Show special tooltip for special column names
 					String colName = rstm.getColumnName(mcol);
-					if (colName != null && StringUtil.equalsAnyIgnoreCase(colName, "tablename", "table_name", "objectname", "object_name"))
+					if (colName != null && StringUtil.equalsAnyIgnoreCase(colName, "tablename", "table_name", "table name", "objectname", "object_name", "object name"))
 					{
 						// Reuse the tooltip in the SQL editor (CompletionProvider)
 						if (_logger.isDebugEnabled())
@@ -671,10 +671,39 @@ implements ToolTipHyperlinkResolver
 							String tabOwnerName = sqlObjName.getSchemaNameNull();
 							String objectName   = sqlObjName.getObjectName();
 
+							if ("dbo".equals(tabOwnerName))
+								tabOwnerName = null;
+
+							// Override dbname: if we can find: 'dbname', 'databasename', 'database_name' or 'database name'
+							if (rstm.hasColumnNoCase("dbname") || rstm.hasColumnNoCase("databasename") || rstm.hasColumnNoCase("database_name") || rstm.hasColumnNoCase("database name"))
+							{
+								int colPos = -1;
+								if (colPos == -1) colPos = rstm.findColumnNoCase("dbname");
+								if (colPos == -1) colPos = rstm.findColumnNoCase("databasename");
+								if (colPos == -1) colPos = rstm.findColumnNoCase("database_name");
+								if (colPos == -1) colPos = rstm.findColumnNoCase("database name");
+
+								if (colPos != -1)
+									dbname = rstm.getValueAsString(mrow, colPos);
+							}
+							
+							// Override tabOwnerName: if we can find: 'schemaname', 'schema_name' or 'schema name'
+							if (rstm.hasColumnNoCase("schemaname") || rstm.hasColumnNoCase("schema_name") || rstm.hasColumnNoCase("schema name"))
+							{
+								int colPos = -1;
+								if (colPos == -1) colPos = rstm.findColumnNoCase("schemaname");
+								if (colPos == -1) colPos = rstm.findColumnNoCase("schema_name");
+								if (colPos == -1) colPos = rstm.findColumnNoCase("schema name");
+
+								if (colPos != -1)
+									tabOwnerName = rstm.getValueAsString(mrow, colPos);
+							}
+								
+							
 							if (_logger.isDebugEnabled())
 								_logger.debug("SHOW TABLE TOOLTIP FOR: cellStr=|" + cellStr + "|, dbname=|" + dbname + "|, tabOwnerName=|" + tabOwnerName + "|, objectName=|" + objectName + "|.");
 
-							List<Completion> list = compleationProviderSql.getTableListWithGuiProgress(conn, dbname, tabOwnerName, objectName);
+							List<Completion> list = compleationProviderSql.getTableListWithGuiProgress(conn, dbname, tabOwnerName, objectName, false);
 
 							if (_logger.isDebugEnabled())
 								_logger.debug("compleationProviderSql.getTableListWithGuiProgress(ObjectName): dbname='" + dbname + "', ownerName='" + tabOwnerName + "', objectName='" + objectName + "'. list.size()=" + (list == null ? "-null-" : list.size()) + ".");

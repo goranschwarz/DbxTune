@@ -380,7 +380,7 @@ extends CountersModelAppend
 					String extendedDescHtml = ErrorMessage;
 
 					// Try to copy everything between "database" and a dot (".")
-					String dbname = StringUtils.substringBetween(ErrorMessage, "database", ".");
+					String dbname = StringUtils.substringBetween(ErrorMessage, "database '", "'.");
 					// Strip out chars we do not need or want
 					if (StringUtil.hasValue(dbname))
 						dbname = dbname.replace('\'', ' ').replace('.', ' ').trim();

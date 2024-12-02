@@ -237,6 +237,29 @@ extends CompletionProviderAbstract
 //		super.addCompletions(list);
 	}
 
+	private String getCurrentCatalog(Connection conn)
+	{
+		if (StringUtil.hasValue(_currentCatalog))
+			return _currentCatalog;
+
+		if (conn == null)
+		{
+			_logger.warn("Problems getting current catalog. conn=null, SKIPPING: conn.getCatalog(), returning: " + _currentCatalog);
+			return _currentCatalog;
+		}
+
+		try 
+		{
+			_currentCatalog = conn.getCatalog(); 
+		}  
+		catch(SQLException ex) 
+		{
+			_logger.warn("Problems getting current catalog. ErrorNumber=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Message=|" + ex.getMessage() + "|.");
+		}
+		return _currentCatalog;
+	}
+
+	
 	public void setCatalog(String catName)
 	{
 		setCatalog(catName, false);
@@ -1507,7 +1530,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				}
 				else
 				{
-					List<Completion> list = getProcedureListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName());
+					List<Completion> list = getProcedureListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName(), isWildcatdMath());
 					if ( list != null && ! list.isEmpty() )
 						procList.addAll(list);
 				}
@@ -1554,7 +1577,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 					if (conn == null)
 						return null;
 
-					list = getProcedureListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName());
+					list = getProcedureListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName(), isWildcatdMath());
 					
 					if (_logger.isDebugEnabled())
 						_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
@@ -1565,7 +1588,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 
 			// Add matching procedures in local database
 			// but NOT if current working database is "sybsystemprocs" and input text starts with sp_
-			if ( "sybsystemprocs".equalsIgnoreCase(_currentCatalog) && etId.getObjectName().startsWith("sp_"))
+			if ( "sybsystemprocs".equalsIgnoreCase(getCurrentCatalog(getConnection())) && etId.getObjectName().startsWith("sp_"))
 			{
 				// do not add sp_* if current working database is sybsystemprocs...
 				// if entered text is 'sp_' those procs will be added a bit down (last in this section)
@@ -1637,7 +1660,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				return null;
 
 			// Note: this will also check for table-valued-functions, but right now that doesn't work :( at least for MS-SQL which I was testing against
-			return getTableListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName());
+			return getTableListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName(), isWildcatdMath());
 		}
 
 		//-----------------------------------------------------------
@@ -1751,7 +1774,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 						if (_logger.isDebugEnabled())
 							_logger.debug("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP FAILED, found 0 column entries in cache --- (_currentCatalog='"+_currentCatalog+"'.)");
 
-						aliasFullTabName.setCatalogName(_currentCatalog);
+						aliasFullTabName.setCatalogName(getCurrentCatalog(getConnection()));
 					}
 				}
 
@@ -1834,7 +1857,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 							//   return known schema names in current catalog/db
 							// else
 							//   get available schemas for the specified catalog/db (NOT cached) 
-							if (catName.equalsIgnoreCase(_currentCatalog))
+							if (catName.equalsIgnoreCase(getCurrentCatalog(getConnection())))
 							{
 								if (_logger.isDebugEnabled())
 									_logger.debug("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP... in CURRENT-CATALOG.");
@@ -1855,7 +1878,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 									if (_logger.isDebugEnabled())
 										_logger.debug("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP... LOOKUP-ON-THE-FLY.");
 
-									List<Completion> list = getSchemaListWithGuiProgress(conn, catName, schName);
+									List<Completion> list = getSchemaListWithGuiProgress(conn, catName, schName, isWildcatdMath());
 									if ( list != null && ! list.isEmpty() )
 										colList.addAll(list);
 								}
@@ -1865,7 +1888,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'.");
 
 //									List<Completion> list = getTableListWithGuiProgress(conn, catName, schName, colName);
-									List<Completion> list = getTableListWithGuiProgress(conn, catName, null, colName); // note: colName contains here the start of the table name 
+									List<Completion> list = getTableListWithGuiProgress(conn, catName, null, colName, isWildcatdMath()); // note: colName contains here the start of the table name 
 
 									if (_logger.isDebugEnabled())
 										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'. list.size()=" + (list==null?"NULL":list.size()) );
@@ -2841,7 +2864,12 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	// SCHEMAS
 	//------------------------------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------------------------------
-	protected List<SchemaInfo> refreshCompletionForSchemas(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName)
+//	protected List<SchemaInfo> refreshCompletionForSchemas(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName)
+//	throws SQLException
+//	{
+//		return refreshCompletionForSchemas(conn, waitDialog, catalogName, schemaName, isWildcatdMath());
+//	}
+	protected List<SchemaInfo> refreshCompletionForSchemas(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, boolean wildcardSearch)
 	throws SQLException
 	{
 //System.out.println("SQL: refreshCompletionForDbs()");
@@ -2858,7 +2886,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+			if ( wildcardSearch && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -3025,14 +3054,17 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	throws SQLException
 	{
 //		return refreshCompletionForTables(conn, waitDialog, null, null, null);
-		return refreshCompletionForTables(conn, waitDialog, _currentCatalog, null, null);
+		return refreshCompletionForTables(conn, waitDialog, getCurrentCatalog(conn), null, null, isWildcatdMath());
 	}
-	protected List<TableInfo> refreshCompletionForTables(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String tableName)
+	protected List<TableInfo> refreshCompletionForTables(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String tableName, boolean wildcardSearch)
 	throws SQLException
 	{
 //System.out.println("SQL: refreshCompletionForTables()");
 		// Obtain a DatabaseMetaData object from our current connection        
 		DatabaseMetaData dbmd = conn.getMetaData();
+
+		if (StringUtil.isNullOrBlank(catalogName))
+			catalogName = getCurrentCatalog(conn);
 
 		// Each table description has the following columns: 
 		// 1:  TABLE_CAT String                 => table catalog (may be null) 
@@ -3057,7 +3089,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+			if ( wildcardSearch && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -3066,7 +3099,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			tableName = tableName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! tableName.endsWith("%") )
+//			if ( isWildcatdMath() && ! tableName.endsWith("%") )
+			if ( wildcardSearch && ! tableName.endsWith("%") )
 				tableName += "%";
 		}
 
@@ -3114,41 +3148,18 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		return tableInfoList;
 	}
 
-	protected List<TableColumnInfo> refreshCompletionForTableColumns(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String tableName, String colName)
+	protected List<TableColumnInfo> refreshCompletionForTableColumns(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String tableName, String colName, boolean wildcardSearch)
 	throws SQLException
 	{
 		DatabaseMetaData dbmd = conn.getMetaData();
 		
+		if (StringUtil.isNullOrBlank(catalogName))
+			catalogName = getCurrentCatalog(conn);
+
 		ArrayList<TableColumnInfo> retList = new ArrayList<TableColumnInfo>();
 
 		final String stateMsg = "Getting Column information for table '"+tableName+"'.";
 		waitDialog.setState(stateMsg);
-
-//		// fix catalogName
-//		if (catalogName != null)
-//		{
-//			catalogName = catalogName.replace('*', '%').trim();
-//			if ( isWildcatdMath() && ! catalogName.endsWith("%") )
-//				catalogName += "%";
-//		}
-//
-//		// fix schemaName
-//		if (schemaName != null)
-//		{
-//			schemaName = schemaName.replace('*', '%').trim();
-//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
-//				schemaName += "%";
-//		}
-//
-//		// fix tableName
-//		if (tableName == null)
-//			tableName = "%";
-//		else
-//		{
-//			tableName = tableName.replace('*', '%').trim();
-//			if ( isWildcatdMath() && ! tableName.endsWith("%") )
-//				tableName += "%";
-//		}
 
 		// fix colName
 		if (colName == null)
@@ -3156,7 +3167,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			colName = colName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! colName.endsWith("%") )
+//			if ( isWildcatdMath() && ! colName.endsWith("%") )
+			if ( wildcardSearch && ! colName.endsWith("%") )
 				colName += "%";
 		}
 
@@ -3404,15 +3416,18 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	throws SQLException
 	{
 //		return refreshCompletionForFunctions(conn, waitDialog, null, null, null);
-		return refreshCompletionForFunctions(conn, waitDialog, _currentCatalog, null, null);
+		return refreshCompletionForFunctions(conn, waitDialog, getCurrentCatalog(conn), null, null, isWildcatdMath());
 	}
-	protected List<FunctionInfo> refreshCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String functionName)
+	protected List<FunctionInfo> refreshCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String functionName, boolean wildcardSearch)
 	throws SQLException
 	{
 //System.out.println("SQL: refreshCompletionForFunctions()");
 //new Exception("DUMMY STACKTRACE").printStackTrace();
 		// Obtain a DatabaseMetaData object from our current connection        
 		DatabaseMetaData dbmd = conn.getMetaData();
+
+		if (StringUtil.isNullOrBlank(catalogName))
+			catalogName = getCurrentCatalog(conn);
 
 		// Each table description has the following columns: 
 
@@ -3437,7 +3452,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+			if ( wildcardSearch && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -3446,7 +3462,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			functionName = functionName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! functionName.endsWith("%") )
+//			if ( isWildcatdMath() && ! functionName.endsWith("%") )
+			if ( wildcardSearch && ! functionName.endsWith("%") )
 				functionName += "%";
 		}
 
@@ -3504,41 +3521,18 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		return functionInfoList;
 	}
 
-	protected List<FunctionColumnInfo> refreshCompletionForFunctionColumns(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String functionName, String colName)
+	protected List<FunctionColumnInfo> refreshCompletionForFunctionColumns(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String functionName, String colName, boolean wildcardSearch)
 	throws SQLException
 	{
 		DatabaseMetaData dbmd = conn.getMetaData();
 		
 		ArrayList<FunctionColumnInfo> retList = new ArrayList<FunctionColumnInfo>();
 
+		if (StringUtil.isNullOrBlank(catalogName))
+			catalogName = getCurrentCatalog(conn);
+
 		final String stateMsg = "Getting Column information for function '"+functionName+"'.";
 		waitDialog.setState(stateMsg);
-
-//		// fix catalogName
-//		if (catalogName != null)
-//		{
-//			catalogName = catalogName.replace('*', '%').trim();
-//			if ( isWildcatdMath() && ! catalogName.endsWith("%") )
-//				catalogName += "%";
-//		}
-//
-//		// fix schemaName
-//		if (schemaName != null)
-//		{
-//			schemaName = schemaName.replace('*', '%').trim();
-//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
-//				schemaName += "%";
-//		}
-//
-//		// fix tableName
-//		if (tableName == null)
-//			tableName = "%";
-//		else
-//		{
-//			tableName = tableName.replace('*', '%').trim();
-//			if ( isWildcatdMath() && ! tableName.endsWith("%") )
-//				tableName += "%";
-//		}
 
 		// fix colName
 		if (colName == null)
@@ -3546,7 +3540,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			colName = colName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! colName.endsWith("%") )
+//			if ( isWildcatdMath() && ! colName.endsWith("%") )
+			if ( wildcardSearch && ! colName.endsWith("%") )
 				colName += "%";
 		}
 
@@ -3785,15 +3780,18 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	throws SQLException
 	{
 //		return refreshCompletionForProcedures(conn, waitDialog, null, null, null);
-		return refreshCompletionForProcedures(conn, waitDialog, _currentCatalog, null, null);
+		return refreshCompletionForProcedures(conn, waitDialog, getCurrentCatalog(conn), null, null, isWildcatdMath());
 	}
-	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName)
+	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName, boolean wildcardSearch)
 	throws SQLException
 	{
 //System.out.println("SQL: refreshCompletionForProcedures()");
 
 		// Obtain a DatabaseMetaData object from our current connection        
 		DatabaseMetaData dbmd = conn.getMetaData();
+
+		if (StringUtil.isNullOrBlank(catalogName))
+			catalogName = getCurrentCatalog(conn);
 
 //		// What PRODUCT are we connected to 
 //		String dbProductName = dbmd.getDatabaseProductName();
@@ -3825,7 +3823,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
+			if ( wildcardSearch && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -3834,7 +3833,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			procName = procName.replace('*', '%').trim();
-			if ( isWildcatdMath() && ! procName.endsWith("%") )
+//			if ( isWildcatdMath() && ! procName.endsWith("%") )
+			if ( wildcardSearch && ! procName.endsWith("%") )
 				procName += "%";
 		}
 
@@ -4282,7 +4282,7 @@ if (_guiOwner == null)
 							// Add all other schemas (that dosn't have a table)
 							if (isLookupSchemaWithNoTables())
 							{
-								List<SchemaInfo> allSchemas = refreshCompletionForSchemas(conn, getWaitDialog(), null, null);
+								List<SchemaInfo> allSchemas = refreshCompletionForSchemas(conn, getWaitDialog(), null, null, isWildcatdMath());
 
 								// If there are NO schemas, fall back to use catalogs instead (this is mainly for MySql)
 //								if (allSchemas.isEmpty() && _dbComplList != null)
@@ -4472,9 +4472,9 @@ if (_guiOwner == null)
 		
 		// get tables
 		if (sqlObj._dbSupportsSchema)
-			tabList = getTableListWithGuiProgress(conn, sqlObj.getCatalogName(), sqlObj.getSchemaName(), sqlObj.getObjectName());
+			tabList = getTableListWithGuiProgress(conn, sqlObj.getCatalogName(), sqlObj.getSchemaName(), sqlObj.getObjectName(), false);
 		else
-			tabList = getTableListWithGuiProgress(conn, sqlObj.getSchemaName(), null, sqlObj.getObjectName());
+			tabList = getTableListWithGuiProgress(conn, sqlObj.getSchemaName(), null, sqlObj.getObjectName(), false);
 
 		// NONE FOUND: Check once again... but with the *original* text that was put into SqlObjectName
 		if ( tabList == null || (tabList != null && tabList.isEmpty()) )
@@ -4483,9 +4483,9 @@ if (_guiOwner == null)
 				_logger.debug("getTableListWithGuiProgress(DbxConnection, SqlObjectName): NO Tables was found, TRY ORIGIN NAMES.");
 			
 			if (sqlObj._dbSupportsSchema)
-				tabList = getTableListWithGuiProgress(conn, sqlObj.getCatalogNameOrigin(), sqlObj.getSchemaNameOrigin(), sqlObj.getObjectNameOrigin());
+				tabList = getTableListWithGuiProgress(conn, sqlObj.getCatalogNameOrigin(), sqlObj.getSchemaNameOrigin(), sqlObj.getObjectNameOrigin(), false);
 			else
-				tabList = getTableListWithGuiProgress(conn, sqlObj.getSchemaNameOrigin(), null, sqlObj.getObjectNameOrigin());
+				tabList = getTableListWithGuiProgress(conn, sqlObj.getSchemaNameOrigin(), null, sqlObj.getObjectNameOrigin(), false);
 		}
 
 		return tabList;
@@ -4500,11 +4500,13 @@ if (_guiOwner == null)
 	 * @return
 	 */
 //	private List<Completion> getTableListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
-	public List<Completion> getTableListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
+	public List<Completion> getTableListWithGuiProgress(final Connection conn, final String catNameIn, final String schemaName, final String objName, boolean wildcardSearch)
 	{
 //new Exception("DUMMY EXCEPTION at: getTableListWithGuiProgress(conn='"+conn+"', catName='"+catName+"', schemaName='"+schemaName+"', objName='"+objName+"')").printStackTrace();
 		// Create a Waitfor Dialog and Executor, then execute it.
 		WaitForExecDialog wait = new WaitForExecDialog(_guiOwner, "Refreshing SQL Completion");
+
+		final String catName = StringUtil.hasValue(catNameIn) ? catNameIn : getCurrentCatalog(conn);
 
 		WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
 		{
@@ -4533,7 +4535,7 @@ if (_guiOwner == null)
 				try
 				{
 					getWaitDialog().setState("Getting Table Completions.");
-					tableInfoList = refreshCompletionForTables(conn, getWaitDialog(), catName, schemaName, objName);
+					tableInfoList = refreshCompletionForTables(conn, getWaitDialog(), catName, schemaName, objName, wildcardSearch);
 
 					// Add it to the global table so we don't have to do the same lookup next time
 					_tableInfoList.addAll(tableInfoList);
@@ -4550,7 +4552,7 @@ if (_guiOwner == null)
 				try
 				{
 					getWaitDialog().setState("Getting Function Completions.");
-					functionInfoList = refreshCompletionForFunctions(conn, getWaitDialog(), catName, schemaName, objName);
+					functionInfoList = refreshCompletionForFunctions(conn, getWaitDialog(), catName, schemaName, objName, wildcardSearch);
 
 					// Add it to the global table so we don't have to do the same lookup next time
 					_functionInfoList.addAll(functionInfoList);
@@ -4684,10 +4686,12 @@ if (_guiOwner == null)
 	 * @param objName
 	 * @return
 	 */
-	private List<Completion> getProcedureListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
+	private List<Completion> getProcedureListWithGuiProgress(final Connection conn, final String catNameIn, final String schemaName, final String objName, boolean wildcardSearch)
 	{
 		// Create a Waitfor Dialog and Executor, then execute it.
 		WaitForExecDialog wait = new WaitForExecDialog(_guiOwner, "Refreshing SQL Completion");
+
+		final String catName = StringUtil.hasValue(catNameIn) ? catNameIn : getCurrentCatalog(conn);
 
 		WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
 		{
@@ -4715,7 +4719,7 @@ if (_guiOwner == null)
 					if (isLookupTableName())
 					{
 						getWaitDialog().setState("Getting Procedure Completions.");
-						List<ProcedureInfo> procInfoList = refreshCompletionForProcedures(conn, getWaitDialog(), catName, schemaName, objName);
+						List<ProcedureInfo> procInfoList = refreshCompletionForProcedures(conn, getWaitDialog(), catName, schemaName, objName, wildcardSearch);
 
 						// Add it to the global table so we don't have to do the same lookup next time
 						_procedureInfoList.addAll(procInfoList);
@@ -4761,10 +4765,12 @@ if (_guiOwner == null)
 	 * @param objName
 	 * @return
 	 */
-	private List<Completion> getSchemaListWithGuiProgress(final Connection conn, final String catName, final String schemaName)
+	private List<Completion> getSchemaListWithGuiProgress(final Connection conn, final String catNameIn, final String schemaName, boolean wildcardSearch)
 	{
 		// Create a Waitfor Dialog and Executor, then execute it.
 		WaitForExecDialog wait = new WaitForExecDialog(_guiOwner, "Refreshing SQL Completion");
+
+		final String catName = StringUtil.hasValue(catNameIn) ? catNameIn : getCurrentCatalog(conn);
 
 		WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
 		{
@@ -4791,7 +4797,7 @@ if (_guiOwner == null)
 					// Get Table and Columns information
 					if (isLookupTableName())
 					{
-						List<SchemaInfo> schemaInfoList = refreshCompletionForSchemas(conn, getWaitDialog(), catName, schemaName);
+						List<SchemaInfo> schemaInfoList = refreshCompletionForSchemas(conn, getWaitDialog(), catName, schemaName, wildcardSearch);
 	
 						// Create completion list
 						getWaitDialog().setState("Creating Schema Completions.");

@@ -13781,6 +13781,8 @@ checkPanelSize(_resPanel, comp);
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "trace 'off', 'dsi', 'dsi_buf_dump'", "", "Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "alter connection to ${selectedText} set trace to 'econn, dsi_buf_dump, on'",  "", "Turn ON: dsi_buf_dump for ExpressConnect"));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "alter connection to ${selectedText} set trace to 'econn, dsi_buf_dump, off'", "", "Turn OFF: dsi_buf_dump for ExpressConnect"));
+		commandList.add(new FavoriteCommandEntry(VendorType.RS, "alter connection to ${selectedText} set dsi_log_cmds to 'on'",  "", "Turn ON: dsi_log_cmds for a Connection (log failed/skipped trans to the RS log)"));
+		commandList.add(new FavoriteCommandEntry(VendorType.RS, "alter connection to ${selectedText} set dsi_log_cmds to 'off'", "", "Turn OFF: dsi_log_cmds for a Connection (log failed/skipped trans to the RS log)"));
 
 		commandList.add(FavoriteCommandEntry.addSeparator());
 		
