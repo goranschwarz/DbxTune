@@ -440,6 +440,118 @@
 		</div>
 	</div>
 
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: dbx-loading-url-dialog
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class='modal fade' id='dbx-loading-url-dialog' role='dialog' aria-labelledby='dbx-loading-url-dialog' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='dbx-loading-url-dialog-title'><b><span id='dbx-loading-url-label'></span></b> <span id='dbx-loading-url-objectName'></span></h5>
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+						<span aria-hidden='true'>&times;</span>
+					</button>
+				</div>
+				<div class='modal-body' style='overflow-x: auto;'>
+					<div id="dbx-loading-url-progress" class="progress mb-3">
+						<div id="dbx-loading-url-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;"></div>
+					</div>
+					<div id="dbx-loading-url-text" class="text-center">Loading...</div>
+<!--					<div id="dbx-loading-url-content" class="mt-3" style="display: none;"></div>-->
+					<div id="dbx-loading-url-content" style="display: none;"></div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		function loadUrlWithProgressBarIntoNewTab(url, title) {
+			console.log("loadUrlWithProgressBarIntoNewTab(): url='" + url + "', title='" + title + "'.");
+			const modalElement  = new bootstrap.Modal(document.getElementById('dbx-loading-url-dialog'));
+			const progressBar   = document.getElementById("dbx-loading-url-progress-bar");
+			const loadingText   = document.getElementById("dbx-loading-url-text");
+			const resultContent = document.getElementById("dbx-loading-url-content");
+			const urlObjectName = document.getElementById("dbx-loading-url-objectName");
+
+			// Show the modal
+			modalElement.show();
+
+			// Reset UI elements
+			progressBar.style.width = "0%";
+			loadingText.style.display = "block";
+//			loadingText.textContent = "Loading...";
+			loadingText.innerHTML = "<b>Loading URL...</b><br><br>" + url
+//			resultContent.innerHTML = "";
+//			resultContent.style.display = "none";
+
+			urlObjectName.innerHTML = title;
+
+			// Move the progress bar every second
+			let progress = 0;
+			const interval = setInterval(() => {
+				if (progress >= 90) {
+					clearInterval(interval);
+				} else {
+					progress += 10;
+					progressBar.style.width = progress + "%";
+				}
+			}, 1000);
+
+			// Call URL, Fetch the HTML content, open HTML in new TAB
+			fetch(url)
+				.then(response => {
+					if (!response.ok) {
+						return response.text().then(errorText => {
+							throw new Error("<b>Failed to fetch data</b> <br>" 
+								+ "<br>"
+								+ "<b>Error Code</b> <br>" 
+								+ response.status + " (" + response.statusText + ") <br>"
+								+ "<br>"
+								+ "<b>Called URL</b> <br>" 
+								+ response.url + "<br>"
+								+ "<br>"
+								+ "<b>Full Error Text from Server</b> <br>" 
+								+ "<hr>"
+								+ errorText + "<br>"
+								);
+						});
+					}
+					return response.text();
+				})
+				.then(html => {
+					// Stop the progress bar
+					clearInterval(interval);
+					progressBar.style.width = "100%";
+
+					// Close the modal and open the content in a new tab
+					setTimeout(() => {
+						modalElement.hide();
+
+						// Open a new tab with the correct URL in the address bar
+						const newTab = window.open(url, "_blank");
+
+						// Replace the tab's content with the fetched HTML
+						newTab.document.open();
+						newTab.document.write(html);
+						newTab.document.close();
+						
+						// Set the URL string in the navigation field
+						newTab.history.pushState("object or string", "Title", url);
+					}, 500);
+				})
+				.catch(error => {
+					// Handle error
+					clearInterval(interval);
+					progressBar.style.width = "0%";
+					loadingText.innerHTML = `<span class="text-danger">${error.message}</span>`;
+				});
+		}
+	</script>
+
+
 
 <!--
 <h1>DbxTune - Central</h1>
@@ -1485,12 +1597,13 @@ Active Alarms
 				const ccMgtButton = '    <a class="dropdown-item" href="/config.html?srvName='+serverName+'" target="_blank"><b>View</b>/Change Collector <b>Configuration</b></a>'
 
 				let collectorMenuOptions = '';
-//				if (srvSession.productString === 'SqlServerTune')
-//				{
-//					collectorMenuOptions = ''
-//						+ '    <a class="dropdown-item" href="/report?op=sqlScheduler&name='+serverName+'" target="_blank">View SQL Agent/Scheduler statistics</a>'
-//						+ '    <div class="dropdown-divider"></div>';
-//				}
+				if (srvSession.productString === 'SqlServerTune')
+				{
+					collectorMenuOptions = ''
+						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-report"                                     , "Job Scheduler Report for Today")\'>SQL Agent/Scheduler <b>Report</b> for <b>Today</b></a>'
+						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-activity&startTime=TODAY&onlyLevelZero=true", "Job Scheduler Activity View Today")\'>SQL Agent/Scheduler <b>Activity</b> View for <b>Today</b></a>'
+						+ '    <div class="dropdown-divider"></div>';
+				}
 
 				html += ''
 						+ '<div class="btn-group">'

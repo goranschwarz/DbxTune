@@ -268,7 +268,7 @@ implements IUserDefinedChart
 
 
 	@Override
-	public List<String> getJaveScriptList()
+	public List<String> getJavaScriptList()
 	{
 		return Collections.emptyList();
 	}

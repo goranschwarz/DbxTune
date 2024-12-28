@@ -57,6 +57,8 @@ class AsetuneTokenMakerFactory extends AbstractTokenMakerFactory
 
 		putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_MSSQL_TSQL , pkg + "MicrosoftTSqlTokenMaker");
 
+		putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_POSTGRES_TEXT_EXECUTION_PLAN, pkg + "PostgresTextPlanTokenMaker");
+
 		pkg = "org.fife.ui.rsyntaxtextarea.modes.";
 
 		putMapping(SYNTAX_STYLE_NONE,			pkg + "PlainTextTokenMaker");

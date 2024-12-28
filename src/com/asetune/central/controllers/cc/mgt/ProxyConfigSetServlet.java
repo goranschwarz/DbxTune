@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package com.asetune.central.controllers.ccmgt;
+package com.asetune.central.controllers.cc.mgt;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
@@ -31,8 +31,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.central.controllers.cc.ProxyHelper;
+
 public class ProxyConfigSetServlet 
-extends MgtProxyHelper
+extends ProxyHelper
 {
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
@@ -65,7 +67,7 @@ extends MgtProxyHelper
 		sendData(req, httpConn);
 
 		// PROXY: Transfer data from the HTTP Call to the caller 
-		sendResult(httpConn, resp);
+		sendResult(httpConn, resp, APPLICATION_JSON);
 	}
 
 }

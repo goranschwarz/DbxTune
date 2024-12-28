@@ -189,11 +189,16 @@ extends AbstractTableModel
 
 //			_skipMessagesList.add(new SkipMessageEntry(SkipMesssageType.INDEXOF, "plan names due to '<planStatus> not executed </planStatus>'. For the last "));
 
-			// Skip some messages between 04:00 and 05:00
+			// Skip some messages between 04:00 and 07:00 (DbxCentral might be down for database compaction)
 			_skipMessagesList.add( new SkipMessageEntry(
 					SkipMesssageType.REGEX, "Problems connecting/sending JSON-REST call to ", 
 					LocalTime.of(04,00), 
-					LocalTime.of(05,00) ) );
+					LocalTime.of(07,00) ) );
+			
+			_skipMessagesList.add( new SkipMessageEntry(
+					SkipMesssageType.REGEX, "The persistent queue has .* entries. The persistent writer might not keep in pace.", 
+					LocalTime.of(04,00), 
+					LocalTime.of(07,00) ) );
 		}
 	}
 

@@ -192,7 +192,7 @@ extends HttpServlet
 		out.println("</script>");
 		out.println("");
 		
-		for (String scriptLocation : udc.getJaveScriptList())
+		for (String scriptLocation : udc.getJavaScriptList())
 		{
 			out.println("<script type='text/javascript' src='" + scriptLocation + "'></script>");
 		}
@@ -208,7 +208,7 @@ extends HttpServlet
 		// - And various User Defined Information content
 		out.println("<details>");
 		out.println("<summary>");
-		out.println("Page loaded: <span id='last-update-ts'>" + (new Timestamp(System.currentTimeMillis())) + "</span>, ");
+		out.println("Show parameters, Page loaded: <span id='last-update-ts'>" + (new Timestamp(System.currentTimeMillis())) + "</span>, ");
 		if (refresh > 0)
 			out.println("This page will 'auto-refresh' every " + refresh + " second. This can be changed with URL parameter 'refresh=##' (where ## is seconds)<br>" );
 		else

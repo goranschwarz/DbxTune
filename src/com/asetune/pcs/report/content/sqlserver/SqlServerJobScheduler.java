@@ -92,8 +92,8 @@ extends SqlServerAbstract
 			return false;
 
 		// If we have got any: Outliers
-		if (_job_history_outliers != null && _job_history_outliers.getRowCount() > 0)
-			return true;
+//		if (_job_history_outliers != null && _job_history_outliers.getRowCount() > 0)
+//			return true;
 
 		// If we have got any: Errors
 		if (_job_history_errors != null && _job_history_errors.getRowCount() > 0)
@@ -119,7 +119,6 @@ extends SqlServerAbstract
 	public void writeMessageText(Writer w, MessageType messageType)
 	throws IOException
 	{
-
 		// If the schema/table did not exists... It may be to the fact:
 		//  * Job Agent/Scheduler is not enabled
 		//  * The user used to monitor SQL Server did not have access to table: msdb.dbo.sysjobhistory 
@@ -144,7 +143,7 @@ extends SqlServerAbstract
 		//------------------------------------------------------------------------
 		beginHtmlSubSection(w, "Summary of All jobs in the Reporting Period", "job_scheduler_overview");
 		
-		if (_job_history_overview.getRowCount() > 0)
+		if (_job_history_overview != null && _job_history_overview.getRowCount() > 0)
 		{
 			hasOverviewRecords = true;
 			
@@ -174,7 +173,7 @@ extends SqlServerAbstract
 
 			int outliers_calcHistoricalDays = Configuration.getCombinedConfiguration().getIntProperty(SqlServerJobSchedulerExtractor.PROPKEY_outliers_calcHistoricalDays, SqlServerJobSchedulerExtractor.DEFAULT_outliers_calcHistoricalDays);
 
-			if (_job_history_outliers.getRowCount() > 0)
+			if (_job_history_outliers != null && _job_history_outliers.getRowCount() > 0)
 			{
 				w.append("<p>The algorithm to find <i>outliers</i> is: "
 						+ "<ul>"
@@ -237,7 +236,7 @@ extends SqlServerAbstract
 					+ "<i>This can be changed with property <code>" + PROPKEY_errors_skip_below_severity + " = #</code></i>"
 					+ "</p> \n");
 
-			if (_job_history_errors.getRowCount() > 0)
+			if (_job_history_errors != null && _job_history_errors.getRowCount() > 0)
 			{
 				// in RED
 				w.append("<p style='color:red'><b>Found " + _job_history_errors.getRowCount() + " Job Steps with ERROR or WARNINGS in the recording period...</b></p>");
@@ -247,7 +246,7 @@ extends SqlServerAbstract
 			else
 			{
 				// in GREEN
-				w.append("<p style='color:green'>Found " + _job_history_errors.getRowCount() + " Job Steps with ERROR or WARNINGS in the recording period...<br><br></p>");
+				w.append("<p style='color:green'>Found 0 Job Steps with ERROR or WARNINGS in the recording period...<br><br></p>");
 			}
 			endHtmlSubSection(w);
 
@@ -255,7 +254,7 @@ extends SqlServerAbstract
 			//------------------------------------------------------------------------
 			// get: Errors ALL (no filter on Message Numbers etc)
 			//------------------------------------------------------------------------
-			if (_job_history_errors_all.getRowCount() > 0)
+			if (_job_history_errors_all != null && _job_history_errors_all.getRowCount() > 0)
 			{
 				beginHtmlSubSection(w, "Job Steps with ERROR or WARNINGS (no filter on Message Numbers)", "job_step_with_errors_or_warnings_ALL");
 
@@ -347,6 +346,7 @@ extends SqlServerAbstract
 		sql = ""
 			    + "SELECT \n"
 			    + "     [JobName] \n"
+			    + "    ,'' AS [details] \n"
 			    + "    ,[stepCount] \n"
 			    + "    ,'' AS [stepCmds] \n"
 			    + "    ,[runStatusDesc] \n"
@@ -355,6 +355,7 @@ extends SqlServerAbstract
 			    + "    ,[sumTime_HMS] \n"
 			    + "    ,[avgTimeInSec] \n"
 			    + "    ,[avgTime_HMS] \n"
+			    + "    ,'' AS [avgHistTimeDiff] \n"
 			    + "    ,[minTime_HMS] \n"
 			    + "    ,[maxTime_HMS] \n"
 			    + "    ,[stdevp] \n"
@@ -388,9 +389,23 @@ extends SqlServerAbstract
 		{
 			String histAllExecTimes = _job_history_overview.getValueAsString(r, "histAllExecTimes");
 			createSparklineForHistoryExecutions(histAllExecTimes, _job_history_overview, r, "histAllExecTimesChart");
+			
+			// calculate the 'avgHistTimeDiff' column
+			int avgTimeInSec     = _job_history_overview.getValueAsInteger(r, "avgTimeInSec");
+			int histAvgTimeInSec = _job_history_overview.getValueAsInteger(r, "histAvgTimeInSec");
+			int avgHistTimeDiff = avgTimeInSec - histAvgTimeInSec;
+			String avgHistTimeDiffStr = TimeUtils.msToTimeStrDHMS(Math.abs(avgHistTimeDiff) * 1000);  // Math.abs() make negative numbers positive
+			if (avgHistTimeDiff < 0)
+				avgHistTimeDiffStr = "-" + avgHistTimeDiffStr + " (faster)";
+			if (avgHistTimeDiff > 0)
+				avgHistTimeDiffStr =       avgHistTimeDiffStr + " (slower)";
+
+			int pos_avgHistTimeDiff = _job_history_overview.findColumn("avgHistTimeDiff");
+			_job_history_overview.setValueAtWithOverride(avgHistTimeDiffStr, r, pos_avgHistTimeDiff);
 		}
 		
 		_job_history_overview.setColumnDescription("JobName"           ,"Name of the JOB shat started this step");
+		_job_history_overview.setColumnDescription("details"           ,"Click on the below for details, for 'today' or 'all executions'");
 		_job_history_overview.setColumnDescription("stepCount"         ,"How many steps does this job name have");
 		_job_history_overview.setColumnDescription("stepCmds"          ,"A list of all commands in the job");
 		_job_history_overview.setColumnDescription("runStatusDesc"     ,"The outcome of the job. Can be: FAILED, SUCCESS, RETRY, CANCELED or IN PROGRESS");
@@ -399,6 +414,7 @@ extends SqlServerAbstract
 		_job_history_overview.setColumnDescription("sumTime_HMS"       ,"Summary Execution time in Hour:Minute:Seconds for all Executions in reporting period");
 		_job_history_overview.setColumnDescription("avgTimeInSec"      ,"Average Execution time in Seconds for all Executions in reporting period");
 		_job_history_overview.setColumnDescription("avgTime_HMS"       ,"Average Execution time in Hour:Minute:Seconds for all Executions in reporting period");
+		_job_history_overview.setColumnDescription("avgHistTimeDiff"   ,"The difference of 'avgTime_HMS' and 'histAvgTime_HMS' this could be a positive (Slower) or negative (faster) than the average history.");
 		_job_history_overview.setColumnDescription("minTime_HMS"       ,"Minimum Execution time in Hour:Minute:Seconds for all Executions in reporting period");
 		_job_history_overview.setColumnDescription("maxTime_HMS"       ,"Maximum Execution time in Hour:Minute:Seconds for all Executions in reporting period");
 		_job_history_overview.setColumnDescription("stdevp"            ,"Standard Deviation Number of the Execution Time. Note: A higher number means more 'outliers', A lower number means more 'equal' execution times.");
@@ -462,10 +478,14 @@ extends SqlServerAbstract
 		_job_history_outliers = executeQuery(conn, sql, true, "job_history_outliers");
 
 		// Create sparkline/charts for each "histAllExecTimes" at column "histAllExecTimesChart"
+		int pos_histAllExecTimes = _job_history_outliers.findColumn("histAllExecTimes");
 		for (int r=0; r<_job_history_outliers.getRowCount(); r++)
 		{
-			String histAllExecTimes = _job_history_outliers.getValueAsString(r, "histAllExecTimes");
+			String histAllExecTimes = _job_history_outliers.getValueAsString(r, pos_histAllExecTimes);
 			createSparklineForHistoryExecutions(histAllExecTimes, _job_history_outliers, r, "histAllExecTimesChart");
+			
+			histAllExecTimes = formatHistoryAllExecTimes(histAllExecTimes);
+			_job_history_outliers.setValueAtWithOverride(histAllExecTimes, r, pos_histAllExecTimes);
 		}
 		
 		int outliers_calcHistoricalDays = Configuration.getCombinedConfiguration().getIntProperty(SqlServerJobSchedulerExtractor.PROPKEY_outliers_calcHistoricalDays, SqlServerJobSchedulerExtractor.DEFAULT_outliers_calcHistoricalDays);
@@ -602,6 +622,19 @@ extends SqlServerAbstract
 
 
 
+
+	/**
+	 * Format the history in some "clever" way... <br>
+	 * For example with <NL> when appropriate (for example after Sunday, or when a new DATE occurs)
+	 * 
+	 * @param histAllExecTimes
+	 * @return
+	 */
+	public static String formatHistoryAllExecTimes(String histAllExecTimes)
+	{
+//TODO; // implement this 
+		return histAllExecTimes;
+	}
 
 	private String getTooltipFor_jobAllCommands(DbxConnection conn, String job_id)
 	{
@@ -972,6 +1005,53 @@ extends SqlServerAbstract
 					if (rstm.getValueAsInteger(row, "execCount", true, -1) == 1)
 						return "<div style='color:lightgray'>-single-exec-</div>";
 				}
+				
+				if ("details".equals(colName))
+				{
+					String jobName           = rstm.getValueAsString(row, "JobName"          , true, "unknown");
+					String jobId             = rstm.getValueAsString(row, "job_id"           , true, "unknown");
+					String firstExecTime     = rstm.getValueAsString(row, "firstExecTime"    , true, "unknown");
+					String lastExecTime      = rstm.getValueAsString(row, "lastExecTime"     , true, "unknown");
+					String sumTimeInSec      = rstm.getValueAsString(row, "sumTimeInSec"     , true, "unknown");
+//					String sumTime_HMS       = rstm.getValueAsString(row, "sumTime_HMS"      , true, "unknown");
+					String histFirstExecTime = rstm.getValueAsString(row, "histFirstExecTime", true, "unknown");
+
+					// lastExecTime...
+					if ("-single-exec-".equals(lastExecTime))
+					{
+					//	lastExecTime = "1";
+						int sumTimeInHours = Math.max(StringUtil.parseInt(sumTimeInSec, 1) / 3600, 1);
+						lastExecTime = sumTimeInHours + "";
+					}
+//					String serverName = getReportingInstance().getDbmsServerName();
+					String serverName = getReportingInstance().getServerName();
+					String urlBase = ""
+							+ "/api/cc/reports"
+							+ "?srvName="    + serverName 
+							+ "&reportName=" + "sqlserver-job-scheduler-activity";
+
+					return "" 
+						+ "<a href='" + urlBase 
+								+ "&jobName="              + jobName 
+								+ "&jobId="                + jobId 
+								+ "&onlyLevelZero="        + false
+								+ "&refresh="              + 0 
+								+ "&startTime="            + firstExecTime     
+								+ "&endTime="              + lastExecTime 
+								+ "&minDurationInSeconds=" + 0
+								+ "' target='_blank'>today</a>"
+						+ " - "
+						+ "<a href='" + urlBase 
+								+ "&jobName="              + jobName 
+								+ "&jobId="                + jobId 
+								+ "&onlyLevelZero="        + true
+								+ "&refresh="              + 0
+								+ "&startTime="            + histFirstExecTime 
+								+ "&minDurationInSeconds=" + 0
+								+ "' target='_blank'>all</a>"
+						;
+				}
+				
 
 				if ("stepCmds".equals(colName))
 				{
@@ -1046,7 +1126,7 @@ extends SqlServerAbstract
 			}
 
 			//--------------------------------------------------------------
-			// job_history_outliers
+			// job_history_errors
 			//--------------------------------------------------------------
 			if ("job_history_errors".equals(rstm.getName()) || "job_history_errors_all".equals(rstm.getName()))
 			{

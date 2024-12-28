@@ -190,7 +190,7 @@ extends CountersModel
 	@Override
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
 	{
-		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
 		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
 	}
 
@@ -267,7 +267,7 @@ extends CountersModel
 			    + "inner join " + dm_db_missing_index_groups      + " mig on migs.group_handle = mig.index_group_handle \n"
 			    + "inner join " + dm_db_missing_index_details     + " mid on mig.index_handle  = mid.index_handle \n"
 			    + "where 1 = 1 \n"
-			    + "  and  mid.database_id = DB_ID() \n"
+			    + "  and  mid.database_id = DB_ID() /* Since we are 'looping' all databases. like sp_msforeachdb */ \n"
 			    + "  and migs.group_handle in ( \n"
 			    + "                             select top 500 group_handle \n"
 			    + "                             from " + dm_db_missing_index_group_stats + " x \n"

@@ -2272,7 +2272,8 @@ public class StringUtil
 	}
 
 	/**
-	 * Check if a String is "true" or "1"
+	 * Check if a String is "true"  or "1" -- returns true <br>
+	 * Check if a String is "false" or "0" -- returns false <br>
 	 * 
 	 * @param str
 	 * @param defaultValue   if the string is NOT a boolean return this value
@@ -2285,11 +2286,13 @@ public class StringUtil
 
 		str = str.trim();
 
-		if (str.equalsIgnoreCase("true"))
+		// We could also test for "yes" and similar
+		if (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("1"))
 			return true;
 
-		if (str.equalsIgnoreCase("1"))
-			return true;
+		// We could also test for "no" and similar
+		if (str.equalsIgnoreCase("false") || str.equalsIgnoreCase("0"))
+			return false;
 
 		return defaultValue;
 	}

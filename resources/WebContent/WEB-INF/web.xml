@@ -229,7 +229,7 @@
 	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ProxyConfigGetServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ccmgt.ProxyConfigGetServlet</servlet-class>
+		<servlet-class>com.asetune.central.controllers.cc.mgt.ProxyConfigGetServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ProxyConfigGetServlet</servlet-name>
@@ -239,11 +239,21 @@
 	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ProxyConfigSetServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ccmgt.ProxyConfigSetServlet</servlet-class>
+		<servlet-class>com.asetune.central.controllers.cc.mgt.ProxyConfigSetServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ProxyConfigSetServlet</servlet-name>
 		<url-pattern>/api/cc/mgt/config/set</url-pattern>
+	</servlet-mapping>
+
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>ProxyReportsServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.cc.report.ProxyReportsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyReportsServlet</servlet-name>
+		<url-pattern>/api/cc/reports</url-pattern>
 	</servlet-mapping>
 
 

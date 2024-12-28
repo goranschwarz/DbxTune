@@ -1943,7 +1943,10 @@ extends CmSummaryAbstract
 
 			double movingAvgDeadlockCount = -1;
 			if (movingAverageInMinutes > 0)
+			{
 				movingAvgDeadlockCount = MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).add(deadlockCount).getAvg(-1, true);
+				movingAvgDeadlockCount = NumberUtils.round(movingAvgDeadlockCount, 3);
+			}
 
 			double dataVal = deadlockCount;
 			if (movingAverageInMinutes > 0)

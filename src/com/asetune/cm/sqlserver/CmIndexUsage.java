@@ -131,7 +131,7 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 300;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 30;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -226,7 +226,7 @@ extends CountersModel
 	@Override
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
 	{
-		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
 		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
 	}
 
@@ -272,7 +272,7 @@ extends CountersModel
 			    +      IndexName
 			    + "    * \n"
 			    + "from sys." + dm_db_index_usage_stats + " BASE \n"
-			    + "where BASE.database_id = db_id() \n"
+			    + "where BASE.database_id = db_id()  /* Since we are 'looping' all databases. like sp_msforeachdb */ \n"
 			    + "";
 
 		// NOTE: object_name() function is not the best in SQL-Server it may block...

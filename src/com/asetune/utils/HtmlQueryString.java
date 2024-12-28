@@ -24,14 +24,19 @@ package com.asetune.utils;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class HtmlQueryString
 {
 	private String          _url	 = null;
 	private StringBuffer    _query	 = new StringBuffer();
 	private int             _counter = 0;
+
+	public HtmlQueryString()
+	{
+	}
 
 	public HtmlQueryString(String url)
 	{
@@ -53,7 +58,44 @@ public class HtmlQueryString
 //		return _query.length();
 //	}
 
+//	/**
+//	 * Remove parameter from URL or Query String
+//	 * @param url
+//	 * @param remove
+//	 * @return
+//	 */
+//	public static String removeParameterFromURL(final String url, final String remove) 
+//	{
+//		final String[] urlArr = url.split("\\?");
+//		final String params = Arrays.asList(urlArr[1].split("&")).stream()
+//				.filter(item -> !item.split("=")[0].equalsIgnoreCase(remove)).collect(Collectors.joining("&"));
+//		return String.join("?", urlArr[0], params);
+//	}
 	/**
+	 * Remove parameter from Query String
+	 * @param url
+	 * @param remove
+	 * @return
+	 */
+	public static String removeParameter(final String queryString, final String... removeKey) 
+	{
+		Map<String, String> map = parseQueryString(queryString);
+
+		for (String key : removeKey)
+		{
+			map.remove(key);
+		}
+		
+		HtmlQueryString qs = new HtmlQueryString();
+		for (Entry<String, String> entry : map.entrySet())
+		{
+			qs.add(entry.getKey(), entry.getValue());
+		}
+
+		return qs.getQuery();
+	}
+
+    /**
 	 * Parse a querystring into a map of key/value pairs.
 	 *
 	 * @param queryString the string to parse (without the '?')
@@ -61,7 +103,7 @@ public class HtmlQueryString
 	 */
 	public static Map<String, String> parseQueryString(String queryString) 
 	{
-		Map<String, String> map = new HashMap<String, String>();
+		Map<String, String> map = new LinkedHashMap<>();
 		if ((queryString == null) || (queryString.equals(""))) 
 		{
 			return map;

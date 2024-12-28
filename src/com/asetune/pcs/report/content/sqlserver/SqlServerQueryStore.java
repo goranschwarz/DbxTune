@@ -947,9 +947,17 @@ extends SqlServerAbstract
 				    + "    ,cast(sum([count_executions]) * sum([avg_logical_io_writes]) as bigint)     as [total_logical_io_writes__sum] \n"
 				    + "    ,sum([avg_logical_io_writes])                                               as [avg_logical_io_writes__sum] \n"
 				    
+				    + "    ,''                                                                         as [avg_logical_io_writes_mb__chart] \n"
+				    + "    ,sum([count_executions]) * sum([avg_logical_io_writes]) / 128               as [total_logical_io_writes_mb__sum] \n"
+				    + "    ,sum([avg_logical_io_writes]) / 128.0                                       as [avg_logical_io_writes_mb__sum] \n"
+				    
 				    + "    ,''                                                                         as [avg_physical_io_reads__chart] \n"
 				    + "    ,cast(sum([count_executions]) * sum([avg_physical_io_reads]) as bigint)     as [total_physical_io_reads__sum] \n"
 				    + "    ,sum([avg_physical_io_reads])                                               as [avg_physical_io_reads__sum] \n"
+				    
+				    + "    ,''                                                                         as [avg_physical_io_reads_mb__chart] \n"
+				    + "    ,sum([count_executions]) * sum([avg_physical_io_reads]) / 128               as [total_physical_io_reads_mb__sum] \n"
+				    + "    ,sum([avg_physical_io_reads]) / 128.0                                       as [avg_physical_io_reads_mb__sum] \n"
 				    
 				    + "    ,''                                                                         as [avg_clr_time__chart] \n"
 				    + "    ,cast(sum([count_executions]) * sum([avg_clr_time]/1000.0) as bigint)       as [total_clr_time_ms__sum] \n"
@@ -1293,11 +1301,35 @@ extends SqlServerAbstract
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
 					SparkLineParams.create       (DataSource.QueryStore)
 					.setSparklineClassNamePrefix (_dbname)
+					.setHtmlChartColumnName      ("avg_logical_io_writes_mb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsSchemaName           (_schemaName)
+					.setDbmsTableName            ("query_store_runtime_stats")
+//					.setDbmsDataValueColumnName  ("avg_logical_io_writes")   
+            		.setDbmsDataValueColumnName  ("sum([avg_logical_io_writes]) / 128.0").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MB
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.validate()));
+			
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+					SparkLineParams.create       (DataSource.QueryStore)
+					.setSparklineClassNamePrefix (_dbname)
 					.setHtmlChartColumnName      ("avg_physical_io_reads__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
 					.setDbmsDataValueColumnName  ("avg_physical_io_reads")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.validate()));
+			
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, SqlServerQueryStore.this, _topCpuRstm, 
+					SparkLineParams.create       (DataSource.QueryStore)
+					.setSparklineClassNamePrefix (_dbname)
+					.setHtmlChartColumnName      ("avg_physical_io_reads_mb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsSchemaName           (_schemaName)
+					.setDbmsTableName            ("query_store_runtime_stats")
+//					.setDbmsDataValueColumnName  ("avg_physical_io_reads")   
+            		.setDbmsDataValueColumnName  ("sum([avg_physical_io_reads]) / 128.0").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)   // MB
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
@@ -1480,8 +1512,10 @@ extends SqlServerAbstract
 			if (rstm.hasColumn("avg_logical_io_reads__chart"           )) htp.add("l-read"       , new ColumnCopyRow().add( new ColumnCopyDef("avg_logical_io_reads__chart"           ) ).add(new ColumnCopyDef("total_logical_io_reads__sum"                    ) ).add(new ColumnCopyDef("avg_logical_io_reads__sum"           , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
 			if (rstm.hasColumn("avg_logical_io_reads_mb__chart"        )) htp.add("l-read-mb"    , new ColumnCopyRow().add( new ColumnCopyDef("avg_logical_io_reads_mb__chart"        ) ).add(new ColumnCopyDef("total_logical_io_reads_mb__sum"                 ) ).add(new ColumnCopyDef("avg_logical_io_reads_mb__sum"        , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
 			if (rstm.hasColumn("avg_physical_io_reads__chart"          )) htp.add("p-read"       , new ColumnCopyRow().add( new ColumnCopyDef("avg_physical_io_reads__chart"          ) ).add(new ColumnCopyDef("total_physical_io_reads__sum"                   ) ).add(new ColumnCopyDef("avg_physical_io_reads__sum"          , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			if (rstm.hasColumn("avg_physical_io_reads_mb__chart"       )) htp.add("p-read-mb"    , new ColumnCopyRow().add( new ColumnCopyDef("avg_physical_io_reads_mb__chart"       ) ).add(new ColumnCopyDef("total_physical_io_reads_mb__sum"                ) ).add(new ColumnCopyDef("avg_physical_io_reads_mb__sum"       , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
 			if (rstm.hasColumn("avg_num_physical_io_reads__chart"      )) htp.add("pio-read"     , new ColumnCopyRow().add( new ColumnCopyDef("avg_num_physical_io_reads__chart"      ) ).add(new ColumnCopyDef("total_num_physical_io_reads__sum"               ) ).add(new ColumnCopyDef("avg_num_physical_io_reads__sum"      , oneDecimal).setColBold()).add(new ColumnStatic("ios")) );
 			if (rstm.hasColumn("avg_logical_io_writes__chart"          )) htp.add("l-write"      , new ColumnCopyRow().add( new ColumnCopyDef("avg_logical_io_writes__chart"          ) ).add(new ColumnCopyDef("total_logical_io_writes__sum"                   ) ).add(new ColumnCopyDef("avg_logical_io_writes__sum"          , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+			if (rstm.hasColumn("avg_logical_io_writes_mb__chart"       )) htp.add("l-write-mb"   , new ColumnCopyRow().add( new ColumnCopyDef("avg_logical_io_writes_mb__chart"       ) ).add(new ColumnCopyDef("total_logical_io_writes_mb__sum"                ) ).add(new ColumnCopyDef("avg_logical_io_writes_mb__sum"       , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
 			if (rstm.hasColumn("avg_query_max_used_memory__chart"      )) htp.add("mem-used"     , new ColumnCopyRow().add( new ColumnCopyDef("avg_query_max_used_memory__chart"      ) ).add(new ColumnCopyDef("total_query_max_used_memory_mb__sum"            ) ).add(new ColumnCopyDef("avg_query_max_used_memory_mb__sum"   , oneDecimal).setColBold()).add(new ColumnStatic("mb")) );
 			if (rstm.hasColumn("avg_log_bytes_used__chart"             )) htp.add("xlog-mb"      , new ColumnCopyRow().add( new ColumnCopyDef("avg_log_bytes_used__chart"             ) ).add(new ColumnCopyDef("total_log_bytes_used_mb__sum"                   ) ).add(new ColumnCopyDef("avg_log_bytes_used_mb__sum"          , oneDecimal).setColBold()).add(new ColumnStatic("mb")) );
 			if (rstm.hasColumn("avg_tempdb_space_used__chart"          )) htp.add("tempdb"       , new ColumnCopyRow().add( new ColumnCopyDef("avg_tempdb_space_used__chart"          ) ).add(new ColumnCopyDef("total_tempdb_space_used_mb__sum"                ) ).add(new ColumnCopyDef("avg_tempdb_space_used_mb__sum"       , oneDecimal).setColBold()).add(new ColumnStatic("mb")) );
@@ -1810,9 +1844,17 @@ extends SqlServerAbstract
 			rstm.setColumnDescription("total_logical_io_writes__sum"          , "Total number of logical I/O writes for the query plan within the aggregation interval (expressed as a number of 8-KB pages written)");
 			rstm.setColumnDescription("avg_logical_io_writes__sum"            , "Average number of logical I/O writes for the query plan within the aggregation interval (expressed as a number of 8-KB pages written)");
 			
+			rstm.setColumnDescription("avg_logical_io_writes_mb__chart"        , "Chart showing 'avg_logical_io_writes_mb' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_logical_io_writes_mb__sum"        , "Total number of logical I/O writes for the query plan within the aggregation interval (expressed as a MB or number of 8-KB pages / 128.0 read).");
+			rstm.setColumnDescription("avg_logical_io_writes_mb__sum"          , "Average number of logical I/O writes for the query plan within the aggregation interval (expressed as MB or a number of 8-KB pages / 128.0 read).");
+			
 			rstm.setColumnDescription("avg_physical_io_reads__chart"          , "Chart showing 'avg_physical_io_reads' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
 			rstm.setColumnDescription("total_physical_io_reads__sum"          , "Total number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8-KB pages read).");
 			rstm.setColumnDescription("avg_physical_io_reads__sum"            , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as a number of 8-KB pages read).");
+			
+			rstm.setColumnDescription("avg_physical_io_reads_mb__chart"        , "Chart showing 'avg_physical_io_reads_mb' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("total_physical_io_reads_mb__sum"        , "Total number of physical I/O reads for the query plan within the aggregation interval (expressed as a MB or number of 8-KB pages / 128.0 read).");
+			rstm.setColumnDescription("avg_physical_io_reads_mb__sum"          , "Average number of physical I/O reads for the query plan within the aggregation interval (expressed as MB or a number of 8-KB pages / 128.0 read).");
 			
 			rstm.setColumnDescription("avg_clr_time__chart"                   , "Chart showing 'avg_clr_time_ms' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
 			rstm.setColumnDescription("total_clr_time_ms__sum"                , "Total CLR time for the query plan within the aggregation interval");

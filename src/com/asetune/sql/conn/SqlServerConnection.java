@@ -462,6 +462,34 @@ extends DbxConnection
 		schema = StringUtil.isNullOrBlank(schema) ? "" : schema + ".";
 
 		int indexCount = 0;
+
+		// When was the SQL Server restarted (used when displaying index "usage")
+		// We could have used... 'select sqlserver_start_time from sys.dm_os_sys_info' 
+		// But tempdb will always be recreated... and we don't need any special privileges for querying 'sys.databases'
+		String srvUptime = null;
+		boolean getSrvUpTime = true;
+		if (getSrvUpTime)
+		{
+			String sql = ""
+					+ "SELECT srvUpTime = CAST(datediff(day,  create_date, getdate())      AS varchar(10)) + 'd:' \n"
+					+ "                 + CAST(datediff(hour, create_date, getdate()) % 24 AS varchar(10)) + 'h'  \n"
+					+ "FROM sys.databases \n"
+					+ "WHERE database_id = 2"
+					;
+
+			try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					srvUptime = rs.getString(1);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting 'Server uptime', ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message='" + ex.getMessage() + "', SQL=|" + sql + "|");
+			}
+			
+		}
 		
 		boolean getIndexTypeInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_getIndexTypeInfo, DEFAULT_getTableExtraInfo_getIndexTypeInfo);
 		if (getIndexTypeInfo)
@@ -734,7 +762,7 @@ extends DbxConnection
 							if (user_seeks == 0 && user_scans == 0 && user_lookups == 0)
 								unused = "<FONT color='red'>UNUSED</FONT>: </b>";
 
-							ixDesc += "<BR>Usage[" + unused + "seeks=" + user_seeks + ", scans=" + user_scans + ", lookups=" + user_lookups + ", updates=" + user_updates + ", last_update=" + last_user_update + "]";
+							ixDesc += "<BR>Usage[" + unused + "seeks=" + user_seeks + ", scans=" + user_scans + ", lookups=" + user_lookups + ", updates=" + user_updates + ", last_update=" + last_user_update + ", srvUptime=" + srvUptime + "]";
 						}
 
 						if (dmDbIndexOperationalStats.hasRows())

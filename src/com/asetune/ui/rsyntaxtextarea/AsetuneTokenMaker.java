@@ -43,6 +43,8 @@ public class AsetuneTokenMaker
 		atmf.putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL, pkg + "SybaseTSqlTokenMaker");
 
 		atmf.putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_MSSQL_TSQL , pkg + "MicrosoftTSqlTokenMaker");
+
+		atmf.putMapping(com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants.SYNTAX_STYLE_POSTGRES_TEXT_EXECUTION_PLAN , pkg + "PostgresTextPlanTokenMaker");
 	}
 
 

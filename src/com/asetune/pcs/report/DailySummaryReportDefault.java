@@ -63,10 +63,12 @@ extends DailySummaryReportAbstract
 	private static Logger _logger = Logger.getLogger(DailySummaryReportDefault.class);
 	private List<IReportEntry> _reportEntries = new ArrayList<>();
 
-	public boolean useBootstrap()
-	{
-		return true;
-	}
+	public boolean useBootstrap()                              { return true; }	
+	public boolean isCollapsedHeaderForTocSection()            { return false; }
+	public boolean isCollapsedHeaderForExecTimeReportSection() { return false; }
+	public boolean createTocSection()                          { return true; }
+	public boolean createExecTimeReportSection()               { return true; }
+	public String  getReportName()                             { return "Daily Summary Report"; }
 	
 	@Override
 	public void create()
@@ -80,7 +82,7 @@ extends DailySummaryReportAbstract
 
 // Moved to init()
 //		addReportEntries();
-//		_logger.info("Initiated Daily Summary Report with " + _reportEntries.size() + " report entries.");
+//		_logger.info("Initiated " + getReportName() + " with " + _reportEntries.size() + " report entries.");
 
 		// Get Configuration possibly from the DbxCentral
 //		Configuration pcsSavedConf = getConfigFromDbxCentral(getServerName());
@@ -88,10 +90,10 @@ extends DailySummaryReportAbstract
 		Configuration localConf    = Configuration.getCombinedConfiguration();
 		
 		// Iterate all entries and create the report
-		int entryCount = _reportEntries.size();
+		int entryCount = getReportEntries().size();
 		int count = 0;
 		IProgressReporter progressReporter = getProgressReporter();
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			// First force a Garbage Collection
 			System.gc();
@@ -217,7 +219,7 @@ extends DailySummaryReportAbstract
 
 	public IReportEntry getReportEntry(Class<?> classToReturn)
 	{
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			if (classToReturn.isInstance(entry))
 				return entry;
@@ -352,7 +354,7 @@ extends DailySummaryReportAbstract
 	 */
 	public boolean hasIssueToReport()
 	{
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			try
 			{
@@ -849,6 +851,15 @@ extends DailySummaryReportAbstract
 	}
 
 
+	/**
+	 * Overrode this if you want to create a navbar
+	 * @param writer
+	 */
+	public void createHtmlNavbar(Writer writer)
+	throws IOException
+	{
+	}
+
 	public void createHtmlBody(Writer writer)
 	throws IOException
 	{
@@ -857,13 +868,15 @@ extends DailySummaryReportAbstract
 //		sb.append("<body style'min-width: 2048px'>\n");
 //		sb.append("<body style'min-width: 1024px'>\n");
 
+		// Create a navbar if we want one.
+		createHtmlNavbar(writer);
+
 		if (useBootstrap())
 		{
 			writer.append("<div class='container-fluid'> \n"); // BEGIN: Bootstrap 4 container
 		}
 		writer.append("\n");
 
-		
 		// Create an area where we can add/show progress bars
 		writer.append("<div id='progress-area' style='background-color: white; position:fixed; top:50px; left:30px; width:100%; z-index: 9999;'>\n");
 		writer.append("</div>\n");
@@ -876,87 +889,95 @@ extends DailySummaryReportAbstract
 		}
 		
 		// TOC HEADER
-		if (useBootstrap())
+		if (createTocSection())
 		{
-			// Bootstrap "card" - BEGIN
-//			sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-//			sb.append("<div id='toc' class='card border-dark mb-3'>");
-//			sb.append("<h5 class='card-header'><b>Daily Summary Report for Servername: ").append(getServerName()).append("</b></h5>");
-//			sb.append("<div class='card-body'>");
-//			sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-//			
-//			sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-//			sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
-//			sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+			if (useBootstrap())
+			{
+				// Bootstrap "card" - BEGIN
+//				sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+//				sb.append("<div id='toc' class='card border-dark mb-3'>");
+//				sb.append("<h5 class='card-header'><b>" + getReportName() + " for Servername: ").append(getServerName()).append("</b></h5>");
+//				sb.append("<div class='card-body'>");
+//				sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+//				
+//				sb.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+//				sb.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
+//				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 
-			// Bootstrap "card" - BEGIN
-			writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-			writer.append("<div class='card border-dark mb-3' id='toc'> \n");
-			writer.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
-			writer.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
-			writer.append("    <i class='fa fa-chevron-down float-right'></i> \n");
-			writer.append("    <b>").append("Daily Summary Report for Servername: ").append(getServerName()).append("</b> \n");
-			writer.append("  </a> \n");
-			writer.append("</h5> \n");
-			writer.append("<div id='collapse_toc' class='collapse show' role='tabpanel' aria-labelledby='heading_toc'> \n");
-			writer.append("<div class='card-body'> \n");
-			writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+				String show = " show";
+				if (isCollapsedHeaderForTocSection())
+					show = "";
 
-			writer.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-			writer.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2> \n");
-			writer.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+				// Bootstrap "card" - BEGIN
+				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				writer.append("<div class='card border-dark mb-3' id='toc'> \n");
+				writer.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
+				writer.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
+				writer.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+				writer.append("    <b>").append(getReportName() + " for Servername: ").append(getServerName()).append("</b> \n");
+				writer.append("  </a> \n");
+				writer.append("</h5> \n");
+				writer.append("<div id='collapse_toc' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_toc'> \n");
+				writer.append("<div class='card-body'> \n");
+				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+
+				writer.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
+				writer.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2> \n");
+				writer.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
+			}
+			else
+			{
+				// Normal HTML - H2 heading
+				writer.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
+			}
+			writer.append( createDbxCentralLink(true) );
+
+			//--------------------------------------------------
+			// TOC
+			writer.append("<br> \n");
+			writer.append("Links to Report Sections. \n");
+			writer.append("<ul> \n");
+			for (IReportEntry entry : getReportEntries())
+			{
+				String tocSubject = entry.getSubject();
+				String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
+
+				// Strip off parts that may be details
+				int firstLeftParentheses = tocSubject.indexOf("(");
+				if (firstLeftParentheses != -1)
+					tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+
+				String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+				
+				writer.append("<li>").append(liContent).append("</li> \n");
+			}
+			writer.append("</ul> \n");
+			writer.append("\n<br>");
+
+			// TOC FOOTER
+			if (useBootstrap())
+			{
+				// Bootstrap "card" - END
+				writer.append("<a href='javascript:void(0);' onclick=\"collapseSection('ALL');\">Collapse</a> ");
+				writer.append(" or \n");
+				writer.append("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
+				writer.append(" ALL sections \n");
+
+				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+				writer.append("</div> \n"); // end: card-body
+				writer.append("</div> \n"); // end: collapse
+				writer.append("</div> \n"); // end: card
+				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+			}
 		}
-		else
-		{
-			// Normal HTML - H2 heading
-			writer.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
-		}
-		writer.append( createDbxCentralLink(true) );
-
-		//--------------------------------------------------
-		// TOC
-		writer.append("<br> \n");
-		writer.append("Links to Report Sections. \n");
-		writer.append("<ul> \n");
-		for (IReportEntry entry : _reportEntries)
-		{
-			String tocSubject = entry.getSubject();
-			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
-
-			// Strip off parts that may be details
-			int firstLeftParentheses = tocSubject.indexOf("(");
-			if (firstLeftParentheses != -1)
-				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
-
-			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
-			
-			writer.append("<li>").append(liContent).append("</li> \n");
-		}
-		writer.append("</ul> \n");
-		writer.append("\n<br>");
-
-		// TOC FOOTER
-		if (useBootstrap())
-		{
-			// Bootstrap "card" - END
-			writer.append("<a href='javascript:void(0);' onclick=\"collapseSection('ALL');\">Collapse</a> ");
-			writer.append(" or \n");
-			writer.append("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
-			writer.append(" ALL sections \n");
-
-			writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-			writer.append("</div> \n"); // end: card-body
-			writer.append("</div> \n"); // end: collapse
-			writer.append("</div> \n"); // end: card
-			writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-		}
+		
 		
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** at createHtmlBody(): after TOC");
 
 
 		//--------------------------------------------------
 		// ALL REPORTS
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			// So we can gather some statistics
 			entry.beginWriteEntry(writer, MessageType.FULL_MESSAGE);
@@ -985,6 +1006,10 @@ extends DailySummaryReportAbstract
 //				sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
 //				sb.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 
+				String show = " show";
+				if (entry.isCollapsedHeader())
+					show = "";
+
 				// Bootstrap "card" - BEGIN
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				writer.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
@@ -994,7 +1019,7 @@ extends DailySummaryReportAbstract
 				writer.append("    <b>").append(entry.getSubject()).append("</b> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
-				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse show' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
+				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse" + show+ "' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
 				writer.append("<div class='card-body'> \n");
 				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 
@@ -1092,7 +1117,8 @@ extends DailySummaryReportAbstract
 
 		//--------------------------------------------------
 		// DEBUG - Write time it too to create each report entry
-		printExecTimeReport(writer, MessageType.FULL_MESSAGE);
+		if (createExecTimeReportSection())
+			printExecTimeReport(writer, MessageType.FULL_MESSAGE);
 
 		
 		// Collapseable group div 
@@ -1139,7 +1165,7 @@ extends DailySummaryReportAbstract
 			writer.append(StringUtil.exceptionToString(rte));
 			writer.append("</pre>\n");
 			
-			_logger.warn("Problems creating HTML Daily Summary Report. Caught: "+rte, rte);
+			_logger.warn("Problems creating HTML " + getReportName() + ". Caught: "+rte, rte);
 		}
 
 		writer.append("</html> \n");
@@ -1179,7 +1205,7 @@ extends DailySummaryReportAbstract
 		w.append("\n");
 		
 		// Normal HTML - H2 heading
-		w.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+		w.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
 
 		w.append( createDbxCentralLink(false) );
 
@@ -1188,7 +1214,7 @@ extends DailySummaryReportAbstract
 		w.append("<br> \n");
 		w.append("Links to Report Sections. \n");
 		w.append("<ul> \n");
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Short Message
 			if ( ! entry.hasShortMessageText() )
@@ -1211,7 +1237,7 @@ extends DailySummaryReportAbstract
 
 		//--------------------------------------------------
 		// ALL REPORTS
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Short Message
 			if ( ! entry.hasShortMessageText() )
@@ -1344,7 +1370,7 @@ extends DailySummaryReportAbstract
 			writer.append(StringUtil.exceptionToString(rte));
 			writer.append("</pre>\n");
 			
-			_logger.warn("Problems creating Daily Summary Report (ShortMessage). Caught: "+rte, rte);
+			_logger.warn("Problems creating " + getReportName() + " (ShortMessage). Caught: "+rte, rte);
 		}
 
 		writer.append("</html> \n");
@@ -1384,7 +1410,7 @@ extends DailySummaryReportAbstract
 		w.append("\n");
 		
 		// Normal HTML - H2 heading
-		w.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+		w.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
 
 		w.append( createDbxCentralLink(false) );
 
@@ -1393,7 +1419,7 @@ extends DailySummaryReportAbstract
 		w.append("<br> \n");
 		w.append("Links to Report Sections. \n");
 		w.append("<ul> \n");
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Minimal Message
 			if ( ! entry.hasMinimalMessageText() )
@@ -1416,7 +1442,7 @@ extends DailySummaryReportAbstract
 
 		//--------------------------------------------------
 		// ALL REPORTS
-		for (IReportEntry entry : _reportEntries)
+		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Minimal Message
 			if ( ! entry.hasMinimalMessageText() )
@@ -1547,7 +1573,7 @@ extends DailySummaryReportAbstract
 			writer.append(StringUtil.exceptionToString(rte));
 			writer.append("</pre>\n");
 			
-			_logger.warn("Problems creating Daily Summary Report (MinimalMessage). Caught: "+rte, rte);
+			_logger.warn("Problems creating " + getReportName() + " (MinimalMessage). Caught: "+rte, rte);
 		}
 
 		writer.append("</html> \n");
@@ -1598,6 +1624,10 @@ extends DailySummaryReportAbstract
 //				w.append("<h2 id='").append(tocDiv).append("'>").append(headingName).append("</h2> \n");
 //				w.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 
+				String show = " show";
+				if (isCollapsedHeaderForExecTimeReportSection())
+					show = "";
+
 				// Bootstrap "card" - BEGIN
 				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				w.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
@@ -1607,7 +1637,7 @@ extends DailySummaryReportAbstract
 				w.append("    <b>").append(headingName).append("</b> \n");
 				w.append("  </a> \n");
 				w.append("</h5> \n");
-				w.append("<div id='collapse_").append(tocDiv).append("' class='collapse show' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
+				w.append("<div id='collapse_").append(tocDiv).append("' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
 				w.append("<div class='card-body'> \n");
 				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 
@@ -1642,7 +1672,7 @@ extends DailySummaryReportAbstract
 
 			NumberFormat nf = NumberFormat.getInstance();
 
-			for (IReportEntry entry : _reportEntries)
+			for (IReportEntry entry : getReportEntries())
 			{
 				totalExecTime   += entry.getExecTime();
 				totalFullMsgKb  += entry.getCharsWrittenKb(MessageType.FULL_MESSAGE)  < 0 ? 0 : entry.getCharsWrittenKb(MessageType.FULL_MESSAGE);

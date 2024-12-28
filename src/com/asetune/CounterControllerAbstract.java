@@ -1926,6 +1926,27 @@ implements ICounterController
 	}
 
 	/**
+	 * Create a new DBMS Connection to the DBMS, based on the 'main' connections properties... 
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	@Override
+	public DbxConnection cloneMonConnection(String appName)
+	throws Exception
+	{
+		if (_conn == null)
+			throw new Exception("No 'main Connection' that we can clone... Can't continue.");
+		
+		ConnectionProp connProp = new ConnectionProp(_conn.getConnPropOrDefault());
+		
+		if (StringUtil.hasValue(appName))
+			connProp.setAppName(appName);
+		
+		return DbxConnection.connect(null, connProp);
+	}
+
+	/**
 	 * After a Monitor Connection has been created, this is called so we can do various static settings on the newly created connection
 	 * <p>
 	 * This is called from {@link #setMonConnection(DbxConnection)}

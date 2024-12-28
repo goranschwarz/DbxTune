@@ -122,7 +122,7 @@ public interface IUserDefinedChart
 	 * Example: list.add("https://www.gstatic.com/charts/loader.js");
 	 * @return
 	 */
-	List<String> getJaveScriptList();
+	List<String> getJavaScriptList();
 
 	/**
 	 * Called from the responsible Servlet, so we can get parameters, and if there are parameters we dont know about we can throw an Exception

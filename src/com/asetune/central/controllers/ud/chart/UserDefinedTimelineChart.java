@@ -197,7 +197,7 @@ extends UserDefinedChartAbstract
 	}
 
 	@Override
-	public List<String> getJaveScriptList()
+	public List<String> getJavaScriptList()
 	{
 		List<String> list = new ArrayList<>();
 		
@@ -376,10 +376,10 @@ extends UserDefinedChartAbstract
 			onlyLevelZero = true;
 
 		// >>> showKeys
-		boolean showKeys = true;
+		boolean showKeys = false;
 		tmpParamStr  = urlParams.get("showKeys");
-		if (tmpParamStr != null && tmpParamStr.equalsIgnoreCase("false"))
-			showKeys = false;
+		if (tmpParamStr != null && tmpParamStr.equalsIgnoreCase("true"))
+			showKeys = true;
 
 		// >>> keySubstitute
 		String keyTransformFrom = ""; // This is a regex
@@ -921,7 +921,7 @@ extends UserDefinedChartAbstract
 				if (ttKey.equals("main_job_start_ts"))
 					tooltip += "<tr> <td>&nbsp;</td> <td>&nbsp;</td> </tr>";
 				
-				tooltip += "<tr> <td nowrap><b>" + ttKey + "</b></td> <td nowrap " + tdAttr + ">" + ttVal + "</td> </tr>";
+				tooltip += "<tr> <td nowrap><b>" + ttKey + ": </b></td> <td nowrap " + tdAttr + ">" + ttVal + "</td> </tr>";
 			}
 		}
 		

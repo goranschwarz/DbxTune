@@ -312,7 +312,7 @@ public class TimeUtils
 	 * 
 	 * @param format %HH:%MM:%SS.%ms  or %?HH[:]%MM:%SS.%ms where the HH is optional and only filled in if hour is above 0
 	 *        ?%DD[d ] -->>> optional parameter, which will hold # days (if hours is above 24)
-	 * @param execTime
+	 * @param execTime  in milliseconds
 	 * @return a string of the format description
 	 */
 	public static String msToTimeStr(String format, long execTime)
@@ -406,7 +406,7 @@ public class TimeUtils
 
 	/**
 	 * Returns [days] HH:MM:SS.sss
-	 * @param duration
+	 * @param duration in milliseconds
 	 * @return
 	 */
 	public static String msToTimeStrDHMSms(long duration)
@@ -429,7 +429,7 @@ public class TimeUtils
 
 	/**
 	 * Returns [days] HH:MM:SS
-	 * @param duration
+	 * @param duration in milliseconds
 	 * @return
 	 */
 	public static String msToTimeStrDHMS(long duration)
@@ -452,7 +452,7 @@ public class TimeUtils
 
 	/**
 	 * Returns [days] HH:MM:SS
-	 * @param duration
+	 * @param duration in milliseconds
 	 * @return
 	 */
 	public static String usToTimeStrDHMS(long duration)
@@ -579,7 +579,7 @@ public class TimeUtils
 		        // Loop on
 		    }
 		}
-		throw new ParseException("No known Date format found for '" + str + "', tested following patterns "+knownPatterns+".", 0);
+		throw new ParseException("No known Date format found for '" + str + "', tested following patterns " + knownPatterns + ".", 0);
 	}
 
 	/**
@@ -769,6 +769,18 @@ public class TimeUtils
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		return sdf.format( ts );
 	}
+	/**
+	 * Format a long to a String<br>
+	 * format is: "yyyy-MM-dd"<br>
+	 * Example output: "2018-01-08 09:56"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmd(long ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		return sdf.format( ts );
+	}
 
 	/**
 	 * Format a Timestamp to a String<br>
@@ -778,6 +790,18 @@ public class TimeUtils
 	 * @return String in above format
 	 */
 	public static String toStringYmdHm(Timestamp ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		return sdf.format( ts );
+	}
+	/**
+	 * Format a long to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm"<br>
+	 * Example output: "2018-01-08 09:56"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmdHm(long ts)
 	{
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		return sdf.format( ts );
@@ -797,7 +821,7 @@ public class TimeUtils
 	}
 
 	/**
-	 * Format a Timestamp to a String<br>
+	 * Format a long to a String<br>
 	 * format is: "yyyy-MM-dd HH:mm:ss"<br>
 	 * Example output: "2018-01-08 09:56:53"
 	 * @param ts
