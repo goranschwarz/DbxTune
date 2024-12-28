@@ -214,7 +214,9 @@ extends SqlServerAbstract
 		String col_total_elapsed_time_ms__sum           = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,sum([total_elapsed_time]/1000.0)       as [total_elapsed_time_ms__sum]           \n"; 
 		String col_total_worker_time_ms__sum            = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,sum([total_worker_time]/1000.0)        as [total_worker_time_ms__sum]            \n"; 
 		String col_total_physical_reads__sum            = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,sum([total_physical_reads])            as [total_physical_reads__sum]            \n"; 
+		String col_total_physical_reads_mb__sum         = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast (sum([total_physical_reads]) / 128 as bigint) as [total_physical_reads_mb__sum]        \n"; // h2 bigint/int seems to produce decimal values...
 		String col_total_logical_writes__sum            = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,sum([total_logical_writes])            as [total_logical_writes__sum]            \n"; 
+		String col_total_logical_writes_mb__sum         = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,cast (sum([total_logical_writes]) / 128 as bigint) as [total_logical_writes_mb__sum]        \n"; // h2 bigint/int seems to produce decimal values...
 		String col_total_logical_reads__sum             = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,sum([total_logical_reads])             as [total_logical_reads__sum]             \n"; 
 		String col_total_logical_reads_mb__sum          = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast(sum([total_logical_reads])/128 as bigint) as [total_logical_reads_mb__sum]  \n"; 
 //		String col_total_clr_time_ms__sum               = !dummyRstm.hasColumnNoCase("total_clr_time"                 ) ? "" : "    ,sum([total_clr_time]/1000.0)           as [total_clr_time_ms__sum]               \n"; 
@@ -251,7 +253,9 @@ extends SqlServerAbstract
 		String col_AvgElapsedTimeMs                     = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast( sum([total_elapsed_time]/1000.0)                      * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgElapsedTimeMs]           \n";
 		String col_AvgWorkerTimeMs                      = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,cast( sum([total_worker_time]/1000.0)                       * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgWorkerTimeMs]            \n";
 		String col_AvgPhysicalReads                     = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast( sum([total_physical_reads])                           * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgPhysicalReads]           \n";
+		String col_AvgPhysicalReadsMb                   = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast( sum([total_physical_reads]) / 128.0                   * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgPhysicalReadsMb]         \n";
 		String col_AvgLogicalWrites                     = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,cast( sum([total_logical_writes])                           * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalWrites]           \n";
+		String col_AvgLogicalWritesMb                   = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,cast( sum([total_logical_writes]) / 128.0                   * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalWritesMb]         \n";
 		String col_AvgLogicalReads                      = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast( sum([total_logical_reads])                            * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalReads]            \n";
 		String col_AvgLogicalReadsMb                    = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast( sum([total_logical_reads])/128.0                      * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgLogicalReadsMb]            \n";
 //		String col_AvgClrTimeMs                         = !dummyRstm.hasColumnNoCase("total_clr_time"                 ) ? "" : "    ,cast( sum([total_clr_time]/1000.0)                          * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgClrTimeMs]               \n";
@@ -270,8 +274,11 @@ extends SqlServerAbstract
 		String col_elapsed_time__chart                  = !dummyRstm.hasColumnNoCase("total_elapsed_time"             ) ? "" : "    ,cast('' as varchar(512))  as [elapsed_time__chart]   \n"; 
 		String col_worker_time__chart                   = !dummyRstm.hasColumnNoCase("total_worker_time"              ) ? "" : "    ,cast('' as varchar(512))  as [worker_time__chart]    \n"; 
 		String col_physical_reads__chart                = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast('' as varchar(512))  as [physical_reads__chart] \n"; 
+		String col_physical_reads_mb__chart             = !dummyRstm.hasColumnNoCase("total_physical_reads"           ) ? "" : "    ,cast('' as varchar(512))  as [physical_reads_mb__chart] \n"; 
 		String col_logical_reads__chart                 = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast('' as varchar(512))  as [logical_reads__chart]  \n"; 
 		String col_logical_reads_mb__chart              = !dummyRstm.hasColumnNoCase("total_logical_reads"            ) ? "" : "    ,cast('' as varchar(512))  as [logical_reads_mb__chart] \n"; 
+		String col_logical_writes__chart                = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,cast('' as varchar(512))  as [logical_writes__chart] \n"; 
+		String col_logical_writes_mb__chart             = !dummyRstm.hasColumnNoCase("total_logical_writes"           ) ? "" : "    ,cast('' as varchar(512))  as [logical_writes_mb__chart] \n"; 
 //		String col_dop__chart                           = !dummyRstm.hasColumnNoCase("total_dop"                      ) ? "" : "    ,cast('' as varchar(512))  as [dop__chart]            \n"; 
 //		String col_grant_kb__chart                      = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast('' as varchar(512))  as [grant_kb__chart]       \n"; 
 		String col_spills__chart                        = !dummyRstm.hasColumnNoCase("total_spills"                   ) ? "" : "    ,cast('' as varchar(512))  as [spills__chart]         \n"; 
@@ -313,7 +320,15 @@ extends SqlServerAbstract
 
 			    + col_physical_reads__chart
 			    + col_total_physical_reads__sum            + col_AvgPhysicalReads           
+
+			    + col_physical_reads_mb__chart
+			    + col_total_physical_reads_mb__sum         + col_AvgPhysicalReadsMb           
+
+			    + col_logical_writes__chart
 			    + col_total_logical_writes__sum            + col_AvgLogicalWrites           
+
+			    + col_logical_writes_mb__chart
+			    + col_total_logical_writes_mb__sum         + col_AvgLogicalWritesMb           
 
 			    + col_logical_reads__chart
 			    + col_total_logical_reads__sum             + col_AvgLogicalReads            
@@ -461,6 +476,22 @@ extends SqlServerAbstract
 					.validate()));
 			}
 
+			if (StringUtil.hasValue(col_physical_reads_mb__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("physical_reads_mb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("total_physical_reads")
+					.setDbmsDataValueColumnName  ("sum(1.0*[total_physical_reads]) / 128.0 / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+					.setSparklineTooltipPostfix  ("Average Number of 'physical_reads_mb' in below period")
+					.validate()));
+			}
+
 			if (StringUtil.hasValue(col_logical_reads__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
@@ -477,7 +508,7 @@ extends SqlServerAbstract
 					.validate()));
 			}
 
-			if (StringUtil.hasValue(col_logical_reads__chart))
+			if (StringUtil.hasValue(col_logical_reads_mb__chart))
 			{
 				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
 					SparkLineParams.create       (DataSource.CounterModel)
@@ -490,6 +521,38 @@ extends SqlServerAbstract
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 					.setSparklineTooltipPostfix  ("Average of 'logical_reads' in below period")
+					.validate()));
+			}
+
+			if (StringUtil.hasValue(col_logical_writes__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("logical_writes__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("total_logical_writes")
+					.setDbmsDataValueColumnName  ("sum(1.0*[total_logical_writes]) / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+					.setSparklineTooltipPostfix  ("Average Number of 'logical_writes' in below period")
+					.validate()));
+			}
+
+			if (StringUtil.hasValue(col_logical_writes_mb__chart))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("logical_writes_mb__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmExecQueryStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+//					.setDbmsDataValueColumnName  ("total_logical_writes")
+					.setDbmsDataValueColumnName  ("sum(1.0*[total_logical_writes]) / 128.0 / nullif(sum([execution_count]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
+					.setSparklineTooltipPostfix  ("Average Number of 'logical_writes_mb' in below period")
 					.validate()));
 			}
 
@@ -561,15 +624,17 @@ extends SqlServerAbstract
 				
 				HtmlTableProducer htp = new HtmlTableProducer(_shortRstm, "dsr-sub-table-chart");
 				htp.setTableHeaders("Charts at 10 minute interval", "Total;style='text-align:right!important'", "Avg per exec;style='text-align:right!important'", "");
-				                                                       htp.add("exec-cnt" , new ColumnCopyRow().add( new ColumnCopyDef("execution_count__chart" ) ).add(new ColumnCopyDef("execution_count__sum").setColBold()).addEmptyCol()                                                         .addEmptyCol() );
-				if (StringUtil.hasValue(col_elapsed_time__chart     )) htp.add("exec-time", new ColumnCopyRow().add( new ColumnCopyDef("elapsed_time__chart"    ) ).add(new ColumnCopyDef("total_elapsed_time_ms__sum", msToHMS) ).add(new ColumnCopyDef("AvgElapsedTimeMs"   , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
-				if (StringUtil.hasValue(col_worker_time__chart      )) htp.add("cpu-time" , new ColumnCopyRow().add( new ColumnCopyDef("worker_time__chart"     ) ).add(new ColumnCopyDef("total_worker_time_ms__sum" , msToHMS) ).add(new ColumnCopyDef("AvgWorkerTimeMs"    , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
-				if (StringUtil.hasValue(col_logical_reads__chart    )) htp.add("l-read"   , new ColumnCopyRow().add( new ColumnCopyDef("logical_reads__chart"   ) ).add(new ColumnCopyDef("total_logical_reads__sum"           ) ).add(new ColumnCopyDef("AvgLogicalReads"    , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
-				if (StringUtil.hasValue(col_logical_reads_mb__chart )) htp.add("l-read-mb", new ColumnCopyRow().add( new ColumnCopyDef("logical_reads_mb__chart") ).add(new ColumnCopyDef("total_logical_reads_mb__sum"        ) ).add(new ColumnCopyDef("AvgLogicalReadsMb"  , oneDecimal).setColBold()).add(new ColumnStatic("mb"  )) );
-				if (StringUtil.hasValue(col_physical_reads__chart   )) htp.add("p-read"   , new ColumnCopyRow().add( new ColumnCopyDef("physical_reads__chart"  ) ).add(new ColumnCopyDef("total_physical_reads__sum"          ) ).add(new ColumnCopyDef("AvgPhysicalReads"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
-//				if (StringUtil.hasValue(col_logical_writes__chart   )) htp.add("l-write"  , new ColumnCopyRow().add( new ColumnCopyDef("logical_writes__chart"  ) ).add(new ColumnCopyDef("total_logical_writes__sum"          ) ).add(new ColumnCopyDef("AvgLogicalWrites"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
-				if (StringUtil.hasValue(col_spills__chart           )) htp.add("spills"   , new ColumnCopyRow().add( new ColumnCopyDef("spills__chart"          ) ).add(new ColumnCopyDef("total_spills__sum"                  ) ).add(new ColumnCopyDef("AvgSpills"          , oneDecimal).setColBold()).add(new ColumnStatic("#"   )) );
-//				if (StringUtil.hasValue(col_grant_kb__chart         )) htp.add("mem-grant", new ColumnCopyRow().add( new ColumnCopyDef("grant_kb__chart"        ) ).add(new ColumnCopyDef("total_grant_kb__sum"                ) ).add(new ColumnCopyDef("AvgGrantKb"         , oneDecimal).setColBold()).add(new ColumnStatic("kb"  )) );
+				                                                       htp.add("exec-cnt" , new ColumnCopyRow().add( new ColumnCopyDef("execution_count__chart"  ) ).add(new ColumnCopyDef("execution_count__sum").setColBold()).addEmptyCol()                                                         .addEmptyCol() );
+				if (StringUtil.hasValue(col_elapsed_time__chart     )) htp.add("exec-time", new ColumnCopyRow().add( new ColumnCopyDef("elapsed_time__chart"     ) ).add(new ColumnCopyDef("total_elapsed_time_ms__sum", msToHMS) ).add(new ColumnCopyDef("AvgElapsedTimeMs"   , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
+				if (StringUtil.hasValue(col_worker_time__chart      )) htp.add("cpu-time" , new ColumnCopyRow().add( new ColumnCopyDef("worker_time__chart"      ) ).add(new ColumnCopyDef("total_worker_time_ms__sum" , msToHMS) ).add(new ColumnCopyDef("AvgWorkerTimeMs"    , oneDecimal).setColBold()).add(new ColumnStatic("ms"  )) );
+				if (StringUtil.hasValue(col_logical_reads__chart    )) htp.add("l-read"   , new ColumnCopyRow().add( new ColumnCopyDef("logical_reads__chart"    ) ).add(new ColumnCopyDef("total_logical_reads__sum"           ) ).add(new ColumnCopyDef("AvgLogicalReads"    , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_logical_reads_mb__chart )) htp.add("l-read-mb", new ColumnCopyRow().add( new ColumnCopyDef("logical_reads_mb__chart" ) ).add(new ColumnCopyDef("total_logical_reads_mb__sum"        ) ).add(new ColumnCopyDef("AvgLogicalReadsMb"  , oneDecimal).setColBold()).add(new ColumnStatic("mb"  )) );
+				if (StringUtil.hasValue(col_physical_reads__chart   )) htp.add("p-read"   , new ColumnCopyRow().add( new ColumnCopyDef("physical_reads__chart"   ) ).add(new ColumnCopyDef("total_physical_reads__sum"          ) ).add(new ColumnCopyDef("AvgPhysicalReads"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_physical_reads_mb__chart)) htp.add("p-read-mb", new ColumnCopyRow().add( new ColumnCopyDef("physical_reads_mb__chart") ).add(new ColumnCopyDef("total_physical_reads_mb__sum"       ) ).add(new ColumnCopyDef("AvgPhysicalReadsMb" , oneDecimal).setColBold()).add(new ColumnStatic("mb"  )) );
+				if (StringUtil.hasValue(col_logical_writes__chart   )) htp.add("l-write"  , new ColumnCopyRow().add( new ColumnCopyDef("logical_writes__chart"   ) ).add(new ColumnCopyDef("total_logical_writes__sum"          ) ).add(new ColumnCopyDef("AvgLogicalWrites"   , oneDecimal).setColBold()).add(new ColumnStatic("pgs" )) );
+				if (StringUtil.hasValue(col_logical_writes_mb__chart)) htp.add("l-write-mb",new ColumnCopyRow().add( new ColumnCopyDef("logical_writes_mb__chart") ).add(new ColumnCopyDef("total_logical_writes_mb__sum"       ) ).add(new ColumnCopyDef("AvgLogicalWritesMb" , oneDecimal).setColBold()).add(new ColumnStatic("mb"  )) );
+				if (StringUtil.hasValue(col_spills__chart           )) htp.add("spills"   , new ColumnCopyRow().add( new ColumnCopyDef("spills__chart"           ) ).add(new ColumnCopyDef("total_spills__sum"                  ) ).add(new ColumnCopyDef("AvgSpills"          , oneDecimal).setColBold()).add(new ColumnStatic("#"   )) );
+//				if (StringUtil.hasValue(col_grant_kb__chart         )) htp.add("mem-grant", new ColumnCopyRow().add( new ColumnCopyDef("grant_kb__chart"         ) ).add(new ColumnCopyDef("total_grant_kb__sum"                ) ).add(new ColumnCopyDef("AvgGrantKb"         , oneDecimal).setColBold()).add(new ColumnStatic("kb"  )) );
 				htp.validate();
 				
 				

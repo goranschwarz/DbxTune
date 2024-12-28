@@ -28,6 +28,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
@@ -35,6 +36,8 @@ import com.asetune.mgt.controllers.NoGuiConfigGetServlet;
 import com.asetune.mgt.controllers.NoGuiConfigSetServlet;
 import com.asetune.mgt.controllers.NoGuiRefreshServlet;
 import com.asetune.mgt.controllers.NoGuiRestartServlet;
+import com.asetune.mgt.controllers.SqlServerJobSchedulerActivity;
+import com.asetune.mgt.controllers.SqlServerJobSchedulerReport;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -139,29 +142,35 @@ public class NoGuiManagementServer
 		        http.setPort(port);
 		        http.setIdleTimeout(30000);
 
+		        // Error handler
+		        ErrorHandler errorHandler = new ErrorHandler();
+		        errorHandler.setShowStacks(false);
+		        errorHandler.setShowServlet(true);
+		        server.addBean(errorHandler);
+		        
 		        // Set the connector
 		        server.addConnector(http);
 
 				// Add a Servlet Context Handler
 				ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
 //				context.setContextPath( "/api/management" ); // or should we use "/api/mgt"
-				context.setContextPath( "/api/mgt" ); // or should we use "/api/management"
+				context.setContextPath( "/api" ); // or should we use "/api/management"
 		        
 				server.setHandler( context );
 
 				// Add Servlet's 
 //					context.addServlet(new DbxTuneNoGuiManagementHandler(), "/*");
-				context.addServlet(new ServletHolder(new NoGuiConfigGetServlet()) , "/config/get"); // can we do regex like: "/config/(get|set)"
-				context.addServlet(new ServletHolder(new NoGuiConfigSetServlet()) , "/config/set"); // can we do regex like: "/config/(get|set)"
-				context.addServlet(new ServletHolder(new NoGuiRestartServlet())   , "/restart");
-				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())   , "/refresh");
+				context.addServlet(new ServletHolder(new NoGuiConfigGetServlet()) , "/mgt/config/get"); // can we do regex like: "/config/(get|set)"
+				context.addServlet(new ServletHolder(new NoGuiConfigSetServlet()) , "/mgt/config/set"); // can we do regex like: "/config/(get|set)"
+				context.addServlet(new ServletHolder(new NoGuiRestartServlet())   , "/mgt/restart");
+				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())   , "/mgt/refresh");
 
 				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
 				// AND: I guess the below implementations will just "stream" over HTML as the "end-result", or how should we do it ???
 				//      Should we have some SSE for feedback (during report creation) or should we just stream the HTML ???
 				// I want the COLLECTORS doing the main work, since they have the "user/password" to the DBMS
-//				context.addServlet(new ServletHolder(new SqlServerJobSchedulerReport())  , "/reports/sqlserver/job-scheduler-report");   // Like the DSR but just get midnight until now
-//				context.addServlet(new ServletHolder(new SqlServerJobSchedulerActivity()), "/reports/sqlserver/job-scheduler-activity"); // This would replace the User Defined Chart - SqlServerAgentJobs
+				context.addServlet(new ServletHolder(new SqlServerJobSchedulerReport())  , "/reports/sqlserver/job-scheduler-report");   // Like the DSR but just get midnight until now
+				context.addServlet(new ServletHolder(new SqlServerJobSchedulerActivity()), "/reports/sqlserver/job-scheduler-activity"); // This would replace the User Defined Chart - SqlServerAgentJobs
 				
 				_logger.info("Trying to start NO-GUI Management Server at address '" + listnerAddress + "', port " + port + ".");
 				server.start();

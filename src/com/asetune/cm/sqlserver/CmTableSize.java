@@ -286,7 +286,7 @@ extends CountersModel
 	@Override
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
 	{
-		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
 		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
 	}
 
@@ -446,7 +446,7 @@ extends CountersModel
 			    + "    , i_row_overflow_used_page_count     = ncistat.row_overflow_used_page_count \n"
 			    + "    , i_row_overflow_reserved_page_count = ncistat.row_overflow_reserved_page_count \n"
 			    + " \n"
-			    + "    , database_id = db_id() \n"
+			    + "    , database_id = db_id()  /* Since we are 'looping' all databases. like sp_msforeachdb */ \n"
 			    + "    , dstat.object_id \n"
 			    + " \n"
 			    + "from #dstat dstat \n"

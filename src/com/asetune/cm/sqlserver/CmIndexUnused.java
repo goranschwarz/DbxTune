@@ -179,7 +179,7 @@ extends CountersModel
 	@Override
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
 	{
-		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
 		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
 	}
 
@@ -362,7 +362,7 @@ extends CountersModel
 				+ "LEFT OUTER JOIN key_cols     kc ON o.object_id = kc.object_id and i.index_id = kc.index_id \n"
 				+ "LEFT OUTER JOIN include_cols ic ON o.object_id = ic.object_id and i.index_id = ic.index_id \n"
 				+ "WHERE OBJECTPROPERTY(u.object_id,'IsUserTable') = 1 \n"
-				+ "  AND u.database_id          = DB_ID() \n"
+				+ "  AND u.database_id          = DB_ID()  /* Since we are 'looping' all databases. like sp_msforeachdb */ \n"
 				+ "  AND i.type_desc            ='nonclustered' \n"
 				+ "  AND i.is_primary_key       = 0 \n"
 				+ "  AND i.is_unique_constraint = 0 \n"

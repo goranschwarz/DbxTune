@@ -277,7 +277,7 @@ extends CountersModel
 	@Override
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
 	{
-		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
 		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
 	}
 
@@ -343,7 +343,7 @@ extends CountersModel
 			    + "    * \n"
 //			    + "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) BASE \n"
 			    + "from sys." + dm_db_index_operational_stats + "(db_id(), DEFAULT, DEFAULT, DEFAULT) BASE \n"
-			    + "where BASE.database_id = db_id() \n"
+			    + "where BASE.database_id = db_id()  /* Since we are 'looping' all databases. like sp_msforeachdb */ \n"
 				+ "  and BASE.object_id > 100"
 			    + "";
 

@@ -308,4 +308,10 @@ public interface IReportEntry
 	 * @return Number of chars written
 	 */
 	long getCharsWrittenKb(MessageType messageType);
+	
+	/** Should we start this section with a open or closed section */
+	boolean isCollapsedHeader();
+
+	/** If we should start this section as a open or closed section */
+	IReportEntry withCollapsedHeader(boolean collapsedHeader);
 }

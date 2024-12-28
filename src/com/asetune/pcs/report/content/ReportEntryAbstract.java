@@ -82,7 +82,9 @@ implements IReportEntry
 	private   long _execTime;
 	private   long _execStartTime;
 	private   long _execEndTime;
-
+	
+	private boolean _collapsedHeader = false;
+	
 	@Override public void setExecTime(long ms) { _execTime = ms;}
 	@Override public void setExecStartTime()   { _execStartTime = System.currentTimeMillis(); }
 	@Override public void setExecEndTime()     { _execEndTime   = System.currentTimeMillis(); setExecTime(_execEndTime - _execStartTime); }
@@ -96,6 +98,9 @@ implements IReportEntry
 	@Override public boolean isFullMessageType()    { return MessageType.FULL_MESSAGE   .equals(getCurrentMessageType()); }
 	@Override public void setCurrentMessageType(MessageType messageType) { _currentMessageType = messageType; }
 	@Override public MessageType getCurrentMessageType() { return _currentMessageType; }
+
+	@Override public boolean isCollapsedHeader() { return _collapsedHeader; }
+	@Override public IReportEntry withCollapsedHeader(boolean collapsedHeader) { _collapsedHeader = collapsedHeader; return this;}
 	
 //	private Timestamp _reportBeginTime = null;
 //	private Timestamp _reportEndTime   = null;

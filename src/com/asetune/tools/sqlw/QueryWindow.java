@@ -494,6 +494,9 @@ public class QueryWindow
 	public final static String  PROPKEY_sqlserverShowplan_useEditorText = PROPKEY_APP_PREFIX + "sqlserver.showplan.use.editor.text";
 	public final static boolean DEFAULT_sqlserverShowplan_useEditorText = true;
 
+	public final static String  PROPKEY_postgresShowplan_useEditorText = PROPKEY_APP_PREFIX + "postgres.showplan.use.editor.text";
+	public final static boolean DEFAULT_postgresShowplan_useEditorText = true;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_asPlainText,         DEFAULT_asPlainText);
@@ -10815,16 +10818,28 @@ checkPanelSize(_resPanel, comp);
 		boolean showRowNumber = Configuration.getCombinedConfiguration().getBooleanProperty(ResultSetTableModel.PROPKEY_ShowRowNumber, ResultSetTableModel.DEFAULT_ShowRowNumber);
 		int xval = !showRowNumber ? 1 : 2;
 
-		if (jtable == null)                  return false;
- 		if (jtable.getColumnCount() != xval) return false;
-   		if (jtable.getRowCount()    != 1)    return false;
+		if (jtable == null)                  
+			return false;
+		
+		// Postgres EXPLAIN
+		if (_conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES) && "QUERY PLAN".equals(jtable.getColumnName(0)))
+			return true;
+		
+		
+		if (jtable.getColumnCount() != xval) return false;
+		if (jtable.getRowCount()    != 1)    return false;
 		
 		Object val = jtable.getValueAt(0, xval-1);
 		if ( val == null )               return false;
+
+		// Postgres seems to deliver JSON in a "PGobject" class... so make it into a String...
+//		if ("PGobject".equals(val.getClass().getSimpleName()))
+//			val = val.toString();
+
 		if ( ! (val instanceof String) ) return false;
 
 		String cell = (String)val; 
-		
+
 		// XML
 		if (cell.startsWith("<?xml "))        return true;
 		if (cell.startsWith("<?XML "))        return true;
@@ -10833,6 +10848,10 @@ checkPanelSize(_resPanel, comp);
 		// JSON
 //		if (JsonUtils.isJsonValid(cell))      return true;
 		if (JsonUtils.isPossibleJson(cell))   return true;
+		
+//		// Postgres EXPLAIN
+//		if ("QUERY PLAN".equals(jtable.getColumnName(0)))
+//			return true;
 		
 		return false;
 	}
@@ -10846,7 +10865,30 @@ checkPanelSize(_resPanel, comp);
 		
 		_logger.info("Special output optimization for "+(isJson?"JSON":"XML")+" data presentation. A Special output will be made for this type, and the content would also be pretty printed/formated.");// This can be disabled with the property '"+PROPKEY_FixMe+"=false'.");
 
+		// Get firt row/column
 		Object val = jtable.getValueAt(0, col);
+		
+		// Postgres EXPLAIN
+		boolean pgExplainPureText = false;
+		if (_conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES) && "QUERY PLAN".equals(jtable.getColumnName(0)) )
+		{
+			// Make it into a String... since the object type is: PGobject
+			val = val.toString();
+
+			// If there are many rows, it must be a QUERY PALN with text content... 
+			// so: Just "collapse" all the rows into a single row  
+			if (jtable.getRowCount() > 1)
+			{
+				pgExplainPureText = true;
+				// Start at 1 (since row 0 has already been copied)
+				for (int r=1; r<jtable.getRowCount(); r++)
+				{
+					val += "\n" + jtable.getValueAt(r, col);
+				}
+			}
+		}
+
+		// Postgres seems to deliver JSON in a "PGobject" class... so make it into a String...
 		String strVal = null;
 		if (val != null && val instanceof String)
 		{
@@ -10859,7 +10901,8 @@ checkPanelSize(_resPanel, comp);
 			}
 			else
 			{
-				strVal = StringUtil.xmlFormat(strVal);
+				if ( ! pgExplainPureText )
+					strVal = StringUtil.xmlFormat(strVal);
 			}
 		}
 
@@ -10871,6 +10914,12 @@ checkPanelSize(_resPanel, comp);
 		out.putClientProperty("ORIGIN_TEXT", val);
 		out.setCodeFoldingEnabled(true);
 		out.setSyntaxEditingStyle( isJson ? SyntaxConstants.SYNTAX_STYLE_JSON : SyntaxConstants.SYNTAX_STYLE_XML);
+		
+//		if (pgExplainPureText)
+//			out.setSyntaxEditingStyle( SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); // Probably think of something better here
+		if (pgExplainPureText)
+			out.setSyntaxEditingStyle( AsetuneSyntaxConstants.SYNTAX_STYLE_POSTGRES_TEXT_EXECUTION_PLAN);
+			
 
 		out.append(strVal);
 		
@@ -11172,6 +11221,7 @@ checkPanelSize(_resPanel, comp);
 
 			// If SQL-Server showplan...
 			Object originTextObj = rsta.getClientProperty("ORIGIN_TEXT");
+//System.out.println("ORIGIN_TEXT: type=|" + originTextObj.getClass().getSimpleName() + "|, str=|"+originTextObj+"|");
 			if (originTextObj != null && originTextObj instanceof String )
 			{
 				String originTextStr = (String) originTextObj;
@@ -11405,6 +11455,48 @@ checkPanelSize(_resPanel, comp);
 					});
 					// Add the Button
 					p.add(showplanCopyUnformatted, "wrap");
+
+				} //end: startsWith("<ShowPlanXML ")
+				else if (_conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES) && "QUERY PLAN".equals(tab.getColumnName(0))) // Postgres 
+				{
+					//---------------------------------------------------------------
+					// View Showplan in: External HTML Browser
+					//---------------------------------------------------------------
+					JButton showplanIn__ExtrenalBrowser = new JButton("View Execution Plan in: External HTML Browser");
+					showplanIn__ExtrenalBrowser.setToolTipText("Create a temporary HTML file, and Open the Registered Browser.");
+					showplanIn__ExtrenalBrowser.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							String localText = originTextStr;
+
+							// Lets get "rsta" selected text or ALL... so we can "paste" a Execution Plan and then open the Browser or APP
+							boolean useTextInEditor = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_postgresShowplan_useEditorText, DEFAULT_postgresShowplan_useEditorText);
+							if (useTextInEditor)
+							{
+								localText = rsta.getText();
+								if (StringUtil.hasValue(rsta.getSelectedText()))
+									localText = rsta.getSelectedText();
+							}
+							
+							try
+							{
+								File tmpFile = ShowplanHtmlView.createHtmlFile(ShowplanHtmlView.Type.POSTGRES, localText);
+								
+								Desktop desktop = Desktop.getDesktop();
+								if ( desktop.isSupported(Desktop.Action.BROWSE) )
+									desktop.browse(tmpFile.toURI());
+							}
+							catch (Exception ex)
+							{
+								SwingUtils.showErrorMessage(_window, "Problems when open the Postgres Execution Plan", "Problems when open the Postgres Execution Plan. Caught: " + ex, ex);
+							}
+						}
+					});
+					// Add the Button
+					p.add(showplanIn__ExtrenalBrowser, "wrap");
+					
 				}
 			}
 
@@ -13661,6 +13753,8 @@ checkPanelSize(_resPanel, comp);
 		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"select inet_server_addr() AS on_host_name, inet_server_port() AS on_port_number, version() AS version"       , "inet_server_addr(), inet_server_port(), version()", "Get hostname, port and Postgres Version String."));
 		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"select * from pg_extension"       , "", "Get what Extentions are installed."));
 		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"select pg_reload_conf()"          , "", "Reload Postgres Configuration and 'pg_hba.conf' file."));
+		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"EXPLAIN (ANALYZE, VERBOSE, COSTS, BUFFERS, TIMING, FORMAT TEXT)\n${selectedText}", "EXECUTE (ANALYZE...TEXT)", "Show Execution Plan in TEXT for selected text"));
+		commandList.add(new FavoriteCommandEntry(VendorType.POSTGRES,"EXPLAIN (ANALYZE, VERBOSE, COSTS, BUFFERS, TIMING, FORMAT JSON)\n${selectedText}", "EXECUTE (ANALYZE...JSON)", "Show Execution Plan in JSON for selected text"));
 
 		
 		commandList.add(FavoriteCommandEntry.addSeparator());

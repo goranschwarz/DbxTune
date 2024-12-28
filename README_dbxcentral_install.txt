@@ -392,8 +392,9 @@ for example: http://dbxtune.acme.com:8080/
 	## Install a SSH Server
 	- Install instructions for OpenSSH on Windows Server 2019 & Windows 10:
 	- https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse
+	- OR get MSI package from https://github.com/PowerShell/Win32-OpenSSH/releases (pick the latest release)
 
-	## Add Local or ActiveDirictory account
+	## Add Local or Active Directory Account
 	net user /add dbxtune long_and_arbitrary_password
 
 	## Allow user to get perf counters by issuing 'typeperf ...'
@@ -405,7 +406,8 @@ for example: http://dbxtune.acme.com:8080/
 	#   WMI Needs "Remote Enable" for the user to allow 'gwmi win32_logicaldisk', and SSH is considered to be a "Remote Operation"
 	#   Look at https://github.com/microsoft/vscode-remote-release/issues/2648#issuecomment-1646047396
 	#   That worked for me... Then the command didn't need 'administrator' role...
-	#   NOTE: There might be other solutions as well, let me know your best solution for this (hopefully command line instructions instead of GUI clicking)
+	#   NOTE: There might be other solutions as well, let me know your best solution for this 
+	#         (Hopefully "someone" can provide a command line instructions instead of GUI clicking)
 
 
 ##--------------------------------------
@@ -416,7 +418,7 @@ vi SERVER_LIST
 		# I added the following entries (which is hosted on Linux)
 		gorans-ub2-ss ; 1 ; SQL-Server on Linux ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
 
-		# On windows it might look like
+		# On windows it might look like (hopefully you dont have to specify '\instancename' because backslashes in names are evil)
 		winHostName\instName  ; 1 ; SQL-Server on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
 
 ##--------------------------------------

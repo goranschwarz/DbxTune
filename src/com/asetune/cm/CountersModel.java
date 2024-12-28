@@ -4348,6 +4348,25 @@ implements Cloneable, ITableTooltip
 //	}
 
 	/**
+	 * Called by the CounterSample when reading the ResultSet if any of the PK column is NULL
+	 * <p>
+	 * In this method, we can resolve any potential NULL values and replace them with "something else"
+	 * <p>
+	 * NOTE: Override this method to do something in any CM, the default implementation does nothing, just returns a NULL value...
+	 * 
+	 * @param counterSample
+	 * @param rsRowNumber
+	 * @param rsColumnNumber
+	 * @param colName
+	 * @return
+	 */
+	public Object pkNullValueResolver(CounterSample counterSample, int rsRowNumber, int rsColumnNumber, String colName)
+	{
+		return null;
+	}
+
+
+	/**
 	 * do local calculation, this should be overridden for local calculations...
 	 * <p>
 	 * This only allow changing Absolute values, and it's called before the localCalculation(prevSample, newSample, diffData)

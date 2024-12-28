@@ -1468,9 +1468,24 @@ extends CounterTableModel
 				if (_colIsPk != null && _colIsPk[i-1] )
 				{
 					if (val != null)
+					{
 						key.append(val).append(PK_STR_DELIMITER);
+					}
 					else
-						_logger.warn(getName() + ": Key containes a NULL value, rsNum=" + rsNum + ", row=" + rsRowNum + ", col=" + i + " colName=" + _colNames.get(i-1) + ". Continuing without adding the NULL value to the key.");
+					{
+						val = cm.pkNullValueResolver(this, rsRowNum, i, _colNames.get(i-1));
+						if (val != null)
+						{
+							key.append(val).append(PK_STR_DELIMITER);
+							
+							// Set the new value in the "last added" position.
+							row.set(row.size()-1, val);
+						}
+						else
+						{
+							_logger.warn(getName() + ": Key containes a NULL value, rsNum=" + rsNum + ", row=" + rsRowNum + ", col=" + i + " colName=" + _colNames.get(i-1) + ". Continuing without adding the NULL value to the key.");
+						}
+					}
 				}
 			}
 			if (_logger.isTraceEnabled())

@@ -5449,4 +5449,25 @@ public class PersistWriterJdbc
 	//---------------------------------------------
 	// END: PCS Key Value Store
 	//---------------------------------------------
+
+
+	/**
+	 * Create a new DBMS Connection to the PCS Storage, based on the 'main' connections properties... 
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	public DbxConnection cloneStorageConnection(String appName)
+	throws Exception
+	{
+		if (_mainConn == null)
+			throw new Exception("No 'main PCS Connection' that we can clone... Can't conntinue.");
+		
+		ConnectionProp connProp = new ConnectionProp(_mainConn.getConnPropOrDefault());
+		
+		if (StringUtil.hasValue(appName))
+			connProp.setAppName(appName);
+		
+		return DbxConnection.connect(null, connProp);
+	}
 }

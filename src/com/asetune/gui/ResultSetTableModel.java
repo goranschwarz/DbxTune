@@ -1901,6 +1901,7 @@ public class ResultSetTableModel
 	@Override
 	public void setValueAt(Object value, int row, int column)
 	{
+		_logger.warn("In ResultSetTableModel named='" + getName() + "', you called setValueAt(value='" + value+ "', row=" + row + ", column=" + column+ "). which will do NOTHING (no operation is implemented).", new RuntimeException("DUMMY Exception to record callstack"));
 	}
 
 	public void setValueAtWithOverride(Object value, int r, int c)

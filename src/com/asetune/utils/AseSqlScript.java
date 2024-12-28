@@ -572,7 +572,13 @@ implements SybMessageHandler, AutoCloseable
 					sql = sqlChunc;
 					_currentSqlStatement = sql;
 					if (_logger.isDebugEnabled()) 
-						_logger.debug("EXECUTING: "+sql);
+					{
+						_logger.debug("EXECUTING: " + sql);
+						sb.append("\n");
+						sb.append("--#################### BEGIN: EXECUTING ################################# \n");
+						sb.append(sql);
+						sb.append("--#################### END: EXECUTING ################################### \n");
+					}
 
 					boolean hasRs = stmnt.execute(sql);
 

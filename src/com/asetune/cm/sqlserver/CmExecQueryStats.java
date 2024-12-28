@@ -164,11 +164,11 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 0;
+	public static final int      DEFAULT_POSTPONE_TIME          = 600;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
 
 //	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
-	@Override public int     getDefaultPostponeTime()                 { return 600; } // every 10 minute
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; } // every 10 minute
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
 	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
@@ -223,7 +223,8 @@ extends CountersModel
 	public static final boolean DEFAULT_sample_lastXminutes       = true;
 
 	public static final String  PROPKEY_sample_lastXminutesTime   = PROP_PREFIX + ".sample.lastXminutes.time";
-	public static final int     DEFAULT_sample_lastXminutesTime   = 30;
+//	public static final int     DEFAULT_sample_lastXminutesTime   = 30;
+	public static final int     DEFAULT_sample_lastXminutesTime   = 6 * 60; // 6 hours
 
 
 	@Override
@@ -362,7 +363,7 @@ extends CountersModel
 		int     sample_lastXminutesTime = conf.getIntProperty(    PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime);
 
 		// Do we have extra where clauses
-		String sql_sample_extraWhereClause = "  -- Extra where clauses will go here. (it will look like: AND the_extra_where_clause) \n";
+		String sql_sample_extraWhereClause = "  /* Extra where clauses will go here. (it will look like: AND the_extra_where_clause) */ \n";
 		if ( ! StringUtil.isNullOrBlank(sample_extraWhereClause) )
 			sql_sample_extraWhereClause = "  AND " + sample_extraWhereClause + "\n";
 
@@ -380,7 +381,7 @@ extends CountersModel
 			// hence: dateadd(ms, (last_elapsed_time/1000), last_execution_time) > #numberOfMinutesToSave#
 			//                     ^^^^^^^^^^^^^^^^^ ^^^^
 			//                     in-microseconds   to-milliseconds
-			sql_sample_lastXminutes = "  AND dateadd(ms, (last_elapsed_time/1000), last_execution_time) > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
+			sql_sample_lastXminutes = "  AND dateadd(ms, (last_elapsed_time/1000), last_execution_time) > dateadd(mi, -" + sample_lastXminutesTime + ", getdate())\n";
 		}
 
 		String sql = 
@@ -397,7 +398,7 @@ extends CountersModel
 				"FROM sys." + dm_exec_query_stats + " qs \n" +
 				"LEFT OUTER JOIN sys.dm_exec_cached_plans ecp ON qs.plan_handle = ecp.plan_handle \n" +
 				"OUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
-				"WHERE 1 = 1 -- to make extra where clauses easier \n" +
+				"WHERE 1 = 1 /* to make extra where clauses easier */ \n" +
 				sql_sample_extraWhereClause +
 				sql_sample_lastXminutes;
 

@@ -84,6 +84,17 @@ implements Serializable
 		_columns.add(ci);
 	}
 
+	public List<String> getTableColumnList()
+	{
+		List<String> list = new ArrayList<>();
+		for (TableColumnInfo ci : _columns)
+		{
+			list.add(ci._colName);
+		}
+		return list;
+	}
+	
+
 //	public void refreshColumnInfo(ConnectionProvider connProvider)
 //	{
 //		try
@@ -616,9 +627,18 @@ implements Serializable
 				}
 			}
 
+			// Get All Columns in the table
+			List<String> tableColumnList = TableInfo.this.getTableColumnList();
+
+			// for column store, if ALL Columns is in the index (CLUSTERED COLUMNSTORE)... Just say '_ALL_COLUMNS_'
+			String indexColumns = StringUtil.toCommaStr(_columns);
+			if (indexType.equals("CLUSTERED COLUMNSTORE") && _columns.equals(tableColumnList))
+				indexColumns = "_ALL_COLUMNS_";
+
+
 			// Now build the DDL text
 			StringBuilder sb = new StringBuilder("CREATE ");
-
+			
 			if (_isUnique)
 				sb.append("<FONT color='blue'>UNIQUE</FONT> ");
 
@@ -637,7 +657,7 @@ implements Serializable
 			
 			sb.append("INDEX ").append(_name).append(" <FONT color='blue'>ON</FONT> ").append(_qualifier);
 			sb.append("(<FONT color='blue'>");
-			sb.append(StringUtil.toCommaStr(_columns));
+			sb.append(indexColumns);
 			sb.append("</FONT>)");
 			
 			if (StringUtil.hasValue(indexIncludeColumns))

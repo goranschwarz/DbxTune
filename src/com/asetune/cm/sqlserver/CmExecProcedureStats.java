@@ -198,7 +198,8 @@ extends CountersModel
 	public static final boolean DEFAULT_sample_lastXminutes       = true;
 
 	public static final String  PROPKEY_sample_lastXminutesTime   = PROP_PREFIX + ".sample.lastXminutes.time";
-	public static final int     DEFAULT_sample_lastXminutesTime   = 30;
+//	public static final int     DEFAULT_sample_lastXminutesTime   = 30;
+	public static final int     DEFAULT_sample_lastXminutesTime   = 25 * 60; // 25 hours
 	
 	@Override
 	protected void registerDefaultValues()
@@ -262,7 +263,7 @@ extends CountersModel
 	@Override
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
 	{
-		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'tempdb', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
+		// Using DEFAULT_SKIP_DB_LIST: 'master', 'model', 'msdb', 'SSISDB', 'ReportServer', 'ReportServerTempDB'
 		return new CounterSampleCatalogIteratorSqlServer(name, negativeDiffCountersToZero, diffColumns, prevSample);
 	}
 
@@ -320,7 +321,8 @@ extends CountersModel
 			    + "    ObjectName = (select sys.objects.name from sys.objects WITH (READUNCOMMITTED) where sys.objects.object_id = BASE.object_id), \n"
 			    + "    * \n"
 			    + "from sys." + dm_exec_procedure_stats + " BASE \n"
-			    + "where BASE.database_id = db_id() \n"
+			    + "where 1 = 1 /* to make extra where clauses easier */ \n"
+			    + "  and BASE.database_id = db_id() /* Since we are 'looping' all databases. like sp_msforeachdb */ \n" 
 				+ sql_sample_extraWhereClause
 				+ sql_sample_lastXminutes
 				;

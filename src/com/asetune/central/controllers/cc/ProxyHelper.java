@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package com.asetune.central.controllers.ccmgt;
+package com.asetune.central.controllers.cc;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +48,7 @@ import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class MgtProxyHelper 
+public class ProxyHelper 
 extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
@@ -61,6 +61,11 @@ extends HttpServlet
 	private String _collectorMgtInfo     = null;
 	private String _collectorAuthStr     = null;
 
+	public static String APPLICATION_JSON = "application/json";
+	public static String TEXT_HTML        = "text/html";
+	
+//	public static String XXXX = com.google.common.net.MediaType.JSON_UTF_8.toString();
+	
 	protected String getSrvName()
 	{
 		return _srvName;
@@ -214,7 +219,7 @@ System.out.println("PROXY: >>>>>>>>>>>> _collectorAuthStr    =|"+_collectorAuthS
 		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> sendData -END-");
 	}
 
-	protected void sendResult(HttpURLConnection httpConn, HttpServletResponse resp) 
+	protected void sendResult(HttpURLConnection httpConn, HttpServletResponse resp, String mediaType) 
 	throws IOException
 	{
 		// check status code
@@ -226,15 +231,25 @@ System.out.println("PROXY: >>>>>>>>>>>> _collectorAuthStr    =|"+_collectorAuthS
 //		}
 
 		// Set response headers
-		resp.setContentType("application/json");
+		if (StringUtil.hasValue(mediaType))
+			resp.setContentType(mediaType);
 		resp.setCharacterEncoding("UTF-8");
 		resp.setHeader("Access-Control-Allow-Origin", "*");
 
 		// Get/Set response status
-		int httpRespCode = httpConn.getResponseCode();
-System.out.println("<<<<<<<<<<<<<<<<<<<<<<<< sendResult: httpRespCode=" + httpRespCode);
-		resp.setStatus(httpRespCode);
+		int    httpRespCode = httpConn.getResponseCode();
+		String httpRespMsg  = httpConn.getResponseMessage();
+System.out.println("<<<<<<<<<<<<<<<<<<<<<<<< sendResult: httpRespCode=" + httpRespCode + ", httpRespMsg=|" + httpRespMsg + "|.");
 
+		resp.setStatus(httpRespCode);
+//		if (httpRespCode != HttpServletResponse.SC_OK)
+//		{
+//			resp.sendError(httpRespCode, httpRespMsg);
+//			return;
+//		}
+
+		// Should I return here... Or can I continue to send any possible data ???
+		
 		// Get "stream" from HTTP endpoint
 		InputStream httpInputStream = httpConn.getInputStream();
 		InputStream httpErrorStream = httpConn.getErrorStream();
@@ -253,7 +268,8 @@ int totLen = 0;
 			while ((length = httpInputStream.read(buf)) != -1)
 			{
 totLen += length;
-System.out.println("<<<<<<<<<<< http INPUT Stream <<<<<<<<<<<<< sendResult: length=" + length + " data=|" + new String(buf, 0, length) + "|");
+System.out.println("<<<<<<<<<<< http INPUT Stream <<<<<<<<<<<<< sendResult: length=" + length + " data=|-not-printed-|");
+//System.out.println("<<<<<<<<<<< http INPUT Stream <<<<<<<<<<<<< sendResult: length=" + length + " data=|" + new String(buf, 0, length) + "|");
 				out.write(buf, 0, length);
 			}
 		}
@@ -318,8 +334,8 @@ System.out.println("<<<<<<<<<<< http ERROR Stream <<<<<<<<<<<<< sendResult: leng
 //			}
 //	
 //			//	String decoded = new String( Base64.getDecoder().decode( auth.substring(firstSpace) ), StandardCharsets.UTF_8 );
-//			System.out.println(">>>>>>>>>>>> MgtProxyHelper.GET.HEADER: Authorization.method = |" + authMethod + "|.");
-//			System.out.println(">>>>>>>>>>>> MgtProxyHelper.GET.HEADER: Authorization.token  = |" + authToken  + "|.");
+//			System.out.println(">>>>>>>>>>>> ProxyHelper.GET.HEADER: Authorization.method = |" + authMethod + "|.");
+//			System.out.println(">>>>>>>>>>>> ProxyHelper.GET.HEADER: Authorization.token  = |" + authToken  + "|.");
 //		}
 //		
 //		

@@ -424,22 +424,22 @@ extends MainFrame
 		item++;
 		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- Install-All</b> - <i><font color=\"green\">main branch</font></i></html>");
 		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
-		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/MaintenanceSolution.sql");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/main/MaintenanceSolution.sql");
 
 		item++;
 		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- ONLY: Database Backup</b> - <i><font color=\"green\">main branch</font></i></html>");
 		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
-		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/DatabaseBackup.sql");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/main/DatabaseBackup.sql");
 
 		item++;
 		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- ONLY: Database Integrity Check</b> - <i><font color=\"green\">main branch</font></i></html>");
 		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
-		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/DatabaseIntegrityCheck.sql");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/main/DatabaseIntegrityCheck.sql");
 
 		item++;
 		systmp.setProperty(propPrefix(item) + ".name",                        "<html><b>Ola Hallengren -- ONLY: Index and Statistics Maintenance</b> - <i><font color=\"green\">main branch</font></i></html>");
 		systmp.setProperty(propPrefix(item) + ".install.dbname",              "master");
-		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/master/IndexOptimize.sql");
+		systmp.setProperty(propPrefix(item) + ".install.scriptLocation",      "https://raw.githubusercontent.com/olahallengren/sql-server-maintenance-solution/refs/heads/main/IndexOptimize.sql");
 
 		
 		createPredefinedSqlMenu(menu, "system.install.sql.", systmp, callerInstance);

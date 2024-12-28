@@ -26,6 +26,7 @@ package com.asetune.pcs;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -40,7 +41,6 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.Version;
-import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.central.pcs.H2WriterStat;
 import com.asetune.cm.CountersModel;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
@@ -346,6 +346,27 @@ implements Runnable
 	public boolean getConfig_doGetStatistics()                 { return _doGetStatistics; }
 	public boolean getConfig_doSpDepends()                     { return _doSpDepends; }
 	public boolean getConfig_addDependantObjectsToDdlInQueue() { return _addDependantObjectsToDdlInQueue; }
+	
+	/** Get All Writers */
+	public Collection<IPersistWriter> getPersistWriters()
+	{
+		return _writerClasses; 
+	}
+
+	/** 
+	 * Get first writer of the instance PersistWriterJdbc
+	 * <p>
+	 * If none was found: null will be returned.
+	 */
+	public PersistWriterJdbc getPersistWriterJdbc()
+	{
+		for (IPersistWriter entry : _writerClasses)
+		{
+			if (entry instanceof PersistWriterJdbc)
+				return (PersistWriterJdbc) entry;
+		}
+		return null;
+	}
 
 	/** Initialize various member of the class */
 	public synchronized void init(Configuration props)

@@ -63,6 +63,16 @@ public interface ICounterController
 	public DbxConnection getMonConnection();
 
 	/**
+	 * Clone the Monitor connection...
+	 * 
+	 * @param appName
+	 * @return
+	 * @throws Exception
+	 */
+	public DbxConnection cloneMonConnection(String appName)
+	throws Exception;
+
+	/**
 	 * After a Monitor Connection has been created, this is called so we can do various static settings on the newly created connection
 	 */
 	public void onMonConnect(DbxConnection conn);

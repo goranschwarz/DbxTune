@@ -139,8 +139,10 @@ extends DbxDatabaseMetaData
 			    + onlyUnique
 			    + "  AND  p.partition_number = 1 /** For partitioned tables we only care about 1 partition, for getting PAGE/ROW count use subselects in the select list... **/ \n"
 			    + "  AND ( \n"
-			    + "          /* FOR 'ordinary' indexes (NON COLUMNSTORE INDEXES) we only want: ic.key_ordinal = 1 and NOT included columns */ \n"
-			    + "          (ix.type_desc NOT LIKE '%COLUMNSTORE%' AND ic.key_ordinal = 1 AND ic.is_included_column = 0) \n"
+//			    + "          /* FOR 'ordinary' indexes (NON COLUMNSTORE INDEXES) we only want: ic.key_ordinal = 1 and NOT included columns */ \n"
+//			    + "          (ix.type_desc NOT LIKE '%COLUMNSTORE%' AND ic.key_ordinal = 1 AND ic.is_included_column = 0) \n"
+				+ "          /* FOR 'ordinary' indexes (NON COLUMNSTORE INDEXES) we only want: NOT included columns */ \n"
+				+ "          (ix.type_desc NOT LIKE '%COLUMNSTORE%' AND ic.is_included_column = 0) \n"
 			    + "       OR \n"
 			    + "          /* FOR COLUMNSTORE INDEXES we only want ic.key_ordinal = 0 and ic.is_included_column = 1 */ \n"
 			    + "          (ix.type_desc     LIKE '%COLUMNSTORE%' AND ic.key_ordinal = 0 AND ic.is_included_column = 1) \n"

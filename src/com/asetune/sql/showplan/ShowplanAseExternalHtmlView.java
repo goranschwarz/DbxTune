@@ -20,6 +20,12 @@
  ******************************************************************************/
 package com.asetune.sql.showplan;
 
+import java.io.File;
+import java.io.IOException;
+
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+
 public class ShowplanAseExternalHtmlView
 extends ShowplanHtmlView
 {
@@ -33,5 +39,11 @@ extends ShowplanHtmlView
 	protected String getTemplateJarDir()
 	{
 		return "ase/";
+	}
+
+	@Override
+	protected File createHtmlFile(String planText) throws IOException, TransformerConfigurationException, TransformerException
+	{
+		throw new IOException("NOT YET IMPLEMENTED");
 	}
 }

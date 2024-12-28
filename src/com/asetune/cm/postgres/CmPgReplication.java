@@ -39,6 +39,7 @@ import com.asetune.alarm.events.postgres.AlarmEventPgReplicationAge;
 import com.asetune.alarm.events.postgres.AlarmEventPgReplicationLag;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -265,7 +266,8 @@ extends CountersModel
 		String sql_9 = ""
 			    + "SELECT \n"
 			    + "     pid \n"
-			    + "    ,cast(client_addr      as varchar(30)) AS client_addr \n"
+//			    + "    ,cast(client_addr      as varchar(30)) AS client_addr \n"
+			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name) as varchar(30)) AS client_addr \n"
 			    + "    ,client_port \n"
 			    + "    ,cast(client_hostname  as varchar(80)) AS client_hostname \n"
 			    + "    ,cast(usename          as varchar(80)) AS user_name \n"
@@ -286,7 +288,8 @@ extends CountersModel
 		String sql_10 = ""
 			    + "SELECT \n"
 			    + "     pid \n"
-			    + "    ,cast(client_addr      as varchar(30)) AS client_addr \n"
+//			    + "    ,cast(client_addr      as varchar(30)) AS client_addr \n"
+			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name) as varchar(30)) AS client_addr \n"
 			    + "    ,client_port \n"
 			    + "    ,cast(client_hostname  as varchar(80)) AS client_hostname \n"
 			    + "    ,cast(usename          as varchar(80)) AS user_name \n"
@@ -333,6 +336,18 @@ extends CountersModel
 //		list.add(new CmSettingsHelper("Slide Window Time", PROPKEY_SlideTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_SlideTimeInSec, DEFAULT_SlideTimeInSec), DEFAULT_SlideTimeInSec, "Set number of seconds the 'slide window time' will keep 'tup_fetched' and 'tup_returned' for." ));
 //
 //		return list;
+//	}
+
+//-----------------------------------------------------
+//	NOTE: Use 'pkNullValueResolver' if the:
+//	          + "    ,cast(COALESCE(cast(client_addr as varchar(30)), 'local:'||application_name) as varchar(30)) AS client_addr \n"
+//	      above COALESCE do not work as expected...
+//-----------------------------------------------------
+//	@Override
+//	public Object pkNullValueResolver(CounterSample counterSample, int rsRowNumber, int rsColumnNumber, String colName)
+//	{
+//		// TODO Auto-generated method stub
+//		return super.pkNullValueResolver(counterSample, rsRowNumber, rsColumnNumber, colName);
 //	}
 
 	@Override

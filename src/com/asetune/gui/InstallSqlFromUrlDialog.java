@@ -45,6 +45,7 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -488,7 +489,10 @@ implements ActionListener
 			{
 				StringBuffer response = new StringBuffer();
 
-				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+//				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+				// If the file has a BOM (Byte order mark), then read/discard it... 
+				// If the BOM is NOT removed, then strange problems may appear, as "Incorrect Syntax near ''" or similar, due to the BOM character is in the text (but NOT visible)
+				BufferedReader in = new BufferedReader(new InputStreamReader( new BOMInputStream(conn.getInputStream()) ));
 				String inputLine;
 
 				while ((inputLine = in.readLine()) != null) 

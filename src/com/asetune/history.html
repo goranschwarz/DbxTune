@@ -74,6 +74,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Print out CM Refresh time after each collection has been made (this can be disabled by: dbxtune.print.cm.refresh.time = false)</LI>
 		<LI>A Graph on CM Refresh time has also been created</LI>
 		<LI>PCS: DataDirectoryCleaner -- New config to cleanup on Disk PCT Used 'DataDirectoryCleaner.max.historical.space.usage.pct=94.0'</LI>
+		<LI>NoGuiManagementServer -- Added: /reports/sqlserver/job-scheduler-report to view a mini version of DSR for SQL Server Job/Scheduler and CPU Overview</LI>
+		<LI>NoGuiManagementServer -- Added: /reports/sqlserver/job-scheduler-activity to view SQL Server Job/Scheduler activity (a timeline chart with job activity)</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -201,6 +203,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>removed some file access with relative path name, and list file options for some directories</LI>
 		<LI>You must be logged in to download recording files, and to remove Daily Summary Report files</LI>
 		<LI>User Defined Charts got some new parameters, and also reload some parameters (like SQL) if the underlying file was changed</LI>
+		<LI>On landing page: For SQL Server entries: Added right click meny items for: 'SQL Agent/Scheduler Report for Today' and 'SQL Agent/Scheduler Activity Vire for Today'</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -421,11 +424,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDeviceIo           </b> - added columns 'AvgReadKbPerIo', 'AvgWriteKbPerIo'</LI>
 		<LI><b>CmDeviceIo           </b> - added charts 'Disk Throughput in KB (Sum,Read,Write)', 'Number of Disk Operations (Sum,Read,Write)', 'Average (Read) KB Per Disk IO, per Device', 'Average (Write) KB Per Disk IO, per Device'</LI>
 
-		<LI><b>CmExecFunctionStats  </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
+		<LI><b>CmExecFunctionStats  </b> - Get data for records that has been used for last 25 hours (configurable)</LI>
 
-		<LI><b>CmExecProcedureStats </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
+		<LI><b>CmExecProcedureStats </b> - Get data for records that has been used for last 25 hours (configurable)</LI>
 
-		<LI><b>CmExecTriggerStats   </b> - Get data for records that has been used for last 30 minutes (configurable)</LI>
+		<LI><b>CmExecTriggerStats   </b> - Get data for records that has been used for last 25 hours (configurable)</LI>
+
+		<LI><b>CmExecQueryStat      </b> - DEFAULT_sample_lastXminutesTime changed from 30 minutes to 6 hours</LI>
 
 		<LI><b>CmExecQueryStatPerDb </b> - If we get 10 sequential "timeouts" when getting data, then disable this CM, until a new recording period starts</LI>
 
@@ -505,6 +510,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Fixed bug that skipped the "summary" section for ALL databases that has Query Store Enabled</li>
 			<li>Added chart 'CmOsIostat_IoBusyPct' to the "summary" section</li>
 			<li>Added Report Section for: Job Agent/Scheduler Information for the full day (origin: msdb.dbo.sysjobs, sysjobsteps, sysjobhistory)</li>
+			<li>Added 'logical_writes_MB', 'physical_reads_MB' in reports that has 'logical_writes', 'physical_reads'</li>
 		</ul>
 		</LI>
 	</UL>
@@ -651,6 +657,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>for SQL Server -- Showplan info: copy/save XML Plan formatted</LI>
 		<LI>for SQL Server -- Showplan info: Now also holds "Execution Time" (if Available), "Cardinality Actual/Estimated Calculation" (if Available)</LI>
 		<LI>for SQL Server -- Showplan info: Mark "Index Spool - Eager Spool" in color red... to highlight them a bit</LI>
+		<LI>for SQL Server -- Code Compleation: Also includes "server up time" for statistics that depends on SQL Server restarts</LI>
 		<LI>Adjusted tabSize to be 4 (it looked like it was 5 previously)</LI>
 		<LI>For SQL Server: Code Completion -- Summary Information -- Did not show indexes for COLUMNSSTORE Indexes</LI>
 		<LI>For Postgres:  Code Completion -- Summary Information -- Did not show an accurate INCLUDE list for indexes</LI>
@@ -659,7 +666,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>RepServer: new "RCL command" -- alter connection to ${selectedText} set dsi_log_cmds to 'on/off'</LI>
 		<LI>Tooltip on ResultSet tables, added "object lookup" on column name 'objectname|object_name|object name|tablename|table_name|table name'.<br>
 		    AND: If columns 'dbname|databasename|database_name|database name' and 'schemaname|schema_name|schema name' exists the will be used to "fully qualify" the objectname</LI>
-		<LI></LI>
+		<LI>Better handling of Showplans for SQL Server and Postgres</LI>
+		<LI>InstallSqlFromUrlDialog -- use BOMInputStream to remove any BOM characters (Byte Order Mark)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

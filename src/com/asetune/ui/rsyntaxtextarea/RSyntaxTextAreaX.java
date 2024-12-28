@@ -519,7 +519,7 @@ super.setUseFocusableTips(false);
 
 		if (isHiglightWordModeEnabled != null && isHiglightWordModeEnabled instanceof Boolean && (Boolean)isHiglightWordModeEnabled == false)
 		{
-			System.out.println("isHiglightWordModeEnabled():     <<<<---- return FALSE");
+//			System.out.println("isHiglightWordModeEnabled():     <<<<---- return FALSE");
 			return false;
 		}
 
