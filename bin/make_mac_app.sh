@@ -18,7 +18,7 @@ javaLibDir=\$APP_PACKAGE/Contents/Resources/Java
 #
 # Compose the class path that we will use later on.
 #
-export CP=${CP}:$javaLibDir/asetune.jar
+export CP=${CP}:$javaLibDir/dbxtune.jar
 export CP=${CP}:$javaLibDir/jconn42.jar
 export CP=${CP}:$javaLibDir/jconn4.jar
 export CP=${CP}:$javaLibDir/jconn3.jar
@@ -78,7 +78,7 @@ cat <<EOF> ${appname}.app/Contents/Info.plist
 	<key>CFBundleDisplayName</key>             <string>$appname</string>
 	<key>Java</key>
 	<dict>
-		<key>MainClass</key>               <string>com.asetune.AseTune</string>
+		<key>MainClass</key>               <string>com.dbxtune.AseTune</string>
 
 		<key>ClassPath</key>               <string>$CP</string>
 
@@ -87,8 +87,8 @@ cat <<EOF> ${appname}.app/Contents/Info.plist
 			<key>apple.laf.useScreenMenuBar</key> <string>true</string>
 			<key>sybase.home</key>                <string>\$SYBASE</string>
 			<key>SYBASE</key>                     <string>\$SYBASE</string>
-			<key>ASETUNE_HOME</key>               <string>\$APP_PACKAGE</string>
-			<key>ASETUNE_SAVE_DIR</key>           <string>~/.asetune/</string>
+			<key>DBXTUNE_HOME</key>               <string>\$APP_PACKAGE</string>
+			<key>DBXTUNE_SAVE_DIR</key>           <string>~/.dbxtune/</string>
 		</dict>
 
 		<key>VMOptions</key>
@@ -120,7 +120,7 @@ EOF
 #        <string>1.6+</string>
 #
 #        <key>MainClass</key>
-#        <string>com.asetune.AseTune</string>
+#        <string>com.dbxtune.AseTune</string>
 #
 #        <key>Properties</key>
 #        <dict>
@@ -131,8 +131,8 @@ EOF
 #            <key>apple.laf.useScreenMenuBar</key> <string>true</string>
 #            <key>sybase.home</key>                <string>$SYBASE</string>
 #            <key>SYBASE</key>                     <string>$SYBASE</string>
-#            <key>ASETUNE_HOME</key>               <string>$APP_PACKAGE</string>
-#            <key>ASETUNE_SAVE_DIR</key>           <string>~/.asetune/</string>
+#            <key>DBXTUNE_HOME</key>               <string>$APP_PACKAGE</string>
+#            <key>DBXTUNE_SAVE_DIR</key>           <string>~/.dbxtune/</string>
 #        </dict>
 #
 #        <key>VMOptions</key>

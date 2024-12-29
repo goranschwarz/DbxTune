@@ -204,7 +204,7 @@ Here are some of the functionality
   Small utility to execute load in a ASE
   This utility is mainly used by me when doing demos of AseTune...
   If you want to use it, you need to install some server side objects.
-  * Unzip lib/asetune.jar and go to directory 'src/com/asetune/perftest/sql'
+  * Unzip lib/dbxtune.jar and go to directory 'src/com/dbxtune/perftest/sql'
   * Look at the README.txt in above directory
   * if you have problems, plese send me an email at: goran_schwarz@hotmail.com
 

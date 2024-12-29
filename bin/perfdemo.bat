@@ -70,7 +70,7 @@ rem ------------------------------------------------------------------------
 rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
 set classpath=%PERF_DEMO_HOME%\classes
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\asetune.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\dbxtune.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\jconn42.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\jconn3.jar
@@ -122,7 +122,7 @@ rem ------------------------------------------------------------------------
 cd %PERF_DEMO_HOME%
 REM echo %CLASSPATH%
 
-java  %JVM_PARAMS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DPERF_DEMO_HOME="%PERF_DEMO_HOME%" -DPERF_DEMO_SAVE_DIR="%PERF_DEMO_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% com.asetune.perftest.PerfDemo %*
+java  %JVM_PARAMS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DPERF_DEMO_HOME="%PERF_DEMO_HOME%" -DPERF_DEMO_SAVE_DIR="%PERF_DEMO_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% com.dbxtune.perftest.PerfDemo %*
 
 goto exit_perfdemo
 

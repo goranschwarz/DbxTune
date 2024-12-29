@@ -1,0 +1,39 @@
+package com.dbxtune.alarm.ui.config.examples;
+
+import com.dbxtune.alarm.IUserDefinedAlarmInterrogator;
+import com.dbxtune.cm.CountersModel;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventHighCpuUtilization;
+
+public class ExampleSimple
+implements IUserDefinedAlarmInterrogator
+{
+	/**
+	 * Check values for this CM (Counter Model) and generate any desired alarms
+	 */
+	@Override
+	public void interrogateCounterData(CountersModel cm)
+	{
+		// No RATE data, get out of here (on first sample we will only have ABS data)
+		if ( ! cm.hasRateData() )
+			return;
+
+		// If we havn't got any alarm handler; exit
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		// If we havn't got all desired column names; exit
+		if ( ! cm.hasColumns("ColName1") )
+			return;
+		
+		// Your logic
+		Double colName1 = cm.getRateValueAvg("ColName1");
+		if (colName1 > 50.0)
+		{
+			// Create the alarm and add/send it to the AlrmHandler
+			AlarmEvent alarm = new AlarmEventHighCpuUtilization(cm, colName1);
+			AlarmHandler.getInstance().addAlarm(alarm);
+		}
+	}
+}

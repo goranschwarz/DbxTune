@@ -26,100 +26,100 @@ set JAVA_START_CLASS=""
 set JAVA_START_PARAMS=""
 
 IF "%APP_NAME%" == "ase" (
-	set JAVA_START_CLASS=com.asetune.AseTune
+	set JAVA_START_CLASS=com.dbxtune.AseTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/asetune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "iq" (
-	set JAVA_START_CLASS=com.asetune.IqTune
+	set JAVA_START_CLASS=com.dbxtune.IqTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/iqtune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "rs" (
-	set JAVA_START_CLASS=com.asetune.RsTune
+	set JAVA_START_CLASS=com.dbxtune.RsTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/rstune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "rax" (
-	set JAVA_START_CLASS=com.asetune.RaxTune
+	set JAVA_START_CLASS=com.dbxtune.RaxTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/raxtune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "hana" (
-	set JAVA_START_CLASS=com.asetune.HanaTune
+	set JAVA_START_CLASS=com.dbxtune.HanaTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/hanatune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "sqlserver" (
-	set JAVA_START_CLASS=com.asetune.SqlServerTune
+	set JAVA_START_CLASS=com.dbxtune.SqlServerTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/sqlservertune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "oracle" (
-	set JAVA_START_CLASS=com.asetune.OracleTune
+	set JAVA_START_CLASS=com.dbxtune.OracleTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/oracletune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "postgres" (
-	set JAVA_START_CLASS=com.asetune.PostgresTune
+	set JAVA_START_CLASS=com.dbxtune.PostgresTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/postgrestune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "mysql" (
-	set JAVA_START_CLASS=com.asetune.MySqlTune
+	set JAVA_START_CLASS=com.dbxtune.MySqlTune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/mysqltune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "db2" (
-	set JAVA_START_CLASS=com.asetune.Db2Tune
+	set JAVA_START_CLASS=com.dbxtune.Db2Tune
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/db2tune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "sqlw" (
-	set JAVA_START_CLASS=com.asetune.tools.sqlw.QueryWindow
+	set JAVA_START_CLASS=com.dbxtune.tools.sqlw.QueryWindow
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/sqlw_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "tailw" (
-	set JAVA_START_CLASS=com.asetune.tools.tailw.LogTailWindow
+	set JAVA_START_CLASS=com.dbxtune.tools.tailw.LogTailWindow
 	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/tailw_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "central" (
-	set JAVA_START_CLASS=com.asetune.central.DbxTuneCentral
+	set JAVA_START_CLASS=com.dbxtune.central.DbxTuneCentral
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "dsr" (
-	set JAVA_START_CLASS=com.asetune.pcs.report.DailySummaryReport
+	set JAVA_START_CLASS=com.dbxtune.pcs.report.DailySummaryReport
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "h2fix" (
-	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy
+	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "dbxcdbcopy" (
-rem set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy
-rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
-	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy3
+rem set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy
+rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
+	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy3
 	set JAVA_START_PARAMS=
 	set SPLASH=
 	set DBXTUNE_JVM_MEMORY_PARAMS=-Xmx4096m -Xms64m
 
 ) ELSE IF /I "%APP_NAME%" == "dbxPassword" (
-	set JAVA_START_CLASS=com.asetune.utils.DbxPassword
+	set JAVA_START_CLASS=com.dbxtune.utils.DbxPassword
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF /I "%APP_NAME%" == "dbxPasswordUpgrade" (
-	set JAVA_START_CLASS=com.asetune.utils.DbxPasswordUpgrade
+	set JAVA_START_CLASS=com.dbxtune.utils.DbxPasswordUpgrade
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF /I "%APP_NAME%" == "configUtil" (
-	set JAVA_START_CLASS=com.asetune.utils.Configuration
+	set JAVA_START_CLASS=com.dbxtune.utils.Configuration
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
@@ -129,26 +129,26 @@ rem	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "sshtest2" (
-	set JAVA_START_CLASS=com.asetune.test.JschTest2
+	set JAVA_START_CLASS=com.dbxtune.test.JschTest2
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "sshtest" (
-	set JAVA_START_CLASS=com.asetune.ssh.SshConnectionTester
+	set JAVA_START_CLASS=com.dbxtune.ssh.SshConnectionTester
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "mailtest" (
-	set JAVA_START_CLASS=com.asetune.test.MailTest
+	set JAVA_START_CLASS=com.dbxtune.test.MailTest
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
 ) ELSE IF "%APP_NAME%" == "mailtest2" (
-	set JAVA_START_CLASS=com.asetune.test.MailTest2
+	set JAVA_START_CLASS=com.dbxtune.test.MailTest2
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
-) ELSE IF "%APP_NAME:~0,11%" == "com.asetune" (
+) ELSE IF "%APP_NAME:~0,11%" == "com.dbxtune" (
 	set JAVA_START_CLASS=%APP_NAME%
 	set JAVA_START_PARAMS=
 	set SPLASH=
@@ -190,7 +190,7 @@ title "%APP_NAME%-console"
 
 rem ------------------------------------------------------------------------
 rem --- set DBXTUNE_HOME to current directory if NOT already set
-rem --- If STARTDIR ends with \bin\ remove that part... (c:\program\asetune\bin\ -->> c:\program\asetune\)
+rem --- If STARTDIR ends with \bin\ remove that part... (c:\program\dbxtune\bin\ -->> c:\program\dbxtune\)
 rem ------------------------------------------------------------------------
 IF "%DBXTUNE_HOME%"=="" (
 	set DBXTUNE_HOME=%STARTDIR%
@@ -203,7 +203,7 @@ rem --- IF "%SYBASE%"=="" set SYBASE=c:\sybase
 rem ------------------------------------------------------------------------
 rem --- Source environment
 rem ------------------------------------------------------------------------
-rem set DBXTUNE_USER_ENV_FILE=%systemdrive%%homepath%\.asetune\DBXTUNE.env.bat
+rem set DBXTUNE_USER_ENV_FILE=%systemdrive%%homepath%\.dbxtune\DBXTUNE.env.bat
 set DBXTUNE_USER_ENV_FILE=%systemdrive%%homepath%\.dbxtune\DBXTUNE.env.bat
 if exist "%DBXTUNE_USER_ENV_FILE%" (
 	echo .
@@ -327,7 +327,7 @@ rem --- set JVM_PARAMS=%JVM_PARAMS% -Xrunhprof:cpu=samples,depth=16
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dhttp.proxyHost=www-proxy.domain.com -Dhttp.proxyPort=8080
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Djava.net.useSystemProxies=true
 set JVM_PARAMS=-noverify
-rem set JVM_PARAMS=-noverify -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=delay=1s,duration=60s,name=AseTuneStartup,filename=C:\tmp\AseTuneStartup.jfr,settings=profile
+rem set JVM_PARAMS=-noverify -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=delay=1s,duration=60s,name=DbxTuneStartup,filename=C:\tmp\DbxTuneStartup.jfr,settings=profile
 rem set JVM_PARAMS=-noverify -XX:+UnlockCommercialFeatures -XX:+FlightRecorder
 
 set EXTRA=%NOGUI%
@@ -359,7 +359,7 @@ rem ------------------------------------------------------------------------
 rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
 set CLASSPATH=%DBXTUNE_HOME%\classes
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\asetune.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\dbxtune.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\dsparser.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\log4j-1.2.17.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-SNAPSHOT.jar
@@ -537,7 +537,7 @@ IF %JAVA_VERSION_MAJOR% GEQ 11 (
 rem ------------------------------------------------------------------------
 rem --- CHECK current Java Version
 rem ------------------------------------------------------------------------
-rem -- java com.asetune.utils.JavaVersion 7
+rem -- java com.dbxtune.utils.JavaVersion 7
 rem -- IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
 
 
@@ -545,7 +545,7 @@ rem -- IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
 rem ------------------------------------------------------------------------
 rem --- SET memory parameters, if 64 bit java: add more memory
 rem ------------------------------------------------------------------------
-java com.asetune.utils.JavaBitness
+java com.dbxtune.utils.JavaBitness
 set JavaBitness=%ERRORLEVEL%
 rem ---echo Java Bitness: %JavaBitness%
 

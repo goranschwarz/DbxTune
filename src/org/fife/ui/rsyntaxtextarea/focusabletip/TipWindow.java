@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------------------------------
  * NOTE: DELETE this file when the issue with: "to big window" is fixed in RSyntaxTextArea 
- *       This jar (asetune.jar) must be loaded before rsyntaxtextarea.jar in order to work
+ *       This jar (dbxtune.jar) must be loaded before rsyntaxtextarea.jar in order to work
  * ------------------------------------------------------------------------------------------------
  * 
  * 07/29/2009

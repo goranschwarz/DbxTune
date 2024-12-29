@@ -1,0 +1,150 @@
+###########################################################
+## Before final checkin:
+###########################################################
+
+-----------------------------------------------------------
+Version.java
+- versin str: BUILD_STRING
+- is dev ver: IS_DEVELOPMENT_VERSION
+- valid date: DEV_VERSION_EXPIRE_STR
+-             GIT_DATE_STRING           to a proper value
+-             GIT_REVISION_STR          to a higher value (used CheckForUpdates, emulates Subversion "Revision:" tag)
+
+
+-----------------------------------------------------------
+history.html
+- update DATE on the last "what has changed" comment
+
+-----------------------------------------------------------
+in Eclipse: (get rid of unnecessary import)
+- Organize Import: at the dbxtune level: Ctrl+Shift+o
+
+-----------------------------------------------------------
+Check that all files are ADDED to GIT:
+c:
+cd C:\projects\dbxtune
+git status
+
+-----------------------------------------------------------
+ANT BUILD
+set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
+ant
+cd dist\bin
+asetune.bat
+-- Check if everything is working
+cd ..\..
+ant clean
+
+-----------------------------------------------------------
+CHECK: README.md & README.txt etc files (so that they are "up to date"
+
+
+
+###########################################################
+## Checkin last code
+###########################################################
+CHECKIN
+- use turtoiseGIT in the explorer, or git:
+	c:
+	cd C:\projects\dbxtune
+	git commit -m "preparation for release"
+	git push 
+
+
+###########################################################
+## Subversion TAG the release
+###########################################################
+#svn copy https://svn.gorans.org/projects/asetune/trunk \
+# https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
+git tag -a "YYYY-MM-DD" -m "Tagging the release."
+git push --follow-tags
+
+
+###########################################################
+## MAKE DISTRIBUTION
+###########################################################
+c:
+cd c:\tmpgit
+- remove old release directory, if it's still there
+
+c:
+cd c:\tmpgit
+git clone https://github.com/goranschwarz/DbxTune release
+cd release
+
+set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
+ant
+cd dist\bin
+asetune.bat
+-- Check if everything is working
+cd ..\..
+
+## Push the version to my releases at: gorans.org 
+ant -Dpassword=theSecretPasswd push
+
+
+
+###########################################################
+## publish the new version
+###########################################################
+-----------------------------------------------------------
+Sourceforge
+
+- ftp history.html           (from: cd c:\tmpgit\release\src\com\dbxtune)
+- ftp dbxtune_YYYY-MM-DD.zip (from: cd c:\tmpgit\release)
+
+Also to 'gorans.org' just in case...
+- gorans.org/www/dbxtune/dbxtune_YYYY-MM-DD.zip
+- gorans.org/www/dbxtune/tmp/dbxtune_YYYY-MM-DD.zip
+
+-----------------------------------------------------------
+done at dbxtune.com
+
+ftp: history.html
+- ftp history.html
+
+update: download.html
+- set the new dbxtune_YYYY-MM-DD.zip in 2 places 
+
+update: check_for_update.php
+- source version string/id (notepad c:\tmpgit\release\src\com\dbxtune\Version.java :SOURCE_REV_STRING)
+	$ASETUNE_LATEST_VERSION_SRC = nnn;
+	$ASETUNE_LATEST_VERSION_STR = "x.y.z";
+	$ASETUNE_LATEST_VERSION_STR = "YYYY-MM-DD";
+	$DBXTUNE_LATEST_VERSION_SRC = nnn;
+	$DBXTUNE_LATEST_VERSION_STR = "x.y.z";
+	$DBXTUNE_LATEST_VERSION_STR = "YYYY-MM-DD";
+
+update: wsql_check_for_update.php
+	$SQLW_LATEST_VERSION_SRC = nnn;
+	$SQLW_LATEST_VERSION_STR = "x.y.z";
+	$SQLW_LATEST_VERSION_STR = "YYYY-MM-DD";
+
+- ftp/copy the files home again
+
+
+###########################################################
+## CLEANUP
+###########################################################
+c:
+cd c:\tmpgit
+- copy dbxtune_YYYY-MM-DD.zip to _prev_releases, and unzip it
+- start previous release and check that the "New Upgrade is Available" pop-up is displayed
+- remove the release and other created directories
+- or leave it until next release
+
+
+###########################################################
+## MAIL out that a new release is available
+###########################################################
+- copy *.php, *.html, etc files 
+        from: dbxtune.com
+          to: C:\projects\dbxtune\src\com\dbxtune\check\server
+- checkin "post release" files...
+
+###########################################################
+## MAIL out that a new release is available
+###########################################################
+- Maybe mail specific instructions to some users (special changes need to be done)
+
+

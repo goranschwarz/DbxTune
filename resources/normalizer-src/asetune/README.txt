@@ -13,11 +13,11 @@ Some extra information about this directory structure:
 - If you want to create User Defined Narmalizations: The best way to put them is in the "normalizer-src/xxxTune" directory
 - If your code has various Exceptions: A good place to store them is the "exceptions" directory
 
-Check the files in: resources\normalizer-src\asetune for example code:
+Check the files in: resources\normalizer-src\dbxtune for example code:
 - DummyNormalizer.java.EXAMPLE         - This creates a "static" normalization
 - DummyStatementFixer.java.EXAMPLE     - This rewrites a SQL Statement into some new SQL Code which can be handled by the Normalizer Parser
 
-You can also check some code examples here: https://github.com/goranschwarz/DbxTune/tree/master/src/com/asetune/sql/norm
+You can also check some code examples here: https://github.com/goranschwarz/DbxTune/tree/master/src/com/dbxtune/sql/norm
 
 Good luck and you have any feedback, please send them to: goran_schwarz@hotmail.com
 /Goran

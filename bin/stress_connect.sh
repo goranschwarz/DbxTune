@@ -6,7 +6,7 @@ scriptPath="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 shortAppName=stressconn
 longAppName=StressConnect
-javaMainClass=com.asetune.test.StressConnect
+javaMainClass=com.dbxtune.test.StressConnect
 javaSplashScreen=lib/stressconn_splash.jpg
 
 #----------------------------------
@@ -44,7 +44,7 @@ export DEBUG_OPTIONS=
 export SPLASH=-splash:${javaSplashScreen}
 
 export CLASSPATH=${APPL_HOME}/classes
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dbxtune.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn42.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
@@ -75,7 +75,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-2.3.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 
-export CLASSPATH=${CLASSPATH}:${HOME}/.asetune/jdbc_drivers/*
+export CLASSPATH=${CLASSPATH}:${HOME}/.dbxtune/jdbc_drivers/*
 export CLASSPATH=${CLASSPATH}:${EXTRA_JDBC_DRIVERS}
 
 
@@ -97,7 +97,7 @@ echo EXTRA_JDBC_DRIVERS=${EXTRA_JDBC_DRIVERS}
 #------------------------------------------------------------------------
 #--- CHECK current Java Version
 #------------------------------------------------------------------------
-java com.asetune.utils.JavaVersion 7
+java com.dbxtune.utils.JavaVersion 7
 if [ $? -ne 0 ]
 then
 	echo "-----------------------------------------------------------------------"
@@ -116,11 +116,11 @@ fi
 #--- SET memory parameters, if 64 bit java: add more memory
 #------------------------------------------------------------------------
 export JVM_MEMORY_PARAMS=${JVM_MEMORY_PARAMS_32}
-java com.asetune.utils.JavaBitness
+java com.dbxtune.utils.JavaBitness
 if [ $? -eq 64 ]
 then
 	export JVM_MEMORY_PARAMS=${JVM_MEMORY_PARAMS_64}
-	echo "NOTE: Java is a 64 bit, AseTune will be allowed to use more memory"
+	echo "NOTE: Java is a 64 bit, DbxTune will be allowed to use more memory"
 fi
 echo "JVM_MEMORY_PARAMS=${JVM_MEMORY_PARAMS}"
 

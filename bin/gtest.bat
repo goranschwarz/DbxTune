@@ -4,8 +4,8 @@ setlocal
 set title=gtest-console
 title %title%
 
-set MAIN_CLASS=com.asetune.tools.sqlw.QueryWindow
-set MAIN_CLASS=com.asetune.utils.JdbcDriverHelper
+set MAIN_CLASS=com.dbxtune.tools.sqlw.QueryWindow
+set MAIN_CLASS=com.dbxtune.utils.JdbcDriverHelper
 
 rem ------------------------------------------------------------------------
 rem --- set SQLW_HOME to current directory if NOT already set
@@ -85,7 +85,7 @@ rem --- if environment is not properly set, do something about it
 rem --- this might mean goto an exit point
 rem ------------------------------------------------------------------------
 rem IF NOT DEFINED SYBASE GOTO no_sybase
-IF NOT DEFINED SQLW_HOME GOTO no_asetunehome
+IF NOT DEFINED SQLW_HOME GOTO no_dbxtunehome
 rem IF NOT DEFINED JAVA_HOME GOTO no_javahome
 
 
@@ -94,7 +94,7 @@ rem ------------------------------------------------------------------------
 rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
 set classpath=%SQLW_HOME%\classes
-set classpath=%classpath%;%SQLW_HOME%\lib\asetune.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\dbxtune.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn42.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
@@ -151,7 +151,7 @@ java -version
 rem ------------------------------------------------------------------------
 rem --- CHECK current Java Version
 rem ------------------------------------------------------------------------
-java com.asetune.utils.JavaVersion 7
+java com.dbxtune.utils.JavaVersion 7
 IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
 
 
@@ -210,7 +210,7 @@ echo Mail to: goran_schwarz@hotmail.com
 echo Subject: SqlW starting problem
 echo -----------------------------------------------------------------------
 echo .
-goto exit_asetune
+goto exit_sqlw
 
 :no_sybase
 echo -----------------------------------------------------------------------

@@ -1,8 +1,8 @@
-package asetune;
+package dbxtune;
 
-import com.asetune.sql.norm.IStatementFixer;
-import com.asetune.sql.norm.IUserDefinedNormalizer;
-import com.asetune.utils.StringUtil;
+import com.dbxtune.sql.norm.IStatementFixer;
+import com.dbxtune.sql.norm.IUserDefinedNormalizer;
+import com.dbxtune.utils.StringUtil;
 
 public class DummyStatementFixer
 implements IStatementFixer

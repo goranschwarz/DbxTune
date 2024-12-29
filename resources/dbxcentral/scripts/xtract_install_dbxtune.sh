@@ -2,7 +2,7 @@
 
 inputParam=$1
 localZipFileName=""
-wgetBaseDir="http://gorans.org/www/asetune/tmp"
+wgetBaseDir="http://gorans.org/www/dbxtune/tmp"
 
 echo ""
 echo "##################################################################################"
@@ -17,7 +17,7 @@ echo "##"
 echo "##        3 - Specify a date you want to install: YYYY-MM-DD"
 echo "##            If no release with 'YYYY-MM-DD' exists, a list of available releses will be listed"
 echo "##"
-echo "##        4 - Specify a filename to install, something like: asetune_YYYY-MM-DD.zip"
+echo "##        4 - Specify a filename to install, something like: dbxtune_YYYY-MM-DD.zip"
 echo "##            If the file is NOT a ZIP file, we will exit"
 echo "##################################################################################"
 echo ""
@@ -50,7 +50,7 @@ else
 		echo ""
 		echo " - Below is a listing of the last 10 releases at '${wgetBaseDir}'."
 		echo "------------------------------------------------------------"
-		wget -q -O - ${wgetBaseDir} | sed -n 's/.*href="\([^"]*\).*/\1/p' | grep '.zip' | tail -10 | sed -e 's/asetune_//' -e 's/.zip//' | awk '{ printf "-- %s\n", $0}'
+		wget -q -O - ${wgetBaseDir} | sed -n 's/.*href="\([^"]*\).*/\1/p' | grep '.zip' | tail -10 | sed -e 's/dbxtune_//' -e 's/.zip//' | awk '{ printf "-- %s\n", $0}'
 		echo "------------------------------------------------------------"
 		echo ""
 		echo "Exiting..."
@@ -73,7 +73,7 @@ else
 	fi
 fi
 
-wgetFileName="asetune_${releaseDate}.zip"
+wgetFileName="dbxtune_${releaseDate}.zip"
 wgetFullFile="${wgetBaseDir}/${wgetFileName}"
 
 ## Check if the Remote file exists
@@ -95,7 +95,7 @@ then
 		echo " - The remote file '${wgetFullFile}' did NOT exists."
 		echo " - Below is a listing of the last 10 releases at '${wgetBaseDir}'."
 		echo "------------------------------------------------------------"
-		wget -q -O - ${wgetBaseDir} | sed -n 's/.*href="\([^"]*\).*/\1/p' | grep '.zip' | tail -10 | sed -e 's/asetune_//' -e 's/.zip//' | awk '{ printf "-- %s\n", $0}'
+		wget -q -O - ${wgetBaseDir} | sed -n 's/.*href="\([^"]*\).*/\1/p' | grep '.zip' | tail -10 | sed -e 's/dbxtune_//' -e 's/.zip//' | awk '{ printf "-- %s\n", $0}'
 		echo "------------------------------------------------------------"
 		echo ""
 		echo "Exiting..."

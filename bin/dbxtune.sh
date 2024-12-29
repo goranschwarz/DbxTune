@@ -69,7 +69,7 @@ case "${toolset}" in
 	ase)
 		shortAppName="asetune"
 		longAppName="AseTune"
-		javaMainClass="com.asetune.AseTune"
+		javaMainClass="com.dbxtune.AseTune"
 		javaMainParams=""
 		javaSplashScreen="lib/asetune_splash.jpg"
 		;;
@@ -77,7 +77,7 @@ case "${toolset}" in
 	iq)
 		shortAppName="iqtune"
 		longAppName="IqTune"
-		javaMainClass="com.asetune.IqTune"
+		javaMainClass="com.dbxtune.IqTune"
 		javaMainParams=""
 		javaSplashScreen="lib/iqtune_splash.jpg"
 		;;
@@ -85,7 +85,7 @@ case "${toolset}" in
 	rs)
 		shortAppName="rstune"
 		longAppName="RsTune"
-		javaMainClass="com.asetune.RsTune"
+		javaMainClass="com.dbxtune.RsTune"
 		javaMainParams=""
 		javaSplashScreen="lib/rstune_splash.jpg"
 		;;
@@ -93,7 +93,7 @@ case "${toolset}" in
 	rax)
 		shortAppName="raxtune"
 		longAppName="RaxTune"
-		javaMainClass="com.asetune.RaxTune"
+		javaMainClass="com.dbxtune.RaxTune"
 		javaMainParams=""
 		javaSplashScreen="lib/raxtune_splash.jpg"
 		;;
@@ -101,7 +101,7 @@ case "${toolset}" in
 	hana)
 		shortAppName="hanatune"
 		longAppName="HanaTune"
-		javaMainClass="com.asetune.HanaTune"
+		javaMainClass="com.dbxtune.HanaTune"
 		javaMainParams=""
 		javaSplashScreen="lib/hanatune_splash.jpg"
 		;;
@@ -109,7 +109,7 @@ case "${toolset}" in
 	sqlserver)
 		shortAppName="sqlservertune"
 		longAppName="SqlServerTune"
-		javaMainClass="com.asetune.SqlServerTune"
+		javaMainClass="com.dbxtune.SqlServerTune"
 		javaMainParams=""
 		javaSplashScreen="lib/sqlservertune_splash.jpg"
 		;;
@@ -117,7 +117,7 @@ case "${toolset}" in
 	oracle)
 		shortAppName="oracletune"
 		longAppName="OracleTune"
-		javaMainClass="com.asetune.OracleTune"
+		javaMainClass="com.dbxtune.OracleTune"
 		javaMainParams=""
 		javaSplashScreen="lib/oracletune_splash.jpg"
 		;;
@@ -125,7 +125,7 @@ case "${toolset}" in
 	postgres)
 		shortAppName="postgrestune"
 		longAppName="PostgresTune"
-		javaMainClass="com.asetune.PostgresTune"
+		javaMainClass="com.dbxtune.PostgresTune"
 		javaMainParams=""
 		javaSplashScreen="lib/postgrestune_splash.jpg"
 		;;
@@ -133,7 +133,7 @@ case "${toolset}" in
 	mysql)
 		shortAppName="mysqltune"
 		longAppName="MySqlTune"
-		javaMainClass="com.asetune.MySqlTune"
+		javaMainClass="com.dbxtune.MySqlTune"
 		javaMainParams=""
 		javaSplashScreen="lib/mysqltune_splash.jpg"
 		;;
@@ -141,7 +141,7 @@ case "${toolset}" in
 	db2)
 		shortAppName="db2tune"
 		longAppName="Db2Tune"
-		javaMainClass="com.asetune.Db2Tune"
+		javaMainClass="com.dbxtune.Db2Tune"
 		javaMainParams=""
 		javaSplashScreen="lib/db2tune_splash.jpg"
 		;;
@@ -149,7 +149,7 @@ case "${toolset}" in
 	sqlw)
 		shortAppName="sqlw"
 		longAppName="SqlW"
-		javaMainClass="com.asetune.tools.sqlw.QueryWindow"
+		javaMainClass="com.dbxtune.tools.sqlw.QueryWindow"
 		javaMainParams=""
 		javaSplashScreen="lib/sqlw_splash.jpg"
 		;;
@@ -157,7 +157,7 @@ case "${toolset}" in
 	tailw)
 		shortAppName="tailw"
 		longAppName="TailW"
-		javaMainClass="com.asetune.tools.tailw.LogTailWindow"
+		javaMainClass="com.dbxtune.tools.tailw.LogTailWindow"
 		javaMainParams=""
 		javaSplashScreen="lib/tailw_splash.jpg"
 		;;
@@ -165,7 +165,7 @@ case "${toolset}" in
 	central)
 		shortAppName="dbxtunecentral"
 		longAppName="DbxTuneCentral"
-		javaMainClass="com.asetune.central.DbxTuneCentral"
+		javaMainClass="com.dbxtune.central.DbxTuneCentral"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -173,7 +173,7 @@ case "${toolset}" in
 	dsr)
 		shortAppName="dsr"
 		longAppName="DailySummaryReport"
-		javaMainClass="com.asetune.pcs.report.DailySummaryReport"
+		javaMainClass="com.dbxtune.pcs.report.DailySummaryReport"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -181,7 +181,7 @@ case "${toolset}" in
 	h2fix)
 		shortAppName="h2fix"
 		longAppName="H2CentralDbCopy"
-		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy"
+		javaMainClass="com.dbxtune.central.pcs.H2CentralDbCopy"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -189,9 +189,9 @@ case "${toolset}" in
 	dbxcdbcopy)
 		shortAppName="dbxcdbcopy"
 		longAppName="DbxCentralDbCopy"
-#		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy"
-#		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy2"
-		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy3"
+#		javaMainClass="com.dbxtune.central.pcs.H2CentralDbCopy"
+#		javaMainClass="com.dbxtune.central.pcs.H2CentralDbCopy2"
+		javaMainClass="com.dbxtune.central.pcs.H2CentralDbCopy3"
 		javaMainParams=""
 		javaSplashScreen=""
 		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
@@ -200,7 +200,7 @@ case "${toolset}" in
 	dbxpassword|dbxPassword)
 		shortAppName="dbxPassword"
 		longAppName="dbxPassword"
-		javaMainClass="com.asetune.utils.DbxPassword"
+		javaMainClass="com.dbxtune.utils.DbxPassword"
 		javaMainParams=""
 		javaSplashScreen=""
 #		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
@@ -209,7 +209,7 @@ case "${toolset}" in
 	dbxpasswordupgrade|dbxPasswordUpgrade)
 		shortAppName="dbxPasswordUpgrade"
 		longAppName="dbxPasswordUpgrade"
-		javaMainClass="com.asetune.utils.DbxPasswordUpgrade"
+		javaMainClass="com.dbxtune.utils.DbxPasswordUpgrade"
 		javaMainParams=""
 		javaSplashScreen=""
 #		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
@@ -218,7 +218,7 @@ case "${toolset}" in
 	configutil|configUtil)
 		shortAppName="configUtil"
 		longAppName="configUtil"
-		javaMainClass="com.asetune.utils.Configuration"
+		javaMainClass="com.dbxtune.utils.Configuration"
 		javaMainParams=""
 		javaSplashScreen=""
 #		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
@@ -236,7 +236,7 @@ case "${toolset}" in
 	sshtest)
 		shortAppName="sshtest"
 		longAppName="SshTest"
-		javaMainClass="com.asetune.ssh.SshConnectionTester"
+		javaMainClass="com.dbxtune.ssh.SshConnectionTester"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -244,7 +244,7 @@ case "${toolset}" in
 	sshtest2)
 		shortAppName="sshtest2"
 		longAppName="SshTest2"
-		javaMainClass="com.asetune.test.JschTest2"
+		javaMainClass="com.dbxtune.test.JschTest2"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -252,7 +252,7 @@ case "${toolset}" in
 	mailtest)
 		shortAppName="mailtest"
 		longAppName="MailTest"
-		javaMainClass="com.asetune.test.MailTest"
+		javaMainClass="com.dbxtune.test.MailTest"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -260,13 +260,13 @@ case "${toolset}" in
 	mailtest2)
 		shortAppName="mailtest2"
 		longAppName="MailTest2"
-		javaMainClass="com.asetune.test.MailTest2"
+		javaMainClass="com.dbxtune.test.MailTest2"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
 
-	## If the parameter starts with "com.asetune." then: test "any" classname passed in
-	com.asetune.*)
+	## If the parameter starts with "com.dbxtune." then: test "any" classname passed in
+	com.dbxtune.*)
 		shortAppName="classtest"
 		longAppName="ClassTest"
 		javaMainClass="${toolset}"
@@ -393,7 +393,7 @@ export DEBUG_OPTIONS=
 export SPLASH=-splash:${javaSplashScreen}
 
 export CLASSPATH=${APPL_HOME}/classes
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dbxtune.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-SNAPSHOT.jar
@@ -581,7 +581,7 @@ fi
 #--- CHECK current Java Version
 #--- Below is problematic, since the package is already compiled with a "higher" java than is executed.
 #------------------------------------------------------------------------
-#java com.asetune.utils.JavaVersion 7
+#java com.dbxtune.utils.JavaVersion 7
 #if [ $? -ne 0 ]
 #then
 #	echo "-----------------------------------------------------------------------"
@@ -645,12 +645,12 @@ fi
 #------------------------------------------------------------------------
 export JVM_MEMORY_PARAMS=${JVM_MEMORY_PARAMS_32}
 export JVM_GC_PARAMS=${JVM_GC_PARAMS_32}
-java com.asetune.utils.JavaBitness
+java com.dbxtune.utils.JavaBitness
 if [ $? -eq 64 ]
 then
 	export JVM_MEMORY_PARAMS=${JVM_MEMORY_PARAMS_64}
 	export JVM_GC_PARAMS=${JVM_GC_PARAMS_64}
-	echo "NOTE: Java is a 64 bit, AseTune will be allowed to use more memory"
+	echo "NOTE: Java is a 64 bit, DbxTune will be allowed to use more memory"
 fi
 echo "JVM_MEMORY_PARAMS=${JVM_MEMORY_PARAMS}"
 echo "JVM_GC_PARAMS=${JVM_GC_PARAMS}"
