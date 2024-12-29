@@ -74,8 +74,8 @@ fi
 ##
 ## Check for ANY pids
 ##
-pidList=$(ps -efww | egrep 'com.asetune.*Tune ' | grep -v grep | awk '{printf "%s ", $2}')
-pidListCental=$(ps -efww | grep 'com.asetune.central.DbxTuneCentral' | grep -v grep | awk '{printf "%s ", $2}')
+pidList=$(ps -efww | egrep 'com.dbxtune.*Tune ' | grep -v grep | awk '{printf "%s ", $2}')
+pidListCental=$(ps -efww | grep 'com.dbxtune.central.DbxTuneCentral' | grep -v grep | awk '{printf "%s ", $2}')
 
 echo ""
 if [ -z "${pidList}" ] 
@@ -124,7 +124,7 @@ then
 					withAliasDesc=" with alias name '${srvNameOrAlias}'"
 				fi
 
-				if [[ ${params[j]} =~ com.asetune.*Tune ]]
+				if [[ ${params[j]} =~ com.dbxtune.*Tune ]]
 				then
 					appName=$(echo ${params[j]} | tr -d \' | cut -d. -f3)
 				fi
@@ -196,8 +196,8 @@ do
 	##
 	## Check if server is already running
 	##
-	cnt=$(ps -efww | grep java | egrep 'com.asetune.*Tune' | egrep "\-S[ ]?${escapedSrvName} " | wc -l)
-	pid=$(ps -efww | grep java | egrep 'com.asetune.*Tune' | egrep "\-S[ ]?${escapedSrvName} " | awk '{print $2}')
+	cnt=$(ps -efww | grep java | egrep 'com.dbxtune.*Tune' | egrep "\-S[ ]?${escapedSrvName} " | wc -l)
+	pid=$(ps -efww | grep java | egrep 'com.dbxtune.*Tune' | egrep "\-S[ ]?${escapedSrvName} " | awk '{print $2}')
 
 	## server is STARTED
 	if [ ${cnt} -gt 0 ]
@@ -226,7 +226,7 @@ do
 			fi
 
 
-			if [[ ${params[j]} =~ com.asetune.*Tune ]]
+			if [[ ${params[j]} =~ com.dbxtune.*Tune ]]
 			then
 				appName=$(echo ${params[j]} | tr -d \' | cut -d. -f3)
 			fi
@@ -297,7 +297,7 @@ then
 				srvName=$(echo ${params[j+1]} | tr -d \')
 			fi
 
-			if [[ ${params[j]} =~ com.asetune.*Tune ]]
+			if [[ ${params[j]} =~ com.dbxtune.*Tune ]]
 			then
 				appName=$(echo ${params[j]} | tr -d \' | cut -d. -f3)
 			fi

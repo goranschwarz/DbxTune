@@ -83,7 +83,7 @@ rem --- if environment is not properly set, do something about it
 rem --- this might mean goto an exit point
 rem ------------------------------------------------------------------------
 rem IF NOT DEFINED SYBASE GOTO no_sybase
-IF NOT DEFINED SQLW_HOME GOTO no_asetunehome
+IF NOT DEFINED SQLW_HOME GOTO no_sqlwhome
 rem IF NOT DEFINED JAVA_HOME GOTO no_javahome
 
 
@@ -92,7 +92,7 @@ rem ------------------------------------------------------------------------
 rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
 set classpath=%SQLW_HOME%\classes
-set classpath=%classpath%;%SQLW_HOME%\lib\asetune.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\dbxtune.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn42.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
@@ -132,7 +132,7 @@ rem set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser-4.5.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\antlr-4.0-complete.jar
 
-set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*
+set classpath=%classpath%;%USERPROFILE%\.dbxtune\jdbc_drivers\*
 set classpath=%classpath%;%EXTRA_JDBC_DRIVERS%
 
 rem --- echo %CLASSPATH%
@@ -156,7 +156,7 @@ java -version
 rem ------------------------------------------------------------------------
 rem --- CHECK current Java Version
 rem ------------------------------------------------------------------------
-java com.asetune.utils.JavaVersion 7
+java com.dbxtune.utils.JavaVersion 7
 IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
 
 
@@ -167,7 +167,7 @@ rem ------------------------------------------------------------------------
 cd %SQLW_HOME%
 REM echo %CLASSPATH%
 
-java  %JVM_PARAMS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.test.StressConnect %*
+java  %JVM_PARAMS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.dbxtune.test.StressConnect %*
 
 IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_sqlw
@@ -217,7 +217,7 @@ echo Mail to: goran_schwarz@hotmail.com
 echo Subject: SqlW starting problem
 echo -----------------------------------------------------------------------
 echo .
-goto exit_asetune
+goto exit_sqlw
 
 :no_sybase
 echo -----------------------------------------------------------------------

@@ -29,11 +29,11 @@ NOTE: This class is not supported when creating/editing Alarm Interrogators from
 
 Below is an exampele of the "generic" interrogator.
 #### BEGIN-Example #######################################################################
-package asetune;
+package dbxtune;
 
-import com.asetune.alarm.IUserDefinedAlarmInterrogator;
-import com.asetune.cm.CountersModel;
-import com.asetune.cm.CounterSample;
+import com.dbxtune.alarm.IUserDefinedAlarmInterrogator;
+import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.CounterSample;
 
 public class GenericFallbackAlarmInterrogator
 implements IUserDefinedAlarmInterrogator

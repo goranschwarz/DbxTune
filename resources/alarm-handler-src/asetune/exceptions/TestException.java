@@ -1,4 +1,4 @@
-package asetune.exceptions;
+package dbxtune.exceptions;
 
 public class TestException
 extends Exception

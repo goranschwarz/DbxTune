@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+
+<!-- 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+- This file contains Filter information for the LogTailWindow 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+- Note: if this is stored in the $HOME/.dbxtune/LogFileFilters.xml
+        The information might be overwritten when new releases are installed.
+        So it might be a GOOD idea to have a backup copy of the file.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+-->
+
+<LogFileFilters>
+	<FilterGroup name="RepServer">
+		<Filter>
+			<name>Discard IGNORE or WARN</name>
+			<regExp>returns messages that are mapped to IGNORE or WARN by error action mapping. See logged data server messages for more information.</regExp>
+			<action>Discard</action>
+			<fgColor>none</fgColor>
+			<bgColor>none</bgColor>
+		</Filter>
+
+		<Filter>
+			<name>Discard stored procedure and trigger recompile</name>
+			<regExp>Message from server: Message: 0, State 1, Severity 10 -- 'Each stored procedure and trigger that uses table</regExp>
+			<action>Discard</action>
+			<fgColor>none</fgColor>
+			<bgColor>none</bgColor>
+		</Filter>
+
+		<Filter>
+			<name>Error</name>
+			<regExp>^H. </regExp>
+			<action>Allow</action>
+			<icon>ERROR</icon>
+		</Filter>
+
+		<Filter>
+			<name>Error</name>
+			<regExp>^E. </regExp>
+			<action>Allow</action>
+			<icon>ERROR</icon>
+		</Filter>
+
+		<Filter>
+			<name>Warning</name>
+			<regExp>^W. </regExp>
+			<action>Allow</action>
+			<icon>WARNING</icon>
+		</Filter>
+
+	</FilterGroup>
+	
+</LogFileFilters>

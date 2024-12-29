@@ -9,8 +9,8 @@ then
 fi
 
 
-pidList=$(ps -efww | egrep 'com.asetune.*Tune ' | grep -v grep | awk '{printf "%s ", $2}')
-pidListCental=$(ps -efww | grep 'com.asetune.central.DbxTuneCentral' | grep -v grep | awk '{printf "%s ", $2}')
+pidList=$(ps -efww | egrep 'com.dbxtune.*Tune ' | grep -v grep | awk '{printf "%s ", $2}')
+pidListCental=$(ps -efww | grep 'com.dbxtune.central.DbxTuneCentral' | grep -v grep | awk '{printf "%s ", $2}')
 
 if [ -z "${pidList}" ]
 then

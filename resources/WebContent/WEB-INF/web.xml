@@ -12,168 +12,168 @@
 
 	<servlet>
 		<servlet-name>AdminServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.AdminServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.AdminServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>AlarmLogServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.AlarmLogServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.AlarmLogServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>AlarmActiveController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.AlarmActiveController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.AlarmActiveController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>AlarmFormatterController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.AlarmFormatterController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.AlarmFormatterController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>AlarmHistoryController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.AlarmHistoryController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.AlarmHistoryController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>CollectorRefreshController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.CollectorRefreshController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.CollectorRefreshController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>LastSampleForCmController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.LastSampleForCmController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.LastSampleForCmController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>HistorySampleForCmController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.HistorySampleForCmController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.HistorySampleForCmController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>HistoryActiveSamplesForCmController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.HistoryActiveSamplesForCmController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.HistoryActiveSamplesForCmController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DbxTuneLogServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DbxTuneLogServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DbxTuneLogServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DbxTuneLogTailWebSocketServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DbxTuneLogTailWebSocketServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DbxTuneConfServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DbxTuneConfServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DbxTuneConfServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DbxTuneReportsServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DbxTuneReportsServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DbxTuneReportsServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DailySummartReportServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DailySummartReportServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DailySummartReportServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DsrSkipEntriesController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DsrSkipEntriesController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DsrSkipEntriesController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DownloadServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DownloadServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DownloadServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DownloadRecordingServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DownloadRecordingServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DownloadRecordingServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>DummyServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.DummyServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.DummyServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>OverviewServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.OverviewServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.OverviewServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>PcsReceiver</servlet-name>
-		<servlet-class>com.asetune.central.controllers.CentralPcsReceiverController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.CentralPcsReceiverController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>PcsQueueInfo</servlet-name>
-		<servlet-class>com.asetune.central.controllers.PcsQueueInfoController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.PcsQueueInfoController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>ShutdownServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ShutdownServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.ShutdownServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>LogoutServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.LogoutServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.LogoutServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>LoginCheckServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.LoginCheckServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.LoginCheckServlet</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>ChartBroadcastServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ChartBroadcastServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.ChartBroadcastServlet</servlet-class>
 		<async-supported>true</async-supported>
 	</servlet>
 
 	<servlet>
 		<servlet-name>ServerLayoutController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ServerLayoutController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.ServerLayoutController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>SessionsController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.SessionsController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.SessionsController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>GraphPropertiesController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.GraphPropertiesController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.GraphPropertiesController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>GraphProfilesController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.GraphProfilesController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.GraphProfilesController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>GraphDescriptionController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.GraphDescriptionController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.GraphDescriptionController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>GraphDataController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.GraphDataController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.GraphDataController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>HealthCheckController</servlet-name>
-		<servlet-class>com.asetune.central.controllers.HealthCheckController</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.HealthCheckController</servlet-class>
 	</servlet>
 
 	<servlet>
 		<servlet-name>ChartBroadcastWebSocketServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ChartBroadcastWebSocketServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.ChartBroadcastWebSocketServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ChartBroadcastWebSocketServlet</servlet-name>
@@ -183,7 +183,7 @@
 
 	<servlet>
 		<servlet-name>H2WriterStatServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.H2WriterStatServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.H2WriterStatServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>H2WriterStatServlet</servlet-name>
@@ -192,13 +192,13 @@
 
 	<servlet>
 		<servlet-name>UserDefinedContentServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.UserDefinedContentServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.UserDefinedContentServlet</servlet-class>
 	</servlet>
 
 
 	<servlet>
 		<servlet-name>ShowplanPostgresServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ShowplanPostgresServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.ShowplanPostgresServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ShowplanPostgresServlet</servlet-name>
@@ -208,7 +208,7 @@
 
 	<servlet>
 		<servlet-name>ShowplanSqlServerServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ShowplanSqlServerServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.ShowplanSqlServerServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ShowplanSqlServerServlet</servlet-name>
@@ -219,7 +219,7 @@
 <!--
 	<servlet>
 		<servlet-name>MgtProxyServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.ccmgt.MgtProxyServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.ccmgt.MgtProxyServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>MgtProxyServlet</servlet-name>
@@ -229,7 +229,7 @@
 	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ProxyConfigGetServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.cc.mgt.ProxyConfigGetServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyConfigGetServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ProxyConfigGetServlet</servlet-name>
@@ -239,7 +239,7 @@
 	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ProxyConfigSetServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.cc.mgt.ProxyConfigSetServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyConfigSetServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ProxyConfigSetServlet</servlet-name>
@@ -249,7 +249,7 @@
 	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ProxyReportsServlet</servlet-name>
-		<servlet-class>com.asetune.central.controllers.cc.report.ProxyReportsServlet</servlet-class>
+		<servlet-class>com.dbxtune.central.controllers.cc.report.ProxyReportsServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ProxyReportsServlet</servlet-name>

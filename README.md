@@ -22,7 +22,7 @@ So: DbxTune is a collection of programs to **Tune**/Monitor various DBMS dialect
 The project started out as AseMon, which later was renamed to AseTune.  
 ASE due to the fact that the tool only could talk to Sybase/SAP Adaptive Server Enterprise   
 Then I decided to extend the tool to embrace other DBMS types as well!  
-Hence the recent change to DbxTune
+Hence the change to DbxTune
 
 
 ## How the DbxTune Tools family works
@@ -255,7 +255,7 @@ Small utility to execute load in a ASE
 This utility is mainly used by me when doing demos of AseTune...  
 If you want to use it, you need to install some server side objects.  
 
-- Unzip `lib/asetune.jar` and go to directory `src/com/asetune/perftest/sql`
+- Unzip `lib/dbxtune.jar` and go to directory `src/com/dbxtune/perftest/sql`
 - Look at the `README.txt` in above directory
 - if you have problems, please send me an email at: goran_schwarz@hotmail.com
 

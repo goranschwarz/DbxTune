@@ -16,7 +16,7 @@ fi
 ##----------------------------------------------
 sleepTime=3
 dbxCentralBase=${DBXTUNE_CENTRAL_BASE:-${HOME}/.dbxtune/dbxc}
-export SYBASE=${SYBASE:-/home/sybase/.asetune}
+export SYBASE=${SYBASE:-${HOME}/.dbxtune}
 
 
 ##----------------------------------------------
@@ -161,7 +161,7 @@ do
 	##
 	## Check if server is already running
 	##
-	cnt=$(ps -efww | grep java | egrep 'com.asetune.*Tune' | egrep "\-S[ ]?${escapedSrvName} " | wc -l)
+	cnt=$(ps -efww | grep java | egrep 'com.dbxtune.*Tune' | egrep "\-S[ ]?${escapedSrvName} " | wc -l)
 	if [ ${cnt} -gt 0 ]
 	then
 		echo ""
