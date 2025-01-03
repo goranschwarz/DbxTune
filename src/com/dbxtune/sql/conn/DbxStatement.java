@@ -20,17 +20,20 @@
  ******************************************************************************/
 package com.dbxtune.sql.conn;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class DbxStatement implements Statement
 {
-	private static Logger _logger = Logger.getLogger(DbxStatement.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static DbxStatement create(Statement stmnt)
 	{

@@ -65,7 +65,6 @@ extends WizardPage
 implements ActionListener, TableModelListener
 {
 	private static final long serialVersionUID = 1L;
-//	private static Logger _logger          = Logger.getLogger(WizardUserDefinedCmPage3.class);
 
 	private static final String WIZ_NAME = "PKCols";
 	private static final String WIZ_DESC = "Primary Key Columns";
@@ -221,9 +220,9 @@ implements ActionListener, TableModelListener
 					if (col != null)
 					{
 						row = new Vector<Object>();
-						row.add(new Boolean( false )); // TAB_POS_CHECK
+						row.add(Boolean.valueOf( false )); // TAB_POS_CHECK
 						row.add(col);                  // TAB_POS_COL_NAME
-						row.add(new Integer( r ));     // TAB_POS_COL_NUM
+						row.add(Integer.valueOf( r ));     // TAB_POS_COL_NUM
 
 						tm.addRow(row);
 					}
@@ -238,7 +237,7 @@ implements ActionListener, TableModelListener
 				String colName  = (String) tm.getValueAt(r, TAB_POS_COL_NAME);
 				boolean colIsPk = (pkStr.indexOf(colName+", ") != -1);
 
-				tm.setValueAt(new Boolean(colIsPk), r, TAB_POS_CHECK);
+				tm.setValueAt(Boolean.valueOf(colIsPk), r, TAB_POS_CHECK);
 			}
 
 		}
@@ -268,7 +267,7 @@ implements ActionListener, TableModelListener
 				{
 					String colName  = (String) tm.getValueAt(r, TAB_POS_COL_NAME);
 					if (pklist.contains(colName))
-						tm.setValueAt(new Boolean(true), r, TAB_POS_CHECK);
+						tm.setValueAt(Boolean.valueOf(true), r, TAB_POS_CHECK);
 				}
 			}
 		}
@@ -342,7 +341,7 @@ implements ActionListener, TableModelListener
 			TableModel tm = _table.getModel();
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
-				tm.setValueAt(new Boolean(true), r, TAB_POS_CHECK);
+				tm.setValueAt(Boolean.valueOf(true), r, TAB_POS_CHECK);
 			}
 		}
 
@@ -351,7 +350,7 @@ implements ActionListener, TableModelListener
 			TableModel tm = _table.getModel();
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
-				tm.setValueAt(new Boolean(false), r, TAB_POS_CHECK);
+				tm.setValueAt(Boolean.valueOf(false), r, TAB_POS_CHECK);
 			}
 		}
 	}

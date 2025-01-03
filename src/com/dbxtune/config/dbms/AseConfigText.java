@@ -23,6 +23,7 @@ package com.dbxtune.config.dbms;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -33,7 +34,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.config.dbms.DbmsConfigIssue.Severity;
 import com.dbxtune.config.dict.AseTraceFlagsDictionary;
@@ -71,7 +73,7 @@ public abstract class AseConfigText
 		};
 
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	/** Instance variable */
 //	private static Map<ConfigType, AseConfigText> _instances = new HashMap<ConfigType, AseConfigText>();
@@ -1434,17 +1436,8 @@ public abstract class AseConfigText
 	*/
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//
 //		Configuration conf2 = new Configuration("c:\\projects\\dbxtune\\dbxtune.properties");
 //		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
-//
 //
 //		// DO THE THING
 //		try

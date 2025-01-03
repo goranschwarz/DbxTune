@@ -23,8 +23,8 @@ package com.dbxtune.cm.ase;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.ACopyMePanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -39,7 +39,6 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class ACopyMe
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(ACopyMe.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = ACopyMe.class.getSimpleName();

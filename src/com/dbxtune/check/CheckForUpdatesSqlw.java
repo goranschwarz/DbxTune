@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.check;
 
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Date;
@@ -27,7 +28,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.gui.ConnectionDialog;
@@ -39,7 +41,7 @@ import com.dbxtune.utils.TimeUtils;
 
 public class CheckForUpdatesSqlw extends CheckForUpdates
 {
-	private static Logger _logger = Logger.getLogger(CheckForUpdatesSqlw.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override protected String getHomeUrl()            { return SQLWIN_HOME_URL; };
 	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }

@@ -25,6 +25,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -41,7 +42,8 @@ import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -70,8 +72,8 @@ import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.tools.AseAppTraceDialog;
 import com.dbxtune.tools.AseStackTraceAnalyzer;
-import com.dbxtune.tools.WindowType;
 import com.dbxtune.tools.AseStackTraceAnalyzer.AseStackTreeView;
+import com.dbxtune.tools.WindowType;
 import com.dbxtune.tools.sqlcapture.ProcessDetailFrame;
 import com.dbxtune.tools.sqlcapture.SqlCaptureOfflineView;
 import com.dbxtune.tools.sqlw.QueryWindow;
@@ -86,7 +88,7 @@ public class MainFrameAse
 extends MainFrame
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(MainFrameAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private SqlCaptureOfflineView _sqlCaptureOfflineView = null;
 

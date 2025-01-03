@@ -20,11 +20,13 @@
  ******************************************************************************/
 package com.dbxtune.gui;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.treetable.AbstractTreeTableModel;
 
 import com.dbxtune.pcs.DdlDetails;
@@ -32,7 +34,7 @@ import com.dbxtune.pcs.DdlDetails;
 public class DdlViewerModel
 extends AbstractTreeTableModel
 {
-	private static Logger _logger = Logger.getLogger(OfflineSessionModel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 //	private ArrayList<DbEntry> _dblist = new ArrayList<DbEntry>();
 	private DbList _dblist = new DbList();

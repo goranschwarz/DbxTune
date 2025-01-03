@@ -23,11 +23,13 @@ package com.dbxtune.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -42,7 +44,7 @@ public class DbmsVersionPanelSqlServer
 extends DbmsVersionPanelAbstract
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(DbmsVersionPanelSqlServer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public DbmsVersionPanelSqlServer(ShowCmPropertiesDialog propDialog)
 	{

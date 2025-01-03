@@ -21,6 +21,7 @@
 package com.dbxtune.tools.sqlw;
 
 import java.awt.Component;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.SqlProgressDialog;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -47,7 +49,7 @@ import com.dbxtune.utils.StringUtil;
 public class SqlStatementCmdSet 
 extends SqlStatementAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlStatementCmdSet.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_PREFIX = "SQLWindow.variable.";
 	

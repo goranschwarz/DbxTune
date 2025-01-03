@@ -40,7 +40,7 @@ import java.util.logging.Logger;
 
 //import org.apache.commons.io.FilenameUtils;
 //import org.apache.commons.lang3.StringUtils;
-//import org.apache.log4j.Logger;
+
 
 //import com.dbxtune.Version;
 //import com.dbxtune.alarm.AlarmHandler;
@@ -74,7 +74,8 @@ import java.util.logging.Logger;
  */
 public class H2WriterStat
 {
-//	private static Logger _logger = Logger.getLogger(H2WriterStat.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+	// NOTE: This is JUL -- Don't know WHY I use that here... (but leave it for now, and fix later if desired)
 	private static Logger _logger = Logger.getLogger("H2WriterStat");
 
 	// implements singleton pattern
@@ -731,7 +732,7 @@ public class H2WriterStat
 			val = _lastDiff.get(key);
 		
 		if (val == null)
-			val = new Long(0);
+			val = Long.valueOf(0);
 
 		return val;
 	}
@@ -744,7 +745,7 @@ public class H2WriterStat
 			val = _lastAbs.get(key);
 		
 		if (val == null)
-			val = new Long(0);
+			val = Long.valueOf(0);
 
 		return val;
 	}
@@ -862,30 +863,30 @@ public class H2WriterStat
 //
 //						String defVal = "-1";
 //						
-//						se.OsLoadAvgAdj_1m      = new Double(OsLoadAvgAdj.getOrDefault("1m", defVal));
-//						se.OsLoadAvgAdj_5m      = new Double(OsLoadAvgAdj.getOrDefault("5m", defVal));
-//						se.OsLoadAvgAdj_15m     = new Double(OsLoadAvgAdj.getOrDefault("15m", defVal));
-//						se.OsLoadAvgAdj_30m     = new Double(OsLoadAvgAdj.getOrDefault("30m", defVal));
-//						se.OsLoadAvgAdj_60m     = new Double(OsLoadAvgAdj.getOrDefault("60m", defVal));
+//						se.OsLoadAvgAdj_1m      = Double.valueOf(OsLoadAvgAdj.getOrDefault("1m", defVal));
+//						se.OsLoadAvgAdj_5m      = Double.valueOf(OsLoadAvgAdj.getOrDefault("5m", defVal));
+//						se.OsLoadAvgAdj_15m     = Double.valueOf(OsLoadAvgAdj.getOrDefault("15m", defVal));
+//						se.OsLoadAvgAdj_30m     = Double.valueOf(OsLoadAvgAdj.getOrDefault("30m", defVal));
+//						se.OsLoadAvgAdj_60m     = Double.valueOf(OsLoadAvgAdj.getOrDefault("60m", defVal));
 //
-//						se.FILE_READ_abs        = new Integer(FILE_READ.getOrDefault("abs", defVal));
-//						se.FILE_READ_diff       = new Integer(FILE_READ.getOrDefault("diff", defVal));
+//						se.FILE_READ_abs        = Integer.valueOf(FILE_READ.getOrDefault("abs", defVal));
+//						se.FILE_READ_diff       = Integer.valueOf(FILE_READ.getOrDefault("diff", defVal));
 //						se.FILE_READ_rate       = new Double (FILE_READ.getOrDefault("rate", defVal));
 //
-//						se.FILE_WRITE_abs       = new Integer(FILE_WRITE.getOrDefault("abs", defVal));
-//						se.FILE_WRITE_diff      = new Integer(FILE_WRITE.getOrDefault("diff", defVal));
+//						se.FILE_WRITE_abs       = Integer.valueOf(FILE_WRITE.getOrDefault("abs", defVal));
+//						se.FILE_WRITE_diff      = Integer.valueOf(FILE_WRITE.getOrDefault("diff", defVal));
 //						se.FILE_WRITE_rate      = new Double (FILE_WRITE.getOrDefault("rate", defVal));
 //
-//						se.PAGE_COUNT_abs       = new Integer(PAGE_COUNT.getOrDefault("abs", defVal));
-//						se.PAGE_COUNT_diff      = new Integer(PAGE_COUNT.getOrDefault("diff", defVal));
+//						se.PAGE_COUNT_abs       = Integer.valueOf(PAGE_COUNT.getOrDefault("abs", defVal));
+//						se.PAGE_COUNT_diff      = Integer.valueOf(PAGE_COUNT.getOrDefault("diff", defVal));
 //						se.PAGE_COUNT_rate      = new Double (PAGE_COUNT.getOrDefault("rate", defVal));
 //
-//						se.H2_FILE_SIZE_KB_abs  = new Integer(H2_FILE_SIZE_KB.getOrDefault("abs", defVal));
-//						se.H2_FILE_SIZE_KB_diff = new Integer(H2_FILE_SIZE_KB.getOrDefault("diff", defVal));
+//						se.H2_FILE_SIZE_KB_abs  = Integer.valueOf(H2_FILE_SIZE_KB.getOrDefault("abs", defVal));
+//						se.H2_FILE_SIZE_KB_diff = Integer.valueOf(H2_FILE_SIZE_KB.getOrDefault("diff", defVal));
 //						se.H2_FILE_SIZE_KB_rate = new Double (H2_FILE_SIZE_KB.getOrDefault("rate", defVal));
 //
-//						se.H2_FILE_SIZE_MB_abs  = new Integer(H2_FILE_SIZE_MB.getOrDefault("abs", defVal));
-//						se.H2_FILE_SIZE_MB_diff = new Integer(H2_FILE_SIZE_MB.getOrDefault("diff", defVal));
+//						se.H2_FILE_SIZE_MB_abs  = Integer.valueOf(H2_FILE_SIZE_MB.getOrDefault("abs", defVal));
+//						se.H2_FILE_SIZE_MB_diff = Integer.valueOf(H2_FILE_SIZE_MB.getOrDefault("diff", defVal));
 //						se.H2_FILE_SIZE_MB_rate = new Double (H2_FILE_SIZE_MB.getOrDefault("rate", defVal));
 //
 //						se.H2_FILE_NAME = H2_FILE_NAME;

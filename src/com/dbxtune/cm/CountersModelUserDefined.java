@@ -24,10 +24,12 @@
  */
 package com.dbxtune.cm;
 
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -41,7 +43,7 @@ public class CountersModelUserDefined
     private static final long serialVersionUID = 505823624208175944L;
 
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(CountersModelUserDefined.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** a Map<Integer, String> that holds a Version and a specific SQL statement */
 	private Map<Integer,String> _sqlVerStr = null;
@@ -115,7 +117,7 @@ public class CountersModelUserDefined
 //			{
 //				_logger.info("Initializing User Defined Counter '"+getName()+"' with sql using version number '"+sqlVersionHigh+"'.");
 //	
-//				String val = (String) _sqlVerStr.get( new Integer(sqlVersionHigh) );
+//				String val = (String) _sqlVerStr.get( Integer.valueOf(sqlVersionHigh) );
 //				return val;
 //			}
 //		}
@@ -157,7 +159,7 @@ public class CountersModelUserDefined
 			{
 				_logger.info("Initializing User Defined Counter '"+getName()+"' with sql using version number '"+sqlVersionHigh+"'.");
 	
-				String val = (String) _sqlVerStr.get( new Integer(sqlVersionHigh) );
+				String val = (String) _sqlVerStr.get( Integer.valueOf(sqlVersionHigh) );
 				return val;
 			}
 		}

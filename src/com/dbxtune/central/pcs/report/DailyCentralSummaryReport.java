@@ -21,10 +21,12 @@
  ******************************************************************************/
 package com.dbxtune.central.pcs.report;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.report.DailySummaryReportFactory;
 import com.dbxtune.pcs.report.IDailySummaryReport;
@@ -33,7 +35,7 @@ import com.dbxtune.utils.Configuration;
 
 public class DailyCentralSummaryReport
 {
-	private static Logger _logger = Logger.getLogger(DailyCentralSummaryReport.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	//---------------------------------------------
 	// NOTE -- NOTE -- NOTE -- NOTE -- NOTE -- NOTE --

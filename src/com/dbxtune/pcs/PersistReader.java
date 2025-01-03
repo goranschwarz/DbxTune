@@ -25,6 +25,7 @@
 package com.dbxtune.pcs;
 
 import java.awt.Component;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -50,15 +51,16 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.EventListenerList;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.cm.ase.BackwardNameCompatibility;
-import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
 import com.dbxtune.config.dict.MonTablesDictionary.MonTableEntry;
+import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -74,7 +76,7 @@ import com.dbxtune.utils.TimeUtils;
 public class PersistReader
 implements Runnable, ConnectionProvider
 {
-	private static Logger _logger = Logger.getLogger(PersistReader.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final String CMD_loadTimelineSlider      = "loadTimelineSlider";
 	private static final String CMD_loadSessionGraphs       = "loadSessionGraphs";
@@ -1540,7 +1542,7 @@ implements Runnable, ConnectionProvider
 				for (int c=4, ca=0; c<=cols; c+=2, ca++)
 				{
 					labels[ca] = rs.getString(c);
-					datapt[ca] = new Double(rs.getDouble(c+1));					
+					datapt[ca] = Double.valueOf(rs.getDouble(c+1));
 				}
 				// Add a extra record at the BEGINING of the traces... using 0 data values
 				if (firstRow)
@@ -1548,7 +1550,7 @@ implements Runnable, ConnectionProvider
 					firstRow = false;
 					Double[] firstDatapt = new Double[datapt.length];
 					for (int d=0; d<firstDatapt.length; d++)
-						firstDatapt[d] = new Double(0);
+						firstDatapt[d] = Double.valueOf(0);
 
 					tg.addPoint(new Timestamp(sessionSampleTime.getTime()-10),  // - 10 millisec
 							firstDatapt, 
@@ -1575,7 +1577,7 @@ implements Runnable, ConnectionProvider
 			{
 				Double[] lastDatapt = new Double[datapt.length];
 				for (int d=0; d<lastDatapt.length; d++)
-					lastDatapt[d] = new Double(0);
+					lastDatapt[d] = Double.valueOf(0);
 				tg.addPoint(new Timestamp(sessionSampleTime.getTime()+10), // + 10 millisec
 						lastDatapt, 
 						labels, null, startTime, endTime);
@@ -1675,7 +1677,7 @@ implements Runnable, ConnectionProvider
 				for (int c=4, ca=0; c<=cols; c++, ca++)
 				{
 					labels[ca] = rsmd.getColumnLabel(c);
-					datapt[ca] = new Double(rs.getDouble(c));
+					datapt[ca] = Double.valueOf(rs.getDouble(c));
 				}
 				// Add a extra record at the BEGINING of the traces... using 0 data values
 				if (firstRow)
@@ -1683,7 +1685,7 @@ implements Runnable, ConnectionProvider
 					firstRow = false;
 					Double[] firstDatapt = new Double[datapt.length];
 					for (int d=0; d<firstDatapt.length; d++)
-						firstDatapt[d] = new Double(0);
+						firstDatapt[d] = Double.valueOf(0);
 
 					tg.addPoint(new Timestamp(sessionSampleTime.getTime()-10),  // - 10 millisec
 							firstDatapt, 
@@ -1710,7 +1712,7 @@ implements Runnable, ConnectionProvider
 			{
 				Double[] lastDatapt = new Double[datapt.length];
 				for (int d=0; d<lastDatapt.length; d++)
-					lastDatapt[d] = new Double(0);
+					lastDatapt[d] = Double.valueOf(0);
 				tg.addPoint(new Timestamp(sessionSampleTime.getTime()+10), // + 10 millisec
 						lastDatapt, 
 						labels, null, startTime, endTime);

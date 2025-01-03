@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,18 +28,19 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
-import com.dbxtune.IGuiController;
 import com.dbxtune.ICounterController.DbmsOption;
+import com.dbxtune.IGuiController;
 import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCache.ObjectInfo;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmWaitingTasksPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -57,7 +59,7 @@ import com.dbxtune.utils.StringUtil;
 public class CmWaitingTasks
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmWaitingTasks.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmWaitingTasks.class.getSimpleName();
@@ -557,7 +559,7 @@ extends CountersModel
 			Double[] arr = new Double[1];
 
 //System.out.println("graphName='"+graphName+"'. rowCount="+this.getCounterDataAbs().getRowCount());
-			arr[0] = new Double( this.getCounterDataAbs().getRowCount() );
+			arr[0] = Double.valueOf( this.getCounterDataAbs().getRowCount() );
 			
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

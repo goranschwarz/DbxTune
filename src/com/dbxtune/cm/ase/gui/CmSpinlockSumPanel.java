@@ -30,14 +30,12 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.CmSpinlockSum;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
 public class CmSpinlockSumPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmSpinlockSumPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSpinlockSum.CM_NAME;

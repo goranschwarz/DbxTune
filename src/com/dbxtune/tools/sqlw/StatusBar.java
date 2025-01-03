@@ -22,6 +22,7 @@ package com.dbxtune.tools.sqlw;
 
 import java.awt.Window;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 
 import javax.swing.JLabel;
@@ -29,7 +30,8 @@ import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.swing.GLabel;
 import com.dbxtune.gui.swing.GMemoryIndicator;
@@ -45,7 +47,7 @@ import net.miginfocom.swing.MigLayout;
 public class StatusBar extends JPanel
 {
 	private static final long	serialVersionUID	= 1L;
-	private static Logger _logger = Logger.getLogger(StatusBar.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static String NOT_CONNECTED = "Not Connected";
 

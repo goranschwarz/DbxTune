@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -31,7 +32,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.gui.ResultSetTableModel;
@@ -46,7 +48,7 @@ import com.dbxtune.utils.TimeUtils;
 public class RecordingInfo
 extends ReportEntryAbstract
 {
-	private static Logger _logger = Logger.getLogger(RecordingInfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private Timestamp _startTimeTs = null;
 	private Timestamp _endTimeTs   = null;

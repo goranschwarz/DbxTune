@@ -23,11 +23,13 @@ package com.dbxtune.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
@@ -40,7 +42,7 @@ public class DbmsVersionPanelOracle
 extends DbmsVersionPanelAbstract
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(DbmsVersionPanelOracle.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected JCheckBox _versionIsRac_chk = new JCheckBox("RAC", false);
 

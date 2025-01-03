@@ -27,6 +27,7 @@ import java.awt.event.FocusListener;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 
 import javax.swing.JButton;
@@ -36,7 +37,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -51,7 +53,7 @@ import net.miginfocom.swing.MigLayout;
 public class SqlSentryPlanExplorer
 extends XmenuActionBase 
 {
-	private static Logger _logger = Logger.getLogger(SqlSentryPlanExplorer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private DbxConnection _conn = null;
 //	private String     _planHandle = null;
 //	private boolean    _closeConnOnExit;

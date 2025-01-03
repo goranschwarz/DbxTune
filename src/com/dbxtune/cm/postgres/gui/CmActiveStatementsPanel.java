@@ -45,7 +45,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmActiveStatementsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgActivityPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public CmActiveStatementsPanel(CountersModel cm)

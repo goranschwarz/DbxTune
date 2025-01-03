@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -35,7 +36,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ModelMissmatchException;
 import com.dbxtune.gui.ResultSetTableModel;
@@ -52,7 +54,7 @@ import com.dbxtune.utils.StringUtil;
 public abstract class SqlServerAbstract
 extends ReportEntryAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public SqlServerAbstract(DailySummaryReportAbstract reportingInstance)
 	{

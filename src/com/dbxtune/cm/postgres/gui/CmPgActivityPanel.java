@@ -44,7 +44,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmPgActivityPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgActivityPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	private static final Color WORKER_PARENT    = new Color(229, 194, 149); // DARK Beige 

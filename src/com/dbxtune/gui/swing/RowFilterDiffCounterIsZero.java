@@ -20,11 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.gui.swing;
 
+import java.lang.invoke.MethodHandles;
+
 import javax.swing.JTable;
 import javax.swing.RowFilter;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 /**
  * Filter data out (do not show) rows where all specified columns has a 0 value
@@ -34,7 +38,7 @@ import org.apache.log4j.Logger;
 public class RowFilterDiffCounterIsZero 
 extends RowFilter<TableModel, Integer>
 {
-	private static Logger _logger = Logger.getLogger(RowFilterDiffCounterIsZero.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Columns id/pos in the table that we apply the check on */
 	private int        _colIds[]     = null;

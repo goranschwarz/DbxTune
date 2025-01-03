@@ -22,13 +22,15 @@ package com.dbxtune.pcs.report.senders;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.mail.EmailConstants;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.HtmlEmail;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.Type;
@@ -41,7 +43,7 @@ import com.dbxtune.utils.StringUtil;
 public class ReportSenderToMail 
 extends ReportSenderAbstract
 {
-	private static Logger _logger = Logger.getLogger(ReportSenderToMail.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Used to save the "attachment file", so we dont have to pass it between methods */
 	private File _attachmentFile = null;

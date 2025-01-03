@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.alarm.writers;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
@@ -41,7 +43,7 @@ import com.dbxtune.utils.Configuration;
 public class AlarmWriterToPcsJdbc 
 extends AlarmWriterAbstract
 {
-	private static Logger _logger = Logger.getLogger(AlarmWriterToPcsJdbc.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ArrayList<AlarmEventWrapper> _rows = new ArrayList<>();
 

@@ -23,6 +23,7 @@ package com.dbxtune.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -34,7 +35,8 @@ import javax.swing.border.Border;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Ver;
@@ -46,7 +48,7 @@ extends JPanel
 implements ActionListener, ChangeListener
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(DbmsVersionPanelAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	protected JLabel             _version_lbl      = new JLabel("Server Version");
 	protected JLabel             _versionMajor_lbl = new JLabel("Major");

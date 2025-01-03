@@ -26,6 +26,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.regex.Pattern;
@@ -48,7 +49,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.sort.RowFilters;
 
 import com.dbxtune.gui.swing.ClickListener;
@@ -65,7 +67,7 @@ import net.miginfocom.swing.MigLayout;
 public class SqlPickList
 extends JDialog
 {
-	private static Logger _logger = Logger.getLogger(SqlPickList.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	@SuppressWarnings("unused")

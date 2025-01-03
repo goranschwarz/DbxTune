@@ -38,7 +38,7 @@ import com.dbxtune.utils.Configuration;
 
 public class AseCmSqlStatement extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseCmSqlStatement.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _shortRstm_sl;

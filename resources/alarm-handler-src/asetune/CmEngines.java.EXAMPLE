@@ -18,7 +18,7 @@ import dbxtune.exceptions.TestException;
 public class CmEngines
 implements IUserDefinedAlarmInterrogator
 {
-	private static Logger _logger = Logger.getLogger(CmEngines.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public void interrogateCounterData(CountersModel cm)
 	{

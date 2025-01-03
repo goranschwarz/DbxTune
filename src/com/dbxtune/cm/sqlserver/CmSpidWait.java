@@ -22,6 +22,7 @@ package com.dbxtune.cm.sqlserver;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,7 +34,8 @@ import java.util.Set;
 import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -41,9 +43,9 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CounterTableModel;
 import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.sqlserver.gui.CmSpidWaitPanel;
 import com.dbxtune.config.dict.SqlServerWaitTypeDictionary;
 import com.dbxtune.graph.TrendGraphDataPoint;
@@ -63,7 +65,7 @@ import com.dbxtune.utils.Ver;
 public class CmSpidWait
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmSpidWait.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSpidWait.class.getSimpleName();
@@ -531,9 +533,9 @@ extends CountersModel
 			Double sumWaitCount        = eventWaitCount       .get(WaitTypeLower);
 			Double sumWaitTimePerCount = eventWaitTimePerCount.get(WaitTypeLower);
 
-			eventWaitTime        .put(WaitTypeLower, new Double(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
-			eventWaitCount       .put(WaitTypeLower, new Double(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
-			eventWaitTimePerCount.put(WaitTypeLower, new Double(sumWaitTimePerCount==null ? WaitTimePerCount.doubleValue() : sumWaitTimePerCount + WaitTimePerCount.doubleValue()) );
+			eventWaitTime        .put(WaitTypeLower, Double.valueOf(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
+			eventWaitCount       .put(WaitTypeLower, Double.valueOf(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
+			eventWaitTimePerCount.put(WaitTypeLower, Double.valueOf(sumWaitTimePerCount==null ? WaitTimePerCount.doubleValue() : sumWaitTimePerCount + WaitTimePerCount.doubleValue()) );
 
 			// Increment: waitTypeCount --- every WaitType has it's own counter so we can do average of the sum values later on
 			Integer waitTypeCount = eventWaitTypeCount.get(WaitTypeLower);

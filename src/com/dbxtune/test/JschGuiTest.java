@@ -27,7 +27,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Properties;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -40,8 +40,10 @@ import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileSystemView;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.gui.swing.WaitForExecDialog.BgExecutor;
@@ -49,7 +51,6 @@ import com.dbxtune.ssh.RemoteFileSystemView;
 import com.dbxtune.ssh.SshConnection;
 import com.dbxtune.ssh.SshConnection.ExecOutput;
 import com.dbxtune.ssh.SshConnection.ExecutionFeedback;
-import com.dbxtune.ssh.SshConnection.IExecutionFeedback;
 import com.dbxtune.utils.SwingUtils;
 import com.jcraft.jsch.ChannelExec;
 
@@ -57,18 +58,14 @@ import net.miginfocom.swing.MigLayout;
 
 public class JschGuiTest
 {
-	private static Logger _logger = Logger.getLogger(JschGuiTest.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 
 	public static void main(String[] args)
 	{
 		// Set Log4J Properties
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		Configurator.setRootLevel(Level.TRACE);
+
 
 		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } 
 		catch(Exception ex) { ex.printStackTrace();	}

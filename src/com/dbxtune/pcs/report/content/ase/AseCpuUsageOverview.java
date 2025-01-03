@@ -41,7 +41,7 @@ import com.dbxtune.utils.TimeUtils;
 
 public class AseCpuUsageOverview extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseCpuUsageOverview.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	public AseCpuUsageOverview(DailySummaryReportAbstract reportingInstance)

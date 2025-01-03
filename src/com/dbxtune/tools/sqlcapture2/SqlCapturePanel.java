@@ -21,6 +21,7 @@
 package com.dbxtune.tools.sqlcapture2;
 
 import java.awt.Dimension;
+import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,7 +35,8 @@ import javax.swing.JSplitPane;
 import javax.swing.border.TitledBorder;
 import javax.swing.text.BadLocationException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
@@ -53,7 +55,7 @@ public class SqlCapturePanel
 extends JPanel
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger        = Logger.getLogger(SqlCapturePanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public final static String DISCARD_APP_NAME = "AseTune";
 

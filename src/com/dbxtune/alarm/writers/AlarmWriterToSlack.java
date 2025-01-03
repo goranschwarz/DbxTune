@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.lang.invoke.MethodHandles;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -33,7 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -48,7 +50,7 @@ import com.google.gson.stream.JsonWriter;
 public class AlarmWriterToSlack
 extends AlarmWriterAbstract
 {
-	private static Logger _logger = Logger.getLogger(AlarmWriterToSlack.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public boolean isCallReRaiseEnabled()

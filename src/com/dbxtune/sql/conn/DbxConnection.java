@@ -22,6 +22,7 @@ package com.dbxtune.sql.conn;
 
 import java.awt.Component;
 import java.awt.Window;
+import java.lang.invoke.MethodHandles;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -51,7 +52,8 @@ import java.util.concurrent.Executor;
 
 import javax.swing.ImageIcon;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ConnectionDialog;
 import com.dbxtune.gui.ConnectionProfileManager;
@@ -97,7 +99,7 @@ import com.sybase.jdbcx.SybConnection;
 public abstract class DbxConnection
 implements Connection, AutoCloseable
 {
-	private static Logger _logger = Logger.getLogger(DbxConnection.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	protected String _username = null;
 //	protected String _password = null;

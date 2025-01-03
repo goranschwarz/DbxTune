@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content.ase;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -33,7 +34,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.dbxtune.cache.XmlPlanAseUtils;
@@ -49,15 +51,15 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.HtmlTableProducer;
-import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyDef;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyRender;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyRow;
 import com.dbxtune.utils.HtmlTableProducer.ColumnStatic;
+import com.dbxtune.utils.StringUtil;
 
 public class AseTopCmStmntCacheDetails extends AseAbstract
 {
-	private static Logger _logger = Logger.getLogger(AseTopCmStmntCacheDetails.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _ssqlRstm;

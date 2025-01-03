@@ -20,19 +20,21 @@
  ******************************************************************************/
 package com.dbxtune.tools.sqlw.msg;
 
+import java.lang.invoke.MethodHandles;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 
 import javax.swing.table.AbstractTableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.NumberUtils;
 
 public class StatisticsIoTableModel
 extends AbstractTableModel
 {
-	private static Logger _logger = Logger.getLogger(StatisticsIoTableModel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 	
 	private static final int UNKNOWN        = 0;

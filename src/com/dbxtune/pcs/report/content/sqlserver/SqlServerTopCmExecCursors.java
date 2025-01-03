@@ -23,11 +23,13 @@ package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.DictCompression;
@@ -42,7 +44,7 @@ import com.dbxtune.utils.Configuration;
 public class SqlServerTopCmExecCursors
 extends SqlServerAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerTopCmExecCursors.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ExecutionPlanCollection _planCollection;

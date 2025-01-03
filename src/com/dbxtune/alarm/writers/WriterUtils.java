@@ -21,17 +21,17 @@
 package com.dbxtune.alarm.writers;
 
 import java.io.StringWriter;
-import java.util.Enumeration;
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
@@ -49,16 +49,16 @@ import com.dbxtune.CounterController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
-import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
+import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.dbxtune.ui.autocomplete.completions.ShorthandCompletionX;
 import com.dbxtune.utils.StringUtil;
 
 public class WriterUtils
 {
-	private static Logger _logger = Logger.getLogger(WriterUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 
 //	/**
@@ -168,26 +168,33 @@ public class WriterUtils
 		VelocityEngine engine = new VelocityEngine(config);
 		engine.init();
 
-		// Set the LOG LEVEL to FATAL for the Velocity PARSER... This so that the Parser exceptions will not be written to the Errolog
+		// Set the LOG LEVEL to FATAL for the Velocity PARSER... This so that the Parser exceptions will not be written to the Error log
 		// NOTE: This is specific to Log4J
-		Logger logLevel = LogManager.getLogger("org.apache.velocity.parser");
-		if (logLevel != null)
-			logLevel.setLevel(Level.FATAL);
+//		Logger logLevel = LogManager.getLogger("org.apache.velocity.parser");
+//		if (logLevel != null)
+//			logLevel.setLevel(Level.FATAL);
+		Configurator.setLevel("org.apache.velocity.parser", Level.FATAL);
 
 
+
+//		boolean debug = false;
+//		if (debug || _logger.isDebugEnabled())
+//		{
+//			Enumeration<?> loggers = LogManager.getCurrentLoggers();
+//			while(loggers.hasMoreElements()) 
+//			{
+//				Logger logger = (Logger) loggers.nextElement();
+//				if (logger.getName().startsWith("org.apache.velocity"))
+//				{
+//					_logger.debug("Setting Velocity logger '"+logger.getName()+"' to DEBUG.");
+//					logger.setLevel(Level.DEBUG);
+//				}
+//			}
+//		}
 		boolean debug = false;
 		if (debug || _logger.isDebugEnabled())
 		{
-			Enumeration<?> loggers = LogManager.getCurrentLoggers();
-			while(loggers.hasMoreElements()) 
-			{
-				Logger logger = (Logger) loggers.nextElement();
-				if (logger.getName().startsWith("org.apache.velocity"))
-				{
-					_logger.debug("Setting Velocity logger '"+logger.getName()+"' to DEBUG.");
-					logger.setLevel(Level.DEBUG);
-				}
-			}
+			Configurator.setAllLevels("org.apache.velocity", Level.DEBUG);
 		}
 
 		boolean isHtmlTemplate = StringUtils.startsWithIgnoreCase(template, "<html>");
@@ -515,14 +522,8 @@ public class WriterUtils
 
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
-
+		Configurator.setRootLevel(Level.TRACE);
+		
 		AlarmEvent ae = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", AlarmEvent.Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
 
 		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true, null, "http://DUMMY-dbxcentral:8080");

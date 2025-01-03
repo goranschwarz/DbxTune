@@ -37,7 +37,7 @@ import com.dbxtune.utils.StringUtil;
 public class SqlStatementCmdCodeComplRefresh 
 extends SqlStatementAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlStatementCmdTabDiff.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 //	private String _originCmd = null;

@@ -35,6 +35,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -80,7 +81,8 @@ import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
@@ -114,7 +116,7 @@ import com.dbxtune.utils.SwingUtils;
 public class GTable 
 extends JXTable
 {
-	private static Logger       _logger = Logger.getLogger(GTable.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final long	serialVersionUID			= 1L;
 	private int					_lastMousePressedAtViewHeaderCol= -1;

@@ -22,13 +22,15 @@
 package com.dbxtune.central.controllers.ud.chart;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.sql.conn.ConnectionProp;
@@ -40,7 +42,7 @@ import com.dbxtune.utils.OpenSslAesUtil;
 public abstract class UserDefinedChartAbstract
 implements IUserDefinedChart
 {
-	private static Logger _logger = Logger.getLogger(UserDefinedChartAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_name             = "name";
 	public static final String PROPKEY_chartType        = "chartType";

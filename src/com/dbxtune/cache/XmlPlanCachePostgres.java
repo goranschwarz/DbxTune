@@ -20,7 +20,11 @@
  ******************************************************************************/
 package com.dbxtune.cache;
 
+import java.lang.invoke.MethodHandles;
 import java.util.List;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.ConnectionProvider;
@@ -34,7 +38,7 @@ import com.dbxtune.utils.ConnectionProvider;
 public class XmlPlanCachePostgres 
 extends XmlPlanCache
 {
-//	private static Logger _logger = Logger.getLogger(XmlPlanCachePostgres.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public XmlPlanCachePostgres(ConnectionProvider connProvider)
 	{

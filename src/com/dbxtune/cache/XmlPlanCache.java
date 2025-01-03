@@ -20,13 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.cache;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -35,7 +37,7 @@ import com.dbxtune.utils.ConnectionProvider;
 
 public abstract class XmlPlanCache
 {
-	private static Logger _logger = Logger.getLogger(XmlPlanCache.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_lowOnMememory_removePct        = "XmlPlanCache.lowOnMememory.removePct";
 	public static final int     DEFAULT_lowOnMememory_removePct        = 20;

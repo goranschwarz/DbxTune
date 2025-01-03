@@ -69,7 +69,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmPgSrvWaitPanel 
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgSrvWaitPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	private static final String  PROP_PREFIX           = CmPgSrvWait.CM_NAME;
@@ -185,8 +184,8 @@ extends TabularCntrPanel
 						Double sumWaitTime         = classesWaitTime       .get(ClassName);
 						Double sumWaitCount        = classesWaitCount      .get(ClassName);
 
-						classesWaitTime        .put(ClassName, new Double(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
-						classesWaitCount       .put(ClassName, new Double(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
+						classesWaitTime        .put(ClassName, Double.valueOf(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
+						classesWaitCount       .put(ClassName, Double.valueOf(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
 					}
 					
 					if (generateEvent)

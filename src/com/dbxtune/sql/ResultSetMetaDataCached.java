@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.sql;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -31,7 +32,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.dbxtune.RsTune;
@@ -48,7 +50,7 @@ import com.dbxtune.utils.StringUtil;
 public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Serializable, Cloneable
 {
 	private static final long   serialVersionUID = 1L;
-	private static final Logger	_logger	= Logger.getLogger(ResultSetMetaDataCached.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public enum State
 	{

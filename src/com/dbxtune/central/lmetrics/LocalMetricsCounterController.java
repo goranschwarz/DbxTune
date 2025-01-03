@@ -20,9 +20,11 @@
  ******************************************************************************/
 package com.dbxtune.central.lmetrics;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterControllerAbstract;
 import com.dbxtune.ICounterController;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.Configuration;
 
 public class LocalMetricsCounterController extends CounterControllerAbstract
 {
-	private static Logger _logger = Logger.getLogger(LocalMetricsCounterController.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_cmOsUptime_alarmDisabledAtStartupForXMinutes = "DbxCentralLocalMetrics.CmOsUptime.alarm.disabled.at.startup.for.x.minutes";
 	public static final int    DEFAULT_cmOsUptime_alarmDisabledAtStartupForXMinutes = 5;

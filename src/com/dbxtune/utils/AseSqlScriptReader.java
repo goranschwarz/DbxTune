@@ -988,7 +988,7 @@ public class AseSqlScriptReader
 										String[] strList = word2.split(":");
 										for (String str : strList)
 										{
-											try { _keepRs.add( new Integer(str) ); }
+											try { _keepRs.add( Integer.valueOf(str) ); }
 											catch (NumberFormatException nfe)
 											{
 												error = "Sub command 'keeprs #' The parameter '"+str+"' is not a number. Caught: "+nfe;
@@ -1002,7 +1002,7 @@ public class AseSqlScriptReader
 										String[] strList = word2.split(":");
 										for (String str : strList)
 										{
-											try { _skipRs.add( new Integer(str) ); }
+											try { _skipRs.add( Integer.valueOf(str) ); }
 											catch (NumberFormatException nfe)
 											{
 												error = "Sub command 'skiprs #' The parameter '"+str+"' is not a number. Caught: "+nfe;

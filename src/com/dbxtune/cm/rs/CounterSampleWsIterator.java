@@ -24,6 +24,7 @@ import java.awt.Window;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -34,7 +35,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CountersModel;
@@ -56,8 +58,8 @@ import com.dbxtune.utils.TimeUtils;
 public class CounterSampleWsIterator 
 extends CounterSample
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
-	private static Logger     _logger          = Logger.getLogger(CounterSampleWsIterator.class);
 
 	private static DbxConnectionPoolMap _cpm;
 	private static long _lastUpdateOfActive = 0;   // Note: CounterSampleWsIterator is created every time... so this needs to be static

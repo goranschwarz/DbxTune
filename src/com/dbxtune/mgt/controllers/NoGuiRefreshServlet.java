@@ -21,10 +21,7 @@
 package com.dbxtune.mgt.controllers;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -32,34 +29,17 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
-import com.dbxtune.Version;
-import com.dbxtune.central.pcs.CentralPersistReader;
-import com.dbxtune.central.pcs.CentralPersistReader.SampleType;
-import com.dbxtune.central.pcs.objects.DbxGraphData;
-import com.dbxtune.cm.CmSettingsHelper;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.gui.MainFrame;
-import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.CronUtils;
-import com.dbxtune.utils.StringUtil;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import it.sauronsoftware.cron4j.SchedulingPattern;
 
 public class NoGuiRefreshServlet 
 extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException

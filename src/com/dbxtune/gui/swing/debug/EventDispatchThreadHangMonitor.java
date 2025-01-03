@@ -25,6 +25,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -38,7 +39,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 /**
  * Monitors the AWT event dispatch thread for events that take longer than
@@ -488,17 +491,5 @@ public final class EventDispatchThreadHangMonitor extends EventQueue {
             _logger.warn("Swing EDT-DEBUG - Hang: " + str);
         }
     }
-	private static Logger _logger = Logger.getLogger(EventDispatchThreadHangMonitor.class);
-
-// Uncomment if you want to test in "standalone mode"
-//    static
-//    {
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//    }
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 }

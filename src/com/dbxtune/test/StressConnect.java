@@ -37,8 +37,6 @@ import java.util.Properties;
 
 import javax.swing.JTable;
 
-import org.apache.log4j.PropertyConfigurator;
-
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.utils.AseConnectionUtils;
 import com.dbxtune.utils.AseSqlScript;
@@ -85,13 +83,8 @@ public class StressConnect
 	//----------------------------------------------------------------------------------------------------------
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		try
 		{
@@ -506,9 +499,9 @@ public class StressConnect
 			diffValues._total_errors   = c1._total_errors   - c2._total_errors;
 
 			// do PCT calculation for CPU values
-			Double cpuUser        = new Double(diffValues._cpu_busy);
-			Double cpuSystem      = new Double(diffValues._cpu_io);
-			Double cpuIdle        = new Double(diffValues._cpu_idle);
+			Double cpuUser        = Double.valueOf(diffValues._cpu_busy);
+			Double cpuSystem      = Double.valueOf(diffValues._cpu_io);
+			Double cpuIdle        = Double.valueOf(diffValues._cpu_idle);
 			if (cpuUser != null && cpuSystem != null && cpuIdle != null)
 			{
 				double CPUTime   = cpuUser  .doubleValue() + cpuSystem.doubleValue() + cpuIdle.doubleValue();

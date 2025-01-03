@@ -23,6 +23,7 @@ package com.dbxtune;
 import java.io.Console;
 import java.io.File;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.nio.file.DirectoryStream;
@@ -44,7 +45,8 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
@@ -101,7 +103,7 @@ extends CounterCollectorThreadAbstract
 implements Memory.MemoryListener
 {
 	/** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(CounterCollectorThreadNoGui.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String THREAD_NAME = "GetCountersNoGui";
 

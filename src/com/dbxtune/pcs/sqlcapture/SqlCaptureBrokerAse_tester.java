@@ -903,14 +903,6 @@ extends SqlCaptureBrokerAse
 //	
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-////		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//		
 //		boolean debug = true;
 ////		debug = false;
 ////		SqlCaptureBrokerAse_tester aseSqlCap;

@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 
 public class DbmsConfigIssues extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(DbmsConfigIssues.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	ResultSetTableModel _shortRstm;
 

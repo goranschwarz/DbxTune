@@ -24,6 +24,7 @@
  */
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Collection;
@@ -36,7 +37,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -56,7 +58,7 @@ import com.dbxtune.utils.TimeUtils;
 public class PersistentCounterHandler 
 implements Runnable
 {
-	private static Logger _logger          = Logger.getLogger(PersistentCounterHandler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	
 	/*---------------------------------------------------

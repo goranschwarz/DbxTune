@@ -24,6 +24,7 @@
  */
 package com.dbxtune.cache;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -31,7 +32,8 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -42,7 +44,7 @@ import com.dbxtune.utils.TimeUtils;
 public class SqlAgentJobInfoCache
 {
     /** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(SqlAgentJobInfoCache.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Instance variable */
 	private static SqlAgentJobInfoCache _instance = null;

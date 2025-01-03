@@ -41,7 +41,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmPgBufferCacheDetPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgBufferCacheDetPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public CmPgBufferCacheDetPanel(CountersModel cm)

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,7 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
@@ -38,8 +40,8 @@ import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.pcs.PersistContainer;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.JdbcUrlParser;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -49,7 +51,7 @@ import com.dbxtune.utils.StringUtil;
 public abstract class CounterCollectorThreadAbstract
 extends Thread
 {
-	private static Logger _logger = Logger.getLogger(CounterCollectorThreadAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = "dbxtune.memory.monitor.threshold.low_on_memory.mb"; 
 	public static final int    DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB  = 130; 

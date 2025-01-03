@@ -15,7 +15,6 @@ import com.sybase.jdbcx.EedInfo;
 
 public class SixSybHelper
 {
-//	private static Logger   logger            = Logger.getLogger(SixSybHelper.class);
 
 //	private static int      MAX_NO_OF_RETRIES = 5;
 //	private static long     DEADLOCKSLEEPTIME = 5000;

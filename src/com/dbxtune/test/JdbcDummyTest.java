@@ -60,9 +60,9 @@ public class JdbcDummyTest
 		cmdOptions.username    = args[0];
 		cmdOptions.password    = args[1];
 		cmdOptions.url         = args[2];
-		cmdOptions.threadCount = new Integer(args[3]);
-		cmdOptions.sqlCount    = new Integer(args[4]);
-		cmdOptions.sleepMs     = new Integer(args[5]);
+		cmdOptions.threadCount = Integer.valueOf(args[3]);
+		cmdOptions.sqlCount    = Integer.valueOf(args[4]);
+		cmdOptions.sleepMs     = Integer.valueOf(args[5]);
 		cmdOptions.sql         = args[6];
 
 		if ("null".equalsIgnoreCase(cmdOptions.sql))

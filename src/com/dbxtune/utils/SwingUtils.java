@@ -55,6 +55,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.sql.Timestamp;
@@ -109,9 +110,11 @@ import javax.swing.table.TableModel;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXEditorPane;
 import org.jdesktop.swingx.JXErrorPane;
 import org.jdesktop.swingx.error.ErrorInfo;
@@ -128,7 +131,7 @@ import net.miginfocom.swing.MigLayout;
 
 public class SwingUtils
 {
-	private static Logger _logger = Logger.getLogger(SwingUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static boolean isHiDpi()
 	{
@@ -2580,10 +2583,11 @@ public class SwingUtils
 	private static TreePath findNameInTree(DefaultMutableTreeNode root, String s) 
 	{
 		@SuppressWarnings("unchecked")
-		Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+//		Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+		Enumeration<TreeNode> e = root.depthFirstEnumeration();
 		while (e.hasMoreElements()) 
 		{
-			DefaultMutableTreeNode node = e.nextElement();
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
 			if (node.toString().equalsIgnoreCase(s)) 
 			{
 				return new TreePath(node.getPath());
@@ -2649,12 +2653,12 @@ public class SwingUtils
 		String[] columnNames = { "First Name", "Last Name", "Sport", "# of Years", "Vegetarian" };
 
 		Object[][] data = { 
-				{ "row 1", "no newlines in this row",      "Snowboarding",                  new Integer(5),  new Boolean(false) }, 
-				{ "row 2", "2-rows:Ro(ln)wing",            "Ro\r\n\rwing",                      new Integer(3),  new Boolean(true) }, 
-				{ "row 3", "8-rows,after each char",       "K\nn\ni\nt\nt\ni\nn\ng\n",      new Integer(2),  new Boolean(false) }, 
-				{ "row 4", "2-rows:Speed(ln) reading",     "Speed\n reading",               new Integer(20), new Boolean(true) }, 
-				{ "row 5", "Pool(ln)             xxx   -", "Pool\n             xxx   -",    new Integer(10), new Boolean(false) }, 
-				{ "row 6", "no newlines, 2 lead space",    "  last Row .-.",                 new Integer(5),  new Boolean(false) }, 
+				{ "row 1", "no newlines in this row",      "Snowboarding",                  Integer.valueOf(5),  Boolean.valueOf(false) }, 
+				{ "row 2", "2-rows:Ro(ln)wing",            "Ro\r\n\rwing",                      Integer.valueOf(3),  Boolean.valueOf(true) }, 
+				{ "row 3", "8-rows,after each char",       "K\nn\ni\nt\nt\ni\nn\ng\n",      Integer.valueOf(2),  Boolean.valueOf(false) }, 
+				{ "row 4", "2-rows:Speed(ln) reading",     "Speed\n reading",               Integer.valueOf(20), Boolean.valueOf(true) }, 
+				{ "row 5", "Pool(ln)             xxx   -", "Pool\n             xxx   -",    Integer.valueOf(10), Boolean.valueOf(false) }, 
+				{ "row 6", "no newlines, 2 lead space",    "  last Row .-.",                 Integer.valueOf(5),  Boolean.valueOf(false) }, 
 			};
 
 		JTable jtable = new JTable(data, columnNames);

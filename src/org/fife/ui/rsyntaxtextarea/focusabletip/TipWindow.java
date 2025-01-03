@@ -50,7 +50,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 
 import org.fife.ui.rsyntaxtextarea.HtmlUtil;
-import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 
 
 /**

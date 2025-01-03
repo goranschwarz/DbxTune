@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
@@ -47,7 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.AppDir;
 import com.dbxtune.Version;
@@ -61,7 +63,7 @@ import com.sybase.util.ds.interfaces.SyInterfacesEntry;
 
 public class AseConnectionFactory
 {
-	private static Logger _logger = Logger.getLogger(AseConnectionFactory.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_LOGINTIMEOUT = "AseConnectionFactory.loginTimeout";
 	public static final int    DEFAULT_LOGINTIMEOUT = 10;

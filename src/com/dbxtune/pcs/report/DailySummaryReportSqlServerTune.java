@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.content.DbmsConfigIssues;
@@ -62,7 +64,7 @@ import com.dbxtune.utils.StringUtil;
 public class DailySummaryReportSqlServerTune 
 extends DailySummaryReportDefault
 {
-	private static Logger _logger = Logger.getLogger(DailySummaryReportSqlServerTune.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public void addReportEntries()

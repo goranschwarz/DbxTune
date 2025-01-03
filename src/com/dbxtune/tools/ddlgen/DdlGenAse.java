@@ -20,11 +20,13 @@
  ******************************************************************************/
 package com.dbxtune.tools.ddlgen;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.JdbcUrlParser;
 import com.dbxtune.sql.conn.ConnectionProp;
@@ -35,7 +37,7 @@ import com.sybase.ddlgen.DDLGenerator;
 
 public class DdlGenAse extends DdlGen
 {
-	private static Logger _logger = Logger.getLogger(DdlGenAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _visibleCommand = "";
 

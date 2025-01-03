@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,15 +31,16 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmSpidCpuWaitPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -60,7 +62,7 @@ import com.dbxtune.utils.Ver;
 public class CmSpidCpuWait
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmSpidCpuWait.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSpidCpuWait.class.getSimpleName();
@@ -837,24 +839,24 @@ extends CountersModel
 			}
 			boolean b = true;
 			b = !"This was disabled".equals(monSqlText)    && !"Not Available".equals(monSqlText)    && !monSqlText   .startsWith("Not properly configured");
-			diffData.setValueAt(new Boolean(b), rowId, pos_HasMonSqlText);
-			diffData.setValueAt(monSqlText,     rowId, pos_MonSqlText);
+			diffData.setValueAt(Boolean.valueOf(b), rowId, pos_HasMonSqlText);
+			diffData.setValueAt(monSqlText,         rowId, pos_MonSqlText);
 
 			b = !"This was disabled".equals(dbccSqlText)   && !"Not Available".equals(dbccSqlText)   && !dbccSqlText  .startsWith("User does not have");
-			diffData.setValueAt(new Boolean(b), rowId, pos_HasDbccSqlText);
-			diffData.setValueAt(dbccSqlText,    rowId, pos_DbccSqlText);
+			diffData.setValueAt(Boolean.valueOf(b), rowId, pos_HasDbccSqlText);
+			diffData.setValueAt(dbccSqlText,        rowId, pos_DbccSqlText);
 
 			b = !"This was disabled".equals(procCallStack) && !"Not Available".equals(procCallStack) && !procCallStack.startsWith("User does not have");
-			diffData.setValueAt(new Boolean(b), rowId, pos_HasProcCallStack);
-			diffData.setValueAt(procCallStack,  rowId, pos_ProcCallStack);
+			diffData.setValueAt(Boolean.valueOf(b), rowId, pos_HasProcCallStack);
+			diffData.setValueAt(procCallStack,      rowId, pos_ProcCallStack);
 
 			b = !"This was disabled".equals(showplan)      && !"Not Available".equals(showplan)      && !showplan     .startsWith("User does not have") && !"System SPID".equals(showplan);
-			diffData.setValueAt(new Boolean(b), rowId, pos_HasShowPlan);
-			diffData.setValueAt(showplan,       rowId, pos_ShowPlanText);
+			diffData.setValueAt(Boolean.valueOf(b), rowId, pos_HasShowPlan);
+			diffData.setValueAt(showplan,           rowId, pos_ShowPlanText);
 
 			b = !"This was disabled".equals(stacktrace)    && !"Not Available".equals(stacktrace)    && !stacktrace   .startsWith("User does not have");
-			diffData.setValueAt(new Boolean(b), rowId, pos_HasStacktrace);
-			diffData.setValueAt(stacktrace,     rowId, pos_DbccStacktrace);
+			diffData.setValueAt(Boolean.valueOf(b), rowId, pos_HasStacktrace);
+			diffData.setValueAt(stacktrace,         rowId, pos_DbccStacktrace);
 
 		} // end: loop all rows
 	}

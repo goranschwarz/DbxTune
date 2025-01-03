@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.DbmsVersionHelperOracle;
 import com.dbxtune.sql.DbmsVersionHelperSimple;
@@ -30,7 +33,7 @@ import com.dbxtune.sql.IDbmsVersionHelper;
 
 public class Ver
 {
-	private static Logger _logger = Logger.getLogger(Ver.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	public static boolean majorVersion_mustBeTenOrAbove = true;
 //	/**
 //	 * compose a long integer version number (9 digits, MMMMSSSPP) based on the more readable input

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.os;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -29,7 +30,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -38,12 +40,12 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
-import com.dbxtune.cm.CounterModelHostMonitor;
-import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.dbxtune.cm.CounterModelHostMonitor;
+import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.gui.CmOsDiskSpacePanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.Category;
@@ -58,7 +60,7 @@ import com.dbxtune.utils.StringUtil;
 public class CmOsDiskSpace
 extends CounterModelHostMonitor
 {
-	private static Logger        _logger          = Logger.getLogger(CmOsDiskSpace.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_DISKSPACE;
@@ -201,9 +203,9 @@ extends CounterModelHostMonitor
 
 			// NOTE: beware of integer overflow... use |(int)(var.longValue()/1024)| instead of |var.intValue()/1024| ... 
 			//       Number.intVal() may cause integer overflow and return a negative number
-			if (sizeKB_num      != null) newSample.setValueAt(new Integer((int)(sizeKB_num     .longValue()/1024)), r, sizeMB_pos);
-			if (usedKB_num      != null) newSample.setValueAt(new Integer((int)(usedKB_num     .longValue()/1024)), r, usedMB_pos);
-			if (availableKB_num != null) newSample.setValueAt(new Integer((int)(availableKB_num.longValue()/1024)), r, availableMB_pos);
+			if (sizeKB_num      != null) newSample.setValueAt(Integer.valueOf((int)(sizeKB_num     .longValue()/1024)), r, sizeMB_pos);
+			if (usedKB_num      != null) newSample.setValueAt(Integer.valueOf((int)(usedKB_num     .longValue()/1024)), r, usedMB_pos);
+			if (availableKB_num != null) newSample.setValueAt(Integer.valueOf((int)(availableKB_num.longValue()/1024)), r, availableMB_pos);
 
 			// Calculate the Pct value with a higher (scale=1) resolution than df
 			if (sizeKB_num != null && usedKB_num != null && availableKB_num != null)

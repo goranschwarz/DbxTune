@@ -49,7 +49,6 @@ extends TabularCntrPanel
 	public final static String TOOLTIP_sample_statementCacheObjects = "<html>Normally you will find Statement Cache entries in the StatementCache Details Collector, but you can also enable it here.</html>";
 	public final static String TOOLTIP_sample_dynamicSqlObjects     = "<html>Normally you will find Dynamic SQL Statements entries in the StatementCache Details Collector, but you can also enable it here.</html>";
 
-	//	private static final Logger  _logger	           = Logger.getLogger(CmCachedProcsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmCachedProcsPanel.CM_NAME;

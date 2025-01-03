@@ -35,7 +35,7 @@ import com.dbxtune.utils.StringUtil;
 public class PostgresDbSize
 extends PostgresAbstract
 {
-//	private static Logger _logger = Logger.getLogger(PostgresDbSize.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 

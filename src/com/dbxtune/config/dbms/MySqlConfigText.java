@@ -33,7 +33,6 @@ public abstract class MySqlConfigText
 		};
 
 	/** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(MySqlConfigText.class);
 
 	public static void createAndRegisterAllInstances()
 	{

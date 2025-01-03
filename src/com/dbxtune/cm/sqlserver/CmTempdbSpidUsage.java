@@ -20,13 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -34,11 +36,11 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventTempdbSpidUsage;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmTempdbSpidUsagePanel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -57,7 +59,7 @@ import com.dbxtune.utils.Ver;
 public class CmTempdbSpidUsage
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmTempdbSpidUsage.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmTempdbSpidUsage.class.getSimpleName();

@@ -21,11 +21,13 @@
  ******************************************************************************/
 package com.dbxtune.mgt;
 
+import java.lang.invoke.MethodHandles;
 import java.net.BindException;
 import java.util.Base64;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ErrorHandler;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class NoGuiManagementServer
 {
-	private static Logger _logger = Logger.getLogger(NoGuiManagementServer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_NOGUI_MANAGEMENT_START = "DbxTune.nogui.management.start";
 	public static final boolean DEFAULT_NOGUI_MANAGEMENT_START = true;

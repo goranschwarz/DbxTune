@@ -20,29 +20,31 @@
  ******************************************************************************/
 package com.dbxtune.cm.os;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.gui.CmOsNwInfoPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
-import com.dbxtune.hostmon.OsTable;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
+import com.dbxtune.hostmon.OsTable;
 
 public class CmOsNwInfo
 extends CounterModelHostMonitor
 {
-	private static Logger        _logger          = Logger.getLogger(CmOsNwInfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_NWINFO;

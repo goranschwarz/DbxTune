@@ -20,14 +20,16 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.api.DatabaseEventListener;
 
 public class H2DatabaseEventListener implements DatabaseEventListener
 {
-	private static Logger _logger = Logger.getLogger(H2DatabaseEventListener.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * This method is called just after creating the object.

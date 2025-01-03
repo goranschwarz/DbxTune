@@ -35,9 +35,9 @@ import com.dbxtune.cache.DbmsObjectIdCacheUtils;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSampleCatalogIteratorSqlServer;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.SortOptions;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.SortOptions.ColumnNameSensitivity;
 import com.dbxtune.cm.SortOptions.DataSortSensitivity;
 import com.dbxtune.cm.SortOptions.SortOrder;
@@ -51,7 +51,6 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 public class CmTableSize
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmTableSize.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmTableSize.class.getSimpleName();

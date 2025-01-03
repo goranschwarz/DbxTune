@@ -47,7 +47,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmTempdbSpidUsagePanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmTempdbSpidUsagePanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_sample_systemThreads    = "<html>Sample System SPID's that executes in the SQL Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";

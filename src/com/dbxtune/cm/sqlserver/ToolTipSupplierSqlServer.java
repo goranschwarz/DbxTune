@@ -23,6 +23,7 @@ package com.dbxtune.cm.sqlserver;
 import java.awt.Desktop;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -33,7 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 
 import com.dbxtune.Version;
@@ -55,7 +57,7 @@ import com.dbxtune.utils.SwingUtils;
 public class ToolTipSupplierSqlServer
 extends CmToolTipSupplierDefault
 {
-	private static Logger _logger = Logger.getLogger(ToolTipSupplierSqlServer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private CompletionProviderJdbc _complProvider;
 	

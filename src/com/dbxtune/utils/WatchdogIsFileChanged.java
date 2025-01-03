@@ -21,12 +21,15 @@
 package com.dbxtune.utils;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class WatchdogIsFileChanged
 {
-	private static Logger _logger = Logger.getLogger(WatchdogIsFileChanged.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public interface WatchdogIsFileChangedChecker
 	{

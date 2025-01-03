@@ -24,15 +24,13 @@ package com.dbxtune.gui;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.SQLException;
-import java.util.Properties;
 
-import org.apache.log4j.PropertyConfigurator;
-import org.apache.log4j.lf5.LogLevel;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.impl.Log4jLogEvent;
+import org.apache.logging.log4j.message.SimpleMessage;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.dbxtune.gui.Log4jLogRecord;
-import com.dbxtune.gui.Log4jTableModel;
 
 public class Log4jTableModelTest
 {
@@ -42,13 +40,7 @@ public class Log4jTableModelTest
 	{
 		//System.out.println("@BeforeClass - init():");
 
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+//		Configurator.setRootLevel(Level.TRACE);
 	}
 	
 	@Test
@@ -78,11 +70,13 @@ public class Log4jTableModelTest
 	
 	private Log4jLogRecord createMessage(String msg)
 	{
-		Log4jLogRecord m = new Log4jLogRecord();
+		LogEvent logEvent = Log4jLogEvent.newBuilder().setLevel(Level.WARN).setMessage( new SimpleMessage(msg) ).build();
+		
+		Log4jLogRecord m = new Log4jLogRecord(logEvent);
 		
 //		m.setCategory();
-		m.setLevel(LogLevel.WARN);
-		m.setMessage(msg);
+//		m.setLevel(LogLevel.WARN);
+//		m.setMessage(msg);
 
 		return m;
 	}

@@ -30,10 +30,10 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.diff.DiffContext;
-import com.dbxtune.sql.diff.DiffSink;
-import com.dbxtune.sql.diff.DiffTable;
 import com.dbxtune.sql.diff.DiffContext.DiffSide;
+import com.dbxtune.sql.diff.DiffSink;
 import com.dbxtune.sql.diff.DiffSink.DiffColumnValues;
+import com.dbxtune.sql.diff.DiffTable;
 import com.dbxtune.utils.StringUtil;
 
 public abstract class GenerateSqlAbstract

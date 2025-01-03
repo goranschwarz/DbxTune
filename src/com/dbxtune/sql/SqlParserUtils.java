@@ -24,16 +24,13 @@ package com.dbxtune.sql;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.Properties;
 import java.util.Set;
-
-import org.apache.log4j.PropertyConfigurator;
 
 import com.dbxtune.utils.StringUtil;
 
 public class SqlParserUtils
 {
-//	private static Logger _logger = Logger.getLogger(SqlParserUtils.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //
 //	private static final String REGEXP_MLC = "(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)";   // MLC=MultiLineComment  from http://blog.ostermiller.org/find-comment
 //
@@ -406,13 +403,8 @@ public class SqlParserUtils
 	
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		System.out.println("NULL: " + test(null));
 		System.out.println("1:  " + test("SELECT T1.TIMESTAMP, T1.M_IDENTITY, T1.M_LABEL, T1.M__INDEX_, T1.M__LINK_, T1.M_COL0, T1.M_COL1, T1.M_COL2, T1.M_COL3, T1.M_COL4, T1.M_COL5, T1.M_COL6, T1.M_COL7, T1.M_COL8, T1.M_COL9, T1.M_COL10, T1.M_COL11, T1.M_COL12, T1.M_COL13, T1.M_COL14, T1.M_COL15, T1.M_COL16, T1.M_COL17, T1.M_COL18, T1.M_COL19, T1.M_COL20, T1.M_COL21, T1.M_COL22, T1.M_COL23, T1.M_COL24, T1.M_COL25, T1.M_COL26, T1.M_COL27, T1.M__DATE_, T1.M__REPLICAT_, T1.M_PERMUTID, T1.M_DSP_WDTH FROM MPX_ASGRC_DBF T1 WHERE ((T1.M_LABEL = ?) AND (T1.M__DATE_ = ?))"));

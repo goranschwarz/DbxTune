@@ -22,6 +22,7 @@ package com.dbxtune.cm.rax.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -30,7 +31,8 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.rax.CmRaStatistics;
@@ -42,7 +44,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmRaStatisticsPanel
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmRaStatisticsPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 	JCheckBox _sample_resetAfter_chk;

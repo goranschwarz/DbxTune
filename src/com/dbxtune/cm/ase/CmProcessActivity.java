@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +31,8 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -41,12 +43,12 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CounterTableModel;
 import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.ase.gui.CmProcessActivityPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -55,8 +57,8 @@ import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.pcs.PcsColumnOptions;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.dbxtune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -72,7 +74,7 @@ import com.dbxtune.utils.Ver;
 public class CmProcessActivity
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmProcessActivity.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmProcessActivity.class.getSimpleName();
@@ -823,7 +825,7 @@ extends CountersModel
 				Object o_sqlText = counters.getValueAt(rowId, pos_SqlText);
 				if (o_sqlText != null && !o_sqlText.equals(""))
 				{
-					counters.setValueAt(new Boolean(true), rowId, pos_HasSqlText);
+					counters.setValueAt(Boolean.valueOf(true), rowId, pos_HasSqlText);
 				}
 			}
 
@@ -843,7 +845,7 @@ extends CountersModel
 				int bytes   = ((Number)o_BytesSent)  .intValue();
 				int packets = ((Number)o_PacketsSent).intValue();
 				
-				counters.setValueAt(new Integer( (packets > 0 ? bytes/packets : 0) ), rowId, pos_AvgBytesPerSentPacket);
+				counters.setValueAt(Integer.valueOf( (packets > 0 ? bytes/packets : 0) ), rowId, pos_AvgBytesPerSentPacket);
 			}
 
 			// AvgBytesPerReceivedPacket
@@ -854,7 +856,7 @@ extends CountersModel
 				int bytes   = ((Number)o_BytesReceived)  .intValue();
 				int packets = ((Number)o_PacketsReceived).intValue();
 				
-				counters.setValueAt(new Integer( (packets > 0 ? bytes/packets : 0) ), rowId, pos_AvgBytesPerReceivedPacket);
+				counters.setValueAt(Integer.valueOf( (packets > 0 ? bytes/packets : 0) ), rowId, pos_AvgBytesPerReceivedPacket);
 			}
 		}
 	}
@@ -1034,10 +1036,10 @@ extends CountersModel
 			// Now fix the values into a structure and send it of to the graph
 			Double[] arr = new Double[4];
 
-			arr[0] = new Double(o_CheckpointWrite == null ? "0" : o_CheckpointWrite.toString());
-			arr[1] = new Double(o_HkWashWrite     == null ? "0" : o_HkWashWrite    .toString());
-			arr[2] = new Double(o_HkGcWrite       == null ? "0" : o_HkGcWrite      .toString());
-			arr[3] = new Double(o_HkChoresWrite   == null ? "0" : o_HkChoresWrite  .toString());
+			arr[0] = Double.valueOf(o_CheckpointWrite == null ? "0" : o_CheckpointWrite.toString());
+			arr[1] = Double.valueOf(o_HkWashWrite     == null ? "0" : o_HkWashWrite    .toString());
+			arr[2] = Double.valueOf(o_HkGcWrite       == null ? "0" : o_HkGcWrite      .toString());
+			arr[3] = Double.valueOf(o_HkChoresWrite   == null ? "0" : o_HkChoresWrite  .toString());
 			_logger.debug("updateGraphData(ChkptHkGraph): o_CheckpointWrite='"+o_CheckpointWrite+"', o_HkWashWrite='"+o_HkWashWrite+"', o_HkGcWrite='"+o_HkGcWrite+"', o_HkChoresWrite='"+o_HkChoresWrite+"'.");
 
 			// Set the values
@@ -1107,7 +1109,7 @@ extends CountersModel
 			// Now fix the values into a structure and send it of to the graph
 			Double[] arr = new Double[1];
 
-			arr[0] = new Double(BatchIdDiff_sum);
+			arr[0] = Double.valueOf(BatchIdDiff_sum);
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData("+tgdp.getName()+"): BatchIdDiff_sum='"+BatchIdDiff_sum+"'.");
@@ -1212,7 +1214,7 @@ extends CountersModel
 			// Now fix the values into a structure and send it of to the graph
 			Double[] arr = new Double[1];
 
-			arr[0] = new Double(maxValue / 1000.0);
+			arr[0] = Double.valueOf(maxValue / 1000.0);
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData("+tgdp.getName()+"): StatementExecInMs_maxValue='"+maxValue+"'.");
@@ -1317,7 +1319,7 @@ extends CountersModel
 			// Now fix the values into a structure and send it of to the graph
 			Double[] arr = new Double[1];
 
-			arr[0] = new Double(count);
+			arr[0] = Double.valueOf(count);
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData("+tgdp.getName()+"): StatementExecInMs_count='"+count+"'.");
@@ -1384,7 +1386,7 @@ extends CountersModel
 			// Now fix the values into a structure and send it of to the graph
 			Double[] arr = new Double[1];
 
-			arr[0] = new Double(sum_pssinfo_tempdb_pages / pagesToMbDivider);
+			arr[0] = Double.valueOf(sum_pssinfo_tempdb_pages / pagesToMbDivider);
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData("+tgdp.getName()+"): sum_pssinfo_tempdb_pages='"+sum_pssinfo_tempdb_pages+"'.");

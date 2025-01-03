@@ -27,6 +27,7 @@ package com.dbxtune.utils;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -50,7 +51,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -79,7 +81,7 @@ public class AseConnectionUtils
 	public static final int CE_SYSTEM_VIEW_CLUSTER  = 1;
 	public static final int CE_SYSTEM_VIEW_INSTANCE = 2;
 
-	private static Logger _logger = Logger.getLogger(AseConnectionUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static String SQL_VERSION     = "select @@version";
 //	private static String SQL_VERSION_NUM = "select @@version_number";
 //	private static String SQL_SP_VERSION  = "sp_version 'installmontables'";

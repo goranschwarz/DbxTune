@@ -20,11 +20,13 @@
  ******************************************************************************/
 package com.dbxtune.cm;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.AseConnectionUtils;
 import com.dbxtune.utils.Configuration;
@@ -34,7 +36,7 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class CmSybMessageHandler 
 implements SybMessageHandler
 {
-	private static Logger _logger = Logger.getLogger(CmSybMessageHandler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private CountersModel _cm = null;
 	private String        _logPrefix = "";
@@ -124,7 +126,7 @@ implements SybMessageHandler
 	}
 	public void addDiscardMsgNum(int msgNum)
 	{
-		Integer msgNumInt = new Integer(msgNum);
+		Integer msgNumInt = Integer.valueOf(msgNum);
 		if ( ! _discardMsgNum.contains(msgNumInt))
 			_discardMsgNum.add(msgNumInt);
 	}
@@ -173,7 +175,7 @@ implements SybMessageHandler
 	{
 		// Take care of some specific messages...
 		int           code    = sqle.getErrorCode();
-		Integer       codeInt = new Integer(code);
+		Integer       codeInt = Integer.valueOf(code);
 		String        msgStr  = sqle.getMessage();
 		StringBuilder sb      = new StringBuilder();
 		StringBuilder logMsg  = new StringBuilder();

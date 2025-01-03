@@ -27,7 +27,7 @@ import com.dbxtune.utils.StringUtil;
 public class MonitorDiskSpaceAllOs
 extends HostMonitor
 {
-//	private static Logger _logger = Logger.getLogger(MonitorDiskSpaceAllOs.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MonitorDiskSpaceAllOs()
 	{

@@ -43,10 +43,10 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.Properties;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -69,8 +69,8 @@ import javax.swing.UIManager;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeNode;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTreeTable;
 import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -99,7 +99,7 @@ extends JFrame
 //implements Runnable, ActionListener//, TableModelListener
 implements ActionListener, PersistReader.INotificationListener//, TableModelListener
 {
-	private static Logger _logger = Logger.getLogger(OfflineSessionVeiwer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = -113668702537883167L;
 
 	private static final Color TAB_CMNAMESUM_COL_BG = new Color(240, 240, 240);
@@ -917,13 +917,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 	public static void main(String[] args) 
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		// set native L&F
 		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());} 

@@ -22,18 +22,20 @@
 package com.dbxtune.central.check;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
-import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.events.AlarmEvent.Category;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
+import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.events.dbxc.AlarmEventDbxCollectorNoData;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.DbxTuneSample;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.Configuration;
 public class ReceiverAlarmCheck
 implements Runnable
 {
-	private static Logger _logger = Logger.getLogger(ReceiverAlarmCheck.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_checkSleepTimeInSec  = "ReceiverAlarmCheck.check.sleep.time.inSeconds";
 	public static final int     DEFAULT_checkSleepTimeInSec  = 30;

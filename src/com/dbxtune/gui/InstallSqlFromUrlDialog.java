@@ -32,6 +32,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.invoke.MethodHandles;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.SQLException;
@@ -47,7 +48,8 @@ import javax.swing.JTextField;
 
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.dbxtune.Version;
@@ -66,7 +68,7 @@ public class InstallSqlFromUrlDialog
 extends JDialog
 implements ActionListener
 {
-	private static Logger _logger = Logger.getLogger(InstallSqlFromUrlDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	private JPanel          _top_panel         = null;

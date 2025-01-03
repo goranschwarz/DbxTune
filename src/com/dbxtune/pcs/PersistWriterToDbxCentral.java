@@ -22,6 +22,7 @@ package com.dbxtune.pcs;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -30,7 +31,8 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.InputValidator;
@@ -51,7 +53,7 @@ extends PersistWriterToHttpJson
 // * Give it a more specific name so we can do more "stuff" in here, like:
 //   * Write to HTTP or FILE (or both) and possibly other "localizations" later on...
 
-	private static Logger _logger = Logger.getLogger(PersistWriterToDbxCentral.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	// What writer type should we use
 	private WriterType _writerType = null;

@@ -27,8 +27,8 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
@@ -42,7 +42,6 @@ import com.dbxtune.utils.Ver;
 public class CmRaLogActivity
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmRaLogActivity.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmRaLogActivity.class.getSimpleName();
@@ -261,7 +260,7 @@ extends CountersModel
 				Double del = this.getRateValueAsDouble(i, "Deletes");
 
 				lArray[i] = this.getRateString(i, "DBName");
-				dArray[i] = new Double(ins + upd + del);
+				dArray[i] = Double.valueOf(ins + upd + del);
 			}
 
 			// Set the values

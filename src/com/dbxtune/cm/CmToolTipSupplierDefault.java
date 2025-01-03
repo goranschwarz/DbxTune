@@ -24,13 +24,15 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Map;
 
 import javax.swing.event.HyperlinkEvent;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.focusabletip.ResolverReturn;
@@ -44,7 +46,7 @@ import com.dbxtune.xmenu.SqlSentryPlanExplorer;
 public class CmToolTipSupplierDefault
 implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 {
-	private static Logger _logger = Logger.getLogger(CmToolTipSupplierDefault.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	public static final String  PROPKEY_TABLE_TOOLTIP_FOCUSABLE = "<CMNAME>.table.tooltip.focusable";
 	public static final boolean DEFAULT_TABLE_TOOLTIP_FOCUSABLE = false;

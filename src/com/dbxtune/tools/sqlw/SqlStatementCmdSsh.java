@@ -21,6 +21,7 @@
 package com.dbxtune.tools.sqlw;
 
 import java.awt.Component;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -32,7 +33,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.SqlTextDialog;
 import com.dbxtune.gui.swing.PromptForPassword;
@@ -49,7 +51,7 @@ import com.dbxtune.utils.SwingUtils;
 public class SqlStatementCmdSsh 
 extends SqlStatementAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlStatementCmdSsh.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 	private String _originCmd = null;

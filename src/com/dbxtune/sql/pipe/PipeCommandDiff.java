@@ -21,6 +21,7 @@
 package com.dbxtune.sql.pipe;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -35,7 +36,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ConnectionProfile;
 import com.dbxtune.gui.ConnectionProfileManager;
@@ -43,8 +45,8 @@ import com.dbxtune.sql.SqlProgressDialog;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.diff.DiffContext;
-import com.dbxtune.sql.diff.DiffSink;
 import com.dbxtune.sql.diff.DiffContext.DiffSide;
+import com.dbxtune.sql.diff.DiffSink;
 import com.dbxtune.sql.diff.actions.DiffTableModel;
 import com.dbxtune.sql.diff.actions.GenerateSqlText;
 import com.dbxtune.tools.sqlw.SqlStatementAbstract;
@@ -66,7 +68,7 @@ import com.dbxtune.utils.SwingUtils;
 public class PipeCommandDiff
 extends PipeCommandAbstract
 {
-	private static Logger _logger = Logger.getLogger(PipeCommandDiff.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	private String[] _args = null;
 

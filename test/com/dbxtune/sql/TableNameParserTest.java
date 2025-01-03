@@ -26,8 +26,6 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import com.dbxtune.sql.TableNameParser;
-
 @SuppressWarnings("deprecation")
 public final class TableNameParserTest {
 	

@@ -36,7 +36,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmExecQueryStatPerDbPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmTempdbSpidUsagePanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_sample_resourcedb = "Sample information about dbid=32767 (Microsoft System Resource DB). https://learn.microsoft.com/en-us/sql/relational-databases/databases/resource-database";

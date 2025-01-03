@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.gui;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
@@ -34,7 +37,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class ConnectionProfile
 {
-	private static Logger _logger = Logger.getLogger(ConnectionProfile.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final DbxTuneParams DBXTUNE_PARAMS_EMPTY = new DbxTuneParams();
 	

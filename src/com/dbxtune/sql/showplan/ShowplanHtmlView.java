@@ -21,18 +21,16 @@
 package com.dbxtune.sql.showplan;
 
 import java.awt.Desktop;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Enumeration;
-import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -45,16 +43,15 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.Version;
 import com.dbxtune.utils.FileUtils;
 import com.dbxtune.utils.SwingUtils;
 
 public abstract class ShowplanHtmlView
 {
-	private static Logger _logger = Logger.getLogger(ShowplanHtmlView.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private static final String _baseTempPath = System.getProperty("java.io.tmpdir");
 	public static final String TMP_SHOWPLAN_PATH = System.getProperty("java.io.tmpdir") + File.separator + "showplan" + File.separator;
@@ -497,13 +494,8 @@ public abstract class ShowplanHtmlView
 
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 		
 
 		String xmlPlan = 

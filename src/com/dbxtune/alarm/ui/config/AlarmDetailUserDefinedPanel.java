@@ -27,6 +27,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -45,7 +46,8 @@ import javax.swing.border.Border;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codehaus.commons.compiler.CompileException;
 import org.codehaus.commons.compiler.util.resource.MapResourceFinder;
 import org.codehaus.commons.compiler.util.resource.MultiResourceFinder;
@@ -83,7 +85,7 @@ public class AlarmDetailUserDefinedPanel
 extends JPanel
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(AlarmDetailUserDefinedPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private JTextField      _javaFileName_txt  = new JTextField();
 	private RSyntaxTextArea _javaEditor_txt    = new RSyntaxTextArea();

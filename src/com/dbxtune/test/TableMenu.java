@@ -231,31 +231,31 @@ public class TableMenu extends JFrame
 					{
 						Integer changeValue = (Integer) value;
 						Integer currentValue = (Integer) getTableModel().getValueAt(rowIndex, columnIndex);
-						getTableModel().setValueAt(new Integer(currentValue.intValue() + changeValue.intValue()), rowIndex, columnIndex);
+						getTableModel().setValueAt(Integer.valueOf(currentValue.intValue() + changeValue.intValue()), rowIndex, columnIndex);
 					}
 				}
 			};
 			JMenuItem changeItem = new JMenuItem();
 			changeItem.setText("+1");
-			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, new Integer(1));
+			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, Integer.valueOf(1));
 			changeItem.addActionListener(changer);
 			contextMenu.add(changeItem);
 
 			changeItem = new JMenuItem();
 			changeItem.setText("-1");
-			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, new Integer(-1));
+			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, Integer.valueOf(-1));
 			changeItem.addActionListener(changer);
 			contextMenu.add(changeItem);
 
 			changeItem = new JMenuItem();
 			changeItem.setText("+10");
-			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, new Integer(10));
+			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, Integer.valueOf(10));
 			changeItem.addActionListener(changer);
 			contextMenu.add(changeItem);
 
 			changeItem = new JMenuItem();
 			changeItem.setText("-10");
-			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, new Integer(-10));
+			changeItem.putClientProperty(PROP_CHANGE_QUANTITY, Integer.valueOf(-10));
 			changeItem.addActionListener(changer);
 			contextMenu.add(changeItem);
 
@@ -399,11 +399,11 @@ class ExampleTableModel extends AbstractTableModel
 		case COLUMN_NAME:
 			return item.name;
 		case COLUMN_PRICE:
-			return new Double(item.price);
+			return Double.valueOf(item.price);
 		case COLUMN_QUANTITY:
-			return new Integer(item.quantity);
+			return Integer.valueOf(item.quantity);
 		case COLUMN_AMOUNT:
-			return new Double(item.getAmount());
+			return Double.valueOf(item.getAmount());
 		default:
 			return null;
 		}

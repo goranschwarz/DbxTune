@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -31,7 +32,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCache.ObjectInfo;
@@ -39,7 +41,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 
 public class PostgresUtils
 {
-	private static Logger _logger = Logger.getLogger(PostgresUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static Timestamp getStartDate(DbxConnection conn)
 	throws SQLException

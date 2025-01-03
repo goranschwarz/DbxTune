@@ -22,20 +22,22 @@
 package com.dbxtune.central.lmetrics;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterCollectorThreadAbstract;
 import com.dbxtune.ICounterController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
-import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.events.AlarmEvent.Category;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
+import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
@@ -52,7 +54,7 @@ import com.dbxtune.utils.TimeUtils;
 public class LocalMetricsCollectorThread
 extends CounterCollectorThreadAbstract
 {
-	private static Logger _logger = Logger.getLogger(LocalMetricsCollectorThread.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String THREAD_NAME = "DbxCentralLocalMetrics";
 	

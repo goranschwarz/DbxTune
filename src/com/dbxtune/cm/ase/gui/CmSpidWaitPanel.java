@@ -25,6 +25,7 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,7 +38,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -80,7 +82,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmSpidWaitPanel
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmSpidWaitPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSpidWait.CM_NAME;
@@ -388,7 +390,7 @@ extends TabularCntrPanel
 
 					// save: EventName -> ID
 					if ( ! waitEventNameToIdMap.containsKey(EventName) )
-						waitEventNameToIdMap.put(EventName, new Integer(WaitEventID.intValue()));
+						waitEventNameToIdMap.put(EventName, Integer.valueOf(WaitEventID.intValue()));
 
 					if (generateClass)
 					{
@@ -396,9 +398,9 @@ extends TabularCntrPanel
 						Double sumWaits           = classesWaits          .get(ClassName);
 						Double sumWaitTimePerWait = classesWaitTimePerWait.get(ClassName);
 
-						classesWaitTime       .put(ClassName, new Double(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
-						classesWaits          .put(ClassName, new Double(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
-						classesWaitTimePerWait.put(ClassName, new Double(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
+						classesWaitTime       .put(ClassName, Double.valueOf(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
+						classesWaits          .put(ClassName, Double.valueOf(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
+						classesWaitTimePerWait.put(ClassName, Double.valueOf(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
 					}
 					
 					if (generateEvent)
@@ -407,9 +409,9 @@ extends TabularCntrPanel
 						Double sumWaits           = eventWaits          .get(EventName);
 						Double sumWaitTimePerWait = eventWaitTimePerWait.get(EventName);
 
-						eventWaitTime       .put(EventName, new Double(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
-						eventWaits          .put(EventName, new Double(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
-						eventWaitTimePerWait.put(EventName, new Double(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
+						eventWaitTime       .put(EventName, Double.valueOf(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
+						eventWaits          .put(EventName, Double.valueOf(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
+						eventWaitTimePerWait.put(EventName, Double.valueOf(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
 //						if (generateEventWaitTime)
 //							dataset.addValue(WaitTime       .doubleValue(), EventName, "Event - WaitTime");
 //

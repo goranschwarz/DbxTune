@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -29,7 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -45,7 +47,7 @@ import it.sauronsoftware.cron4j.TaskExecutionContext;
 public class SqlServerQueryStoreDdlExtractor
 extends Task
 {
-	private static Logger _logger = Logger.getLogger(SqlServerQueryStoreDdlExtractor.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_start = "SqlServerQueryStoreDdlExtractor.start";
 	public static final boolean DEFAULT_start = true;

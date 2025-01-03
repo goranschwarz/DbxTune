@@ -29,8 +29,6 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.dbxtune.utils.StringUtil;
-
 public class StringUtilTest
 {
 

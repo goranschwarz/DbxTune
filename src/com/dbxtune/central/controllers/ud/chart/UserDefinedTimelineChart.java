@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.central.controllers.ud.chart;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -38,7 +39,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -48,7 +50,7 @@ import com.dbxtune.utils.StringUtil;
 public class UserDefinedTimelineChart
 extends UserDefinedChartAbstract
 {
-	private static Logger _logger = Logger.getLogger(UserDefinedTimelineChart.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_startTime = "startTime.default";
 	public static final String DEFAULT_startTime = "-2";

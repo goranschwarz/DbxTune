@@ -41,7 +41,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmPgStatementsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgStatementsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_totalTimeGt = 

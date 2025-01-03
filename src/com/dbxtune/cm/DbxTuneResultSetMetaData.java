@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.ResultSetMetaData;
 import java.sql.Time;
@@ -32,7 +33,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.StringUtil;
 
@@ -40,7 +42,7 @@ import com.dbxtune.utils.StringUtil;
 public class DbxTuneResultSetMetaData
 implements ResultSetMetaData
 {
-	private static Logger _logger = Logger.getLogger(DbxTuneResultSetMetaData.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String  _schemaName    = "";
 	private String  _tableName     = "";
@@ -563,14 +565,14 @@ implements ResultSetMetaData
 		{
 			switch (sqlType)
 			{
-			case java.sql.Types.BIT:          return new Boolean(strVal);
-			case java.sql.Types.TINYINT:      return new Byte(Byte.parseByte(strVal));
-			case java.sql.Types.SMALLINT:     return new Short(Short.parseShort(strVal));
-			case java.sql.Types.INTEGER:      return new Integer(strVal);
-			case java.sql.Types.BIGINT:       return new Long(strVal);
-			case java.sql.Types.FLOAT:        return new Float(strVal);
-			case java.sql.Types.REAL:         return new Float(strVal);
-			case java.sql.Types.DOUBLE:       return new Double(strVal);
+			case java.sql.Types.BIT:          return Boolean.valueOf(strVal);
+			case java.sql.Types.TINYINT:      return Byte   .valueOf(Byte.parseByte(strVal));
+			case java.sql.Types.SMALLINT:     return Short  .valueOf(Short.parseShort(strVal));
+			case java.sql.Types.INTEGER:      return Integer.valueOf(strVal);
+			case java.sql.Types.BIGINT:       return Long   .valueOf(strVal);
+			case java.sql.Types.FLOAT:        return Float  .valueOf(strVal);
+			case java.sql.Types.REAL:         return Float  .valueOf(strVal);
+			case java.sql.Types.DOUBLE:       return Double .valueOf(strVal);
 			case java.sql.Types.NUMERIC:      return new BigDecimal(strVal).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
 			case java.sql.Types.DECIMAL:      return new BigDecimal(strVal).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
 			case java.sql.Types.CHAR:         return new String(strVal);
@@ -592,7 +594,7 @@ implements ResultSetMetaData
 			case java.sql.Types.CLOB:         return val;
 //			case java.sql.Types.REF:          return "-REF-";
 //			case java.sql.Types.DATALINK:     return "-DATALINK-";
-			case java.sql.Types.BOOLEAN:      return new Boolean(strVal);
+			case java.sql.Types.BOOLEAN:      return Boolean.valueOf(strVal);
 			default:
 				throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '"+sqlType+"', value='"+val+"'.");
 			}
@@ -626,14 +628,14 @@ implements ResultSetMetaData
 
 		switch (sqlType)
 		{
-		case java.sql.Types.BIT:          return new Boolean(false);
-		case java.sql.Types.TINYINT:      return new Byte(Byte.parseByte("0"));
-		case java.sql.Types.SMALLINT:     return new Short(Short.parseShort("0"));
-		case java.sql.Types.INTEGER:      return new Integer(0);
-		case java.sql.Types.BIGINT:       return new Long(0);
-		case java.sql.Types.FLOAT:        return new Float(0);
-		case java.sql.Types.REAL:         return new Float(0);
-		case java.sql.Types.DOUBLE:       return new Double(0);
+		case java.sql.Types.BIT:          return Boolean.valueOf(false);
+		case java.sql.Types.TINYINT:      return Byte   .valueOf(Byte.parseByte("0"));
+		case java.sql.Types.SMALLINT:     return Short  .valueOf(Short.parseShort("0"));
+		case java.sql.Types.INTEGER:      return Integer.valueOf(0);
+		case java.sql.Types.BIGINT:       return Long   .valueOf(0);
+		case java.sql.Types.FLOAT:        return Float  .valueOf(0);
+		case java.sql.Types.REAL:         return Float  .valueOf(0);
+		case java.sql.Types.DOUBLE:       return Double .valueOf(0);
 		case java.sql.Types.NUMERIC:      return new BigDecimal(0).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
 		case java.sql.Types.DECIMAL:      return new BigDecimal(0).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
 		case java.sql.Types.CHAR:         return "";
@@ -655,7 +657,7 @@ implements ResultSetMetaData
 		case java.sql.Types.CLOB:         return "";
 //		case java.sql.Types.REF:          return "-REF-";
 //		case java.sql.Types.DATALINK:     return "-DATALINK-";
-		case java.sql.Types.BOOLEAN:      return new Boolean(false);
+		case java.sql.Types.BOOLEAN:      return Boolean.valueOf(false);
 		default:
 			throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '"+sqlType+"', value='"+val+"'.");
 		}

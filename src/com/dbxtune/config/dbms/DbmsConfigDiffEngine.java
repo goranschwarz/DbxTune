@@ -22,6 +22,7 @@
 package com.dbxtune.config.dbms;
 
 import java.awt.Window;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
@@ -29,7 +30,8 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ConnectionDialog;
 import com.dbxtune.pcs.PersistReader;
@@ -41,7 +43,7 @@ import com.google.common.collect.Maps;
 
 public class DbmsConfigDiffEngine
 {
-	private static Logger _logger = Logger.getLogger(DbmsConfigDiffEngine.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private Window _owner;
 //	private DbxConnection _localConn;

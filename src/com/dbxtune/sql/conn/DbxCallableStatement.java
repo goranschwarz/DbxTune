@@ -22,6 +22,7 @@ package com.dbxtune.sql.conn;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.Array;
@@ -44,11 +45,13 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class DbxCallableStatement implements CallableStatement
 {
-	private static Logger _logger = Logger.getLogger(DbxCallableStatement.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static DbxCallableStatement create(CallableStatement cstmnt)
 	{

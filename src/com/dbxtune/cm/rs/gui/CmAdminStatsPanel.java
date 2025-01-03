@@ -36,7 +36,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmAdminStatsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmAdminStatsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	JCheckBox _sample_resetAfter_chk;

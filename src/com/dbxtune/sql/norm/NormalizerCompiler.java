@@ -22,20 +22,22 @@ package com.dbxtune.sql.norm;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.codehaus.commons.compiler.CompileException;
 import org.codehaus.janino.JavaSourceClassLoader;
 //import org.codehaus.janino.DebuggingInformation;
@@ -48,7 +50,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class NormalizerCompiler
 {
-	private static Logger _logger = Logger.getLogger(NormalizerCompiler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public final static String PROPKEY_sourceDir         = "NormalizerCompiler.source.dir";
 //	public final static String DEFAULT_sourceDir         = "resources/normalizer-src";
@@ -291,13 +293,8 @@ public class NormalizerCompiler
 
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.TRACE);
 
 		try
 		{

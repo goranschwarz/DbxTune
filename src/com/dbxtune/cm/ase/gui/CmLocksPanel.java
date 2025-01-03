@@ -45,7 +45,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmLocksPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmLocksPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_sample_extraWhereClause = 

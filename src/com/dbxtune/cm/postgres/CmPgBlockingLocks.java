@@ -20,15 +20,17 @@
  ******************************************************************************/
 package com.dbxtune.cm.postgres;
 
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
@@ -40,7 +42,7 @@ import com.dbxtune.utils.Ver;
 public class CmPgBlockingLocks
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmPgBlockingLocks.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgBlockingLocks.class.getSimpleName();

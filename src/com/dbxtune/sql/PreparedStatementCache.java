@@ -22,6 +22,7 @@ package com.dbxtune.sql;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.Array;
@@ -45,11 +46,13 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class PreparedStatementCache
 {
-	private static Logger _logger = Logger.getLogger(PreparedStatementCache.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static HashMap<Connection, PreparedStatementCacheEntries> _psceMap = new HashMap<Connection, PreparedStatementCacheEntries>();
 
 	/**

@@ -227,7 +227,7 @@ implements ActionListener, TableModelListener
 							row.set(TAB_POS_NAME,                 cmsh.getName());
 							row.set(TAB_POS_OPTION,               cmsh.getPropName());
 							row.set(TAB_POS_OPTION_DTYPE,         cmsh.getDataTypeString());
-							row.set(TAB_POS_OPTION_BOL_VALUE,     "Boolean".equals(cmsh.getDataTypeString()) ? new Boolean(cmsh.getStringValue()) : new Boolean(false));
+							row.set(TAB_POS_OPTION_BOL_VALUE,     "Boolean".equals(cmsh.getDataTypeString()) ? Boolean.valueOf(cmsh.getStringValue()) : Boolean.valueOf(false));
 							row.set(TAB_POS_OPTION_STR_VALUE,     cmsh.getStringValue());
 							row.set(TAB_POS_OPTION_IS_DEFAULT,    cmsh.isDefaultValue());
 							row.set(TAB_POS_OPTION_DEFAULT_VALUE, cmsh.getDefaultValue());

@@ -29,6 +29,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +50,8 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.JTableHeader;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTableHeader;
 
 import com.dbxtune.Version;
@@ -71,7 +73,7 @@ extends JFrame
 implements ActionListener //, ConnectionProvider
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(DbmsConfigIssuesDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	// PANEL: OK-CANCEL
 	private JButton                _ok              = new JButton("OK");

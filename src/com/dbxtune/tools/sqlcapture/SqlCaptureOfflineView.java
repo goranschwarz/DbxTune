@@ -32,6 +32,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -41,7 +42,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Properties;
 
 import javax.swing.Action;
 import javax.swing.ImageIcon;
@@ -66,8 +66,8 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
@@ -117,7 +117,7 @@ extends JFrame
 implements ActionListener, ChangeListener//, MouseListener
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(SqlCaptureOfflineView.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	public static final String PROPKEY_BASE = "SqlCaptureOfflineView.";
 
@@ -2215,13 +2215,8 @@ implements ActionListener, ChangeListener//, MouseListener
 	{
 		System.out.println("Only used for dummy testing during development");
 
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		Configuration conf = new Configuration(System.getProperty("user.home") + File.separator + "SqlCaptureOfflineView.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf);

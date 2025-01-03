@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -40,7 +41,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.SqlProgressDialog;
@@ -50,7 +52,7 @@ import com.dbxtune.utils.StringUtil;
 public class PipeCommandToFile
 extends PipeCommandAbstract
 {
-	private static Logger _logger = Logger.getLogger(PipeCommandToFile.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 

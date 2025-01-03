@@ -24,14 +24,12 @@ import java.io.File;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Properties;
 
-import org.apache.log4j.PropertyConfigurator;
 import org.h2.engine.SysProperties;
 
 public class H2UrlHelper
 {
-//	private static Logger _logger = Logger.getLogger(H2UrlHelper.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static String _h2UrlStart = "jdbc:h2:";
 
 	private String _urlType   = "file";
@@ -466,13 +464,8 @@ public class H2UrlHelper
 
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		test("jdbc:h2:file:C:/projects/dbxtune_recordings_temp/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
 		test("jdbc:h2:tcp://192.168.0.112/spam_prod_b_2014-09-23.15");

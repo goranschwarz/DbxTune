@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.rs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -28,7 +29,8 @@ import java.util.List;
 
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -38,9 +40,9 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.NoValidRowsInSample;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.rs.gui.CmSummaryPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.sql.ResultSetMetaDataCached;
@@ -54,7 +56,7 @@ public class CmSummary
 //extends CountersModel
 extends CmSummaryAbstract
 {
-	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSummary.class.getSimpleName();
@@ -330,9 +332,9 @@ extends CmSummaryAbstract
 ////			arr[0] = this.getAbsValueAsDouble (0, "Connections");
 ////			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 ////			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-//			arr[0] = new Double(5.1  * ms);
-//			arr[1] = new Double(10.2 * ms);
-//			arr[2] = new Double(15.5 * ms);
+//			arr[0] = Double.valueOf(5.1  * ms);
+//			arr[1] = Double.valueOf(10.2 * ms);
+//			arr[2] = Double.valueOf(15.5 * ms);
 //			_logger.debug("updateGraphData("+GRAPH_NAME_XXX+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"'.");
 //
 //			// Set the values

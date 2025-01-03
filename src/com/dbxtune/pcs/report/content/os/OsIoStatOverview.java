@@ -38,7 +38,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class OsIoStatOverview extends OsAbstract
 {
-//	private static Logger _logger = Logger.getLogger(OsIoStatIo.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private List<String>        _miniChartJsList = new ArrayList<>();

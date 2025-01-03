@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -36,7 +37,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import com.dbxtune.utils.StringUtil;
@@ -45,7 +47,7 @@ import com.j256.simplemagic.ContentInfoUtil;
 
 public class SqlParam
 {
-	private static Logger _logger = Logger.getLogger(SqlParam.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private int     _sqlType  = Types.OTHER;
 	private Object  _val      = null;
@@ -174,7 +176,7 @@ public class SqlParam
 				p._val = null;
 			else
 			{
-				try { p._val = new Integer(val); }
+				try { p._val = Integer.valueOf(val); }
 				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a Integer.", e);}
 			}
 		}
@@ -186,7 +188,7 @@ public class SqlParam
 				p._val = null;
 			else
 			{
-				try { p._val = new Long(val); }
+				try { p._val = Long.valueOf(val); }
 				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a Long.", e);}
 			}
 		}
@@ -210,7 +212,7 @@ public class SqlParam
 				p._val = null;
 			else
 			{
-				try { p._val = new Double(val); }
+				try { p._val = Double.valueOf(val); }
 				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a Double.", e);}
 			}
 		}

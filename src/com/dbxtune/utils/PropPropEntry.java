@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.text.ParseException;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -28,7 +29,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 /**
  * This is a class that holds several 'properties' inside a single property
@@ -59,7 +62,7 @@ import org.apache.log4j.Logger;
 public class PropPropEntry
 implements Iterable<String>
 {
-	private static Logger _logger = Logger.getLogger(PropPropEntry.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private LinkedHashMap<String, Entry> _keys = new LinkedHashMap<String, Entry>();
 

@@ -24,6 +24,7 @@
  */
 package com.dbxtune.central.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -32,9 +33,9 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.dbxtune.central.pcs.DbxTuneSample.CmEntry;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.utils.Configuration;
@@ -46,7 +47,7 @@ import com.dbxtune.utils.TimeUtils;
 public class CentralPcsWriterHandler 
 implements Runnable
 {
-	private static Logger _logger          = Logger.getLogger(CentralPcsWriterHandler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String THREAD_NAME = "CentralPcsWriterHandler";
 	

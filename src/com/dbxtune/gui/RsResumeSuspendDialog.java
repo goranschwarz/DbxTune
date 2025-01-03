@@ -27,6 +27,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -43,7 +44,8 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.gui.swing.WaitForExecDialog.BgExecutor;
@@ -61,7 +63,7 @@ public class RsResumeSuspendDialog
 extends JDialog
 implements ActionListener, FocusListener
 {
-	private static Logger _logger = Logger.getLogger(RsResumeSuspendDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	public enum RsThreadType {DSI, REP_AGENT}

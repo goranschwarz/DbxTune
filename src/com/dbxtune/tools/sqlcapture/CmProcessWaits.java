@@ -38,7 +38,6 @@ import com.dbxtune.utils.Ver;
 public class CmProcessWaits
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmProcessWaits.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmProcessWaits.class.getSimpleName();

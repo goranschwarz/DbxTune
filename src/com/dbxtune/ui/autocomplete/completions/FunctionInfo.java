@@ -21,13 +21,15 @@
 package com.dbxtune.ui.autocomplete.completions;
 
 import java.io.Serializable;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -40,7 +42,7 @@ import com.dbxtune.utils.StringUtil;
 public class FunctionInfo
 implements Serializable
 {
-	private static Logger _logger = Logger.getLogger(FunctionInfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	public String _funcCat      = null;

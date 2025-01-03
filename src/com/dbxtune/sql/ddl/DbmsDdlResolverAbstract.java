@@ -22,11 +22,13 @@
 package com.dbxtune.sql.ddl;
 
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.ResultSetMetaDataCached;
 import com.dbxtune.sql.ResultSetMetaDataCached.Entry;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.StringUtil;
 public abstract class DbmsDdlResolverAbstract 
 implements IDbmsDataTypeResolver, IDbmsDdlResolver
 {
-	private static Logger _logger = Logger.getLogger(DbmsDdlResolverAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private DbxConnection _conn;
 	

@@ -33,9 +33,9 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.DbxTuneResultSetMetaData;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.rs.gui.CmAdminStatsPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -52,7 +52,6 @@ import com.dbxtune.utils.Ver;
 public class CmAdminStats
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmAdminStats.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmAdminStats.class.getSimpleName();

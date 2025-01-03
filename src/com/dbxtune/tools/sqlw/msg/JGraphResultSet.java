@@ -22,6 +22,7 @@ package com.dbxtune.tools.sqlw.msg;
 
 import java.awt.Dimension;
 import java.awt.Image;
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.NumberFormat;
@@ -40,7 +41,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jfree.chart.ChartFactory;
@@ -105,7 +107,7 @@ import net.miginfocom.swing.MigLayout;
 public class JGraphResultSet
 extends JComponent
 {
-	private static Logger _logger = Logger.getLogger(JGraphResultSet.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 //	private List<String> _graphMessages = null;
@@ -1093,7 +1095,7 @@ extends JComponent
 //					else if (isTimeColumn(col))
 //					{
 //						Timestamp ts = (Timestamp) _tm.getValueAsObject(row, col);
-//						Number value = new Long(ts.getTime());
+//						Number value = Long.valueOf(ts.getTime());
 //
 //						setOrIncrementValue(dataset, row, col, pivot, value, columnKey, rowKey);
 //					}
@@ -1229,7 +1231,7 @@ extends JComponent
 //					else if (isTimeColumn(col))
 //					{
 //						Timestamp ts = (Timestamp) _tm.getValueAsObject(r, col);
-//						Number value = new Long(ts.getTime());
+//						Number value = Long.valueOf(ts.getTime());
 //
 //						if ( transpose )
 //							dataset.setValue(value, columnKey, rowKey);

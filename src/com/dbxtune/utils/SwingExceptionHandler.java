@@ -20,11 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class SwingExceptionHandler
 {
-	private static final Logger	_logger	= Logger.getLogger(SwingExceptionHandler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static void register()
 	{

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune;
 
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.ResultSet;
@@ -28,7 +29,8 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.HashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCachePostgres;
@@ -91,7 +93,7 @@ import com.dbxtune.utils.Ver;
 public class CounterControllerPostgres 
 extends CounterControllerAbstract
 {
-	private static Logger _logger = Logger.getLogger(CounterControllerPostgres.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final int	   NUMBER_OF_PERFORMANCE_COUNTERS	= 54 + 10 + 20; 
 

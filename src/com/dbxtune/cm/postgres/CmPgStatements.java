@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,24 +33,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.postgres.gui.CmPgStatementsPanel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.pcs.PcsColumnOptions;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.ResultSetMetaDataCached;
-import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.ResultSetMetaDataCached.Entry;
+import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
@@ -63,7 +65,7 @@ import com.dbxtune.utils.Ver;
 public class CmPgStatements
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmPgStatements.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgStatements.class.getSimpleName();

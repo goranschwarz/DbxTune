@@ -25,6 +25,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -54,7 +55,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.Script;
 import org.h2.util.ScriptReader;
 
@@ -91,8 +93,7 @@ import com.dbxtune.utils.TimeUtils;
 public class H2CentralDbCopy
 implements AutoCloseable
 {
-	private static final Logger _logger = Logger.getLogger(H2CentralDbCopy.class);
-//	private final Logger _logger = Logger.getLogger(this.getClass().getName());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static char q = '"';
 	

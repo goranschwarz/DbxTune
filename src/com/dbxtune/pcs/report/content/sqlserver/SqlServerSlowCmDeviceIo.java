@@ -34,7 +34,7 @@ import com.dbxtune.utils.Configuration;
 public class SqlServerSlowCmDeviceIo 
 extends SqlServerAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlServerSlowCmDeviceIo.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 

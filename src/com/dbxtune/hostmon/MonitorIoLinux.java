@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.hostmon;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.os.CmOsIostat;
 import com.dbxtune.utils.Configuration;
@@ -29,7 +32,7 @@ import com.dbxtune.utils.VersionShort;
 public class MonitorIoLinux 
 extends MonitorIo
 {
-	private static Logger _logger = Logger.getLogger(MonitorIoLinux.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static String getUtilExtraInfoCommand()
 	{

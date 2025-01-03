@@ -24,6 +24,7 @@ import java.awt.Window;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -34,7 +35,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.gui.MainFrame;
@@ -51,8 +53,8 @@ import com.dbxtune.utils.TimeUtils;
 public class CounterSampleCatalogIteratorPostgres 
 extends CounterSampleCatalogIterator
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
-	private static Logger     _logger          = Logger.getLogger(CounterSampleCatalogIteratorPostgres.class);
 
 	// This is used if no databases are in a "valid" state.
 	private List<String> _fallbackList = null;

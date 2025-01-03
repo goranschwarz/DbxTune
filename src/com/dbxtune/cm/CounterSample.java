@@ -28,6 +28,7 @@ package com.dbxtune.cm;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -51,7 +52,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.ResultSetMetaDataCached;
@@ -67,7 +69,7 @@ public  class CounterSample
 extends CounterTableModel
 {
     /** Log4j logging. */
-	private   static Logger _logger = Logger.getLogger(CounterSample.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
     private static final long serialVersionUID = 4786911833477005253L;
 
     public static final String PK_STR_DELIMITER = "|"; 
@@ -796,16 +798,16 @@ extends CounterTableModel
 
 		switch (objSqlType)
 		{
-		case java.sql.Types.BIT:          return new Boolean(false);
-		case java.sql.Types.TINYINT:      return new Byte(Byte.parseByte("0"));
-		case java.sql.Types.SMALLINT:     return new Short(Short.parseShort("0"));
-		case java.sql.Types.INTEGER:      return new Integer(0);
-		case java.sql.Types.BIGINT:       return new Long(0);
-		case java.sql.Types.FLOAT:        return new Float(0);
-		case java.sql.Types.REAL:         return new Float(0);
-		case java.sql.Types.DOUBLE:       return new Double(0);
-		case java.sql.Types.NUMERIC:      return new BigDecimal(0);
-		case java.sql.Types.DECIMAL:      return new BigDecimal(0);
+		case java.sql.Types.BIT:          return Boolean.valueOf(false);
+		case java.sql.Types.TINYINT:      return Byte.valueOf(Byte.parseByte("0"));
+		case java.sql.Types.SMALLINT:     return Short.valueOf(Short.parseShort("0"));
+		case java.sql.Types.INTEGER:      return Integer.valueOf(0);
+		case java.sql.Types.BIGINT:       return Long.valueOf(0);
+		case java.sql.Types.FLOAT:        return Float.valueOf(0);
+		case java.sql.Types.REAL:         return Float.valueOf(0);
+		case java.sql.Types.DOUBLE:       return Double.valueOf(0);
+		case java.sql.Types.NUMERIC:      return BigDecimal.valueOf(0);
+		case java.sql.Types.DECIMAL:      return BigDecimal.valueOf(0);
 		case java.sql.Types.CHAR:         return "";
 		case java.sql.Types.VARCHAR:      return "";
 		case java.sql.Types.LONGVARCHAR:  return "";
@@ -828,7 +830,7 @@ extends CounterTableModel
 		case java.sql.Types.CLOB:         return "";
 		case java.sql.Types.REF:          return "-REF-";
 		case java.sql.Types.DATALINK:     return "-DATALINK-";
-		case java.sql.Types.BOOLEAN:      return new Boolean(false);
+		case java.sql.Types.BOOLEAN:      return Boolean.valueOf(false);
 		default:
 			_logger.error(getName()+": Unknow SQL datatype, when translating a NULL value.");
 			return new Object();
@@ -1270,7 +1272,7 @@ extends CounterTableModel
 				String colClassName = rsmd.getColumnClassName(i);
 
 				_colNames      .add(colName);
-				_colSqlType    .add(new Integer(colType));
+				_colSqlType    .add(Integer.valueOf(colType));
 				_colSqlTypeName.add(colTypeName);
 				_colClassName  .add(colClassName);
 
@@ -1285,7 +1287,7 @@ extends CounterTableModel
 						_colIsPk[i-1] = true;
 					
 					if (_colIsPk[i-1])
-						tmpPkPos.add(new Integer(i));
+						tmpPkPos.add(Integer.valueOf(i));
 				}
 
 				// Special... if colname is "msgAsColValue", 
@@ -1460,7 +1462,7 @@ extends CounterTableModel
 
 				// Set the "sampleTimeInMs" in the resultset.
 				if (_pos_sampleTimeInMs == i)
-					val = new Integer( getSampleInterval() );
+					val = Integer.valueOf( getSampleInterval() );
 
 				row.add(val);
 
@@ -1545,9 +1547,9 @@ extends CounterTableModel
 						_pkDupCountMap = new HashMap<String, Integer>();
 					Integer dupMergeCount = _pkDupCountMap.get(keyStr);
 					if (dupMergeCount == null)
-						dupMergeCount = new Integer(1); // initial value is/should_be 0
+						dupMergeCount = Integer.valueOf(1); // initial value is/should_be 0
 					else
-						dupMergeCount = new Integer(dupMergeCount.intValue() + 1);
+						dupMergeCount = Integer.valueOf(dupMergeCount.intValue() + 1);
 					_pkDupCountMap.put(keyStr, dupMergeCount);
 
 					// set/increment column 'dupMergeCount'/'dupRowCount'
@@ -1611,7 +1613,7 @@ extends CounterTableModel
 				// This is current size, because _rows.add() is done AFTER this
 				int rowId = _rows.size();
 
-				_keysToRowid.put(keyStr, new Integer(rowId));
+				_keysToRowid.put(keyStr, Integer.valueOf(rowId));
 				_rowidToKey.add(keyStr);
 				if (_logger.isTraceEnabled())
 					_logger.trace(getName()+":    >> key='"+key+"', rowId="+rowId+", _rowidToKey.addPos="+(_rowidToKey.size()-1));
@@ -1657,7 +1659,7 @@ extends CounterTableModel
 			if (_colIsPk != null)
 			{
 				String keyStr = key.toString();
-				_keysToRowid.put(keyStr, new Integer(r));
+				_keysToRowid.put(keyStr, Integer.valueOf(r));
 				_rowidToKey.add(keyStr);
 			}
 		}
@@ -1769,7 +1771,7 @@ extends CounterTableModel
 		// save PKEY with corresponding row
 		if (_colIsPk != null)
 		{
-			_keysToRowid.put(keyStr, new Integer(rowId));
+			_keysToRowid.put(keyStr, Integer.valueOf(rowId));
 			_rowidToKey.add(keyStr);
 		}
 
@@ -1831,7 +1833,7 @@ extends CounterTableModel
 				key = _rowidToKey.get(r);
 
 				// Set the new rowId for the PrimaryKey
-				_keysToRowid.put(key, new Integer(r)) ;
+				_keysToRowid.put(key, Integer.valueOf(r)) ;
 			}
 			
 		}
@@ -1857,7 +1859,7 @@ extends CounterTableModel
 
 	public void setPk(String key, int row)
 	{
-		_keysToRowid.put(key, new Integer(row));
+		_keysToRowid.put(key, Integer.valueOf(row));
 
 		while ( _rowidToKey.size() <= row )
 		{
@@ -2025,7 +2027,7 @@ extends CounterTableModel
 //			diffRow = new ArrayList<Object>();
 //			for (int i = 0; i < newSample.getColumnCount(); i++)
 //			{
-//				diffRow.add(new Integer(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
+//				diffRow.add(Integer.valueOf(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
 //			}
 //			diffCnt._rows.add(diffRow);
 //			return diffCnt;
@@ -2162,24 +2164,24 @@ extends CounterTableModel
 //		}
 //		else if (newColVal instanceof Byte)
 //		{
-//			diffColVal = new Byte((byte) (newColVal.byteValue() - prevColVal.byteValue()));
+//			diffColVal = Byte.valueOf((byte) (newColVal.byteValue() - prevColVal.byteValue()));
 //			if (diffColVal.intValue() < 0)
 //				if (negativeDiffCountersToZero)
-//					diffColVal = new Byte("0");
+//					diffColVal = Byte.valueOf("0");
 //		}
 //		else if (newColVal instanceof Double)
 //		{
-//			diffColVal = new Double(newColVal.doubleValue() - prevColVal.doubleValue());
+//			diffColVal = Double.valueOf(newColVal.doubleValue() - prevColVal.doubleValue());
 //			if (diffColVal.doubleValue() < 0)
 //				if (negativeDiffCountersToZero)
-//					diffColVal = new Double(0);
+//					diffColVal = Double.valueOf(0);
 //		}
 //		else if (newColVal instanceof Float)
 //		{
-//			diffColVal = new Float(newColVal.floatValue() - prevColVal.floatValue());
+//			diffColVal = Float.valueOf(newColVal.floatValue() - prevColVal.floatValue());
 //			if (diffColVal.floatValue() < 0)
 //				if (negativeDiffCountersToZero)
-//					diffColVal = new Float(0);
+//					diffColVal = Float.valueOf(0);
 //		}
 //		else if (newColVal instanceof Integer)
 //		{
@@ -2192,29 +2194,29 @@ extends CounterTableModel
 //////				// example prevColVal=2147483646, newColVal=-2147483647: The difference SHOULD BE: 3  
 //////				int restVal = Integer.MAX_VALUE - prevColVal.intValue(); // get changes up to the overflow: 2147483647 - 2147483646 == 7 
 //////				int overflv = newColVal.intValue() - Integer.MIN_VALUE;  // get changes after the overflow: -2147483647 - -2147483648 = 8
-//////				diffColVal = new Integer( restVal + overflv );
+//////				diffColVal = Integer.valueOf( restVal + overflv );
 //////System.out.println("restVal: "+restVal);
 //////System.out.println("overflv: "+overflv);
 //////System.out.println("=result: "+diffColVal);
 ////
 ////				// Or simplified (one-line)
-//////				diffColVal = new Integer( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
+//////				diffColVal = Integer.valueOf( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
 ////
 ////				// Deal with counter overflows by bumping up to a higher data type: and adding the negative delta on top of Integer.MAX_VALUE -------*/ 
 ////				long newColVal_bumped = Integer.MAX_VALUE + (newColVal.longValue() - Integer.MIN_VALUE);
-////				diffColVal = new Integer( (int) newColVal_bumped - prevColVal.intValue() );
+////				diffColVal = Integer.valueOf( (int) newColVal_bumped - prevColVal.intValue() );
 ////			}
 ////			else
-////				diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+////				diffColVal = Integer.valueOf(newColVal.intValue() - prevColVal.intValue());
 //			
-//			diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+//			diffColVal = Integer.valueOf(newColVal.intValue() - prevColVal.intValue());
 //			if (diffColVal.intValue() < 0)
 //				if (negativeDiffCountersToZero)
-//					diffColVal = new Integer(0);
+//					diffColVal = Integer.valueOf(0);
 //		}
 //		else if (newColVal instanceof Long)
 //		{
-//			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
+//			diffColVal = Long.valueOf(newColVal.longValue() - prevColVal.longValue());
 //			if (diffColVal.longValue() < 0)
 //			{
 //				// Do special stuff for diff counters on CmSpinlockSum and ASE is above 15.x, then counters will be delivered as bigint
@@ -2230,21 +2232,21 @@ extends CounterTableModel
 //					long maxUnsignedInt = 4294967295L; // 4 294 967 295
 //					
 ////					if (prevColVal.longValue() > (maxUnsignedInt - threshold) && newColVal.longValue() < threshold)
-//						diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
+//						diffColVal = Long.valueOf((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
 //					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', Long(ASE-bigint) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.longValue()='"+newColVal.longValue()+"', prevColVal.longValue()='"+prevColVal.longValue()+"', beforeReCalc.longValue()='"+beforeReCalc.longValue()+"', diffColVal.longValue()='"+diffColVal.longValue()+"'.");
 //				}
 //
 //				if (diffColVal.longValue() < 0)
 //					if (negativeDiffCountersToZero)
-//						diffColVal = new Long(0);
+//						diffColVal = Long.valueOf(0);
 //			}
 //		}
 //		else if (newColVal instanceof Short)
 //		{
-//			diffColVal = new Short((short) (newColVal.shortValue() - prevColVal.shortValue()));
+//			diffColVal = Short.valueOf((short) (newColVal.shortValue() - prevColVal.shortValue()));
 //			if (diffColVal.shortValue() < 0)
 //				if (negativeDiffCountersToZero)
-//					diffColVal = new Short("0");
+//					diffColVal = Short.valueOf("0");
 //		}
 //		else if (newColVal instanceof AtomicInteger)
 //		{
@@ -2283,31 +2285,31 @@ extends CounterTableModel
 
 		if      (thisColVal instanceof BigDecimal)
 		{
-			mergeColVal = new BigDecimal(prevColVal.doubleValue() + thisColVal.doubleValue());
+			mergeColVal = BigDecimal.valueOf(prevColVal.doubleValue() + thisColVal.doubleValue());
 		}
 		else if (thisColVal instanceof Byte)
 		{
-			mergeColVal = new Byte((byte) (prevColVal.byteValue() + thisColVal.byteValue()));
+			mergeColVal = Byte.valueOf((byte) (prevColVal.byteValue() + thisColVal.byteValue()));
 		}
 		else if (thisColVal instanceof Double)
 		{
-			mergeColVal = new Double(prevColVal.doubleValue() + thisColVal.doubleValue());
+			mergeColVal = Double.valueOf(prevColVal.doubleValue() + thisColVal.doubleValue());
 		}
 		else if (thisColVal instanceof Float)
 		{
-			mergeColVal = new Float(prevColVal.floatValue() + thisColVal.floatValue());
+			mergeColVal = Float.valueOf(prevColVal.floatValue() + thisColVal.floatValue());
 		}
 		else if (thisColVal instanceof Integer)
 		{
-			mergeColVal = new Integer(prevColVal.intValue() + thisColVal.intValue());
+			mergeColVal = Integer.valueOf(prevColVal.intValue() + thisColVal.intValue());
 		}
 		else if (thisColVal instanceof Long)
 		{
-			mergeColVal = new Long(prevColVal.longValue() + thisColVal.longValue());
+			mergeColVal = Long.valueOf(prevColVal.longValue() + thisColVal.longValue());
 		}
 		else if (thisColVal instanceof Short)
 		{
-			mergeColVal = new Short((short) (prevColVal.shortValue() + thisColVal.shortValue()));
+			mergeColVal = Short.valueOf((short) (prevColVal.shortValue() + thisColVal.shortValue()));
 		}
 		else if (thisColVal instanceof AtomicInteger)
 		{
@@ -2604,9 +2606,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Double(((Number) o).doubleValue());
+			return Double.valueOf(((Number) o).doubleValue());
 		else
-			return new Double(Double.parseDouble(o.toString()));
+			return Double.valueOf(Double.parseDouble(o.toString()));
 	}
 
 	// 
@@ -2623,9 +2625,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Double(((Number) o).doubleValue());
+			return Double.valueOf(((Number) o).doubleValue());
 		else
-			return new Double(Double.parseDouble(o.toString()));
+			return Double.valueOf(Double.parseDouble(o.toString()));
 	}
 
 	// 
@@ -2642,9 +2644,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Double(((Number) o).doubleValue());
+			return Double.valueOf(((Number) o).doubleValue());
 		else
-			return new Double(Double.parseDouble(o.toString()));
+			return Double.valueOf(Double.parseDouble(o.toString()));
 	}
 
 
@@ -2668,7 +2670,7 @@ extends CounterTableModel
 //		if (o instanceof Number)
 //			return ((Number) o).intValue();
 //		else
-//			return new Integer(Integer.parseInt(o.toString()));
+//			return Integer.valueOf(Integer.parseInt(o.toString()));
 //	}
 //
 //	// 
@@ -2687,7 +2689,7 @@ extends CounterTableModel
 //		if (o instanceof Number)
 //			return ((Number) o).intValue();
 //		else
-//			return new Integer(Integer.parseInt(o.toString()));
+//			return Integer.valueOf(Integer.parseInt(o.toString()));
 //	}
 //
 //	// 
@@ -2706,7 +2708,7 @@ extends CounterTableModel
 //		if (o instanceof Number)
 //			return ((Number) o).intValue();
 //		else
-//			return new Integer(Integer.parseInt(o.toString()));
+//			return Integer.valueOf(Integer.parseInt(o.toString()));
 //	}
 
 	
@@ -2728,9 +2730,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Integer(((Number) o).intValue());
+			return Integer.valueOf(((Number) o).intValue());
 		else
-			return new Integer(Integer.parseInt(o.toString()));
+			return Integer.valueOf(Integer.parseInt(o.toString()));
 	}
 
 	// 
@@ -2747,9 +2749,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Integer(((Number) o).intValue());
+			return Integer.valueOf(((Number) o).intValue());
 		else
-			return new Integer(Integer.parseInt(o.toString()));
+			return Integer.valueOf(Integer.parseInt(o.toString()));
 	}
 
 	// 
@@ -2766,9 +2768,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Integer(((Number) o).intValue());
+			return Integer.valueOf(((Number) o).intValue());
 		else
-			return new Integer(Integer.parseInt(o.toString()));
+			return Integer.valueOf(Integer.parseInt(o.toString()));
 	}
 
 
@@ -2790,9 +2792,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Long(((Number) o).longValue());
+			return Long.valueOf(((Number) o).longValue());
 		else
-			return new Long(Long.parseLong(o.toString()));
+			return Long.valueOf(Long.parseLong(o.toString()));
 	}
 
 	// 
@@ -2809,9 +2811,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Long(((Number) o).longValue());
+			return Long.valueOf(((Number) o).longValue());
 		else
-			return new Long(Long.parseLong(o.toString()));
+			return Long.valueOf(Long.parseLong(o.toString()));
 	}
 
 	// 
@@ -2828,9 +2830,9 @@ extends CounterTableModel
 			return def;
 
 		if (o instanceof Number)
-			return new Long(((Number) o).longValue());
+			return Long.valueOf(((Number) o).longValue());
 		else
-			return new Long(Long.parseLong(o.toString()));
+			return Long.valueOf(Long.parseLong(o.toString()));
 	}
 
 
@@ -3261,28 +3263,28 @@ extends CounterTableModel
 //	public static void main(String[] args)
 //	{ // 3646 + -3647
 //		//                 expected value     firstSampleValue             secondSampleValue
-//		testDiff("test-int-1", new Integer(10),   new Integer(10),             new Integer(20));
-//		testDiff("test-int-2", new Integer(1),    new Integer(2147483647),     new Integer(-2147483648));
-//		testDiff("test-int-3", new Integer(3),    new Integer(2147483646),     new Integer(-2147483647));
-//		testDiff("test-int-4", new Integer(7296), new Integer(2147480000),     new Integer(-2147480000));
-//		testDiff("test-int-5", new Integer(10),   new Integer(-2000),          new Integer(-1990));
+//		testDiff("test-int-1", Integer.valueOf(10),   Integer.valueOf(10),             Integer.valueOf(20));
+//		testDiff("test-int-2", Integer.valueOf(1),    Integer.valueOf(2147483647),     Integer.valueOf(-2147483648));
+//		testDiff("test-int-3", Integer.valueOf(3),    Integer.valueOf(2147483646),     Integer.valueOf(-2147483647));
+//		testDiff("test-int-4", Integer.valueOf(7296), Integer.valueOf(2147480000),     Integer.valueOf(-2147480000));
+//		testDiff("test-int-5", Integer.valueOf(10),   Integer.valueOf(-2000),          Integer.valueOf(-1990));
 //		
-//		testDiff("test-long-1", new Long(21),      new Long(Long.MAX_VALUE-10), new Long(Long.MIN_VALUE+10));
+//		testDiff("test-long-1", Long.valueOf(21),      Long.valueOf(Long.MAX_VALUE-10), Long.valueOf(Long.MIN_VALUE+10));
 //		
 //		testDiff("test-bd-1", new BigDecimal(10), new BigDecimal(10),    new BigDecimal(20));
 //		
 //		long maxUnsignedInt = 4294967295L; // 4 294 967 295
 //		testDiff("this-should-fail",    new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000));
 //		testDiff(CmSpinlockSum.CM_NAME, new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000)); // Special logic for CmSpinlockSum
-//		testDiff("this-should-fail",    new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));
-//		testDiff(CmSpinlockSum.CM_NAME, new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));       // Special logic for CmSpinlockSum
+//		testDiff("this-should-fail",    Long.valueOf(2001),       Long.valueOf(      maxUnsignedInt-1000), Long.valueOf(1000));
+//		testDiff(CmSpinlockSum.CM_NAME, Long.valueOf(2001),       Long.valueOf(      maxUnsignedInt-1000), Long.valueOf(1000));       // Special logic for CmSpinlockSum
 //		
 //		// Basic algorithm: diff = SecondSample - FirstSample
 //		// so 100 - 10 = 90
-//		System.out.println("dummy test: this should result in 90 = " + new Integer( new Integer(100) - new Integer(10) ));
+//		System.out.println("dummy test: this should result in 90 = " + Integer.valueOf( Integer.valueOf(100) - Integer.valueOf(10) ));
 //
 //		// lets try basic diff with counters that has overflow values ---          SecondSample               FirstSample
 //		// ASE will cause 'Msg 3606: Arithmetic overflow occurred.'
-//		System.out.println("dummy test: this should result in 3 = " + new Integer( new Integer(-2147483647) - new Integer(2147483646) ));
+//		System.out.println("dummy test: this should result in 3 = " + Integer.valueOf( Integer.valueOf(-2147483647) - Integer.valueOf(2147483646) ));
 //	}
 }

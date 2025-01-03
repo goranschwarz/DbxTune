@@ -21,9 +21,8 @@
  ******************************************************************************/
 package com.dbxtune.test;
 
-import java.util.Properties;
-
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 
 public class OpenSslAesUtil
 {
@@ -33,13 +32,8 @@ public class OpenSslAesUtil
 	 */
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.TRACE);
 
 		System.out.println("Usage: user passphrase [server] [filename]");
 		String user       = null;

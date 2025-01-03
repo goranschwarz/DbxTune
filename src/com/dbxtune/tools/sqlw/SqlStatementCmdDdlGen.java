@@ -22,6 +22,7 @@ package com.dbxtune.tools.sqlw;
 
 import java.awt.Component;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -35,7 +36,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.SqlTextDialog;
 import com.dbxtune.sql.SqlProgressDialog;
@@ -51,7 +53,7 @@ import com.dbxtune.utils.SwingUtils;
 public class SqlStatementCmdDdlGen 
 extends SqlStatementAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlStatementCmdDdlGen.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 	private String _originCmd = null;

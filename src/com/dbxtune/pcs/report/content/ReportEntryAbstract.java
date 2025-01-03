@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -40,7 +41,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.cm.CountersModel;
@@ -65,7 +67,7 @@ import com.dbxtune.utils.TimeUtils;
 public abstract class ReportEntryAbstract
 implements IReportEntry
 {
-	private static Logger _logger = Logger.getLogger(ReportEntryAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE = "DailySummaryReport.top.statements.onlyListObjectsInCurrentDatabase";
 	public static final boolean DEFAULT_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE = true;

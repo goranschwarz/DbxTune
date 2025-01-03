@@ -20,22 +20,24 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
-import com.dbxtune.IGuiController;
 import com.dbxtune.ICounterController.DbmsOption;
+import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmOpenTransactionsPanel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -54,7 +56,7 @@ import com.dbxtune.utils.SqlServerUtils.LockRecord;
 public class CmOpenTransactions
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmOpenTransactions.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmOpenTransactions.class.getSimpleName();
@@ -366,7 +368,7 @@ extends CountersModel
 
 				// SPID Locks
 				b = !"This was disabled".equals(spidLocks) && !"No Locks found".equals(spidLocks) && !"Timeout - when getting lock information".equals(spidLocks);
-				newSample.setValueAt(new Boolean(b), rowId, pos_HasSpidLocks);
+				newSample.setValueAt(Boolean.valueOf(b), rowId, pos_HasSpidLocks);
 				newSample.setValueAt(spidLocks,      rowId, pos_SpidLocks);
 				newSample.setValueAt(spidLockCount,  rowId, pos_SpidLockCount);
 	

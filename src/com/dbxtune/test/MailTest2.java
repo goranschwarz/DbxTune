@@ -21,14 +21,10 @@
  ******************************************************************************/
 package com.dbxtune.test;
 
-import java.util.Properties;
-
-import org.apache.log4j.PropertyConfigurator;
-
 import com.dbxtune.alarm.events.AlarmEvent;
-import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
+import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.writers.AlarmWriterToMail;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -70,17 +66,8 @@ public class MailTest2
 
 			Configuration conf = new Configuration(filename);
 
-			// Set Log4J Properties
-			Properties log4jProps = new Properties();
-			log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-			log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-			log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-			log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-
-			if ( (System.getenv("MAILTEST2_DEBUG")+"").trim().equalsIgnoreCase("true") )
-				log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-			
-			PropertyConfigurator.configure(log4jProps);
+			// Set Log4j Log Level
+//			Configurator.setRootLevel(Level.TRACE);
 			
 			// Set JUL (Java Util Logging) format
 //			System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT,%1$tL - %4$-7s - [%2$s] - %5$s %n");

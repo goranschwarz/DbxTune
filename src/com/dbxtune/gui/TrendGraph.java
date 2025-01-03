@@ -43,6 +43,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.geom.Rectangle2D;
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -69,7 +70,8 @@ import javax.swing.UIManager;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -112,7 +114,7 @@ public class TrendGraph
 implements ActionListener, MouseListener
 {
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(TrendGraph.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final int TYPE_BY_COL = CountersModel.GRAPH_TYPE_BY_COL;
 	public static final int TYPE_BY_ROW = CountersModel.GRAPH_TYPE_BY_ROW;
@@ -812,7 +814,7 @@ implements ActionListener, MouseListener
 
 				_series[i] = new Trace2DLtd(chartMaxSamples);
 				_series[i].setRenderer(_chart); // needed in jChart2D 3.2.1  
-				_series[i].setZIndex(new Integer(_colorPtr));
+				_series[i].setZIndex(Integer.valueOf(_colorPtr));
 				_series[i].setColor(nextColor());
 				_series[i].setName(newLabelName);
 				//_series[i].setStroke(new BasicStroke((float) 1.2));

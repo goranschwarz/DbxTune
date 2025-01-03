@@ -28,15 +28,17 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.hostmon.HostMonitorConnectionSsh;
 import com.dbxtune.hostmon.HostMonitorConnection.ExecutionWrapper;
+import com.dbxtune.hostmon.HostMonitorConnectionSsh;
 import com.dbxtune.ssh.SshConnection;
 
 /**
@@ -52,7 +54,7 @@ import com.dbxtune.ssh.SshConnection;
  */
 public class FileTail 
 {
-	private static Logger _logger = Logger.getLogger(FileTail.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Called for every new row appended to the file */
 	public interface TraceListener

@@ -21,20 +21,22 @@
  ******************************************************************************/
 package com.dbxtune.sql.norm;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
 public class StatementFixerManager
 {
-	private static Logger _logger = Logger.getLogger(StatementFixerManager.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private Set<IStatementFixer> _statementFixerEntries = new LinkedHashSet<>();
 

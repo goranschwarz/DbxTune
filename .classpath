@@ -14,11 +14,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/planviewer.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.17.jar" sourcepath="3pp/log4j-1.2.17.zip">
-		<attributes>
-			<attribute name="javadoc_location" value="http://logging.apache.org/log4j/1.2/apidocs"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="lib/swingx-all-1.6.5-1.jar" sourcepath="3pp/swingx-all-1.6.5-1-sources.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/swingx-all-1.6.5-1-javadoc.jar!/"/>
@@ -52,14 +47,12 @@
 			<attribute name="javadoc_location" value="http://jsendnsca.github.io/jsendnsca/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/jul-to-slf4j-2.0.16.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/cron4j-2.2.5.jar" sourcepath="3pp/cron4j-2.2.5-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jchart2d-3.3.2.jar" sourcepath="3pp/jchart2d-3.3.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/miglayout-core-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/miglayout-swing-5.2.jar"/>
-	<classpathentry kind="lib" path="lib/slf4j-api-1.7.29.jar"/>
-	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.7.29.jar"/>
-	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.7.29.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/geronimo-jaspi-2.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.security.auth.message-1.0.0.v201108011116.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.servlet-api-3.1.0.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1702070598402/source/javax.servlet-api-3.1.0-sources-1702158022404.jar"/>
@@ -102,6 +95,9 @@
 	<classpathentry kind="lib" path="lib/rsyntaxtextarea-3.5.2.jar" sourcepath="3pp/rsyntaxtextarea-3.5.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-0.2.21.jar"/>
 	<classpathentry kind="lib" path="lib/httpclient-4.5.14.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-api-2.24.3.jar" sourcepath="3pp/apache-log4j-2.24.3-src.zip"/>
+	<classpathentry kind="lib" path="lib/log4j-core-2.24.3.jar" sourcepath="3pp/apache-log4j-2.24.3-src.zip"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-2.0.16.jar"/>
 	<classpathentry kind="output" path="classes"/>
 	<referencedentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="3pp/NEW/apache-mail/new/rsyntaxtextarea-3.5.1-sources.jar"/>
 </classpath>

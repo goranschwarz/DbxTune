@@ -28,7 +28,7 @@ import com.dbxtune.utils.SwingUtils;
 public class RsSuspend
 extends XmenuActionBase 
 {
-//	private static Logger _logger = Logger.getLogger(RsSuspend.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * 

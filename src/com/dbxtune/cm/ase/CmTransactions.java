@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.cm.ase;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -33,8 +35,8 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEventLongRunningDetachedTransaction;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
@@ -48,7 +50,7 @@ import com.dbxtune.utils.Configuration;
 public class CmTransactions
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmTransactions.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmTransactions.class.getSimpleName();

@@ -31,7 +31,6 @@ public class MonTablesDictionaryMySql
 extends MonTablesDictionaryDefault
 {
     /** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(MonTablesDictionaryMySql.class);
 
 	@Override
 	public void initialize(DbxConnection conn, boolean hasGui)

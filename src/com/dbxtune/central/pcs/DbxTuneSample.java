@@ -1181,8 +1181,8 @@ public class DbxTuneSample
 
 		if (node.isLong())       return node.asLong();
 		if (node.isDouble())     return node.asDouble();
-		if (node.isShort())      return new Short(node.asText());
-		if (node.isFloat())      return new Float(node.asText());
+		if (node.isShort())      return Short.valueOf(node.asText());
+		if (node.isFloat())      return Float.valueOf(node.asText());
 		if (node.isBigDecimal()) return new BigDecimal(node.asText());
 		if (node.isBigInteger()) return new BigInteger(node.asText());
 //		if (node.isBinary())     return node.as);

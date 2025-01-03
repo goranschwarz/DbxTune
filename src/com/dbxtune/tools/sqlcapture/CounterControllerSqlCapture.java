@@ -20,9 +20,11 @@
  ******************************************************************************/
 package com.dbxtune.tools.sqlcapture;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterControllerAbstract;
 import com.dbxtune.ICounterController;
@@ -38,7 +40,7 @@ import com.dbxtune.utils.Ver;
 public class CounterControllerSqlCapture extends CounterControllerAbstract
 {
 	/** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(CounterControllerSqlCapture.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	/** This is a input to the SplashScreen */
 //	public static final int	   NUMBER_OF_PERFORMANCE_COUNTERS	= 54 + 10 + 20; 

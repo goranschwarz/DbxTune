@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
@@ -37,7 +38,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -48,7 +50,7 @@ import com.dbxtune.utils.TimeUtils;
 
 public class SparklineHelper
 {
-	private static Logger _logger = Logger.getLogger(SparklineHelper.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_getSparclineData_timeout = "SparklineHelper.getSparclineData.timeout";
 	public static final int    DEFAULT_getSparclineData_timeout = 600;
@@ -422,7 +424,7 @@ public class SparklineHelper
 				boolean doNotShowZeroValues = Configuration.getCombinedConfiguration().getBooleanProperty("SparklineHelper.doNotShowZeroValues", false);
 				if (doNotShowZeroValues)
 				{
-					double zeroValue = new Double(params.getNoDataInGroupDefaultValue());
+					double zeroValue = Double.valueOf(params.getNoDataInGroupDefaultValue());
 
     				for (int i=0; i<result.values.size(); i++)
     				{

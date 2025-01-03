@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.ui.tooltip.suppliers;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -30,7 +33,7 @@ import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 
 public class TtpEntryCompletionProvider
 {
-	private static Logger _logger = Logger.getLogger(TtpEntryCompletionProvider.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static CompletionProvider installAutoCompletion(TextEditorPane textPane)
 	{

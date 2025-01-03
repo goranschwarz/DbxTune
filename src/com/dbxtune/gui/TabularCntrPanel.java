@@ -50,6 +50,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -98,7 +99,8 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -153,7 +155,7 @@ implements
 	TableModelListener, 
 	ClipboardOwner
 {
-	private static Logger			_logger								= Logger.getLogger(TabularCntrPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final long		serialVersionUID					= 1L;
 

@@ -21,13 +21,16 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class MovingAverageCounterManager
 {
-	private static Logger _logger = Logger.getLogger(MovingAverageCounterManager.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	//---------------------------------------------------
 	// BEGIN: Instance variables and methods

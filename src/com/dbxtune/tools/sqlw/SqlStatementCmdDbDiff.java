@@ -41,8 +41,8 @@ import com.dbxtune.sql.SqlProgressDialog;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.diff.DiffContext;
 import com.dbxtune.sql.diff.DiffException;
-import com.dbxtune.sql.pipe.PipeCommandException;
 import com.dbxtune.sql.pipe.PipeCommandDiff.ActionType;
+import com.dbxtune.sql.pipe.PipeCommandException;
 import com.dbxtune.tools.sqlw.msg.IMessageAware;
 import com.dbxtune.tools.sqlw.msg.JPipeMessage;
 import com.dbxtune.tools.sqlw.msg.Message;
@@ -52,7 +52,7 @@ import com.dbxtune.utils.StringUtil;
 public class SqlStatementCmdDbDiff 
 extends SqlStatementAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlStatementCmdDbDiff.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 	private String _originCmd = null;

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.check;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -29,7 +30,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -39,7 +41,7 @@ import com.dbxtune.utils.Ver;
 
 public class CheckForUpdatesAse extends CheckForUpdatesDbx
 {
-	private static Logger _logger = Logger.getLogger(CheckForUpdatesAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	@Override protected String getHomeUrl()            { return ASETUNE_HOME_URL; };
 //	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }

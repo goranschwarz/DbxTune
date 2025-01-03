@@ -30,7 +30,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -39,7 +40,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 public class PcsQueueInfoController extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException

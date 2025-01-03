@@ -26,7 +26,6 @@ import com.dbxtune.gui.TabularCntrPanel;
 public class ACopyMePanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(ACopyMePanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = ACopyMe.CM_NAME;

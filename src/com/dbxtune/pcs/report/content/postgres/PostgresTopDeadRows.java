@@ -38,7 +38,7 @@ import com.dbxtune.utils.Configuration;
 public class PostgresTopDeadRows
 extends PostgresAbstract
 {
-//	private static Logger _logger = Logger.getLogger(PostgresDbSize.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _autovacuumConfigRstm;

@@ -32,7 +32,7 @@ public abstract class OracleConfigText
 		};
 
 	/** Log4j logging. */
-//	private static Logger _logger = Logger.getLogger(OracleConfigText.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 
 	public static void createAndRegisterAllInstances()

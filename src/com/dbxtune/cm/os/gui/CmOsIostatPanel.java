@@ -40,15 +40,14 @@ import com.dbxtune.cm.CounterTableModel;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.CmOsIostat;
 import com.dbxtune.hostmon.HostMonitor;
-import com.dbxtune.hostmon.MonitorIoLinux;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
+import com.dbxtune.hostmon.MonitorIoLinux;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
 public class CmOsIostatPanel
 extends CmOsGenericPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmOsIostatPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmOsIostat.CM_NAME;

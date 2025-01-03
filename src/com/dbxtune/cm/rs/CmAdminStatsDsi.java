@@ -23,8 +23,8 @@ package com.dbxtune.cm.rs;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.MainFrameRs;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
@@ -35,7 +35,6 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmAdminStatsDsi
 extends CmAdminStatsAbstract
 {
-//	private static Logger        _logger          = Logger.getLogger(CmAdminStats.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmAdminStatsDsi.class.getSimpleName();

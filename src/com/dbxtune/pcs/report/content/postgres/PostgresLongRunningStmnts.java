@@ -26,18 +26,19 @@ import java.io.Writer;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
+//import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer; // This needs to be here, but in case of "Organize Imports" (Ctl-O) it may disappear, leading to error !!!
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.SqlUtils;
-import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SqlUtils.SqlDialict;
+import com.dbxtune.utils.StringUtil;
 
 public class PostgresLongRunningStmnts
 extends PostgresAbstract
 {
-//	private static Logger _logger = Logger.getLogger(PostgresLongRunningStmnts.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _msoRstm; // Special table for MS Outlook

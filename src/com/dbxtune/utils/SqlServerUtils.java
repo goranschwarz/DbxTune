@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -35,11 +36,12 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
-import com.dbxtune.Version;
 import com.dbxtune.ICounterController.DbmsOption;
+import com.dbxtune.Version;
 import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCache.ObjectInfo;
 import com.dbxtune.cm.CountersModel;
@@ -48,7 +50,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 
 public class SqlServerUtils
 {
-	private static Logger _logger = Logger.getLogger(SqlServerUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 
 	/**

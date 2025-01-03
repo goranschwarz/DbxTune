@@ -36,7 +36,7 @@ import com.dbxtune.utils.StringUtil;
 public class DbxTuneErrors
 extends ReportEntryAbstract
 {
-//	private static Logger _logger = Logger.getLogger(DbxTuneErrors.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	private Log4jTableModel _tm = null;
 	
@@ -118,7 +118,7 @@ extends ReportEntryAbstract
 		{
 			Log4jLogRecord rec = tm.getRecord(r);
 
-			if (StringUtil.hasValue(rec.getThrownStackTrace()))
+			if (StringUtil.hasValue(rec.getThrownStackTraceAsString()))
 				rowsWithStacktrace++;
 		}
 		
@@ -159,7 +159,7 @@ extends ReportEntryAbstract
 			Log4jLogRecord rec = tm.getRecord(r);
 
 			// Format HTML -- StackTrace
-			String stackTrace = rec.getThrownStackTrace();
+			String stackTrace = rec.getThrownStackTraceAsString();
 			if (StringUtil.isNullOrBlank(stackTrace))
 			{
 				stackTrace = "";
@@ -174,12 +174,23 @@ extends ReportEntryAbstract
 				continue;
 
 			// Print the ROW 
+//			w.append("<TBODY> \n");
+//			w.append("  <TR> \n");
+//			w.append("    <TD>")       .append("" + new Timestamp(rec.getMillis())).append("</TD> \n");  // TIME
+//			w.append("    <TD>")       .append("" + rec.getLevel()).append("</TD> \n");                  // LEVEL
+//			w.append("    <TD>")       .append(rec.getThreadDescription()).append("</TD> \n");           // Thread Name 
+//			w.append("    <TD>")       .append(rec.getCategory()).append("</TD> \n");                    // Class Name
+//			w.append("    <TD>")       .append(rec.getLocation()).append("</TD> \n");                    // Location
+//			w.append("    <TD>")       .append(rec.getMessage()).append("</TD> \n");                     // Message
+//			w.append("    <TD NOWRAP>").append(stackTrace).append("</TD> \n");                           // StackTrace
+//			w.append("  </TR> \n");
+//			w.append("</TBODY> \n");
 			w.append("<TBODY> \n");
 			w.append("  <TR> \n");
-			w.append("    <TD>")       .append("" + new Timestamp(rec.getMillis())).append("</TD> \n");  // TIME
+			w.append("    <TD>")       .append("" + new Timestamp(rec.getTimeMs())).append("</TD> \n");  // TIME
 			w.append("    <TD>")       .append("" + rec.getLevel()).append("</TD> \n");                  // LEVEL
-			w.append("    <TD>")       .append(rec.getThreadDescription()).append("</TD> \n");           // Thread Name 
-			w.append("    <TD>")       .append(rec.getCategory()).append("</TD> \n");                    // Class Name
+			w.append("    <TD>")       .append(rec.getThreadName()).append("</TD> \n");                  // Thread Name 
+			w.append("    <TD>")       .append(rec.getClassName()).append("</TD> \n");                   // Class Name
 			w.append("    <TD>")       .append(rec.getLocation()).append("</TD> \n");                    // Location
 			w.append("    <TD>")       .append(rec.getMessage()).append("</TD> \n");                     // Message
 			w.append("    <TD NOWRAP>").append(stackTrace).append("</TD> \n");                           // StackTrace

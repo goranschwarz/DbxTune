@@ -536,37 +536,37 @@ public class CmSettingsHelper
 				
 			if (Byte.class == sh._dataType)
 			{
-				try { new Byte(val); }
+				try { Byte.valueOf(val); }
 				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Byte: "+ex.getMessage()); }
 			}
 				
 			if (Double.class == sh._dataType)
 			{
-				try { new Double(val); }
+				try { Double.valueOf(val); }
 				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Double: "+ex.getMessage()); }
 			}
 				
 			if (Float.class == sh._dataType)
 			{
-				try { new Float(val); }
+				try { Float.valueOf(val); }
 				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Float: "+ex.getMessage()); }
 			}
 				
 			if (Integer.class == sh._dataType)
 			{
-				try { new Integer(val); }
+				try { Integer.valueOf(val); }
 				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Integer: "+ex.getMessage()); }
 			}
 				
 			if (Long.class == sh._dataType)
 			{
-				try { new Long(val); }
+				try { Long.valueOf(val); }
 				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Long: "+ex.getMessage()); }
 			}
 				
 			if (Short.class == sh._dataType)
 			{
-				try { new Short(val); }
+				try { Short.valueOf(val); }
 				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Short: "+ex.getMessage()); }
 			}
 				

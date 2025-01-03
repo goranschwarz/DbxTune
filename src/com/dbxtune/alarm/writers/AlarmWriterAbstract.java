@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.alarm.writers;
 
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -39,7 +41,7 @@ import com.dbxtune.utils.StringUtil;
 public abstract class AlarmWriterAbstract
 implements IAlarmWriter
 {
-	private static Logger _logger = Logger.getLogger(AlarmWriterAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public final static String ACTION_RAISE    = "RAISE";
 	public final static String ACTION_RE_RAISE = "RE-RAISE";

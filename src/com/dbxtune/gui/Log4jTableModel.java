@@ -26,6 +26,7 @@ package com.dbxtune.gui;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalTime;
@@ -39,7 +40,8 @@ import java.util.regex.PatternSyntaxException;
 import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.utils.StringUtil;
@@ -47,7 +49,7 @@ import com.dbxtune.utils.StringUtil;
 public class Log4jTableModel
 extends AbstractTableModel
 {
-	private static Logger _logger = Logger.getLogger(Log4jTableModel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
     private static final long serialVersionUID = 2152458182894425275L;
 
     //	LogManager.
@@ -372,19 +374,37 @@ extends AbstractTableModel
 	{
 		return _records.size();
 	}
+//	@Override
+//	public Object getValueAt(int row, int col)
+//	{
+//		Log4jLogRecord r = _records.get(row);
+//		switch (col)
+//		{
+//		case 0: return Long.toString(r.getSequenceNumber());
+//		case 1: return new Timestamp(r.getMillis());
+//		case 2: return r.getLevel();
+//		case 3: return r.getThreadDescription();
+//		case 4: return r.getCategory();
+//		case 5: return r.getLocation();
+//		case 6: return Boolean.valueOf( r.getThrownStackTrace() != null ? true : false);
+//		case 7: return r.getMessage();
+////		case 4: return r.getNDC();
+//		}
+//		return null;
+//	}	
 	@Override
 	public Object getValueAt(int row, int col)
 	{
 		Log4jLogRecord r = _records.get(row);
 		switch (col)
 		{
-		case 0: return Long.toString(r.getSequenceNumber());
-		case 1: return new Timestamp(r.getMillis());
+		case 0: return r.getSequence();
+		case 1: return new Timestamp(r.getTimeMs());
 		case 2: return r.getLevel();
-		case 3: return r.getThreadDescription();
-		case 4: return r.getCategory();
+		case 3: return r.getThreadName();
+		case 4: return r.getClassName();
 		case 5: return r.getLocation();
-		case 6: return new Boolean( r.getThrownStackTrace() != null ? true : false);
+		case 6: return r.getThrowable() != null ? true : false;
 		case 7: return r.getMessage();
 //		case 4: return r.getNDC();
 		}

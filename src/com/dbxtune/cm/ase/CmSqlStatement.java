@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -37,7 +38,8 @@ import java.util.Set;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -48,12 +50,12 @@ import com.dbxtune.alarm.events.AlarmEventClientErrorMsgRate;
 import com.dbxtune.alarm.events.AlarmEventSqlCaptureOldData;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.NoValidRowsInSample;
-import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.config.dict.AseErrorMessageDictionary;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -78,7 +80,7 @@ import com.google.gson.Gson;
 public class CmSqlStatement
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmSqlStatement.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSqlStatement.class.getSimpleName();
@@ -1125,7 +1127,7 @@ extends CountersModel
 	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
 	{
 		if ("statId".equalsIgnoreCase(colName))
-			return new Integer(SqlCaptureStatementStatisticsSample.SUMMARY_STAT_ID);
+			return Integer.valueOf(SqlCaptureStatementStatisticsSample.SUMMARY_STAT_ID);
 		
 		return null;
 	}

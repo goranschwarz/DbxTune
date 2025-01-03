@@ -27,10 +27,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.invoke.MethodHandles;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
 
@@ -45,7 +47,7 @@ import com.dbxtune.alarm.events.AlarmEvent;
 public class AlarmContainer
 implements Serializable
 {
-	private static Logger _logger          = Logger.getLogger(AlarmContainer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	/** a list of: IAlarmEvent */

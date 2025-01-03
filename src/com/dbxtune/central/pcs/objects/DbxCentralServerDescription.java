@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +39,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.utils.StringUtil;
@@ -84,7 +86,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @JsonPropertyOrder(value = {"serverName", "serverNameOrAlias", "displayName", "enabled", "description", "extraInfo"}, alphabetic = true)
 public class DbxCentralServerDescription
 {
-	private static Logger _logger = Logger.getLogger(DbxCentralServerDescription.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String  _serverName;
 	private String  _aliasName;

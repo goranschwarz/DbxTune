@@ -32,6 +32,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -71,8 +72,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -117,7 +118,7 @@ public class LogTailWindow
 extends JFrame
 implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener, Memory.MemoryListener
 {
-	private static Logger _logger = Logger.getLogger(LogTailWindow.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	public enum FileType {ASE_LOG, REPSERVER_LOG, IQ_LOG, UNKNOWN_LOG}
@@ -244,13 +245,8 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	{
 		Version.setAppName(APP_NAME);
 
-Properties log4jProps = new Properties();
-log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 		
 //		// Create store dir if it did not exists.
 //		File appStoreDir = new File(AppDir.getAppStoreDir());
@@ -2099,13 +2095,8 @@ PropertyConfigurator.configure(log4jProps);
 	//--------------------------------------------------
 	public static void main_test(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		Configuration tailTempProps = new Configuration(getDefaultPropFile());
 		Configuration.setInstance(Configuration.TAIL_TEMP, tailTempProps);

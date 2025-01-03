@@ -28,6 +28,7 @@ import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.ProxySelector;
@@ -43,8 +44,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.btr.proxy.search.ProxySearch;
 import com.btr.proxy.search.ProxySearch.Strategy;
@@ -82,7 +83,7 @@ import com.dbxtune.utils.TimeUtils;
  */
 public abstract class CheckForUpdates
 {
-	private static Logger _logger = Logger.getLogger(CheckForUpdates.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private static final boolean _printDevTrace = false;
 
@@ -1428,8 +1429,8 @@ public abstract class CheckForUpdates
 					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)   && _logger.isTraceEnabled()) return true;
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)   && _logger.isDebugEnabled()) return true;
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.INFO)    && _logger.isInfoEnabled())  return true;
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING) && _logger.isEnabledFor(Level.WARN))  return true;
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)   && _logger.isEnabledFor(Level.ERROR))  return true;
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING) && _logger.isWarnEnabled())  return true;
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)   && _logger.isErrorEnabled()) return true;
 					else return false;
 				}
 
@@ -1470,7 +1471,7 @@ public abstract class CheckForUpdates
 							return;
 						}
 					}
-					_logDiscardCache.put(logMsg, new Long(System.currentTimeMillis()));
+					_logDiscardCache.put(logMsg, Long.valueOf(System.currentTimeMillis()));
 
 					
 //					System.out.println("PROXY-VOLE.log(logLevel="+logLevel+"): "+msg);
@@ -1717,14 +1718,6 @@ public abstract class CheckForUpdates
 	*/
 //	public static void main(String args[])
 //	{
-//		Properties log4jProps = new Properties();
-//		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//
 //		Configuration conf1 = new Configuration("c:\\projects\\dbxtune\\asetune.save.properties");
 //		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 //

@@ -21,13 +21,15 @@
  ******************************************************************************/
 package com.dbxtune.cm.postgres;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCache.ObjectInfo;
@@ -41,7 +43,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class PostgresCmHelper
 {
-	private static Logger _logger = Logger.getLogger(PostgresCmHelper.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * get/fill in 'dbname', 'schema_name' and 'schema_name' from ObjectIdCache based on the 'database:id' and 'relation:id'

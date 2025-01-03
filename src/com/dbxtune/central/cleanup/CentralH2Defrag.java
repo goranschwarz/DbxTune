@@ -21,14 +21,16 @@
 package com.dbxtune.central.cleanup;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.util.Date;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
-import com.dbxtune.central.pcs.ICentralPersistWriter;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc.H2ShutdownType;
+import com.dbxtune.central.pcs.ICentralPersistWriter;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.H2UrlHelper;
@@ -44,7 +46,7 @@ import it.sauronsoftware.cron4j.TaskExecutionContext;
 public class CentralH2Defrag
 extends Task
 {
-	private static Logger _logger = Logger.getLogger(CentralH2Defrag.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_start = "CentralH2Defrag.start";
 	public static final boolean DEFAULT_start = true;

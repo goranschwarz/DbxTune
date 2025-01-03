@@ -27,7 +27,7 @@ import com.dbxtune.utils.StringUtil;
 public class MonitorPsWindows
 extends HostMonitor
 {
-//	private static Logger _logger = Logger.getLogger(MonitorDiskSpaceAllOs.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MonitorPsWindows()
 	{
@@ -93,6 +93,7 @@ extends HostMonitor
 		md.setPkCol("Id");
 		
 //		md.setDiffCol( "Used-KB", "Available-KB", "Used-MB", "Available-MB" );
+		md.setDiffCol( "Handles", "NPM(K)", "PM(K)", "WS(K)", "CPU(s)" );
 
 		// Skip the header line
 		md.setSkipRows("Handles", "Handles");

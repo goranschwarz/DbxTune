@@ -30,6 +30,7 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -68,7 +69,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -94,7 +96,7 @@ import net.miginfocom.swing.MigLayout;
 
 public class ConnectionProfileManager
 {
-	private static Logger _logger = Logger.getLogger(ConnectionProfileManager.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //	private static final long serialVersionUID = 1L;
 
 	/** all connection profiles, by key: getName() from the profile */
@@ -855,10 +857,11 @@ public class ConnectionProfileManager
 	private TreeNode[] getTreePath(Object profile)
 	{
 		@SuppressWarnings("unchecked")
-		Enumeration<DefaultMutableTreeNode> en = _profileTreeRoot.preorderEnumeration();	
+//		Enumeration<DefaultMutableTreeNode> en = _profileTreeRoot.preorderEnumeration();
+		Enumeration<TreeNode> en = _profileTreeRoot.preorderEnumeration();
 		while (en.hasMoreElements())
 		{
-			DefaultMutableTreeNode node = en.nextElement();
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) en.nextElement();
 
 			TreeNode[] path = node.getPath();
 //System.out.println((node.isLeaf() ? "  - " : "+ ") + path[path.length - 1] + " (obj="+path[path.length - 1].getClass().getName()+")");
@@ -2086,10 +2089,11 @@ public class ConnectionProfileManager
 		public static DefaultMutableTreeNode findTreeNode(DefaultMutableTreeNode root, String str)
 		{
 			@SuppressWarnings("unchecked")
-			Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+//			Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+			Enumeration<TreeNode> e = root.depthFirstEnumeration();
 			while (e.hasMoreElements())
 			{
-				DefaultMutableTreeNode node = e.nextElement();
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
 //				if ( node.toString().equalsIgnoreCase(str) )
 				if ( node.toString().equals(str) )
 				{
@@ -2103,10 +2107,11 @@ public class ConnectionProfileManager
 		public static TreePath findTreePath(DefaultMutableTreeNode root, String str)
 		{
 			@SuppressWarnings("unchecked")
-			Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+//			Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+			Enumeration<TreeNode> e = root.depthFirstEnumeration();
 			while (e.hasMoreElements())
 			{
-				DefaultMutableTreeNode node = e.nextElement();
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
 //				if ( node.toString().equalsIgnoreCase(str) )
 				if ( node.toString().equals(str) )
 				{

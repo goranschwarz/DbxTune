@@ -26,8 +26,8 @@ import java.util.Map.Entry;
 
 import javax.swing.table.DefaultTableModel;
 
-import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.config.dbms.DbmsConfigDiffEngine.Context;
+import com.dbxtune.config.dbms.IDbmsConfig;
 import com.google.common.collect.MapDifference.ValueDifference;
 
 public class DbmsConfigDiffTableModel extends DefaultTableModel

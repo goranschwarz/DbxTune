@@ -24,6 +24,7 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,8 @@ import javax.swing.JPanel;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.BadLocationException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
@@ -57,7 +59,7 @@ import net.miginfocom.swing.MigLayout;
 public abstract class ToolTipSupplierAbstract
 implements ToolTipSupplier, ToolTipHyperlinkResolver
 {
-	private static Logger _logger = Logger.getLogger(ToolTipSupplierAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public  static String  PROPKEY_SHOW_TABLE_INFO = "TooltipSupplier.abstract.show.table.info";
 	public  static boolean DEFAULT_SHOW_TABLE_INFO = true;

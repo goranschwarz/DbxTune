@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.invoke.MethodHandles;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -44,7 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.pcs.objects.DsrSkipEntry;
@@ -65,7 +67,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public abstract class DailySummaryReportAbstract
 implements IDailySummaryReport
 {
-	private static Logger _logger = Logger.getLogger(DailySummaryReportAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private DbxConnection _conn = null;
 	private IReportSender _sender = null;

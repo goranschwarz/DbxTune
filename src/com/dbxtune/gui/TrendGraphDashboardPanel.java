@@ -27,6 +27,7 @@ import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,7 +48,8 @@ import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -65,7 +67,7 @@ public class TrendGraphDashboardPanel
 extends JPanel
 {
 	private static final long	serialVersionUID	= 1L;
-	static Logger _logger = Logger.getLogger(TrendGraphDashboardPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private final String GRAPH_LAYOUT_CONSTRAINT = "insets 0 0 0 0, fill, hidemode 3, wrap "; // + _graphLayoutColumns
 //	private final String GRAPH_LAYOUT_PROP       = "push, grow, hidemode 3";
@@ -421,7 +423,7 @@ extends JPanel
 		_logger.debug("set-Chart-MaxHistoryTimeInMinutes(minutes="+minutes+")");
 
 		// Set the Spinner model
-		_maxChartHistoryInMinutes_spm.setValue( new Integer(minutes) );
+		_maxChartHistoryInMinutes_spm.setValue( Integer.valueOf(minutes) );
 
 		// Set all the individual graphs
 		for (TrendGraph tg : _graphCurrentOrderMap.values())
@@ -479,7 +481,7 @@ extends JPanel
 		_logger.debug("set-In-Mem-MaxHistoryTimeInMinutes(minutes="+minutes+")");
 
 		// Set the spinner
-		_maxInMemHistoryInMinutes_spm.setValue( new Integer(minutes) );
+		_maxInMemHistoryInMinutes_spm.setValue( Integer.valueOf(minutes) );
 
 		// set the Handler
 		// During startup the in-memory handler might not yet have an instance...

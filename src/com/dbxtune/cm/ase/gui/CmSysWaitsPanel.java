@@ -24,6 +24,7 @@ import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,7 +37,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -74,7 +76,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmSysWaitsPanel 
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmSysWaitsPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 	private static final String  PROP_PREFIX           = CmSysWaits.CM_NAME;
@@ -207,9 +209,9 @@ extends TabularCntrPanel
 						Double sumWaits           = classesWaits          .get(ClassName);
 						Double sumWaitTimePerWait = classesWaitTimePerWait.get(ClassName);
 
-						classesWaitTime       .put(ClassName, new Double(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
-						classesWaits          .put(ClassName, new Double(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
-						classesWaitTimePerWait.put(ClassName, new Double(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
+						classesWaitTime       .put(ClassName, Double.valueOf(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
+						classesWaits          .put(ClassName, Double.valueOf(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
+						classesWaitTimePerWait.put(ClassName, Double.valueOf(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
 					}
 					
 					if (generateEvent)

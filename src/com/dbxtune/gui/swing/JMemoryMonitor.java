@@ -37,6 +37,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.lang.invoke.MethodHandles;
 import java.util.Locale;
 
 import javax.swing.AbstractAction;
@@ -45,7 +46,9 @@ import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 /**
  * Simple memory monitor component lifted from JEdit with minor modifications.
@@ -54,8 +57,7 @@ public class JMemoryMonitor extends JComponent
 {
 	private static final long serialVersionUID = 1L;
 
-	private static final Logger logger_ = 
-        Logger.getLogger(JMemoryMonitor.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
     //--------------------------------------------------------------------------
     // Constants
@@ -132,7 +134,7 @@ public class JMemoryMonitor extends JComponent
 //        if (_labelFont == null)
 //            _labelFont = FontUtil.getPreferredSerifFont();
         
-        logger_.debug("Label font: " + _labelFont);
+        _logger.debug("Label font: " + _labelFont);
         
         setDoubleBuffered(true);
         setForeground(UIManager.getColor("Label.foreground"));

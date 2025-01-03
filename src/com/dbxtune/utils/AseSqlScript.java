@@ -30,6 +30,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -37,10 +38,11 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.List;
-import java.util.Properties;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.AppDir;
 import com.dbxtune.gui.ResultSetTableModel;
@@ -56,7 +58,7 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class AseSqlScript
 implements SybMessageHandler, AutoCloseable
 {
-	private static Logger _logger = Logger.getLogger(AseSqlScript.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private Connection         _conn;
 	private String             _dbmsProductName;
@@ -1322,13 +1324,8 @@ implements SybMessageHandler, AutoCloseable
 	//----------------------------------------------------------------------
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.DEBUG);
 
 		Configuration conf1 = new Configuration(AppDir.getAppStoreDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);

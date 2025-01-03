@@ -32,6 +32,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.net.BindException;
 import java.sql.Connection;
 import java.sql.Driver;
@@ -65,7 +66,8 @@ import javax.swing.WindowConstants;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnExt;
 
@@ -96,7 +98,7 @@ public class ConnectionProgressDialog
 extends JDialog 
 implements ActionListener, ConnectionProgressCallback
 {
-	private static Logger _logger = Logger.getLogger(ConnectionProgressDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	private static final int TAB_POS_ICON      = 0;

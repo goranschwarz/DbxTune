@@ -24,6 +24,7 @@
  */
 package com.dbxtune.config.dbms;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -36,7 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.AseTune;
 import com.dbxtune.config.dbms.AseConfigText.Cache;
@@ -57,7 +59,7 @@ extends DbmsConfigAbstract
 	private static final long serialVersionUID = 1L;
 
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(AseConfig.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private boolean   _offline   = false;
 	private boolean   _hasGui    = false;

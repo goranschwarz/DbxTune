@@ -28,11 +28,10 @@ import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.StringUtil;
 
 public class OsCpuUsageOverview extends OsAbstract
 {
-//	private static Logger _logger = Logger.getLogger(OsCpuUsageOverview.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public OsCpuUsageOverview(DailySummaryReportAbstract reportingInstance)
 	{

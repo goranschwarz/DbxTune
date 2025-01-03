@@ -31,7 +31,7 @@ public class MonTablesDictionaryDb2
 extends MonTablesDictionaryDefault
 {
     /** Log4j logging. */
-//	private static Logger _logger = Logger.getLogger(MonTablesDictionaryDb2.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public void initialize(DbxConnection conn, boolean hasGui)

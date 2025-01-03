@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.tools.sqlw;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -29,7 +30,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.AseConnectionFactory;
 import com.dbxtune.utils.AseConnectionUtils;
@@ -39,7 +41,7 @@ import com.dbxtune.utils.SwingUtils;
 
 public class RsLastcommit
 {
-	private static Logger _logger = Logger.getLogger(RsLastcommit.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final String SQL = 
 		"select origin, origin_qid, secondary_qid, origin_time, dest_commit_time, sample_time = getdate() " +

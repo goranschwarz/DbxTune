@@ -40,13 +40,14 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.cleanup.DataDirectoryCleaner;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
-import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler.NotificationType;
+import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.objects.DbxCentralServerDescription;
 import com.dbxtune.central.pcs.objects.DbxCentralSessions;
 import com.dbxtune.utils.Configuration;
@@ -59,7 +60,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AdminServlet extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static String getParameter(HttpServletRequest req, String name, String defaultVal)
 	{

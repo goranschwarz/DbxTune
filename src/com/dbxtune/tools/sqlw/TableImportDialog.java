@@ -26,6 +26,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -55,7 +56,8 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
@@ -79,7 +81,7 @@ extends JDialog
 implements ActionListener, KeyListener
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(TableImportDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	private static final String PROPKEY_lastKnownFile = "TableImportDialog.lastKnownFile";
 	private static final String DEFAULT_lastKnownFile = "";

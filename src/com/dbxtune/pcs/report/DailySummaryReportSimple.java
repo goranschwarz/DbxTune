@@ -25,7 +25,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.report.IProgressReporter.State;
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
@@ -38,7 +39,7 @@ import com.dbxtune.utils.HeartbeatMonitor;
 public class DailySummaryReportSimple
 extends DailySummaryReportDefault
 {
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public void init() throws Exception

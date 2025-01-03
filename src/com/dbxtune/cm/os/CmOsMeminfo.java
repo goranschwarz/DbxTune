@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.cm.os;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -36,15 +38,15 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.gui.CmOsMeminfoPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
-import com.dbxtune.hostmon.OsTable;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
+import com.dbxtune.hostmon.OsTable;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MovingAverageChart;
 import com.dbxtune.utils.MovingAverageCounterManager;
@@ -52,7 +54,7 @@ import com.dbxtune.utils.MovingAverageCounterManager;
 public class CmOsMeminfo
 extends CounterModelHostMonitor
 {
-	private static Logger        _logger          = Logger.getLogger(CmOsMeminfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_MEMINFO;
@@ -360,7 +362,7 @@ extends CounterModelHostMonitor
 			if (prevOsSampleTable == null)
 			{
 				// Set to 0, instead of null on "first sample"
-				thisOsSampleTable.setValueAt(new Long(0),       r, pos_usedDiff);
+				thisOsSampleTable.setValueAt(Long.valueOf(0),       r, pos_usedDiff);
 				thisOsSampleTable.setValueAt(new BigDecimal(0), r, pos_usedRate);
 			}
 			else
@@ -543,6 +545,9 @@ extends CounterModelHostMonitor
 						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
 						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
 
+				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable();
+				
 				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
 						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
 						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);
@@ -592,6 +597,9 @@ extends CounterModelHostMonitor
 						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
 						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
 
+				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable();
+				
 				AlarmEventOsSwapThrashing alarm = new AlarmEventOsSwapThrashing(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
 						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
 						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);

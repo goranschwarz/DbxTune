@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -32,7 +33,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -41,7 +43,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class ExecutionPlanCollection
 {
-	private static Logger _logger = Logger.getLogger(ExecutionPlanCollection.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private Map<String, String> _planMap;
 	private Map<PlanKey, String> _planMap;

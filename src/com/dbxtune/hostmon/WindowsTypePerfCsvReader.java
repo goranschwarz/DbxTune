@@ -23,6 +23,7 @@ package com.dbxtune.hostmon;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -35,7 +36,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.StringUtil;
 
@@ -45,7 +47,7 @@ import com.dbxtune.utils.StringUtil;
  */
 public class WindowsTypePerfCsvReader
 {
-	private static Logger _logger = Logger.getLogger(WindowsTypePerfCsvReader.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 //	private LinkedHashMap<String, TypeperfRow> _rowKeys  = new LinkedHashMap<>();
 	private LinkedHashMap<Integer, CounterColumn> _inputRowDict = new LinkedHashMap<>();

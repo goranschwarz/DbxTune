@@ -37,7 +37,7 @@ import com.dbxtune.utils.Configuration;
 
 public class SqlServerCmDeviceIo extends SqlServerAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlServerCmDeviceIo.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private List<String>        _miniChartJsList = new ArrayList<>();

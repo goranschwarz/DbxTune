@@ -25,6 +25,7 @@ import java.awt.Frame;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -35,7 +36,8 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.swing.GInputValidationGroup;
 import com.dbxtune.gui.swing.GInputValidator;
@@ -48,7 +50,7 @@ public class ResultSetJXTableSettingsDialog
 extends JDialog
 implements ActionListener //, FocusListener
 {
-	private static Logger _logger = Logger.getLogger(ResultSetJXTableSettingsDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	private Window             _owner                      = null;

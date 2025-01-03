@@ -26,8 +26,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.util.Iterator;
-import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -35,8 +35,10 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.NormalExitException;
 import com.dbxtune.Version;
@@ -53,7 +55,7 @@ public class DailySummaryReport
 //	public final static String APP_NAME = "DailySummaryReport"; // Daily Summary Report
 	public final static String APP_NAME = "dsr";                // Daily Summary Report
 
-	private static Logger _logger = Logger.getLogger(DailySummaryReport.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 
 	private InputParams _params;
@@ -80,14 +82,8 @@ public class DailySummaryReport
 	{
 		Version.setAppName(APP_NAME);
 
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		if (cmd.hasOption('x'))
-			log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.DEBUG);
 
 		// Check for Mandatory Command Line Switches
 		// Also validate Command Line Switches

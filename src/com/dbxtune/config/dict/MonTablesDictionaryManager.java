@@ -29,7 +29,6 @@ package com.dbxtune.config.dict;
 public class MonTablesDictionaryManager
 {
     /** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(MonTablesDictionary.class);
 
 	/** Instance variable */
 	private static MonTablesDictionary _instance = null;

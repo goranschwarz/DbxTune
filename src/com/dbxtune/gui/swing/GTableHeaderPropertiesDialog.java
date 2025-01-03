@@ -56,7 +56,7 @@ public class GTableHeaderPropertiesDialog
 extends JDialog
 implements ActionListener, TableModelListener
 {
-//	private static Logger _logger = Logger.getLogger(TrendGraphPanelReorderDialog.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 ////	private ImageIcon                _iconDialog      = new ImageIcon(Version.class.getResource("images/graph.png"));

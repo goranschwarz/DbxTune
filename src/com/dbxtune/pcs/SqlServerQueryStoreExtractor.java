@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -34,7 +35,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.ResultSetMetaDataCached;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -46,7 +48,7 @@ import com.dbxtune.utils.Ver;
 
 public class SqlServerQueryStoreExtractor
 {
-	private static Logger _logger = Logger.getLogger(SqlServerQueryStoreExtractor.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String        _monDbName;
 	private String        _pcsSchemaName;

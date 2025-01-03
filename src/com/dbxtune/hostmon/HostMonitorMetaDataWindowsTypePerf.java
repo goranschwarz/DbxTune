@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.hostmon;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.util.StringUtils;
 
 import com.dbxtune.config.dict.WindowsPerformanceCountersDictionary;
@@ -36,7 +38,7 @@ import com.dbxtune.utils.StringUtil;
 public class HostMonitorMetaDataWindowsTypePerf
 extends HostMonitorMetaData
 {
-	private static Logger _logger = Logger.getLogger(HostMonitorMetaDataWindowsTypePerf.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	WindowsTypePerfCsvReader _csvReader = new WindowsTypePerfCsvReader();
 

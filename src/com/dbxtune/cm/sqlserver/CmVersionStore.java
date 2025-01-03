@@ -34,8 +34,8 @@ import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.graph.TrendGraphDataPoint;
@@ -51,7 +51,6 @@ import com.dbxtune.utils.Ver;
 public class CmVersionStore
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmTempdbUsage.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmVersionStore.class.getSimpleName();
@@ -253,7 +252,7 @@ extends CountersModel
 	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
 	{
 		if ("database_id".equalsIgnoreCase(colName))
-			return new Long(-1);
+			return Long.valueOf(-1);
 		
 		return null;
 	}

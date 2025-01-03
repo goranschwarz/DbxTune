@@ -44,7 +44,7 @@ import com.dbxtune.utils.Configuration;
 
 public class AseTopSlowDynAndStmnt extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseTopSlowProcCalls.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _ssqlRstm;

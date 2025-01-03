@@ -25,6 +25,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 
 import javax.swing.JMenuItem;
@@ -37,7 +38,8 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
 
@@ -48,7 +50,7 @@ import com.dbxtune.utils.SwingUtils;
 public class AlarmWritersTable extends JXTable
 {
 	private static final long serialVersionUID = 0L;
-	private static Logger _logger = Logger.getLogger(AlarmWritersTable.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	//	protected int           _lastTableHeaderPointX = -1;
 	protected int           _lastTableHeaderColumn = -1;
@@ -301,7 +303,7 @@ public class AlarmWritersTable extends JXTable
 					for (int r=0; r<tm.getRowCount(); r++)
 					{
 						if (tm.isCellEditable(r, col))
-							tm.setValueAt(new Boolean(true), r, col);
+							tm.setValueAt(Boolean.valueOf(true), r, col);
 					}
 				}
 			}
@@ -319,7 +321,7 @@ public class AlarmWritersTable extends JXTable
 					for (int r=0; r<tm.getRowCount(); r++)
 					{
 						if (tm.isCellEditable(r, col))
-							tm.setValueAt(new Boolean(false), r, col);
+							tm.setValueAt(Boolean.valueOf(false), r, col);
 					}
 				}
 			}

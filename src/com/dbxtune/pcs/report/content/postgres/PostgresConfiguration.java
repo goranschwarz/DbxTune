@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 public class PostgresConfiguration 
 extends PostgresAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlServerConfiguration.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	ResultSetTableModel _shortRstm;
 

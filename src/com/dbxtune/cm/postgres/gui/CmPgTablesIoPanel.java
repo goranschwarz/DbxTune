@@ -36,7 +36,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmPgTablesIoPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgTablesIoPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	private JCheckBox l_sampleSystemTables_chk;

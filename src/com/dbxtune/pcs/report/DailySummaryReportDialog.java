@@ -35,6 +35,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -60,7 +61,8 @@ import javax.swing.event.ChangeListener;
 import javax.swing.text.JTextComponent;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.gui.swing.GTabbedPane;
@@ -88,7 +90,7 @@ extends JDialog
 implements ActionListener, FocusListener, KeyListener, ChangeListener
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(DailySummaryReportDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final String H2DB_FILE_TEMPLATE = "jdbc:h2:file:${filename};IFEXISTS=TRUE";
 

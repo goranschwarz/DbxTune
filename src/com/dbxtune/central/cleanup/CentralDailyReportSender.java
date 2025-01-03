@@ -20,11 +20,13 @@
  ******************************************************************************/
 package com.dbxtune.central.cleanup;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
-import com.dbxtune.central.pcs.CentralPersistWriterBase;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
 import com.dbxtune.central.pcs.ICentralPersistWriter;
 import com.dbxtune.central.pcs.report.DailyCentralSummaryReport;
@@ -37,7 +39,7 @@ import it.sauronsoftware.cron4j.TaskExecutionContext;
 public class CentralDailyReportSender
 extends Task
 {
-	private static Logger _logger = Logger.getLogger(CentralDailyReportSender.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_start = "CentralDailyReportSender.start";
 	public static final boolean DEFAULT_start = true;

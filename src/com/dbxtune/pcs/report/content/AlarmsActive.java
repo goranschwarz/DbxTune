@@ -23,7 +23,6 @@ package com.dbxtune.pcs.report.content;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.HashMap;
 import java.util.Map;
 
 import com.dbxtune.gui.ResultSetTableModel;
@@ -35,7 +34,7 @@ import com.dbxtune.utils.Configuration;
 public class AlarmsActive
 extends ReportEntryAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AlarmsActive.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _fullRstm;

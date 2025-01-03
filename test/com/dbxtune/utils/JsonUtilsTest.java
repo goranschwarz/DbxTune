@@ -24,8 +24,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.dbxtune.utils.JsonUtils;
-
 public class JsonUtilsTest
 {
 	@Test

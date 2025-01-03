@@ -27,6 +27,7 @@ package com.dbxtune.pcs;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -38,7 +39,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.DbxTune;
@@ -46,7 +48,6 @@ import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.cm.JsonCmWriterOptions;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -59,7 +60,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class PersistContainer
 {
-	private static Logger _logger          = Logger.getLogger(PersistContainer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	
 	/*---------------------------------------------------

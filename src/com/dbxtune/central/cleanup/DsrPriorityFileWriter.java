@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.central.cleanup;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.report.DsrPriority;
 
@@ -30,7 +33,7 @@ import it.sauronsoftware.cron4j.TaskExecutionContext;
 public class DsrPriorityFileWriter
 extends Task
 {
-	private static Logger _logger = Logger.getLogger(DsrPriorityFileWriter.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_start = "DailySummaryReport.priority.file.writer.start";
 	public static final boolean DEFAULT_start = true;

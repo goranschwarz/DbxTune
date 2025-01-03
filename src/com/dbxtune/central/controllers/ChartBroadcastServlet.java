@@ -31,22 +31,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.servlets.EventSource;
 import org.eclipse.jetty.servlets.EventSource.Emitter;
+import org.eclipse.jetty.servlets.EventSourceServlet;
 
 import com.dbxtune.central.pcs.DbxTuneSample;
 import com.dbxtune.utils.StringUtil;
-
-import org.eclipse.jetty.servlets.EventSourceServlet;
 
 public class ChartBroadcastServlet
 extends EventSourceServlet
 {
 	private static final long serialVersionUID = 1L;
 //	private final static Logger _logger = LoggerFactory.getLogger(ChartBroadcastServlet.class);
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private static final Map<String, Emitter> sseMap = new ConcurrentHashMap<>();
 	private static final Map<String, ClientSubscription> _subsMap = new ConcurrentHashMap<>();

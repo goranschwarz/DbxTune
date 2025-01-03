@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.sql.pipe;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -42,7 +43,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.gui.ConnectionProfile;
@@ -68,7 +70,7 @@ import com.dbxtune.utils.StringUtil;
 public class PipeCommandBcp
 extends PipeCommandAbstract
 {
-	private static Logger _logger = Logger.getLogger(PipeCommandBcp.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 

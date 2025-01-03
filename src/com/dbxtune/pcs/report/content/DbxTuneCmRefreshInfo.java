@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -30,7 +31,8 @@ import java.sql.Timestamp;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jfree.data.general.Dataset;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
@@ -45,7 +47,7 @@ import com.dbxtune.utils.Configuration;
 public class DbxTuneCmRefreshInfo
 extends ReportEntryAbstract
 {
-	private static Logger _logger = Logger.getLogger(DbxTuneCmRefreshInfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _rstm1;
 	private ResultSetTableModel _rstm2;

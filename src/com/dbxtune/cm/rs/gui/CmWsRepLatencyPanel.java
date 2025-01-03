@@ -48,7 +48,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmWsRepLatencyPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmWsRepLatencyPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	private JCheckBox  l_updateActive_chk;

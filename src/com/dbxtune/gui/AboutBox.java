@@ -32,6 +32,7 @@ import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.List;
@@ -51,7 +52,8 @@ import javax.swing.UIManager;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 
 import com.dbxtune.Version;
@@ -69,7 +71,7 @@ public class AboutBox
 	extends JDialog
 	implements ActionListener, HyperlinkListener
 {
-	private static Logger _logger              = Logger.getLogger(AboutBox.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = -2789087991515012041L;
 
 	private JButton   _ok_but             = new JButton("OK");

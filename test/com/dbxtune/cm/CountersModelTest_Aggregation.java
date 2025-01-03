@@ -27,16 +27,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
-import org.apache.log4j.PropertyConfigurator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.dbxtune.CounterControllerAbstract;
 import com.dbxtune.ICounterController;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.SwingUtils;
@@ -49,13 +46,7 @@ public class CountersModelTest_Aggregation
 	@BeforeClass
 	public static void setupDb() throws Exception
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+//		Configurator.setRootLevel(Level.TRACE);
 
 		//		_conn = DbxConnection.createDbxConnection(DriverManager.getConnection("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "sa", ""));
 		_conn = DbxConnection.createDbxConnection(DriverManager.getConnection("jdbc:h2:mem:test", "sa", ""));
@@ -147,8 +138,8 @@ System.out.println("_cm.getColumnCount()="+_cm.getColumnCount());
 System.out.println("_cm.getRowCount()="+_cm.getRowCount());
 		assertEquals("getColumnCount", 7, _cm.getColumnCount());
 		assertEquals("getRowCount"   , 5, _cm.getRowCount());
-		assertEquals("getAbsValueSum" , new Double(10d), _cm.getAbsValueSum("C1_SUM"));
-		assertEquals("getDiffValueSum", new Double(0d), _cm.getDiffValueSum("C1_SUM"));
+		assertEquals("getAbsValueSum" , Double.valueOf(10d), _cm.getAbsValueSum("C1_SUM"));
+		assertEquals("getDiffValueSum", Double.valueOf(0d), _cm.getDiffValueSum("C1_SUM"));
 
 		_conn.createStatement().executeUpdate(
 				"update T1 "
@@ -164,7 +155,7 @@ System.out.println("_cm.getRowCount()="+_cm.getRowCount());
 		_cm.refresh(_conn);
 		
 		assertEquals("getRowCount", 5, _cm.getRowCount());
-//		assertEquals("getDiffValueSum", new Double(1d), _cm.getDiffValueSum("C1_SUM"));
+//		assertEquals("getDiffValueSum", Double.valueOf(1d), _cm.getDiffValueSum("C1_SUM"));
 		
 //		System.out.println( ">>>> ABS \n"  + _cm.toTextTableString(CountersModel.DATA_ABS , _cm.getAggregatedRowId()) );
 //		System.out.println( ">>>> DIFF \n" + _cm.toTextTableString(CountersModel.DATA_DIFF, _cm.getAggregatedRowId()) );

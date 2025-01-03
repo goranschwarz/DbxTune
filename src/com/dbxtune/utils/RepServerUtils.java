@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -29,16 +30,17 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.gui.swing.WaitForExecDialog;
 
 public class RepServerUtils
 {
-	private static Logger _logger = Logger.getLogger(RepServerUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static class ConfigEntry
 	{
@@ -1021,13 +1023,8 @@ public class RepServerUtils
 		int portNum = Integer.parseInt(port);
 		try
 		{
-			Properties log4jProps = new Properties();
-			log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-//			log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-			log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-			log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-			log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-			PropertyConfigurator.configure(log4jProps);
+			// Set Log4j Log Level
+			Configurator.setRootLevel(Level.DEBUG);
 
 			Connection conn = AseConnectionFactory.getConnection(host, portNum, null, user, pass, "test-rsConfig", null, null);
 			System.out.println(printConfig(conn, true, null));

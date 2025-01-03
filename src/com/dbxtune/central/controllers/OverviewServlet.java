@@ -53,15 +53,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.time.DateUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.DbxTune;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.writers.AlarmWriterToFile;
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.cleanup.CentralH2Defrag;
-import com.dbxtune.central.cleanup.DataDirectoryCleaner;
 import com.dbxtune.central.cleanup.CentralH2Defrag.H2StorageInfo;
+import com.dbxtune.central.cleanup.DataDirectoryCleaner;
 import com.dbxtune.central.controllers.ud.chart.IUserDefinedChart;
 import com.dbxtune.central.controllers.ud.chart.UserDefinedChartManager;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -78,7 +79,7 @@ import com.dbxtune.utils.TimeUtils;
 public class OverviewServlet extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private static final String HOME_DIR    = DbxTuneCentral.getAppHomeDir();
 	private static final String INFO_DIR    = DbxTuneCentral.getAppInfoDir();

@@ -24,6 +24,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
@@ -31,7 +32,8 @@ import javax.swing.RowFilter;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -48,7 +50,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmPgPidWaitPanel
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmPgPidWaitPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_show_systemThreads = "<html>Show System PID's that executes in Postgres.<br><b>Note</b>: Filter out where 'datname' is NULL.</html>";

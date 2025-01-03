@@ -23,9 +23,9 @@ package com.dbxtune.cm.ase;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
@@ -37,7 +37,6 @@ import com.dbxtune.utils.Ver;
 public class CmThresholdEvent
 extends CountersModelAppend
 {
-//	private static Logger        _logger          = Logger.getLogger(CmThresholdEvents.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmThresholdEvent.class.getSimpleName();

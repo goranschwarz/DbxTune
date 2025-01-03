@@ -23,13 +23,13 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WriteCallback;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
@@ -46,7 +46,7 @@ import com.dbxtune.utils.StringUtil;
 @WebSocket
 public class ChartBroadcastWebSocket
 {
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private static ScheduledExecutorService	_timer = null;
 

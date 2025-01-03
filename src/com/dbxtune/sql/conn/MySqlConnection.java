@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.sql.conn;
 
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
@@ -31,7 +32,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoMySql;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.Ver;
 
 public class MySqlConnection extends DbxConnection
 {
-	private static Logger _logger = Logger.getLogger(MySqlConnection.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MySqlConnection(Connection conn)
 	{

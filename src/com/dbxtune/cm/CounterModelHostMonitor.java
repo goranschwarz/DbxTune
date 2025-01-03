@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -27,7 +28,8 @@ import java.util.List;
 
 import javax.swing.SwingUtilities;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.DbxTune;
@@ -55,7 +57,7 @@ public class CounterModelHostMonitor
 extends CountersModel
 {
 	/** Log4j logging. */
-	private static Logger	   _logger	          = Logger.getLogger(CounterModelHostMonitor.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long	serialVersionUID	= 1L;
 
 	private Timestamp   _thisSamplingTime = null;
@@ -895,7 +897,7 @@ extends CountersModel
 			for (int c = 1; c <= newSample.getColumnCount(); c++) // Note col start with 1 in OsTableRow
 			{
 				// This looks ugly: should really be done using the same logic as below... But this is really never used...
-				diffRow.setValue(c, new Integer(((Integer) (newRow.getValue(c))).intValue() - ((Integer) (oldRow.getValue(c))).intValue()));
+				diffRow.setValue(c, Integer.valueOf(((Integer) (newRow.getValue(c))).intValue() - ((Integer) (oldRow.getValue(c))).intValue()));
 			}
 			diffCnt.addRow(diffRow);
 			return diffCnt;

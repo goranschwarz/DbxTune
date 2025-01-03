@@ -35,7 +35,6 @@ import com.dbxtune.utils.SwingUtils;
 public class CmPgLocksPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPgActivityPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public CmPgLocksPanel(CountersModel cm)

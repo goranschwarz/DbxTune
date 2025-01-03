@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.rax;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -31,7 +32,8 @@ import java.util.Locale;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -40,9 +42,9 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.DbxTuneResultSetMetaData;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.rax.gui.CmRaStatisticsPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -60,7 +62,7 @@ import com.dbxtune.utils.Configuration;
 public class CmRaStatistics
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmRaStatistics.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmRaStatistics.class.getSimpleName();
@@ -679,7 +681,7 @@ extends CountersModel
 			String value      = (String) newSample.getValueAt(rowId, Value_pos);
 
 //			Long numberValue = null;
-//			try	{ numberValue = new Long(value); }
+//			try	{ numberValue = Long.valueOf(value); }
 //			catch(NumberFormatException nfe) {System.out.println("problems converting row="+rowId+", value='"+value+"'.");}
 
 			// Try to convert to numbers

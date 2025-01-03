@@ -67,7 +67,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmMemoryClerksPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmMemoryClerksPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	private static final String  PROP_PREFIX           = CmMemoryClerks.CM_NAME;
@@ -169,10 +168,10 @@ extends TabularCntrPanel
 //						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": type_pos("+type_pos+")='"+OperationName+"', SizeMb_pos("+SizeMb_pos+")='"+SizeMb+"', ExecutionTime("+ExecutionTime_pos+")='"+ExecutionTime+"', ExecutionTimePerCnt("+ExecutionTimePerCnt_pos+")='"+ExecutionTimePerCnt+"', CpuUsagePct("+CpuUsagePct_pos+")='"+CpuUsagePct+"'.");
 
 					// add 0 if null value...
-					if (SizeMb       == null) SizeMb        = new Double(0);
-//					if (ExecutionTime      == null) ExecutionTime       = new Double(0);
-//					if (ExecutionTimePerCnt== null) ExecutionTimePerCnt = new Double(0);
-//					if (CpuUsagePct        == null) CpuUsagePct         = new Double(0);
+					if (SizeMb       == null) SizeMb        = Double.valueOf(0);
+//					if (ExecutionTime      == null) ExecutionTime       = Double.valueOf(0);
+//					if (ExecutionTimePerCnt== null) ExecutionTimePerCnt = Double.valueOf(0);
+//					if (CpuUsagePct        == null) CpuUsagePct         = Double.valueOf(0);
 
 					if (generateSizeMb)        dataset.addValue(SizeMb       .doubleValue(), OperationName, "SizeMb");
 //					if (generateExecutionTime)       dataset.addValue(ExecutionTime      .doubleValue(), OperationName, "ExecutionTime");

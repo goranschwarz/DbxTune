@@ -44,7 +44,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -52,18 +53,16 @@ import com.dbxtune.central.controllers.DbxCentralPageTemplate;
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.DbxConnection;
-import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
-import com.dbxtune.utils.Ver;
 
 public class SqlServerJobSchedulerActivity
 extends DbxCentralPageTemplate
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_startTime = "SqlServerJobSchedulerActivity.startTime.default";
 	public static final String DEFAULT_startTime = "-2h";

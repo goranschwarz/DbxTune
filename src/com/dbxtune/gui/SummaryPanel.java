@@ -43,7 +43,6 @@ public class SummaryPanel
 //extends JPanel
 //implements TableModelListener, GTabbedPane.ShowProperties
 //{
-//	static Logger _logger = Logger.getLogger(SummaryPanel.class);
 //
 //	private static final long serialVersionUID = 7555710440479350306L;
 //

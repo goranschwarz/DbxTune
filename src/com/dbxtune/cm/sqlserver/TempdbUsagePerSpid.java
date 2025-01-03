@@ -21,13 +21,15 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -38,7 +40,7 @@ import com.dbxtune.utils.Ver;
 
 public class TempdbUsagePerSpid
 {
-	private static Logger _logger = Logger.getLogger(TempdbUsagePerSpid.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _sql_session = null;
 	private String _sql_task    = null;

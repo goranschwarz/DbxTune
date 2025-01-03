@@ -30,6 +30,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
@@ -56,7 +57,8 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.sort.RowFilters;
@@ -73,7 +75,7 @@ public class JdbcOptionsDialog
 extends JDialog
 implements ActionListener, TableModelListener
 {
-	private static Logger _logger = Logger.getLogger(JdbcOptionsDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long	serialVersionUID	= 1L;
 
 //	private Frame                  _owner           = null;
@@ -292,7 +294,7 @@ implements ActionListener, TableModelListener
 		
 		if (e.getType() == TableModelEvent.UPDATE && e.getColumn() == TAB_POS_OPT_VALUE)
 			if (e.getFirstRow() != TableModelEvent.HEADER_ROW)
-				_table.getModel().setValueAt(new Boolean(true), e.getFirstRow(), TAB_POS_USE);
+				_table.getModel().setValueAt(Boolean.valueOf(true), e.getFirstRow(), TAB_POS_USE);
 
 //		_apply.setEnabled(true);
 	}
@@ -451,9 +453,9 @@ implements ActionListener, TableModelListener
 			Boolean changed = changeRowIndicator.get(column);
 			
 			if ( changed == null )
-				changeRowIndicator.set(column, new Boolean(true));
+				changeRowIndicator.set(column, Boolean.valueOf(true));
 			else if ( ! changed.booleanValue() )
-				changeRowIndicator.set(column, new Boolean(true));
+				changeRowIndicator.set(column, Boolean.valueOf(true));
 		}
 
 		public boolean isCellChanged(int row, int col)
@@ -771,9 +773,9 @@ implements ActionListener, TableModelListener
 				row = new Vector<Object>();
 				row.setSize(TAB_HEADER.length);
 
-				row.set(TAB_POS_USE,          new Boolean(false));
-				row.set(TAB_POS_USER_DEFINED, new Boolean(false));
-				row.set(TAB_POS_OPT_REQUIRED, new Boolean(required));
+				row.set(TAB_POS_USE,          Boolean.valueOf(false));
+				row.set(TAB_POS_USER_DEFINED, Boolean.valueOf(false));
+				row.set(TAB_POS_OPT_REQUIRED, Boolean.valueOf(required));
 				row.set(TAB_POS_OPT_NAME,     name);
 				row.set(TAB_POS_OPT_VALUE,    value + choises);
 				row.set(TAB_POS_OPT_DESC,     description);
@@ -781,7 +783,7 @@ implements ActionListener, TableModelListener
 				if (inValuesCopy.containsKey(name))
 				{
 					String inStr = (String) inValuesCopy.get(name);
-					row.set(TAB_POS_USE,       new Boolean(true));
+					row.set(TAB_POS_USE,       Boolean.valueOf(true));
 					row.set(TAB_POS_OPT_VALUE, inStr);
 					
 					inValuesCopy.remove(name);
@@ -800,9 +802,9 @@ implements ActionListener, TableModelListener
 				row = new Vector<Object>();
 				row.setSize(TAB_HEADER.length);
 
-				row.set(TAB_POS_USE,          new Boolean(true));
-				row.set(TAB_POS_USER_DEFINED, new Boolean(true));
-				row.set(TAB_POS_OPT_REQUIRED, new Boolean(false));
+				row.set(TAB_POS_USE,          Boolean.valueOf(true));
+				row.set(TAB_POS_USER_DEFINED, Boolean.valueOf(true));
+				row.set(TAB_POS_OPT_REQUIRED, Boolean.valueOf(false));
 				row.set(TAB_POS_OPT_NAME,     key);
 				row.set(TAB_POS_OPT_VALUE,    val);
 				row.set(TAB_POS_OPT_DESC,     "");
@@ -912,7 +914,7 @@ implements ActionListener, TableModelListener
 ////						for (int r=0; r<tm.getRowCount(); r++)
 ////						{
 ////							if (tm.isCellEditable(r, col))
-////								tm.setValueAt(new Boolean(true), r, col);
+////								tm.setValueAt(Boolean.valueOf(true), r, col);
 ////						}
 ////					}
 //				}
@@ -929,7 +931,7 @@ implements ActionListener, TableModelListener
 ////						for (int r=0; r<tm.getRowCount(); r++)
 ////						{
 ////							if (tm.isCellEditable(r, col))
-////								tm.setValueAt(new Boolean(false), r, col);
+////								tm.setValueAt(Boolean.valueOf(false), r, col);
 ////						}
 ////					}
 //				}
@@ -976,14 +978,6 @@ implements ActionListener, TableModelListener
 
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//
 //		// set native L&F
 //		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());}
 //		catch (Exception e) {}

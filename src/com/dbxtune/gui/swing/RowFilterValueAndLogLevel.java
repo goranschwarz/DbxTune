@@ -20,14 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.gui.swing;
 
+import java.lang.invoke.MethodHandles;
 import java.util.regex.Pattern;
 
 import javax.swing.JTable;
 import javax.swing.RowFilter;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.lf5.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Filter data
@@ -36,7 +37,7 @@ import org.apache.log4j.lf5.LogLevel;
  */
 public class RowFilterValueAndLogLevel extends RowFilter<TableModel, Integer>
 {
-	private static Logger _logger = Logger.getLogger(RowFilterValueAndLogLevel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Is this filtering enabled/disabled */
 	private boolean    _filterIsActive = false;
@@ -210,21 +211,34 @@ public class RowFilterValueAndLogLevel extends RowFilter<TableModel, Integer>
 			return false;
 		if (_level > 0)
 		{
-			if (levelCellVal instanceof LogLevel)
-			{
-				int level = 0;
-				LogLevel ll = (LogLevel)levelCellVal;
-				if      (LogLevel.INFO .equals(ll)) level |= 8;
-				else if (LogLevel.DEBUG.equals(ll)) level |= 16;
-//				else if (LogLevel.TRACE.equals(ll)) level |= 32;
-				else if (ll.getLabel().equals("TRACE")) level |= 32;
-				else if (LogLevel.WARN .equals(ll)) level |= 4;
-				else if (LogLevel.ERROR.equals(ll)) level |= 2;
-				else if (LogLevel.FATAL.equals(ll)) level |= 1;
-				
-				if ((_level & level) == 0) // this means NOT match
-					return false;
-			}
+//			if (levelCellVal instanceof LogLevel)
+//			{
+//				int level = 0;
+//				LogLevel ll = (LogLevel)levelCellVal;
+//				if      (LogLevel.INFO .equals(ll)) level |= 8;
+//				else if (LogLevel.DEBUG.equals(ll)) level |= 16;
+////				else if (LogLevel.TRACE.equals(ll)) level |= 32;
+//				else if (ll.getLabel().equals("TRACE")) level |= 32;
+//				else if (LogLevel.WARN .equals(ll)) level |= 4;
+//				else if (LogLevel.ERROR.equals(ll)) level |= 2;
+//				else if (LogLevel.FATAL.equals(ll)) level |= 1;
+//				
+//				if ((_level & level) == 0) // this means NOT match
+//					return false;
+//			}
+
+			String logLevelStr = levelCellVal + "";
+			int level = 0;
+
+			if      ("FATAL".equals(logLevelStr)) level |= 1;
+			else if ("ERROR".equals(logLevelStr)) level |= 2;
+			else if ("WARN" .equals(logLevelStr)) level |= 4;
+			else if ("INFO" .equals(logLevelStr)) level |= 8;
+			else if ("DEBUG".equals(logLevelStr)) level |= 16;
+			else if ("TRACE".equals(logLevelStr)) level |= 32;
+			
+			if ((_level & level) == 0) // this means NOT match
+				return false;
 		}
 
 		// THREAD NAME

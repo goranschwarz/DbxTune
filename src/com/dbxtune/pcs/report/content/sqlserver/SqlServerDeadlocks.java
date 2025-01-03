@@ -23,20 +23,21 @@ package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterControllerSqlServer;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
-import com.dbxtune.pcs.report.content.ReportEntryAbstract.ReportEntryTableStringRenderer;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -44,7 +45,7 @@ import com.dbxtune.utils.StringUtil;
 public class SqlServerDeadlocks 
 extends SqlServerAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerDeadlocks.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public SqlServerDeadlocks(DailySummaryReportAbstract reportingInstance)
 	{

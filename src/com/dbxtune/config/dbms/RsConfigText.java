@@ -37,7 +37,6 @@ public abstract class RsConfigText
 //	public enum ConfigType {RsConfigAsText, RsConfigAsTextNonDefault, RsLicenseInfo, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseHelpSort, AseLicenseInfo, AseClusterInfo, AseConfigFile};
 
 	/** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(RsConfigText.class);
 
 	public static void createAndRegisterAllInstances()
 	{

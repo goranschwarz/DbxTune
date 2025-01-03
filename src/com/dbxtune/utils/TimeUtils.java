@@ -102,7 +102,7 @@ public class TimeUtils
 		// If not found... print message and store the time
 		if (lastCallTime == null)
 		{
-			lastCallTime = new Long(System.currentTimeMillis()); 
+			lastCallTime = Long.valueOf(System.currentTimeMillis()); 
 			_timeExpiredMap.put(key, lastCallTime);
 			return true;
 		}
@@ -110,7 +110,7 @@ public class TimeUtils
 		// if "over" the timeLimit... print message and store the "new" time
 		if (System.currentTimeMillis() - lastCallTime > timeLimitInMs)
 		{
-			lastCallTime = new Long(System.currentTimeMillis()); 
+			lastCallTime = Long.valueOf(System.currentTimeMillis()); 
 			_timeExpiredMap.put(key, lastCallTime);
 			return true;
 		}
@@ -129,7 +129,7 @@ public class TimeUtils
 	 */
 	public static void timeExpiredSetStartTime(String key)
 	{
-		_timeExpiredMap.put( key, new Long(System.currentTimeMillis()) );
+		_timeExpiredMap.put( key, Long.valueOf(System.currentTimeMillis()) );
 	}
 	
 //	public static boolean printMessage(String key, long timeLimitInMs, String messageToPrint, boolean appendDiscardCount)

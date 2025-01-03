@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content.ase;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,7 +44,8 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cache.XmlPlanAseUtils;
 import com.dbxtune.gui.ModelMissmatchException;
@@ -63,7 +65,7 @@ import com.dbxtune.utils.TimeUtils;
 public abstract class AseAbstract
 extends ReportEntryAbstract
 {
-	private static Logger _logger = Logger.getLogger(AseAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected int _statement_gt_execTime      = -1;
 	protected int _statement_gt_logicalReads  = -1;

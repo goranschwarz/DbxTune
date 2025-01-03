@@ -26,8 +26,8 @@ import java.util.List;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmMissingStatsPanel;
 import com.dbxtune.cm.sql.VersionInfo;
 import com.dbxtune.gui.MainFrame;
@@ -43,7 +43,6 @@ import com.dbxtune.utils.Ver;
 public class CmMissingStats
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmMissingStats.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmMissingStats.class.getSimpleName();

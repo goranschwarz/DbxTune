@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,7 +39,8 @@ import javax.swing.JOptionPane;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -54,13 +56,13 @@ import com.dbxtune.alarm.events.AlarmEventOldBackup;
 import com.dbxtune.alarm.events.AlarmEventOldTranLogBackup;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmOpenDatabasesPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -70,8 +72,8 @@ import com.dbxtune.gui.DbSelectionForGraphsDialog;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.pcs.PcsColumnOptions;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.dbxtune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -89,7 +91,7 @@ import com.dbxtune.utils.Ver;
 public class CmOpenDatabases
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmOpenDatabases.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmOpenDatabases.class.getSimpleName();
@@ -1391,16 +1393,16 @@ extends CountersModel
 					// Set the values: *Has* and *Text*
 					boolean b = true;
 					b = !"This was disabled".equals(sqlText)  && !"Not Available".equals(sqlText)  && !sqlText .startsWith("Not properly configured");
-					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasSqlText);
-					newSample.setValueAt(sqlText,        rowId, pos_OldestTranSqlText);
+					newSample.setValueAt(Boolean.valueOf(b), rowId, pos_OldestTranHasSqlText);
+					newSample.setValueAt(sqlText,            rowId, pos_OldestTranSqlText);
 
 					b = !"This was disabled".equals(showplan) && !"Not Available".equals(showplan) && !showplan.startsWith("User does not have");
-					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasShowPlan);
-					newSample.setValueAt(showplan,       rowId, pos_OldestTranShowPlanText);
+					newSample.setValueAt(Boolean.valueOf(b), rowId, pos_OldestTranHasShowPlan);
+					newSample.setValueAt(showplan,           rowId, pos_OldestTranShowPlanText);
 
 					b = !"This was disabled".equals(sysLocks) && !"Not Available".equals(sysLocks);
-					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasLocks);
-					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
+					newSample.setValueAt(Boolean.valueOf(b), rowId, pos_OldestTranHasLocks);
+					newSample.setValueAt(sysLocks,           rowId, pos_OldestTranLocks);
 				}
 			}
 
@@ -1968,7 +1970,7 @@ extends CountersModel
 
 						if (hoursSinceAseRestart <= 24)
 						{
-							val = new Double(hoursSinceAseRestart);
+							val = Double.valueOf(hoursSinceAseRestart);
 
 							// Not ethe extra space >>>>>>>>>_<<<<< here: this so it lines up with below 'LOG' which will probably also be printed in the log.
 							_logger.info("It looks like no DB  Backups has been taken yet (maybe ASE was recently restarted). 'LastDbBackupAgeInHours' was null or -1. hoursSinceAseRestart=" + hoursSinceAseRestart + ", setting LastDbBackupAgeInHours=" + val + " for database '" + dbname + "'.");
@@ -2081,7 +2083,7 @@ extends CountersModel
 
 						if (hoursSinceAseRestart <= 24)
 						{
-    						val = new Double(hoursSinceAseRestart);
+    						val = Double.valueOf(hoursSinceAseRestart);
     
     						_logger.info("It looks like no LOG Backups has been taken yet (maybe ASE was recently restarted). 'LastLogBackupAgeInHours' was null or -1. hoursSinceAseRestart=" + hoursSinceAseRestart + ", setting LastLogBackupAgeInHours=" + val + " for database '" + dbname + "'.");
 						}

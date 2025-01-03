@@ -164,7 +164,7 @@ extends OsTableRow
 //				Double addVal  = (Double)entryToAdd._values[dp];
 //
 ////				System.out.println("colName='"+ce._colName+"', dp='"+dp+"', sqlColNum='"+ce._sqlColNum+"', thisVal='"+thisVal+"',addValue='"+addVal+"'.");
-//				Double newVal  = new Double( thisVal + addVal );
+//				Double newVal  = Double.valueOf( thisVal + addVal );
 //				_values[dp] = newVal;
 //			}
 //		}
@@ -184,7 +184,7 @@ extends OsTableRow
 //				continue;
 //
 //			if (ce._isStatColumn)
-//				_values[dp] = new Double( (Double)_values[dp] / _numOfSamples );
+//				_values[dp] = Double.valueOf( (Double)_values[dp] / _numOfSamples );
 //
 //		}
 //	}

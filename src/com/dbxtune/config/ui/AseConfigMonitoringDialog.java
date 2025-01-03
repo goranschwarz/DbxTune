@@ -32,6 +32,7 @@ import java.awt.Frame;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -40,7 +41,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -59,8 +59,8 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -86,7 +86,7 @@ public class AseConfigMonitoringDialog
 {
 	private static final long serialVersionUID = 7587303888489834272L;
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(AseConfigMonitoringDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	private static final String msgDialogTitle    = "ASE monitor configuration";
 
@@ -1012,26 +1012,26 @@ public class AseConfigMonitoringDialog
 			_statementPipeActive_chk         .setSelected(false);
 			_nonpushdownPipeActive_chk       .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
-			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_errorlogPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_thresholdEventMaxMessages_spm   .setValue( new Integer(0) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
+			_deadlockPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_errorlogPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_thresholdEventMaxMessages_spm   .setValue( Integer.valueOf(0) );
 
-			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
-			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
-			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( Integer.valueOf(0) );
+			_statementPipeMaxMessages_spm    .setValue( Integer.valueOf(0) );
+			_planTextPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
 
-			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
+			_maxSqlTextMonitored_spm         .setValue( Integer.valueOf(0) );
 			
 			_enableFileAccess_chk            .setSelected(false);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
-//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsElapMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsExecMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsLioMax_spm            .setValue( Integer.valueOf(0) );
+//			_cfgMetricsPioMax_spm            .setValue( Integer.valueOf(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_MINIMAL]) ) // MINIMAL
 		{
@@ -1058,26 +1058,26 @@ public class AseConfigMonitoringDialog
 			_planTextPipeActive_chk          .setSelected(false);
 			_nonpushdownPipeActive_chk       .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
-			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_errorlogPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_thresholdEventMaxMessages_spm   .setValue( new Integer(0) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
+			_deadlockPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_errorlogPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_thresholdEventMaxMessages_spm   .setValue( Integer.valueOf(0) );
 
-			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
-			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
-			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( Integer.valueOf(0) );
+			_statementPipeMaxMessages_spm    .setValue( Integer.valueOf(0) );
+			_planTextPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
 
-			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
+			_maxSqlTextMonitored_spm         .setValue( Integer.valueOf(0) );
 
 			_enableFileAccess_chk            .setSelected(true);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
-//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsElapMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsExecMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsLioMax_spm            .setValue( Integer.valueOf(0) );
+//			_cfgMetricsPioMax_spm            .setValue( Integer.valueOf(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_SMALL]) ) // SMALL
 		{
@@ -1104,26 +1104,26 @@ public class AseConfigMonitoringDialog
 			_planTextPipeActive_chk          .setSelected(false);
 			_nonpushdownPipeActive_chk       .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
-			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_errorlogPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_thresholdEventMaxMessages_spm   .setValue( new Integer(0) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
+			_deadlockPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_errorlogPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_thresholdEventMaxMessages_spm   .setValue( Integer.valueOf(0) );
 
-			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
-			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
-			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( Integer.valueOf(0) );
+			_statementPipeMaxMessages_spm    .setValue( Integer.valueOf(0) );
+			_planTextPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
 
-			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
+			_maxSqlTextMonitored_spm         .setValue( Integer.valueOf(0) );
 
 			_enableFileAccess_chk            .setSelected(true);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
-//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsElapMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsExecMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsLioMax_spm            .setValue( Integer.valueOf(0) );
+//			_cfgMetricsPioMax_spm            .setValue( Integer.valueOf(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_MEDIUM]) ) // MEDIUM
 		{
@@ -1150,26 +1150,26 @@ public class AseConfigMonitoringDialog
 			_planTextPipeActive_chk          .setSelected(false);
 			_nonpushdownPipeActive_chk       .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(500) );
-			_deadlockPipeMaxMessages_spm     .setValue( new Integer(500) );
-			_errorlogPipeMaxMessages_spm     .setValue( new Integer(200) );
-			_thresholdEventMaxMessages_spm   .setValue( new Integer(500) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( Integer.valueOf(500) );
+			_deadlockPipeMaxMessages_spm     .setValue( Integer.valueOf(500) );
+			_errorlogPipeMaxMessages_spm     .setValue( Integer.valueOf(200) );
+			_thresholdEventMaxMessages_spm   .setValue( Integer.valueOf(500) );
 
-			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(1000) );
-			_statementPipeMaxMessages_spm    .setValue( new Integer(5000) );
-			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( Integer.valueOf(1000) );
+			_statementPipeMaxMessages_spm    .setValue( Integer.valueOf(5000) );
+			_planTextPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
 
-			_maxSqlTextMonitored_spm         .setValue( new Integer(2048) );
+			_maxSqlTextMonitored_spm         .setValue( Integer.valueOf(2048) );
 
 			_enableFileAccess_chk            .setSelected(true);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
-//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsElapMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsExecMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsLioMax_spm            .setValue( Integer.valueOf(0) );
+//			_cfgMetricsPioMax_spm            .setValue( Integer.valueOf(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_LARGE]) ) // LARGE
 		{
@@ -1196,26 +1196,26 @@ public class AseConfigMonitoringDialog
 			_planTextPipeActive_chk          .setSelected(false);
 			_nonpushdownPipeActive_chk       .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(1000) );
-			_deadlockPipeMaxMessages_spm     .setValue( new Integer(1000) );
-			_errorlogPipeMaxMessages_spm     .setValue( new Integer(1000) );
-			_thresholdEventMaxMessages_spm   .setValue( new Integer(1000) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( Integer.valueOf(1000) );
+			_deadlockPipeMaxMessages_spm     .setValue( Integer.valueOf(1000) );
+			_errorlogPipeMaxMessages_spm     .setValue( Integer.valueOf(1000) );
+			_thresholdEventMaxMessages_spm   .setValue( Integer.valueOf(1000) );
 
-			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(5000) );
-			_statementPipeMaxMessages_spm    .setValue( new Integer(50000) );
-			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
-			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( Integer.valueOf(5000) );
+			_statementPipeMaxMessages_spm    .setValue( Integer.valueOf(50000) );
+			_planTextPipeMaxMessages_spm     .setValue( Integer.valueOf(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( Integer.valueOf(0) );
 
-			_maxSqlTextMonitored_spm         .setValue( new Integer(4096) );
+			_maxSqlTextMonitored_spm         .setValue( Integer.valueOf(4096) );
 
 			_enableFileAccess_chk            .setSelected(true);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
-//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsElapMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsExecMax_spm           .setValue( Integer.valueOf(0) );
+//			_cfgMetricsLioMax_spm            .setValue( Integer.valueOf(0) );
+//			_cfgMetricsPioMax_spm            .setValue( Integer.valueOf(0) );
 		}
 	}
 
@@ -1338,21 +1338,21 @@ public class AseConfigMonitoringDialog
 				else if ( config.equals("show deferred compilation text") ) _showDeferredCompilationText_chk .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("wait event timing"             ) ) _waitEventTiming_chk             .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("lock timeout pipe active"      ) ) _lockTimeoutPipeActive_chk       .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("lock timeout pipe max messages") ) _lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(runVal) );
+				else if ( config.equals("lock timeout pipe max messages") ) _lockTimeoutPipeMaxMessages_spm  .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("deadlock pipe active"          ) ) _deadlockPipeActive_chk          .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("deadlock pipe max messages"    ) ) _deadlockPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("deadlock pipe max messages"    ) ) _deadlockPipeMaxMessages_spm     .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("errorlog pipe active"          ) ) _errorlogPipeActive_chk          .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("errorlog pipe max messages"    ) ) _errorlogPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("errorlog pipe max messages"    ) ) _errorlogPipeMaxMessages_spm     .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("threshold event monitoring"    ) ) _thresholdEventMonitoring_chk    .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("threshold event max messages"  ) ) _thresholdEventMaxMessages_spm   .setValue( new Integer(runVal) );
+				else if ( config.equals("threshold event max messages"  ) ) _thresholdEventMaxMessages_spm   .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("sql text pipe active"          ) ) _sqlTextPipeActive_chk           .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("sql text pipe max messages"    ) ) _sqlTextPipeMaxMessages_spm      .setValue( new Integer(runVal) );
+				else if ( config.equals("sql text pipe max messages"    ) ) _sqlTextPipeMaxMessages_spm      .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("statement pipe active"         ) ) _statementPipeActive_chk         .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("statement pipe max messages"   ) ) _statementPipeMaxMessages_spm    .setValue( new Integer(runVal) );
+				else if ( config.equals("statement pipe max messages"   ) ) _statementPipeMaxMessages_spm    .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("plan text pipe active"         ) ) _planTextPipeActive_chk          .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("plan text pipe max messages"   ) ) _planTextPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("plan text pipe max messages"   ) ) _planTextPipeMaxMessages_spm     .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("nonpushdown pipe active"       ) ) _nonpushdownPipeActive_chk       .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("nonpushdown pipe max messages" ) ) _nonpushdownPipeMaxMessages_spm  .setValue( new Integer(runVal) );
+				else if ( config.equals("nonpushdown pipe max messages" ) ) _nonpushdownPipeMaxMessages_spm  .setValue( Integer.valueOf(runVal) );
 				else if ( config.equals("max SQL text monitored"        ) )
 				{
 					if (cfgVal != runVal)
@@ -1367,7 +1367,7 @@ public class AseConfigMonitoringDialog
 						_maxSqlTextMonitored_sp.setToolTipText( _tts.get(_maxSqlTextMonitored_sp) );
 						((JSpinner.DefaultEditor)((JSpinner)this._maxSqlTextMonitored_sp).getEditor()).getTextField().setForeground(Color.BLACK);
 					}
-					_maxSqlTextMonitored_spm.setValue( new Integer(cfgVal) );
+					_maxSqlTextMonitored_spm.setValue( Integer.valueOf(cfgVal) );
 				}
 				else if ( config.equals("performance monitoring option") )
 				{
@@ -2030,13 +2030,8 @@ public class AseConfigMonitoringDialog
 			e.printStackTrace();
 		}
 
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		Configuration conf1 = new Configuration("c:\\projects\\dbxtune\\asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);

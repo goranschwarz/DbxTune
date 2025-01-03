@@ -34,10 +34,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
@@ -53,7 +51,10 @@ import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SortOrder;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.TableModelEvent;
@@ -62,10 +63,11 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
-import org.apache.log4j.lf5.LogLevel;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -76,6 +78,7 @@ import com.dbxtune.gui.swing.GTableFilter;
 import com.dbxtune.gui.swing.JColorComboBox;
 import com.dbxtune.gui.swing.RowFilterValueAndLogLevel;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -84,9 +87,9 @@ import net.miginfocom.swing.MigLayout;
 
 public class Log4jViewer
 extends JFrame
-implements ActionListener, TableModelListener
+implements ActionListener, TableModelListener, CaretListener
 {
-	private static Logger _logger = Logger.getLogger(Log4jViewer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 4578428349487389745L;
 
 	private static final Color LOG_LEVEL_COLOR_FATAL = Color.BLUE;
@@ -471,6 +474,10 @@ implements ActionListener, TableModelListener
 		_filterClassName_tf .addActionListener(this);		
 		_filterMessage_tf   .addActionListener(this);
 
+		_filterThreadName_tf.addCaretListener(this);
+		_filterClassName_tf .addCaretListener(this);		
+		_filterMessage_tf   .addCaretListener(this);
+
 		_filterUseFilter_cb .addActionListener(this);
 
 		//---- OPTIONS PANEL -----
@@ -552,6 +559,15 @@ implements ActionListener, TableModelListener
 			_logger.trace("TRACE TEST message.");
 		}
     }
+	@Override
+	public void caretUpdate(CaretEvent e)
+	{
+		Object source = e.getSource();
+
+		if (_filterThreadName_tf.equals(source)) setFilter();
+		if (_filterClassName_tf .equals(source)) setFilter();
+		if (_filterMessage_tf   .equals(source)) setFilter();
+	}
 
 	private void setFilter()
 	{
@@ -608,11 +624,28 @@ implements ActionListener, TableModelListener
 		return _openOnErrors_chk.isSelected();
 	}
 
-	public LogLevel getLogLevelForRow(int row)
+//	public LogLevel getLogLevelForRow(int row)
+//	{
+//		// set column position to the filter
+//		int levelColId  = _log4jTableModel.findColumn("Level");
+//		return (LogLevel) _dataTable.getValueAt(row, levelColId);
+//	}
+//	public String getLogLevelForRow(int row)
+//	{
+//		// set column position to the filter
+//		int levelColId  = _log4jTableModel.findColumn("Level");
+//		return (String) _dataTable.getValueAt(row, levelColId);
+//	}
+	public boolean isLogLevelErrorOrAboveForRow(int row)
 	{
 		// set column position to the filter
 		int levelColId  = _log4jTableModel.findColumn("Level");
-		return (LogLevel) _dataTable.getValueAt(row, levelColId);
+		String level = (String) _dataTable.getValueAt(row, levelColId);
+		
+		// NOTE: This should really be done as: return _log4jLogEvent.getLevel().isMoreSpecificThan(Level.ERROR) )
+		//       But lets live with this for now, since I don't want to fetch the TableModel and do the isMoreSpecificThan()...
+		//       Please change in the future
+		return StringUtil.equalsAny(level, "ERROR", "FATAL");
 	}
 
 	private void saveProps()
@@ -758,15 +791,15 @@ implements ActionListener, TableModelListener
 	**---------------------------------------------------
 	**---------------------------------------------------
 	*/
-	private class LogSorter
-	implements Comparator<Logger>
-	{
-		@Override
-		public int compare(Logger o1, Logger o2) 
-		{
-			return o1.getName().compareTo( o2.getName() );
-		}
-	}
+//	private class LogSorter
+//	implements Comparator<Logger>
+//	{
+//		@Override
+//		public int compare(Logger o1, Logger o2) 
+//		{
+//			return o1.getName().compareTo( o2.getName() );
+//		}
+//	}
 	//---------------------------------------
 	// The GUI that shows what Classes is added to LOG4J
 	// And the ability to change log level for each lo4j logger class
@@ -825,16 +858,32 @@ implements ActionListener, TableModelListener
 			super.setVisible(b);
 		}
 		
-		@SuppressWarnings("unchecked")
+//		@SuppressWarnings("unchecked")
+//		private void refreshData()
+//		{
+//			_tm.clear();
+//
+//			List<Logger> logList = Collections.list(LogManager.getCurrentLoggers());
+//			Collections.sort( logList, new LogSorter() );
+//			for (Logger logger : logList)
+//			{
+//				_tm.addRows(new Log4jClass(logger.getName(), logger.getEffectiveLevel()));
+//			}
+//			
+//			_dataTable.packAll();
+//			_apply.setEnabled(false);
+//		}
 		private void refreshData()
 		{
 			_tm.clear();
 
-			List<Logger> logList = Collections.list(LogManager.getCurrentLoggers());
-			Collections.sort( logList, new LogSorter() );
-			for (Logger logger : logList)
+			LoggerContext context = (LoggerContext) LogManager.getContext(false);
+
+			for (Logger logger : context.getLoggers())
 			{
-				_tm.addRows(new Log4jClass(logger.getName(), logger.getEffectiveLevel()));
+				String       name  = logger.getName();
+				String       level = logger.getLevel().toString();
+				_tm.addRows(new Log4jClass(name, level));
 			}
 			
 			_dataTable.packAll();
@@ -862,6 +911,8 @@ implements ActionListener, TableModelListener
 			_dataTable.setSortable(true);
 			_dataTable.setColumnControlVisible(true);
 			_dataTable.setHighlighters(_highlitersLogLevelAtColId_1); // a variant of cell render
+			
+			_dataTable.setSortOrder(0, SortOrder.ASCENDING);
 
 //			_dataTable.setDefaultEditor(  Log4jClass.class, new DefaultCellEditor(new JComboBox(_logLevels)));
 			_dataTable.setDefaultEditor(  Log4jClass.class, new DefaultCellEditor(new JColorComboBox(JColorComboBox.TEXT_ONLY, _logLevelsColors, _logLevels)));
@@ -896,21 +947,36 @@ implements ActionListener, TableModelListener
 				if ( ! l._originalLevel.equals(l._level) )
 				{
 					_logger.info("Setting new Level for '"+l._className+"' from '"+l._originalLevel+"', to '"+l._level+"'.");
-					Logger logger = LogManager.exists(l._className);
+//					Logger logger = LogManager.exists(l._className);
+//
+//					if (logger == null)
+//					{
+//						_logger.error("Class name '"+l._className+"' cant be found, check available with: log4j get" );
+//						return;
+//					}
+//
+//					if      ( "TRACE".equalsIgnoreCase(l._level) ) logger.setLevel( Level.TRACE );
+//					else if ( "DEBUG".equalsIgnoreCase(l._level) ) logger.setLevel( Level.DEBUG );
+//					else if ( "INFO" .equalsIgnoreCase(l._level) ) logger.setLevel( Level.INFO  );
+//					else if ( "WARN" .equalsIgnoreCase(l._level) ) logger.setLevel( Level.WARN  );
+//					else if ( "ERROR".equalsIgnoreCase(l._level) ) logger.setLevel( Level.ERROR );
+//					else if ( "FATAL".equalsIgnoreCase(l._level) ) logger.setLevel( Level.FATAL );
+//					else logger.setLevel( Level.DEBUG );
 
-					if (logger == null)
-					{
-						_logger.error("Class name '"+l._className+"' cant be found, check available with: log4j get" );
-						return;
-					}
-
-					if      ( "TRACE".equalsIgnoreCase(l._level) ) logger.setLevel( Level.TRACE );
-					else if ( "DEBUG".equalsIgnoreCase(l._level) ) logger.setLevel( Level.DEBUG );
-					else if ( "INFO" .equalsIgnoreCase(l._level) ) logger.setLevel( Level.INFO  );
-					else if ( "WARN" .equalsIgnoreCase(l._level) ) logger.setLevel( Level.WARN  );
-					else if ( "ERROR".equalsIgnoreCase(l._level) ) logger.setLevel( Level.ERROR );
-					else if ( "FATAL".equalsIgnoreCase(l._level) ) logger.setLevel( Level.FATAL );
-					else logger.setLevel( Level.DEBUG );
+//					if      ( "TRACE".equalsIgnoreCase(l._level) ) l._loggerCfg.setLevel( Level.TRACE );
+//					else if ( "DEBUG".equalsIgnoreCase(l._level) ) l._loggerCfg.setLevel( Level.DEBUG );
+//					else if ( "INFO" .equalsIgnoreCase(l._level) ) l._loggerCfg.setLevel( Level.INFO  );
+//					else if ( "WARN" .equalsIgnoreCase(l._level) ) l._loggerCfg.setLevel( Level.WARN  );
+//					else if ( "ERROR".equalsIgnoreCase(l._level) ) l._loggerCfg.setLevel( Level.ERROR );
+//					else if ( "FATAL".equalsIgnoreCase(l._level) ) l._loggerCfg.setLevel( Level.FATAL );
+//					else l._loggerCfg.setLevel( Level.DEBUG );
+					if      ( "TRACE".equalsIgnoreCase(l._level) ) Configurator.setLevel( l._className, Level.TRACE );
+					else if ( "DEBUG".equalsIgnoreCase(l._level) ) Configurator.setLevel( l._className, Level.DEBUG );
+					else if ( "INFO" .equalsIgnoreCase(l._level) ) Configurator.setLevel( l._className, Level.INFO  );
+					else if ( "WARN" .equalsIgnoreCase(l._level) ) Configurator.setLevel( l._className, Level.WARN  );
+					else if ( "ERROR".equalsIgnoreCase(l._level) ) Configurator.setLevel( l._className, Level.ERROR );
+					else if ( "FATAL".equalsIgnoreCase(l._level) ) Configurator.setLevel( l._className, Level.FATAL );
+					else Configurator.setLevel( l._className, Level.DEBUG );
 				}
 			}
 		}
@@ -985,16 +1051,14 @@ implements ActionListener, TableModelListener
 	private class Log4jClass
 	{
 		protected String  _className     = "";
-		protected Level   _levelObj      = null;
 		protected String  _level         = "";
 		protected String  _originalLevel = "";
 
-		public Log4jClass(String className, Level level)
+		public Log4jClass(String className, String level)
 		{
 			_className      = className;
-			_levelObj       = level;
-			_level          = level.toString();
-			_originalLevel  = level.toString();
+			_level          = level;
+			_originalLevel  = level;
 		}
 		@Override
 		public String toString()

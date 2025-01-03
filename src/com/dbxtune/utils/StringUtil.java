@@ -31,6 +31,7 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -64,7 +65,8 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
@@ -80,7 +82,7 @@ import org.xml.sax.InputSource;
  */
 public class StringUtil
 {
-	private static Logger _logger = Logger.getLogger(StringUtil.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	// https://stackoverflow.com/questions/18893390/splitting-on-comma-outside-quotes
 	private static final String REGEX_SPLIT_COMMA_RESPECT_QUOTES = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
@@ -1789,6 +1791,9 @@ public class StringUtil
 	 */
 	public static String stackTraceToString(Throwable t)
 	{
+		if (t == null)
+			return ""; // OR null ???
+
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
 		t.printStackTrace(pw);

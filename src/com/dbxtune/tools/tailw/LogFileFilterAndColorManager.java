@@ -22,6 +22,7 @@ package com.dbxtune.tools.tailw;
 
 import java.awt.Color;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
@@ -33,7 +34,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -46,7 +48,7 @@ import com.dbxtune.utils.SwingUtils;
 
 public class LogFileFilterAndColorManager
 {
-	private static Logger _logger = Logger.getLogger(LogFileFilterAndColorManager.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static LogFileFilterAndColorManager _instance = null;
 	private String _filename = null;

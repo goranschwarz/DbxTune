@@ -82,7 +82,7 @@ public class CreateGraphDialog
 extends JDialog
 implements ActionListener, TableModelListener, FocusListener, KeyListener
 {
-//	private static Logger _logger = Logger.getLogger(CreateGraphDialog.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long	serialVersionUID	= -1L;
 
 	private static final String DIALOG_TITLE = "Create Graph or Chart";

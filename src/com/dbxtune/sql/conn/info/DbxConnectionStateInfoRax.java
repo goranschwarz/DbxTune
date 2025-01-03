@@ -20,11 +20,13 @@
  ******************************************************************************/
 package com.dbxtune.sql.conn.info;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.StringUtil;
@@ -32,7 +34,7 @@ import com.dbxtune.utils.StringUtil;
 public class DbxConnectionStateInfoRax
 implements DbxConnectionStateInfo
 {
-	private static Logger _logger = Logger.getLogger(DbxConnectionStateInfoRax.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public String  _state  = "";
 	public String  _action = "";

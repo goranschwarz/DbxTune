@@ -35,6 +35,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URL;
@@ -53,14 +54,15 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import net.miginfocom.swing.MigLayout;
 
 public class FileUtils
 {
-	private static Logger _logger = Logger.getLogger(FileUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** get KB in format ###.# */
 	public static double byteToKb(Path p)

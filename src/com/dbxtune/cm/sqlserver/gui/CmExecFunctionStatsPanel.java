@@ -31,7 +31,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.CmExecFunctionStats;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -46,7 +45,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmExecFunctionStatsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPlanCacheDetailsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_sample_afterPrevSample  = 

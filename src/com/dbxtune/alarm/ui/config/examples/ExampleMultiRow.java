@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.alarm.ui.config.examples;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.IUserDefinedAlarmInterrogator;
@@ -32,7 +35,7 @@ import com.dbxtune.cm.CountersModel;
 public class ExampleMultiRow
 implements IUserDefinedAlarmInterrogator
 {
-	private static Logger _logger = Logger.getLogger(ExampleMultiRow.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * Check values for this CM (Counter Model) and generate any desired alarms

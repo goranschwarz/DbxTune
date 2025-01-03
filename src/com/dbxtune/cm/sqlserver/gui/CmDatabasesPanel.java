@@ -24,6 +24,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
@@ -37,7 +38,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -76,7 +78,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmDatabasesPanel
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmDatabasesPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 	private static final String  PROP_PREFIX           = CmDatabases.CM_NAME;

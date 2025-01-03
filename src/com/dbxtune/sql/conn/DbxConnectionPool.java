@@ -21,10 +21,12 @@
 package com.dbxtune.sql.conn;
 
 import java.awt.Window;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.LinkedList;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -32,7 +34,7 @@ import com.dbxtune.utils.TimeUtils;
 
 public class DbxConnectionPool
 {
-	private static Logger _logger = Logger.getLogger(DbxConnectionPool.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static DbxConnectionPool _instance = null;
 

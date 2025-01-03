@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.central.cleanup;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,14 +33,15 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.time.DateUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
 import com.dbxtune.central.pcs.CentralPersistWriterBase;
+import com.dbxtune.central.pcs.CentralPersistWriterBase.Table;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
 import com.dbxtune.central.pcs.ICentralPersistWriter;
-import com.dbxtune.central.pcs.CentralPersistWriterBase.Table;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -53,7 +55,7 @@ import it.sauronsoftware.cron4j.TaskExecutionContext;
 public class CentralPcsJdbcCleaner
 extends Task
 {
-	private static Logger _logger = Logger.getLogger(CentralPcsJdbcCleaner.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_start = "CentralPcsJdbcCleaner.start";
 	public static final boolean DEFAULT_start = true;
