@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 
 public class AseDbSize extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseCpuUsageOverview.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 

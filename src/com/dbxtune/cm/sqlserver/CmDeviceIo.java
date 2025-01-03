@@ -32,8 +32,8 @@ import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmDeviceIoPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -51,7 +51,6 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 public class CmDeviceIo
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmDeviceIo.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmDeviceIo.class.getSimpleName();

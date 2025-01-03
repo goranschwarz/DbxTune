@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.sql.conn;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSybaseRax;
@@ -36,7 +38,7 @@ import com.dbxtune.utils.Ver;
 public class RaxConnection
 extends TdsConnection
 {
-	private static Logger _logger = Logger.getLogger(RaxConnection.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public RaxConnection(Connection conn)
 	{

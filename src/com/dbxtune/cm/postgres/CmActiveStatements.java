@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ import java.util.concurrent.TimeoutException;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -49,11 +51,11 @@ import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
 import com.dbxtune.cache.XmlPlanCache;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.postgres.gui.CmActiveStatementsPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -67,9 +69,9 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MathUtils;
 import com.dbxtune.utils.PostgresUtils;
+import com.dbxtune.utils.PostgresUtils.PgLockRecord;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
-import com.dbxtune.utils.PostgresUtils.PgLockRecord;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -77,7 +79,7 @@ import com.dbxtune.utils.PostgresUtils.PgLockRecord;
 public class CmActiveStatements
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmActiveStatements.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmActiveStatements.class.getSimpleName();
@@ -843,7 +845,7 @@ extends CountersModel
 
 					// SPID Locks
 					b = !"This was disabled".equals(pidLocksStr) && !"No Locks found".equals(pidLocksStr) && !"Timeout - when getting lock information".equals(pidLocksStr);
-					newSample.setValueAt(new Boolean(b),  rowId, pos_has_pid_lock_info);
+					newSample.setValueAt(Boolean.valueOf(b),  rowId, pos_has_pid_lock_info);
 					newSample.setValueAt(pidLocksStr,     rowId, pos_pid_lock_info);
 					newSample.setValueAt(pidLockCount,    rowId, pos_pid_lock_count);
 					newSample.setValueAt(pidExLockCount,  rowId, pos_pid_exlock_count);

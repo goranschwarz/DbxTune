@@ -21,6 +21,7 @@
 package com.dbxtune.alarm;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,23 +29,24 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.AppDir;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
-import com.dbxtune.alarm.events.AlarmEventOsLoadAverageAdjusted;
-import com.dbxtune.alarm.events.AlarmEventSrvDown;
 import com.dbxtune.alarm.events.AlarmEvent.Category;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
+import com.dbxtune.alarm.events.AlarmEventOsLoadAverageAdjusted;
+import com.dbxtune.alarm.events.AlarmEventSrvDown;
 import com.dbxtune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
 import com.dbxtune.alarm.events.internal.AlarmEvent_EndOfScan;
 import com.dbxtune.alarm.events.internal.AlarmEvent_Stop;
@@ -69,7 +71,7 @@ import com.dbxtune.utils.TimeUtils;
 public class AlarmHandler 
 implements Runnable
 {
-	private static Logger _logger          = Logger.getLogger(AlarmHandler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  DEFAULT_INSTANCE              = "DEFAULT";
 
@@ -1443,17 +1445,8 @@ implements Runnable
 	}
 	public static void main(String[] args) 
 	{
-		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		
-//		log4jProps.setProperty("log4j.logger.com.dbxtune.alarm.AlarmContainer", "debug");
-		log4jProps.setProperty("log4j.logger.com.dbxtune.alarm.AlarmHandler",   "debug");
-
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.TRACE);
 
 		System.out.println("DUMMY ALARM FILE: " + AlarmHandler.getDymmyAlarmFileName(null));
 		

@@ -44,7 +44,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmBlockingPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmBlockingPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmBlocking.CM_NAME;

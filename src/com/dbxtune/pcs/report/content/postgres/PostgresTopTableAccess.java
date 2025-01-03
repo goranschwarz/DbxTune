@@ -39,7 +39,7 @@ import com.dbxtune.utils.StringUtil;
 public class PostgresTopTableAccess 
 extends PostgresAbstract
 {
-//	private static Logger _logger = Logger.getLogger(PostgresTopTableAccess.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _rstm_IoCache;
 	private ResultSetTableModel _rstm_access;

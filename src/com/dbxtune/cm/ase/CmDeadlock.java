@@ -23,9 +23,9 @@ package com.dbxtune.cm.ase;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.TabularCntrPanelAppend;
@@ -39,7 +39,6 @@ import com.dbxtune.utils.Ver;
 public class CmDeadlock
 extends CountersModelAppend
 {
-//	private static Logger        _logger          = Logger.getLogger(CmDeadlock.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmDeadlock.class.getSimpleName();

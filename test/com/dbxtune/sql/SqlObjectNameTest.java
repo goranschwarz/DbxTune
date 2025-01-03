@@ -25,7 +25,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.utils.DbUtils;
 
 public class SqlObjectNameTest

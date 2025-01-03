@@ -68,7 +68,6 @@ import com.dbxtune.utils.StringUtil;
 public class MonWaitEventIdDictionary
 {
     /** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(MonWaitEventIdDictionary.class);
 
 	/** Instance variable */
 	private static MonWaitEventIdDictionary _instance = null;
@@ -238,12 +237,12 @@ public class MonWaitEventIdDictionary
 
 	private void add(WaitEventIdRecord rec)
 	{
-		_monWaitEwentIds.put(new Integer(rec._id), rec);
+		_monWaitEwentIds.put(Integer.valueOf(rec._id), rec);
 	}
 
 	public String getToolTipText(int waitEventId)
 	{
-		WaitEventIdRecord rec = _monWaitEwentIds.get(new Integer(waitEventId));
+		WaitEventIdRecord rec = _monWaitEwentIds.get(Integer.valueOf(waitEventId));
 		if (rec != null)
 			return rec.toString();
 

@@ -70,9 +70,6 @@ public class SchemaCrawlerUtils
 		String logger = ""; // empty is "Root logger"
 //		logger = "logger"; // I think "logger" is used by all SchemaCrawler classes
 
-//		java.util.logging.Logger.getLogger(logger).setLevel(java.util.logging.Level.FINEST); // Root logger, for example.
-//		java.util.logging.Logger.getLogger(logger).setLevel(java.util.logging.Level.INFO); // Root logger, for example.
-		java.util.logging.Logger.getLogger(logger).setLevel(logLevel);
 	}
 
 	public static Catalog getAllCatalogObjects(DbxConnection conn) 

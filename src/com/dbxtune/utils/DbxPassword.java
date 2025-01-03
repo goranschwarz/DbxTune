@@ -41,7 +41,6 @@ import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 
 public class DbxPassword
 {
-//	private static Logger  _logger = Logger.getLogger(DbxPassword.class);
 	
 //	public static final boolean DEFAULT_DO_BACKUP = true;
 

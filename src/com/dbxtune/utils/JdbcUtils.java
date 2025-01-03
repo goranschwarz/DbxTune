@@ -21,6 +21,7 @@
 package com.dbxtune.utils;
 
 import java.awt.Component;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -30,13 +31,14 @@ import java.util.Properties;
 
 import javax.swing.JOptionPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 
 public class JdbcUtils
 {
-	private static Logger _logger = Logger.getLogger(JdbcUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * Connect to a JDBC database

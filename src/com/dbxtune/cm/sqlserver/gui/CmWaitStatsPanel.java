@@ -75,7 +75,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmWaitStatsPanel 
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmWaitStatsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	private static final String  PROP_PREFIX           = CmWaitStats.CM_NAME;
@@ -261,9 +260,9 @@ extends TabularCntrPanel
 //						Double sumWaitCount        = classesWaitCount      .get(ClassName);
 //						Double sumWaitTimePerCount = classesWaitTimePerCount.get(ClassName);
 //
-//						classesWaitTime        .put(ClassName, new Double(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
-//						classesWaitCount       .put(ClassName, new Double(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
-//						classesWaitTimePerCount.put(ClassName, new Double(sumWaitTimePerCount==null ? WaitTimePerCount.doubleValue() : sumWaitTimePerCount + WaitTimePerCount.doubleValue()) );
+//						classesWaitTime        .put(ClassName, Double.valueOf(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
+//						classesWaitCount       .put(ClassName, Double.valueOf(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
+//						classesWaitTimePerCount.put(ClassName, Double.valueOf(sumWaitTimePerCount==null ? WaitTimePerCount.doubleValue() : sumWaitTimePerCount + WaitTimePerCount.doubleValue()) );
 //					}
 					
 					if (generateEvent)

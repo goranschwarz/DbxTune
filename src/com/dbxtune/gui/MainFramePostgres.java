@@ -21,12 +21,14 @@
 package com.dbxtune.gui;
 
 import java.awt.event.ActionEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.cache.DbmsObjectIdCache;
@@ -50,7 +52,7 @@ public class MainFramePostgres
 extends MainFrame
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(MainFramePostgres.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MainFramePostgres()
 	{

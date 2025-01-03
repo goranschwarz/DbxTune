@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.ase;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -27,7 +28,8 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -39,8 +41,8 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmEnginesPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -71,7 +73,7 @@ import com.dbxtune.utils.Ver;
 public class CmEngines
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmEngines.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmEngines.class.getSimpleName();
@@ -646,8 +648,8 @@ extends CountersModel
 
 				if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
-					diffData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);
-					diffData.setValueAt(new BigDecimal( -1 ), rowId, IOCPUTimePct_pos);
+					diffData.setValueAt(Integer   .valueOf( -1 ), rowId, IOCPUTime_pos);
+					diffData.setValueAt(BigDecimal.valueOf( -1 ), rowId, IOCPUTimePct_pos);
 				}
 			}
 		}
@@ -681,8 +683,8 @@ extends CountersModel
 		{
 			if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 			{
-				rateData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);
-				rateData.setValueAt(new BigDecimal( -1 ), rowId, IOCPUTimePct_pos);
+				rateData.setValueAt(Integer   .valueOf( -1 ), rowId, IOCPUTime_pos);
+				rateData.setValueAt(BigDecimal.valueOf( -1 ), rowId, IOCPUTimePct_pos);
 			}
 		}
 	}

@@ -26,6 +26,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -43,7 +44,8 @@ import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.Utilities;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.rsta.ui.GoToDialog;
 import org.fife.rsta.ui.search.ReplaceDialog;
 import org.fife.rsta.ui.search.SearchEvent;
@@ -64,7 +66,7 @@ import com.dbxtune.utils.SwingUtils;
 
 public class RSyntaxUtilitiesX
 {
-	private static Logger _logger = Logger.getLogger(RSyntaxUtilitiesX.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected static final String EMPTY_STRING = "";
 

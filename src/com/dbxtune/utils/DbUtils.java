@@ -21,6 +21,7 @@
 package com.dbxtune.utils;
 
 import java.awt.Component;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -36,7 +37,8 @@ import java.util.Set;
 
 import javax.swing.JOptionPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ConnectionDialog;
 import com.dbxtune.gui.ResultSetTableModel;
@@ -45,7 +47,7 @@ import com.dbxtune.sql.conn.info.DbxConnectionStateInfoAse;
 
 public class DbUtils
 {
-	private static Logger _logger = Logger.getLogger(DbUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	public static final String DB_PROD_NAME_SYBASE_ASE   = "Adaptive Server Enterprise";
 	public static final String DB_PROD_NAME_SYBASE_ASA   = "SQL Anywhere";

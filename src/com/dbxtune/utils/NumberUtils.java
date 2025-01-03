@@ -53,19 +53,19 @@ public class NumberUtils
 		// handle "number" that are still 10 char length but above 2147483647... between 2147483647 and 9999999999
 		if (asStr.length() == 10)  // Integer.MAX_VALUE == 2147483647 ... "2147483647".length() == 10
 		{
-			Long l = new Long(asStr);
+			Long l = Long.valueOf(asStr);
 			if (l > Integer.MAX_VALUE)
 				return l;
 			else
-				return new Integer(l.intValue());
+				return Integer.valueOf(l.intValue());
 		}
 		// Handle longer values than Integer.MAX_VALUE
 		else if (asStr.length() > 10)  // Integer.MAX_VALUE == 2147483647 ... "2147483647".length() == 10
 		{
-			return new Long(asStr);
+			return Long.valueOf(asStr);
 		}
 
-		return new Integer(asStr);
+		return Integer.valueOf(asStr);
 	}
 
 	public static boolean isNumber(String str)
@@ -145,7 +145,7 @@ public class NumberUtils
 
 		BigDecimal bd = new BigDecimal(value);
 		bd = bd.setScale(places, RoundingMode.HALF_UP);
-	    return new Double( bd.doubleValue() );
+	    return Double.valueOf( bd.doubleValue() );
 
 //	    return new BigDecimal( value ).setScale(places, RoundingMode.HALF_UP).doubleValue();
 	}
@@ -230,13 +230,13 @@ public class NumberUtils
 		if (numberObj == null) throw new RuntimeException("toNumberValue() expects a 'numberObj' to decide what data type to return");
 
 		// Well known data types
-		if (numberObj instanceof Integer   ) return new Integer   (asValue);
-		if (numberObj instanceof Long      ) return new Long      (asValue);
-		if (numberObj instanceof Short     ) return new Short     (asValue + "");
-		if (numberObj instanceof Double    ) return new Double    (asValue);
-		if (numberObj instanceof BigDecimal) return new BigDecimal(asValue);
-		if (numberObj instanceof Float     ) return new Float     (asValue);
-		if (numberObj instanceof Byte      ) return new Byte      (asValue + "");
+		if (numberObj instanceof Integer   ) return Integer   .valueOf(asValue);
+		if (numberObj instanceof Long      ) return Long      .valueOf(asValue);
+		if (numberObj instanceof Short     ) return Short     .valueOf(asValue + "");
+		if (numberObj instanceof Double    ) return Double    .valueOf(asValue);
+		if (numberObj instanceof BigDecimal) return BigDecimal.valueOf(asValue);
+		if (numberObj instanceof Float     ) return Float     .valueOf(asValue);
+		if (numberObj instanceof Byte      ) return Byte      .valueOf(asValue + "");
 
 		// Not that Well known data types
 //		if (numberObj instanceof BigInteger       ) return new BigInteger().add(asValue);

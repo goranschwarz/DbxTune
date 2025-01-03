@@ -24,15 +24,18 @@
  */
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class Memory
 {
-	private static Logger _logger          = Logger.getLogger(Memory.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	//-----------------------------------------------------------------------
 	// BEGIN: Memory Handler functionality

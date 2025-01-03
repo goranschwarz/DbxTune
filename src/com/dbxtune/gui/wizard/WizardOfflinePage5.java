@@ -55,7 +55,6 @@ extends WizardPage
 implements ActionListener
 {
     private static final long serialVersionUID = 1L;
-//	private static Logger _logger          = Logger.getLogger(WizardOfflinePage4.class);
 
 	private static final String WIZ_NAME = "SshConnection";
 	private static final String WIZ_DESC = "Host Monitor Connection information";

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.config.dbms;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -30,7 +31,8 @@ import java.util.Map;
 
 import javax.swing.table.AbstractTableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistWriterBase;
@@ -44,7 +46,7 @@ implements IDbmsConfig
 	private static final long serialVersionUID = 1L;
 
 	/** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(DbmsConfigAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private List<DbmsConfigIssue> _configIssueList = new ArrayList<>();
 
@@ -277,7 +279,7 @@ implements IDbmsConfig
 //	private static final long serialVersionUID = 1L;
 //
 //	/** Log4j logging. */
-//	private static Logger _logger = Logger.getLogger(DbmsConfigAbstract.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //
 //	/** Instance variable */
 //	private static IDbmsConfig _instance = null;

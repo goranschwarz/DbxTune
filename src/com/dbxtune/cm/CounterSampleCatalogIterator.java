@@ -23,6 +23,7 @@ package com.dbxtune.cm;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -31,7 +32,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -42,8 +44,8 @@ import com.dbxtune.utils.TimeUtils;
 public class CounterSampleCatalogIterator 
 extends CounterSample
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
-	private static Logger     _logger          = Logger.getLogger(CounterSampleCatalogIterator.class);
 
 	public CounterSampleCatalogIterator(String name, boolean negativeDiffCountersToZero, String[] diffColNames, CounterSample prevSample)
 	{

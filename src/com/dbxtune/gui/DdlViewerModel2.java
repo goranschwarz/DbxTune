@@ -34,7 +34,7 @@ public class DdlViewerModel2
 extends DefaultTreeTableModel
 
 {
-//	private static Logger _logger = Logger.getLogger(OfflineSessionModel.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 //	private ArrayList<DbEntry> _dblist = new ArrayList<DbEntry>();
 //	private DbList _dblist = new DbList();

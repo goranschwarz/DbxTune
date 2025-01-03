@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,14 +33,15 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.SqlServerJobSchedulerExtractor;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.SparklineHelper;
-import com.dbxtune.pcs.report.content.SparklineJfreeChart;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResult;
+import com.dbxtune.pcs.report.content.SparklineJfreeChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
@@ -49,7 +51,7 @@ import com.dbxtune.utils.TimeUtils;
 public class SqlServerJobScheduler 
 extends SqlServerAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerJobScheduler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_errors_skip_msg_numbers = "DailySummaryReport.SqlServerJobScheduler.skip.msg.numbers.csv";
 	public static final String DEFAULT_errors_skip_msg_numbers = "0, 1945, 8153, 15477, 50000";

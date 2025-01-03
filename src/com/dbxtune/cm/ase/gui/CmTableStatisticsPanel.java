@@ -46,7 +46,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmTableStatisticsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmTableStatisticsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmTableStatisticsPanel.CM_NAME;

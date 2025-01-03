@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cache;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Collections;
@@ -33,7 +34,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.dbxtune.Version;
@@ -45,7 +47,7 @@ import com.dbxtune.utils.TimeUtils;
 
 public abstract class DbmsObjectIdCache
 {
-	private static Logger _logger = Logger.getLogger(DbmsObjectIdCache.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_lowOnMememory_removePct  = "DbmsObjectIdCache.lowOnMememory.removePct";
 	public static final int     DEFAULT_lowOnMememory_removePct  = 20;

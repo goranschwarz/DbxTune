@@ -20,13 +20,16 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 
 /**
@@ -35,7 +38,7 @@ import org.apache.log4j.Logger;
  */
 public class AseUrlHelper
 {
-	private static Logger _logger = Logger.getLogger(AseUrlHelper.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long   serialVersionUID   = 1L;
 	
 	private static String _urlStart = "jdbc:sybase:Tds:";

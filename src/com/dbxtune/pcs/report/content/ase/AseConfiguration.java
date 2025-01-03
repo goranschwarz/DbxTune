@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 
 public class AseConfiguration extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseStatementCacheUsageOverview.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	ResultSetTableModel _shortRstm;
 

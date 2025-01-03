@@ -42,6 +42,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 
@@ -71,7 +72,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.text.BadLocationException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
@@ -112,7 +114,7 @@ public class ProcessDetailFrame
     private static final long serialVersionUID = -5013813797380259896L;
 
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(ProcessDetailFrame.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private   JFrame            pdf                          = null;
 	private   JLabel            _activeStmntTableCount_lbl     = new JLabel("0 Rows");

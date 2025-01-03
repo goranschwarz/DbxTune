@@ -38,13 +38,16 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocketFactory;
-import javax.xml.bind.DatatypeConverter;
+//import javax.xml.bind.DatatypeConverter;
+//import jakarta.xml.bind.DatatypeConverter;
+
 
 /**
  * found at: https://stackoverflow.com/questions/2138940/import-pem-into-java-key-store
@@ -82,6 +85,14 @@ public class PEMImporter
 		return keystore;
 	}
 
+	private static byte[] parseBase64Binary(String hexString)
+	{
+		//return DatatypeConverter.parseBase64Binary(hexString);
+		
+		byte[] decodedBytes = Base64.getDecoder().decode(hexString);
+		return decodedBytes;
+	}
+	
 	private static PrivateKey createPrivateKey(File privateKeyPem) 
 	throws Exception 
 	{
@@ -102,7 +113,7 @@ public class PEMImporter
 		}
 		r.close();
 		final String hexString = b.toString();
-		final byte[] bytes = DatatypeConverter.parseBase64Binary(hexString);
+		final byte[] bytes = parseBase64Binary(hexString);
 		return generatePrivateKeyFromDER(bytes);
 	}
 
@@ -120,7 +131,7 @@ public class PEMImporter
 		while (s != null) {
 			if (s.contains("END CERTIFICATE")) {
 				String hexString = b.toString();
-				final byte[] bytes = DatatypeConverter.parseBase64Binary(hexString);
+				final byte[] bytes = parseBase64Binary(hexString);
 				X509Certificate cert = generateCertificateFromDER(bytes);
 				result.add(cert);
 				b = new StringBuilder();

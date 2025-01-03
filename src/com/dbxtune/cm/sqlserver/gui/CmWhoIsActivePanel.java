@@ -37,7 +37,6 @@ import com.dbxtune.cm.CountersModel.ClearOption;
 import com.dbxtune.cm.sqlserver.CmWhoIsActive;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.swing.GCheckBox;
-import com.dbxtune.pcs.PersistWriterJdbc.GraphStorageType;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
@@ -47,7 +46,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmWhoIsActivePanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmWhoIsActivePanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmProcessActivity.CM_NAME;

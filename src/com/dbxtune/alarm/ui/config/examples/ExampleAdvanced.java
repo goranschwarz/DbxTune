@@ -20,10 +20,12 @@
  ******************************************************************************/
 package com.dbxtune.alarm.ui.config.examples;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Calendar;
 import java.util.Date;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
@@ -36,7 +38,7 @@ import com.dbxtune.utils.Ver;
 public class ExampleAdvanced
 implements IUserDefinedAlarmInterrogator
 {
-	private static Logger _logger = Logger.getLogger(ExampleAdvanced.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * Check values for this CM (Counter Model) and generate any desired alarms

@@ -31,6 +31,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
@@ -44,6 +45,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import com.dbxtune.Version;
@@ -60,7 +63,8 @@ public class AlarmConfigDialog
 extends JDialog
 implements ActionListener, TableModelListener, PropertyChangeListener
 {
-//	private static Logger _logger = Logger.getLogger(AlarmConfigDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
 	private static final long	serialVersionUID	= -1L;
 
 //	private Frame                  _owner           = null;
@@ -634,14 +638,6 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//
 //		// set native L&F
 //		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());}
 //		catch (Exception e) {}

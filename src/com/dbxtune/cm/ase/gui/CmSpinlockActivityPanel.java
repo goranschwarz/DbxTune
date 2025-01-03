@@ -30,7 +30,6 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.CmSpinlockActivity;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.SwingUtils;
 import com.dbxtune.utils.Ver;
 
 import net.miginfocom.swing.MigLayout;
@@ -38,7 +37,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmSpinlockActivityPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmSpinlockActivityPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSpinlockActivity.CM_NAME;

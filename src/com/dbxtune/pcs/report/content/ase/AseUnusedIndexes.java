@@ -37,7 +37,7 @@ import com.dbxtune.utils.StringUtil;
 public class AseUnusedIndexes
 extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseUnusedIndexes.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private int _totalUnusedIndexCount;

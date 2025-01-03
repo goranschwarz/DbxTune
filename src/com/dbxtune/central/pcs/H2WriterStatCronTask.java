@@ -21,7 +21,10 @@
  ******************************************************************************/
 package com.dbxtune.central.pcs;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.Configuration;
 
@@ -31,7 +34,7 @@ import it.sauronsoftware.cron4j.TaskExecutionContext;
 public class H2WriterStatCronTask
 extends Task
 {
-	private static Logger _logger = Logger.getLogger(H2WriterStatCronTask.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_start = "H2WriterStatCronTask.start";
 	public static final boolean DEFAULT_start = true;

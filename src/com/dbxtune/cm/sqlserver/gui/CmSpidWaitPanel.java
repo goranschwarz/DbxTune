@@ -25,6 +25,7 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,7 +38,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -80,7 +82,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmSpidWaitPanel
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmSpidWaitPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSpidWait.CM_NAME;
@@ -302,9 +304,9 @@ extends TabularCntrPanel
 						Double sumWaitCount        = eventWaitCount       .get(WaitType);
 						Double sumWaitTimePerCount = eventWaitTimePerCount.get(WaitType);
 
-						eventWaitTime        .put(WaitType, new Double(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
-						eventWaitCount       .put(WaitType, new Double(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
-						eventWaitTimePerCount.put(WaitType, new Double(sumWaitTimePerCount==null ? WaitTimePerCount.doubleValue() : sumWaitTimePerCount + WaitTimePerCount.doubleValue()) );
+						eventWaitTime        .put(WaitType, Double.valueOf(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
+						eventWaitCount       .put(WaitType, Double.valueOf(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
+						eventWaitTimePerCount.put(WaitType, Double.valueOf(sumWaitTimePerCount==null ? WaitTimePerCount.doubleValue() : sumWaitTimePerCount + WaitTimePerCount.doubleValue()) );
 					}
 				} // end: loop dataTable
 

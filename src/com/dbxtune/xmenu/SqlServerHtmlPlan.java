@@ -33,7 +33,7 @@ import com.dbxtune.utils.StringUtil;
 public class SqlServerHtmlPlan
 extends XmenuActionBase 
 {
-//	private static Logger _logger = Logger.getLogger(SqlServerHtmlPlan.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private DbxConnection _conn = null;
 //	private String     _planHandle = null;
 //	private boolean    _closeConnOnExit;

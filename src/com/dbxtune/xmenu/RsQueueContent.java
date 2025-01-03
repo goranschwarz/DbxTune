@@ -29,7 +29,7 @@ import com.dbxtune.utils.SwingUtils;
 public class RsQueueContent
 extends XmenuActionBase 
 {
-//	private static Logger _logger = Logger.getLogger(RsQueueContent.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * 

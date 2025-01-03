@@ -34,27 +34,20 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Comparator;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import javax.servlet.ServletException;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
-
-import com.dbxtune.central.DbxCentralStatistics;
-import com.dbxtune.central.DbxCentralStatistics.ServerEntry;
-import com.dbxtune.central.check.ReceiverAlarmCheck;
 import com.dbxtune.central.controllers.CentralPcsReceiverController;
-import com.dbxtune.central.controllers.ChartBroadcastWebSocket;
-import com.dbxtune.central.pcs.DbxTuneSample.CmEntry;
 import com.dbxtune.central.pcs.DbxTuneSample.MissingFieldException;
 import com.dbxtune.pcs.PersistWriterToDbxCentral;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.StringUtil;
 
 /**
  * Read JSON files posted by any Collector that writes to a directory instead of using the default HTTP CentralPcsReceiverController 
@@ -69,7 +62,7 @@ import com.dbxtune.utils.StringUtil;
  */
 public class CentralPcsDirectoryReceiver
 {
-	private static Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static ReceiverDirectoryWatcher _receiveDirWatcher;
 
@@ -399,13 +392,8 @@ public class CentralPcsDirectoryReceiver
 
 	public static void main(String[] args) 
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.TRACE);
 
 //		String dirName = System.getProperty("java.io.tmpdir");
 //		startWatcher(dirName);

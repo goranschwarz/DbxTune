@@ -46,8 +46,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
@@ -98,8 +98,8 @@ import javax.swing.event.PopupMenuListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.lf5.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.AppDir;
 import com.dbxtune.AseTune;
@@ -119,8 +119,8 @@ import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.XmlPlanCache;
 import com.dbxtune.cache.XmlPlanCacheOffline;
 import com.dbxtune.check.CheckForUpdates;
-import com.dbxtune.check.MailGroupDialog;
 import com.dbxtune.check.CheckForUpdatesDbx.DbxConnectInfo;
+import com.dbxtune.check.MailGroupDialog;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.CmBlocking;
 import com.dbxtune.cm.ase.CmOpenDatabases;
@@ -135,10 +135,10 @@ import com.dbxtune.gui.ConnectionDialog.Options;
 import com.dbxtune.gui.swing.AbstractComponentDecorator;
 import com.dbxtune.gui.swing.GMemoryIndicator;
 import com.dbxtune.gui.swing.GTabbedPane;
+import com.dbxtune.gui.swing.GTabbedPane.TabOrderAndVisibilityListener;
 import com.dbxtune.gui.swing.GTabbedPaneViewDialog;
 import com.dbxtune.gui.swing.Screenshot;
 import com.dbxtune.gui.swing.WaitForExecDialog;
-import com.dbxtune.gui.swing.GTabbedPane.TabOrderAndVisibilityListener;
 import com.dbxtune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.dbxtune.gui.wizard.WizardOffline;
 import com.dbxtune.gui.wizard.WizardUserDefinedCm;
@@ -187,7 +187,7 @@ public abstract class MainFrame
     	AlarmHandler.ChangeListener
 {
 	private static final long    serialVersionUID = 8984251025337127843L;
-	private static Logger        _logger          = Logger.getLogger(MainFrame.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	//-------------------------------------------------
 	// STATUS fields
@@ -1957,11 +1957,13 @@ public abstract class MainFrame
 //		{
 		try
 		{
-			LogLevel logLevel = _logView.getLogLevelForRow(e.getLastRow());
+			boolean isLogLevelErrorOrAbove = _logView.isLogLevelErrorOrAboveForRow(e.getLastRow());
+			//LogLevel logLevel = _logView.getLogLevelForRow(e.getLastRow());
 			
 			// if loglevel is more severe than WARN, then show the logView window 
 			// even if it's not visible for the moment
-			if (logLevel != null && ! logLevel.encompasses(LogLevel.WARN))
+			//if (logLevel != null && ! logLevel.encompasses(LogLevel.WARN))
+			if (isLogLevelErrorOrAbove)
 			{
 				if (_logView.doOpenOnErrors())
 				{
@@ -2822,8 +2824,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				String leftStr  = SimpleDateFormat.getTimeInstance().format(pcLeft .getMainSampleTime());
 				String rightStr = SimpleDateFormat.getTimeInstance().format(pcRight.getMainSampleTime());
 				
-				dict.put(new Integer(0),    new JLabel(leftStr));
-				dict.put(new Integer(size), new JLabel(rightStr));
+				dict.put(Integer.valueOf(0),    new JLabel(leftStr));
+				dict.put(Integer.valueOf(size), new JLabel(rightStr));
 				_readSlider.setLabelTable(dict);
 
 //				_readSlider.repaint();
@@ -4256,8 +4258,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		String leftStr  = SimpleDateFormat.getTimeInstance().format(left);
 		String rightStr = SimpleDateFormat.getTimeInstance().format(right);
 		
-		dict.put(new Integer(0),    new JLabel(leftStr));
-		dict.put(new Integer(size), new JLabel(rightStr));
+		dict.put(Integer.valueOf(0),    new JLabel(leftStr));
+		dict.put(Integer.valueOf(size), new JLabel(rightStr));
 		_offlineSlider.setLabelTable(dict);
 
 		_offlineSlider.setVisible(true);
@@ -4282,8 +4284,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		String leftStr  = SimpleDateFormat.getTimeInstance().format(left);
 		String rightStr = SimpleDateFormat.getTimeInstance().format(right);
 		
-		dict.put(new Integer(0),    new JLabel(leftStr));
-		dict.put(new Integer(size), new JLabel(rightStr));
+		dict.put(Integer.valueOf(0),    new JLabel(leftStr));
+		dict.put(Integer.valueOf(size), new JLabel(rightStr));
 		_offlineSlider.setLabelTable(dict);
 
 		_offlineSlider.setVisible(true);

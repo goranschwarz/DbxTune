@@ -23,13 +23,15 @@ package com.dbxtune.ui.tooltip.suppliers;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.xml.sax.InputSource;
 import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
@@ -38,7 +40,7 @@ import org.xml.sax.helpers.DefaultHandler;
 public class ToolTipProviderXmlParser
 extends DefaultHandler
 {
-	private static Logger _logger = Logger.getLogger(ToolTipProviderXmlParser.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private SAXParserFactory _saxFactory      = SAXParserFactory.newInstance();
 	private SAXParser        _saxParser       = null;

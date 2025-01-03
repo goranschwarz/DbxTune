@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 
 import javax.swing.Box;
@@ -52,12 +53,13 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.gui.swing.PromptForPassword;
-import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.gui.swing.PromptForPassword.SaveType;
+import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
@@ -74,7 +76,7 @@ import com.jcraft.jsch.UserInfo;
 
 public class SshConnection
 {
-	private static Logger _logger = Logger.getLogger(SshConnection.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _username = null;
 	private String _password = null;
@@ -2097,7 +2099,7 @@ public class SshConnection
 	 */
 	private static class JschLog4jBridge implements com.jcraft.jsch.Logger
 	{
-		private static Logger _logger = Logger.getLogger(JschLog4jBridge.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 		@Override
 		public boolean isEnabled(int level)

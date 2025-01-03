@@ -20,12 +20,17 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
-//import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+//
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class WaitforShutdown
 {
 	// everything was moved to: ShutdownHandler
-//	private static Logger _logger = Logger.getLogger(WaitforShutdown.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //
 //	private static Object _waitforObject = new Object();
 //	private static boolean _withRestart = false;

@@ -33,6 +33,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -50,7 +51,8 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.DbxTune;
 import com.dbxtune.Version;
@@ -70,7 +72,7 @@ import com.dbxtune.utils.Ver;
 
 public class RefreshProcess extends Thread 
 {
-	private static Logger _logger          = Logger.getLogger(RefreshProcess.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final String  PROPKEY_showDialogMdaConfig = "CommandHistory.showDialogMdaConfig";
 	private static final boolean DEFAULT_showDialogMdaConfig = true;

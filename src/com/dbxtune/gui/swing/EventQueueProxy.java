@@ -23,15 +23,17 @@ package com.dbxtune.gui.swing;
 import java.awt.AWTEvent;
 import java.awt.EventQueue;
 import java.awt.Toolkit;
+import java.lang.invoke.MethodHandles;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.Memory;
 import com.dbxtune.utils.SwingUtils;
 
 public class EventQueueProxy extends EventQueue
 {
-	private static Logger _logger = Logger.getLogger(EventQueueProxy.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	protected void dispatchEvent(AWTEvent newEvent)

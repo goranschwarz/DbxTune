@@ -28,6 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,7 +44,8 @@ import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.Util;
@@ -62,7 +64,7 @@ import com.dbxtune.utils.ConnectionProvider;
 public abstract class CompletionProviderAbstract
 extends DefaultCompletionProvider
 {
-	private static Logger _logger = Logger.getLogger(CompletionProviderAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = "code.completion.lookup.static.cmds.info";
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_MISC_INFO                     = "code.completion.lookup.misc.info";

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.postgres;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -29,7 +30,8 @@ import java.util.concurrent.TimeoutException;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -38,8 +40,8 @@ import com.dbxtune.cache.DbmsObjectIdCache.ObjectInfo;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.postgres.gui.CmPgBufferCacheDetPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -55,7 +57,7 @@ import com.dbxtune.utils.Configuration;
 public class CmPgBufferCacheDet
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmPgBufferCacheDet.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgBufferCacheDet.class.getSimpleName();
@@ -282,8 +284,8 @@ extends CountersModel
 	@Override
 	public Object calculateAggregateRow_getAggregatePkColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
 	{
-		if ("reldatabase"  .equalsIgnoreCase(colName)) return new Long(-1);
-		if ("relfilenode"  .equalsIgnoreCase(colName)) return new Long(-1);
+		if ("reldatabase"  .equalsIgnoreCase(colName)) return Long.valueOf(-1);
+		if ("relfilenode"  .equalsIgnoreCase(colName)) return Long.valueOf(-1);
 		
 		return addValue;
 	}
@@ -294,8 +296,8 @@ extends CountersModel
 		if ("dbname"       .equalsIgnoreCase(colName)) return "_Total";
 		if ("schema_name"  .equalsIgnoreCase(colName)) return "_Total";
 		if ("relation_name".equalsIgnoreCase(colName)) return "_Total";
-		if ("reldatabase"  .equalsIgnoreCase(colName)) return new Long(-1);
-		if ("relfilenode"  .equalsIgnoreCase(colName)) return new Long(-1);
+		if ("reldatabase"  .equalsIgnoreCase(colName)) return Long.valueOf(-1);
+		if ("relfilenode"  .equalsIgnoreCase(colName)) return Long.valueOf(-1);
 		
 		return null;
 	}

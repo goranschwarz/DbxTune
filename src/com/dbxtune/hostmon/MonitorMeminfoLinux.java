@@ -26,7 +26,7 @@ import com.dbxtune.utils.Configuration;
 public class MonitorMeminfoLinux
 extends HostMonitor
 {
-//	private static Logger _logger = Logger.getLogger(MonitorMeminfoLinux.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/*
         gorans@gorans-ub2:~$ cat /proc/meminfo

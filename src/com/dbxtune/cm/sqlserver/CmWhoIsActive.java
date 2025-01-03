@@ -21,6 +21,7 @@
 package com.dbxtune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -30,16 +31,17 @@ import java.util.List;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.IgnoreSqlWarning;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.sqlserver.gui.CmWhoIsActivePanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -60,7 +62,7 @@ import com.dbxtune.utils.TimeUtils;
 public class CmWhoIsActive
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmWhoIsActive.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmWhoIsActive.class.getSimpleName();

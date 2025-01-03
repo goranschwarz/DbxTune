@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.central.DbxTuneCentral;
@@ -31,7 +34,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class DailySummaryReportFactory
 {
-	private static Logger _logger = Logger.getLogger(DailySummaryReportFactory.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_create = "DailySummaryReport.create";
 	public static final boolean DEFAULT_create = false;

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.os;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,7 +28,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -36,11 +38,11 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventOsDiskUtilPct;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.gui.CmOsIostatPanel;
 import com.dbxtune.cm.os.gui.IoStatDeviceMapperDialog;
 import com.dbxtune.cm.sqlserver.CmDatabases;
@@ -50,8 +52,8 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.TrendGraph;
 import com.dbxtune.hostmon.HostMonitor;
-import com.dbxtune.hostmon.OsTable;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
+import com.dbxtune.hostmon.OsTable;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
@@ -63,7 +65,7 @@ import com.dbxtune.utils.StringUtil;
 public class CmOsIostat
 extends CounterModelHostMonitor
 {
-	private static Logger        _logger          = Logger.getLogger(CmOsIostat.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_IOSTAT;

@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.pcs.inspection;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.DbxTune;
 import com.dbxtune.Version;
@@ -31,7 +34,7 @@ import com.dbxtune.utils.Configuration;
 public abstract class ObjectLookupInspectorAbstract
 implements IObjectLookupInspector
 {
-	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Configuration we were initialized with */
 	private Configuration _conf;

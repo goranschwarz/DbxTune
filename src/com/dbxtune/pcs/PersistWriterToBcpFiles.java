@@ -30,6 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -37,7 +38,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
@@ -52,7 +54,7 @@ public class PersistWriterToBcpFiles
     extends PersistWriterBase
 {
     /** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(PersistWriterToBcpFiles.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/*---------------------------------------------------
 	** DEFINITIONS

@@ -35,7 +35,6 @@ import com.dbxtune.tools.sqlcapture.CmLocks;
 public class CmSpidDetails
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmLocks.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmLocks.class.getSimpleName();

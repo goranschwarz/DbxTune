@@ -27,8 +27,8 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmLocksPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -46,7 +46,6 @@ import com.dbxtune.utils.Ver;
 public class CmLocks
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmLocks.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmLocks.class.getSimpleName();
@@ -241,7 +240,7 @@ extends CountersModel
 		{
 			Double[] arr = new Double[1];
 
-			arr[0] = new Double( this.getCounterDataAbs().getRowCount() );
+			arr[0] = Double.valueOf( this.getCounterDataAbs().getRowCount() );
 			
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

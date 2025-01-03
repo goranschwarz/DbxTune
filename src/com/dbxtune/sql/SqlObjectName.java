@@ -20,10 +20,12 @@
  ******************************************************************************/
 package com.dbxtune.sql;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.DbUtils;
@@ -36,7 +38,7 @@ import com.dbxtune.utils.StringUtil;
  */
 public class SqlObjectName
 {
-	private static Logger _logger = Logger.getLogger(SqlObjectName.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	// If DBMS Stores the Table Names in UPPERCASE then: This value is Translated to upper case 
 //	private String _fullName  = "";

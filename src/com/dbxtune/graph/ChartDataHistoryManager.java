@@ -21,15 +21,17 @@
  ******************************************************************************/
 package com.dbxtune.graph;
 
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.StringUtil;
 
 public class ChartDataHistoryManager
 {
-	private static Logger _logger = Logger.getLogger(ChartDataHistoryManager.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	//---------------------------------------------------
 	// BEGIN: Instance variables and methods

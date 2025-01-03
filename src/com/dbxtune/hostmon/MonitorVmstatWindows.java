@@ -26,7 +26,7 @@ import com.dbxtune.utils.Configuration;
 public class MonitorVmstatWindows 
 extends HostMonitor
 {
-//	private static Logger _logger = Logger.getLogger(MonitorVmstatWindows.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MonitorVmstatWindows()
 	{

@@ -28,8 +28,8 @@ import javax.naming.NameNotFoundException;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrameIq;
@@ -50,7 +50,6 @@ import com.dbxtune.utils.StringUtil;
 public class CmSaConnActivity
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmAdminWhoSqm.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSaConnActivity.class.getSimpleName();

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.inspection;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -32,7 +33,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.pcs.DdlDetails;
@@ -50,7 +52,7 @@ import com.dbxtune.utils.StringUtil;
 public class ObjectLookupInspectorSqlServer
 extends ObjectLookupInspectorAbstract
 {
-	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorSqlServer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private long _parserExceptionCount = 0;
 //	private ConcurrentHashMap<String, Integer> _parserFailCache = new ConcurrentHashMap<>();

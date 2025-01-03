@@ -21,6 +21,7 @@
 package com.dbxtune.ui.autocomplete;
 
 import java.awt.Window;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,7 +33,8 @@ import javax.swing.ListCellRenderer;
 import javax.swing.text.JTextComponent;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
@@ -55,7 +57,7 @@ import com.sybase.jdbcx.SybConnection;
 public class CompletionProviderRax
 extends CompletionProviderAbstract
 {
-	private static Logger _logger = Logger.getLogger(CompletionProviderRax.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private final CompletionProviderAbstract thisOuter = this;
 	

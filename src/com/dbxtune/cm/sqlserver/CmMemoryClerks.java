@@ -21,6 +21,7 @@
 package com.dbxtune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -29,7 +30,8 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -41,8 +43,8 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmMemoryClerksPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -62,7 +64,7 @@ import com.dbxtune.utils.Configuration;
 public class CmMemoryClerks
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmMemoryClerks.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmMemoryClerks.class.getSimpleName();
@@ -237,8 +239,8 @@ extends CountersModel
 			CmSummary cmSummary = (CmSummary) CounterController.getSummaryCm();
 			
 			dArray[0] = this.getAbsValueSum("SizeMb");
-			dArray[1] = new Double( cmSummary.getLastTargetServerMemoryMb() );
-			dArray[2] = new Double( cmSummary.getLastTotalServerMemoryMb() );
+			dArray[1] = Double.valueOf( cmSummary.getLastTargetServerMemoryMb() );
+			dArray[2] = Double.valueOf( cmSummary.getLastTotalServerMemoryMb() );
 			dArray[3] = this.getAbsValueAsDouble("MEMORYCLERK_SQLBUFFERPOOL", "SizeMb");
 
 			// Set the values
@@ -434,7 +436,7 @@ extends CountersModel
 			return "_Total";
 
 		if ("InstanceCount".equalsIgnoreCase(colName))
-			return new Integer(-1);
+			return Integer.valueOf(-1);
 
 		
 		return null;

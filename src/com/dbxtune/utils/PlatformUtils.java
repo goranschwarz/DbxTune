@@ -20,11 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 public class PlatformUtils 
 {
-	private static Logger _logger = Logger.getLogger(PlatformUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	public enum Platform {WIN, LINUX, MAC_OS, SOLARIS, OTHER} 
 //	public enum Desktop  {WIN, KDE, GNOME, MAC_OS, OTHER} 

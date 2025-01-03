@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 
 public class TrendGraphDataPointTest

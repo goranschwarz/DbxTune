@@ -25,6 +25,7 @@
 package com.dbxtune.pcs;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -53,7 +54,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.server.TcpServer;
 import org.h2.tools.Server;
 
@@ -74,9 +76,9 @@ import com.dbxtune.config.dbms.DbmsConfigTextManager;
 import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.config.dbms.IDbmsConfigText;
 import com.dbxtune.config.dict.MonTablesDictionary;
-import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
 import com.dbxtune.config.dict.MonTablesDictionary.MonTableEntry;
+import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.ResultSetTableModel;
@@ -109,7 +111,7 @@ public class PersistWriterJdbc
     extends PersistWriterBase
 {
     /** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(PersistWriterJdbc.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/*---------------------------------------------------
 	** DEFINITIONS

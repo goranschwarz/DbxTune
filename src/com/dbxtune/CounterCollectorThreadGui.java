@@ -22,6 +22,7 @@ package com.dbxtune;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -30,7 +31,8 @@ import java.util.List;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc;
@@ -58,7 +60,7 @@ import com.dbxtune.utils.TimeUtils;
 public class CounterCollectorThreadGui 
 extends CounterCollectorThreadAbstract
 {
-	private static Logger _logger = Logger.getLogger(CounterCollectorThreadGui.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String THREAD_NAME = "CounterCollectorThreadGui";
 

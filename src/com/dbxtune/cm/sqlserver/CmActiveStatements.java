@@ -21,6 +21,7 @@
 package com.dbxtune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -34,22 +35,23 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
-import com.dbxtune.IGuiController;
 import com.dbxtune.ICounterController.DbmsOption;
+import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventExtensiveUsage;
 import com.dbxtune.alarm.events.AlarmEventHoldingLocksWhileWaitForClientInput;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmActiveStatementsPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -63,9 +65,9 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.SqlServerUtils;
+import com.dbxtune.utils.SqlServerUtils.LockRecord;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
-import com.dbxtune.utils.SqlServerUtils.LockRecord;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -73,7 +75,7 @@ import com.dbxtune.utils.SqlServerUtils.LockRecord;
 public class CmActiveStatements
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmActiveStatements.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmActiveStatements.class.getSimpleName();
@@ -1624,23 +1626,23 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 //				}
 //				boolean b = true;
 //				b = !"This was disabled".equals(monSqlText)    && !"Not Available".equals(monSqlText)    && !monSqlText   .startsWith("Not properly configured");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasMonSqlText);
+//				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasMonSqlText);
 //				counters.setValueAt(monSqlText,     rowId, pos_MonSqlText);
 //
 //				b = !"This was disabled".equals(dbccSqlText)   && !"Not Available".equals(dbccSqlText)   && !dbccSqlText  .startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasDbccSqlText);
+//				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasDbccSqlText);
 //				counters.setValueAt(dbccSqlText,    rowId, pos_DbccSqlText);
 //
 //				b = !"This was disabled".equals(procCallStack) && !"Not Available".equals(procCallStack) && !procCallStack.startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasProcCallStack);
+//				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasProcCallStack);
 //				counters.setValueAt(procCallStack,  rowId, pos_ProcCallStack);
 //
 //				b = !"This was disabled".equals(showplan)      && !"Not Available".equals(showplan)      && !showplan     .startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasShowPlan);
+//				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasShowPlan);
 //				counters.setValueAt(showplan,       rowId, pos_ShowPlanText);
 //
 //				b = !"This was disabled".equals(stacktrace)    && !"Not Available".equals(stacktrace)    && !stacktrace   .startsWith("User does not have");
-//				counters.setValueAt(new Boolean(b), rowId, pos_HasStacktrace);
+//				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasStacktrace);
 //				counters.setValueAt(stacktrace,     rowId, pos_DbccStacktrace);
 
 				boolean b;
@@ -1652,27 +1654,27 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 				{
 					obj = counters.getValueAt(rowId, pos_LastBufferSqlText);
 					b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
-					counters.setValueAt(new Boolean(b), rowId, pos_HasBufferSqlText);
+					counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasBufferSqlText);
 				}
 
 				// SQL-Text check box
 				obj = counters.getValueAt(rowId, pos_MonSqlText);
 				b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
-				counters.setValueAt(new Boolean(b), rowId, pos_HasMonSqlText);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasMonSqlText);
 
 				// QueryPlan check box
 				obj = counters.getValueAt(rowId, pos_ShowPlanText);
 				b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
-				counters.setValueAt(new Boolean(b), rowId, pos_HasShowPlan);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasShowPlan);
 
 				// LiveQueryPlan check box
 				obj = counters.getValueAt(rowId, pos_LiveQueryPlan);
 				b = (obj != null && obj instanceof String && StringUtil.hasValue((String)obj)); 
-				counters.setValueAt(new Boolean(b), rowId, pos_HasLiveQueryPlan);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasLiveQueryPlan);
 
 				// SPID Locks
 				b = !"This was disabled".equals(spidLocks) && !"No Locks found".equals(spidLocks) && !"Timeout - when getting lock information".equals(spidLocks);
-                counters.setValueAt(new Boolean(b), rowId, pos_HasSpidLocks);
+                counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasSpidLocks);
                 counters.setValueAt(spidLocks,      rowId, pos_SpidLocks);
                 counters.setValueAt(spidLockCount,  rowId, pos_SpidLockCount);
 
@@ -1903,6 +1905,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 				if (counters.findColumn("context_info_str") != -1) extraInfo += "<TR> <TD><B>context_info_str</B></TD> <TD>" + counters.getValueAsString(rowId, "context_info_str") + "</TD> </TR>";
 				if (counters.findColumn("HOST_NAME")        != -1) extraInfo += "<TR> <TD><B>HOST_NAME       </B></TD> <TD>" + counters.getValueAsString(rowId, "HOST_NAME"       ) + "</TD> </TR>";
 				if (counters.findColumn("ProcName")         != -1) extraInfo += "<TR> <TD><B>ProcName        </B></TD> <TD>" + counters.getValueAsString(rowId, "ProcName"        ) + "</TD> </TR>";
+				if (counters.findColumn("StmntStart")       != -1) extraInfo += "<TR> <TD><B>StmntStart      </B></TD> <TD>" + counters.getValueAsString(rowId, "StmntStart"      ) + "</TD> </TR>";
 
 				if (counters.findColumn("command")          != -1) extraInfo += "<TR> <TD><B>command         </B></TD> <TD>" + counters.getValueAsString(rowId, "command"         ) + "</TD> </TR>";
 				if (counters.findColumn("tran_begin_time")  != -1) extraInfo += "<TR> <TD><B>tran_begin_time </B></TD> <TD>" + counters.getValueAsString(rowId, "tran_begin_time" ) + "</TD> </TR>";

@@ -20,10 +20,12 @@
  ******************************************************************************/
 package com.dbxtune.sql.conn;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ssh.SshTunnelInfo;
 import com.dbxtune.utils.StringUtil;
@@ -31,7 +33,7 @@ import com.dbxtune.utils.StringUtil;
 public class ConnectionProp
 implements Cloneable
 {
-	private static Logger _logger = Logger.getLogger(ConnectionProp.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected String _username = null;
 	protected String _password = null;

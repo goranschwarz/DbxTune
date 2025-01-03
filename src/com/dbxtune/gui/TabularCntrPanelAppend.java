@@ -40,7 +40,7 @@ public class TabularCntrPanelAppend
 extends TabularCntrPanel
 {
 	private static final long serialVersionUID = 1L;
-//	private static Logger _logger = Logger.getLogger(TabularCntrPanelAppend.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private JCheckBox _showAllRows_chk;
 

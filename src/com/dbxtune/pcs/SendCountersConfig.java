@@ -21,26 +21,27 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
-import java.util.Set;
-
 //------------------------------------------------------------------------------
 // PRIVATE HELPER CLASS
 //------------------------------------------------------------------------------
 public class SendCountersConfig
 {
-	private static Logger _logger = Logger.getLogger(SendCountersConfig.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private boolean             _sendAll = false;
 	private Map<String, String> _includeMap;

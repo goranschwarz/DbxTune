@@ -21,6 +21,7 @@
 package com.dbxtune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,12 +38,13 @@ import java.util.regex.PatternSyntaxException;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterControllerSqlServer;
 import com.dbxtune.ICounterController;
-import com.dbxtune.IGuiController;
 import com.dbxtune.ICounterController.DbmsOption;
+import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventDatabaseState;
@@ -60,12 +62,12 @@ import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
-import com.dbxtune.cm.CounterSample;
-import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.dbxtune.cm.CounterSample;
+import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmDatabasesPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -91,7 +93,7 @@ import com.dbxtune.utils.Ver;
 public class CmDatabases
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmDatabases.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmDatabases.class.getSimpleName();
@@ -2861,7 +2863,7 @@ extends CountersModel
 					boolean b = true;
 
 					b = !"This was disabled".equals(sysLocks) && !NO_LOCKS_WAS_FOUND.equals(sysLocks) && !"Timeout - when getting lock information".equals(sysLocks);
-					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasLocks);
+					newSample.setValueAt(Boolean.valueOf(b), rowId, pos_OldestTranHasLocks);
 					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
 
 					//---------------------------------------------
@@ -2961,7 +2963,7 @@ extends CountersModel
 						// Reset OldestTranInSeconds to -1
 						if (debugPrint || _logger.isDebugEnabled())
 							System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', OldestTranInSeconds='"+OldestTranInSeconds+"'. BUT OldestTranLocks='" + NO_LOCKS_WAS_FOUND + "' -- Setting: OldestTranInSeconds to: -1");
-						OldestTranInSeconds = new Double(-1);
+						OldestTranInSeconds = Double.valueOf(-1);
 					}
 
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OldestTranInSeconds, DEFAULT_alarm_OldestTranInSeconds);

@@ -20,15 +20,25 @@
  ******************************************************************************/
 package com.dbxtune.cm.os;
 
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventHighCpuUtilization;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.gui.CmOsMpstatPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -36,12 +46,13 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.TrendGraph;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
 public class CmOsMpstat
 extends CounterModelHostMonitor
 {
-//	private static Logger        _logger          = Logger.getLogger(CmOsMpstat.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_MPSTAT;
@@ -392,19 +403,19 @@ extends CounterModelHostMonitor
 				int cpu_pos                          = this.findColumn("CPU");  // Linux, Solaris
 				if (cpu_pos < 0)             cpu_pos = this.findColumn("cpu");  // AIX
 				
-				int usrPct_pos                       = this.findColumn("usrPct"); // Linix
+				int usrPct_pos                       = this.findColumn("usrPct"); // Linux
 				if (usrPct_pos < 0)       usrPct_pos = this.findColumn("usr");    // Solaris
 				if (usrPct_pos < 0)       usrPct_pos = this.findColumn("us");     // AIX
 
-				int sysPct_pos                       = this.findColumn("sysPct"); // Linix
+				int sysPct_pos                       = this.findColumn("sysPct"); // Linux
 				if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sys");    // Solaris
 				if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sy");     // AIX
 
-				int iowaitPct_pos                    = this.findColumn("iowaitPct"); // Linix
+				int iowaitPct_pos                    = this.findColumn("iowaitPct"); // Linux
 				if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // Solaris
 				if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // AIX
 
-				int idlePct_pos                      = this.findColumn("idlePct"); // Linix
+				int idlePct_pos                      = this.findColumn("idlePct"); // Linux
 				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("idl");     // Solaris
 				if (idlePct_pos < 0)     idlePct_pos = this.findColumn("id");      // AIX
 
@@ -449,4 +460,264 @@ extends CounterModelHostMonitor
 
 	} // end: method
 
+//	TODO; // Add alarm: cpu usage for all CPU's WARNING: ... at 95%
+//	TODO; // Add alarm: cpu usage for all CPU's ERROR:   ... at 99%
+
+	private Double getCpuUsage()
+	{
+		Double cpuPctUsage = null;
+
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+//			String pk = createPkStr("_Total", "", "");
+//			Double val = this.getRateValueAsDouble(pk, "cntr_value");
+//			Double processorTime  = this.getAbsValueAsDouble(pk, "% Processor Time");
+//			Double userTime       = this.getAbsValueAsDouble(i, "% User Time");
+//			Double privilegedTime = this.getAbsValueAsDouble(i, "% Privileged Time");
+//			Double idleTime       = this.getAbsValueAsDouble(i, "% Idle Time");
+			
+			int pos_Instance = this.findColumn("Instance");
+			for (int r=0; r<this.getRowCount(); r++)
+			{
+				String instance = this.getAbsString(r, pos_Instance);
+				if ("_Total".equals(instance))
+					cpuPctUsage = this.getAbsValueAsDouble(r, "% Processor Time");
+			}
+		}
+		else
+		{
+			int cpu_pos                          = this.findColumn("CPU"); // Linux, Solaris
+			if (cpu_pos < 0)             cpu_pos = this.findColumn("cpu"); // AIX
+			
+			int usrPct_pos                       = this.findColumn("usrPct"); // Linix
+			if (usrPct_pos < 0)       usrPct_pos = this.findColumn("usr");    // Solaris
+			if (usrPct_pos < 0)       usrPct_pos = this.findColumn("us");     // AIX
+
+			int sysPct_pos                       = this.findColumn("sysPct"); // Linix
+			if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sys");    // Solaris
+			if (sysPct_pos < 0)       sysPct_pos = this.findColumn("sy");     // AIX
+
+			int iowaitPct_pos                    = this.findColumn("iowaitPct"); // Linix
+			if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // Solaris
+			if (iowaitPct_pos < 0) iowaitPct_pos = this.findColumn("wt");        // AIX
+
+			int idlePct_pos                      = this.findColumn("idlePct"); // Linix
+			if (idlePct_pos < 0)     idlePct_pos = this.findColumn("idl");     // Solaris
+			if (idlePct_pos < 0)     idlePct_pos = this.findColumn("id");      // AIX
+
+			if (cpu_pos < 0 || usrPct_pos < 0 || sysPct_pos < 0 || iowaitPct_pos < 0 || idlePct_pos < 0)
+			{
+				String msg = "";
+				if (cpu_pos        < 0) msg += "'CPU', ";
+				if (usrPct_pos     < 0) msg += "'usrPct|usr|us', ";
+				if (sysPct_pos     < 0) msg += "'sysPct|sys|sy', ";
+				if (iowaitPct_pos  < 0) msg += "'iowaitPct|wt', ";
+				if (idlePct_pos    < 0) msg += "'idlePct|idl|id', ";
+			}
+			else
+			{
+				boolean gotAllEntry = false;
+
+//				Double[] dArray = new Double[this.getRowCount()];
+				Double[] aArray = new Double[5]; // "all" array (for values that do have the 'all' record)
+				Double[] sArray = new Double[5]; // "sum" array (for values that do NOT have the 'all' record)
+				String[] lArray = new String[5];
+
+				// Initialize the "sum" array
+				for (int i=0; i<sArray.length; i++)
+					sArray[i] = 0.0;
+
+				lArray[0] = "TotalPct (usr + sys + iowait)";
+				lArray[1] = "usrPct";
+				lArray[2] = "sysPct";
+				lArray[3] = "iowaitPct";
+				lArray[4] = "idlePct";
+
+				for (int i=0; i<this.getRowCount(); i++)
+				{
+					String cpu = this.getAbsString(i, cpu_pos);
+
+					if ("all".equalsIgnoreCase(cpu))
+					{
+						gotAllEntry = true;
+						
+						Double usrPct    = this.getAbsValueAsDouble(i, usrPct_pos);
+						Double sysPct    = this.getAbsValueAsDouble(i, sysPct_pos);
+						Double iowaitPct = this.getAbsValueAsDouble(i, iowaitPct_pos);
+						Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
+
+						aArray[0] = usrPct + sysPct + iowaitPct;
+						aArray[1] = usrPct;
+						aArray[2] = sysPct;
+						aArray[3] = iowaitPct;
+						aArray[4] = idlePct;
+					}
+					else
+					{
+						Double usrPct    = this.getAbsValueAsDouble(i, usrPct_pos);
+						Double sysPct    = this.getAbsValueAsDouble(i, sysPct_pos);
+						Double iowaitPct = this.getAbsValueAsDouble(i, iowaitPct_pos);
+						Double idlePct   = this.getAbsValueAsDouble(i, idlePct_pos);
+
+						sArray[0] += usrPct + sysPct + iowaitPct;
+						sArray[1] += usrPct;
+						sArray[2] += sysPct;
+						sArray[3] += iowaitPct;
+						sArray[4] += idlePct;
+					}
+				}
+
+				if (gotAllEntry)
+				{
+					cpuPctUsage = aArray[0];
+					// use the "all" entry
+//					tgdp.setDataPoint(this.getTimestamp(), lArray, aArray);
+				}
+				else
+				{
+					// get average value from "sum" values / rowCount 
+					for (int i=0; i<sArray.length; i++)
+						sArray[i] = sArray[i] / (this.getRowCount() * 1.0);
+
+					cpuPctUsage = sArray[0];
+//					tgdp.setDataPoint(this.getTimestamp(), lArray, sArray);
+				}
+			}
+		}
+		return cpuPctUsage;
+	}
+	
+	//--------------------------------------------------------------
+	// Alarm handling
+	//--------------------------------------------------------------
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		CountersModel cm = this;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		//-------------------------------------------------------
+		// CpuUsageWarning
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("CpuUsageWarning"))
+		{
+			Double cpuPctUsage = getCpuUsage();
+//System.out.println("CmOsMpstat: CpuUsageWarning: cpuPctUsage=" + cpuPctUsage);
+			
+			if (cpuPctUsage != null)
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): cpuPctUsage=" + cpuPctUsage + ".");
+
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_cpuUsageWarning, DEFAULT_alarm_cpuUsageWarning);
+				if (cpuPctUsage > threshold)
+				{
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpSum);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpCpu);
+
+					// Possibly getting info from CmOsPs
+					// This will help us to determine if OTHER processes than the DBMS is loading the server
+					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable();
+
+					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.WARNING);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageWarning_delay, DEFAULT_alarm_cpuUsageWarning_delay);
+					ae.setRaiseDelayInSec(raiseDelay);
+					
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+		}
+
+		//-------------------------------------------------------
+		// CpuUsageError
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("CpuUsageError"))
+		{
+			Double cpuPctUsage = getCpuUsage();
+//System.out.println("CmOsMpstat: CpuUsageError: cpuPctUsage=" + cpuPctUsage);
+			
+			if (cpuPctUsage != null)
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): cpuPctUsage=" + cpuPctUsage + ".");
+
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_cpuUsageError, DEFAULT_alarm_cpuUsageError);
+				if (cpuPctUsage > threshold)
+				{
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpSum);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpCpu);
+
+					// Possibly getting info from CmOsPs
+					// This will help us to determine if OTHER processes than the DBMS is loading the server
+					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable();
+
+					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.ERROR);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageError_delay, DEFAULT_alarm_cpuUsageError_delay);
+					ae.setRaiseDelayInSec(raiseDelay);
+					
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+		}
+	} // end: method
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_MpSum.equals(name)) return true;
+		if (GRAPH_NAME_MpCpu.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
+	public static final String  PROPKEY_alarm_cpuUsageWarning                    = CM_NAME + ".alarm.system.if.CpuUsageWarning.gt";
+	public static final double  DEFAULT_alarm_cpuUsageWarning                    = 95.0d;
+	public static final String  PROPKEY_alarm_cpuUsageWarning_delay              = CM_NAME + ".alarm.system.if.CpuUsageWarning.raise.delay";
+	public static final int     DEFAULT_alarm_cpuUsageWarning_delay              = 2 * 60; // 2 minutes
+	
+	public static final String  PROPKEY_alarm_cpuUsageError                      = CM_NAME + ".alarm.system.if.cpu.usage.error.gt";
+	public static final double  DEFAULT_alarm_cpuUsageError                      = 99.0d;
+	public static final String  PROPKEY_alarm_cpuUsageError_delay                = CM_NAME + ".alarm.system.if.CpuUsageWarning.raise.delay";
+	public static final int     DEFAULT_alarm_cpuUsageError_delay                = 5 * 60; // 5 minutes
+	
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("CpuUsageWarning", isAlarmSwitch, PROPKEY_alarm_cpuUsageWarning,       Double.class,  conf.getDoubleProperty(PROPKEY_alarm_cpuUsageWarning      , DEFAULT_alarm_cpuUsageWarning      ), DEFAULT_alarm_cpuUsageWarning      , "If 'CpuUsage' is GREATER than ##.#, send 'AlarmEventHighCpuUtilization(WARNING)'."));
+		list.add(new CmSettingsHelper("CpuUsageWarning RaiseDelay",     PROPKEY_alarm_cpuUsageWarning_delay, Integer.class, conf.getIntProperty(   PROPKEY_alarm_cpuUsageWarning_delay, DEFAULT_alarm_cpuUsageWarning_delay), DEFAULT_alarm_cpuUsageWarning_delay, "If 'CpuUsageWarning' is true and has been so for 2 minutes (120 sec) then proceed with the Alarm Raise." ));
+
+		list.add(new CmSettingsHelper("CpuUsageError"  , isAlarmSwitch, PROPKEY_alarm_cpuUsageError,         Double.class,  conf.getDoubleProperty(PROPKEY_alarm_cpuUsageError        , DEFAULT_alarm_cpuUsageError        ), DEFAULT_alarm_cpuUsageError        , "If 'CpuUsage' is GREATER than ##.# ,send 'AlarmEventHighCpuUtilization(ERROR)'."));
+		list.add(new CmSettingsHelper("CpuUsageError RaiseDelay",       PROPKEY_alarm_cpuUsageError_delay,   Integer.class, conf.getIntProperty(   PROPKEY_alarm_cpuUsageError_delay  , DEFAULT_alarm_cpuUsageError_delay  ), DEFAULT_alarm_cpuUsageError_delay  , "If 'CpuUsageError' is true and has been so for 5 minutes (300 sec) then proceed with the Alarm Raise." ));
+
+		return list;
+	}
 }

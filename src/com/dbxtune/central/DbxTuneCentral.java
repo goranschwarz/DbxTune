@@ -25,6 +25,7 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -51,11 +52,10 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.mail.HtmlEmail;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.RollingFileAppender;
-import org.apache.log4j.spi.Filter;
-import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.filter.AbstractFilter;
 import org.eclipse.jetty.server.CustomRequestLog;
 import org.eclipse.jetty.server.RequestLog.Writer;
 import org.eclipse.jetty.server.RequestLogWriter;
@@ -98,6 +98,7 @@ import com.dbxtune.utils.CronUtils;
 import com.dbxtune.utils.Debug;
 import com.dbxtune.utils.FileUtils;
 import com.dbxtune.utils.JavaUtils;
+import com.dbxtune.utils.Log4jUtils;
 import com.dbxtune.utils.Logging;
 import com.dbxtune.utils.Memory;
 import com.dbxtune.utils.NetUtils;
@@ -109,8 +110,7 @@ import it.sauronsoftware.cron4j.Scheduler;
 
 public class DbxTuneCentral
 {
-//	private final static Logger _logger = LoggerFactory.getLogger(CentralPcsReceiverController.class);
-	private static Logger _logger = Logger.getLogger(DbxTuneCentral.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_WEB_PORT = "DbxTuneCentral.web.port";
 	public static final int    DEFAULT_WEB_PORT = 8080;
@@ -1217,7 +1217,7 @@ public class DbxTuneCentral
 	throws Exception
 	{
 		_scheduler = new Scheduler();
-		
+
 		//--------------------------------------------
 		// H2 Database File Cleanup - Scheduling Task
 		//--------------------------------------------
@@ -1228,30 +1228,42 @@ public class DbxTuneCentral
 			if (logFile != null)
 			{
 				String pattern = Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_LOG_FILE_PATTERN, DataDirectoryCleaner.DEFAULT_LOG_FILE_PATTERN);
-				PatternLayout layout = new PatternLayout(pattern);
-				_logger.info("Adding separate log file for '"+DataDirectoryCleaner.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-				
-				// Create a Rolling Log File
-				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-				appender.setMaxFileSize("10MB");
-				appender.setMaxBackupIndex(3);
-				appender.setName(DataDirectoryCleaner.EXTRA_LOG_NAME);
 
-				// Only log messages from 'DataDirectoryCleaner' in this appender
-				appender.addFilter(new Filter()
-				{
-					@Override
-					public int decide(LoggingEvent event)
-					{
-						if (event.getLogger().getName().equals(DataDirectoryCleaner.class.getName()))
-							return Filter.NEUTRAL;
+				Log4jUtils.addRollingFileAppenderWithFilter(
+						DataDirectoryCleaner.EXTRA_LOG_NAME, // Name of the logger 
+						logFile,                             // Filename
+						pattern,                             // File layout/pattern
+						5,                                   // Number of files
+						10,                                  // MaxSize for each File in MB
+						DataDirectoryCleaner.class,          // Filter on this class only
+						null,                                // Extra filters
+						Level.INFO);                         // And the Log Level
 
-						return Filter.DENY;
-					}
-				});
-
-				// Add the appender
-				Logger.getRootLogger().addAppender(appender);
+//				String pattern = Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_LOG_FILE_PATTERN, DataDirectoryCleaner.DEFAULT_LOG_FILE_PATTERN);
+//				PatternLayout layout = new PatternLayout(pattern);
+//				_logger.info("Adding separate log file for '"+DataDirectoryCleaner.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+//				
+//				// Create a Rolling Log File
+//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+//				appender.setMaxFileSize("10MB");
+//				appender.setMaxBackupIndex(3);
+//				appender.setName(DataDirectoryCleaner.EXTRA_LOG_NAME);
+//
+//				// Only log messages from 'DataDirectoryCleaner' in this appender
+//				appender.addFilter(new Filter()
+//				{
+//					@Override
+//					public int decide(LoggingEvent event)
+//					{
+//						if (event.getLogger().getName().equals(DataDirectoryCleaner.class.getName()))
+//							return Filter.NEUTRAL;
+//
+//						return Filter.DENY;
+//					}
+//				});
+//
+//				// Add the appender
+//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_cron,  DataDirectoryCleaner.DEFAULT_cron);
@@ -1269,30 +1281,42 @@ public class DbxTuneCentral
 			if (logFile != null)
 			{
 				String pattern = Configuration.getCombinedConfiguration().getProperty(H2WriterStatCronTask.PROPKEY_LOG_FILE_PATTERN, H2WriterStatCronTask.DEFAULT_LOG_FILE_PATTERN);
-				PatternLayout layout = new PatternLayout(pattern);
-				_logger.info("Adding separate log file for '"+H2WriterStatCronTask.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-				
-				// Create a Rolling Log File
-				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-				appender.setMaxFileSize("10MB");
-				appender.setMaxBackupIndex(3);
-				appender.setName(H2WriterStatCronTask.EXTRA_LOG_NAME);
 
-				// Only log messages from 'H2WriterStatCronTask' in this appender
-				appender.addFilter(new Filter()
-				{
-					@Override
-					public int decide(LoggingEvent event)
-					{
-						if (event.getLogger().getName().equals(H2WriterStatCronTask.class.getName()))
-							return Filter.NEUTRAL;
+				Log4jUtils.addRollingFileAppenderWithFilter(
+						H2WriterStatCronTask.EXTRA_LOG_NAME, // Name of the logger 
+						logFile,                             // Filename
+						pattern,                             // File layout/pattern
+						5,                                   // Number of files
+						10,                                  // MaxSize for each File in MB
+						H2WriterStatCronTask.class,          // Filter on this class only
+						null,                                // Extra filters
+						Level.INFO);                         // And the Log Level
 
-						return Filter.DENY;
-					}
-				});
-
-				// Add the appender
-				Logger.getRootLogger().addAppender(appender);
+//				String pattern = Configuration.getCombinedConfiguration().getProperty(H2WriterStatCronTask.PROPKEY_LOG_FILE_PATTERN, H2WriterStatCronTask.DEFAULT_LOG_FILE_PATTERN);
+//				PatternLayout layout = new PatternLayout(pattern);
+//				_logger.info("Adding separate log file for '"+H2WriterStatCronTask.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+//				
+//				// Create a Rolling Log File
+//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+//				appender.setMaxFileSize("10MB");
+//				appender.setMaxBackupIndex(3);
+//				appender.setName(H2WriterStatCronTask.EXTRA_LOG_NAME);
+//
+//				// Only log messages from 'H2WriterStatCronTask' in this appender
+//				appender.addFilter(new Filter()
+//				{
+//					@Override
+//					public int decide(LoggingEvent event)
+//					{
+//						if (event.getLogger().getName().equals(H2WriterStatCronTask.class.getName()))
+//							return Filter.NEUTRAL;
+//
+//						return Filter.DENY;
+//					}
+//				});
+//
+//				// Add the appender
+//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(H2WriterStatCronTask.PROPKEY_cron,  H2WriterStatCronTask.DEFAULT_cron);
@@ -1310,30 +1334,42 @@ public class DbxTuneCentral
 			if (logFile != null)
 			{
 				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralPcsJdbcCleaner.PROPKEY_LOG_FILE_PATTERN, CentralPcsJdbcCleaner.DEFAULT_LOG_FILE_PATTERN);
-				PatternLayout layout = new PatternLayout(pattern);
-				_logger.info("Adding separate log file for '"+CentralPcsJdbcCleaner.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-				
-				// Create a Rolling Log File
-				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-				appender.setMaxFileSize("10MB");
-				appender.setMaxBackupIndex(3);
-				appender.setName(CentralPcsJdbcCleaner.EXTRA_LOG_NAME);
 
-				// Only log messages from 'CentralPcsJdbcCleaner' in this appender
-				appender.addFilter(new Filter()
-				{
-					@Override
-					public int decide(LoggingEvent event)
-					{
-						if (event.getLogger().getName().equals(CentralPcsJdbcCleaner.class.getName()))
-							return Filter.NEUTRAL;
+				Log4jUtils.addRollingFileAppenderWithFilter(
+						CentralPcsJdbcCleaner.EXTRA_LOG_NAME, // Name of the logger 
+						logFile,                             // Filename
+						pattern,                             // File layout/pattern
+						5,                                   // Number of files
+						10,                                  // MaxSize for each File in MB
+						CentralPcsJdbcCleaner.class,         // Filter on this class only
+						null,                                // Extra filters
+						Level.INFO);                         // And the Log Level
 
-						return Filter.DENY;
-					}
-				});
-
-				// Add the appender
-				Logger.getRootLogger().addAppender(appender);
+//				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralPcsJdbcCleaner.PROPKEY_LOG_FILE_PATTERN, CentralPcsJdbcCleaner.DEFAULT_LOG_FILE_PATTERN);
+//				PatternLayout layout = new PatternLayout(pattern);
+//				_logger.info("Adding separate log file for '"+CentralPcsJdbcCleaner.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+//				
+//				// Create a Rolling Log File
+//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+//				appender.setMaxFileSize("10MB");
+//				appender.setMaxBackupIndex(3);
+//				appender.setName(CentralPcsJdbcCleaner.EXTRA_LOG_NAME);
+//
+//				// Only log messages from 'CentralPcsJdbcCleaner' in this appender
+//				appender.addFilter(new Filter()
+//				{
+//					@Override
+//					public int decide(LoggingEvent event)
+//					{
+//						if (event.getLogger().getName().equals(CentralPcsJdbcCleaner.class.getName()))
+//							return Filter.NEUTRAL;
+//
+//						return Filter.DENY;
+//					}
+//				});
+//
+//				// Add the appender
+//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralPcsJdbcCleaner.PROPKEY_cron,  CentralPcsJdbcCleaner.DEFAULT_cron);
@@ -1351,50 +1387,56 @@ public class DbxTuneCentral
 			if (logFile != null)
 			{
 				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralH2Defrag.PROPKEY_LOG_FILE_PATTERN, CentralH2Defrag.DEFAULT_LOG_FILE_PATTERN);
-				PatternLayout layout = new PatternLayout(pattern);
-				_logger.info("Adding separate log file for '"+CentralH2Defrag.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+
+				// Special Filter for 'CentralPersistWriterJdbc' and if message contains " H2 "
+				List<AbstractFilter> extraFilter = new ArrayList<>();
+				extraFilter.add( new Log4jUtils.FilterOnClassNameAndMessage(CentralPersistWriterJdbc.class, " H2 ") ); 
 				
-				// Create a Rolling Log File
-				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-				appender.setMaxFileSize("10MB");
-				appender.setMaxBackupIndex(3);
-				appender.setName(CentralH2Defrag.EXTRA_LOG_NAME);
+				Log4jUtils.addRollingFileAppenderWithFilter(
+						CentralH2Defrag.EXTRA_LOG_NAME, // Name of the logger 
+						logFile,                             // Filename
+						pattern,                             // File layout/pattern
+						5,                                   // Number of files
+						10,                                  // MaxSize for each File in MB
+						CentralH2Defrag.class,               // Filter on this class only
+						extraFilter,                         // Extra filters
+						Level.INFO);                         // And the Log Level
 
-				// Only log messages from 'CentralH2Defrag' in this appender
-				appender.addFilter(new Filter()
-				{
-					@Override
-					public int decide(LoggingEvent event)
-					{
-//						if (    event.getLogger().getName().equals(CentralH2Defrag.class.getName()) 
-//						     || event.getLogger().getName().equals(CentralPersistWriterJdbc.class.getName()) 
-//						   )
-//						{
+//				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralH2Defrag.PROPKEY_LOG_FILE_PATTERN, CentralH2Defrag.DEFAULT_LOG_FILE_PATTERN);
+//				PatternLayout layout = new PatternLayout(pattern);
+//				_logger.info("Adding separate log file for '"+CentralH2Defrag.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+//				
+//				// Create a Rolling Log File
+//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+//				appender.setMaxFileSize("10MB");
+//				appender.setMaxBackupIndex(3);
+//				appender.setName(CentralH2Defrag.EXTRA_LOG_NAME);
+//
+//				// Only log messages from 'CentralH2Defrag' in this appender
+//				appender.addFilter(new Filter()
+//				{
+//					@Override
+//					public int decide(LoggingEvent event)
+//					{
+//						// log all in: CentralH2Defrag
+//						if (event.getLogger().getName().equals(CentralH2Defrag.class.getName()))
 //							return Filter.NEUTRAL;
-//						}
-
-						// log all in: CentralH2Defrag
-						if (event.getLogger().getName().equals(CentralH2Defrag.class.getName()))
-							return Filter.NEUTRAL;
-
-						// log only "some" (message has H2 in the message) in: CentralPersistWriterJdbc
-						if (event.getLogger().getName().equals(CentralPersistWriterJdbc.class.getName()))
-						{
-//							if (event.getThreadName().equals("xxxx"))
+//
+//						// log only "some" (message has H2 in the message) in: CentralPersistWriterJdbc
+//						if (event.getLogger().getName().equals(CentralPersistWriterJdbc.class.getName()))
+//						{
+//							String msg = "" + event.getMessage();
+//
+//							if (msg.indexOf(" H2 ") != -1)
 //								return Filter.NEUTRAL;
-								
-							String msg = "" + event.getMessage();
-
-							if (msg.indexOf(" H2 ") != -1)
-								return Filter.NEUTRAL;
-						}
-
-						return Filter.DENY;
-					}
-				});
-
-				// Add the appender
-				Logger.getRootLogger().addAppender(appender);
+//						}
+//
+//						return Filter.DENY;
+//					}
+//				});
+//
+//				// Add the appender
+//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralH2Defrag.PROPKEY_cron,  CentralH2Defrag.DEFAULT_cron);
@@ -1412,30 +1454,42 @@ public class DbxTuneCentral
 			if (logFile != null)
 			{
 				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_LOG_FILE_PATTERN, CentralDailyReportSender.DEFAULT_LOG_FILE_PATTERN);
-				PatternLayout layout = new PatternLayout(pattern);
-				_logger.info("Adding separate log file for '"+CentralDailyReportSender.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-				
-				// Create a Rolling Log File
-				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-				appender.setMaxFileSize("10MB");
-				appender.setMaxBackupIndex(3);
-				appender.setName(CentralDailyReportSender.EXTRA_LOG_NAME);
 
-				// Only log messages from 'CentralDailyReportSender' in this appender
-				appender.addFilter(new Filter()
-				{
-					@Override
-					public int decide(LoggingEvent event)
-					{
-						if (event.getLogger().getName().equals(CentralDailyReportSender.class.getName()))
-							return Filter.NEUTRAL;
+				Log4jUtils.addRollingFileAppenderWithFilter(
+						CentralDailyReportSender.EXTRA_LOG_NAME, // Name of the logger 
+						logFile,                             // Filename
+						pattern,                             // File layout/pattern
+						5,                                   // Number of files
+						10,                                  // MaxSize for each File in MB
+						CentralDailyReportSender.class,      // Filter on this class only
+						null,                                // Extra filters
+						Level.INFO);                         // And the Log Level
 
-						return Filter.DENY;
-					}
-				});
-
-				// Add the appender
-				Logger.getRootLogger().addAppender(appender);
+//				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_LOG_FILE_PATTERN, CentralDailyReportSender.DEFAULT_LOG_FILE_PATTERN);
+//				PatternLayout layout = new PatternLayout(pattern);
+//				_logger.info("Adding separate log file for '"+CentralDailyReportSender.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+//				
+//				// Create a Rolling Log File
+//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+//				appender.setMaxFileSize("10MB");
+//				appender.setMaxBackupIndex(3);
+//				appender.setName(CentralDailyReportSender.EXTRA_LOG_NAME);
+//
+//				// Only log messages from 'CentralDailyReportSender' in this appender
+//				appender.addFilter(new Filter()
+//				{
+//					@Override
+//					public int decide(LoggingEvent event)
+//					{
+//						if (event.getLogger().getName().equals(CentralDailyReportSender.class.getName()))
+//							return Filter.NEUTRAL;
+//
+//						return Filter.DENY;
+//					}
+//				});
+//
+//				// Add the appender
+//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_cron,  CentralDailyReportSender.DEFAULT_cron);
@@ -1450,36 +1504,6 @@ public class DbxTuneCentral
 		boolean dsrPriorityFileWriterStart = Configuration.getCombinedConfiguration().getBooleanProperty(DsrPriorityFileWriter.PROPKEY_start, DsrPriorityFileWriter.DEFAULT_start);
 		if (dsrPriorityFileWriterStart)
 		{
-//			File logFile = Logging.getBaseLogFile("_" + DsrPriorityFileWriter.class.getSimpleName() + ".log");
-//			if (logFile != null)
-//			{
-//				String pattern = Configuration.getCombinedConfiguration().getProperty(DsrPriorityFileWriter.PROPKEY_LOG_FILE_PATTERN, DsrPriorityFileWriter.DEFAULT_LOG_FILE_PATTERN);
-//				PatternLayout layout = new PatternLayout(pattern);
-//				_logger.info("Adding separate log file for '"+DsrPriorityFileWriter.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-//				
-//				// Create a Rolling Log File
-//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-//				appender.setMaxFileSize("10MB");
-//				appender.setMaxBackupIndex(3);
-//				appender.setName(DsrPriorityFileWriter.EXTRA_LOG_NAME);
-//
-//				// Only log messages from 'DsrPriorityFileWriter' in this appender
-//				appender.addFilter(new Filter()
-//				{
-//					@Override
-//					public int decide(LoggingEvent event)
-//					{
-//						if (event.getLogger().getName().equals(DsrPriorityFileWriter.class.getName()))
-//							return Filter.NEUTRAL;
-//
-//						return Filter.DENY;
-//					}
-//				});
-//
-//				// Add the appender
-//				Logger.getRootLogger().addAppender(appender);
-//			}
-
 			String cron  = Configuration.getCombinedConfiguration().getProperty(DsrPriorityFileWriter.PROPKEY_cron,  DsrPriorityFileWriter.DEFAULT_cron);
 			_logger.info("Adding 'Daily Summary Report File Writer' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
 			_scheduler.schedule(cron, new DsrPriorityFileWriter());

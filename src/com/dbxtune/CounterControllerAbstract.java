@@ -22,6 +22,7 @@ package com.dbxtune;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -43,7 +44,8 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CmToolTipSupplierDefault;
@@ -77,7 +79,7 @@ public abstract class CounterControllerAbstract
 implements ICounterController
 {
 	/** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(CounterControllerAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _supportedProductString = null;
 	@Override public void   setSupportedProductName(String str) { _supportedProductString = str; }
@@ -986,7 +988,7 @@ implements ICounterController
 					sqlVer = new HashMap<Integer, String>();
 
 				sqlVer.put(
-					new Integer(sqlVersionNumInKey), 
+					Integer.valueOf(sqlVersionNumInKey), 
 					conf.getProperty(sqlVersionPrefix + sqlVersionNumInKey) );
 			}
 

@@ -221,7 +221,7 @@ public abstract class AbstractComponentDecorator {
                 layerRoot = layeredChild;
                 layerRoot.addPropertyChangeListener(listener);
             }
-            lp.add(painter, new Integer(layer), position);
+            lp.add(painter, Integer.valueOf(layer), position);
         }
         else {
             // Always detach when the target component's window is null
@@ -545,7 +545,7 @@ public abstract class AbstractComponentDecorator {
                 return 0;
             int value = c.getComponentCount();
             try {
-                nComponents.set(c, new Integer(0));
+                nComponents.set(c, Integer.valueOf(0));
             }
             catch(Exception e) {
                 return c.getComponentCount();
@@ -556,7 +556,7 @@ public abstract class AbstractComponentDecorator {
         private void restoreChildren(Container c, int count) {
             if (c != null) {
                 try {
-                    nComponents.set(c, new Integer(count));
+                    nComponents.set(c, Integer.valueOf(count));
                 }
                 catch(Exception e) {
                 }        

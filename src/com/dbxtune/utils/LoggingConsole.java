@@ -21,9 +21,8 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
-import java.util.Properties;
-
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 
 public class LoggingConsole
 {
@@ -37,20 +36,11 @@ public class LoggingConsole
 	/** Initialize a console logger with DEBUG or TRACE level */
 	public static void init(boolean debug, boolean trace)
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, console");
-		
 		if (debug)
-			log4jProps.setProperty("log4j.rootLogger", "DEBUG, console");
-		
-		if (trace)
-			log4jProps.setProperty("log4j.rootLogger", "TRACE, console");
-		
-		log4jProps.setProperty("log4j.appender.console",                          "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.console.layout",                   "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.console.layout.ConversionPattern", "%d - %-5p - %-30t - %-30c{1} - %m%n");
+			Configurator.setRootLevel(Level.DEBUG);
 
-		PropertyConfigurator.configure(log4jProps);
+		if (trace)
+			Configurator.setRootLevel(Level.TRACE);
 	}
 
 }

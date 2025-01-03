@@ -225,7 +225,7 @@ public class AlarmWritersTableModel extends AbstractTableModel
 
 		// Set the value
 		if (col == TAB_POS_USE)
-			e._selected = new Boolean(newVal.toString());
+			e._selected = Boolean.valueOf(newVal.toString());
 
 		fireTableCellUpdated(row, col);
 	}

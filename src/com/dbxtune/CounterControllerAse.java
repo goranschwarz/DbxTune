@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -35,7 +36,8 @@ import java.util.Properties;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cache.XmlPlanCache;
 import com.dbxtune.cache.XmlPlanCacheAse;
@@ -130,7 +132,7 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class CounterControllerAse extends CounterControllerAbstract
 {
 	/** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(CounterControllerAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** is sp_configure 'capture missing statistics' set or not */
 	protected boolean _config_captureMissingStatistics = false;

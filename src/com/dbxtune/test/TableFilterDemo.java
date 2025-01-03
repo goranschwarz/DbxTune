@@ -301,7 +301,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		private static final long	serialVersionUID	= 1L;
 
 		private String[]	columnNames	= { "FirstName", "LastName", "Sport", "# of Years", "Vegetarian" };
-//		private Object[][]	data		= { { "Kathy", "Smith", "Snowboarding", new Integer(5), new Boolean(false) }, { "John", "Doe", "Rowing", new Integer(3), new Boolean(true) }, { "Sue", "Black", "Knitting", new Integer(2), new Boolean(false) }, { "Jane", "White", "Speed reading", new Integer(20), new Boolean(true) }, { "Joe", "Brown", "Pool", new Integer(10), new Boolean(false) } };
+//		private Object[][]	data		= { { "Kathy", "Smith", "Snowboarding", Integer.valueOf(5), Boolean.valueOf(false) }, { "John", "Doe", "Rowing", Integer.valueOf(3), Boolean.valueOf(true) }, { "Sue", "Black", "Knitting", Integer.valueOf(2), Boolean.valueOf(false) }, { "Jane", "White", "Speed reading", Integer.valueOf(20), Boolean.valueOf(true) }, { "Joe", "Brown", "Pool", Integer.valueOf(10), Boolean.valueOf(false) } };
 		private List<List<Object>>data = new ArrayList<List<Object>>();
 
 		public void printTableModelListeners()
@@ -376,11 +376,11 @@ table.getTableHeader().setReorderingAllowed(true);
 
 		public void init()
 		{
-//			addRow("Kathy", "Smith", "Snowboarding",  new Integer(5),  new Boolean(false));
-//			addRow("John",  "Doe",   "Rowing",        new Integer(3),  new Boolean(true));
-//			addRow("Sue",   "Black", "Knitting",      new Integer(2),  new Boolean(false));
-//			addRow("Jane",  "White", "Speed reading", new Integer(20), new Boolean(true));
-//			addRow("Joe",   "Brown", "Pool",          new Integer(10), new Boolean(false));
+//			addRow("Kathy", "Smith", "Snowboarding",  Integer.valueOf(5),  Boolean.valueOf(false));
+//			addRow("John",  "Doe",   "Rowing",        Integer.valueOf(3),  Boolean.valueOf(true));
+//			addRow("Sue",   "Black", "Knitting",      Integer.valueOf(2),  Boolean.valueOf(false));
+//			addRow("Jane",  "White", "Speed reading", Integer.valueOf(20), Boolean.valueOf(true));
+//			addRow("Joe",   "Brown", "Pool",          Integer.valueOf(10), Boolean.valueOf(false));
 
 			addRow("Kathy2", "Smith", "Snowboarding",  5,  false);
 			addRow("John2",  "Doe",   "Rowing",        3,  true);

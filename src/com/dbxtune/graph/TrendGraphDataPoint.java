@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.graph;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.utils.StringUtil;
@@ -33,7 +35,7 @@ import com.dbxtune.utils.StringUtil;
 public class TrendGraphDataPoint
 implements Cloneable
 {
-	private static Logger _logger = Logger.getLogger(TrendGraphDataPoint.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Use this when you want to assign Labels at a later stage */
 	public static final String[] RUNTIME_REPLACED_LABELS = new String[] {"RUNTIME_REPLACED_LABELS"};
@@ -581,7 +583,7 @@ implements Cloneable
 //			Integer aPos = _labelOrder_labelName.get(key);
 //			if (aPos == null)
 //			{
-//				aPos = new Integer(_labelOrder_labelName.size());
+//				aPos = Integer.valueOf(_labelOrder_labelName.size());
 //				_labelOrder_labelName.put(key, aPos);
 //				_labelOrder_posToLabelName.put(aPos, key);
 //				

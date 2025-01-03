@@ -25,16 +25,15 @@ import static org.junit.Assert.assertEquals;
 import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.dbxtune.CounterControllerAbstract;
 import com.dbxtune.ICounterController;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 
@@ -46,13 +45,8 @@ public class CountersModelTest
 	@BeforeClass
 	public static void setupDb() throws Exception
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.TRACE);
 
 		//		_conn = DbxConnection.createDbxConnection(DriverManager.getConnection("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "sa", ""));
 		_conn = DbxConnection.createDbxConnection(DriverManager.getConnection("jdbc:h2:mem:test", "sa", ""));
@@ -126,15 +120,15 @@ System.out.println("_cm.getColumnCount()="+_cm.getColumnCount());
 System.out.println("_cm.getRowCount()="+_cm.getRowCount());
 		assertEquals("getColumnCount", 5, _cm.getColumnCount());
 		assertEquals("getRowCount"   , 4, _cm.getRowCount());
-		assertEquals("getAbsValueSum" , new Double(10d), _cm.getAbsValueSum("C1"));
-		assertEquals("getDiffValueSum", new Double(0d), _cm.getDiffValueSum("C1"));
+		assertEquals("getAbsValueSum" , Double.valueOf(10d), _cm.getAbsValueSum("C1"));
+		assertEquals("getDiffValueSum", Double.valueOf(0d), _cm.getDiffValueSum("C1"));
 
 		_conn.createStatement().executeUpdate("update T1 set    C1 = C1 + 1,    C2 = C2 + 2,    C3 = C3 + 3    where ID = 'row1'");
 		
 		_cm.refresh(_conn);
 		
 		assertEquals("getRowCount", 4, _cm.getRowCount());
-		assertEquals("getDiffValueSum", new Double(1d), _cm.getDiffValueSum("C1"));
+		assertEquals("getDiffValueSum", Double.valueOf(1d), _cm.getDiffValueSum("C1"));
 
 //		fail("Not yet implemented");
 	}

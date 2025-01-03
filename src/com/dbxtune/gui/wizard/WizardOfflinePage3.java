@@ -276,12 +276,12 @@ implements ActionListener, TableModelListener
 				{
 					row = new Vector<Object>();
 					row.setSize(TAB_HEADER.length);
-					row.set(TAB_POS_TIMEOUT,    new Integer(cm.getQueryTimeout()));
-					row.set(TAB_POS_POSTPONE,   new Integer(cm.getPostponeTime()));
-					row.set(TAB_POS_STORE_PCS,  new Boolean(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()));
-					row.set(TAB_POS_STORE_ABS,  new Boolean(cm.isPersistCountersAbsEnabled()));
-					row.set(TAB_POS_STORE_DIFF, new Boolean(cm.isPersistCountersDiffEnabled()));
-					row.set(TAB_POS_STORE_RATE, new Boolean(cm.isPersistCountersRateEnabled()));
+					row.set(TAB_POS_TIMEOUT,    Integer.valueOf(cm.getQueryTimeout()));
+					row.set(TAB_POS_POSTPONE,   Integer.valueOf(cm.getPostponeTime()));
+					row.set(TAB_POS_STORE_PCS,  Boolean.valueOf(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()));
+					row.set(TAB_POS_STORE_ABS,  Boolean.valueOf(cm.isPersistCountersAbsEnabled()));
+					row.set(TAB_POS_STORE_DIFF, Boolean.valueOf(cm.isPersistCountersDiffEnabled()));
+					row.set(TAB_POS_STORE_RATE, Boolean.valueOf(cm.isPersistCountersRateEnabled()));
 //					row.set(TAB_POS_ICON,       cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
 					row.set(TAB_POS_ICON,       cm.getIconFile() == null ? null : SwingUtils.readImageIcon(Version.class, cm.getIconFile()));
 					row.set(TAB_POS_TAB_NAME,   cm.getDisplayName());
@@ -303,12 +303,12 @@ implements ActionListener, TableModelListener
 		{
 			row = new Vector<Object>();
 			row.setSize(TAB_HEADER.length);
-			row.set(TAB_POS_TIMEOUT,    new Integer(0));
-			row.set(TAB_POS_POSTPONE,   new Integer(0));
-			row.set(TAB_POS_STORE_PCS,  new Boolean(true));
-			row.set(TAB_POS_STORE_ABS,  new Boolean(true));
-			row.set(TAB_POS_STORE_DIFF, new Boolean(true));
-			row.set(TAB_POS_STORE_RATE, new Boolean(true));
+			row.set(TAB_POS_TIMEOUT,    Integer.valueOf(0));
+			row.set(TAB_POS_POSTPONE,   Integer.valueOf(0));
+			row.set(TAB_POS_STORE_PCS,  Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_ABS,  Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_DIFF, Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_RATE, Boolean.valueOf(true));
 			row.set(TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/cm_summary_activity.png"));
 			row.set(TAB_POS_TAB_NAME,   "Summary");
 			row.set(TAB_POS_CM_NAME,    "cmSummary");
@@ -317,12 +317,12 @@ implements ActionListener, TableModelListener
 	
 			row = new Vector<Object>();
 			row.setSize(TAB_HEADER.length);
-			row.set(TAB_POS_TIMEOUT,    new Integer(0));
-			row.set(TAB_POS_POSTPONE,   new Integer(0));
-			row.set(TAB_POS_STORE_PCS,  new Boolean(true));
-			row.set(TAB_POS_STORE_ABS,  new Boolean(true));
-			row.set(TAB_POS_STORE_DIFF, new Boolean(true));
-			row.set(TAB_POS_STORE_RATE, new Boolean(true));
+			row.set(TAB_POS_TIMEOUT,    Integer.valueOf(0));
+			row.set(TAB_POS_POSTPONE,   Integer.valueOf(0));
+			row.set(TAB_POS_STORE_PCS,  Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_ABS,  Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_DIFF, Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_RATE, Boolean.valueOf(true));
 			row.set(TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/cm_engine_activity.png"));
 			row.set(TAB_POS_TAB_NAME,   "CPU Usage");
 			row.set(TAB_POS_CM_NAME,    "cmCpu");
@@ -331,12 +331,12 @@ implements ActionListener, TableModelListener
 	
 			row = new Vector<Object>();
 			row.setSize(TAB_HEADER.length);
-			row.set(TAB_POS_TIMEOUT,    new Integer(0));
-			row.set(TAB_POS_POSTPONE,   new Integer(0));
-			row.set(TAB_POS_STORE_PCS,  new Boolean(true));
-			row.set(TAB_POS_STORE_ABS,  new Boolean(true));
-			row.set(TAB_POS_STORE_DIFF, new Boolean(true));
-			row.set(TAB_POS_STORE_RATE, new Boolean(true));
+			row.set(TAB_POS_TIMEOUT,    Integer.valueOf(0));
+			row.set(TAB_POS_POSTPONE,   Integer.valueOf(0));
+			row.set(TAB_POS_STORE_PCS,  Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_ABS,  Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_DIFF, Boolean.valueOf(true));
+			row.set(TAB_POS_STORE_RATE, Boolean.valueOf(true));
 			row.set(TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/cm_device_activity.png"));
 			row.set(TAB_POS_TAB_NAME,   "Device Usage");
 			row.set(TAB_POS_CM_NAME,    "cmDevice");
@@ -347,12 +347,12 @@ implements ActionListener, TableModelListener
 			{
 				row = new Vector<Object>();
 				row.setSize(TAB_HEADER.length);
-				row.set(TAB_POS_TIMEOUT,    new Integer(0));
-				row.set(TAB_POS_POSTPONE,   new Integer(0));
-				row.set(TAB_POS_STORE_PCS,  new Boolean(true));
-				row.set(TAB_POS_STORE_ABS,  new Boolean(true));
-				row.set(TAB_POS_STORE_DIFF, new Boolean(true));
-				row.set(TAB_POS_STORE_RATE, new Boolean(true));
+				row.set(TAB_POS_TIMEOUT,    Integer.valueOf(0));
+				row.set(TAB_POS_POSTPONE,   Integer.valueOf(0));
+				row.set(TAB_POS_STORE_PCS,  Boolean.valueOf(true));
+				row.set(TAB_POS_STORE_ABS,  Boolean.valueOf(true));
+				row.set(TAB_POS_STORE_DIFF, Boolean.valueOf(true));
+				row.set(TAB_POS_STORE_RATE, Boolean.valueOf(true));
 				row.set(TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png"));
 				row.set(TAB_POS_TAB_NAME,   "Dummy Tab "+i);
 				row.set(TAB_POS_CM_NAME,    "cmDummy"+i);
@@ -447,7 +447,7 @@ implements ActionListener, TableModelListener
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
 				if (_sessionTable.isCellEditable(r, TAB_POS_STORE_PCS))
-					tm.setValueAt(new Boolean(true), r, TAB_POS_STORE_PCS);
+					tm.setValueAt(Boolean.valueOf(true), r, TAB_POS_STORE_PCS);
 			}
 		}
 
@@ -457,13 +457,13 @@ implements ActionListener, TableModelListener
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
 				if (_sessionTable.isCellEditable(r, TAB_POS_STORE_PCS))
-					tm.setValueAt(new Boolean(false), r, TAB_POS_STORE_PCS);
+					tm.setValueAt(Boolean.valueOf(false), r, TAB_POS_STORE_PCS);
 
 				if (_sessionTable.isCellEditable(r, TAB_POS_POSTPONE))
-					tm.setValueAt(new Integer(0), r, TAB_POS_POSTPONE);
+					tm.setValueAt(Integer.valueOf(0), r, TAB_POS_POSTPONE);
 
 				if (_sessionTable.isCellEditable(r, TAB_POS_TIMEOUT))
-					tm.setValueAt(new Integer(0), r, TAB_POS_TIMEOUT);
+					tm.setValueAt(Integer.valueOf(0), r, TAB_POS_TIMEOUT);
 			}
 		}
 
@@ -495,12 +495,12 @@ implements ActionListener, TableModelListener
 			if (cm == null)
 				continue;
 
-			tm.setValueAt(new Integer(cm.getQueryTimeout()),              r, TAB_POS_TIMEOUT);
-			tm.setValueAt(new Integer(cm.getPostponeTime()),              r, TAB_POS_POSTPONE);
-			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled()),     r, TAB_POS_STORE_PCS);
-			tm.setValueAt(new Boolean(cm.isPersistCountersAbsEnabled()),  r, TAB_POS_STORE_ABS);
-			tm.setValueAt(new Boolean(cm.isPersistCountersDiffEnabled()), r, TAB_POS_STORE_DIFF);
-			tm.setValueAt(new Boolean(cm.isPersistCountersRateEnabled()), r, TAB_POS_STORE_RATE);
+			tm.setValueAt(Integer.valueOf(cm.getQueryTimeout()),              r, TAB_POS_TIMEOUT);
+			tm.setValueAt(Integer.valueOf(cm.getPostponeTime()),              r, TAB_POS_POSTPONE);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersEnabled()),     r, TAB_POS_STORE_PCS);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersAbsEnabled()),  r, TAB_POS_STORE_ABS);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersDiffEnabled()), r, TAB_POS_STORE_DIFF);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersRateEnabled()), r, TAB_POS_STORE_RATE);
 		}
 	}
 }

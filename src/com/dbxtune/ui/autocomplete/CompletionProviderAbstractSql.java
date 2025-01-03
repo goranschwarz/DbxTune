@@ -22,9 +22,9 @@ package com.dbxtune.ui.autocomplete;
 
 import java.awt.Window;
 import java.awt.event.ActionEvent;
-import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -52,7 +52,8 @@ import javax.swing.text.TextAction;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
@@ -111,7 +112,7 @@ import net.miginfocom.swing.MigLayout;
 public abstract class CompletionProviderAbstractSql
 extends CompletionProviderAbstract
 {
-	private static Logger _logger = Logger.getLogger(CompletionProviderAbstractSql.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	
 	public final static String  PROPKEY_PREFIX_alwaysQuoteTableNames  = "sqlw.CompletionProviderAbstractSql.always.quote.table.names.";
@@ -2977,7 +2978,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 					include = true;
 
 				Object[] oa = new Object[2];
-				oa[0] = new Boolean(include);
+				oa[0] = Boolean.valueOf(include);
 				oa[1] = new String(type);
 //System.out.println("getLookupTableTypesModel(): AddRow: include="+include+":(oa[0]="+oa[0]+"), type='"+type+"':(oa[1]='"+oa[1]+"').");
 

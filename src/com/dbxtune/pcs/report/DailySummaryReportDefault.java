@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.ResultSet;
@@ -36,7 +37,8 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.PersistWriterToHttpJson;
 import com.dbxtune.pcs.report.IProgressReporter.State;
@@ -47,9 +49,9 @@ import com.dbxtune.pcs.report.content.DbxTuneCmRefreshInfo;
 import com.dbxtune.pcs.report.content.DbxTuneErrors;
 import com.dbxtune.pcs.report.content.DbxTunePcsTablesSize;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IReportEntry.MessageType;
 import com.dbxtune.pcs.report.content.RecordingInfo;
 import com.dbxtune.pcs.report.content.ReportContent;
-import com.dbxtune.pcs.report.content.IReportEntry.MessageType;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.CountingWriter;
@@ -60,7 +62,7 @@ import com.dbxtune.utils.TimeUtils;
 public class DailySummaryReportDefault
 extends DailySummaryReportAbstract
 {
-	private static Logger _logger = Logger.getLogger(DailySummaryReportDefault.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private List<IReportEntry> _reportEntries = new ArrayList<>();
 
 	public boolean useBootstrap()                              { return true; }	

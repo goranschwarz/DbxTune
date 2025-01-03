@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -30,7 +31,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.CmQpMetrics;
@@ -49,7 +51,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmQpMetricsPanel
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmQpMetricsPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmQpMetrics.CM_NAME;

@@ -35,7 +35,6 @@ import com.dbxtune.utils.SwingUtils;
 public class CmSessionsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmSessionsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSessionsPanel.CM_NAME;

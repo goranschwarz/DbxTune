@@ -59,7 +59,7 @@ extends JFrame
 implements ActionListener
 {
 	private static final long serialVersionUID = 1L;
-//	private static Logger _logger = Logger.getLogger(TableModelViewDialog.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	// PANEL: OK-CANCEL
 //	private JButton                _ok              = new JButton("OK");

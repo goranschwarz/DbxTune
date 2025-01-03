@@ -32,7 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.utils.StringUtil;
@@ -44,7 +45,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @JsonInclude(Include.NON_NULL)
 public class DbxCentralServerLayout
 {
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String  _type;
 	private Map<String, String>  _options;

@@ -26,6 +26,7 @@ package com.dbxtune.gui;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
@@ -51,7 +52,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.regex.Pattern;
 
 import javax.swing.table.AbstractTableModel;
@@ -61,8 +61,8 @@ import javax.swing.table.TableModel;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 import org.jdesktop.swingx.decorator.Highlighter;
 
@@ -81,11 +81,11 @@ import com.dbxtune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.JsonUtils;
+import com.dbxtune.utils.JsonUtils.MissingFieldException;
 import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
 import com.dbxtune.utils.TimeUtils;
-import com.dbxtune.utils.JsonUtils.MissingFieldException;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -105,7 +105,7 @@ public class ResultSetTableModel
     extends AbstractTableModel
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(ResultSetTableModel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	public static final String  PROPKEY_BINERY_PREFIX = "ResultSetTableModel.binary.prefix";
 	public static final String  DEFAULT_BINERY_PREFIX = "0x";
@@ -332,7 +332,7 @@ public class ResultSetTableModel
 		{
 			_rsmdColumnLabel      .add(ROW_NUMBER_COLNAME);
 			_rsmdColumnName       .add(ROW_NUMBER_COLNAME);
-			_rsmdColumnType       .add(new Integer(java.sql.Types.INTEGER));
+			_rsmdColumnType       .add(Integer.valueOf(java.sql.Types.INTEGER));
 			_rsmdColumnTypeStr    .add("--sqlw-generated-rowid--");
 			_rsmdColumnClassName  .add("java.lang.Integer");
 			_rsmdColumnTypeName   .add("int");
@@ -394,14 +394,14 @@ public class ResultSetTableModel
 
 			_rsmdColumnLabel      .add(columnLabel);
 			_rsmdColumnName       .add(columnName);
-			_rsmdColumnType       .add(new Integer(columnType));
+			_rsmdColumnType       .add(Integer.valueOf(columnType));
 			_rsmdColumnTypeStr    .add(getColumnJavaSqlTypeName(columnType));
 			_rsmdColumnClassName  .add(columnClassName);
 			_rsmdColumnTypeName   .add(columnTypeNameRaw);
 			_rsmdColumnTypeNameStr.add(columnTypeNameGen);
 			_rsmdColumnPrecision  .add(rsmd.getPrecision(c));
 			_rsmdColumnScale      .add(rsmd.getScale(c));
-			_displaySize          .add(new Integer(columnDisplaySize));
+			_displaySize          .add(Integer.valueOf(columnDisplaySize));
 			_rsmdRefTableName     .add(fullRefTableName);
 			
 //			System.out.println("name='"+_cols.get(c-1)+"', getColumnClassName("+c+")='"+_type.get(c-1)+"', getColumnTypeName("+c+")='"+_sqlType.get(c-1)+"'.");
@@ -540,7 +540,7 @@ public class ResultSetTableModel
 			// Read all columns for a row and add it to the structure
 			ArrayList<Object> row = new ArrayList<Object>();
 			if (_showRowNumber)
-				row.add(new Integer(_readCount));
+				row.add(Integer.valueOf(_readCount));
 
 			for (int c=1; c<_numcols; c++)
 			{
@@ -638,7 +638,7 @@ public class ResultSetTableModel
 			case Types.VARBINARY:
 			case Types.LONGVARBINARY:
 				int size = _displaySize.get( _showRowNumber ? c+1 : c );
-				_displaySize.set( (_showRowNumber ? c+1 : c), new Integer(size + BINARY_PREFIX.length()));
+				_displaySize.set( (_showRowNumber ? c+1 : c), Integer.valueOf(size + BINARY_PREFIX.length()));
 				break;
 			}
 
@@ -3563,7 +3563,7 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Short((short)0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Short.valueOf((short)0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).shortValue();
@@ -3594,7 +3594,7 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, mcol);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Short((short)0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Short.valueOf((short)0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).shortValue();
@@ -3633,7 +3633,7 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Integer(0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Integer.valueOf(0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).intValue();
@@ -3664,7 +3664,7 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, mcol);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Integer(0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Integer.valueOf(0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).intValue();
@@ -3723,7 +3723,7 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Long(0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Long.valueOf(0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).longValue();
@@ -3754,7 +3754,7 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, mcol);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Long(0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Long.valueOf(0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).longValue();
@@ -3835,7 +3835,7 @@ public class ResultSetTableModel
 	}
 
 	//-------------------------
-	//---- BIG DECIMAL
+	//---- DOUBLE
 	//-------------------------
 	public Double getValueAsDouble(int mrow, String colName)
 	{
@@ -3850,14 +3850,14 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Double(0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Double.valueOf(0) : defaultNullValue;
 
 		if (o instanceof Double)
 			return ((Double)o);
 
 		try
 		{
-			return new Double(o.toString());
+			return Double.valueOf(o.toString());
 		}
 		catch(NumberFormatException e)
 		{
@@ -3881,14 +3881,14 @@ public class ResultSetTableModel
 		Object o = getValueAsObject(mrow, mcol);
 
 		if (o == null)
-			return _nullValuesAsEmptyInGetValueAsType ? new Double(0) : defaultNullValue;
+			return _nullValuesAsEmptyInGetValueAsType ? Double.valueOf(0) : defaultNullValue;
 
 		if (o instanceof Double)
 			return ((Double)o);
 
 		try
 		{
-			return new Double(o.toString());
+			return Double.valueOf(o.toString());
 		}
 		catch(NumberFormatException e)
 		{
@@ -5895,13 +5895,8 @@ public class ResultSetTableModel
 	
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		String str = ""
     		+ "+------+----------------+-----------------------------------+-----+-------------------+----------------+\n"
@@ -5979,13 +5974,8 @@ public class ResultSetTableModel
 
 	public static void main_YYY(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		SimpleResultSet srs = new SimpleResultSet();
 		srs.addColumn("c_int",          Types.INTEGER,        0, 0);
@@ -6063,14 +6053,6 @@ public class ResultSetTableModel
 
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//		
 //		try
 //		{
 //			Connection conn = DriverManager.getConnection("jdbc:sybase:Tds:192.168.0.110:1600", "sa", "sybase");

@@ -48,7 +48,6 @@ import net.miginfocom.swing.MigLayout;
 public class ChangeToJTabDialog extends JDialog implements ActionListener
 {
 	// private static Logger _logger =
-	// Logger.getLogger(ChangeToJTabDialog.class);
 	private static final long	serialVersionUID				= 802663031446167220L;
 
 	// PROPERTIES

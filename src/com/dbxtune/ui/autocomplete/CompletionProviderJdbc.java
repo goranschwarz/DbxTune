@@ -21,9 +21,11 @@
 package com.dbxtune.ui.autocomplete;
 
 import java.awt.Window;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -38,7 +40,7 @@ import com.dbxtune.utils.ConnectionProvider;
 public class CompletionProviderJdbc
 extends CompletionProviderAbstractSql
 {
-	private static Logger _logger = Logger.getLogger(CompletionProviderJdbc.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{

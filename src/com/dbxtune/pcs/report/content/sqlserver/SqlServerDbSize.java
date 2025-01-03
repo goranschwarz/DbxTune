@@ -34,7 +34,7 @@ import com.dbxtune.utils.StringUtil;
 public class SqlServerDbSize 
 extends SqlServerAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlServerDbSize.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 

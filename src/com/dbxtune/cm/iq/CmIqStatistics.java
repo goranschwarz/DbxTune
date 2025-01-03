@@ -30,8 +30,8 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.graph.TrendGraphDataPoint;
@@ -53,7 +53,6 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmIqStatistics
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmAdminWhoSqm.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmIqStatistics.class.getSimpleName();

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.sql.conn;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -27,7 +28,8 @@ import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoH2;
@@ -39,7 +41,7 @@ import com.dbxtune.utils.Ver;
 
 public class H2Connection extends DbxConnection
 {
-	private static Logger _logger = Logger.getLogger(H2Connection.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public H2Connection(Connection conn)
 	{

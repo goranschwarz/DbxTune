@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -28,7 +29,8 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 
 import com.dbxtune.cm.CmToolTipSupplierDefault;
@@ -47,7 +49,7 @@ import com.dbxtune.utils.StringUtil;
 public class ToolTipSupplierAse 
 extends CmToolTipSupplierDefault
 {
-	private static Logger _logger = Logger.getLogger(ToolTipSupplierAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private long   _lastCalled = 0;
 //	private String _currentObjectName = "";

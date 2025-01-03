@@ -28,8 +28,8 @@ import javax.swing.table.AbstractTableModel;
 
 import com.dbxtune.sql.diff.DiffContext;
 import com.dbxtune.sql.diff.DiffSink;
-import com.dbxtune.sql.diff.DiffTable;
 import com.dbxtune.sql.diff.DiffSink.DiffColumnValues;
+import com.dbxtune.sql.diff.DiffTable;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 

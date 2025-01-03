@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 
 public class AseTopCmObjectActivityTabSize extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseTopCmObjectActivityTabSize.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private boolean _isTableSizeConfigured  = CmObjectActivity.DEFAULT_sample_tabRowCount;

@@ -31,7 +31,6 @@ import java.util.List;
 import org.junit.Test;
 
 import com.dbxtune.central.controllers.Helper;
-import com.dbxtune.central.pcs.objects.DbxCentralServerLayout;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class DbxCentralServerLayoutTest

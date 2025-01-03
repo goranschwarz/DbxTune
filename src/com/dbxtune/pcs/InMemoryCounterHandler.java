@@ -24,6 +24,7 @@
  */
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.concurrent.BlockingQueue;
@@ -33,7 +34,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.EventListenerList;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.utils.Configuration;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.TimeUtils;
 public class InMemoryCounterHandler 
 implements Runnable
 {
-	private static Logger _logger          = Logger.getLogger(InMemoryCounterHandler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public  static final String PROPKEY_HISTORY_SIZE_IN_SECONDS      = "InMemoryCounterHandler.history";
 	public  static final int    DEFAULT_HISTORY_SIZE_IN_SECONDS      = 10 * 60;

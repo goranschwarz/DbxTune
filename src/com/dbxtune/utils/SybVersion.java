@@ -32,7 +32,7 @@ public class SybVersion
 //public class SybVersion
 //implements Comparable<SybVersion>
 //{
-////	private static Logger _logger = Logger.getLogger(SybVersion.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //
 //	private int _major = 0;
 //	private int _minor = 0;
@@ -498,14 +498,6 @@ public class SybVersion
 //	}
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//
 //		test("Adaptive Server Enterprise/15.0.3/EBF 16748 Cluster Edition/P/x86_64/Enterprise Linux/asepyxis/2837/64-bit/FBO/Mon Jun  1 08:38:39 2009");
 //		test("Adaptive Server Enterprise/15.5/EBF 18157 SMP ESD#2/P/NT (IX86)/Windows 2003/asear155/2514/32-bit/OPT/Wed Aug 25 05:31:40 2010");
 //		test("15.5/18157/P/NT (IX86)/Windows 2003/asear155/2514/32-bit/OPT/Wed Aug 25 05:22:07 2010");

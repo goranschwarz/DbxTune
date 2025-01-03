@@ -37,7 +37,7 @@ import java.awt.event.WindowEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -49,7 +49,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -79,8 +78,10 @@ import javax.swing.event.CaretListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.text.BadLocationException;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 
@@ -112,7 +113,7 @@ public class AseAppTraceDialog
 extends JDialog
 implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener, Memory.MemoryListener
 {
-	private static Logger _logger = Logger.getLogger(AseAppTraceDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	private FileTail        _fileTail               = null;
@@ -3146,13 +3147,8 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	//--------------------------------------------------
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.DEBUG);
 
 		Configuration conf1 = new Configuration(AppDir.getAppStoreDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);

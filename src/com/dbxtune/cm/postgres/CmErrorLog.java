@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -32,7 +33,8 @@ import javax.naming.NameNotFoundException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -47,9 +49,9 @@ import com.dbxtune.cache.XmlPlanCache;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.config.dict.PostgresErrorCodeDictionary;
@@ -69,7 +71,7 @@ import com.dbxtune.utils.Ver;
 public class CmErrorLog
 extends CountersModelAppend
 {
-	private static Logger        _logger          = Logger.getLogger(CmErrorLog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	// This needs to go "at top" -- if we want to use it in below "HTML_DESC"

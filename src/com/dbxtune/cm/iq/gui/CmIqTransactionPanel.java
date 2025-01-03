@@ -35,7 +35,6 @@ import com.dbxtune.utils.SwingUtils;
 public class CmIqTransactionPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmIqTransactionPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public CmIqTransactionPanel(CountersModel cm)

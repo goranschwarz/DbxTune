@@ -25,8 +25,8 @@ import java.util.List;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmBlockingPanel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -40,7 +40,6 @@ import com.dbxtune.utils.Ver;
 public class CmBlocking
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmBlocking.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmBlocking.class.getSimpleName();

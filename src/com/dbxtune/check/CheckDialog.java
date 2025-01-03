@@ -37,6 +37,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -55,10 +56,10 @@ import javax.swing.UIManager;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
-import com.dbxtune.gui.AboutBox;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.tools.sqlw.QueryWindow;
 import com.dbxtune.utils.Configuration;
@@ -74,7 +75,7 @@ public class CheckDialog
 	extends JDialog 
 	implements ActionListener, HyperlinkListener
 {
-	private static Logger _logger              = Logger.getLogger(AboutBox.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = -2789087991515012041L;
 
 	private JButton    _ok_but             = new JButton("OK");
@@ -763,14 +764,6 @@ public class CheckDialog
 	
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-////		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//
 //		try
 //		{
 //			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

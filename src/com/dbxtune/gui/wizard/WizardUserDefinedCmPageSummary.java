@@ -45,7 +45,6 @@ extends WizardPage
 //implements ActionListener
 {
     private static final long serialVersionUID = 1L;
-//	private static Logger _logger          = Logger.getLogger(WizardUserDefinedCmPage2.class);
 
 	private static final String WIZ_NAME = "Apply";
 	private static final String WIZ_DESC = "Apply or Store";

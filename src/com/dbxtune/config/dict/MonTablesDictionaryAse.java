@@ -34,7 +34,8 @@ import java.util.Map;
 import javax.naming.NameNotFoundException;
 import javax.swing.JOptionPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.DbxTune;
 import com.dbxtune.Version;
@@ -52,7 +53,7 @@ public class MonTablesDictionaryAse
 extends MonTablesDictionary
 {
     /** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(MonTablesDictionaryAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	/** Character used for quoted identifier */
 //	public static String  qic = "\"";

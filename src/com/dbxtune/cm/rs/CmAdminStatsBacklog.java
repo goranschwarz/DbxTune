@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.rs;
 
+import java.lang.invoke.MethodHandles;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,15 +28,16 @@ import java.util.Map.Entry;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.rs.helper.RsDbidStripper;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -51,7 +53,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmAdminStatsBacklog
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmAdminStatsBacklog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmAdminStatsBacklog.class.getSimpleName();

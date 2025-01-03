@@ -29,6 +29,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -43,7 +44,8 @@ import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
 import javax.swing.Timer;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.DocumentRange;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
@@ -67,7 +69,7 @@ public class SqlProgressDialog
 extends JDialog
 implements PropertyChangeListener, ActionListener
 {
-	private static Logger _logger = Logger.getLogger(SqlProgressDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	private JLabel           _allSql_lbl            = new JLabel("Executing SQL at Server", JLabel.CENTER);

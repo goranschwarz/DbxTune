@@ -27,10 +27,19 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H2>2024-MM-DD</H2>
 <UL>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Generic - MAJOR Changes That affects all DbxTune tools</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>The package name was changed for all classes from 'com.asetune' to 'com.dbxtune'. (so anyone referencing the internals of DbxTune will have to change)</LI>
+		<LI>The above meant that the <code>asetune.jar</code> also was changed to <code>dbxtune.jar</code>, and also the ZIP package from <code>asetune_YYYY-MM-DD.zip</code> to <code>dbxtune_YYYY-MM-DD.zip</code></LI>
+		<LI>Log4J Version 1 was replaced with Log4J Version 2</LI>
+		<LI>Internal <i>stuff</i>... Rewrote a bunch of constructs to be able to move to Java 11, 17 or 21. (Java 11 is needed to upgrade to H2 latest version, which will be done soon)</LI>
+	</UL>
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<H3>Generic - Changes that affects all DbxTune tools</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI><b>Major change</b> The package name was changed for all classes from 'com.asetune' to 'com.dbxtune'.</LI>
 		<LI>Added option <code>-N|--displayName</code> to all the DbxTune collectors. This will set the Display Name in DbxCentral (button), but the server name will still be the key where "stuff" are stored. (Note: you can also use -A|--serverAlias to name a DBMS instance differently than the server name)</LI>
 		<LI>Alarms "Duration" does now reflect the "Full/Actual Duration" in a better way (for the Alarms with time thresholds... adding the threshold time to the duration makes the "Full/Actual Duration"<br>
             Note: templates that references '<code>${duration}</code>' will have a slightly new output '01:10 (MM:SS) -- Added/Adjusted ## Seconds to the Alarm Raise Time'. Also there are new variables '<code>${alarmDuration}</code>', '<code>${fullDuration}</code>', '<code>${fullDurationAdjustmentInSec}</code>' if you want more control.</LI>
@@ -3844,7 +3853,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	SQL: CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(bigint, value) END -- @int_min/max is bigint <br>
 	Also at the client side, try to do a better job when the higher datatype (unsigned int) gets wrapped but NOT cleared.<br>
        Algorithm ASE 12.5:  diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1); <br>
-       Algorithm ASE >= 15: diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br>
+       Algorithm ASE >= 15: diffColVal = Long.valueOf((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br>
     If the underlying counters are cleared, the sample interval is adjusted to reflect <b>when</b> the counters where cleared and the values will start at zero (as it's a counter reset)<br>
     The goal is to eliminate problems with Counter Wrapping and Counter Resets...<br>
     So even when it happens, the counters in the "difference calculated" values should reflect the actual DIFFERENCE from previous sample<br>

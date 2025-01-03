@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.sqlcapture;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,7 +44,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.DbxTune;
 import com.dbxtune.Version;
@@ -71,7 +73,7 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class SqlCaptureBrokerAse 
 extends SqlCaptureBrokerAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlCaptureBrokerAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected boolean _inTestCode = false;
 	
@@ -2621,8 +2623,8 @@ extends SqlCaptureBrokerAbstract
 
 								try
 								{
-									row.SsqlId  = new Integer(str_SsqlId);
-									row.HashKey = new Integer(str_HashKey);
+									row.SsqlId  = Integer.valueOf(str_SsqlId);
+									row.HashKey = Integer.valueOf(str_HashKey);
 
 //System.out.println("Found a row with 'ProcName' that starts with '*' (a DynamicSQL or Statement Cache Entry) which had a zero in 'SsqlId' or 'HashKey'. ProcName='" + procName + "', SsqlId=" + SsqlId + ", HashKey=" + HashKey + ". New=[SsqlId=" + row.SsqlId + ", HashKey=" + row.HashKey + "], Prev=[SsqlId=" + SsqlId + ", HashKey=" + HashKey + "].");
 									if (_logger.isDebugEnabled())

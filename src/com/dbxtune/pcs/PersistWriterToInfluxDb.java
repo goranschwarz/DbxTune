@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -41,16 +42,17 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
 import com.dbxtune.cm.CmSettingsHelper;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
+import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.pcs.sqlcapture.SqlCaptureDetails;
 import com.dbxtune.utils.Configuration;
@@ -70,7 +72,7 @@ public class PersistWriterToInfluxDb
 extends PersistWriterBase
 //implements IPersistWriter
 {
-	private static Logger _logger = Logger.getLogger(PersistWriterToInfluxDb.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _srvName;
 	

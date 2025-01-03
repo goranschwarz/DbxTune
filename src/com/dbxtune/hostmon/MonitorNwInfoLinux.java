@@ -25,7 +25,7 @@ import com.dbxtune.utils.Configuration;
 public class MonitorNwInfoLinux
 extends MonitorNwInfo
 {
-//	private static Logger _logger = Logger.getLogger(MonitorNwInfoLinux.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/*
 	 * -----------------------------------------------------------

@@ -42,9 +42,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.central.controllers.DbxCentralPageTemplate.UrlParameterDescription;
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -61,7 +61,7 @@ public abstract class DbxCentralPageTemplate
 extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private HttpServletRequest _request;
 	private HttpServletResponse _response;

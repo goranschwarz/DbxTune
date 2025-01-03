@@ -31,8 +31,8 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSampleCatalogIteratorPostgres;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.postgres.gui.CmPgSequencesIoPanel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -46,7 +46,6 @@ import com.dbxtune.utils.Configuration;
 public class CmPgSequencesIo
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmPgSequencesIo.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgSequencesIo.class.getSimpleName();

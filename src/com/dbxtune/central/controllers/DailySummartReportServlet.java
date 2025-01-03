@@ -34,7 +34,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistReader;
@@ -53,7 +54,7 @@ import com.google.gson.Gson;
 public class DailySummartReportServlet extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Used as ContentType for Server Sent Events */
 	public static final String TEXT_EVENT_STREAM = "text/event-stream";

@@ -37,7 +37,6 @@ public class CountersModelAppend
     extends CountersModel
 {
 	/** Log4j logging. */
-//	private static Logger	   _logger	          = Logger.getLogger(CountersModelAppend.class);
 	private static final long	serialVersionUID	= 1L;
 
 	private List<List<Object>> _lastRefreshData = new ArrayList<>();

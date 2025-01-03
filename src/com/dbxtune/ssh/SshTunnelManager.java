@@ -21,11 +21,13 @@
 package com.dbxtune.ssh;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.util.HashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.StringUtil;
 
@@ -37,7 +39,7 @@ import com.dbxtune.utils.StringUtil;
 public class SshTunnelManager
 {
     /** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(SshTunnelManager.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Instance variable */
 	private static SshTunnelManager _instance = null;

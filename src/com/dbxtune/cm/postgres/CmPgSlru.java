@@ -27,8 +27,8 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
@@ -42,7 +42,6 @@ import com.dbxtune.utils.Ver;
 public class CmPgSlru
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmPgWal.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgSlru.class.getSimpleName();

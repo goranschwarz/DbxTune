@@ -20,10 +20,12 @@
  ******************************************************************************/
 package com.dbxtune.check;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxCentralStatistics;
 import com.dbxtune.central.DbxCentralStatistics.ServerEntry;
@@ -31,7 +33,7 @@ import com.dbxtune.gui.Log4jLogRecord;
 
 public class CheckForUpdatesDbxCentral extends CheckForUpdatesDbx
 {
-	private static Logger _logger = Logger.getLogger(CheckForUpdatesDbxCentral.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected static final String DBXCENTRAL_CONNECT_INFO_URL   = "http://www.dbxtune.com/dbxc_connect_info.php";    // TODO: DO NOT EXISTS FOR THE MOMENT
 	protected static final String DBXCENTRAL_STORE_INFO_URL     = "http://www.dbxtune.com/dbxc_store_info.php";      // TODO: DO NOT EXISTS FOR THE MOMENT

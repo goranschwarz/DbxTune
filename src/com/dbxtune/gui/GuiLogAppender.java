@@ -24,39 +24,41 @@
  */
 package com.dbxtune.gui;
 
-import java.util.Enumeration;
+import java.lang.invoke.MethodHandles;
 
-import org.apache.log4j.Appender;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Logger;
-import org.apache.log4j.lf5.LogLevel;
-import org.apache.log4j.lf5.LogLevelFormatException;
-import org.apache.log4j.spi.LocationInfo;
-import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 
 import com.dbxtune.check.CheckForUpdates;
 
 
 public class GuiLogAppender
-    extends AppenderSkeleton
+//extends AppenderSkeleton
+extends AbstractAppender
 {
-	private static Logger _logger = Logger.getLogger(GuiLogAppender.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private Log4jTableModel _logTable = new Log4jTableModel();
 	private static GuiLogAppender _instance = null;
 
 	// Initialize the TRACE level
-	static
-	{
-		// TRACE is not registered, in the LogLevel...
-		// so it makes LogLevel.valueOf(level) to throw LogLevelFormatException
-		LogLevel.register( new LogLevel("TRACE", 5) );
-	}
+//	static
+//	{
+//		// TRACE is not registered, in the LogLevel...
+//		// so it makes LogLevel.valueOf(level) to throw LogLevelFormatException
+//		LogLevel.register( new LogLevel("TRACE", 5) );
+//	}
 
-	@SuppressWarnings("rawtypes")
 	public GuiLogAppender()
 	{
-		setName( "GuiLogAppender" );
+		super("GuiLogAppender", null, null, true, null);
+//		setName( "GuiLogAppender" );
 		_instance = this;
 
 		//- TODO: CAN WE DO IT AT NON-ROOT-LOGGER
@@ -65,54 +67,55 @@ public class GuiLogAppender
 
 		// Go to Log4j and register/add this appender
 		// this so we don't need it in the Log4j properties file
-		boolean isInstalled = false;
-		Enumeration en = Logger.getRootLogger().getAllAppenders();
-		while (en.hasMoreElements())
-		{
-			Appender a = (Appender) en.nextElement();
-			if (a.equals(this))
-				isInstalled = true;
-		}
-		if (! isInstalled)
-		{
-			//System.out.println("Installing the '"+getName()+"' as a root logger in log4j.");
-			Logger.getRootLogger().addAppender(this);
-		}
+//		boolean isInstalled = false;
+//		Enumeration en = Logger.getRootLogger().getAllAppenders();
+//		while (en.hasMoreElements())
+//		{
+//			Appender a = (Appender) en.nextElement();
+//			if (a.equals(this))
+//				isInstalled = true;
+//		}
+//		if (! isInstalled)
+//		{
+//			//System.out.println("Installing the '"+getName()+"' as a root logger in log4j.");
+//			Logger.getRootLogger().addAppender(this);
+//		}
+
+		// Get the LoggerContext
+		LoggerContext context = (LoggerContext) LogManager.getContext(false);
+
+		// Get the configuration
+		Configuration config = context.getConfiguration();
+
+		// Start the appender
+		this.start();
+
+		// Add the appender to the configuration
+		config.addAppender(this);
+
+		// Create an AppenderRef
+//		AppenderRef ref = AppenderRef.createAppenderRef(loggerName, null, null);
+
+		// Add the AppenderRef to the RootLoggerConfig
+		LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+		loggerConfig.addAppender(this, Level.ALL, null);
+
+		// Update the LoggerContext
+		context.updateLoggers();
 	}
 	
 	@Override
-	protected void append(LoggingEvent event)
+	public void append(LogEvent event)
 	{
-		String category = event.getLoggerName();
-		String logMessage = event.getRenderedMessage();
-		String nestedDiagnosticContext = event.getNDC();
-		String threadDescription = event.getThreadName();
-		String level = event.getLevel().toString();
-		long time = event.timeStamp;
-		LocationInfo locationInfo = event.getLocationInformation();
+//		String category = event.getLoggerName();
+//		String logMessage = event.getMessage().getFormattedMessage();
+////		String nestedDiagnosticContext = event.getNDC();
+//		String threadDescription = event.getThreadName();
+//		String level = event.getLevel().toString();
+//		long time = event.getTimeMillis();
+////		LocationInfo locationInfo = event.getLocationInformation();
 
-		Log4jLogRecord record = new Log4jLogRecord();
-		record.setCategory(category);
-		record.setMessage(logMessage);
-		record.setLocation(locationInfo.fullInfo);
-		record.setMillis(time);
-		record.setThreadDescription(threadDescription);
-		if (nestedDiagnosticContext != null)
-			record.setNDC(nestedDiagnosticContext);
-		else
-			record.setNDC("");
-		if (event.getThrowableInformation() != null)
-			record.setThrownStackTrace(event.getThrowableInformation());
-		try
-		{
-			record.setLevel(LogLevel.valueOf(level));
-		}
-		catch (LogLevelFormatException e)
-		{
-//			System.out.println("level='"+level+"', e="+e);
-//			e.printStackTrace();
-			record.setLevel(LogLevel.WARN);
-		}
+		Log4jLogRecord record = new Log4jLogRecord(event);
 
 		if (_logTable != null)
 			_logTable.addMessage(record);
@@ -120,20 +123,65 @@ public class GuiLogAppender
 		// Yes this can be done better
 		// for example with a listener, but I was in a hurry...
 		if (record.isSevereLevel() || record.isWarningLevel())
-//			CheckForUpdates.sendLogInfoNoBlock(record);
+		{
 			CheckForUpdates.getInstance().sendLogInfoNoBlock(record);
+		}
 	}
-
-	@Override
-	public void close()
-	{
-	}
-
-	@Override
-	public boolean requiresLayout()
-	{
-		return false;
-	}
+	
+//	@Override
+//	protected void append(LoggingEvent event)
+//	{
+//		String category = event.getLoggerName();
+//		String logMessage = event.getRenderedMessage();
+//		String nestedDiagnosticContext = event.getNDC();
+//		String threadDescription = event.getThreadName();
+//		String level = event.getLevel().toString();
+//		long time = event.timeStamp;
+//		LocationInfo locationInfo = event.getLocationInformation();
+//
+//		Log4jLogRecord record = new Log4jLogRecord();
+//		record.setCategory(category);
+//		record.setMessage(logMessage);
+//		record.setLocation(locationInfo.fullInfo);
+//		record.setMillis(time);
+//		record.setThreadDescription(threadDescription);
+//		if (nestedDiagnosticContext != null)
+//			record.setNDC(nestedDiagnosticContext);
+//		else
+//			record.setNDC("");
+//		if (event.getThrowableInformation() != null)
+//			record.setThrownStackTrace(event.getThrowableInformation());
+//		try
+//		{
+//			record.setLevel(LogLevel.valueOf(level));
+//		}
+//		catch (LogLevelFormatException e)
+//		{
+////			System.out.println("level='"+level+"', e="+e);
+////			e.printStackTrace();
+//			record.setLevel(LogLevel.WARN);
+//		}
+//
+//		if (_logTable != null)
+//			_logTable.addMessage(record);
+//		
+//		// Yes this can be done better
+//		// for example with a listener, but I was in a hurry...
+//		if (record.isSevereLevel() || record.isWarningLevel())
+////			CheckForUpdates.sendLogInfoNoBlock(record);
+//			CheckForUpdates.getInstance().sendLogInfoNoBlock(record);
+//	}
+//
+//	@Override
+//	public void close()
+//	{
+//	}
+//
+//	@Override
+//	public boolean requiresLayout()
+//	{
+//		return false;
+//	}
 	
 	public static synchronized GuiLogAppender getInstance()
 	{

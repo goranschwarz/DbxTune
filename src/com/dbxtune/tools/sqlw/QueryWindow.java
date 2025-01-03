@@ -69,6 +69,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.CallableStatement;
@@ -162,8 +163,10 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.fife.io.UnicodeReader;
 import org.fife.io.UnicodeWriter;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
@@ -211,6 +214,8 @@ import com.dbxtune.gui.ConnectionProfile;
 import com.dbxtune.gui.ConnectionProfileManager;
 import com.dbxtune.gui.CreateGraphDialog;
 import com.dbxtune.gui.FavoriteCommandDialog;
+import com.dbxtune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
+import com.dbxtune.gui.FavoriteCommandDialog.VendorType;
 import com.dbxtune.gui.GuiLogAppender;
 import com.dbxtune.gui.JdbcMetaDataInfoDialog;
 import com.dbxtune.gui.JvmMemorySettingsDialog;
@@ -222,8 +227,6 @@ import com.dbxtune.gui.ParameterDialog;
 import com.dbxtune.gui.ResultSetMetaDataViewDialog;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.SqlTextDialog;
-import com.dbxtune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
-import com.dbxtune.gui.FavoriteCommandDialog.VendorType;
 import com.dbxtune.gui.swing.AbstractComponentDecorator;
 import com.dbxtune.gui.swing.DeferredChangeListener;
 import com.dbxtune.gui.swing.EventQueueProxy;
@@ -367,7 +370,7 @@ public class QueryWindow
 //implements ActionListener, SybMessageHandler, ConnectionProvider, CaretListener, CommandHistoryDialog.HistoryExecutor
 	implements ActionListener, ConnectionProvider, CaretListener, DocumentListener, CommandHistoryDialog.HistoryExecutor, WatchdogIsFileChanged.WatchdogIsFileChangedChecker
 {
-	private static Logger _logger = Logger.getLogger(QueryWindow.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private static final String LOCAL_JVM = ManagementFactory.getRuntimeMXBean().getName();
 	
@@ -6555,13 +6558,13 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		_conn = null;
 	}
 
-	/** Automatically close the connection when we're garbage collected */
-	@Override
-	protected void finalize()
-	{
-		if (_closeConnOnExit)
-			close();
-	}
+//	/** Automatically close the connection when we're garbage collected */
+//	@Override
+//	protected void finalize()
+//	{
+//		if (_closeConnOnExit)
+//			close();
+//	}
 	
 //	/**
 //	 * Change database context in the ASE 
@@ -15206,13 +15209,8 @@ checkPanelSize(_resPanel, comp);
 	{
 		// FIXME: parse input parameters
 
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.TRACE);
 
 		// Set configuration, right click menus are in there...
 		Configuration conf = new Configuration("c:\\projects\\dbxtune\\conf\\dbxtune.properties");
@@ -15395,11 +15393,8 @@ checkPanelSize(_resPanel, comp);
 
 //	private static void jConnectEnableLogging()
 //	{
-////		java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("com.sybase.jdbc4.jdbc");
-//		java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("com.sybase.jdbc4.jdbc.SybConnection");
 //
 //		// To log class-specific log message, provide complete class name, for example:
-//		//Logger.getLogger("com.sybase.jdbc4.jdbc.SybConnection");
 //		//Get handle as per user's requirement 
 //		Handler handler = new ConsoleHandler();
 //

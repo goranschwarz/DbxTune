@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -29,7 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -40,11 +42,11 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.postgres.gui.CmPgActivityPanel;
 import com.dbxtune.config.dict.PostgresWaitTypeDictionary;
 import com.dbxtune.graph.TrendGraphDataPoint;
@@ -66,7 +68,7 @@ import com.dbxtune.utils.Ver;
 public class CmPgActivity
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmPgActivity.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgActivity.class.getSimpleName();

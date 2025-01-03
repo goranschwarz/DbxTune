@@ -29,6 +29,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 
@@ -46,7 +47,8 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -71,7 +73,7 @@ public class CmSummaryPanel
 extends JPanel
 implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmSummaryPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSummary.CM_NAME;

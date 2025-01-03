@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.gui;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -29,7 +30,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.treetable.AbstractTreeTableModel;
 
 import com.dbxtune.CounterController;
@@ -54,7 +56,7 @@ public class OfflineSessionModel
 //extends DefaultTreeTableModel
 extends AbstractTreeTableModel
 {
-	private static Logger _logger = Logger.getLogger(OfflineSessionModel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	private ArrayList<SessionLevel> _sessions = new ArrayList<SessionLevel>();
 
@@ -564,7 +566,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 			case 1: return rec.getStartTime() != null ? _sdf.format(rec.getStartTime()) : "none";
 			case 2: return rec.getEndTime()   != null ? _sdf.format(rec.getEndTime())   : "none";
 			case 3: return rec.getDuration();
-			case 4: return new Integer(rec.getDisplayChildCount());
+			case 4: return Integer.valueOf(rec.getDisplayChildCount());
 			}
 		}
 

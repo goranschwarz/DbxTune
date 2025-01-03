@@ -31,7 +31,7 @@ import com.dbxtune.utils.Configuration;
 
 public class OsSpaceUsageOverview extends OsAbstract
 {
-//	private static Logger _logger = Logger.getLogger(OsCpuUsageOverview.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public OsSpaceUsageOverview(DailySummaryReportAbstract reportingInstance)
 	{

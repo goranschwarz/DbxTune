@@ -23,11 +23,13 @@ package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.ResultSetTableModel;
@@ -44,7 +46,7 @@ import com.dbxtune.utils.StringUtil;
 public class SqlServerTopCmExecFunctionStats
 extends SqlServerAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerTopCmExecFunctionStats.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ExecutionPlanCollection _planCollection;

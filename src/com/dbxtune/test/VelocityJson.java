@@ -22,12 +22,13 @@
 package com.dbxtune.test;
 
 import java.io.StringWriter;
-import java.util.Enumeration;
+import java.lang.invoke.MethodHandles;
 import java.util.Properties;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
@@ -43,6 +44,8 @@ import com.dbxtune.utils.StringUtil;
 
 public class VelocityJson
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
 	/**
 	 * Take the AlarmEvent and fill in the template values...
 	 * 
@@ -66,23 +69,29 @@ public class VelocityJson
 
 		// Set the LOG LEVEL to FATAL for the Velocity PARSER... This so that the Parser exceptions will not be written to the Errolog
 		// NOTE: This is specific to Log4J
-		Logger logLevel = LogManager.getLogger("org.apache.velocity.parser");
-		if (logLevel != null)
-			logLevel.setLevel(Level.FATAL);
+//		Logger logLevel = LogManager.getLogger("org.apache.velocity.parser");
+//		if (logLevel != null)
+//			logLevel.setLevel(Level.FATAL);
+		Configurator.setLevel("org.apache.velocity.parser", Level.FATAL);
 
 
+//		boolean debug = false;
+//		if (debug)
+//		{
+//			Enumeration<?> loggers = LogManager.getCurrentLoggers();
+//			while(loggers.hasMoreElements()) 
+//			{
+//				Logger logger = (Logger) loggers.nextElement();
+//				if (logger.getName().startsWith("org.apache.velocity"))
+//				{
+//					logger.setLevel(Level.DEBUG);
+//				}
+//			}
+//		}
 		boolean debug = false;
-		if (debug)
+		if (debug || _logger.isDebugEnabled())
 		{
-			Enumeration<?> loggers = LogManager.getCurrentLoggers();
-			while(loggers.hasMoreElements()) 
-			{
-				Logger logger = (Logger) loggers.nextElement();
-				if (logger.getName().startsWith("org.apache.velocity"))
-				{
-					logger.setLevel(Level.DEBUG);
-				}
-			}
+			Configurator.setAllLevels("org.apache.velocity", Level.DEBUG);
 		}
 
 		VelocityContext context = new VelocityContext();

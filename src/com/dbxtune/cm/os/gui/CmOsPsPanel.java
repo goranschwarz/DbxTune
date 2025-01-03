@@ -81,7 +81,7 @@ extends CmOsGenericPanel
 		_sample_topRows_txt.setVisible(true);
 
 
-		panel.add( _sample_topRows_lbl, "hidemode 3");
+		panel.add( _sample_topRows_lbl, "split, hidemode 3");  // or: span
 		panel.add( _sample_topRows_txt, "hidemode 3, wrap");
 
 		_sample_topRows_txt.addActionListener(new ActionListener()

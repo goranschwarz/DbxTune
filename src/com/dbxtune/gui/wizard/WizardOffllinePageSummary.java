@@ -40,7 +40,6 @@ import com.dbxtune.Version;
 public class WizardOffllinePageSummary implements WizardResultProducer {
 
     private static final long serialVersionUID = 1L;
-//	private static Logger _logger          = Logger.getLogger(WizardOffllinePageSummary.class);
 
 	/* (non-Javadoc)
 	 * @see org.netbeans.spi.wizard.WizardPage.WizardResultProducer#cancel(java.util.Map)

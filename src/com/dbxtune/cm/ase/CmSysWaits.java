@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,7 +34,8 @@ import javax.naming.NameNotFoundException;
 import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -42,8 +44,8 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmSysWaitsPanel;
 import com.dbxtune.cm.ase.helper.WaitCounterSummary;
 import com.dbxtune.cm.ase.helper.WaitCounterSummary.WaitCounterEntry;
@@ -66,7 +68,7 @@ import com.dbxtune.utils.Ver;
 public class CmSysWaits
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmSysWaits.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSysWaits.class.getSimpleName();

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.rs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -27,13 +28,15 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 
 public class RsStatCounterDictionary
 //implements SrvCounterDictionary
 {
-	private static Logger        _logger          = Logger.getLogger(CmAdminStats.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //	private static final long    serialVersionUID = 1L;
 
 	private static RsStatCounterDictionary _instance = null;

@@ -21,6 +21,7 @@
 package com.dbxtune.ui.autocomplete;
 
 import java.awt.Window;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -31,7 +32,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -56,7 +58,7 @@ import com.dbxtune.utils.Ver;
 public class CompletionProviderAse
 extends CompletionProviderAbstractSql
 {
-	private static Logger _logger = Logger.getLogger(CompletionProviderAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected Map<String, String> _aseMonTableDesc = new HashMap<String, String>();
 

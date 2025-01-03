@@ -36,7 +36,6 @@ import com.dbxtune.utils.StringUtil;
 public class LoginCheckServlet extends HttpServlet
 {
 	private static final long	serialVersionUID = 1L;
-//	private static final Logger	_logger			 = Logger.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException

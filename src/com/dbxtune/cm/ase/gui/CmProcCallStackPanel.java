@@ -37,7 +37,6 @@ import com.dbxtune.utils.SwingUtils;
 public class CmProcCallStackPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmProcCallStackPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmProcCallStack.CM_NAME;

@@ -34,7 +34,7 @@ import com.dbxtune.utils.Configuration;
 public class PostgresSrvIoStats 
 extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseWaitStats.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public PostgresSrvIoStats(DailySummaryReportAbstract reportingInstance)
 	{

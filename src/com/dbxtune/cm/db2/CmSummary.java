@@ -20,13 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.cm.db2;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -36,8 +38,8 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.db2.gui.CmSummaryPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -51,7 +53,7 @@ public class CmSummary
 //extends CountersModel
 extends CmSummaryAbstract
 {
-	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSummary.class.getSimpleName();
@@ -220,9 +222,9 @@ extends CmSummaryAbstract
 //			arr[0] = this.getAbsValueAsDouble (0, "Connections");
 //			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 //			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-			arr[0] = new Double(hour);
-			arr[1] = new Double(minute);
-			arr[2] = new Double(second);
+			arr[0] = Double.valueOf(hour);
+			arr[1] = Double.valueOf(minute);
+			arr[2] = Double.valueOf(second);
 			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 
 			// Set the values

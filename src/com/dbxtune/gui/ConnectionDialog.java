@@ -46,6 +46,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -120,8 +121,8 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.table.TableColumnModelExt;
@@ -180,7 +181,7 @@ public class ConnectionDialog
 	extends JDialog
 	implements ActionListener, KeyListener, TableModelListener, ChangeListener, FocusListener
 {
-	private static Logger _logger = Logger.getLogger(ConnectionDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = -7782953767666701933L;
 	
 	public static final String   PROPKEY_RECONNECT_ON_FAILURE        = "conn.reconnectOnFailure";
@@ -4056,12 +4057,12 @@ public class ConnectionDialog
 						Vector<Object> row = new Vector<Object>();
 						row.setSize(PCS_TAB_HEADER.length);
 						
-						row.set(PCS_TAB_POS_TIMEOUT,    new Integer(cm.getQueryTimeout()));
-						row.set(PCS_TAB_POS_POSTPONE,   new Integer(cm.getPostponeTime()));
-						row.set(PCS_TAB_POS_STORE_PCS,  new Boolean(cm.isPersistCountersEnabled()));
-						row.set(PCS_TAB_POS_STORE_ABS,  new Boolean(cm.isPersistCountersAbsEnabled()));
-						row.set(PCS_TAB_POS_STORE_DIFF, new Boolean(cm.isPersistCountersDiffEnabled()));
-						row.set(PCS_TAB_POS_STORE_RATE, new Boolean(cm.isPersistCountersRateEnabled()));
+						row.set(PCS_TAB_POS_TIMEOUT,    Integer.valueOf(cm.getQueryTimeout()));
+						row.set(PCS_TAB_POS_POSTPONE,   Integer.valueOf(cm.getPostponeTime()));
+						row.set(PCS_TAB_POS_STORE_PCS,  Boolean.valueOf(cm.isPersistCountersEnabled()));
+						row.set(PCS_TAB_POS_STORE_ABS,  Boolean.valueOf(cm.isPersistCountersAbsEnabled()));
+						row.set(PCS_TAB_POS_STORE_DIFF, Boolean.valueOf(cm.isPersistCountersDiffEnabled()));
+						row.set(PCS_TAB_POS_STORE_RATE, Boolean.valueOf(cm.isPersistCountersRateEnabled()));
 	
 						row.set(PCS_TAB_POS_TAB_NAME,   cm.getDisplayName());
 						row.set(PCS_TAB_POS_GROUP_NAME, groupName);
@@ -6349,7 +6350,7 @@ if ( ! jdbcSshTunnelUse )
 			TableModel tm = _pcsSessionTable.getModel();
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
-				tm.setValueAt(new Boolean(true), r, PCS_TAB_POS_STORE_PCS);
+				tm.setValueAt(Boolean.valueOf(true), r, PCS_TAB_POS_STORE_PCS);
 			}
 		}
 
@@ -6359,8 +6360,8 @@ if ( ! jdbcSshTunnelUse )
 			TableModel tm = _pcsSessionTable.getModel();
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
-				tm.setValueAt(new Boolean(false), r, PCS_TAB_POS_STORE_PCS);
-				tm.setValueAt(new Integer(0),     r, PCS_TAB_POS_POSTPONE);
+				tm.setValueAt(Boolean.valueOf(false), r, PCS_TAB_POS_STORE_PCS);
+				tm.setValueAt(Integer.valueOf(0),     r, PCS_TAB_POS_POSTPONE);
 			}
 		}
 
@@ -7750,13 +7751,13 @@ if ( ! jdbcSshTunnelUse )
 		_aseDeferredDisConnect_chk   .setSelected(entry._dbxtuneOptDissConnectLater);
 		if (entry._dbxtuneOptConnectLater)
 		{
-			_aseDeferredConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptConnectLaterHour));
-			_aseDeferredConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptConnectLaterMinute));
+			_aseDeferredConnectHour_spm  .setValue(Integer.valueOf(entry._dbxtuneOptConnectLaterHour));
+			_aseDeferredConnectMinute_spm.setValue(Integer.valueOf(entry._dbxtuneOptConnectLaterMinute));
 		}
 		if (entry._dbxtuneOptConnectLater)
 		{
-			_aseDeferredDisConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptDissConnectLaterHour));
-			_aseDeferredDisConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptDissConnectLaterMinute));
+			_aseDeferredDisConnectHour_spm  .setValue(Integer.valueOf(entry._dbxtuneOptDissConnectLaterHour));
+			_aseDeferredDisConnectMinute_spm.setValue(Integer.valueOf(entry._dbxtuneOptDissConnectLaterMinute));
 		}
 
 		if (entry._dbxtuneOptOsMonitoring)
@@ -7854,13 +7855,13 @@ if ( ! jdbcSshTunnelUse )
 //					_aseDeferredDisConnect_chk   .setSelected(entry._dbxtuneOptDissConnectLater);
 //					if (entry._dbxtuneOptConnectLater)
 //					{
-//						_aseDeferredConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptConnectLaterHour));
-//						_aseDeferredConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptConnectLaterMinute));
+//						_aseDeferredConnectHour_spm  .setValue(Integer.valueOf(entry._dbxtuneOptConnectLaterHour));
+//						_aseDeferredConnectMinute_spm.setValue(Integer.valueOf(entry._dbxtuneOptConnectLaterMinute));
 //					}
 //					if (entry._dbxtuneOptConnectLater)
 //					{
-//						_aseDeferredDisConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptDissConnectLaterHour));
-//						_aseDeferredDisConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptDissConnectLaterMinute));
+//						_aseDeferredDisConnectHour_spm  .setValue(Integer.valueOf(entry._dbxtuneOptDissConnectLaterHour));
+//						_aseDeferredDisConnectMinute_spm.setValue(Integer.valueOf(entry._dbxtuneOptDissConnectLaterMinute));
 //					}
 //
 //					if (entry._dbxtuneOptOsMonitoring)
@@ -8354,13 +8355,13 @@ if ( ! jdbcSshTunnelUse )
 			if (cm == null)
 				continue;
 
-			tm.setValueAt(new Integer(cm.getQueryTimeout()),              r, PCS_TAB_POS_TIMEOUT);
-			tm.setValueAt(new Integer(cm.getPostponeTime()),              r, PCS_TAB_POS_POSTPONE);
-//			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()), r, PCS_TAB_POS_STORE_PCS);
-			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled()),     r, PCS_TAB_POS_STORE_PCS);
-			tm.setValueAt(new Boolean(cm.isPersistCountersAbsEnabled()),  r, PCS_TAB_POS_STORE_ABS);
-			tm.setValueAt(new Boolean(cm.isPersistCountersDiffEnabled()), r, PCS_TAB_POS_STORE_DIFF);
-			tm.setValueAt(new Boolean(cm.isPersistCountersRateEnabled()), r, PCS_TAB_POS_STORE_RATE);
+			tm.setValueAt(Integer.valueOf(cm.getQueryTimeout()),              r, PCS_TAB_POS_TIMEOUT);
+			tm.setValueAt(Integer.valueOf(cm.getPostponeTime()),              r, PCS_TAB_POS_POSTPONE);
+//			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()), r, PCS_TAB_POS_STORE_PCS);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersEnabled()),     r, PCS_TAB_POS_STORE_PCS);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersAbsEnabled()),  r, PCS_TAB_POS_STORE_ABS);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersDiffEnabled()), r, PCS_TAB_POS_STORE_DIFF);
+			tm.setValueAt(Boolean.valueOf(cm.isPersistCountersRateEnabled()), r, PCS_TAB_POS_STORE_RATE);
 		}
 	}
 
@@ -10510,13 +10511,8 @@ if ( ! jdbcSshTunnelUse )
 			e.printStackTrace();
 		}
 
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		Configuration conf1 = new Configuration(defaultTmpPropsFile);
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);

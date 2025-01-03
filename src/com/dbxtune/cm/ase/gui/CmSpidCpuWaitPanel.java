@@ -48,7 +48,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmSpidCpuWaitPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmSpidCpuWaitPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_sample_monSqlText       = "<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>";

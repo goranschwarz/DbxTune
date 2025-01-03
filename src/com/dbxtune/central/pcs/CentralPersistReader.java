@@ -27,6 +27,7 @@ package com.dbxtune.central.pcs;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -48,11 +49,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.central.check.ReceiverAlarmCheck;
-import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.dbxtune.central.pcs.CentralPersistWriterBase.Table;
 import com.dbxtune.central.pcs.objects.DbxAlarmActive;
@@ -79,13 +80,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 
 
 public class CentralPersistReader
 {
-	private static Logger _logger = Logger.getLogger(CentralPersistReader.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_SERVER_LIST_SORT = "CentralPersistReader.server.list.sort";
 	public static final boolean DEFAULT_SERVER_LIST_SORT = true;
@@ -4035,7 +4034,7 @@ public class CentralPersistReader
 			String sumKey = sum.getKey();
 			Double sumVal = sum.getValue();
 
-			// toMap.put(sumKey, new Double(sumVal / count) );
+			// toMap.put(sumKey, Double.valueOf(sumVal / count) );
 			
 			Integer count = countMap.get(sumKey);
 			
@@ -4049,7 +4048,7 @@ public class CentralPersistReader
 			else
 			{
 				BigDecimal bd = new BigDecimal(sumVal / count).setScale(1, BigDecimal.ROUND_HALF_EVEN /*RoundingMode.HALF_UP*/);  // in the CENTRAL DB the datatype is decimal(16, 1)
-				Double avgVal = new Double(bd.doubleValue());
+				Double avgVal = Double.valueOf(bd.doubleValue());
 				toMap.put(sumKey, avgVal);
 			}
 		}
@@ -4197,7 +4196,7 @@ public class CentralPersistReader
 			if (sumVal != null)
 			{
 				BigDecimal bd = new BigDecimal(sumVal).setScale(1, BigDecimal.ROUND_HALF_EVEN /*RoundingMode.HALF_UP*/);  // in the CENTRAL DB the datatype is decimal(16, 1)
-				Double avgVal = new Double(bd.doubleValue());
+				Double avgVal = Double.valueOf(bd.doubleValue());
 				toMap.put(sumKey, avgVal);
 			}
 		}
@@ -4210,31 +4209,31 @@ public class CentralPersistReader
 //		List<Map<String, Double>> list = new ArrayList<>();
 //		
 //		Map<String, Double> map1 = new LinkedHashMap<>();
-//		map1.put("k1", new Double(1.1) );
-//		map1.put("k2", new Double(2.2) );
-//		map1.put("k3", new Double(3.3) );
-//		map1.put("k4", new Double(3.0) );
-//		map1.put("k5", new Double(50) );
+//		map1.put("k1", Double.valueOf(1.1) );
+//		map1.put("k2", Double.valueOf(2.2) );
+//		map1.put("k3", Double.valueOf(3.3) );
+//		map1.put("k4", Double.valueOf(3.0) );
+//		map1.put("k5", Double.valueOf(50) );
 //		map1.put("k6", null );
 //		map1.put("k7", null );
 //		
 //		Map<String, Double> map2 = new LinkedHashMap<>();
-//		map2.put("k1", new Double(1.1) );
-//		map2.put("k2", new Double(2.2) );
-//		map2.put("k3", new Double(3.3) );
-//		map2.put("k4", new Double(3.0) );
+//		map2.put("k1", Double.valueOf(1.1) );
+//		map2.put("k2", Double.valueOf(2.2) );
+//		map2.put("k3", Double.valueOf(3.3) );
+//		map2.put("k4", Double.valueOf(3.0) );
 //		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
 //		map2.put("k6", null );
 //		map2.put("k7", null );
 //		
 //		Map<String, Double> map3 = new LinkedHashMap<>();
-//		map3.put("k1", new Double(1.1) );
-//		map3.put("k2", new Double(2.2) );
-//		map3.put("k3", new Double(3.3) );
-//		map3.put("k4", new Double(4.0) );
-//		map3.put("k5", new Double(150) );
+//		map3.put("k1", Double.valueOf(1.1) );
+//		map3.put("k2", Double.valueOf(2.2) );
+//		map3.put("k3", Double.valueOf(3.3) );
+//		map3.put("k4", Double.valueOf(4.0) );
+//		map3.put("k5", Double.valueOf(150) );
 //		map3.put("k6", null );
-//		map3.put("k7", new Double(99) );
+//		map3.put("k7", Double.valueOf(99) );
 //		
 //		// Add entries to list
 //		list.add(map1);
@@ -4307,31 +4306,31 @@ public class CentralPersistReader
 //		List<Map<String, Double>> list = new ArrayList<>();
 //		
 //		Map<String, Double> map1 = new LinkedHashMap<>();
-//		map1.put("k1", new Double(-1.1) );
-//		map1.put("k2", new Double(-2.2) );
-//		map1.put("k3", new Double(-3.3) );
-//		map1.put("k4", new Double(-3.0) );
-//		map1.put("k5", new Double(-50) );
+//		map1.put("k1", Double.valueOf(-1.1) );
+//		map1.put("k2", Double.valueOf(-2.2) );
+//		map1.put("k3", Double.valueOf(-3.3) );
+//		map1.put("k4", Double.valueOf(-3.0) );
+//		map1.put("k5", Double.valueOf(-50) );
 //		map1.put("k6", null );
 //		map1.put("k7", null );
 //		
 //		Map<String, Double> map2 = new LinkedHashMap<>();
-//		map2.put("k1", new Double(-1.1) );
-//		map2.put("k2", new Double(-2.2) );
-//		map2.put("k3", new Double(-3.3) );
-//		map2.put("k4", new Double(-3.0) );
+//		map2.put("k1", Double.valueOf(-1.1) );
+//		map2.put("k2", Double.valueOf(-2.2) );
+//		map2.put("k3", Double.valueOf(-3.3) );
+//		map2.put("k4", Double.valueOf(-3.0) );
 //		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
 //		map2.put("k6", null );
 //		map2.put("k7", null );
 //		
 //		Map<String, Double> map3 = new LinkedHashMap<>();
-//		map3.put("k1", new Double(-1.1) );
-//		map3.put("k2", new Double(-2.2) );
-//		map3.put("k3", new Double(-3.3) );
-//		map3.put("k4", new Double(-4.0) );
-//		map3.put("k5", new Double(-150) );
+//		map3.put("k1", Double.valueOf(-1.1) );
+//		map3.put("k2", Double.valueOf(-2.2) );
+//		map3.put("k3", Double.valueOf(-3.3) );
+//		map3.put("k4", Double.valueOf(-4.0) );
+//		map3.put("k5", Double.valueOf(-150) );
 //		map3.put("k6", null );
-//		map3.put("k7", new Double(-99) );
+//		map3.put("k7", Double.valueOf(-99) );
 //		
 //		// Add entries to list
 //		list.add(map1);
@@ -4404,31 +4403,31 @@ public class CentralPersistReader
 //		List<Map<String, Double>> list = new ArrayList<>();
 //		
 //		Map<String, Double> map1 = new LinkedHashMap<>();
-//		map1.put("k1", new Double(1.1) );
-//		map1.put("k2", new Double(2.2) );
-//		map1.put("k3", new Double(3.3) );
-//		map1.put("k4", new Double(3.0) );
-//		map1.put("k5", new Double(50) );
+//		map1.put("k1", Double.valueOf(1.1) );
+//		map1.put("k2", Double.valueOf(2.2) );
+//		map1.put("k3", Double.valueOf(3.3) );
+//		map1.put("k4", Double.valueOf(3.0) );
+//		map1.put("k5", Double.valueOf(50) );
 //		map1.put("k6", null );
 //		map1.put("k7", null );
 //		
 //		Map<String, Double> map2 = new LinkedHashMap<>();
-//		map2.put("k1", new Double(1.1) );
-//		map2.put("k2", new Double(2.2) );
-//		map2.put("k3", new Double(3.3) );
-//		map2.put("k4", new Double(3.0) );
+//		map2.put("k1", Double.valueOf(1.1) );
+//		map2.put("k2", Double.valueOf(2.2) );
+//		map2.put("k3", Double.valueOf(3.3) );
+//		map2.put("k4", Double.valueOf(3.0) );
 //		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
 //		map2.put("k6", null );
 //		map2.put("k7", null );
 //		
 //		Map<String, Double> map3 = new LinkedHashMap<>();
-//		map3.put("k1", new Double(1.1) );
-//		map3.put("k2", new Double(2.2) );
-//		map3.put("k3", new Double(3.3) );
-//		map3.put("k4", new Double(4.0) );
-//		map3.put("k5", new Double(150) );
+//		map3.put("k1", Double.valueOf(1.1) );
+//		map3.put("k2", Double.valueOf(2.2) );
+//		map3.put("k3", Double.valueOf(3.3) );
+//		map3.put("k4", Double.valueOf(4.0) );
+//		map3.put("k5", Double.valueOf(150) );
 //		map3.put("k6", null );
-//		map3.put("k7", new Double(99) );
+//		map3.put("k7", Double.valueOf(99) );
 //		
 //		// Add entries to list
 //		list.add(map1);
@@ -5919,7 +5918,7 @@ public class CentralPersistReader
 //				for (int c=4, ca=0; c<=cols; c+=2, ca++)
 //				{
 //					labels[ca] = rs.getString(c);
-//					datapt[ca] = new Double(rs.getDouble(c+1));					
+//					datapt[ca] = Double.valueOf(rs.getDouble(c+1));					
 //				}
 //				// Add a extra record at the BEGINING of the traces... using 0 data values
 //				if (firstRow)
@@ -5927,7 +5926,7 @@ public class CentralPersistReader
 //					firstRow = false;
 //					Double[] firstDatapt = new Double[datapt.length];
 //					for (int d=0; d<firstDatapt.length; d++)
-//						firstDatapt[d] = new Double(0);
+//						firstDatapt[d] = Double.valueOf(0);
 //					tg.addPoint(new Timestamp(sessionSampleTime.getTime()-10),  // - 10 millisec
 //							firstDatapt, 
 //							labels, null, startTime, endTime);
@@ -5953,7 +5952,7 @@ public class CentralPersistReader
 //			{
 //				Double[] lastDatapt = new Double[datapt.length];
 //				for (int d=0; d<lastDatapt.length; d++)
-//					lastDatapt[d] = new Double(0);
+//					lastDatapt[d] = Double.valueOf(0);
 //				tg.addPoint(new Timestamp(sessionSampleTime.getTime()+10), // + 10 millisec
 //						lastDatapt, 
 //						labels, null, startTime, endTime);

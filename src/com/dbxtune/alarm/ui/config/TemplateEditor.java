@@ -28,6 +28,7 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,8 @@ import javax.swing.event.CaretListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.velocity.exception.MethodInvocationException;
 import org.apache.velocity.exception.ParseErrorException;
 import org.fife.ui.autocomplete.AutoCompletion;
@@ -61,10 +64,10 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
-import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.events.AlarmEvent.Category;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
+import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.ui.view.DummyEventDialog;
 import com.dbxtune.alarm.ui.view.DummyEventDialog.AlarmEventSetCallback;
 import com.dbxtune.alarm.writers.AlarmWriterAbstract;
@@ -81,7 +84,8 @@ public class TemplateEditor
 extends JDialog
 implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallback
 {
-//	private static Logger _logger = Logger.getLogger(TemplateEditor.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
 	private static final long	serialVersionUID	= -1L;
 	
 	private static final String TEMPLATE_HELP = "http://velocity.apache.org/engine/2.0/user-guide.html#conditionals";

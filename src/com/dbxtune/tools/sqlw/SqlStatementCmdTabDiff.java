@@ -45,13 +45,13 @@ import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.TdsConnection;
 import com.dbxtune.sql.diff.DiffContext;
+import com.dbxtune.sql.diff.DiffContext.DiffSide;
 import com.dbxtune.sql.diff.DiffSink;
 import com.dbxtune.sql.diff.DiffTable;
-import com.dbxtune.sql.diff.DiffContext.DiffSide;
 import com.dbxtune.sql.diff.actions.DiffTableModel;
 import com.dbxtune.sql.diff.actions.GenerateSqlText;
-import com.dbxtune.sql.pipe.PipeCommandException;
 import com.dbxtune.sql.pipe.PipeCommandDiff.ActionType;
+import com.dbxtune.sql.pipe.PipeCommandException;
 import com.dbxtune.tools.sqlw.msg.JPipeMessage;
 import com.dbxtune.tools.sqlw.msg.JTableResultSet;
 import com.dbxtune.tools.sqlw.msg.Message;
@@ -63,7 +63,7 @@ import com.dbxtune.utils.TimeUtils;
 public class SqlStatementCmdTabDiff 
 extends SqlStatementAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlStatementCmdTabDiff.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 	private String _originCmd = null;

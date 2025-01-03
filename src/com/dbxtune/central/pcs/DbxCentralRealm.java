@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.central.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -30,7 +31,8 @@ import java.util.Map;
 
 import javax.servlet.ServletRequest;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.security.AbstractLoginService;
 import org.eclipse.jetty.server.UserIdentity;
 import org.eclipse.jetty.util.security.Credential;
@@ -42,7 +44,7 @@ import com.dbxtune.utils.StringUtil;
 public class DbxCentralRealm 
 extends AbstractLoginService
 {
-	private static Logger _logger = Logger.getLogger(DbxCentralRealm.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String ROLE_ADMIN = "admin";
 	public static final String ROLE_USER  = "user";
@@ -206,7 +208,7 @@ extends AbstractLoginService
 //extends JettyMappedLoginService
 ////extends AbstractLoginService
 //{
-//	private static Logger _logger = Logger.getLogger(DbxCentralRealm.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //
 //	public static final String ROLE_ADMIN = "admin";
 //	public static final String ROLE_USER  = "user";
@@ -260,7 +262,7 @@ extends AbstractLoginService
 ////		Resource resource = Resource.newResource(_config);
 ////		properties.load(resource.getInputStream());
 ////
-////		_cacheTime = new Integer(properties.getProperty("cachetime"));
+////		_cacheTime = Integer.valueOf(properties.getProperty("cachetime"));
 ////
 ////		_cacheTime    *= 1000;
 ////		_lastHashPurge = 0;

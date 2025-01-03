@@ -24,6 +24,7 @@ import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.text.NumberFormat;
 import java.util.List;
 
@@ -33,7 +34,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -68,7 +70,7 @@ import net.miginfocom.swing.MigLayout;
 public class CmExecutionTimePanel
 extends TabularCntrPanel
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmExecutionTimePanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 	private static final String  PROP_PREFIX           = CmExecutionTime.CM_NAME;
@@ -163,10 +165,10 @@ extends TabularCntrPanel
 						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": OperationName("+OperationName_pos+")='"+OperationName+"', ExecutionCnt("+ExecutionCnt_pos+")='"+ExecutionCnt+"', ExecutionTime("+ExecutionTime_pos+")='"+ExecutionTime+"', ExecutionTimePerCnt("+ExecutionTimePerCnt_pos+")='"+ExecutionTimePerCnt+"', CpuUsagePct("+CpuUsagePct_pos+")='"+CpuUsagePct+"'.");
 
 					// add 0 if null value...
-					if (ExecutionCnt       == null) ExecutionCnt        = new Double(0);
-					if (ExecutionTime      == null) ExecutionTime       = new Double(0);
-					if (ExecutionTimePerCnt== null) ExecutionTimePerCnt = new Double(0);
-					if (CpuUsagePct        == null) CpuUsagePct         = new Double(0);
+					if (ExecutionCnt       == null) ExecutionCnt        = Double.valueOf(0);
+					if (ExecutionTime      == null) ExecutionTime       = Double.valueOf(0);
+					if (ExecutionTimePerCnt== null) ExecutionTimePerCnt = Double.valueOf(0);
+					if (CpuUsagePct        == null) CpuUsagePct         = Double.valueOf(0);
 
 					if (generateExecutionCnt)        dataset.addValue(ExecutionCnt       .doubleValue(), OperationName, "ExecutionCnt");
 					if (generateExecutionTime)       dataset.addValue(ExecutionTime      .doubleValue(), OperationName, "ExecutionTime");

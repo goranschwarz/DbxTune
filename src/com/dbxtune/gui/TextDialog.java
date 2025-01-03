@@ -27,6 +27,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
@@ -36,7 +37,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.dbxtune.Version;
@@ -53,7 +55,7 @@ public class TextDialog
 extends JDialog
 implements ActionListener
 {
-	private static Logger _logger = Logger.getLogger(TextDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	private JPanel          _top_panel         = null;

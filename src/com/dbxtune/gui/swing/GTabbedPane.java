@@ -20,6 +20,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -46,7 +47,8 @@ import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.focusabletip.FocusableTip;
 import com.dbxtune.utils.Configuration;
@@ -61,7 +63,7 @@ public class GTabbedPane
     extends JTabbedPane
     implements MouseListener, DockUndockManagement
 {
-	private static Logger _logger = Logger.getLogger(GTabbedPane.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	public static final String GROUP_STR_SEPARATOR = ":";
 
 	/*---------------------------------------------------
@@ -2621,7 +2623,7 @@ public class GTabbedPane
 						for(int i=0; i<getTabCount(); i++)
 						{
 							JMenuItem mi = new JMenuItem(getTitleAt(i), getIconAt(i));
-							mi.putClientProperty("tabIndex", new Integer(i));
+							mi.putClientProperty("tabIndex", Integer.valueOf(i));
 							mi.addActionListener(new ActionListener()
 							{
 								@Override

@@ -31,6 +31,7 @@ import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -52,7 +53,8 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -63,10 +65,10 @@ import com.dbxtune.gui.ChangeToJTabDialog;
 import com.dbxtune.gui.ISummaryPanel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.ResultSetTableModel;
+import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.gui.ShowCmPropertiesDialog;
 import com.dbxtune.gui.TrendGraph;
 import com.dbxtune.gui.TrendGraphDashboardPanel;
-import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.gui.swing.AbstractComponentDecorator;
 import com.dbxtune.gui.swing.GTabbedPane;
 import com.dbxtune.gui.swing.GTextField;
@@ -82,7 +84,7 @@ public class CmSummaryPanel
 extends JPanel
 implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 {
-	private static final Logger  _logger	           = Logger.getLogger(CmSummaryPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSummary.CM_NAME;

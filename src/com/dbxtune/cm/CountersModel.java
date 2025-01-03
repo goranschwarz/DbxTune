@@ -30,6 +30,7 @@ import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSetMetaData;
@@ -71,14 +72,15 @@ import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.DbxTune;
 import com.dbxtune.ICounterController;
+import com.dbxtune.ICounterController.DbmsOption;
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
-import com.dbxtune.ICounterController.DbmsOption;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.IUserDefinedAlarmInterrogator;
 import com.dbxtune.alarm.UserDefinedAlarmHandler;
@@ -103,8 +105,8 @@ import com.dbxtune.gui.swing.GTable.ITableTooltip;
 import com.dbxtune.hostmon.HostMonitorMetaData;
 import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.PcsColumnOptions;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistReader.PcsSavedException;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.ResultSetMetaDataCached;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.TdsConnection;
@@ -133,7 +135,7 @@ implements Cloneable, ITableTooltip
     private static final long serialVersionUID = -7486772146682031469L;
 
 	/** Log4j logging. */
-	private static Logger      _logger            = Logger.getLogger(CountersModel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final int    DATA_ABS           = 1;
 	public static final int    DATA_DIFF          = 2;
@@ -5875,7 +5877,7 @@ implements Cloneable, ITableTooltip
 			for (int i = 0; i < newSample.getColumnCount(); i++)
 			{
 				// This looks ugly: should really be done using the same logic as below... But this is really never used...
-				diffRow.add(new Integer(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
+				diffRow.add(Integer.valueOf(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
 			}
 			diffCnt.addRow(this, diffRow);
 			return diffCnt;
@@ -6022,24 +6024,24 @@ implements Cloneable, ITableTooltip
 		}
 		else if (newColVal instanceof Byte)
 		{
-			diffColVal = new Byte((byte) (newColVal.byteValue() - prevColVal.byteValue()));
+			diffColVal = Byte.valueOf((byte) (newColVal.byteValue() - prevColVal.byteValue()));
 			if (diffColVal.intValue() < 0)
 				if (negativeDiffCountersToZero)
-					diffColVal = new Byte("0");
+					diffColVal = Byte.valueOf("0");
 		}
 		else if (newColVal instanceof Double)
 		{
-			diffColVal = new Double(newColVal.doubleValue() - prevColVal.doubleValue());
+			diffColVal = Double.valueOf(newColVal.doubleValue() - prevColVal.doubleValue());
 			if (diffColVal.doubleValue() < 0)
 				if (negativeDiffCountersToZero)
-					diffColVal = new Double(0);
+					diffColVal = Double.valueOf(0);
 		}
 		else if (newColVal instanceof Float)
 		{
-			diffColVal = new Float(newColVal.floatValue() - prevColVal.floatValue());
+			diffColVal = Float.valueOf(newColVal.floatValue() - prevColVal.floatValue());
 			if (diffColVal.floatValue() < 0)
 				if (negativeDiffCountersToZero)
-					diffColVal = new Float(0);
+					diffColVal = Float.valueOf(0);
 		}
 		else if (newColVal instanceof Integer)
 		{
@@ -6052,39 +6054,39 @@ implements Cloneable, ITableTooltip
 ////				// example prevColVal=2147483646, newColVal=-2147483647: The difference SHOULD BE: 3  
 ////				int restVal = Integer.MAX_VALUE - prevColVal.intValue(); // get changes up to the overflow: 2147483647 - 2147483646 == 7 
 ////				int overflv = newColVal.intValue() - Integer.MIN_VALUE;  // get changes after the overflow: -2147483647 - -2147483648 = 8
-////				diffColVal = new Integer( restVal + overflv );
+////				diffColVal = Integer.valueOf( restVal + overflv );
 ////System.out.println("restVal: "+restVal);
 ////System.out.println("overflv: "+overflv);
 ////System.out.println("=result: "+diffColVal);
 //
 //				// Or simplified (one-line)
-////				diffColVal = new Integer( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
+////				diffColVal = Integer.valueOf( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
 //
 //				// Deal with counter overflows by bumping up to a higher data type: and adding the negative delta on top of Integer.MAX_VALUE -------*/ 
 //				long newColVal_bumped = Integer.MAX_VALUE + (newColVal.longValue() - Integer.MIN_VALUE);
-//				diffColVal = new Integer( (int) newColVal_bumped - prevColVal.intValue() );
+//				diffColVal = Integer.valueOf( (int) newColVal_bumped - prevColVal.intValue() );
 //			}
 //			else
-//				diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+//				diffColVal = Integer.valueOf(newColVal.intValue() - prevColVal.intValue());
 			
-			diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+			diffColVal = Integer.valueOf(newColVal.intValue() - prevColVal.intValue());
 			if (diffColVal.intValue() < 0)
 				if (negativeDiffCountersToZero)
-					diffColVal = new Integer(0);
+					diffColVal = Integer.valueOf(0);
 		}
 		else if (newColVal instanceof Long)
 		{
-			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
+			diffColVal = Long.valueOf(newColVal.longValue() - prevColVal.longValue());
 			if (diffColVal.longValue() < 0)
 				if (negativeDiffCountersToZero)
-					diffColVal = new Long(0);
+					diffColVal = Long.valueOf(0);
 		}
 		else if (newColVal instanceof Short)
 		{
-			diffColVal = new Short((short) (newColVal.shortValue() - prevColVal.shortValue()));
+			diffColVal = Short.valueOf((short) (newColVal.shortValue() - prevColVal.shortValue()));
 			if (diffColVal.shortValue() < 0)
 				if (negativeDiffCountersToZero)
-					diffColVal = new Short("0");
+					diffColVal = Short.valueOf("0");
 		}
 		else if (newColVal instanceof AtomicInteger)
 		{
@@ -7535,9 +7537,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Double(((Number) o).doubleValue());
+			return Double.valueOf(((Number) o).doubleValue());
 		else
-			return new Double(Double.parseDouble(o.toString()));
+			return Double.valueOf(Double.parseDouble(o.toString()));
 	}
 
 	// 
@@ -7554,9 +7556,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Double(((Number) o).doubleValue());
+			return Double.valueOf(((Number) o).doubleValue());
 		else
-			return new Double(Double.parseDouble(o.toString()));
+			return Double.valueOf(Double.parseDouble(o.toString()));
 	}
 
 	private Double getValueAsDouble(int whatData, String pkStr, String colname, boolean caseSensitive)
@@ -7572,9 +7574,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Double(((Number) o).doubleValue());
+			return Double.valueOf(((Number) o).doubleValue());
 		else
-			return new Double(Double.parseDouble(o.toString()));
+			return Double.valueOf(Double.parseDouble(o.toString()));
 	}
 
 	//---------------------------------------------------------------------------
@@ -7593,9 +7595,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Integer(((Number) o).intValue());
+			return Integer.valueOf(((Number) o).intValue());
 		else
-			return new Integer(Integer.parseInt(o.toString()));
+			return Integer.valueOf(Integer.parseInt(o.toString()));
 	}
 
 	// 
@@ -7612,9 +7614,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Integer(((Number) o).intValue());
+			return Integer.valueOf(((Number) o).intValue());
 		else
-			return new Integer(Integer.parseInt(o.toString()));
+			return Integer.valueOf(Integer.parseInt(o.toString()));
 	}
 
 	private Integer getValueAsInteger(int whatData, String pkStr, String colname, boolean caseSensitive)
@@ -7630,9 +7632,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Integer(((Number) o).intValue());
+			return Integer.valueOf(((Number) o).intValue());
 		else
-			return new Integer(Integer.parseInt(o.toString()));
+			return Integer.valueOf(Integer.parseInt(o.toString()));
 	}
 
 	//---------------------------------------------------------------------------
@@ -7651,9 +7653,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Long(((Number) o).longValue());
+			return Long.valueOf(((Number) o).longValue());
 		else
-			return new Long(Long.parseLong(o.toString()));
+			return Long.valueOf(Long.parseLong(o.toString()));
 	}
 
 	// 
@@ -7670,9 +7672,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Long(((Number) o).longValue());
+			return Long.valueOf(((Number) o).longValue());
 		else
-			return new Long(Long.parseLong(o.toString()));
+			return Long.valueOf(Long.parseLong(o.toString()));
 	}
 
 	private Long getValueAsLong(int whatData, String pkStr, String colname, boolean caseSensitive)
@@ -7688,9 +7690,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return def;
 
 		if (o instanceof Number)
-			return new Long(((Number) o).longValue());
+			return Long.valueOf(((Number) o).longValue());
 		else
-			return new Long(Long.parseLong(o.toString()));
+			return Long.valueOf(Long.parseLong(o.toString()));
 	}
 
 	//---------------------------------------------------------------------------
@@ -7812,7 +7814,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 //		if (o instanceof Double)
 //			return (Double) o;
 //		else
-//			return new Double(o.toString());
+//			return Double.valueOf(o.toString());
 		return o;
 	}
 	/**
@@ -7994,7 +7996,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				maxResult = result;
 			}
 		}
-		return new Double(maxResult);
+		return Double.valueOf(maxResult);
 	}
 
 	// Return the MIN of the values of a column (ColumnName)
@@ -8081,7 +8083,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				minResult = result;
 			}
 		}
-		return new Double(minResult);
+		return Double.valueOf(minResult);
 	}
 
 	// Return the sum of the values of a Long column (ColumnName)
@@ -8168,7 +8170,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				result += Double.parseDouble(o.toString());
 			}
 		}
-		return new Double(result);
+		return Double.valueOf(result);
 	}
 
 	// Return the sum of the values of a Long column (ColumnName)
@@ -8275,9 +8277,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			count--;
 			
 		if (count == 0)
-			return new Double(0);
+			return Double.valueOf(0);
 		else
-			return new Double(sum.doubleValue() / count);
+			return Double.valueOf(sum.doubleValue() / count);
 	}
 
 	// Return the AVG of the values of a Long column (ColumnName)
@@ -8306,9 +8308,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			count--;
 			
 		if (count == 0)
-			return new Double(0);
+			return Double.valueOf(0);
 		else
-			return new Double(sum.doubleValue() / count);
+			return Double.valueOf(sum.doubleValue() / count);
 	}
 
 	// Return the AVG of the values of a Long column (ColumnName)
@@ -8332,9 +8334,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		int count = getCountGtZero(whatData, rowIds, colname, caseSensitive);
 		
 		if (count == 0)
-			return new Double(0);
+			return Double.valueOf(0);
 		else
-			return new Double(sum.doubleValue() / count);
+			return Double.valueOf(sum.doubleValue() / count);
 	}
 
 	// Return the AVG of the values of a Long column (ColumnName)
@@ -8358,9 +8360,9 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		int count = getCountGtZero(whatData, rowIds, colPos);
 		
 		if (count == 0)
-			return new Double(0);
+			return Double.valueOf(0);
 		else
-			return new Double(sum.doubleValue() / count);
+			return Double.valueOf(sum.doubleValue() / count);
 	}
 
 	// Return the Primary Key for a specific row
@@ -10270,38 +10272,38 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 		else if (jdbcType == java.sql.Types.SMALLINT)
 		{
 			if (sumVal == null) 
-				sumVal = new Short((short)0);
+				sumVal = Short.valueOf((short)0);
 
-//			return new Short( ((Number)sumVal).shortValue() + ((Number)val).shortValue() );
+//			return Short.valueOf( ((Number)sumVal).shortValue() + ((Number)val).shortValue() );
 			return ((Number)sumVal).shortValue() + ((Number)val).shortValue();
 		}
 		else if (jdbcType == java.sql.Types.INTEGER)
 		{
 			if (sumVal == null) 
-				sumVal = new Integer(0);
+				sumVal = Integer.valueOf(0);
 
-			return new Integer( ((Number)sumVal).intValue() + ((Number)val).intValue() );
+			return Integer.valueOf( ((Number)sumVal).intValue() + ((Number)val).intValue() );
 		}
 		else if (jdbcType == java.sql.Types.BIGINT)
 		{
 			if (sumVal == null) 
-				sumVal = new Long(0);
+				sumVal = Long.valueOf(0);
 
-			return new Long( ((Number)sumVal).longValue() + ((Number)val).longValue() );
+			return Long.valueOf( ((Number)sumVal).longValue() + ((Number)val).longValue() );
 		}
 		else if (jdbcType == java.sql.Types.FLOAT || jdbcType == java.sql.Types.REAL)
 		{
 			if (sumVal == null) 
-				sumVal = new Float(0);
+				sumVal = Float.valueOf(0);
 
-			return new Float( ((Number)sumVal).floatValue() + ((Number)val).floatValue() );
+			return Float.valueOf( ((Number)sumVal).floatValue() + ((Number)val).floatValue() );
 		}
 		else if (jdbcType == java.sql.Types.DOUBLE)
 		{
 			if (sumVal == null) 
-				sumVal = new Double(0);
+				sumVal = Double.valueOf(0);
 
-			return new Double( ((Number)sumVal).doubleValue() + ((Number)val).doubleValue() );
+			return Double.valueOf( ((Number)sumVal).doubleValue() + ((Number)val).doubleValue() );
 		}
 		else if (jdbcType == java.sql.Types.NUMERIC || jdbcType == java.sql.Types.DECIMAL)
 		{
@@ -10393,7 +10395,7 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			if (minVal == null) 
 				minVal = ((Number)val).shortValue();
 
-			return new Short( (short) Math.min( ((Number)minVal).shortValue(), ((Number)val).shortValue() ) );
+			return Short.valueOf( (short) Math.min( ((Number)minVal).shortValue(), ((Number)val).shortValue() ) );
 		}
 		else if (jdbcType == java.sql.Types.INTEGER)
 		{
@@ -10456,7 +10458,7 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			if (maxVal == null) 
 				maxVal = ((Number)val).shortValue();
 
-			return new Short( (short) Math.max( ((Number)maxVal).shortValue(), ((Number)val).shortValue() ) );
+			return Short.valueOf( (short) Math.max( ((Number)maxVal).shortValue(), ((Number)val).shortValue() ) );
 		}
 		else if (jdbcType == java.sql.Types.INTEGER)
 		{
@@ -10515,16 +10517,16 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 
 		switch (jdbcType)
 		{
-		case java.sql.Types.BIT:                     return new Boolean(false);
-		case java.sql.Types.TINYINT:                 return new Byte(Byte.parseByte("0"));
-		case java.sql.Types.SMALLINT:                return new Short(Short.parseShort("0"));
-		case java.sql.Types.INTEGER:                 return new Integer(0);
-		case java.sql.Types.BIGINT:                  return new Long(0);
-		case java.sql.Types.FLOAT:                   return new Float(0);
-		case java.sql.Types.REAL:                    return new Float(0);
-		case java.sql.Types.DOUBLE:                  return new Double(0);
-		case java.sql.Types.NUMERIC:                 return new BigDecimal(0);
-		case java.sql.Types.DECIMAL:                 return new BigDecimal(0);
+		case java.sql.Types.BIT:                     return Boolean.valueOf(false);
+		case java.sql.Types.TINYINT:                 return Byte.valueOf(Byte.parseByte("0"));
+		case java.sql.Types.SMALLINT:                return Short.valueOf(Short.parseShort("0"));
+		case java.sql.Types.INTEGER:                 return Integer.valueOf(0);
+		case java.sql.Types.BIGINT:                  return Long.valueOf(0);
+		case java.sql.Types.FLOAT:                   return Float.valueOf(0);
+		case java.sql.Types.REAL:                    return Float.valueOf(0);
+		case java.sql.Types.DOUBLE:                  return Double.valueOf(0);
+		case java.sql.Types.NUMERIC:                 return BigDecimal.valueOf(0);
+		case java.sql.Types.DECIMAL:                 return BigDecimal.valueOf(0);
 		case java.sql.Types.CHAR:                    return strVal;
 		case java.sql.Types.VARCHAR:                 return strVal;
 		case java.sql.Types.LONGVARCHAR:             return strVal;
@@ -10544,7 +10546,7 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 		case java.sql.Types.CLOB:                    return null;
 		case java.sql.Types.REF:                     return null;
 		case java.sql.Types.DATALINK:                return null;
-		case java.sql.Types.BOOLEAN:                 return new Boolean(false);
+		case java.sql.Types.BOOLEAN:                 return Boolean.valueOf(false);
 
 	    //------------------------- JDBC 4.0 -----------------------------------
 	    case java.sql.Types.ROWID:                   return null;

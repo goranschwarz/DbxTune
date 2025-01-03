@@ -36,7 +36,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmOsGenericPanel
 extends CmOsAbstractPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmOsGenericPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public CmOsGenericPanel(CountersModel cm)

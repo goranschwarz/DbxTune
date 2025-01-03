@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.inspection;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -31,7 +32,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.cache.XmlPlanAseUtils;
@@ -54,7 +56,7 @@ import com.dbxtune.utils.Ver;
 public class ObjectLookupInspectorAse
 extends ObjectLookupInspectorAbstract
 {
-	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_xmlPlan_parseAndSendTables = Version.getAppName() + "." + ObjectLookupInspectorAse.class.getSimpleName() + ".xmlPlan.parse.send.tables";
 	public static final boolean DEFAULT_xmlPlan_parseAndSendTables = true;

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,7 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -38,7 +40,7 @@ import com.dbxtune.utils.StringUtil;
 public class CounterSampleCatalogIteratorSqlServer 
 extends CounterSampleCatalogIterator
 {
-	private static Logger     _logger          = Logger.getLogger(CounterSampleCatalogIterator.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 //	public final static List<String> DEFAULT_SKIP_DB_LIST     = Arrays.asList( new String[]{"master", "model", "tempdb", "msdb", "SSISDB", "ReportServer", "ReportServerTempDB"} );

@@ -29,7 +29,7 @@ import com.dbxtune.utils.SwingUtils;
 public class RsLogFirstTran
 extends XmenuActionBase 
 {
-//	private static Logger _logger = Logger.getLogger(RsResume.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * 

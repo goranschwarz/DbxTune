@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.gui.swing;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.text.Collator;
 import java.util.regex.Pattern;
@@ -28,7 +29,8 @@ import javax.swing.JTable;
 import javax.swing.RowFilter;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 
@@ -40,7 +42,7 @@ import com.dbxtune.cm.CountersModel;
 public class RowFilterValueAndOp 
 extends RowFilter<TableModel, Integer>
 {
-	private static Logger _logger = Logger.getLogger(RowFilterValueAndOp.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final int FILTER_OP_EQ = 0;  // EQual
 	public static final int FILTER_OP_NE = 1;  // Not Equal

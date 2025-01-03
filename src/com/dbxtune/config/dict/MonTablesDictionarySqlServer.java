@@ -28,7 +28,8 @@ import java.lang.invoke.MethodHandles;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.DbxConnection;
 
@@ -37,7 +38,7 @@ public class MonTablesDictionarySqlServer
 extends MonTablesDictionaryDefault
 {
     /** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(MonTablesDictionaryPostgres.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public void initialize(DbxConnection conn, boolean hasGui)

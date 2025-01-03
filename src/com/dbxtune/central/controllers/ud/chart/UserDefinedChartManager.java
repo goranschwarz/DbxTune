@@ -22,6 +22,7 @@
 package com.dbxtune.central.controllers.ud.chart;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -32,7 +33,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.controllers.OverviewServlet;
 import com.dbxtune.central.controllers.ud.chart.IUserDefinedChart.ChartType;
@@ -40,7 +42,7 @@ import com.dbxtune.utils.Configuration;
 
 public class UserDefinedChartManager
 {
-	private static Logger _logger = Logger.getLogger(UserDefinedChartManager.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private List<IUserDefinedChart> _charts = new ArrayList<>();
 	private Map<String, IUserDefinedChart> _charts = new LinkedHashMap<>();

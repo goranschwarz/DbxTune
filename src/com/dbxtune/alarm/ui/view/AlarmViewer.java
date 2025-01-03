@@ -31,11 +31,11 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Properties;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -53,8 +53,10 @@ import javax.swing.UIManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.JTableHeader;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -82,7 +84,7 @@ public class AlarmViewer
 extends JFrame
 implements ActionListener
 {
-	private static Logger _logger = Logger.getLogger(AlarmViewer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	// PANEL: OK-CANCEL
@@ -1016,13 +1018,8 @@ implements ActionListener
 //System.setProperty("AlarmWriterToFile.alarms.active.filename", "c:\\tmp\\AlarmViewTest_alarm_active.log");
 //System.setProperty("AlarmWriterToFile.alarms.log.filename",    "c:\\tmp\\AlarmViewTest_alarm.log");
 
-		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.TRACE);
 
 		String saveFile = "c:\\tmp\\AlarmViewTest.tmp.deleteme.properties";
 		try

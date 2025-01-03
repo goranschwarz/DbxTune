@@ -37,7 +37,6 @@ import com.dbxtune.utils.StringUtil;
 public abstract class MonTablesDictionary
 {
     /** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(MonTablesDictionary.class);
 
 	/** Was initialized using a GUI */
 	private boolean _hasGui = false;

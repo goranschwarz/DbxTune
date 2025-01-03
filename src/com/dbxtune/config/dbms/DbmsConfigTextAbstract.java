@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.config.dbms;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -27,7 +28,8 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import com.dbxtune.Version;
@@ -48,7 +50,7 @@ public abstract class DbmsConfigTextAbstract
 implements IDbmsConfigText
 {
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(DbmsConfigTextAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private boolean _offline = false;
 	private boolean _hasGui  = false;

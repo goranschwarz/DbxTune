@@ -21,13 +21,15 @@
  ******************************************************************************/
 package com.dbxtune.cm.os.gui;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
 import javax.swing.JLabel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
 import org.jdesktop.swingx.renderer.LabelProvider;
 import org.jdesktop.swingx.renderer.StringValue;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.Configuration;
 public abstract class CmOsAbstractPanel
 extends TabularCntrPanel
 {
-	private static Logger     _logger          = Logger.getLogger(CmOsAbstractPanel.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	public static final String  PROPKEY_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS = "CounterModelHostMonitor.windows.perfmon.cellRenderer.format.min.Number.decimals";

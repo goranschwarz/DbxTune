@@ -30,7 +30,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.CentralPersistReader.SampleType;
@@ -42,8 +43,7 @@ public class GraphDataController
 extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
-//	private static Logger _logger = Logger.getLogger(GraphDataController.class);
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 
 	@Override
@@ -256,12 +256,12 @@ extends HttpServlet
 //		{
 //			Map<String, Double> map = new LinkedHashMap<>();
 //
-//			map.put("1.0",     new Double(1.0));
-//			map.put("1.1",     new Double(1.1));
-//			map.put("1.12",    new Double(1.12));
-//			map.put("1.123",   new Double(1.123));
-//			map.put("1.1234",  new Double(1.1234));
-//			map.put("1.12345", new Double(1.12345));
+//			map.put("1.0",     Double.valueOf(1.0));
+//			map.put("1.1",     Double.valueOf(1.1));
+//			map.put("1.12",    Double.valueOf(1.12));
+//			map.put("1.123",   Double.valueOf(1.123));
+//			map.put("1.1234",  Double.valueOf(1.1234));
+//			map.put("1.12345", Double.valueOf(1.12345));
 //
 //			ObjectMapper om = Helper.createObjectMapper();
 //			System.out.println(om.writeValueAsString(map));

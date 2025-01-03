@@ -22,6 +22,7 @@ package com.dbxtune.tools.sqlw;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.DatabaseMetaData;
@@ -44,7 +45,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -65,7 +67,7 @@ import com.dbxtune.utils.SwingUtils;
 public class SqlStatementCmdUtf8Length 
 extends SqlStatementAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlStatementCmdUtf8Length.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String[] _args = null;
 	private String _originCmd = null;

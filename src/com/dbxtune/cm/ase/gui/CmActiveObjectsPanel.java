@@ -35,7 +35,6 @@ import com.dbxtune.utils.SwingUtils;
 public class CmActiveObjectsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmActiveObjectsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmActiveObjectsPanel.CM_NAME;

@@ -35,7 +35,6 @@ public class MonTablesDictionaryPostgres
 extends MonTablesDictionaryDefault
 {
     /** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(MonTablesDictionaryPostgres.class);
 
 	@Override
 	public void initialize(DbxConnection conn, boolean hasGui)

@@ -47,7 +47,6 @@ import net.miginfocom.swing.MigLayout;
 public class CmProcessActivityPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmProcessActivityPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmProcessActivity.CM_NAME;

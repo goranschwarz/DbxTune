@@ -20,13 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 /**
  * This installes a JVM shutdown hook by calling <code>Runtime.getRuntime().addShutdownHook(_shutdownHook);</code>
@@ -68,7 +70,7 @@ import org.apache.log4j.PropertyConfigurator;
 public class ShutdownHandler
 implements Runnable
 {
-	private static Logger _logger = Logger.getLogger(ShutdownHandler.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_maxWaitTime = "ShutdownHandler.maxWaitTime";
 	public static final int     DEFAULT_maxWaitTime = 60*1000; // 60 sec
@@ -503,13 +505,8 @@ implements Runnable
 	
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+		Configurator.setRootLevel(Level.DEBUG);
 
 		System.out.println("START.");
 		System.out.println("   to test: press ctrl-c, or kill the process in some way (kill <spid>).");

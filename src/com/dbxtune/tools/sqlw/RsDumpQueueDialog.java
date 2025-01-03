@@ -35,6 +35,7 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -84,7 +85,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
@@ -94,10 +96,10 @@ import com.dbxtune.DebugOptions;
 import com.dbxtune.Version;
 import com.dbxtune.gui.ConnectionDialog;
 import com.dbxtune.gui.ConnectionProfile;
+import com.dbxtune.gui.ConnectionProfile.TdsEntry;
 import com.dbxtune.gui.ConnectionProfileManager;
 import com.dbxtune.gui.ParameterDialog;
 import com.dbxtune.gui.ResultSetTableModel;
-import com.dbxtune.gui.ConnectionProfile.TdsEntry;
 import com.dbxtune.gui.swing.GLabel;
 import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.gui.swing.WaitForExecDialog.BgExecutor;
@@ -129,7 +131,7 @@ public class RsDumpQueueDialog
 implements ActionListener
 //implements ActionListener, SybMessageHandler, ConnectionProvider
 {
-	private static Logger _logger = Logger.getLogger(RsDumpQueueDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 //	private static final long serialVersionUID = 1L;
 
 	//-------------------------------------------------

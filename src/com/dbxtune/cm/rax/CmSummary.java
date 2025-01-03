@@ -31,8 +31,8 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.rax.gui.CmSummaryPanel;
 import com.dbxtune.gui.ISummaryPanel;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -45,7 +45,6 @@ public class CmSummary
 //extends CountersModel
 extends CmSummaryAbstract
 {
-//	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSummary.class.getSimpleName();
@@ -216,9 +215,9 @@ extends CmSummaryAbstract
 ////			arr[0] = this.getAbsValueAsDouble (0, "Connections");
 ////			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 ////			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-//			arr[0] = new Double(hour);
-//			arr[1] = new Double(minute);
-//			arr[2] = new Double(second);
+//			arr[0] = Double.valueOf(hour);
+//			arr[1] = Double.valueOf(minute);
+//			arr[2] = Double.valueOf(second);
 //			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 //
 //			// Set the values
@@ -367,7 +366,7 @@ extends CmSummaryAbstract
 //			String value      = (String) newSample.getValueAt(rowId, Value_pos);
 //
 ////			Long numberValue = null;
-////			try	{ numberValue = new Long(value); }
+////			try	{ numberValue = Long.valueOf(value); }
 ////			catch(NumberFormatException nfe) {System.out.println("problems converting row="+rowId+", value='"+value+"'.");}
 //
 //			// Try to convert to numbers

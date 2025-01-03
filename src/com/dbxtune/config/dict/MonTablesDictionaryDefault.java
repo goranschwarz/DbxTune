@@ -20,15 +20,17 @@
  ******************************************************************************/
 package com.dbxtune.config.dict;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.DbxConnection;
 
 public class MonTablesDictionaryDefault extends MonTablesDictionary
 {
-	private static Logger _logger          = Logger.getLogger(MonTablesDictionaryDefault.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public void initialize(DbxConnection conn, boolean hasGui)

@@ -29,7 +29,7 @@ import com.dbxtune.utils.VersionShort;
 public class MonitorPsLinux
 extends HostMonitor
 {
-//	private static Logger _logger = Logger.getLogger(MonitorDiskSpaceAllOs.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MonitorPsLinux()
 	{

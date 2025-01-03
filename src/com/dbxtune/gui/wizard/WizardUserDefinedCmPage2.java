@@ -70,7 +70,6 @@ extends WizardPage
 implements ActionListener, FocusListener, CaretListener
 {
     private static final long serialVersionUID = 1L;
-//	private static Logger _logger          = Logger.getLogger(WizardUserDefinedCmPage2.class);
 
 	private static final String WIZ_NAME = "SQL-Statements";
 	private static final String WIZ_DESC = "SQL Statement(s)";// 

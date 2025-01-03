@@ -21,16 +21,17 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.PersistReader.MonVersionInfo;
-import com.dbxtune.pcs.report.content.RecordingInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
@@ -38,7 +39,7 @@ import com.dbxtune.utils.VersionShort;
 
 public class MonRecordingInfo
 {
-	private static Logger _logger = Logger.getLogger(RecordingInfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public Timestamp _sessionStartTime = null;
 	

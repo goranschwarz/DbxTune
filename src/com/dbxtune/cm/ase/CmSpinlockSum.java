@@ -21,12 +21,14 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -34,8 +36,8 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmSpinlockSumPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -54,7 +56,7 @@ import com.dbxtune.utils.Ver;
 public class CmSpinlockSum
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmSpinlockSum.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSpinlockSum.class.getSimpleName();
@@ -898,7 +900,7 @@ extends CountersModel
 		// ASE >= 15.x data
 		else if (newColVal instanceof Long)
 		{
-			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
+			diffColVal = Long.valueOf(newColVal.longValue() - prevColVal.longValue());
 			if (diffColVal.longValue() < 0)
 			{
 				// Do special stuff for diff counters on CmSpinlockSum and ASE is above 15.x, then counters will be delivered as bigint
@@ -913,13 +915,13 @@ extends CountersModel
 					long maxUnsignedInt = 4294967295L; // 4 294 967 295
 					
 //					if (prevColVal.longValue() > (maxUnsignedInt - threshold) && newColVal.longValue() < threshold)
-						diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
+						diffColVal = Long.valueOf((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
 					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', Long(ASE-bigint) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.longValue()='"+newColVal.longValue()+"', prevColVal.longValue()='"+prevColVal.longValue()+"', beforeReCalc.longValue()='"+beforeReCalc.longValue()+"', diffColVal.longValue()='"+diffColVal.longValue()+"'.");
 				}
 
 				if (diffColVal.longValue() < 0)
 					if (negativeDiffCountersToZero)
-						diffColVal = new Long(0);
+						diffColVal = Long.valueOf(0);
 			}
 		}
 		else

@@ -28,7 +28,6 @@ import java.sql.Timestamp;
 
 import com.dbxtune.central.pcs.CentralPcsWriterHandler.NotificationType;
 import com.dbxtune.central.pcs.DbxTuneSample.CmEntry;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.utils.Configuration;
 

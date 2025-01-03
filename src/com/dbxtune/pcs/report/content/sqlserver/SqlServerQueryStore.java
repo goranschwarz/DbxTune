@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -37,7 +38,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.dbxtune.cm.SortOptions;
@@ -57,17 +59,17 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.HtmlTableProducer;
-import com.dbxtune.utils.StringUtil;
-import com.dbxtune.utils.TimeUtils;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyDef;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyRender;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyRow;
 import com.dbxtune.utils.HtmlTableProducer.ColumnStatic;
+import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.TimeUtils;
 
 public class SqlServerQueryStore
 extends SqlServerAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerQueryStore.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private ResultSetTableModel _shortRstm;
 	private LinkedHashMap<String, QsDbReport> _dbMap = new LinkedHashMap<>();

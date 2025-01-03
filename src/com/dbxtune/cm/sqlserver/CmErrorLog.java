@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -28,7 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -41,9 +43,9 @@ import com.dbxtune.alarm.events.AlarmEventFullTranLog;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventStackDump;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.TabularCntrPanelAppend;
@@ -59,7 +61,7 @@ import com.dbxtune.utils.StringUtil;
 public class CmErrorLog
 extends CountersModelAppend
 {
-	private static Logger        _logger          = Logger.getLogger(CmErrorLog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmErrorLog.class.getSimpleName();

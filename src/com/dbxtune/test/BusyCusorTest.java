@@ -121,7 +121,7 @@ public class BusyCusorTest extends JFrame
 			{
 				try
 				{
-					System.out.printf("Waiting for %d milliseconds\n", new Integer(delay));
+					System.out.printf("Waiting for %d milliseconds\n", Integer.valueOf(delay));
 					Thread.sleep(delay);
 				}
 				catch (InterruptedException ie)

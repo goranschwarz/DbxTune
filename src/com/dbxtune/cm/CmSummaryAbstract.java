@@ -26,8 +26,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import javax.jws.soap.SOAPBinding;
-
 import com.dbxtune.ICounterController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
@@ -148,7 +146,7 @@ extends CountersModel
 				long refreshTimeMs = cm.getSqlRefreshTime() + cm.getLcRefreshTime();
 
 				label[i] = cm.getName();
-				data [i] = new Double(refreshTimeMs);
+				data [i] = Double.valueOf(refreshTimeMs);
 
 				totalMs += refreshTimeMs;
 				i++;
@@ -156,7 +154,7 @@ extends CountersModel
 
 			// Add "Total" at slot[0]
 			label[0] = "Total";
-			data [0] = new Double(totalMs);
+			data [0] = Double.valueOf(totalMs);
 
 			// Set the values
 			cmRefrshTimeTgdp.setDataPoint(this.getTimestamp(), label, data);

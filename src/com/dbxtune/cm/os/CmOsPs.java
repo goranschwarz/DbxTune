@@ -23,22 +23,23 @@ package com.dbxtune.cm.os;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.gui.CmOsPsPanel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.SwingUtils;
 
 public class CmOsPs
 extends CounterModelHostMonitor
 {
-//	private static Logger        _logger          = Logger.getLogger(CmOsPs.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_PS;
@@ -52,7 +53,7 @@ extends CounterModelHostMonitor
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 
@@ -121,6 +122,43 @@ extends CounterModelHostMonitor
 	private void addTrendGraphs()
 	{
 	}
+
+	/**
+	 * Get a HTML Table representation of the ABS/RATE values from CmOsPs
+	 * 
+	 * @return A HTML Table String (if CmOsPs is not found, then "" will be returned)
+	 */
+	public static String getCmOsPs_asHtmlTable()
+	{
+		String retStr = "";
+		
+		CountersModel cmOsPs = CounterController.getInstance().getCmByName(CmOsPs.CM_NAME);
+		if (cmOsPs != null)
+		{
+			if (cmOsPs.hasAbsData())
+			{
+				retStr += "<b>ABS Top Processes: (" + cmOsPs.getAbsRowCount() + " records)</b><br>";
+				retStr += SwingUtils.tableToHtmlString(cmOsPs.getCounterDataAbs()) + "<br>";
+
+				if (cmOsPs.hasRateData())
+				{
+					retStr += "<b>RATE Top Processes: (" + cmOsPs.getRateRowCount() + " records)</b><br>";
+					retStr += SwingUtils.tableToHtmlString(cmOsPs.getCounterDataRate()) + "<br>";
+				}
+			}
+			else
+			{
+				if (cmOsPs.isActive())
+					retStr += "<b>Top Processes: (CmOsPs does NOT contain any data)</b><br>";
+				else
+					retStr += "<b>Top Processes: (CmOsPs is NOT enabled)</b><br>";
+			}
+		}
+		
+		return retStr;
+	}
+	
+	
 	
 //	@Override
 //	public void localCalculation(OsTable newSample)
@@ -149,9 +187,9 @@ extends CounterModelHostMonitor
 //			Number usedKB_num      = (Number) newSample.getValueAt(r, usedKB_pos);
 //			Number availableKB_num = (Number) newSample.getValueAt(r, availableKB_pos);
 //
-//			if (sizeKB_num      != null) newSample.setValueAt(new Integer(sizeKB_num     .intValue()/1024), r, sizeMB_pos);
-//			if (usedKB_num      != null) newSample.setValueAt(new Integer(usedKB_num     .intValue()/1024), r, usedMB_pos);
-//			if (availableKB_num != null) newSample.setValueAt(new Integer(availableKB_num.intValue()/1024), r, availableMB_pos);
+//			if (sizeKB_num      != null) newSample.setValueAt(Integer.valueOf(sizeKB_num     .intValue()/1024), r, sizeMB_pos);
+//			if (usedKB_num      != null) newSample.setValueAt(Integer.valueOf(usedKB_num     .intValue()/1024), r, usedMB_pos);
+//			if (availableKB_num != null) newSample.setValueAt(Integer.valueOf(availableKB_num.intValue()/1024), r, availableMB_pos);
 //
 //			// Calculate the Pct value with a higher (scale=1) resolution than df
 //			if (sizeKB_num != null && usedKB_num != null && availableKB_num != null)

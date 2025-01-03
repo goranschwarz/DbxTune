@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 
 public class RsRssdQueueSize extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(RsRssdQueueSize.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public RsRssdQueueSize(DailySummaryReportAbstract reportingInstance)
 	{

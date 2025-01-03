@@ -28,7 +28,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
@@ -38,7 +39,7 @@ import com.dbxtune.gui.MainFrame;
 public class DbxTuneGuiHttpConnectOfflineHandler 
 extends AbstractHandler
 {
-	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public void handle( String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response ) 

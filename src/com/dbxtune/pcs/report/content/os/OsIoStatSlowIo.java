@@ -35,7 +35,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class OsIoStatSlowIo extends OsAbstract
 {
-//	private static Logger _logger = Logger.getLogger(OsIoStatSlowIo.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 

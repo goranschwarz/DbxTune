@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 public class SqlServerCpuUsageOverview 
 extends SqlServerAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlServerCpuUsageOverview.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public SqlServerCpuUsageOverview(DailySummaryReportAbstract reportingInstance)
 	{

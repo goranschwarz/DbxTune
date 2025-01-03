@@ -24,6 +24,7 @@
  */
 package com.dbxtune.pcs;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -40,7 +41,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dbms.DbmsConfigManager;
@@ -61,7 +63,7 @@ public abstract class PersistWriterBase
     implements IPersistWriter
 {
     /** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(PersistWriterBase.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/*---------------------------------------------------
 	** DEFINITIONS/STATIC variables

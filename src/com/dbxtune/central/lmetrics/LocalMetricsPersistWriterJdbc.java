@@ -35,7 +35,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.dbxtune.Version;
 import com.dbxtune.central.pcs.CentralPersistWriterBase;
 import com.dbxtune.central.pcs.CentralPersistWriterBase.Table;
 import com.dbxtune.cm.CountersModel;

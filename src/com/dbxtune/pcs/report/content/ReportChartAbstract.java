@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -35,7 +36,8 @@ import java.util.Set;
 
 import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.output.WriterOutputStream;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jfree.chart.ChartRenderingInfo;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
@@ -53,7 +55,7 @@ import com.dbxtune.utils.TimeUtils;
 
 public abstract class ReportChartAbstract implements IReportChart
 {
-	private static Logger _logger = Logger.getLogger(ReportChartAbstract.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public enum ChartType
 	{

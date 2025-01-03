@@ -36,13 +36,13 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar;
-import com.dbxtune.pcs.report.content.SparklineHelper;
-import com.dbxtune.pcs.report.content.SparklineJfreeChart;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupDataRecord;
+import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResult;
+import com.dbxtune.pcs.report.content.SparklineJfreeChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -51,7 +51,7 @@ import com.dbxtune.utils.TimeUtils;
 public class AseWaitStats 
 extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseWaitStats.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public AseWaitStats(DailySummaryReportAbstract reportingInstance)
 	{

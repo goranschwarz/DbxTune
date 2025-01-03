@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ import java.util.Map;
 
 import javax.swing.Timer;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.hostmon.HostMonitorConnection.ExecutionWrapper;
 import com.dbxtune.ssh.SshConnection;
@@ -51,7 +53,7 @@ import com.dbxtune.utils.StringUtil;
 public abstract class HostMonitor
 implements Runnable
 {
-	private static Logger _logger = Logger.getLogger(HostMonitor.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	public static final String PROPERTY_NAME = "HostMonitor";
 	

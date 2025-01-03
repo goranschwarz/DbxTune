@@ -35,7 +35,6 @@ import com.dbxtune.utils.SwingUtils;
 public class CmMissingStatsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmMissingStatsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmMissingStats.CM_NAME;

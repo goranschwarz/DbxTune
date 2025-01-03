@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.check;
 
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.DatabaseMetaData;
@@ -30,7 +31,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.DbxTune;
@@ -41,11 +43,11 @@ import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.ConnectionDialog;
 import com.dbxtune.gui.Log4jLogRecord;
 import com.dbxtune.pcs.PersistReader;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistReader.CmCounterInfo;
 import com.dbxtune.pcs.PersistReader.CmNameSum;
 import com.dbxtune.pcs.PersistReader.SampleCmCounterInfo;
 import com.dbxtune.pcs.PersistReader.SessionInfo;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.JdbcUrlParser;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -57,7 +59,7 @@ import com.dbxtune.utils.TimeUtils;
 
 public abstract class CheckForUpdatesDbx extends CheckForUpdates
 {
-	private static Logger _logger = Logger.getLogger(CheckForUpdatesDbx.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override protected String getHomeUrl()            { return DBXTUNE_HOME_URL; };
 	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
@@ -1215,12 +1217,18 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		urlParams.add("srvVersion",    srvVersion);
 		urlParams.add("appVersion",    Version.getVersionStr());
 
+//		urlParams.add("logLevel",      record.getLevel().toString());
+//		urlParams.add("logThreadName", record.getThreadDescription());
+//		urlParams.add("logClassName",  record.getCategory());
+//		urlParams.add("logLocation",   record.getLocation());
+//		urlParams.add("logMessage",    record.getMessage());
+//		urlParams.add("logStacktrace", record.getThrownStackTrace());
 		urlParams.add("logLevel",      record.getLevel().toString());
-		urlParams.add("logThreadName", record.getThreadDescription());
-		urlParams.add("logClassName",  record.getCategory());
+		urlParams.add("logThreadName", record.getThreadName());
+		urlParams.add("logClassName",  record.getClassName());
 		urlParams.add("logLocation",   record.getLocation());
 		urlParams.add("logMessage",    record.getMessage());
-		urlParams.add("logStacktrace", record.getThrownStackTrace());
+		urlParams.add("logStacktrace", record.getThrownStackTraceAsString());
 
 		return urlParams;
 	}

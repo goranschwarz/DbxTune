@@ -82,7 +82,7 @@ public class JfreeChartStackedBarTest1 extends ApplicationFrame
 			
 			for (int j = 1; j <= 5; j++)
 			{
-//				double    val  = new Double(i);
+//				double    val  = Double.valueOf(i);
 				double    val  = ThreadLocalRandom.current().nextDouble(1, 100);
 
 				String    grp  = "ZERO";

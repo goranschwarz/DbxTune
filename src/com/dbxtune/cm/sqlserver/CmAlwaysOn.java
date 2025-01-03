@@ -24,6 +24,7 @@ import java.awt.Window;
 import java.awt.event.MouseEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -42,7 +43,8 @@ import java.util.Set;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -59,8 +61,8 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmAlwaysOnPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -81,10 +83,10 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.JsonUtils;
 import com.dbxtune.utils.OpenSslAesUtil;
+import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 import com.dbxtune.utils.Ver;
-import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -92,7 +94,7 @@ import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 public class CmAlwaysOn
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmAlwaysOn.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmAlwaysOn.class.getSimpleName();

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.postgres;
 
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,14 +28,15 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
@@ -48,7 +50,7 @@ import com.dbxtune.utils.Ver;
 public class CmPgBufferCacheACnt
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmPgBufferCacheACnt.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgBufferCacheACnt.class.getSimpleName();
@@ -215,7 +217,7 @@ extends CountersModel
 	@Override
 	public Object calculateAggregateRow_getAggregatePkColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
 	{
-		if ("usage_count"  .equalsIgnoreCase(colName)) return new Long(-1);
+		if ("usage_count"  .equalsIgnoreCase(colName)) return Long.valueOf(-1);
 		
 		return addValue;
 	}
@@ -223,7 +225,7 @@ extends CountersModel
 	@Override
 	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
 	{
-		if ("usage_count"  .equalsIgnoreCase(colName)) return new Long(-1);
+		if ("usage_count"  .equalsIgnoreCase(colName)) return Long.valueOf(-1);
 		
 		return null;
 	}

@@ -49,7 +49,7 @@ import com.dbxtune.utils.HtmlTableProducer.EmptyColumn;
 public class PostgresStatementsPerDb 
 extends PostgresAbstract
 {
-//	private static Logger _logger = Logger.getLogger(PostgresStatementsPerDb.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _miniChartRstm;

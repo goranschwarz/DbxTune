@@ -22,6 +22,7 @@ package com.dbxtune.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -30,7 +31,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
@@ -54,7 +56,7 @@ public class MainFrameSqlServer
 extends MainFrame
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(MainFrameSqlServer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MainFrameSqlServer()
 	{

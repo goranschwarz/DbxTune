@@ -21,12 +21,6 @@
  ******************************************************************************/
 package com.dbxtune.test;
 
-import java.nio.ByteBuffer;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
 //import org.postgresql.PGConnection;
 //import org.postgresql.PGProperty;
 //import org.postgresql.replication.PGReplicationStream;

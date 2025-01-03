@@ -21,7 +21,10 @@
  ******************************************************************************/
 package com.dbxtune.gui;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoDb2;
@@ -32,7 +35,7 @@ public class DbmsVersionPanelDb2
 extends DbmsVersionPanelAbstract
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(DbmsVersionPanelOracle.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public DbmsVersionPanelDb2(ShowCmPropertiesDialog propDialog)
 	{

@@ -32,9 +32,9 @@ import java.awt.Frame;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.net.URI;
 import java.net.URL;
-import java.util.Properties;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -48,8 +48,8 @@ import javax.swing.UIManager;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.gui.MainFrame;
@@ -64,7 +64,7 @@ public class MailGroupDialog
 	extends JDialog 
 	implements ActionListener, HyperlinkListener
 {
-	private static Logger _logger              = Logger.getLogger(MailGroupDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 0L;
 	
 	protected static final String ASETUNE_MAIL_GROUP_URL = "http://groups.google.com/group/asetune/subscribe";
@@ -285,13 +285,8 @@ public class MailGroupDialog
 	
 	public static void main(String[] args)
 	{
-		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
+		// Set Log4j Log Level
+//		Configurator.setRootLevel(Level.TRACE);
 
 		Configuration conf = new Configuration("c:\\MailGroupDialog.tmp.deleteme.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf);

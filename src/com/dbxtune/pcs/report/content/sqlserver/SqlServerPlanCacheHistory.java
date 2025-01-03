@@ -23,13 +23,15 @@ package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -40,7 +42,7 @@ import com.dbxtune.utils.HtmlTableProducer;
 
 public class SqlServerPlanCacheHistory extends AseAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlServerPlanCacheHistory.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_top = "DailySummaryReport.SqlServerPlanCacheHistory.top.rows";
 	public static final int    DEFAULT_top = 50;

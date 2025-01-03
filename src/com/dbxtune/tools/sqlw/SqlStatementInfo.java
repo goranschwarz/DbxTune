@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.tools.sqlw;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.Connection;
@@ -34,7 +35,8 @@ import javax.swing.JComponent;
 import javax.swing.JTable;
 import javax.swing.SortOrder;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 
 import com.dbxtune.Version;
@@ -55,7 +57,7 @@ import com.sybase.jdbcx.SybPreparedStatement;
 public class SqlStatementInfo
 implements SqlStatement
 {
-	private static Logger _logger = Logger.getLogger(SqlStatementInfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private boolean                         _callableStatement = false;
 	private boolean                         _preparedStatement = false;

@@ -33,6 +33,7 @@ import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -61,7 +62,8 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -81,7 +83,7 @@ public class IoStatDeviceMapperDialog
 extends JDialog
 implements ActionListener, FocusListener //, ChangeListener
 {
-	private static Logger _logger = Logger.getLogger(IoStatDeviceMapperDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 //	private JSplitPane           _splitPane              = new JSplitPane();

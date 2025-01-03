@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.cache;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -34,7 +36,7 @@ import com.dbxtune.utils.ConnectionProvider;
 public class XmlPlanCacheOffline
 extends XmlPlanCache
 {
-	private static Logger _logger = Logger.getLogger(XmlPlanCacheAse.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public XmlPlanCacheOffline(ConnectionProvider connProvider)
 	{

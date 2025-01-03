@@ -26,6 +26,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.lang.invoke.MethodHandles;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -36,7 +37,9 @@ import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -48,7 +51,7 @@ import org.apache.log4j.Logger;
 public class FocusableTipExtention
 implements MouseListener, FocusListener
 {
-	private static Logger _logger = Logger.getLogger(FocusableTipExtention.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	/** JCompontent the ToolTip was attached to */
 	private JComponent _owner;

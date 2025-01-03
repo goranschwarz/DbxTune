@@ -32,7 +32,7 @@ import com.dbxtune.utils.Configuration;
 
 public class RsWsRepLatency extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(RsWsRepLatency.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public RsWsRepLatency(DailySummaryReportAbstract reportingInstance)
 	{

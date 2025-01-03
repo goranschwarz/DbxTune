@@ -28,6 +28,7 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
@@ -37,15 +38,16 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.config.dbms.DbmsConfigDiffEngine;
+import com.dbxtune.config.dbms.DbmsConfigDiffEngine.Context;
 import com.dbxtune.config.dbms.DbmsConfigManager;
 import com.dbxtune.config.dbms.DbmsConfigTextManager;
 import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.config.dbms.IDbmsConfigText;
-import com.dbxtune.config.dbms.DbmsConfigDiffEngine.Context;
 import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.dbxtune.pcs.PersistReader;
@@ -62,7 +64,7 @@ extends JFrame
 implements ActionListener, ConnectionProvider
 {
 	private static final long serialVersionUID = 1L;
-	private static Logger _logger = Logger.getLogger(DbmsConfigViewDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	// PANEL: OK-CANCEL
 	private JButton                _ok                   = new JButton("OK");

@@ -26,8 +26,8 @@ import java.util.List;
 
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.diff.DiffContext;
-import com.dbxtune.sql.diff.DiffSink;
 import com.dbxtune.sql.diff.DiffContext.DiffSide;
+import com.dbxtune.sql.diff.DiffSink;
 
 public class GenerateSqlText
 extends GenerateSqlAbstract

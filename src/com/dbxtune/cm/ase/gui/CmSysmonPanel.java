@@ -41,7 +41,6 @@ import com.dbxtune.utils.SwingUtils;
 public class CmSysmonPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmSysmonPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmSysmon.CM_NAME;

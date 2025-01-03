@@ -27,14 +27,14 @@ import java.util.Map;
 import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.tools.sqlw.QueryWindow.RclViewer;
 import com.dbxtune.utils.RepServerUtils;
+import com.dbxtune.utils.RepServerUtils.ConfigEntry;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
-import com.dbxtune.utils.RepServerUtils.ConfigEntry;
 
 public class RsGenerateRcl
 extends XmenuActionBase 
 {
-//	private static Logger _logger = Logger.getLogger(RsGenerateRcl.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * 

@@ -33,7 +33,6 @@ import java.awt.event.KeyListener;
 import java.util.Map;
 
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -45,7 +44,6 @@ import com.dbxtune.gui.swing.GLabel;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
-import com.dbxtune.xmenu.SQLWindow;
 
 import net.miginfocom.swing.MigLayout;
 

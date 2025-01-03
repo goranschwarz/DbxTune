@@ -20,12 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.cm.ase;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -41,9 +43,9 @@ import com.dbxtune.alarm.events.AlarmEventProcessTimeSliceError;
 import com.dbxtune.alarm.events.ase.AlarmEventBackgroundMessage;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
-import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.config.dict.AseErrorMessageDictionary;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -61,7 +63,7 @@ import com.dbxtune.utils.Ver;
 public class CmErrorLog
 extends CountersModelAppend
 {
-	private static Logger        _logger          = Logger.getLogger(CmErrorLog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmErrorLog.class.getSimpleName();

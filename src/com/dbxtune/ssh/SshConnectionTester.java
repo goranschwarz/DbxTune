@@ -21,9 +21,8 @@
  ******************************************************************************/
 package com.dbxtune.ssh;
 
-import java.util.Properties;
-
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -87,13 +86,6 @@ public class SshConnectionTester
 			
 			// Enable more logging.
 
-			// Set Log4J Properties
-			Properties log4jProps = new Properties();
-			log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-			log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-			log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-			log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-
 			// Set JUL (Java Util Logging) format
 //			System.setProperty("java.util.logging.SimpleFormatter.format", "%1$s [%4$s] [%2$s] %5$s%6$s%n");
 //			System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT - %4$-7s - [%2$s] - %5$s %n");
@@ -104,7 +96,6 @@ public class SshConnectionTester
 //				ch.ethz.ssh2.log.Logger.enabled = true;
 
 				// JUL needs full NameSpace, since we also use Log4J in here
-//				final java.util.logging.Logger rootLogger = java.util.logging.Logger.getLogger("");
 				final java.util.logging.Logger app = java.util.logging.Logger.getLogger("ch.ethz");
 
 //				java.util.logging.LogManager.getLogManager().reset();
@@ -122,7 +113,8 @@ public class SshConnectionTester
 //					System.setProperty("java.util.logging.ConsoleHandler.level", "FINEST");
 
 					// Set Log4J Properties
-					log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+//					log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+					Configurator.setRootLevel(Level.TRACE);
 				}
 				else if (debugLvl >= 2)
 				{
@@ -131,7 +123,8 @@ public class SshConnectionTester
 					app.setLevel(logLevel);
 
 					// Set Log4J Properties
-					log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+//					log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+					Configurator.setRootLevel(Level.DEBUG);
 				}
 				else if (debugLvl >= 1)
 				{
@@ -140,10 +133,14 @@ public class SshConnectionTester
 					app.setLevel(logLevel);
 
 					// Set Log4J Properties
-					log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+//					log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+					Configurator.setRootLevel(Level.DEBUG);
 				}
 			}
-			PropertyConfigurator.configure(log4jProps);
+//			PropertyConfigurator.configure(log4jProps);
+
+			// Set Log4j Log Level
+//			Configurator.setRootLevel(Level.TRACE);
 			
 			
 			

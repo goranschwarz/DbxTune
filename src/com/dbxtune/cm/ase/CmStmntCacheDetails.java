@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -29,7 +30,8 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -38,8 +40,8 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmStmntCacheDetailsPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -63,7 +65,7 @@ import com.dbxtune.utils.Ver;
 public class CmStmntCacheDetails
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmStmntCacheDetails.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmStmntCacheDetails.class.getSimpleName();
@@ -604,7 +606,7 @@ extends CountersModel
 				boolean b = true;
 				b = !"This was disabled".equals(cachedPlanInXml) && !"Not Available".equals(cachedPlanInXml) && !cachedPlanInXml.startsWith("User does not have");
 				counters.setValueAt(cachedPlanInXml, rowId, pos_xmlPlan);
-				counters.setValueAt(new Boolean(b),  rowId, pos_HasXmlPlan);
+				counters.setValueAt(Boolean.valueOf(b),  rowId, pos_HasXmlPlan);
 			}
 		}
 	}

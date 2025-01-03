@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +32,8 @@ import java.util.Map;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -41,11 +43,11 @@ import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.cache.XmlPlanCache;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.gui.CmActiveStatementsPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
@@ -53,8 +55,8 @@ import com.dbxtune.gui.AsePlanViewer;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.pcs.PcsColumnOptions;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.dbxtune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -72,7 +74,7 @@ import com.dbxtune.utils.Ver;
 public class CmActiveStatements
 extends CountersModel
 {
-	private static Logger        _logger          = Logger.getLogger(CmActiveStatements.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmActiveStatements.class.getSimpleName();
@@ -1104,7 +1106,7 @@ extends CountersModel
 
 				boolean b = true;
 				b = !"This was disabled".equals(cachedPlanInXml) && !"Not Available".equals(cachedPlanInXml) && !cachedPlanInXml.startsWith("User does not have");
-				counters.setValueAt(new Boolean(b),  rowId, pos_HasCachedPlanInXml);
+				counters.setValueAt(Boolean.valueOf(b),  rowId, pos_HasCachedPlanInXml);
 				counters.setValueAt(cachedPlanInXml, rowId, pos_CachedPlanInXml);
 			}
 
@@ -1221,29 +1223,29 @@ extends CountersModel
 
 				boolean b = true;
 				b = !"This was disabled".equals(monSqlText)    && !"Not Available".equals(monSqlText)    && !monSqlText   .startsWith("Not properly configured");
-				counters.setValueAt(new Boolean(b), rowId, pos_HasMonSqlText);
-				counters.setValueAt(monSqlText,     rowId, pos_MonSqlText);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasMonSqlText);
+				counters.setValueAt(monSqlText,         rowId, pos_MonSqlText);
 
 				b = !"This was disabled".equals(dbccSqlText)   && !"Not Available".equals(dbccSqlText)   && !dbccSqlText  .startsWith("User does not have");
-				counters.setValueAt(new Boolean(b), rowId, pos_HasDbccSqlText);
-				counters.setValueAt(dbccSqlText,    rowId, pos_DbccSqlText);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasDbccSqlText);
+				counters.setValueAt(dbccSqlText,        rowId, pos_DbccSqlText);
 
 				b = !"This was disabled".equals(procCallStack) && !"Not Available".equals(procCallStack) && !procCallStack.startsWith("User does not have");
-				counters.setValueAt(new Boolean(b), rowId, pos_HasProcCallStack);
-				counters.setValueAt(procCallStack,  rowId, pos_ProcCallStack);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasProcCallStack);
+				counters.setValueAt(procCallStack,      rowId, pos_ProcCallStack);
 
 				b = !"This was disabled".equals(showplan)      && !"Not Available".equals(showplan)      && !showplan     .startsWith("User does not have");
-				counters.setValueAt(new Boolean(b), rowId, pos_HasShowPlan);
-				counters.setValueAt(showplan,       rowId, pos_ShowPlanText);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasShowPlan);
+				counters.setValueAt(showplan,           rowId, pos_ShowPlanText);
 
 				b = !"This was disabled".equals(stacktrace)    && !"Not Available".equals(stacktrace)    && !stacktrace   .startsWith("User does not have");
-				counters.setValueAt(new Boolean(b), rowId, pos_HasStacktrace);
-				counters.setValueAt(stacktrace,     rowId, pos_DbccStacktrace);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasStacktrace);
+				counters.setValueAt(stacktrace,         rowId, pos_DbccStacktrace);
 
 				b = !"This was disabled".equals(spidLocks) && !"Not Available".equals(spidLocks);
-				counters.setValueAt(new Boolean(b), rowId, pos_HasSpidLocks);
-				counters.setValueAt(spidLocks,      rowId, pos_SpidLocks);
-				counters.setValueAt(spidLockCount,  rowId, pos_SpidLockCount);
+				counters.setValueAt(Boolean.valueOf(b), rowId, pos_HasSpidLocks);
+				counters.setValueAt(spidLocks,          rowId, pos_SpidLocks);
+				counters.setValueAt(spidLockCount,      rowId, pos_SpidLockCount);
 
 				// Get LIST of SPID's that I'm blocking
 				String blockingList = getBlockingListStrForSpid(counters, spid, pos_BlockingSPID, pos_SPID);

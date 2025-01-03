@@ -60,8 +60,8 @@ import org.jdesktop.swingx.decorator.PainterHighlighter;
 import org.jdesktop.swingx.painter.PinstripePainter;
 
 import com.dbxtune.Version;
-import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.config.dbms.DbmsConfigDiffEngine.Context;
+import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.gui.SqlTextDialog;
 import com.dbxtune.gui.swing.GTable;
 import com.dbxtune.gui.swing.GTableFilter;
@@ -80,7 +80,7 @@ extends JFrame
 implements ActionListener
 {
 	private static final long serialVersionUID = 1L;
-//	private static Logger _logger = Logger.getLogger(DbmsConfigDiffViewDialog.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_COLUMN_NO_DIFF = "DiffTableModel.column.no.diff.str";
 	public static final String PROPKEY_COLOR_BG_DIFF  = "DiffTableModel.color.bg.diff";

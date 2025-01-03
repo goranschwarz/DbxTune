@@ -27,6 +27,7 @@ package com.dbxtune.xmenu;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,7 +39,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 
 import com.dbxtune.utils.ConnectionProvider;
@@ -47,7 +49,7 @@ import com.dbxtune.utils.ConnectionProvider;
 public class TablePopupAction
 implements ActionListener
 {
-	private static Logger _logger = Logger.getLogger(TablePopupAction.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String              _menuName;
 	private String              _connName;

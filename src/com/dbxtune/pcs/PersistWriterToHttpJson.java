@@ -41,7 +41,8 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
@@ -61,7 +62,7 @@ public class PersistWriterToHttpJson
 extends PersistWriterBase
 //implements IPersistWriter
 {
-	private static Logger _logger = Logger.getLogger(PersistWriterToHttpJson.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Some statistics for this Writer */
 	private PersistWriterStatisticsRest _writerStatistics = new PersistWriterStatisticsRest();

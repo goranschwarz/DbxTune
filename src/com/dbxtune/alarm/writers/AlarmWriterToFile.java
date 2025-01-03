@@ -24,10 +24,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
@@ -40,7 +42,7 @@ import com.dbxtune.utils.StringUtil;
 public class AlarmWriterToFile
 extends AlarmWriterAbstract
 {
-	private static Logger _logger          = Logger.getLogger(AlarmWriterToFile.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
 	public boolean isCallReRaiseEnabled()

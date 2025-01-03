@@ -20,7 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.hostmon;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.hostmon.HostMonitorMetaData.ColumnEntry;
 import com.dbxtune.utils.Configuration;
@@ -30,7 +33,7 @@ import com.dbxtune.utils.NumberUtils;
 public class MonitorUpTimeWindows
 extends MonitorUpTime
 {
-	private static Logger _logger = Logger.getLogger(MonitorUpTimeWindows.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public MonitorUpTimeWindows()
 	{

@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.config.dbms;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -28,7 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CounterSampleCatalogIteratorPostgres;
 import com.dbxtune.hostmon.HostMonitorConnection;
@@ -52,7 +54,7 @@ public abstract class PostgresConfigText
 		};
 
 	/** Log4j logging. */
-	private static Logger _logger = Logger.getLogger(PostgresConfigText.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static void createAndRegisterAllInstances()
 	{

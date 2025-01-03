@@ -21,6 +21,7 @@
 package com.dbxtune;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -38,7 +39,8 @@ import java.util.regex.PatternSyntaxException;
 
 import javax.swing.JOptionPane;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCacheSqlServer;
@@ -101,11 +103,11 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.swing.GTable.ITableTooltip;
 import com.dbxtune.pcs.PersistContainer;
+import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.SqlServerJobSchedulerExtractor;
 import com.dbxtune.pcs.SqlServerQueryStoreDdlExtractor;
 import com.dbxtune.pcs.SqlServerQueryStoreExtractor;
-import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
@@ -125,7 +127,7 @@ import it.sauronsoftware.cron4j.Scheduler;
 public class CounterControllerSqlServer 
 extends CounterControllerAbstract
 {
-	private static Logger _logger = Logger.getLogger(CounterControllerSqlServer.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final int	   NUMBER_OF_PERFORMANCE_COUNTERS	= 54 + 10 + 20; 
 

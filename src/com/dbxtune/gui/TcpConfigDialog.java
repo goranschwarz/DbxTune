@@ -30,6 +30,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -60,7 +61,8 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
@@ -81,7 +83,7 @@ public class TcpConfigDialog
 extends JDialog
 implements ActionListener, TableModelListener
 {
-	private static Logger _logger = Logger.getLogger(TcpConfigDialog.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long	serialVersionUID	= -8717629657711689568L;
 
 //	private Frame                  _owner           = null;
@@ -1220,9 +1222,9 @@ implements ActionListener, TableModelListener
 			Boolean changed = changeRowIndicator.get(column);
 			
 			if ( changed == null )
-				changeRowIndicator.set(column, new Boolean(true));
+				changeRowIndicator.set(column, Boolean.valueOf(true));
 			else if ( ! changed.booleanValue() )
-				changeRowIndicator.set(column, new Boolean(true));
+				changeRowIndicator.set(column, Boolean.valueOf(true));
 		}
 
 		public boolean isCellChanged(int row, int col)
@@ -1498,16 +1500,16 @@ implements ActionListener, TableModelListener
 //						row.add(cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
 //						row.add(cm.getDisplayName());   // TAB_POS_TAB_NAME
 //
-//						row.add(new Integer( cm.getQueryTimeout()) );
-//						row.add(new Integer( cm.getPostponeTime()) );
-//						row.add(new Boolean( cm.isDataPollingPaused() ));
-//						row.add(new Boolean( cm.isBackgroundDataPollingEnabled() ));
-//						row.add(new Boolean( cm.isNegativeDiffCountersToZero() ));
+//						row.add(Integer.valueOf( cm.getQueryTimeout()) );
+//						row.add(Integer.valueOf( cm.getPostponeTime()) );
+//						row.add(Boolean.valueOf( cm.isDataPollingPaused() ));
+//						row.add(Boolean.valueOf( cm.isBackgroundDataPollingEnabled() ));
+//						row.add(Boolean.valueOf( cm.isNegativeDiffCountersToZero() ));
 //
-//						row.add(new Boolean( cm.isPersistCountersEnabled() ));
-//						row.add(new Boolean( cm.isPersistCountersAbsEnabled() ));
-//						row.add(new Boolean( cm.isPersistCountersDiffEnabled() ));
-//						row.add(new Boolean( cm.isPersistCountersRateEnabled() ));
+//						row.add(Boolean.valueOf( cm.isPersistCountersEnabled() ));
+//						row.add(Boolean.valueOf( cm.isPersistCountersAbsEnabled() ));
+//						row.add(Boolean.valueOf( cm.isPersistCountersDiffEnabled() ));
+//						row.add(Boolean.valueOf( cm.isPersistCountersRateEnabled() ));
 //
 //						tm.addRow(row);
 //					}
@@ -1558,16 +1560,16 @@ implements ActionListener, TableModelListener
 						row.add(cm.getDisplayName());   // TAB_POS_TAB_NAME
 						row.add(groupName);
 
-						row.add(new Integer( cm.getQueryTimeout()) );
-						row.add(new Integer( cm.getPostponeTime()) );
-						row.add(new Boolean( cm.isDataPollingPaused() ));
-						row.add(new Boolean( cm.isBackgroundDataPollingEnabled() ));
-						row.add(new Boolean( cm.isNegativeDiffCountersToZero() ));
+						row.add(Integer.valueOf( cm.getQueryTimeout()) );
+						row.add(Integer.valueOf( cm.getPostponeTime()) );
+						row.add(Boolean.valueOf( cm.isDataPollingPaused() ));
+						row.add(Boolean.valueOf( cm.isBackgroundDataPollingEnabled() ));
+						row.add(Boolean.valueOf( cm.isNegativeDiffCountersToZero() ));
 
-						row.add(new Boolean( cm.isPersistCountersEnabled() ));
-						row.add(new Boolean( cm.isPersistCountersAbsEnabled() ));
-						row.add(new Boolean( cm.isPersistCountersDiffEnabled() ));
-						row.add(new Boolean( cm.isPersistCountersRateEnabled() ));
+						row.add(Boolean.valueOf( cm.isPersistCountersEnabled() ));
+						row.add(Boolean.valueOf( cm.isPersistCountersAbsEnabled() ));
+						row.add(Boolean.valueOf( cm.isPersistCountersDiffEnabled() ));
+						row.add(Boolean.valueOf( cm.isPersistCountersRateEnabled() ));
 
 						tm.addRow(row);
 					}
@@ -1667,7 +1669,7 @@ implements ActionListener, TableModelListener
 						for (int r=0; r<tm.getRowCount(); r++)
 						{
 							if (tm.isCellEditable(r, col))
-								tm.setValueAt(new Boolean(true), r, col);
+								tm.setValueAt(Boolean.valueOf(true), r, col);
 						}
 					}
 				}
@@ -1685,7 +1687,7 @@ implements ActionListener, TableModelListener
 						for (int r=0; r<tm.getRowCount(); r++)
 						{
 							if (tm.isCellEditable(r, col))
-								tm.setValueAt(new Boolean(false), r, col);
+								tm.setValueAt(Boolean.valueOf(false), r, col);
 						}
 					}
 				}
@@ -1732,14 +1734,6 @@ implements ActionListener, TableModelListener
 
 //	public static void main(String[] args)
 //	{
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-//
 //		// set native L&F
 //		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());}
 //		catch (Exception e) {}

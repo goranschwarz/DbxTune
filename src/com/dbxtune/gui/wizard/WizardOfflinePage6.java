@@ -28,6 +28,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 
 import javax.swing.JCheckBox;
@@ -35,7 +36,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
@@ -63,7 +65,7 @@ implements ActionListener
 			+ "<b>Note:</b> This is only available for AseTune and SqlServerTune<br>"
 			+ "</html>";
 
-	private static Logger _logger = Logger.getLogger(WizardOfflinePage6.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	//---- PCS:DDL Lookup & Store
 	private JCheckBox            _pcsDdl_doDdlLookupAndStore_chk             = new JCheckBox("Do DDL lookup and Store", PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore);

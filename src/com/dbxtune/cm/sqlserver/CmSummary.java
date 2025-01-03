@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -30,7 +31,8 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
@@ -46,12 +48,12 @@ import com.dbxtune.alarm.events.sqlserver.AlarmEventOutOfWorkerThreads;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventSuspectPages;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
-import com.dbxtune.cm.CountersModel;
-import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.sqlserver.gui.CmSummaryPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -74,7 +76,7 @@ public class CmSummary
 //extends CountersModel
 extends CmSummaryAbstract
 {
-	private static Logger        _logger          = Logger.getLogger(CmSummary.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSummary.class.getSimpleName();
@@ -1069,9 +1071,9 @@ extends CmSummaryAbstract
 //			int minute = now.get(Calendar.MINUTE);
 //			int second = now.get(Calendar.SECOND);
 //			
-//			arr[0] = new Double(hour);
-//			arr[1] = new Double(minute);
-//			arr[2] = new Double(second);
+//			arr[0] = Double.valueOf(hour);
+//			arr[1] = Double.valueOf(minute);
+//			arr[2] = Double.valueOf(second);
 //			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 //
 //			// Set the values
@@ -1414,10 +1416,10 @@ extends CmSummaryAbstract
 
 			Double[] arr = new Double[4];
 
-			arr[0] = new Double( osMem_system_high_memory_signal_state ? 1 : 0);
-			arr[1] = new Double( osMem_system_low_memory_signal_state  ? 1 : 0);
-			arr[2] = new Double( memProcessPhysicalMemoryLow           ? 1 : 0);
-			arr[3] = new Double( memProcessVirtualMemoryLow            ? 1 : 0);
+			arr[0] = Double.valueOf( osMem_system_high_memory_signal_state ? 1 : 0);
+			arr[1] = Double.valueOf( osMem_system_low_memory_signal_state  ? 1 : 0);
+			arr[2] = Double.valueOf( memProcessPhysicalMemoryLow           ? 1 : 0);
+			arr[3] = Double.valueOf( memProcessVirtualMemoryLow            ? 1 : 0);
 
 			_logger.debug("updateGraphData(" + tgdp.getName() + "): osMem_system_high_memory_signal_state=" + arr[0] + ", osMem_system_low_memory_signal_state=" + arr[1] + ", memProcessPhysicalMemoryLow=" + arr[2] + ", memProcessVirtualMemoryLow=" + arr[3]);
 
@@ -1526,7 +1528,7 @@ extends CmSummaryAbstract
 				if (((Number)obj).intValue() < 0)
 				{
 					//System.out.println("colId="+colId+", name='"+columnName+"', setting to Integer(0)");
-					counters.setValueAt(new Integer(0), rowId, colId);
+					counters.setValueAt(Integer.valueOf(0), rowId, colId);
 				}
 			}
 		}

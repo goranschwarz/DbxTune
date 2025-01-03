@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.sql.conn;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -31,7 +32,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
@@ -48,7 +50,7 @@ import com.dbxtune.utils.Ver;
 public class AseConnection 
 extends TdsConnection
 {
-	private static final Logger	_logger	= Logger.getLogger(AseConnection.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_getTableExtraInfo_useSpSpaceused = "AseConnection.getTableExtraInfo.useSpSpaceused";
 	public static final boolean DEFAULT_getTableExtraInfo_useSpSpaceused = true;

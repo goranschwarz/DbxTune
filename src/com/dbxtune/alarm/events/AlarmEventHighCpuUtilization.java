@@ -41,6 +41,7 @@ extends AlarmEvent
 	 * Alarm on CPU Utilization
 	 * 
 	 * @param cm                    CounterModel which this happened on
+	 * @param threshold             What was the threshold we crossed
 	 * @param totalCpuUsagePct      Total CPU Usage Percent (user + system [+ IO])
 	 */
 	public AlarmEventHighCpuUtilization(CountersModel cm, Number threshold, Number totalCpuUsagePct)
@@ -52,6 +53,34 @@ extends AlarmEvent
 				null,                 // extraInfo
 				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.ServiceState.UP, 
+				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ". (threshold="+threshold+")",
+				threshold);
+
+		// Set: Time To Live if postpone is enabled
+		setTimeToLive(cm);
+
+		// Set the raw data carier: current cpu usage
+		setData(totalCpuUsagePct);
+	}
+
+	/**
+	 * Alarm on CPU Utilization
+	 * 
+	 * @param cm                    CounterModel which this happened on
+	 * @param threshold             What was the threshold we crossed
+	 * @param totalCpuUsagePct      Total CPU Usage Percent (user + system [+ IO])
+	 * @param severity              What is the severity of this Alarm
+	 */
+	public AlarmEventHighCpuUtilization(CountersModel cm, Number threshold, Number totalCpuUsagePct, AlarmEvent.Severity severity)
+	{
+		super(
+				Version.getAppName(), // serviceType
+				cm.getServerName(),   // serviceName
+				cm.getName(),         // serviceInfo
+				null,                 // extraInfo
+				AlarmEvent.Category.CPU,
+				severity, 
 				AlarmEvent.ServiceState.UP, 
 				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ". (threshold="+threshold+")",
 				threshold);

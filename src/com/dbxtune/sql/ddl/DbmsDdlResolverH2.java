@@ -21,7 +21,10 @@ DbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2025 Goran Schwarz
  ******************************************************************************/
 package com.dbxtune.sql.ddl;
 
-import org.apache.log4j.Logger;
+import java.lang.invoke.MethodHandles;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.ResultSetMetaDataCached.Entry;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -29,7 +32,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 public class DbmsDdlResolverH2 
 extends DbmsDdlResolverAbstract
 {
-	private static Logger _logger = Logger.getLogger(DbmsDdlResolverH2.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public DbmsDdlResolverH2(DbxConnection conn)
 	{

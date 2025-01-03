@@ -403,17 +403,17 @@ implements ActionListener, TableModelListener
 						String jdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType);
 
 						row = new Vector<Object>();
-						row.add(new Boolean( false )); // TAB_POS_COL_PK
-						row.add(new Boolean( false )); // TAB_POS_COL_DIFF
-						row.add(new Boolean( false )); // TAB_POS_COL_PCT
-						row.add(new Boolean( false )); // TAB_POS_CHECK
+						row.add(Boolean.valueOf( false )); // TAB_POS_COL_PK
+						row.add(Boolean.valueOf( false )); // TAB_POS_COL_DIFF
+						row.add(Boolean.valueOf( false )); // TAB_POS_COL_PCT
+						row.add(Boolean.valueOf( false )); // TAB_POS_CHECK
 						row.add(col);                  // TAB_POS_COL_NAME
 						row.add(datatype);             // TAB_POS_DATA_TYPE
 						row.add(label);                // TAB_POS_AXIS_LABEL
 						row.add(NO_METHOD);            // TAB_POS_METHOD
-						row.add(new Integer( r ));     // TAB_POS_COL_NUM
+						row.add(Integer.valueOf( r ));     // TAB_POS_COL_NUM
 						row.add(jdbcTypeStr);          // TAB_POS_COL_JDBC_TYPE_STR
-						row.add(new Integer(jdbcType));// TAB_POS_COL_JDBC_TYPE
+						row.add(Integer.valueOf(jdbcType));// TAB_POS_COL_JDBC_TYPE
 
 						tm.addRow(row);
 					}
@@ -450,10 +450,10 @@ implements ActionListener, TableModelListener
 				boolean isPctCol  = (pctStr .indexOf(colName+", ") != -1);
 				boolean isGraphCol= (gColStr.indexOf(colName+", ") != -1);
 
-				tm.setValueAt(new Boolean(isPkCol),   r, TAB_POS_COL_PK);
-				tm.setValueAt(new Boolean(isDiffCol), r, TAB_POS_COL_DIFF);
-				tm.setValueAt(new Boolean(isPctCol),  r, TAB_POS_COL_PCT);
-				tm.setValueAt(new Boolean(isGraphCol),r, TAB_POS_CHECK);
+				tm.setValueAt(Boolean.valueOf(isPkCol),   r, TAB_POS_COL_PK);
+				tm.setValueAt(Boolean.valueOf(isDiffCol), r, TAB_POS_COL_DIFF);
+				tm.setValueAt(Boolean.valueOf(isPctCol),  r, TAB_POS_COL_PCT);
+				tm.setValueAt(Boolean.valueOf(isGraphCol),r, TAB_POS_CHECK);
 				
 				if (isGraphCol)
 				{
@@ -530,7 +530,7 @@ implements ActionListener, TableModelListener
 					String  colName = (String) tm.getValueAt(r, TAB_POS_COL_NAME);
 					boolean isGraphCol= StringUtil.arrayContains(colNames, colName);
 
-					tm.setValueAt(new Boolean(isGraphCol),r, TAB_POS_CHECK);
+					tm.setValueAt(Boolean.valueOf(isGraphCol),r, TAB_POS_CHECK);
 					if (isGraphCol)
 					{
 						for(int a=0; a<colNames.length; a++)
@@ -713,7 +713,7 @@ implements ActionListener, TableModelListener
 			if (col == TAB_POS_METHOD)
 			{
 				if ( isChecked != hasMethod )
-					tm.setValueAt(new Boolean(hasMethod), row, TAB_POS_CHECK);
+					tm.setValueAt(Boolean.valueOf(hasMethod), row, TAB_POS_CHECK);
 			}
 		}
 

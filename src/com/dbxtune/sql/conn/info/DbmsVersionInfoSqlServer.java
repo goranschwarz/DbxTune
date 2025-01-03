@@ -27,7 +27,7 @@ import com.dbxtune.utils.Ver;
 public class DbmsVersionInfoSqlServer
 extends DbmsVersionInfo
 {
-//	private static Logger _logger = Logger.getLogger(DbmsVersionInfoSqlServer.class);
+//	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final long VERSION_AZURE_SQL_DB            = Ver.ver(9999, 1);
 	public static final long VERSION_AZURE_SYNAPSE_ANALYTICS = Ver.ver(9999, 2);

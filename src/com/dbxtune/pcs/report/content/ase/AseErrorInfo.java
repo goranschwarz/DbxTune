@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content.ase;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -32,7 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.config.dict.AseErrorMessageDictionary;
 import com.dbxtune.gui.ModelMissmatchException;
@@ -47,7 +49,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class AseErrorInfo extends AseAbstract
 {
-	private static Logger _logger = Logger.getLogger(AseErrorInfo.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _sqlTextRstm;

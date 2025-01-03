@@ -24,8 +24,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.dbxtune.sql.JdbcUrlParser;
-
 public class JdbcUrlParserTest
 {
 	@Test(expected = IllegalArgumentException.class)
@@ -37,14 +35,6 @@ public class JdbcUrlParserTest
 	@Test
 	public void test()
 	{
-//		Properties log4jProps = new Properties();
-//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
-//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-//		PropertyConfigurator.configure(log4jProps);
-
 		JdbcUrlParser p;
 		String url = "jdbc:sybase:Tds:host1:5000?ENCRYPT_PASSWORD=true";
 		assertEquals(5000,         JdbcUrlParser.parse(url).getPort());

@@ -24,13 +24,15 @@
  */
 package com.dbxtune.config.dict;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.cm.CountersModel;
@@ -41,7 +43,7 @@ public class MonTablesDictionaryHana
 extends MonTablesDictionaryDefault
 {
     /** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(MonTablesDictionaryHana.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	@Override
 //	public void initialize(DbxConnection conn, boolean hasGui)

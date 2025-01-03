@@ -69,7 +69,6 @@ extends WizardPage
 implements ActionListener, TableModelListener
 {
 	private static final long serialVersionUID = 1L;
-//	private static Logger _logger          = Logger.getLogger(WizardUserDefinedCmPage5.class);
 
 	private static final String WIZ_NAME = "PctColls";
 	private static final String WIZ_DESC = "Percentage Calculation Columns";
@@ -277,14 +276,14 @@ implements ActionListener, TableModelListener
 						String jdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType);
 
 						row = new Vector<Object>();
-						row.add(new Boolean( false ));  // TAB_POS_COL_PK
-						row.add(new Boolean( false ));  // TAB_POS_COL_DIFF
-						row.add(new Boolean( false ));  // TAB_POS_CHECK
+						row.add(Boolean.valueOf( false ));  // TAB_POS_COL_PK
+						row.add(Boolean.valueOf( false ));  // TAB_POS_COL_DIFF
+						row.add(Boolean.valueOf( false ));  // TAB_POS_CHECK
 						row.add(col);                   // TAB_POS_COL_NAME
 						row.add(datatype);              // TAB_POS_DATA_TYPE
-						row.add(new Integer( r ));      // TAB_POS_COL_NUM
+						row.add(Integer.valueOf( r ));      // TAB_POS_COL_NUM
 						row.add(jdbcTypeStr);           // TAB_POS_COL_JDBC_TYPE_STR
-						row.add(new Integer(jdbcType)); // TAB_POS_COL_JDBC_TYPE
+						row.add(Integer.valueOf(jdbcType)); // TAB_POS_COL_JDBC_TYPE
 
 						tm.addRow(row);
 					}
@@ -304,9 +303,9 @@ implements ActionListener, TableModelListener
 				boolean isDiffCol = (diffStr.indexOf(colName+", ") != -1);
 				boolean isPctCol  = (pctStr .indexOf(colName+", ") != -1);
 
-				tm.setValueAt(new Boolean(isPkCol),   r, TAB_POS_COL_PK);
-				tm.setValueAt(new Boolean(isDiffCol), r, TAB_POS_COL_DIFF);
-				tm.setValueAt(new Boolean(isPctCol),  r, TAB_POS_CHECK);
+				tm.setValueAt(Boolean.valueOf(isPkCol),   r, TAB_POS_COL_PK);
+				tm.setValueAt(Boolean.valueOf(isDiffCol), r, TAB_POS_COL_DIFF);
+				tm.setValueAt(Boolean.valueOf(isPctCol),  r, TAB_POS_CHECK);
 			}
 
 		}
@@ -330,7 +329,7 @@ implements ActionListener, TableModelListener
 				String colName  = (String) tm.getValueAt(r, TAB_POS_COL_NAME);
 				if (cm.isPctColumn(cm.findColumn(colName)))
 				{
-					tm.setValueAt(new Boolean(true), r, TAB_POS_CHECK);
+					tm.setValueAt(Boolean.valueOf(true), r, TAB_POS_CHECK);
 					hasPct = true;
 				}
 			}
@@ -400,7 +399,7 @@ implements ActionListener, TableModelListener
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
 				if (tm.isCellEditable(r, TAB_POS_CHECK))
-					tm.setValueAt(new Boolean(true), r, TAB_POS_CHECK);
+					tm.setValueAt(Boolean.valueOf(true), r, TAB_POS_CHECK);
 			}
 		}
 
@@ -410,7 +409,7 @@ implements ActionListener, TableModelListener
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
 				if (tm.isCellEditable(r, TAB_POS_CHECK))
-					tm.setValueAt(new Boolean(false), r, TAB_POS_CHECK);
+					tm.setValueAt(Boolean.valueOf(false), r, TAB_POS_CHECK);
 			}
 		}
 	}

@@ -33,14 +33,12 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
 public class CmPlanCacheDetailsPanel
 extends TabularCntrPanel
 {
-//	private static final Logger  _logger	           = Logger.getLogger(CmPlanCacheDetailsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_sample_afterPrevSample  = 

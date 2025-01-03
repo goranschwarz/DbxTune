@@ -22,6 +22,7 @@
 package com.dbxtune.pcs.report.content;
 
 import java.awt.BasicStroke;
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -37,7 +38,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.LegendItem;
@@ -62,7 +64,7 @@ import com.dbxtune.utils.StringUtil;
 public class ReportChartTimeSeriesLine
 extends ReportChartAbstract
 {
-	private static Logger _logger = Logger.getLogger(ReportChartTimeSeriesLine.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	public final static String SQL_WHERE_PREFIX = "SQL-WHERE:";
 	public final static String SKIP_COLNAME_WITH_VALUE_ABOVE = "SKIP_COLNAME_WITH_VALUE_ABOVE:";
@@ -240,7 +242,7 @@ extends ReportChartAbstract
 				for (Entry<String, String> e : tmpMap.entrySet())
 				{
 					try {
-						skipNameAboveValue.put(e.getKey(), new Double(e.getValue()));
+						skipNameAboveValue.put(e.getKey(), Double.valueOf(e.getValue()));
 					} catch (NumberFormatException nfe) {
 						_logger.warn("Skipping 'SKIP_COLNAME_WITH_VALUE_ABOVE' key='"+e.getKey()+"', value='"+e.getValue()+"', caught: " + nfe);
 					}
@@ -253,7 +255,7 @@ extends ReportChartAbstract
 				for (Entry<String, String> e : tmpMap.entrySet())
 				{
 					try {
-						skipNameBelowValue.put(e.getKey(), new Double(e.getValue()));
+						skipNameBelowValue.put(e.getKey(), Double.valueOf(e.getValue()));
 					} catch (NumberFormatException nfe) {
 						_logger.warn("Skipping 'SKIP_COLNAME_WITH_VALUE_BELOW' key='"+e.getKey()+"', value='"+e.getValue()+"', caught: " + nfe);
 					}
@@ -355,7 +357,7 @@ extends ReportChartAbstract
 					for (int c=4, ca=0; c<=colCount; c+=2, ca++)
 					{
 						labels[ca] = rs.getString(c);
-						datapt[ca] = new Double(rs.getDouble(c+1));					
+						datapt[ca] = Double.valueOf(rs.getDouble(c+1));					
 					}
 
 					for (int ca=0; ca<datapt.length; ca++)

@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.sql.Timestamp;
@@ -47,7 +48,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ContextHandler;
@@ -85,13 +87,13 @@ import com.dbxtune.utils.JavaVersion;
 import com.dbxtune.utils.Logging;
 import com.dbxtune.utils.Memory;
 import com.dbxtune.utils.OpenSslAesUtil;
+import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 import com.dbxtune.utils.ShutdownHandler;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingExceptionHandler;
 import com.dbxtune.utils.SwingUtils;
 import com.dbxtune.utils.TimeUtils;
 import com.dbxtune.utils.Ver;
-import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 
 /**
  * NOT YET EVEN CLOSE TO BE FINNISHED
@@ -103,7 +105,7 @@ import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
  */
 public abstract class DbxTune
 {
-	private static Logger _logger = Logger.getLogger(DbxTune.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static String _mainClassName = "unknown"; // this is set in main() by looking at the stack trace, by getting the last entry";
 
 	public static final String DBXTUNE_NOGUI_INFO_CONFIG = "DBXTUNE_NOGUI_INFO_CONFIG";

@@ -384,7 +384,7 @@ implements ActionListener
 						row = _table.convertRowIndexToModel(row);
 						TableModel tm = _table.getModel();
 						boolean choosen = ((Boolean)tm.getValueAt(row, TAB_POS_CHECK)).booleanValue();
-						tm.setValueAt(new Boolean(!choosen), row, TAB_POS_CHECK);
+						tm.setValueAt(Boolean.valueOf(!choosen), row, TAB_POS_CHECK);
 					}
 				}
 			});
@@ -422,7 +422,7 @@ implements ActionListener
 				if (cm != null)
 				{
 					row = new Vector<Object>();
-					row.add(new Boolean( false ));
+					row.add(Boolean.valueOf( false ));
 					row.add(cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
 					row.add(cm.getName());
 					row.add(cm.getDisplayName());
@@ -441,7 +441,7 @@ implements ActionListener
 				for (int i=0; i<40; i++)
 				{
 					row = new Vector<Object>();
-					row.add(new Boolean(false));
+					row.add(Boolean.valueOf(false));
 					row.add( SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png") );
 					row.add("cmDummy"+i);
 					row.add("Dummy Tab "+i);
@@ -462,7 +462,7 @@ implements ActionListener
 				TableModel tm = _table.getModel();
 				for (int r=0; r<tm.getRowCount(); r++)
 				{
-					tm.setValueAt(new Boolean(true), r, TAB_POS_CHECK);
+					tm.setValueAt(Boolean.valueOf(true), r, TAB_POS_CHECK);
 				}
 			}
 
@@ -472,7 +472,7 @@ implements ActionListener
 				TableModel tm = _table.getModel();
 				for (int r=0; r<tm.getRowCount(); r++)
 				{
-					tm.setValueAt(new Boolean(false), r, TAB_POS_CHECK);
+					tm.setValueAt(Boolean.valueOf(false), r, TAB_POS_CHECK);
 				}
 			}
 

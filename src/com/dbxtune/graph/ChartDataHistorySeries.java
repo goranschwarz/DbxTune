@@ -21,13 +21,15 @@
  ******************************************************************************/
 package com.dbxtune.graph;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.graph.TrendGraphDataPoint.Category;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -46,7 +48,7 @@ import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
  */
 public class ChartDataHistorySeries
 {
-	private static Logger _logger = Logger.getLogger(ChartDataHistorySeries.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _name;
 	private int    _minutes;
@@ -62,7 +64,7 @@ public class ChartDataHistorySeries
 	/** */
 	private LinkedList<Long> _timeList = new LinkedList<>();
 
-	private static final Double FILL_VALUE = new Double(0d);
+	private static final Double FILL_VALUE = Double.valueOf(0d);
 
 	public static final int DEFAULT_KEEP_AGE_IN_MINUTES = 60; // 60 minutes
 

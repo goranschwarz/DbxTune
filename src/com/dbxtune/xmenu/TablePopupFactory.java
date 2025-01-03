@@ -31,6 +31,7 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Properties;
@@ -43,7 +44,8 @@ import javax.swing.JTable;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.gui.swing.GTable;
@@ -55,7 +57,7 @@ import com.dbxtune.utils.SwingUtils;
 
 public class TablePopupFactory
 {
-	private static Logger _logger = Logger.getLogger(TablePopupFactory.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String TABLE_PUPUP_MENU_PREFIX = "table.menu.";
 	

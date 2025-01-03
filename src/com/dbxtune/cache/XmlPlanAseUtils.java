@@ -22,6 +22,7 @@
 package com.dbxtune.cache;
 
 import java.io.StringReader;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,7 +33,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -43,7 +45,7 @@ import com.dbxtune.utils.StringUtil;
 
 public class XmlPlanAseUtils
 {
-	private static Logger _logger = Logger.getLogger(XmlPlanAseUtils.class);
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
 	 * Get SQL Statement from a ASE XML Showplan
