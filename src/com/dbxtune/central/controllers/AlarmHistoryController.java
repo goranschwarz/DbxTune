@@ -47,11 +47,11 @@ extends HttpServlet
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
-		ServletOutputStream out = resp.getOutputStream();
 		resp.setContentType("text/html");
 		resp.setCharacterEncoding("UTF-8");
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
+		ServletOutputStream out = resp.getOutputStream();
 
 
 		// Check that we have a READER

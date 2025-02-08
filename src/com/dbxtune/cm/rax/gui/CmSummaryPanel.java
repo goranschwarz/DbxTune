@@ -1601,7 +1601,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		if (postProcessing)
 		{
-			CountersModel cmRaStat = CounterController.getInstance().getCmByName(CmRaStatistics.CM_NAME);
+//			CountersModel cmRaStat = CounterController.getInstance().getCmByName(CmRaStatistics.CM_NAME);
+			CountersModel cmRaStat = getCm().getCounterController().getCmByName(CmRaStatistics.CM_NAME);
 			if (cmRaStat != null)
 			{
 //				System.out.println("summary: doPostRefresh(): Time replication last started: " + cmRaStat.getAbsString("Time replication last started", "Value") );

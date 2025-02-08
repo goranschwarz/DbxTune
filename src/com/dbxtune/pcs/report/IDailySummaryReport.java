@@ -27,6 +27,7 @@ import java.util.List;
 
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.RecordingInfo;
 import com.dbxtune.pcs.report.senders.IReportSender;
 import com.dbxtune.sql.conn.DbxConnection;
 
@@ -71,6 +72,12 @@ extends AutoCloseable
 	 */
 	List<IReportEntry> getReportEntries();
 
+	/**
+	 * Get the 'Recording Info' entry
+	 * @return
+	 */
+	RecordingInfo getReportEntryRecordingInfo();
+	
 	/**
 	 * Default method which adds Report Entries by any implementations and is placed at the TOP of the report (called from init) 
 	 */

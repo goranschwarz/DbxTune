@@ -67,6 +67,7 @@ import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.SqlServerUtils.LockRecord;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.TimeUtils;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -147,7 +148,7 @@ extends CountersModel
 
 	public CmActiveStatements(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -230,7 +231,9 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("HasQueryplan",              "<html>Checkbox to indicate that 'query_plan' column has a value<br><b>Note:</b> Hower over this cell to see the Query plan.</html>");
 		setLocalToolTipTextOnTableColumnHeader("HasLiveQueryplan",          "<html>Checkbox to indicate that 'live_query_plan' column has a value<br><b>Note:</b> Hower over this cell to see the Query plan.</html>");
 		setLocalToolTipTextOnTableColumnHeader("ExecTimeInMs",              "<html>How many milliseconds has this session_id been executing the current SQL Statement</html>");
+		setLocalToolTipTextOnTableColumnHeader("ExecTimeHms",               "<html>Same as 'ExecTimeInMs' but in a more readable format</html>");
 		setLocalToolTipTextOnTableColumnHeader("UsefullExecTime",           "<html>More or less same thing as the column 'ExecTimeInMs' but it subtracts the 'wait_time'...<br>The idea is to display <i>time</i> used on something <i>usefull</i>, e.g. Not in sleep mode.</html>");
+		setLocalToolTipTextOnTableColumnHeader("UsefullExecTimeHms",        "<html>Same as 'UsefullExecTime' but in a more readable format</html>");
 		setLocalToolTipTextOnTableColumnHeader("lastKnownSql",              "<html>"
 		                                                                  + "  Last SQL Statement executed by this session_id.<br>"
 		                                                                  + "  If 'monSource' is in status:<br>"
@@ -525,7 +528,9 @@ extends CountersModel
 //			"    ,dec.last_write \n" +
 			"    ,der.start_time \n" +
 			"    ,ExecTimeInMs              = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,ExecTimeHms               = CAST('' as varchar(20))\n" + // filled in with 'localCalculation(...)'
 			"    ,UsefullExecTime           = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ,UsefullExecTimeHms        = CAST('' as varchar(20))\n" + // filled in with 'localCalculation(...)'
 			"    ,des.[program_name] \n" +
 			     contextInfoStr1 +
 			"    ,der.wait_type \n" +
@@ -648,8 +653,10 @@ extends CountersModel
 			"    ,used_memory_kb            = -1 \n" +
 			"    ,used_memory_pct           = convert(numeric(9,1), 0) \n" +
 			"    ,p1.last_batch                                --der.start_time  \n" +
-			"    ,ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END  \n" +
-			"    ,UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END  \n" +
+			"    ,ExecTimeInMs       = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END  \n" +
+			"    ,ExecTimeHms        = CAST('' as varchar(20))\n" + // filled in with 'localCalculation(...)'
+			"    ,UsefullExecTime    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END  \n" +
+			"    ,UsefullExecTimeHms = CAST('' as varchar(20))\n" + // filled in with 'localCalculation(...)'
 			"    ,p1.program_name                              --des.[program_name] \n" +
 			      contextInfoStr2 +
 			"    ,p1.lastwaittype                              --der.wait_type \n" +  // p1.waittype -- is 'binary(2)' -- Description='Reserved.' ... so 'lastwaittype' seems better
@@ -977,6 +984,11 @@ extends CountersModel
 		int pos_estimated_completion_time = newSample.findColumn("estimated_completion_time");
 		int pos_estimated_compl_time_dhms = newSample.findColumn("estimated_compl_time_dhms");
 		
+		int pos_ExecTimeInMs       = newSample.findColumn("ExecTimeInMs");
+		int pos_ExecTimeHms        = newSample.findColumn("ExecTimeHms");
+		int pos_UsefullExecTime    = newSample.findColumn("UsefullExecTime");
+		int pos_UsefullExecTimeHms = newSample.findColumn("UsefullExecTimeHms");
+		
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
 		{
@@ -1034,6 +1046,28 @@ extends CountersModel
 				
 				// Set value
 				newSample.setValueAt(newValue_estimated_compl_time_dhms, rowId, pos_estimated_compl_time_dhms);
+			}
+
+			// set: "ExecTimeHms"
+			if (pos_ExecTimeInMs != -1 && pos_ExecTimeHms != -1)
+			{
+				int ExecTimeInMs = newSample.getValueAsInteger(rowId, pos_ExecTimeInMs, 0);
+
+				String newValue_ExecTimeHms = TimeUtils.msToTimeStrLong(ExecTimeInMs);
+
+				// Set value
+				newSample.setValueAt(newValue_ExecTimeHms, rowId, pos_ExecTimeHms);
+			}
+
+			// set: "UsefullExecTimeHms"
+			if (pos_UsefullExecTime != -1 && pos_UsefullExecTimeHms != -1)
+			{
+				int UsefullExecTime = newSample.getValueAsInteger(rowId, pos_UsefullExecTime, 0);
+
+				String newValue_UsefullExecTimeHms = TimeUtils.msToTimeStrLong(UsefullExecTime);
+
+				// Set value
+				newSample.setValueAt(newValue_UsefullExecTimeHms, rowId, pos_UsefullExecTimeHms);
 			}
 		}
 	}

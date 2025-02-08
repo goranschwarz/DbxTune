@@ -52,26 +52,36 @@ import com.dbxtune.Version;
 import com.dbxtune.central.controllers.DbxCentralPageTemplate;
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
 import com.dbxtune.gui.ResultSetTableModel;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerJobScheduler;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerJobScheduler.ReturnObject_allExecTimes;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerJobScheduler.SourceType;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerJobScheduler.StatObject;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.MathUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 
-public class SqlServerJobSchedulerActivity
+public class SqlServerJobSchedulerTimeline
 extends DbxCentralPageTemplate
 {
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	public static final String PROPKEY_startTime = "SqlServerJobSchedulerActivity.startTime.default";
+	public static final String PROPKEY_startTime = "SqlServerJobSchedulerTimeline.startTime.default";
 	public static final String DEFAULT_startTime = "-2h";
 
-	public static final String PROPKEY_refreshTime = "SqlServerJobSchedulerActivity.refreshTime.default";
+	public static final String PROPKEY_refreshTime = "SqlServerJobSchedulerTimeline.refreshTime.default";
 	public static final int    DEFAULT_refreshTime = 0;
 
 	private DbxConnection _conn = null;
 	
+	private Map<String, StatObject> _jobIdStepIdExecSummaryMap;
+	
+	private boolean _debugMode    = false;
+	private double  _deviationPct = 50.0;
+
 
 	@Override
 	public String getHeadTitle()
@@ -96,7 +106,7 @@ extends DbxCentralPageTemplate
 	}
 
 	@Override
-	public void craeteHtmlHeadCss(PrintWriter writer)
+	public void craeteHtmlHeadCssPre(PrintWriter writer)
 	{
 		writer.println("<style type='text/css'>");
 		writer.println();
@@ -119,16 +129,60 @@ extends DbxCentralPageTemplate
 		writer.println("        height: 90vh; ");
 		writer.println("    } ");
 		writer.println();
+		writer.println("    /* Override some 'prism' formatting to be smaller & wrap long lines */ ");
+		writer.println("    code[class*=language-], pre[class*=language-] { ");
+		writer.println("        font-size: 11px; ");
+		writer.println("        white-space: pre-wrap; ");
+		writer.println("    } ");
+		writer.println();
 		writer.println("</style>");
 	}
 
+	@Override
+	public void craeteHtmlHeadCssPost(PrintWriter writer)
+	{
+		writer.println("<style type='text/css'>");
+		writer.println();
+		writer.println("    /* Override some 'prism' formatting to be smaller & wrap long lines */ ");
+		writer.println("    code[class*=language-], pre[class*=language-] { ");
+		writer.println("        font-size: 11px; ");
+		writer.println("        white-space: pre-wrap; ");
+		writer.println("    } ");
+		writer.println();
+//		writer.println("    /* Modal dialog... if we use several... we need to play around with the 'z-index' */ ");
+//		writer.println("    /* I'm guessing this only works for 2 modals, and possible only for bootstrap 4 */ ");
+//		writer.println("    .modal:nth-of-type(even) { ");
+//		writer.println("        z-index: 1052 !important; ");
+//		writer.println("    } ");
+//		writer.println("    .-backdrop.show:nth-of-type(even) { ");
+//		writer.println("        z-index: 1051 !important; ");
+//		writer.println("    } ");
+//		writer.println();
+		writer.println("</style>");
+	}
+	
 	@Override
 	protected List<String> getJavaScriptList()
 	{
 		List<String> list = new ArrayList<>();
 
+		// Google's charting tools
 		list.add("https://www.gstatic.com/charts/loader.js");
+
+		// Date Range Picker
 		list.add("/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js");
+
+		// Chart.js
+//		list.add("/scripts/chartjs/Chart.min.js");
+//		list.add("/scripts/chartjs/plugins/chartjs-plugin-annotation.js");
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"); 
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js"); 
+		
+		// Prism -- to get TEXT field(s) to look better
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js");
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js");
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js");
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js");
 
 		return list;
 	}
@@ -138,7 +192,13 @@ extends DbxCentralPageTemplate
 	{
 		List<String> list = new ArrayList<>();
 
+		// Date Range Picker
 		list.add("/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css");
+
+		// Prism -- to get TEXT field(s) to look better
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css");
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css");
+		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css");
 
 		return list;
 	}
@@ -208,27 +268,30 @@ extends DbxCentralPageTemplate
 		writer.println("            timePicker24Hour: true, ");
 		writer.println("            timePickerIncrement: 5, ");
 		writer.println("            ranges: { ");
-		writer.println("                'Last 2 Hours':  [moment().subtract(2,  'hours'), moment()], ");
-		writer.println("                'Last 4 Hours':  [moment().subtract(4,  'hours'), moment()], ");
-		writer.println("                'Last 6 Hours':  [moment().subtract(6,  'hours'), moment()], ");
-		writer.println("                'Last 8 Hours':  [moment().subtract(8,  'hours'), moment()], ");
-		writer.println("                'Last 12 Hours': [moment().subtract(12, 'hours'), moment()], ");
-		writer.println("                'Last 24 Hours': [moment().subtract(24, 'hours'), moment()], ");
-		writer.println("                'Today':         [moment().startOf('day'), moment().endOf('day')], ");
-		writer.println("                'Yesterday':     [moment().startOf('day').subtract(1,  'days'), moment().endOf('day').subtract(1, 'days')], ");
-		writer.println("                'This Week':     [moment().startOf('isoWeek'), moment().endOf('isoWeek')], ");
-		writer.println("                'Last 7 Days':   [moment().startOf('day').subtract(7,  'days'), moment().endOf('day')], ");
-		writer.println("                'Last 2 Weeks':  [moment().startOf('day').subtract(14, 'days'), moment().endOf('day')], ");
-		writer.println("                'Last 4 Weeks':  [moment().startOf('day').subtract(28, 'days'), moment().endOf('day')], ");
-		writer.println("                'Last 30 Days':  [moment().startOf('day').subtract(30, 'days'), moment().endOf('day')], ");
-		writer.println("                'This Month':    [moment().startOf('month'), moment().endOf('month')], ");
-		writer.println("                'Last Month':    [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')] ");
+		writer.println("                'Last 2 Hours':    [moment().subtract(2,  'hours'), moment()], ");
+		writer.println("                'Last 4 Hours':    [moment().subtract(4,  'hours'), moment()], ");
+		writer.println("                'Last 6 Hours':    [moment().subtract(6,  'hours'), moment()], ");
+		writer.println("                'Last 8 Hours':    [moment().subtract(8,  'hours'), moment()], ");
+		writer.println("                'Last 12 Hours':   [moment().subtract(12, 'hours'), moment()], ");
+		writer.println("                'Last 24 Hours':   [moment().subtract(24, 'hours'), moment()], ");
+		writer.println("                'Start Time + 2H': [moment(), moment()], ");
+		writer.println("                'Start Time + 4H': [moment(), moment()], ");
+		writer.println("                'Start Time + 8H': [moment(), moment()], ");
+		writer.println("                'Today':           [moment().startOf('day'), moment().endOf('day')], ");
+		writer.println("                'Yesterday':       [moment().startOf('day').subtract(1,  'days'), moment().endOf('day').subtract(1, 'days')], ");
+		writer.println("                'This Week':       [moment().startOf('isoWeek'), moment().endOf('isoWeek')], ");
+		writer.println("                'Last 7 Days':     [moment().startOf('day').subtract(7,  'days'), moment().endOf('day')], ");
+		writer.println("                'Last 2 Weeks':    [moment().startOf('day').subtract(14, 'days'), moment().endOf('day')], ");
+		writer.println("                'Last 4 Weeks':    [moment().startOf('day').subtract(28, 'days'), moment().endOf('day')], ");
+		writer.println("                'Last 30 Days':    [moment().startOf('day').subtract(30, 'days'), moment().endOf('day')], ");
+		writer.println("                'This Month':      [moment().startOf('month'), moment().endOf('month')], ");
+		writer.println("                'Last Month':      [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')] ");
 		writer.println("            } ");
 		writer.println("        }); ");
 		writer.println();       
 		writer.println("        // On daterangepicker-APPLY ");
 		writer.println("        $('#dbx-report-range').on('apply.daterangepicker', function(ev, picker) { ");
-		writer.println("            dateRangePickerCb(picker.startDate, picker.endDate, picker.chosenLabel); ");
+		writer.println("            dateRangePickerCb(picker.startDate, picker.endDate, picker.chosenLabel, picker); ");
 		writer.println("        }); ");
 		writer.println();       
 		writer.println("        // On daterangepicker-OPEN, set some start/end date ");
@@ -261,7 +324,7 @@ extends DbxCentralPageTemplate
 		writer.println();
 		writer.println("    } ");
 		writer.println();
-		writer.println("    function dateRangePickerCb(start, end, label) ");
+		writer.println("    function dateRangePickerCb(start, end, label, picker) ");
 		writer.println("    { ");
 		writer.println("        console.log('dateRangePickerCb CALLBACK: start=' + start + ', end=' + end + ', label=' + label); ");
 		writer.println();
@@ -280,6 +343,34 @@ extends DbxCentralPageTemplate
 		writer.println();
 		writer.println("            url.searchParams.set('"    + urlParameterName_startTime + "', startTime); ");
 		writer.println("            url.searchParams.delete('" + urlParameterName_endTime   + "'); ");
+		writer.println();
+		writer.println("            console.log('window.location.ref: ' + url); ");
+		writer.println("            window.location.assign(url); ");
+		writer.println("        } ");
+		writer.println("        else if (label === 'Start Time + 2H' || label === 'Start Time + 4H' || label === 'Start Time + 8H') ");
+		writer.println("        { ");
+//		writer.println("            const currentStartTime = moment(picker.startDate); ");
+		writer.println("            // Get current start/end Time from 'the button label' #dbx-report-range) ");
+		writer.println("            var currentStartTime = ''; ");
+		writer.println("            var currentEndTime   = ''; ");
+		writer.println("            const currentStartEndDate = $('#dbx-report-range span').html().split(' - '); ");
+		writer.println("            if (currentStartEndDate.length === 2) ");
+		writer.println("            { ");
+		writer.println("                currentStartTime = parseDate(currentStartEndDate[0]); ");
+		writer.println("                currentEndTime   = parseDate(currentStartEndDate[1]); ");
+		writer.println("            } ");
+		writer.println();
+		writer.println("            var   startTime = currentStartTime.format('YYYY-MM-DD HH:mm'); ");
+		writer.println("            var   endTime   = '2h'; ");
+		writer.println("                                                           ");
+		writer.println("            if      (label === 'Start Time + 2H')  endTime = '2h'; ");
+		writer.println("            else if (label === 'Start Time + 4H')  endTime = '4h'; ");
+		writer.println("            else if (label === 'Start Time + 8H')  endTime = '8h'; ");
+		writer.println();
+		writer.println("            const url = new URL(window.location.href); ");
+		writer.println();
+		writer.println("            url.searchParams.set('" + urlParameterName_startTime + "', startTime); ");
+		writer.println("            url.searchParams.set('" + urlParameterName_endTime   + "', endTime); ");
 		writer.println();
 		writer.println("            console.log('window.location.ref: ' + url); ");
 		writer.println("            window.location.assign(url); ");
@@ -415,7 +506,9 @@ extends DbxCentralPageTemplate
 	@Override
 	public void createHtmlBodyJavaScriptTop(PrintWriter writer)
 	{
+		writer.println();
 		writer.println("<script>");
+		writer.println();
 		writer.println("function updateLastUpdatedClock() {                   ");
 		writer.println("    var ageInSec = Math.floor((new Date() - lastUpdateTime) / 1000);");
 		writer.println("    document.getElementById('last-update-ts').innerHTML = ageInSec + ' seconds ago'; ");
@@ -424,9 +517,56 @@ extends DbxCentralPageTemplate
 		writer.println("    setTimeout(updateLastUpdatedClock, 1000); ");
 		writer.println("}                                                     ");
 		writer.println("var lastUpdateTime = new Date();");
+		writer.println();
 		writer.println("</script>");
+		writer.println();
 	}
 
+	@Override
+	public void createHtmlBodyJavaScriptBottom(PrintWriter writer)
+	{
+		writer.println();
+		writer.println("<script>");
+		writer.println();
+		writer.println("<!-- Initialize various stuff --> ");
+		writer.println();
+		writer.println("<!-- Make all modal dialogs: Dragable & Resizeable --> ");
+		writer.println("$('.modal-content').resizable({ alsoResize: '.modal-dialog' }); ");
+		writer.println("$('.modal-dialog' ).draggable({ handle:     '.modal-header' }); ");
+		writer.println();
+		writer.println("</script>");
+		writer.println();
+	}
+
+	/**
+	 * Describe Colors used in the TimeLine
+	 * @param writer
+	 * @return
+	 */
+	public void createColorDescriptions(PrintWriter writer)
+	{
+		writer.println();
+		writer.println("Below are descriptions of bar colors used in the timeline");
+		writer.println("<table>");
+		writer.println("<thead>");
+		writer.println("    <tr> <th>Color</th> <th>Description</th> </tr>");
+		writer.println("</thead>");
+		writer.println("<tbody>");
+		writer.println("    <tr> <td>Light Blue</td>    <td>Top level (step_id=0) of any job... To expand/collapse, click 'link at the top'</td> </tr>");
+		writer.println("    <tr> <td>Blue</td>          <td>Normal Job Step (step_id>0) </td> </tr>");
+		writer.println("    <tr> <td>Red</td>           <td>JobStep Failed</td> </tr>");
+		writer.println("    <tr> <td>Orange</td>        <td>JobStep has some issues/warnings</td> </tr>");
+		writer.println("    <tr> <td>Pink</td>          <td>JobStep is slower than <i>normal</i> (based on average historical execuation times, see tooltip for details)</td> </tr>");
+		writer.println("    <tr> <td>Light Green</td>   <td>JobStep is faster than <i>normal</i> (based on average historical execuation times, see tooltip for details)</td> </tr>");
+		writer.println("    <tr> <td>Green</td>         <td>The JobStep is currently Executing, any '<i>Tep Level/step_id=0</i> will be a lighter green</td> </tr>");
+		writer.println("    <tr> <td>Gray</td>          <td><i>NO Activity</i> At the end of the timeline, if endTime is not specified...</td> </tr>");
+		writer.println("</tbody>");
+		writer.println("</table>");
+		writer.println("<br>");
+		writer.println();
+	}
+	
+	
 	@Override
 	public void createHtmlBodyContent(PrintWriter writer)
 	{
@@ -454,7 +594,14 @@ extends DbxCentralPageTemplate
 			writer.println("Show <a href='#' onClick=\"reloadCurrentUrlWithParam('onlyLevelZero', 'true')\">only FULL jobs</a>");
 
 		writer.println("    </summary>");
+		
+		// Describe used colors in the timeline
+		createColorDescriptions(writer);
+		
+		// Describe URL Parameters 
+		writer.println("Below are descriptions of URL Parameters for this page");
 		writer.println(getParameterDescriptionHtmlTable());
+		
 		// Another collapsable section (IN the summary) to show SQL Statement
 		writer.println();
 		writer.println("    <details>");
@@ -462,9 +609,11 @@ extends DbxCentralPageTemplate
 		writer.println("              <b>Executed SQL Statement:</b><br>");
 		writer.println("          </summary>");
 		writer.println("          <div id='executed_sql'>");
-		writer.println("          <pre>");
+		writer.println("<pre>");
+		writer.println("<code class='language-sql line-numbers'>");
 		writer.println(StringEscapeUtils.escapeHtml4(getSql()));
-		writer.println("          </pre>");
+		writer.println("</code>");
+		writer.println("</pre>");
 		writer.println("          </div>");
 		writer.println("    </details>");
 		writer.println();
@@ -651,7 +800,19 @@ extends DbxCentralPageTemplate
 						+ "<b>Default</b>: <code>true</code>",
                 true,
                 Boolean.class));		
-		
+
+		set.add(new UrlParameterDescription(
+				"deviationPct",
+				"If the execution time deviates to much from the average execution time, mark them pink or lightGreen<br>"
+						+ "This is the <b>base</b> percent to be considdered. <br>"
+						+ "But for fast executions the base percent will be multipied with X. <br>"
+						+ "And for longer executions the multiply factor will decrease. <br>"
+						+ "And for really long executions the multiply factor will be below 0.75 or 0.5 <br>"
+						+ "<br>"
+						+ "<b>Default</b>: <code>50.0</code>", 
+                50.0d,
+                Double.class));
+
 		set.add(new UrlParameterDescription(
 				"showKeys",
 				"Show the chart 'keys' at the left side of the chart<br>"
@@ -660,6 +821,22 @@ extends DbxCentralPageTemplate
 						+ "<b>Default</b>: <code>false</code>", 
                 false, 
                 Boolean.class));
+
+		set.add(new UrlParameterDescription(
+				"fillEnd",
+				"Fill the end of the chart with 'No Activity' label. Usefull if we are looking at the 'tail', so we can se time that has passed without any activity <br>"
+						+ "<br>"
+						+ "<b>Note</b>:    This will be disabled if the <code>endTime</code> is specified.<br>"
+						+ "<b>Default</b>: <code>true</code>",
+                true,
+                Boolean.class));
+
+		set.add(new UrlParameterDescription(
+				"minDurationInSeconds",
+				"If we want to 'skip' items in the chart which has a 'duration' of less than ## seconds<br>"
+						+ "<b>Default</b>: <code>0</code> (if not restricted by the executed SQL Statement",
+                10,
+                Integer.class));
 
 		set.add(new UrlParameterDescription(
 				"keyTransform",
@@ -673,13 +850,6 @@ extends DbxCentralPageTemplate
 						+ "<b>Default</b>: <i>none</i> ", 
                 null, 
                 String.class));
-
-		set.add(new UrlParameterDescription(
-				"minDurationInSeconds",
-				"If we want to 'skip' items in the chart which has a 'duration' of less than ## seconds<br>"
-						+ "<b>Default</b>: <code>0</code> (if not restricted by the executed SQL Statement",
-                10,
-                Integer.class));
 
 		set.add(new UrlParameterDescription(
 				"keepNames",
@@ -704,15 +874,6 @@ extends DbxCentralPageTemplate
                 String.class));
 
 		set.add(new UrlParameterDescription(
-				"fillEnd",
-				"Fill the end of the chart with 'No Activity' label. Usefull if we are looking at the 'tail', so we can se time that has passed without any activity <br>"
-						+ "<br>"
-						+ "<b>Note</b>:    This will be disabled if the <code>endTime</code> is specified.<br>"
-						+ "<b>Default</b>: <code>true</code>",
-                true,
-                Boolean.class));
-
-		set.add(new UrlParameterDescription(
 				"generateDummyRows",
 				"Just for demo purposes. Generate some dummy records...<br>"
 						+ "<br>"
@@ -721,6 +882,14 @@ extends DbxCentralPageTemplate
 						+ "<b>Default</b>: <i>none</i>",
                 null,
                 String.class));
+
+		set.add(new UrlParameterDescription(
+				"debug",
+				"Enable some debugging.<br>"
+						+ "<br>"
+						+ "<b>Default</b>: <code>false</code>",
+                false,
+                Boolean.class));
 
 		set.add(new UrlParameterDescription(
 				"useDefaultTooltip",
@@ -816,6 +985,13 @@ extends DbxCentralPageTemplate
 			}
 		}
 
+		//----------------------------------------
+		// debug
+		_debugMode = getUrlParameterBoolean_defaultFromDesc("debug");
+
+		//----------------------------------------
+		// deviationPct
+		_deviationPct = getUrlParameterDouble("deviationPct", 50.0);
 
 		//----------------------
 		// SET: "startTime"
@@ -940,40 +1116,23 @@ extends DbxCentralPageTemplate
 			jobNameOrId_where = "      AND j.name = " + DbUtils.safeStr(jobName) + " \n";
 		}
 
-//TODO; // Add the below "somehow" to add "historical info" for each 'job_step_id' so we can put it in the tooltip...
-//      // Possibly also add "seconds diff" to current execution time
-//      // Below code was 'reused' from SqlServerJobSchedulerExtractor.java, row=240
-//TODO; // In the Report Section... Add "same as above" to 'step id:s' descriptions (another tooltip) so "historical info" also is possible from the report!
-//TODO; // POSSIBLY: Create a (collapsable) section with ALL available jobs(and there job steps), and when the main job was last executed... 
-//      //           This so we can check jobs that only runs "periodically" like once a week/month
-//		String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 and above' \n";
-//		DbmsVersionInfo verInfo = _conn.getDbmsVersionInfo();
-//		if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
-//		{
-//			allExecTimes = ""
-//				    + "        ,allExecTimes  = STRING_AGG( \n"
-//				    + "                             CAST( \n"
-//				    + "                                 'ts=' + convert(varchar(30), date_executed, 120) \n"
-//				    + "                               + ', wd=' + cast(datename(weekday, date_executed) as char(9)) \n"
-//				    + "                               + ', HMS=' + convert(varchar(10), dateadd(second, secs_duration, '2000-01-01'), 8) \n"
-//				    + "                               + ', sec=' + cast(secs_duration as varchar(20)) \n"
-//				    + "                               + ', status=' + run_status_desc \n"
-//				    + "                               + ';' \n"
-//				    + "                               as varchar(max)) \n"
-//				    + "                           ,char(10) \n"
-//				    + "                         ) WITHIN GROUP (ORDER BY date_executed) \n"
-//					;
-//		}
-		
+
+		// NOTE: When I removed the 'msdb.dbo.agent_datetime' function, it seems to slow down a bit
+		//       Lets live with that for now... and see if we can solve that "later"
+		//       BUT: We should REWRITE the the below from start... using a bit "smarter" code... This starts to be "clunky" 
 		String sql = ""
-			    + "/* NOTE: the below needs: use msdb; GRANT EXECUTE ON msdb.dbo.agent_datetime TO PUBLIC -- or: dbxtune */ \n"
+//			    + "/* NOTE: the below needs: use msdb; GRANT EXECUTE ON msdb.dbo.agent_datetime TO PUBLIC -- or: dbxtune */ \n"
+			    + "/* NOTE: since I dont want to use function 'msdb.dbo.agent_datetime' due to authorizations/grant issues */ \n"
+			    + "/*       It's emulated via: convert(datetime, convert(varchar(8), RUN_DATE)) + ' ' + stuff(stuff(right(1000000 + RUN_TIME,6),3,0,':'),6,0,':') */ \n"
+			    + "/*       It might be a bit slower, but we dont need to 'grant execution' on the function... */ \n"
 			    + "DECLARE @minimum_duration_in_seconds int = " + minDurationInSeconds + " \n"
 			    + ";WITH st0 AS \n"
 			    + "( \n"
 			    + "    /* Get \"parent\" jobs (step_id=0) that are in the history -- jobs that already has been executed */ \n"
 			    + "    SELECT \n"
 			    + "        job_name     = j.name \n"
-			    + "       ,run_datetime = msdb.dbo.agent_datetime(h.run_date, h.run_time) \n"
+//			    + "       ,run_datetime = msdb.dbo.agent_datetime(h.run_date, h.run_time) \n"
+			    + "       ,run_datetime = convert(datetime, convert(varchar(8), h.run_date)) + ' ' + stuff(stuff(right(1000000+h.run_time,6),3,0,':'),6,0,':') \n"
 			    + "       ,h.instance_id \n"
 			    + "       ,h.job_id \n"
 			    + "       ,h.run_date \n"
@@ -982,7 +1141,8 @@ extends DbxCentralPageTemplate
 			    + "    FROM msdb.dbo.sysjobhistory h \n"
 			    + "    INNER JOIN msdb.dbo.sysjobs j ON h.job_id = j.job_id \n"
 			    + "    WHERE h.step_id = 0 \n"
-			    + "      AND msdb.dbo.agent_datetime(h.run_date, h.run_time) BETWEEN '" + startTime + "' and '" + endTime + "' \n"
+//			    + "      AND msdb.dbo.agent_datetime(h.run_date, h.run_time) BETWEEN '" + startTime + "' and '" + endTime + "' \n"
+			    + "      AND convert(datetime, convert(varchar(8), h.run_date)) + ' ' + stuff(stuff(right(1000000+h.run_time,6),3,0,':'),6,0,':') BETWEEN '" + startTime + "' and '" + endTime + "' \n"
 			    + "      /* possibly rewrite this to use 'run_date, run_time' instead of a datetime... */ \n"
 			    + "      /* this so we can create/use a index on sysjobhistory(run_date, run_time)     */ \n"
 			    + "      AND (h.run_duration/10000*3600 + (h.run_duration/100)%100*60 + h.run_duration%100) >= @minimum_duration_in_seconds \n"
@@ -1027,10 +1187,15 @@ extends DbxCentralPageTemplate
 			    + "              ,jh.job_id \n"
 			    + "              ,jh.step_id \n"
 			    + "              ,main_job_start_ts  = st0.run_datetime \n"
-			    + "              ,step_start_ts      = msdb.dbo.agent_datetime(st0.run_date, jh.run_time) \n"
-			    + "              ,step_end_ts        = dateadd(second,  (jh.run_duration/10000*3600 + (jh.run_duration/100)%100*60 + jh.run_duration%100), msdb.dbo.agent_datetime(st0.run_date, jh.run_time)) \n"
+//			    + "              ,step_start_ts      = msdb.dbo.agent_datetime(st0.run_date, jh.run_time) \n"
+//				+ "              ,step_end_ts        = dateadd(second,  (jh.run_duration/10000*3600 + (jh.run_duration/100)%100*60 + jh.run_duration%100), msdb.dbo.agent_datetime(st0.run_date, jh.run_time)) \n"
+			    + "              ,step_start_ts      = convert(datetime, convert(varchar(8), st0.run_date)) + ' ' + stuff(stuff(right(1000000+jh.run_time,6),3,0,':'),6,0,':') \n"
+			    + "              ,step_end_ts        = dateadd(second,  (jh.run_duration/10000*3600 + (jh.run_duration/100)%100*60 + jh.run_duration%100), convert(datetime, convert(varchar(8), st0.run_date)) + ' ' + stuff(stuff(right(1000000+jh.run_time,6),3,0,':'),6,0,':')) \n"
 			    + "              ,step_duration_sec  = (jh.run_duration/10000*3600 + (jh.run_duration/100)%100*60 + jh.run_duration%100) \n"
-			    + "             ,query_src           = st0.query_src \n"
+			    + "              ,sql_message_id     = jh.sql_message_id \n"
+			    + "              ,sql_severity       = jh.sql_severity \n"
+			    + "              ,message            = jh.message \n"
+			    + "              ,query_src          = st0.query_src \n"
 			    + "        FROM st0 \n"
 			    + "        INNER JOIN msdb.dbo.sysjobhistory jh ON (    jh.job_id       = st0.job_id \n"
 			    + "                                                 AND jh.instance_id <= st0.instance_id \n"
@@ -1070,6 +1235,9 @@ extends DbxCentralPageTemplate
 			    + "    ,job_history.main_job_start_ts \n"
 			    + "    ,job_history.job_id \n"
 			    + "    ,query_src \n"
+			    + "    ,sql_message_id = CASE WHEN job_history.sql_message_id = 0 THEN '' ELSE CAST(job_history.sql_message_id as varchar(10)) END \n"
+			    + "    ,sql_severity   = CASE WHEN job_history.sql_severity   = 0 THEN '' ELSE CAST(job_history.sql_severity   as varchar(10)) END \n"
+			    + "    ,message        = CAST(job_history.message as nvarchar(4000)) \n"
 			    + "FROM job_history \n"
 			    + "LEFT OUTER JOIN msdb.dbo.sysjobsteps js ON job_history.job_id = js.job_id AND job_history.step_id = js.step_id \n"
 			    + " \n"
@@ -1092,6 +1260,9 @@ extends DbxCentralPageTemplate
 			    + "    ,main_job_start_ts  = ja.start_execution_date \n"
 			    + "    ,job_id             = CAST(ja.job_id as nvarchar(128)) \n"
 			    + "    ,query_src          = '10' \n"
+			    + "    ,sql_message_id     = CAST('' as varchar(10)) \n"
+			    + "    ,sql_severity       = CAST('' as varchar(10)) \n"
+			    + "    ,message            = CAST('' as nvarchar(4000)) \n"
 			    + "FROM msdb.dbo.sysjobactivity ja \n"
 			    + "INNER JOIN msdb.dbo.sysjobs   j ON ja.job_id         = j.job_id \n"
 			    + "WHERE 1=1 \n"
@@ -1104,12 +1275,12 @@ extends DbxCentralPageTemplate
 			    + " \n"
 			    + "/* Get Active jobs sub levels (step_id's above 0) */ \n"
 			    + "SELECT \n"
-			    + "     chart_key = FORMAT(ja.start_execution_date, 'yyyy-MM-dd HH:mm:ss') + ' -- ' + j.name + ' - step: [' + FORMAT(ISNULL(last_executed_step_id,0)+1,'D3') + ']' \n"
-			    + "    ,bar_name  = '[' + CAST(ISNULL(last_executed_step_id,0)+1 as varchar(9)) + '] ' + js.step_name \n"
-			    + "    ,bar_color = 'green' \n"
-			    + "/*  ,startDate = COALESCE(ja.last_executed_step_date, ja.start_execution_date) */ \n"
-			    + "    ,startDate = ja.last_executed_step_date \n"
-			    + "    ,endDate   = NULL /*--getdate() -- OR NULL */ \n"
+			    + "     chart_key          = FORMAT(ja.start_execution_date, 'yyyy-MM-dd HH:mm:ss') + ' -- ' + j.name + ' - step: [' + FORMAT(ISNULL(last_executed_step_id,0)+1,'D3') + ']' \n"
+			    + "    ,bar_name           = '[' + CAST(ISNULL(last_executed_step_id,0)+1 as varchar(9)) + '] ' + js.step_name \n"
+			    + "    ,bar_color          = 'green' \n"
+			    + "/*  ,startDate          = COALESCE(ja.last_executed_step_date, ja.start_execution_date) */ \n"
+			    + "    ,startDate          = ja.last_executed_step_date \n"
+			    + "    ,endDate            = NULL /*--getdate() -- OR NULL */ \n"
 			    + "    ,js.step_id \n"
 			    + "    ,js.subsystem \n"
 			    + "    ,js.command \n"
@@ -1117,9 +1288,12 @@ extends DbxCentralPageTemplate
 			    + "    ,js.database_name \n"
 			    + "    ,js.database_user_name \n"
 			    + "    ,js.output_file_name \n"
-			    + "    ,main_job_start_ts = ja.start_execution_date \n"
+			    + "    ,main_job_start_ts  = ja.start_execution_date \n"
 			    + "    ,js.job_id \n"
-			    + "    ,query_src    = '20' \n"
+			    + "    ,query_src          = '20' \n"
+			    + "    ,sql_message_id     = CAST('' as varchar(10)) \n"
+			    + "    ,sql_severity       = CAST('' as varchar(10)) \n"
+			    + "    ,message            = CAST('' as nvarchar(4000)) \n"
 			    + "FROM msdb.dbo.sysjobactivity ja \n"
 			    + "INNER JOIN msdb.dbo.sysjobs        j ON ja.job_id         = j.job_id \n"
 			    + "INNER JOIN msdb.dbo.sysjobsteps   js ON ja.job_id         = js.job_id      AND ISNULL(ja.last_executed_step_id,0)+1 = js.step_id \n"
@@ -1134,6 +1308,79 @@ extends DbxCentralPageTemplate
 
 		return sql;
 	}
+	
+//	private String getSql_allExecTimes_jobId_stepId()
+//	{
+//		String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 or later' \n";
+//		DbmsVersionInfo verInfo = _conn.getDbmsVersionInfo();
+//		if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
+//		{
+//			allExecTimes = ""
+//				    + "    ,allExecTimes  = STRING_AGG( \n"
+//				    + "                         CAST( \n"
+//				    + "                             'ts=' + convert(varchar(30), h.run_ts, 120) \n"
+//				    + "                           + ', wd=' + cast(datename(weekday, h.run_ts) as char(9)) \n"
+//				    + "                           + ', HMS=' + convert(varchar(10), dateadd(second, h.run_duration_sec, '2000-01-01'), 8) \n"
+//				    + "                           + ', sec=' + cast(h.run_duration_sec as varchar(20)) \n"
+//				    + "                           + ', status=' + h.run_status_desc \n"
+//				    + "                           + ';' \n"
+//				    + "                           as varchar(max)) \n"
+//				    + "                       ,char(10) \n"
+//				    + "                     ) WITHIN GROUP (ORDER BY h.run_ts) \n"
+//					;
+//		}
+//
+//		String sql = ""
+//			    + ";WITH jobhistory as \n"
+//			    + "( \n"
+//			    + "    SELECT \n"
+////			    + "         jh.instance_id \n" // IF THIS IS UNCOMMENT, then remember to add comma on next line
+//			    + "         job_id = cast(jh.job_id as varchar(40)) \n"
+//			    + "        ,jh.step_id \n"
+////			    + "        ,jh.step_name \n"
+////			    + "        ,jh.sql_message_id \n"
+////			    + "        ,jh.sql_severity \n"
+////			    + "        ,jh.message \n"
+////			    + "        ,jh.run_status \n"
+////			    + "        ,jh.run_date \n"
+////			    + "        ,jh.run_time \n"
+////			    + "        ,jh.run_duration \n"
+////			    + "        ,jh.operator_id_emailed \n"
+////			    + "        ,jh.operator_id_netsent \n"
+////			    + "        ,jh.operator_id_paged \n"
+////			    + "        ,jh.retries_attempted \n"
+////			    + "        ,jh.server \n"
+//			    + "        ,run_status_desc = \n"
+//			    + "            CASE \n"
+//			    + "                WHEN jh.run_status = 0 THEN 'FAILED' \n"
+//			    + "                WHEN jh.run_status = 1 THEN 'SUCCESS' \n"
+//			    + "                WHEN jh.run_status = 2 THEN 'RETRY' \n"
+//			    + "                WHEN jh.run_status = 3 THEN 'CANCELED' \n"
+//			    + "                WHEN jh.run_status = 4 THEN 'IN PROGRESS' \n"
+//			    + "                ELSE '-UNKNOWN-' + cast(jh.run_status as varchar(10)) + '-' \n"
+//			    + "            END \n"
+//			    + "        ,run_ts = convert(datetime, convert(varchar(8), jh.run_date)) \n"
+//			    + "                                  + ' ' \n"
+//			    + "                                  + stuff(stuff(right(1000000 + jh.run_time \n"
+//			    + "                                                     ,6) \n"
+//			    + "                                                ,3,0,':') \n"
+//			    + "                                          ,6,0,':') \n"
+//			    + "        ,run_duration_sec = jh.run_duration / 10000 * 3600 \n"
+//			    + "                          + jh.run_duration % 10000 / 100 * 60 \n"
+//			    + "                          + jh.run_duration % 100 \n"
+//			    + "    FROM msdb.dbo.sysjobhistory jh \n"
+//			    + ") \n"
+//			    + "SELECT \n"
+//			    + "     h.job_id \n"
+//			    + "    ,h.step_id \n"
+//			    + allExecTimes
+//			    + "FROM jobhistory h \n"
+//			    + "GROUP BY h.job_id, h.step_id \n"
+//			    + "ORDER BY h.job_id, h.step_id \n"
+//			    + "";
+//
+//		return sql;
+//	}
 
 //	private String createInfoContent()
 //	{
@@ -1252,11 +1499,29 @@ extends DbxCentralPageTemplate
 		
 		// >>> useDefaultTooltip
 		boolean useDefaultTooltip = getUrlParameterBoolean_defaultFromDesc("useDefaultTooltip");
-		
+
+		// Use in Exceptions (what to write)
+		boolean inReadingSqlResults = false;
 		
 		// Connect to DBMS - with AutoClose
 		try ( DbxConnection conn = getConnection() ) 
 		{
+			// Get Name of THIS server (Get the server name, which depends on dbms/aliasName and displayName)
+			String serverName = CounterController.getInstance().getServerName();
+
+			//-----------------------------------------
+			// Add modal popup for execution times of: (job_id, step_id)
+			SqlServerJobScheduler.createStaticHtmlAndJavaScriptContent(writer, serverName);
+			
+			// add variable(s) for 'ExecTime' for all 'job_id' and 'step_id' so we can view them in detail (at a second level) modal dialog
+			ReturnObject_allExecTimes ro_allExecTimes = SqlServerJobScheduler.createStaticJavaScript_lookupContent__jobId_stepId__to__allExecTimes(writer, conn, SourceType.ONLINE);
+			_jobIdStepIdExecSummaryMap = ro_allExecTimes.getStatMap();
+
+			// we also need: 'jobId' to 'name'
+			SqlServerJobScheduler.createStaticJavaScript_lookupContent__jobId__to__name(writer, conn, SourceType.ONLINE);
+
+
+			//---------------------------------------------------------
 			// Execute the SQL - with AutoClose
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 			{
@@ -1300,14 +1565,14 @@ extends DbxCentralPageTemplate
 				Timestamp prevRowStartTs = null;
 				Timestamp prevRowEndTs   = null;
 
-				SimpleDateFormat sdf     = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
 				int addRecordCount = 0;
 				
 				// Add all jobs to a Map, so we can write it as JavaScript Objects...
 				// This will be used when 'onlyLevelZero=true' and we click on *details* for a "main" job, to open a pop-up with details for the mail job.
 				// jobInstanceMap: <JobId:StartTime, ListOfRecords>
 				LinkedHashMap<String, List<String>> jobInstanceMap = new LinkedHashMap<>(); 
+
+				inReadingSqlResults = true;
 
 				// Loop all rows in ResultSet
 				while(rs.next())
@@ -1319,8 +1584,13 @@ extends DbxCentralPageTemplate
 					Timestamp endTs     = rs.getTimestamp(5);
 
 					String jobId        = rs.getString("job_id");
+					int    stepId       = rs.getInt   ("step_id");
 					String jobStartTime = rs.getString("main_job_start_ts");
 
+					// Truncate 'jobStartTime' at the second level (remove any milliseconds)
+					if (StringUtil.hasValue(jobStartTime))
+						jobStartTime = jobStartTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
+					
 					// Columns above FIVE will be added as tooltip values
 					Map<String, String> extraColumns = null;
 					if (colCount > 5)
@@ -1344,7 +1614,7 @@ extends DbxCentralPageTemplate
 					// This is a *special* case for SQL Server Job Scheduler...
 					if (extraColumns != null)
 					{
-						 int stepId = StringUtil.parseInt(extraColumns.get("step_id"), -1);
+					//	 int stepId = StringUtil.parseInt(extraColumns.get("step_id"), -1);
 						 if (stepId >= 2)
 						 {
 							 if (startTs != null && prevRowStartTs != null && prevRowEndTs != null && startTs.equals(prevRowStartTs))
@@ -1363,7 +1633,7 @@ extends DbxCentralPageTemplate
 							// just ADD 60 seconds to the startTs
 							Timestamp newEndTs = new Timestamp(startTs.getTime() + 60 * 1000);
 							
-							_logger.warn("The 'endTs' is before 'startTs'... labelKey='" + labelKey + "', barText='" + barText + "', origin[startTs='" + sdf.format(startTs) + "', endTs='" + sdf.format(endTs) + "']. Adjusting 'endTs' to be 60 seconds AFTER startTs. newEndTs='" + sdf.format(newEndTs) + "'.");
+							_logger.warn("The 'endTs' is before 'startTs'... labelKey='" + labelKey + "', barText='" + barText + "', origin[startTs='" + TimeUtils.toStringYmdHms(startTs) + "', endTs='" + TimeUtils.toStringYmdHms(endTs) + "']. Adjusting 'endTs' to be 60 seconds AFTER startTs. newEndTs='" + TimeUtils.toStringYmdHms(newEndTs) + "'.");
 							endTs = newEndTs;
 						}
 					}
@@ -1402,7 +1672,26 @@ extends DbxCentralPageTemplate
 						if ( barText.matches(skipNames) )
 							continue;
 					}
-					
+
+					// Change Bar Color -- Based on message, sqlCode, sqlSeverity
+					if (extraColumns != null)
+					{
+						// Do NOT override the color RED if we already decided on an ERROR
+						if ( ! "red".equals(barColor) )
+						{
+							String sqlMessage     = StringUtil.nullToValue( extraColumns.get("message")       , "");
+						//	int    sqlMessageCode = StringUtil.parseInt(    extraColumns.get("sql_message_id"), -1);
+							int    sqlSeverity    = StringUtil.parseInt(    extraColumns.get("sql_severity")  , -1);
+								
+							if (sqlMessage.contains("ERROR-MSG: "))
+								barColor = "orange";
+
+							if (sqlSeverity > 10)
+								barColor = "orange";
+						}
+					}
+
+					// If no 'barColor' has been set, make it green
 					if (StringUtil.isNullOrBlank(barColor))
 						barColor = "green";
 
@@ -1420,10 +1709,31 @@ extends DbxCentralPageTemplate
 					// Add '[HH:MM:SS]' to the barText (at least for "main" jobs)
 					if (showTimeInBars)
 					{
-						long execTimeInMs = endTs.getTime() - startTs.getTime();
-						String dhms = TimeUtils.msToTimeStrDHMS(execTimeInMs);
+						String dhms    = "unknown";
+						String statStr = "";
+						if (startTs != null)
+						{
+							long execTimeInMs  = endTs.getTime() - startTs.getTime();
+							dhms = TimeUtils.msToTimeStrDHMS(execTimeInMs);
+
+							// 50% deviation (but it will be adjusted based on the execution time)
+							// - shorter     execution time (below x minutes): a higher PCT will be applied (less sensitive)
+							// - medium      execution time:(below x hour):    a medium PCT will be applied (little less sensitive)
+							// - long        execution time:(above x hour):    UNCHANGED PCT will be applied
+							// - really long execution time:(above x hour):    a smaller PCT will be applied
+							//double deviationPct = 50.0;
+							// NOTE: 'deviationPct' is now a URL Parameter which is set before this loop
+							
+							// If it deviates to much from the average execution time... 
+							// Get some text explanation that we can use in the "barText"
+							statStr = getStatExecutionDeviation(jobId, stepId, (execTimeInMs/1000), _deviationPct);
+
+							// Set some color if it deviates 
+							if ( statStr.contains("SLOWER") ) barColor = "#FFC0CB"; // pink
+							if ( statStr.contains("FASTER") ) barColor = "#DAF7A6"; // light green
+						}
 						
-						barText += " -- <" + dhms + ">";
+						barText += " -- <" + dhms + statStr + ">";
 					}
 
 					// Add "everything" to a Map (so we can view "skipped" records later)
@@ -1435,12 +1745,12 @@ extends DbxCentralPageTemplate
 						jobInstanceMap.put(jobIdInstance, jobIdInstanceList);
 					}
 					// Add ALL (Level0 and all-step-ids) Records... Later we will print this out to a JavaScript object.
-					jobIdInstanceList.add("[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] ");
+					jobIdInstanceList.add("[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
 
 					if (addToTimeLine)
 					{
 						addRecordCount++;
-						write(writer, "            " + prefix + "[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] ");
+						write(writer, "            " + prefix + "[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
 						prefix = ",";
 
 						// Remember MAX TS, used if we need to "fillEnd"
@@ -1463,7 +1773,7 @@ extends DbxCentralPageTemplate
 						Timestamp endTs   = endTime;
 						udTooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
 						// NO Activity -- FULL Period
-						write(writer, "            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] ");
+						write(writer, "            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
 					}
 					else
 					{
@@ -1476,7 +1786,7 @@ extends DbxCentralPageTemplate
 						if (tsDiffMs > 10_000)
 						{
 							// NO Activity -- AT THE END
-							write(writer, "            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] ");
+							write(writer, "            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
 						}
 					}
 					prefix = ",";
@@ -1509,7 +1819,7 @@ extends DbxCentralPageTemplate
 
 						udTooltip = createUserDefinedTooltip(useDefaultTooltip, dummyLabel, dummyLabel, startTs, endTs, null);
 
-						write(writer, "            " + prefix + "[ '" + tmpDummyLabel + "', '" + tmpDummyLabel + "', '" + dummyColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] ");
+						write(writer, "            " + prefix + "[ '" + tmpDummyLabel + "', '" + tmpDummyLabel + "', '" + dummyColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
 						
 						prefix = ",";
 					}
@@ -1530,50 +1840,41 @@ extends DbxCentralPageTemplate
 				write(writer, "            if (selectedItem)                                                            ");
 				write(writer, "            {                                                                            ");
 				write(writer, "                // Get the toolip section, and format it into plain text                 ");
-				write(writer, "                let htmlTooltip = dataTable.getValue(selectedItem.row, 3);               ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<br>/g, '\\n');                       ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<hr>/g, '\\n-------------------------------------------------------\\n');");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<\\/tr>/g, '\\n');                    ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/&nbsp;/g, ' ');                       ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/&emsp;/g, '\\t');                     ");
-				write(writer, "                                                                                         ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<[^>]+>/g, '');                       ");
+				write(writer, "                let tooltipPlainText = htmlToolTipToPlainText(dataTable.getValue(selectedItem.row, 3)); ");
 				write(writer, "                                                                                         ");
 				write(writer, "                // Write content to copy/paste buffer                                    ");
-				write(writer, "                copyToClipboard(htmlTooltip);                                            ");
+				write(writer, "                copyToClipboard(tooltipPlainText);                                            ");
 				write(writer, "                                                                                         ");
-				write(writer, "                if (htmlTooltip.indexOf('[0] - FULL JOB: ') != -1)                       ");
+				write(writer, "                // Open modal -- Level_0 -> 'all steps'; else -> 'All Executions Chart'  ");
+				write(writer, "                if (true)                                                                ");
 				write(writer, "                {                                                                        ");
-				write(writer, "                    let job_id = '';                                                     ");
-				write(writer, "                    let main_job_start_ts = '';                                          ");
+				write(writer, "                    const start_time = tooltipPlainText.match(  /Start:\\s+(.*)/)?.[1].trim(); ");
+				write(writer, "                    const job_id     = tooltipPlainText.match( /job_id:\\s+(.*)/)?.[1].trim(); ");
+				write(writer, "                    const step_id    = tooltipPlainText.match(/step_id:\\s+(.*)/)?.[1].trim(); ");
 				write(writer, "                                                                                         ");
-				write(writer, "                    // get 'job_id:'                                                     ");
-				write(writer, "                    let startPos = htmlTooltip.indexOf('job_id: ');                      ");
-				write(writer, "                    if (startPos >= 0)                                                   ");
+//				write(writer, "                    // Open the dialog                                                   ");
+				write(writer, "                    //----------------------------------------                           ");
+				write(writer, "                    // LEVEL: 0 -- open 'all steps'                                      ");
+				write(writer, "                    if (step_id === '0') // yes it's a STRING...                         ");
 				write(writer, "                    {                                                                    ");
-				write(writer, "                        startPos += 'job_id: '.length;                                   ");
-				write(writer, "                        let endPos = htmlTooltip.indexOf('\\n', startPos);               ");
-				write(writer, "                        job_id = htmlTooltip.substring(startPos, endPos).trim();         ");
-				write(writer, "                    }                                                                    ");
+				write(writer, "                        console.log('### 1 ### Selected: LEVEL-0: : OpenModal -- open-all-steps: job_id=|' + job_id + '|'); ");
 				write(writer, "                                                                                         ");
-				write(writer, "                    // get 'main_job_start_ts:'                                          ");
-				write(writer, "                    startPos = htmlTooltip.indexOf('main_job_start_ts: ');               ");
-				write(writer, "                    if (startPos >= 0)                                                   ");
+				write(writer, "                        // get 'main' JobName and Time                                   ");
+				write(writer, "                        let jobTimeAndName = dataTable.getValue(selectedItem.row, 0);    ");
+				write(writer, "                                                                                         ");
+				write(writer, "                        // Open modal                                                    ");
+				write(writer, "                        openModalForJobId(job_id, start_time, jobTimeAndName);           ");
+				write(writer, "                    }                                                                    ");
+				write(writer, "                    else // Open 'All Execution Chart'                                   ");
 				write(writer, "                    {                                                                    ");
-				write(writer, "                        startPos += 'main_job_start_ts: '.length;                        ");
-				write(writer, "                        let endPos = htmlTooltip.indexOf('\\n', startPos);               ");
-				write(writer, "                        main_job_start_ts = htmlTooltip.substring(startPos, endPos).trim(); ");
+				write(writer, "                        console.log('### 1 ### Selected: LEVEL-ABOVE-0: OpenChart: step_id=|' + step_id + '|, job_id=|' + job_id + '|'); ");
+				write(writer, "                                                                                         ");
+				write(writer, "                        // Open the dialog                                               ");
+				write(writer, "                        openTimeLineChartDialog_byIds(job_id, step_id, start_time);      ");
 				write(writer, "                    }                                                                    ");
-				write(writer, "                                                                                         ");
-				write(writer, "                    // get 'main' JobName and Time                                       ");
-				write(writer, "                    let jobTimeAndName = dataTable.getValue(selectedItem.row, 0);        ");
-				write(writer, "                                                                                         ");
-				write(writer, "                    // Open modal                                                        ");
-				write(writer, "                    openModalForJobId(job_id, main_job_start_ts, jobTimeAndName);        ");
 				write(writer, "                                                                                         ");
 				write(writer, "                    // Close the tooltip in some way                                     ");
 				write(writer, "                    document.querySelectorAll('.google-visualization-tooltip').forEach(el => el.style.display = 'none'); ");
-				write(writer, "                    // setTimeout(() => chart.setSelection([]), 1000); // and UNSELECT the current selected row (but causes other problems)  ");
 				write(writer, "                }                                                                        ");
 				write(writer, "            }                                                                            ");
 				write(writer, "        });                                                                              ");
@@ -1626,27 +1927,40 @@ extends DbxCentralPageTemplate
 //				write(writer, "       console.log('changeAutoscroll: ' + div.checked);									");
 //				write(writer, "    }																					");
 				write(writer, "																							");
-				write(writer, "    // When we click on a 'Level0' element, this array will be set						");
-				write(writer, "    var g_latestSelectedJobIdInstanceArr = [];											");
+				write(writer, "    // Get the toolip section, and format it into plain text                             ");
+				write(writer, "    function htmlToolTipToPlainText(htmlTooltip) 										");
+				write(writer, "    {                                                                                    ");
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/<BR>/g, '\\n');                               ");
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/<br>/g, '\\n');                               ");
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/<hr>/g, '\\n-------------------------------------------------------\\n');");
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/<\\/tr>/g, '\\n');                            ");
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/&nbsp;/g, ' ');                               ");
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/&emsp;/g, '\\t');                             ");
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/&#92;/g,  '\\\\');                            "); // is JavaScript this will be \\ (two backslashes)
+				write(writer, "        htmlTooltip = htmlTooltip.replace(/<[^>]+>/g, '');                               ");
 				write(writer, "																							");
+				write(writer, "        return htmlTooltip;																");
+				write(writer, "    }																					");
+				write(writer, "																							");
+				write(writer, "    // When we click on a 'Level0' element, this array will be set						");
+				write(writer, "    var _global_latestSelected__jobId_startTime__instanceArr = [];						");
+				write(writer, "																							");
+				write(writer, "    // Open a new modal, with ALL steps in that job										");
 				write(writer, "    function openModalForJobId(job_id, main_job_start_ts, jobTimeAndName)				");
 				write(writer, "    {                                                                                    ");
 				write(writer, "        // Refereence the variablename and show data i a modal dialog 					");
-				write(writer, "        let propName = job_id + '____' + main_job_start_ts;                              ");
-				write(writer, "        let jobIdInstance = globalJobIdInstance[propName];                               ");
-				write(writer, "        g_latestSelectedJobIdInstanceArr = jobIdInstance;                                ");
+				write(writer, "        let jobId_startTime_instance = lookup__jobId_startTime__to__instance(job_id, main_job_start_ts); ");
+				write(writer, "        _global_latestSelected__jobId_startTime__instanceArr = jobId_startTime_instance; ");
 				write(writer, "                                                                                         ");
-				write(writer, "        console.log('Selected jobIdInstance for |' + propName + '|.', jobIdInstance);    ");
-//				write(writer, "        alert('TODO: Show FULL Details for child steps for job_id=|' + job_id + '|, main_job_start_ts=|' + main_job_start_ts + '|.'); ");
+				write(writer, "        console.log('Selected jobId_startTime_instance: for job_id=|' + job_id + '|, main_job_start_ts=|' + main_job_start_ts + '|.', jobId_startTime_instance); ");
 				write(writer, "                                                                                         ");
 				write(writer, "        // Set various info in the modal dialog                                          ");
 				write(writer, "        document.getElementById('dbx-view-jobIdDetails-title').innerHTML = 'Job Details for: ' + jobTimeAndName; ");
 				write(writer, "                                                                                         ");
 				write(writer, "        // Open the modal... drawChartModal() will be done when to modal IS OPEN         ");
 				write(writer, "        $('#dbx-view-jobIdDetails-dialog').modal('show');                                ");
-//				write(writer, "        google.charts.load('current', {'packages':['timeline']});						");
-//				write(writer, "        google.charts.setOnLoadCallback(drawChartModal);									");
 				write(writer, "    }                                                                                    ");
+				write(writer, "																							");
 				write(writer, "    function drawChartModal()															");
 				write(writer, "    {																					");
 				write(writer, "        let container = document.getElementById('timeline-modal');						");
@@ -1659,19 +1973,18 @@ extends DbxCentralPageTemplate
 				write(writer, "        dataTable.addColumn({ type: 'string', role: 'tooltip' });						");
 				write(writer, "        dataTable.addColumn({ type: 'date', id: 'Start' });								");
 				write(writer, "        dataTable.addColumn({ type: 'date', id: 'End' });								");
-//				write(writer, "        dataTable.addRows(jobIdInstance);												");
-				write(writer, "        dataTable.addRows(g_latestSelectedJobIdInstanceArr);								");
+				write(writer, "        dataTable.addRows(_global_latestSelected__jobId_startTime__instanceArr);			");
 				write(writer, "																							");
 				write(writer, "        let options = 																	");
 				write(writer, "        {																				");
-				write(writer, "             hAxis: { format: '< HH:mm - dd MMM >' }											");
+				write(writer, "             hAxis: { format: '< HH:mm - dd MMM >' }										");
 				write(writer, "            ,timeline: { 																");
 				write(writer, "                showRowLabels: false														");
 //				write(writer, "                ,rowLabelStyle: { fontSize: 10 }											");
 //				write(writer, "                ,barLabelStyle: { fontSize: 10 }											");
 				write(writer, "            } 																			");
 				write(writer, "        };																				");
-				write(writer, "        if (g_latestSelectedJobIdInstanceArr.length >= " + recordThresholdForSmallerFont + ") ");
+				write(writer, "        if (_global_latestSelected__jobId_startTime__instanceArr.length >= " + recordThresholdForSmallerFont + ") ");
 				write(writer, "        {																				");
 				write(writer, "            options.timeline.rowLabelStyle = { fontSize: " + timelineFontSize + " };		");
 				write(writer, "            options.timeline.barLabelStyle = { fontSize: " + timelineFontSize + " };		");
@@ -1684,23 +1997,26 @@ extends DbxCentralPageTemplate
 				write(writer, "            if (selectedItem)                                                            ");
 				write(writer, "            {                                                                            ");
 				write(writer, "                // Get the toolip section, and format it into plain text                 ");
-				write(writer, "                let htmlTooltip = dataTable.getValue(selectedItem.row, 3);               ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<br>/g, '\\n');                       ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<hr>/g, '\\n-------------------------------------------------------\\n');");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<\\/tr>/g, '\\n');                    ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/&nbsp;/g, ' ');                       ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/&emsp;/g, '\\t');                     ");
-				write(writer, "                                                                                         ");
-				write(writer, "                htmlTooltip = htmlTooltip.replace(/<[^>]+>/g, '');                       ");
+				write(writer, "                let tooltipPlainText = htmlToolTipToPlainText(dataTable.getValue(selectedItem.row, 3)); ");
 				write(writer, "                                                                                         ");
 				write(writer, "                // Write content to copy/paste buffer                                    ");
-				write(writer, "                copyToClipboard(htmlTooltip);                                            ");
+				write(writer, "                copyToClipboard(tooltipPlainText);                                            ");
+				write(writer, "                                                                                         ");
+				write(writer, "                // Open modal -- All Executions Chart                                    ");
+				write(writer, "                if (true)                                                                ");
+				write(writer, "                {                                                                        ");
+				write(writer, "                    const start_time = tooltipPlainText.match(  /Start:\\s+(.*)/)?.[1].trim(); ");
+				write(writer, "                    const job_id     = tooltipPlainText.match( /job_id:\\s+(.*)/)?.[1].trim(); ");
+				write(writer, "                    const step_id    = tooltipPlainText.match(/step_id:\\s+(.*)/)?.[1].trim(); ");
+				write(writer, "                                                                                         ");
+				write(writer, "                    console.log('### 2 ### Selected: OpenChart: step_id=|' + step_id + '|, job_id=|' + job_id + '|, start_time=|' + start_time + '|.'); ");
+				write(writer, "                                                                                         ");
+				write(writer, "                    // Open the dialog                                                   ");
+				write(writer, "                    openTimeLineChartDialog_byIds(job_id, step_id, start_time);          ");
+				write(writer, "                }                                                                        ");
 				write(writer, "            }                                                                            ");
 				write(writer, "        });                                                                              ");
 				write(writer, "                                                                                         ");
-//				write(writer, "        // Open the modal																");
-//				write(writer, "        $('#dbx-view-jobIdDetails-dialog').modal('show'); 								");
-//				write(writer, "	   																						");
 				write(writer, "        // Then draw the chart															");
 				write(writer, "        chart.draw(dataTable, options);													");
 				write(writer, "    }																					");
@@ -1715,8 +2031,6 @@ extends DbxCentralPageTemplate
 				write(writer, "        {                                                                                ");
 				write(writer, "            for (var child of childArr)                                                  ");
 				write(writer, "            {                                                                            ");
-//				write(writer, "//              if (child.css('overflow-y') == 'scroll' || child.css('overflow-y') == 'auto')                        ");
-//				write(writer, "//              if ( (child.scrollHeight > child.clientHeight) && ('hidden' !== getComputedStyle(child).overflowY) )	");
 				write(writer, "                if ( (child.scrollHeight > child.clientHeight) )                                                     ");
 				write(writer, "                {                                                                                                    ");
 				write(writer, "                    console.log('Scroll to ' + to + ': level[' + level + '], child='+child, child);                  ");
@@ -1724,8 +2038,6 @@ extends DbxCentralPageTemplate
 				write(writer, "                        child.scrollTop = 0;                                             ");
 				write(writer, "                    else                                                                 ");
 				write(writer, "                        child.scrollTop = child.scrollHeight - child.clientHeight;       ");
-//				write(writer, "					                                                                        ");
-//				write(writer, "//                  break;                                                               ");
 				write(writer, "                }                                                                        ");
 				write(writer, "				                                                                            ");
 				write(writer, "                recursiveScrollToTopOrBottom(child, to, level, maxLevel);                ");
@@ -1733,17 +2045,20 @@ extends DbxCentralPageTemplate
 				write(writer, "        }                                                                                ");
 				write(writer, "    }                                                                                    ");
 				write(writer, "                                                                                         ");
-				write(writer, "    function scrollToBottom (id) {														");
+				write(writer, "    function scrollToBottom (id) 														");
+				write(writer, "    {                                                                                    ");
 				write(writer, "       var elem = document.getElementById(id);											");
 				write(writer, "       recursiveScrollToTopOrBottom(elem, 'bottom', -1, 3);								");
 				write(writer, "    }																					");
 				write(writer, "    																						");
-				write(writer, "    function scrollToTop (id) {															");
+				write(writer, "    function scrollToTop (id) 															");
+				write(writer, "    {                                                                                    ");
 				write(writer, "       var elem = document.getElementById(id);											");
 				write(writer, "       recursiveScrollToTopOrBottom(elem, 'top', -1, 3);									");
 				write(writer, "    }																					");
 				write(writer, "    																						");
-				write(writer, "    function copyToClipboard(str) {														");
+				write(writer, "    function copyToClipboard(str) 														");
+				write(writer, "    {                                                                                    ");
 				write(writer, "       const textArea = document.createElement('textarea');								");
 				write(writer, "       textArea.value = str;																");
 				write(writer, "       document.body.appendChild(textArea);												");
@@ -1755,33 +2070,20 @@ extends DbxCentralPageTemplate
 				write(writer, "       }																					");
 				write(writer, "       document.body.removeChild(textArea);												");
 				write(writer, "																							");
-				write(writer, "       console.log('copyToClipboard: ' + str);											");
+				write(writer, "       //console.log('copyToClipboard: ' + str);											");
 				write(writer, "    }																					");
 				write(writer, "																							");
-				write(writer, "    function copyExecutedSql() {															");
+				write(writer, "    function copyExecutedSql() 															");
+				write(writer, "    {                                                                                    ");
 				write(writer, "       var sqlText = document.getElementById('executed_sql').textContent;				");
 				write(writer, "																							");
 				write(writer, "       copyToClipboard(sqlText);															");
 				write(writer, "    }																					");
 				write(writer, "																							");
-//				write(writer, "    // do-deferred: Scroll to bottom of 'timeline'										");
-//				write(writer, "																							");
-//				write(writer, "    setTimeout(function() {																");
-//				write(writer, "        var savedVal_autoscrollToBottom = getStorage('dbxtune_checkboxes_').get('autoscroll-to-bottom');		");
-//				write(writer, "        document.getElementById('autoscroll-to-bottom').checked = savedVal_autoscrollToBottom;				");
-//				write(writer, "        if (savedVal_autoscrollToBottom) {												");
-//				write(writer, "            scrollToBottom('timeline');													");
-//				write(writer, "        }																				");
-//				write(writer, "    }, 200);																				");
-//				write(writer, "																							");
-//				write(writer, "    if (document.getElementById('autoscroll-to-bottom').checked)	{						");
-//				write(writer, "        setTimeout(function() { scrollToBottom('timeline') }, 100);						");
-//				write(writer, "    }																					");
-				
 				write(writer, "																							");
+				write(writer, "    //------------------------------------------------------								");
 				write(writer, "    // Create a Java Object that will hold ALL job instances								");
-				write(writer, "    let globalJobIdInstance = {															");
-				write(writer, "    }																					");
+				write(writer, "    let _globalLookup__jobId_startTine__to__instance = {}								");
 				write(writer, "																							");
 				write(writer, "    // Now ADD entries to the above object. First initialize, then push					");
 				for (Entry<String, List<String>> entry : jobInstanceMap.entrySet())
@@ -1791,23 +2093,190 @@ extends DbxCentralPageTemplate
 
 					write(writer, "                          															");
 					write(writer, "    // --------																		");
-					write(writer, "    globalJobIdInstance['" + key + "'] = [];											");
+					write(writer, "    _globalLookup__jobId_startTine__to__instance['" + key + "'] = [];				");
 					for (String row : val)
 					{
-						write(writer, "    globalJobIdInstance['" + key + "'].push(" + row + ");						");
+						write(writer, "    _globalLookup__jobId_startTine__to__instance['" + key + "'].push(" + row + "); ");
 					}
 				}
+				write(writer, "																							");
+				write(writer, "    // LOOKUP Function																	");
+				write(writer, "    function lookup__jobId_startTime__to__instance(jobId, startTime) 					");
+				write(writer, "    {																					");
+				write(writer, "        let key = jobId + '____' + startTime;                                    ");
+				write(writer, "        let jobIdInstance = _globalLookup__jobId_startTine__to__instance[key];           ");
+				write(writer, "																							");
+				write(writer, "        if (jobIdInstance === undefined)													");
+				write(writer, "        {																				");
+				write(writer, "            console.log('lookup__jobId__to__XXX(): NOT FOUND. key=|' + key + '|. jobId=|' + jobId + '|, startTime=|' + startTime + '|');	");
+				write(writer, "            return 'jobId=|' + jobId + '|, startTime=|' + startTime + '|';				");
+				write(writer, "        }																				");
+				write(writer, "																							");
+				write(writer, "        return jobIdInstance; 															");
+				write(writer, "    }																					");
 				write(writer, "																							");
 				write(writer, "</script> \n");
 			}
 		}
-		catch (SQLException ex)
+		catch (Exception ex)
 		{
-			_logger.error("In '" + this.getClass().getSimpleName() + "'. Problems executing SQL Statement. ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|, SQL=|" + sql + "|.");
+			String msg = "In '" + this.getClass().getSimpleName() + "'. Problems when creating Job Scheduler Timeline. Caught: " + ex;
+			if (ex instanceof SQLException)
+			{
+				SQLException sqlex = (SQLException) ex;
+				msg = "In '" + this.getClass().getSimpleName() + "'. Problems executing SQL Statement. ErrorCode=" + sqlex.getErrorCode() + ", SQLState=" + sqlex.getSQLState() + ", Message=|" + sqlex.getMessage() + "|, SQL=|" + sql + "|.";
+			}
 
-			throw new SQLException("Problems executing SQL Statement. ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|, SQL=|" + sql + "|.", ex);
+			// CLOSE the above JavaScript code creations...
+			// Otherwise we will get JavaScript errors (possibly we get it anyway...
+			if (inReadingSqlResults)
+			{
+				writer.println("] // in Java Exception... closing the array: dataTable.addRows([ "); 
+				writer.println("} // in Java Exception... closing the function drawChart() { ");
+				writer.println("</script> <!-- in Java Exception... closing the 'script' tag --> ");
+			}
+			writer.println();
+			writer.println("<!-- BEGIN: ERROR MESSAGE in Servlet ");
+			writer.println(msg);
+			writer.println("  -- END: ERROR MESSAGE in Servlet --> ");
+			writer.println();
+
+			_logger.error(msg);
+
+			throw new SQLException(msg, ex);
 		}
 	}
+
+	
+	/**
+	 * Get deviation from the Average execution time
+	 * <br>
+	 * NOTE: Part of the below code is also implemented in createUserDefinedTooltip(...), so if you change here, also change that code...
+	 * 
+	 * @param jobId
+	 * @param stepId
+	 * @param execTimeInSec
+	 * 
+	 * @return "" if no deviation, otherwise a string the can be used to present the deviation
+	 */
+	private String getStatExecutionDeviation(String jobId, int stepId, long execTimeInSec, double basePctThresh)
+	{
+		if (execTimeInSec < 10)
+			return "";
+
+		if (_jobIdStepIdExecSummaryMap == null)
+			return " no-avg-data";
+
+		// also add deviation from the average
+		String key = jobId + "____" + stepId;  // NOTE: Separator between 'jobId' and 'stepId' is 4 underscores 
+		StatObject statObj = _jobIdStepIdExecSummaryMap.get(key);
+
+		//Exit early if no entry was found.
+		if (statObj == null)
+			return " no-avg-for-id-found";
+
+		// Get avg times 
+		long   avgTimeSec = statObj.getAvg();
+		String avgTimeStr = TimeUtils.secToTimeStrShort(avgTimeSec);
+
+		long   avgDiffSec = execTimeInSec - avgTimeSec;
+		String avgDiffStr = TimeUtils.secToTimeStrShort(avgDiffSec);
+
+		// isOutlier will be true if more/less than X % deviation from the average
+		//           but it's MORE Sensitive for longer execution times 
+		//           and for shorter execution times we allow more deviations (bump up PCT on shorter avg executions)
+//		double adjustedPct = adjustThresholdBasedOnMath(avgTimeSec, basePctThresh); // use this if you can come up with a nice algorithm for adjusting the PCT
+        double adjustedPct = adjustThresholdBasedOnTime(avgTimeSec, basePctThresh);
+		
+		double upperBound = avgTimeSec * (1 + (adjustedPct / 100.0));
+		double lowerBound = avgTimeSec * (1 - (adjustedPct / 100.0));
+		
+		// Are we IN RANGE or an "out-lier"
+		boolean isOutlier = execTimeInSec > upperBound || execTimeInSec < lowerBound;
+
+		double pctDeviationFromAvg = avgTimeSec == 0 ? 0.0 : ((execTimeInSec - avgTimeSec) / (avgTimeSec*1.0)) * 100.0;
+		pctDeviationFromAvg = Math.abs(pctDeviationFromAvg); // ABS to make it positive number all the time
+		pctDeviationFromAvg = MathUtils.round(pctDeviationFromAvg, 1);
+		
+		String debugStr = "";
+		if (_logger.isDebugEnabled() || _debugMode)
+		{
+			debugStr = ", DEBUG: basePct=" + basePctThresh + ", adjustedPct=" + adjustedPct + " -- isOutlier=" + isOutlier + ": execTimeInSec=" + execTimeInSec + ", avgTimeSec=" + avgTimeSec + ", lowerBound=" + MathUtils.round(lowerBound,2) + ", upperBound=" + MathUtils.round(upperBound,2);
+
+			_logger.debug("getStatExecutionDeviation(jobId='" + jobId + "', stepId=" + stepId + ", basePct=" + basePctThresh + "): "
+					+ "---- isOutlier=" + isOutlier + ": execTimeInSec=" + execTimeInSec + ", avgTimeSec=" + avgTimeSec 
+					+ " ::: lowerBound=" + MathUtils.round(lowerBound,2) + ", upperBound=" + MathUtils.round(upperBound,2) + ", adjustedPct=" + adjustedPct);
+		}
+
+		String sign = "+";
+		if (avgDiffSec < 0)
+			sign = "-";
+		
+		String outlierNote = "";
+		if (isOutlier)
+		{
+			if (avgDiffSec < 0)
+				outlierNote = " FASTER";
+			else
+				outlierNote = " ***SLOWER***";
+		}
+		
+		// Add "sign" and Percent to: avgDiffStr
+		avgDiffStr = sign + avgDiffStr + " [" + pctDeviationFromAvg + "%]";
+
+//		return ", diff: " + avgDiffStr + outlierNote + ", avg: " + avgTimeStr + debugStr;
+		return ", diff: " + avgDiffStr + outlierNote + debugStr;
+	}
+
+	/** 
+	 * Simple adjustment based on the average time
+	 * <p>
+	 * Allow larger deviation for shorter execution times.
+	 * The basePctThresh will be multiplied X time based on time
+	 */
+	private static double adjustThresholdBasedOnTime(double avgTimeSec, double basePctThresh)
+	{
+		// Less than 1 minute
+		if ( avgTimeSec < 60 )
+		{ 
+			return basePctThresh * 4;
+		}
+
+		// Between 1 and 10 minutes
+		if ( avgTimeSec < 600 )
+		{ 
+			return basePctThresh * 3;
+		}
+
+		// Between 10 minutes and 1 hour
+		if ( avgTimeSec < 3600 )
+		{ 
+			return basePctThresh * 2;
+		}
+
+		// Between 1 hour and 2 hours
+		if ( avgTimeSec < 3600 * 2 )
+		{ 
+			return basePctThresh * 1; // 
+		}
+
+		// Between 2 hour and 4 hours
+		if ( avgTimeSec < 3600 * 2 )
+		{ 
+			return basePctThresh * 0.75; // 
+		}
+
+		// Above 4 hours
+		return basePctThresh * 0.5;
+	}
+
+//	/** Use some "math" to calculate the new adjustedPct */ 
+//	private static double adjustThresholdBasedOnMath(double avgTimeSec, double basePctThresh)
+//	{
+//		return Math.log10(avgTimeSec + 1) * 2;
+////		return Math.log10(avgTimeSec + 1) / Math.log10(3600 + 1);
+//	}
+	
 
 	private String createUserDefinedTooltip(boolean useDefaultTooltip, String label, String barText, Timestamp startTs, Timestamp endTs, Map<String, String> extraColumns)
 	{
@@ -1817,6 +2286,70 @@ extends DbxCentralPageTemplate
 		SimpleDateFormat ymd       = new SimpleDateFormat("yyyy-MM-dd");
 		SimpleDateFormat hms       = new SimpleDateFormat("HH:mm:ss");
 		SimpleDateFormat dayOfWeek = new SimpleDateFormat("EEEE");
+
+		String diffDurationTT = "";
+		String avgDurationTT  = "";
+		String deviationPctTT = "";
+		if (extraColumns != null && !extraColumns.isEmpty())
+		{
+			String jobId  = extraColumns.get("job_id");
+			String stepId = extraColumns.get("step_id");
+			
+			String key = jobId + "____" + stepId;  // NOTE: Separator between 'jobId' and 'stepId' is 4 underscores 
+			StatObject statObj = _jobIdStepIdExecSummaryMap.get(key);
+			
+			if (statObj != null)
+			{
+				long execTimeInSec = -1;
+				if (startTs != null && endTs != null)
+					execTimeInSec = (endTs.getTime() - startTs.getTime()) / 1000;
+
+				String avgTimeStr2 = " (based of " + statObj.getCount() + " executions, max=" + TimeUtils.secToTimeStrHMS(statObj.getMax()) + ", min=" + TimeUtils.secToTimeStrHMS(statObj.getMin()) + ")";
+
+				// Get avg times 
+				long   avgTimeSec = statObj.getAvg();
+				String avgTimeStr = TimeUtils.secToTimeStrHMS(avgTimeSec);
+
+				long   avgDiffSec = execTimeInSec - avgTimeSec;
+				String avgDiffStr = TimeUtils.secToTimeStrHMS(avgDiffSec);
+
+		        double adjustedPct = adjustThresholdBasedOnTime(avgTimeSec, _deviationPct);
+				
+				double upperBound = avgTimeSec * (1 + (adjustedPct / 100.0));
+				double lowerBound = avgTimeSec * (1 - (adjustedPct / 100.0));
+				
+				// Are we IN RANGE or an "out-lier"
+				boolean isOutlier = execTimeInSec > upperBound || execTimeInSec < lowerBound;
+
+				double pctDeviationFromAvg = avgTimeSec == 0 ? 0.0 : ((execTimeInSec - avgTimeSec) / (avgTimeSec*1.0)) * 100.0;
+				pctDeviationFromAvg = Math.abs(pctDeviationFromAvg); // ABS to make it positive number all the time
+				pctDeviationFromAvg = MathUtils.round(pctDeviationFromAvg, 1);
+				
+				String sign = " (<span style='color:red'>slower</span> by " + pctDeviationFromAvg + "%)";
+				if (avgDiffSec < 0)
+					sign = " (<span style='color:green'>faster</span> by " + pctDeviationFromAvg + "%)";
+				
+				String outlierNote = "";
+				if (isOutlier)
+				{
+					if (avgDiffSec < 0)
+						outlierNote = " FASTER";
+					else
+						outlierNote = " ***SLOWER***";
+				}
+
+				String deviationInfo = ""
+						+ "isOutlier="      + isOutlier + outlierNote
+						+ ", deviationPct=" + MathUtils.round(_deviationPct, 1)
+						+ ", adjustedPct="  + MathUtils.round(adjustedPct, 1)
+						;
+				
+				
+				avgDurationTT  = "<tr> <td nowrap><b>Avg Duration:   </b></td> <td nowrap>" + "<code>" + avgTimeStr + "</code>" + avgTimeStr2 + "</td> </tr>";
+				diffDurationTT = "<tr> <td nowrap><b>Diff Avg Dur:   </b></td> <td nowrap>" + "<code>" + avgDiffStr + "</code>" + sign        + "</td> </tr>";
+				deviationPctTT = "<tr> <td nowrap><b>Deviation Info: </b></td> <td nowrap>" + deviationInfo                                   + "</td> </tr>";
+			}
+		}
 		
 		String tooltip = ""
 				+ "<div style='padding:10px; white-space:nowrap; font-size:12px; font-family:Arial;'>"
@@ -1826,12 +2359,15 @@ extends DbxCentralPageTemplate
 				+ "<hr>"
 				+ "<table style='font-size:12px; font-family:Arial;'>" 
 				+ "<tr> <td nowrap><b>Duration: </b></td> <td nowrap>" + calculateDuration(startTs, endTs) + "</td> </tr>"
+				+ avgDurationTT
+				+ diffDurationTT
+				+ deviationPctTT
 				+ "<tr> <td nowrap><b>&nbsp;    </b></td> <td nowrap>&nbsp;</td> </tr>"
 				+ "<tr> <td nowrap><b>Day:      </b></td> <td nowrap>" + (startTs == null ? "-NULL-" : dayOfWeek.format(startTs)) + "</td> </tr>"
 				+ "<tr> <td nowrap><b>Start:    </b></td> <td nowrap>" + (startTs == null ? "-NULL-" : ymd.format(startTs)      ) + " <b>" + (startTs == null ? "-NULL-" : hms.format(startTs)) + "</b></td> </tr>"
 				+ "<tr> <td nowrap><b>End:      </b></td> <td nowrap>" + (  endTs == null ? "-NULL-" : ymd.format(endTs)        ) + " <b>" + (  endTs == null ? "-NULL-" : hms.format(endTs)  ) + "</b></td> </tr>"
 				;
-		
+
 		if (extraColumns != null && !extraColumns.isEmpty())
 		{
 			// first add blank row in table
@@ -1890,13 +2426,24 @@ extends DbxCentralPageTemplate
 
 				// If key is "message", then try to parse the message a bit and add NEWLINES in some places (hard coded because: I was lazy)
 				if (ttKey.equalsIgnoreCase("message"))
-					ttVal = tooltipForMessage(ttVal);
+				{
+					String subsystem   =  "" + extraColumns.get("subsystem");
+					int    msgNumber   = StringUtil.parseInt(extraColumns.get("sql_message_id"), -1);
+					int    msgSeverity = StringUtil.parseInt(extraColumns.get("sql_severity"  ), -1);
 
-				// Hack to get a separator in before column 'main_job_start_ts' (hard coded because: I was lazy)
+//					ttVal = tooltipForMessage(ttVal);
+					ttVal = formatMessageString(ttVal, "<BR>", subsystem, msgNumber, msgSeverity);
+				}
+
+				// Hack to get a separator in before column 'main_job_start_ts'
 				if (ttKey.equals("main_job_start_ts"))
 					tooltip += "<tr> <td>&nbsp;</td> <td>&nbsp;</td> </tr>";
 				
 				tooltip += "<tr> <td nowrap><b>" + ttKey + ": </b></td> <td nowrap " + tdAttr + ">" + ttVal + "</td> </tr>";
+
+				// Hack to get a separator in before column 'query_src'
+				if (ttKey.equals("query_src"))
+					tooltip += "<tr> <td>&nbsp;</td> <td><hr></td> </tr>";
 			}
 		}
 		
@@ -1908,46 +2455,103 @@ extends DbxCentralPageTemplate
 		return "'" + escapeJsQuote(tooltip) + "', ";
 	}
 
+//	/**
+//	 * Try to make messages a bit more readable<br>
+//	 *  - If it's to long try to add NEWLINE somewhere
+//	 *  - NewLine on some special words
+//	 *  - If it looks like a "console log line" add newlines
+//	 * @param ttVal
+//	 * @return
+//	 */
+//	private static String tooltipForMessage(String ttVal)
+//	{
+//		if (ttVal == null)
+//			return null;
+//		
+//		if (ttVal.length() < 64)
+//			return ttVal;
+//		
+//		// "Executed as user: MAXM\\goran.schwarz. " -->> "Executed as user: MAXM\\goran.schwarz. <BR>"
+//		ttVal = ttVal.replaceFirst("Executed as user: \\S* ", "$0<BR>");
+//		
+//		// Console messages
+//		ttVal = ttVal.replace("DEBUG   - ", "<BR>DEBUG   - ");
+//		ttVal = ttVal.replace("INFO    - ", "<BR>INFO    - ");
+//		ttVal = ttVal.replace("WARNING - ", "<BR>WARNING - ");
+//		ttVal = ttVal.replace("ERROR   - ", "<BR>ERROR   - ");
+//
+//		// Some Error messages
+//		ttVal = ttVal.replace("ERROR-MSG: ", "<BR>ERROR-MSG: ");
+//		
+//		ttVal = ttVal.replace("Warning! ", "<BR>Warning! ");
+//		ttVal = ttVal.replace("Warning: ", "<BR>Warning: ");
+//
+//		ttVal = ttVal.replace("Process Exit Code ", "<BR>Process Exit Code ");
+//		
+//		ttVal = ttVal.replace("The step failed."   , "<BR>The step failed."); 
+//		ttVal = ttVal.replace("The step succeeded.", "<BR>The step succeeded.");
+//		
+//		// Remove any "double newlines"
+//		ttVal = ttVal.replace("<BR><BR>", "<BR>");
+//		
+//		return ttVal;
+//	}
 	/**
 	 * Try to make messages a bit more readable<br>
 	 *  - If it's to long try to add NEWLINE somewhere
 	 *  - NewLine on some special words
 	 *  - If it looks like a "console log line" add newlines
-	 * @param ttVal
+	 * @param msg            The input
+	 * @param newline        What is the String for newline
+	 * @param subsystem      
+	 * @param msgNumber 
+	 * @param msgSeverity    
 	 * @return
 	 */
-	private static String tooltipForMessage(String ttVal)
+	private static String formatMessageString(String msg, String newline, String subsystem, int msgNumber, int msgSeverity)
 	{
-		if (ttVal == null)
+		if (msg == null)
 			return null;
 		
-		if (ttVal.length() < 64)
-			return ttVal;
+		if (msg.length() < 64)
+			return msg;
 		
 		// "Executed as user: MAXM\\goran.schwarz. " -->> "Executed as user: MAXM\\goran.schwarz. <BR>"
-		ttVal = ttVal.replaceFirst("Executed as user: \\S* ", "$0<BR>");
+		msg = msg.replaceFirst("Executed as user: \\S* ", "$0" + newline);
 		
 		// Console messages
-		ttVal = ttVal.replace("DEBUG   - ", "<BR>DEBUG   - ");
-		ttVal = ttVal.replace("INFO    - ", "<BR>INFO    - ");
-		ttVal = ttVal.replace("WARNING - ", "<BR>WARNING - ");
-		ttVal = ttVal.replace("ERROR   - ", "<BR>ERROR   - ");
+		msg = msg.replace("DEBUG   - ",          newline + "DEBUG   - ");
+		msg = msg.replace("INFO    - ",          newline + "INFO    - ");
+		msg = msg.replace("WARNING - ",          newline + "WARNING - ");
+		msg = msg.replace("ERROR   - ",          newline + "ERROR   - ");
 
 		// Some Error messages
-		ttVal = ttVal.replace("ERROR-MSG: ", "<BR>ERROR-MSG: ");
+		msg = msg.replace("ERROR-MSG: ",         newline + "ERROR-MSG: ");
 		
-		ttVal = ttVal.replace("Warning! ", "<BR>Warning! ");
-		ttVal = ttVal.replace("Warning: ", "<BR>Warning: ");
+		// Make a newline *after* '[SQLSTATE #####] (Message ####)'
+		msg = msg.replaceAll("\\[SQLSTATE \\d+\\] \\(Message \\d+\\)", "$0" + newline); 
 
-		ttVal = ttVal.replace("Process Exit Code ", "<BR>Process Exit Code ");
+		msg = msg.replace("Process Exit Code ",  newline + "Process Exit Code ");
 		
-		ttVal = ttVal.replace("The step failed."   , "<BR>The step failed."); 
-		ttVal = ttVal.replace("The step succeeded.", "<BR>The step succeeded.");
+		msg = msg.replace("The step failed."   , newline + "The step failed."); 
+		msg = msg.replace("The step succeeded.", newline + "The step succeeded.");
+		
+		// Remove any "double newlines" (that only contains a period '.' char) 
+		msg = msg.replace(newline + ".  " + newline, newline);
 		
 		// Remove any "double newlines"
-		ttVal = ttVal.replace("<BR><BR>", "<BR>");
+		msg = msg.replace(newline + newline, newline);
 		
-		return ttVal;
+		// If it's a T-SQL subsystem, lets remove some "stuff"
+		if ("TSQL".equals(subsystem))
+		{
+			// SQLSTATE description: https://en.wikipedia.org/wiki/SQLSTATE
+			
+			// Simplify message: "[SQLSTATE 01000] (Message 50000)" -> "" (empty string)
+			msg = msg.replaceAll("\\[SQLSTATE 01\\d+\\] \\(Message \\d+\\)", ""); // Remove any of the "warning" SQL STATES
+		}
+		
+		return msg;
 	}
 	
 	private String calculateDuration(Timestamp startTs, Timestamp endTs)
@@ -1977,10 +2581,14 @@ extends DbxCentralPageTemplate
 		if (seconds > 0)
 			res += seconds + "s ";
 
+//		if ( days == 0 )
+//			res += String.format("    &emsp;<code>%02d:%02d:%02d</code>", hours, minutes, seconds);
+//		else
+//			res += String.format("    &emsp;<code>%dd %02d:%02d:%02d</code>", days, hours, minutes, seconds);
 		if ( days == 0 )
-			res += String.format("    &emsp;<code>%02d:%02d:%02d</code>", hours, minutes, seconds);
+			res = String.format("<code>%02d:%02d:%02d</code> ("     + res.trim() + ")", hours, minutes, seconds);
 		else
-			res += String.format("    &emsp;<code>%dd %02d:%02d:%02d</code>", days, hours, minutes, seconds);
+			res = String.format("<code>%dd %02d:%02d:%02d</code> (" + res.trim() + ")", days, hours, minutes, seconds);
 
 		return res;
 	}

@@ -123,7 +123,7 @@ extends CountersModel
 
 	public CmTempdbUsage(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 

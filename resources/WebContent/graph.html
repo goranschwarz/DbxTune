@@ -19,7 +19,8 @@ at pc:
 
 	<!-- Prism: SQL Text Area needs this -->
 	<!-- Done up here since we OVERRIDE some of the stuff in below -->
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+	<link href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css' rel='stylesheet'>
+	<link href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css' rel='stylesheet'>
 
 	<!-- SQL Server SHOWPLAN -->
 	<!-- Done up here since we OVERRIDE some of the stuff in below -->
@@ -540,6 +541,24 @@ at pc:
 <!--<script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-datalabels.js"></script>-->
 <!--<script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-colorschemes.js"></script>-->
 
+<!--
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js" integrity="sha512-L0Shl7nXXzIlBSUUPpxrokqq4ojqgZFQczTYlGjzONGTDAcLremjwaWv5A+EDLnxhQzY5xUZPWLOLqYRkY0Cbw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/helpers.js"   integrity="sha512-08S2icXl5dFWPl8stSVyzg3W14tTISlNtJekjsQplv326QtsmbEVqL4TFBrRXTdEj8QI5izJFoVaf5KgNDDOMA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.1.0/chartjs-plugin-annotation.min.js" integrity="sha512-8MntMizyPIYkcjoDkYqgrQOuWOZsp92zlZ9d7M2RCG0s1Zua8H215p2PdsxS7qg/4hLrHrdPsZgVZpXheHYT+Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.2.0/chartjs-plugin-zoom.min.js"             integrity="sha512-FRGbE3pigbYamZnw4+uT4t63+QJOfg4MXSgzPn2t8AWg9ofmFvZ/0Z37ZpCawjfXLBSVX2p2CncsmUH2hzsgJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js"       integrity="sha512-hVy4KxCKgnXi2ok7rlnlPma4JHXI1VPQeempoaclV1GwRHrDeaiuS1pI6DVldaj5oh6Opy2XJ2CTljQLPkaMrQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+-->
+
+<!--
+<script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js'   integrity='sha512-TW5s0IT/IppJtu76UbysrBH9Hy/5X41OTAbQuffZFU6lQ1rdcLHzpU5BzVvr/YFykoiMYZVWlr/PX1mDcfM9Qg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js' integrity='sha512-qF3T5CaMgSRNrxzu69V3ZrYGnrbRMIqrkE+OrE01DDsYDNo8R1VrtYL8pk+fqhKxUBXQ2z+yV/irk+AbbHtBAg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.2.0/chartjs-plugin-zoom.min.js"             integrity="sha512-FRGbE3pigbYamZnw4+uT4t63+QJOfg4MXSgzPn2t8AWg9ofmFvZ/0Z37ZpCawjfXLBSVX2p2CncsmUH2hzsgJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js' integrity='sha512-oh5t+CdSBsaVVAvxcZKy3XJdP7ZbYUBSRCXDTVn0ODewMDDNnELsrG9eDm8rVZAQg7RsDD/8K3MjPAFB13o6eA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>
+-->
+
+
+
 	<!-- JS: DbxCentral -->
 	<script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
 	<script type="text/javascript" src="/scripts/dbxcentral.graph.js"></script>
@@ -566,12 +585,16 @@ at pc:
     <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js'></script>
 
 	<!-- SQL Server Showplan: html-query-plan -->
 	<!-- <script src="https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js"></script> -->
 	<script src='https://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script>
 	<!-- The CSS is done at the TOP, since we override some stuff -->
 	<!--<link href="https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/css/qp.min.css" rel="stylesheet">-->
+
+	<!-- Zoom (on SQL Server Showplan) -->
+	<script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
 	<!-- SQL formatter -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/sql-formatter/12.1.3/sql-formatter.min.js" integrity="sha512-KYBOFOOIIdyOZnOWTuAIISlg049+bMVJfG5ZOi+ZIY+uqlFBErw0Nju4yIIEOiFkULPtn34VOi7u17Q6kBgtfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -582,7 +605,7 @@ at pc:
 	<!-- Postgres Query Plan -- PEV2 -->
 	<script src="https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js"></script>
 	<script src="https://unpkg.com/pev2/dist/pev2.umd.js"></script>
-
+	
 
 	<!--
 	  =======================================================================
@@ -1443,6 +1466,8 @@ at pc:
 					<div class='scroll-tree' style='width: 3000px;'>
 						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-ssShowplan-content").toggle();'>Hide/Show Below Execution Plan</button>
 						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='QP.drawLines(document.getElementById("dbx-view-ssShowplan-content"));'>Redraw Lines</button>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='ssShowplanEnableZoom();'>Enable Zoom</button>
+						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='ssShowplanResetZoom();'>Reset Zoom</button>
 						<br><br>
 						<div id='dbx-view-ssShowplan-content' class='dbx-view-ssShowplan-content'></div>
 						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$("#dbx-view-ssShowplan-sqlContent").toggle();'>Hide/Show Below SQL Text</button>
@@ -1484,6 +1509,9 @@ at pc:
 			$('#dbx-view-ssShowplan-xmlContent', this).text(formatXml(data.tooltip));
 			$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql(data.sqltext));
 			ssShowplanGetParameters(); // sets both Compile and Runtime parameters in there fields
+
+			// Reset zoom if enabled (otherwise drawing will/may be "fucked upp")
+			ssShowplanResetZoom();
 		});
 
 		//---------------------------------------------------------------------------
@@ -1504,7 +1532,7 @@ at pc:
 
 			// Scroll top top (do not seems to work)
 			$('#dbx-view-ssShowplan-dialog').animate({ scrollTop: 0 }, 'slow');
-
+			
 //			// If it takes a LONG time to load... the lines are NOT VISIBLE, so lets draw them again!
 //			$('#dbx-view-ssShowplan-dialog').on('loaded.bs.modal', function(e) {
 //				setTimeout(function() {
@@ -1512,7 +1540,37 @@ at pc:
 //				}, 500);
 //			});
 		});
+
+		// Global variable for the Zoom functionality, so we can reset it...
+		var _ssShowplanZoom = undefined;
+		//------------------------------------------------------------------------------------------
+		function ssShowplanEnableZoom()
+		{
+			if (_ssShowplanZoom !== undefined)
+				return;
+
+			// Get what element we are initializing Zoop on
+			const showplanElem = document.getElementById('dbx-view-ssShowplan-content');
+
+			_ssShowplanZoom = Panzoom(showplanElem, { maxScale: 1, minScale: 0.01 } );
 			
+			// Normal wheel
+			showplanElem.addEventListener('wheel', _ssShowplanZoom.zoomWithWheel);
+
+			// Bind to shift + wheel
+//			showplanElem.addEventListener('wheel', function(event) 
+//			{
+//				if ( ! event.shiftKey ) 
+//					return;
+//				_ssShowplanZoom.zoomWithWheel(event);
+//			});
+		}
+		//------------------------------------------------------------------------------------------
+		function ssShowplanResetZoom()
+		{
+			if (_ssShowplanZoom !== undefined)
+				_ssShowplanZoom.reset();
+		}
 		//------------------------------------------------------------------------------------------
 		function ssShowplanFormatSql()
 		{
@@ -1795,7 +1853,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 	* -- View SQL Text
 	* ---------------------------------------------------------------------------
 	*/
-	$('#dbx-view-sqltext-dialog').on('show.bs.modal', function(e) {
+	$('#dbx-view-sqltext-dialog').on('shown.bs.modal', function(e) {
 		var data = $(e.relatedTarget).data();
 
 		console.log('#dbx-view-sqltext-dialog: data: '+data, data);
@@ -1811,7 +1869,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 		$('#dbx-view-sqltext-dialog').animate({ scrollTop: 0 }, 'slow');
 	});
 
-	$('#dbx-view-lockTable-dialog').on('show.bs.modal', function(e) {
+	$('#dbx-view-lockTable-dialog').on('shown.bs.modal', function(e) {
 		var data = $(e.relatedTarget).data();
 
 		console.log('#dbx-view-lockTable-dialog: data: '+data, data);
@@ -1930,8 +1988,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 			 */
 			// var start = moment().subtract(2, 'hours');
 			// var end = moment();
-
-			function dateRangePickerCb(start, end, label)
+			function dateRangePickerCb(start, end, label, picker)
 			{
 				console.log("CALLBACK: start="+start+", end="+end+", label="+label);
 				// alert("CALLBACK: start="+start+", end="+end+", label="+label);
@@ -1956,6 +2013,34 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					console.log("window.location.ref: "+url);
 					window.location.assign(url);
 				}
+				else if (label === "Start Time + 2H" || label === "Start Time + 4H" || label === "Start Time + 8H")
+				{
+					// Get current start/end Time from 'the button label' #dbx-report-range)
+					var currentStartTime = '';
+					var currentEndTime   = '';
+					const currentStartEndDate = $('#dbx-report-range span').html().split(" - ");
+					if (currentStartEndDate.length === 2)
+					{
+						currentStartTime = parseDate(currentStartEndDate[0]);
+						currentEndTime   = parseDate(currentStartEndDate[1]);
+					}
+
+					var   startTime = currentStartTime.format('YYYY-MM-DD HH:mm');
+					var   endTime   = '2h';
+
+					if      (label === "Start Time + 2H")  endTime = '2h';
+					else if (label === "Start Time + 4H")  endTime = '4h';
+					else if (label === "Start Time + 8H")  endTime = '8h';
+					
+					const url = new URL(window.location.href);
+
+					url.searchParams.set("startTime", startTime);
+					url.searchParams.set("endTime",   endTime);
+					url.searchParams.set("subscribe", false);
+
+					console.log("window.location.ref: "+url);
+					window.location.assign(url);
+				}
 				else
 				{
 					const url = new URL(window.location.href);
@@ -1969,6 +2054,7 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					console.log("window.location.ref: "+url);
 					window.location.assign(url);
 				}
+
 				//$('#dbx-report-range span').html(start.format('YYYY-MM-DD HH:mm') + ' - ' + end.format('YYYY-MM-DD HH:mm'));
 				if (moment(start).isSame(moment(), 'day') && moment(end).isSame(moment(), 'day'))
 					$('#dbx-report-range span').html(start.format('HH:mm') + ' - ' + end.format('HH:mm'));
@@ -1985,28 +2071,31 @@ console.log("SQLTEXT=|"+sqlText+"|");
 				timePicker24Hour: true,
 				timePickerIncrement: 5,
 				ranges: {
-					'Last 2 Hours':  [moment().subtract(2,  'hours'), moment()],
-					'Last 4 Hours':  [moment().subtract(4,  'hours'), moment()],
-					'Last 6 Hours':  [moment().subtract(6,  'hours'), moment()],
-					'Last 8 Hours':  [moment().subtract(8,  'hours'), moment()],
-					'Last 12 Hours': [moment().subtract(12, 'hours'), moment()],
-					'Last 24 Hours': [moment().subtract(24, 'hours'), moment()],
-					'Today':         [moment().startOf('day'), moment().endOf('day')],
-					'Yesterday':     [moment().startOf('day').subtract(1,  'days'), moment().endOf('day').subtract(1, 'days')],
-					'This Week':     [moment().startOf('isoWeek'), moment().endOf('isoWeek')],
-					'Last 7 Days':   [moment().startOf('day').subtract(7,  'days'), moment().endOf('day')],
-					'Last 2 Weeks':  [moment().startOf('day').subtract(14, 'days'), moment().endOf('day')],
-					'Last 4 Weeks':  [moment().startOf('day').subtract(28, 'days'), moment().endOf('day')],
-					'Last 30 Days':  [moment().startOf('day').subtract(30, 'days'), moment().endOf('day')],
-					'This Month':    [moment().startOf('month'), moment().endOf('month')],
-					'Last Month':    [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+					'Last 2 Hours':    [moment().subtract(2,  'hours'), moment()],
+					'Last 4 Hours':    [moment().subtract(4,  'hours'), moment()],
+					'Last 6 Hours':    [moment().subtract(6,  'hours'), moment()],
+					'Last 8 Hours':    [moment().subtract(8,  'hours'), moment()],
+					'Last 12 Hours':   [moment().subtract(12, 'hours'), moment()],
+					'Last 24 Hours':   [moment().subtract(24, 'hours'), moment()],
+					'Start Time + 2H': [moment(), moment()],
+					'Start Time + 4H': [moment(), moment()],
+					'Start Time + 8H': [moment(), moment()],
+					'Today':           [moment().startOf('day'), moment().endOf('day')],
+					'Yesterday':       [moment().startOf('day').subtract(1,  'days'), moment().endOf('day').subtract(1, 'days')],
+					'This Week':       [moment().startOf('isoWeek'), moment().endOf('isoWeek')],
+					'Last 7 Days':     [moment().startOf('day').subtract(7,  'days'), moment().endOf('day')],
+					'Last 2 Weeks':    [moment().startOf('day').subtract(14, 'days'), moment().endOf('day')],
+					'Last 4 Weeks':    [moment().startOf('day').subtract(28, 'days'), moment().endOf('day')],
+					'Last 30 Days':    [moment().startOf('day').subtract(30, 'days'), moment().endOf('day')],
+					'This Month':      [moment().startOf('month'), moment().endOf('month')],
+					'Last Month':      [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
 				}
 			});
 			// }, dateRangePickerCb); // Using the callback caused "callback to be called" when user clickes "outside the picker"... su use elow 'apply.daterangepicker' instead
 
 			// On daterangepicker-APPLY
 			$('#dbx-report-range').on('apply.daterangepicker', function(ev, picker) {
-				dateRangePickerCb(picker.startDate, picker.endDate, picker.chosenLabel);
+				dateRangePickerCb(picker.startDate, picker.endDate, picker.chosenLabel, picker);
 			});
 
 			// On daterangepicker-OPEN, set some start/end date
@@ -2185,6 +2274,16 @@ console.log("SQLTEXT=|"+sqlText+"|");
 
 			/* Start to subscribe to data, sent by the backend-server */
 			dbxTuneGraphSubscribe();
+			
+//			/* If we have 'markTime' then enable historical mode, and set the position in the timeline */
+//			var markTime = getParameter("markTime");
+//			if (markTime !== undefined)
+//			{
+//				// THE BELOW IS UGGLY... Sleep for a while before kicking off the history load
+//				// TODO: Change this to be executed when we *know* we have data in the proper structures
+//				setTimeout(function(){ console.log('ENABLE HISTORY MODE'); dbxHistoryAction(); }, 1000);
+//				setTimeout(function(){ console.log('SET TIME IN HISTORY MODE: markTime=|' + markTime + '|'); dbxHistoryAction(markTime); }, 2000);
+//			}
 		}
 		function scrollToFormatter(value, row, index)
 		{
@@ -2291,6 +2390,13 @@ console.log("SQLTEXT=|"+sqlText+"|");
 			// and *fire* the "change" event on the slider
 			if (isHistoryViewEnabled && momentTs !== undefined)
 			{
+				// ensure that it's a moment object
+				if (typeof momentTs === 'string' || momentTs instanceof String)
+				{
+					momentTs = momentTs.replace("+", " "); // If the date string contain '+' instead of ' '
+					momentTs = moment(momentTs);
+				}
+				
 				let toArrayPos = getHistoryArrayPosForTs(momentTs);
 				if (toArrayPos > 0)
 				{
@@ -2527,11 +2633,21 @@ console.log("SQLTEXT=|"+sqlText+"|");
 					});
 				}
 
-				// Set slider to the END
-				dbxHistoryTimelineSlider.value = dbxHistoryTimelineSlider.max;
-				dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
-			}
-		}
+				if (momentTs === undefined)
+				{
+					// no input parameter: Set slider to the END
+					dbxHistoryTimelineSlider.value = dbxHistoryTimelineSlider.max;
+					dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
+				}
+				else
+				{
+					// if passed parameter, then call this method again... 
+					// Second time: it will then already be in "active/visible" mode, and position will simple be moved, then the function will exit early)
+					setTimeout(function() { dbxHistoryAction(momentTs); }, 500);
+				}
+			} // end: Change to HISTORY MODE
+			
+		} // end: function
 
 		function dbxHistoryPrevActiveStatement()
 		{

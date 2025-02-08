@@ -109,7 +109,7 @@ implements ITableTooltip
 		}
 	}
 //	private static final String[] TAB_HEADER = {"Event Time", "Action", "isActive", "AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
-	private static final String[] TAB_HEADER = {"Event Time", "action", "isActive", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
+	private static final String[] TAB_HEADER = {"Event Time", "action", "isActive", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
 	public static final int TAB_POS_EVENT_TIME                = 0;
 	public static final int TAB_POS_ACTION                    = 1;
 	public static final int TAB_POS_IS_ACTIVE                 = 2;
@@ -121,20 +121,21 @@ implements ITableTooltip
 	public static final int TAB_POS_CATEGORY                  = 8;
 	public static final int TAB_POS_SEVERITY                  = 9;
 	public static final int TAB_POS_STATE                     = 10;
-	public static final int TAB_POS_REPEAT_COUNT              = 11;
-	public static final int TAB_POS_ALARM_DURATION            = 12;
-	public static final int TAB_POS_FULL_DURATION             = 13;
-	public static final int TAB_POS_FULL_DURATION_ADJ_IN_SEC  = 14;
-	public static final int TAB_POS_CR_TIME                   = 15;
-	public static final int TAB_POS_RE_RAISE_TIME             = 16;
-	public static final int TAB_POS_CANCEL_TIME               = 17;
-	public static final int TAB_POS_TIME_TO_LIVE              = 18;
-	public static final int TAB_POS_DATA                      = 19;
-	public static final int TAB_POS_LAST_DATA                 = 20;
-	public static final int TAB_POS_DESCRIPTION               = 21;
-	public static final int TAB_POS_LAST_DESCRIPTION          = 22;
-	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 23;
-	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 24;
+	public static final int TAB_POS_ALARM_ID                  = 11;
+	public static final int TAB_POS_REPEAT_COUNT              = 12;
+	public static final int TAB_POS_ALARM_DURATION            = 13;
+	public static final int TAB_POS_FULL_DURATION             = 14;
+	public static final int TAB_POS_FULL_DURATION_ADJ_IN_SEC  = 15;
+	public static final int TAB_POS_CR_TIME                   = 16;
+	public static final int TAB_POS_RE_RAISE_TIME             = 17;
+	public static final int TAB_POS_CANCEL_TIME               = 18;
+	public static final int TAB_POS_TIME_TO_LIVE              = 19;
+	public static final int TAB_POS_DATA                      = 20;
+	public static final int TAB_POS_LAST_DATA                 = 21;
+	public static final int TAB_POS_DESCRIPTION               = 22;
+	public static final int TAB_POS_LAST_DESCRIPTION          = 23;
+	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 24;
+	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 25;
 
 	private ArrayList<AlarmEventWrapper> _rows = new ArrayList<>();
 	private boolean _hasChanged = false;
@@ -233,6 +234,7 @@ implements ITableTooltip
 		case TAB_POS_CATEGORY                  : return entry._alarmEvent.getCategory();
 		case TAB_POS_SEVERITY                  : return entry._alarmEvent.getSeverity();
 		case TAB_POS_STATE                     : return entry._alarmEvent.getState();
+		case TAB_POS_ALARM_ID                  : return entry._alarmEvent.getAlarmId();
 		case TAB_POS_REPEAT_COUNT              : return entry._alarmEvent.getReRaiseCount();
 		case TAB_POS_ALARM_DURATION            : return entry._alarmEvent.getAlarmDuration();
 		case TAB_POS_FULL_DURATION             : return entry._alarmEvent.getFullDuration();

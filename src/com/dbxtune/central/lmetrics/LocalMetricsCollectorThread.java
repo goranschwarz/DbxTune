@@ -284,8 +284,20 @@ extends CounterCollectorThreadAbstract
 					cm.doPostRefresh(refreshedCms);
 				}
 
+
+				//---------------------------------------------------
+				// POSTPROCESSING -  Alarm handling
+				//---------------------------------------------------
+				// TODO: Do this here so Alarms can reference data in CM's that has been refreshed later than the current CM (so we can include data in the Extended descriptions)
+				_logger.debug("---- Do Alarm handling...");
+				for (CountersModel cm : refreshedCms.values())
+				{
+					cm.wrapperFor_sendAlarmRequest();
+				}
+
 				// Send any Dummy/debug alarm if a specific file exists
 				sendDummyAlarmIfFileExists();
+
 
 				//-----------------
 				// AlarmHandler: end-of-scan: Cancel any alarms that has not been repeated

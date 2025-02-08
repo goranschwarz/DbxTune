@@ -96,6 +96,11 @@ extends ReportEntryAbstract
 	public String    getDbmsServerName()      { return _dbmsServerName; } 
 	public String    getDbmsDisplayName()     { return _dbmsDisplayName; } 
 	
+	public String    getOsCoreInfo()             { return _osCoreInfo; }
+	public String    getOsMemoryInfo()           { return _osMemoryInfo; }
+	public String    getHostMonitorHostname()    { return _hostMonitorHostname; }
+	public boolean   isHostMonitoringEnabled()   { return _isHostMonitoringEnabled; }
+
 	@Override
 	public boolean hasMinimalMessageText()
 	{

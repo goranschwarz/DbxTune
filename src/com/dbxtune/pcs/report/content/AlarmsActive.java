@@ -196,6 +196,7 @@ extends ReportEntryAbstract
 		      "     [category],               \n" +
 		      "     [severity],               \n" +
 		      "     [state],                  \n" +
+		      "     [alarmId],                \n" +
 		      "     [repeatCnt],              \n" +
 		      "     [cancelTime],             \n" +
 		      "     [timeToLive],             \n" +

@@ -114,10 +114,10 @@ public class LocalMetricsCounterController extends CounterControllerAbstract
 			boolean persistDiff = conf.getBooleanProperty(cm.getName() + ".persistCounters.diff", true);
 			boolean persistRate = conf.getBooleanProperty(cm.getName() + ".persistCounters.rate", true);
 
-			cm.setPersistCounters    (persist    , false);
-			cm.setPersistCountersAbs (persistAbs , false);
-			cm.setPersistCountersDiff(persistDiff, false);
-			cm.setPersistCountersRate(persistRate, false);
+			cm.setPersistCounters    (persist    , false); // false for "doNotSaveProps"
+			cm.setPersistCountersAbs (persistAbs , false); // false for "doNotSaveProps"
+			cm.setPersistCountersDiff(persistDiff, false); // false for "doNotSaveProps"
+			cm.setPersistCountersRate(persistRate, false); // false for "doNotSaveProps"
 
 			// Now when we are connected to a server, and properties are set in the CM, 
 			// mark it as runtime initialized (or late initialization)

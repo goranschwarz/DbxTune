@@ -621,6 +621,10 @@ Active Alarms
 	console.log("_refresh="+_refresh);
 	console.log("_debug="  +_debug);
 
+	//-----------------------------------------------------------
+	// Global Params
+	//-----------------------------------------------------------
+	var _global_disabledServers = [];
 
 //	function resizeExampleImage() {
 //		// Origin size is: 378
@@ -1521,7 +1525,9 @@ Active Alarms
 
 				if ((parseInt(srvSession.status) & 1) === 1) // 1=DISABLED
 				{
-					console.log("Skipping server '"+srvSession.serverName+"', since it's in DISABLED Status (status=1)");
+					_global_disabledServers.push(srvSession.serverName);
+
+					console.log("Skipping server '" + srvSession.serverName + "', since it's in DISABLED Status (status=1)");
 					return html;
 				}
 
@@ -1601,7 +1607,7 @@ Active Alarms
 				{
 					collectorMenuOptions = ''
 						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-report"                                     , "Job Scheduler Report for Today")\'>SQL Agent/Scheduler <b>Report</b> for <b>Today</b></a>'
-						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-activity&startTime=TODAY&onlyLevelZero=true", "Job Scheduler Activity View Today")\'>SQL Agent/Scheduler <b>Activity</b> View for <b>Today</b></a>'
+						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-timeline&startTime=TODAY&onlyLevelZero=true", "Job Scheduler Activity View Today")\'>SQL Agent/Scheduler <b>Timeline</b> View for <b>Today</b></a>'
 						+ '    <div class="dropdown-divider"></div>';
 				}
 
@@ -1836,6 +1842,12 @@ Active Alarms
 				for (var i=0; i<jsonResp.length; i++)
 				{
 					var srvName = jsonResp[i].srvName;
+					
+					if (_global_disabledServers.includes(srvName))
+					{
+						console.log('Skipping alarms for server ' + srvName + ' since it has been disabled.');
+						continue;
+					}
 
 					// Check if KEY exists, if NOT create an array, where we will "stuff" AlarmEntries
 					if ( ! srvAlarmMap.hasOwnProperty(srvName) )

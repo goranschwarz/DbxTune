@@ -76,7 +76,8 @@ public class CountersModelTest
 		String[] diffCols = new String[]{"C1", "C2", "C3"};
 		
 		_cm = new CountersModel(
-				cc,     //counterController, 
+				cc,     // counterController, 
+				null,   // guiController
 				"DummyCmTest", // name, 
 				null,     // groupName, 
 				"select * from T1", 

@@ -92,7 +92,7 @@ extends CmSummaryAbstract
 
 	public CmSummary(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -158,7 +158,8 @@ extends CmSummaryAbstract
 		CmSummaryPanel summaryPanel = new CmSummaryPanel(this);
 
 		// THIS IS THE SUMMARY CM, so set this
-		CounterController.getInstance().setSummaryPanel( summaryPanel );
+//		CounterController.getInstance().setSummaryPanel( summaryPanel );
+		getCounterController().setSummaryPanel( summaryPanel );
 
 		// add listener, so that the GUI gets updated when data changes in the CM
 		addTableModelListener( summaryPanel );
@@ -231,7 +232,8 @@ extends CmSummaryAbstract
 	@Override
 	public void doPostRefresh(LinkedHashMap<String, CountersModel> refreshedCms)
 	{
-		CountersModel cmRaStat = CounterController.getInstance().getCmByName(CmRaStatistics.CM_NAME);
+//		CountersModel cmRaStat = CounterController.getInstance().getCmByName(CmRaStatistics.CM_NAME);
+		CountersModel cmRaStat = getCounterController().getCmByName(CmRaStatistics.CM_NAME);
 		if (cmRaStat == null)
 		{
 //			System.out.println("summary: doPostRefresh(): CmRaStatistics == null, return");
@@ -274,7 +276,8 @@ extends CmSummaryAbstract
 //		addRow(getCounterSampleDiff(), "Total bytes sent - MB",         cmRaStat.getDiffString("Total bytes sent - MB",         "NumberValue"));
 //		addRow(getCounterSampleRate(), "Total bytes sent - MB",         cmRaStat.getRateString("Total bytes sent - MB",         "NumberValue"));
 
-		ISummaryPanel sumPanel = CounterController.getInstance().getSummaryPanel(); 
+//		ISummaryPanel sumPanel = CounterController.getInstance().getSummaryPanel(); 
+		ISummaryPanel sumPanel = getCounterController().getSummaryPanel(); 
 		if (sumPanel != null)
 		{
 //			System.out.println("summary: doPostRefresh(): has TabPanel()");

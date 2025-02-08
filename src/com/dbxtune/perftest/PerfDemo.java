@@ -479,7 +479,7 @@ implements ActionListener
 		LinkedList<String> pkList        = new LinkedList<String>();
 		pkList.add("tabName");
 
-		_qStatTmRowCount = new CountersModel(null, "StatRowCount", null,
+		_qStatTmRowCount = new CountersModel(null, null, "StatRowCount", null,
 				sql, 
 				pkList, colsCalcDiff, colsCalcPCT, 
 				monTables, needRole, needConfig, needVersion, needCeVersion, 

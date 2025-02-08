@@ -32,6 +32,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
+import com.dbxtune.IGuiController;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Ver;
@@ -56,6 +57,7 @@ public class CountersModelUserDefined
 	public CountersModelUserDefined
 	(
 			ICounterController counterController,
+			IGuiController     guiController,
 			String              name,             // Name of the Counter Model
 			String              groupName,        // Group this belongs to
 			String              sql,              // SQL Used to grab a sample from the counter data
@@ -71,7 +73,7 @@ public class CountersModelUserDefined
 			boolean             negativeDiffCountersToZero // if diff calculations is negative, reset the counter to zero.
 	)
 	{
-		super(counterController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, false);
+		super(counterController, guiController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, false);
 		
 		_sqlVerStr  = sqlVerStr;
 		_sqlInitial = sql;

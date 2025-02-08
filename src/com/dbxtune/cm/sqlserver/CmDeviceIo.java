@@ -107,7 +107,7 @@ extends CountersModel
 
 	public CmDeviceIo(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -486,7 +486,7 @@ extends CountersModel
 		       "ReadTime           = a.io_stall_read_ms, \n" + 
 		       "WriteTime          = a.io_stall_write_ms, \n" + 
 		       "AvgServ_ms         = CASE WHEN "+TotalIOs+" > 0 \n" +
-		       "                          THEN convert(numeric(10,1), a.io_stall / convert(numeric(10,0), "+TotalIOs+")) \n" +
+		       "                          THEN convert(numeric(10,1), a.io_stall / convert(numeric(18,0), "+TotalIOs+")) \n" +
 		       "                          ELSE convert(numeric(10,1), null) \n" +
 		       "                     END, \n" +
 		       "ReadServiceTimeMs  = CASE WHEN a.num_of_reads > 0 \n" +

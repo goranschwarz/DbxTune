@@ -2117,7 +2117,7 @@ public class StringUtil
 	 */
 	public static boolean isInteger(String str)
 	{
-		if (str == null)
+		if (isNullOrBlank(str))
 			return false;
 
 		try
@@ -2139,9 +2139,8 @@ public class StringUtil
 	 */
 	public static int parseInt(String str, int defaultValue)
 	{
-		if (str == null)
+		if (isNullOrBlank(str))
 			return defaultValue;
-//			throw new NullPointerException("parseInt(str) expects a string value not a null");
 
 		str = cleanupNumberStr(str, false);
 		try
@@ -2162,7 +2161,7 @@ public class StringUtil
 	 */
 	public static long parseLong(String str, long defaultValue)
 	{
-		if (str == null)
+		if (isNullOrBlank(str))
 			return defaultValue;
 
 		str = cleanupNumberStr(str, false);
@@ -2255,6 +2254,9 @@ public class StringUtil
 	 */
 	public static double parseDouble(String str, double defaultValue)
 	{
+		if (isNullOrBlank(str))
+			return defaultValue;
+
 		try
 		{
 			return Double.parseDouble(str);
@@ -4678,6 +4680,19 @@ public class StringUtil
 		return outStr;
 	}
 	
+	/**
+	 * Simple replace a java NULL value with a known string
+	 * 
+	 * @param input                The value to check for null
+	 * @param ifNullReturnThis     The value to return if 'input' is null
+	 * @return
+	 */
+	public static String nullToValue(String input, String ifNullReturnThis)
+	{
+		if (input == null)
+			return ifNullReturnThis;
+		return input;
+	}
 	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////

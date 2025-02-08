@@ -674,6 +674,7 @@ public class AlarmLogServlet extends HttpServlet
 			out.println("    <th>Category</th>");
 			out.println("    <th>Severity</th>");
 			out.println("    <th>State</th>");
+			out.println("    <th>AlarmId</th>");
 			out.println("    <th>RepeatCnt</th>");
 			out.println("    <th>Duration</th>");
 			out.println("    <th>AlarmDuration</th>");
@@ -720,6 +721,7 @@ public class AlarmLogServlet extends HttpServlet
 				out.println("  <td nowrap>" + e.getCategory()                    + "</td>");
 				out.println("  <td nowrap>" + e.getSeverity()                    + "</td>");
 				out.println("  <td nowrap>" + e.getState()                       + "</td>");
+				out.println("  <td nowrap>" + e.getAlarmId()                     + "</td>");
 				out.println("  <td nowrap>" + e.getRepeatCnt()                   + "</td>");
 				out.println("  <td nowrap>" + e.getDuration()                    + "</td>");
 				out.println("  <td nowrap>" + e.getAlarmDuration()               + "</td>");

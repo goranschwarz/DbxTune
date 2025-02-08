@@ -46,7 +46,8 @@ extends CounterSample
 	throws SQLException, NoValidRowsInSample
 	{
 		// Get the CmAdminStats which holds all the counter which a Module is based on
-		CmAdminStats cmAdminStats = (CmAdminStats) CounterController.getInstance().getCmByName(CmAdminStats.CM_NAME);
+//		CmAdminStats cmAdminStats = (CmAdminStats) CounterController.getInstance().getCmByName(CmAdminStats.CM_NAME);
+		CmAdminStats cmAdminStats = (CmAdminStats) cm.getCounterController().getCmByName(CmAdminStats.CM_NAME);
 //		if ( cmAdminStats.getColumnCount() == 0 )
 //			return false;
 

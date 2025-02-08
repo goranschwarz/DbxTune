@@ -79,7 +79,7 @@ extends DailySummaryReportDefault
 		
 		// Job Agent/Scheduler
 		addReportEntry( new SqlServerJobScheduler           (this));
-
+		
 		// SQL
 		addReportEntry( new SqlServerPlanCacheHistory       (this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
 		addReportEntry( new SqlServerDeadlocks              (this));

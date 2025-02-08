@@ -760,14 +760,14 @@ implements Runnable
 		{
 			boolean allowLookup = _objectLookupInspector.allowInspection(entry);
 			if (_logger.isDebugEnabled())
-				_logger.debug("addDdl(): _objectLookupInspector.allowInspection(entry) retuned: " + allowLookup);
+				_logger.debug("addDdl(): _objectLookupInspector.allowInspection(entry) returned: " + allowLookup);
 			
 			// Inspector said: DISCARD, so we can exit early
 			if ( ! allowLookup )
 			{
 				if (doPrintInfo)
-					_logger.info("DEBUG: addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) retuned: " + allowLookup);
-//System.out.println("addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) retuned: " + allowLookup);
+					_logger.info("DEBUG: addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) returned: " + allowLookup);
+//System.out.println("addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) returned: " + allowLookup);
 				return;
 			}
 

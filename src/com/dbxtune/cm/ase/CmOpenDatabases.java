@@ -23,6 +23,7 @@ package com.dbxtune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -156,7 +157,7 @@ extends CountersModel
 
 	public CmOpenDatabases(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -1934,16 +1935,39 @@ extends CountersModel
 
 					if (val.intValue() > threshold)
 					{
+						// Guess what TYPE of dump that went wrong
+						String backupType = "-UNKNOWN-TYPE-"; // 'DB' or 'TRAN'
+						if (cm.hasColumns("BackupStartTime", "LastTranLogDumpTime"))
+						{
+							Timestamp backupStartTime     = cm.getAbsValueAsTimestamp(r, "BackupStartTime");
+							Timestamp lastTranLogDumpTime = cm.getAbsValueAsTimestamp(r, "LastTranLogDumpTime");
+							
+							if (backupStartTime != null && lastTranLogDumpTime != null)
+							{
+								if (backupStartTime.getTime() >= lastTranLogDumpTime.getTime())
+									backupType = "DB";
+								else
+									backupType = "TRAN";
+							}
+							else
+							{
+								if (lastTranLogDumpTime != null) backupType = "TRAN";
+								if (backupStartTime     != null) backupType = "DB";
+							}
+						}
+
+						// Create the Alarm
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
-						AlarmEvent ae = new AlarmEventLastBackupFailed(cm, dbname, threshold);
+						AlarmEvent ae = new AlarmEventLastBackupFailed(cm, dbname, backupType, threshold);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
 			}
+			
 
 			//-------------------------------------------------------
 			// LastDbBackupAgeInHours

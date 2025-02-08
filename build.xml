@@ -27,7 +27,7 @@
 	</path>
 
 	<!-- - - - - - - - - - - - - - -->
-	<!--  target: init             -->
+	<!--  target: help             -->
 	<!-- - - - - - - - - - - - - - -->
 	<target name="help">
 		<echo>Here is a couple of commands</echo>

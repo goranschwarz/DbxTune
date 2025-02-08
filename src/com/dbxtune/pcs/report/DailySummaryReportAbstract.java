@@ -26,7 +26,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -702,7 +704,7 @@ implements IDailySummaryReport
 //	}
 
 
-	public String getDbxCentralBaseUrl()
+	public static String getDbxCentralBaseUrl()
 	{
 		// initialize with default parameters, which may change below...
 		String dbxCentralProt = "http";
@@ -734,13 +736,44 @@ implements IDailySummaryReport
 		{
 			dbxCentralHost = StringUtil.getHostnameWithDomain();
 		}
+		
+		// if the URL says port 8080, try to check if we can access it using port 80 also...
+		if (dbxCentralPort == 8080)
+		{
+			// Only check this "once", remember the test in: _dbxCentralPortTest
+			if (_dbxCentralPortTest == null)
+			{
+				try (Socket socket = new Socket()) 
+				{
+					int testOnPort = 80;
+					int timeoutMs  = 10;
 
+					socket.connect(new InetSocketAddress(dbxCentralHost, testOnPort), timeoutMs);
+					dbxCentralPort = -1; // USE DEFAULT Port for this protocol
+					
+					// Should we also "remember" this after the first initial test
+					_dbxCentralPortTest = dbxCentralPort;
+				} 
+				catch (IOException ignore) 
+				{
+					// Just continue to use 8080
+					_dbxCentralPortTest = dbxCentralPort;
+				}
+			}
+			else
+			{
+				dbxCentralPort = _dbxCentralPortTest;
+			}
+		}
+		
 		// Compose URL's
 		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
 
 		// Return a Text with links
 		return dbxCentralBaseUrl;
 	}
+	private static Integer _dbxCentralPortTest = null;
+
 
 	public String createDbxCentralLink(boolean isFullText)
 	{
@@ -1201,7 +1234,7 @@ implements IDailySummaryReport
 		sb.append("        </div>																																	\n");
 		sb.append("        <div class='modal-body' style='overflow-x: auto;'>																						\n");
 		sb.append("          <div class='scroll-tree' style='width: 3000px;'>																						\n");
-		sb.append("            <pre><code id='dbx-view-sqltext-content' class='language-sql dbx-view-sqltext-content' ></code></pre>								\n");
+		sb.append("            <pre><code id='dbx-view-sqltext-content' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre>								\n");
 		sb.append("          </div>																																	\n");
 		sb.append("        </div>																																	\n");
 		sb.append("        <div class='modal-footer'>																												\n");
@@ -1224,10 +1257,10 @@ implements IDailySummaryReport
 		sb.append("   * -- View SQL Text																\n");
 		sb.append("   * ---------------------------------------------------------------------------		\n");
 		sb.append("   */																				\n");
-		sb.append("  $('#dbx-view-sqltext-dialog').on('show.bs.modal', function(e) {					\n");
+		sb.append("  $('#dbx-view-sqltext-dialog').on('shown.bs.modal', function(e) {					\n");
 		sb.append("      var data = $(e.relatedTarget).data();											\n");
 		sb.append("      																				\n");
-		sb.append("      console.log('#dbx-view-sqltext-dialog: data: '+data, data);					\n");
+		sb.append("      console.log('#dbx-view-sqltext-dialog: data: ' + data, data);					\n");
 		sb.append("      																				\n");
 		sb.append("      $('#dbx-view-sqltext-objectName', this).text(data.objectname);					\n");
 		sb.append("      $('#dbx-view-sqltext-content',    this).text(data.tooltip);					\n");

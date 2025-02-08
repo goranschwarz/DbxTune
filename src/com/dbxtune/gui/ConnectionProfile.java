@@ -25,6 +25,7 @@ import java.lang.invoke.MethodHandles;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.dbxtune.pcs.PersistentCounterHandler;
@@ -1923,6 +1924,21 @@ public class ConnectionProfile
 		{
 			if (Configuration.isEncryptedValue(retValue))
 					retValue = Configuration.decryptPropertyValue(tagName, retValue);
+
+			// Be a bit backward compatible with saved values (or at least WARN about it)
+			if (retValue.contains("com.asetune."))
+			{
+				String asetuneBackwardCompat_propName = "ConnectionProfile.backward.compat.asetune";
+				if (System.getProperty(asetuneBackwardCompat_propName, "true").equalsIgnoreCase("true"))
+				{
+					String tmpSave = retValue;
+					retValue = retValue.replace("com.asetune.", "com.dbxtune.");
+
+//					Exception tmpEx = new Exception("MAKE THE LOG MESSAGE STICK OUT: Found old configuration '" + tmpSave+ "' which was replaced with '" + retValue + "'."); 
+					_logger.warn("Found old XML Configuration for tagName='" + tagName + "', value '" + tmpSave + "' which was replaced with '" + retValue + "'. Xpath='" + getXPath(element) + "'. This can be disabled with System Property " + asetuneBackwardCompat_propName + "=false");
+				}
+			}
+
 			return retValue;
 		}
 
@@ -1987,5 +2003,36 @@ public class ConnectionProfile
 			return "true".equalsIgnoreCase(retValue);
 
 		return defaultVal;
+	}
+
+
+	public static String getXPath(Element element)
+	{
+		StringBuilder xpath   = new StringBuilder();
+		Node          current = element;
+
+		while (current != null && current.getNodeType() == Node.ELEMENT_NODE)
+		{
+			Element el       = (Element) current;
+			String  nodeName = el.getNodeName();
+
+			// Calculate the position of the element among siblings
+			int     index    = 1;
+			Node    sibling  = current.getPreviousSibling();
+			while (sibling != null)
+			{
+				if ( sibling.getNodeType() == Node.ELEMENT_NODE && sibling.getNodeName().equals(nodeName) )
+				{
+					index++;
+				}
+				sibling = sibling.getPreviousSibling();
+			}
+
+			// Append the node and position to the XPath
+			xpath.insert(0, "/" + nodeName + "[" + index + "]");
+			current = current.getParentNode();
+		}
+
+		return xpath.toString();
 	}
 }

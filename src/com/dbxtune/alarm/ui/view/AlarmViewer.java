@@ -544,6 +544,7 @@ implements ActionListener
 					case AlarmActiveTableModel.TAB_POS_EXTRA_INFO                : tip = "<html> This could be a database, object name, or similar that the alarm was raised for. </html>"; break;
 					case AlarmActiveTableModel.TAB_POS_SEVERITY                  : tip = "<html> ERROR, WARNING, INFO </html>"; break;
 					case AlarmActiveTableModel.TAB_POS_STATE                     : tip = "<html> UP, AFFECTED, DOWN </html>"; break;
+					case AlarmActiveTableModel.TAB_POS_ALARM_ID                  : tip = "<html> UUID Of the Alarm </html>"; break;
 					case AlarmActiveTableModel.TAB_POS_REPEAT_COUNT              : tip = "<html> How many times this alarm has been re-raised.<br> All CounterModels will send an Alarm <b>every time</b> it sees an issue. Then the AlarmHandler will figgure out if it should send a RAISE or CANCEL or simply do nothing and increment the <i>repeat count</i> due to that the alarm was overlapping between two checks.</html>"; break;
 					case AlarmActiveTableModel.TAB_POS_ALARM_DURATION            : tip = "<html> How <b>long</b> in milliseconds has/was the Alarm in <i>active</i> state,</html>"; break;
 					case AlarmActiveTableModel.TAB_POS_FULL_DURATION             : tip = "<html> How <b>long</b> in milliseconds has/was the Alarm in <i>active</i> state, aftr the 'fullAdjInSec' </html>"; break;
@@ -876,6 +877,7 @@ implements ActionListener
 					case AlarmHistoryTableModel.TAB_POS_EXTRA_INFO                : tip = "<html> This could be a database, object name, or similar that the alarm was raised for. </html>"; break;
 					case AlarmHistoryTableModel.TAB_POS_SEVERITY                  : tip = "<html> ERROR, WARNING, INFO </html>"; break;
 					case AlarmHistoryTableModel.TAB_POS_STATE                     : tip = "<html> UP, AFFECTED, DOWN </html>"; break;
+					case AlarmHistoryTableModel.TAB_POS_ALARM_ID                  : tip = "<html> UUID Of the Alarm </html>"; break;
 					case AlarmHistoryTableModel.TAB_POS_REPEAT_COUNT              : tip = "<html> How many times this alarm has been re-raised.<br> All CounterModels will send an Alarm <b>every time</b> it sees an issue. Then the AlarmHandler will figgure out if it should send a RAISE or CANCEL or simply do nothing and increment the <i>repeat count</i> due to that the alarm was overlapping between two checks.</html>"; break;
 					case AlarmHistoryTableModel.TAB_POS_ALARM_DURATION            : tip = "<html> How <b>long</b> in milliseconds has/was the Alarm in <i>active</i> state,</html>"; break;
 					case AlarmHistoryTableModel.TAB_POS_FULL_DURATION             : tip = "<html> How <b>long</b> in milliseconds has/was the Alarm in <i>active</i> state, aftr the 'fullAdjInSec' </html>"; break;

@@ -128,7 +128,7 @@ extends CountersModel
 
 	public CmPgActivity(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -771,7 +771,8 @@ extends CountersModel
 
 						// Check if "PgActiveStatements" is enabled... then THAT Alarm will hold more information (Like locks etc)... so we don't need to fire this one.
 						// NOTE: To override this behavior, specify 'CmPgActivity.alarm.StatementExecInSec.override=true' in the properties file.
-						CountersModel cmPgActiveStatements = CounterController.getInstance().getCmByName("CmActiveStatements");
+//						CountersModel cmPgActiveStatements = CounterController.getInstance().getCmByName("CmActiveStatements");
+						CountersModel cmPgActiveStatements = getCounterController().getCmByName("CmActiveStatements");
 						if (cmPgActiveStatements != null)
 						{
 							if (cmPgActiveStatements.isActive() && cmPgActiveStatements.isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))

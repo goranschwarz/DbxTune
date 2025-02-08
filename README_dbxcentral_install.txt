@@ -400,6 +400,7 @@ for example: http://dbxtune.acme.com:8080/
 	## Allow user to get perf counters by issuing 'typeperf ...'
 	net localgroup "Performance Log Users" dbxtune /add
 	
+	## I have *Switched* from 'gwmi win32_logicaldisk' to 'Get-CimInstance Win32_LogicalDisk', so the BELOW 'admin' stuff is hopefully not needed anymore... 
 	## Allow user to get "disk space used" on local drives, by issuing 'powershell gwmi win32_logicaldisk' over the SSH Connection
 	net localgroup administrators dbxtune /add
 	# Instead of the 'administrator' thing above, you can do the following:

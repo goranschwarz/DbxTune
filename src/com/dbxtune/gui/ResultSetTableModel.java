@@ -1913,6 +1913,22 @@ public class ResultSetTableModel
 			_logger.warn("setValueAtWithOverride::The row returned NULL. (row="+r+", col="+c+", val='"+value+"')");
 	}
 
+	public void setValueAtWithOverride(Object value, int r, String colName)
+	{
+		int c = findColumn(colName);
+		if (c == -1)
+		{
+			_logger.warn("setValueAtWithOverride(): colName='" + colName + "' NOT found in RSTM=|" + getName() + "|.");
+			return;
+		}
+
+		ArrayList<Object> row = _rows.get(r);
+		if (row != null)
+			row.set(c, value);
+		else
+			_logger.warn("setValueAtWithOverride::The row returned NULL. (row="+r+", col="+c+", val='"+value+"')");
+	}
+
 //	public void addTableModelListener(TableModelListener l)
 //	{
 //	}
@@ -3334,6 +3350,30 @@ public class ResultSetTableModel
 	}
 
 	/**
+	 * Remove Last Row
+	 */
+	public ArrayList<Object> removeLastRow()
+	{
+		return _rows.remove( _rows.size() - 1 );
+	}
+
+	/**
+	 * Remove X number of rows at the end of the table
+	 * rowsToKeep   number of rows to keep  
+	 * @return number of rows that was deleted
+	 */
+	public int removeRowsAfterSize(int rowsToKeep)
+	{
+		int count = 0;
+		while (_rows.size() > rowsToKeep)
+		{
+			count++;
+			removeLastRow();
+		}
+		return count;
+	}
+
+	/**
 	 * 
 	 * @param colName
 	 * @param values   A collection of values that matches the column names (all values in the collection will be deleted, so basically a OR clause) 
@@ -3806,7 +3846,10 @@ public class ResultSetTableModel
 		}
 		catch(ParseException e)
 		{
-			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			try	{ return TimeUtils.parseToTimestampX(o.toString());	}
+			catch(ParseException e2) {}
+			
+			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', value='" + o + "', returning returning DEFAULT='" + defaultNullValue + "'. Caught: "+e);
 			return null;
 		}
 	}
@@ -3828,8 +3871,11 @@ public class ResultSetTableModel
 		}
 		catch(ParseException e)
 		{
+			try	{ return TimeUtils.parseToTimestampX(o.toString());	}
+			catch(ParseException e2) {}
+			
 			String colName = getColumnName(mcol);
-			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", mcol="+mcol+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", mcol="+mcol+", column='"+colName+"', TableModelNamed='"+getName()+"',value='" + o + "', returning null. Caught: "+e);
 			return null;
 		}
 	}

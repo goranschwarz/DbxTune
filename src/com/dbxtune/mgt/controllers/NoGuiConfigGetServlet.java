@@ -59,12 +59,12 @@ extends HttpServlet
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
-		ServletOutputStream out = resp.getOutputStream();
 //		resp.setContentType("text/html");
 //		resp.setCharacterEncoding("UTF-8");
 		resp.setContentType("application/json");
 		resp.setCharacterEncoding("UTF-8");
 		resp.setHeader("Access-Control-Allow-Origin", "*");
+		ServletOutputStream out = resp.getOutputStream();
 
 		// Check for known input parameters
 //		if (Helper.hasUnKnownParameters(req, resp, "sessionName", "srv", "srvName",    "cmName", "graphName", "startTime", "endTime", "sampleType", "sampleValue"))

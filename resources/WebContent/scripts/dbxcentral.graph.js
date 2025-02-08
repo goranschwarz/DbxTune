@@ -319,15 +319,16 @@ var _showSrvTimer = null;
 var _lastHistoryMomentsArray = null;
 var _hasActiveHistoryStatementArr = null;
 
-//window.chartColors = {
-//	red:    'rgb(255, 99, 132)',
-//	orange: 'rgb(255, 159, 64)',
-//	yellow: 'rgb(255, 205, 86)',
-//	green:  'rgb(75, 192, 192)',
-//	blue:   'rgb(54, 162, 235)',
-//	purple: 'rgb(153, 102, 255)',
-//	grey:   'rgb(201, 203, 207)'
-//};
+// This was previously part of ChartJS 2.x -- WebContent\scripts\chartjs\samples\utils.js and it's used in function: addData(jsonData)
+window.chartColors = {
+	red:    'rgb(255, 99, 132)',
+	orange: 'rgb(255, 159, 64)',
+	yellow: 'rgb(255, 205, 86)',
+	green:  'rgb(75, 192, 192)',
+	blue:   'rgb(54, 162, 235)',
+	purple: 'rgb(153, 102, 255)',
+	grey:   'rgb(201, 203, 207)'
+};
 
 
 //-----------------------------------------------------------
@@ -1984,7 +1985,10 @@ function dbxTuneGraphSubscribe()
 //--------------------------------------------------------------------
 class DbxGraph
 {
-	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphProps, graphCategory, isPercentGraph, graphLineProps, subscribeAgeInSec, gheight, gwidth, debug, initStartTime, initEndTime, initSampleType, initSampleValue, isMultiDayChart)
+	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphProps, graphCategory, 
+		isPercentGraph, graphLineProps, subscribeAgeInSec, gheight, gwidth, debug, 
+		initStartTime, initEndTime, initSampleType, initSampleValue, isMultiDayChart,
+		markStartTime, markEndTime)
 	{
 		// Properties/fields
 		this._serverName        = serverName;
@@ -2004,6 +2008,9 @@ class DbxGraph
 		this._initSampleType    = initSampleType;
 		this._initSampleValue   = initSampleValue;
 		this._isMultiDayChart   = isMultiDayChart;
+
+		this._markStartTime     = markStartTime;
+		this._markEndTime       = markEndTime;
 		
 		// this._graphHeight = 150;
 		this._graphHeight = 200;
@@ -2021,6 +2028,8 @@ class DbxGraph
 			this._graphLineProps = {};
 
 		this._timelineMarker = undefined;
+
+		this._annotations = [];
 
 		if (_debug > 0)
 			console.log("Creating DbxGraph: " 
@@ -2041,6 +2050,9 @@ class DbxGraph
 				+ ", _initSampleType   ='" + this._initSampleType    + "'\n"
 				+ ", _initSampleValue  ='" + this._initSampleValue   + "'\n"
 				+ ", _isMultiDayChart  ='" + this._isMultiDayChart   + "'\n"
+				
+				+ ", _markStartTime    ='" + this._markStartTime     + "'\n"
+				+ ", _markEndTime      ='" + this._markEndTime       + "'\n"
 		);
 				
 
@@ -2198,9 +2210,10 @@ class DbxGraph
 							ci.update();
 						}
 					},
-				},
+				}, // end: legend
 				scales: {
 					xAxes: [{
+						id: 'x-axis-0', // Assign an ID to the X-axis
 						type: 'time',
 						distribution: 'linear',
 						tooltipFormat: 'YYYY-MM-DD (dddd) HH:mm:ss', // This didn't work
@@ -2220,6 +2233,7 @@ class DbxGraph
 						},
 					}],
 					yAxes: [{
+						id: 'y-axis-0', // Assign an ID to the Y-axis
 						ticks: {
 							beginAtZero: true,  // if true, scale will include 0 if it is not already included.
 							callback: function(value, index, values) 
@@ -2276,42 +2290,23 @@ class DbxGraph
 							zeroLineColor: 'rgba(0, 0, 0, 0.25)'
 						},
 					}],
-				},
+				}, // end: scales
 				// pan: { // Container for pan options
 				// 	enabled: true, // Boolean to enable panning
 				// 	mode: 'x', // Panning directions. Remove the appropriate direction to disable, Eg. 'y' would only allow panning in the y direction
 				// 	drag: true,
 				// },
-				zoom: {  // Container for zoom options
-					enabled: true,  // Boolean to enable zooming
-					mode: 'x', // Zooming directions. Remove the appropriate direction to disable, Eg. 'y' would only allow zooming in the y direction
-					drag: true,
-				},
+//				zoom: {  // Container for zoom options
+//					enabled: true,  // Boolean to enable zooming
+//					mode: 'x', // Zooming directions. Remove the appropriate direction to disable, Eg. 'y' would only allow zooming in the y direction
+//					drag: true,
+//				},
 				annotation: {
 					// drawTime: 'afterDatasetsDraw',
 					drawTime: 'afterDraw',
 					// events: ['click'],
-					annotations: [],
-					// annotations: [{
-					// 	// drawTime: 'afterDraw', // overrides annotation.drawTime if set
-					// 	id: 'vline',
-					// 	type: 'line',
-					// 	mode: 'vertical',
-					// 	scaleID: 'x-axis-0',
-					// 	// value: null,
-					// 	borderColor: 'black',
-					// 	borderWidth: 3,
-					// //	borderDash: [2, 2],
-					// 	label: {
-					// 		backgroundColor: "red",
-					// 		content: "Selected Line",
-					// 		enabled: true
-					// 	},
-					// 	onClick: function(e) {
-					// 		// The annotation is is bound to the `this` variable
-					// 		console.log('Annotation', e.type, this);
-					// 	}
-					// }]
+					annotations: this._annotations,
+//					annotations: {}, // in v3/v4 i think this is an object and not an array
 				},
 				tooltips: {
 					callbacks: {
@@ -2326,16 +2321,6 @@ class DbxGraph
 						}
 					}
 				},
-//				plugins: {
-//					colorschemes: {
-//						scheme: 'brewer.Paired12'
-//					}
-//					datalabels: {
-//						formatter: function(value, context) {
-//							return numeral(value).format(0,0);
-//						}
-//					}
-//				}
 			},
 			tooltips: {
 //				mode: 'dataset',
@@ -2354,6 +2339,55 @@ class DbxGraph
 			},
 		};
 
+// NOTE: Keep this for v3/v4 -- multiple annotations and 'markedStartEndTime' to highlight important section
+//		// Initally mark a important period
+//		if ( this._markStartTime !== undefined && this._markEndTime !== undefined)
+//		{
+//			// We cant call this, since THIS is not fully initialized yet...
+//			// this.setMarkerStartEndTime(this._markStartTime, this._markEndTime);
+//			
+//			// NOTE: If you change the below also chang ein function: this.setMarkerStartEndTime
+//			// SET box/marker
+//			const markedStartEndTime = {
+//				id:   'markedStartEndTime',
+//				type: 'box',
+//				xMin: this._markStartTime,
+//				xMax: this._markEndTime,
+//				backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
+//				borderWidth: 0
+//			};
+//	
+//			this._chartConfig.options.plugins.annotation.annotations['markedStartEndTime'] = markedStartEndTime;
+//		}
+//		// Initally mark a important period
+//		if ( this._markStartTime !== undefined && this._markEndTime !== undefined && this._markStartTime !== '' && this._markEndTime !== '')
+//		{
+//			this._markStartTime = moment(this._markStartTime);
+//			this._markEndTime   = moment(this._markEndTime);
+//			
+//			// We cant call this, since THIS is not fully initialized yet...
+//			// this.setMarkerStartEndTime(this._markStartTime, this._markEndTime);
+//			
+//			// NOTE: If you change the below also chang ein function: this.setMarkerStartEndTime
+//			// SET box/marker
+//			const markedStartEndTime = {
+//				id: 'markedStartEndTime',
+//				type: 'box',
+//				xMin: this._markStartTime,
+//				xMax: this._markEndTime,
+////				xMin: 10,
+////				xMax: 20,
+////				yMin: 10,
+////				yMax: 30,
+//				borderColor: 'gray',
+//				backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
+//				borderWidth: 0
+//			};
+//	
+//			this._annotations.push(markedStartEndTime);
+//			this._chartConfig.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+//		}
+		
 		// Set MIN/MAX values when it's a PERCENT Graph
 		if (this._debug > 0)
 			console.log("GRAPH: "+this._fullName+": this._isPercentGraph="+this._isPercentGraph);
@@ -2365,6 +2399,8 @@ class DbxGraph
 
 			this._chartConfig.options.scales.yAxes[0].ticks.suggestedMax = 100; // Adjustment used when calculating the maximum  data value
 			this._chartConfig.options.scales.yAxes[0].ticks.suggestedMin = 0;   // Adjustment used when calculating the minimum data value
+	//v3		this._chartConfig.options.scales.y.ticks.suggestedMax = 100; // Adjustment used when calculating the maximum  data value
+	//v3		this._chartConfig.options.scales.y.ticks.suggestedMin = 0;   // Adjustment used when calculating the minimum data value
 		}
 		
 		if (_colorSchema === "dark")
@@ -2381,6 +2417,10 @@ class DbxGraph
 			this._chartConfig.options.scales.xAxes[0].gridLines.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
 			this._chartConfig.options.scales.yAxes[0].gridLines.color         = 'rgba(255, 255, 255, 0.2)';
 			this._chartConfig.options.scales.yAxes[0].gridLines.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
+	//v3		this._chartConfig.options.scales.x.grid.color         = 'rgba(255, 255, 255, 0.2)';
+	//v3		this._chartConfig.options.scales.x.grid.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
+	//v3		this._chartConfig.options.scales.y.grid.color         = 'rgba(255, 255, 255, 0.2)';
+	//v3		this._chartConfig.options.scales.y.grid.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
 
 //			Chart.defaults.global.defaultColor = 'rgba(255, 255, 255, 0.2)';
 		}
@@ -2830,6 +2870,130 @@ class DbxGraph
 		});
 	}
 
+//	findClosestTimestamp(inputDate) 
+//	{
+//		let searchArray = this._chartObject.data.labels;
+//		let closestMatch = null;
+//		let smallestDiff = Infinity;
+//
+//		// Loop through the labels array to find the closest match
+//		searchArray.forEach(entry => 
+//		{
+//			let diff = Math.abs(inputDate.diff(moment(entry))); // Get the absolute difference in milliseconds
+//
+//			if (diff < smallestDiff) 
+//			{
+//				smallestDiff = diff;
+//				closestMatch = entry; // Update closest match
+//			}
+//		});
+//
+//		return closestMatch;
+//	}
+//	findClosestTimestampIndex(inputDate) 
+//	{
+//		let searchArray = this._chartObject.data.labels;
+//		let closestIndex = -1;  // Default to -1 if no match is found
+//		let smallestDiff = Infinity;
+//
+//		// Loop through the labels array to find the closest match
+//		searchArray.forEach((entry, index) => 
+//		{
+//			let diff = Math.abs(inputDate.diff(moment(entry))); // Get the absolute difference in milliseconds
+//		  
+//			if (diff < smallestDiff) 
+//			{
+//				smallestDiff = diff;
+//				closestIndex = index;
+//			}
+//		});
+//
+//		return closestIndex;
+//	}
+
+// NOTE: Used by v3/v4 to mark important section
+//	/**
+//	 * Set a marker (area of interest) start/end 
+//	 * @param {*} startTime        The start time to mark
+//	 * @param {*} endTime          The end time to mark 
+//	 */
+//	setMarkerStartEndTime(startTime, endTime)
+//	{
+//		console.log("setMarkerStartEndTime(startTime=|" + startTime + "|, endTime=|" + endTime + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
+//
+//		// Reset marker area
+//		if (this._chartObject.options.plugins.annotation.annotations.hasOwnProperty('markedStartEndTime'))
+//			delete this._chartObject.options.plugins.annotation.annotations.markedStartEndTime;
+//
+//		this._chartObject.update(0);
+//
+//		if (startTime === undefined || endTime === undefined)
+//			return;
+//
+//		this._markStartTime = startTime;
+//		this._markEndTime   = endTime;
+//
+//		// NOTE: If you change the below also chang in Chart constructor/init code
+//
+//		// SET box/marker
+//		const markedStartEndTime = {
+//			id:   'markedStartEndTime',
+//			type: 'box',
+//			xMin: this._markStartTime,
+//			xMax: this._markEndTime,
+//			backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
+//			borderWidth: 0
+//		};
+//
+//		this._chartObject.options.plugins.annotation.annotations['markedStartEndTime'] = markedStartEndTime;
+//		this._chartObject.update(0);
+//	}
+	/**
+	 * Set a marker (area of interest) start/end 
+	 * @param {*} startTime        The start time to mark
+	 * @param {*} endTime          The end time to mark 
+	 */
+	setMarkerStartEndTime(startTime, endTime)
+	{
+//		console.log("setMarkerStartEndTime(startTime=|" + startTime + "|, endTime=|" + endTime + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
+
+		// Reset marker area
+		const arrayPos = this._annotations.findIndex(item => item['id'] === 'markedStartEndTime')
+		if (arrayPos !== -1)
+		{
+			this._annotations.splice(arrayPos, 1); // Remove 1 entry in the array
+			this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+		}
+
+		this._chartObject.update(0);
+
+		if ( startTime !== undefined && endTime !== undefined && startTime !== '' && endTime !== '')
+		{
+			//console.log("SET VALUES: setMarkerStartEndTime(startTime=|" + startTime + "|, endTime=|" + endTime + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
+			this._markStartTime = moment(startTime);
+			this._markEndTime   = moment(endTime);
+
+			// NOTE: If you change the below also chang in Chart constructor/init code
+			// SET box/marker
+			const markedStartEndTime = {
+				id:   'markedStartEndTime',
+				type: 'box',
+				xScaleID: 'x-axis-0',
+				yScaleID: 'y-axis-0',
+				xMin: this._markStartTime,
+				xMax: this._markEndTime,
+				backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
+				borderColor: 'gray',
+				borderWidth: 0
+			};
+
+			this._annotations.push(markedStartEndTime);
+			this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+
+			this._chartObject.update(0);
+		}
+	}
+
 	/**
 	 * Set a timeline marker on a specific "moment object" timestamp
 	 */
@@ -2840,12 +3004,22 @@ class DbxGraph
 		this._timelineMarker = ts;
 		if ( ! this.isInViewport() )
 		{
-			//console.log("<<< NOT inViewPort -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
+//			console.log("<<< NOT inViewPort -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
 			return;
 		}
 
 		// Reset timeline-marker
-		this._chartObject.options.annotation.annotations = [];
+		const arrayPos = this._annotations.findIndex(item => item['id'] === 'timelineMarker')
+		if (arrayPos !== -1)
+		{
+			this._annotations.splice(arrayPos, 1); // Remove 1 entry in the array
+			this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+		}
+//console.log("------ arrayPos=" + arrayPos + ", this._annotations.length=" + this._annotations.length + " -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
+		
+//		this._chartObject.options.annotation.annotations = [];
+//v3		if (this._chartObject.options.plugins.annotation.annotations.hasOwnProperty('timelineMarker'))
+//v3			delete this._chartObject.plugins.options.annotation.annotations.timelineMarker;
 		this._chartObject.update(0);
 		
 		// If no 'ts' input... get out of here (with just reseting the timeline-marker
@@ -2862,7 +3036,7 @@ class DbxGraph
 
 		// SET timeline-markers in ALL Graphs
 		const annotation = {
-			id: 'vline',
+			id: 'timelineMarker',
 			type: 'line',
 			mode: 'vertical',
 			scaleID: 'x-axis-0',
@@ -2878,8 +3052,14 @@ class DbxGraph
 				position: 'top'
 			}
 		};
-		this._chartObject.options.annotation.annotations[0] = annotation;
+		this._annotations.push(annotation);
+		this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+//		this._annotations['timelineMarker'] = annotation;
+//		this._chartObject.options.annotation.annotations[0] = annotation;
+//v3		this._chartObject.options.plugins.annotation.annotations['timelineMarker'] = annotation;
 		this._chartObject.update(0);
+//const arrayPos1 = this._annotations.findIndex(item => item['id'] === 'timelineMarker')
+//console.log("<<<<<< arrayPos1=" + arrayPos1 + ", this._annotations.length=" + this._annotations.length + " -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
 	} // end: method
 
 	/**
@@ -2941,6 +3121,11 @@ class DbxGraph
 	onLoadCompetion()
 	{
 		this.enableDisableChartLines();
+		
+		if ( this._markStartTime !== undefined && this._markEndTime !== undefined && this._markStartTime !== '' && this._markEndTime !== '')
+		{
+			this.setMarkerStartEndTime(this._markStartTime, this._markEndTime);
+		}
 	}
 
 	checkForNoDataInChart()
@@ -3116,15 +3301,36 @@ class DbxGraph
 
 					// if we have timeline-markers older than the "points" we deleted.
 					// Remove the annotation
-					if (this._chartObject.options.annotation.annotations.length > 0)
+					const arrayPos = this._annotations.findIndex(item => item['id'] === 'timelineMarker')
+					if (arrayPos !== -1)
 					{
-						if (this._chartObject.options.annotation.annotations[0].value <= oldestTs)
+						if (this._annotations[arrayPos].value <= oldestTs)
 						{
 							if (this._debug > 0)
-								console.log("Clearing timeline-marker for graph '"+this._fullName+"' due to time-expire. annotationTs='"+this._chartObject.options.annotation.annotations[0].value+"', graphpOldestTs='"+oldestTs+"'.");
-							this._chartObject.options.annotation.annotations = [];
+								console.log("Clearing timeline-marker for graph '"+this._fullName+"' due to time-expire. annotationTs='"+this._annotations[arrayPos].value+"', graphpOldestTs='"+oldestTs+"'.");
+							this._annotations.splice(arrayPos, 1); // Remove 1 entry in the array
+							this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
 						}
 					}
+					
+//					if (this._chartObject.options.annotation.annotations.length > 0)
+//					{
+//						if (this._chartObject.options.annotation.annotations[0].value <= oldestTs)
+//						{
+//							if (this._debug > 0)
+//								console.log("Clearing timeline-marker for graph '"+this._fullName+"' due to time-expire. annotationTs='"+this._chartObject.options.annotation.annotations[0].value+"', graphpOldestTs='"+oldestTs+"'.");
+//							this._chartObject.options.annotation.annotations = [];
+//						}
+//					}
+//v3					if (this._chartObject?.options?.plugins?.annotation?.annotations?.hasOwnProperty('timelineMarker'))
+//v3					{
+//v3						if (this._chartObject.options.plugins.annotation.annotations['timelineMarker'].value <= oldestTs)
+//v3						{
+//v3							if (this._debug > 0)
+//v3								console.log("Clearing timeline-marker for graph '"+this._fullName+"' due to time-expire. annotationTs='"+this._chartObject.options.plugins.annotation.annotations[0].value+"', graphpOldestTs='"+oldestTs+"'.");
+//v3							delete this._chartObject.options.plugins.annotation.annotations.timelineMarker;
+//v3						}
+//v3					}
 				}
 				else
 				{
@@ -3340,6 +3546,27 @@ function dbxChartPrintApiHelp()
 			'<b>default:</b> 2h<br>' + 
 			'</td>' + 
 		'</tr>' +
+		'<tr>' + 
+			'<td>markTime</td>' + 
+			'<td>Mark a time in the timeline, where you want to look, (also implies that we are going into history mode)<br>' + 
+			'Format: YYYY-mm-dd HH:MM:SS<br>' + 
+			'<b>default:</b> none<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'<tr>' + 
+			'<td>markStartTime</td>' + 
+			'<td>Draw a gray area over the chart to indicate a period of interest. (both: markStartTime and markEndTime needs to be specified)<br>' + 
+			'Format: YYYY-mm-dd HH:MM:SS<br>' + 
+			'<b>default:</b> none<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'<tr>' + 
+			'<td>markEndTime</td>' + 
+			'<td>Draw a gray area over the chart to indicate a period of interest. (both: markStartTime and markEndTime needs to be specified)<br>' + 
+			'Format: YYYY-mm-dd HH:MM:SS<br>' + 
+			'<b>default:</b> none<br>' + 
+			'</td>' + 
+		'</tr>' +
 		'<tr>' +
 			'<td>mdc</td>' + 
 			'<td>Multi Day Chart<br>' + 
@@ -3458,6 +3685,9 @@ function dbxTuneLoadCharts(destinationDivId)
 	var   graphList      = getParameter("graphList");
 	var   startTime      = getParameter("startTime",     "2h");
 	var   endTime        = getParameter("endTime",       "");
+	var   markTime       = getParameter("markTime",      "");               // Mark this time in the timeline (also implies that we are going into history mode)
+	var   markStartTime  = getParameter("markStartTime", "");               // Start time for an area of interest
+	var   markEndTime    = getParameter("markEndTime",   "");               // End time for an area of interest
 	var   multiDayChart  = getParameter("mdc",           "");
 	var   mdcPivot       = getParameter("mdcp",          false);
 	var   mdcWeekDays    = getParameter("mdcwd",         "1,2,3,4,5,6,7");
@@ -3472,20 +3702,27 @@ function dbxTuneLoadCharts(destinationDivId)
 	_debug = debug;
 	_colorSchema = colorSchema;
 
-	console.log("Passed sessionName="+sessionName);
-	console.log("Passed graphList="+graphList);
-	console.log("Passed startTime="+startTime);
-	console.log("Passed endTime="+endTime);
-	console.log("Passed mdc="+multiDayChart); // Multi Day Chart
-	console.log("Passed mdcp="+mdcPivot);     // Multi Day Chart - Pivot
-	console.log("Passed mdcwd="+mdcWeekDays); // Multi Day Chart - WeekDays
-	console.log("Passed colorSchema="+colorSchema);
+	console.log("Passed sessionName="   + sessionName);
+	console.log("Passed graphList="     + graphList);
+	console.log("Passed startTime="     + startTime);
+	console.log("Passed endTime="       + endTime);
+	console.log("Passed markTime="      + markTime);
+	console.log("Passed markStartTime=" + markStartTime);
+	console.log("Passed markEndTime="   + markEndTime);
+	console.log("Passed mdc="           + multiDayChart); // Multi Day Chart
+	console.log("Passed mdcp="          + mdcPivot);      // Multi Day Chart - Pivot
+	console.log("Passed mdcwd="         + mdcWeekDays);   // Multi Day Chart - WeekDays
+	console.log("Passed colorSchema="   + colorSchema);
 
 	if (subscribe === "false")
 		subscribe = false;
 
 	// turn subscribe off if 'endTime' is present
 	if (endTime !== "")
+		subscribe = false;
+
+	// turn subscribe off if 'markTime' is present
+	if (markTime !== "")
 		subscribe = false;
 
 	// Set the global variable
@@ -3525,6 +3762,18 @@ function dbxTuneLoadCharts(destinationDivId)
 	// endTime: 2019-02-03+18:00  --- remove the +
 	if (endTime.match("^[0-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9][+]"))
 		endTime = endTime.replace("+", " ");
+
+	// markTime: 2019-02-03+18:00  --- remove the +
+	if (markTime.match("^[0-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9][+]"))
+		markTime = markTime.replace("+", " ");
+
+	// markStartTime: 2019-02-03+18:00  --- remove the +
+	if (markStartTime.match("^[0-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9][+]"))
+		markStartTime = markStartTime.replace("+", " ");
+
+	// markEndTime: 2019-02-03+18:00  --- remove the +
+	if (markEndTime.match("^[0-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9][+]"))
+		markEndTime = markEndTime.replace("+", " ");
 
 	// Check the startTime
 	// If it's a valid data, if not it might be some strange chars, which can be removed
@@ -3933,7 +4182,9 @@ function dbxTuneLoadCharts(destinationDivId)
 							initEndTime,
 							initSampleType,
 							initSampleValue,
-							isMultiDayChart
+							isMultiDayChart,
+							markStartTime,
+							markEndTime
 						);
 
 						// add it to the global list/map
@@ -3982,7 +4233,9 @@ function dbxTuneLoadCharts(destinationDivId)
 							initEndTime,
 							initSampleType,
 							initSampleValue,
-							isMultiDayChart
+							isMultiDayChart,
+							markStartTime,
+							markEndTime
 						);
 
 						// add it to the global list/map
@@ -4215,7 +4468,7 @@ function loadDataForGraph(indexToLoad)
 }
 
 /** 
- * Call when all grphs has been initially loaded
+ * Call when all graphs has been initially loaded
 */
 function graphLoadIsComplete()
 {
@@ -4241,6 +4494,26 @@ function graphLoadIsComplete()
 		const dbxGraph = _graphMap[i];
 		dbxGraph._chartObject.resize();
 	}
+
+	/* If we have 'markTime' then ebale historical mode, and set the position in the timeline */
+	var markTime = getParameter("markTime");
+	if (markTime !== undefined)
+	{
+		dbxHistoryAction();
+		dbxHistoryAction(markTime);
+	}
+
+//	var markStartTime = getParameter("markStartTime");
+//	var markEndTime   = getParameter("markEndTime");
+//	if ( markStartTime !== undefined && markEndTime !== undefined && markStartTime !== '' && markEndTime !== '')
+//	{
+//		for(var i=0; i<_graphMap.length; i++)
+//		{
+//			const dbxGraph = _graphMap[i];
+//
+//			dbxGraph.setMarkerStartEndTime(markStartTime, markEndTime);
+//		}
+//	}
 
 	if (_debug > 0)
 		console.log("DONE: loading ALL data...");

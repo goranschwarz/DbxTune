@@ -69,7 +69,7 @@ extends HttpServlet
 	private PrintWriter _writer;
 	private Map<String, String> _urlParameterMap = new LinkedHashMap<>();
 
-	private Set<UrlParameterDescription> _urlParameterDescriptions = new LinkedHashSet<>();
+	private Set<UrlParameterDescription> _urlParameterDescriptions;// = new LinkedHashSet<>();
 	
 	public HttpServletRequest    getRequest()      { return _request; }
 	public HttpServletResponse   getResponse()     { return _response; }
@@ -191,6 +191,20 @@ extends HttpServlet
 		return StringUtil.parseInt(value, defaultValue);
 	}
 	
+	/** Get parameter from the URL Parameters Map, if not found the 'defaultValue' will be returned  */
+	public double getUrlParameterDouble(String parameterName, double defaultValue)
+	{
+		String value = getUrlParameter(parameterName);
+		
+		if (StringUtil.isNullOrBlank(value))
+			return defaultValue;
+		
+		if (value.equals("undefined"))
+			return defaultValue;
+		
+		return StringUtil.parseDouble(value, defaultValue);
+	}
+	
 	/** Get parameter from the URL Parameters Map, if not found use the default value from 'urlParameterDescriptions'  */
 	public int getUrlParameterInt_defaultFromDesc(String parameterName)
 	{
@@ -273,6 +287,8 @@ extends HttpServlet
 	
 	/**
 	 * Create a list of known parameters, there descriptions etc... 
+	 * <p>
+	 * Return <code>null</code> to "skip" checking parameters and allow "anything" 
 	 */
 	public abstract Set<UrlParameterDescription> createUrlParameterDescription();
 	
@@ -332,8 +348,11 @@ extends HttpServlet
 		
 		// Check for known input parameters
 		String[] knownParams = getKnownParameters();
-		if (Helper.hasUnKnownParameters(request, response, ArrayUtils.addAll(knownParams)))
-			return;
+		if (knownParams != null)
+		{
+			if (Helper.hasUnKnownParameters(request, response, ArrayUtils.addAll(knownParams)))
+				return;
+		}
 
 		// Get KNOWN Parameters for the User Defined Content producer
 //		udc.setUrlParameters(Helper.getParameterMap(req));
@@ -448,6 +467,9 @@ ex.printStackTrace();
 		writer.println("<!-- JS: JQuery -->");
 		writer.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.min.js'></script>");
 		writer.println();
+		writer.println("<!-- JS: JQuery UI -->");
+		writer.println("<script type='text/javascript' src='/scripts/jquery/ui/1.13.2/jquery-ui.min.js'></script>");
+		writer.println();
 		writer.println("<!-- JS: Moment; used by: ChartJs, DateRangePicker -->");
 		writer.println("<script type='text/javascript' src='/scripts/moment/moment.js'></script>");
 		writer.println("<script type='text/javascript' src='/scripts/moment/moment-duration-format.js'></script>");
@@ -469,6 +491,9 @@ ex.printStackTrace();
 		writer.println("<!-- CSS: DbxCentral -->");
 		writer.println("<link rel='stylesheet' href='/scripts/css/dbxcentral.css'>");
 		writer.println();
+		writer.println("<!-- CSS: JQuery UI -->");
+		writer.println("<link rel='stylesheet' href='/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css'>");
+		writer.println();
 		writer.println("<!-- CSS: Bootstrap -->");
 		writer.println("<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'>");
 		writer.println();
@@ -479,11 +504,12 @@ ex.printStackTrace();
 		// Internal CSS needed (a better name could probably be good)
 		craeteHtmlHeadCssInternal(writer);
 		
-		craeteHtmlHeadCss(writer);
+		craeteHtmlHeadCssPre(writer);
 		for (String cssLocation : getCssList())
 		{
 			writer.println("<link rel='stylesheet' href='" + cssLocation + "'>");
 		}
+		craeteHtmlHeadCssPost(writer);
 
 		writer.println("</head>");
 		writer.println("<!-- ################### HEAD END ################### -->");
@@ -508,8 +534,12 @@ ex.printStackTrace();
 	public void createHtmlHeadJavaScript(PrintWriter writer)
 	{
 	}
-	/** implement this to add your own CSS in the header */
-	public void craeteHtmlHeadCss(PrintWriter writer)
+	/** implement this to add your own CSS in the header... BEFORE calling getCssList() */
+	public void craeteHtmlHeadCssPre(PrintWriter writer)
+	{
+	}
+	/** implement this to add your own CSS in the header... AFTER calling getCssList() */
+	public void craeteHtmlHeadCssPost(PrintWriter writer)
 	{
 	}
 	/** implement this to add your own Code in the header, at the TOP */
@@ -681,14 +711,18 @@ ex.printStackTrace();
 	 */
 	public String[] getKnownParameters()
 	{
+		Set<UrlParameterDescription> parameterDescriptions = getUrlParameterDescriptions();
+		if (parameterDescriptions == null)
+			return null;
+
 		List<String> knownParams = new ArrayList<>();
-		
-		for (UrlParameterDescription paramDesc : getUrlParameterDescriptions())
+
+		for (UrlParameterDescription paramDesc : parameterDescriptions)
 			knownParams.add(paramDesc.getName());
 
 		return knownParams.toArray(new String[0]);
 	}
-	
+
 	/**
 	 * Create a HTML Table with all parameters and there descriptions 
 	 * <p>

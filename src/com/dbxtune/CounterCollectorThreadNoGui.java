@@ -110,6 +110,9 @@ implements Memory.MemoryListener
 	public static final String    PROPKEY_noGuiDoJavaGcAfterRefresh         = "no.gui.do.java.gc.after.refresh";	
 	public static final boolean   DEFAULT_noGuiDoJavaGcAfterRefresh         = true;
 
+	public static final String    PROPKEY_noGui_hostmon_windows_onConnect_executeCommand = "no.gui.hostmon.windows.onConnect.executeCommand";	
+	public static final String    DEFAULT_noGui_hostmon_windows_onConnect_executeCommand = "taskkill /f /t /im typeperf.exe";
+
 
 	public CounterCollectorThreadNoGui(CounterControllerAbstract counterController)
 	{
@@ -1346,6 +1349,38 @@ implements Memory.MemoryListener
 							sshConn.connect();
 							
 							HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(sshConn);
+							
+							// TODO: Probably implement the below as 'onSshConnect()' in the CounterController
+							String osName = hostMonConn.getOsName();
+							if (StringUtil.hasValue(osName) && osName.startsWith("Windows-"))
+							{
+								// ON Windows: Kill all processes "typeperf"
+								// This due to the fact that the SSHD does NOT kill all subprocesses when it terminates
+								// So this is a ugly way of cleaning up old instances of "typeperf"
+								// Note: We might kill instances of "typeperf" that wasn't supposed to be killed (other collectors on the same host)
+								//       Well, they will be automatically be restarted (at least if they are issued by any DbxTune Collector)
+								// For now: This is only implemented in the "NO GUI" Collector (maybe in the future, we can add it to the GUI version as well)
+								String killCommand = Configuration.getCombinedConfiguration().getProperty(PROPKEY_noGui_hostmon_windows_onConnect_executeCommand, DEFAULT_noGui_hostmon_windows_onConnect_executeCommand);
+								if (StringUtil.hasValue(killCommand))
+								{
+									_logger.info("On Hostmon SSH Connect the following OS Command will be executed '" + killCommand + "' at '" + hostMonConn.getHostname() + "'.");
+									try
+									{
+										String killOutput = hostMonConn.execCommandOutputAsStr(killCommand);
+										List<String> killOutputList = StringUtil.readLines(killOutput);
+										int lineNum = 0;
+										for (String str : killOutputList)
+										{
+											lineNum++;
+											_logger.info("Output from '" + killCommand + "' line[" + lineNum + "]: " + str);
+										}
+									}
+									catch (Exception ex)
+									{
+										_logger.error("On Hostmon SSH Connect, problems executing command '" + killCommand + "' at '" + hostMonConn.getHostname() + "'. Skipping this and continuing. Caught: " + ex, ex);
+									}
+								}
+							}
 
 							getCounterController().setHostMonConnection(hostMonConn);
 						}

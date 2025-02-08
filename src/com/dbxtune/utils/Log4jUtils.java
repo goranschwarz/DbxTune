@@ -32,8 +32,10 @@ import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.RollingFileAppender;
+import org.apache.logging.log4j.core.appender.rolling.CompositeTriggeringPolicy;
 import org.apache.logging.log4j.core.appender.rolling.DefaultRolloverStrategy;
 import org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy;
+import org.apache.logging.log4j.core.appender.rolling.TimeBasedTriggeringPolicy;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
@@ -118,7 +120,7 @@ public class Log4jUtils
 		if (logPattern == null)
 			logPattern = "%d - %-5p - %m%n";
 
-		String rolloverFilePattern = logFilePath + ".%i.%d{yyyy-MM-dd}.log";
+		String rolloverFilePattern = logFilePath + ".%d{yyyy-MM-dd}.%i.log";
 		
 		// Create a PatternLayout for the appender
 		PatternLayout layout = PatternLayout.newBuilder()
@@ -126,9 +128,16 @@ public class Log4jUtils
 				.withPattern(logPattern)
 				.build();
 
-		// Create a SizeBasedTriggeringPolicy
-		SizeBasedTriggeringPolicy policy = SizeBasedTriggeringPolicy.createPolicy(maxMb + "MB");
+		// Create a SizeBasedTriggeringPolicy & TimeBasedTriggeringPolicy
+		SizeBasedTriggeringPolicy sizePolicy = SizeBasedTriggeringPolicy.createPolicy(maxMb + "MB");
+		TimeBasedTriggeringPolicy timePolicy = TimeBasedTriggeringPolicy.newBuilder()
+				.withInterval(1)
+				.withModulate(true)
+				.build();
+		// Combine the policies
+		CompositeTriggeringPolicy policy = CompositeTriggeringPolicy.createPolicy(sizePolicy, timePolicy);
 
+		
 		// Create a DefaultRolloverStrategy
 		DefaultRolloverStrategy strategy = DefaultRolloverStrategy.newBuilder()
 				.withMax(maxFiles + "") // Max # files

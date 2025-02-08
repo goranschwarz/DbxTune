@@ -71,6 +71,7 @@ extends SqlServerAbstract
 	{
 		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are CPU Graphs/Charts with various information that can help you decide how the DBMS is handling the load.",
 				"CmSummary_aaCpuGraph",
+				"CmSchedulers_CpuComboSch",
 				"CmOsMpstat_MpSum",
 				"CmSummary_aaReadWriteGraph",
 				"CmOsIostat_IoBusyPct",
@@ -89,7 +90,8 @@ extends SqlServerAbstract
 				"CmSchedulers_RunQLengthEng"
 				));
 
-		_CmSummary_aaCpuGraph           .writeHtmlContent(w, null, null);
+		_CmSummary_aaCpuGraph           .writeHtmlContent(w, null, "<b>Note</b>: The above graph may show less usage, especially if the server has been up for some time... <i>(due to counter wrapping in @@cpu_busy)</i>");
+		_CmSchedulers_CpuComboSch       .writeHtmlContent(w, null, null);
 		_CmOsMpstat_MpSum               .writeHtmlContent(w, null, null);
 		_CmSummary_aaReadWriteGraph     .writeHtmlContent(w, null, null);
 		_CmOsIostat_IoBusyPct           .writeHtmlContent(w, null, null);
@@ -151,6 +153,7 @@ extends SqlServerAbstract
 
 		int maxValue = 100;
 		_CmSummary_aaCpuGraph            = createTsLineChart(conn, schema, "CmSummary",         "aaCpuGraph",       maxValue, false, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
+		_CmSchedulers_CpuComboSch        = createTsLineChart(conn, schema, "CmSchedulers",      "CpuComboSch",      maxValue, false, null,    "CPU Usage in Percent, Both Average and Per Schedulers (using dm_os_schedulers.total_cpu_usage_ms)");
 		_CmOsMpstat_MpSum                = createTsLineChart(conn, schema, "CmOsMpstat",        "MpSum",            maxValue, false, idlePct, "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
 		_CmSummary_aaReadWriteGraph      = createTsLineChart(conn, schema, "CmSummary",         "aaReadWriteGraph", -1,       false, null,    "Disk read/write per second, using @@total_read, @@total_write (Summary)");
 		_CmOsIostat_IoBusyPct            = createTsLineChart(conn, schema, "CmOsIostat",        "IoBusyPct",        maxValue, false, null,    "OS: Disk Busy Percent(utilPct) per Device (Host Monitor->OS Disk Stat(iostat))");
@@ -172,6 +175,7 @@ extends SqlServerAbstract
 	}
 	
 	private IReportChart _CmSummary_aaCpuGraph;
+	private IReportChart _CmSchedulers_CpuComboSch;
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmSummary_aaReadWriteGraph;
 	private IReportChart _CmOsIostat_IoBusyPct;

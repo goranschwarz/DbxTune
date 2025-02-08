@@ -135,14 +135,20 @@ then
 				appName="DbxTune"
 			fi
 
+			## Compose a LOG name where we can look at the last line for status during shutdown
+			logFile=$(echo "${DBXTUNE_LOG_DIR}/${srvNameOrAlias:-${srvName}}.log" | sed "s/'//g")
+
 			if [ ${longList} -eq 0 ]
 			then
 				echo " >> ${appName}: ${srvName}${withAliasDesc}, PID=${pid}"
+				tail -1 ${logFile} | sed -e 's/^/    Last log entry: /'
 			else
 				echo ""
 				echo " >> ${appName}: ${srvName}${withAliasDesc}, PID=${pid}"
 				echo "======================================================"
 				ps -fww -p ${pid}
+				echo "==== last log entry =================================="
+				tail -1 ${logFile} | sed -e 's/^/    Last log entry: /'
 				echo "======================================================"
 			fi
 		done

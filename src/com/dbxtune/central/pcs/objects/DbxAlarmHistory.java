@@ -39,20 +39,21 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 //RS> 10   category                java.sql.Types.VARCHAR   VARCHAR(20)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
 //RS> 11   severity                java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
 //RS> 12   state                   java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 13   repeatCnt               java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 14   duration                java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 15   createTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 16   cancelTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 17   timeToLive              java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 18   threshold               java.sql.Types.VARCHAR   VARCHAR(15)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 19   data                    java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 20   lastData                java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 21   description             java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 22   lastDescription         java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 23   extendedDescription     java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
-//RS> 24   lastExtendedDescription java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 13   alarmId                 java.sql.Types.VARCHAR   VARCHAR(40)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 14   repeatCnt               java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 15   duration                java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 16   createTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 17   cancelTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 18   timeToLive              java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 19   threshold               java.sql.Types.VARCHAR   VARCHAR(15)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 20   data                    java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 21   lastData                java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 22   description             java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 23   lastDescription         java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 24   extendedDescription     java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
+//RS> 26   lastExtendedDescription java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
 
-@JsonPropertyOrder(value = {"srvName", "sessionStartTime", "sessionSampleTime", "eventTime", "action", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"}, alphabetic = true)
+@JsonPropertyOrder(value = {"srvName", "sessionStartTime", "sessionSampleTime", "eventTime", "action", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"}, alphabetic = true)
 public class DbxAlarmHistory
 {
 	private String    _srvName                ;
@@ -68,6 +69,7 @@ public class DbxAlarmHistory
 	private String    _category               ;
 	private String    _severity               ;
 	private String    _state                  ;
+	private String    _alarmId                ;
 	private int       _repeatCnt              ;
 	private String    _duration               ;
 	private String    _alarmDuration          ;
@@ -97,6 +99,7 @@ public class DbxAlarmHistory
 	public String    getCategory                   () { return _category                   ; }
 	public String    getSeverity                   () { return _severity                   ; }
 	public String    getState                      () { return _state                      ; }
+	public String    getAlarmId                    () { return _alarmId                    ; }
 	public int       getRepeatCnt                  () { return _repeatCnt                  ; }
 	public String    getDuration                   () { return _duration                   ; }
 	public String    getAlarmDuration              () { return _alarmDuration              ; }
@@ -126,6 +129,7 @@ public class DbxAlarmHistory
 	public void setCategory                   (String    category                   ) { _category                    = category                   ; }
 	public void setSeverity                   (String    severity                   ) { _severity                    = severity                   ; }
 	public void setState                      (String    state                      ) { _state                       = state                      ; }
+	public void setAlarmId                    (String    alarmId                    ) { _alarmId                     = alarmId                    ; }
 	public void setRepeatCnt                  (int       repeatCnt                  ) { _repeatCnt                   = repeatCnt                  ; }
 	public void setDuration                   (String    duration                   ) { _duration                    = duration                   ; }
 	public void setAlarmDuration              (String    alarmDuration              ) { _alarmDuration               = alarmDuration              ; }
@@ -142,7 +146,7 @@ public class DbxAlarmHistory
 	public void setExtendedDescription        (String    extendedDescription        ) { _extendedDescription         = extendedDescription        ; }
 	public void setLastExtendedDescription    (String    lastExtendedDescription    ) { _lastExtendedDescription     = lastExtendedDescription    ; }
 
-	public DbxAlarmHistory(String srvName, Timestamp sessionStartTime, Timestamp sessionSampleTime, Timestamp eventTime, String action, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription)
+	public DbxAlarmHistory(String srvName, Timestamp sessionStartTime, Timestamp sessionSampleTime, Timestamp eventTime, String action, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, String alarmId, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription)
 	{
 		_srvName                     = srvName;
 		_sessionStartTime            = sessionStartTime;
@@ -157,6 +161,7 @@ public class DbxAlarmHistory
 		_category                    = category;
 		_severity                    = severity;
 		_state                       = state;
+		_alarmId                     = alarmId;
 		_repeatCnt                   = repeatCnt;
 		_duration                    = duration;
 		_alarmDuration               = alarmDuration;

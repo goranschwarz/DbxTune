@@ -175,6 +175,9 @@ public class TimeUtils
 		String execTimeSS = "00";
 		String execTimeMs = "000";
 
+		// Make negative numbers positive
+		execTime = Math.abs(execTime);
+
 		// MS
 		execTimeMs = "000" + execTime % 1000;
 		execTimeMs = execTimeMs.substring(execTimeMs.length()-3);
@@ -212,6 +215,9 @@ public class TimeUtils
 	{
 		if (format == null) throw new RuntimeException("msToTimeStr(): format can't be null");
 		if (format.trim().length() == 0) throw new RuntimeException("msToTimeStr(): format can't be empty");
+
+		// Make negative numbers positive
+		execTime = Math.abs(execTime);
 
 		String execTimeHH = "00";
 		String execTimeMM = "00";
@@ -281,6 +287,16 @@ public class TimeUtils
 	{
 		return msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", execTimeInSec * 1000);
 	}
+	/** seconds as a string in format %HH:%MM:%SS */
+	public static String secToTimeStrHMS(int execTimeInSec)
+	{
+		return msToTimeStr("%HH:%MM:%SS", execTimeInSec * 1000);
+	}
+	/** seconds as a string in format %HH:%MM:%SS */
+	public static String secToTimeStrHMS(long execTimeInSec)
+	{
+		return msToTimeStr("%HH:%MM:%SS", execTimeInSec * 1000);
+	}
 
 
 	/** ms as a string in format %?DD[d ]%HH:%MM:%SS.%ms */
@@ -319,6 +335,9 @@ public class TimeUtils
 	{
 		if (format == null) throw new RuntimeException("msToTimeStr(): format can't be null");
 		if (format.trim().length() == 0) throw new RuntimeException("msToTimeStr(): format can't be empty");
+
+		// Make negative numbers positive
+		execTime = Math.abs(execTime);
 
 //		String originFormat = format;
 
@@ -411,6 +430,9 @@ public class TimeUtils
 	 */
 	public static String msToTimeStrDHMSms(long duration)
 	{
+		// Make negative numbers positive
+		duration = Math.abs(duration);
+
 		String res = ""; // java.util.concurrent.TimeUnit;
 		
 		long days    = TimeUnit.MILLISECONDS.toDays(duration);
@@ -434,6 +456,9 @@ public class TimeUtils
 	 */
 	public static String msToTimeStrDHMS(long duration)
 	{
+		// Make negative numbers positive
+		duration = Math.abs(duration);
+
 		String res = ""; // java.util.concurrent.TimeUnit;
 		
 		long days    = TimeUnit.MILLISECONDS.toDays(duration);
@@ -457,6 +482,9 @@ public class TimeUtils
 	 */
 	public static String usToTimeStrDHMS(long duration)
 	{
+		// Make negative numbers positive
+		duration = Math.abs(duration);
+
 		String res = ""; // java.util.concurrent.TimeUnit;
 		
 		long days    = TimeUnit.MICROSECONDS.toDays(duration);
@@ -690,6 +718,9 @@ public class TimeUtils
 	 */
 	public static String toStringIso8601(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		synchronized (ISO8601_DATE_FORMAT)
 		{
 			return ISO8601_DATE_FORMAT.format( new Date(ts) );
@@ -735,6 +766,9 @@ public class TimeUtils
 	 */
 	public static String toString(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		synchronized (DATE_FORMAT)
 		{
 			return DATE_FORMAT.format( new Date(ts) );
@@ -751,6 +785,9 @@ public class TimeUtils
 	 */
 	public static String toStringUtc(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		synchronized (DATE_FORMAT)
 		{
 			return UTC_DATE_FORMAT.format( new Date(ts));
@@ -766,6 +803,9 @@ public class TimeUtils
 	 */
 	public static String toStringYmd(Timestamp ts)
 	{
+		if (ts == null)
+			return null;
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		return sdf.format( ts );
 	}
@@ -778,6 +818,9 @@ public class TimeUtils
 	 */
 	public static String toStringYmd(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		return sdf.format( ts );
 	}
@@ -791,6 +834,9 @@ public class TimeUtils
 	 */
 	public static String toStringYmdHm(Timestamp ts)
 	{
+		if (ts == null)
+			return null;
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		return sdf.format( ts );
 	}
@@ -803,6 +849,9 @@ public class TimeUtils
 	 */
 	public static String toStringYmdHm(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		return sdf.format( ts );
 	}
@@ -816,6 +865,9 @@ public class TimeUtils
 	 */
 	public static String toStringYmdHms(Timestamp ts)
 	{
+		if (ts == null)
+			return null;
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return sdf.format( ts );
 	}
@@ -829,6 +881,9 @@ public class TimeUtils
 	 */
 	public static String toStringYmdHms(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return sdf.format( ts );
 	}
@@ -842,6 +897,9 @@ public class TimeUtils
 	 */
 	public static String getCurrentTimeForFileNameYmdHms(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
 		return sdf.format( new Date(ts) );
 	}
@@ -868,6 +926,9 @@ public class TimeUtils
 	 */
 	public static String getCurrentTimeForFileNameYmdHm(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmm");
 		return sdf.format( new Date(ts) );
 	}
@@ -893,6 +954,9 @@ public class TimeUtils
 	 */
 	public static String getCurrentTimeForFileNameYmd(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		return sdf.format( new Date(ts) );
 	}
@@ -918,6 +982,9 @@ public class TimeUtils
 	 */
 	public static String getCurrentTimeForFileNameHms(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("HHmmss");
 		return sdf.format( new Date(ts) );
 	}
@@ -943,6 +1010,9 @@ public class TimeUtils
 	 */
 	public static String getCurrentTimeForFileNameHm(long ts)
 	{
+		// Make negative numbers positive
+		ts = Math.abs(ts);
+
 		SimpleDateFormat sdf = new SimpleDateFormat("HHmm");
 		return sdf.format( new Date(ts) );
 	}
@@ -958,6 +1028,26 @@ public class TimeUtils
 	}
 	
 
+	/** Get weekday */
+	public static String toWeekDay(Timestamp run_ts)
+	{
+		if (run_ts == null)
+			return null;
+		return toWeekDay(new Date(run_ts.getTime()));
+	}
+	/** Get weekday */
+	public static String toWeekDay(long run_ts)
+	{
+		return toWeekDay(new Date(run_ts));
+	}
+	/** Get weekday */
+	public static String toWeekDay(Date run_ts)
+	{
+		if (run_ts == null)
+			return null;
+		SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
+	    return sdf.format(run_ts);
+	}
 	
 	
 	

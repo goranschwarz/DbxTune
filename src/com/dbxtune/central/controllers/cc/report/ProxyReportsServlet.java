@@ -45,10 +45,10 @@ extends ProxyHelper
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		// Get "basic" stuff... implemented in parent class
-		getSrvInfo(req);
+		getSrvInfo(request);
 
 		String collectorBaseUrl = getCollectorBaseUrl();
 		if (collectorBaseUrl == null)
@@ -58,26 +58,26 @@ extends ProxyHelper
 			return;
 		}
 		
-		String reportName = Helper.getParameter(req, "reportName");
+		String reportName = Helper.getParameter(request, "reportName");
 
 		String urlStr = null;
 		if ("sqlserver-job-scheduler-report".equals(reportName))
 		{
 			urlStr = "sqlserver/job-scheduler-report";
 		}
-		else if ("sqlserver-job-scheduler-activity".equals(reportName))
+		else if ("sqlserver-job-scheduler-timeline".equals(reportName))
 		{
-			urlStr = "sqlserver/job-scheduler-activity";
+			urlStr = "sqlserver/job-scheduler-timeline";
 		}
 		else
 		{
-			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Report name '" + reportName + "' was NOT found.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Report name '" + reportName + "' was NOT found.");
 			return;
 		}
 
 		// Build a query String (if any)
 		// "remove" some entries we passed: "srvName", "reportName", which we no longer need (or want to pass on)
-		String queryString = HtmlQueryString.removeParameter(req.getQueryString(), "srvName", "reportName");
+		String queryString = HtmlQueryString.removeParameter(request.getQueryString(), "srvName", "reportName");
 
 		if (StringUtil.isNullOrBlank(queryString))
 			queryString = "";
@@ -87,21 +87,62 @@ extends ProxyHelper
 
 		// Call the remote URL
 		URL url = new URL(getCollectorBaseUrl() + "/api/reports/" + urlStr + queryString);
-System.out.println("ProxyReportsServlet: CALLING URL: " + url);
+
+//System.out.println("ProxyReportsServlet: CALLING URL: " + url);
 		if (_logger.isDebugEnabled())
 			_logger.debug("ProxyReportsServlet: CALLING URL: " + url);
+
+		// GET request
 		HttpURLConnection httpConn = (HttpURLConnection)url.openConnection();
+		httpConn.setRequestMethod("GET");
+
+		// Do we really need to do this?
+		forwardRequestHeaders(request, httpConn);
 
 		// set request header if required
 		httpConn.setRequestProperty("Authentication", getMgtAuthentication());
-//		httpConn.setRequestProperty("header1", "value1");
 
-		httpConn.setRequestMethod("GET");
 
-//		// PROXY: Transfer data from the Caller to the HTTP end point 
+//		// PROXY: Transfer data from the Caller to the HTTP end point (NOT in a GET request)
 //		sendData(req, httpConn);
 
 		// PROXY: Transfer data from the HTTP Call to the caller 
-		sendResult(httpConn, resp, TEXT_HTML);
+		try
+		{
+			sendResult(httpConn, response, TEXT_HTML);
+		}
+		finally
+		{
+			httpConn.disconnect();
+		}
+		
+
+//		// PROXY: Transfer data from the HTTP Call to the caller 
+//		try
+//		{
+//			// Get response from target server
+//			int    responseCode = httpConn.getResponseCode();
+//
+//			// NOTE: if respoceCode is 400 (or above) then forward: ERROR Stream
+//			// NOTE: if respoceCode is less than 400  then forward: INPUT Stream
+//			boolean transferErrors = responseCode >= 400;
+//			
+//			// Use direct stream copying to avoid charset issues
+//			try (InputStream  inputStream  = (transferErrors ? httpConn.getErrorStream() : httpConn.getInputStream()); 
+//			     OutputStream outputStream = response.getOutputStream())
+//			{
+//				byte[] buffer = new byte[4096];
+//				int    bytesRead;
+//				while ((bytesRead = inputStream.read(buffer)) != -1)
+//				{
+//					outputStream.write(buffer, 0, bytesRead);
+//				}
+//				outputStream.flush();
+//			}
+//		}
+//		finally
+//		{
+//			httpConn.disconnect();
+//		}
 	}
 }

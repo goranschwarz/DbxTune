@@ -136,7 +136,7 @@ extends CountersModel
 
 	public CmRsSrcToDest(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -325,7 +325,8 @@ extends CountersModel
 			throws SQLException, NoValidRowsInSample
 			{
 				// Get the CmAdminStats which holds all the counter which a Module is based on
-				CmAdminStats cmAdminStats = (CmAdminStats) CounterController.getInstance().getCmByName(CmAdminStats.CM_NAME);
+//				CmAdminStats cmAdminStats = (CmAdminStats) CounterController.getInstance().getCmByName(CmAdminStats.CM_NAME);
+				CmAdminStats cmAdminStats = (CmAdminStats) cm.getCounterController().getCmByName(CmAdminStats.CM_NAME);
 //				if ( cmAdminStats.getColumnCount() == 0 )
 //					return false;
 

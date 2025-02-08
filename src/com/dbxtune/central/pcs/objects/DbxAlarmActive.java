@@ -36,20 +36,21 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 //RS> 6    category                java.sql.Types.VARCHAR   VARCHAR(20)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
 //RS> 7    severity                java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
 //RS> 8    state                   java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 9    repeatCnt               java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 10   duration                java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 11   createTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 12   cancelTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 13   timeToLive              java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 14   threshold               java.sql.Types.VARCHAR   VARCHAR(15)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 15   data                    java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 16   lastData                java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 17   description             java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 18   lastDescription         java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 19   extendedDescription     java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
-//RS> 20   lastExtendedDescription java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 9    alarmId                 java.sql.Types.VARCHAR   VARCHAR(40)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 10   repeatCnt               java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 11   duration                java.sql.Types.VARCHAR   VARCHAR(10)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 12   createTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 13   cancelTime              java.sql.Types.TIMESTAMP TIMESTAMP         DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 14   timeToLive              java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 15   threshold               java.sql.Types.VARCHAR   VARCHAR(15)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 16   data                    java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 17   lastData                java.sql.Types.VARCHAR   VARCHAR(80)       DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 18   description             java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 19   lastDescription         java.sql.Types.VARCHAR   VARCHAR(512)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 20   extendedDescription     java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
+//RS> 21   lastExtendedDescription java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
 
-@JsonPropertyOrder(value = {"srvName", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"}, alphabetic = true)
+@JsonPropertyOrder(value = {"srvName", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"}, alphabetic = true)
 public class DbxAlarmActive
 {
 	private String    _srvName                ;
@@ -61,6 +62,7 @@ public class DbxAlarmActive
 	private String    _category               ;
 	private String    _severity               ;
 	private String    _state                  ;
+	private String    _alarmId                ;
 	private int       _repeatCnt              ;
 	private String    _duration               ;
 	private String    _alarmDuration          ;
@@ -86,6 +88,7 @@ public class DbxAlarmActive
 	public String    getCategory                   () { return _category                   ; }
 	public String    getSeverity                   () { return _severity                   ; }
 	public String    getState                      () { return _state                      ; }
+	public String    getAlarmId                    () { return _alarmId                    ; }
 	public int       getRepeatCnt                  () { return _repeatCnt                  ; }
 	public String    getDuration                   () { return _duration                   ; }
 	public String    getAlarmDuration              () { return _alarmDuration              ; }
@@ -111,6 +114,7 @@ public class DbxAlarmActive
 	public void setCategory                   (String    category                   ) { _category                    = category                   ; }
 	public void setSeverity                   (String    severity                   ) { _severity                    = severity                   ; }
 	public void setState                      (String    state                      ) { _state                       = state                      ; }
+	public void setAlarmId                    (String    alarmId                    ) { _alarmId                     = alarmId                    ; }
 	public void setRepeatCnt                  (int       repeatCnt                  ) { _repeatCnt                   = repeatCnt                  ; }
 	public void setDuration                   (String    duration                   ) { _duration                    = duration                   ; }
 	public void setAlarmDuration              (String    alarmDuration              ) { _alarmDuration               = alarmDuration              ; }
@@ -127,7 +131,7 @@ public class DbxAlarmActive
 	public void setExtendedDescription        (String    extendedDescription        ) { _extendedDescription         = extendedDescription        ; }
 	public void setLastExtendedDescription    (String    lastExtendedDescription    ) { _lastExtendedDescription     = lastExtendedDescription    ; }
 	
-	public DbxAlarmActive(String srvName, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription)
+	public DbxAlarmActive(String srvName, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, String alarmId, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription)
 	{
 		_srvName                     = srvName;
 		_alarmClass                  = alarmClass;
@@ -138,6 +142,7 @@ public class DbxAlarmActive
 		_category                    = category;
 		_severity                    = severity;
 		_state                       = state;
+		_alarmId                     = alarmId;
 		_repeatCnt                   = repeatCnt;
 		_duration                    = duration;
 		_alarmDuration               = alarmDuration;

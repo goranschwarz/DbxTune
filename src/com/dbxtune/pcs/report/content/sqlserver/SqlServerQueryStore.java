@@ -439,8 +439,8 @@ extends SqlServerAbstract
 			if (_keyToSqlText  == null) _keyToSqlText  = new HashMap<>();
 			if (_keyToWaitTime == null) _keyToWaitTime = new HashMap<>();
 
-			_keyToSqlText .putAll(entry._keyToSqlText);
-			_keyToWaitTime.putAll(entry._keyToWaitTime);
+			if (entry._keyToSqlText  != null) _keyToSqlText .putAll(entry._keyToSqlText);
+			if (entry._keyToWaitTime != null) _keyToWaitTime.putAll(entry._keyToWaitTime);
 
 		
 			//-----------------------------------------------------
@@ -449,13 +449,13 @@ extends SqlServerAbstract
 			if (_planCollectionCpu  == null) _planCollectionCpu  = new QsExecutionPlanCollection(SqlServerQueryStore.this, _topCpuRstm,  "qs_SUMMARY_cpu", _schemaName);
 			if (_planCollectionWait == null) _planCollectionWait = new QsExecutionPlanCollection(SqlServerQueryStore.this, _topWaitRstm, "qs_SUMMARY_wait", _schemaName);
 
-			_planCollectionCpu .addShowplanMap(entry._planCollectionCpu .getShowplanAsMap());
-			_planCollectionWait.addShowplanMap(entry._planCollectionWait.getShowplanAsMap());
+			if (entry._planCollectionCpu  != null) _planCollectionCpu .addShowplanMap(entry._planCollectionCpu .getShowplanAsMap());
+			if (entry._planCollectionWait != null) _planCollectionWait.addShowplanMap(entry._planCollectionWait.getShowplanAsMap());
 
 			//-----------------------------------------------------
 			// Copy: SparkLine - JavaScript code
 			//-----------------------------------------------------
-			_miniChartJsList.addAll(entry._miniChartJsList);
+			if (entry._miniChartJsList != null) _miniChartJsList.addAll(entry._miniChartJsList);
 		}
 
 		public void sort()
@@ -466,14 +466,14 @@ extends SqlServerAbstract
 			cpuSortOptions .add(new SortOptions("total_cpu_time_ms__sum"       , ColumnNameSensitivity.IN_SENSITIVE, SortOrder.DESCENDING, DataSortSensitivity.SENSITIVE));
 			waitSortOptions.add(new SortOptions("total_query_wait_time_ms__sum", ColumnNameSensitivity.IN_SENSITIVE, SortOrder.DESCENDING, DataSortSensitivity.SENSITIVE));
 
-			_topCpuRstm .sort(cpuSortOptions);
-			_topWaitRstm.sort(waitSortOptions);
+			if (_topCpuRstm  != null) _topCpuRstm .sort(cpuSortOptions);
+			if (_topWaitRstm != null) _topWaitRstm.sort(waitSortOptions);
 		}
 
 		public void setTopRows(int topRows)
 		{
-			_topCpuRstm .setRowCount(topRows);
-			_topWaitRstm.setRowCount(topRows);
+			if (_topCpuRstm  != null) _topCpuRstm .setRowCount(topRows);
+			if (_topWaitRstm != null) _topWaitRstm.setRowCount(topRows);
 		}
 
 		public void postMerge()

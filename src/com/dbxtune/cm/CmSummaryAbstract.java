@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import com.dbxtune.ICounterController;
+import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventDbmsVersionString;
@@ -60,6 +61,7 @@ extends CountersModel
 	public CmSummaryAbstract
 	(
 			ICounterController counterController,
+			IGuiController     guiController,
 			String       name,
 			String       groupName,
 			String       sql,
@@ -76,7 +78,7 @@ extends CountersModel
 			int          defaultPostponeTime
 	)
 	{
-		super(counterController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, defaultPostponeTime);
+		super(counterController, guiController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, defaultPostponeTime);
 
 //		addPostRefreshTrendGraphs(); // This needs to be done later... after the 'guiController' has been assigned (which is done in the CmSummary's constructor)
 	}

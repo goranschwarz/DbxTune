@@ -393,6 +393,7 @@ extends AlarmWriterAbstract
 			+ "`Category:  ` ${category}\n"
 			+ "`Severity:  ` ${severity}\n"
 			+ "`State:     ` ${state}\n"
+//			+ "`Alarm Id:  ` ${alarmId}\n"
 			+ "\n"
 			+ "`Info:      ` ${extraInfo}\n"
 			+ "`Raise Time:` ${crTimeStr}\n"
@@ -404,6 +405,8 @@ extends AlarmWriterAbstract
 			+ "#if (${type} == 'CANCEL')"
 			+ "`Cancel Time:` ${cancelTimeStr}\n" 
 			+ "#end\n"
+
+			+ "`View Period:` ${dbxCentralUrl}\n"
 			
 			+ "\n"
 			+ "*Alarm description*\n"

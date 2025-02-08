@@ -49,6 +49,10 @@ import com.dbxtune.utils.HtmlTableProducer.ColumnCopyRow;
 import com.dbxtune.utils.HtmlTableProducer.ColumnStatic;
 import com.dbxtune.utils.StringUtil;
 
+//-----------------------------------------------------------------------------
+// NOTE: This class is NOT used for the moment...
+//       It's commented out in: DailySummaryReportSqlServerTune.java
+//-----------------------------------------------------------------------------
 public class SqlServerTopCmExecQueryStatsDb
 extends SqlServerAbstract
 {

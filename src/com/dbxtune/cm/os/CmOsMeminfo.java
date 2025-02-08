@@ -477,12 +477,15 @@ extends CounterModelHostMonitor
 		return "";
 	}
 
+	/** How many minutes the Moving Average should be calculated on*/
+	private static final int MOVING_AVG_TIME_IN_MINUTES = 10;
+
 	@Override
 	public void reset()
 	{
-		// Reset 5 minute average counters
-		MovingAverageCounterManager.getInstance(this.getName(), "swapIn",  5).reset();
-		MovingAverageCounterManager.getInstance(this.getName(), "swapOut", 5).reset();
+		// Reset X minute average counters
+		MovingAverageCounterManager.getInstance(this.getName(), "swapIn",  MOVING_AVG_TIME_IN_MINUTES).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "swapOut", MOVING_AVG_TIME_IN_MINUTES).reset();
 		
 		super.reset();
 	}
@@ -523,34 +526,37 @@ extends CounterModelHostMonitor
 			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
 			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
 
-			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).add(swapIn) .getAvg(0, true, maxCap);
-			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).add(swapOut).getAvg(0, true, maxCap);
+			int swapIn_xmAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  MOVING_AVG_TIME_IN_MINUTES).add(swapIn) .getAvg(0, true, maxCap);
+			int swapOut_xmAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).add(swapOut).getAvg(0, true, maxCap);
 
 			// Add to 60m since this is what we use as a Graph in the Alarm (but we don't care/use the result calculation)
 			MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
 			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
 
-			if (swapIn_5mAvg > threshold || swapOut_5mAvg > threshold)
+			if (swapIn_xmAvg > threshold || swapOut_xmAvg > threshold)
 			{
-				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakTimestamp();
-				double    swapIn_peakNumber  = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakNumber();
-				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakTimestamp();
-				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakNumber();
+				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance(groupName, "swapIn",  MOVING_AVG_TIME_IN_MINUTES).getPeakTimestamp();
+				double    swapIn_peakNumber  = MovingAverageCounterManager.getInstance(groupName, "swapIn",  MOVING_AVG_TIME_IN_MINUTES).getPeakNumber();
+				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakTimestamp();
+				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakNumber();
 
 				// Create a small chart, that can be used in emails etc.
 				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
 						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
 						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
 
-				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
-				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable();
+				// Get CPU Summary Usage chart
+				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
 				
-				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
-						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
-						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);
+				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
+				
+				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over " + MOVING_AVG_TIME_IN_MINUTES + " minute moving average", 
+						swapIn_xmAvg,  swapIn_peakTs,  swapIn_peakNumber,
+						swapOut_xmAvg, swapOut_peakTs, swapOut_peakNumber);
 				
 				alarm.setExtendedDescription(null, htmlChartImage);
 
@@ -574,35 +580,38 @@ extends CounterModelHostMonitor
 			int swapIn  = (swapIn_tmp  == null) ? 0 : swapIn_tmp .intValue();
 			int swapOut = (swapOut_tmp == null) ? 0 : swapOut_tmp.intValue();
 
-			int swapIn_5mAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).add(swapIn) .getAvg(0, true, maxCap);
-			int swapOut_5mAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).add(swapOut).getAvg(0, true, maxCap);
+			int swapIn_xmAvg  = (int) MovingAverageCounterManager.getInstance(groupName, "swapIn",  MOVING_AVG_TIME_IN_MINUTES).add(swapIn) .getAvg(0, true, maxCap);
+			int swapOut_xmAvg = (int) MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).add(swapOut).getAvg(0, true, maxCap);
 
 			// Add to 60m since this is what we use as a Graph in the Alarm (but we don't care/use the result calculation)
 			MovingAverageCounterManager.getInstance(groupName, "swapIn",  60).add(swapIn) .getAvg(0, true, maxCap);
 			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): SwapThrashing: in=" + swapIn + ", out=" + swapOut + ". swapIn_5mAvg=" + swapIn_5mAvg + ", swapOut_5mAvg=" + swapOut_5mAvg);
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): SwapThrashing: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
 
 			// BOTH swap 'in' AND 'out' 
-			if (swapIn_5mAvg > threshold && swapOut_5mAvg > threshold)
+			if (swapIn_xmAvg > threshold && swapOut_xmAvg > threshold)
 			{
-				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakTimestamp();
-				double    swapIn_peakNumber  = MovingAverageCounterManager.getInstance(groupName, "swapIn",  5).getPeakNumber();
-				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakTimestamp();
-				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", 5).getPeakNumber();
+				Timestamp swapIn_peakTs      = MovingAverageCounterManager.getInstance(groupName, "swapIn",  MOVING_AVG_TIME_IN_MINUTES).getPeakTimestamp();
+				double    swapIn_peakNumber  = MovingAverageCounterManager.getInstance(groupName, "swapIn",  MOVING_AVG_TIME_IN_MINUTES).getPeakNumber();
+				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakTimestamp();
+				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakNumber();
 
 				// Create a small chart, that can be used in emails etc.
 				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
 						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
 						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
 
-				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
-				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable();
+				// Get CPU Summary Usage chart
+				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
 				
-				AlarmEventOsSwapThrashing alarm = new AlarmEventOsSwapThrashing(cm, threshold, maxCap, hostname, "over 5 minute moving average", 
-						swapIn_5mAvg,  swapIn_peakTs,  swapIn_peakNumber,
-						swapOut_5mAvg, swapOut_peakTs, swapOut_peakNumber);
+				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
+				
+				AlarmEventOsSwapThrashing alarm = new AlarmEventOsSwapThrashing(cm, threshold, maxCap, hostname, "over " + MOVING_AVG_TIME_IN_MINUTES + " minute moving average", 
+						swapIn_xmAvg,  swapIn_peakTs,  swapIn_peakNumber,
+						swapOut_xmAvg, swapOut_peakTs, swapOut_peakNumber);
 				
 				alarm.setExtendedDescription(null, htmlChartImage);
 
@@ -635,65 +644,12 @@ extends CounterModelHostMonitor
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
-		list.add(new CmSettingsHelper("Swapping"     , isAlarmSwitch  , PROPKEY_alarm_swap                             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap                             , DEFAULT_alarm_swap                            ), DEFAULT_alarm_swap                            , "If 'Pages Input/sec' or 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+		list.add(new CmSettingsHelper("Swapping"     , isAlarmSwitch  , PROPKEY_alarm_swap                             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap                             , DEFAULT_alarm_swap                            ), DEFAULT_alarm_swap                            , "If 'Pages Input/sec' or 'Pages Output/sec' is greater than ## (" + MOVING_AVG_TIME_IN_MINUTES + " minute average), then send 'AlarmEventOsSwapping'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
 		list.add(new CmSettingsHelper("Swapping MaxCapMultiplier"     , PROPKEY_alarm_swap_maxCap_multiplier           , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_maxCap_multiplier           , DEFAULT_alarm_swap_maxCap_multiplier          ), DEFAULT_alarm_swap_maxCap_multiplier          , "Parameter to 'Swapping', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 1000 and 'MaxCap Multiplier' is '1.5' The MaxCap will be 1500..." ));
 
-		list.add(new CmSettingsHelper("SwapThrashing", isAlarmSwitch  , PROPKEY_alarm_swap_thrashing                   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap_thrashing                   , DEFAULT_alarm_swap_thrashing)                  , DEFAULT_alarm_swap_thrashing                  , "If 'Pages Input/sec' AND 'Pages Output/sec' is greater than ## (5 minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
+		list.add(new CmSettingsHelper("SwapThrashing", isAlarmSwitch  , PROPKEY_alarm_swap_thrashing                   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap_thrashing                   , DEFAULT_alarm_swap_thrashing)                  , DEFAULT_alarm_swap_thrashing                  , "If 'Pages Input/sec' AND 'Pages Output/sec' is greater than ## (" + MOVING_AVG_TIME_IN_MINUTES + " minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
 		list.add(new CmSettingsHelper("SwapThrashing MaxCapMultiplier", PROPKEY_alarm_swap_thrashing_maxCap_multiplier , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_thrashing_maxCap_multiplier , DEFAULT_alarm_swap_thrashing_maxCap_multiplier), DEFAULT_alarm_swap_thrashing_maxCap_multiplier, "Parameter to 'SwapThrashing', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 150 and 'MaxCap Multiplier' is '2.0' The MaxCap will be 300..." ));
 
 		return list;
 	}
-
-//-----------------------------------------------------------------------------
-//-- MAYBE: Do alarm when MemAvailable is getting to low... (need algo for this)
-//-- NOTE:  The below is just "taken" from CmOsUptime, and needs to be altered
-//-----------------------------------------------------------------------------
-//	@Override
-//	public void sendAlarmRequest()
-//	{
-//		CountersModel cm = this;
-//
-//		if ( ! cm.hasAbsData() )
-//			return;
-//		if ( ! cm.getCounterController().isHostMonConnected() )
-//			return;
-//
-//		String hostname = cm.getCounterController().getHostMonConnection().getHost();
-//
-//		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
-//		
-//		//-------------------------------------------------------
-//		// Run Queue Length (adjLoadAverage_1Min), Avg Last Minute 
-//		//-------------------------------------------------------
-//		Double adjLoadAverage_1Min  = this.getAbsValueAsDouble(0, "adjLoadAverage_1Min");
-//		Double adjLoadAverage_5Min  = this.getAbsValueAsDouble(0, "adjLoadAverage_5Min");
-//		Double adjLoadAverage_15Min = this.getAbsValueAsDouble(0, "adjLoadAverage_15Min");
-//
-//		if (adjLoadAverage_1Min != null)
-//		{
-//			if (debugPrint || _logger.isDebugEnabled())
-//				System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage: 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
-//
-//			if (AlarmHandler.hasInstance())
-//			{
-//				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_1Min, DEFAULT_alarm_adjLoadAverage_1Min);
-//				if (adjLoadAverage_1Min > threshold)
-//					AlarmHandler.getInstance().addAlarm( new AlarmEventOsLoadAverage(cm, hostname, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min) );
-//			}
-//		}
-//	}
-//
-//	public static final String  PROPKEY_alarm_adjLoadAverage_1Min = CM_NAME + ".alarm.system.if.adjLoadAverage_1Min.gt";
-//	public static final double  DEFAULT_alarm_adjLoadAverage_1Min = 1.0;
-//
-//	@Override
-//	public List<CmSettingsHelper> getLocalAlarmSettings()
-//	{
-//		Configuration conf = Configuration.getCombinedConfiguration();
-//		List<CmSettingsHelper> list = new ArrayList<>();
-//		
-//		list.add(new CmSettingsHelper("adjLoadAverage_1Min", PROPKEY_alarm_adjLoadAverage_1Min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_adjLoadAverage_1Min , DEFAULT_alarm_adjLoadAverage_1Min), DEFAULT_alarm_adjLoadAverage_1Min, "If 'adjLoadAverage_1Min' is greater than ## then send 'AlarmEventOsLoadAverage'." ));
-//
-//		return list;
-//	}
 }

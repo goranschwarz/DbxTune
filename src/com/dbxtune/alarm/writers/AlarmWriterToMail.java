@@ -572,6 +572,7 @@ extends AlarmWriterAbstract
 			+ "  <tr> <td><b>Category:  </b></td> <td>${category}             </td> </tr>\n"
 			+ "  <tr> <td><b>Severity:  </b></td> <td>${severity}             </td> </tr>\n"
 			+ "  <tr> <td><b>State:     </b></td> <td>${state}                </td> </tr>\n"
+//			+ "  <tr> <td><b>Alarm Id:  </b></td> <td>${alarmId}              </td> </tr>\n"
 			+ "\n"
 			+ "  <td colspan='2'>&nbsp; </td>\n"
 			+ "  <tr> <td><b>Info:      </b></td> <td>${extraInfo}            </td> </tr>\n"
@@ -584,6 +585,9 @@ extends AlarmWriterAbstract
 			+ "#if (${type} == 'CANCEL')\n"
 			+ "  <tr> <td><b>Cancel Time:</b></td> <td>${cancelTimeStr}       </td> </tr>\n"
 			+ "#end\n"
+
+//			+ "  <tr> <td><b>View Period:</b></td> <td><a href='${dbxCentralUrl}'>View the Alarm Period in DbxCentral</a></td> </tr>\n"
+			+ "  <tr> <td><b>&nbsp;</b></td> <td><a href='${dbxCentralUrl}'>View Period in DbxCentral</a></td> </tr>\n"
 
 			+ "</table>\n"
 			
