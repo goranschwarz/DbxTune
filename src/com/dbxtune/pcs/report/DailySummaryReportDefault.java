@@ -256,6 +256,17 @@ extends DailySummaryReportAbstract
 		return _reportEntries;
 	}
 
+	@Override
+	public RecordingInfo getReportEntryRecordingInfo()
+	{
+		for (IReportEntry entry : getReportEntries())
+		{
+			if (entry instanceof RecordingInfo)
+				return (RecordingInfo) entry;
+		}
+		return null;
+	}
+
 	/**
 	 * Get values from PCS table <code>MonSessionParams</code>
 	 * 
@@ -752,8 +763,9 @@ extends DailySummaryReportAbstract
 			//sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		}
 		
-//		sb.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/themes/prism.min.css'> \n");
-		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/themes/prism-okaidia.min.css'> \n");
+//		sb.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css'> \n");
+		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css'> \n");
+		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css'> \n");
 
 		createDbxTuneCss(w);
 
@@ -770,14 +782,17 @@ extends DailySummaryReportAbstract
 			w.append("    <script src='https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js'     integrity='sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s' crossorigin='anonymous'></script> \n");
 		}
 		
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/prism.min.js'></script> \n");
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/components/prism-sql.min.js'></script> \n");
+		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script> \n");
+		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script> \n");
+		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js'></script> \n");
+		w.append("    <script src=''></script> \n");
 
 		// chart.js
 		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js'   integrity='sha512-TW5s0IT/IppJtu76UbysrBH9Hy/5X41OTAbQuffZFU6lQ1rdcLHzpU5BzVvr/YFykoiMYZVWlr/PX1mDcfM9Qg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
-//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.js'       integrity='sha512-uLlukEfSLB7gWRBvzpDnLGvzNUluF19IDEdUoyGAtaO0MVSBsQ+g3qhLRL3GTVoEzKpc24rVT6X1Pr5fmsShBg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
-//old//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.bundle.js' integrity='sha512-oaUGh3C8smdaT0kMeyQ7xS1UY60lko23ZRSnRljkh2cbB7GJHZjqe3novnhSNc+Qj21dwBE5dFBqhcUrFc9xIw==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>\n");
-//old//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.js'        integrity='sha512-YB9sg4Z0/6+Q2qyde+om6RdPat0bLazJXJe15qHmZ9FjckJKxHOpHbp1mGTnHq7fzljiKbMEPiwHSLU2cX8qHA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>\n");
+
+		// chart.js plugins
+		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js' integrity='sha512-qF3T5CaMgSRNrxzu69V3ZrYGnrbRMIqrkE+OrE01DDsYDNo8R1VrtYL8pk+fqhKxUBXQ2z+yV/irk+AbbHtBAg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+
 
 		// moment.js
 		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");

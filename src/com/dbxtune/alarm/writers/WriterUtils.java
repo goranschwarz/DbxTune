@@ -283,6 +283,8 @@ public class WriterUtils
 			context.put("crAgeInMs"                  , StringUtil.toStr( alarmEvent.getCrAgeInMs()                  ,trMap ));
 			context.put("isActive"                   , StringUtil.toStr( alarmEvent.isActive()                      ,trMap ));
 			context.put("activeAlarmCount"           , StringUtil.toStr( alarmEvent.getActiveAlarmCount()           ,trMap ));
+			context.put("dbxCentralUrl"              , StringUtil.toStr( alarmEvent.getDbxCentralUrl()              ,trMap ));
+			context.put("alarmId"                    , StringUtil.toStr( alarmEvent.getAlarmId()                    ,trMap ));
 		}
 		
 		if (pcsAlarmEntry != null)
@@ -317,6 +319,9 @@ public class WriterUtils
 			context.put("crAgeInMs"                  , StringUtil.toStr( pcsAlarmEntry.getCreationAgeInMs()            ,trMap ));
 			context.put("isActive"                   , StringUtil.toStr( pcsAlarmEntry.isActive()                      ,trMap ));
 			context.put("activeAlarmCount"           , StringUtil.toStr( -1                                            ,trMap ));
+//			context.put("dbxCentralUrl"              , StringUtil.toStr( pcsAlarmEntry.getDbxCentralUrl()              ,trMap ));
+			context.put("dbxCentralUrl"              , StringUtil.toStr( "-unknown-"                                   ,trMap ));
+			context.put("alarmId"                    , StringUtil.toStr( pcsAlarmEntry.getAlarmId()                    ,trMap ));
 		}
 
 		if (activeAlarmList != null)
@@ -477,6 +482,8 @@ public class WriterUtils
 		desc.put("crAgeInMs"                  , "<html> <h2>crAgeInMs                  </h2> How many milleseconds has pased since the Alarm was Created.  </html>");
 		desc.put("isActive"                   , "<html> <h2>isActive                   </h2> Boolean status flag if the Alarm is still Active, which would be true when <code>type</code> is RAISE and RE-RAISE.                                  <br><br>Example: <code>true</code> or <code>false</code>      </html>");
 		desc.put("activeAlarmCount"           , "<html> <h2>activeAlarmCount           </h2> Get number of <b>active</b> alarms in the AlarmHandler. This can be used to simply print out how many active alarms we have for the moment. </html>");
+		desc.put("dbxCentralUrl"              , "<html> <h2>dbxCentralUrl              </h2> Get URL to view the Alarm Period in DbxCentral. </html>");
+		desc.put("alarmId"                    , "<html> <h2>alarmId                    </h2> Get UUID of the Alarm. </html>");
 		
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "_[generalDescription]"      , ""                              ,  null, desc.get("generalDescription"        )));
@@ -507,7 +514,9 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "cancelTimeStr"              , "${cancelTimeStr}"              ,  null, desc.get("cancelTimeStr"             )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "crAgeInMs"                  , "${crAgeInMs}"                  ,  null, desc.get("crAgeInMs"                 )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "isActive"                   , "${isActive}"                   ,  null, desc.get("isActive"                  )));
-		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmCount"           , "${activeAlarmCount}"           ,  null, desc.get("activeAlarmCount"           )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmCount"           , "${activeAlarmCount}"           ,  null, desc.get("activeAlarmCount"          )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, desc.get("dbxCentralUrl"             )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "alarmId"                    , "${alarmId}"                    ,  null, desc.get("alarmId"                   )));
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "serverDisplayName"          , "${serverDisplayName}"          ,  null, "<html>The command line switch <i>--displayName</i> or the ServerName. This can for example be used in the <b>mail subject</b> if the servernames are cryptical.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));

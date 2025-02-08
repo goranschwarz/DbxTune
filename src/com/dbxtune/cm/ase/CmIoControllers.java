@@ -100,7 +100,7 @@ extends CountersModel
 	 */
 	public CmIoControllers(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -186,7 +186,7 @@ extends CountersModel
 		{
     		int[] rqRows = this.getAbsRowIdsWhere("Type", "DiskController");
     		if (rqRows == null)
-    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), retuned null, so I can't do more here.");
+    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), returned null, so I can't do more here.");
     		else
     		{
     			Double[] arr = new Double[1];
@@ -202,7 +202,7 @@ extends CountersModel
 		{
     		int[] rqRows = this.getAbsRowIdsWhere("Type", "DiskController");
     		if (rqRows == null)
-    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), retuned null, so I can't do more here.");
+    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), returned null, so I can't do more here.");
     		else
     		{
     			Double[] arr = new Double[1];

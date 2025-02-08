@@ -136,7 +136,7 @@ extends ReportEntryAbstract
 			out.println("<br>");
 			out.println("<br>");
 			out.println("<p>");
-			out.println("<b>DbxCentral: Last Cleanup Report of -- DbxCollector Recording Databases<br>");
+			out.println("<b>DbxCentral: Last Cleanup Report of -- DbxCollector Recording Databases</b><br>");
 			out.println("</p>");
 
 			// Use '<pre>' here or do we need to translate '\n' --> '<br>\n'

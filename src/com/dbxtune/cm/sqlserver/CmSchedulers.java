@@ -113,7 +113,7 @@ extends CountersModel
 
 	public CmSchedulers(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -152,6 +152,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_PENDING_IO_ENG           = "PendingIoEng";
 	public static final String GRAPH_NAME_CPU_PER_SCHEDULER        = "CpuPerSch";
 	public static final String GRAPH_NAME_CPU_ALL_SCHEDULERS       = "CpuAllSch";
+	public static final String GRAPH_NAME_CPU_COMBO_SCHEDULERS     = "CpuComboSch";
 	public static final String GRAPH_NAME_CPU_DELAY_PER_SCHEDULER  = "CpuDelayPerSch";
 	public static final String GRAPH_NAME_CPU_DELAY_ALL_SCHEDULERS = "CpuDelayAllSch";
 	
@@ -208,6 +209,19 @@ extends CountersModel
 			false, // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH: CPU ALL Schedulers
+		addTrendGraph(GRAPH_NAME_CPU_COMBO_SCHEDULERS,
+			"CPU Usage in Percent, Both Average and Per Schedulers", 	                        // Menu CheckBox text
+			"CPU Usage in Percent, Both Average and Per Schedulers (using dm_os_schedulers.total_cpu_usage_ms)", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true, // is Percent Graph
+			true, // visible at start
+			Ver.ver(2016),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
 		// GRAPH: CPU ALL Schedulers
@@ -276,7 +290,7 @@ extends CountersModel
 		{
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[2];
@@ -299,7 +313,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -334,7 +348,7 @@ extends CountersModel
 		{	
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[2];
@@ -357,7 +371,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -388,12 +402,57 @@ extends CountersModel
 		//---------------------------------
 		// GRAPH:
 		//---------------------------------
+		if (GRAPH_NAME_CPU_COMBO_SCHEDULERS.equals(tgdp.getName()))
+		{	
+			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
+			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
+			if (rowIds == null)
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+			else
+			{
+				Double[] data  = new Double[rowIds.length + 1];
+				String[] label = new String[rowIds.length + 1];
+
+				// AVG all schedulers... put in array slot: 0
+				Double cpuUsageMsSum = this.getRateValueSum(rowIds, "total_cpu_usage_ms");
+				data[0]  = cpuUsageMsSum / 10.0 / (rowIds.length * 1.0);
+				label[0] = "AVG_all_schedulers";
+
+				// All schedulers... put in array slot: 1+
+				for (int i=0; i<rowIds.length; i++)
+				{
+					int as = i + 1;
+					int rowId = rowIds[i];
+
+					// get LABEL
+					label[as] = "sch-" + this.getAbsString(rowId, "scheduler_id");
+
+					// get DATA
+					Double cpuUsageMs = this.getRateValueAsDouble(rowId, "total_cpu_usage_ms");
+					data[as]  = cpuUsageMs / 10.0;
+				}
+				if (_logger.isDebugEnabled())
+				{
+					String debugStr = "";
+					for (int i=0; i<data.length; i++)
+						debugStr += label[i] + "='" + data[i] + "', ";
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): " + debugStr);
+				}
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), label, data);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_CPU_ALL_SCHEDULERS.equals(tgdp.getName()))
 		{	
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[1];
@@ -417,7 +476,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -454,7 +513,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -490,7 +549,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[2];

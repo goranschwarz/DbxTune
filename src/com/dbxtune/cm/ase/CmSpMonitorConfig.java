@@ -105,7 +105,7 @@ extends CountersModel
 
 	public CmSpMonitorConfig(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -270,7 +270,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
 			int[] rqRows = this.getAbsRowIdsWhere("Name", "procedure cache size");
 			if (rqRows == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), returned null, so I can't do more here.");
 			else
 			{
 				Double pctAct   = this.getAbsValueAsDouble(rqRows[0], "Pct_act");
@@ -293,7 +293,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
 			int[] rqRows = this.getAbsRowIdsWhere("Name", "procedure cache size");
 			if (rqRows == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), retuned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), returned null, so I can't do more here.");
 			else
 			{
 				Double numFree   = this.getAbsValueAsDouble(rqRows[0], "Num_free");
@@ -447,7 +447,7 @@ extends CountersModel
 //		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
 //		int[] rqRows = this.getAbsRowIdsWhere("Name", "procedure cache size");
 //		if (rqRows == null)
-//			_logger.warn("When checking for alarms in '"+getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), retuned null, so I can't do more here.");
+//			_logger.warn("When checking for alarms in '"+getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), returned null, so I can't do more here.");
 //		else
 //		{
 //			//-------------------------------------------------------

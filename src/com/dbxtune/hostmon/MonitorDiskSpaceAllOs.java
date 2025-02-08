@@ -54,18 +54,32 @@ extends HostMonitor
 		
 		if (isConnectedToVendor(OsVendor.Windows))
 		{
-//			return "powershell \"gwmi win32_logicaldisk | Format-Table -HideTableHeaders DeviceId, MediaType, @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}} ,@{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}, @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}} ,@{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}, VolumeName\" ";
-			return "powershell \"gwmi win32_logicaldisk | Format-Table -HideTableHeaders"
+//			return "powershell \"gwmi win32_logicaldisk | Format-Table -HideTableHeaders"
+//					+ " DeviceId"
+//					+ ", @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}}"
+//					+ ", @{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}"
+//					+ ", @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}}"
+//					+ ", @{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}"
+//				//	+ ", DeviceId" // use DeviceId both as 'FileSystem' and 'MountedOn'
+//					+ ", @{n='MountedOn'; e={($_.DeviceId+' ['+$_.VolumeName+']').Replace('[]','').Replace(' ','&nbsp;')}}" // MountedOn == Can be used to get: "D: [Disk Label]"
+//					+ "\" ";
+			
+			return "powershell \"Get-CimInstance Win32_LogicalDisk | Format-Table -HideTableHeaders"
 					+ " DeviceId"
 					+ ", @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}}"
 					+ ", @{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}"
 					+ ", @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}}"
 					+ ", @{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}"
-//					+ ", DeviceId" // use DeviceId both as 'FileSystem' and 'MountedOn'
 					+ ", @{n='MountedOn'; e={($_.DeviceId+' ['+$_.VolumeName+']').Replace('[]','').Replace(' ','&nbsp;')}}" // MountedOn == Can be used to get: "D: [Disk Label]"
 					+ "\" ";
-			
+
 			// NOTE: the reader splits on "whitespace", so simulate spaces with "&nbsp;", which will be translated back again in parseRow() method 
+			
+			// TODO; Possibly use: Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name="Used(KB)";Expression={($_.Used / 1KB).ToString("F2")}}, @{Name="Free(KB)";Expression={($_.Free / 1KB).ToString("F2")}}, @{Name="Total(KB)";Expression={($_.Used + $_.Free) / 1KB}}
+			//                 OR: Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Select-Object DeviceID, @{Name="FreeSpace(KB)";Expression={($_.FreeSpace / 1KB).ToString("F2")}}, @{Name="Size(KB)";Expression={($_.Size / 1KB).ToString("F2")}}
+			//                     Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Select-Object DeviceID, VolumeName, @{Name="FreeSpace(KB)";Expression={($_.FreeSpace / 1KB).ToString("F2")}}, @{Name="Size(KB)";Expression={($_.Size / 1KB).ToString("F2")}}
+			//        since it do NOT require Administrator Privileges
+
 		}
 		else
 		{

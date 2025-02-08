@@ -1965,6 +1965,44 @@ extends CentralPersistWriterBase
 			}
 		}
 		
+		if (fromDbVersion <= 14)
+		{
+			// Add column 'ServerDisplayName' to Table.CENTRAL_SESSIONS
+			step = 17;
+
+			// Get schemas
+			Set<String> schemaSet = DbUtils.getSchemaNames(conn);
+			
+			// get table name WITHOUT schema specification and NOT quoted
+			String alarmActiveTabName  = getTableName(conn, null, Table.ALARM_ACTIVE , null, false);
+			String alarmHistoryTabName = getTableName(conn, null, Table.ALARM_HISTORY, null, false);
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmActiveTabName))
+				{
+					// Add column 'alarmId',
+					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmActiveTabName+rq + " "
+							+ " add ( " + lq+"alarmId"+rq + " varchar(40) null ) "
+							+ " after " + lq+"state"+rq;
+
+					internalDbUpgradeDdlExec(conn, step, sql);
+				}
+
+				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmHistoryTabName))
+				{
+					// Add column 'alarmId',
+					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmHistoryTabName+rq + " "
+							+ " add ( " + lq+"alarmId"+rq + " varchar(40) null ) "
+							+ " after " + lq+"state"+rq;
+
+					internalDbUpgradeDdlExec(conn, step, sql);
+				}
+			}
+		}
+		
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;
 	}
@@ -2767,21 +2805,22 @@ extends CentralPersistWriterBase
 					sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  )); // "category"                    // 6 
 					sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  )); // "severity"                    // 7 
 					sbSql.append(", ").append(safeStr( ae.getState()                , 10  )); // "state"                       // 8 
-					sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  )); // "repeatCnt"                   // 9 
-					sbSql.append(", ").append(safeStr( ae.getDuration()             , 80  )); // "duration"                    // 10
-					sbSql.append(", ").append(safeStr( ae.getAlarmDuration()        , 20  )); // "alarmDuration"               // 11
-					sbSql.append(", ").append(safeStr( ae.getFullDuration()         , 20  )); // "fullDuration"                // 12
-					sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec())); // "fullDurationAdjustmentInSec" // 13
-					sbSql.append(", ").append(safeStr( ae.getCreationTime()               )); // "createTime"                  // 14
-					sbSql.append(", ").append(safeStr( ae.getCancelTime()                 )); // "cancelTime"                  // 15
-					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 )); // "timeToLive"                  // 16
-					sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  )); // "threshold"                   // 17
-					sbSql.append(", ").append(safeStr( ae.getData()                 , 160 )); // "data"                        // 18
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 )); // "lastData"                    // 19
-					sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 )); // "description"                 // 20
-					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 )); // "lastDescription"             // 21
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        )); // "extendedDescription"         // 22 /*HTML or Normal???*/
-					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 23 /*HTML or Normal???*/
+					sbSql.append(", ").append(safeStr( ae.getAlarmId()              , 40  )); // "alarmId"                     // 9 
+					sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  )); // "repeatCnt"                   // 10
+					sbSql.append(", ").append(safeStr( ae.getDuration()             , 80  )); // "duration"                    // 11
+					sbSql.append(", ").append(safeStr( ae.getAlarmDuration()        , 20  )); // "alarmDuration"               // 12
+					sbSql.append(", ").append(safeStr( ae.getFullDuration()         , 20  )); // "fullDuration"                // 13
+					sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec())); // "fullDurationAdjustmentInSec" // 14
+					sbSql.append(", ").append(safeStr( ae.getCreationTime()               )); // "createTime"                  // 15
+					sbSql.append(", ").append(safeStr( ae.getCancelTime()                 )); // "cancelTime"                  // 16
+					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 )); // "timeToLive"                  // 17
+					sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  )); // "threshold"                   // 18
+					sbSql.append(", ").append(safeStr( ae.getData()                 , 160 )); // "data"                        // 19
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 )); // "lastData"                    // 20
+					sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 )); // "description"                 // 21
+					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 )); // "lastDescription"             // 22
+					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        )); // "extendedDescription"         // 23 /*HTML or Normal???*/
+					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 24 /*HTML or Normal???*/
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -2887,21 +2926,22 @@ extends CentralPersistWriterBase
 						sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));  // "category"                    // 10 
 						sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  ));  // "severity"                    // 11 
 						sbSql.append(", ").append(safeStr( ae.getState()                , 10  ));  // "state"                       // 12 
-						sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  ));  // "repeatCnt"                   // 13 
-						sbSql.append(", ").append(safeStr( ae.getDuration()             , 80  ));  // "duration"                    // 14 
-						sbSql.append(", ").append(safeStr( ae.getAlarmDuration()        , 20  ));  // "alarmDuration"               // 15 
-						sbSql.append(", ").append(safeStr( ae.getFullDuration()         , 20  ));  // "fullDuration"                // 16 
-						sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec()));  // "fullDurationAdjustmentInSec" // 17 
-						sbSql.append(", ").append(safeStr( ae.getCreationTime()               ));  // "createTime"                  // 18 
-						sbSql.append(", ").append(safeStr( ae.getCancelTime()                 ));  // "cancelTime"                  // 19 
-						sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 ));  // "timeToLive"                  // 20 
-						sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  ));  // "threshold"                   // 21 
-						sbSql.append(", ").append(safeStr( ae.getData()                 , 160 ));  // "data"                        // 22 
-						sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));  // "lastData"                    // 23 
-						sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));  // "description"                 // 24 
-						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));  // "lastDescription"             // 25 
-						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));  // "extendedDescription"         // 26 /*HTML or Normal???*/
-						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 27 /*HTML or Normal???*/
+						sbSql.append(", ").append(safeStr( ae.getAlarmId()              , 40  ));  // "alarmId"                     // 13 
+						sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  ));  // "repeatCnt"                   // 14 
+						sbSql.append(", ").append(safeStr( ae.getDuration()             , 80  ));  // "duration"                    // 15 
+						sbSql.append(", ").append(safeStr( ae.getAlarmDuration()        , 20  ));  // "alarmDuration"               // 16 
+						sbSql.append(", ").append(safeStr( ae.getFullDuration()         , 20  ));  // "fullDuration"                // 17 
+						sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec()));  // "fullDurationAdjustmentInSec" // 18 
+						sbSql.append(", ").append(safeStr( ae.getCreationTime()               ));  // "createTime"                  // 19 
+						sbSql.append(", ").append(safeStr( ae.getCancelTime()                 ));  // "cancelTime"                  // 20 
+						sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 ));  // "timeToLive"                  // 21 
+						sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  ));  // "threshold"                   // 22 
+						sbSql.append(", ").append(safeStr( ae.getData()                 , 160 ));  // "data"                        // 23 
+						sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));  // "lastData"                    // 24 
+						sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));  // "description"                 // 25 
+						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));  // "lastDescription"             // 26 
+						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));  // "extendedDescription"         // 27 /*HTML or Normal???*/
+						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 28 /*HTML or Normal???*/
 						sbSql.append(")");
 
 						sql = sbSql.toString();

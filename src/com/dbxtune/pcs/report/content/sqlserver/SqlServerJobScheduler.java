@@ -22,22 +22,32 @@
 package com.dbxtune.pcs.report.content.sqlserver;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bouncycastle.crypto.RuntimeCryptoException;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.SqlServerJobSchedulerExtractor;
+import com.dbxtune.pcs.SqlServerJobSchedulerExtractor.SqlAgentInfo;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResult;
@@ -54,10 +64,11 @@ extends SqlServerAbstract
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_errors_skip_msg_numbers = "DailySummaryReport.SqlServerJobScheduler.skip.msg.numbers.csv";
-	public static final String DEFAULT_errors_skip_msg_numbers = "0, 1945, 8153, 15477, 50000";
+//	public static final String DEFAULT_errors_skip_msg_numbers = "0, 1945, 8153, 15477, 50000";
+	public static final String DEFAULT_errors_skip_msg_numbers = "50000";
 	
 	public static final String PROPKEY_errors_skip_below_severity = "DailySummaryReport.SqlServerJobScheduler.skip.severity.below";
-	public static final int    DEFAULT_errors_skip_below_severity = -1;
+	public static final int    DEFAULT_errors_skip_below_severity = 10; // 
 	
 	private List<String>        _miniChartJsList = new ArrayList<>();
 	
@@ -66,14 +77,23 @@ extends SqlServerAbstract
 	private ResultSetTableModel _sysjobs     = null;
 	private ResultSetTableModel _sysjobsteps = null;
 
-	private ResultSetTableModel _job_history_overview   = null;
-	private ResultSetTableModel _job_history_outliers   = null;
-	private ResultSetTableModel _job_history_errors     = null;
-	private ResultSetTableModel _job_history_errors_all = null;
+	private ResultSetTableModel _job_history_overview_all = null;
+	private ResultSetTableModel _job_history_overview     = null;
+	private ResultSetTableModel _job_history_outliers     = null;
+	private ResultSetTableModel _job_history_errors       = null;
+	private ResultSetTableModel _job_history_errors_all   = null;
 
 	/** Key=job_id, Val=CommandsToShowInTooltip */
 	private Map<String, String> _jobCommandsMap = null;
-	
+
+	// The below are "Writers" used in methods: create/writeMessageText
+	private StringWriter _js__jobId_stepId__to__allExecTimes = new StringWriter();
+	private StringWriter _js__jobId__to__name                = new StringWriter();
+
+	// The below Holds mapping that can be used by: HtmlTableRenderer
+	private Map<String, List<String>>  _jobId_stepId__to__allExecTimes;
+	private Map<String, String>        _jobId__to__name;
+	private Map<String, StartStopTime> _jobId__to__startStopTime = new HashMap<>();
 	
 	public SqlServerJobScheduler(DailySummaryReportAbstract reportingInstance)
 	{
@@ -141,6 +161,41 @@ extends SqlServerAbstract
 		HtmlTableRenderer htmlTableRenderer = new HtmlTableRenderer();
 		
 		//------------------------------------------------------------------------
+		// get: Summary ALL
+		//------------------------------------------------------------------------
+		beginHtmlSubSection(w, "All Available Jobs Summary (both Enabled and Disabled)", "job_scheduler_allAvailable");
+		
+		if (_job_history_overview_all != null && _job_history_overview_all.getRowCount() > 0)
+		{
+//			w.append("<p>The summary table is ordered by 'sumTimeInSec'...</p> \n");
+//			w.append("<p>The Historical Calculation (last columns) are based on the last " + overview_calcHistoricalDays + " days. <i>This can be changed with property <code>" + SqlServerJobSchedulerExtractor.PROPKEY_overview_calcHistoricalDays + " = ##</code></i></p>");
+//			w.append(_job_history_overview_all.toHtmlTableString("sortable", true, true, null, htmlTableRenderer));
+
+			String  divId       = "_job_history_overview_all__collapsable";
+			boolean showAtStart = false;
+
+			String htmlContent = ""
+					+ "<p>Here you can see statistics for ALL jobs, even the ones that has not been started today<br> \n"
+					+ "   Note: If a job is assigned to many scheduleders, the <code>next_scheduled_ts</code> is for the first scheduler about to start.</p> \n"
+					+ "<p>Jobs are sorted by Job Name (disabled at the end, in gray)</p> \n"
+					;
+
+//			htmlContent += "<p style='color:red'><b>Found " + _job_history_errors_all.getRowCount() + " Job Steps with ERROR or WARNINGS in the recording period (no filter on Message Numbers)...</b></p>";
+			htmlContent += _job_history_overview_all.toHtmlTableString("sortable", true, true, null, htmlTableRenderer);
+			
+			String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide all " + _job_history_overview_all.getRowCount() + " available Jobs...", htmlContent);
+			
+			w.append( msOutlookAlternateText(showHideDiv, "", "Note: " + _job_history_overview_all.getRowCount() + " Jobs are not shown in Microsoft Outlook, but available in a browser.") );
+			
+		}
+		else
+		{
+			w.append("<p>NO Jobs was found...<br><br></p>");
+		}
+		endHtmlSubSection(w);
+
+		
+		//------------------------------------------------------------------------
 		// get: Summary
 		//------------------------------------------------------------------------
 		beginHtmlSubSection(w, "Summary of All jobs in the Reporting Period", "job_scheduler_overview");
@@ -151,8 +206,10 @@ extends SqlServerAbstract
 			
 			int overview_calcHistoricalDays = Configuration.getCombinedConfiguration().getIntProperty(SqlServerJobSchedulerExtractor.PROPKEY_overview_calcHistoricalDays, SqlServerJobSchedulerExtractor.DEFAULT_overview_calcHistoricalDays);
 
-//			w.append("<p>The summary table is ordered by 'avgTimeInSec'...</p> \n");
+			String serverName = getReportingInstance().getServerName();
+			
 			w.append("<p>The summary table is ordered by 'sumTimeInSec'...</p> \n");
+			w.append("<p>Open <i>Timeline</p> View for All below jobs, for Today <a href='/api/cc/reports?srvName=" + serverName + "&reportName=sqlserver-job-scheduler-timeline&startTime=TODAY&onlyLevelZero=true' target='_blank'>here</a> (same as open '<i>SQL Agent/Scheduler <b>Timeline</b> View for <b>Today</b></i>' on the start page)</p> \n");
 			w.append("<p>The Historical Calculation (last columns) are based on the last " + overview_calcHistoricalDays + " days. <i>This can be changed with property <code>" + SqlServerJobSchedulerExtractor.PROPKEY_overview_calcHistoricalDays + " = ##</code></i></p>");
 			w.append(_job_history_overview.toHtmlTableString("sortable", true, true, null, htmlTableRenderer));
 		}
@@ -258,7 +315,7 @@ extends SqlServerAbstract
 			//------------------------------------------------------------------------
 			if (_job_history_errors_all != null && _job_history_errors_all.getRowCount() > 0)
 			{
-				beginHtmlSubSection(w, "Job Steps with ERROR or WARNINGS (no filter on Message Numbers)", "job_step_with_errors_or_warnings_ALL");
+				beginHtmlSubSection(w, "Job Steps with ERROR or WARNINGS (no filter on Message Numbers or Severity)", "job_step_with_errors_or_warnings_ALL");
 
 				if (_job_history_errors_all.getRowCount() > 0)
 				{
@@ -284,6 +341,32 @@ extends SqlServerAbstract
 			for (String str : _miniChartJsList)
 				w.append(str);
 		}
+
+		// Write some extra HTML and JavaScript to show Chart's on Jobs executions times by parsing 
+		if (isFullMessageType())
+		{
+			//-----------------------------------------
+			// Add modal popup for execution times of: (job_id, step_id)
+			createStaticHtmlAndJavaScriptContent(w, getReportingInstance().getServerName());
+			
+			// add variable(s) for 'ExecTime' for all 'job_id' and 'step_id' so we can view them in detail (at a second level) modal dialog
+			//createStaticJavaScript_lookupContent__jobId_stepId__to__allExecTimes(w, _tmpSaveConn, SourceType.PCS);
+			w.append(_js__jobId_stepId__to__allExecTimes.toString());
+
+			// we also need: 'jobId' to 'name'
+			//createStaticJavaScript_lookupContent__jobId__to__name(w, _tmpSaveConn, SourceType.PCS);
+			w.append(_js__jobId__to__name.toString());
+		}
+	}
+
+	private static void setFromSecondsToHms(ResultSetTableModel rstm, int row, String sourceColumnName, String targetColumnName)
+	{
+		int seconds = rstm.getValueAsInteger(row, sourceColumnName, true, -1);
+		if (seconds >= 0)
+		{
+			String hms = TimeUtils.secToTimeStrLong(seconds);
+			rstm.setValueAtWithOverride(hms, row, targetColumnName);
+		}
 	}
 
 	@Override
@@ -300,7 +383,21 @@ extends SqlServerAbstract
 		}
 
 
+		
+		//================================
+		// add variable(s) for 'ExecTime' for all 'job_id' and 'step_id' so we can view them in detail (at a second level) modal dialog
+		// The below does 2 things:
+		//  1: Add code to a StringWriter, that later will be printed in the method: writeMessageText() 
+		//  2: Add the values in Map '_jobId_stepId__to__allExecTimes' so we can use them in *this* code
+//		_jobId_stepId__to__allExecTimes = createStaticJavaScript_lookupContent__jobId_stepId__to__allExecTimes(_js__jobId_stepId__to__allExecTimes, conn, SourceType.PCS);
+		ReturnObject_allExecTimes retObj = createStaticJavaScript_lookupContent__jobId_stepId__to__allExecTimes(_js__jobId_stepId__to__allExecTimes, conn, SourceType.PCS);
+		_jobId_stepId__to__allExecTimes = retObj.getTimeMap();
 
+		// we also need: 'jobId' to 'name'
+		_jobId__to__name = createStaticJavaScript_lookupContent__jobId__to__name(_js__jobId__to__name, conn, SourceType.PCS);
+
+
+		
 		//================================
 		// get: sysjobs
 		//================================
@@ -343,12 +440,130 @@ extends SqlServerAbstract
 
 
 		//================================
+		// get: Overview ALL
+		//================================
+		sql = ""
+			    + "SELECT \n"
+			    + "     [job_name] \n"
+			    + "    ,[enabled] \n"
+			    + "    ,[exec_count] \n"
+			    + "    ,'' AS [timeline] \n"
+			    + "    ,'' AS [execGraph] \n"
+			    + "    ,[step_count] \n"
+			    + "    ,'' AS [stepCmds] \n"
+			    + "    ,[last_started] \n"
+			    + "    ,[days_since_last_start] \n"
+			    + "    ,'' AS [sum_exec_hms] \n"
+			    + "    ,'' AS [avg_exec_hms] \n"
+			    + "    ,'' AS [max_exec_hms] \n"
+			    + "    ,'' AS [min_exec_hms] \n"
+			    + "    ,[sum_exec_seconds] \n"
+			    + "    ,[avg_exec_seconds] \n"
+			    + "    ,[max_exec_seconds] \n"
+			    + "    ,[min_exec_seconds] \n"
+			    + "    ,[next_scheduled_ts] \n"
+			    + "    ,[next_scheduled_in_days] \n"
+			    + "    ,[scheduler_name] \n"
+			    + "    ,[scheduler_count] \n"
+			    + "    ,'' AS [allExecTimes] \n"
+			    + "    ,'' AS [allExecTimesChart] \n"
+			    + "    ,[first_started] \n"
+			    + "    ,[date_created] \n"
+			    + "    ,[date_modified] \n"
+			    + "    ,[last_modified_in_days] \n"
+			    + "    ,[version_number] \n"
+			    + "    ,[notify_eventlog_on] \n"
+			    + "    ,[notify_mail_on] \n"
+			    + "    ,[notify_mail] \n"
+			    + "    ,[notify_netsend_on] \n"
+			    + "    ,[notify_netsend] \n"
+			    + "    ,[notify_page_on] \n"
+			    + "    ,[notify_page] \n"
+			    + "    ,[job_description] \n"
+			    + "    ,[job_category] \n"
+			    + "    ,[job_id] \n"
+
+			    + "FROM [" + schema + "].[" + SqlServerJobSchedulerExtractor.SqlAgentInfo.job_history_overview_all + "] \n"
+			    + "ORDER BY 2 DESC, 1 \n"
+			    + "";
+				
+		_job_history_overview_all = executeQuery(conn, sql, true, "job_history_overview_all");
+//		_job_history_overview_all.setHighlightSortColumns("sum_exec_seconds");
+
+		// Set/fix 'HMS' columns
+		for (int r=0; r<_job_history_overview_all.getRowCount(); r++)
+		{
+			setFromSecondsToHms(_job_history_overview_all, r, "sum_exec_seconds", "sum_exec_hms");
+			setFromSecondsToHms(_job_history_overview_all, r, "avg_exec_seconds", "avg_exec_hms");
+			setFromSecondsToHms(_job_history_overview_all, r, "max_exec_seconds", "max_exec_hms");
+			setFromSecondsToHms(_job_history_overview_all, r, "min_exec_seconds", "min_exec_hms");
+		}
+
+		// Create SparkLine/charts for each "allExecTimes" at column "allExecTimesChart"
+		for (int r=0; r<_job_history_overview_all.getRowCount(); r++)
+		{
+			String job_id  = _job_history_overview_all.getValueAsString(r, "job_id");
+			String step_id = "0"; // in here we only want TOP Level
+
+//			String allExecTimes = _job_history_overview_all.getValueAsString(r, "allExecTimes");
+			String allExecTimes = getTooltipFor_allExecTimes(job_id, step_id);
+			createSparklineForHistoryExecutions(allExecTimes, _job_history_overview_all, r, "allExecTimesChart");
+		}
+
+		_job_history_overview_all.setColumnDescription("job_name"                ,"Name of the JOB shat started this step");
+		_job_history_overview_all.setColumnDescription("enabled"                 ,"1: If the job is ENABLED, 0: if the job is DISABLED.");
+		_job_history_overview_all.setColumnDescription("exec_count"              ,"How many times has this job been executed (found in the history).");
+		_job_history_overview_all.setColumnDescription("timeline"                ,"Click on the below for a TimeLine on 'today' or 'all executions'");
+		_job_history_overview_all.setColumnDescription("execGraph"               ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
+		_job_history_overview_all.setColumnDescription("step_count"              ,"How many steps does this job name have");
+		_job_history_overview_all.setColumnDescription("stepCmds"                ,"A list of all commands in the job");
+
+		_job_history_overview_all.setColumnDescription("last_started"            ,"Last date this job was started");
+		_job_history_overview_all.setColumnDescription("days_since_last_start"   ,"Number of days since this job was started");
+		_job_history_overview_all.setColumnDescription("sum_exec_hms"            ,"Summary of all execution time in Hour:Minute:Seconds");
+		_job_history_overview_all.setColumnDescription("avg_exec_hms"            ,"Average execution time in Hour:Minute:Seconds");
+		_job_history_overview_all.setColumnDescription("max_exec_hms"            ,"Maximum execution time in Hour:Minute:Seconds");
+		_job_history_overview_all.setColumnDescription("min_exec_hms"            ,"Minimum execution time in Hour:Minute:Seconds");
+		_job_history_overview_all.setColumnDescription("sum_exec_seconds"        ,"Summary of all execution time in Seconds");
+		_job_history_overview_all.setColumnDescription("avg_exec_seconds"        ,"Average execution time in Seconds");
+		_job_history_overview_all.setColumnDescription("max_exec_seconds"        ,"Maximum execution time in Seconds");
+		_job_history_overview_all.setColumnDescription("min_exec_seconds"        ,"Minimum execution time in Seconds");
+		_job_history_overview_all.setColumnDescription("next_scheduled_ts"       ,"Date when this job will be scheduled the next time");
+		_job_history_overview_all.setColumnDescription("next_scheduled_in_days"  ,"Number of days when this job will be scheduled the next time");
+		_job_history_overview_all.setColumnDescription("scheduler_name"          ,"What scheduler is responsible for starting the next execution of this job.");
+		_job_history_overview_all.setColumnDescription("scheduler_count"         ,"Normally 1, but if the job is assigned to several schedulers it will be above 1");
+		_job_history_overview_all.setColumnDescription("allExecTimes"            ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
+		_job_history_overview_all.setColumnDescription("allExecTimesChart"       ,"A Chart with the timings of ALL jobs in the last ## days");
+
+		_job_history_overview_all.setColumnDescription("first_started"           ,"First time this job started");
+		_job_history_overview_all.setColumnDescription("date_created"            ,"When was this job created.");
+		_job_history_overview_all.setColumnDescription("date_modified"           ,"When was this job modified.");
+		_job_history_overview_all.setColumnDescription("last_modified_in_days"   ,"How many days has gone since the job was last modified");
+		_job_history_overview_all.setColumnDescription("version_number"          ,"Internal Version Number of this job");
+
+		_job_history_overview_all.setColumnDescription("notify_eventlog_on"      ,"Send notifications to Windows Event Log");
+		_job_history_overview_all.setColumnDescription("notify_mail_on"          ,"Send notifications via email");
+		_job_history_overview_all.setColumnDescription("notify_mail"             ,"What 'emails' will we send to");
+		_job_history_overview_all.setColumnDescription("notify_netsend_on"       ,"Send notifications via netsend");
+		_job_history_overview_all.setColumnDescription("notify_netsend"          ,"What 'netsenders' will we send to");
+		_job_history_overview_all.setColumnDescription("notify_page_on"          ,"Send notifications via pager");
+		_job_history_overview_all.setColumnDescription("notify_page"             ,"What 'pagers' will we send to");
+
+		_job_history_overview_all.setColumnDescription("job_description"         ,"A description of the job");
+		_job_history_overview_all.setColumnDescription("job_id"                  ,"The ID of the JOB");
+
+		// Get All JobStep Commands for a 'job_id', and put it in a Map, used later to compose a ToolTip
+		getJobStepCommandsTooltipForJobId(conn, _job_history_overview_all, "job_id");
+		
+		//================================
 		// get: Overview
 		//================================
 		sql = ""
 			    + "SELECT \n"
 			    + "     [JobName] \n"
-			    + "    ,'' AS [details] \n"
+			    + "    ,'' AS [timeline] \n"
+			    + "    ,'' AS [histGraph] \n"
+			    + "    ,'' AS [execView] \n"
 			    + "    ,[stepCount] \n"
 			    + "    ,'' AS [stepCmds] \n"
 			    + "    ,[runStatusDesc] \n"
@@ -372,13 +587,12 @@ extends SqlServerAbstract
 			    + "    ,[histMinTime_HMS] \n"
 			    + "    ,[histMaxTime_HMS] \n"
 			    + "    ,[histStdevp] \n"
-			    + "    ,[histAllExecTimes] \n"
+				+ "    ,'' AS [histAllExecTimes] \n"
 			    + "    ,'' AS [histAllExecTimesChart] \n" // Fill this one with a chart of "histAllExecTimes"
 
 			    + "    ,[job_id] \n"
 
 			    + "FROM [" + schema + "].[" + SqlServerJobSchedulerExtractor.SqlAgentInfo.job_history_overview + "] \n"
-//			    + "ORDER BY [avgTimeInSec] DESC \n"
 			    + "ORDER BY [sumTimeInSec] DESC \n"
 			    + "";
 				
@@ -386,10 +600,29 @@ extends SqlServerAbstract
 //		_job_history_overview.setHighlightSortColumns("avgTimeInSec");
 		_job_history_overview.setHighlightSortColumns("sumTimeInSec");
 
+		// Populate: _jobId__to__startStopTime 
+		for (int r=0; r<_job_history_overview.getRowCount(); r++)
+		{
+			String    jobId         = _job_history_overview.getValueAsString   (r, "job_id");
+			Timestamp firstExecTime = _job_history_overview.getValueAsTimestamp(r, "firstExecTime");
+			Timestamp lastExecTime  = _job_history_overview.getValueAsTimestamp(r, "lastExecTime");
+			int       avgTimeInSec  = _job_history_overview.getValueAsInteger  (r, "avgTimeInSec");
+			
+			// NOTE: 'lastExecTime' is NOT the stop time, so we need to add some execution time
+			//       So lets add the 'avgTimeInSec'... It might not be 100% correct, but...
+			lastExecTime = new Timestamp( lastExecTime.getTime() + (avgTimeInSec * 1000) );
+
+			_jobId__to__startStopTime.put(jobId, new StartStopTime(firstExecTime, lastExecTime));
+		}
+
 		// Create sparkline/charts for each "histAllExecTimes" at column "histAllExecTimesChart"
 		for (int r=0; r<_job_history_overview.getRowCount(); r++)
 		{
-			String histAllExecTimes = _job_history_overview.getValueAsString(r, "histAllExecTimes");
+			String job_id  = _job_history_overview.getValueAsString(r, "job_id");
+			String step_id = "0"; // in here we only want TOP Level
+
+//			String histAllExecTimes = _job_history_overview.getValueAsString(r, "histAllExecTimes");
+			String histAllExecTimes = getTooltipFor_allExecTimes(job_id, step_id);
 			createSparklineForHistoryExecutions(histAllExecTimes, _job_history_overview, r, "histAllExecTimesChart");
 			
 			// calculate the 'avgHistTimeDiff' column
@@ -398,16 +631,18 @@ extends SqlServerAbstract
 			int avgHistTimeDiff = avgTimeInSec - histAvgTimeInSec;
 			String avgHistTimeDiffStr = TimeUtils.msToTimeStrDHMS(Math.abs(avgHistTimeDiff) * 1000);  // Math.abs() make negative numbers positive
 			if (avgHistTimeDiff < 0)
-				avgHistTimeDiffStr = "-" + avgHistTimeDiffStr + " (faster)";
+				avgHistTimeDiffStr = "-" + avgHistTimeDiffStr + " <span style='color: green;'>(faster)</span>";
 			if (avgHistTimeDiff > 0)
-				avgHistTimeDiffStr =       avgHistTimeDiffStr + " (slower)";
+				avgHistTimeDiffStr =       avgHistTimeDiffStr + " <span style='color: red;'>(slower)</span>";
 
 			int pos_avgHistTimeDiff = _job_history_overview.findColumn("avgHistTimeDiff");
 			_job_history_overview.setValueAtWithOverride(avgHistTimeDiffStr, r, pos_avgHistTimeDiff);
 		}
 		
 		_job_history_overview.setColumnDescription("JobName"           ,"Name of the JOB shat started this step");
-		_job_history_overview.setColumnDescription("details"           ,"Click on the below for details, for 'today' or 'all executions'");
+		_job_history_overview.setColumnDescription("timeline"          ,"Click on the below for a TimeLine on 'today' or 'all executions'");
+		_job_history_overview.setColumnDescription("histGraph"         ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
+		_job_history_overview.setColumnDescription("execView"          ,"Open DbxTune/DbxCentral in historical mode and position to the start time of the job/step");
 		_job_history_overview.setColumnDescription("stepCount"         ,"How many steps does this job name have");
 		_job_history_overview.setColumnDescription("stepCmds"          ,"A list of all commands in the job");
 		_job_history_overview.setColumnDescription("runStatusDesc"     ,"The outcome of the job. Can be: FAILED, SUCCESS, RETRY, CANCELED or IN PROGRESS");
@@ -431,19 +666,13 @@ extends SqlServerAbstract
 		_job_history_overview.setColumnDescription("histMinTime_HMS"   ,"Minimum Hour:Minute:Seconds this job took for the last ## days");
 		_job_history_overview.setColumnDescription("histMaxTime_HMS"   ,"Max Hour:Minute:Seconds this job took for the last ## days");
 		_job_history_overview.setColumnDescription("histStdevp"        ,"Standard Deviation Number of the Execution Time for the last ## days. Note: A higher number means more 'outliers', A lower number means more 'equal' execution times.");
-		_job_history_overview.setColumnDescription("histAllExecTimes"  ,"A tooltip/popup with timings of ALL jobs in the last ## days");
+		_job_history_overview.setColumnDescription("histAllExecTimes"  ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
 		_job_history_overview.setColumnDescription("histAllExecTimesChart"  ,"A Chart with the timings of ALL jobs in the last ## days");
 
 		_job_history_overview.setColumnDescription("job_id"            ,"The ID of the JOB");
 
-		// get tooltip for each job_id
-		_jobCommandsMap = new HashMap<>();
-		for (int r=0; r<_job_history_overview.getRowCount(); r++)
-		{
-			String job_id  = _job_history_overview.getValueAsString(r, "job_id");
-			String tooltip = getTooltipFor_jobAllCommands(conn, job_id);
-			_jobCommandsMap.put(job_id, tooltip);
-		}
+		// Get All JobStep Commands for a 'job_id', and put it in a Map, used later to compose a ToolTip
+		getJobStepCommandsTooltipForJobId(conn, _job_history_overview, "job_id");
 		
 		//================================
 		// get: Outliers
@@ -452,6 +681,9 @@ extends SqlServerAbstract
 		    + "SELECT \n"
 		    + "     [execTime] \n"
 		    + "    ,[JobName] \n"
+		    + "    ,'' AS [timeline] \n"
+		    + "    ,'' AS [histGraph] \n"
+		    + "    ,'' AS [execView] \n"
 		    + "    ,[step_id] \n"
 		    + "    ,'' AS [cmd] \n"
 		    + "    ,[run_status_desc] \n"
@@ -470,7 +702,7 @@ extends SqlServerAbstract
 		    + "    ,[histDaysCount] \n"
 		    + "    ,[histStdevp] \n"
 		    + "    ,[thresholdInSec] \n"
-		    + "    ,[histAllExecTimes] \n"
+		    + "    ,'' AS [histAllExecTimes] \n"
 		    + "    ,'' AS [histAllExecTimesChart] \n" // Fill this one with a chart of "histAllExecTimes"
 		    + "    ,[job_id] \n"
 		    + "FROM [" + schema + "].[" + SqlServerJobSchedulerExtractor.SqlAgentInfo.job_history_outliers + "] \n"
@@ -483,10 +715,14 @@ extends SqlServerAbstract
 		int pos_histAllExecTimes = _job_history_outliers.findColumn("histAllExecTimes");
 		for (int r=0; r<_job_history_outliers.getRowCount(); r++)
 		{
-			String histAllExecTimes = _job_history_outliers.getValueAsString(r, pos_histAllExecTimes);
+			String job_id  = _job_history_outliers.getValueAsString(r, "job_id");
+			String step_id = _job_history_outliers.getValueAsString(r, "step_id");
+
+//			String histAllExecTimes = _job_history_outliers.getValueAsString(r, pos_histAllExecTimes);
+			String histAllExecTimes = getTooltipFor_allExecTimes(job_id, step_id);
 			createSparklineForHistoryExecutions(histAllExecTimes, _job_history_outliers, r, "histAllExecTimesChart");
 			
-			histAllExecTimes = formatHistoryAllExecTimes(histAllExecTimes);
+			histAllExecTimes = formatAllExecTimes(histAllExecTimes);
 			_job_history_outliers.setValueAtWithOverride(histAllExecTimes, r, pos_histAllExecTimes);
 		}
 		
@@ -494,6 +730,9 @@ extends SqlServerAbstract
 		
 		_job_history_outliers.setColumnDescription("execTime"              ,"When was it executed");
 		_job_history_outliers.setColumnDescription("JobName"               ,"Name of the JOB shat started this step");
+		_job_history_outliers.setColumnDescription("timeline"              ,"Click on the below for a TimeLine on 'today'.");
+		_job_history_outliers.setColumnDescription("histGraph"             ,"A tooltip/popup with timings of ALL job steps in the last ## days, click to see Graph on the exec times");
+		_job_history_outliers.setColumnDescription("execView"              ,"Open DbxTune/DbxCentral in historical mode and position to the start time of the job/step");
 		_job_history_outliers.setColumnDescription("step_id"               ,"The step_id in the job. NOTE: If you reorder the steps inside the job (Average execution time might be wrong, since the 'step_id' is not a 'real' id, but just a sequence number within the job...");
 		_job_history_outliers.setColumnDescription("cmd"                   ,"What Job command was executed.");
 		_job_history_outliers.setColumnDescription("run_status_desc"       ,"The outcome of the job. Can be: FAILED, SUCCESS, RETRY, CANCELED or IN PROGRESS");
@@ -523,7 +762,7 @@ extends SqlServerAbstract
 		String agent_skip_msgNumberList  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_errors_skip_msg_numbers, DEFAULT_errors_skip_msg_numbers);
 		List<String> skipMsgList = StringUtil.parseCommaStrToList(agent_skip_msgNumberList, true);
 		
-		// TODO: Check if skipMsgList entries are numbers ???
+		// TODO: Check if above variable 'skipMsgList' entries are numbers ???... otherwise we will get Syntax Error...
 
 		String sqlSkipMessageIds = "";
 		if ( ! skipMsgList.isEmpty() )
@@ -532,11 +771,19 @@ extends SqlServerAbstract
 		}
 
 		int agent_skip_severityBelow = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_errors_skip_below_severity, DEFAULT_errors_skip_below_severity); 
-		
+
 		String sqlSkipBelowSeverity = "";
-		if (agent_skip_severityBelow != DEFAULT_errors_skip_below_severity)
+		if (agent_skip_severityBelow > 0)
 		{
-			sqlSkipBelowSeverity = "  AND ([sql_message_id] > " + agent_skip_severityBelow + " AND [subsystem] = 'TSQL') \n";
+			sqlSkipBelowSeverity = "  AND ([sql_severity] >= " + agent_skip_severityBelow + " AND [subsystem] = 'TSQL') \n";
+		}
+
+		
+		String sql_whereMessageLike = "";
+		String searchErrorMessage = Configuration.getCombinedConfiguration().getProperty(SqlServerJobSchedulerExtractor.PROPKEY_search_errorMessage, SqlServerJobSchedulerExtractor.DEFAULT_search_errorMessage);
+		if (StringUtil.hasValue(searchErrorMessage)) 
+		{
+			sql_whereMessageLike    = "   OR [message] LIKE '%" + searchErrorMessage + "%' \n";
 		}
 		
 		sql = ""
@@ -545,6 +792,9 @@ extends SqlServerAbstract
 		    + "    ,[JobName] \n"
 		    + "    ,[step_name] \n"
 		    + "    ,[step_id] \n"
+		    + "    ,'' AS [timeline] \n"
+		    + "    ,'' AS [histGraph] \n"
+		    + "    ,'' AS [execView] \n"
 		    + "    ,[subsystem] \n"
 		    + "    ,'' AS [cmd] \n"
 		    + "    ,[run_status_desc] \n"
@@ -552,20 +802,26 @@ extends SqlServerAbstract
 		    + "    ,[sql_message_id] \n"
 		    + "    ,[sql_severity] \n"
 		    + "    ,[message] \n"
+		    + "    ,[job_id] \n"
 		    + "FROM [" + schema + "].[" + SqlServerJobSchedulerExtractor.SqlAgentInfo.job_history_errors + "] \n"
 		    + "WHERE 1 = 1 \n"
 		    + sqlSkipMessageIds
 		    + sqlSkipBelowSeverity
-		    + " OR [subsystem] <> 'TSQL' \n"
+//		    + " OR [subsystem] <> 'TSQL' \n"
+		    + sql_whereMessageLike
 		    + "ORDER BY [execTime] \n"
 		    + "";
-				
+
 		_job_history_errors = executeQuery(conn, sql, true, "job_history_errors");
 
-		_job_history_errors.setColumnDescription("ExecutionDate"     ,"When was it executed");
+		_job_history_errors.setColumnDescription("execTime"          ,"When was it executed");
 		_job_history_errors.setColumnDescription("JobName"           ,"Name of the JOB shat started this step");
 		_job_history_errors.setColumnDescription("step_name"         ,"Name of the job step");
 		_job_history_errors.setColumnDescription("step_id"           ,"The step_id in the job");
+		_job_history_errors.setColumnDescription("timeline"          ,"Click on the below for a TimeLine on 'today'.");
+		_job_history_errors.setColumnDescription("histGraph"         ,"A tooltip/popup with timings of ALL job steps in the last ## days, click to see Graph on the exec times");
+		_job_history_errors.setColumnDescription("execView"          ,"Open DbxTune/DbxCentral in historical mode and position to the start time of the job/step");
+		_job_history_errors.setColumnDescription("histGraph"         ,"A tooltip/popup with timings of ALL job steps in the last ## days, click to see Graph on the exec times");
 		_job_history_errors.setColumnDescription("subsystem"         ,"What subsystem was used to execute");
 		_job_history_errors.setColumnDescription("run_status_desc"   ,"The outcome of the job. Can be: FAILED, SUCCESS, WARNING, RETRY, CANCELED or IN PROGRESS");
 		_job_history_errors.setColumnDescription("job_id"            ,"Just the ID of the job if you want to know");
@@ -593,6 +849,9 @@ extends SqlServerAbstract
 		    + "    ,[JobName] \n"
 		    + "    ,[step_name] \n"
 		    + "    ,[step_id] \n"
+		    + "    ,'' AS [timeline] \n"
+		    + "    ,'' AS [histGraph] \n"
+		    + "    ,'' AS [execView] \n"
 		    + "    ,[subsystem] \n"
 		    + "    ,'' AS [cmd] \n"
 		    + "    ,[run_status_desc] \n"
@@ -600,6 +859,7 @@ extends SqlServerAbstract
 		    + "    ,[sql_message_id] \n"
 		    + "    ,[sql_severity] \n"
 		    + "    ,[message] \n"
+		    + "    ,[job_id] \n"
 		    + "FROM [" + schema + "].[" + SqlServerJobSchedulerExtractor.SqlAgentInfo.job_history_errors + "] \n"
 		    + "ORDER BY [execTime] \n"
 		    + "";
@@ -607,10 +867,13 @@ extends SqlServerAbstract
 		_job_history_errors_all = executeQuery(conn, sql, true, "job_history_errors_all");
 //System.out.println("_job_history_errors_all:\n" + _job_history_errors_all.toAsciiTableString());
 
-		_job_history_errors_all.setColumnDescription("ExecutionDate"     ,"When was it executed");
+		_job_history_errors_all.setColumnDescription("execTime"          ,"When was it executed");
 		_job_history_errors_all.setColumnDescription("JobName"           ,"Name of the JOB shat started this step");
 		_job_history_errors_all.setColumnDescription("step_name"         ,"Name of the job step");
 		_job_history_errors_all.setColumnDescription("step_id"           ,"The step_id in the job");
+		_job_history_errors_all.setColumnDescription("timeline"          ,"Click on the below for a TimeLine on 'today'.");
+		_job_history_errors_all.setColumnDescription("histGraph"         ,"A tooltip/popup with timings of ALL job steps in the last ## days, click to see Graph on the exec times");
+		_job_history_errors_all.setColumnDescription("execView"          ,"Open DbxTune/DbxCentral in historical mode and position to the start time of the job/step");
 		_job_history_errors_all.setColumnDescription("subsystem"         ,"What subsystem was used to execute");
 		_job_history_errors_all.setColumnDescription("run_status_desc"   ,"The outcome of the job. Can be: FAILED, SUCCESS, WARNING, RETRY, CANCELED or IN PROGRESS");
 		_job_history_errors_all.setColumnDescription("job_id"            ,"Just the ID of the job if you want to know");
@@ -618,12 +881,50 @@ extends SqlServerAbstract
 		_job_history_errors_all.setColumnDescription("sql_message_id"    ,"SQL Server error number, if the SQL Job produced any errors");
 		_job_history_errors_all.setColumnDescription("sql_severity"      ,"SQL Server error severity, if the SQL Job produced any errors");
 		_job_history_errors_all.setColumnDescription("message"           ,"Any messages produced by the output");
-		
 	}
 	
 
 
 
+	/**
+	 * Get ALL "step" Commands for a specific job id, and store them in the Map '_jobCommandsMap'
+	 * <p>
+	 * Use <code>getTooltipFor_jobAllCommands(jobId)</code> to get information for the above Map 
+	 * 
+	 * @param conn
+	 * @param rstm
+	 * @param colName
+	 */
+	private void getJobStepCommandsTooltipForJobId(DbxConnection conn, ResultSetTableModel rstm, String colName)
+	{
+		if (_jobCommandsMap == null)
+			_jobCommandsMap = new HashMap<>();
+
+		if (rstm== null)
+		{
+			_logger.error("getJobStepCommandsTooltipForJobId(): rstm can't be NULL. Skipping lookups...");
+			return;
+		}
+
+		int colPos = rstm.findColumn(colName);
+		if (colPos == -1)
+		{
+			_logger.error("getJobStepCommandsTooltipForJobId(): rstm.name=|" + rstm.getName() + "|, cant find column '" + colName + "'. Skipping lookups...");
+			return;
+		}
+
+		// Get records and add them to: _jobCommandsMap
+		for (int r=0; r<rstm.getRowCount(); r++)
+		{
+			String job_id = rstm.getValueAsString(r, colPos);
+			
+			if ( ! _jobCommandsMap.containsKey(job_id) )
+			{
+				String tooltip = getTooltipFor_jobAllCommands(conn, job_id);
+				_jobCommandsMap.put(job_id, tooltip);
+			}
+		}
+	}
 
 	/**
 	 * Format the history in some "clever" way... <br>
@@ -632,7 +933,7 @@ extends SqlServerAbstract
 	 * @param histAllExecTimes
 	 * @return
 	 */
-	public static String formatHistoryAllExecTimes(String histAllExecTimes)
+	public static String formatAllExecTimes(String histAllExecTimes)
 	{
 //TODO; // implement this 
 		return histAllExecTimes;
@@ -825,17 +1126,31 @@ extends SqlServerAbstract
 		return tooltip;
 	}
 
-	private String getTooltipFor_histAllExecTimes(String job_id, String strVal)
+//	private String getTooltipFor_histAllExecTimes(String job_id, String strVal)
+//	{
+//		// not really using job_id here
+//		
+//		if (StringUtil.isNullOrBlank(strVal))
+//			return "";
+//
+//		return strVal;
+//		
+//		// Newlines to HTML-Newlines
+////		return strVal.replace("\n", "<BR>");
+//	}
+	private String getTooltipFor_allExecTimes(String job_id, String step_id)
 	{
-		// not really using job_id here
+		String key = job_id + "____" + step_id;
+		List<String> list = _jobId_stepId__to__allExecTimes.get(key);
 		
-		if (StringUtil.isNullOrBlank(strVal))
-			return "";
+		if (list == null || (list != null && list.isEmpty()) )
+			return "No Execution Times was found for: jobId=" + job_id + ", stepId=" + step_id;
 
-		return strVal;
-		
-		// Newlines to HTML-Newlines
-//		return strVal.replace("\n", "<BR>");
+		StringBuilder sb = new StringBuilder();
+		for (String entry : list)
+			sb.append(entry).append("\n");
+
+		return sb.toString();
 	}
 
 	private String getTooltipFor_jobStepCommand(String jobName, String step_id)
@@ -986,16 +1301,112 @@ extends SqlServerAbstract
 
 			if (colName.startsWith("hist") || colName.startsWith("Hist"))
 			{
-				attr = "style='color:#9C7B57;'"; // #BA9368; == Camel
-//				attr = "style='background-color:#EDC9AF;'"; // #EDC9AF; == Desert Sand
+				if ( ! colName.equals("histGraph"))
+				{
+					attr = "style='color:#9C7B57;'"; // #BA9368; == Camel
+//					attr = "style='background-color:#EDC9AF;'"; // #EDC9AF; == Desert Sand
+				}
 			}
 
 			return attr;
 		}
 
 		@Override
+		public String tagTrAttr(ResultSetTableModel rstm, int row)
+		{
+			if ("job_history_overview_all".equals(rstm.getName()))
+			{
+				// Show DISABLED rows in "gray"
+				int enabled = rstm.getValueAsInteger(row, "enabled", true, 1);
+				if (enabled == 0)
+				{
+					return "style='color: gray;'";
+				}
+			}
+			
+			return null;
+		}
+		@Override
 		public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 		{
+			//--------------------------------------------------------------
+			// job_history_overview_all
+			//--------------------------------------------------------------
+			if ("job_history_overview_all".equals(rstm.getName()))
+			{
+				if ("timeline".equals(colName))
+				{
+					String jobName           = rstm.getValueAsString(row, "job_name"         , true, "unknown");
+					String jobId             = rstm.getValueAsString(row, "job_id"           , true, "unknown");
+					String firstExecTime     = rstm.getValueAsString(row, "first_started"    , true, "unknown");
+					String lastExecTime      = rstm.getValueAsString(row, "last_started"     , true, "unknown");
+
+//					String serverName = getReportingInstance().getDbmsServerName();
+					String serverName = getReportingInstance().getServerName();
+					String urlBase = ""
+							+ "/api/cc/reports"
+							+ "?srvName="    + serverName 
+							+ "&reportName=" + "sqlserver-job-scheduler-timeline";
+
+					return "" 
+						+ "<a href='" + urlBase 
+								+ "&jobName="              + jobName 
+								+ "&jobId="                + jobId 
+								+ "&onlyLevelZero="        + true
+								+ "&refresh="              + 0
+								+ "&startTime="            + firstExecTime 
+								+ "&endTime="              + lastExecTime 
+								+ "&minDurationInSeconds=" + 0
+								+ "' target='_blank'>All Executions</a>"
+						;
+				}
+				
+
+				if ("stepCmds".equals(colName))
+				{
+					// Get properties we want to pass
+					String job_name   = rstm.getValueAsString(row, "job_name");
+					String job_id     = rstm.getValueAsString(row, "job_id");
+					
+					return "<div title='Click to Open' "
+							+ "data-toggle='modal' "
+							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-objectname='" + job_name + "' "
+							+ "data-tooltip=\""   + getTooltipFor_jobAllCommands(job_id) + "\" "
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
+				}
+
+				if ("allExecTimes".equals(colName))
+				{
+					// Get properties we want to pass
+					String job_name   = rstm.getValueAsString(row, "job_name");
+					String job_id     = rstm.getValueAsString(row, "job_id");
+					String step_id    = "0"; // We only want to so the TOP LEVEL
+
+					return "<div title='Click to Open' "
+							+ "data-toggle='modal' "
+							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-objectname='" + job_name + "' "
+							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "  // stepId=0 --- We only want to so the TOP LEVEL
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
+				}
+				// Same as above ("allExecTimes")
+				if ("execGraph".equals(colName))
+				{
+					// Get properties we want to pass
+					String job_name   = rstm.getValueAsString(row, "job_name");
+					String job_id     = rstm.getValueAsString(row, "job_id");
+					String step_id    = "0"; // We only want to so the TOP LEVEL
+
+					return "<div title='Click to Open' "
+							+ "data-toggle='modal' "
+							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-objectname='" + job_name + "' "
+							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "  // stepId=0 --- We only want to so the TOP LEVEL
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
+				}
+			}
+			
 			//--------------------------------------------------------------
 			// job_history_overview
 			//--------------------------------------------------------------
@@ -1008,7 +1419,7 @@ extends SqlServerAbstract
 						return "<div style='color:lightgray'>-single-exec-</div>";
 				}
 				
-				if ("details".equals(colName))
+				if ("timeline".equals(colName))
 				{
 					String jobName           = rstm.getValueAsString(row, "JobName"          , true, "unknown");
 					String jobId             = rstm.getValueAsString(row, "job_id"           , true, "unknown");
@@ -1017,6 +1428,7 @@ extends SqlServerAbstract
 					String sumTimeInSec      = rstm.getValueAsString(row, "sumTimeInSec"     , true, "unknown");
 //					String sumTime_HMS       = rstm.getValueAsString(row, "sumTime_HMS"      , true, "unknown");
 					String histFirstExecTime = rstm.getValueAsString(row, "histFirstExecTime", true, "unknown");
+//					String histAllExecTimes  = rstm.getValueAsString(row, "histAllExecTimes", true, "unknown");
 
 					// lastExecTime...
 					if ("-single-exec-".equals(lastExecTime))
@@ -1030,7 +1442,7 @@ extends SqlServerAbstract
 					String urlBase = ""
 							+ "/api/cc/reports"
 							+ "?srvName="    + serverName 
-							+ "&reportName=" + "sqlserver-job-scheduler-activity";
+							+ "&reportName=" + "sqlserver-job-scheduler-timeline";
 
 					return "" 
 						+ "<a href='" + urlBase 
@@ -1041,7 +1453,7 @@ extends SqlServerAbstract
 								+ "&startTime="            + firstExecTime     
 								+ "&endTime="              + lastExecTime 
 								+ "&minDurationInSeconds=" + 0
-								+ "' target='_blank'>today</a>"
+								+ "' target='_blank'>Today</a>"
 						+ " - "
 						+ "<a href='" + urlBase 
 								+ "&jobName="              + jobName 
@@ -1050,43 +1462,85 @@ extends SqlServerAbstract
 								+ "&refresh="              + 0
 								+ "&startTime="            + histFirstExecTime 
 								+ "&minDurationInSeconds=" + 0
-								+ "' target='_blank'>all</a>"
+								+ "' target='_blank'>All</a>"
 						;
 				}
 				
 
 				if ("stepCmds".equals(colName))
 				{
-					// Get Actual Executed SQL Text for current row
-				//	String query_hash = rstm.getValueAsString(row, "query_hash");
-				//	String sqlText    = rstm.getValueAsString(row, "SqlText");
+					// Get properties we want to pass
 					String JobName    = rstm.getValueAsString(row, "JobName");
 					String job_id     = rstm.getValueAsString(row, "job_id");
 					
-					// Put the "Actual Executed SQL Text" as a "tooltip"
-					return "<div title='Click for Detailes' "
+					return "<div title='Click to Open' "
 							+ "data-toggle='modal' "
 							+ "data-target='#dbx-view-sqltext-dialog' "
 							+ "data-objectname='" + JobName + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobAllCommands(job_id) + "\" "
-							+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
 				}
 
 				if ("histAllExecTimes".equals(colName))
 				{
-					// Get Actual Executed SQL Text for current row
-				//	String query_hash = rstm.getValueAsString(row, "query_hash");
-				//	String sqlText    = rstm.getValueAsString(row, "SqlText");
-					String JobName    = rstm.getValueAsString(row, "JobName");
+					// Get properties we want to pass
+					String jobName    = rstm.getValueAsString(row, "JobName");
 					String job_id     = rstm.getValueAsString(row, "job_id");
-					
-					// Put the "Actual Executed SQL Text" as a "tooltip"
-					return "<div title='Click for Detailes' "
+					String step_id    = "0"; // We only want to so the TOP LEVEL
+
+					return "<div title='Click to Open' "
 							+ "data-toggle='modal' "
-							+ "data-target='#dbx-view-sqltext-dialog' "
-							+ "data-objectname='" + JobName + "' "
-							+ "data-tooltip=\""   + getTooltipFor_histAllExecTimes(job_id, strVal) + "\" "
-							+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-objectname='" + jobName + "' "
+							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
+				}
+				// Same as above ("histAllExecTimes")
+				if ("histGraph".equals(colName))
+				{
+					// Get properties we want to pass
+					String jobName    = rstm.getValueAsString(row, "JobName");
+					String job_id     = rstm.getValueAsString(row, "job_id");
+					String step_id    = "0"; // We only want to so the TOP LEVEL
+
+					return "<div title='Click to Open' "
+							+ "data-toggle='modal' "
+							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-objectname='" + jobName + "' "
+							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
+				}
+
+				if ("execView".equals(colName))
+				{
+					// Get properties we want to pass
+					String jobId    = rstm.getValueAsString(row, "job_id"           , true, "unknown");
+					String execTime = rstm.getValueAsString(row, "firstExecTime"    , true, "unknown");
+
+					if (StringUtil.hasValue(execTime))
+						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
+
+					String serverName = getReportingInstance().getServerName();
+					String url = ""
+							+ "/graph.html"
+							+ "?subscribe="     + false 
+							+ "&sessionName="   + serverName 
+							+ "&startTime="     + getJobStartTime(jobId, 15)
+							+ "&endTime="       + getJobEndTime  (jobId, 15)
+							+ "&markTime="      + execTime
+							+ "&markStartTime=" + getJobStartTime(jobId, 0)
+							+ "&markEndTime="   + getJobEndTime  (jobId, 0)
+							;
+
+					// Change "'" and "\n" into html characters: "'"=>"&#39;" and "\n"=>"&#10;"
+					String tooltip = "Open DbxTune/DbxCentral in historical mode and position you at the below 'markTime'.\n"
+							+ "startTime= '" + getJobStartTime(jobId, 15) + "'\n"
+							+ "endTime=  '"  + getJobEndTime  (jobId, 15) + "'\n"
+							+ "markTime='"   + execTime               + "'\n"
+							+ "\n"
+							+ "Note: 15 minutes have been added to the start/end time from the origin 'firstExecTime' and 'lastExecTime' of JobId '" + jobId + "'.";
+					tooltip = tooltip.replace("'", "&#39;").replace("\n", "&#10;");
+					return "<a href='" + url + "' title='" + tooltip + "' target='_blank'>DbxTune</a>";
 				}
 			}
 			
@@ -1095,55 +1549,239 @@ extends SqlServerAbstract
 			//--------------------------------------------------------------
 			if ("job_history_outliers".equals(rstm.getName()))
 			{
+				if ("timeline".equals(colName))
+				{
+					String jobName  = rstm.getValueAsString(row, "JobName"     , true, "unknown");
+					String jobId    = rstm.getValueAsString(row, "job_id"      , true, "unknown");
+					String stepId   = rstm.getValueAsString(row, "step_id"     , true, "unknown");
+//					String execTime = rstm.getValueAsString(row, "execTime"    , true, "unknown");
+					String execTime = "TODAY";
+
+					String serverName = getReportingInstance().getServerName();
+					String urlBase = ""
+							+ "/api/cc/reports"
+							+ "?srvName="    + serverName 
+							+ "&reportName=" + "sqlserver-job-scheduler-timeline";
+
+					return "" 
+						+ "<a href='" + urlBase 
+								+ "&jobName="              + jobName 
+								+ "&jobId="                + jobId 
+//								+ "&stepId="               + stepId // NOT YET IMPLEMENTED
+								+ "&onlyLevelZero="        + true
+								+ "&refresh="              + 0
+								+ "&startTime="            + execTime 
+								+ "&minDurationInSeconds=" + 0
+								+ "' target='_blank'>Today</a>"
+						;
+				}
+
 				if ("cmd".equals(colName))
 				{
+					// Get properties we want to pass
 					String jobName = rstm.getValueAsString(row, "JobName");
 					String stepId  = rstm.getValueAsString(row, "step_id");
 					
-					// Put the "Actual Executed SQL Text" as a "tooltip"
-					return "<div title='Click for Detailes' "
+					return "<div title='Click to Open' "
 							+ "data-toggle='modal' "
 							+ "data-target='#dbx-view-sqltext-dialog' "
 							+ "data-objectname='" + ("step_id=" + stepId +", jobName=" + jobName) + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobStepCommand(jobName, stepId) + "\" "
-							+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
 				}
 
 				if ("histAllExecTimes".equals(colName))
 				{
-					// Get Actual Executed SQL Text for current row
-				//	String query_hash = rstm.getValueAsString(row, "query_hash");
-				//	String sqlText    = rstm.getValueAsString(row, "SqlText");
-					String JobName    = rstm.getValueAsString(row, "JobName");
+					// Get properties we want to pass
+					String jobName    = rstm.getValueAsString(row, "JobName");
 					String job_id     = rstm.getValueAsString(row, "job_id");
+					String step_id    = rstm.getValueAsString(row, "step_id");
+					String execTime   = rstm.getValueAsString(row, "execTime");
 					
-					// Put the "Actual Executed SQL Text" as a "tooltip"
-					return "<div title='Click for Detailes' "
+					if (StringUtil.hasValue(execTime))
+						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
+
+					return "<div title='Click to Open' "
 							+ "data-toggle='modal' "
-							+ "data-target='#dbx-view-sqltext-dialog' "
-							+ "data-objectname='" + JobName + "' "
-							+ "data-tooltip=\""   + getTooltipFor_histAllExecTimes(job_id, strVal) + "\" "
-							+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-objectname='" + jobName  + "' "
+							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
+							+ "data-starttime='"  + execTime + "' "
+							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
+							+ ">&#x1F4AC; Show</div>" // symbol popup with "..."
+							;
+				}
+				// Same as above ("histAllExecTimes")
+				if ("histGraph".equals(colName))
+				{
+					// Get properties we want to pass
+					String jobName    = rstm.getValueAsString(row, "JobName");
+					String job_id     = rstm.getValueAsString(row, "job_id");
+					String step_id    = rstm.getValueAsString(row, "step_id");
+					String execTime   = rstm.getValueAsString(row, "execTime");
+					
+					if (StringUtil.hasValue(execTime))
+						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
+
+					return "<div title='Click to Open' "
+							+ "data-toggle='modal' "
+							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-objectname='" + jobName  + "' "
+							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
+							+ "data-starttime='"  + execTime + "' "
+							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
+							+ ">&#x1F4AC; Show</div>" // symbol popup with "..."
+							;
+				}
+
+				if ("execView".equals(colName))
+				{
+					// Get properties we want to pass
+					String jobId      = rstm.getValueAsString(row, "job_id");
+					String stepId     = rstm.getValueAsString(row, "step_id");
+					String execTime   = rstm.getValueAsString(row, "execTime");
+
+					if (StringUtil.hasValue(execTime))
+						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
+
+//					String startTime     = getJobStartTime(jobId);
+//					String endTime       = getJobEndTime  (jobId);
+					String startTime     = getStartTime(jobId, stepId, execTime, 15);
+					String endTime       = getEndTime  (jobId, stepId, execTime, 15);
+					String markStartTime = getStartTime(jobId, stepId, execTime, 0);
+					String markEndTime   = getEndTime  (jobId, stepId, execTime, 0);
+					
+					String serverName = getReportingInstance().getServerName();
+					String url = ""
+							+ "/graph.html"
+							+ "?subscribe="     + false 
+							+ "&sessionName="   + serverName 
+							+ "&startTime="     + startTime
+							+ "&endTime="       + endTime
+							+ "&markTime="      + execTime
+							+ "&markStartTime=" + markStartTime
+							+ "&markEndTime="   + markEndTime
+							;
+
+					// Change "'" and "\n" into html characters: "'"=>"&#39;" and "\n"=>"&#10;"
+					String tooltip = "Open DbxTune/DbxCentral in historical mode and position you at the below 'markTime'.\n"
+							+ "startTime ='" + startTime + "'\n"
+							+ "endTime  ='"  + endTime   + "'\n"
+							+ "markTime='"   + execTime  + "'\n"
+							+ "\n"
+							+ "Note: 15 minutes have been added to the start/end time from the origin stepId='" + stepId + "', execTime='" + execTime + "' and jobId '" + jobId + "'.";
+					tooltip = tooltip.replace("'", "&#39;").replace("\n", "&#10;");
+					return "<a href='" + url + "' title='" + tooltip + "' target='_blank'>DbxTune</a>";
 				}
 			}
 
 			//--------------------------------------------------------------
-			// job_history_errors
+			// job_history_errors or job_history_error_all
 			//--------------------------------------------------------------
 			if ("job_history_errors".equals(rstm.getName()) || "job_history_errors_all".equals(rstm.getName()))
 			{
+				if ("timeline".equals(colName))
+				{
+					String jobName  = rstm.getValueAsString(row, "JobName"     , true, "unknown");
+					String jobId    = rstm.getValueAsString(row, "job_id"      , true, "unknown");
+					String stepId   = rstm.getValueAsString(row, "step_id"     , true, "unknown");
+//					String execTime = rstm.getValueAsString(row, "execTime"    , true, "unknown");
+					String execTime = "TODAY";
+
+					String serverName = getReportingInstance().getServerName();
+					String urlBase = ""
+							+ "/api/cc/reports"
+							+ "?srvName="    + serverName 
+							+ "&reportName=" + "sqlserver-job-scheduler-timeline";
+
+					return "" 
+						+ "<a href='" + urlBase 
+								+ "&jobName="              + jobName 
+								+ "&jobId="                + jobId 
+//								+ "&stepId="               + stepId // NOT YET IMPLEMENTED
+								+ "&onlyLevelZero="        + true
+								+ "&refresh="              + 0
+								+ "&startTime="            + execTime 
+//								+ "&endTime="              + lastExecTime 
+								+ "&minDurationInSeconds=" + 0
+								+ "' target='_blank'>Today</a>"
+						;
+				}
+
 				if ("cmd".equals(colName))
 				{
+					// Get properties we want to pass
 					String jobName = rstm.getValueAsString(row, "JobName");
-					String stepId  = rstm.getValueAsString(row, "step_id");
+					String step_id = rstm.getValueAsString(row, "step_id");
 					
-					// Put the "Actual Executed SQL Text" as a "tooltip"
-					return "<div title='Click for Detailes' "
+					return "<div title='Click to Open' "
 							+ "data-toggle='modal' "
 							+ "data-target='#dbx-view-sqltext-dialog' "
-							+ "data-objectname='" + ("step_id=" + stepId +", jobName=" + jobName) + "' "
-							+ "data-tooltip=\""   + getTooltipFor_jobStepCommand(jobName, stepId) + "\" "
-							+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName) + "' "
+							+ "data-tooltip=\""   + getTooltipFor_jobStepCommand(jobName, step_id) + "\" "
+							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
+				}
+
+				if ("histGraph".equals(colName))
+				{
+					// Get properties we want to pass
+					String jobName    = rstm.getValueAsString(row, "JobName");
+					String job_id     = rstm.getValueAsString(row, "job_id");
+					String step_id    = rstm.getValueAsString(row, "step_id");
+					String execTime   = rstm.getValueAsString(row, "execTime");
+
+					if (StringUtil.hasValue(execTime))
+						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
+
+					return "<div title='Click to Open' "
+						+ "data-toggle='modal' "
+						+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+						+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
+						+ "data-starttime='"  + execTime + "' "
+						+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
+						+ ">&#x1F4AC; Show</div>" // symbol popup with "..."
+						;
+				}
+
+
+				if ("execView".equals(colName))
+				{
+					// Get properties we want to pass
+					String jobId      = rstm.getValueAsString(row, "job_id");
+					String stepId     = rstm.getValueAsString(row, "step_id");
+					String execTime   = rstm.getValueAsString(row, "execTime");
+
+					if (StringUtil.hasValue(execTime))
+						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
+
+//					String startTime     = getJobStartTime(jobId);
+//					String endTime       = getJobEndTime  (jobId);
+					String startTime     = getStartTime(jobId, stepId, execTime, 15);
+					String endTime       = getEndTime  (jobId, stepId, execTime, 15);
+					String markStartTime = getStartTime(jobId, stepId, execTime, 0);
+					String markEndTime   = getEndTime  (jobId, stepId, execTime, 0);
+
+					String serverName = getReportingInstance().getServerName();
+					String url = ""
+							+ "/graph.html"
+							+ "?subscribe="     + false 
+							+ "&sessionName="   + serverName 
+							+ "&startTime="     + startTime
+							+ "&endTime="       + endTime
+							+ "&markTime="      + execTime
+							+ "&markStartTime=" + markStartTime
+							+ "&markEndTime="   + markEndTime
+							;
+
+					// Change "'" and "\n" into html characters: "'"=>"&#39;" and "\n"=>"&#10;"
+					String tooltip = "Open DbxTune/DbxCentral in historical mode and position you at the below 'markTime'.\n"
+							+ "startTime ='" + startTime + "'\n"
+							+ "endTime  ='"  + endTime   + "'\n"
+							+ "markTime='"   + execTime  + "'\n"
+							+ "\n"
+							+ "Note: 15 minutes have been added to the start/end time from the origin stepId='" + stepId + "', execTime='" + execTime + "' and jobId '" + jobId + "'.";
+					tooltip = tooltip.replace("'", "&#39;").replace("\n", "&#10;");
+					return "<a href='" + url + "' title='" + tooltip + "' target='_blank'>DbxTune</a>";
 				}
 
 				if ("message".equals(colName))
@@ -1164,15 +1802,1021 @@ extends SqlServerAbstract
 		@Override
 		public String cellToolTip(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 		{
-			if ("JobName".equals(colName))
+			if ("JobName".equals(colName) || "job_name".equals(colName))
 			{
 				return getDescriptionForJobName(strVal);
 			}
-			// TODO Auto-generated method stub
+
 			return ResultSetTableModel.TableStringRenderer.super.cellToolTip(rstm, row, col, colName, objVal, strVal);
 	
 		} // end: cellToolTip(...)
 
 	} // end: class
+
+
+	private String getJobStartTime(String jobId, int subtractMinutes)
+	{
+		StartStopTime entry = _jobId__to__startStopTime.get(jobId);
+		if (entry == null)
+		{
+			_logger.warn("getJobStartTime(): Lookup of jobId='" + jobId + "'. Nothing was found.");
+			return "JOBID_NOT_FOUND[" + jobId + "]";
+		}
+
+		Timestamp ts = entry._startTime;
+		if (ts == null)
+			return "JOBID_TS_ISNULL[" + jobId + "]";
+
+		// Subtract X minutes
+		ts = new Timestamp( ts.getTime() - (subtractMinutes*60*1000) );
+		
+		return TimeUtils.toStringYmdHm(ts);
+	}
+
+	private String getJobEndTime(String jobId, int addMinutes)
+	{
+		StartStopTime entry = _jobId__to__startStopTime.get(jobId);
+		if (entry == null)
+		{
+			_logger.warn("getJobStartTime(): Lookup of jobId='" + jobId + "'. Nothing was found.");
+			return "JOBID_NOT_FOUND[" + jobId + "]";
+		}
+
+		Timestamp ts = entry._stopTime;
+		if (ts == null)
+			return "JOBID_TS_ISNULL[" + jobId + "]";
+
+		// Add X minutes
+		ts = new Timestamp( ts.getTime() + (addMinutes*60*1000) );
+		
+		return TimeUtils.toStringYmdHm(ts);
+	}
+
+
+	private static class StartStopTime
+	{
+		Timestamp _startTime;
+		Timestamp _stopTime;
+
+		public StartStopTime(Timestamp startTime, Timestamp stopTime)
+		{
+			_startTime = startTime;
+			_stopTime  = stopTime;
+		}
+	}
+
+
+	/**
+	 * Get StartTime for a specific: jobId, stepId and execTime
+	 * <p>
+	 * If parameter 'addMinutes' those minutes will be decremented from the found 'ts='.<br>
+	 * 
+	 * The list entries look like:
+	 * <pre>
+	 * ts=2025-01-22 16:20:00, wd=Wednesday, HMS=00:01:16, sec=76, status=SUCCESS;
+	 * ts=2025-01-22 16:40:00, wd=Wednesday, HMS=00:00:55, sec=55, status=SUCCESS;
+	 * ts=2025-01-22 17:00:00, wd=Wednesday, HMS=00:01:10, sec=70, status=SUCCESS;
+	 * ts=2025-01-22 17:20:00, wd=Wednesday, HMS=00:00:55, sec=55, status=SUCCESS;
+	 * ts=2025-01-22 17:40:00, wd=Wednesday, HMS=00:00:58, sec=58, status=SUCCESS;
+	 * ts=2025-01-22 18:00:00, wd=Wednesday, HMS=00:01:04, sec=64, status=SUCCESS;
+	 * </pre>
+	 * 
+	 * @param jobId
+	 * @param stepId
+	 * @param execTime
+	 * @param addMinutes   How many minutes <b>before</b> the found time would you like to add
+	 * 
+	 * @return Timestamp in format: YYYY-mm-dd HH:MM   ("" if not found, or "problem text" on exceptions)
+	 */
+	private String getStartTime(String jobId, String stepId, String execTimeStr, int addMinutes)
+	{
+		String key = jobId + "____" + stepId;
+		List<String> list = _jobId_stepId__to__allExecTimes.get(key);
+		
+		if (list == null || (list != null && list.isEmpty()) )
+			return "No Execution Times was found for: jobId=" + jobId + ", stepId=" + stepId;
+
+		try
+		{
+			Timestamp execTs   = TimeUtils.parseToTimestampX(execTimeStr);
+			Timestamp foundTs  = null;
+//			int       foundSec = 0;
+			
+			for (String entry : list)
+			{
+				String tsStr  = StringUtils.substringBetween(entry, "ts=",  ",");
+//				String secStr = StringUtils.substringBetween(entry, "sec=", ",");
+
+				Timestamp ts  = TimeUtils.parseToTimestampX(tsStr);
+//				int       sec = StringUtil.parseInt(secStr, 0);
+				
+				// If ENTRY is >= the passed 'execTime'
+				if (ts.getTime() >= execTs.getTime())
+				{
+					foundTs = ts;
+//					foundSec = sec;
+					break; // GET OUT OF THE LOOP
+				}
+			}
+			
+			if (foundTs != null)
+			{
+				// Subtract X minutes
+				Timestamp retTs = new Timestamp( foundTs.getTime() - (addMinutes*60*1000) );
+				return TimeUtils.toStringYmdHm(retTs);
+			}
+			
+			return "";
+		}
+		catch (ParseException ex)
+		{
+			return "Problems parsing time. Caught: " + ex.getMessage();
+		}
+	}
+
+	/**
+	 * Get EndTime for a specific: jobId, stepId and execTime
+	 * <p>
+	 * Number of seconds will be added to the 'ts='<br>
+	 * Also parameter 'addMinutes' the end.<br>
+	 * 
+	 * The list entries look like:
+	 * <pre>
+	 * ts=2025-01-22 16:20:00, wd=Wednesday, HMS=00:01:16, sec=76, status=SUCCESS;
+	 * ts=2025-01-22 16:40:00, wd=Wednesday, HMS=00:00:55, sec=55, status=SUCCESS;
+	 * ts=2025-01-22 17:00:00, wd=Wednesday, HMS=00:01:10, sec=70, status=SUCCESS;
+	 * ts=2025-01-22 17:20:00, wd=Wednesday, HMS=00:00:55, sec=55, status=SUCCESS;
+	 * ts=2025-01-22 17:40:00, wd=Wednesday, HMS=00:00:58, sec=58, status=SUCCESS;
+	 * ts=2025-01-22 18:00:00, wd=Wednesday, HMS=00:01:04, sec=64, status=SUCCESS;
+	 * </pre>
+	 * 
+	 * @param jobId
+	 * @param stepId
+	 * @param execTime
+	 * @param addMinutes   How many minutes <b>after</b> the found time would you like to add
+	 * 
+	 * @return Timestamp in format: YYYY-mm-dd HH:MM   ("" if not found, or "problem text" on exceptions)
+	 */
+	private String getEndTime(String jobId, String stepId, String execTimeStr, int addMinutes)
+	{
+		String key = jobId + "____" + stepId;
+		List<String> list = _jobId_stepId__to__allExecTimes.get(key);
+		
+		if (list == null || (list != null && list.isEmpty()) )
+			return "No Execution Times was found for: jobId=" + jobId + ", stepId=" + stepId;
+
+		try
+		{
+			Timestamp execTs   = TimeUtils.parseToTimestampX(execTimeStr);
+			Timestamp foundTs  = null;
+			int       foundSec = 0;
+			
+			for (String entry : list)
+			{
+				String tsStr  = StringUtils.substringBetween(entry, "ts=",  ",");
+				String secStr = StringUtils.substringBetween(entry, "sec=", ",");
+
+				Timestamp ts  = TimeUtils.parseToTimestampX(tsStr);
+				int       sec = StringUtil.parseInt(secStr, 0);
+
+				// If ENTRY is >= the passed 'execTime'
+				if (ts.getTime() >= execTs.getTime())
+				{
+					foundTs = ts;
+					foundSec = sec;
+					break; // GET OUT OF THE LOOP
+				}
+			}
+			
+			if (foundTs != null)
+			{
+				// Increment X seconds to the end time... How many seconds it took to run this step
+				// Increment X minutes to the end time... Some extra time, so it will be easier to view in the timeline
+				Timestamp retTs = new Timestamp( foundTs.getTime() + (foundSec*1000) + (addMinutes*60*1000) );
+				return TimeUtils.toStringYmdHm(retTs);
+			}
+			
+			return "";
+		}
+		catch (ParseException ex)
+		{
+			return "Problems parsing time. Caught: " + ex.getMessage();
+		}
+	}
+
+
+
+
+
+	public enum SourceType
+	{
+		ONLINE, PCS
+	};
 	
+	public static Map<String, String> createStaticJavaScript_lookupContent__jobId__to__name(Writer w, DbxConnection conn, SourceType sourceType)
+//	public static void create_lookup_jobId_name(PrintWriter writer, DbxConnection conn, SourceType sourceType)
+//	throws SQLException
+	{
+		PrintWriter  writer = (w instanceof PrintWriter) ? (PrintWriter)w : new PrintWriter(w);
+		Map<String, String> retMap = new LinkedHashMap<>();
+
+		String sql = "";
+		if (SourceType.ONLINE.equals(sourceType))
+		{
+			sql = ""
+			    + "SELECT \n"
+			    + "     job_id \n"
+			    + "    ,name \n"
+			    + "FROM msdb.dbo.sysjobs \n"
+			    + "ORDER BY 1 \n"
+			    ;
+		}
+		else if (SourceType.PCS.equals(sourceType))
+		{
+			sql = ""
+				+ "SELECT \n"
+				+ "     [job_id] \n"
+				+ "    ,[name] \n"
+				+ "FROM [" + SqlServerJobSchedulerExtractor.PCS_SCHEMA_NAME + "].[" + SqlAgentInfo.sysjobs + "] \n"
+			    + "ORDER BY 1 \n"
+				;
+
+			sql = conn.quotifySqlString(sql);
+		}
+		else
+		{
+			throw new RuntimeException("Unsupported sourceType='" + sourceType + "'.");
+		}
+
+		// Execute the SQL - with AutoClose
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+		{
+			// Write 'BEGIN'
+			writer.println();
+			writer.println("<!-- BEGIN: JAVA SCRIPT for 'lookup': for 'job_id' => 'job_name' --> ");
+			writer.println("<script> ");
+			writer.println("    // Create a Java Object that will hold data ");
+			writer.println("    var _globalLookup__jobId__to__name = {} ");
+			writer.println();
+			while(rs.next())
+			{
+				String job_id   = rs.getString(1);
+				String job_name = rs.getString(2);
+
+				String key = job_id;
+				String val = job_name;
+
+				writer.println("    _globalLookup__jobId__to__name['" + key + "'] = `" + val + "`;");
+
+				// Add to Return Map
+				retMap.put(key, val);
+			}
+
+			// and some functions
+			writer.println();
+			writer.println("    // LOOKUP Function ");
+			writer.println("    function lookup__jobId__to__name(job_id) ");
+			writer.println("    { ");
+			writer.println("        let name = _globalLookup__jobId__to__name[job_id]; ");
+			writer.println("        if (name === undefined) ");
+			writer.println("        { ");
+			writer.println("            return job_id; ");
+			writer.println("        } ");
+			writer.println("        return name; ");
+			writer.println("    } ");
+
+			// Write 'END'
+			writer.println("</script> ");
+			writer.println("<!-- END: JAVA SCRIPT for 'lookup' for: 'job_id' => 'job_name' --> ");
+			writer.println();
+		}
+		catch (SQLException ex)
+		{
+			String msg = "In '" + MethodHandles.lookup().lookupClass().getSimpleName() + "'. Problems executing SQL Statement. ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|, SQL=|" + sql + "|.";
+			_logger.error(msg);
+
+			writer.println();
+			writer.println("<!-- BEGIN: ERROR MESSAGE in Servlet  ");
+			writer.println(msg);
+			writer.println("  -- END: ERROR MESSAGE in Servlet --> ");
+			writer.println();
+		}
+
+		return retMap;
+	}
+
+
+	public static void createStaticJavaScript_lookupContent__jobId_stepId__to__name(Writer w, DbxConnection conn, SourceType sourceType)
+	throws SQLException
+	{
+		PrintWriter writer = (w instanceof PrintWriter) ? (PrintWriter)w : new PrintWriter(w);
+
+		// NOT IMPLEMENTED
+		String sql = ""
+			    + "SELECT \n"
+			    + "     job_id \n"
+			    + "    ,step_id \n"
+			    + "    ,step_name \n"
+			    + "FROM msdb.dbo.sysjobsteps \n"
+			    + "ORDER BY job_id, step_id \n"
+			    + "";
+
+		throw new RuntimeCryptoException("-NOT-YET-IMPLEMENTED-");
+	}
+
+
+//	/**
+//	 * Produce: 
+//	 * @param conn     DBMS Connection
+//	 * @param sql      SQL Statement to execute
+//	 * @param writer   Where to write content
+//	 */
+//	public static void create_allExecTimes_jobId_stepId(DbxConnection conn, String sql, PrintWriter writer)
+//	throws SQLException
+//	{
+//		// Execute the SQL - with AutoClose
+//		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+//		{
+//			// Write 'BEGIN'
+//			writer.println();
+//			writer.println("<!-- BEGIN: JAVA SCRIPT for 'allExecTime' for 'job_id' and 'step_id' --> ");
+//			writer.println("<script> ");
+//			writer.println("    // Create a Java Object that will hold ALL job instances ");
+//			writer.println("    var _global_JobId_StepId_Instance = { ");
+//			writer.println("    } ");
+//			writer.println();
+//
+//			while(rs.next())
+//			{
+//				String job_id       = rs.getString(1);
+//				String step_id      = rs.getString(2);
+//				String allExecTimes = rs.getString(3);
+//
+//				String key = job_id + "____" + step_id;
+//				
+//				writer.println();
+//				writer.println("    // -------- jobid='" + job_id + "', step_id='" + step_id + "', NOTE: The below uses backtick (`) so we can have newlines... ");
+//				writer.println("    _global_JobId_StepId_Instance['" + key + "'] = `" + allExecTimes + "`;");
+//			}
+//
+//			// Write 'END'
+//			writer.println("</script> ");
+//			writer.println("<!-- END: JAVA SCRIPT for 'allExecTime' for 'job_id' and 'step_id' --> ");
+//			writer.println();
+//		}
+//	}
+
+	public static class ReturnObject_allExecTimes
+	{
+		Map<String, List<String>> _timeMap;
+		Map<String, StatObject>   _statMap;
+
+		public ReturnObject_allExecTimes(Map<String, List<String>> timeMap, Map<String, StatObject> statMap)
+		{
+			_timeMap = timeMap;
+			_statMap = statMap;
+		}
+		public Map<String, List<String>> getTimeMap() { return _timeMap; }
+		public Map<String, StatObject>   getStatMap() { return _statMap; }
+	}
+
+	public static class StatObject
+	{
+		long _count = 0;
+		long _min   = Long.MAX_VALUE;
+		long _max   = Long.MIN_VALUE;
+		long _avg   = 0;
+		long _sum   = 0;
+		
+		public void add(long value)
+		{
+			_count++;
+			_min = Math.min(_min, value);
+			_max = Math.max(_max, value);
+			_sum += value;
+			_avg = _sum / _count;
+		}
+
+		public long getCount() { return _count; }
+		public long getMin()   { return _min;   }
+		public long getMax()   { return _max;   }
+		public long getAvg()   { return _avg;   }
+		public long getSum()   { return _sum;   }
+		
+		public String toJson()
+		{
+			return ("{#count#:" + _count + ", #min#:" + _min + ", #max#:" + _max + ", #sum#:" + _sum + ", #avg#:" + _avg + " }").replace('#', '"');
+		}		
+	}
+
+//	public static Map<String, List<String>> createStaticJavaScript_lookupContent__jobId_stepId__to__allExecTimes(Writer w, DbxConnection conn, SourceType sourceType)
+	public static ReturnObject_allExecTimes createStaticJavaScript_lookupContent__jobId_stepId__to__allExecTimes(Writer w, DbxConnection conn, SourceType sourceType)
+	{
+		PrintWriter  writer = (w instanceof PrintWriter) ? (PrintWriter)w : new PrintWriter(w);
+		Map<String, List<String>> retMap = new LinkedHashMap<>();
+		Map<String, StatObject>   sumMap = new LinkedHashMap<>();
+		
+		String sql = "";
+		if (SourceType.ONLINE.equals(sourceType))
+		{
+			sql = ""
+				+ "SELECT \n"
+				+ "     job_id = cast(jh.job_id as varchar(40)) \n"
+				+ "    ,jh.step_id \n"
+				+ "    ,run_ts = convert(datetime, convert(varchar(8), jh.run_date)) \n"
+				+ "                              + ' ' \n"
+				+ "                              + stuff(stuff(right(1000000 + jh.run_time \n"
+				+ "                                                 ,6) \n"
+				+ "                                            ,3,0,':') \n"
+				+ "                                      ,6,0,':') \n"
+				+ "    ,run_duration_sec = jh.run_duration / 10000 * 3600 \n"
+				+ "                      + jh.run_duration % 10000 / 100 * 60 \n"
+				+ "                      + jh.run_duration % 100 \n"
+				+ "    ,run_status_desc = \n"
+				+ "        CASE \n"
+				+ "            WHEN jh.run_status = 0 THEN 'FAILED' \n"
+				+ "            WHEN jh.run_status = 1 THEN 'SUCCESS' \n"
+				+ "            WHEN jh.run_status = 2 THEN 'RETRY' \n"
+				+ "            WHEN jh.run_status = 3 THEN 'CANCELED' \n"
+				+ "            WHEN jh.run_status = 4 THEN 'IN PROGRESS' \n"
+				+ "            ELSE '-UNKNOWN-' + cast(jh.run_status as varchar(10)) + '-' \n"
+				+ "        END \n"
+			    + "FROM msdb.dbo.sysjobhistory jh \n"
+			    + "ORDER BY 1, 2, 3 \n"
+			    ;
+		}
+		else if (SourceType.PCS.equals(sourceType))
+		{
+			sql = ""
+				+ "SELECT \n"
+				+ "     [job_id] \n"
+				+ "    ,[step_id] \n"
+				+ "    ,[run_ts] \n"
+				+ "    ,[run_duration_sec] \n"
+				+ "    ,[run_status_desc] \n"
+				+ "FROM [" + SqlServerJobSchedulerExtractor.PCS_SCHEMA_NAME + "].[" + SqlAgentInfo.sysjobhistory + "] \n"
+			    + "ORDER BY 1, 2, 3 \n"
+				;
+
+			sql = conn.quotifySqlString(sql);
+		}
+		else
+		{
+			throw new RuntimeException("Unsupported sourceType='" + sourceType + "'.");
+		}
+		
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			// Write 'BEGIN'
+			writer.println();
+			writer.println("<!-- BEGIN: JAVA SCRIPT for 'lookup': for 'job_id:step_id' => 'allExecTimes' --> ");
+			writer.println("<script> ");
+			writer.println("    // Create a Java Object that will hold data ");
+			writer.println("    var _globalLookup__jobId_stepId__to__allExecTimes = {} ");
+			writer.println();
+			
+			String prevKey = "";
+//			String val     = "";
+
+			while(rs.next())
+			{
+				String    job_id           = rs.getString   (1);
+				int       step_id          = rs.getInt      (2);
+				Timestamp run_ts           = rs.getTimestamp(3);
+				int       run_duration_sec = rs.getInt      (4);
+				String    run_status_desc  = rs.getString   (5);
+
+				String key = job_id + "____" + step_id;
+
+				String val = ""
+						+ "ts="       + TimeUtils.toStringYmdHms(run_ts)
+						+ ", wd="     + StringUtil.left(TimeUtils.toWeekDay(run_ts), 9) // make it 9 chars
+						+ ", HMS="    + TimeUtils.secToTimeStrHMS(run_duration_sec)
+						+ ", sec="    + run_duration_sec
+						+ ", status=" + run_status_desc
+						+ ";"
+						;
+
+				if ( ! prevKey.equals(key))
+				{
+					writer.println();
+					writer.println("    // -------------- ");
+					writer.println("    _globalLookup__jobId_stepId__to__allExecTimes['" + key + "'] = [];");
+				}
+				writer.println("    _globalLookup__jobId_stepId__to__allExecTimes['" + key + "'].push(`" + val + "`);");
+				
+				// Add to sumMap
+				StatObject sumEntry = sumMap.get(key);
+				if (sumEntry == null)
+				{
+					sumEntry = new StatObject();
+					sumMap.put(key, sumEntry);
+				}
+				sumEntry.add(run_duration_sec);
+				
+				// Add to Return Map
+				List<String> list = retMap.get(key);
+				if (list == null)
+				{
+					list = new ArrayList<>();
+					retMap.put(key, list);
+				}
+				list.add(val);
+
+//				writer.println("    _globalLookup__jobId_stepId__to__allExecTimes['" + key + "'] = `" + val + "`;");
+				prevKey = key;
+			}
+			
+			// NOTE: The above will probably produce a lot of "chars"...
+			//       So another solution would be to append all "rows" to "holderVar" and only write that when 'key' is changing
+			//       ANd don't forget to write "spills" in the "holderVar" after enf-of-loop to print out LAST row...
+
+			// and some functions
+			writer.println();
+			writer.println("    // LOOKUP Function ");
+			writer.println("    function lookup__jobId_stepId__to__allExecTimes(jobId, stepId) ");
+			writer.println("    { ");
+			writer.println("        let key = jobId + '____' + stepId; ");
+			writer.println("        let val = _globalLookup__jobId_stepId__to__allExecTimes[key]; ");
+			writer.println("        if (name === undefined) ");
+			writer.println("        { ");
+			writer.println("            return jobId + '|' + stepId; ");
+			writer.println("        } ");
+			writer.println("       if (Array.isArray(val)) ");
+			writer.println("            return val.join('\\n'); ");
+			writer.println("        return val; ");
+			writer.println("    } ");
+
+			// Write 'END'
+			writer.println("</script> ");
+			writer.println("<!-- END: JAVA SCRIPT for 'lookup': for 'job_id:step_id' => 'allExecTimes' --> ");
+			writer.println();
+
+		
+		
+		
+			//----------------------------------------------------------------------------
+			// allExecSummary
+			//----------------------------------------------------------------------------
+
+			// Write 'BEGIN'
+			writer.println();
+			writer.println("<!-- BEGIN: JAVA SCRIPT for 'lookup': for 'job_id:step_id' => 'allExecSummary' --> ");
+			writer.println("<script> ");
+			writer.println("    // Create a Java Object that will hold data ");
+			writer.println("    var _globalLookup__jobId_stepId__to__allExecSummary = {} ");
+			writer.println();
+		
+			for (Entry<String, StatObject> entry : sumMap.entrySet())
+			{
+				String key = entry.getKey();
+				String val = entry.getValue().toJson();
+				
+				writer.println("    _globalLookup__jobId_stepId__to__allExecSummary['" + key + "'] = " + val + ";");
+			}
+
+			// and some functions
+			writer.println();
+			writer.println("    // LOOKUP Function ");
+			writer.println("    function lookup__jobId_stepId__to__allExecSummary(jobId, stepId) ");
+			writer.println("    { ");
+			writer.println("        let key = jobId + '____' + stepId; ");
+			writer.println("        let val = _globalLookup__jobId_stepId__to__allExecSummary[key]; ");
+			writer.println("        if (name === undefined) ");
+			writer.println("        { ");
+			writer.println("            return jobId + '|' + stepId; ");
+			writer.println("        } ");
+			writer.println("       if (Array.isArray(val)) ");
+			writer.println("            return val.join('\\n'); ");
+			writer.println("        return val; ");
+			writer.println("    } ");
+
+			// Write 'END'
+			writer.println("</script> ");
+			writer.println("<!-- END: JAVA SCRIPT for 'lookup': for 'job_id:step_id' => 'allExecSummary' --> ");
+			writer.println();
+		}
+		catch (SQLException ex)
+		{
+			String msg = "In '" + MethodHandles.lookup().lookupClass().getSimpleName() + "'. Problems executing SQL Statement. ErrorCode=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|, SQL=|" + sql + "|.";
+			_logger.error(msg);
+
+			writer.println();
+			writer.println("<!-- BEGIN: ERROR MESSAGE in Servlet  ");
+			writer.println(msg);
+			writer.println("  -- END: ERROR MESSAGE in Servlet --> ");
+			writer.println();
+		}
+
+		return new ReturnObject_allExecTimes(retMap, sumMap); 
+	}
+
+
+	/**
+	 * Create HTML and JavaScript code for the modal <code>dbx-jobScheduler-timeline-dialog</code>
+	 * @param w              To what writer
+	 * @param serverName     Name of the Server (The id/Display name in DbxCentral)... This is used if we want to click on a "time" in the chart and open a "chart.html" call to dig further...
+	 */
+	public static void createStaticHtmlAndJavaScriptContent(Writer w, String serverName)
+	{
+		PrintWriter  writer = (w instanceof PrintWriter) ? (PrintWriter)w : new PrintWriter(w);
+
+		writer.println();
+		writer.println("    <!-- Modal: Show SQL Server Job/Scheduler, with a graph and text of the executions  --> ");
+		writer.println("    <div class='modal fade' id='dbx-jobScheduler-timeline-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-jobScheduler-timeline-label' aria-hidden='true'> ");
+		writer.println("        <div class='modal-dialog modal-xl' style='max-width: 80%;' role='document'> ");
+		writer.println("            <div class='modal-content'> ");
+		writer.println("                <div class='modal-header'> ");
+		writer.println("                    <h5 class='modal-title' id='dbx-jobScheduler-objectName'>Job Scheduler Timeline Chart</h5> ");
+		writer.println("                    <button type='button' class='close' data-dismiss='modal' aria-label='Close'> ");
+		writer.println("                        <span aria-hidden='true'>&times;</span> ");
+		writer.println("                    </button> ");
+		writer.println("                </div> ");
+		writer.println("                <div class='modal-body' style='overflow-x: auto;'> ");
+		writer.println("                    <canvas id='dbx-jobScheduler-timeline-chart' style='width: 77vw; display: none;'></canvas> ");
+		writer.println("                    <div class='scroll-tree' style='width: 100%;'> ");
+		writer.println("                        <pre><code id='dbx-jobScheduler-text-content' class='language-sql line-numbers dbx-view-sqltext-content' ></code></pre> ");
+		writer.println("                    </div> ");
+		writer.println("                </div> ");
+		writer.println("                <div class='modal-footer'> ");
+		writer.println("                    <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button> ");
+		writer.println("                </div> ");
+		writer.println("            </div> ");
+		writer.println("        </div> ");
+		writer.println("    </div> ");
+		writer.println();
+		writer.println("    <script> ");
+		writer.println();
+		writer.println("        // When initializing the structure, 'serverName' is passed, which we set here as a global variable");
+		writer.println("        var _global_jobSchedulerTimeline_serverName = '" + serverName + "'; ");
+		writer.println();
+		writer.println("        // On modal open (AFTER fully open) ");
+		writer.println("        $('#dbx-jobScheduler-timeline-dialog').on('shown.bs.modal', function(e) ");
+		writer.println("        { ");
+		writer.println("            // highlight again, since the dialog DOM wasn't visible earlier ");
+		writer.println("            Prism.highlightAll(); ");
+//		writer.println();
+//		writer.println("            // Scroll top top (do not seems to work) ");
+//		writer.println("            $('#dbx-jobScheduler-timeline-dialog').animate({ scrollTop: 0 }, 'slow'); ");
+		writer.println("        }); ");
+		writer.println();
+		writer.println("        // On modal open (BEFORE fully open) ");
+		writer.println("        $('#dbx-jobScheduler-timeline-dialog').on('show.bs.modal', function(e) ");
+		writer.println("        { ");
+		writer.println("            // BEGIN: If there are open modals, we need to increment z-index... to make this modal 'on-top' ");
+		writer.println("            const openModals = $('.modal.show'); ");
+		writer.println("            if (openModals.length > 0) ");
+		writer.println("            { ");
+		writer.println("                console.log('#dbx-jobScheduler-timeline-dialog[show.bs.modal]: OTHER MODALS are OPEN: openModals.length=' + openModals.length); ");
+		writer.println("                var highestZIndex = 0;");
+		writer.println();
+		writer.println("                // Loop through all open modals and find the highest z-index ");
+		writer.println("                openModals.each(function() ");
+		writer.println("                { ");
+		writer.println("                    let currentZIndex = parseInt($(this).css('z-index'), 10); ");
+		writer.println("                    if (currentZIndex > highestZIndex) ");
+		writer.println("                    { ");
+		writer.println("                        highestZIndex = currentZIndex; ");
+		writer.println("                    } ");
+		writer.println("                }); ");
+		writer.println("                console.log('#dbx-jobScheduler-timeline-dialog[show.bs.modal]: OTHER MODALS are OPEN: newZIndex=' + newZIndex); ");
+		writer.println();
+		writer.println("                // Increment the z-index for the second modal, to ensure it's on top ");
+		writer.println("                var newZIndex = highestZIndex + 10; ");
+		writer.println("                $(this).css('z-index', newZIndex); ");
+		writer.println("            } ");
+		writer.println("            // END: check for other open modals ");
+		writer.println();
+		writer.println("            // Get 'data' attributes from events callers element/button ");
+		writer.println("            let data = $(e.relatedTarget).data(); ");
+		writer.println("            console.log('#dbx-jobScheduler-timeline-dialog[show.bs.modal]: data: ' + data, data); ");
+		writer.println();
+		writer.println("            // Read input from the 'data-' attributes... ");
+		writer.println("            const jobId             = data.jobid; ");
+		writer.println("            const stepId            = data.stepid; ");
+		writer.println();
+		writer.println("            let   inputStr          = data.tooltip; ");
+		writer.println("            let   jobName           = data.objectname; ");
+		writer.println("            let   jobStartTsMarker  = data.starttime; ");
+		writer.println();
+		writer.println("            // If 'jobid' and 'stepid' was passed, override some values");
+		writer.println("            if (jobId !== undefined && stepId !== undefined) ");
+		writer.println("            { ");
+		writer.println("                console.log('#dbx-jobScheduler-timeline-dialog[show.bs.modal]: jobid=|' + jobId + '|, stepid=|' + stepId + '|. was passed... overriding some values') ");
+		writer.println();
+		writer.println("                inputStr = lookup__jobId_stepId__to__allExecTimes(jobId, stepId); ");
+		writer.println("                jobName  = lookup__jobId__to__name(jobId); ");
+		writer.println();
+		writer.println("                jobName  = 'stepId=' + stepId + ', jobName=' + jobName; ");
+		writer.println();
+		writer.println("                if (jobStartTsMarker !== undefined) ");
+		writer.println("                    jobName = jobName + ', startTime=' + jobStartTsMarker; ");
+		writer.println("            } ");
+		writer.println();
+		writer.println("            $('#dbx-jobScheduler-objectName').text(jobName); ");
+//		writer.println("            $('#dbx-jobScheduler-xxx-content',    this).text(data.tooltip); ");
+		writer.println();
+		writer.println("            console.log('#dbx-jobScheduler-timeline-dialog[show.bs.modal]: jobName=|' + jobName + '|, jobStartTsMarker=|' + jobStartTsMarker + '.', inputStr); ");
+		writer.println();
+		writer.println("            // Create the chart... ");
+		writer.println("            createTimeLineChart(inputStr, jobName, jobStartTsMarker);");
+		writer.println("        }); ");
+		writer.println();
+		writer.println("        // Open Chart Dialog by: jobId, stepId ");
+		writer.println("        function openTimeLineChartDialog_byIds(jobId, stepId, startTsMarker)  ");
+		writer.println("        { ");
+		writer.println("            // How this is done to handel both 'data-target' and calling this function... ");
+		writer.println("            // Simulate that it was called from an 'element'... Create an element, which we programatically 'click' on! ");
+		writer.println("            var tempElement = $('<button>', { ");
+		writer.println("                 type: 'button', ");
+		writer.println("                     'data-toggle'    : 'modal', ");
+		writer.println("                     'data-target'    : '#dbx-jobScheduler-timeline-dialog', ");
+		writer.println("                     'data-jobid'     : jobId, ");
+		writer.println("                     'data-stepid'    : stepId, ");
+		writer.println("                     'data-starttime' : startTsMarker ");
+		writer.println("            }); ");
+		writer.println();
+		writer.println("            // Append the element to the body (temporarily) ");
+		writer.println("            $('body').append(tempElement); ");
+		writer.println();
+		writer.println("            // Trigger the click to open the modal decided above by: 'data-target': '#dbx-jobScheduler-timeline-dialog' ");
+		writer.println("            tempElement.trigger('click'); ");
+		writer.println();
+		writer.println("            // Remove the element ");
+		writer.println("            tempElement.remove(); ");
+		writer.println("        } ");
+		writer.println();
+		writer.println("        // If you want to open the dialog using a function call, then use this function ");
+		writer.println("        // Or do it by: <button ... data-toggle='modal' data-target='#dbx-jobScheduler-timeline-dialog' data-objectname='name' data-tooltip='ts input...' data-starttime='YYYY-mm-dd HH:MM:SS'> ");
+		writer.println("        function openTimeLineChartDialog_byTsStr(input, name, startTsMarker)  ");
+		writer.println("        { ");
+		writer.println("            // How this is done to handel both 'data-target' and calling this function... ");
+		writer.println("            // Simulate that it was called from an 'element'... Create an element, which we programatically 'click' on! ");
+		writer.println("            var tempElement = $('<button>', { ");
+		writer.println("                 type: 'button', ");
+		writer.println("                     'data-toggle'     : 'modal', ");
+		writer.println("                     'data-target'     : '#dbx-jobScheduler-timeline-dialog', ");
+		writer.println("                     'data-tooltip'    : input, ");
+		writer.println("                     'data-objectname' : name, ");
+		writer.println("                     'data-starttime'  : startTsMarker ");
+		writer.println("            }); ");
+		writer.println();
+		writer.println("            // Append the element to the body (temporarily) ");
+		writer.println("            $('body').append(tempElement); ");
+		writer.println();
+		writer.println("            // Trigger the click to open the modal decided above by: 'data-target': '#dbx-jobScheduler-timeline-dialog' ");
+		writer.println("            tempElement.trigger('click'); ");
+		writer.println();
+		writer.println("            // Remove the element ");
+		writer.println("            tempElement.remove(); ");
+		writer.println("        } ");
+		writer.println();
+		writer.println("        // Global object to hold any created chart instances ");
+		writer.println("        let _jobSchedulerTimelineChartInstance = null; ");
+		writer.println();
+		writer.println("        function parseTsDataInput(input) ");
+		writer.println("        { ");
+		writer.println("            const lines      = input.split(';'); ");
+		writer.println("            const timestamps = []; ");
+		writer.println("            const values     = []; ");
+		writer.println("            const status     = []; ");
+		writer.println();
+		writer.println("            lines.forEach(line => { ");
+		writer.println("                const tsMatch     = line.match(/ts=([^,]+)/); ");
+		writer.println("                const secMatch    = line.match(/sec=([^,]+)/); ");
+		writer.println("                const statusMatch = line.match(/status=([^,]+)/); ");
+		writer.println();
+		writer.println("                if (tsMatch && secMatch)  ");
+		writer.println("                { ");
+		writer.println("                    timestamps.push(tsMatch[1]); ");
+		writer.println("                    values    .push(parseInt(secMatch[1], 10)); ");
+		writer.println("                    status    .push(statusMatch ? statusMatch[1] : 'UNKNOWN'); ");
+		writer.println("                } ");
+		writer.println("            }); ");
+		writer.println();
+		writer.println("            return { timestamps, values, status }; ");
+		writer.println("        } ");
+		writer.println();
+		writer.println("        function formatSecondsToHMS(seconds)  ");
+		writer.println("        { ");
+		writer.println("            const h = Math.floor( seconds / 3600); ");
+		writer.println("            const m = Math.floor((seconds % 3600) / 60); ");
+		writer.println("            const s = Math.floor( seconds % 60); ");
+		writer.println("            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; ");
+		writer.println("        } ");
+		writer.println();
+		writer.println("        function createTimeLineChart(input, jobName, jobStartTsMarker)  ");
+		writer.println("        { ");
+		writer.println("            // Parse the data ");
+		writer.println("            const parsedTsData = parseTsDataInput(input); ");
+		writer.println();
+		writer.println("            // Calculate average ");
+//		writer.println("            const averageExecutionTime = data.datasets[0].data.reduce((a, b) => a + b, 0) / data.datasets[0].data.length; ");
+		writer.println("            const avgExecTimeSec = parsedTsData.values.reduce((a, b) => a + b, 0) / parsedTsData.values.length; ");
+		writer.println("            const avgExecTimeHms = formatSecondsToHMS(avgExecTimeSec); ");
+		writer.println("            console.log('createTimeLineChart(): avgExecTimeSec=' + avgExecTimeSec + ', avgExecTimeHms=' + avgExecTimeHms); ");
+		writer.println();
+		writer.println("            // Chart options (created later) ");
+		writer.println("            const chartOptions =  ");
+		writer.println("            { ");
+		writer.println("                type: 'line', ");
+		writer.println("                data: { ");
+		writer.println("                    labels: parsedTsData.timestamps, ");
+		writer.println("                    datasets: [{ ");
+		writer.println("                        label: 'Execution Time', ");
+		writer.println("                        data: parsedTsData.values, ");
+		writer.println("                        borderColor: 'rgba(75, 192, 192, 1)', // '#007bff', ");
+		writer.println("                        tension: 0.4, ");
+		writer.println("                        borderWidth: 2, ");
+		writer.println("                        pointRadius: 4, ");
+		writer.println("                        fill: false, ");
+//		writer.println("                        pointBackgroundColor: parsedTsData.status.map(s => s === 'SUCCESS' ? 'green' : 'red') ");
+		writer.println("                        pointBackgroundColor: parsedTsData.status.map(s => { ");
+		writer.println("                            switch(s) { ");
+		writer.println("                                case 'SUCCESS': return 'green';  ");
+		writer.println("                                case 'WARNING': return 'yellow'; ");
+		writer.println("                                case 'FAILED':  return 'red';    ");
+		writer.println("                                case 'ERROR':   return 'red';    ");
+		writer.println("                                default:        return 'gray';   ");
+		writer.println("                            } ");
+		writer.println("                        }) ");
+		writer.println("                    }] ");
+		writer.println("                }, ");
+		writer.println("                options: { ");
+		writer.println("                    responsive: true, ");
+		writer.println("                    scales: { ");
+		writer.println("                        y: { ");
+		writer.println("                            ticks: { ");
+		writer.println("                                callback: function(value) { ");
+		writer.println("                                    return formatSecondsToHMS(value); ");
+		writer.println("                                } ");
+		writer.println("                            }, ");
+		writer.println("                            title: { display: true, text: 'Duration (HH:MM:SS)' } ");
+		writer.println("                        } ");
+		writer.println("                    }, ");
+		writer.println("                    plugins: { ");
+		writer.println("                        title: { ");
+		writer.println("                            display: true, ");
+		writer.println("                            text: jobName ");
+		writer.println("                        }, ");
+		writer.println("                        legend: { ");
+		writer.println("                            display: false ");
+		writer.println("                        }, ");
+		writer.println("                        tooltip: { ");
+		writer.println("                            callbacks: { ");
+		writer.println("                                title: function(context) { ");
+		writer.println("                                    const isoDate = context[0].label; ");
+		writer.println("                                    const date = new Date(isoDate); ");
+		writer.println("                                    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']; ");
+		writer.println("                                    const dayOfWeek = days[date.getDay()]; ");
+//		writer.println("                                    return `${isoDate} (${dayOfWeek})` ");
+		writer.println("                                    return isoDate + ' (' + dayOfWeek + ')'; ");
+		writer.println("                                }, ");
+		writer.println("                                label: function(tooltipItem) { ");
+		writer.println("                                    return formatSecondsToHMS(tooltipItem.raw); ");
+		writer.println("                                }, ");
+		writer.println("                                afterBody: function(context) { ");
+		writer.println("                                    return '\\nClick the Chart Point will:\\n - Open DbxTune at that specific time (adding 15m at start/end).'; ");
+		writer.println("                                } ");
+		writer.println("                            } ");
+		writer.println("                        }, ");
+//		writer.println("                        annotation: {} ");
+		writer.println("                        annotation: { ");
+		writer.println("                            annotations: { ");
+		writer.println("                                averageLine: { ");
+		writer.println("                                    type: 'line', ");
+		writer.println("                                    yMin: avgExecTimeSec, ");
+		writer.println("                                    yMax: avgExecTimeSec, ");
+		writer.println("                                    borderColor: 'gray',");
+		writer.println("                                    borderWidth: 2, ");
+		writer.println("                                    borderDash: [5, 5], ");
+		writer.println("                                    label: { ");
+//		writer.println("                                        content: `Avg: ${averageExecutionTime.toFixed(2)}`, ");
+		writer.println("                                        content: `Avg: ${avgExecTimeHms}`, ");
+		writer.println("                                        display: true, ");
+		writer.println("                                        backgroundColor: 'gray' ");
+		writer.println("                                    } ");
+		writer.println("                                } ");
+		writer.println("                            } ");
+		writer.println("                        } ");
+		writer.println("                    }, ");
+		writer.println("                    onClick: (event, elements, chart) => { ");
+		writer.println("                        if (elements[0]) ");
+		writer.println("                        {");
+		writer.println("                            const i = elements[0].index; ");
+		writer.println();
+		writer.println("                            const ts      = moment(chart.data.labels[i]); ");
+		writer.println("                            const seconds = chart.data.datasets[0].data[i]; ");
+//		writer.println("console.log('onClick: ts=|' + ts + '|, seconds=|' + seconds + '|.', ts, seconds); ");
+//		writer.println("alert('onClick: ts=|' + ts + '|, seconds=|' + seconds + '|.'); ");
+		writer.println();
+		writer.println("                            const srvName       = _global_jobSchedulerTimeline_serverName; ");
+		writer.println("                            const tsFormat      = 'YYYY-MM-DD HH:mm:ss'; ");
+		writer.println("                            const startTime     = ts.clone().subtract(15, 'minutes').format(tsFormat); ");
+		writer.println("                            const endTime       = ts.clone().add(seconds, 'seconds').add(15, 'minutes').format(tsFormat); ");
+		writer.println("                            const markTime      = ts.clone().format(tsFormat); ");
+		writer.println("                            const markStartTime = ts.clone().format(tsFormat); ");
+		writer.println("                            const markEndTime   = ts.clone().add(seconds, 'seconds').format(tsFormat); ");
+		writer.println();
+		writer.println("                            // Open URL in new tab ");
+		writer.println("                            const url = '/graph.html?subscribe=false&sessionName=' + srvName + '&startTime=' + startTime + '&endTime=' + endTime + '&markTime=' + markTime + '&markStartTime=' + markStartTime + '&markEndTime=' + markEndTime; ");
+		writer.println("                            window.open(url, '_blank').focus(); ");
+		writer.println("                            ");
+		writer.println("                        }");
+		writer.println("                    } ");
+		writer.println("                } ");
+		writer.println("            }; ");
+		writer.println();
+		writer.println("            // Add a marker for 'current' time ");
+		writer.println("            if (jobStartTsMarker !== undefined) ");
+		writer.println("            { ");
+		writer.println("                const highlightLineObj =  ");
+		writer.println("                { ");
+		writer.println("                    type: 'line', ");
+		writer.println("                    xMin: jobStartTsMarker, ");
+		writer.println("                    xMax: jobStartTsMarker, ");
+		writer.println("                    borderColor: 'pink', ");
+		writer.println("                    borderWidth: 2, ");
+		writer.println("                    label: { ");
+		writer.println("                        content: 'Start Time for this Job', ");
+		writer.println("                        enabled: true, ");
+		writer.println("                        position: 'top' ");
+		writer.println("                    } ");
+//		writer.println("                    // The below is only to get some tooltip on the marker line... alot of code for 'little value', which I'm not even sure it will work... ");
+//		writer.println("                    // It did not work... possibly because 'yPos' wasn't found ");
+//		writer.println("                    , ");
+//		writer.println("                    enter: (context) => { ");
+//		writer.println("                        let tooltip = document.getElementById('annotation-tooltip'); ");
+//		writer.println("                        if (!tooltip) { ");
+//		writer.println("                            tooltip = document.createElement('div'); ");
+//		writer.println("                            tooltip.id = 'annotation-tooltip'; ");
+//		writer.println("                            tooltip.style.position = 'absolute'; ");
+//		writer.println("                            tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; ");
+//		writer.println("                            tooltip.style.color = 'white'; ");
+//		writer.println("                            tooltip.style.padding = '5px 10px'; ");
+//		writer.println("                            tooltip.style.borderRadius = '5px'; ");
+//		writer.println("                            tooltip.style.pointerEvents = 'none'; ");
+//		writer.println("                            tooltip.style.zIndex = '1000'; ");
+//		writer.println("                            context.chart.canvas.parentNode.appendChild(tooltip); ");
+//		writer.println("                        } ");
+//		writer.println("                        tooltip.innerHTML = 'Start Time for this Job'; ");
+//		writer.println();                   
+//		writer.println("                        // Calculate line position ");
+//		writer.println("                        const chartRect = context.chart.canvas.getBoundingClientRect(); ");
+//		writer.println("                        const xScale = context.chart.scales.x; ");
+//		writer.println("                        const yScale = context.chart.scales.y; ");
+//		writer.println("                         ");
+//		writer.println("                        // Position tooltip at annotation line ");
+//		writer.println("                        const xPos = xScale.getPixelForValue(jobStartTsMarker); // xMin = position ");
+//		writer.println("                        const yPos = yScale.getPixelForValue(jobStartTsMarker); // hmm.. do I need to get the 'seconds pos' as well, or can I get the mouse position instead...");
+//		writer.println();                   
+//		writer.println("                        tooltip.style.left = `${chartRect.left + xPos}px`; ");
+//		writer.println("                        tooltip.style.top = `${chartRect.top + yPos - 30}px`;  // Above the point ");
+//		writer.println("                    }, ");
+//		writer.println("                    leave: () => { ");
+//		writer.println("                        const tooltip = document.getElementById('annotation-tooltip'); ");
+//		writer.println("                        if (tooltip) tooltip.remove(); ");
+//		writer.println("                    } ");
+		writer.println("                }; ");
+		writer.println();
+		writer.println("                chartOptions.options.plugins.annotation.annotations['highlightLine'] = highlightLineObj; ");
+		writer.println("                console.log('chartOptions adjustments after |jobStartTsMarker|.', chartOptions); ");
+		writer.println("            } ");
+		writer.println();
+		writer.println("            if (_jobSchedulerTimelineChartInstance) { ");
+		writer.println("                _jobSchedulerTimelineChartInstance.destroy(); ");
+		writer.println("            } ");
+		writer.println();
+		writer.println("            // If we have data, generate the chart ");
+		writer.println("            // When NO-DATA the input tect will still show the text (hopefully with a error message) ");
+		writer.println("            if (parsedTsData.values.length > 0) ");
+		writer.println("            { ");
+		writer.println("                // Get element where to create the chart ");
+		writer.println("                const ctx = document.getElementById('dbx-jobScheduler-timeline-chart').getContext('2d'); ");
+		writer.println();
+		writer.println("                // Create the chart ");
+		writer.println("                _jobSchedulerTimelineChartInstance = new Chart(ctx, chartOptions); ");
+		writer.println();
+		writer.println("                // Make it visible ");
+		writer.println("                document.getElementById('dbx-jobScheduler-timeline-chart').style.display='block'; ");
+		writer.println();
+		writer.println("                // Force re-render after a delay ");
+		writer.println("                // If the timeline marker (the line) when 'execTime' is provided and it points at the LAST entry... Then it will be hidden... ");
+		writer.println("                // But with this workaround, it will be visible again... after the re-render...");
+		writer.println("                setTimeout(() => { _jobSchedulerTimelineChartInstance.update(); }, 1000); ");
+		writer.println("            } ");
+		writer.println();               
+		writer.println("            // Set text ");
+		writer.println("            document.getElementById('dbx-jobScheduler-text-content').textContent = input; ");
+		writer.println();
+//		writer.println("            // Open Modal ");
+//		writer.println("            $('#dbx-jobScheduler-timeline-dialog').modal('show'); ");
+//		writer.println();
+//		writer.println("            // highlight again, since the dialog DOM wasn't visible earlier ");
+//		writer.println("            Prism.highlightAll(); ");
+		writer.println("        } ");
+		writer.println();
+		writer.println("    </script> ");
+		writer.println();
+	}
 }

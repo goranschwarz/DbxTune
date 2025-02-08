@@ -73,7 +73,7 @@ implements Runnable
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String  PROPKEY_maxWaitTime = "ShutdownHandler.maxWaitTime";
-	public static final int     DEFAULT_maxWaitTime = 60*1000; // 60 sec
+	public static final int     DEFAULT_maxWaitTime = 120*1000; // 120 sec
 
 	/** Restart exit code is 8  ( or laying 8 : a lemniscate = infinity symbol) */
 	public static final int     RESTART_EXIT_CODE = 8; 

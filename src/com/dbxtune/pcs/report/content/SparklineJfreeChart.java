@@ -93,7 +93,8 @@ public class SparklineJfreeChart
 			if (val != null && val.doubleValue() != 0d)
 				allValuesAreZero = false;
 			
-			data.add(new Minute(bts), val);
+//			data.add(new Minute(bts), val);
+			data.addOrUpdate(new Minute(bts), val);
 		}
 
 		dataSet.addSeries(data);

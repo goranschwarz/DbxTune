@@ -70,8 +70,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Changed the default storage for Graph/Charts from LABEL_IN_SEPARATE_COLUMN to COLUMN_NAME_IS_LABEL (now using the column name as the "label name" instead of a separate column holding the name)</LI>
 		<LI>PCS: If CountersModel number of columns changes "on the fly", we will now alter the CM PCS tables on the fly (more columns will be added, but not deleted)</LI>
 
-		<LI>CmOsVmstat:    for Linux:   Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
-		<LI>CmOsMeminfo:   for Windows: Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 5 minutes.</LI>
+		<LI>CmOsVmstat:    for Linux:   Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 10 minutes.</LI>
+		<LI>CmOsMeminfo:   for Windows: Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 10 minutes.</LI>
 		<LI>CmOsDiskSpace: On Windows add the 'disk label' to the 'drive name' for easier determination of what the disk may be used for</LI>
 		<LI>CmOsIostat:    On Windows add the 'disk label' to the 'drive name' for easier determination of what the disk may be used for</LI>
 		<LI>NO-GUI now starts a Management Web Server (localhost:89##), so we can do some management of configuration etc from DbxCentral web ui<br>
@@ -85,10 +85,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>A Graph on CM Refresh time has also been created</LI>
 		<LI>PCS: DataDirectoryCleaner -- New config to cleanup on Disk PCT Used 'DataDirectoryCleaner.max.historical.space.usage.pct=94.0'</LI>
 		<LI>NoGuiManagementServer -- Added: /reports/sqlserver/job-scheduler-report to view a mini version of DSR for SQL Server Job/Scheduler and CPU Overview</LI>
-		<LI>NoGuiManagementServer -- Added: /reports/sqlserver/job-scheduler-activity to view SQL Server Job/Scheduler activity (a timeline chart with job activity)</LI>
+		<LI>NoGuiManagementServer -- Added: /reports/sqlserver/job-scheduler-timeline to view SQL Server Job/Scheduler timeline (a timeline chart with job activity)</LI>
+		<LI>CmOsMpstat: If CPU Usage is above 90% for more than 45 minutes, send HighCpuUtilization(INFO)   , also send info from CmOsPs on top OS Processes...</LI>
+		<LI>CmOsMpstat: If CPU Usage is above 95% for more than 15 minutes, send HighCpuUtilization(WARNING), also send info from CmOsPs on top OS Processes...</LI>
+		<LI>CmOsMpstat: If CPU Usage is above 99% for more than 15 minutes, send HighCpuUtilization(ERROR)  , also send info from CmOsPs on top OS Processes...</LI>
+		<LI>Host Monitoring: "Swapping" "SwapThrashing" is now working on a 10 minute Moving Average (instead of 5 minutes)</LI>
+		<LI>Host Monitoring: MpStat now has INFO/WARNING/ERROR Alarms when CPU Usage is to high</LI>
+		<LI>Fixed some backward compatibility (if config has 'com.asetune.xxx' we automatically changes that to 'com.dbxtune.xxx'</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
+				<LI>Added 'alarmId' so we can identify alarms, and in the future also "aknowledge" alarms (for alarms we dont want to see)</LI>
+				<LI>In the Mail and Slack Template added a "link" so we can open DbxCentral (in history mode) and view trends/SQL when the alarm was active... varialble: ${dbxCentralUrl}</LI>
 				<LI>New: AlarmEventOsSwapThrashing -- When we are swapping both in and out at the same time... Linux(vmstat, column 'pi' and 'po'), Windows(column 'Pages Input/sec' AND 'Pages Output/sec')</LI>
 				<LI>New: AlarmEventDbmsVersionString -- If the version string changes during collection, then make a short Information Alarm about this.</LI>
 				
@@ -214,6 +222,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>You must be logged in to download recording files, and to remove Daily Summary Report files</LI>
 		<LI>User Defined Charts got some new parameters, and also reload some parameters (like SQL) if the underlying file was changed</LI>
 		<LI>On landing page: For SQL Server entries: Added right click meny items for: 'SQL Agent/Scheduler Report for Today' and 'SQL Agent/Scheduler Activity Vire for Today'</LI>
+		<LI>SQL Server Showplan -- are now zoomable (in Active Statements modal)</LI>
+		<LI>Graph -- Time Selection -- Added: Start Time +#h... to make it easier to extend the current time selection</LI>
+		<LI>Alarms for Disabled servers are not shown anymore</LI>
+		<LI>added URL Options for; 'markTime', 'markStartTime', 'markEndTime' to visualize start/end time for "interesting" time spans</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -242,6 +254,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>OldestTranInSeconds:AlarmEventLongRunningTransaction -- Added som more details "Last Known SQL Text for 'Oldest Open Tran' SPID"</li>
 			<li>Add column 'DBCreateTime', so we can see when a database was created.</li>
+			<li>Alarm LastBackupFailed now has a "guess" if it was a transaction log or database dump that failed</li>
 		</ul>
 		</LI>
 
@@ -321,9 +334,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RsTune - Sybase/SAP Replication Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>xxx</LI>
-
-		<LI><b>CmName</b> - xxxx</LI>
+		<LI><b>WarmStandby</b> - When updating Active databases, now include what user name this was done with (for eaier trouble shooting, if no replication... maint_user...)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -462,9 +473,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmPerfCounters       </b> - new chart 'SQL Errors' -- with lines: 'Total', 'Info Errors', 'User Errors', 'Kill Connection Errors', 'DB Offline Errors'</LI>
 
 		<LI><b>CmSchedulers         </b> - Changed NEGATIVE_DIFF_COUNTERS_TO_ZERO from false to true</LI>
+		<LI><b>CmSchedulers         </b> - Added graph -- CPU Usage in Percent, Both Average and Per Schedulers (using dm_os_schedulers.total_cpu_usage_ms)</LI>
 
 		<LI><b>CmSessions           </b> - The "hidden report" on WaitResources has been extended (can now lookup pages to get ObjectID's and translated to ObjectName's, also lookup 'locked data' when WaitResource is 'KEY')</LI>
-		<LI><b>CmSessions           </b> - added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+		<LI><b>CmSessions           </b> - Added new column 'context_info_str' which is a String interpretation of the binary field 'context_info'</LI>
+		<LI><b>CmSessions           </b> - Added column 'ExecTimeHms' (easier read of long running statements)</LI>
 
 		<LI><b>CmSpidWait           </b> - Changed NEGATIVE_DIFF_COUNTERS_TO_ZERO from false to true</LI>
 
@@ -521,6 +534,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added chart 'CmOsIostat_IoBusyPct' to the "summary" section</li>
 			<li>Added Report Section for: Job Agent/Scheduler Information for the full day (origin: msdb.dbo.sysjobs, sysjobsteps, sysjobhistory)</li>
 			<li>Added 'logical_writes_MB', 'physical_reads_MB' in reports that has 'logical_writes', 'physical_reads'</li>
+			<li>For Windows... Include CmOsPs information about most active Processes (so we can see for example if the Virus Scan takes to much resourses)</li>
+			<li>Job Scheduler information is now much better (a lot of work was done here)</li>
 		</ul>
 		</LI>
 	</UL>
@@ -678,6 +693,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    AND: If columns 'dbname|databasename|database_name|database name' and 'schemaname|schema_name|schema name' exists the will be used to "fully qualify" the objectname</LI>
 		<LI>Better handling of Showplans for SQL Server and Postgres</LI>
 		<LI>InstallSqlFromUrlDialog -- use BOMInputStream to remove any BOM characters (Byte Order Mark)</LI>
+		<LI>SQL Server: Tooltip on Tables now shows more information (Usage, and Operations) both on Indexes and HEAP Tables</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

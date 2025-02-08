@@ -38,7 +38,7 @@ import com.dbxtune.mgt.controllers.NoGuiConfigGetServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
 import com.dbxtune.mgt.controllers.NoGuiRefreshServlet;
 import com.dbxtune.mgt.controllers.NoGuiRestartServlet;
-import com.dbxtune.mgt.controllers.SqlServerJobSchedulerActivity;
+import com.dbxtune.mgt.controllers.SqlServerJobSchedulerTimeline;
 import com.dbxtune.mgt.controllers.SqlServerJobSchedulerReport;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -172,7 +172,7 @@ public class NoGuiManagementServer
 				//      Should we have some SSE for feedback (during report creation) or should we just stream the HTML ???
 				// I want the COLLECTORS doing the main work, since they have the "user/password" to the DBMS
 				context.addServlet(new ServletHolder(new SqlServerJobSchedulerReport())  , "/reports/sqlserver/job-scheduler-report");   // Like the DSR but just get midnight until now
-				context.addServlet(new ServletHolder(new SqlServerJobSchedulerActivity()), "/reports/sqlserver/job-scheduler-activity"); // This would replace the User Defined Chart - SqlServerAgentJobs
+				context.addServlet(new ServletHolder(new SqlServerJobSchedulerTimeline()), "/reports/sqlserver/job-scheduler-timeline"); // This would replace the User Defined Chart - SqlServerAgentJobs
 				
 				_logger.info("Trying to start NO-GUI Management Server at address '" + listnerAddress + "', port " + port + ".");
 				server.start();

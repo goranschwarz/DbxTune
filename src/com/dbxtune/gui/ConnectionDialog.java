@@ -4972,6 +4972,14 @@ public class ConnectionDialog
 			for (String pcs : pcsAll.split(","))
 			{
 //System.out.println("pcsConnect(): pcs='"+pcs+"'.");
+				if (pcs.startsWith("com.asetune."))
+				{
+					String tmpSave = pcs;
+					pcs = pcs.replace("com.asetune.", "com.dbxtune.");
+
+					Exception tmpEx = new Exception("MAKE THE LOG MESSAGE STICK OUT: Found old configuration '" + tmpSave+ "' which was replaced with '" + pcs + "'."); 
+					_logger.warn("Found old configuration '" + tmpSave+ "' which was replaced with '" + pcs + "'.", tmpEx);
+				}
 
 				if (pcs.equals("com.dbxtune.pcs.PersistWriterJdbc"))
 				{
@@ -5082,6 +5090,8 @@ public class ConnectionDialog
 		catch (Exception e)
 		{
 			_logger.error("Problems initializing PersistentCounterHandler", e);
+			
+			SwingUtils.showErrorMessage(this, "Init PCS Error", "Problems initializing PersistentCounterHandler", e);
 			return false;
 		}
 //		_pcsConn = jdbcConnect(Version.getAppName(), 

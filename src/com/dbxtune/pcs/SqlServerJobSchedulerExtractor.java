@@ -42,13 +42,11 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.ResultSetMetaDataCached;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
-import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.ddl.IDbmsDdlResolver;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
-import com.dbxtune.utils.Ver;
 
 /**
  * Most code for this was reused from SqlServerQueryStoreExtractor...
@@ -92,9 +90,10 @@ public class SqlServerJobSchedulerExtractor
 		,sysjobsteps          // Most columns from: msdb.dbo.sysjobsteps + some extra aggregated column like 'disabled_by_step, next_step'
 		,sysjobhistory        // Most columns from: msdb.dbo.sysjobhistory + some extra aggregated column like 'run_status_desc, run_ts, run_duration_sec'
 
-		,job_history_overview // How many executions Jobs and Steps that had been executed by the scheduler.
-		,job_history_outliers // Get info about jobs that is running above the "normal" average...
-		,job_history_errors   // Get info about jobs that is has errors 
+		,job_history_overview_all // All 
+		,job_history_overview     // How many executions Jobs and Steps that had been executed by the scheduler.
+		,job_history_outliers     // Get info about jobs that is running above the "normal" average...
+		,job_history_errors       // Get info about jobs that is has errors 
 	};
 
 	
@@ -137,6 +136,7 @@ public class SqlServerJobSchedulerExtractor
     			
 				return sql;
     		}
+
     		case sysjobsteps:
     		{
     			String sql = ""
@@ -183,6 +183,7 @@ public class SqlServerJobSchedulerExtractor
     			
 				return sql;
     		}
+
     		case sysjobhistory:
     		{
     			String sql = ""
@@ -229,28 +230,205 @@ public class SqlServerJobSchedulerExtractor
     			
 				return sql;
     		}
+
+    		case job_history_overview_all:
+    		{
+				String allExecTimes = "";
+//				String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 or later' \n";
+//				DbmsVersionInfo verInfo = _monConn.getDbmsVersionInfo();
+//				if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
+//				{
+//					allExecTimes = ""
+//	    				    + "        ,allExecTimes  = STRING_AGG( \n"
+//	    				    + "                             CAST( \n"
+//	    				    + "                                 'ts=' + convert(varchar(30), start_execution_date, 120) \n"
+//	    				    + "                               + ', wd=' + cast(datename(weekday, start_execution_date) as char(9)) \n"
+//	    				    + "                               + ', HMS=' + convert(varchar(10), dateadd(second, datediff(second, start_execution_date, stop_execution_date), '2000-01-01'), 8) \n"
+//	    				    + "                               + ', sec=' + cast(datediff(second, start_execution_date, stop_execution_date) as varchar(20)) \n"
+//	    				    + "                               + ', status=' + 'UNKNOWN' \n"
+//	    				    + "                               + ';' \n"
+//	    				    + "                               as varchar(max)) \n"
+//	    				    + "                           ,char(10) \n"
+//	    				    + "                         ) WITHIN GROUP (ORDER BY start_execution_date) \n"
+//							;
+//				}
+				
+//    			String sql = ""
+//    				    + "WITH jobactivity \n"
+//    				    + "as ( \n"
+//    				    + "    select \n"
+//    				    + "         job_id \n"
+//    				    + "        ,avg_exec_seconds = avg(datediff(second, start_execution_date, stop_execution_date)) \n"
+//    				    + "        ,min_exec_seconds = min(datediff(second, start_execution_date, stop_execution_date)) \n"
+//    				    + "        ,max_exec_seconds = max(datediff(second, start_execution_date, stop_execution_date)) \n"
+//    				    + "        ,first_started = min(start_execution_date) \n"
+//    				    + "        ,last_started  = max(start_execution_date) \n"
+//    				    + "        ,next_scheduled_run_date  = max(next_scheduled_run_date) \n"
+//    				    + "        ,exec_count = count(*) \n"
+//    				    + allExecTimes
+//    				    + "    from msdb.dbo.sysjobactivity \n"
+//    				    + "    group by job_id \n"
+//    				    + ") \n"
+//    				    + "select \n"
+//    				    + "     job_name = j.name \n"
+//    				    + "    ,j.enabled \n"
+//    				    + " \n"
+//    				    + "    ,a.exec_count \n"
+//    				    + "    ,step_count = (select count(*) from msdb.dbo.sysjobsteps s where s.job_id = a.job_id) \n"
+//    				    + "    ,a.last_started \n"
+//    				    + "    ,days_since_last_exec = datediff(day, a.last_started, getdate()) \n"
+//    				    + "    ,avg_exec_hms = convert(varchar(10), dateadd(second, a.avg_exec_seconds, '2000-01-01'), 8) \n"
+//    				    + "    ,max_exec_hms = convert(varchar(10), dateadd(second, a.max_exec_seconds, '2000-01-01'), 8) \n"
+//    				    + "    ,min_exec_hms = convert(varchar(10), dateadd(second, a.min_exec_seconds, '2000-01-01'), 8) \n"
+//    				    + "    ,a.avg_exec_seconds \n"
+//    				    + "    ,a.max_exec_seconds \n"
+//    				    + "    ,a.min_exec_seconds \n"
+//    				    + "    ,a.next_scheduled_run_date \n"
+//    				    + "    ,next_scheduled_in_days = CASE WHEN j.enabled = 0 THEN NULL ELSE datediff(day, getdate(), a.next_scheduled_run_date) END \n"
+//    				    + "    ,a.first_started \n"
+////    				    + "    ,a.allExecTimes \n"
+//    				    + " \n"
+//    				    + "    ,j.date_created \n"
+//    				    + "    ,j.date_modified \n"
+//    				    + "    ,last_modified_in_days = datediff(day, j.date_modified, getdate()) \n"
+//    				    + "    ,j.version_number \n"
+//    				    + "    ,j.description \n"
+//    				    + "    ,job_id = cast(a.job_id as varchar(40)) \n"
+//    				    + "from jobactivity a \n"
+//    				    + "inner join msdb.dbo.sysjobs j on a.job_id = j.job_id \n"
+//    				    + "order by 2 desc, 1 \n"
+//    				    + "";
+
+    			String sql = ""
+    				    + "WITH history AS \n"
+    				    + "( \n"
+    				    + "    SELECT \n"
+    				    + "         job_id \n"
+    				    + "        ,jh.run_status \n"
+    				    + "        ,run_ts = convert(datetime, convert(varchar(8), jh.run_date)) \n"
+    				    + "                                  + ' ' \n"
+    				    + "                                  + stuff(stuff(right(1000000 + jh.run_time \n"
+    				    + "                                                     ,6) \n"
+    				    + "                                                ,3,0,':') \n"
+    				    + "                                          ,6,0,':') \n"
+    				    + "        ,run_duration_sec = jh.run_duration / 10000 * 3600 \n"
+    				    + "                          + jh.run_duration % 10000 / 100 * 60 \n"
+    				    + "                          + jh.run_duration % 100 \n"
+    				    + "    FROM msdb.dbo.sysjobhistory jh \n"
+    				    + "    WHERE jh.step_id = 0 \n"
+    				    + ") \n"
+    				    + ",job_info AS \n"
+    				    + "( \n"
+    				    + "    SELECT \n"
+    				    + "        job_id \n"
+    				    + "        ,exec_count        = COUNT(*) \n"
+    				    + "        ,sum_exec_seconds  = SUM(run_duration_sec) \n"
+    				    + "        ,avg_exec_seconds  = AVG(run_duration_sec) \n"
+    				    + "        ,min_exec_seconds  = MIN(run_duration_sec) \n"
+    				    + "        ,max_exec_seconds  = MAX(run_duration_sec) \n"
+    				    + "        ,first_started     = MIN(run_ts) \n"
+    				    + "        ,last_started      = MAX(run_ts) \n"
+    				    + "        ,run_fail_count    = SUM(CASE WHEN h.run_status = 0 THEN 1 ELSE 0 END) \n"
+    				    + "        ,run_success_count = SUM(CASE WHEN h.run_status = 1 THEN 1 ELSE 0 END) \n"
+    				    + "        ,run_retry_count   = SUM(CASE WHEN h.run_status = 2 THEN 1 ELSE 0 END) \n"
+    				    + "        ,run_cancel_count  = SUM(CASE WHEN h.run_status = 3 THEN 1 ELSE 0 END) \n"
+    				    + "    FROM history h \n"
+    				    + "    GROUP BY job_id \n"
+    				    + ") \n"
+    				    + ",next_job_info AS \n"
+    				    + "( \n"
+						+ "    /*** Only get the FIRST/next to to be sceduled... NOTE: The job can be assigned to MANY schedulers ***/ \n"
+			    	    + "    SELECT * \n"
+			    	    + "    FROM ( \n"
+			    	    + "        SELECT \n"
+			    	    + "             sh.job_id \n"
+			    	    + "            ,sh.schedule_id \n"
+			    	    + "            ,next_scheduled_ts = convert(datetime, convert(varchar(8), sh.next_run_date)) + ' ' + stuff(stuff(right(1000000 + sh.next_run_time,6),3,0,':'),6,0,':') \n"
+			    	    + "            ,scheduler_name    = (SELECT s.name FROM msdb.dbo.sysschedules s WHERE s.schedule_id = sh.schedule_id) \n"
+			    	    + "            ,scheduler_count   = COUNT(*)     OVER (PARTITION BY job_id) \n"
+			    	    + "            ,row_num           = ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY next_run_date, next_run_time) \n"
+			    	    + "        FROM msdb.dbo.sysjobschedules sh \n"
+			    	    + "    ) js \n"
+			    	    + "    WHERE js.row_num = 1 \n"
+    				    + ") \n"
+    				    + "SELECT \n"
+    				    + "     job_name = jobs.name \n"
+    				    + "    ,jobs.enabled \n"
+    				    + "    ,ji.exec_count \n"
+//    				    + "    ,details = '-filled-in-by-dsr-' \n"
+//    				    + "    ,execGraph = '-filled-in-by-dsr-' \n"
+    				    + "    ,step_count = (SELECT count(*) FROM msdb.dbo.sysjobsteps s WHERE s.job_id = jobs.job_id) \n"
+//    				    + "    ,stepCmds = '-filled-in-by-dsr-' \n"
+    				    + "    ,ji.last_started \n"
+    				    + "    ,days_since_last_start = datediff(day, ji.last_started, getdate()) \n"
+//    				    + "    ,sum_exec_hms = convert(varchar(10), dateadd(second, ji.sum_exec_seconds, '2000-01-01'), 8) \n" // NOTE: This will overflow and not show #DAYS ... so calculate this at client instead
+//    				    + "    ,avg_exec_hms = convert(varchar(10), dateadd(second, ji.avg_exec_seconds, '2000-01-01'), 8) \n" // NOTE: This will overflow and not show #DAYS ... so calculate this at client instead
+//    				    + "    ,max_exec_hms = convert(varchar(10), dateadd(second, ji.max_exec_seconds, '2000-01-01'), 8) \n" // NOTE: This will overflow and not show #DAYS ... so calculate this at client instead
+//    				    + "    ,min_exec_hms = convert(varchar(10), dateadd(second, ji.min_exec_seconds, '2000-01-01'), 8) \n" // NOTE: This will overflow and not show #DAYS ... so calculate this at client instead
+    				    + "    ,ji.sum_exec_seconds \n"
+    				    + "    ,ji.avg_exec_seconds \n"
+    				    + "    ,ji.max_exec_seconds \n"
+    				    + "    ,ji.min_exec_seconds \n"
+    				    + " \n"
+    				    + "    ,next_scheduled_ts      = CASE WHEN jobs.enabled = 1 THEN nj.next_scheduled_ts                           ELSE NULL END \n"
+    				    + "    ,next_scheduled_in_days = CASE WHEN jobs.enabled = 1 THEN datediff(day, getdate(), nj.next_scheduled_ts) ELSE NULL END \n"
+    				    + "    ,nj.scheduler_name \n"
+    				    + "    ,nj.scheduler_count \n"
+    				    + " \n"
+//    				    + "    ,allExecTimes      = '-filled-in-by-dsr-' \n"
+//    				    + "    ,allExecTimesChart = '-filled-in-by-dsr-' \n"
+    				    + " \n"
+    				    + "    ,ji.first_started \n"
+    				    + "    ,jobs.date_created \n"
+    				    + "    ,jobs.date_modified \n"
+    				    + "    ,last_modified_in_days = datediff(day, jobs.date_modified, getdate()) \n"
+    				    + "    ,jobs.version_number \n"
+    				    + " \n"
+    				    + "    ,notify_eventlog_on = CASE jobs.notify_level_eventlog WHEN 0 THEN '-off-' WHEN 1 THEN 'SUCCESS' WHEN 2 THEN 'FAILURE' WHEN 3 THEN 'COMPLETION' ELSE '-unknown-' END \n"
+    				    + "    ,notify_mail_on     = CASE jobs.notify_level_email    WHEN 0 THEN '-off-' WHEN 1 THEN 'SUCCESS' WHEN 2 THEN 'FAILURE' WHEN 3 THEN 'COMPLETION' ELSE '-unknown-' END \n"
+    				    + "    ,notify_mail        = (SELECT o.name + ': ' + o.email_address   FROM msdb.dbo.sysoperators o WHERE o.id = notify_email_operator_id) \n"
+    				    + "    ,notify_netsend_on  = CASE jobs.notify_level_netsend  WHEN 0 THEN '-off-' WHEN 1 THEN 'SUCCESS' WHEN 2 THEN 'FAILURE' WHEN 3 THEN 'COMPLETION' ELSE '-unknown-' END \n"
+    				    + "    ,notify_netsend     = (SELECT o.name + ': ' + o.netsend_address FROM msdb.dbo.sysoperators o WHERE o.id = notify_email_operator_id) \n"
+    				    + "    ,notify_page_on     = CASE jobs.notify_level_page     WHEN 0 THEN '-off-' WHEN 1 THEN 'SUCCESS' WHEN 2 THEN 'FAILURE' WHEN 3 THEN 'COMPLETION' ELSE '-unknown-' END \n"
+    				    + "    ,notify_page        = (SELECT o.name + ': ' + o.pager_address   FROM msdb.dbo.sysoperators o WHERE o.id = notify_email_operator_id) \n"
+    				    + " \n"
+    				    + "    ,job_description    = jobs.description \n"
+    				    + "    ,job_category       = (SELECT c.name FROM msdb.dbo.syscategories c WHERE c.category_id = jobs.category_id) \n"
+    				    + "    ,job_id             = CAST(jobs.job_id as varchar(40)) \n"
+    				    + " \n"
+    				    + "FROM msdb.dbo.sysjobs jobs \n"
+    				    + "LEFT OUTER JOIN job_info      ji ON ji.job_id = jobs.job_id \n"
+    				    + "LEFT OUTER JOIN next_job_info nj ON nj.job_id = jobs.job_id \n"
+    				    + "ORDER BY jobs.enabled DESC, job_name \n"
+    				    + "-------------------------------------------- \n"
+    				    + "";
+    			
+    			return sql;
+    		}
+
     		case job_history_overview:
 			{
 				int overview_calcHistoricalDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_overview_calcHistoricalDays, DEFAULT_overview_calcHistoricalDays);
 
-				String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 and above' \n";
-				DbmsVersionInfo verInfo = _monConn.getDbmsVersionInfo();
-				if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
-				{
-					allExecTimes = ""
-						    + "        ,allExecTimes  = STRING_AGG( \n"
-						    + "                             CAST( \n"
-						    + "                                 'ts=' + convert(varchar(30), date_executed, 120) \n"
-						    + "                               + ', wd=' + cast(datename(weekday, date_executed) as char(9)) \n"
-						    + "                               + ', HMS=' + convert(varchar(10), dateadd(second, secs_duration, '2000-01-01'), 8) \n"
-						    + "                               + ', sec=' + cast(secs_duration as varchar(20)) \n"
-						    + "                               + ', status=' + run_status_desc \n"
-						    + "                               + ';' \n"
-						    + "                               as varchar(max)) \n"
-						    + "                           ,char(10) \n"
-						    + "                         ) WITHIN GROUP (ORDER BY date_executed) \n"
-							;
-				}
+				String allExecTimes = "";
+//				String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 or later' \n";
+//				DbmsVersionInfo verInfo = _monConn.getDbmsVersionInfo();
+//				if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
+//				{
+//					allExecTimes = ""
+//						    + "        ,allExecTimes  = STRING_AGG( \n"
+//						    + "                             CAST( \n"
+//						    + "                                 'ts=' + convert(varchar(30), date_executed, 120) \n"
+//						    + "                               + ', wd=' + cast(datename(weekday, date_executed) as char(9)) \n"
+//						    + "                               + ', HMS=' + convert(varchar(10), dateadd(second, secs_duration, '2000-01-01'), 8) \n"
+//						    + "                               + ', sec=' + cast(secs_duration as varchar(20)) \n"
+//						    + "                               + ', status=' + run_status_desc \n"
+//						    + "                               + ';' \n"
+//						    + "                               as varchar(max)) \n"
+//						    + "                           ,char(10) \n"
+//						    + "                         ) WITHIN GROUP (ORDER BY date_executed) \n"
+//							;
+//				}
 				
 				String sql = ""
 					    + "DECLARE @todayBeginTs      datetime = '" + _periodStartTimeLocal      + "' \n"
@@ -349,7 +527,7 @@ public class SqlServerJobSchedulerExtractor
 					    + "    ,histMinTime_HMS   = convert(varchar(10), dateadd(second, hist.minDuration, '2000-01-01'), 8) \n"
 					    + "    ,histMaxTime_HMS   = convert(varchar(10), dateadd(second, hist.maxDuration, '2000-01-01'), 8) \n"
 					    + "    ,histStdevp        = CAST(hist.stdevp as numeric(10,1)) \n"
-					    + "    ,histAllExecTimes  = hist.allExecTimes \n"
+//					    + "    ,histAllExecTimes  = hist.allExecTimes \n"
 					    + " \n"
 					    + "    ,job_id            = cast(j.job_id as varchar(40)) \n"
 //					    + "    ,job_id            = j.job_id \n"  // This does NOT work for the moment... FIXME: The JDBC type mapping
@@ -362,28 +540,30 @@ public class SqlServerJobSchedulerExtractor
 				
 				return sql;
 			}
-			case job_history_outliers:
+
+    		case job_history_outliers:
 			{
 				int outliers_calcHistoricalDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_outliers_calcHistoricalDays, DEFAULT_outliers_calcHistoricalDays);
 
-				String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 and above' \n";
-				DbmsVersionInfo verInfo = _monConn.getDbmsVersionInfo();
-				if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
-				{
-					allExecTimes = ""
-						    + "        ,allExecTimes  = STRING_AGG( \n"
-						    + "                             CAST( \n"
-						    + "                                 'ts=' + convert(varchar(30), date_executed, 120) \n"
-						    + "                               + ', wd=' + cast(datename(weekday, date_executed) as char(9)) \n"
-						    + "                               + ', HMS=' + convert(varchar(10), dateadd(second, secs_duration, '2000-01-01'), 8) \n"
-						    + "                               + ', sec=' + cast(secs_duration as varchar(20)) \n"
-						    + "                               + ', status=' + run_status_desc \n"
-						    + "                               + ';' \n"
-						    + "                               as varchar(max)) \n"
-						    + "                           ,char(10) \n"
-						    + "                         ) WITHIN GROUP (ORDER BY date_executed) \n"
-							;
-				}
+				String allExecTimes = "";
+//				String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 or later' \n";
+//				DbmsVersionInfo verInfo = _monConn.getDbmsVersionInfo();
+//				if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
+//				{
+//					allExecTimes = ""
+//						    + "        ,allExecTimes  = STRING_AGG( \n"
+//						    + "                             CAST( \n"
+//						    + "                                 'ts=' + convert(varchar(30), date_executed, 120) \n"
+//						    + "                               + ', wd=' + cast(datename(weekday, date_executed) as char(9)) \n"
+//						    + "                               + ', HMS=' + convert(varchar(10), dateadd(second, secs_duration, '2000-01-01'), 8) \n"
+//						    + "                               + ', sec=' + cast(secs_duration as varchar(20)) \n"
+//						    + "                               + ', status=' + run_status_desc \n"
+//						    + "                               + ';' \n"
+//						    + "                               as varchar(max)) \n"
+//						    + "                           ,char(10) \n"
+//						    + "                         ) WITHIN GROUP (ORDER BY date_executed) \n"
+//							;
+//				}
 				
 				// This was mostly from https://bradsruminations.blogspot.com/2011/04/sysjobhistory-job_history_outliers.html
 				// with some modifications
@@ -473,7 +653,7 @@ public class SqlServerJobSchedulerExtractor
 					    + "    ,histDaysCount    = jhs.daysCount \n"
 					    + "    ,histStdevp       = cast(jhs.stdevp        as numeric(10,1)) \n"
 					    + "    ,thresholdInSec   = cast(jhs.avgPlus2StDev as int) \n"
-					    + "    ,histAllExecTimes = jhs.allExecTimes \n"
+//					    + "    ,histAllExecTimes = jhs.allExecTimes \n"
 					    + "    ,job_id           = cast(jd.job_id         as varchar(40)) \n"
 					    + "FROM JobHistData jd \n"
 					    + "JOIN JobHistStats jhs       ON jd.job_id = jhs.job_id AND jd.step_id = jhs.step_id \n"
@@ -492,6 +672,26 @@ public class SqlServerJobSchedulerExtractor
 
 			case job_history_errors:
 			{
+				String allExecTimes = "";
+//				String allExecTimes = "        ,allExecTimes  = 'Only available in SQL Server 2017 or later' \n";
+//				DbmsVersionInfo verInfo = _monConn.getDbmsVersionInfo();
+//				if (verInfo != null && verInfo.getLongVersion() >= Ver.ver(2017))
+//				{
+//					allExecTimes = ""
+//						    + "        ,allExecTimes  = STRING_AGG( \n"
+//						    + "                             CAST( \n"
+//						    + "                                 'ts=' + convert(varchar(30), date_executed, 120) \n"
+//						    + "                               + ', wd=' + cast(datename(weekday, date_executed) as char(9)) \n"
+//						    + "                               + ', HMS=' + convert(varchar(10), dateadd(second, secs_duration, '2000-01-01'), 8) \n"
+//						    + "                               + ', sec=' + cast(secs_duration as varchar(20)) \n"
+//						    + "                               + ', status=' + run_status_desc \n"
+//						    + "                               + ';' \n"
+//						    + "                               as varchar(max)) \n"
+//						    + "                           ,char(10) \n"
+//						    + "                         ) WITHIN GROUP (ORDER BY date_executed) \n"
+//							;
+//				}
+				
 				String searchErrorMessage      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_search_errorMessage, DEFAULT_search_errorMessage);
 				String sql_caseWhenMessageLike = "";
 				String sql_whereMessageLike    = "";
@@ -519,9 +719,9 @@ public class SqlServerJobSchedulerExtractor
 					    + "        ,job_id \n"
 					    + "        ,run_status_desc = \n"
 					    + "            CASE \n"
+					    + "                WHEN run_status = 0 THEN 'FAILED' \n"
 					    + "                WHEN message like '%![SQLSTATE %' ESCAPE '!' THEN 'WARNING' \n"
 					    + sql_caseWhenMessageLike
-					    + "                WHEN run_status = 0 THEN 'FAILED' \n"
 					    + "                WHEN run_status = 1 THEN 'SUCCESS' \n"
 					    + "                WHEN run_status = 2 THEN 'RETRY' \n"
 					    + "                WHEN run_status = 3 THEN 'CANCELED' \n"
@@ -541,11 +741,22 @@ public class SqlServerJobSchedulerExtractor
 					    + "       OR message like '%![SQLSTATE %' ESCAPE '!' /* Escape the '[' character */ \n"
 					    + sql_whereMessageLike
 					    + ") \n"
+//					    + ",JobHistStats AS \n"
+//					    + "( \n"
+//					    + "    SELECT \n"
+//					    + "         job_id \n"
+//					    + "        ,step_id \n"
+//					    + allExecTimes // Note: Only available in 2017 and above... when STRING_AGG was introduced
+//					    + "    FROM JobHistData \n"
+//					    + "    GROUP BY job_id \n"
+//					    + "            ,step_id \n"
+//					    + ") \n"
 					    + "SELECT \n"
 					    + "     execTime = jd.date_executed \n"
 					    + "    ,JobName = j.name \n"
 					    + "    ,jd.step_name \n"
 					    + "    ,jd.step_id \n"
+					    + allExecTimes
 					    + "    ,s.subsystem \n"
 					    + "    ,jd.run_status_desc \n"
 					    + "    ,jd.retries_attempted \n"
@@ -554,6 +765,7 @@ public class SqlServerJobSchedulerExtractor
 					    + "    ,jd.message \n"
 						+ "    ,job_id = cast(jd.job_id as varchar(40)) \n"
 					    + "FROM JobHistData jd \n"
+//					    + "JOIN JobHistStats jhs       ON jd.job_id = jhs.job_id AND jd.step_id = jhs.step_id \n"
 					    + "JOIN msdb.dbo.sysjobs j     ON jd.job_id = j.job_id \n"
 					    + "JOIN msdb.dbo.sysjobsteps s ON jd.job_id = s.job_id AND jd.step_id = s.step_id \n"
 					    + "WHERE jd.date_executed >= @periodStartTime \n"
@@ -598,6 +810,7 @@ public class SqlServerJobSchedulerExtractor
 			transferTable(true, SqlAgentInfo.sysjobhistory);
 
 			// Transfer tables (using intermediate in-memory storage)
+			transferTable(false, SqlAgentInfo.job_history_overview_all);
 			transferTable(false, SqlAgentInfo.job_history_overview);
 			transferTable(false, SqlAgentInfo.job_history_outliers);
 			transferTable(false, SqlAgentInfo.job_history_errors);
@@ -1076,6 +1289,9 @@ public class SqlServerJobSchedulerExtractor
 		case sysjobhistory:
 			break;
 			
+		case job_history_overview_all:
+			break;
+
 		case job_history_overview:
 			break;
 
@@ -1156,6 +1372,9 @@ public class SqlServerJobSchedulerExtractor
 
 				sql = pcsConn.quotifySqlString("select * from [" + PCS_SCHEMA_NAME + "].[" + SqlAgentInfo.sysjobhistory + "]"); 
 				System.out.println(ResultSetTableModel.executeQuery(pcsConn, sql, SqlAgentInfo.sysjobhistory.toString()).toAsciiTableString());
+
+				sql = pcsConn.quotifySqlString("select * from [" + PCS_SCHEMA_NAME + "].[" + SqlAgentInfo.job_history_overview_all + "]"); 
+				System.out.println(ResultSetTableModel.executeQuery(pcsConn, sql, SqlAgentInfo.job_history_overview_all.toString()).toAsciiTableString());
 
 				sql = pcsConn.quotifySqlString("select * from [" + PCS_SCHEMA_NAME + "].[" + SqlAgentInfo.job_history_overview + "]"); 
 				System.out.println(ResultSetTableModel.executeQuery(pcsConn, sql, SqlAgentInfo.job_history_overview.toString()).toAsciiTableString());

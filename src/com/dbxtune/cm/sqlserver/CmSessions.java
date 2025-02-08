@@ -165,7 +165,7 @@ extends CountersModel
 
 	public CmSessions(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -229,6 +229,7 @@ extends CountersModel
 			mtd.addColumn("CmSessions",  "StmntStart",                           "<html>If it's a Stored Proc: What's the <i>offset</i> in the procedure (not line number), but <i>character position</i> </html>");
 			mtd.addColumn("CmSessions",  "exec_start_time",                      "<html>The 'start_time' column from table 'dm_exec_requests'...<br>Timestamp when the request arrived.</html>");
 			mtd.addColumn("CmSessions",  "ExecTimeInMs",                         "<html>How long has this been executed for (in milliseconds)</html>");
+			mtd.addColumn("CmSessions",  "ExecTimeHms",                          "<html>Same as 'ExecTimeInMs' but more readable</html>");
 			mtd.addColumn("CmSessions",  "total_reads",                          "<html>The 'reads' column from table 'dm_exec_sessions'...<br>Number of reads performed, by requests in this session, during this session.</html>");
 			mtd.addColumn("CmSessions",  "total_writes",                         "<html>The 'writes' column from table 'dm_exec_sessions'...<br>Number of writes performed, by requests in this session, during this session.</html>");
 			mtd.addColumn("CmSessions",  "total_logical_reads",                  "<html>The 'logical_reads' column from table 'dm_exec_sessions'...<br>Number of logical reads that have been performed on the session.</html>");
@@ -422,6 +423,7 @@ extends CountersModel
 				+ "    ,StmntStart      = er.statement_start_offset \n"
 			    + "    ,exec_start_time = er.start_time \n"
 			    + "    ,ExecTimeInMs    = CASE WHEN datediff(day, er.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, er.start_time, getdate()) END \n"
+			    + "    ,ExecTimeHms     = CAST('' as varchar(20)) \n"
 			    + "    ,es.cpu_time                       -- DIFF CALC \n"
 			    + "    ,es.memory_usage                   -- DIFF CALC ?????? (or add another column so we can see both) \n"
 			    + "    ,es.total_scheduled_time           -- DIFF \n"
@@ -617,6 +619,9 @@ extends CountersModel
 		int pos_BlockingSPID       = newSample.findColumn("blocking_session_id");
 		int pos_BlockingOtherSpids = newSample.findColumn("BlockingOtherSpids");
 		
+		int pos_ExecTimeInMs       = newSample.findColumn("ExecTimeInMs");
+		int pos_ExecTimeHms        = newSample.findColumn("ExecTimeHms");
+
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
 		{
@@ -663,6 +668,17 @@ extends CountersModel
 						newSample.setValueAt(spaceInfo.get_internal_objects_dealloc_mb()     , rowId, "tmp_internal_objects_dealloc_mb");
 					}
 				}
+			}
+
+			// set: "ExecTimeHms"
+			if (pos_ExecTimeInMs != -1 && pos_ExecTimeHms != -1)
+			{
+				int ExecTimeInMs = newSample.getValueAsInteger(rowId, pos_ExecTimeInMs, 0);
+
+				String newValue_ExecTimeHms = TimeUtils.msToTimeStrLong(ExecTimeInMs);
+
+				// Set value
+				newSample.setValueAt(newValue_ExecTimeHms, rowId, pos_ExecTimeHms);
 			}
 		}
 	}

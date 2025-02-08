@@ -20,19 +20,27 @@
  ******************************************************************************/
 package com.dbxtune.hostmon;
 
+import java.lang.invoke.MethodHandles;
+import java.sql.Timestamp;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.dbxtune.cm.CounterTableModel;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.TimeUtils;
 
 
 public class OsTable
 extends CounterTableModel
 //implements ResultSet
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long serialVersionUID = 1L;
 
 	/** Column description of the table */
@@ -287,6 +295,373 @@ extends CounterTableModel
 	//---------------------------------------------------------
 
 
+	//----------------------------------------------------------------------------------
+	//-- getValueAsString
+	//----------------------------------------------------------------------------------
+	public String getValueAsString (int    rowId, int    colPos)                          { Object o = getValueAsObject     (rowId, colPos);  return (o==null)?"":o.toString(); }
+	public String getValueAsString (int    rowId, String colname)                         { Object o = getValueAsObject     (rowId, colname, true); return (o==null)?"":o.toString(); }
+	public String getValueAsString (int    rowId, String colname, boolean cs)             { Object o = getValueAsObject     (rowId, colname,   cs); return (o==null)?"":o.toString(); }
+//	public String getValueAsString (String pkStr, String colname)                         { Object o = getValueAsObject     (pkStr, colname, true); return (o==null)?"":o.toString(); }
+//	public String getValueAsString (String pkStr, String colname, boolean cs)             { Object o = getValueAsObject     (pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsObject
+	//----------------------------------------------------------------------------------
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, int colId)
+	{
+		return getValueAsObject(rowId, colId, null);
+	}
+
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, int colId, Object def)
+	{
+		if (colId < 0 || colId > getColumnCount())
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getValue: column id " + colId + " is out of range. column Count is " + getColumnCount());
+			return null;
+		}
+		if (getRowCount() <= rowId)
+			return null;
+
+		return getValueAt(rowId, colId);
+	}
+
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsObject(rowId, colname, caseSensitive, null);
+	}
+
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	public Object getValueAsObject(int rowId, String colname, boolean caseSensitive, Object def)
+	{
+		int idCol = findColumn(colname, caseSensitive);
+		if (idCol == -1)
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getValue: Can't find the column '" + colname + "'.");
+			return null;
+		}
+		if (getRowCount() <= rowId)
+			return null;
+
+		return getValueAt(rowId, idCol);
+	}
+
+	// 
+	public Object getValueAsObject(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsObject(pkStr, colname, caseSensitive, null);
+	}
+
+	/**
+	 *  Return the value of a cell by ROWID (rowId, colId)
+	 *  rowId starts at 0
+	 *  colId starts at 
+	 *  NOTE: note tested (2007-07-13)
+	 */
+	// Return the value of a cell by keyVal, (keyVal, ColumnName)
+	public Object getValueAsObject(String pkStr, String colname, boolean caseSensitive, Object def)
+	{
+		// Get the rowId, if not found, return null
+		int rowId = getRowNumberForPkValue(pkStr);
+		if (rowId < 0)
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
+			return def;
+		}
+
+		// Got object for the RowID and column name
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
+			return def;
+		}
+
+		return o;
+	}
+
+
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsDouble
+	//----------------------------------------------------------------------------------
+	
+	// 
+	public Double getValueAsDouble(int rowId, int colPos)
+	{
+		return getValueAsDouble(rowId, colPos, null);
+	}
+
+	// 
+	public Double getValueAsDouble(int rowId, int colPos, Double def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Double.valueOf(((Number) o).doubleValue());
+		else
+			return Double.valueOf(Double.parseDouble(o.toString()));
+	}
+
+	// 
+	public Double getValueAsDouble(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsDouble(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Double getValueAsDouble(int rowId, String colname, boolean caseSensitive, Double def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Double.valueOf(((Number) o).doubleValue());
+		else
+			return Double.valueOf(Double.parseDouble(o.toString()));
+	}
+
+	// 
+	public Double getValueAsDouble(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsDouble(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Double getValueAsDouble(String pkStr, String colname, boolean caseSensitive, Double def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Double.valueOf(((Number) o).doubleValue());
+		else
+			return Double.valueOf(Double.parseDouble(o.toString()));
+	}
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsInteger
+	//----------------------------------------------------------------------------------
+	
+	// 
+	public Integer getValueAsInteger(int rowId, int colPos)
+	{
+		return getValueAsInteger(rowId, colPos, null);
+	}
+
+	// 
+	public Integer getValueAsInteger(int rowId, int colPos, Integer def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Integer.valueOf(((Number) o).intValue());
+		else
+			return Integer.valueOf(Integer.parseInt(o.toString()));
+	}
+
+	// 
+	public Integer getValueAsInteger(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsInteger(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Integer getValueAsInteger(int rowId, String colname, boolean caseSensitive, Integer def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Integer.valueOf(((Number) o).intValue());
+		else
+			return Integer.valueOf(Integer.parseInt(o.toString()));
+	}
+
+	// 
+	public Integer getValueAsInteger(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsInteger(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Integer getValueAsInteger(String pkStr, String colname, boolean caseSensitive, Integer def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Integer.valueOf(((Number) o).intValue());
+		else
+			return Integer.valueOf(Integer.parseInt(o.toString()));
+	}
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsLong
+	//----------------------------------------------------------------------------------
+	
+	// 
+	public Long getValueAsLong(int rowId, int colPos)
+	{
+		return getValueAsLong(rowId, colPos, null);
+	}
+
+	// 
+	public Long getValueAsLong(int rowId, int colPos, Long def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Long.valueOf(((Number) o).longValue());
+		else
+			return Long.valueOf(Long.parseLong(o.toString()));
+	}
+
+	// 
+	public Long getValueAsLong(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsLong(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Long getValueAsLong(int rowId, String colname, boolean caseSensitive, Long def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Long.valueOf(((Number) o).longValue());
+		else
+			return Long.valueOf(Long.parseLong(o.toString()));
+	}
+
+	// 
+	public Long getValueAsLong(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsLong(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Long getValueAsLong(String pkStr, String colname, boolean caseSensitive, Long def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Number)
+			return Long.valueOf(((Number) o).longValue());
+		else
+			return Long.valueOf(Long.parseLong(o.toString()));
+	}
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsTimestamp
+	//----------------------------------------------------------------------------------
+	
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, int colPos)
+	{
+		return getValueAsTimestamp(rowId, colPos, null);
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, int colPos, Timestamp def)
+	{
+		Object o = getValueAsObject(rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try { 
+				return TimeUtils.parseToTimestamp(o.toString()); 
+			} catch(ParseException ex) {
+				_logger.warn("Problems parsing value '" + o + "' for rowId=" + rowId + ", colPos=" + colPos + ". Returning default value: " + def);
+				return def;
+			}
+		}
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsTimestamp(rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(int rowId, String colname, boolean caseSensitive, Timestamp def)
+	{
+		Object o = getValueAsObject(rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try { 
+				return TimeUtils.parseToTimestamp(o.toString()); 
+			} catch(ParseException ex) {
+				_logger.warn("Problems parsing value '" + o + "' for rowId=" + rowId + ", colname=" + colname + ". Returning default value: " + def);
+				return def;
+			}
+		}
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsTimestamp(pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	public Timestamp getValueAsTimestamp(String pkStr, String colname, boolean caseSensitive, Timestamp def)
+	{
+		Object o = getValueAsObject(pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try { 
+				return TimeUtils.parseToTimestamp(o.toString()); 
+			} catch(ParseException ex) {
+				_logger.warn("Problems parsing value '" + o + "' for pkStr=" + pkStr + ", colname=" + colname + ". Returning default value: " + def);
+				return def;
+			}
+		}
+	}
+
+
+	//----------------------------------------------------------------------------------
+	//-- getValueAsXXX
+	//----------------------------------------------------------------------------------
 	
 	
 	

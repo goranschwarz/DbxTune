@@ -1650,6 +1650,14 @@ public class SwingUtils
 
 	public static String tableToHtmlString(TableModel tm)
 	{
+		return tableToHtmlString(tm, null, -1);
+	}
+	public static String tableToHtmlString(TableModel tm, int firstXRows)
+	{
+		return tableToHtmlString(tm, null, firstXRows);
+	}
+	public static String tableToHtmlString(TableModel tm, String className, int firstXRows)
+	{
 		if (tm == null)
 		{
 			_logger.warn("tableToHtmlString(TableModel tm): The passed TableModel is null, returning '' (blank)");
@@ -1660,7 +1668,14 @@ public class SwingUtils
 		int rows = tm.getRowCount();
 		int cols = tm.getColumnCount();
 
-		sb.append("<TABLE>\n");
+		if (firstXRows > 0)
+			rows = Math.min(rows, firstXRows);
+		
+		String tableAttr = "";
+		if (StringUtil.hasValue(className))
+			tableAttr = " class='" + className + "'";
+
+		sb.append("<TABLE" + tableAttr + ">\n");
 
 		// Headers
 		sb.append("  <TR>");
@@ -1683,11 +1698,26 @@ public class SwingUtils
 
 	public static String tableToHtmlString(JTable table)
 	{
+		return tableToHtmlString(table, null, -1);
+	}
+	public static String tableToHtmlString(JTable table, int firstXRows)
+	{
+		return tableToHtmlString(table, null, firstXRows);
+	}
+	public static String tableToHtmlString(JTable table, String className, int firstXRows)
+	{
 		StringBuilder sb = new StringBuilder();
 		int rows = table.getRowCount();
 		int cols = table.getColumnCount();
 
-		sb.append("<TABLE>\n");
+		if (firstXRows > 0)
+			rows = Math.min(rows, firstXRows);
+		
+		String tableAttr = "";
+		if (StringUtil.hasValue(className))
+			tableAttr = " class='" + className + "'";
+
+		sb.append("<TABLE" + tableAttr + ">\n");
 
 		// Headers
 		sb.append("  <TR>");

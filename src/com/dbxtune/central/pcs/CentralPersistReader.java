@@ -505,6 +505,7 @@ public class CentralPersistReader
 					+ " ," + lq + "category"                    + rq
 					+ " ," + lq + "severity"                    + rq
 					+ " ," + lq + "state"                       + rq
+					+ " ," + lq + "alarmId"                     + rq
 					+ " ," + lq + "repeatCnt"                   + rq
 					+ " ," + lq + "duration"                    + rq
 					+ " ," + lq + "alarmDuration"               + rq
@@ -547,21 +548,22 @@ public class CentralPersistReader
 						rs.getString   (7),  // "category"               
 						rs.getString   (8),  // "severity"               
 						rs.getString   (9),  // "state"                  
-						rs.getInt      (10), // "repeatCnt"              
-						rs.getString   (11), // "duration"               
-						rs.getString   (12), // "alarmDuration"               
-						rs.getString   (13), // "fullDuration"               
-						rs.getInt      (14), // "fullDurationAdjustmentInSec"               
-						rs.getTimestamp(15), // "createTime"             
-						rs.getTimestamp(16), // "cancelTime"             
-						rs.getInt      (17), // "timeToLive"             
-						rs.getString   (18), // "threshold"              
-						rs.getString   (19), // "data"                   
-						rs.getString   (20), // "lastData"               
-						rs.getString   (21), // "description"            
-						rs.getString   (22), // "lastDescription"        
-						rs.getString   (23), // "extendedDescription"    
-						rs.getString   (24)  // "lastExtendedDescription"
+						rs.getString   (10), // "alarmId"                  
+						rs.getInt      (11), // "repeatCnt"              
+						rs.getString   (12), // "duration"               
+						rs.getString   (13), // "alarmDuration"               
+						rs.getString   (14), // "fullDuration"               
+						rs.getInt      (15), // "fullDurationAdjustmentInSec"               
+						rs.getTimestamp(16), // "createTime"             
+						rs.getTimestamp(17), // "cancelTime"             
+						rs.getInt      (18), // "timeToLive"             
+						rs.getString   (19), // "threshold"              
+						rs.getString   (10), // "data"                   
+						rs.getString   (21), // "lastData"               
+						rs.getString   (22), // "description"            
+						rs.getString   (23), // "lastDescription"        
+						rs.getString   (24), // "extendedDescription"    
+						rs.getString   (25)  // "lastExtendedDescription"
 						);
 					list.add(a);
 				}
@@ -739,6 +741,7 @@ public class CentralPersistReader
 					+ " ," + lq + "category"                    + rq
 					+ " ," + lq + "severity"                    + rq
 					+ " ," + lq + "state"                       + rq
+					+ " ," + lq + "alarmId"                     + rq
 					+ " ," + lq + "repeatCnt"                   + rq
 					+ " ," + lq + "duration"                    + rq
 					+ " ," + lq + "alarmDuration"               + rq
@@ -786,21 +789,22 @@ public class CentralPersistReader
 						rs.getString   (11), // category                            
 						rs.getString   (12), // severity                            
 						rs.getString   (13), // state                               
-						rs.getInt      (14), // repeatCnt                           
-						rs.getString   (15), // duration                            
-						rs.getString   (16), // alarmDuration                       
-						rs.getString   (17), // fullDuration                        
-						rs.getInt      (18), // fullDurationAdjustmentInSec         
-						rs.getTimestamp(19), // createTime                          
-						rs.getTimestamp(20), // cancelTime                          
-						rs.getInt      (21), // timeToLive                          
-						rs.getString   (22), // threshold                           
-						rs.getString   (23), // data                                
-						rs.getString   (24), // lastData                            
-						rs.getString   (25), // description                         
-						rs.getString   (26), // lastDescription                     
-						rs.getString   (27), // extendedDescription                 
-						rs.getString   (28)  // lastExtendedDescription             
+						rs.getString   (14), // alarmId                               
+						rs.getInt      (15), // repeatCnt                           
+						rs.getString   (16), // duration                            
+						rs.getString   (17), // alarmDuration                       
+						rs.getString   (18), // fullDuration                        
+						rs.getInt      (19), // fullDurationAdjustmentInSec         
+						rs.getTimestamp(20), // createTime                          
+						rs.getTimestamp(21), // cancelTime                          
+						rs.getInt      (22), // timeToLive                          
+						rs.getString   (23), // threshold                           
+						rs.getString   (24), // data                                
+						rs.getString   (25), // lastData                            
+						rs.getString   (26), // description                         
+						rs.getString   (27), // lastDescription                     
+						rs.getString   (28), // extendedDescription                 
+						rs.getString   (29)  // lastExtendedDescription             
 						);
 					list.add(a);
 				}
@@ -4700,7 +4704,7 @@ public class CentralPersistReader
 			}
 			if (rowc != 1)
 			{
-				throw new SQLException("Expected to find 1 row, but "+rowc+" was retuned using SQL: "+sqlGet);
+				throw new SQLException("Expected to find 1 row, but "+rowc+" was returned using SQL: "+sqlGet);
 			}
 			
 			int newStatus = 0;

@@ -74,7 +74,8 @@ public class CountersModelTest_Aggregation
 		String[] diffCols = new String[]{"C1_SUM", "C2_SUM", "C3_AVG", "C4_MIN", "C5_MAX"};
 		
 		_cm = new CountersModel(
-				cc,     //counterController, 
+				cc,     // counterController, 
+				null,   // guiController
 				"DummyCmTest", // name, 
 				null,     // groupName, 
 				"select * from T1", 

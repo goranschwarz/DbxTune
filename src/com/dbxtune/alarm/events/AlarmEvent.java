@@ -25,11 +25,13 @@ import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
@@ -42,6 +44,9 @@ extends Throwable
 
 	private static final long serialVersionUID = 1L;
 
+	public static final String PROPKEY_AlarmDbxCentralBaseUrl = "alarm.dbxCentral.base.url";
+	public static final String DEFAULT_AlarmDbxCentralBaseUrl = ""; // NO DEFAULT
+	
 	public static String SERVICE_TYPE_GENERIC   = "GENERIC"; // probably only used in: AlarmEventCommunicationTimeout
 	public static String SERVICE_TYPE_ASE       = "ASE";
 	public static String SERVICE_TYPE_RS        = "REPSERVER";
@@ -160,6 +165,9 @@ extends Throwable
 	protected Object       _data                    = null;
 	protected Object       _reRaiseData             = null;
 
+	// This will be created at "RAISE" (on "RE-RAISE" or "CANCEL" it will keep it's original UUID)
+	protected UUID         _alarmUuid               = null;
+
 //	protected long         _initialCrTime       = -1;
 	protected int          _reRaiseCount        = 0;
 	protected long         _reRaiseTime         = -1;
@@ -178,6 +186,64 @@ extends Throwable
 	/** How many Active Alarms to we have in the AlarmHandler */
 	public int  getActiveAlarmCount()          { return _activeAlarmCount; }
 	public void setActiveAlarmCount(int count) { _activeAlarmCount = count; }
+
+	public UUID getAlarmId()            { return _alarmUuid; }
+	public void setAlarmId(String uuid) { _alarmUuid = UUID.fromString(uuid); }
+	public void setAlarmId(UUID uuid)   { _alarmUuid = uuid; }
+
+	/** 
+	 * Get URL to view the current Alarm Period in DbxCentral
+	 * @return a URL String
+	 */
+	public String getDbxCentralUrl()
+	{
+		long m1  = 60 * 1000; // 1 minutes in milliseconds. 
+		long m5  = 5  * m1;   // 5 minutes in milliseconds. 
+		long m15 = 15 * m1;   // 15 minutes in milliseconds. 
+
+		String dbxCentralBaseUrl = Configuration.getCombinedConfiguration().getProperty(PROPKEY_AlarmDbxCentralBaseUrl, DEFAULT_AlarmDbxCentralBaseUrl);
+
+		String srvName           = private_getServerName();
+		String startTime         = TimeUtils.toStringYmdHms(getCrTime() - m15); 
+		String endTime           = TimeUtils.toStringYmdHms(getCrTime() + m15);
+		String markTime          = TimeUtils.toStringYmdHms(getCrTime());
+		String markStartTime     = TimeUtils.toStringYmdHms(getCrTime());
+		String markEndTime       = TimeUtils.toStringYmdHms(getCrTime() + m5); // Well add at least 5 minute... to endTime (cancel will OVERRIDE) 
+
+		// Typically in: CANCEL
+		if ( ! isActive() )
+		{
+			endTime     = TimeUtils.toStringYmdHms(getCancelTime() + m15);
+			markEndTime = TimeUtils.toStringYmdHms(getCancelTime());
+		}
+
+		// Base URL
+		if (StringUtil.isNullOrBlank(dbxCentralBaseUrl))
+		{
+			dbxCentralBaseUrl = DailySummaryReportAbstract.getDbxCentralBaseUrl();
+		}
+		
+		// Or should we "remove": 'markStartTime' and 'markEndTime' if the Alarm is ACTIVE ???
+		
+		String url = ""
+				+ dbxCentralBaseUrl + "/graph.html"
+				+ "?subscribe=false"
+				+ "&sessionName="   + srvName
+				+ "&startTime="     + startTime
+				+ "&endTime="       + endTime
+				+ "&markTime="      + markTime
+				+ "&markStartTime=" + markStartTime
+				+ "&markEndTime="   + markEndTime
+				;
+
+		return url;
+	}
+	private String private_getServerName()
+	{
+		// TODO: The the collectors ServerName from somewhere else than 'getServiceName()', ServiceName may NOT hold the server (for instance in RepServer WS, it holds the LDS.dbname)
+		String srvName = getServiceName();
+		return srvName;
+	}
 	
 	/**
 	 * If Writer/Sender should <b>always</b> send this alarm<br>
@@ -210,9 +276,11 @@ extends Throwable
 			return _cancelTime - _crTime;
 	}
 
-	public int  getRaiseDelayInSec()        { return _raiseDelayInSec; }  
-	public void setRaiseDelayInSec(int sec) { _raiseDelayInSec = sec;  }  
-	public boolean hasRaiseDelay()          { return _raiseDelayInSec > 0; }
+	public int  getRaiseDelayInSec()            { return _raiseDelayInSec; }  
+	public void setRaiseDelayInSec(int sec)     { _raiseDelayInSec = sec;  }  
+	public int  getRaiseDelayInMinutes()        { return _raiseDelayInSec / 60; }  
+	public void setRaiseDelayInMinutes(int min) { _raiseDelayInSec = min * 60;  }  
+	public boolean hasRaiseDelay()              { return _raiseDelayInSec > 0; }
 	public boolean hasRaiseDelayExpired()
 	{
 		if (_raiseDelayInSec <= 0)
@@ -476,6 +544,9 @@ extends Throwable
 
 		// Get UserDefined: 'raiseDelay' properties
 		_raiseDelayInSec = getDefaultProperty_raiseDelay();
+		
+		// Assign a ID for the Alarm (possibly use Time Based UUID instead of random) 
+		_alarmUuid = UUID.randomUUID();
 	}
 
 	/** get default property for 'category', override this to set any new default that is class specific, or use property 'className.category=CategoryEnumStr' */

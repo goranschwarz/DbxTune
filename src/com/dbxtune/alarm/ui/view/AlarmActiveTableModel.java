@@ -38,7 +38,7 @@ implements ITableTooltip
 	private static final long serialVersionUID = 1L;
 
 //	private static final String[] TAB_HEADER = {"AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "crTime", "reRaiseTime", "timeToLive", "data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
-	private static final String[] TAB_HEADER = {"alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "crTime", "reRaiseTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
+	private static final String[] TAB_HEADER = {"alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "crTime", "reRaiseTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
 	public static final int TAB_POS_ALARM_CLASS               = 0;
 	public static final int TAB_POS_SERVICE_TYPE              = 1;
 	public static final int TAB_POS_SERVICE_NAME              = 2;
@@ -47,19 +47,20 @@ implements ITableTooltip
 	public static final int TAB_POS_CATEGORY                  = 5;
 	public static final int TAB_POS_SEVERITY                  = 6;
 	public static final int TAB_POS_STATE                     = 7;
-	public static final int TAB_POS_REPEAT_COUNT              = 8;
-	public static final int TAB_POS_ALARM_DURATION            = 9;
-	public static final int TAB_POS_FULL_DURATION             = 10;
-	public static final int TAB_POS_FULL_DURATION_ADJ_IN_SEC  = 11;
-	public static final int TAB_POS_CR_TIME                   = 12;
-	public static final int TAB_POS_RE_RAISE_TIME             = 13;
-	public static final int TAB_POS_TIME_TO_LIVE              = 14;
-	public static final int TAB_POS_DATA                      = 15;
-	public static final int TAB_POS_LAST_DATA                 = 16;
-	public static final int TAB_POS_DESCRIPTION               = 17;
-	public static final int TAB_POS_LAST_DESCRIPTION          = 18;
-	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 19;
-	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 20;
+	public static final int TAB_POS_ALARM_ID                  = 8;
+	public static final int TAB_POS_REPEAT_COUNT              = 9;
+	public static final int TAB_POS_ALARM_DURATION            = 10;
+	public static final int TAB_POS_FULL_DURATION             = 11;
+	public static final int TAB_POS_FULL_DURATION_ADJ_IN_SEC  = 12;
+	public static final int TAB_POS_CR_TIME                   = 13;
+	public static final int TAB_POS_RE_RAISE_TIME             = 14;
+	public static final int TAB_POS_TIME_TO_LIVE              = 15;
+	public static final int TAB_POS_DATA                      = 16;
+	public static final int TAB_POS_LAST_DATA                 = 17;
+	public static final int TAB_POS_DESCRIPTION               = 18;
+	public static final int TAB_POS_LAST_DESCRIPTION          = 19;
+	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 20;
+	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 21;
 
 	@Override
 	public int getColumnCount()
@@ -119,6 +120,7 @@ implements ITableTooltip
 			case TAB_POS_CATEGORY                  : return ae.getCategory();
 			case TAB_POS_SEVERITY                  : return ae.getSeverity();
 			case TAB_POS_STATE                     : return ae.getState();
+			case TAB_POS_ALARM_ID                  : return ae.getAlarmId();
 			case TAB_POS_REPEAT_COUNT              : return ae.getReRaiseCount();
 			case TAB_POS_ALARM_DURATION            : return ae.getAlarmDuration();
 			case TAB_POS_FULL_DURATION             : return ae.getFullDuration();

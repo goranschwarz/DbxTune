@@ -34,7 +34,7 @@ extends AlarmEvent
 	 * @param dbname
 	 * @param threshold 
 	 */
-	public AlarmEventLastBackupFailed(CountersModel cm, String dbname, int threshold)
+	public AlarmEventLastBackupFailed(CountersModel cm, String dbname, String type, int threshold)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -44,7 +44,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Last Backup FAILED in Server '" + cm.getServerName() + "' and dbname '" + dbname + "'. (threshold="+threshold+")",
+				"Last " + type + " Backup FAILED in Server '" + cm.getServerName() + "' and dbname '" + dbname + "'. (threshold="+threshold+")",
 				threshold
 				);
 

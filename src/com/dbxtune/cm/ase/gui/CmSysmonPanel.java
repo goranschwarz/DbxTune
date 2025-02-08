@@ -88,7 +88,8 @@ extends TabularCntrPanel
 		
 //		if ( ! isMonConnected() )
 //			return;
-		CountersModel cmSpinlockSum = CounterController.getInstance().getCmByName(CmSpinlockSum.CM_NAME);
+//		CountersModel cmSpinlockSum = CounterController.getInstance().getCmByName(CmSpinlockSum.CM_NAME);
+		CountersModel cmSpinlockSum = getCm().getCounterController().getCmByName(CmSpinlockSum.CM_NAME);
 		if ( MainFrame.isOfflineConnected() )
 		{
 			if (cmSpinlockSum != null)

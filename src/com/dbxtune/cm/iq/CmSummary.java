@@ -128,7 +128,7 @@ extends CmSummaryAbstract
 
 	public CmSummary(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -238,7 +238,8 @@ extends CmSummaryAbstract
 		CmSummaryPanel summaryPanel = new CmSummaryPanel(this);
 
 		// THIS IS THE SUMMARY CM, so set this
-		CounterController.getInstance().setSummaryPanel( summaryPanel );
+//		CounterController.getInstance().setSummaryPanel( summaryPanel );
+		getCounterController().setSummaryPanel( summaryPanel );
 
 		// add listener, so that the GUI gets updated when data changes in the CM
 		addTableModelListener( summaryPanel );
@@ -437,7 +438,8 @@ extends CmSummaryAbstract
 		if (GRAPH_NAME_REQUESTS.equals(tgdp.getName()))
 		{	
 			Double[] arr = new Double[4];
-			CountersModel _cm         = CounterController.getInstance().getCmByName(CmIqStatistics .CM_NAME);
+//			CountersModel _cm         = CounterController.getInstance().getCmByName(CmIqStatistics .CM_NAME);
+			CountersModel _cm         = getCounterController().getCmByName(CmIqStatistics .CM_NAME);
 
 			arr[0] = _cm.getAbsValueAsDouble("ConnectionsActive",                  "stat_value");
 			arr[1] = _cm.getAbsValueAsDouble("OperationsWaiting",                  "stat_value");

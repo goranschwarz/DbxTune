@@ -438,11 +438,52 @@ implements Serializable
 			if (TableExtraInfo.IndexExtraInfoDescription.equals(ei.getName())) continue;
 			if (TableExtraInfo.IndexIncludeColumns      .equals(ei.getName())) continue;
 
-			sb.append("  <TR><TD nowrap>&nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;</TD><TD nowrap>").append("<B>").append(ei.getDescriptiveName()).append("</B> </TD> <TD nowrap>&nbsp;").append(ei.getStringValue()).append("&nbsp;</TD> <TD nowrap><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></TD></TR>");
+			sb.append("  <TR><TD nowrap>&nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;</TD>" +
+			                "<TD nowrap>").append("<B>").append(ei.getDescriptiveName()).append("</B> </TD> " +
+			                "<TD nowrap>&nbsp;").append(ei.getStringValue()).append("&nbsp;</TD> " + 
+			                "<TD nowrap><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></TD> " +
+			            "</TR>");
 		}
 		sb.append("</table>");
 
 		sb.append("<HR>");
+
+		// For SQL Server, lets print some extra information about HEAP Tables
+		if (DbUtils.isProductName(_refreshedWithDbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
+		{
+			TableExtraInfo indexInfo = _extraInfo.get(TableExtraInfo.IndexExtraInfoDescription);
+			if (indexInfo != null)
+			{
+				sb.append("<B>Statistical information on: Heap Table or Indexes</B><BR>");
+				sb.append("&emsp; &bull;&nbsp; Note: <code>[Usage]</code> Fields are fetched from <code>dm_db_index_usage_stats</code><BR>");
+				sb.append("&emsp; &bull;&nbsp; Note: <code>[OP-*] </code> Fields are fetched from <code>dm_db_index_operational_stats</code><BR>");
+				sb.append("&emsp; &bull;&nbsp; Counters are cleared on server restart. You also need authorization (VIEW SERVER|DATABASE STATE) <BR>");
+				sb.append("<HR>");
+//				sb.append("<BR>");
+				
+				Map<String, String> indexInfoMap = (Map) indexInfo.getValue();
+				String heapInfo = indexInfoMap.get("HEAP");
+				if (heapInfo != null)
+				{
+					sb.append("<B>Heap Table Information</B><BR>");
+					sb.append("<UL>");
+					sb.append("<LI>");
+					sb.append("<CODE>");
+					sb.append("<FONT color='green'>");
+					if (heapInfo.startsWith("<br>") || heapInfo.startsWith("<BR>"))
+						heapInfo = heapInfo.substring("<br>".length());
+					if (heapInfo.startsWith("type=HEAP, "))
+						heapInfo = heapInfo.substring("type=HEAP, ".length());
+					sb.append(heapInfo);
+					sb.append("</FONT> ");
+					sb.append("</CODE>");
+					sb.append("</LI>");
+					sb.append("</UL>");
+					sb.append("<HR>");
+				}
+			}
+		}
+		
 		return sb.toString();
 	}
 	// Generate HTML index descriptions
@@ -498,6 +539,7 @@ implements Serializable
 		}
 
 		StringBuilder sb = new StringBuilder();
+
 		sb.append("<UL>\n");
 		for (Index ind : indexes.values())
 			sb.append("  <LI><CODE>").append(ind.getDdl()).append("</CODE></LI>\n");

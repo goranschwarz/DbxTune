@@ -450,6 +450,9 @@ public class ExecutionPlanCollection
 	 */
 	public void cleanupMap(String srcColDbname, String srcColName)
 	{
+		if (_rstm == null) // If this wasn't here I get a NullPointerException in my test environment... (but not sure if we should have this here or not)
+			return;
+
 		// Get ShowPlan for StatementCache entries, and SqlText from the above table
 		Set<PlanKey> planHandleObjects = getPlanHandleObjects(_rstm, srcColDbname, srcColName);
 		

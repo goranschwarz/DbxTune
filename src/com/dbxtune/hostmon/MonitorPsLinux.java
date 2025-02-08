@@ -55,16 +55,24 @@ extends HostMonitor
 			return cmd;
 		
 		int top = Configuration.getCombinedConfiguration().getIntProperty(CmOsPs.PROPKEY_top, CmOsPs.DEFAULT_top);
+		
+		String topProcs = " | head -n " + top;
+
+		if (top <= 0)
+		{
+			topProcs = "";
+		}
+
 
 		// NOTE: 'etimes' is not available in RHEL 6.6 (possible version 6)
 		//       'etimes' was introduced in version 3.3 according to -- https://abi-laboratory.pro/?view=changelog&l=procps-ng&v=3.3.12
 		if ( getUtilVersion() < VersionShort.toInt(3,3,0))
 		{
-			return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,cputime,pmem,pcpu,args --sort=-pcpu | head -n " + top;
+			return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,cputime,pmem,pcpu,args --sort=-pcpu" + topProcs;
 		}
 		else
 		{
-			return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,etimes,cputime,pmem,pcpu,args --sort=-pcpu | head -n " + top;
+			return "ps -e -ww --format pid,ppid,euser,tty,vsz,rss,etimes,cputime,pmem,pcpu,args --sort=-pcpu" + topProcs;
 		}
 
 	}

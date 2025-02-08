@@ -41,6 +41,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.NumberFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -487,6 +488,7 @@ implements Cloneable, ITableTooltip
 	public CountersModel
 	(
 			ICounterController counterController,
+			IGuiController guiController,
 			String       name,             // Name of the Counter Model
 			String       groupName,        // Name of the Group this counter belongs to, can be null
 			String       sql,              // SQL Used to grab a sample from the counter data
@@ -502,7 +504,7 @@ implements Cloneable, ITableTooltip
 			boolean      systemCm
 	)
 	{
-		this(counterController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, 0);
+		this(counterController, guiController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, 0);
 	}
 
 
@@ -525,6 +527,7 @@ implements Cloneable, ITableTooltip
 	public CountersModel
 	(
 			ICounterController counterController,
+			IGuiController guiController,
 			String       name,
 			String       groupName,
 			String       sql,
@@ -555,6 +558,9 @@ implements Cloneable, ITableTooltip
 
 		// Register it at the CounterController
 		setCounterController(counterController);
+		
+		// set the GUI Controller (if any)
+//		setGuiController(guiController); // THIS MUST BE DONE LATER...
 
 		_sqlRequest         = sql;
 		_sqlWhere           = "";
@@ -1001,6 +1007,15 @@ implements Cloneable, ITableTooltip
 			_counterController.addCm(this);
 	}
 	/**
+	 * Set who is responsible for collecting the counters for this CounterModel<br>
+	 * But DO NOT register/add this CM to the internal list of CM's
+	 * @param counterController
+	 */
+	public void setCounterController_withoutAddingCurrentCmToCmList(ICounterController counterController)
+	{
+		_counterController = counterController;
+	}
+	/**
 	 * Get who is responsible for collecting the counters for this CounterModel
 	 * @return counterController
 	 */
@@ -1008,6 +1023,8 @@ implements Cloneable, ITableTooltip
 	{
 		if (_counterController != null)
 			return _counterController;
+
+		_logger.error("LOGGING RUNTIME EXCEPTION... instead of throwing...", new RuntimeException("In CM '" + getName() + "' when calling getCounterController(), the '_counterController' was NOT INITIALIZED"));
 
 		// Remove this, this is just for backward compatibility.
 		return CounterController.getInstance();
@@ -1021,8 +1038,11 @@ implements Cloneable, ITableTooltip
 		if (_counterController != null)
 			return true;
 
-		// Remove this, this is just for backward compatibility.
-		return CounterController.hasInstance();
+		return false;
+//		_logger.error("LOGGING RUNTIME EXCEPTION... instead of throwing...", new RuntimeException("In CM '" + getName() + "' when calling hasCounterController(), the '_counterController' was NOT INITIALIZED"));
+//
+//		// Remove this, this is just for backward compatibility.
+//		return CounterController.hasInstance();
 	}
 
 	/**
@@ -1074,6 +1094,15 @@ implements Cloneable, ITableTooltip
 	public IGuiController getGuiController()
 	{
 		return _guiController;
+	}
+	
+	/**
+	 * Check if we have GUI controller
+	 * @return
+	 */
+	public boolean hasGuiController()
+	{
+		return getGuiController() != null;
 	}
 	
 	/** set Icon Filename which the GUI can use */
@@ -1883,8 +1912,13 @@ implements Cloneable, ITableTooltip
 	 */
 	public GTable.ITableTooltip createToolTipSupplier()
 	{
+		// No need to continue if we DO NOT have a GUI
+		if ( ! hasGuiController() )
+			return null;
+
 		if (hasCounterController())
 			return getCounterController().createCmToolTipSupplier(this);
+
 		return null;
 	}
 
@@ -7696,6 +7730,110 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	}
 
 	//---------------------------------------------------------------------------
+	// Timestamp
+	//---------------------------------------------------------------------------
+	private Timestamp getValueAsTimestamp(int whatData, int rowId, int colPos)
+	{
+		return getValueAsTimestamp(whatData, rowId, colPos, null);
+	}
+
+	// 
+	private synchronized Timestamp getValueAsTimestamp(int whatData, int rowId, int colPos, Timestamp def)
+	{
+		Object o = getValue(whatData, rowId, colPos);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try
+			{
+				SimpleDateFormat sdf = new SimpleDateFormat();
+				java.util.Date date = sdf.parse(o.toString());
+				return new Timestamp(date.getTime());
+			}
+			catch(ParseException e)
+			{
+				try	{ return TimeUtils.parseToTimestampX(o.toString());	}
+				catch(ParseException e2) {}
+				
+				_logger.warn("Problem reading Timestamp value for: whatData=" + whatData + ", rowId=" + rowId + ", colPos='" + colPos + ", value='" + o + "', returning DEFAULT='" + def + "'. Caught: " + e);
+				return def;
+			}
+		}
+	}
+
+	// 
+	private Timestamp getValueAsTimestamp(int whatData, int rowId, String colname, boolean caseSensitive)
+	{
+		return getValueAsTimestamp(whatData, rowId, colname, caseSensitive, null);
+	}
+
+	// 
+	private synchronized Timestamp getValueAsTimestamp(int whatData, int rowId, String colname, boolean caseSensitive, Timestamp def)
+	{
+		Object o = getValue(whatData, rowId, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try
+			{
+				SimpleDateFormat sdf = new SimpleDateFormat();
+				java.util.Date date = sdf.parse(o.toString());
+				return new Timestamp(date.getTime());
+			}
+			catch(ParseException e)
+			{
+				try	{ return TimeUtils.parseToTimestampX(o.toString());	}
+				catch(ParseException e2) {}
+				
+				_logger.warn("Problem reading Timestamp value for: whatData=" + whatData + ", rowId=" + rowId + ", colname='" + colname + ", caseSensitive=" + caseSensitive + ", value='" + o + "', returning DEFAULT='" + def + "'. Caught: " + e);
+				return def;
+			}
+		}
+	}
+
+	private Timestamp getValueAsTimestamp(int whatData, String pkStr, String colname, boolean caseSensitive)
+	{
+		return getValueAsTimestamp(whatData, pkStr, colname, caseSensitive, null);
+	}
+
+	// 
+	private synchronized Timestamp getValueAsTimestamp(int whatData, String pkStr, String colname, boolean caseSensitive, Timestamp def)
+	{
+		Object o = getValue(whatData, pkStr, colname, caseSensitive);
+		if (o == null)
+			return def;
+
+		if (o instanceof Timestamp)
+			return (Timestamp) o;
+		else
+		{
+			try
+			{
+				SimpleDateFormat sdf = new SimpleDateFormat();
+				java.util.Date date = sdf.parse(o.toString());
+				return new Timestamp(date.getTime());
+			}
+			catch(ParseException e)
+			{
+				try	{ return TimeUtils.parseToTimestampX(o.toString());	}
+				catch(ParseException e2) {}
+				
+				_logger.warn("Problem reading Timestamp value for: whatData=" + whatData + ", pkStr=" + pkStr + ", colname='" + colname + ", caseSensitive=" + caseSensitive + ", value='" + o + "', returning DEFAULT='" + def + "'. Caught: " + e);
+				return def;
+			}
+		}
+	}
+
+
+	//---------------------------------------------------------------------------
 	// Value
 	//---------------------------------------------------------------------------
 	// Return the value of a cell by ROWID (rowId, ColumnName)
@@ -8482,6 +8620,17 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public Long   getAbsValueAsLong  (String pkStr, String colname, Long def)                { return getValueAsLong   (DATA_ABS, pkStr, colname, true, def); }
 	public Long   getAbsValueAsLong  (String pkStr, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_ABS, pkStr, colname,   cs, def); }
 	
+	public Timestamp getAbsValueAsTimestamp(int    rowId, int    colPos)                            { return getValueAsTimestamp(DATA_ABS, rowId, colPos);             }
+	public Timestamp getAbsValueAsTimestamp(int    rowId, int    colPos, Timestamp def)             { return getValueAsTimestamp(DATA_ABS, rowId, colPos, def);        }
+	public Timestamp getAbsValueAsTimestamp(int    rowId, String colname)                           { return getValueAsTimestamp(DATA_ABS, rowId, colname, true);      }
+	public Timestamp getAbsValueAsTimestamp(int    rowId, String colname, boolean cs)               { return getValueAsTimestamp(DATA_ABS, rowId, colname,   cs);      }
+	public Timestamp getAbsValueAsTimestamp(int    rowId, String colname, Timestamp def)            { return getValueAsTimestamp(DATA_ABS, rowId, colname, true, def); }
+	public Timestamp getAbsValueAsTimestamp(int    rowId, String colname, boolean cs, Timestamp def){ return getValueAsTimestamp(DATA_ABS, rowId, colname,   cs, def); }
+	public Timestamp getAbsValueAsTimestamp(String pkStr, String colname)                           { return getValueAsTimestamp(DATA_ABS, pkStr, colname, true);      }
+	public Timestamp getAbsValueAsTimestamp(String pkStr, String colname, boolean cs)               { return getValueAsTimestamp(DATA_ABS, pkStr, colname,   cs);      }
+	public Timestamp getAbsValueAsTimestamp(String pkStr, String colname, Timestamp def)            { return getValueAsTimestamp(DATA_ABS, pkStr, colname, true, def); }
+	public Timestamp getAbsValueAsTimestamp(String pkStr, String colname, boolean cs, Timestamp def){ return getValueAsTimestamp(DATA_ABS, pkStr, colname,   cs, def); }
+	
 	public Double getAbsValueMax      (int    colPos)                                        { return getMaxValue      (DATA_ABS, null,  colPos);        }
 	public Double getAbsValueMax      (String colname)                                       { return getMaxValue      (DATA_ABS, null,  colname, true); }
 	public Double getAbsValueMax      (String colname, boolean cs)                           { return getMaxValue      (DATA_ABS, null,  colname,   cs); }
@@ -8576,6 +8725,18 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public Long   getDiffValueAsLong  (String pkStr, String colname, boolean cs)              { return getValueAsLong   (DATA_DIFF, pkStr, colname,   cs);      }
 	public Long   getDiffValueAsLong  (String pkStr, String colname, Long def)                { return getValueAsLong   (DATA_DIFF, pkStr, colname, true, def); }
 	public Long   getDiffValueAsLong  (String pkStr, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_DIFF, pkStr, colname,   cs, def); }
+
+	// NOTE: Do we really need this for DIFF
+	public Timestamp getDiffValueAsTimestamp(int    rowId, int    colPos)                            { return getValueAsTimestamp(DATA_DIFF, rowId, colPos);             }
+	public Timestamp getDiffValueAsTimestamp(int    rowId, int    colPos, Timestamp def)             { return getValueAsTimestamp(DATA_DIFF, rowId, colPos, def);        }
+	public Timestamp getDiffValueAsTimestamp(int    rowId, String colname)                           { return getValueAsTimestamp(DATA_DIFF, rowId, colname, true);      }
+	public Timestamp getDiffValueAsTimestamp(int    rowId, String colname, boolean cs)               { return getValueAsTimestamp(DATA_DIFF, rowId, colname,   cs);      }
+	public Timestamp getDiffValueAsTimestamp(int    rowId, String colname, Timestamp def)            { return getValueAsTimestamp(DATA_DIFF, rowId, colname, true, def); }
+	public Timestamp getDiffValueAsTimestamp(int    rowId, String colname, boolean cs, Timestamp def){ return getValueAsTimestamp(DATA_DIFF, rowId, colname,   cs, def); }
+	public Timestamp getDiffValueAsTimestamp(String pkStr, String colname)                           { return getValueAsTimestamp(DATA_DIFF, pkStr, colname, true);      }
+	public Timestamp getDiffValueAsTimestamp(String pkStr, String colname, boolean cs)               { return getValueAsTimestamp(DATA_DIFF, pkStr, colname,   cs);      }
+	public Timestamp getDiffValueAsTimestamp(String pkStr, String colname, Timestamp def)            { return getValueAsTimestamp(DATA_DIFF, pkStr, colname, true, def); }
+	public Timestamp getDiffValueAsTimestamp(String pkStr, String colname, boolean cs, Timestamp def){ return getValueAsTimestamp(DATA_DIFF, pkStr, colname,   cs, def); }
 	
 	public Double getDiffValueMax      (int    colPos)                                        { return getMaxValue      (DATA_DIFF, null,  colPos);        }
 	public Double getDiffValueMax      (String colname)                                       { return getMaxValue      (DATA_DIFF, null,  colname, true); }
@@ -8671,6 +8832,18 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public Long   getRateValueAsLong  (String pkStr, String colname, boolean cs)              { return getValueAsLong   (DATA_RATE, pkStr, colname,   cs);      }
 	public Long   getRateValueAsLong  (String pkStr, String colname, Long def)                { return getValueAsLong   (DATA_RATE, pkStr, colname, true, def); }
 	public Long   getRateValueAsLong  (String pkStr, String colname, boolean cs, Long def)    { return getValueAsLong   (DATA_RATE, pkStr, colname,   cs, def); }
+
+	// NOTE: Do we really need this for RATE
+	public Timestamp getRateValueAsTimestamp(int    rowId, int    colPos)                            { return getValueAsTimestamp(DATA_RATE, rowId, colPos);             }
+	public Timestamp getRateValueAsTimestamp(int    rowId, int    colPos, Timestamp def)             { return getValueAsTimestamp(DATA_RATE, rowId, colPos, def);        }
+	public Timestamp getRateValueAsTimestamp(int    rowId, String colname)                           { return getValueAsTimestamp(DATA_RATE, rowId, colname, true);      }
+	public Timestamp getRateValueAsTimestamp(int    rowId, String colname, boolean cs)               { return getValueAsTimestamp(DATA_RATE, rowId, colname,   cs);      }
+	public Timestamp getRateValueAsTimestamp(int    rowId, String colname, Timestamp def)            { return getValueAsTimestamp(DATA_RATE, rowId, colname, true, def); }
+	public Timestamp getRateValueAsTimestamp(int    rowId, String colname, boolean cs, Timestamp def){ return getValueAsTimestamp(DATA_RATE, rowId, colname,   cs, def); }
+	public Timestamp getRateValueAsTimestamp(String pkStr, String colname)                           { return getValueAsTimestamp(DATA_RATE, pkStr, colname, true);      }
+	public Timestamp getRateValueAsTimestamp(String pkStr, String colname, boolean cs)               { return getValueAsTimestamp(DATA_RATE, pkStr, colname,   cs);      }
+	public Timestamp getRateValueAsTimestamp(String pkStr, String colname, Timestamp def)            { return getValueAsTimestamp(DATA_RATE, pkStr, colname, true, def); }
+	public Timestamp getRateValueAsTimestamp(String pkStr, String colname, boolean cs, Timestamp def){ return getValueAsTimestamp(DATA_RATE, pkStr, colname,   cs, def); }
 	
 	public Double getRateValueMax      (int    colPos)                                        { return getMaxValue      (DATA_RATE, null,  colPos);        }
 	public Double getRateValueMax      (String colname)                                       { return getMaxValue      (DATA_RATE, null,  colname, true); }

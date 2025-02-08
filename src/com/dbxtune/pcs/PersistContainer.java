@@ -568,6 +568,7 @@ public class PersistContainer
 					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
 					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
 					gen.writeStringField("state"                      , toString( ae.getState()                      ));
+					gen.writeStringField("alarmId"                    , toString( ae.getAlarmId()                    ));
 					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
 //gen.writeBooleanField("hasExtendedDescription"        , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() )) );
 //gen.writeBooleanField("hasReRaiseExtendedDescription" , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() )) );
@@ -618,6 +619,7 @@ public class PersistContainer
 					gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
 					gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
 					gen.writeStringField("state"                      , toString( ae.getState()                      ));
+					gen.writeStringField("alarmId"                    , toString( ae.getAlarmId()                    ));
 					gen.writeNumberField("repeatCnt"                  ,           ae.getReRaiseCount()                );
 //gen.writeBooleanField("hasExtendedDescription"        , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() )) );
 //gen.writeBooleanField("hasReRaiseExtendedDescription" , StringUtil.hasValue( toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() )) );

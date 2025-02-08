@@ -1233,7 +1233,8 @@ extends CounterControllerAbstract
 	//------------------------------------------------------------------
 	private void deadlockExtractor(DbxConnection pcsConn, String srvName)
 	{
-		CountersModel cmSummary = CounterController.getInstance().getCmByName(CmSummary.CM_NAME);
+//		CountersModel cmSummary = CounterController.getInstance().getCmByName(CmSummary.CM_NAME);
+		CountersModel cmSummary = getCmByName(CmSummary.CM_NAME);
 		if (cmSummary != null)
 		{
 			Object o_deadlockCountOverRecordingPeriod = cmSummary.getClientProperty(CmSummary.PROPKEY_clientProp_deadlockCountOverRecordingPeriod);

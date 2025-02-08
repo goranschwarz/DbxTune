@@ -256,6 +256,16 @@
 		<url-pattern>/api/cc/reports</url-pattern>
 	</servlet-mapping>
 
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>LoadPageProgress</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.LoadPageProgress</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LoadPageProgress</servlet-name>
+		<url-pattern>/lpp/*</url-pattern>
+	</servlet-mapping>
+
 
 
 

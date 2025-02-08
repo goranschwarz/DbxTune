@@ -151,7 +151,7 @@ extends CountersModel
 
 	public CmAlwaysOn(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -1010,6 +1010,7 @@ extends CountersModel
 						{
 //							perfCounters = new CmPerfCounters(getCounterController(), null); // we can't use this (getCounterController), since it registers the CM at the controller...
 							perfCounters = new CmPerfCounters(null, null);
+							perfCounters.setCounterController_withoutAddingCurrentCmToCmList(getCounterController());
 
 							perfCounters.setServerVersion(this.getServerVersion());
 							perfCounters.setClusterEnabled(this.isClusterEnabled());

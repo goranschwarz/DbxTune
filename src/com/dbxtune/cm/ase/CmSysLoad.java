@@ -111,7 +111,7 @@ extends CountersModel
 
 	public CmSysLoad(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -290,7 +290,7 @@ extends CountersModel
 			{
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), retuned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] arr = new Double[5];
@@ -325,7 +325,7 @@ extends CountersModel
 				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), retuned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] data  = new Double[rqRows.length];
@@ -381,7 +381,7 @@ extends CountersModel
 			{
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), retuned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] arr = new Double[4];
@@ -415,7 +415,7 @@ extends CountersModel
 				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), retuned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] data  = new Double[rqRows.length];
@@ -472,7 +472,7 @@ extends CountersModel
 				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), retuned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] data  = new Double[rqRows.length];
@@ -541,7 +541,7 @@ extends CountersModel
 		{
 			int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
 			if (rqRows == null)
-				_logger.warn("In sendAlarmRequest for '"+cm.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), retuned null, so I can't do more here.");
+				_logger.warn("In sendAlarmRequest for '"+cm.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
 			else
 			{
 				// round the double value to 3 decimals

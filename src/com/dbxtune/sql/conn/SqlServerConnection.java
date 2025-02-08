@@ -54,6 +54,7 @@ import com.dbxtune.sql.conn.info.DbxConnectionStateInfoSqlServer;
 import com.dbxtune.ui.autocomplete.completions.TableExtraInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.MathUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
 import com.microsoft.sqlserver.jdbc.ISQLServerMessageHandler;
@@ -579,8 +580,10 @@ extends DbxConnection
 						+ "DECLARE @dbid  int = COALESCE(db_id('" + catOrigin + "'), db_id()) \n"
 						+ "DECLARE @objid int = OBJECT_ID('" + schema + table + "') \n"
 						+ "\n"
-						+ "SELECT * FROM sys.indexes                   WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
-						+ "SELECT * FROM sys.partitions                WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+//						+ "SELECT * FROM sys.indexes                   WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+//						+ "SELECT * FROM sys.partitions                WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+						+ "SELECT * FROM sys.indexes                   WHERE object_id = @objid       ORDER BY index_id \n"
+						+ "SELECT * FROM sys.partitions                WHERE object_id = @objid       ORDER BY index_id \n"
 						+ "SELECT "
 						+ "     p.index_id \n"
 						+ "    ,total_pages = sum(a.total_pages) \n"
@@ -597,9 +600,12 @@ extends DbxConnection
 						+ "DECLARE @dbid  int = COALESCE(db_id('" + catOrigin + "'), db_id()) \n"
 						+ "DECLARE @objid int = OBJECT_ID('" + schema + table + "') \n"
 						+ "\n"
-						+ "SELECT * FROM sys.dm_db_partition_stats     WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
-						+ "SELECT * FROM sys.dm_db_index_usage_stats   WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
-						+ "SELECT * FROM sys.dm_db_index_operational_stats(@dbid, @objid, null, null) WHERE index_id > 0  ORDER BY index_id \n"
+//						+ "SELECT * FROM sys.dm_db_partition_stats     WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+//						+ "SELECT * FROM sys.dm_db_index_usage_stats   WHERE object_id = @objid         AND index_id > 0  ORDER BY index_id \n"
+//						+ "SELECT * FROM sys.dm_db_index_operational_stats(@dbid, @objid, null, null) WHERE index_id > 0  ORDER BY index_id \n"
+						+ "SELECT * FROM sys.dm_db_partition_stats     WHERE object_id = @objid       ORDER BY index_id \n"
+						+ "SELECT * FROM sys.dm_db_index_usage_stats   WHERE object_id = @objid       ORDER BY index_id \n"
+						+ "SELECT * FROM sys.dm_db_index_operational_stats(@dbid, @objid, null, null) ORDER BY index_id \n"
 						;                                                                             
 
 				sql = sql1; 
@@ -652,8 +658,6 @@ extends DbxConnection
 				// Now loop the INDEX Part (which SHOULD be available for less authorized users as well)
 				for (int r=0; r<indexInfo.getRowCount(); r++)
 				{
-					indexCount++;
-
 					//----------------------------------------------------
 					String  index_name                 = indexInfo.getValueAsString (r, "name");
 					String  type_desc                  = indexInfo.getValueAsString (r, "type_desc");
@@ -667,7 +671,14 @@ extends DbxConnection
 					boolean has_filter                 = indexInfo.getValueAsBoolean(r, "has_filter");
 					String  filter_definition          = indexInfo.getValueAsString (r, "filter_definition");
 
+					if (index_id == 0)
+					{
+						index_name = "HEAP";
+					}
 
+					if (index_id != 0)
+						indexCount++;
+					
 					//----------------------------------------------------
 					rowIds = partitionInfo.getRowIdsWhere("index_id", index_id);
 					indexIdRow = rowIds.isEmpty() ? -1 : rowIds.get(0);
@@ -724,14 +735,26 @@ extends DbxConnection
 //					if (rowIds.size() > 1)
 //						_logger.warn("IndexExtraInfo: found more than one row in 'dmDbIndexOperationalStats' for index_id=" + index_id + ", index_name='" + index_name + "'. Table/Index is probably Partitioned, which is NOT yet handled. Just using first entry.");
 
-					Integer   range_scan_count         = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "range_scan_count");
-					Integer   singleton_lookup_count   = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "singleton_lookup_count");
-					Integer   forwarded_fetch_count    = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "forwarded_fetch_count");
-//					Integer   page_latch_wait_count    = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_latch_wait_count");
-//					Integer   page_latch_wait_in_ms    = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_latch_wait_in_ms");
-					Integer   page_io_latch_wait_count = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_io_latch_wait_count");
-//					Integer   page_io_latch_wait_in_ms = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_io_latch_wait_in_ms");
+					Integer   range_scan_count               = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "range_scan_count");
+					Integer   singleton_lookup_count         = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "singleton_lookup_count");
+					Integer   forwarded_fetch_count          = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "forwarded_fetch_count");
+					Integer   page_latch_wait_count          = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_latch_wait_count");
+					Integer   page_latch_wait_in_ms          = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_latch_wait_in_ms");
+					Integer   page_io_latch_wait_count       = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_io_latch_wait_count");
+					Integer   page_io_latch_wait_in_ms       = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_io_latch_wait_in_ms");
 
+					Integer   leaf_insert_count              = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "leaf_insert_count");
+					Integer   leaf_update_count              = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "leaf_update_count");
+					Integer   leaf_delete_count              = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "leaf_delete_count");
+					Integer   leaf_ghost_count               = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "leaf_ghost_count");
+					Integer   lob_fetch_in_pages             = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "lob_fetch_in_pages");
+					Integer   row_overflow_fetch_in_pages    = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "row_overflow_fetch_in_pages");
+					Integer   row_lock_wait_count            = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "row_lock_wait_count");
+					Integer   row_lock_wait_in_ms            = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "row_lock_wait_in_ms");
+					Integer   page_lock_wait_count           = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_lock_wait_count");
+					Integer   page_lock_wait_in_ms           = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_lock_wait_in_ms");
+					Integer   page_compression_attempt_count = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_compression_attempt_count");
+					Integer   page_compression_success_count = indexIdRow < 0 ? -1 : dmDbIndexOperationalStats.getValueAsIntegerRowIdsSum(rowIds, "page_compression_success_count");
 
 					String ixDesc = "<BR>";
 					List<String> prefixes = new ArrayList<>();
@@ -764,14 +787,69 @@ extends DbxConnection
 							if (user_seeks == 0 && user_scans == 0 && user_lookups == 0)
 								unused = "<FONT color='red'>UNUSED</FONT>: </b>";
 
-							ixDesc += "<BR>Usage[" + unused + "seeks=" + user_seeks + ", scans=" + user_scans + ", lookups=" + user_lookups + ", updates=" + user_updates + ", last_update=" + last_user_update + ", srvUptime=" + srvUptime + "]";
+							ixDesc += "<BR>Usage[" + unused + "seeks=" + user_seeks + ", scans=" + user_scans + ", lookups=" + user_lookups + ", ins_upd_del=" + user_updates + ", last_ins_upd_del=" + last_user_update + ", srvUptime=" + srvUptime + "]";
+						}
+						else
+						{
+							ixDesc += "<BR>Usage[no-info]";
 						}
 
 						if (dmDbIndexOperationalStats.hasRows())
-							ixDesc += "<BR>OP[range_scan=" + range_scan_count + ", singleton_lookup=" + singleton_lookup_count + ", forwarded_fetch=" + forwarded_fetch_count + ", page_io_latch_wait_count=" + page_io_latch_wait_count + "]";
+						{
+							ixDesc += "<BR>OP-READ[range_scan=" + range_scan_count + ", singleton_lookup=" + singleton_lookup_count + ", forwarded_fetch=" + forwarded_fetch_count + "]";
+							ixDesc += "<BR>OP-IUD[leaf_insert_count=" + leaf_insert_count + ", leaf_update_count=" + leaf_update_count + ", leaf_delete_count=" + leaf_delete_count + ", leaf_ghost_count=" + leaf_ghost_count + "]";
+
+							if (index_id == 0)
+							{
+								if (lob_fetch_in_pages > 0 || row_overflow_fetch_in_pages > 0)
+								{
+									ixDesc += "<BR>OP-LOB[lob_fetch_in_pages=" + lob_fetch_in_pages + ", row_overflow_fetch_in_pages=" + row_overflow_fetch_in_pages + "]";
+								}
+							}
+
+							if (page_latch_wait_count > 0)
+							{
+								double avgMsPerWait = 0.0;
+								avgMsPerWait = MathUtils.round((page_latch_wait_in_ms*1.0) / (page_latch_wait_count*1.0), 1);
+								ixDesc += "<BR>OP-LATCH[page_latch_wait_count=" + page_latch_wait_count + ", page_latch_wait_in_ms=" + page_latch_wait_in_ms + ", avgMsPerWait=" + avgMsPerWait + "]";
+							}
+
+							if (row_lock_wait_count > 0 || page_lock_wait_count > 0)
+							{
+								ixDesc += "<BR>OP-LCK[row_lock_wait_count=" + row_lock_wait_count + ", row_lock_wait_in_ms=" + row_lock_wait_in_ms + ", page_lock_wait_count=" + page_lock_wait_count + ", page_lock_wait_in_ms=" + page_lock_wait_in_ms + "]";
+							}
+
+							if (page_io_latch_wait_count > 0)
+							{
+								double msPerIo = 0.0;
+								msPerIo = MathUtils.round((page_io_latch_wait_in_ms*1.0) / (page_io_latch_wait_count*1.0), 1);
+								ixDesc += "<BR>OP-IO[page_io_latch_wait_count=" + page_io_latch_wait_count + ", page_io_latch_wait_in_ms=" + page_io_latch_wait_in_ms + ", avgMsPerIo=" + msPerIo + "]";
+							}
+							
+							if ("PAGE".equals(data_compression_desc) || "ROW".equals(data_compression_desc))
+							{
+								if (page_compression_attempt_count > 0)
+								{
+									double pct = 0;
+									if (page_compression_attempt_count > 0)
+										pct = MathUtils.round((((page_compression_success_count*1.0)/(page_compression_attempt_count*1.0))*100.0), 1);
+									ixDesc += "<BR>OP-COMP[page_compression_attempt_count=" + page_compression_attempt_count + ", page_compression_success_count=" + page_compression_success_count + ", success_pct=" + pct + "]";
+								}
+							}
+						}
+						else
+						{
+							ixDesc += "<BR>OP[no-info]";
+						}
+					}
+					else
+					{
+						ixDesc += "<BR>Usage[not-authorized]";
 					}
 					
 
+//System.out.println("extIndexInfo -- index_name=" + index_name + ", ixDesc   =" + ixDesc);
+//System.out.println("extIndexType -- index_name=" + index_name + ", type_desc=" + type_desc);
 					extIndexInfo.put(index_name, ixDesc);
 					extIndexType.put(index_name, type_desc);
 				}

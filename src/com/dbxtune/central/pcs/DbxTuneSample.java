@@ -639,6 +639,7 @@ public class DbxTuneSample
 		String    _category                   ;
 		String    _severity                   ;
 		String    _state                      ;
+		String    _alarmId                    ;
 		int       _repeatCnt                  ;
 		String    _duration                   ;
 		String    _alarmDuration              ;
@@ -666,6 +667,7 @@ public class DbxTuneSample
 		public String    getCategory()                    { return _category; }
 		public String    getSeverity()                    { return _severity; }
 		public String    getState()                       { return _state; }
+		public String    getAlarmId()                     { return _alarmId; }
 		public int       getRepeatCnt()                   { return _repeatCnt; }
 		public String    getDuration()                    { return _duration; }
 		public String    getAlarmDuration()               { return _alarmDuration; }
@@ -693,6 +695,7 @@ public class DbxTuneSample
 		public void setCategory                   (String    category)                    { _category                    = category; }
 		public void setSeverity                   (String    severity)                    { _severity                    = severity; }
 		public void setState                      (String    state)                       { _state                       = state; }
+		public void setAlarmId                    (String    alarmId)                     { _alarmId                     = alarmId; }
 		public void setRepeatCnt                  (int       repeatCnt)                   { _repeatCnt                   = repeatCnt; }
 		public void setDuration                   (String    duration)                    { _duration                    = duration; }
 		public void setAlarmDuration              (String    alarmDuration)               { _alarmDuration               = alarmDuration; }
@@ -733,6 +736,7 @@ public class DbxTuneSample
 			sb.append("category                   ".trim()).append("='").append(_category                   ).append("'").append(","); // String    _category                   ;
 			sb.append("severity                   ".trim()).append("='").append(_severity                   ).append("'").append(","); // String    _severity                   ;
 			sb.append("state                      ".trim()).append("='").append(_state                      ).append("'").append(","); // String    _state                      ;
+			sb.append("alarmId                    ".trim()).append("='").append(_alarmId                    ).append("'").append(","); // String    _alarmId                    ;
 			sb.append("repeatCnt                  ".trim()).append("=") .append(_repeatCnt                  ).append("") .append(","); // int       _repeatCnt                  ;
 			sb.append("duration                   ".trim()).append("='").append(_duration                   ).append("'").append(","); // String    _duration                   ;
 			sb.append("alarmDuration              ".trim()).append("='").append(_alarmDuration              ).append("'").append(","); // String    _alarmDuration              ;
@@ -1230,6 +1234,7 @@ public class DbxTuneSample
 		ae.setCategory                   ( getString            (alarm, "category"));
 		ae.setSeverity                   ( getString            (alarm, "severity"));
 		ae.setState                      ( getString            (alarm, "state"));
+		ae.setAlarmId                    ( getString            (alarm, "alarmId",                     null));
 		ae.setRepeatCnt                  ( getInt               (alarm, "repeatCnt",                   -1));              // Last Parameter is default value if not found
 		ae.setDuration                   ( getString            (alarm, "duration",                    "-unknown-"));
 		ae.setAlarmDuration              ( getString            (alarm, "alarmDuration",               "-unknown-"));
@@ -1356,6 +1361,7 @@ public class DbxTuneSample
 					ae.setCategory                   ( getString   (alarm, "category"));
 					ae.setSeverity                   ( getString   (alarm, "severity"));
 					ae.setState                      ( getString   (alarm, "state"));
+					ae.setAlarmId                    ( getString   (alarm, "alarmId"));
 					ae.setRepeatCnt                  ( getInt      (alarm, "repeatCnt"));
 					ae.setDuration                   ( getString   (alarm, "duration"));
 					ae.setAlarmDuration              ( getString   (alarm, "alarmDuration"));
@@ -1398,6 +1404,7 @@ public class DbxTuneSample
 					ae.setCategory                   ( getString   (alarm, "category"));
 					ae.setSeverity                   ( getString   (alarm, "severity"));
 					ae.setState                      ( getString   (alarm, "state"));
+					ae.setAlarmId                    ( getString   (alarm, "alarmId"));
 					ae.setRepeatCnt                  ( getInt      (alarm, "repeatCnt"));
 					ae.setDuration                   ( getString   (alarm, "duration"));
 					ae.setAlarmDuration              ( getString   (alarm, "alarmDuration"));
@@ -1747,6 +1754,7 @@ public class DbxTuneSample
 				gen.writeStringField("category"                   , toString( ae.getCategory()                   ));
 				gen.writeStringField("severity"                   , toString( ae.getSeverity()                   ));
 				gen.writeStringField("state"                      , toString( ae.getState()                      ));
+				gen.writeStringField("alarmId"                    , toString( ae.getAlarmId()                    ));
 				gen.writeNumberField("repeatCnt"                  ,           ae.getRepeatCnt()                   );
 				gen.writeStringField("duration"                   , toString( ae.getDuration()                   ));
 				gen.writeStringField("alarmDuration"              , toString( ae.getAlarmDuration()              ));

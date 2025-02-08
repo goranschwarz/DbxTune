@@ -54,17 +54,32 @@ extends HostMonitor
 		
 		int top = Configuration.getCombinedConfiguration().getIntProperty(CmOsPs.PROPKEY_top, CmOsPs.DEFAULT_top);
 
+		String discNullCpu = " | Where-Object { $_.CPU -ne $null -and $_.CPU -gt 0 }";   // Get rid of processes that has NO CPU Usage
+		String sort        = " | Sort-Object CPU -Descending";         // Sort by CPU
+		String topProcs    = " | Select -First " + top;                // Only get first X records
+		String autoFormat  = " | Format-Table -AutoSize";              // AutoSize to NOT truncate cell content (like 'NPM(K)' sometimes get ...###)
+
+		if (top <= 0)
+		{
+			topProcs = "";
+		}
+
 		// NOTE: [cultureinfo]::CurrentCulture = 'en-US'; will force the "CPU(s)" output to be: ###,###.## instead of some localized string ex: ### ###,##
 		//       if the localized string is returned... parsing may of numbers may fail!
 		return "powershell \"" // -start- quote for embedded command
 				+ "(Get-Culture).NumberFormat.NumberGroupSeparator=''; "     // numbers should not have comma separators for readability
 				+ "(Get-Culture).NumberFormat.NumberDecimalSeparator='.'; "  // numbers should have "." separator for ####.12
-				+ "Get-Process | sort -desc cpu | select -first " + top 
+				+ "Get-Process" + discNullCpu + sort + topProcs + autoFormat
 				+ "\""; // -end- quote for embedded command
 		
+		// or Get-Process | Get-Member ... to get ALL Members and get specific counter members
 		// or possibly: tasklist
 		// or powershell Get-WMIObject Win32_Process
 		// or sysinternals: pslist
+		
+		// more on PWSH... possibly output to | ConvertTo-Csv -NoTypeInformation
+		// and select some "columns"... Get-Process | Where-Object { $_.CPU -ne $null } | Sort-Object CPU -Descending | Select-Object Id, SessionId, StartTime, ProcessName, CPU, HandleCount, Threads, BasePriority, PriorityClass, ProcessorAffinity, MaxWorkingSet, MinWorkingSet, NonpagedSystemMemorySize64, PagedMemorySize64, PagedSystemMemorySize64, PeakPagedMemorySize64, PeakVirtualMemorySize64, PeakWorkingSet64, PrivateMemorySize64, VirtualMemorySize64, WorkingSet64, PrivilegedProcessorTime, TotalProcessorTime, UserProcessorTime, Company, FileVersion, Path, Product, ProductVersion | select -first 10 | ConvertTo-Csv -NoTypeInformation
+		// NOTE: If we change to 'Select-Object' we can also get 'StartTime' and if its a 'typeperf' process that has been running for a "long" time, lets kill it (because they seems to be laying around after we do disconnect, The SSHD does not kill it's subprocesses on exit...)
 	}
 
 	@Override
@@ -73,15 +88,19 @@ extends HostMonitor
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
 
-		md.addIntColumn ("Handles",      1, 1, false,        "The number of handles that the process has opened.");
-		md.addIntColumn ("NPM(K)",       2, 2, false,        "The amount of non-paged memory that the process is using, in kilobytes");
-		md.addIntColumn ("PM(K)",        3, 3, false,        "The amount of pageable memory that the process is using, in kilobytes");
-		md.addIntColumn ("WS(K)",        4, 4, false,        "The size of the working set of the process, in kilobytes. The working set consists of the pages of memory that were recently referenced by the process.");
-//		md.addIntColumn ("VM(M)",        5, 5, false,        "The amount of virtual memory that the process is using, in megabytes. Virtual memory includes storage in the paging files on disk.");
-		md.addDecColumn ("CPU(s)",       5, 5, false, 20, 2, "The amount of processor time that the process has used on all processors, in seconds.");
-		md.addIntColumn ("Id",           6, 6, false,        "The process ID (PID) of the process.");
-		md.addIntColumn ("SI",           7, 7, false,        "This is the Session ID. Session 0 is shown for all services, Session 1 for first logged on user and 2 because you switch from user 1 to a new user logon.");
-		md.addStrColumn ("ProcessName",  8, 8, false, 4096,  "The name of the process. For explanations of the concepts related to processes, see the Glossary in Help and Support Center and the Help for Task Manager.");
+		md.addIntColumn("Handles",      1,  1, false,        "The number of handles that the process has opened.");
+		md.addIntColumn("NPM(K)",       2,  2, false,        "The amount of non-paged memory that the process is using, in kilobytes");
+		md.addIntColumn("PM(K)",        3,  3, false,        "The amount of pageable memory that the process is using, in kilobytes");
+		md.addIntColumn("WS(K)",        4,  4, false,        "The size of the working set of the process, in kilobytes. The working set consists of the pages of memory that were recently referenced by the process.");
+//		md.addIntColumn("VM(M)",        5,  5, false,        "The amount of virtual memory that the process is using, in megabytes. Virtual memory includes storage in the paging files on disk.");
+		md.addDecColumn("CPU(s)",       5,  5, false, 20, 2, "The amount of processor time that the process has used on all processors, in seconds.");
+		md.addStrColumn("CpuTimeHms",   6, -1, false, 20,    "CPU(s) transformed into #d #h:#m:#s.#ms so it's easier to read ohow many CPU Seconds it really is");
+		md.addIntColumn("Id",           7,  6, false,        "The process ID (PID) of the process.");
+		md.addIntColumn("SI",           8,  7, false,        "This is the Session ID. Session 0 is shown for all services, Session 1 for first logged on user and 2 because you switch from user 1 to a new user logon.");
+		md.addStrColumn("ProcessName",  9,  8, false, 4096,  "The name of the process. For explanations of the concepts related to processes, see the Glossary in Help and Support Center and the Help for Task Manager.");
+//		md.addStrColumn("Description", 10, -1, true , 4096,  "Description of the process name.");
+
+		// NOTE: 'CpuTimeHms' is calculated in CmOsPs.localCalculation(OsTable thisSample)
 
 		// What regexp to use to split the input row into individual fields
 		md.setParseRegexp(HostMonitorMetaData.REGEXP_IS_SPACE);

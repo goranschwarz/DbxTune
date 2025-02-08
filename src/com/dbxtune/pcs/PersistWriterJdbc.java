@@ -1146,7 +1146,23 @@ public class PersistWriterJdbc
 				",jdbcKeepConnOpen="     + _keepConnOpen +
 				"";
 		}
-}
+		
+		//--------------------------------
+		// Check for almost "errors"
+		//--------------------------------
+		if (StringUtil.isNullOrBlank(_jdbcUser))
+		{
+			_logger.error("Initializing JDBC PCS: The property '" + PROPKEY_jdbcUsername + "' is not set, is this REALLY OK. I will allow it, but my guess is that we will FAIL to connect. jdbcUser='" + _jdbcUser + "'.");
+		}
+
+		//--------------------------------
+		// Check for errors
+		//--------------------------------
+		if (StringUtil.isNullOrBlank(_jdbcUrl))
+		{
+			throw new Exception("Initializing JDBC PCS: The property '" + PROPKEY_jdbcUrl + "' is MANDATORY. jdbcUrl='" + _jdbcUrl + "'.");
+		}
+	}
 
 	@Override
 	protected void finalize() throws Throwable
@@ -2483,6 +2499,12 @@ public class PersistWriterJdbc
 						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
 						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
+
+					if ( ! colNames.contains("alarmId"))
+					{
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmId] varchar(40) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
+					}
 				}
 				else if (tabId == ALARM_HISTORY)
 				{
@@ -2517,6 +2539,12 @@ public class PersistWriterJdbc
 					if ( ! colNames.contains("fullDurationAdjustmentInSec"))
 					{
 						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [fullDurationAdjustmentInSec] int null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
+					}
+
+					if ( ! colNames.contains("alarmId"))
+					{
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmId] varchar(40) null"); // NOTE: 'not null' is not supported at upgrades
 						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 				}
@@ -3472,21 +3500,22 @@ public class PersistWriterJdbc
 					sbSql.append(", ").append(safeStr( ae.getCategory()                                                     ,20  )); // "category"                    varchar(20)   null false   - 6
 					sbSql.append(", ").append(safeStr( ae.getSeverity()                                                     ,10  )); // "severity"                    varchar(10)   null false   - 7
 					sbSql.append(", ").append(safeStr( ae.getState()                                                        ,10  )); // "state"                       varchar(10)   null false   - 8
-					sbSql.append(", ").append(safeStr( ae.getReRaiseCount()                                                      )); // "repeatCnt"                   int           null false   - 9
-					sbSql.append(", ").append(safeStr( ae.getFullDuration(true)                                             ,80  )); // "duration"                    varchar(80)   null false   - 10
-					sbSql.append(", ").append(safeStr( ae.getAlarmDuration()                                                ,20  )); // "alarmDuration"               varchar(10)   null false   - 11
-					sbSql.append(", ").append(safeStr( ae.getFullDuration()                                                 ,20  )); // "fullDuration"                varchar(10)   null false   - 12
-					sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec()                                       )); // "fullDurationAdjustmentInSec" int           null false   - 13
-					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           )); // "createTime"                  datetime      null false   - 14
-					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       )); // "cancelTime"                  datetime      null true    - 15
-					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                        )); // "timeToLive"                  int           null true    - 16
-					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15  )); // "threshold"                   varchar(15)   null true    - 17
-					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,512 )); // "data"                        varchar(512)  null true    - 18
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,512 )); // "lastData"                    varchar(512)  null true    - 19
-					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"                 varchar(512)  null false   - 20
-					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"             varchar(512)  null false   - 21
-					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getExtendedDescriptionHtml()        : ae.getExtendedDescription()        /*HTML or Normal???*/ )); // "extendedDescription"         text          null true    - 22
-					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() /*HTML or Normal???*/ )); // "lastExtendedDescription"     text          null true    - 23
+					sbSql.append(", ").append(safeStr( ae.getAlarmId()                                                      ,40  )); // "alarmId"                     varchar(40)   null false   - 9
+					sbSql.append(", ").append(safeStr( ae.getReRaiseCount()                                                      )); // "repeatCnt"                   int           null false   - 10
+					sbSql.append(", ").append(safeStr( ae.getFullDuration(true)                                             ,80  )); // "duration"                    varchar(80)   null false   - 11
+					sbSql.append(", ").append(safeStr( ae.getAlarmDuration()                                                ,20  )); // "alarmDuration"               varchar(10)   null false   - 12
+					sbSql.append(", ").append(safeStr( ae.getFullDuration()                                                 ,20  )); // "fullDuration"                varchar(10)   null false   - 13
+					sbSql.append(", ").append(safeStr( ae.getFullDurationAdjustmentInSec()                                       )); // "fullDurationAdjustmentInSec" int           null false   - 14
+					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           )); // "createTime"                  datetime      null false   - 15
+					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       )); // "cancelTime"                  datetime      null true    - 16
+					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                        )); // "timeToLive"                  int           null true    - 17
+					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15  )); // "threshold"                   varchar(15)   null true    - 18
+					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,512 )); // "data"                        varchar(512)  null true    - 19
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,512 )); // "lastData"                    varchar(512)  null true    - 20
+					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"                 varchar(512)  null false   - 21
+					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"             varchar(512)  null false   - 22
+					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getExtendedDescriptionHtml()        : ae.getExtendedDescription()        /*HTML or Normal???*/ )); // "extendedDescription"         text          null true    - 23
+					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() /*HTML or Normal???*/ )); // "lastExtendedDescription"     text          null true    - 24
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3579,6 +3608,7 @@ public class PersistWriterJdbc
 				pst.setString   (i++, strMaxLen(ae.getCategory()+""                                                  ,20 ,"category"           )); // category                    - varchar(20) , Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getSeverity()+""                                                  ,10 ,"severity"           )); // severity                    - varchar(10) , Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getState()+""                                                     ,10 ,"state"              )); // state                       - varchar(10) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getAlarmId()+""                                                   ,40 ,"alarmId"            )); // alarmId                     - varchar(40) , Nullable = false
 				pst.setInt      (i++,           ae.getReRaiseCount()                                                                            ); // repeatCnt                   - int         , Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getFullDuration(true)                                             ,80 ,"duration"           )); // duration                    - varchar(80) , Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getAlarmDuration()                                                ,20 ,"alarmDuration"      )); // alarmDuration               - varchar(10) , Nullable = false
@@ -5463,7 +5493,7 @@ public class PersistWriterJdbc
 	throws Exception
 	{
 		if (_mainConn == null)
-			throw new Exception("No 'main PCS Connection' that we can clone... Can't conntinue.");
+			throw new Exception("No 'main PCS Connection' available that we can clone... (the service might be in the startup phase). Can't continue...");
 		
 		ConnectionProp connProp = new ConnectionProp(_mainConn.getConnPropOrDefault());
 		

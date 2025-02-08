@@ -63,6 +63,9 @@ public class TableExtraInfo
 	public String getTextDescription() { return _textDesc; }
 	public String getHtmlDescription() { return _htmlDesc; }
 
+//	public boolean isValueMap()        { return _val != null && _val instanceof Map; }
+//	public Map<String, String> getValueMap() { return (Map<String, String>) _val; }
+	
 	public String getStringValue()     
 	{
 		if (_val == null)

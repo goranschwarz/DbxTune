@@ -783,7 +783,8 @@ extends CountersModel
 			updateGraphData();
 
 			// Do we want to send an Alarm somewhere, every CM's has to implement this.
-			wrapperFor_sendAlarmRequest();
+			// This is now done from: CounterCollectorThread{Gui|NoGui}
+//			wrapperFor_sendAlarmRequest();
 		}
 		else // HAS GUI
 		{
@@ -830,7 +831,8 @@ extends CountersModel
 					endGuiRefresh();
 
 					// Do we want to send an Alarm somewhere, every CM's has to implement this.
-					wrapperFor_sendAlarmRequest();
+					// This is now done from: CounterCollectorThread{Gui|NoGui}
+//					wrapperFor_sendAlarmRequest();
 				}
 			};
 			// Invoke this job on the SWING Event Dispather Thread

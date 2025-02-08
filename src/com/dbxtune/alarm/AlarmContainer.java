@@ -88,6 +88,7 @@ implements Serializable
 			existing.setReRaiseTime(); // existing.setReRaiseTime(repeatedAlarmEvent.getCrTime());
 			
 			repeatedAlarmEvent.setReRaiseCount(existing.getReRaiseCount());
+			repeatedAlarmEvent.setAlarmId(     existing.getAlarmId());
 
 			existing.setReRaiseDescription        (repeatedAlarmEvent.getDescription());
 			existing.setReRaiseExtendedDescription(repeatedAlarmEvent.getExtendedDescription(), repeatedAlarmEvent.getExtendedDescriptionHtml());

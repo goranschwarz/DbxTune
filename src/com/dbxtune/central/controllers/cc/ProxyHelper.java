@@ -29,6 +29,7 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Collections;
+import java.util.Enumeration;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
@@ -136,7 +137,7 @@ extends HttpServlet
 			File f = new File(file);
 			String fSrvName = f.getName().split("\\.")[0];
 
-System.out.println("PROXY: >>>>>>>>>>>> _srvName=|"+_srvName+"|, CHECK_FILE |" + file + "|, fSrvName=|" + fSrvName + "|.");
+//System.out.println("PROXY: >>>>>>>>>>>> _srvName=|"+_srvName+"|, CHECK_FILE |" + file + "|, fSrvName=|" + fSrvName + "|.");
 
 			if ( ! fSrvName.equals(_srvName) )
 				continue;
@@ -150,17 +151,17 @@ System.out.println("PROXY: >>>>>>>>>>>> _srvName=|"+_srvName+"|, CHECK_FILE |" +
 			parseCollectorMgtInfo(_collectorMgtInfo);
 			
 			foundInfoFile = true;
-System.out.println("PROXY: >>>>>>>>>>>> _srvName             =|"+_srvName+"|.");
-System.out.println("PROXY: >>>>>>>>>>>> _collectorMgtHostname=|"+_collectorMgtHostname+"|.");
-System.out.println("PROXY: >>>>>>>>>>>> _collectorMgtPort    =|"+_collectorMgtPort+"|.");
-System.out.println("PROXY: >>>>>>>>>>>> _collectorMgtInfo    =|"+_collectorMgtInfo+"|.");
-System.out.println("PROXY: >>>>>>>>>>>> _collectorAuthStr    =|"+_collectorAuthStr+"|.");
+//System.out.println("PROXY: >>>>>>>>>>>> _srvName             =|"+_srvName+"|.");
+//System.out.println("PROXY: >>>>>>>>>>>> _collectorMgtHostname=|"+_collectorMgtHostname+"|.");
+//System.out.println("PROXY: >>>>>>>>>>>> _collectorMgtPort    =|"+_collectorMgtPort+"|.");
+//System.out.println("PROXY: >>>>>>>>>>>> _collectorMgtInfo    =|"+_collectorMgtInfo+"|.");
+//System.out.println("PROXY: >>>>>>>>>>>> _collectorAuthStr    =|"+_collectorAuthStr+"|.");
 			break; // No need to continue
 		}
 		
 		if ( ! foundInfoFile )
 		{
-			throw new IOException("No INFO FILE was found for server name '" + _srvName + "', cant continue.... in: " + req.getServletPath());
+			throw new IOException("No INFO FILE was found for server name '" + _srvName + "', is the server started? Cant continue.... in: " + req.getServletPath());
 		}
 	}
 	
@@ -208,7 +209,7 @@ System.out.println("PROXY: >>>>>>>>>>>> _collectorAuthStr    =|"+_collectorAuthS
 
 		// Read input
 		String requestBody = IOUtils.toString(req.getReader());
-		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> sendData(): requestBody=|"+requestBody+"|");
+System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> sendData(): requestBody=|"+requestBody+"|");
 
 		// Send to HTTP end point
 		OutputStream httpOutputStream = httpConn.getOutputStream();
@@ -217,10 +218,71 @@ System.out.println("PROXY: >>>>>>>>>>>> _collectorAuthStr    =|"+_collectorAuthS
 		httpOutputStream.flush();
 		httpOutputStream.close();
 		
-		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> sendData -END-");
+System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> sendData -END-");
 	}
 
-	protected void sendResult(HttpURLConnection httpConn, HttpServletResponse resp, String mediaType) 
+	
+	protected void sendResult(HttpURLConnection httpConn, HttpServletResponse response, String mediaType) 
+	throws IOException
+	{
+		// Get response from target server
+		int responseCode = httpConn.getResponseCode();
+
+		// Set response headers
+		if (StringUtil.hasValue(mediaType))
+			response.setContentType(mediaType);
+
+		// NOTE: if respoceCode is 400 (or above) then forward: ERROR Stream
+		// NOTE: if respoceCode is less than 400  then forward: INPUT Stream
+		boolean transferErrors = responseCode >= 400;
+		
+		// Use direct stream copying to avoid charset issues
+		try (InputStream  inputStream  = (transferErrors ? httpConn.getErrorStream() : httpConn.getInputStream()); 
+		     OutputStream outputStream = response.getOutputStream())
+		{
+			byte[] buffer = new byte[4096];
+			int    bytesRead;
+			while ((bytesRead = inputStream.read(buffer)) != -1)
+			{
+				outputStream.write(buffer, 0, bytesRead);
+			}
+			outputStream.flush();
+		}
+		
+	}
+	protected void forwardRequestHeaders(HttpServletRequest request, HttpURLConnection conn)
+	{
+		Enumeration<String> headerNames = request.getHeaderNames();
+		while (headerNames.hasMoreElements())
+		{
+			String headerName  = headerNames.nextElement();
+			String headerValue = request.getHeader(headerName);
+			// Skip headers that URLConnection sets automatically
+			if ( !headerName.equalsIgnoreCase("host") && !headerName.equalsIgnoreCase("content-length") )
+			{
+				conn.setRequestProperty(headerName, headerValue);
+			}
+		}
+	}
+
+//	protected String getCharset(String contentType)
+//	{
+//		if ( contentType == null )
+//			return null;
+//
+//		String[] values = contentType.split(";");
+//		for (String value : values)
+//		{
+//			value = value.trim();
+//			if ( value.toLowerCase().startsWith("charset=") )
+//			{
+//				return value.substring("charset=".length());
+//			}
+//		}
+//		return null;
+//	}
+
+	protected void sendResult_OLD(HttpURLConnection httpConn, HttpServletResponse resp, String mediaType) 
 	throws IOException
 	{
 		// check status code

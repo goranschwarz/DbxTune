@@ -1340,7 +1340,23 @@ extends Properties
 				val = getUseDefaultValue(propName, val);
 			}
 		}
-		return parseProperty( propName, val );
+		
+		val = parseProperty( propName, val );
+
+		// Be a bit backward compatible with saved values (or at least WARN about it)
+		if (val != null && val.contains("com.asetune."))
+		{
+			String asetuneBackwardCompat_propName = "Configuration.backward.compat.asetune";
+			if (System.getProperty(asetuneBackwardCompat_propName, "true").equalsIgnoreCase("true"))
+			{
+				String tmpSave = val;
+				val = val.replace("com.asetune.", "com.dbxtune.");
+
+				_logger.warn("Found old Properties Configuration for property='" + propName + "', value '" + tmpSave+ "' which was replaced with '" + val + "'. ConfigFile='" + getFilename() + "'. This can be disabled with System Property " + asetuneBackwardCompat_propName + "=false");
+			}
+		}
+		
+		return val;
 	}
 
 	/** Get a String value for property */

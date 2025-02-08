@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.dbxtune.ICounterController;
+import com.dbxtune.IGuiController;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
@@ -44,6 +45,7 @@ public class CountersModelAppend
 
 	public CountersModelAppend(
 		ICounterController counterController,
+		IGuiController     guiController,
 		String name, 
 		String groupName, 
 		String sql, 
@@ -54,7 +56,7 @@ public class CountersModelAppend
 		long dependsOnCeVersion, 
 		boolean systemCm)
 	{
-		super(counterController, name, groupName, sql, null, null, null, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, true, systemCm);
+		super(counterController, guiController, name, groupName, sql, null, null, null, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, true, systemCm);
 
 		setDataSource(DATA_ABS, false);
 	}

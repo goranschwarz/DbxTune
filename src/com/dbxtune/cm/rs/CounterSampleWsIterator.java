@@ -560,11 +560,11 @@ extends CounterSample
 						String updateTable = 
 								"-- Create the dummy table if it do not exist \n" +
 								"if not exists (select 1 from sysobjects where name = 'rsTune_ws_dummy_update' and type = 'U') \n" +
-								"   exec('create table rsTune_ws_dummy_update(id varchar(30), activeServerName varchar(30), ts datetime, primary key(id))') \n" +
+								"   exec('CREATE TABLE rsTune_ws_dummy_update(id varchar(30), activeServerName varchar(80), ts datetime, primary key(id))') \n" +
 								"-- remove all old rows \n" +
-								"exec('delete from rsTune_ws_dummy_update') \n" +
+								"exec('DELETE FROM rsTune_ws_dummy_update') \n" +
 								"-- insert a new dummy row \n" +
-								"exec('insert into rsTune_ws_dummy_update(id, activeServerName, ts) select newid(), @@servername, getdate()') \n" +
+								"exec('INSERT INTO rsTune_ws_dummy_update(id, activeServerName, ts) SELECT newid(), @@servername+''/''+suser_name(), getdate()') \n" +
 								"";
 						try ( Statement stmnt = dbConn.createStatement() )
 						{

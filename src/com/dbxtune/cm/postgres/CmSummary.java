@@ -107,7 +107,7 @@ extends CmSummaryAbstract
 
 	public CmSummary(ICounterController counterController, IGuiController guiController)
 	{
-		super(counterController,
+		super(counterController, guiController,
 				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
@@ -239,7 +239,8 @@ extends CmSummaryAbstract
 		CmSummaryPanel summaryPanel = new CmSummaryPanel(this);
 
 		// THIS IS THE SUMMARY CM, so set this
-		CounterController.getInstance().setSummaryPanel( summaryPanel );
+//		CounterController.getInstance().setSummaryPanel( summaryPanel );
+		getCounterController().setSummaryPanel( summaryPanel );
 
 		// add listener, so that the GUI gets updated when data changes in the CM
 		addTableModelListener( summaryPanel );
