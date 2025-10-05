@@ -189,7 +189,7 @@ extends CounterModelHostMonitor
 						Double currentCounter = procToCounterMap.get(procName);
 						if (currentCounter == null)
 						{
-							currentCounter = new Double(0.0);
+							currentCounter = Double.valueOf(0.0);
 							procToCounterMap.put(procName, currentCounter);
 						}
 						// Increment/Set value

@@ -53,7 +53,7 @@ public class JdbcTest1
 			user   = "pml_api";
 			passwd = "pqvZnRseCBs3Q2v7"; // PROD
 
-			inSql  = "select * from Foretag f WHERE f.raderas != 'j' AND (f.Foretag LIKE 'sl‰p%')";
+			inSql  = "select * from Foretag f WHERE f.raderas != 'j' AND (f.Foretag LIKE 'sl√§p%')";
 			inSql  = "file:c:\\tmp\\MAXM_PML_test1.sql";
 		}
 		
@@ -64,7 +64,7 @@ public class JdbcTest1
 			user   = "pml_api";
 			passwd = "TqJhKT2j56z7NdXc"; // DEV
 
-			inSql  = "select * from Foretag f WHERE f.raderas != 'j' AND (f.Foretag LIKE 'sl‰p%')";
+			inSql  = "select * from Foretag f WHERE f.raderas != 'j' AND (f.Foretag LIKE 'sl√§p%')";
 			inSql  = "file:c:\\tmp\\MAXM_PML_test1.sql";
 		}
 
@@ -139,7 +139,7 @@ public class JdbcTest1
 //				sql = "select * from Foretag f WHERE f.raderas != 'j' AND (f.Foretag LIKE ?)";
 //				try (PreparedStatement pstmnt = conn.prepareStatement(sql))
 //				{
-//					pstmnt.setString(1, "sl‰p%"); 
+//					pstmnt.setString(1, "sl√§p%"); 
 //					try( ResultSet rs = pstmnt.executeQuery() )
 //					{
 //						printRs(rs);
