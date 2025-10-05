@@ -1140,13 +1140,13 @@ public class AseSqlScriptReader
 		}
 	}
 	
-	@Override
-	protected void finalize() 
-	throws Throwable
-	{
-		this.close();
-		super.finalize();
-	}
+//	@Override
+//	protected void finalize() 
+//	throws Throwable
+//	{
+//		this.close();
+//		super.finalize();
+//	}
 
 	/**
 	 * Help to decide what's a SQL Statement or not when semicolon are allowed as send-to-server-terminator 

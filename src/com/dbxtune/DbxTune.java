@@ -1005,7 +1005,7 @@ public abstract class DbxTune
 				if (cmd.hasOption('A'))
 					aseServer = cmd.getOptionValue('A');
 
-//FIXME; rewrite a bunch of this... this is to "rörigt" and it's also a bit of duplicate in CounterCollectorThreadNoGui
+//FIXME; rewrite a bunch of this... this is to "messy" and it's also a bit of duplicate in CounterCollectorThreadNoGui
 
 				if ("integratedSecurity".equalsIgnoreCase(aseUser))
 				{

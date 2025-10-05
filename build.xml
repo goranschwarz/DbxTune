@@ -18,7 +18,7 @@
 		<fileset dir="lib"              includes="*.jar"/>
 		<fileset dir="lib/jetty"        includes="*.jar"/>
 		<fileset dir="lib/jdbc_drivers" includes="jconn4.jar"/>
-		<fileset dir="lib/jdbc_drivers" includes="mssql-jdbc-12.8.1.jre8.jar"/>
+		<fileset dir="lib/jdbc_drivers" includes="mssql-jdbc-13.2.0.jre8.jar"/>
 <!--
 		<pathelement location="lib/"/>
 		<pathelement path="${java.class.path}/"/>

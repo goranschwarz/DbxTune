@@ -1164,17 +1164,17 @@ public class PersistWriterJdbc
 		}
 	}
 
-	@Override
-	protected void finalize() throws Throwable
-	{
-		super.finalize();
-		
-		boolean force = true;
-		boolean dueToDatabaseRollover = false;
-		String  dailyReportServerName = null;
-
-		close(force, dueToDatabaseRollover, dailyReportServerName);
-	}
+//	@Override
+//	protected void finalize() throws Throwable
+//	{
+//		super.finalize();
+//		
+//		boolean force = true;
+//		boolean dueToDatabaseRollover = false;
+//		String  dailyReportServerName = null;
+//
+//		close(force, dueToDatabaseRollover, dailyReportServerName);
+//	}
 
 	private void close(boolean force, boolean dueToDatabaseRollover, String dailyReportServerName)
 	{

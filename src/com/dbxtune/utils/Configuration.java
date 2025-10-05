@@ -1907,14 +1907,14 @@ extends Properties
 
 
 	// Hopefully this is kicked of when the JVM dies aswell...
-	@Override
-	protected void finalize() throws Throwable
-	{
-	    super.finalize();
-
-		if (_saveOnExit)
-		    save();
-	}
+//	@Override
+//	protected void finalize() throws Throwable
+//	{
+//	    super.finalize();
+//
+//		if (_saveOnExit)
+//		    save();
+//	}
 
 
 
