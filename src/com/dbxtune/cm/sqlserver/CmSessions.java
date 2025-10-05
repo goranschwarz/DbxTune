@@ -820,12 +820,14 @@ extends CountersModel
 						String skipLoginRegExp    = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipLogin,    DEFAULT_alarm_StatementExecInSecSkipLogin);
 						String skipCmdRegExp      = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipCmd,      DEFAULT_alarm_StatementExecInSecSkipCmd);
 						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName);
+						String skipProgNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StatementExecInSecSkipProgName, DEFAULT_alarm_StatementExecInSecSkipProgName);
 
 						String StatementStartTime = cm.getDiffValue(r, "exec_start_time")  + "";
 						String DBName             = cm.getDiffValue(r, "DBName")           + "";
 						String Login              = cm.getDiffValue(r, "login_name")       + "";
 						String Command            = cm.getDiffValue(r, "command")          + "";
 						String tran_name          = cm.getDiffValue(r, "transaction_name") + "";
+						String prog_name          = cm.getDiffValue(r, "program_name")     + "";
 						
 						// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 						boolean doAlarm = true;
@@ -836,6 +838,7 @@ extends CountersModel
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLoginRegExp)    || ! Login    .matches(skipLoginRegExp   ))); // NO match in the SKIP Cmd      regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipCmdRegExp)      || ! Command  .matches(skipCmdRegExp     ))); // NO match in the SKIP Cmd      regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipTranNameRegExp) || ! tran_name.matches(skipTranNameRegExp))); // NO match in the SKIP TranName regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipProgNameRegExp) || ! prog_name.matches(skipProgNameRegExp))); // NO match in the SKIP TranName regexp
 
 						// NOTE: DBCC SHRINKDATABASE/SHRINKFILE tends to "change" database name from "the db to shrink" to "tempdb" A LOT
 						// So can we do anything about that ... 
@@ -921,6 +924,9 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_StatementExecInSecSkipTranName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.tranName";
 	public static final String  DEFAULT_alarm_StatementExecInSecSkipTranName = "";
 	
+	public static final String  PROPKEY_alarm_StatementExecInSecSkipProgName = CM_NAME + ".alarm.system.if.StatementExecInSec.skip.progName";
+	public static final String  DEFAULT_alarm_StatementExecInSecSkipProgName = "(TdService)"; // AzureDB has "TdService" running all the time
+	
 	public static final String  PROPKEY_alarm_DacInUse                       = CM_NAME + ".alarm.system.if.EndpointType.is.DAC";
 	public static final boolean DEFAULT_alarm_DacInUse                       = true;
 	
@@ -945,6 +951,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("StatementExecInSec SkipLogins",               PROPKEY_alarm_StatementExecInSecSkipLogin   , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipLogin   , DEFAULT_alarm_StatementExecInSecSkipLogin   ), DEFAULT_alarm_StatementExecInSecSkipLogin   , "If 'StatementExecInSec' is true; Discard Logins listed (regexp is used)."   , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("StatementExecInSec SkipProgramNames",         PROPKEY_alarm_StatementExecInSecSkipProgName, String .class, conf.getProperty       (PROPKEY_alarm_StatementExecInSecSkipProgName, DEFAULT_alarm_StatementExecInSecSkipProgName), DEFAULT_alarm_StatementExecInSecSkipProgName, "If 'StatementExecInSec' is true; Discard ProgramName listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("DacInUse",                     isAlarmSwitch, PROPKEY_alarm_DacInUse                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_DacInUse                      , DEFAULT_alarm_DacInUse                      ), DEFAULT_alarm_DacInUse                      , "If any user is connected via the DAC (Dedicated Admin Connection), then send alarm 'AlarmEventDacInUse'." ));
 		list.add(new CmSettingsHelper("WaitInfo",                     isAlarmSwitch, PROPKEY_alarm_WaitInfo                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_WaitInfo                      , DEFAULT_alarm_WaitInfo                      ), DEFAULT_alarm_WaitInfo                      , "If any users has 'WaitInfo', then send alarm 'AlarmEventDebugWaitInfo' for debugging purposes." ));
 		list.add(new CmSettingsHelper("WaitInfo MaxCount",                           PROPKEY_alarm_WaitInfo_maxCount_gt          , Integer.class, conf.getIntProperty    (PROPKEY_alarm_WaitInfo_maxCount_gt          , DEFAULT_alarm_WaitInfo_maxCount_gt          ), DEFAULT_alarm_WaitInfo_maxCount_gt          , "If 'WaitInfo' is enabled 'maxCount' must be above ##." ));

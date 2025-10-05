@@ -126,8 +126,8 @@ public class NormalizerCompiler
 		// if DBXTUNE_NORMALIZER_SOURCE_DIR, is NOT set: set it to ${HOME}/.dbxtune
 		if ( ! conf.hasProperty("DBXTUNE_NORMALIZER_SOURCE_DIR") )
 		{
-			_logger.warn("The environment variable 'DBXTUNE_NORMALIZER_SOURCE_DIR' is NOT set. Setting this to '"+AppDir.getAppStoreDir()+"'.");
-			System.setProperty("DBXTUNE_NORMALIZER_SOURCE_DIR", AppDir.getAppStoreDir());
+			_logger.warn("The environment variable 'DBXTUNE_NORMALIZER_SOURCE_DIR' is NOT set. Setting this to '"+AppDir.getDbxUserHomeDir()+"'.");
+			System.setProperty("DBXTUNE_NORMALIZER_SOURCE_DIR", AppDir.getDbxUserHomeDir());
 		}
 
 		

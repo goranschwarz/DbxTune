@@ -476,7 +476,7 @@ implements Runnable, ConnectionProvider
 	/** Queue that holds commands for the _readThread */
 	private BlockingQueue<QueueCommand> _cmdQueue   = new LinkedBlockingQueue<QueueCommand>();
 	private Thread         _readThread = null;
-	private boolean        _running    = false;
+	private transient boolean _running    = false;
 	private int            _warnQueueSizeThresh = 10;
 
 	/** Place holder object for commands to be executed be the readThread */

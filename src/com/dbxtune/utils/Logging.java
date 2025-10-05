@@ -241,7 +241,7 @@ public class Logging
 		// logfile, add / or \ if it's not at the end.
 		if (logfile == null)
 		{
-			logfile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : System.getProperty("user.home");
+			logfile = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() : System.getProperty("user.home");
 			if ( logfile != null && ! (logfile.endsWith("/") || logfile.endsWith("\\")) )
 				logfile += File.separatorChar;
 

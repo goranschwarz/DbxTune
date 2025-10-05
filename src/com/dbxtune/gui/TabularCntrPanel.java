@@ -2774,6 +2774,14 @@ implements
 	 */
 	private void updateExtendedInfoPanel_private()
 	{
+		// Do NOT continue if are in shutdown mode
+		// We might block our self in the '_lastUpdateExtendedInfoPanelTimer' action (when calling cm.size() ...) for some strange reason
+		if (_cm != null)
+		{
+			if ( ! _cm.getCounterController().isRunning() )
+				return;
+		}
+
 		// only if we are the ACTIVE tab or if the tab is undocked
 		// simply is it visible for the human eay in the GUI
 		if (isActiveOrUndocked())
@@ -3278,9 +3286,9 @@ implements
 		});
 
 		// Shortcuts for ABS, DIFF, RATE
-		KeyStroke ctrl_1 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_1, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
-		KeyStroke ctrl_2 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_2, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
-		KeyStroke ctrl_3 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_3, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
+		KeyStroke ctrl_1 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_1, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx());
+		KeyStroke ctrl_2 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_2, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx());
+		KeyStroke ctrl_3 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_3, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx());
 		
 		getInputMap(WHEN_IN_FOCUSED_WINDOW).put(ctrl_1, "counter.choose.abs");
 		getInputMap(WHEN_IN_FOCUSED_WINDOW).put(ctrl_2, "counter.choose.diff");

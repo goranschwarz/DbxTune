@@ -33,7 +33,7 @@ implements Comparator<Object[]>
 	private DiffContext _context;
 
 	private List<String> _colNames;
-	private List<Comparator> _colComparators = new ArrayList<>();
+	private List<ColComparator> _colComparators = new ArrayList<>();
 
 	public PkComparator(DiffContext context)
 	{
@@ -66,6 +66,34 @@ implements Comparator<Object[]>
 //		this(caseInSensitive, Arrays.asList(colNames));
 //	}
 	
+
+//	@Override
+//	public int compare(Object[] left, Object[] right)
+//	{
+//		if (left == null)
+//			return -1;
+//
+//		if (right == null)
+//			return 1;
+//
+//		if (_context.isTraceEnabled())
+//			_context.addTraceMessage("  * PkComparator: colNames=" + _colNames);
+//
+//		for (int i=0; i<_colComparators.size(); i++)
+//		{
+//			Comparator comparator = _colComparators.get(i);
+//			
+//			int retval = comparator.compare(left[i], right[i]);
+//			
+//			if (retval != 0)
+//				return retval;
+//			
+//		}
+//
+//		// if comparators are exhausted, return 0
+//		return 0;
+//	}
+
 	@Override
 	public int compare(Object[] left, Object[] right)
 	{
@@ -78,14 +106,23 @@ implements Comparator<Object[]>
 		if (_context.isTraceEnabled())
 			_context.addTraceMessage("  * PkComparator: colNames=" + _colNames);
 
-		for (int i=0; i<_colComparators.size(); i++)
+		for (ColComparator comparator : _colComparators)
 		{
-			Comparator comparator = _colComparators.get(i);
+			int leftDataPos  = comparator.getLeftDataArrayPos();
+			int rightDataPos = comparator.getRightDataArrayPos();
 			
-			int retval = comparator.compare(left[i], right[i]);
+			int retval = comparator.compare(left[leftDataPos], right[rightDataPos]);
+
+//if (retval != 0)
+//{
+//	System.out.println("  * PkComparator: colNames=" + _colNames);
+//	System.out.println("    <<< left DataPos=" + leftDataPos  + ", data=|" + left[leftDataPos]   + "|.");
+//	System.out.println("    >>> rightDataPos=" + rightDataPos + ", data=|" + right[rightDataPos] + "|.");
+//	
+//}
+
 			if (retval != 0)
 				return retval;
-			
 		}
 
 		// if comparators are exhausted, return 0

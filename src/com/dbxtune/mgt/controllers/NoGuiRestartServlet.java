@@ -34,6 +34,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
+import com.dbxtune.utils.ServletUtils;
 import com.dbxtune.utils.ShutdownHandler;
 
 public class NoGuiRestartServlet 
@@ -51,6 +52,10 @@ extends HttpServlet
 		resp.setCharacterEncoding("UTF-8");
 		ServletOutputStream out = resp.getOutputStream();
 
+		boolean isAuthorized = ServletUtils.checkBasicOrTokenAuthentication(req, resp, out);
+		if ( ! isAuthorized )
+			return;
+		
 		_logger.info("RESTART was requested by the NO-GUI Management interface.");
 
 		String payload = "";
@@ -63,6 +68,11 @@ extends HttpServlet
 			
 			// Stop the Counter Controller
 			counterController.shutdown();
+			
+			// NOTE: This will just "trigger" the installed JVM shutdown hook... (which will honor shutdown "timeout"...)
+			//       or possibly use ShutdownHandler.shutdown(String reasonText, boolean withRestart, Configuration shutdownConfig, boolean doSystemExit)
+//			System.exit(ShutdownHandler.RESTART_EXIT_CODE);
+			// NOTE: If we call System.exit() here... Jetty will not send the below 'payload' and it will wait for 30 sec in NoGuiManagementServer.stopServer() to stop all it's threads...
 
 			payload = "{ \"restart\" : \"initiated\" }";
 		}

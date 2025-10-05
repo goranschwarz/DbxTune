@@ -199,7 +199,9 @@ public class PostgresConnection extends DbxConnection
 //		String sql = "SELECT reltuples::BIGINT AS estimate FROM pg_class WHERE relname='" + schema + table + "'";
 //		String sql = "SELECT reltuples::BIGINT AS estimate FROM pg_class WHERE relname='" + table + "'";
 		String sql = 
-			"SELECT reltuples::bigint                                     AS estimate,  \n" +
+			"SELECT \n" +
+			"       pg_get_userbyid(relowner)                             AS owner,     \n" +
+			"       reltuples::bigint                                     AS estimate,  \n" +
 			"       pg_size_pretty(pg_total_relation_size(oid))           AS totalSize, \n" +
 			"       pg_size_pretty(pg_total_relation_size(oid) - pg_indexes_size(oid) - COALESCE(pg_total_relation_size(reltoastrelid),0)) AS dataSize, \n" +
 			"       pg_size_pretty(pg_indexes_size(oid))                  AS indexSize,  \n" +
@@ -213,11 +215,12 @@ public class PostgresConnection extends DbxConnection
 			ResultSet rs = stmnt.executeQuery(sql);
 			while(rs.next())
 			{
-				extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong(1),   "Number of rows in the table. Note: fetched from statistics using 'WHERE oid = 'schema.table'::regclass'", null));
-				extraInfo.put(TableExtraInfo.TableTotalSizeInKb,  new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,  "Total Size",      rs.getString(2), "Table size (data + indexes). Note: pg_size_pretty(pg_total_relation_size(oid))", null));
-				extraInfo.put(TableExtraInfo.TableDataSizeInKb,   new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,   "Data Size",       rs.getString(3), "Data Size. Note: pg_size_pretty(total_bytes - index_bytes - toast_bytes)", null));
-				extraInfo.put(TableExtraInfo.TableIndexSizeInKb,  new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,  "Index Size",      rs.getString(4), "Index size (all indexes). Note: pg_size_pretty(pg_indexes_size(oid))", null));
-				extraInfo.put(TableExtraInfo.TableLobSizeInKb,    new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,    "Toast Size",      rs.getString(5), "Toast Size. Note: pg_size_pretty(pg_total_relation_size(reltoastrelid))", null));
+				extraInfo.put(TableExtraInfo.TableOwner,          new TableExtraInfo(TableExtraInfo.TableOwner,          "Table Owner",     rs.getString(1), "Username that owns/created the table.  Note: pg_get_userbyid(relowner)", null));
+				extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong  (2), "Number of rows in the table. Note: fetched from statistics using 'WHERE oid = 'schema.table'::regclass'", null));
+				extraInfo.put(TableExtraInfo.TableTotalSizeInKb,  new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,  "Total Size",      rs.getString(3), "Table size (data + indexes). Note: pg_size_pretty(pg_total_relation_size(oid))", null));
+				extraInfo.put(TableExtraInfo.TableDataSizeInKb,   new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,   "Data Size",       rs.getString(4), "Data Size. Note: pg_size_pretty(total_bytes - index_bytes - toast_bytes)", null));
+				extraInfo.put(TableExtraInfo.TableIndexSizeInKb,  new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,  "Index Size",      rs.getString(5), "Index size (all indexes). Note: pg_size_pretty(pg_indexes_size(oid))", null));
+				extraInfo.put(TableExtraInfo.TableLobSizeInKb,    new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,    "Toast Size",      rs.getString(6), "Toast Size. Note: pg_size_pretty(pg_total_relation_size(reltoastrelid))", null));
 			}
 			rs.close();
 		}
@@ -236,11 +239,12 @@ public class PostgresConnection extends DbxConnection
 					ResultSet rs = stmnt.executeQuery(sql);
 					while(rs.next())
 					{
-						extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong(1),   "Number of rows in the table. Note: fetched from statistics using 'WHERE oid = 'schema.table'::regclass'", null));
-						extraInfo.put(TableExtraInfo.TableTotalSizeInKb,  new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,  "Total Size",      rs.getString(2), "Table size (data + indexes). Note: pg_size_pretty(pg_total_relation_size(oid))", null));
-						extraInfo.put(TableExtraInfo.TableDataSizeInKb,   new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,   "Data Size",       rs.getString(3), "Data Size. Note: pg_size_pretty(total_bytes - index_bytes - toast_bytes)", null));
-						extraInfo.put(TableExtraInfo.TableIndexSizeInKb,  new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,  "Index Size",      rs.getString(4), "Index size (all indexes). Note: pg_size_pretty(pg_indexes_size(oid))", null));
-						extraInfo.put(TableExtraInfo.TableLobSizeInKb,    new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,    "Toast Size",      rs.getString(5), "Toast Size. Note: pg_size_pretty(pg_total_relation_size(reltoastrelid))", null));
+						extraInfo.put(TableExtraInfo.TableOwner,          new TableExtraInfo(TableExtraInfo.TableOwner,          "Table Owner",     rs.getString(1), "Username that owns/created the table.  Note: pg_get_userbyid(relowner)", null));
+						extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong  (2), "Number of rows in the table. Note: fetched from statistics using 'WHERE oid = 'schema.table'::regclass'", null));
+						extraInfo.put(TableExtraInfo.TableTotalSizeInKb,  new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,  "Total Size",      rs.getString(3), "Table size (data + indexes). Note: pg_size_pretty(pg_total_relation_size(oid))", null));
+						extraInfo.put(TableExtraInfo.TableDataSizeInKb,   new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,   "Data Size",       rs.getString(4), "Data Size. Note: pg_size_pretty(total_bytes - index_bytes - toast_bytes)", null));
+						extraInfo.put(TableExtraInfo.TableIndexSizeInKb,  new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,  "Index Size",      rs.getString(5), "Index size (all indexes). Note: pg_size_pretty(pg_indexes_size(oid))", null));
+						extraInfo.put(TableExtraInfo.TableLobSizeInKb,    new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,    "Toast Size",      rs.getString(6), "Toast Size. Note: pg_size_pretty(pg_total_relation_size(reltoastrelid))", null));
 					}
 					rs.close();
 				}

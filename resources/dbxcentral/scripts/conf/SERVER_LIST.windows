@@ -1,0 +1,64 @@
+##===========================================================================
+## Fields in this file
+## 1 - SERVERNAME (must be unique) (this is connection info sent to the specified DbxTune collector) 
+## 2 - 1=Enabled, 0=Disabled
+## 3 - Some explanation for the role of this server
+## 4 - Script that will be used to start the server.
+##     NOTE: <SRVNAME> is replaced with the servername in field 1
+##===========================================================================
+## NOTE about field 1 / ServerName
+##  * This must be a unique name
+##  * If this field contain any strange char like '/', '\', ';' or ':' then we need to add: -A alternameSrvName
+##    The alternate server name will be used for log files, H2 Database Recordings, DbxCentral SchemaName, etc...
+##  For example if the server do not run on the default port name, a entry might look like:
+##    prod-1a-pg.acme.com:1234 ; 1 ; Some Desc ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.bat <SRVNAME> -A prod-1a-pg
+##  Or for a SQL-Server with dynamic ports
+##    GS-1-WIN\SS_2016 ; 1 ; SQL-Server 2016 on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A GS-1-WIN__SS_2016
+##  If server names might be to "like" each others, another switch -N or --displayName can be used to make a more readable description
+##    This 'displayName' will be used for DbxCentral buttons on the landing page and in Alarm Mail subject etc... 
+##    NOTE: For the moment the -N or --displayName switch can't have spaces in them (for various reasons), if you still need
+##          spaces in the name, do: -N _My_Server_Name_ (if it starts/ends with '_' all under scores will be replaced with spaces)
+##===========================================================================
+## NOTE about field 4 / Script...
+## ${DBXTUNE_CENTRAL_BASE} is normally: ${HOME}/.dbxtune/dbxc
+## In that script you can specialize how to start the various collectors
+## You CAN also put everything (all cmdline switches) in here as well, but the row will be very long...
+##===========================================================================
+## Layout of buttons in the DBX Central Landing page
+## * Servers are laid out in the order they are added in this file
+## However you can add some special "#LABEL; " Comments, which means you can arrange servers in groups etc
+## Syntax: #FORMAT; {GROUP|LABEL}; Some Text; option1=value, option2=value 
+## * #FORMAT; GROUP; Name of The Group; border=false         (note: border=true/false is optional)
+## * #FORMAT; LABEL; Name of The Label
+##===========================================================================
+
+PROD_A1_ASE      ; 1 ; PROD Active Side                      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.bat <SRVNAME>
+PROD_REP         ; 1 ; PROD Replication Server               ; ${DBXTUNE_CENTRAL_BASE}/bin/start_rstune.bat <SRVNAME>
+PROD_B1_ASE      ; 1 ; PROD Standby Side                     ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.bat <SRVNAME>
+prod-psql1       ; 1 ; Postgres on default port              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.bat <SRVNAME>
+host-1:1234      ; 1 ; Postgres on non default port          ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.bat <SRVNAME> -A prod-1a-pg
+GS-1-WIN\SS_2016 ; 1 ; SQL-Server on dynamic port            ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A GS-1-WIN__SS_2016
+host-1:1234      ; 1 ; Postgres on non default port          ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.bat <SRVNAME> -A prod-1a-pg
+gorans-ub3:1433  ; 1 ; SQL-Server 2019 on Linux              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A gorans-ub3-ss
+prod-2a-mssql    ; 1 ; Start collector as a windows Service  ; service DbxTune__<SRVNAME>
+
+
+## Example of using a specialized layout
+# >>>       #FORMAT; GROUP; Sybase Servers; border=false
+# >>>       GORAN_UB0_DS       ; 1 ; ASE Version 12.5.4         ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.bat <SRVNAME>
+# >>>       GORANS_UB1_DS      ; 1 ; ASE Version 15.5           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.bat <SRVNAME>
+# >>>       GORAN_UB2_DS       ; 1 ; ASE Version 15.7           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.bat <SRVNAME>
+# >>>       GORAN_UB3_DS       ; 1 ; ASE Version 16.0           ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.bat <SRVNAME>
+# >>>       
+# >>>       #FORMAT; GROUP; Microsoft SQL Servers; border=false
+# >>>       gs-1-win:1433      ; 1 ; SQL-Server 2016 on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A GS-1-WIN__SS_2016
+# >>>       gorans-ub3:1433    ; 1 ; SQL-Server 2019 on Linux   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A gorans-ub3-ss
+# >>>       prod-2a-mssql      ; 1 ; SQL-Server 2019 on Linux   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME>
+# >>>       prod-2b-mssql      ; 1 ; SQL-Server 2019 on Linux   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME>
+# >>>       
+# >>>       #FORMAT; GROUP; Other Servers; border=false
+# >>>       #FORMAT; LABEL; Postgres
+# >>>       gorans-ub3:5432    ; 1 ; Postgress 12.7              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.bat <SRVNAME>  -A gorans-ub3-pg
+# >>>       #FORMAT; LABEL; MySQL
+# >>>       gorans-ub3:3306    ; 1 ; MySql 8                     ; ${DBXTUNE_CENTRAL_BASE}/bin/start_mysqltune.bat <SRVNAME>     -A gorans-ub3-my
+ 

@@ -72,6 +72,9 @@ implements IReportEntry
 	public static final String  PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE = "DailySummaryReport.top.statements.onlyListObjectsInCurrentDatabase";
 	public static final boolean DEFAULT_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE = true;
 
+	public static final String  PROPKEY_TABLE_INFO_DETAILS_OPEN = "DailySummaryReport.TableInfo.details.open";
+	public static final boolean DEFAULT_TABLE_INFO_DETAILS_OPEN = false;
+
 	private   Exception _problemEx;
 	private   String    _problemMsg;
 	private   List<String> _warningMsgList;
@@ -1712,6 +1715,14 @@ implements IReportEntry
 		// Finally make up a message that will be appended to the SQL Text
 		if (StringUtil.hasValue(tableInfo))
 		{
+			boolean tableInfoDetailsOpen = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_INFO_DETAILS_OPEN, DEFAULT_TABLE_INFO_DETAILS_OPEN);
+
+			String tableInfoDetailsOpenStr = "";
+			if (tableInfoDetailsOpen)
+			{
+				tableInfoDetailsOpenStr = " open";
+			}
+
 			// Surround with collapse div
 			tableInfo = ""
 					//+ "<!--[if !mso]><!--> \n" // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
@@ -1719,8 +1730,9 @@ implements IReportEntry
 					+ "\n<br>\n"
 					+ getFormattedSqlAsTooltipDiv(sqlText, "Hover or Click to see formatted SQL Text...", dbmsVendor) + "\n"
 //					+ "<br>\n"
-					+ "<details open> \n"
+					+ "<details class='dsr-details-tableinfo'" + tableInfoDetailsOpenStr + "> \n"
 					+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s): " + listToHtmlCode(tableList) + "</summary> \n"
+					+ "&nbsp; &nbsp; <a href='#' class='dsr-details-tableinfo-close-all'>Close All Table Information (like below) in the report</a> - Or set property <code>" + PROPKEY_TABLE_INFO_DETAILS_OPEN + "=true|false</code> to have the details open/closed when the report is created.<br> "
 					+ tableInfo
 					+ "</details> \n"
 

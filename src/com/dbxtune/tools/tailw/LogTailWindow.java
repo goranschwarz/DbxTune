@@ -2078,8 +2078,8 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 	public static String getDefaultPropFile()
 	{
-		if (AppDir.getAppStoreDir() != null) 
-			return AppDir.getAppStoreDir() + File.separator + TAIL_CONFIG_FILE_NAME;
+		if (AppDir.getDbxUserHomeDir() != null) 
+			return AppDir.getDbxUserHomeDir() + File.separator + TAIL_CONFIG_FILE_NAME;
 
 		return TAIL_CONFIG_FILE_NAME;
 	}

@@ -32,10 +32,8 @@ import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.RollingFileAppender;
-import org.apache.logging.log4j.core.appender.rolling.CompositeTriggeringPolicy;
 import org.apache.logging.log4j.core.appender.rolling.DefaultRolloverStrategy;
 import org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy;
-import org.apache.logging.log4j.core.appender.rolling.TimeBasedTriggeringPolicy;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
@@ -120,8 +118,11 @@ public class Log4jUtils
 		if (logPattern == null)
 			logPattern = "%d - %-5p - %m%n";
 
-		String rolloverFilePattern = logFilePath + ".%d{yyyy-MM-dd}.%i.log";
-		
+//TODO; // Look at this again... it saves a lot of log files (not keeping only 3 time stamped)... So either go back to xxx.1.log, xxx.2.log, xxx.3.log ... or change it "somehow"...
+//         There was no simple solution for this, so I reverted back to: X number of log files... and commented out the 'timePolicy' and the 'combinedPolicy' hopefully it can be resolved later.
+//		String rolloverFilePattern = logFilePath + ".%d{yyyy-MM-dd}.%i.log";
+		String rolloverFilePattern = logFilePath + ".%i.log";
+
 		// Create a PatternLayout for the appender
 		PatternLayout layout = PatternLayout.newBuilder()
 				.withConfiguration(config)
@@ -130,12 +131,13 @@ public class Log4jUtils
 
 		// Create a SizeBasedTriggeringPolicy & TimeBasedTriggeringPolicy
 		SizeBasedTriggeringPolicy sizePolicy = SizeBasedTriggeringPolicy.createPolicy(maxMb + "MB");
-		TimeBasedTriggeringPolicy timePolicy = TimeBasedTriggeringPolicy.newBuilder()
-				.withInterval(1)
-				.withModulate(true)
-				.build();
+//		TimeBasedTriggeringPolicy timePolicy = TimeBasedTriggeringPolicy.newBuilder()
+//				.withInterval(1)
+//				.withModulate(true)
+//				.build();
+
 		// Combine the policies
-		CompositeTriggeringPolicy policy = CompositeTriggeringPolicy.createPolicy(sizePolicy, timePolicy);
+//		CompositeTriggeringPolicy combinedPolicy = CompositeTriggeringPolicy.createPolicy(sizePolicy, timePolicy);
 
 		
 		// Create a DefaultRolloverStrategy
@@ -163,7 +165,8 @@ public class Log4jUtils
 				.withFileName(logFilePath)
 				.withFilePattern(rolloverFilePattern)
 				.withAppend(true)
-				.withPolicy(policy)
+//				.withPolicy(combinedPolicy)
+				.withPolicy(sizePolicy)
 				.withStrategy(strategy)
 				.build();
 

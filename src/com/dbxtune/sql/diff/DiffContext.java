@@ -51,6 +51,9 @@ public class DiffContext
 	
 	private List<String> _diffColumns; // null if all columns are to be compared, a list of columns that should be difference checked
 
+	private List<String>  _leftOriginUuidColumnList  = new ArrayList<>();
+	private List<String>  _rightOriginUuidColumnList = new ArrayList<>();
+	
 	private DiffTable _leftDt;
 	private DiffTable _rightDt;
 
@@ -64,11 +67,31 @@ public class DiffContext
 	protected Component _guiOwner;
 	private SqlProgressDialog _progressDialog;
 	
+	private UuidCaseSensitivity _uuidCaseSensitivity = UuidCaseSensitivity.UNCHANGED;
+
+	
 	public enum DiffSide
 	{
 		LEFT, 
 		RIGHT
 	};
+
+	public enum UuidCaseSensitivity
+	{
+		UNCHANGED, 
+		TO_UPPER, 
+		TO_LOWER
+	};
+
+	public UuidCaseSensitivity getUuidCaseSensitivity() { return _uuidCaseSensitivity; }
+	public void setUuidCaseSensitivity(UuidCaseSensitivity caseSensitivity) { _uuidCaseSensitivity = caseSensitivity; }
+
+	public void setLeftOriginUuidColumns (List<String> colNames) { _leftOriginUuidColumnList  = colNames; }
+	public void setRightOriginUuidColumns(List<String> colNames) { _rightOriginUuidColumnList = colNames; }
+
+	public List<String> getLeftOriginUuidColumns()  { return _leftOriginUuidColumnList;  }
+	public List<String> getRightOriginUuidColumns() { return _rightOriginUuidColumnList; }
+
 	
 //	public DiffContext(List<String> pkList, ResultSet left, ResultSet right)
 //	throws DiffException, SQLException
@@ -290,7 +313,47 @@ public class DiffContext
 		for (int c=0; c<getRightDt().getColumnCount(); c++)
 			if (getRightDt().isJdbcDataTypeSupportedInDiffColumnThrow(c))
 				/* ABOVE THROWS Exception on problems */;
-		
+
+		//---------------------------------------------------
+		// Check for UUID Columns
+		//---------------------------------------------------
+		if ( ! getLeftDt().getUuidColumnNames().isEmpty() || ! getRightDt().getUuidColumnNames().isEmpty() )
+		{
+			if ( ! getLeftDt().getUuidColumnNames().isEmpty() )
+			{
+				List<String> pkUuidNames = new ArrayList<>();
+				for (String pkColName : getLeftDt().getPkColumnNames())
+					if (getLeftDt().getUuidColumnNames().contains(pkColName))
+						pkUuidNames.add(pkColName);
+				
+				String pkUuidColsWarn = "";
+				if ( ! pkUuidNames.isEmpty() )
+					pkUuidColsWarn = "KEY column(s) with UUID " + pkUuidNames + ", ";
+
+				addWarningMessage("Left hand side HAS UUID columns, " + pkUuidColsWarn + "this may cause problems when comparing, due to how UUID's are SORTED. \n"
+						+ "Possible solution is to cast them to chars. Example: 'CAST(uuidCol as char(36))'. \n"
+						+ "All UUID columns: " + getRightDt().getUuidColumnNames()
+						+ (pkUuidNames.isEmpty() ? "" : "\n>>> KEY column(s) with UUID: " + pkUuidNames + " which affects sorting!"));
+			}
+			
+			if ( ! getRightDt().getUuidColumnNames().isEmpty() )
+			{
+				List<String> pkUuidNames = new ArrayList<>();
+				for (String pkColName : getRightDt().getPkColumnNames())
+					if (getRightDt().getUuidColumnNames().contains(pkColName))
+						pkUuidNames.add(pkColName);
+
+				String pkUuidColsWarn = "";
+				if ( ! pkUuidNames.isEmpty() )
+					pkUuidColsWarn = "KEY column(s) with UUID " + pkUuidNames + ", ";
+
+				addWarningMessage("Right hand side HAS UUID columns, " + pkUuidColsWarn + "this may cause problems when comparing, due to how UUID's are SORTED. \n"
+						+ "Possible solution is to cast them to chars. Example: 'CAST(uuidCol as char(36))'. \n"
+						+ "All UUID columns: " + getRightDt().getUuidColumnNames()
+						+ (pkUuidNames.isEmpty() ? "" : "\n>>> KEY column(s) with UUID: " + pkUuidNames + " which affects sorting!"));
+			}
+		}
+
 		//---------------------------------------------------
 		// Check for ORDER BY -- Only a WARNING Message
 		//---------------------------------------------------

@@ -22,6 +22,7 @@ package com.dbxtune.cm.rs;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -239,7 +240,7 @@ extends CountersModel
 				else
 				{
 					//Double memoryPctUsed = totalMemUsed / _memoryLimitSizeMb * 100.0;
-					BigDecimal memoryPctUsed = new BigDecimal(totalMemUsed / _memoryLimitSizeMb * 100.0).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal memoryPctUsed = new BigDecimal(totalMemUsed / _memoryLimitSizeMb * 100.0).setScale(2, RoundingMode.HALF_EVEN);
 
 					dArray[0] = memoryPctUsed.doubleValue();
 
@@ -488,7 +489,7 @@ extends CountersModel
 			
 			if (totalMemUsed != null && _memoryLimitSizeMb != -1)
 			{
-				BigDecimal usedPct = new BigDecimal(totalMemUsed / _memoryLimitSizeMb * 100.0).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal usedPct = new BigDecimal(totalMemUsed / _memoryLimitSizeMb * 100.0).setScale(2, RoundingMode.HALF_EVEN);
 				int usedMemInMb = totalMemUsed.intValue();
 				int freeMemInMb = _memoryLimitSizeMb - totalMemUsed.intValue();
 

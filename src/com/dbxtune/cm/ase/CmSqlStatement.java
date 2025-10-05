@@ -130,6 +130,8 @@ extends CountersModel
 			,"sumCpuTime"
 			,"sumWaitTime"
 			,"sumRowsAffected"
+			,"cntQueryOptimizationTimeGtZero"
+			,"sumQueryOptimizationTime"
 			};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -200,6 +202,9 @@ extends CountersModel
 	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_CPU_TIME      = "SqlStmntSumCpuTime";
 	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME     = "SqlStmntSumWaitTime";
 	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED = "SqlStmntSumRowsAfct";
+
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_CNT   = "SqlStmntSumCmplCnt";
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TIME  = "SqlStmntSumCmplTime";
 
 	public static final String GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT       = "SqlStmntSumErrorCnt";
 	
@@ -385,6 +390,32 @@ extends CountersModel
 			"Sum Rows Affected per sec Over SQL Response Time", // Menu CheckBox text
 			"Sum Rows Affected per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_CNT,
+			"Sum Query Compile/Optimization Count per sec Over SQL Response Time", // Menu CheckBox text
+			"Sum Query Compile/Optimization Count per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TIME,
+			"Sum Query Compile/Optimization Time Over SQL Response Time", // Menu CheckBox text
+			"Sum Query Compile/Optimization Time Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -736,6 +767,18 @@ extends CountersModel
 		}
 		
 		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_CNT.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "cntQueryOptimizationTimeGtZero");
+		}
+		
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TIME.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "sumQueryOptimizationTime");
+		}
+		
+		// -----------------------------------------------------------------------------------------
 		if (GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT.equals(tgdp.getName()))
 		{
 			Double[] arr = new Double[1];
@@ -910,6 +953,13 @@ extends CountersModel
 			mtd.addColumn(tabName, "avgRowsAffected",      "<html>Average RowsAffected for this time span.<br><b>Algorithm:</b> abs.sumRowsAffected / abs.totalCount</html>");
 			mtd.addColumn(tabName, "maxRowsAffected",      "<html>Maximum RowsAffected for this time span.</html>");
 
+			mtd.addColumn(tabName, "cntQueryOptimizationTimeGtZero",    "<html>Summary of all QueryOptimizationTime with values above 0 for this time span. <br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
+			mtd.addColumn(tabName, "cntQueryOptimizationTimeGtZeroAbs", "<html>Summary of all QueryOptimizationTime with values above 0 for this time span.</html>");
+			mtd.addColumn(tabName, "sumQueryOptimizationTime",          "<html>Summary of all QueryOptimizationTime for this time span. <br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
+			mtd.addColumn(tabName, "sumQueryOptimizationTimeAbs",       "<html>Summary of all QueryOptimizationTime for this time span.</html>");
+			mtd.addColumn(tabName, "avgQueryOptimizationTime",          "<html>Average QueryOptimizationTime for this time span.<br> <b>Algorithm:</b> abs.sumQueryOptimizationTime / abs.cntQueryOptimizationTimeGtZero</html>");
+			mtd.addColumn(tabName, "maxQueryOptimizationTime",          "<html>Maximum QueryOptimizationTime for this time span.</html>");
+			
 //			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"=count, \"MsgNumber\"=count}.</html>");
 			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"={\"dbname\"=count}, \"MsgNumber\"={\"dbname\"=count}}.</html>");
 		}
@@ -1116,6 +1166,13 @@ extends CountersModel
 		tmp = new AggregationType("avgRowsAffected",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("maxRowsAffected",        AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
 		        
+		tmp = new AggregationType("cntQueryOptimizationTimeGtZero",     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("cntQueryOptimizationTimeGtZeroAbs",  AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumQueryOptimizationTime",           AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumQueryOptimizationTimeAbs",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgQueryOptimizationTime",           AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxQueryOptimizationTime",           AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		        
 //		tmp = new AggregationType("errorMsgCountMap",       Types.VARCHAR, 1024, 0);
 
 //		tmp = new AggregationType("statId",                 Types.INTEGER,  0, 0);
@@ -1227,7 +1284,8 @@ extends CountersModel
 					String  dbname   = ndbe.getKey();
 					Long    newCount = ndbe.getValue();
 					
-					Long prevCount = prevSampleErrorMsgCountMap.get(errorNum) == null ? 0L : prevSampleErrorMsgCountMap.get(errorNum).get(dbname);
+//					Long prevCount = prevSampleErrorMsgCountMap.get(errorNum) == null ? 0L : prevSampleErrorMsgCountMap.get(errorNum).get(dbname);
+					Long prevCount = prevSampleErrorMsgCountMap.get(errorNum) == null ? 0L : prevSampleErrorMsgCountMap.get(errorNum).getOrDefault(dbname, 0L);
 
 					if (newCount  == null) newCount  = 0L;
 					if (prevCount == null) prevCount = 0L;
@@ -1662,13 +1720,26 @@ extends CountersModel
 
 						errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT);
 						errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_SEC);
-						
+
+						// Add last ## SQL Statements with errors, so we can have a clue about what SQL is sent in the alarm
+						boolean addLastSqlText = true;
+						if ( addLastSqlText && PersistentCounterHandler.hasInstance() ) // The hasInstance() is overkill, but why not...
+						{
+							ISqlCaptureBroker sqlCapBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+							if (sqlCapBroker != null && sqlCapBroker instanceof SqlCaptureBrokerAse)
+							{
+								SqlCaptureBrokerAse aseSqlCapBroker = (SqlCaptureBrokerAse)sqlCapBroker;
+
+								errorMsgInfoHtml += "<br>Last Captured SQL Statements with Errors:<br>" + aseSqlCapBroker.getAseErrorStatementsAsHtml();
+							}
+						}
+
 						// Create Alarm
 						AlarmEvent alarm = new AlarmEventClientErrorMsgRate(cm, round1(errorCountPerSec), errorMsgInfoJson, threshold);
-						
+
 						// Set the Error Info
 						alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
-						
+
 						// Add the Alarm
 						AlarmHandler.getInstance().addAlarm(alarm);
 					}

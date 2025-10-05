@@ -395,7 +395,7 @@ extends CounterModelHostMonitor
 //					if (pct > 100)
 //						pct = 100;
 //
-//					BigDecimal bd =  new BigDecimal( pct ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//					BigDecimal bd =  new BigDecimal( pct ).setScale(1, RoundingMode.HALF_EVEN);
 //					newSample.setValueAt(bd, r, usedPct_pos);
 //				}
 //			}

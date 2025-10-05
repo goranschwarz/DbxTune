@@ -92,7 +92,7 @@ public class FileTail
 	private int _linesFromEnd = 10;
 
 	/** Is the tailer currently tailing? */
-	private boolean _running = false;
+	private transient boolean _running = false;
 
 	/** This will be set to true right before the thread is ending */
 	private boolean _shutdownIsComplete = false;

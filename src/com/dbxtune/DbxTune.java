@@ -332,7 +332,7 @@ public abstract class DbxTune
 //		_cmdLine = cmd;
 
 		// Create store dir if it did not exists.
-		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out );
+		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out, cmd );
 
 
 		// Are we in GUI mode or not
@@ -360,13 +360,13 @@ public abstract class DbxTune
 		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  getSaveConfigFileName());
 		final String APP_HOME              = System.getProperty(getAppHomeEnvName());
 
-		String defaultPropsFile     = (APP_HOME                != null) ? APP_HOME                + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (APP_HOME                   != null) ? APP_HOME                   + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 		// Compose MAIN CONFIG file (first USER_HOME then IQTUNE_HOME)
-		String filename = AppDir.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
+		String filename = AppDir.getDbxUserHomeDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -664,7 +664,7 @@ public abstract class DbxTune
 			// NO Logfile was specified, maybe try to set the filename to AppName.nogui.dbmsSrvName.log
 			if ( tmpSrvName != null && StringUtil.isNullOrBlank(logFilename) )
 			{
-				logFilename = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : System.getProperty("user.home");
+				logFilename = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() : System.getProperty("user.home");
 				if ( logFilename != null && ! (logFilename.endsWith("/") || logFilename.endsWith("\\")) )
 					logFilename += File.separator;
 
@@ -688,7 +688,27 @@ public abstract class DbxTune
 		SplashWindow.drawProgress("Initializing.");
 
 
+		// Print some environment variables (for debugging purposes)
+		_logger.info("Environment Variable: DBXTUNE_HOME        = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_HOME"       , "-not-set-") + "'.");
+		_logger.info("Environment Variable: DBXTUNE_USER_HOME   = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_USER_HOME"  , "-not-set-") + "'.");
 
+		_logger.info("Environment Variable: DBXTUNE_SAVE_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_SAVE_DIR"   , "-not-set-") + "'.");
+		_logger.info("Environment Variable: DBXTUNE_LOG_DIR     = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_LOG_DIR"    , "-not-set-") + "'.");
+		_logger.info("Environment Variable: DBXTUNE_CONF_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CONF_DIR"   , "-not-set-") + "'.");
+		_logger.info("Environment Variable: DBXTUNE_INFO_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_INFO_DIR"   , "-not-set-") + "'.");
+		_logger.info("Environment Variable: DBXTUNE_REPORTS_DIR = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_REPORTS_DIR", "-not-set-") + "'.");
+		
+		if ( ! _gui )
+		{
+			_logger.info("Environment Variable: DBXTUNE_CENTRAL_BASE        = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CENTRAL_BASE"       , "-not-set-") + "'.");
+			_logger.info("Environment Variable: DBXTUNE_CENTRAL_SAVE_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CENTRAL_SAVE_DIR"   , "-not-set-") + "'.");
+			_logger.info("Environment Variable: DBXTUNE_CENTRAL_LOG_DIR     = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CENTRAL_LOG_DIR"    , "-not-set-") + "'.");
+			_logger.info("Environment Variable: DBXTUNE_CENTRAL_CONF_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CENTRAL_CONF_DIR"   , "-not-set-") + "'.");
+			_logger.info("Environment Variable: DBXTUNE_CENTRAL_INFO_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CENTRAL_INFO_DIR"   , "-not-set-") + "'.");
+			_logger.info("Environment Variable: DBXTUNE_CENTRAL_REPORTS_DIR = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CENTRAL_REPORTS_DIR", "-not-set-") + "'.");
+		}
+
+		
 		//--------------------------------------------------------------------
 		// BEGIN: Set some SYSTEM properties
 		// - Mainly for H2 database specific settings
@@ -985,41 +1005,49 @@ public abstract class DbxTune
 				if (cmd.hasOption('A'))
 					aseServer = cmd.getOptionValue('A');
 
-//FIXME; rewrite a bunch of this... this is to "rï¿½rigt" and it's also a bit of duplicate in CounterCollectorThreadNoGui
+//FIXME; rewrite a bunch of this... this is to "rörigt" and it's also a bit of duplicate in CounterCollectorThreadNoGui
 
-				try
+				if ("integratedSecurity".equalsIgnoreCase(aseUser))
 				{
-					//_logger.info("Reading password for DBMS server name '" + aseServer + "' from file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
-
-					// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
-					String asePasswd = OpenSslAesUtil.readPasswdFromFile(aseUser, aseServer);
-					
-					if (asePasswd != null)
+					_logger.info("No DBMS password was specified. but the user '" + aseUser + "', means that we do not need a password.");
+					storeConfigProps.setProperty("conn.dbmsPassword", "", true); // should we encrypt the passwd or not
+				}
+				else
+				{
+					try
 					{
-						_logger.info("No DBMS password was specified. But the password '******', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						//_logger.info("Reading password for DBMS server name '" + aseServer + "' from file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
-						if (_logger.isDebugEnabled())
-							_logger.info("No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
+						String asePasswd = OpenSslAesUtil.readPasswdFromFile(aseUser, aseServer);
+						
+						if (asePasswd != null)
+						{
+							_logger.info("No DBMS password was specified. But the password '******', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
 
-						if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-							System.out.println("#### DEBUG ####: No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+							if (_logger.isDebugEnabled())
+								_logger.info("No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
 
-						storeConfigProps.setProperty("conn.dbmsPassword", asePasswd, true); // should we encrypt the passwd or not
+							if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
+								System.out.println("#### DEBUG ####: No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+
+							storeConfigProps.setProperty("conn.dbmsPassword", asePasswd, true); // should we encrypt the passwd or not
+						}
+						else
+							_logger.warn("No DBMS password was specified. and NO entry, for user '"+aseUser+"', DBMS Server '"+aseServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
 					}
-					else
-						_logger.warn("No DBMS password was specified. and NO entry, for user '"+aseUser+"', DBMS Server '"+aseServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
-				}
-				catch(DecryptionException ex)
-				{
-					_logger.warn("Problems decrypting the password, for user '"+aseUser+"', DBMS Server '"+aseServer+"'. Probably a bad passphrase for the encrypted passwd. Caught: "+ex);
-				}
-				catch(FileNotFoundException ex)
-				{
-					_logger.warn("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
-				}
-				catch(IOException ex)
-				{
-					_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
+					catch(DecryptionException ex)
+					{
+						_logger.warn("Problems decrypting the password, for user '"+aseUser+"', DBMS Server '"+aseServer+"'. Probably a bad passphrase for the encrypted passwd. Caught: "+ex);
+					}
+					catch(FileNotFoundException ex)
+					{
+						_logger.warn("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
+					}
+					catch(IOException ex)
+					{
+						_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
+					}
 				}
 			}
 			
@@ -1071,11 +1099,11 @@ public abstract class DbxTune
 //System.out.println("DbxTune: storeConfigProps.getProperty(conn.sshHostname) = " + storeConfigProps.getProperty("conn.sshHostname"));
 //System.out.println("---> DbxTune: storeConfigProps.hasProperty(conn.sshPassword) = " + storeConfigProps.hasProperty("conn.sshPassword"));
 			// If no password, try to grab a password from the file '~/.passwd.enc'
-			if ( ! storeConfigProps.hasProperty("conn.sshPassword"))
+			if ( ! storeConfigProps.hasProperty("conn.sshPassword") && storeConfigProps.hasProperty("conn.sshUsername"))
 			{
 				try 
 				{
-					String sshUser   = storeConfigProps.getProperty("conn.sshUsername", "sybase");
+					String sshUser   = storeConfigProps.getProperty("conn.sshUsername", "unknownSshUser");
 					String sshServer = storeConfigProps.getProperty("conn.sshHostname", null);
 					
 					String sshUserName      = sshUser;
@@ -1338,7 +1366,7 @@ public abstract class DbxTune
 			}
 		}
 
-boolean startEvenIfGui_justToTestTheService = "gorans2".equals(StringUtil.getHostname());
+boolean startEvenIfGui_justToTestTheService = "gorans3".equals(StringUtil.getHostname());
 if (_gui && startEvenIfGui_justToTestTheService)
 {
 	(new Exception("REMOVE THIS, we should NOT start a Management Server in GUI Mode...")).printStackTrace();
@@ -1364,8 +1392,9 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			if (writeDbxTuneServiceFile)
 			{
 				// file location: ${HOME}/.dbxtune/info/${dbmsSrvName}.dbxtune
-//				String noGuiServiceInfoFile = AppDir.getAppStoreDir() + File.separator + "info" + File.separator + dbmsSrvName + ".dbxtune";
-				String noGuiServiceInfoFile = AppDir.getAppStoreDir() + File.separator + "info" + File.separator + dbmsSrvOrAliasName + ".dbxtune";
+//				String noGuiServiceInfoFile = AppDir.getDbxUserHomeDir() + File.separator + "info" + File.separator + dbmsSrvName + ".dbxtune";
+//				String noGuiServiceInfoFile = AppDir.getDbxUserHomeDir() + File.separator + "info" + File.separator + dbmsSrvOrAliasName + ".dbxtune";
+				String noGuiServiceInfoFile = AppDir.getAppInfoDir() + File.separator + dbmsSrvOrAliasName + ".dbxtune";
 				File f = new File(noGuiServiceInfoFile);
 
 				_logger.info("Creating DbxTune - NOGUI Service information file '" + f.getAbsolutePath() + "'.");
@@ -1385,7 +1414,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 				Configuration conf = new Configuration(noGuiServiceInfoFile);
 				Configuration.setInstance(DBXTUNE_NOGUI_INFO_CONFIG, conf);
 				
-				// Set some configuartion in the file
+				// Set some configuration in the file
 				conf.setProperty("dbxtune.app.name",            Version.getAppName());
 				conf.setProperty("dbxtune.startTime",           new Timestamp(System.currentTimeMillis())+"" );
 				conf.setProperty("dbxtune.pid",                 JavaUtils.getProcessId("-1"));
@@ -1399,6 +1428,8 @@ if (_gui && startEvenIfGui_justToTestTheService)
 				conf.setProperty("dbxtune.management.host",     noGuiMngmntSrv.getListenerHost());
 				conf.setProperty("dbxtune.management.port",     noGuiMngmntSrv.getPort());
 				conf.setProperty("dbxtune.management.info",     noGuiMngmntSrv.getExInfo());
+//				conf.setProperty("dbxtune.management.shutdown.url", "http://admin:" + noGuiMngmntSrv.getAuthPassword() + "@" + noGuiMngmntSrv.getListenerHost() + ":" + noGuiMngmntSrv.getPort() + "/api/mgt/shutdown"); // ???
+				conf.setProperty("dbxtune.management.shutdown.url", "http://" + noGuiMngmntSrv.getListenerHost() + ":" + noGuiMngmntSrv.getPort() + "/api/mgt/shutdown?access_token=" + noGuiMngmntSrv.getAuthTokenString(true)); // ???
 
 				// AlarmWriteToFile ACTIVE/LOG properties (so the DBXCENTRAL OverviewServlet can pick it up)
 				String wtoFileActiveFilename = Configuration.getCombinedConfiguration().getPropertyRaw(AlarmWriterToFile.PROPKEY_activeFilename);
@@ -2220,7 +2251,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			else if ( cmd.hasOption("createAppDir") )
 			{
 				// Create store dir if it did not exists.
-				AppDir.checkCreateAppDir( null, System.out );
+				AppDir.checkCreateAppDir( null, System.out, cmd );
 			}
 			//-------------------------------
 			// Check for correct number of cmd line parameters
@@ -2281,10 +2312,23 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			System.exit(1);
 		}
 
+		// WAIT FOR SHUTDOWN -- Possibly change this to: if ( no-gui ) { ShutdownHandler.waitforShutdown(); }
+		// Note: This method print out: 
+		//    1 - Waiting for shutdown on thread...
+		//    do: _waitforObject.wait();
+		//    2 - AFTER-Waiting for shutdown on thread 
+		ShutdownHandler.waitforShutdown();
+		
 		// Did anyone set that we requested a restart, then exit with 8  ( or laying 8 : a lemniscate = infinity symbol)
 		if (ShutdownHandler.wasRestartSpecified())
 		{
+			_logger.info("Shutdown with 'restart' was specified, Exiting with return code: " + ShutdownHandler.RESTART_EXIT_CODE);
 			System.exit(ShutdownHandler.RESTART_EXIT_CODE);
+		}
+		else
+		{
+			_logger.info("Normal shutdown, Exiting with return code: 0");
+			System.exit(0);
 		}
 	}
 }

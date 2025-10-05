@@ -805,7 +805,7 @@ implements ActionListener
 			String txt = _diffContext.getLocalDbmsConfig().reverseEngineer(createDdlFixMapUseRight(), comment);
 			if (StringUtil.hasValue(txt))
 			{
-				SqlTextDialog dialog = new SqlTextDialog(this, txt);
+				SqlTextDialog dialog = new SqlTextDialog(this, "DDL View", txt);
 				dialog.setVisible(true);
 			}
 		}
@@ -818,7 +818,7 @@ implements ActionListener
 			String txt = _diffContext.getRemoteDbmsConfig().reverseEngineer(createDdlFixMapUseLeft(), comment);
 			if (StringUtil.hasValue(txt))
 			{
-				SqlTextDialog dialog = new SqlTextDialog(this, txt);
+				SqlTextDialog dialog = new SqlTextDialog(this, "DDL View", txt);
 				dialog.setVisible(true);
 			}
 		}

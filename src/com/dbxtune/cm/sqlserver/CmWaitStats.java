@@ -23,6 +23,7 @@ package com.dbxtune.cm.sqlserver;
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -559,7 +560,7 @@ extends CountersModel
 			{
 				double calcWaitTimePerCount = wait_time_ms / (waiting_tasks_count * 1.0);
 
-				BigDecimal newVal = new BigDecimal(calcWaitTimePerCount).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
+				BigDecimal newVal = new BigDecimal(calcWaitTimePerCount).setScale(3, RoundingMode.HALF_EVEN);;
 				diffData.setValueAt(newVal, rowId, pos_WaitTimePerCount);
 			}
 			else
@@ -569,7 +570,7 @@ extends CountersModel
 			// percentage
 			if (sum_wait_time_ms > 0)
 			{
-				BigDecimal newVal = new BigDecimal( 100.0 * wait_time_ms / sum_wait_time_ms ).setScale(1, BigDecimal.ROUND_HALF_EVEN);;
+				BigDecimal newVal = new BigDecimal( 100.0 * wait_time_ms / sum_wait_time_ms ).setScale(1, RoundingMode.HALF_EVEN);;
 				diffData.setValueAt(newVal, rowId, pos_percentage);
 			}
 			else

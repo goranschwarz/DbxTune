@@ -23,8 +23,13 @@ package com.dbxtune.pcs.report;
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.sql.Types;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -242,6 +247,180 @@ extends DailySummaryReportDefault
 			// Put them in the "desired" order
 			if (StringUtil.hasValue(collationName)) otherInfo.put("Collation Name"       , collationName);
 			if (StringUtil.hasValue(collationDesc)) otherInfo.put("Collation Description", collationDesc);
+		}
+		catch(Exception ex)
+		{
+			_logger.warn("Problems getting SQL Server Config Information from table 'MonSessionDbmsConfigText'.", ex);
+		}
+		
+
+		
+		//-------------------------------------------------------
+		// WSFC/Windows Clustering
+		//-------------------------------------------------------
+		sql = ""
+			    + "select [configText] \n"
+			    + "from [MonSessionDbmsConfigText] \n"
+			    + "where [configName] = 'SqlServerClusterNodes' \n"
+			    + "  and [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfigText]) \n"
+			    + "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			String configText = "";
+
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+					configText = rs.getString(1);
+			}
+
+			// FIXME: describe how the table output looks like.
+			// THE BELOW IS FOR 'SqlServerHelpSort' SO IT SHOULD BE CHANGED
+			// +-------------------------------------------------------------------------------------------------------------------------------+
+			// |Server default collation                                                                                                       |
+			// +-------------------------------------------------------------------------------------------------------------------------------+
+			// |Latin1-General-100, case-insensitive, accent-sensitive, kanatype-insensitive, width-insensitive, supplementary characters, UTF8|
+			// +-------------------------------------------------------------------------------------------------------------------------------+
+			// Rows 1
+			// +--------------------------------+
+			// |SERVERPROPERTY_Collation        |
+			// +--------------------------------+
+			// |Latin1_General_100_CI_AS_SC_UTF8|
+			// +--------------------------------+
+			// Rows 1
+			
+			String deploymentType = "";
+			String clusterInfo    = "";
+//			String availabilityGroupInfo = "";
+			ResultSetTableModel rstmAvailabilityGroupInfo = ResultSetTableModel.createEmpty("availabilityGroupInfoHtmlTable");
+
+			for (ResultSetTableModel rstm : ResultSetTableModel.parseTextTables(configText))
+			{
+				if (rstm.hasColumn("DeploymentType"))
+				{
+					if (rstm.getRowCount() > 0)
+					{
+						deploymentType = rstm.getValueAsString(0, 0); // rowPos & colPos is at ModelPosition, starting at 0
+					}
+				}
+
+				// WSFC - Windows Server Failover Clustering
+				if (rstm.hasColumn("NodeName"))
+				{
+					String entrySeparator = "";
+					for (int r=0; r<rstm.getRowCount(); r++)
+					{
+						String nodeName          = rstm.getValueAsString(r, "NodeName"          , true, "unknown");
+						String statusDescription = rstm.getValueAsString(r, "status_description", true, "");
+						String isCurrentOwner    = rstm.getValueAsString(r, "is_current_owner"  , true, "");
+
+						clusterInfo += entrySeparator + "NodeName='" + nodeName + "', isCurrentOwner=" + isCurrentOwner + ", statusDescription='" + statusDescription + "'";
+//						entrySeparator = "; ";
+						entrySeparator = "; <BR>";
+					}
+				}
+
+				// AG - Availability Groups
+				if (rstm.hasColumn("failover_mode_desc"))
+				{
+					Map<String, Set<String>> primary_agName_SqlNameSet   = new LinkedHashMap<>();
+					Map<String, Set<String>> secondary_agName_SqlNameSet = new LinkedHashMap<>();
+					Map<String, Set<String>> failoverMode_agName_ModeSet = new LinkedHashMap<>();
+					Map<String, Set<String>> agType_agName_TypeSet       = new LinkedHashMap<>();
+					
+					for (int r=0; r<rstm.getRowCount(); r++)
+					{
+						String AGName             = rstm.getValueAsString(r, "AGName"             , true, "unknown");
+						String sql_server_name    = rstm.getValueAsString(r, "sql_server_name"    , true, "");
+						String role_desc          = rstm.getValueAsString(r, "role_desc"          , true, "");
+						String failover_mode_desc = rstm.getValueAsString(r, "failover_mode_desc" , true, "");
+						String AG_Type            = rstm.getValueAsString(r, "AG_Type"            , true, "");
+
+						// primary_agName_SqlNameSet
+						if ("PRIMARY".equals(role_desc))
+						{
+							String key = AGName;
+							Set<String> sqlNameSet = primary_agName_SqlNameSet.computeIfAbsent(key, k -> new LinkedHashSet<String>());
+							sqlNameSet.add(sql_server_name);
+						}
+						// secondary_agName_SqlNameSet
+						if ("SECONDARY".equals(role_desc))
+						{
+							String key = AGName;
+							Set<String> sqlNameSet = secondary_agName_SqlNameSet.computeIfAbsent(key, k -> new LinkedHashSet<String>());
+							sqlNameSet.add(sql_server_name);
+						}
+
+						// failoverMode_agName_ModeSet
+						if ("AUTOMATIC".equals(failover_mode_desc) || "MANUAL".equals(failover_mode_desc))
+						{
+							String key = AGName;
+							Set<String> modeSet = failoverMode_agName_ModeSet.computeIfAbsent(key, k -> new LinkedHashSet<String>());
+							modeSet.add(failover_mode_desc);
+						}
+
+						// agType_agName_ModeSet
+						if (true)
+						{
+							String key = AGName;
+							Set<String> modeSet = agType_agName_TypeSet.computeIfAbsent(key, k -> new LinkedHashSet<String>());
+							modeSet.add(AG_Type);
+						}
+					}
+
+//					// Build 'availabilityGroupInfo'
+//					//    AGNAME - PRIMARY=server_name, SECONDARY=server_name_list
+//					String entrySeparator = "";
+//					for (Entry<String, Set<String>> entry : primary_agName_SqlNameSet.entrySet())
+//					{
+//						String      agName              = entry.getKey();
+//						Set<String> primarySqlNameSet   = entry.getValue();
+//						Set<String> secondarySqlNameSet = secondary_agName_SqlNameSet.get(agName);
+//						Set<String> failoverMode        = failoverMode_agName_ModeSet.get(agName);
+//						Set<String> AG_Type             = agType_agName_TypeSet      .get(agName);
+//
+//						availabilityGroupInfo += entrySeparator + "AG Name='" + agName + "', AG Type=" + AG_Type + ", Failover Mode=" + failoverMode + ", Primary=" + primarySqlNameSet + ", Secondary=" + secondarySqlNameSet;
+////						entrySeparator = "; ";
+//						entrySeparator = "; <BR>";
+//					}
+
+					// Build 'availabilityGroupInfoHtmlTable'
+//					rstmAvailabilityGroupInfo = ResultSetTableModel.createEmpty("availabilityGroupInfoHtmlTable");
+					rstmAvailabilityGroupInfo.addColumn("AG Name"      , 0, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+					rstmAvailabilityGroupInfo.addColumn("AG Type"      , 1, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+					rstmAvailabilityGroupInfo.addColumn("Failover Mode", 2, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+					rstmAvailabilityGroupInfo.addColumn("Primary"      , 3, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+					rstmAvailabilityGroupInfo.addColumn("Secondary"    , 4, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+					
+					for (Entry<String, Set<String>> entry : primary_agName_SqlNameSet.entrySet())
+					{
+						String      agName              = entry.getKey();
+						Set<String> primarySqlNameSet   = entry.getValue();
+						Set<String> secondarySqlNameSet = secondary_agName_SqlNameSet.get(agName);
+						Set<String> failoverMode        = failoverMode_agName_ModeSet.get(agName);
+						Set<String> AG_Type             = agType_agName_TypeSet      .get(agName);
+
+						ArrayList<Object> row = new ArrayList<>();
+						row.add(agName);
+						row.add(StringUtil.toCommaStr( AG_Type             ));
+						row.add(StringUtil.toCommaStr( failoverMode        ));
+						row.add(StringUtil.toCommaStr( primarySqlNameSet   ));
+						row.add(StringUtil.toCommaStr( secondarySqlNameSet ));
+
+						rstmAvailabilityGroupInfo.addRow(row);
+					}
+				}
+			}
+
+			// Put them in the "desired" order
+			if (StringUtil.hasValue(deploymentType))        otherInfo.put("Deployment Type"        , deploymentType);
+			if (StringUtil.hasValue(clusterInfo))           otherInfo.put("WSFC Cluster Info"      , clusterInfo);
+//			if (StringUtil.hasValue(availabilityGroupInfo)) otherInfo.put("Availability Group Info", availabilityGroupInfo);
+			if (rstmAvailabilityGroupInfo.hasRows())        otherInfo.put("Availability Group Info", rstmAvailabilityGroupInfo.toHtmlTableString("ag-table-info"));
 		}
 		catch(Exception ex)
 		{

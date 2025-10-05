@@ -37,6 +37,7 @@ import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.diff.DiffContext.DiffSide;
+import com.dbxtune.sql.diff.DiffContext.UuidCaseSensitivity;
 import com.dbxtune.ui.autocomplete.completions.TableInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
@@ -62,6 +63,7 @@ public class DiffTable
 	private List<Integer> _colJdbcDataType = new ArrayList<>();
 	private List<String>  _colDbmsDataType = new ArrayList<>();
 	private List<String>  _lobColList      = new ArrayList<>();
+	private List<String>  _uuidColList     = new ArrayList<>();
 	
 	private List<String>  _colNameList = new ArrayList<>();
 	private String    _fullTableName;
@@ -120,7 +122,17 @@ public class DiffTable
 
 		// initialize the DBMS DataType array
 		for (int c=0; c<_colCount; c++)
-			_colDbmsDataType.add(_rsmd.getColumnTypeName(c+1));
+		{
+			String nativeDbmsType = _rsmd.getColumnTypeName(c+1);
+			_colDbmsDataType.add(nativeDbmsType);
+
+			// There is NO java.sql.Types for UUID, and it's only to my knowledge: SQL-Server and Postgres (MariaDb 10.7+) that supports it (for the moment 2025-02-14)
+			if (StringUtil.equalsAnyIgnoreCase(nativeDbmsType, "uniqueidentifier", "UUID")) // SQL-Server: 'uniqueidentifier', Postgres&MariaDb: 'UUID'
+			{
+				String colName = _colNameList.get(c);
+				_uuidColList.add(colName);
+			}
+		}
 		
 		// Initialize LOB Column Names
 		for (int c=0; c<_colCount; c++)
@@ -473,6 +485,20 @@ public class DiffTable
 	}
 
 
+	public int findColumn(String colName,boolean caseSensitive)
+	{
+		if (caseSensitive)
+			return getColumnNames().indexOf(colName);
+
+		int colPos = 0;
+		for (String col : getColumnNames())
+		{
+			if (colName.equalsIgnoreCase(col))
+				return colPos;
+			colPos++;
+		}
+		return -1;
+	}
 	public List<String> getColumnNames()
 	{
 		return _colNameList;
@@ -489,10 +515,87 @@ public class DiffTable
 		
 		return StringUtil.toCommaStrQuoted(startQuoteChar, endQuoteChar, colNames);
 	}
+
+	public String createSelectStatement(DbxConnection conn, String tableName, String whereClause, boolean castUuidColumns, boolean skipLobColumns)
+	{
+//		String rightQuery = "select " + rightPreDt.getColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote(), skipLobColumns) 
+//			+ " from " + _params._rightTable + whereClause 
+//			+ " order by " + rightPreDt.getPkColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote());
+		
+		String startQuoteChar = conn.getLeftQuote();
+		String endQuoteChar   = conn.getRightQuote();
+		String comma   = "";     // used in 'loop' to know when to add commas
+		String indent  = "    "; // characters used to indent code
+		String nl      = "\n";   // characters used for NewLine... use " " if not formating with newlines
+
+		// if any of the columns is a UUID especially in the "PK"... We need to tell the DBMS to sort that in a CHARacter representation...
+
+		//---------------------------
+		String sql = nl;
+		sql += "SELECT " + nl;
+		
+		//---------------------------
+		// ADD column names to the select list
+		comma = " "; // Reset comma variable
+		for (String colName : getColumnNames())
+		{
+			if (skipLobColumns && getLobColumnNames().contains(colName))
+				continue;
+
+			String addColName = startQuoteChar + colName + endQuoteChar;
+
+			// CAST any UUID columns
+			if (castUuidColumns && getUuidColumnNames().contains(colName))
+				addColName = "CAST(" + addColName + " as CHAR(36)) AS " + addColName;
+
+			// Add Column
+			sql += indent + comma + addColName + nl;
+			comma = ",";
+		}
+
+		//---------------------------
+		// add 'FROM'
+		sql += "FROM " + startQuoteChar + tableName + endQuoteChar + nl;
+
+		//---------------------------
+		// add 'WHERE clause'
+		if (StringUtil.hasValue(whereClause))
+		{
+			sql += whereClause;
+			sql += nl;
+		}
+		
+		//---------------------------
+		// add 'ORDER BY' 
+		sql += "ORDER BY " + nl;
+		comma = ""; // Reset comma variable
+		for (String colName : getColumnNames())
+		{
+			if (skipLobColumns && getLobColumnNames().contains(colName))
+				continue;
+
+			String addColName = startQuoteChar + colName + endQuoteChar;
+
+			// CAST any UUID columns
+			if (castUuidColumns && getUuidColumnNames().contains(colName))
+				addColName = "CAST(" + addColName + " as CHAR(36))";
+
+			// Add Column
+			sql += indent + comma + addColName + nl;
+			comma = ",";
+		}
+
+		return sql;
+	}
 	
 	public List<String> getLobColumnNames()
 	{
 		return _lobColList;
+	}
+
+	public List<String> getUuidColumnNames()
+	{
+		return _uuidColList;
 	}
 
 	public List<String> getPkColumnNames()
@@ -899,6 +1002,35 @@ public class DiffTable
 	private Object getDataValue(int colPos)
 	throws SQLException
 	{
+		// Possibly if we want to handle UUID's in a special way
+		String colName = getColumnNames().get(colPos - 1);
+		List<String> uuidCols = DiffSide.LEFT.equals(_diffSide) ? _context.getLeftOriginUuidColumns() : _context.getRightOriginUuidColumns();
+		if (uuidCols.contains(colName))
+		{
+			// get UUID's as STRINGS
+			String uuidStr = _rs.getString(colPos);
+			
+			// Should we do UPPER/LOWER ???
+			if (uuidStr != null)
+			{
+				if (UuidCaseSensitivity.UNCHANGED.equals(_context.getUuidCaseSensitivity()))
+				{
+					// Do nothing
+				}
+				else if (UuidCaseSensitivity.TO_UPPER.equals(_context.getUuidCaseSensitivity()))
+				{
+					uuidStr = uuidStr.toUpperCase();
+				}
+				else if (UuidCaseSensitivity.TO_LOWER.equals(_context.getUuidCaseSensitivity()))
+				{
+					uuidStr = uuidStr.toLowerCase();
+				}
+			}
+
+			return uuidStr;
+		}
+		
+
 		int jdbcDataType = getJdbcDataTypes().get(colPos - 1); // Array vs JDBC Pos
 
 		switch (jdbcDataType)

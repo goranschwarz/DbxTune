@@ -80,6 +80,7 @@ import com.dbxtune.sql.pipe.PipeCommandGrep;
 import com.dbxtune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.JavaUtils;
 import com.dbxtune.utils.JsonUtils;
 import com.dbxtune.utils.JsonUtils.MissingFieldException;
 import com.dbxtune.utils.NumberUtils;
@@ -1901,7 +1902,13 @@ public class ResultSetTableModel
 	@Override
 	public void setValueAt(Object value, int row, int column)
 	{
-		_logger.warn("In ResultSetTableModel named='" + getName() + "', you called setValueAt(value='" + value+ "', row=" + row + ", column=" + column+ "). which will do NOTHING (no operation is implemented).", new RuntimeException("DUMMY Exception to record callstack"));
+		Exception dummyEx = new RuntimeException("DUMMY Exception to record callstack");
+		
+		// If it's called from 'JTable.editingStopped' then we probably opened the cell, to do: copy content
+		if ( ! JavaUtils.isCalledFrom(dummyEx, "JTable.editingStopped") )
+		{
+			_logger.warn("In ResultSetTableModel named='" + getName() + "', you called setValueAt(value='" + value+ "', row=" + row + ", column=" + column+ "). which will do NOTHING (no operation is implemented).", dummyEx);
+		}
 	}
 
 	public void setValueAtWithOverride(Object value, int r, int c)

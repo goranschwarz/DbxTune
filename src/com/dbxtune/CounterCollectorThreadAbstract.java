@@ -76,7 +76,7 @@ extends Thread
 	
 	
 	protected Thread   _thread  = null;
-	protected boolean  _running = false;
+	protected transient boolean  _running = false;
 
 	protected ICounterController _counterController;
 
@@ -109,6 +109,11 @@ extends Thread
 		_running = false;
 		if (_thread != null)
 			_thread.interrupt();
+	}
+	
+	public boolean isRunning()
+	{
+		return _running;
 	}
 
 	public abstract void init(boolean hasGui) throws Exception;

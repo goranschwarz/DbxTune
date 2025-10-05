@@ -1437,7 +1437,23 @@ public class StringUtil
 					System.setProperty(key, val);
 				}
 			}
-
+		}
+		
+		// Also check if we have IMPORTANT variables
+		//  - like 'HOME' that we normal have on Unix/Linux systems
+		//  - If they do NOT exists... Simply add them
+		if (System.getProperty("HOME") == null)
+		{
+			String javaUserHome = System.getProperty("user.home");
+			if (javaUserHome != null)
+			{
+				_logger.info("Environment variable 'HOME' was not found. Setting this to Java System Property 'user.home', HOME='" + javaUserHome + "'.");
+				System.setProperty("HOME", javaUserHome);
+			}
+			else
+			{
+				_logger.warn("Environment variable 'HOME' was not found, and java 'user.home' was NOT set, so 'HOME' will still not be set.");
+			}
 		}
 	}
 
@@ -4692,6 +4708,50 @@ public class StringUtil
 		if (input == null)
 			return ifNullReturnThis;
 		return input;
+	}
+
+	/**
+	 * Check if a hostname is a FQDN -- Fully Qualified Domain Name (or contains any '.' but not at the end)
+	 * @param hostname
+	 * @return
+	 */
+	public static boolean isHostFqdn(String hostname)
+	{
+	    if (hostname == null) {
+	        return false;
+	    }
+	    // Host must contain a dot and not end with a dot
+	    return hostname.contains(".") && !hostname.endsWith(".");
+	}
+
+	/** Like the method name says */
+	public static String extractDomainFromFqdn(String fqdn)
+	{
+		if ( fqdn == null )
+			return null;
+
+		int dotIndex = fqdn.indexOf('.');
+		if ( dotIndex == -1 || dotIndex == fqdn.length() - 1 )
+		{
+			// No dot -> not a FQDN, return null or empty
+			return null;
+		}
+		return fqdn.substring(dotIndex + 1);
+	}
+
+	/** Like the method name says */
+	public static String extractHostnameFromFqdn(String fqdn)
+	{
+		if ( fqdn == null )
+			return null;
+
+		int dotIndex = fqdn.indexOf('.');
+		if ( dotIndex == -1 )
+		{
+			// No domain part
+			return fqdn;
+		}
+		return fqdn.substring(0, dotIndex);
 	}
 	
 	/////////////////////////////////////////////////////////////////////////////

@@ -123,7 +123,7 @@ public class ConnectionProfileManager
 
 	/** default file name where the connection profiles are stored */
 	public  final static String  PROPKEY_STORAGE_FILE = "ConnectionProfileManager.storage.filename";
-	public  final static String  DEFAULT_STORAGE_FILE = AppDir.getAppStoreDir() + File.separator + "ConnectionProfiles.xml";
+	public  final static String  DEFAULT_STORAGE_FILE = AppDir.getDbxUserHomeDir() + File.separator + "ConnectionProfiles.xml";
 
 	public static final String   PROPKEY_connProfile_serverAdd_showDialog_H2_offline = "ConnectionProfileManager.connProfile.serverAdd.showDialog.h2.offline";
 	public static final boolean  DEFAULT_connProfile_serverAdd_showDialog_H2_offline = false;

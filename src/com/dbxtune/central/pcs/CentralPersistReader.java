@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -4051,7 +4052,7 @@ public class CentralPersistReader
 			}
 			else
 			{
-				BigDecimal bd = new BigDecimal(sumVal / count).setScale(1, BigDecimal.ROUND_HALF_EVEN /*RoundingMode.HALF_UP*/);  // in the CENTRAL DB the datatype is decimal(16, 1)
+				BigDecimal bd = new BigDecimal(sumVal / count).setScale(1, RoundingMode.HALF_EVEN /*RoundingMode.HALF_UP*/);  // in the CENTRAL DB the datatype is decimal(16, 1)
 				Double avgVal = Double.valueOf(bd.doubleValue());
 				toMap.put(sumKey, avgVal);
 			}
@@ -4199,7 +4200,7 @@ public class CentralPersistReader
 
 			if (sumVal != null)
 			{
-				BigDecimal bd = new BigDecimal(sumVal).setScale(1, BigDecimal.ROUND_HALF_EVEN /*RoundingMode.HALF_UP*/);  // in the CENTRAL DB the datatype is decimal(16, 1)
+				BigDecimal bd = new BigDecimal(sumVal).setScale(1, RoundingMode.HALF_EVEN /*RoundingMode.HALF_UP*/);  // in the CENTRAL DB the datatype is decimal(16, 1)
 				Double avgVal = Double.valueOf(bd.doubleValue());
 				toMap.put(sumKey, avgVal);
 			}

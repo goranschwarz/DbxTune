@@ -22,6 +22,7 @@ package com.dbxtune.cm.rs;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -190,7 +191,7 @@ extends CountersModel
 			if (TotalSegs == null || UsedSegs == null)
 				return;
 			
-			BigDecimal pct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal pct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, RoundingMode.HALF_EVEN);
 			dArray[0] = pct.doubleValue();
 
 			// Set the values
@@ -329,7 +330,7 @@ extends CountersModel
 			if (TotalSegs != null && UsedSegs != null)
 			{
 				
-				BigDecimal usedPct = new BigDecimal(100.0 * (UsedSegs / TotalSegs)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal usedPct = new BigDecimal(100.0 * (UsedSegs / TotalSegs)).setScale(2, RoundingMode.HALF_EVEN);
 				int usedSpaceInMb = UsedSegs.intValue();
 				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
 
@@ -363,7 +364,7 @@ extends CountersModel
 			if (TotalSegs != null && UsedSegs != null)
 			{
 				
-				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, RoundingMode.HALF_EVEN);
 				int usedSpaceInMb = UsedSegs.intValue();
 				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
 
@@ -396,7 +397,7 @@ extends CountersModel
 			if (TotalSegs != null && UsedSegs != null)
 			{
 				
-				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, RoundingMode.HALF_EVEN);
 				int usedSpaceInMb = UsedSegs.intValue();
 				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
 

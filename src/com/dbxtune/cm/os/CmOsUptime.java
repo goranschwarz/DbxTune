@@ -22,6 +22,7 @@ package com.dbxtune.cm.os;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -284,9 +285,9 @@ extends CounterModelHostMonitor
 			BigDecimal loadAverage_5Min  = (BigDecimal) osSampleTable.getValueAt(0, pos_loadAverage_5Min);
 			BigDecimal loadAverage_15Min = (BigDecimal) osSampleTable.getValueAt(0, pos_loadAverage_15Min);
 
-			adjLoadAverage_1Min  = new BigDecimal( loadAverage_1Min .doubleValue() / nproc ).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-			adjLoadAverage_5Min  = new BigDecimal( loadAverage_5Min .doubleValue() / nproc ).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-			adjLoadAverage_15Min = new BigDecimal( loadAverage_15Min.doubleValue() / nproc ).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+			adjLoadAverage_1Min  = new BigDecimal( loadAverage_1Min .doubleValue() / nproc ).setScale(2, RoundingMode.HALF_EVEN);
+			adjLoadAverage_5Min  = new BigDecimal( loadAverage_5Min .doubleValue() / nproc ).setScale(2, RoundingMode.HALF_EVEN);
+			adjLoadAverage_15Min = new BigDecimal( loadAverage_15Min.doubleValue() / nproc ).setScale(2, RoundingMode.HALF_EVEN);
 		}
 		
 		// Set nproc

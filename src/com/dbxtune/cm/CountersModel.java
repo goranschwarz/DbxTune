@@ -580,7 +580,7 @@ implements Cloneable, ITableTooltip
 
 		_sybMessageHandler  = createSybMessageHandler();
 		
-		_cmToolTipSupplier  = createToolTipSupplier();
+		_cmToolTipSupplier  = createToolTipSupplier(guiController);
 		
 		_cmLocalToolTipColumnDescriptions = createLocalToolTipTextOnTableColumnHeader();
 		initLocalToolTipTextOnTableColumnHeader();
@@ -1908,12 +1908,15 @@ implements Cloneable, ITableTooltip
 	/**
 	 * Create a tool tip supplier...<br>
 	 * The default is to let the CounterController create it...
+	 * @param guiController 
 	 * @return
 	 */
-	public GTable.ITableTooltip createToolTipSupplier()
+	public GTable.ITableTooltip createToolTipSupplier(IGuiController guiController)
 	{
 		// No need to continue if we DO NOT have a GUI
-		if ( ! hasGuiController() )
+//		if ( ! hasGuiController() )
+//			return null;
+		if ( guiController == null )
 			return null;
 
 		if (hasCounterController())
@@ -6051,7 +6054,7 @@ implements Cloneable, ITableTooltip
 			// Get scale of the value so we can preserve that after the difference calculation.
 			int scale = ((BigDecimal)newColVal).scale();
 			
-			diffColVal = new BigDecimal( newColVal.doubleValue() - prevColVal.doubleValue() ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+			diffColVal = new BigDecimal( newColVal.doubleValue() - prevColVal.doubleValue() ).setScale(scale, RoundingMode.HALF_EVEN);
 			if (diffColVal.doubleValue() < 0)
 				if (negativeDiffCountersToZero)
 					diffColVal = new BigDecimal(0);
@@ -6212,7 +6215,7 @@ implements Cloneable, ITableTooltip
 
 						// interval is in MilliSec, so val has to be multiplied by 1000
 						val = (val * 1000) / sampleInterval;
-						BigDecimal newVal = new BigDecimal( val ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						BigDecimal newVal = new BigDecimal( val ).setScale(1, RoundingMode.HALF_EVEN);
 
 						// Set the new object
 						newObject = newVal;
@@ -10605,6 +10608,16 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 
 			return ((BigDecimal)minVal).min( (BigDecimal) val );
 		}
+		else if (jdbcType == java.sql.Types.TIMESTAMP)
+		{
+			if (minVal == null) 
+				return val;
+
+			if ( ((Timestamp)minVal).getTime() < ((Timestamp)val).getTime() )
+				return minVal;
+
+			return val;
+		}
 		
 		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in private_doMinForValue().");
 		return null;
@@ -10667,6 +10680,16 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 				maxVal = (BigDecimal) val;
 
 			return ((BigDecimal)maxVal).max( (BigDecimal) val );
+		}
+		else if (jdbcType == java.sql.Types.TIMESTAMP)
+		{
+			if (maxVal == null) 
+				return val;
+
+			if ( ((Timestamp)maxVal).getTime() > ((Timestamp)val).getTime() )
+				return maxVal;
+
+			return val;
 		}
 		
 		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in private_doMaxForValue().");

@@ -175,6 +175,7 @@ public interface ICounterController
 
 	/** shutdown or stop any collector */
 	public void shutdown();
+	public boolean isRunning();
 
 	
 	

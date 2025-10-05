@@ -77,9 +77,11 @@ implements Runnable
 
 	/** Restart exit code is 8  ( or laying 8 : a lemniscate = infinity symbol) */
 	public static final int     RESTART_EXIT_CODE = 8; 
+	public static final int     NORMAL_EXIT_CODE = 0; 
 
 	private static List<Shutdownable> _handlers = new ArrayList<>();
 	private static Thread _shutdownHook = null;
+	private static long   _shutdownThreadStartTime = -1;
 
 	private static long _maxWaitTime = DEFAULT_maxWaitTime;
 
@@ -206,7 +208,7 @@ implements Runnable
 
 	
 	/**
-	 * Call this method, and the current thread will wait untill "someone" calls method shutdown.
+	 * Call this method, and the current thread will wait until "someone" calls method shutdown.
 	 */
 	public static void waitforShutdown()
 	{
@@ -216,14 +218,13 @@ implements Runnable
 		{
 			try
 			{
-				_logger.info("Waiting for shutdown on thread '"+Thread.currentThread().getName()+"'.");
+				_logger.info("Waiting for shutdown on thread '" + Thread.currentThread().getName() + "'.");
 				_waitforObject.wait();
-				_logger.info("AFTER-Waiting for shutdown on thread '"+Thread.currentThread().getName()+"'.");
+				_logger.info("AFTER-Waiting for shutdown on thread '" + Thread.currentThread().getName() + "'.");
 			}
 			catch (InterruptedException e)
 			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				_logger.info("In waitforShutdown, received Interupted Exception.", e);
 			}
 		}
 	}
@@ -233,7 +234,7 @@ implements Runnable
 	 */
 	public static void shutdown(String reasonText)
 	{
-		shutdown(reasonText, false, null);
+		shutdown(reasonText, false, null, false);
 	}
 
 	/**
@@ -241,13 +242,21 @@ implements Runnable
 	 */
 	public static void shutdownWithRestart(String reasonText)
 	{
-		shutdown(reasonText, true, null);
+		shutdown(reasonText, true, null, false);
 	}
 
 	/**
 	 * Release the waiter thread
 	 */
 	public static void shutdown(String reasonText, boolean withRestart, Configuration shutdownConfig)
+	{
+		shutdown(reasonText, withRestart, shutdownConfig, false);
+	}
+
+	/**
+	 * Release the waiter thread
+	 */
+	public static void shutdown(String reasonText, boolean withRestart, Configuration shutdownConfig, boolean doSystemExit)
 	{
 		// Only set this for "the FIRST caller"
 		if (StringUtil.isNullOrBlank(_shutdownReasonText))
@@ -256,16 +265,46 @@ implements Runnable
 			
 			_withRestart = withRestart;
 			_shutdownReasonText = reasonText;
+
+			_logger.info("Shutdown request properties [reasonText='" + _shutdownReasonText + "', withRestart=" + _withRestart + "].");
 		}
 		else
 		{
-			_logger.info("The just sent shutdown request properties [reasonText='"+reasonText+"', withRestart="+withRestart+"] wont be used... keeping first entered request with properties [reasonText='"+_shutdownReasonText+"', withRestart="+_withRestart+"]. The shutdown request will still be done, but the shutdown properties will be discarded.");
+			_logger.info("The just sent shutdown request properties [reasonText='" + reasonText + "', withRestart=" + withRestart + "] wont be used... keeping first entered request with properties [reasonText='" + _shutdownReasonText + "', withRestart=" + _withRestart + "]. The shutdown request will still be done, but the shutdown properties will be discarded.");
 		}
 		
 		synchronized (_waitforObject)
 		{
-			_logger.info("Shutdown was called from from thread '"+Thread.currentThread().getName()+"'. reason='"+reasonText+"'.");
+			_logger.info("Shutdown was called from from thread '" + Thread.currentThread().getName() + "'. reason='" + reasonText + "'.");
 			_waitforObject.notifyAll();
+		}
+
+		// Should we also do: System.exit(_withRestart ? RESTART_EXIT_CODE : 0);
+		// in here to "trigger" the installed JVM shutdown hook... (which will honor shutdown "timeout"...)
+		// But lets hold off with that for a while... I need to test/think...
+		// However: DO NOT call System.exit() from WITHIN the above synchronized section... That will BLOCK the shutdown...
+		if (doSystemExit)
+		{
+			if (_shutdownThreadStartTime <= 0)
+			{
+				long sleepTimeMs = 500;
+				try 
+				{
+					// Sleeping 500ms to wait for the shutdown hook/thread to start...
+					Thread.sleep(sleepTimeMs);
+					
+					// Check again (after the short sleep)
+					if (_shutdownThreadStartTime <= 0)
+					{
+						_logger.info("The JVM Shutdown hook thread has not yet been started. Lets call: 'System.exit(" + (_withRestart ? RESTART_EXIT_CODE : 0) + ")' to TRIGGER the installed JVM shutdown hook...");
+						System.exit(_withRestart ? RESTART_EXIT_CODE : 0);
+					}
+				}
+				catch(InterruptedException ex)
+				{
+					_logger.warn("Interrupted when sleeping " + sleepTimeMs + " ms to wait/check if installed JVM shutdown hook has been started. System.exit() will NOT BE DOME.", ex);
+				}
+			}
 		}
 	}
 	
@@ -302,6 +341,9 @@ implements Runnable
 	@Override
 	public void run()
 	{
+		// Just mark that the thread has started.
+		_shutdownThreadStartTime = System.currentTimeMillis();
+
 		List<Thread> nonDeamonList = new ArrayList<>();
 		for (Thread th : Thread.getAllStackTraces().keySet()) 
 		{
@@ -329,10 +371,10 @@ implements Runnable
 
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug("Shutdown-hook: Initiating non-normal shutdown. nonDeamonList count="+nonDeamonList.size());
+			_logger.debug("Shutdown-hook: Initiating non-normal shutdown. nonDeamonList count=" + nonDeamonList.size());
 			for (Thread th : nonDeamonList)
 			{
-				_logger.debug("Shutdown-hook: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+				_logger.debug("Shutdown-hook: isDaemon=" + th.isDaemon() + ", threadName=|" + th.getName() + "|, th.getClass().getName()=|" + th.getClass().getName() + "|.");
 			}
 		}
 		
@@ -375,7 +417,7 @@ implements Runnable
 			return;
 		}
 
-		_logger.info("Shutdown-hook: Waiting for the following thread names to terminate before JVM Shutdown: "+waitforThreadNames);
+		_logger.info("Shutdown-hook: Waiting for the following thread names to terminate before JVM Shutdown: " + waitforThreadNames);
 
 		long sleepTime   = 1000;
 		long maxWaitTime = getMaxWaitTime();
@@ -408,7 +450,7 @@ implements Runnable
 					// simply remove the thread name from the waiting list nad continue.
 					if (didThreadIssueExit(waitForThread))
 					{
-						_logger.info("Shutdown-hook: Skip waiting for thread '"+waitForThreadName+"', which issued 'System.exit'. Removing this thread from the waiting list.");
+						_logger.info("Shutdown-hook: Skip waiting for thread '" + waitForThreadName + "', which issued 'System.exit'. Removing this thread from the waiting list.");
 						waitforThreadNames.remove(waitForThreadName);
 						break;
 					}
@@ -416,8 +458,8 @@ implements Runnable
 					// But dont wait invane... onnor the timeout
 					if (TimeUtils.msDiffNow(startTime) > maxWaitTime)
 					{
-						_logger.warn("Shutdown-hook: Waited for thread '"+waitForThreadName+"' to terminate. maxWaitTime="+maxWaitTime+" ms has been expired. STOP WAITING.");
-						_logger.warn("Shutdown-hook: Here is a stacktrace of the thread '"+waitForThreadName+"' we are waiting for:" 
+						_logger.warn("Shutdown-hook: Waited for thread '" + waitForThreadName + "' to terminate. maxWaitTime=" + maxWaitTime + " ms has been expired. STOP WAITING.");
+						_logger.warn("Shutdown-hook: Here is a stacktrace of the thread '" + waitForThreadName + "' we are waiting for:" 
 								+ StringUtil.stackTraceToString(waitForThread.getStackTrace()));
 
 						String stackDump = JavaUtils.getStackDump(true);
@@ -426,7 +468,7 @@ implements Runnable
 						return; // ON TIMEOUT: get out method
 					}
 
-					_logger.info("Shutdown-hook: Still waiting for thread '"+waitForThreadName+"' to terminate... sleepTime="+sleepTime+", TotalWaitTime="+TimeUtils.msDiffNow(startTime)+", maxWaitTime="+maxWaitTime);
+					_logger.info("Shutdown-hook: Still waiting for thread '" + waitForThreadName + "' to terminate... sleepTime=" + sleepTime + ", TotalWaitTime=" + TimeUtils.msDiffNow(startTime) + ", maxWaitTime=" + maxWaitTime);
 
 					// Sleep for X ms, but if the threads treminates earlier, then continue logic
 					try { waitForThread.join(sleepTime); }
@@ -482,9 +524,9 @@ implements Runnable
 //						if ("xxx1".equals(_tName))
 //							System.exit(9);
 
-						System.out.println("START THREAD: "+Thread.currentThread().getName()+", sleepTime="+_sleepTime);
+						System.out.println("START THREAD: " + Thread.currentThread().getName() + ", sleepTime=" + _sleepTime);
 						Thread.sleep(_sleepTime * 1000); 
-						System.out.println("STOP THREAD: "+Thread.currentThread().getName());
+						System.out.println("STOP THREAD: " + Thread.currentThread().getName());
 
 //						if ("xxx1".equals(_tName))
 //							System.exit(9);

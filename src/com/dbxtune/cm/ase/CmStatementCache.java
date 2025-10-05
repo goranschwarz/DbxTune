@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -133,8 +134,11 @@ extends CountersModel
 	// Implementation
 	//------------------------------------------------------------
 
-	public static final String GRAPH_NAME_REQUEST_PER_SEC = "RequestPerSecGraph"; //String x=GetCounters.CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC;
-	public static final String GRAPH_NAME_HIT_RATE_PCT    = "HitRatePctGraph";    //String x=GetCounters.CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC;
+	public static final String GRAPH_NAME_REQUEST_PER_SEC     = "RequestPerSecGraph"; //String x=GetCounters.CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC;
+	public static final String GRAPH_NAME_HIT_RATE_PCT        = "HitRatePctGraph";    //String x=GetCounters.CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC;
+	public static final String GRAPH_NAME_INS_DEL_PER_SEC     = "StmntCacheInsDel";
+	public static final String GRAPH_NAME_MEM_USAGE           = "StmntCacheMemUsage";
+	public static final String GRAPH_NAME_NUM_STMNTS_IN_CACHE = "NumStmntsInCache";
 
 	private void addTrendGraphs()
 	{
@@ -163,6 +167,44 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_INS_DEL_PER_SEC,
+			"Statement Cache Add/Remove Count", 	                           // Menu CheckBox text
+			"Statement Cache Add/Remove Count, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "NumRemovals", "NumInserts" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_MEM_USAGE,
+			"Statement Cache Memory Usage", 	                           // Menu CheckBox text
+			"Statement Cache Memory Usage, in KB ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "TotalSizeKB", "UsedSizeKB", "UnusedSizeKB" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_NUM_STMNTS_IN_CACHE,
+			"Number of Statement in the Statement Cache", 	                           // Menu CheckBox text
+			"Number of Statement in the Statement Cache ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "NumStatements" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
 
 //	@Override
@@ -333,11 +375,11 @@ extends CountersModel
 			{
 				double calc = ((HitCount+0.0) / (NumSearches+0.0)) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, colPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+				diffData.setValueAt(new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN), rowId, colPos);
 
 //			//---- OveralAvgReusePct
 //			colPos = OveralAvgReusePctId;
@@ -345,11 +387,11 @@ extends CountersModel
 //			{
 //				double calc = ((HitCount+0.0) / (NumStatementsDiff+0.0)) * 100.0;
 //
-//				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 //				diffData.setValueAt(newVal, rowId, colPos);
 //			}
 //			else
-//				diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+//				diffData.setValueAt(new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN), rowId, colPos);
 		}
 	}
 
@@ -380,6 +422,48 @@ extends CountersModel
 			
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData(StatementCache:HitRatePctGraph): CacheHitPct='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_INS_DEL_PER_SEC.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getRateValueSum("NumRemovals");
+			arr[1] = this.getRateValueSum("NumInserts");
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("updateGraphData(StatementCache:InsDel): NumRemovals='"+arr[0]+"', NumInserts='"+arr[1]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_MEM_USAGE.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[3];
+
+			arr[0] = this.getRateValueSum("TotalSizeKB");
+			arr[1] = this.getRateValueSum("UsedSizeKB");
+			arr[2] = this.getRateValueSum("UnusedSizeKB");
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("updateGraphData(StatementCache:MemoryUsage): TotalSizeKB='"+arr[0]+"', UsedSizeKB='"+arr[1]+"', UnusedSizeKB='"+arr[2]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_NUM_STMNTS_IN_CACHE.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getRateValueSum("NumStatements");
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("updateGraphData(StatementCache:NumStmntsInCache): NumStatements='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

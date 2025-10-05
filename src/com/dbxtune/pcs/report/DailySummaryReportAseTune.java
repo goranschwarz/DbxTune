@@ -40,6 +40,7 @@ import com.dbxtune.pcs.report.content.ase.AseDbSize;
 import com.dbxtune.pcs.report.content.ase.AseErrorInfo;
 import com.dbxtune.pcs.report.content.ase.AseSlowCmDeviceIo;
 import com.dbxtune.pcs.report.content.ase.AseSpMonitorConfig;
+import com.dbxtune.pcs.report.content.ase.AseStmntCacheHistory;
 import com.dbxtune.pcs.report.content.ase.AseStatementCacheUsageOverview;
 import com.dbxtune.pcs.report.content.ase.AseTopCmActiveStatements;
 import com.dbxtune.pcs.report.content.ase.AseTopCmCachedProcs;
@@ -88,7 +89,10 @@ extends DailySummaryReportDefault
 
 		// SQL: from Cm's
 		addReportEntry( new AseStatementCacheUsageOverview(this) ); // This isn't really SQL, but statistics/charts on the Statement Cache
+		addReportEntry( new AseStmntCacheHistory(this) );
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.CPU_TIME) );
+		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD) );
+		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.USE_COUNT) );
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.WAIT_TIME) );
 		addReportEntry( new AseTopCmCachedProcs(this)       );
 		addReportEntry( new AseTopCmActiveStatements(this)  );

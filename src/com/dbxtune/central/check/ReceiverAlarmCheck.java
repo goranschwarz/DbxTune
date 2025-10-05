@@ -86,7 +86,7 @@ implements Runnable
 
 	private boolean  _initialized = false;
 	private Thread   _thread      = null;
-	private boolean  _running     = false;
+	private transient boolean _running = false;
 
 	private int      _checkSleepTimeInSec = DEFAULT_checkSleepTimeInSec;
 	

@@ -32,6 +32,8 @@ implements Comparator<Object>
 	private boolean     _isCaseInSensitive = true;
 	private String      _colName           = "-UNKNOWN-";
 	private int         _jdbcDataType      = -99999;
+	private int         _leftDataArrayPos  = -1;
+	private int         _rightDataArrayPos = -1;
 
 	// Possibly if we want to keep track of left/right column names (and datatypes)... Column names can differ at least in Upper/Lower case
 //	private String      _leftColName            = "-UNKNOWN-";
@@ -45,11 +47,23 @@ implements Comparator<Object>
 		_isCaseInSensitive = _context.isCaseInSensitive();
 
 		_jdbcDataType = jdbcDataType;
+		
+		_leftDataArrayPos  = context.getLeftDt() .findColumn(colName, _isCaseInSensitive);
+		_rightDataArrayPos = context.getRightDt().findColumn(colName, _isCaseInSensitive);
+
+		if (_leftDataArrayPos == -1)
+			throw new RuntimeException("ColComparator: cant find column '" + colName + "' in LEFT Diff Table");
+		if (_rightDataArrayPos == -1)
+			throw new RuntimeException("ColComparator: cant find column '" + colName + "' in RIGHT Diff Table");
 
 		_colName = colName;
 		if (_colName == null)
 			_colName = "-UNKNOWN-";
 	}
+	
+	public int getLeftDataArrayPos()  { return _leftDataArrayPos; }
+	public int getRightDataArrayPos() { return _rightDataArrayPos; }
+
 //	public ColComparator(boolean caseInSensitive)
 //	{
 //		_isCaseInSensitive = caseInSensitive;

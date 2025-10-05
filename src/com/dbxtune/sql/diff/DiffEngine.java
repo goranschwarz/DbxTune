@@ -156,6 +156,8 @@ public class DiffEngine
 			// Handle "data on one side only"
 			if (l_row == null && r_row != null)
 			{
+//System.out.println("  <<-- NO-LEFT-ROW = RIGHT-----VALUE----- add RIGHT row as EXTRA ROW");
+//System.out.println("  ROW POSITIONS: l_rowPos="+l_dt.getRowCount()+", r_rowPos="+r_dt.getRowCount());
 				if (_context.isTraceEnabled())
 					_context.addTraceMessage("  <<-- NO-LEFT-ROW = RIGHT-----VALUE----- add RIGHT row as EXTRA ROW");
 				
@@ -166,6 +168,8 @@ public class DiffEngine
 			
 			if (r_row == null && l_row != null)
 			{
+//System.out.println("  -->> NO-RIGHT-ROW = LEFT-----VALUE----- add LEFT row as EXTRA ROW");
+//System.out.println("  ROW POSITIONS: l_rowPos="+l_dt.getRowCount()+", r_rowPos="+r_dt.getRowCount());
 				if (_context.isTraceEnabled())
 					_context.addTraceMessage("  -->> NO-RIGHT-ROW = LEFT-----VALUE----- add LEFT row as EXTRA ROW");
 
@@ -181,6 +185,8 @@ public class DiffEngine
 					_context.addTraceMessage("  ROW POSITIONS: l_rowPos="+l_dt.getRowCount()+", r_rowPos="+r_dt.getRowCount());
 
 				int compRes = pkComp.compare(l_row, r_row);
+//if (compRes != 0)
+//System.out.println("  ROW POSITIONS: l_rowPos="+l_dt.getRowCount()+", r_rowPos="+r_dt.getRowCount()+", compRes="+compRes);
 				
 				if (_context.isTraceEnabled())
 					_context.addTraceMessage("    comparatorRes=|" + compRes + "|: l_rowPos=" + l_dt.getRowCount() + ", r_rowPos=" + r_dt.getRowCount());
@@ -188,6 +194,7 @@ public class DiffEngine
 		         // LEFT < RIGHT
 				if (compRes < 0)
 				{
+//System.out.println("    <<<<<<<<<<<<<<<<<<<<<<<<<<< LEFT PK EXISTS, but Right PK is missing... keep on reading LEFT SIDE <<<<<<");
 					if (_context.isTraceEnabled())
 						_context.addTraceMessage("    <<<<<<<<<<<<<<<<<<<<<<<<<<< LEFT PK EXISTS, but Right PK is missing... keep on reading LEFT SIDE <<<<<<");
 
@@ -197,6 +204,7 @@ public class DiffEngine
 		         // LEFT > RIGHT
 				else if (compRes > 0)
 				{
+//System.out.println("    >>>>>>>>>>>>>>>>>>>>>>>>>>> RIGHT PK EXISTS, but Left PK is missing... keep on reading RIGHT SIDE >>>>>>");
 					if (_context.isTraceEnabled())
 						_context.addTraceMessage("    >>>>>>>>>>>>>>>>>>>>>>>>>>> RIGHT PK EXISTS, but Left PK is missing... keep on reading RIGHT SIDE >>>>>>");
 

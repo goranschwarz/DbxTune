@@ -42,6 +42,7 @@ import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 
 public class OsCpuUsageOverview extends OsAbstract
@@ -171,24 +172,36 @@ public class OsCpuUsageOverview extends OsAbstract
 	 * @param conn
 	 * @param localConf
 	 */
-	private void initSkipNewOrDiffRateRows(String pcsTableName, DbxConnection conn, Configuration localConf)
+	private void initSkipNewOrDiffRateRows(String schemaName, String pcsTableName, DbxConnection conn, Configuration localConf)
 	{
+		if (schemaName == null)
+			schemaName = "";
+
+		if (StringUtil.hasValue(schemaName))
+			schemaName = "[" + schemaName + "].";
+
 		// Get a dummy "metadata" for the table (so we can check what columns exists)
-		String dummySql = "select * from [" + pcsTableName + "] where 1 = 2"; // just to get Column names
+		String dummySql = "select * from " + schemaName + "[" + pcsTableName + "] where 1 = 2"; // just to get Column names
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 
 		// DO NOT TRUST: new data that hasn't yet been DIFF Calculated (it only has 1 sample, so it's probably Asolute values, which are *to high*)
 		// If we would trust the above values, it will/may create statistical problems (showing to high values in specific periods)
-		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", true);
+		boolean skipNewDiffRateRows = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", true);
 
 		//  SQL for: only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse)
-		_sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; // This is the "old" way... and used for backward compatibility
+		_sql_and_skipNewOrDiffRateRows = "";
 		if (dummyRstm.hasColumn("CmRowState")) // New column name for 'CmNewDiffRateRow' (which is a bitwise state column)
 		{
 			// the below will produce for H2:     and  BITAND([CmRowState], 1) = ???   
 			//                        for OTHERS: and  ([CmRowState] & 1) = ???
 			_sql_and_skipNewOrDiffRateRows = "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = 0 \n";
 		}
+		else if (dummyRstm.hasColumn("CmNewDiffRateRow"))
+		{
+			// This is the "old" way... and used for backward compatibility
+			_sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; 
+		}
+		
 //FIXME; double check the code for "CmNewDiffRateRow and CmRowState"... ESPECIALLY if we move it up in the class hierarchy (also see AseTopCmStmntCacheDetails for more details/fields)
 
 		// Used by "sparkline" charts to filter out "new diff/rate" rows
@@ -216,7 +229,7 @@ public class OsCpuUsageOverview extends OsAbstract
 		
 		boolean exists_CmOsPs_WinPs = DbUtils.checkIfTableExistsNoThrow(conn, null, schema, "CmOsPs_diff");
 		if (exists_CmOsPs_WinPs)
-			initSkipNewOrDiffRateRows("CmOsPs_diff", conn, localConf);
+			initSkipNewOrDiffRateRows(schema, "CmOsPs_diff", conn, localConf);
 		
 		int maxValue = 100;
 		_CmOsMpstat_MpSum          = createTsLineChart(conn, schema, "CmOsMpstat", "MpSum",          maxValue, false, idlePct, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");

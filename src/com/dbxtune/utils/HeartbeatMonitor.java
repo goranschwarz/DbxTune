@@ -38,7 +38,7 @@ public class HeartbeatMonitor
 	// BEGIN: Memory Handler functionality
 	//-----------------------------------------------------------------------
 	private static Thread  _checkThread = null;
-	private static boolean _running = false;
+	private static transient boolean _running = false;
 	private static int     _sleepTimeInSec = 20;
 
 	private static long _lastHeartbeat   = -1;

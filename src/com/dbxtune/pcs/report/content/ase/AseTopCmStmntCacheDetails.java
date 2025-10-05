@@ -74,6 +74,8 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	public enum ReportType
 	{
 		CPU_TIME, 
+		CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD, 
+		USE_COUNT, 
 		WAIT_TIME
 	};
 	
@@ -92,7 +94,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		if (ReportType.CPU_TIME.equals(_reportType))
+		if (ReportType.CPU_TIME.equals(_reportType) )
+			return true;
+
+		if (ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD.equals(_reportType) )
 			return true;
 
 		return false;
@@ -250,10 +255,16 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		if (ReportType.WAIT_TIME.equals(_reportType))
-			return "Top Statement Cache Entries by WAIT Time (order by: TotalSortTimeDiff_sum, origin: CmStmntCacheDetails / monCachedStatement)";
+		if (ReportType.USE_COUNT.equals(_reportType))
+			return "Top Statement Cache Entries by USE/Exec Count (order by: UseCount__sum, origin: CmStmntCacheDetails / monCachedStatement)";
 
-		return "Top Statement Cache Entries by CPU Time (order by: TotalCpuTimeDiff_sum, origin: CmStmntCacheDetails / monCachedStatement)";
+		if (ReportType.WAIT_TIME.equals(_reportType))
+			return "Top Statement Cache Entries by WAIT Time (order by: TotalEstWaitTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
+
+		if (ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD.equals(_reportType))
+			return "Top Statement Cache Entries by CPU Time below " + _statement_gt_execTime + " ms (order by: TotalCpuTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
+
+		return "Top Statement Cache Entries by CPU Time (order by: TotalCpuTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
 	}
 
 	@Override
@@ -269,13 +280,27 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	{
 		if (rstm == null)
 			return;
-		
+
+//		_statement_gt_execTime = Configuration.getCombinedConfiguration().getIntProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime, PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime);
+		String descriptionForCpuBelowNormailizedSqlThreeshold = "";
+		if (ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD.equals(_reportType))
+		{
+			descriptionForCpuBelowNormailizedSqlThreeshold = ""
+					+ "Execution time below the Execution Time for Normalized SQL Statements (Top [SQL Captured] - CPU_TIME - SLOW Normalized SQL Statements) <br>"
+					+ "The threshold is " + _statement_gt_execTime + "<br>"
+					+ "This so we dont <i>bloat</i> this report with entries already displayed in 'SLOW Normalized SQL Statements'. <br>"
+					+ "Hence: it's easier to <i>spot</i> <b>often</b> but <b>short running</b> Statements that may need improvements. <br>"
+					+ "<br>";
+		}
+
 		// Section description
 		rstm.setDescription(
 				"Both slow and fast SQL Statements (from the Statement Cache) are presented here (ordered by: " + _reportType + ") <br>" +
 				"<br>" +
 				"This so you can see if there are problems with <i>Statement Cache Entries</i> that falls <i>just below</i> the threshold for 'Slow SQL Statements' <br>" +
+				"And also detect if <i>normalized</i> Statements has <i>outliers</i> where some parameters or in(...) list might cause the optimizer to produce bad plans.<br>" +
 				"<br>" +
+				descriptionForCpuBelowNormailizedSqlThreeshold +
 				"ASE Source table is 'master.dbo.monCachedStatement' where StatementCache and DynamicSql are displayed. <br>" +
 				"PCS Source table is 'CmStmntCacheDetails_diff'. (PCS = Persistent Counter Store) <br>" +
 				"<br>" +
@@ -334,6 +359,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		// Set: _statement_gt_* variables
+		getSlowQueryThresholds(conn);
+		
 		int topRows = getTopRows();
 //		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 
@@ -484,18 +512,29 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //		String extraWhereClause = "where [UseCount] > 100 or [AvgLIO] > 100000\n"; // this is only used if we havn't got "TotalLioDiff" or "TotalCpuTimeDiff"
 		String extraWhereClause = "";
 		String orderByCol = "[samples_count]";
-		if (dummyRstm.hasColumnNoCase("UseCountDiff"))     { orderByCol = "[UseCount__sum]";     extraWhereClause = "  and [UseCountDiff] > 0 \n"; }
+		if (dummyRstm.hasColumnNoCase("UseCountDiff"))     { orderByCol = "[UseCount__sum]";     extraWhereClause = "  AND [UseCountDiff] > 0 \n"; }
 //		if (dummyRstm.hasColumnNoCase("AvgCpuTime"))       { orderByCol = "[AvgCpuTime_est_max]";   }
 		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLio__sum]";     }
 		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTime__sum]"; }
 		if (ReportType.WAIT_TIME.equals(_reportType))      { orderByCol = "[TotalEstWaitTime__sum]"; }
+		if (ReportType.USE_COUNT.equals(_reportType))      { orderByCol = "[UseCount__sum]"; }
 		
 //		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : "  and [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse) \n";
 		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : sql_and_skipNewOrDiffRateRows;
 
+		String havingClause = "";
+		if (ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD.equals(_reportType))
+		{ 
+			if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff"))
+			{
+				// use a "having" on "AvgCpuTime":
+				havingClause = "HAVING sum([TotalCpuTimeDiff]) *1.0 / nullif(sum([UseCountDiff]), 0) < " + _statement_gt_execTime + " \n";
+			}
+		}
+		
 		// Build: SQL Statement
 		String sql = getCmDiffColumnsAsSqlComment("CmStmntCacheDetails")
-				+ "select top " + topRows + " \n"
+				+ "SELECT TOP " + topRows + " \n"
 				+ "  [DBName] \n"
 				+ " ,[Hashkey] \n"
 				+ " ,cast('' as varchar(10))     as [txt] \n"
@@ -594,15 +633,16 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				+ col_newDiffRow_sum
 				+ " ,sum([CmSampleMs])           as [CmSampleMs_sum] \n"
 
-				+ "from [CmStmntCacheDetails_diff] \n"
-				+ "where 1 = 1 \n"
+				+ "FROM [CmStmntCacheDetails_diff] \n"
+				+ "WHERE 1 = 1 \n"
 				+ getReportPeriodSqlWhere()
 				+ extraWhereClause
 				+ whereFilter_skipNewDiffRateRows
-				+ "group by [DBName], [Hashkey] \n"
+				+ "GROUP BY [DBName], [Hashkey] \n"
 //also in all/some reports, do not trust count(*), it has to be where changes has happened (I think I did something like that in SQL Server SqlServerTopCmExecQueryStats)
 				+ " \n"
-				+ "order by " + orderByCol + " desc \n"
+				+ havingClause
+				+ "ORDER BY " + orderByCol + " DESC \n"
 				+ "";
 
 		_shortRstm = executeQuery(conn, sql, false, "TopStatementCacheCalls");
@@ -821,6 +861,14 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 					whereColValMap.put("HashKey", _shortRstm.getValueAsInteger(r, "Hashkey")); // Note: 'HashKey' (capital K) in [MonSqlCapStatements] but 'Hashkey' in RSTM
 
 					_keyToExecutedSql = getSqlCapExecutedSqlText(_keyToExecutedSql, conn, true, whereColValMap);
+					
+					// TODO: Can we also grab the "ObjectName" and if it starts with "*sq" or "*ss" then grab information from DDL Storage (where the XML Plan possibly is available)
+					//       Then extract the "SQL Text: ..." from the XML   (and possibly also some "extra" statistics from the XML plan <avgTime> and <avgExecTime> note there can be more than one plan in the XML...)
+					// <statementId>135457747</statementId>
+					// <text>
+					// 	<![CDATA[
+					// 		SQL Text: SELECT m."xID", "xChanged", "xCreated_by", "xCreated", "xModified_by", m."xModified", "xModTime", "xOwner", "Fornamn", "Efternamn" ,"Namn", "MaklarID", "Internet", "Signatur", "Maklartyp", "Anvnamn", "xKontor", "xBrokerTeam", "Grupp", "personnummer", "Tel", "mobil", "Ort", "Adress", "besadress", "Postnr", "xTitle", "xRegion", t."name" as titleName, us.value as extendedAccess, k."Kontorsnamn" AS officeName FROM "Maklare" m LEFT JOIN "UserSettings" us ON m."xID" = us."xBroker" AND us."xSetting" = 27 LEFT OUTER JOIN "Title" t on m."xTitle" = t."xID" LEFT JOIN "xKontor" k ON k."xID" = m."xKontor" WHERE "Anvnamn" = ?]]>
+					// </text>
 				}
 			}
 
@@ -828,7 +876,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			//----------------------------------------------------
 			// Create a SQL-Details ResultSet based on values in _shortRstm
 			//----------------------------------------------------
-			if ( ReportType.CPU_TIME.equals(_reportType) )
+			if ( ReportType.CPU_TIME.equals(_reportType) || ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD.equals(_reportType))
 			{
 				SimpleResultSet srs = new SimpleResultSet();
 

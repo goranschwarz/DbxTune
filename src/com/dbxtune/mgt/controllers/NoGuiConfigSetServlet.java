@@ -62,43 +62,43 @@ extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	private boolean hasCorrectSecurityToken(HttpServletRequest request)
-	{
-		Configuration conf = Configuration.getInstance(DbxTune.DBXTUNE_NOGUI_INFO_CONFIG);
-		if (conf == null)
-		{
-			// FIXME;
-		}
-		if ( ! NoGuiManagementServer.hasInstance() )
-		{
-			// FIXME: send error
-		}
-		NoGuiManagementServer noGuiMngmntSrv = NoGuiManagementServer.getInstance();
-		String authTokenString = noGuiMngmntSrv.getAuthTokenString();
-		
-		// Get Header!
-		final String auth = request.getHeader( "Authorization" );
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.hasCorrectSecurityToken(): Authorization = |" + auth + "|, noGuiMngmntSrv.getAuthTokenString()=|" + authTokenString + "|.");
-
-		boolean authorized = false;
-		if (auth != null && auth.equals(authTokenString))
-		{
-			authorized = true;
-		}
-
-		if ( ! authorized )
-		{
-			// FIXME: send error
-		}
-		return authorized;
-		
-//		conf.getProperty(getServletInfo())
-		// If this is a Basic Authentication, we might want to do:
-		// - Generate a UUID (or similar random string), that we store in INFO file: ${HOME}/.dbxtune/info/SERVER_NAME.dbxtune
-		// - Possibly send that via the JSON (in PersistWriterToHttpJson)
-		// - Possibly store it in DbxCentral database (just like 'collectorMgtHostname' and 'collectorMgtPort'
-//		return _xxxToken.equals(request.getParameter("password"));
-	}
+//	private boolean hasCorrectSecurityToken(HttpServletRequest request)
+//	{
+//		Configuration conf = Configuration.getInstance(DbxTune.DBXTUNE_NOGUI_INFO_CONFIG);
+//		if (conf == null)
+//		{
+//			// FIXME;
+//		}
+//		if ( ! NoGuiManagementServer.hasInstance() )
+//		{
+//			// FIXME: send error
+//		}
+//		NoGuiManagementServer noGuiMngmntSrv = NoGuiManagementServer.getInstance();
+//		String authTokenString = noGuiMngmntSrv.getAuthTokenString(false);
+//		
+//		// Get Header!
+//		final String auth = request.getHeader( "Authorization" );
+//System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.hasCorrectSecurityToken(): Authorization = |" + auth + "|, noGuiMngmntSrv.getAuthTokenString()=|" + authTokenString + "|.");
+//
+//		boolean authorized = false;
+//		if (auth != null && auth.equals(authTokenString))
+//		{
+//			authorized = true;
+//		}
+//
+//		if ( ! authorized )
+//		{
+//			// FIXME: send error
+//		}
+//		return authorized;
+//		
+////		conf.getProperty(getServletInfo())
+//		// If this is a Basic Authentication, we might want to do:
+//		// - Generate a UUID (or similar random string), that we store in INFO file: ${HOME}/.dbxtune/info/SERVER_NAME.dbxtune
+//		// - Possibly send that via the JSON (in PersistWriterToHttpJson)
+//		// - Possibly store it in DbxCentral database (just like 'collectorMgtHostname' and 'collectorMgtPort'
+////		return _xxxToken.equals(request.getParameter("password"));
+//	}
 
 	/**
 	 * Send a JSON Response to the caller

@@ -22,6 +22,7 @@ package com.dbxtune.cm.hana;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -362,11 +363,11 @@ extends CountersModel
 			{
 				double calc = ((HitCount+0.0) / (NumSearches+0.0)) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, colPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+				diffData.setValueAt(new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN), rowId, colPos);
 		}
 	}
 

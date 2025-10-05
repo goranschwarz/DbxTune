@@ -27,6 +27,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.tools.JdbcMetadataFindUnindexedFkTables;
+import com.dbxtune.tools.JdbcMetadataFindUnindexedFkTables.MissingIndexInfoDetails;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 
@@ -66,10 +69,13 @@ implements Serializable
 	public ResultSetTableModel         _mdIndex = null;
 	public ResultSetTableModel         _mdFkOut = null;
 	public ResultSetTableModel         _mdFkIn  = null;
+	public Map<String, String>         _missingIxFkOut = null; // <TableName, DDL>
+	public Map<String, String>         _missingIxFkIn  = null; // <TableName, DDL>
 	
 	public List<String> _viewReferences = null;
 	
 	public String _refreshedWithDbmsProductName = "";
+	public String _refreshedWithCurrentCatalog = "";
 
 	public void addColumn(TableColumnInfo ci)
 	{
@@ -166,6 +172,8 @@ implements Serializable
 			DatabaseMetaData dbmd = conn.getMetaData();
 			
 			_refreshedWithDbmsProductName = conn.getDatabaseProductName();
+			try	{ _refreshedWithCurrentCatalog  = conn.getCatalog(); }
+			catch (SQLException ex)	{ _logger.warn("TableInfo.refreshColumnInfo(): Problems getting current catalog. Caught: " + ex); }
 
 			ResultSet rs = dbmd.getColumns(_tabCat, _tabSchema, _tabName, "%");
 			ResultSetTableModel rstm = new ResultSetTableModel(rs, "getColumns");
@@ -203,9 +211,76 @@ implements Serializable
 					_pk = getPkOrFirstUniqueIndex(conn, _tabCat, _tabSchema, _tabName);
 					_extraInfo = conn.getTableExtraInfo(_tabCat, _tabSchema, _tabName);
 					
-	    			_mdIndex = new ResultSetTableModel( dbmd.getIndexInfo   (_tabCat, _tabSchema, _tabName, false, false), "getIndexInfo");
-	    			_mdFkOut = new ResultSetTableModel( dbmd.getImportedKeys(_tabCat, _tabSchema, _tabName),               "getImportedKeys");
-	    			_mdFkIn  = new ResultSetTableModel( dbmd.getExportedKeys(_tabCat, _tabSchema, _tabName),               "getExportedKeys");
+					_mdIndex = new ResultSetTableModel( dbmd.getIndexInfo   (_tabCat, _tabSchema, _tabName, false, false), "getIndexInfo");
+					_mdFkOut = new ResultSetTableModel( dbmd.getImportedKeys(_tabCat, _tabSchema, _tabName),               "getImportedKeys");
+					_mdFkIn  = new ResultSetTableModel( dbmd.getExportedKeys(_tabCat, _tabSchema, _tabName),               "getExportedKeys");
+
+					// Get MISSING indexes on Foreign Keys (easy to disable if it's to heavy)
+					boolean getMissingIndexesOnForeignKeys = false; // NOTE: This is NOT yet ready
+					if (getMissingIndexesOnForeignKeys)
+					{
+System.out.println("----");
+						for (int r=0; r<_mdFkOut.getRowCount(); r++)
+						{
+							String fkName  = _mdFkOut.getValueAsString (r, "FK_NAME"      , false, "");
+							String catName = _mdFkOut.getValueAsString (r, "PKTABLE_CAT"  , false, "");
+							String schName = _mdFkOut.getValueAsString (r, "PKTABLE_SCHEM", false, "");
+							String tabName = _mdFkOut.getValueAsString (r, "PKTABLE_NAME" , false, "");
+							int    keySeq  = _mdFkOut.getValueAsInteger(r, "KEY_SEQ"      , false, -1);
+							if (keySeq != 1)
+								continue;
+							
+System.out.println(String.format("FK >>> Out-Imported Keys: %s.%s.%s -- fkName='%s'", catName, schName, tabName, fkName));
+							List<MissingIndexInfoDetails> midList = JdbcMetadataFindUnindexedFkTables.checkTableForeignKeys(conn, catName, schName, tabName, null);
+							if ( ! midList.isEmpty() )
+							{
+System.out.println("midList: " + midList);
+								for (MissingIndexInfoDetails missingIndexInfoDetails : midList)
+								{
+									if (fkName.equals(missingIndexInfoDetails._fkName))
+									{
+										if (_missingIxFkOut == null)
+											_missingIxFkOut = new HashMap<String, String>();
+										
+										_missingIxFkOut.put(fkName, missingIndexInfoDetails._suggestedDdl);
+System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDetails._suggestedDdl);
+									}
+								}
+							}
+						}
+						for (int r=0; r<_mdFkIn.getRowCount(); r++)
+						{
+							String fkName  = _mdFkIn.getValueAsString (r, "FK_NAME"      , false, "");
+							String catName = _mdFkIn.getValueAsString (r, "FKTABLE_CAT"  , false, "");
+							String schName = _mdFkIn.getValueAsString (r, "FKTABLE_SCHEM", false, "");
+							String tabName = _mdFkIn.getValueAsString (r, "FKTABLE_NAME" , false, "");
+							int    keySeq  = _mdFkIn.getValueAsInteger(r, "KEY_SEQ"      , false, -1);
+							if (keySeq != 1)
+								continue;
+							
+System.out.println(String.format("FK <<< In-Exported Keys: %s.%s.%s -- fkName='%s'", catName, schName, tabName, fkName));
+							List<MissingIndexInfoDetails> midList = JdbcMetadataFindUnindexedFkTables.checkTableForeignKeys(conn, catName, schName, tabName, null);
+							if ( ! midList.isEmpty() )
+							{
+System.out.println("midList: " + midList);
+								for (MissingIndexInfoDetails missingIndexInfoDetails : midList)
+								{
+									if (fkName.equals(missingIndexInfoDetails._fkName))
+									{
+										if (_missingIxFkIn == null)
+											_missingIxFkIn = new HashMap<String, String>();
+										
+										_missingIxFkIn.put(fkName, missingIndexInfoDetails._suggestedDdl);
+System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDetails._suggestedDdl);
+									}
+								}
+							}
+						}
+//						TODO; // loop _mdFkOut & _mdFkIn to check for "missing FK indexes"
+						// _missingIxFkOut
+						// _missingIxFkIn
+						
+					}
 				}
 				else if ( _tabType.equalsIgnoreCase("VIEW") )
 				{
@@ -324,7 +399,22 @@ implements Serializable
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-		sb.append(StringUtil.hasValue(_tabSchema) ? _tabSchema : _tabCat).append(".<B>").append(_tabName).append("</B> - <font color='blue'>").append(_tabType).append("</font>");
+//		sb.append(StringUtil.hasValue(_tabSchema) ? _tabSchema : _tabCat).append(".<B>").append(_tabName).append("</B> - <font color='blue'>").append(_tabType).append("</font>");
+		if (_refreshedWithCurrentCatalog != null && _refreshedWithCurrentCatalog.equalsIgnoreCase(_tabCat))
+		{
+			// do **NOT** Show DB/CAT NAME in the header
+			// Note: MySQL handles catalog/schema differently... (thats why the "hasValue(_tabSchema)" I think)
+			sb.append(StringUtil.hasValue(_tabSchema) ? _tabSchema : _tabCat).append(".<B>").append(_tabName).append("</B>");
+		}
+		else
+		{
+			// **Show** DB/CAT NAME in the header (the looked-up table was in another catalog) 
+			sb.append("<font color='blue'><B>").append(_tabCat).append("</B>.</font>");
+			sb.append(StringUtil.hasValue(_tabSchema) ? _tabSchema : "-unknown-schema-");
+			sb.append(".<B>").append(_tabName).append("</B>");
+		}
+		sb.append(" - <font color='blue'>").append(_tabType).append("</font>");
+
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_tabRemark) ? "not available" : _tabRemark).append("<BR>");
@@ -371,12 +461,12 @@ implements Serializable
 				sb.append(getIndexDesc(_mdIndex));
 				sb.append("<HR>");
 
-				sb.append("<B>Foreign Key</B> -&gt; TO other tables<BR>");
-				sb.append(getFkOutboundDesc(_mdFkOut));
+				sb.append("<B>Foreign Key</B> -&gt; References TO other tables<BR>");
+				sb.append(getFkOutboundDesc(_mdFkOut, _missingIxFkOut));
 				sb.append("<HR>");
 
-				sb.append("<B>Foreign Key</B> &lt;- FROM other tables<BR>");
-				sb.append(getFkInboundDesc(_mdFkIn));
+				sb.append("<B>Foreign Key</B> &lt;- References FROM other tables<BR>");
+				sb.append(getFkInboundDesc(_mdFkIn, _missingIxFkIn));
 				sb.append("<HR>");
 			}
 			else if ( _tabType.equalsIgnoreCase("VIEW") )
@@ -579,6 +669,7 @@ implements Serializable
 			{
 				for (TableExtraInfo ei : _extraInfo.values())
 				{
+//System.out.println("ei.getName()==|" + ei.getName() + "|.");
 					String indexExtraInfo1 = "";
 					String indexExtraInfo2 = "";
 					
@@ -647,6 +738,7 @@ implements Serializable
 					{
 						@SuppressWarnings("unchecked")
 						Map<String, String> indexTypeMap = (Map<String, String>) ei.getValue();
+//System.out.println("TableExtraInfo.IndexType: Map=|" + indexTypeMap + "|");
 						String value = indexTypeMap.get(_name);
 						if (value != null)
 						{
@@ -655,6 +747,9 @@ implements Serializable
 					}
 				}
 			}
+//System.out.println("indexExtraInfoDescriptionHasClustered==|" + indexExtraInfoDescriptionHasClustered + "|.");
+//System.out.println("indexIncludeColumns==|" + indexIncludeColumns + "|.");
+//System.out.println("indexType==|" + indexType + "|.");
 			
 			// NOTE: For some DBMS (Postgres) also has the INCLUDE columns from dbmd.getIndexInfo() in the ResultSet
 			//       So lets REMOVE those from the KEY Columns...
@@ -718,7 +813,7 @@ implements Serializable
 	}
 
 	// Generate HTML ForeignKeys TO other Tables descriptions
-	private String getFkOutboundDesc(ResultSetTableModel md)
+	private String getFkDesc(ResultSetTableModel md, FkType fkType, Map<String, String> fkMissingIndex)
 	{
 		if (md == null)
 			return "<UL><LI><CODE>None</CODE></LI></UL>";
@@ -764,16 +859,38 @@ implements Serializable
 		StringBuilder sb = new StringBuilder();
 		sb.append("<UL>\n");
 		for (ForeignKey fk : fkMap.values())
-			sb.append("  <LI><CODE>").append(fk.getDdl()).append("</CODE></LI>\n");
+		{
+			sb.append("  <LI>\n");
+			sb.append("     ").append(fk.getDesc(fkType)).append("<BR>\n");
+			sb.append("     <CODE>").append(fk.getDdl(fkType)).append("</CODE>\n");
+//System.out.println(" --- fkMissingIndex: " + fkMissingIndex);
+			if (fkMissingIndex != null && fkMissingIndex.containsKey(fk._fkName))
+			{
+				sb.append("     <BR>\n");
+				sb.append("     <B><FONT color='orange'>Missing index, suggesting: </FONT></B><CODE>").append(fkMissingIndex.get(fk._fkName)).append("</CODE>\n");
+			}
+			sb.append("  <BR><BR>\n"); // one extra <BR> to make an extra space between FK Entries
+			sb.append("  </LI>\n");
+		}
 		sb.append("</UL>\n");
 		return sb.toString();
 //		return md.toHtmlTableString();
 	}
 
-	// Generate HTML ForeignKeys FROM other Tables descriptions
-	private String getFkInboundDesc(ResultSetTableModel md)
+	public enum FkType
 	{
-		return getFkOutboundDesc(md);
+		InBound,
+		OutBound
+	};
+
+	// Generate HTML ForeignKeys FROM other Tables descriptions
+	private String getFkInboundDesc(ResultSetTableModel md, Map<String, String> fkMissingIndex)
+	{
+		return getFkDesc(md, FkType.InBound, fkMissingIndex);
+	}
+	private String getFkOutboundDesc(ResultSetTableModel md, Map<String, String> fkMissingIndex)
+	{
+		return getFkDesc(md, FkType.OutBound, fkMissingIndex);
 	}
 	private static class ForeignKey
 	{
@@ -827,16 +944,49 @@ implements Serializable
 			sb.append(name);
 			return sb.toString();
 		}
-		public String getDdl()
+		public String getDesc(FkType fkType)
+		{
+			StringBuilder sb = new StringBuilder();
+
+			if (FkType.OutBound.equals(fkType))
+			{
+				// >> From-Parent: tabname(cols) --To-Child-->> tabname(cols) 
+				sb.append("&gt;&gt; From-Parent: <B>").append(_fkTabName).append("</B>(").append(StringUtil.toCommaStr(_fkColumns)).append(")");
+				sb.append(" --To-Child--&gt;&gt; "); // >>
+				sb.append("<B>").append(_pkTabName).append("</B>(").append(StringUtil.toCommaStr(_pkColumns)).append(")");
+			}
+
+			if (FkType.InBound.equals(fkType))
+			{
+				// << To: tabname(cols) <<--From-- tabname(cols) 
+				sb.append("&lt;&lt; To-Parent: <B>").append(_pkTabName).append("</B>(").append(StringUtil.toCommaStr(_pkColumns)).append(")");
+				sb.append(" &lt;&lt;--From-Child-- "); // << 
+				sb.append("<B>").append(_fkTabName).append("</B>(").append(StringUtil.toCommaStr(_fkColumns)).append(")");
+			}
+
+			return sb.toString();
+		}
+		public String getDdl(FkType fkType)
 		{
 			// constraint fk_AppServer    foreign key(versionId, resourceAppServer) references Resources_AppServer(versionId, resourceName),
 			// alter table XXX add constraint XXX foreign key(c1,c2) references XXX(c1,c2)
 			StringBuilder sb = new StringBuilder();
-			sb.append("ALTER TABLE ").append(objName(_fkTabCat, _fkTabSchema, _fkTabName));
+
+			// Mark the OUT Bound table name
+			if (FkType.OutBound.equals(fkType))
+				sb.append("ALTER TABLE ").append(objName(_fkTabCat, _fkTabSchema, "<B><FONT color='blue'>" + _fkTabName + "</FONT></B>"));
+			if (FkType.InBound.equals(fkType))
+				sb.append("ALTER TABLE ").append(objName(_fkTabCat, _fkTabSchema,                            _fkTabName));
+			
 			sb.append(" ADD CONSTRAINT ").append(_fkName);
 			sb.append(" FOREIGN KEY(<FONT color='blue'>").append(StringUtil.toCommaStr(_fkColumns)).append("</FONT>)");
 			sb.append("<BR>");
-			sb.append(" REFERENCES ").append(objName(_pkTabCat, _pkTabSchema, _pkTabName)).append("(<FONT color='blue'>").append(StringUtil.toCommaStr(_pkColumns)).append("</FONT>)");
+
+			// Mark the IN Bound table name
+			if (FkType.OutBound.equals(fkType))
+				sb.append(" REFERENCES ").append(objName(_pkTabCat, _pkTabSchema,                            _pkTabName            )).append("(<FONT color='blue'>").append(StringUtil.toCommaStr(_pkColumns)).append("</FONT>)");
+			if (FkType.InBound.equals(fkType))
+				sb.append(" REFERENCES ").append(objName(_pkTabCat, _pkTabSchema, "<B><FONT color='blue'>" + _pkTabName + "</FONT>")).append("(<FONT color='blue'>").append(StringUtil.toCommaStr(_pkColumns)).append("</FONT>)");
 			
 			sb.append("<BR>");
 			sb.append("<FONT color='green'>");

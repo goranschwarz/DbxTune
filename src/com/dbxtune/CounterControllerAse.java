@@ -92,6 +92,7 @@ import com.dbxtune.cm.ase.CmSqlStatement;
 import com.dbxtune.cm.ase.CmSqlStatementPerDb;
 import com.dbxtune.cm.ase.CmStatementCache;
 import com.dbxtune.cm.ase.CmStmntCacheDetails;
+import com.dbxtune.cm.ase.CmStmntCacheHistory;
 import com.dbxtune.cm.ase.CmSummary;
 import com.dbxtune.cm.ase.CmSysLoad;
 import com.dbxtune.cm.ase.CmSysWaits;
@@ -429,6 +430,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmPCacheMemoryUsage.create(counterController, guiController);
 		CmStatementCache   .create(counterController, guiController);
 		CmStmntCacheDetails.create(counterController, guiController);
+		CmStmntCacheHistory.create(counterController, guiController);
 
 		// tab: Disk
 		CmDeviceIo         .create(counterController, guiController);

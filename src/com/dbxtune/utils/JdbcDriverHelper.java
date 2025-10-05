@@ -92,7 +92,7 @@ import net.miginfocom.swing.MigLayout;
 public class JdbcDriverHelper
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-	public final static String  DEFAULT_DriversFileName = AppDir.getAppStoreDir() + File.separator + "JdbcDrivers.xml";
+	public final static String  DEFAULT_DriversFileName = AppDir.getDbxUserHomeDir() + File.separator + "JdbcDrivers.xml";
 
 	public static final String JDBC_DRIVER_DOWNLOAD_URL = "http://www.dbxtune.com/jdbc_drivers_download.php";
 
@@ -747,7 +747,7 @@ public class JdbcDriverHelper
 		}
 		private String getDriversPath()
 		{
-			File driversDir = new File(AppDir.getAppStoreDir() + File.separator + "jdbc_drivers");
+			File driversDir = new File(AppDir.getDbxUserHomeDir() + File.separator + "jdbc_drivers");
 			if ( ! driversDir.exists() )
 			{
 				if (driversDir.mkdir())

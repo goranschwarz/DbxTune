@@ -286,7 +286,7 @@ implements ActionListener
 		Version.setAppName("Dump Queue");
 
 		// Create store dir if it did not exists.
-		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out );
+		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out, cmd );
 
 		
 		// -----------------------------------------------------------------
@@ -297,12 +297,12 @@ implements ActionListener
 		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "conf" + File.separatorChar + "rsDumpQueue.save.properties");
 		final String RS_DUMP_QUEUE_HOME    = System.getProperty("RS_DUMP_QUEUE_HOME");
 		
-		String defaultPropsFile     = (RS_DUMP_QUEUE_HOME      != null) ? RS_DUMP_QUEUE_HOME      + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (RS_DUMP_QUEUE_HOME         != null) ? RS_DUMP_QUEUE_HOME         + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 
 		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
-		String filename = AppDir.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
+		String filename = AppDir.getDbxUserHomeDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -546,13 +546,13 @@ implements ActionListener
 
 			//			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionEvent.ALT_MASK));
 //			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, ActionEvent.ALT_MASK));
-			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
-			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
+			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
 
-			_fNew_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-			_fOpen_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-			_fSave_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+			_fNew_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+			_fOpen_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+			_fSave_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
 
 			// TOOLBAR
 //			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DBMS",         "Connect");

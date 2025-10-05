@@ -46,6 +46,7 @@ import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.config.dict.AseErrorMessageDictionary;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
@@ -696,13 +697,28 @@ extends CountersModelAppend
 			{
 				if (ErrorMessage.startsWith("background task message: "))
 				{
-					String extendedDescText = ErrorMessage;
-					String extendedDescHtml = "<pre>\n" + ErrorMessage + "\n</pre>";
+					String keepRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BackgroundMessage_KeepMsg, DEFAULT_alarm_BackgroundMessage_KeepMsg);
+					String skipRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_BackgroundMessage_SkipMsg, DEFAULT_alarm_BackgroundMessage_SkipMsg);
 
-					AlarmEvent ae = new AlarmEventBackgroundMessage(this, ErrorMessage, errorlogTs);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+					boolean doAlarm = true;
+					
+					// The below could have been done with nested if(keep), if(keep-xxx), if(!skip), if(!skip-xxx) doAlarm=true; 
+					// Below is more readable, from a variable context point-of-view, but HARDER to understand
+					// Logic is re-used from CmOpenDatabases
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepRegExp) ||   ErrorMessage.matches(keepRegExp))); //     matches the KEEP regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipRegExp) || ! ErrorMessage.matches(skipRegExp))); // NO match in the SKIP regexp
 
-					alarmHandler.addAlarm( ae );
+					if (doAlarm)
+					{
+						String extendedDescText = ErrorMessage;
+						String extendedDescHtml = "<pre>\n" + ErrorMessage + "\n</pre>";
+
+						AlarmEvent ae = new AlarmEventBackgroundMessage(this, ErrorMessage, errorlogTs);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						alarmHandler.addAlarm( ae );
+					}
 				}
 			}
 		}
@@ -763,35 +779,39 @@ extends CountersModelAppend
 	}
 
 
-	public static final String  PROPKEY_alarm_UserConnections       = CM_NAME + ".alarm.system.on.UserConnections";
-	public static final boolean DEFAULT_alarm_UserConnections       = true;
+	public static final String  PROPKEY_alarm_UserConnections           = CM_NAME + ".alarm.system.on.UserConnections";
+	public static final boolean DEFAULT_alarm_UserConnections           = true;
 
-	public static final String  PROPKEY_alarm_TransactionLogFull    = CM_NAME + ".alarm.system.on.TransactionLogFull";
-	public static final boolean DEFAULT_alarm_TransactionLogFull    = true;
+	public static final String  PROPKEY_alarm_TransactionLogFull        = CM_NAME + ".alarm.system.on.TransactionLogFull";
+	public static final boolean DEFAULT_alarm_TransactionLogFull        = true;
 
-	public static final String  PROPKEY_alarm_Severity              = CM_NAME + ".alarm.system.if.Severity.gt";
-	public static final int     DEFAULT_alarm_Severity              = 16;
+	public static final String  PROPKEY_alarm_Severity                  = CM_NAME + ".alarm.system.if.Severity.gt";
+	public static final int     DEFAULT_alarm_Severity                  = 16;
 
-	public static final String  PROPKEY_alarm_ErrorNumberSkipList   = CM_NAME + ".alarm.system.errorNumber.skip.list";
-//	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
-	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "1621";
+	public static final String  PROPKEY_alarm_ErrorNumberSkipList       = CM_NAME + ".alarm.system.errorNumber.skip.list";
+//	public static final String  DEFAULT_alarm_ErrorNumberSkipList       = "";
+	public static final String  DEFAULT_alarm_ErrorNumberSkipList       = "1621";
 	// Below number are usually found when a "penetration test tool" is checking the environment
 	// Num=1621, Severity=18, Text=Type '3' not allowed before login.
 
-	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
-	public static final boolean DEFAULT_alarm_ConfigChanges         = true;
+	public static final String  PROPKEY_alarm_ConfigChanges             = CM_NAME + ".alarm.system.on.ConfigChanges";
+	public static final boolean DEFAULT_alarm_ConfigChanges             = true;
 
-	public static final String  PROPKEY_alarm_ProcessStackTrace     = CM_NAME + ".alarm.system.on.ProcessStackTrace";
-	public static final boolean DEFAULT_alarm_ProcessStackTrace     = true;
+	public static final String  PROPKEY_alarm_ProcessStackTrace         = CM_NAME + ".alarm.system.on.ProcessStackTrace";
+	public static final boolean DEFAULT_alarm_ProcessStackTrace         = true;
 
-	public static final String  PROPKEY_alarm_ProcessInfected       = CM_NAME + ".alarm.system.on.ProcessInfected";
-	public static final boolean DEFAULT_alarm_ProcessInfected       = true;
+	public static final String  PROPKEY_alarm_ProcessInfected           = CM_NAME + ".alarm.system.on.ProcessInfected";
+	public static final boolean DEFAULT_alarm_ProcessInfected           = true;
 
-	public static final String  PROPKEY_alarm_ProcessTimesliceError = CM_NAME + ".alarm.system.on.ProcessTimesliceError";
-	public static final boolean DEFAULT_alarm_ProcessTimesliceError = true;
+	public static final String  PROPKEY_alarm_ProcessTimesliceError     = CM_NAME + ".alarm.system.on.ProcessTimesliceError";
+	public static final boolean DEFAULT_alarm_ProcessTimesliceError     = true;
 
-	public static final String  PROPKEY_alarm_BackgroundMessage     = CM_NAME + ".alarm.system.on.BackgroundMessage";
-	public static final boolean DEFAULT_alarm_BackgroundMessage     = true;
+	public static final String  PROPKEY_alarm_BackgroundMessage         = CM_NAME + ".alarm.system.on.BackgroundMessage";
+	public static final boolean DEFAULT_alarm_BackgroundMessage         = true;
+	public static final String  PROPKEY_alarm_BackgroundMessage_KeepMsg = CM_NAME + ".alarm.system.on.BackgroundMessage.keep.regex";
+	public static final String  DEFAULT_alarm_BackgroundMessage_KeepMsg = "";
+	public static final String  PROPKEY_alarm_BackgroundMessage_SkipMsg = CM_NAME + ".alarm.system.on.BackgroundMessage.skip.regex";
+	public static final String  DEFAULT_alarm_BackgroundMessage_SkipMsg = ""; // example property: CmErrorLog.alarm.system.on.BackgroundMessage.skip.regex = ".*(MFEXImporter).*";
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -801,16 +821,19 @@ extends CountersModelAppend
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections      , DEFAULT_alarm_UserConnections      ), DEFAULT_alarm_UserConnections      , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
-		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull   , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull   , DEFAULT_alarm_TransactionLogFull   ), DEFAULT_alarm_TransactionLogFull   , "On Error 7413, send 'AlarmEventFullTranLog'." ));
-		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges        , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges        , DEFAULT_alarm_ConfigChanges        ), DEFAULT_alarm_ConfigChanges        , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
-		list.add(new CmSettingsHelper("ProcessStackTrace"      , isAlarmSwitch, PROPKEY_alarm_ProcessStackTrace    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessStackTrace    , DEFAULT_alarm_ProcessStackTrace    ), DEFAULT_alarm_ProcessStackTrace    , "On error log message 'end of stack trace, spid .*, kpid .*, suid .*', send 'AlarmEventProcessStackTrace'." ));
-		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected      , DEFAULT_alarm_ProcessInfected      ), DEFAULT_alarm_ProcessInfected      , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
-		list.add(new CmSettingsHelper("ProcessTimeSliceError"  , isAlarmSwitch, PROPKEY_alarm_ProcessTimesliceError, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessTimesliceError, DEFAULT_alarm_ProcessTimesliceError), DEFAULT_alarm_ProcessTimesliceError, "On error log message 'timeslice .*, current process infected at', send 'AlarmEventProcessTimeSliceError'." ));
-		list.add(new CmSettingsHelper("BackgroundMessage"      , isAlarmSwitch, PROPKEY_alarm_BackgroundMessage    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_BackgroundMessage    , DEFAULT_alarm_BackgroundMessage    ), DEFAULT_alarm_BackgroundMessage    , "On messages starting with 'background task message:', send 'AlarmEventBackgroundMessage'." ));
+		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections          , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections          , DEFAULT_alarm_UserConnections          ), DEFAULT_alarm_UserConnections          , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
+		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull       , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull       , DEFAULT_alarm_TransactionLogFull       ), DEFAULT_alarm_TransactionLogFull       , "On Error 7413, send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges            , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges            , DEFAULT_alarm_ConfigChanges            ), DEFAULT_alarm_ConfigChanges            , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
+		list.add(new CmSettingsHelper("ProcessStackTrace"      , isAlarmSwitch, PROPKEY_alarm_ProcessStackTrace        , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessStackTrace        , DEFAULT_alarm_ProcessStackTrace        ), DEFAULT_alarm_ProcessStackTrace        , "On error log message 'end of stack trace, spid .*, kpid .*, suid .*', send 'AlarmEventProcessStackTrace'." ));
+		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected          , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected          , DEFAULT_alarm_ProcessInfected          ), DEFAULT_alarm_ProcessInfected          , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
+		list.add(new CmSettingsHelper("ProcessTimeSliceError"  , isAlarmSwitch, PROPKEY_alarm_ProcessTimesliceError    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessTimesliceError    , DEFAULT_alarm_ProcessTimesliceError    ), DEFAULT_alarm_ProcessTimesliceError    , "On error log message 'timeslice .*, current process infected at', send 'AlarmEventProcessTimeSliceError'." ));
 
-		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity             , DEFAULT_alarm_Severity             ), DEFAULT_alarm_Severity             , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
-		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)"               , PROPKEY_alarm_ErrorNumberSkipList  , String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList  , DEFAULT_alarm_ErrorNumberSkipList  ), DEFAULT_alarm_ErrorNumberSkipList  , "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
+		list.add(new CmSettingsHelper("BackgroundMessage"      , isAlarmSwitch, PROPKEY_alarm_BackgroundMessage        , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_BackgroundMessage        , DEFAULT_alarm_BackgroundMessage        ), DEFAULT_alarm_BackgroundMessage        , "On messages starting with 'background task message:', send 'AlarmEventBackgroundMessage'." ));
+		list.add(new CmSettingsHelper("BackgroundMessage Keep Msg"            , PROPKEY_alarm_BackgroundMessage_KeepMsg, String.class,  conf.getProperty       (PROPKEY_alarm_BackgroundMessage_KeepMsg, DEFAULT_alarm_BackgroundMessage_KeepMsg), DEFAULT_alarm_BackgroundMessage_KeepMsg, "Keep messages in 'Background Message', That contains this RegEx. After this rule the 'skip' rule is evaluated. (blank=disables this rule). " , new RegExpInputValidator() ));
+		list.add(new CmSettingsHelper("BackgroundMessage Skip Msg"            , PROPKEY_alarm_BackgroundMessage_SkipMsg, String.class,  conf.getProperty       (PROPKEY_alarm_BackgroundMessage_SkipMsg, DEFAULT_alarm_BackgroundMessage_SkipMsg), DEFAULT_alarm_BackgroundMessage_SkipMsg, "Skip messages in 'Background Message', That contains this RegEx. Before this rule the 'keep' rule is evaluated. (blank=disables this rule). ", new RegExpInputValidator() ));
+
+		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity                 , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity                 , DEFAULT_alarm_Severity                 ), DEFAULT_alarm_Severity                 , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
+		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)"               , PROPKEY_alarm_ErrorNumberSkipList      , String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList      , DEFAULT_alarm_ErrorNumberSkipList      ), DEFAULT_alarm_ErrorNumberSkipList      , "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
 
 		return list;
 	}

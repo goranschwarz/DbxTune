@@ -153,7 +153,7 @@ public class Message {
 	/** 
 	 * Constructor 
 	 *
-	 * @deprecated
+	 * @Deprecated
 	 */
 	public Message (String host,
 					int port,
@@ -183,7 +183,7 @@ public class Message {
 	/**
 	 * Returns recipient 
 	 *
-	 * @deprecated
+	 * @Deprecated
 	 */
 	public String getRecipient () {
 		return getPager();
@@ -251,7 +251,7 @@ public class Message {
 	/** 
 	 * Sets sender 
 	 *
-	 * @deprecated
+	 * @Deprecated
 	 */
 	public void setSender(String sender) {
 		setCallerIdentifier(sender);
@@ -267,7 +267,7 @@ public class Message {
 	/** 
 	 * Sets recipient 
 	 *
-	 * @deprecated
+	 * @Deprecated
 	 */
 	public void setRecipient(String recipient) {
 		setPager(recipient);

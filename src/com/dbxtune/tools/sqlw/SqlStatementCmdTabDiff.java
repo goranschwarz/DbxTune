@@ -46,6 +46,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.TdsConnection;
 import com.dbxtune.sql.diff.DiffContext;
 import com.dbxtune.sql.diff.DiffContext.DiffSide;
+import com.dbxtune.sql.diff.DiffContext.UuidCaseSensitivity;
 import com.dbxtune.sql.diff.DiffSink;
 import com.dbxtune.sql.diff.DiffTable;
 import com.dbxtune.sql.diff.actions.DiffTableModel;
@@ -97,12 +98,14 @@ extends SqlStatementAbstract
 //FIXME: implement the below
 //		String    _rawTabDiffCmdSwitches = null;
 
+		boolean    _castUuidCols   = true;
+
 		boolean    _skipLobCols    = false;
 		List<String> _diffColumns  = null;
 		
 		ActionType _action         = null; 
 		String     _actionOutFile  = null; 
-		String     _goString       = "\\ngo"; 
+		String     _goString       = "\ngo"; 
 		String     _execBeforeSync = null;
 		String     _execAfterSync  = null;
 		boolean    _execSyncInTran = true;
@@ -136,6 +139,7 @@ extends SqlStatementAbstract
 			sb.append(", ").append("rightTable    ".trim()).append("=").append(StringUtil.quotify(_rightTable    ));
 			sb.append(", ").append("whereClause   ".trim()).append("=").append(StringUtil.quotify(_whereClause   ));
 			sb.append(", ").append("diffColumns   ".trim()).append("=").append(StringUtil.quotify(_diffColumns   ));
+			sb.append(", ").append("castUuidCols  ".trim()).append("=").append(StringUtil.quotify(_castUuidCols  ));
 			sb.append(", ").append("skipLobCols   ".trim()).append("=").append(StringUtil.quotify(_skipLobCols   ));
 			sb.append(", ").append("action        ".trim()).append("=").append(StringUtil.quotify(_action        ));
 			sb.append(", ").append("actionOutFile ".trim()).append("=").append(StringUtil.quotify(_actionOutFile ));
@@ -214,6 +218,7 @@ extends SqlStatementAbstract
 			if (cmdLine.hasOption('o')) _params._actionOutFile   = cmdLine.getOptionValue('o');
 			if (cmdLine.hasOption('g')) _params._goString        = cmdLine.getOptionValue('g');
 			if (cmdLine.hasOption('L')) _params._skipLobCols     = true;
+			if (cmdLine.hasOption('s')) _params._castUuidCols    = false;
 			if (cmdLine.hasOption('c')) _params._diffColumns     = StringUtil.commaStrToList(cmdLine.getOptionValue('c'));;
 
 			if (cmdLine.hasOption('?'))
@@ -309,6 +314,7 @@ extends SqlStatementAbstract
 		options.addOption( "o", "actionOutFile",   true,    "Write actions to file" );
 		options.addOption( "g", "go",              true,    "go string" );
 		options.addOption( "L", "skipLobCols",     false,   "" );
+		options.addOption( "s", "skipCastUuid",    false,   "" );
 		options.addOption( "x", "debug",           false,   "debug" );
 		options.addOption( "X", "trace",           false,   "trace" );
 		options.addOption( "Y", "stdout",          false,   "print debug messages to Stdout" );
@@ -524,13 +530,13 @@ extends SqlStatementAbstract
 			// Build a WHERE Clause, from the input parameter (if it was specified)
 			String whereClause = "";
 			if (StringUtil.hasValue(_params._whereClause))
-				whereClause = " where " + _params._whereClause;
+				whereClause = " WHERE " + _params._whereClause;
 
 
 			// PRE Query on LEFT and RIGHT to see if table exists
 			// and also to collect PK info etc
-			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wring database name for Sybase ASE)
-			String rightPreQuery = "select * from " + _params._rightTable + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wring database name for Sybase ASE)
+			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wrong database name for Sybase ASE)
+			String rightPreQuery = "select * from " + _params._rightTable + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wrong database name for Sybase ASE)
 
 
 			//----------------------------------------------------
@@ -568,7 +574,6 @@ extends SqlStatementAbstract
 				throw ex;
 			}
 
-
 			context.setPkColumns(_params._keyCols);
 			DiffTable leftPreDt  = new DiffTable(DiffSide.LEFT,  context, leftPreRs,  leftPreQuery,  leftConn);//leftConnProps);
 			DiffTable rightPreDt = new DiffTable(DiffSide.RIGHT, context, rightPreRs, rightPreQuery, rightConn);//rightConnProps);
@@ -580,13 +585,41 @@ extends SqlStatementAbstract
 				context.clearMessages();
 			}
 
+//			// Check for UUID Columns
+//			if ( ! leftPreDt.getUuidColumnNames().isEmpty() || ! rightPreDt.getUuidColumnNames().isEmpty() )
+//			{
+//				if ( ! leftPreDt.getUuidColumnNames().isEmpty() )
+//					addWarningMessage("Left hand side HAS UUID columns, this may cause problems when comparing, due to how UUID's are SORTED. Possible solution is to cast them to chars. Example: 'CAST(uuidCol as char(36))'. The columns are: " + leftPreDt.getUuidColumnNames());
+//				
+//				if ( ! rightPreDt.getUuidColumnNames().isEmpty() )
+//					addWarningMessage("Right hand side HAS UUID columns, this may cause problems when comparing, due to how UUID's are SORTED. Possible solution is to cast them to chars. Example: 'CAST(uuidCol as char(36))'. The columns are: " + leftPreDt.getUuidColumnNames());
+//			}
 
 
 			//----------------------------------------------------------------------
 			// NOW CONSTRUCT SQL TEXT for the REAL SQL Query on the LEFT and RIGHT
 			boolean skipLobColumns = _params._skipLobCols;
-			String leftQuery  = "select " + leftPreDt .getColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote(), skipLobColumns) + " from " + _params._leftTable  + whereClause + " order by " + leftPreDt .getPkColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote());
-			String rightQuery = "select " + rightPreDt.getColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote(), skipLobColumns) + " from " + _params._rightTable + whereClause + " order by " + rightPreDt.getPkColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote());
+			boolean castUuidCols   = _params._castUuidCols;
+//			String leftQuery  = "select " + leftPreDt .getColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote(), skipLobColumns) + " from " + _params._leftTable  + whereClause + " order by " + leftPreDt .getPkColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote());
+//			String rightQuery = "select " + rightPreDt.getColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote(), skipLobColumns) + " from " + _params._rightTable + whereClause + " order by " + rightPreDt.getPkColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote());
+			String leftQuery  = leftPreDt .createSelectStatement(leftConn , _params._leftTable , whereClause, castUuidCols, skipLobColumns);
+			String rightQuery = rightPreDt.createSelectStatement(rightConn, _params._rightTable, whereClause, castUuidCols, skipLobColumns);
+			
+			if (castUuidCols)
+			{
+				if ( ! leftPreDt.getUuidColumnNames().isEmpty() || ! rightPreDt.getUuidColumnNames().isEmpty() )
+				{
+					addInfoMessage("The left/right table has columns with UUID's, which means they will CAST them to CHAR(36) in the SELECT list and ORDER BY list. \n"
+							+ "To look at the executed SQL Statement, use switch '-x' \n"
+							+ "If you DO NOT want to do the CAST, use switch '-s|--skipCastUuid'");
+
+					if ( ! leftPreDt.getUuidColumnNames().isEmpty() )
+						addInfoMessage("The left table UUID column(s): " + leftPreDt.getUuidColumnNames());
+
+					if ( ! rightPreDt.getUuidColumnNames().isEmpty() )
+						addInfoMessage("The right table UUID column(s): " + rightPreDt.getUuidColumnNames());
+				}
+			}
 			
 			if (skipLobColumns)
 			{
@@ -601,11 +634,25 @@ extends SqlStatementAbstract
 			// SET the PK found in the PreQuery (or from the _params._keyCols, which was specified earlier)
 			addDebugMessage("Setting/Using PK Columns in the context to use: "+leftPreDt.getPkColumnNames());
 			context.setPkColumns(leftPreDt.getPkColumnNames());
+			
+			// Set "pre" UUID columns in the context
+			context.setLeftOriginUuidColumns ( leftPreDt.getUuidColumnNames());
+			context.setRightOriginUuidColumns(rightPreDt.getUuidColumnNames());
 
 			leftPreDt .close();
 			rightPreDt.close();
 
-
+			// If the Vendor are DIFFERENT, for UUID's, use UpperCase compare
+			String leftDbmsVendor  = leftConn .getDatabaseProductName();
+			String rightDbmsVendor = rightConn.getDatabaseProductName();
+			if ( ! leftDbmsVendor.equals(rightDbmsVendor))
+			{
+				if ( !leftPreDt.getUuidColumnNames().isEmpty() || !rightPreDt.getUuidColumnNames().isEmpty())
+				{
+					addInfoMessage("DBMS Vendors seems to be different Left='" + leftDbmsVendor + "', Right='" + rightDbmsVendor + "'. Setting UUID Comparison mode: TO_UPPER");
+					context.setUuidCaseSensitivity(UuidCaseSensitivity.TO_UPPER);
+				}
+			}
 			
 			
 			String leftPreCountQuery  = "select count(*) from " + _params._leftTable  + whereClause;
@@ -644,7 +691,7 @@ extends SqlStatementAbstract
 
 				try 
 				{
-					Statement tmpStmnt = leftConn.createStatement();
+					Statement tmpStmnt = rightConn.createStatement();
 					ResultSet tmpRs    = tmpStmnt.executeQuery(rightPreCountQuery);
 					while (tmpRs.next())
 						rightPreCount = tmpRs.getLong(1);

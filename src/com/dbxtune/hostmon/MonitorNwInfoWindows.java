@@ -43,9 +43,10 @@ extends MonitorNwInfo
 	@Override
 	public String getCommand()
 	{
+		String cmdPath = Configuration.getCombinedConfiguration().getProperty(PROPKEY_windows_typeperf_cmd_path, DEFAULT_windows_typeperf_cmd_path);
 		String cmd = super.getCommand();
-//		return cmd != null ? cmd : "typeperf -si " + getSleepTime() + " \"\\Network Interface(*)\\*\" \"\\Network Adapter(*)\\*\"";
-		return cmd != null ? cmd : "typeperf -si " + getSleepTime() + " \"\\Network Interface(*)\\*\" ";
+//		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\Network Interface(*)\\*\" \"\\Network Adapter(*)\\*\"";
+		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\Network Interface(*)\\*\" ";
 	}
 
 	@Override

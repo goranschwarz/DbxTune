@@ -1959,7 +1959,7 @@ extends CounterTableModel
 //
 //						// interval is in MilliSec, so val has to be multiplied by 1000
 //						val = (val * 1000) / diff._interval;
-//						BigDecimal newVal = new BigDecimal( val ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//						BigDecimal newVal = new BigDecimal( val ).setScale(1, RoundingMode.HALF_EVEN);
 //
 //						// Set the new object
 //						newObject = newVal;

@@ -121,12 +121,12 @@ public class JdbcUrlParser
 				AseUrlHelper aseUrl = AseUrlHelper.parseUrl(url);
 				
 				p.setDbType("sybase");
-	    		p.setHost  (aseUrl.getFirstHost());
-	    		p.setPort  (aseUrl.getFirstPort());
-	    		p.setHostPortStr(aseUrl.getHostPortStr());
-	    		
-	    		p.setPath   (aseUrl.getDbname());
-	    		p.setOptions(aseUrl.getOptions("&"));
+				p.setHost  (aseUrl.getFirstHost());
+				p.setPort  (aseUrl.getFirstPort());
+				p.setHostPortStr(aseUrl.getHostPortStr());
+				
+				p.setPath   (aseUrl.getDbname());
+				p.setOptions(aseUrl.getOptions("&"));
 			}
 			catch (ParseException ex)
 			{
@@ -141,16 +141,36 @@ public class JdbcUrlParser
 				H2UrlHelper h2Url = new H2UrlHelper(url);
 				
 				p.setDbType("h2");
-	    		p.setHost  (h2Url.getUrlTcpHost());
-	    		p.setPort  (h2Url.getUrlTcpPort());
-	    		p.setHostPortStr(h2Url.getUrlTcpHostPort());
+				p.setHost  (h2Url.getUrlTcpHost());
+				p.setPort  (h2Url.getUrlTcpPort());
+				p.setHostPortStr(h2Url.getUrlTcpHostPort());
 
-	    		p.setPath   (h2Url.getFilename());
-	    		p.setOptions(h2Url.getUrlOptions());
+				p.setPath   (h2Url.getFilename());
+				p.setOptions(h2Url.getUrlOptions());
 			}
 			catch (Exception ex)
 			{
 				_logger.warn("Problem parsing the H2 URL '"+url+"'. Caught: "+ex);
+			}
+		}
+		else if (url.startsWith("jdbc:sqlserver:"))
+		{
+			try
+			{
+				// FIXME: make MsSqlUrlHelper a subclass of JdbcUrlParser
+				MsSqlUrlHelper msSqlHelperUrl = MsSqlUrlHelper.parse(url);
+
+				p.setDbType     ("sqlserver");
+				p.setHost       (msSqlHelperUrl.getHostInstance());
+				p.setPort       (msSqlHelperUrl.getPort());
+//				p.setHostPortStr(msSqlHelperUrl.getHostPortStr());
+
+				p.setPath   (null);
+				p.setOptions(msSqlHelperUrl.getUrlOptions());
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Problem parsing the MS SQL URL '" + url + "'. Caught: " + ex);
 			}
 		}
 		else if (url.startsWith("jdbc:oracle:thin:"))
@@ -268,41 +288,57 @@ public class JdbcUrlParser
 		// Set Log4j Log Level
 //		Configurator.setRootLevel(Level.TRACE);
 
-		test("jdbc:derby://localhost:1527/netld;collation=TERRITORY_BASED:PRIMARY");
-		test("jdbc:sybase:Tds:vadbjsa000.ash.od.sap.biz:30015?ENCRYPT_PASSWORD=true");
-		test("jdbc:sapdb://vadbj00.od.sap.biz/J00");
-		test("jdbc:oracle:thin:@//nlhtblob001.htb.sap.corp:1521/ORA11DEV");
-		test("jdbc:sqlserver://mo-58db799f7.mo.sap.corp:1433");
-		test("jdbc:sqlserver://gorans-ub2:1433");
-		test("jdbc:sap://mo-b402c54f9.mo.sap.corp:30015");
-		test("jdbc:h2:file:C:/projects/asetune_recordings_temp/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
-		test("jdbc:h2:tcp://192.168.0.112/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
-		test("jdbc:h2:tcp://192.168.0.111:9092/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
-		test("jdbc:sybase:Tds:localhost:15702,STON60266746A:15702?IS_CLOSED_TEST=INTERNAL&ENCRYPT_PASSWORD=true");
-		test("jdbc:sybase:Tds:localhost:15702/goransdb?IS_CLOSED_TEST=INTERNAL&ENCRYPT_PASSWORD=true");
-		test("jdbc:oracle:thin:@//nlhtblob001.htb.sap.corp:1521/ora11dev");
-		test("jdbc:oracle:thin:Herong/TopSecret@h1:9999:XE");
-		test("jdbc:oracle:thin:Herong/TopSecret@:8888:XE");
-		test("jdbc:oracle:thin:Herong/TopSecret@//h1:7777/XE");
-		test("jdbc:oracle:thin:Herong/TopSecret@//:6666/XE");
-		test("jdbc:oracle:thin:Herong/TopSecret@//h1/XE");
-		test("jdbc:oracle:thin:Herong/TopSecret@///XE");
-		test("jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=h1)(PORT=5555)) (CONNECT_DATA=(SERVICE_NAME= service_name)))");
-		test("jdbc:oracle:thin:@(DESCRIPTION=(LOAD_BALANCE=on) (ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=h1)(PORT=1111))(ADDRESS=(PROTOCOL=TCP)(HOST=h2)(PORT=2222))) (CONNECT_DATA=(SERVICE_NAME= service_name)))");
-		test("jdbc:postgresql:database");
-		test("dbc:postgresql:/");
-		test("jdbc:postgresql://host/database");
-		test("jdbc:postgresql://host/");
-		test("jdbc:postgresql://host:1234/database");
-		test("jdbc:postgresql://host:1234/");
-		test("jdbc:postgresql://host:1234/database?ssl=true");
-		test("jdbc:postgresql://host:1234/database?ssl=true&user=fred&password=secret");
+//		test("jdbc:derby://localhost:1527/netld;collation=TERRITORY_BASED:PRIMARY");
+//		test("jdbc:sybase:Tds:vadbjsa000.ash.od.sap.biz:30015?ENCRYPT_PASSWORD=true");
+//		test("jdbc:sapdb://vadbj00.od.sap.biz/J00");
+//		test("jdbc:oracle:thin:@//nlhtblob001.htb.sap.corp:1521/ORA11DEV");
+//		test("jdbc:sqlserver://mo-58db799f7.mo.sap.corp:1433");
+//		test("jdbc:sqlserver://gorans-ub2:1433");
+//		test("jdbc:sap://mo-b402c54f9.mo.sap.corp:30015");
+//		test("jdbc:h2:file:C:/projects/asetune_recordings_temp/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+//		test("jdbc:h2:tcp://192.168.0.112/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+//		test("jdbc:h2:tcp://192.168.0.111:9092/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+//		test("jdbc:sybase:Tds:localhost:15702,STON60266746A:15702?IS_CLOSED_TEST=INTERNAL&ENCRYPT_PASSWORD=true");
+//		test("jdbc:sybase:Tds:localhost:15702/goransdb?IS_CLOSED_TEST=INTERNAL&ENCRYPT_PASSWORD=true");
+//		test("jdbc:oracle:thin:@//nlhtblob001.htb.sap.corp:1521/ora11dev");
+//		test("jdbc:oracle:thin:Herong/TopSecret@h1:9999:XE");
+//		test("jdbc:oracle:thin:Herong/TopSecret@:8888:XE");
+//		test("jdbc:oracle:thin:Herong/TopSecret@//h1:7777/XE");
+//		test("jdbc:oracle:thin:Herong/TopSecret@//:6666/XE");
+//		test("jdbc:oracle:thin:Herong/TopSecret@//h1/XE");
+//		test("jdbc:oracle:thin:Herong/TopSecret@///XE");
+//		test("jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=h1)(PORT=5555)) (CONNECT_DATA=(SERVICE_NAME= service_name)))");
+//		test("jdbc:oracle:thin:@(DESCRIPTION=(LOAD_BALANCE=on) (ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=h1)(PORT=1111))(ADDRESS=(PROTOCOL=TCP)(HOST=h2)(PORT=2222))) (CONNECT_DATA=(SERVICE_NAME= service_name)))");
+//		test("jdbc:postgresql:database");
+//		test("dbc:postgresql:/");
+//		test("jdbc:postgresql://host/database");
+//		test("jdbc:postgresql://host/");
+//		test("jdbc:postgresql://host:1234/database");
+//		test("jdbc:postgresql://host:1234/");
+//		test("jdbc:postgresql://host:1234/database?ssl=true");
+//		test("jdbc:postgresql://host:1234/database?ssl=true&user=fred&password=secret");
+
+		testX("jdbc:sqlserver://AXSEALISQL02.acme.com:50001");
+		testX("jdbc:sqlserver://AXSEALISQL02\\INST01:50001");
+		testX("jdbc:sqlserver://AXSEALISQL02\\INST01");
 		
-		test2("jdbc:postgresql://host:1234/aDbName");
-		test2("jdbc:postgresql://host:1234/database?ssl=true&user=fred&password=secret");
+//		test2("jdbc:postgresql://host:1234/aDbName");
+//		test2("jdbc:postgresql://host:1234/database?ssl=true&user=fred&password=secret");
 		
 	}
 	
+	private static void testX(String url)
+	{
+		System.out.println("");
+		System.out.println("########################################################");
+		System.out.println(" URL="+url);
+		JdbcUrlParser p = JdbcUrlParser.parse(url); 
+		p.setHost("XXX"); // set the new server name
+		url = p.toUrl();
+		System.out.println(" xxxxx   ="+url);
+		System.out.println(" toString="+p);
+		System.out.println(" toUrl   ="+p.toUrl());
+	}
 	private static void test(String url)
 	{
 		System.out.println("");

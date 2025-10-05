@@ -25,7 +25,6 @@
 package com.dbxtune.config.dbms;
 
 import java.lang.invoke.MethodHandles;
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -169,6 +168,12 @@ extends DbmsConfigAbstract
 //		"			      and b.type != 'read-only' \n" + 
 //		"			      and b.display_level <= 10 \n" + 
 		"order by a.parent, a.name \n";
+	String sql = ""
+		    + "    USED_MEMORY   = CASE \n"
+		    + "                        WHEN b.unit = 'memory pages(2k)' THEN CAST(CAST(b.value/512.0 as numeric(15,1)) AS varchar(30)) + \" MB\" \n"
+		    + "                        ELSE b.comment \n"
+		    + "                    END, \n"
+		    + "";
 
 	private static String GET_CONFIG_OFFLINE_SQL = 
 		"select * " +
@@ -471,16 +476,34 @@ extends DbmsConfigAbstract
 							entry.usedMemoryStr = "";
 						else
 						{
-							double memInMb = mem / 1024.0;
-							BigDecimal bdMem = new BigDecimal( memInMb ).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-							entry.usedMemoryStr = bdMem + " MB";
+//							double memInMb = mem / 1024.0;
+//							BigDecimal bdMem = new BigDecimal( memInMb ).setScale(2, RoundingMode.HALF_EVEN);
+//							entry.usedMemoryStr = bdMem + " MB";
 	
 							String unit = entry.configUnit;
 							if (unit.equals("memory pages(2k)"))
 							{
+								entry.usedMemoryStr = entry.configValue == 0 ? "" : NumberUtils.round( (entry.configValue) / 512.0 , 1) + " MB";
+
+								double newVal  = NumberUtils.round( (entry.configValue) / 512.0 , 1);
+								String tmpUnit = "MB";
+								if (newVal >= 1024*10)
+								{
+									newVal  = NumberUtils.round( (entry.configValue) / 512.0 / 1024.0 , 1);
+									tmpUnit = "GB";
+								}
+								entry.usedMemoryStr = entry.configValue == 0 ? "" : newVal + " " + tmpUnit;
 							}
 							else if (unit.equals("kilobytes"))
 							{
+								double newVal  = NumberUtils.round( (entry.configValue) / 1024.0 , 1);
+								String tmpUnit = "MB";
+								if (newVal >= 1024*10)
+								{
+									newVal  = NumberUtils.round( (entry.configValue) / 1024.0 / 1024.0 , 1);
+									tmpUnit = "GB";
+								}
+								entry.usedMemoryStr = entry.configValue == 0 ? "" : newVal + " " + tmpUnit;
 							}
 						}
 					}

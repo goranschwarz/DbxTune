@@ -268,6 +268,12 @@ implements ICounterController
 //			_thread.interrupt();
 		getCounterCollectorThread().shutdown();
 	}
+	
+	@Override
+	public boolean isRunning()
+	{
+		return getCounterCollectorThread().isRunning();
+	}
 
 	@Override
 //	public CountersModel getSummaryCm()

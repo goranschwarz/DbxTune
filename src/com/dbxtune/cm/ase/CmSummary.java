@@ -23,6 +23,7 @@ package com.dbxtune.cm.ase;
 import java.awt.Component;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -36,7 +37,6 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.CounterController;
 import com.dbxtune.DbxTune;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -184,6 +184,7 @@ extends CmSummaryAbstract
 	public static final String GRAPH_NAME_ULC                = "UlcGraph";                 // ULCFlushes, ULCFlushFull, ULCKBWritten
 	public static final String GRAPH_NAME_IO_RW              = "IoRwGraph";                // PagesRead, PagesWritten, PhysicalReads, PhysicalWrites
 	public static final String GRAPH_NAME_LOGICAL_READ       = "LogicalReadGraph";         // LogicalReads
+	public static final String GRAPH_NAME_LOGICAL_READ_MB    = "LogicalReadMbGraph";       // LogicalReads in MB/sec
 
 	private void addTrendGraphs()
 	{
@@ -288,6 +289,18 @@ extends CmSummaryAbstract
 			"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "LogicalReads" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
+
+		addTrendGraph(GRAPH_NAME_LOGICAL_READ_MB,
+			"ASE Operations - Logical Reads in MB per second", 	                   // Menu CheckBox text
+			"ASE Operations - Logical Reads in MB  per Second ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "LogicalReadsMb" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
 			false,   // is Percent Graph
@@ -854,10 +867,10 @@ extends CmSummaryAbstract
 				double CPUSystem = cpuSystem.doubleValue();
 //				double CPUIdle   = cpuIdle  .doubleValue();
 
-				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//				BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+//				BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 //				_cpuTime_txt          .setText(calcCPUTime      .toString());
 //				_cpuUser_txt          .setText(calcUserCPUTime  .toString());
@@ -908,7 +921,7 @@ extends CmSummaryAbstract
 
 					dArray[0] = this.getRateValueSum("Transactions");
 					dArray[1] = this.getRateValueSum("Rollbacks");
-					_logger.debug("updateGraphData(TransGraph): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
+					_logger.debug("updateGraphData("+tgdp.getName()+"): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
 
 					// Set the values
 					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
@@ -919,7 +932,7 @@ extends CmSummaryAbstract
 					String[] lArray = new String[] { "Transactions" };
 
 					dArray[0] = this.getRateValueSum("Transactions");
-					_logger.debug("updateGraphData(TransGraph): Transactions='"+dArray[0]+"'.");
+					_logger.debug("updateGraphData("+tgdp.getName()+"): Transactions='"+dArray[0]+"'.");
 
 					// Set the values
 					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
@@ -954,7 +967,7 @@ extends CmSummaryAbstract
 				Double[] arr = new Double[1];
 
 				arr[0] = this.getRateValueSum("Selects");
-				_logger.debug("updateGraphData("+GRAPH_NAME_SELECT_OPERATIONS+"): Selects='"+arr[0]+"'.");
+				_logger.debug("updateGraphData("+tgdp.getName()+"): Selects='"+arr[0]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -991,7 +1004,7 @@ extends CmSummaryAbstract
 				arr[1] = this.getRateValueSum("Updates");
 				arr[2] = this.getRateValueSum("Deletes");
 				arr[3] = this.getRateValueSum("Merges");
-				_logger.debug("updateGraphData("+GRAPH_NAME_IUDM_OPERATIONS+"): Inserts='"+arr[0]+"', Updates='"+arr[1]+"', Deletes='"+arr[2]+"', Merges='"+arr[3]+"'.");
+				_logger.debug("updateGraphData("+tgdp.getName()+"): Inserts='"+arr[0]+"', Updates='"+arr[1]+"', Deletes='"+arr[2]+"', Merges='"+arr[3]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1026,7 +1039,7 @@ extends CmSummaryAbstract
 
 				arr[0] = this.getRateValueSum("TableAccesses");
 				arr[1] = this.getRateValueSum("IndexAccesses");
-				_logger.debug("updateGraphData("+GRAPH_NAME_TAB_IND_ACCESS+"): TableAccesses='"+arr[0]+"', IndexAccesses='"+arr[1]+"'.");
+				_logger.debug("updateGraphData("+tgdp.getName()+"): TableAccesses='"+arr[0]+"', IndexAccesses='"+arr[1]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1061,7 +1074,7 @@ extends CmSummaryAbstract
 
 				arr[0] = this.getRateValueSum("TempDbObjects");
 				arr[1] = this.getRateValueSum("WorkTables");
-				_logger.debug("updateGraphData("+GRAPH_NAME_TEMPDB_ACCESS+"): TempDbObjects='"+arr[0]+"', WorkTables='"+arr[1]+"'.");
+				_logger.debug("updateGraphData("+tgdp.getName()+"): TempDbObjects='"+arr[0]+"', WorkTables='"+arr[1]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1097,7 +1110,7 @@ extends CmSummaryAbstract
 				arr[0] = this.getRateValueSum("ULCFlushes");
 				arr[1] = this.getRateValueSum("ULCFlushFull");
 				arr[2] = this.getRateValueSum("ULCKBWritten");
-				_logger.debug("updateGraphData("+GRAPH_NAME_ULC+"): ULCFlushes='"+arr[0]+"', ULCFlushFull='"+arr[1]+"', ULCKBWritten='"+arr[2]+"'.");
+				_logger.debug("updateGraphData("+tgdp.getName()+"): ULCFlushes='"+arr[0]+"', ULCFlushFull='"+arr[1]+"', ULCKBWritten='"+arr[2]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1134,7 +1147,7 @@ extends CmSummaryAbstract
 				arr[1] = this.getRateValueSum("PagesWritten");
 				arr[2] = this.getRateValueSum("PhysicalReads");
 				arr[3] = this.getRateValueSum("PhysicalWrites");
-				_logger.debug("updateGraphData("+GRAPH_NAME_IO_RW+"): PagesRead='"+arr[0]+"', PagesWritten='"+arr[1]+"', PhysicalReads='"+arr[2]+"', PhysicalWrites='"+arr[3]+"'.");
+				_logger.debug("updateGraphData("+tgdp.getName()+"): PagesRead='"+arr[0]+"', PagesWritten='"+arr[1]+"', PhysicalReads='"+arr[2]+"', PhysicalWrites='"+arr[3]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1168,7 +1181,44 @@ extends CmSummaryAbstract
 				Double[] arr = new Double[1];
 
 				arr[0] = this.getRateValueSum("LogicalReads");
-				_logger.debug("updateGraphData("+GRAPH_NAME_LOGICAL_READ+"): LogicalReads='"+arr[0]+"'.");
+				_logger.debug("updateGraphData("+tgdp.getName()+"): LogicalReads='"+arr[0]+"'.");
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_LOGICAL_READ_MB.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("LogicalReads");
+
+			int asePageSize = this.getAbsValueAsInteger(0, "asePageSize", true, -1);
+			double asePageSizeDivideToGetMb = 1024.0 * 1024.0 / asePageSize;
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 || asePageSize == -1)
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_LOGICAL_READ_MB);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				Double[] arr = new Double[1];
+
+				arr[0] = this.getRateValueSum("LogicalReads") / asePageSizeDivideToGetMb;
+				_logger.debug("updateGraphData("+tgdp.getName()+"): LogicalReadsMb='"+arr[0]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1197,7 +1247,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble (0, "LockWaits");
-			_logger.debug("updateGraphData(BlockingLocksGraph): LockWait='"+arr[0]+"'.");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): LockWait='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1214,7 +1264,7 @@ extends CmSummaryAbstract
 			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
 			arr[3] = this.getRateValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData(DbxConnectionsGraph): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1228,7 +1278,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getRateValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData("+GRAPH_NAME_CONNECTION_RATE+"): aaConnections(Rate)='"+arr[0]+"'.");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): aaConnections(Rate)='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1247,7 +1297,7 @@ extends CmSummaryAbstract
 			arr[0] = io_total_read + io_total_write;
 			arr[1] = io_total_read;
 			arr[2] = io_total_write;
-			_logger.debug("updateGraphData(aaReadWriteGraph): total='"+arr[0]+"', io_total_read='"+arr[1]+"', io_total_write='"+arr[2]+"'.");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): total='"+arr[0]+"', io_total_read='"+arr[1]+"', io_total_write='"+arr[2]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1268,7 +1318,7 @@ extends CmSummaryAbstract
 			arr[1] = pack_received;
 			arr[2] = pack_sent;
 			arr[3] = packet_errors;
-			_logger.debug("updateGraphData(aaPacketGraph): total='"+arr[0]+"', pack_received='"+arr[1]+"', pack_sent='"+arr[2]+"', packet_errors='"+arr[3]+"'.");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): total='"+arr[0]+"', pack_received='"+arr[1]+"', pack_sent='"+arr[2]+"', packet_errors='"+arr[3]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1282,7 +1332,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble(0, "oldestOpenTranInSec");
-			_logger.debug("updateGraphData("+GRAPH_NAME_OLDEST_TRAN_IN_SEC+"): oldestOpenTranInSec='"+arr[0]+"'.");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): oldestOpenTranInSec='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1330,10 +1380,10 @@ extends CmSummaryAbstract
 				double CPUSystem = cpuSystem.doubleValue();
 				double CPUIdle   = cpuIdle  .doubleValue();
 
-				BigDecimal pctCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal pctUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal pctSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal pctIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal pctUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal pctSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal pctIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 				if (isSystemAlarmsForColumnEnabledAndInTimeRange("TotalCPUTime"))
 				{

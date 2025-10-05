@@ -956,12 +956,12 @@ public abstract class MainFrame
 //		_tools_m.setMnemonic(KeyEvent.VK_T);
 //		_help_m .setMnemonic(KeyEvent.VK_H);
 
-//		_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
-//		_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
-//		_sqlQuery_mi       .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-//		_logView_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-//		_tcpSettingsConf_mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-//		_aseConfMon_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+//		_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
+//		_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
+//		_sqlQuery_mi       .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+//		_logView_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+//		_tcpSettingsConf_mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+//		_aseConfMon_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
 		// Refresh: alt+r, F5
 		_refreshNow_but.setMnemonic(KeyEvent.VK_R);
@@ -970,12 +970,12 @@ public abstract class MainFrame
 
 //		FIXME: Add some Ctrl+>, Ctrl+<  and Ctrl+Shift+<>  to navigate the offline/inmem JSlider, this will make navigation easier
 //		FIXME: look at setFocus on JSlide after a Offline dataset has been loded....
-		KeyStroke leftSample       = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
-		KeyStroke rightSample      = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
+		KeyStroke leftSample       = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx());
+		KeyStroke rightSample      = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx());
 		KeyStroke leftLeftSample   = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  ActionEvent.SHIFT_MASK);
 		KeyStroke rightRightSample = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, ActionEvent.SHIFT_MASK);
-		KeyStroke leftNextSample   = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | ActionEvent.SHIFT_MASK);
-		KeyStroke rightNextSample  = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | ActionEvent.SHIFT_MASK);
+		KeyStroke leftNextSample   = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | ActionEvent.SHIFT_MASK);
+		KeyStroke rightNextSample  = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | ActionEvent.SHIFT_MASK);
 
 		contentPane.registerKeyboardAction(this, ACTION_SLIDER_LEFT,        leftSample,       JComponent.WHEN_IN_FOCUSED_WINDOW);
 		contentPane.registerKeyboardAction(this, ACTION_SLIDER_RIGHT,       rightSample,      JComponent.WHEN_IN_FOCUSED_WINDOW);
@@ -1636,8 +1636,8 @@ public abstract class MainFrame
 		_openConnDialogAtStart_mi     .addActionListener(this);
 		_exit_mi                      .addActionListener(this);
 
-		_connect_mi                   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
-		_disconnect_mi                .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+		_connect_mi                   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
+		_disconnect_mi                .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
 
 		menu.add(_connect_mi);
 		menu.add(_disconnect_mi);
@@ -1692,8 +1692,8 @@ public abstract class MainFrame
 		_counterTabView_mi            .addActionListener(this);
 		_graphView_mi                 .addActionListener(this);
 
-		_logView_mi                   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-		_tcpSettingsConf_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+		_logView_mi                   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+		_tcpSettingsConf_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
 		menu.add(_logView_mi);
 		menu.add(_offlineSessionsView_mi);
@@ -1889,8 +1889,8 @@ public abstract class MainFrame
 		_doGc_mi                      .addActionListener(this);
 		_pcsAddDdlObject_mi           .addActionListener(this);
 
-		_sqlQuery_mi                 .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-//		_aseConfMon_mi               .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+		_sqlQuery_mi                 .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+//		_aseConfMon_mi               .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
 //		menu.add(_aseConfMon_mi);
 		menu.add(_viewSrvLogFile_mi);
@@ -2590,13 +2590,13 @@ public abstract class MainFrame
 			String extraInfo = Version.getAppName() + ", Version: "+ Version.getVersionStr();
 			
 			// Main window
-			String main = Screenshot.windowScreenshot(this, AppDir.getAppStoreDir(), appName+".main", true, extraInfo);
+			String main = Screenshot.windowScreenshot(this, AppDir.getDbxUserHomeDir(), appName+".main", true, extraInfo);
 			fileList += main + NL;
 
 			// ALL Summary graphs (even hidden ones, eg the ones outside of the ScrollPane)
 			// Note: the Header/Labels on the graphs are not there, this is due to the fact that they are printed "later" with the Watermark stuff that uses the AbstractComponentDecorator...
 			Component summaryComp = CounterController.getSummaryPanel().getGraphPanel().getGraphPanelNoScroll();
-			String summaryPanel = Screenshot.windowScreenshot(summaryComp, AppDir.getAppStoreDir(), appName+".graphs", true, extraInfo);
+			String summaryPanel = Screenshot.windowScreenshot(summaryComp, AppDir.getDbxUserHomeDir(), appName+".graphs", true, extraInfo);
 			fileList += summaryPanel + NL;
 
 			// LOOP all CounterModels, and check if they got any windows open, then screenshot that also
@@ -2611,7 +2611,7 @@ public abstract class MainFrame
 					if (tp.isTabUnDocked(cm.getDisplayName()))
 					{
 						JFrame frame = tp.getTabUnDockedFrame(cm.getDisplayName());
-						String fn = Screenshot.windowScreenshot(frame, AppDir.getAppStoreDir(), appName+"."+cm.getName(), true, extraInfo);
+						String fn = Screenshot.windowScreenshot(frame, AppDir.getDbxUserHomeDir(), appName+"."+cm.getName(), true, extraInfo);
 						fileList += fn + NL;
 					}
 				}
@@ -3948,7 +3948,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			// SQLW: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.sqlw_jvm_settings.properties
 			// ELSE: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.dbxtune_jvm_settings.properties
 			
-			filename = AppDir.getAppStoreDir(true) + ".dbxtune_jvm_settings.properties";
+			filename = AppDir.getDbxUserHomeDir(true) + ".dbxtune_jvm_settings.properties";
 		}
 
 		int ret = JvmMemorySettingsDialog.showDialog(this, Version.getAppName(), filename);

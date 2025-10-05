@@ -22,6 +22,7 @@ package com.dbxtune.cm;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -1081,7 +1082,7 @@ extends CountersModel
 
 						// interval is in MilliSec, so val has to be multiplied by 1000
 						val = (val * 1000) / sampleInterval;
-						BigDecimal newVal = new BigDecimal( val ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						BigDecimal newVal = new BigDecimal( val ).setScale(1, RoundingMode.HALF_EVEN);
 
 						// Set the new object
 						newObject = newVal;

@@ -36,6 +36,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -93,9 +94,33 @@ extends SqlStatementAbstract
 	throws SQLException, PipeCommandException
 	{
 		_originCmd = input;
-//		String params = input.substring(input.indexOf(' ') + 1).trim();
-		String params = input.replace("\\set", "").trim();
 
+		// NOTE: The below is borrowed from SqlStatementCmdRemoteSql or SqlStatementCmdConnect
+		// If this is a "multi-line" input
+		// Divide the: \set -.... "line" as the input command
+		// and everything after the \set row will be placed in "overflowText"
+		// This so we can pick up potential "trailing" value (if value has not been passed)
+		String overflowText = null;
+		int firstNewLinePos = input.indexOf("\n");
+		if (firstNewLinePos != -1)
+		{
+			input = input.substring(0, firstNewLinePos).trim();
+			input = StringUtil.removeSemicolonAtEnd(input).trim();
+
+			overflowText = _originCmd.substring(firstNewLinePos).trim();
+
+			// Remove first line **after** "\rsql" if it's a "go"
+			int tmp = overflowText.indexOf("\n");
+			if (tmp != -1)
+			{
+				String overflowFirstLine = overflowText.substring(0, tmp).trim();
+				if (StringUtil.hasValue(overflowFirstLine) && (overflowFirstLine.equalsIgnoreCase("go") || StringUtils.startsWithIgnoreCase(overflowFirstLine, "go ")))
+					overflowText = overflowText.substring(tmp).trim();
+			}
+		}
+
+		String params = input.replace("\\set", "").trim();
+		
 		_args = StringUtil.translateCommandline(params, false);
 
 		if (_args.length >= 1)
@@ -121,6 +146,9 @@ extends SqlStatementAbstract
 					if (sa.length >= 3)
 						_logger.warn("Received more values than expected, skipping the rest of the values starting from '"+sa[2]+"'.");
 				}
+
+				if (StringUtil.isNullOrBlank(_params._value) && StringUtil.hasValue(overflowText))
+					_params._value = overflowText;
 			}
 			else if ( cmdLine.getArgs() != null && cmdLine.getArgs().length == 0 )
 			{

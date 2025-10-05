@@ -38,8 +38,9 @@ import com.dbxtune.mgt.controllers.NoGuiConfigGetServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
 import com.dbxtune.mgt.controllers.NoGuiRefreshServlet;
 import com.dbxtune.mgt.controllers.NoGuiRestartServlet;
-import com.dbxtune.mgt.controllers.SqlServerJobSchedulerTimeline;
+import com.dbxtune.mgt.controllers.NoGuiShutdownServlet;
 import com.dbxtune.mgt.controllers.SqlServerJobSchedulerReport;
+import com.dbxtune.mgt.controllers.SqlServerJobSchedulerTimeline;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
@@ -58,6 +59,12 @@ public class NoGuiManagementServer
 
 	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_auth_token       = "DbxTune.nogui.management.http.auth.token";
 	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_auth_token       = "";
+
+	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_auth_Basic       = "DbxTune.nogui.management.http.auth.basic";
+	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_auth_Basic       = "";
+
+	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_auth_Bearer      = "DbxTune.nogui.management.http.auth.bearer";
+	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_auth_Bearer      = "";
 
 	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_onStartup_doDump = "DbxTune.nogui.management.http.onStartup.doDump";
 	public static final boolean DEFAULT_NOGUI_MANAGEMENT_http_onStartup_doDump = false;
@@ -164,6 +171,7 @@ public class NoGuiManagementServer
 //					context.addServlet(new DbxTuneNoGuiManagementHandler(), "/*");
 				context.addServlet(new ServletHolder(new NoGuiConfigGetServlet()) , "/mgt/config/get"); // can we do regex like: "/config/(get|set)"
 				context.addServlet(new ServletHolder(new NoGuiConfigSetServlet()) , "/mgt/config/set"); // can we do regex like: "/config/(get|set)"
+				context.addServlet(new ServletHolder(new NoGuiShutdownServlet())  , "/mgt/shutdown");
 				context.addServlet(new ServletHolder(new NoGuiRestartServlet())   , "/mgt/restart");
 				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())   , "/mgt/refresh");
 
@@ -178,6 +186,9 @@ public class NoGuiManagementServer
 				server.start();
 
 				// Generate a random Authorization Token
+				String authorizationTokenBasic  = "";
+				String authorizationTokenBearer = "";
+
 				if (StringUtil.isNullOrBlank(authorizationToken))
 				{
 					String authUser   = "admin";
@@ -188,8 +199,10 @@ public class NoGuiManagementServer
 					String encodeThis = authUser + ":" + authPasswd;
 					String base64 = Base64.getEncoder().encodeToString(encodeThis.getBytes());
 					
-					authorizationToken = "Basic " + base64;
-
+					authorizationTokenBasic  = "Basic "  + base64;
+					authorizationTokenBearer = "Bearer " + authPasswd;
+					authorizationToken       = authorizationTokenBearer;
+					
 					// Possibly the below can be used...
 					// https://www.fortytools.com/blog/servlet-filter-for-http-basic-auth
 					
@@ -200,8 +213,12 @@ public class NoGuiManagementServer
 					//		.addUserPath(authUser, authPasswd, "/restart")
 					//		.build();
 				}
-				_listenerHost = listnerAddress;
+				// Set System Property, for easy access from Servlets
+				System.setProperty(PROPKEY_NOGUI_MANAGEMENT_http_auth_Basic , authorizationTokenBasic);
+				System.setProperty(PROPKEY_NOGUI_MANAGEMENT_http_auth_Bearer, authorizationTokenBearer);
 				_authorizationToken = authorizationToken;
+
+				_listenerHost = listnerAddress;
 				_port = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
 				_logger.info("Succeeded to start Local Web server at address '" + listnerAddress + "', port " + _port + ".");
 				
@@ -211,6 +228,12 @@ public class NoGuiManagementServer
 				if (onStartDoDump)
 					_logger.info("Management Web server 'Jetty' configuration. \n" + _server.dump());
 
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/config/get");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/config/set");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/shutdown");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/restart");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/refresh");
+				
 				// Get out of the "start on port number" loop
 				break;
 			}
@@ -247,7 +270,16 @@ public class NoGuiManagementServer
 		try
 		{
 			_logger.info("Stopping NO-GUI Management server...");
+			_server.setStopTimeout(5_000);    // Only wait for 5 seconds
+			_server.setStopAtShutdown(true);  
 			_server.stop();
+
+//			QueuedThreadPool qtp = (QueuedThreadPool) _server.getThreadPool();
+//			qtp.stop(); // attempts to stop QueuedThreadPool
+//
+//			_logger.info("Jetty QueuedThreadPool is running:   " + qtp.isRunning());
+//			_logger.info("Jetty QueuedThreadPool threads:      " + qtp.getThreads());
+//			_logger.info("Jetty QueuedThreadPool idle threads: " + qtp.getIdleThreads());
 		}
 		catch (Exception ex)
 		{
@@ -288,9 +320,23 @@ public class NoGuiManagementServer
 		return "{\"authorization\":\"" + _authorizationToken + "\"}";
 	}
 
-	/** Get authorization token... <code>Basic uuEncodedStringWithUserAndPassword</code> */
-	public String getAuthTokenString()
+	/**
+	 * Get authorization token... <code>Basic uuEncodedStringWithUserAndPassword</code>
+	 * 
+	 * @param skipType do NOT include 'Basic' or 'Bearer' only return the token
+	 * @return
+	 */
+	public String getAuthTokenString(boolean skipType)
 	{
+		if (skipType)
+		{
+			String token = _authorizationToken;
+			if (token != null && token.contains(" "))
+			{
+				token = token.substring(token.indexOf(" ")).trim();
+				return token;
+			}
+		}
 		return _authorizationToken;
 	}
 }

@@ -74,6 +74,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.swing.PromptForPassword;
 import com.dbxtune.gui.swing.PromptForPassword.SaveType;
 import com.dbxtune.sql.JdbcUrlParser;
+import com.dbxtune.sql.MsSqlUrlHelper;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.DbxConnectionPool;
@@ -82,6 +83,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.JsonUtils;
+import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.OpenSslAesUtil;
 import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 import com.dbxtune.utils.StringUtil;
@@ -220,6 +222,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_RECOVERY_QUEUE            = "RecoveryQueue";
 	public static final String GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB = "LogSendQueueSizeKb";
 	public static final String GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME = "SecCommitLagTime";
+	public static final String GRAPH_NAME_PRIMARY_AVG_TRAN_DELAY    = "PrimAvgTranDelay";
 
 
 	@Override
@@ -230,6 +233,7 @@ extends CountersModel
 		{
 			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '"+getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support this.");
 
+			// DISABLE
 			setActive(false, "This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
 
 			TabularCntrPanel tcp = getTabPanel();
@@ -241,6 +245,41 @@ extends CountersModel
 		}
 
 		return super.checkDependsOnVersion(conn);
+	}
+	
+	@Override
+	public boolean checkDependsOnConfig(DbxConnection conn)
+	{
+		// Check if HADR is enabled
+		String sql = "SELECT SERVERPROPERTY('IsHadrEnabled')";
+
+		int isHadrEnabled = -1;
+		try(Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				isHadrEnabled = rs.getInt(1);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems checking if 'HADR' is enabled/configured. ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message='" + ex.getMessage() + "'. SQL=|" + sql + "|.");
+		}
+
+		if (isHadrEnabled <= 0)
+		{
+			// DISABLE
+			setActive(false, "HADR is NOT enabled/configured on this server.");
+
+			TabularCntrPanel tcp = getTabPanel();
+			if (tcp != null)
+			{
+				tcp.setToolTipText("HADR is NOT enabled/configured on this server.");
+			}
+			return false;
+		}
+		
+		return super.checkDependsOnConfig(conn);
 	}
 	
 	private void addTrendGraphs()
@@ -297,6 +336,18 @@ extends CountersModel
 				"AlwaysOn Secondary Commit Lag Time, in Seconds",        // Menu CheckBox text
 				"AlwaysOn Secondary Commit Lag Time, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				null, 
+				LabelType.Dynamic,
+				TrendGraphDataPoint.Category.REPLICATION,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_PRIMARY_AVG_TRAN_DELAY,
+				"AlwaysOn Average Transaction/Commit Delay, in Milliseconds",        // Menu CheckBox text
+				"AlwaysOn Average Transaction/Commit Delay, in Milliseconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
 				TrendGraphDataPoint.Category.REPLICATION,
@@ -488,6 +539,44 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
+		
+		if (GRAPH_NAME_PRIMARY_AVG_TRAN_DELAY.equals(tgdp.getName()))
+		{
+			HashMap<String, Object> whereClause = new HashMap<>(2);
+			whereClause.put("locality",       COLVAL_LOCALITY_LOCAL);
+			whereClause.put("role_desc",      PRIMARY_ROLE);
+
+			List<Integer> rowIds = getAbsRowIdsWhere(whereClause);
+
+			if (rowIds.isEmpty())
+				return;
+
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[rowIds.size() + 1];
+			String[] lArray = new String[rowIds.size() + 1];
+			double total = 0;
+			int d = 1; // Start at array 1, leave 0 for "_Total"
+			for (int row : rowIds)
+			{
+//				String server_name = this.getAbsString       (row, "server_name");
+				String dbname      = this.getAbsString       (row, "database_name");
+				Double dvalue      = this.getAbsValueAsDouble(row, "p_AvgTransactionDelayMs");
+
+				if (dvalue == null)
+					dvalue = 0d; // Note: set to -1d if we want to "stand out" instead of 0
+				else
+					total += dvalue;
+
+				lArray[d] = dbname;
+				dArray[d] = dvalue;
+				d++;
+			}
+			lArray[0] = "_Total";
+			dArray[0] = total;
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
 	}
 		
 	@Override
@@ -649,7 +738,8 @@ extends CountersModel
 			mtd.addColumn("CmAlwaysOn", "p_LogFlushesPerSec                  ".trim(),  "<html>grabed from CmPerfCounters: ':Databases',            'Log Flushes/sec'                  , ${dbname}                     <br>" + pcttd + "Number of log flushes per second.</html>"); 
 
 			mtd.addColumn("CmAlwaysOn", "p_MirroredWriteTransactionsPerSec   ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Mirrored Write Transactions/sec'  , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Number of transactions that were written to the primary database and then waited to commit until the log was sent to the secondary database, in the last second.</html>"); 
-			mtd.addColumn("CmAlwaysOn", "p_TransactionDelay                  ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Transaction Delay'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Delay in waiting for unterminated commit acknowledgment for all the current transactions, in milliseconds. Divide by Mirrored Write Transaction/sec to get Avg Transaction Delay. For more information, see SQL Server 2012 AlwaysOn � Part 12 � Performance Aspects and Performance Monitoring II</html>"); 
+			mtd.addColumn("CmAlwaysOn", "p_TransactionDelay                  ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Transaction Delay'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Delay in waiting for unterminated commit acknowledgment for all the current transactions, in milliseconds. Divide by Mirrored Write Transaction/sec to get Avg Transaction Delay. For more information, see SQL Server 2012 AlwaysOn - Part 12 - Performance Aspects and Performance Monitoring II</html>"); 
+			mtd.addColumn("CmAlwaysOn", "p_AvgTransactionDelayMs             ".trim(),  "<html>                                                                                                                        <br>" + pcttd + "View on 'Primary'.   Average Delay in waiting for unterminated commit acknowledgment for all the current transactions, in milliseconds. Divided by 'Mirrored Write Transaction/sec' to get Avg Transaction Delay. For more information, see SQL Server 2012 AlwaysOn - Part 12 - Performance Aspects and Performance Monitoring II</html>"); 
 			mtd.addColumn("CmAlwaysOn", "p_GroupCommitTime                   ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Group Commit Time'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Number of microseconds all transactions group commit waited.</html>"); // This was found at: https://support.microsoft.com/en-us/help/3173156/update-adds-alwayson-extended-events-and-performance-counters-in-sql-s
 			mtd.addColumn("CmAlwaysOn", "p_GroupCommitsPerSec                ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Group Commits/Sec'                , ${dbname}                     <br>" + pcttd + "View on 'Primary'.   Number of times transactions waited for group commit.</html>");        // This was found at: https://support.microsoft.com/en-us/help/3173156/update-adds-alwayson-extended-events-and-performance-counters-in-sql-s
 			mtd.addColumn("CmAlwaysOn", "p_LogBytesCompressedPerSec          ".trim(),  "<html>grabed from CmPerfCounters: ':Database Replica',     'Log Bytes Compressed/sec'         , ${dbname}                     <br>" + pcttd + "View on 'Primary?'.  The amount of log in bytes compressed per sec.</html>");               // This was found at: https://support.microsoft.com/en-us/help/3173156/update-adds-alwayson-extended-events-and-performance-counters-in-sql-s
@@ -868,9 +958,43 @@ extends CountersModel
 		}
 		
 		// Set the new server name
+		// Example of what will happen:
+		//   originConnUrl                                  srvName        >>  translatedUrl
+		//   ---------------------------------------------- --------       >>  ------------------------
+		//   jdbc:sqlserver://host-1                        host-2         >>  jdbc:sqlserver://host-2
+		//   jdbc:sqlserver://host-1.acme.com               host-2         >>  jdbc:sqlserver://host-2.acme.com
+		//   jdbc:sqlserver://host-1.acme.com:50001         host-2         >>  jdbc:sqlserver://host-2.acme.com:50001
+		//   jdbc:sqlserver://host-1\INST01                 host-2\INST01  >>  jdbc:sqlserver://host-2\INST01
+		//   jdbc:sqlserver://host-1.acme.com\INST01        host-2\INST01  >>  jdbc:sqlserver://host-2.acme.com\INST01
+		//   jdbc:sqlserver://host-1.acme.com\INST01:50001  host-2\INST01  >>  jdbc:sqlserver://host-2.acme.com\INST01:50001
+		// 
 		String url = connProp.getUrl();
-		JdbcUrlParser p = JdbcUrlParser.parse(url); 
-		p.setHost(srvName); // set the new server name
+		MsSqlUrlHelper p = MsSqlUrlHelper.parse(url);
+
+		// extract host and instance from the 'srvName' we are connecting to
+		String srvHostname = MsSqlUrlHelper.extractHost    (srvName);
+		String srvInstance = MsSqlUrlHelper.extractInstance(srvName);
+
+		// If the "original url" host name is a FQDN
+		// AND If the "srvName" is MISSING a domain name
+		// Then "add" the domain name into the NEW URL
+		if (p.isHostFqdn() && ! StringUtil.isHostFqdn(srvHostname))
+		{
+			// Get domain name from "original url"
+			String originConnDomainName = StringUtil.extractDomainFromFqdn(p.getHost());
+
+			// Add the "origin connect/url" domain name to the new hostname 
+			String newDomainHostname = srvHostname + "." + originConnDomainName;
+
+			// Set the new values
+			p.setHost    (newDomainHostname);
+			p.setInstance(srvInstance);
+		}
+		else
+		{
+			p.setHost    (srvHostname);
+			p.setInstance(srvInstance);
+		}
 
 		url = p.toUrl();
 		connProp.setUrl(url);
@@ -1408,6 +1532,7 @@ extends CountersModel
 			+ "    \n"
 			+ "    ,p_MirroredWriteTransactionsPerSec  = convert(decimal(17,2), NULL) \n"  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Mirrored Write Transactions/sec"     , dbname);
 			+ "    ,p_TransactionDelay                 = convert(decimal(17,2), NULL) \n"  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Transaction Delay"                   , dbname);
+			+ "    ,p_AvgTransactionDelayMs            = convert(decimal(17,2), NULL) \n"  // TODO: Calculate this by: 'Transaction Delay' / 'Mirrored Write Transactions/sec'
 			+ "    ,p_GroupCommitTime                  = convert(decimal(17,2), NULL) \n"  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Group Commit Time"                   , dbname);
 			+ "    ,p_GroupCommitsPerSec               = convert(decimal(17,2), NULL) \n"  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Group Commits/Sec"                   , dbname);
 			+ "    ,p_LogBytesCompressedPerSec         = convert(decimal(17,2), NULL) \n"  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Log Bytes Compressed/sec"            , dbname);
@@ -1793,6 +1918,7 @@ extends CountersModel
 
     					setValueSecondarySrvRow(row, rstm, "p_MirroredWriteTransactionsPerSec" , perfCounters, createPkStr(":Database Replica", "Mirrored Write Transactions/sec"  , dbname));
     					setValueSecondarySrvRow(row, rstm, "p_TransactionDelay"                , perfCounters, createPkStr(":Database Replica", "Transaction Delay"                , dbname));
+//    					setValueSecondarySrvRow(row, rstm, "p_AvgTransactionDelayMs"           , FIXME ...
     					setValueSecondarySrvRow(row, rstm, "p_GroupCommitTime"                 , perfCounters, createPkStr(":Database Replica", "Group Commit Time"                , dbname));
     					setValueSecondarySrvRow(row, rstm, "p_GroupCommitsPerSec"              , perfCounters, createPkStr(":Database Replica", "Group Commits/Sec"                , dbname));
     					setValueSecondarySrvRow(row, rstm, "p_LogBytesCompressedPerSec"        , perfCounters, createPkStr(":Database Replica", "Log Bytes Compressed/sec"         , dbname));
@@ -2034,6 +2160,7 @@ extends CountersModel
 
 		int pos_p_MirroredWriteTransactionsPerSec  = -1;  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Mirrored Write Transactions/sec"  , dbname);
 		int pos_p_TransactionDelay                 = -1;  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Transaction Delay"                , dbname);
+		int pos_p_AvgTransactionDelayMs            = -1;  // TODO: "Transaction Delay" / "Mirrored Write Transactions/sec"
 		int pos_p_GroupCommitTime                  = -1;  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Group Commit Time"                , dbname);
 		int pos_p_GroupCommitsPerSec               = -1;  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Group Commits/Sec"                , dbname);
 		int pos_p_LogBytesCompressedPerSec         = -1;  // grab from CmPerfCounters: String pk = createPkStr(":Database Replica", "Log Bytes Compressed/sec"         , dbname);
@@ -2098,6 +2225,7 @@ extends CountersModel
 			
 			else if (colName.equals("p_MirroredWriteTransactionsPerSec" )) pos_p_MirroredWriteTransactionsPerSec  = colId;
 			else if (colName.equals("p_TransactionDelay"                )) pos_p_TransactionDelay                 = colId;
+			else if (colName.equals("p_AvgTransactionDelayMs"           )) pos_p_AvgTransactionDelayMs            = colId;
 			else if (colName.equals("p_GroupCommitTime"                 )) pos_p_GroupCommitTime                  = colId;
 			else if (colName.equals("p_GroupCommitsPerSec"              )) pos_p_GroupCommitsPerSec               = colId;
 			else if (colName.equals("p_LogBytesCompressedPerSec"        )) pos_p_LogBytesCompressedPerSec         = colId;
@@ -2166,6 +2294,7 @@ extends CountersModel
 
 				setValue(newSample, rowId, pos_p_MirroredWriteTransactionsPerSec, perfCounters, createPkStr(":Database Replica", "Mirrored Write Transactions/sec"  , dbname));
 				setValue(newSample, rowId, pos_p_TransactionDelay               , perfCounters, createPkStr(":Database Replica", "Transaction Delay"                , dbname));
+//				setValue(newSample, rowId, pos_p_AvgTransactionDelayMs          , NOTE: Done later in this code block);
 				setValue(newSample, rowId, pos_p_GroupCommitTime                , perfCounters, createPkStr(":Database Replica", "Group Commit Time"                , dbname));
 				setValue(newSample, rowId, pos_p_GroupCommitsPerSec             , perfCounters, createPkStr(":Database Replica", "Group Commits/Sec"                , dbname));
 				setValue(newSample, rowId, pos_p_LogBytesCompressedPerSec       , perfCounters, createPkStr(":Database Replica", "Log Bytes Compressed/sec"         , dbname));
@@ -2176,6 +2305,24 @@ extends CountersModel
 				setValue(newSample, rowId, pos_p_LogDecompressionsPerSec        , perfCounters, createPkStr(":Database Replica", "Log Decompressions/sec"           , dbname));
 				setValue(newSample, rowId, pos_p_DatabaseFlowControlDelay       , perfCounters, createPkStr(":Database Replica", "Database Flow Control Delay"      , dbname));
 				setValue(newSample, rowId, pos_p_DatabaseFlowControlsPerSec     , perfCounters, createPkStr(":Database Replica", "Database Flow Controls/sec"       , dbname));
+
+				// set: AvgTransactionDelayMs = TransactionDelay / MirroredWriteTransactions
+				if (pos_p_MirroredWriteTransactionsPerSec > 0 && pos_p_TransactionDelay > 0 && pos_p_AvgTransactionDelayMs > 0)
+				{
+					String pkMirroredWriteTransactions = createPkStr(":Database Replica", "Mirrored Write Transactions/sec"  , dbname);
+					String pkTransactionDelay          = createPkStr(":Database Replica", "Transaction Delay"                , dbname);
+					
+					Double valMirroredWriteTransactions = perfCounters.getAbsValueAsDouble(pkMirroredWriteTransactions, "calculated_value", true, 0d);
+					Double valTransactionDelay          = perfCounters.getAbsValueAsDouble(pkTransactionDelay         , "calculated_value", true, 0d);
+
+					if (valMirroredWriteTransactions > 0d)
+					{
+						Double valAvgTransactionDelayMs = NumberUtils.round(valTransactionDelay / valMirroredWriteTransactions, 2);
+						newSample.setValueAt(valAvgTransactionDelayMs, rowId, pos_p_AvgTransactionDelayMs);
+						
+						//System.out.println(">>>>>>>>> DEBUG: CmAlwaysOn: dbname='" + dbname + "', AvgTransactionDelayMs=" + valAvgTransactionDelayMs + " (valMirroredWriteTransactions=" + valMirroredWriteTransactions + ", valTransactionDelay=" + valTransactionDelay + ")");
+					}
+				}
 			}
 
 			// Below Counters in 'perfCounters' is only valid if server is NOT LOCAL and it's a SECONDARY

@@ -847,6 +847,7 @@ extends DailySummaryReportAbstract
 		w.append("           } 										\n");
 		w.append("           return false; 							\n");
 		w.append("        } 										\n");
+		w.append("\n");
 		w.append("    </script> \n");
 		w.append("\n");
 
@@ -1157,6 +1158,26 @@ extends DailySummaryReportAbstract
 
 		writer.append("\n");
 		writer.append("</div> \n"); // END: Bootstrap 4 container
+		
+		writer.append("\n");
+		writer.append("    //----------------------------------------------------------- \n");
+		writer.append("    // AT the BOTTOM: do stuff when the page is loaded. \n");
+		writer.append("    //----------------------------------------------------------- \n");
+		writer.append("    <script type='text/javascript'>  \n");
+		writer.append("\n");
+		writer.append("        // Functionality to CLOSE ALL 'details' sections of class 'dsr-details-tableinfo' \n");
+		writer.append("        document.querySelectorAll('.dsr-details-tableinfo-close-all').forEach(link => { \n");
+		writer.append("            link.addEventListener('click', function(e) {                                \n");
+		writer.append("                e.preventDefault(); // prevent jump                                     \n");
+		writer.append("                document.querySelectorAll('.dsr-details-tableinfo').forEach(d => {      \n");
+		writer.append("                    d.open = false; // close them all                                   \n");
+		writer.append("                });                                                                     \n");
+		writer.append("            });                                                                         \n");
+		writer.append("        });                                                                             \n");
+		writer.append("\n");
+		writer.append("    </script> \n");
+		writer.append("\n");
+		
 		writer.append("</body> \n");
 
 		// Collect some garbage

@@ -457,6 +457,14 @@ extends CountersModel
 		String sql_tranInfo_col__wal_record_count = "    ,wal_kb_used               = #tran_info.wal_kb_used \n";
 
 
+		// In AzureDB there is always a active processes with 'program_name' = "TdService"
+		// So lets remove that row
+		String where_skipProgramNameInAzureDb = ""; 
+		if ( ssVersionInfo.isAzureDb() )
+		{
+			where_skipProgramNameInAzureDb = "  AND des.program_name != 'TdService' \n";
+		}
+
 
 		String sql1 =
 			"SELECT /* ${cmCollectorName} */  \n" +
@@ -575,14 +583,18 @@ extends CountersModel
 			"    ,deqp.query_plan \n" +
 			LiveQueryPlanActive +
 			"FROM sys." + dm_exec_sessions + " des \n" +
-			"JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
+//			"JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
+// Lets try with 'LEFT OUTER JOIN sys.dm_exec_requests' instead of 'JOIN sys.dm_exec_requests'
+// WHY: Because sometimes in the DbxTune Web UI we do NOT get results back... It might NOT be this but lets try it out... (it could also be "somewhere else" in the communication between SqlServerTune and DbxCentral... I'm not sure about this...)
+			"LEFT OUTER JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
 			"LEFT OUTER JOIN sys." + dm_exec_query_memory_grants + " dem ON des.session_id = dem.session_id \n" +
 //			"LEFT OUTER JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
 			sql_tranInfo_join_1 +
 			"OUTER APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
 			"OUTER APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +
-			"WHERE des.session_id != @@spid \n " +
+			"WHERE des.session_id != @@spid \n" +
 			whereIsUserSpid +
+			where_skipProgramNameInAzureDb + 
 			"  AND (der.executing_managed_code = 0 OR (der.executing_managed_code = 1 AND der.wait_type != 'SLEEP_TASK')) \n" + // SSIS seems to be executing ALL THE TIME... so discard some of them... (this may be unique to MaxM)
 			"";
 
@@ -759,10 +771,14 @@ extends CountersModel
 				"FROM sys.sysprocesses p1 \n" +
 				sql_tranInfo_join_3 +
 				"OUTER APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
-				"WHERE p1.open_tran > 0 \n" + 
+				"WHERE 1 = 1 \n" + 
+//				"  AND p1.open_tran > 0 \n" + 
+//				"  AND (p1.open_tran > 0 OR #tran_info.tran_id > 0) \n" + 
+				"  AND (p1.open_tran > 0 OR EXISTS (SELECT * FROM #tran_info WHERE #tran_info.session_id = p1.spid AND #tran_info.tran_id > 0)) \n" + 
+// The above could possibly be just: AND EXISTS (SELECT * FROM #tran_info WHERE #tran_info.session_id = p1.spid AND #tran_info.tran_id > 0)
 				"  AND p1.status    = 'sleeping' \n" +  
 				"  AND p1.cmd       = 'AWAITING COMMAND' \n" +  
-				"  AND exists (SELECT * FROM sys.dm_tran_locks WHERE request_session_id = p1.spid AND resource_type != 'DATABASE') \n" + 
+				"  AND EXISTS (SELECT * FROM sys.dm_tran_locks WHERE request_session_id = p1.spid AND resource_type != 'DATABASE') \n" + 
 //				"  AND p1.spid in (select session_id from sys.dm_tran_session_transactions) \n" + 
 				"  AND p1.ecid = 0 \n" + // Only Parent SPID's in parallel statements ... or we can add/introduce the ECID in the primary key... 
 				"";

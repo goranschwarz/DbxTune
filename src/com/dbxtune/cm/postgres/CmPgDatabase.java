@@ -22,6 +22,7 @@ package com.dbxtune.cm.postgres;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -438,13 +439,13 @@ extends CountersModel
 				// Formula: AppendLogContPct = (AppendLogWaits / AppendLogRequests) * 100;
 				Double fetch_efficency_pct = ((tup_fetched * 1.0) / (tup_returned * 1.0)) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(fetch_efficency_pct).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(fetch_efficency_pct).setScale(2, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, fetch_efficency_pct_pos);
 			}
 			else
 			{
 			//	diffData.setValueAt(null, rowId, fetch_efficency_pct_pos);
-				diffData.setValueAt(new BigDecimal(-1).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, fetch_efficency_pct_pos);
+				diffData.setValueAt(new BigDecimal(-1).setScale(2, RoundingMode.HALF_EVEN), rowId, fetch_efficency_pct_pos);
 			}
 			
 			// fetch_efficency_slide_pct, CacheEfficiencySlide and slide_time
@@ -474,11 +475,11 @@ extends CountersModel
 				if (slideSumTupReturned > 0)
 				{
 					Double tmp_fetch_efficency_slide_pct = ((slideSumTupFetched * 1.0) / (slideSumTupReturned * 1.0)) * 100.0;
-					fetch_efficency_slide_pct = new BigDecimal(tmp_fetch_efficency_slide_pct).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					fetch_efficency_slide_pct = new BigDecimal(tmp_fetch_efficency_slide_pct).setScale(2, RoundingMode.HALF_EVEN);
 				}
 				else
 				{
-					fetch_efficency_slide_pct = new BigDecimal(-1).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					fetch_efficency_slide_pct = new BigDecimal(-1).setScale(2, RoundingMode.HALF_EVEN);
 				}
 				
 				diffData.setValueAt(fetch_efficency_slide_pct, rowId, fetch_efficency_slide_pct_pos);

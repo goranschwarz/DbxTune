@@ -50,13 +50,13 @@ public abstract class GenerateSqlAbstract
 	
 	// used to check that IDENTITY/AUTO_INCREMENT is enabled on some columns
 	// we should do the following before after inserting into such tables:
-	// Sybase-ASE:           BEFORE: 'set identity_insert <tabname> on' AFTER: 'set identity_insert <tabname> off'
+	// Sybase-ASE:           BEFORE: 'set identity_insert <tabname> on' AFTER: 'set identity_insert <tabname> off'  NOTE: We probably need to SET THE MAX identity value somewhere as well ... exec sp_chgattribute 'dbo.table_name', 'identity_burn_max', 0, 'new-identity-value'      OR   dbcc set_identity_burn_max('database_name', 'table_name', 'new-identity-value')
 	// Sybase-IQ:            BEFORE: ???? AFTER: ????
 	// Sybase-SQL-Anywhere:  BEFORE: ???? AFTER: ???? (probably same as ASE)
-	// Microsoft SQL-Server: BEFORE: 'set identity_insert <tabname> on' AFTER: 'set identity_insert <tabname> off'
+	// Microsoft SQL-Server: BEFORE: 'set identity_insert <tabname> on' AFTER: 'set identity_insert <tabname> off'  NOTE: We probably need to SET THE MAX identity value somewhere as well
 	// Oracle:               BEFORE: ???? AFTER: ???? (do we need to "fix" the sequence, and how do we know what sequence name to do it on)
 	// MySQL:                BEFORE: ???? AFTER: ???? (do we need to "fix" the sequence, and how do we know what sequence name to do it on)
-	// Postgres:             BEFORE: ???? AFTER: ???? (do we need to "fix" the sequence, and how do we know what sequence name to do it on)
+	// Postgres:             BEFORE: ???? AFTER: ???? (do we need to "fix" the sequence, and how do we know what sequence name to do it on) -- use: insert into t1(...) OVERRIDING SYSTEM  values(...);;; AND at the end if we want to SET the new starting point for the table with something like: SELECT setval(pg_get_serial_sequence('t2', 'id'), coalesce(MAX(id), 1)) from t2;   OR  'ALTER TABLE table ALTER COLUMN id RESTART WITH 1000;'
 	// DB2:                  BEFORE: ???? AFTER: ???? (db2 has both identity and sequence...)
 	// SAP-HANA:             BEFORE: ???? AFTER: ???? (HANA has both identity and sequence...)
 	// ????????:             BEFORE: ???? AFTER: ???? (how should we handle DBMS's that we don't know... templates or something)

@@ -116,7 +116,7 @@ extends PipeCommandAbstract
 
 		ActionType _action         = null; 
 		String     _actionOutFile  = null; 
-		String     _goString       = "\\ngo"; 
+		String     _goString       = "\ngo"; 
 		String     _execBeforeSync = null;
 		String     _execAfterSync  = null;
 		boolean    _execSyncInTran = true;

@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -886,8 +887,8 @@ extends CountersModel
 				if ( dCacheEfficiency > 100.0 )
 					dCacheEfficiency = 100.0;
 
-				calcCacheUtilization = new BigDecimal( dCacheUtilization ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				calcCacheEfficiency  = new BigDecimal( dCacheEfficiency  ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				calcCacheUtilization = new BigDecimal( dCacheUtilization ).setScale(1, RoundingMode.HALF_EVEN);
+				calcCacheEfficiency  = new BigDecimal( dCacheEfficiency  ).setScale(1, RoundingMode.HALF_EVEN);
 			}
 			
 			if (_logger.isDebugEnabled())
@@ -903,7 +904,7 @@ extends CountersModel
 				int PagesPerIO    = ((Number)diffData.getValueAt(rowId, PagesPerIOId)).intValue();
 				int PhysicalReads = ((Number)diffData.getValueAt(rowId, PhysicalReadsId)).intValue();
 
-				BigDecimal bdVal = (PagesRead <= 0) ? new BigDecimal(0) : new BigDecimal((1.0*PhysicalReads*PagesPerIO)/(1.0*PagesRead) * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal bdVal = (PagesRead <= 0) ? new BigDecimal(0) : new BigDecimal((1.0*PhysicalReads*PagesPerIO)/(1.0*PagesRead) * 100.0).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(bdVal, rowId, PhysicalReadsPctId );
 			}
 			
@@ -913,7 +914,7 @@ extends CountersModel
 				int PagesPerIO    = ((Number)diffData.getValueAt(rowId, PagesPerIOId)).intValue();
 				int APFReads = ((Number)diffData.getValueAt(rowId, APFReadsId)).intValue();
 
-				BigDecimal bdVal = (PagesRead <= 0) ? new BigDecimal(0) : new BigDecimal((1.0*APFReads*PagesPerIO)/(1.0*PagesRead) * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal bdVal = (PagesRead <= 0) ? new BigDecimal(0) : new BigDecimal((1.0*APFReads*PagesPerIO)/(1.0*PagesRead) * 100.0).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(bdVal, rowId, APFReadsPctId );
 			}
 
@@ -923,7 +924,7 @@ extends CountersModel
 				//SQL: "CacheReplacementPct        = convert(numeric(12,1), 1.0*PagesRead / (AllocatedKB*(1024.0/@@maxpagesize))), \n" +
 				
 				// PagesRead/AllocatedPages
-				BigDecimal bdVal = new BigDecimal( 1.0*PagesRead / allocatedPages * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal bdVal = new BigDecimal( 1.0*PagesRead / allocatedPages * 100.0).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(bdVal, rowId, CacheReplacementPctId);
 			}
 
@@ -948,8 +949,8 @@ extends CountersModel
 				int slideSumPagesRead = sumCacheSlideEntries(list, newSample.getSampleTime());
 				String timeStr        = getTimeSpanCacheSlideEntries(list, newSample.getSampleTime());
 
-				BigDecimal cReplaceSlidePct  = new BigDecimal(                              slideSumPagesRead / allocatedPages * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal cEfficentSlidePct = new BigDecimal( slideSumPagesRead <= 0 ? 0 : allocatedPages / slideSumPagesRead * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal cReplaceSlidePct  = new BigDecimal(                              slideSumPagesRead / allocatedPages * 100.0).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal cEfficentSlidePct = new BigDecimal( slideSumPagesRead <= 0 ? 0 : allocatedPages / slideSumPagesRead * 100.0).setScale(1, RoundingMode.HALF_EVEN);
 
 				if ( cEfficentSlidePct.doubleValue() > 100.0 )
 					cEfficentSlidePct = new BigDecimal(100.0);
@@ -970,7 +971,7 @@ extends CountersModel
 				if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CacheHitRateTo100PctOnZeroReads, DEFAULT_CacheHitRateTo100PctOnZeroReads))
 					usePctValueOnZeroReads = 100;
 				
-				BigDecimal calc_CacheHitRate = new BigDecimal( LogicalReads <= 0 ? usePctValueOnZeroReads : (100.0 - (RealPagesRead*1.0/LogicalReads) * 100.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calc_CacheHitRate = new BigDecimal( LogicalReads <= 0 ? usePctValueOnZeroReads : (100.0 - (RealPagesRead*1.0/LogicalReads) * 100.0) ).setScale(1, RoundingMode.HALF_EVEN);
 
 				diffData.setValueAt(calc_CacheHitRate, rowId, CacheHitRateId );
 			}

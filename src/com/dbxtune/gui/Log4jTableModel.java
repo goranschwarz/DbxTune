@@ -33,6 +33,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -306,8 +307,15 @@ extends AbstractTableModel
 
 		if (_records.size() > _maxRecords)
 		{
-			_records.removeFirst();
-			fireTableRowsDeleted(0, 0);
+			try
+			{
+				_records.removeFirst();
+				fireTableRowsDeleted(0, 0);
+			}
+			catch (NoSuchElementException ignore)
+			{
+				// Ignore!
+			}
 		}
 //		System.out.println("addMessage(): "+record);
 		

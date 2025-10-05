@@ -26,6 +26,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -223,6 +224,29 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+		// RED (or 1 cell) = VLF Count 
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.vlf.high");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				int vlf_count_mpos  = adapter.getColumnIndex("vlf_count");
+				
+				// If CURRENT cell IS "vlf_count"
+				int mcol = adapter.convertColumnIndexToModel(adapter.column);
+				if (mcol == vlf_count_mpos)
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(CmDatabases.PROPKEY_alarm_VlfCount, CmDatabases.DEFAULT_alarm_VlfCount);
+
+					Number vlf_count = (Number) adapter.getValue(vlf_count_mpos);
+					
+					return vlf_count != null && vlf_count.intValue() >= threshold;
+				}
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
 	private CategoryDataset createDatasetForLog(GTable dataTable)
@@ -279,7 +303,7 @@ extends TabularCntrPanel
 				{
 					double freePct = Math.random() * 100.0;
 					double usedPct = 100.0 - freePct;
-					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
 					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
 				}
@@ -344,7 +368,7 @@ extends TabularCntrPanel
 				{
 					double freePct = Math.random() * 100.0;
 					double usedPct = 100.0 - freePct;
-					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
 					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
 				}
@@ -467,7 +491,7 @@ extends TabularCntrPanel
 				{
 					double freePct = Math.random() * 100.0;
 					double usedPct = 100.0 - freePct;
-					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
 					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
 				}

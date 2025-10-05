@@ -50,7 +50,7 @@ public class DailySummaryReportTest
 	
 	public static void main(String[] args)
 	{
-		String propFile = AppDir.getAppStoreDir(true) + "DailySummaryReportTest.props";
+		String propFile = AppDir.getDbxUserHomeDir(true) + "DailySummaryReportTest.props";
 
 		try (InputStream input = new FileInputStream(propFile)) 
 		{

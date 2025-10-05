@@ -23,6 +23,7 @@ package com.dbxtune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -203,15 +204,16 @@ extends CountersModel
 	public static final String  PROPKEY_disable_spaceusage_onTimeout = PROP_PREFIX + ".disable.spaceusage.onTimeoutException";
 	public static final boolean DEFAULT_disable_spaceusage_onTimeout = true;
 	
-	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";   //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT;
-	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB    = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
-	public static final String GRAPH_NAME_LOGSIZE_USED_MB    = "DbLogSizeUsedMbGraph";
-	public static final String GRAPH_NAME_LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph"; //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT;
-	public static final String GRAPH_NAME_DATASIZE_LEFT_MB   = "DbDataSizeLeftMbGraph";
-	public static final String GRAPH_NAME_DATASIZE_USED_MB   = "DbDataSizeUsedMbGraph";
-	public static final String GRAPH_NAME_DATASIZE_USED_PCT  = "DbDataSizeUsedPctGraph";
-//	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
-	public static final String GRAPH_NAME_TEMPDB_USED_MB     = "TempdbUsedMbGraph";
+	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT      = "DbLogSemapContGraph";   //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT;
+	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB        = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
+	public static final String GRAPH_NAME_LOGSIZE_USED_MB        = "DbLogSizeUsedMbGraph";
+	public static final String GRAPH_NAME_LOGSIZE_USED_PCT       = "DbLogSizeUsedPctGraph"; //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT;
+	public static final String GRAPH_NAME_DATASIZE_LEFT_MB       = "DbDataSizeLeftMbGraph";
+	public static final String GRAPH_NAME_DATASIZE_USED_MB       = "DbDataSizeUsedMbGraph";
+	public static final String GRAPH_NAME_DATASIZE_USED_PCT      = "DbDataSizeUsedPctGraph";
+//	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC     = "OldestTranInSecGraph";
+	public static final String GRAPH_NAME_TEMPDB_USED_MB         = "TempdbUsedMbGraph";
+	public static final String GRAPH_NAME_TEMPDB_MAX_AND_USED_MB = "TempdbMaxAndUsedMb";
 
 	private void addTrendGraphs()
 	{
@@ -302,6 +304,18 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_USED_MB,
 			"TempDB Space Used in MB",     // Menu CheckBox text
 			"TempDB Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_TEMPDB_MAX_AND_USED_MB,
+			"TempDB Space Max-Size and Used-Size in MB",     // Menu CheckBox text
+			"TempDB Space Max-Size and Used-Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -642,6 +656,20 @@ extends CountersModel
 						"<b>Formula</b>: datediff(hour, x.LastTranLogDumpTime, getdate())<br>" +
 					"</html>");
 
+			mtd.addColumn("monOpenDatabases", "LastDbBackupDurationDhms",
+					"<html>" +
+						"How long did the last DB Backup take in #d HH:MM:SS.<br>" +
+						"Note: Depending if backup failes etc, this value might not be trustworthy...<br>" +
+						"<b>Formula</b>: kind off; datediff(..., BackupStartTime, BackupEndTime)<br>" +
+					"</html>");
+			
+			mtd.addColumn("monOpenDatabases", "LastLogBackupDurationDhms",
+					"<html>" +
+						"How long did the last Transaction Log Backup take in #d HH:MM:SS.<br>" +
+						"Note: Depending if backup failes etc, this value might not be trustworthy...<br>" +
+						"<b>Formula</b>: kind off; datediff(..., LastTranLogDumpTime, LastTranLogEndDumpTime)<br>" +
+					"</html>");
+			
 			mtd.addColumn("monOpenDatabases", "DBOptions",    "<html>Database options for this database. Values are decoded from the columns 'status*' and 'minLogMode'.</html>");
 			mtd.addColumn("monOpenDatabases", "status",       "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
 			mtd.addColumn("monOpenDatabases", "status1",      "<html>Integer value saved in master..sysdatabases for keeping various database statuses</html>");
@@ -874,6 +902,28 @@ extends CountersModel
 //			// OldestTranSqlText = "OldestTranSqlText      = CASE WHEN (h.spid is not null AND h.spid > 0 AND exists(select 1 from master.dbo.sysprocesses p where p.spid = h.spid and p.suid != 0)) THEN query_text(h.spid) ELSE null END, \n"; 
 //		}
 		
+		// 16.0 SP4 PL1
+		String BackupEndTime           = ""; // New in: 16.0 SP4 PL1 
+		String LastTranLogEndDumpTime  = ""; // New in: 16.0 SP4 PL1
+		String LastDbBackupAgeInHours  = "LastDbBackupAgeInHours  = isnull(datediff(hour, od.BackupStartTime, getdate()),-1), ";     // The default
+		String LastLogBackupAgeInHours = "LastLogBackupAgeInHours = isnull(datediff(hour, od.LastTranLogDumpTime, getdate()),-1), "; // The default
+		
+		String LastDbBackupDurationDhms  = "";
+		String LastLogBackupDurationDhms = "";
+		if (srvVersion >= Ver.ver(16,0,0, 4,1))
+		{
+			BackupEndTime          = "od.BackupEndTime, ";
+			LastTranLogEndDumpTime = "od.LastTranLogEndDumpTime, ";
+			
+			 // 'BackupEndTime' reflects MORE the actual backup time (and if the backup starts, and FAILS 'BackupEndTime' is NOT updated)
+			LastDbBackupAgeInHours  = "LastDbBackupAgeInHours  = isnull(datediff(hour, od.BackupEndTime, getdate()),-1), ";
+			LastLogBackupAgeInHours = "LastLogBackupAgeInHours = isnull(datediff(hour, od.LastTranLogEndDumpTime, getdate()),-1), ";
+
+			LastDbBackupDurationDhms  = "LastDbBackupDurationDhms  = CASE WHEN od.BackupStartTime     IS NULL OR od.BackupEndTime          IS NULL OR od.BackupEndTime          < od.BackupStartTime     THEN NULL ELSE convert(varchar(4), datediff(day, od.BackupStartTime,     od.BackupEndTime))          + 'd ' + convert(varchar(10), dateadd(second, datediff(second, od.BackupStartTime,     od.BackupEndTime), '2000-01-01'), 108) END, \n";
+			LastLogBackupDurationDhms = "LastLogBackupDurationDhms = CASE WHEN od.LastTranLogDumpTime IS NULL OR od.LastTranLogEndDumpTime IS NULL OR od.LastTranLogEndDumpTime < od.LastTranLogDumpTime THEN NULL ELSE convert(varchar(4), datediff(day, od.LastTranLogDumpTime, od.LastTranLogEndDumpTime)) + 'd ' + convert(varchar(10), dateadd(second, datediff(second, od.LastTranLogDumpTime, od.LastTranLogEndDumpTime), '2000-01-01'), 108) END, \n";
+		}
+		
+		
 		if ( ! canDoSelectOnSyslogshold )
 		{
 			OldestTranStartTime    = "OldestTranStartTime    = convert(datetime,    null), \n";
@@ -930,7 +980,8 @@ extends CountersModel
 		         DataMb + IndexMb + nl_160 +
 		         "SrvPageSize = @@maxpagesize, \n" +
 		         "od.BackupInProgress, od.LastBackupFailed, \n" +
-		         "od.BackupStartTime, LastDbBackupAgeInHours = isnull(datediff(hour, od.BackupStartTime, getdate()),-1), \n";
+		         "od.BackupStartTime, " + BackupEndTime + LastDbBackupAgeInHours + " \n" +
+		         LastDbBackupDurationDhms;
 		cols2 += "";
 		cols3 += QuiesceTag + RawSpaceUsage + nl_160 
 				+ OldestTranSqlText + OldestTranShowPlanText + OldestTranLocks;
@@ -940,7 +991,8 @@ extends CountersModel
 		}
 		if (srvVersion >= Ver.ver(15,0,2,5))
 		{
-			cols2 += "od.LastTranLogDumpTime, LastLogBackupAgeInHours = isnull(datediff(hour, od.LastTranLogDumpTime, getdate()),-1), \n";
+			cols2 += "od.LastTranLogDumpTime, " + LastTranLogEndDumpTime + LastLogBackupAgeInHours + " \n";
+			cols2 += LastLogBackupDurationDhms;
 			cols2 += "od.LastCheckpointTime, ";
 		}
 
@@ -1282,11 +1334,11 @@ extends CountersModel
 			{
 				double calc_val = oval_LogSizeInMb - oval_LogSizeFreeInMb;
 				
-				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, RoundingMode.HALF_EVEN);
 				newSample.setValueAt(newVal, rowId, LogSizeUsedInMb_pos);
 				newSample.setValueAt(newVal, rowId, LogSizeUsedInMbDiff_pos);
 				
-				newVal = new BigDecimal(oval_LogSizeFreeInMb).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				newVal = new BigDecimal(oval_LogSizeFreeInMb).setScale(1, RoundingMode.HALF_EVEN);
 				newSample.setValueAt(newVal, rowId, LogSizeFreeInMbDiff_pos);
 			}
 			
@@ -1294,11 +1346,11 @@ extends CountersModel
 			{
 				double calc_val = oval_DataSizeInMb - oval_DataSizeFreeInMb;
 				
-				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, RoundingMode.HALF_EVEN);
 				newSample.setValueAt(newVal, rowId, DataSizeUsedInMb_pos);
 				newSample.setValueAt(newVal, rowId, DataSizeUsedInMbDiff_pos);
 
-				newVal = new BigDecimal(oval_DataSizeFreeInMb).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				newVal = new BigDecimal(oval_DataSizeFreeInMb).setScale(1, RoundingMode.HALF_EVEN);
 				newSample.setValueAt(newVal, rowId, DataSizeFreeInMbDiff_pos);
 			}
 
@@ -1310,11 +1362,11 @@ extends CountersModel
 				if (calc_val < 0.0)
 					calc_val = 0.0;
 
-				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, RoundingMode.HALF_EVEN);
 				newSample.setValueAt(newVal, rowId, LogSizeUsedPct_pos);
 			}
 			else
-				newSample.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, LogSizeUsedPct_pos);
+				newSample.setValueAt(new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN), rowId, LogSizeUsedPct_pos);
 
 			// COLUMN: DataSizeUsedPct
 			if (oval_DataSizeInMb > 0) // I doubt that oval_DataSizeInMb can be 0
@@ -1324,11 +1376,11 @@ extends CountersModel
 				if (calc_val < 0.0)
 					calc_val = 0.0;
 
-				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc_val).setScale(1, RoundingMode.HALF_EVEN);
 				newSample.setValueAt(newVal, rowId, DataSizeUsedPct_pos);
 			}
 			else
-				newSample.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, DataSizeUsedPct_pos);
+				newSample.setValueAt(new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN), rowId, DataSizeUsedPct_pos);
 
 		
 //			OldestTranHasSqlText
@@ -1468,11 +1520,11 @@ extends CountersModel
 				// Formula: AppendLogContPct = (AppendLogWaits / AppendLogRequests) * 100;
 				calcAppendLogContPct = ((AppendLogWaits + 0.0) / AppendLogRequests) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calcAppendLogContPct).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calcAppendLogContPct).setScale(2, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, AppendLogContPctId);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, AppendLogContPctId);
+				diffData.setValueAt(new BigDecimal(0).setScale(2, RoundingMode.HALF_EVEN), rowId, AppendLogContPctId);
 		}
 	}
 
@@ -1667,9 +1719,53 @@ extends CountersModel
 
 					if (isUserTempdb || dbname.equals("tempdb"))
 					{
-						Double dvalue = this.getAbsValueAsDouble(row, "DataSizeUsedInMb");
+						Double dvalue     = this.getAbsValueAsDouble(row, "DataSizeUsedInMb");
 
 						lArray[d] = dbname;
+						dArray[d] = dvalue;
+						d++;
+					}
+				}
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+		}
+
+		if (GRAPH_NAME_TEMPDB_MAX_AND_USED_MB.equals(tgdp.getName()))
+		{
+			int tempdbCount = 0;
+			for (int row = 0; row < this.size(); row++) // NOTE: loop all table rows (no filters here, since we need to find all tempdb's)
+			{
+				boolean isUserTempdb = "true".equalsIgnoreCase(this.getAbsString(row, "IsUserTempdb"));
+				String  dbname       = this.getAbsString(row, "DBName");
+
+				if (isUserTempdb || dbname.equals("tempdb"))
+					tempdbCount++;
+			}
+
+			// no databases found... do not do anything
+			if (tempdbCount > 0)
+			{
+				// Write 1 "line" for every 'tempdb' database
+				Double[] dArray = new Double[tempdbCount * 2];
+				String[] lArray = new String[tempdbCount * 2];
+				int d = 0;
+				for (int row = 0; row < this.size(); row++)
+				{
+					boolean isUserTempdb = "true".equalsIgnoreCase(this.getAbsString(row, "IsUserTempdb"));
+					String  dbname       = this.getAbsString(row, "DBName");
+
+					if (isUserTempdb || dbname.equals("tempdb"))
+					{
+						Double dvalue     = this.getAbsValueAsDouble(row, "DataSizeUsedInMb");
+						Double dbSizeInMb = this.getAbsValueAsDouble(row, "DbSizeInMb");
+
+						lArray[d] = dbname + " [max-size]";
+						dArray[d] = dbSizeInMb;
+						d++;
+
+						lArray[d] = dbname + " [used]";
 						dArray[d] = dvalue;
 						d++;
 					}
@@ -2037,7 +2133,12 @@ extends CountersModel
 					// NO match in the SKIP regexp
 					if (doAlarm)
 					{
-						String lastBackupDate = cm.getAbsValue(r, "BackupStartTime") + "";
+//						String lastBackupDate   = cm.getAbsValue(r, "BackupStartTime") + "";
+						String lastBackupDate   = cm.getAbsString(r, "BackupStartTime", true, "");
+						String lastBackuEndDate = cm.getAbsString(r, "BackupEndTime"  , true, "");
+						if (StringUtil.hasValue(lastBackuEndDate))
+							lastBackupDate = lastBackuEndDate;
+						
 	
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);

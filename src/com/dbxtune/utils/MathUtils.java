@@ -21,6 +21,7 @@
 package com.dbxtune.utils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public class MathUtils
 {
@@ -47,7 +48,7 @@ public class MathUtils
 	}
 	
 	/**
-	 * Round a Decimal into some decimals points, using BigDecimal.ROUND_HALF_EVEN
+	 * Round a Decimal into some decimals points, using RoundingMode.HALF_EVEN
 	 * 
 	 * @param val      The Decimal value to round
 	 * @param scale    To number of decimals
@@ -57,12 +58,12 @@ public class MathUtils
 		if (val == null)
 			return null;
 		
-		BigDecimal bd = new BigDecimal( val ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal bd = new BigDecimal( val ).setScale(scale, RoundingMode.HALF_EVEN);
 		return bd.doubleValue();
 	}
 	
 	/**
-	 * Round a Decimal into some decimals points, using BigDecimal.ROUND_HALF_EVEN
+	 * Round a Decimal into some decimals points, using RoundingMode.HALF_EVEN
 	 * 
 	 * @param val      The Decimal value to round
 	 * @param scale    To number of decimals
@@ -72,11 +73,11 @@ public class MathUtils
 		if (val == null)
 			return null;
 		
-		return new BigDecimal( val ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		return new BigDecimal( val ).setScale(scale, RoundingMode.HALF_EVEN);
 	}
 	
 	/**
-	 * Round a Float into some decimals points, using BigDecimal.ROUND_HALF_EVEN
+	 * Round a Float into some decimals points, using RoundingMode.HALF_EVEN
 	 * 
 	 * @param val      The Float value to round
 	 * @param scale    To number of decimals
@@ -86,7 +87,7 @@ public class MathUtils
 		if (val == null)
 			return null;
 		
-		BigDecimal bd = new BigDecimal( val ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal bd = new BigDecimal( val ).setScale(scale, RoundingMode.HALF_EVEN);
 		return bd.doubleValue();
 	}
 	

@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -341,11 +342,11 @@ extends CountersModel
 			{
 				double calc = ((AppendLogWaits + 0.0) / AppendLogRequests) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(2, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, colPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+				diffData.setValueAt(new BigDecimal(0).setScale(2, RoundingMode.HALF_EVEN), rowId, colPos);
 
 			//------------------------------
 			// CALC: LockContPct
@@ -354,11 +355,11 @@ extends CountersModel
 			{
 				double calc = ((LockWaits+0.0) / (LockRequests+0.0)) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(2, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, colPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+				diffData.setValueAt(new BigDecimal(0).setScale(2, RoundingMode.HALF_EVEN), rowId, colPos);
 
 			//------------------------------
 			// CALC: CatLockContPct
@@ -367,11 +368,11 @@ extends CountersModel
 			{
 				double calc = ((CatLockWaits+0.0) / (CatLockRequests+0.0)) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(2, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, colPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+				diffData.setValueAt(new BigDecimal(0).setScale(2, RoundingMode.HALF_EVEN), rowId, colPos);
 		}
 	}
 

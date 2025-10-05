@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -395,7 +396,7 @@ extends CountersModel
 			{
 				double calc = (ExecutionTime + 0.0) / (ExecutionCnt + 0.0);
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, ExecutionTimePerCnt_pos);
 			}
 			else
@@ -439,7 +440,7 @@ extends CountersModel
 				// ExecutionTime                  / allEngines*1000000 == PossibleExecutionSlotsInMicroSec
 				double calc = (rate_ExecutionTime / (1_000_000.0 * rate_EngineCount)) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, CpuUsagePct_pos);
 				rateData.setValueAt(newVal, rowId, CpuUsagePct_pos);
 			}

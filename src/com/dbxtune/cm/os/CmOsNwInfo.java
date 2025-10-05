@@ -22,6 +22,7 @@ package com.dbxtune.cm.os;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -459,13 +460,13 @@ extends CounterModelHostMonitor
 			Number t_packets = (Number) osSampleTable.getValueAt(r, pos_t_packets);
 
 			// convert to KB and MB
-			BigDecimal r_kb   = new BigDecimal( r_bytes.doubleValue() / 1024 )          .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal r_mb   = new BigDecimal( r_bytes.doubleValue() / 1024 / 1024)    .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal r_mbit = new BigDecimal( r_bytes.doubleValue() / 1024 / 1024 * 8).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal r_kb   = new BigDecimal( r_bytes.doubleValue() / 1024 )          .setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal r_mb   = new BigDecimal( r_bytes.doubleValue() / 1024 / 1024)    .setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal r_mbit = new BigDecimal( r_bytes.doubleValue() / 1024 / 1024 * 8).setScale(1, RoundingMode.HALF_EVEN);
 
-			BigDecimal t_kb   = new BigDecimal( t_bytes.doubleValue() / 1024 )          .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal t_mb   = new BigDecimal( t_bytes.doubleValue() / 1024 / 1024)    .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal t_mbit = new BigDecimal( t_bytes.doubleValue() / 1024 / 1024 * 8).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal t_kb   = new BigDecimal( t_bytes.doubleValue() / 1024 )          .setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal t_mb   = new BigDecimal( t_bytes.doubleValue() / 1024 / 1024)    .setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal t_mbit = new BigDecimal( t_bytes.doubleValue() / 1024 / 1024 * 8).setScale(1, RoundingMode.HALF_EVEN);
 			
 			// Calc bytesPerPackage
 			int r_bPerPacket = 0;

@@ -174,8 +174,8 @@ implements Runnable
 	// implements singleton pattern
 	private static CentralPcsWriterHandler _instance = null;
 
-	private boolean  _initialized = false;
-	private boolean  _running     = false;
+	private transient boolean  _initialized = false;
+	private transient boolean  _running     = false;
 
 	private Thread   _thread           = null;
 

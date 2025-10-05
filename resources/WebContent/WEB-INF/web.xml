@@ -10,167 +10,368 @@
 
 <web-app>
 
+	<!-- ============================================================ -->
+	<!-- if Servlets are BLOCKING static files -->
+	<servlet-mapping>
+		<servlet-name>default</servlet-name>
+		<url-pattern>/*</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>AdminServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.AdminServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>AdminServlet</servlet-name>
+		<url-pattern>/admin</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>AlarmLogServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.AlarmLogServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>AlarmLogServlet</servlet-name>
+		<url-pattern>/alarmLog</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>AlarmActiveController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.AlarmActiveController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>AlarmActiveController</servlet-name>
+		<url-pattern>/api/alarm/active</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>AlarmFormatterController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.AlarmFormatterController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>AlarmFormatterController</servlet-name>
+		<url-pattern>/api/alarm/formatter</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>AlarmHistoryController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.AlarmHistoryController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>AlarmHistoryController</servlet-name>
+		<url-pattern>/api/alarm/history</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>CollectorRefreshController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.CollectorRefreshController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>CollectorRefreshController</servlet-name>
+		<url-pattern>/api/collector-refresh</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>LastSampleForCmController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.LastSampleForCmController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>LastSampleForCmController</servlet-name>
+		<url-pattern>/api/last-sample</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>HistorySampleForCmController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.HistorySampleForCmController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>HistorySampleForCmController</servlet-name>
+		<url-pattern>/api/history-sample</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>HistoryActiveSamplesForCmController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.HistoryActiveSamplesForCmController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>HistoryActiveSamplesForCmController</servlet-name>
+		<url-pattern>/api/history-active-samples</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DbxTuneLogServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DbxTuneLogServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DbxTuneLogServlet</servlet-name>
+		<url-pattern>/log</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DbxTuneLogTailWebSocketServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
+		<url-pattern>/logtail</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DbxTuneConfServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DbxTuneConfServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DbxTuneConfServlet</servlet-name>
+		<url-pattern>/conf</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DbxTuneReportsServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DbxTuneReportsServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DbxTuneReportsServlet</servlet-name>
+		<url-pattern>/report</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DailySummartReportServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DailySummartReportServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DailySummartReportServlet</servlet-name>
+		<url-pattern>/api/dsr</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DsrSkipEntriesController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DsrSkipEntriesController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DsrSkipEntriesController</servlet-name>
+		<url-pattern>/api/dsr/skip</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DownloadServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DownloadServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DownloadServlet</servlet-name>
+		<url-pattern>/download-local-dbxtune</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DownloadRecordingServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DownloadRecordingServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DownloadRecordingServlet</servlet-name>
+		<url-pattern>/download-recording</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>DummyServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.DummyServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>DummyServlet</servlet-name>
+		<url-pattern>/dummy</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>OverviewServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.OverviewServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>OverviewServlet</servlet-name>
+		<url-pattern>/overview</url-pattern>
+	</servlet-mapping>
+ 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>PcsReceiver</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.CentralPcsReceiverController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>PcsReceiver</servlet-name>
+		<url-pattern>/api/pcs/receiver</url-pattern>
+	</servlet-mapping>
+ 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>PcsQueueInfo</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.PcsQueueInfoController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>PcsQueueInfo</servlet-name>
+		<url-pattern>/api/pcs/queueInfo</url-pattern>
+	</servlet-mapping>
+ 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ShutdownServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.ShutdownServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>ShutdownServlet</servlet-name>
+		<url-pattern>/admin/shutdown</url-pattern>
+	</servlet-mapping>
+ 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>LogoutServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.LogoutServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>LogoutServlet</servlet-name>
+		<url-pattern>/logout</url-pattern>
+	</servlet-mapping>
+ 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>LoginCheckServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.LoginCheckServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>LoginCheckServlet</servlet-name>
+		<url-pattern>/login-check</url-pattern>
+	</servlet-mapping>
+ 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ChartBroadcastServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.ChartBroadcastServlet</servlet-class>
 		<async-supported>true</async-supported>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>ChartBroadcastServlet</servlet-name>
+		<url-pattern>/api/chart/broadcast-sse</url-pattern>
+	</servlet-mapping>
+ 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ServerLayoutController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.ServerLayoutController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>ServerLayoutController</servlet-name>
+		<url-pattern>/api/server-layout</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>SessionsController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.SessionsController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>SessionsController</servlet-name>
+		<url-pattern>/api/sessions</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>GraphPropertiesController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.GraphPropertiesController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>GraphPropertiesController</servlet-name>
+		<url-pattern>/api/graphs</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>GraphProfilesController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.GraphProfilesController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>GraphProfilesController</servlet-name>
+		<url-pattern>/api/graph/profiles</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>GraphDescriptionController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.GraphDescriptionController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>GraphDescriptionController</servlet-name>
+		<url-pattern>/api/graph/description</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>GraphDataController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.GraphDataController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>GraphDataController</servlet-name>
+		<url-pattern>/api/graph/data</url-pattern>
+	</servlet-mapping>
+	
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>HealthCheckController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.HealthCheckController</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>HealthCheckController</servlet-name>
+		<url-pattern>/api/healthcheck</url-pattern>
+	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ChartBroadcastWebSocketServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.ChartBroadcastWebSocketServlet</servlet-class>
@@ -181,6 +382,7 @@
 	</servlet-mapping>
 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>H2WriterStatServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.H2WriterStatServlet</servlet-class>
@@ -190,12 +392,18 @@
 		<url-pattern>/h2ws</url-pattern>
 	</servlet-mapping>
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>UserDefinedContentServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.UserDefinedContentServlet</servlet-class>
 	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserDefinedContentServlet</servlet-name>
+		<url-pattern>/api/udc</url-pattern>
+	</servlet-mapping>
 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ShowplanPostgresServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.ShowplanPostgresServlet</servlet-class>
@@ -206,6 +414,7 @@
 	</servlet-mapping>
 
 
+	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ShowplanSqlServerServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.ShowplanSqlServerServlet</servlet-class>
@@ -216,6 +425,7 @@
 	</servlet-mapping>
 
 
+	<!-- ============================================================ -->
 <!--
 	<servlet>
 		<servlet-name>MgtProxyServlet</servlet-name>
@@ -226,6 +436,8 @@
 		<url-pattern>/api/cc/mgt/*</url-pattern>
 	</servlet-mapping>
 -->
+
+
 	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ProxyConfigGetServlet</servlet-name>
@@ -235,6 +447,7 @@
 		<servlet-name>ProxyConfigGetServlet</servlet-name>
 		<url-pattern>/api/cc/mgt/config/get</url-pattern>
 	</servlet-mapping>
+
 
 	<!-- ============================================================ -->
 	<servlet>
@@ -246,6 +459,7 @@
 		<url-pattern>/api/cc/mgt/config/set</url-pattern>
 	</servlet-mapping>
 
+
 	<!-- ============================================================ -->
 	<servlet>
 		<servlet-name>ProxyReportsServlet</servlet-name>
@@ -255,6 +469,7 @@
 		<servlet-name>ProxyReportsServlet</servlet-name>
 		<url-pattern>/api/cc/reports</url-pattern>
 	</servlet-mapping>
+
 
 	<!-- ============================================================ -->
 	<servlet>
@@ -267,172 +482,29 @@
 	</servlet-mapping>
 
 
-
-
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>NoGuiShutdownServlet</servlet-name>
+		<servlet-class>com.dbxtune.mgt.controllers.NoGuiShutdownServlet</servlet-class>
+	</servlet>
 	<servlet-mapping>
-		<servlet-name>AdminServlet</servlet-name>
-		<url-pattern>/admin</url-pattern>
+		<servlet-name>NoGuiShutdownServlet</servlet-name>
+		<url-pattern>/api/mgt/shutdown</url-pattern>
 	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>NoGuiRestartServlet</servlet-name>
+		<servlet-class>com.dbxtune.mgt.controllers.NoGuiRestartServlet</servlet-class>
+	</servlet>
 	<servlet-mapping>
-		<servlet-name>AlarmLogServlet</servlet-name>
-		<url-pattern>/alarmLog</url-pattern>
+		<servlet-name>NoGuiRestartServlet</servlet-name>
+		<url-pattern>/api/mgt/restart</url-pattern>
 	</servlet-mapping>
 
-	<servlet-mapping>
-		<servlet-name>DbxTuneLogServlet</servlet-name>
-		<url-pattern>/log</url-pattern>
-	</servlet-mapping>
 
-	<servlet-mapping>
-		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
-		<url-pattern>/logtail</url-pattern>
-	</servlet-mapping>
 
-	<servlet-mapping>
-		<servlet-name>DbxTuneConfServlet</servlet-name>
-		<url-pattern>/conf</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>DbxTuneReportsServlet</servlet-name>
-		<url-pattern>/report</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>DailySummartReportServlet</servlet-name>
-		<url-pattern>/api/dsr</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>DsrSkipEntriesController</servlet-name>
-		<url-pattern>/api/dsr/skip</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>DownloadServlet</servlet-name>
-		<url-pattern>/download-local-dbxtune</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>DownloadRecordingServlet</servlet-name>
-		<url-pattern>/download-recording</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>DummyServlet</servlet-name>
-		<url-pattern>/dummy</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>OverviewServlet</servlet-name>
-		<url-pattern>/overview</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>PcsReceiver</servlet-name>
-		<url-pattern>/api/pcs/receiver</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>PcsQueueInfo</servlet-name>
-		<url-pattern>/api/pcs/queueInfo</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>ShutdownServlet</servlet-name>
-		<url-pattern>/admin/shutdown</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>LogoutServlet</servlet-name>
-		<url-pattern>/logout</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>LoginCheckServlet</servlet-name>
-		<url-pattern>/login-check</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>ChartBroadcastServlet</servlet-name>
-		<url-pattern>/api/chart/broadcast-sse</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>ServerLayoutController</servlet-name>
-		<url-pattern>/api/server-layout</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>SessionsController</servlet-name>
-		<url-pattern>/api/sessions</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>GraphPropertiesController</servlet-name>
-		<url-pattern>/api/graphs</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>GraphProfilesController</servlet-name>
-		<url-pattern>/api/graph/profiles</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>GraphDescriptionController</servlet-name>
-		<url-pattern>/api/graph/description</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>GraphDataController</servlet-name>
-		<url-pattern>/api/graph/data</url-pattern>
-	</servlet-mapping>
-	
-	<servlet-mapping>
-		<servlet-name>HealthCheckController</servlet-name>
-		<url-pattern>/api/healthcheck</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>AlarmActiveController</servlet-name>
-		<url-pattern>/api/alarm/active</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>AlarmFormatterController</servlet-name>
-		<url-pattern>/api/alarm/formatter</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>AlarmHistoryController</servlet-name>
-		<url-pattern>/api/alarm/history</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>CollectorRefreshController</servlet-name>
-		<url-pattern>/api/collector-refresh</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>LastSampleForCmController</servlet-name>
-		<url-pattern>/api/last-sample</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>HistorySampleForCmController</servlet-name>
-		<url-pattern>/api/history-sample</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>HistoryActiveSamplesForCmController</servlet-name>
-		<url-pattern>/api/history-active-samples</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>UserDefinedContentServlet</servlet-name>
-		<url-pattern>/api/udc</url-pattern>
-	</servlet-mapping>
 
  <!-- 
     <servlet id="jsp">
