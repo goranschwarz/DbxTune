@@ -208,9 +208,10 @@ extends SqlServerAbstract
 
 			String serverName = getReportingInstance().getServerName();
 			
+			String timeLinkUrl = "/api/cc/reports?srvName=" + serverName + "&reportName=sqlserver-job-scheduler-timeline&startTime=TODAY&onlyLevelZero=true";
 			w.append("<p>The summary table is ordered by 'sumTimeInSec'...</p> \n");
-			w.append("<p>Open <i>Timeline</p> View for All below jobs, for Today <a href='/api/cc/reports?srvName=" + serverName + "&reportName=sqlserver-job-scheduler-timeline&startTime=TODAY&onlyLevelZero=true' target='_blank'>here</a> (same as open '<i>SQL Agent/Scheduler <b>Timeline</b> View for <b>Today</b></i>' on the start page)</p> \n");
-			w.append("<p>The Historical Calculation (last columns) are based on the last " + overview_calcHistoricalDays + " days. <i>This can be changed with property <code>" + SqlServerJobSchedulerExtractor.PROPKEY_overview_calcHistoricalDays + " = ##</code></i></p>");
+			w.append("<p><a href='" + timeLinkUrl + "' target='_blank'>Open <i>Timeline</i> View</a> for All below jobs, for Today <a href='" + timeLinkUrl + "' target='_blank'>here</a> (same as open '<i>SQL Agent/Scheduler <b>Timeline</b> View for <b>Today</b></i>' on the start page)</p> \n");
+			w.append("<p>The Historical Calculation (last columns, in gray) are based on the last " + overview_calcHistoricalDays + " days. <i>This can be changed with property <code>" + SqlServerJobSchedulerExtractor.PROPKEY_overview_calcHistoricalDays + " = ##</code></i></p>");
 			w.append(_job_history_overview.toHtmlTableString("sortable", true, true, null, htmlTableRenderer));
 		}
 		else

@@ -231,7 +231,7 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 		public GoToLineAction()
 		{
 			super("Go To Line...");
-			int c = getToolkit().getMenuShortcutKeyMask();
+			int c = getToolkit().getMenuShortcutKeyMaskEx();
 			putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_L, c));
 		}
 
@@ -273,7 +273,7 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 		public ShowFindDialogAction()
 		{
 			super("Find...");
-			int c = getToolkit().getMenuShortcutKeyMask();
+			int c = getToolkit().getMenuShortcutKeyMaskEx();
 			putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_F, c));
 		}
 
@@ -296,7 +296,7 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 		public ShowReplaceDialogAction()
 		{
 			super("Replace...");
-			int c = getToolkit().getMenuShortcutKeyMask();
+			int c = getToolkit().getMenuShortcutKeyMaskEx();
 			putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_H, c));
 		}
 

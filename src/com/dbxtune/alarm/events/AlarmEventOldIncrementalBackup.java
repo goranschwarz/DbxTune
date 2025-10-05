@@ -29,11 +29,12 @@ extends AlarmEvent
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Alarm for full transaction log for a specific database.
+	 * Alarm to indicate the we do not have any recent incremental backups for a specific database.
+	 * 
 	 * @param cm
 	 * @param dbname
 	 */
-	public AlarmEventOldIncrementalBackup(CountersModel cm, Number thresholdInHours, String dbname, String lastBackupStartTime, int age)
+	public AlarmEventOldIncrementalBackup(CountersModel cm, Number thresholdInHours, String dbname, String lastBackupStartOrEndTime, int age)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -45,7 +46,7 @@ extends AlarmEvent
 				AlarmEvent.ServiceState.UP, 
 				"Old or No Incremental Database Backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', Backup Age in Hours '" + age + "'" 
 						+ (age == -1 ? ", (where -1 means: Since ASE was started)" : "") 
-						+ ", lastBackupStartTime='" + lastBackupStartTime + "'. (thresholdInHours="+thresholdInHours+")",
+						+ ", lastBackupStartOrEndTime='" + lastBackupStartOrEndTime + "'. (thresholdInHours="+thresholdInHours+")",
 						thresholdInHours);
 
 		// Adjust the Alarm Full Duration with X seconds

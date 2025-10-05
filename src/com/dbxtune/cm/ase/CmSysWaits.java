@@ -24,6 +24,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -382,7 +383,7 @@ extends CountersModel
 				// WaitTimePerWait = WaitTime / Waits;
 				calcWaitTimePerWait = WaitTime / (Waits * 1.0);
 
-				BigDecimal newVal = new BigDecimal(calcWaitTimePerWait).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
+				BigDecimal newVal = new BigDecimal(calcWaitTimePerWait).setScale(3, RoundingMode.HALF_EVEN);;
 				diffData.setValueAt(newVal, rowId, WaitTimePerWaitId);
 			}
 			else

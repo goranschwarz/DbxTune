@@ -231,7 +231,7 @@ extends DefaultCompletionProvider
 		// Keep only A-Z, a-z so no strange chars will be part of the filename
 		instanceName = instanceName.replaceAll("[^A-Za-z0-9_.-]", "");
 		
-		String filename = AppDir.getAppStoreDir() + File.separator + TEMPLATE_CODE_COMP_saveCacheFileName.replace("{INSTANCE}", instanceName);
+		String filename = AppDir.getDbxUserHomeDir() + File.separator + TEMPLATE_CODE_COMP_saveCacheFileName.replace("{INSTANCE}", instanceName);
 		_codeCompletionCacheSavedFile = filename;
 	}
 

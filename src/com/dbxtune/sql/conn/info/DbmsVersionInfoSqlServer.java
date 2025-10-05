@@ -118,6 +118,6 @@ extends DbmsVersionInfo
 	@Override
 	public String toString()
 	{
-		return super.toString() + "[longVer=" + getLongVersion() + ", isAzureDb=" + _isAzureDb + ", isAzureSynapseAnalytics=" + _isAzureSynapseAnalytics + ", isAzureManagedInstance=" + _isAzureManagedInstance + "]";
+		return super.toString() + "[longVer=" + getLongVersion() + ", isAzureDb=" + isAzureDb() + ", isAzureSynapseAnalytics=" + isAzureSynapseAnalytics() + ", isAzureManagedInstance=" + isAzureManagedInstance() + "]";
 	}
 }

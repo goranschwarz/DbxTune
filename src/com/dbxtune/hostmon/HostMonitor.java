@@ -58,6 +58,10 @@ implements Runnable
 	public static final String PROPERTY_NAME = "HostMonitor";
 	
 //	public static final String  PROPKEY_forcePty = "HostMonitor.ssh.requestPty.force";
+
+	public static final String  PROPKEY_windows_typeperf_cmd_path = "HostMonitor.windows.typeperf.cmd.path";
+	public static final String  DEFAULT_windows_typeperf_cmd_path = "";
+	
 	
 
 	/**The Operating System command that will be used to get valid information*/
@@ -67,7 +71,7 @@ implements Runnable
 	private Thread _thread  = null;
 
 	/** shows that the thread is still running, also used by shutdown() to try to stop the thread */
-	private boolean _running = false;
+	private transient boolean _running = false;
 
 	/** indicates that someone has paused the thread, and it should not start up again */
 	private boolean _paused = false;

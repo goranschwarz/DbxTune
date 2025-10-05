@@ -30,5 +30,4 @@ extends DbxConnectionStateInfoAse
 	{
 		super(conn);
 	}
-
 }

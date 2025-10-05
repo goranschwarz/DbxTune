@@ -22,6 +22,7 @@ package com.dbxtune.cm.os;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -219,7 +220,7 @@ extends CounterModelHostMonitor
 					if (pct > 100)
 						pct = 100;
 
-					BigDecimal bd =  new BigDecimal( pct ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal bd =  new BigDecimal( pct ).setScale(1, RoundingMode.HALF_EVEN);
 					newSample.setValueAt(bd, r, usedPct_pos);
 				}
 			}
@@ -664,7 +665,7 @@ extends CounterModelHostMonitor
 			_logger.info(prefix + "Evaluating alarm for 'LowFreeSpaceInMb' in the following order:");
 			for (Entry<String, Number> entry : _map_alarm_LowFreeSpaceInMb.entrySet())
 			{
-				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
+				_logger.info(prefix + "    MountPoint='" + entry.getKey() + "', mb=" + entry.getValue());
 			}
 		}
 		
@@ -707,7 +708,7 @@ extends CounterModelHostMonitor
 			_logger.info(prefix + "Evaluating alarm for 'LowFreeSpaceInPct' in the following order:");
 			for (Entry<String, Number> entry : _map_alarm_LowFreeSpaceInPct.entrySet())
 			{
-				_logger.info(prefix + "    dbname='" + entry.getKey() + "', mb=" + entry.getValue());
+				_logger.info(prefix + "    MountPoint='" + entry.getKey() + "', pct=" + entry.getValue());
 			}
 		}
 	}

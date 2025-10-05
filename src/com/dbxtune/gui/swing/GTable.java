@@ -1728,7 +1728,7 @@ extends JXTable
 				}
 				// No tooltip text at new location - hide tip window if one is
 				// currently visible
-				else if (_focusableTip!=null) 
+				else if (_focusableTip != null) 
 				{
 					_focusableTip.possiblyDisposeOfTipWindow();
 				}

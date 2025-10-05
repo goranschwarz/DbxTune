@@ -297,7 +297,7 @@ public class H2LongTermTester
 		private Thread _thread;
 		private int    _workerId;
 		private int    _tableCount;
-		private boolean _running;
+		private transient boolean _running;
 		private List<DbTable> _tableList = new ArrayList<>();
 
 		public DbWorker(int workerId, int tableCount, int colCount)

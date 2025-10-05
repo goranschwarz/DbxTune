@@ -88,7 +88,7 @@ implements Runnable
 	public static final boolean DEFAULT_persistAlarmsEnabled  = false; // no default
 
 	public static final String  PROPKEY_persistAlarmsFilename = "AlarmHandler.persist.alarms.filename";
-	public static final String  DEFAULT_persistAlarmsFilename = AppDir.getAppStoreDir() + File.separator + Version.getAppName() + ".AlarmHandler.jso";
+	public static final String  DEFAULT_persistAlarmsFilename = AppDir.getDbxUserHomeDir() + File.separator + Version.getAppName() + ".AlarmHandler.jso";
 
 	/*---------------------------------------------------
 	** Constants
@@ -109,9 +109,9 @@ implements Runnable
 
 	private String   _instanceName;
 
-	private boolean  _initialized = false;
+	private transient boolean  _initialized = false;
+	private transient boolean _running = false;
 	private Thread   _thread      = null;
-	private boolean  _running     = false;
 
 	private Object _waitForQueueEndOfScan = new Object();
 

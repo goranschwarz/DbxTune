@@ -21,6 +21,7 @@
 package com.dbxtune.sp_sysmon;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -303,9 +304,9 @@ public abstract class AbstractSysmonType
 		double dPerSec  = counter / ((NumElapsedMs * 1.0) / 1000.0);
 		double dPerTran = counter /  (NumXacts     * 1.0);
 		double dTotal   = counter;
-		BigDecimal perSec  = new BigDecimal(dPerSec) .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-		BigDecimal perTran = new BigDecimal(dPerTran).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-		BigDecimal total   = new BigDecimal(dTotal)  .setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal perSec  = new BigDecimal(dPerSec) .setScale(1, RoundingMode.HALF_EVEN);
+		BigDecimal perTran = new BigDecimal(dPerTran).setScale(1, RoundingMode.HALF_EVEN);
+		BigDecimal total   = new BigDecimal(dTotal)  .setScale(1, RoundingMode.HALF_EVEN);
 
 		String na = "";
 		if (printNA)
@@ -358,9 +359,9 @@ public abstract class AbstractSysmonType
 		double dPerSec  = counter / ((NumElapsedMs  * 1.0) / 1000.0);
 		double dPerTran = counter /  (NumXacts      * 1.0);
 		double dPct     = 100.0 * (counter / (divideBy * 1.0));
-		BigDecimal perSec  = new BigDecimal(dPerSec) .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-		BigDecimal perTran = new BigDecimal(dPerTran).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-		BigDecimal pct     = new BigDecimal(dPct)    .setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal perSec  = new BigDecimal(dPerSec) .setScale(1, RoundingMode.HALF_EVEN);
+		BigDecimal perTran = new BigDecimal(dPerTran).setScale(1, RoundingMode.HALF_EVEN);
+		BigDecimal pct     = new BigDecimal(dPct)    .setScale(1, RoundingMode.HALF_EVEN);
 		
 		//|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
 		//|  -------------------------  ------------  ------------  ----------  ----------
@@ -387,7 +388,7 @@ public abstract class AbstractSysmonType
 
 //System.out.println(getReportHead()+":pct.NumElapsedMs  = "+NumElapsedMs);
 		double dPct     = 100.0 * (counter / (divideBy * 1.0));
-		BigDecimal pct  = new BigDecimal(dPct)    .setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal pct  = new BigDecimal(dPct)    .setScale(1, RoundingMode.HALF_EVEN);
 		
 		//|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
 		//|  -------------------------  ------------  ------------  ----------  ----------
@@ -441,7 +442,7 @@ public abstract class AbstractSysmonType
 		if (divideby > 0)
 			dCalc = counter / (divideby * 1.0);
 
-		BigDecimal calc = new BigDecimal(dCalc).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal calc = new BigDecimal(dCalc).setScale(scale, RoundingMode.HALF_EVEN);
 
 		String line = //"  " +
 			StringUtil.left(name    , 32, false) +
@@ -464,7 +465,7 @@ public abstract class AbstractSysmonType
 		if (divideby > 0)
 			dCalc = counter / (divideby * 1.0);
 
-		BigDecimal calc = new BigDecimal(dCalc).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal calc = new BigDecimal(dCalc).setScale(scale, RoundingMode.HALF_EVEN);
 
 		String line = //"  " +
 			StringUtil.left(name,     32, false) +

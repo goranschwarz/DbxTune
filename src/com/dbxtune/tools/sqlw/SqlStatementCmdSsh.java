@@ -274,7 +274,7 @@ extends SqlStatementAbstract
 
 				if (_params._openWindow)
 				{
-    				SqlTextDialog dialog = new SqlTextDialog(null, retStr);
+    				SqlTextDialog dialog = new SqlTextDialog(null, "Output Text", retStr);
     				dialog.setVisible(true);
 				}
 				else

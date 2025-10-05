@@ -82,7 +82,10 @@ implements Iterable<String>
 	public void parse(String confVal)
 	{
 		// split on '; ' and stuff the entries in a Map object
-		String[] strArr = confVal.split(";");
+//		String[] strArr = confVal.split(";");'
+		// Regex explanation: (?<!\\\\);  --> match a semicolon not preceded by a backslash
+		String[] strArr = confVal.split("(?<!\\\\);");
+
 		for (int i=0; i<strArr.length; i++)
 		{
 			String strEntry = strArr[i].trim();
@@ -521,7 +524,7 @@ implements Iterable<String>
 
 				_logger.trace("parse() colName='"+e._propName+"': i="+i+", keyVal='"+strArr[i]+"'.");
 
-				String[] strKeyVal = strArr[i].split("=");
+				String[] strKeyVal = strArr[i].split("=", 2); // Preserve any '=' in the value part
 				if (strKeyVal.length < 2)
 				{
 					_logger.info("Faulty key=value representation '"+strArr[i]+"' at position '"+i+"' in the string '"+strArr[i]+"'.");

@@ -294,7 +294,7 @@ implements AutoCloseable
 		else
 		{
 			// Decide path to the log file.
-			String logPath = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : System.getProperty("user.home");
+			String logPath = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() : System.getProperty("user.home");
 			if ( logPath != null && ! (logPath.endsWith("/") || logPath.endsWith("\\")) )
 				logPath += File.separatorChar;
 			logPath += "log" + File.separatorChar;
@@ -509,6 +509,108 @@ implements AutoCloseable
 		}
 	}
 	
+//	private int checkForTableColumnWithSameName(DbxConnection conn)
+//	{
+//		String sql = ""
+//				+ "SELECT \n"
+//				+ "     UPPER(c.TABLE_SCHEMA) as TABLE_SCHEMA \n"
+//				+ "    ,UPPER(c.TABLE_NAME)   as TABLE_NAME \n"
+//				+ "    ,UPPER(c.COLUMN_NAME)  as COLUMN_NAME \n"
+//				+ "    ,count(*)                as CNT \n"
+//				+ "FROM INFORMATION_SCHEMA.COLUMNS c \n"
+//				+ "GROUP BY \n"
+//				+ "     UPPER(c.TABLE_SCHEMA) \n"
+//				+ "    ,UPPER(c.TABLE_NAME) \n"
+//				+ "    ,UPPER(c.COLUMN_NAME) \n"
+//				+ "HAVING COUNT(*) > 1 \n"
+//				+ "";
+//
+//		
+//		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//		{
+//			int sumDupCount = 0;
+//
+//			while(rs.next())
+//			{
+//				String schName = rs.getString(1);
+//				String tabName = rs.getString(2);
+//				String colName = rs.getString(3);
+//				int    cnt     = rs.getInt   (4);
+//
+//				sumDupCount += (cnt - 1); // The count will be 2, when there is a duplicate
+//
+//				_logger.info("Found duplicate column names in: schema='" + schName + "', tableName='" + tabName + "', columnName='" + colName + "', count=" + cnt);
+//			}
+//
+//			if (sumDupCount > 0)
+//				_logger.info("NOTE: The 'names' listed above is in CAPTITAL Letters, while the ACTUAL column names might be of MIXED case. This is because i do: group by UPPER(...)");
+//
+//			return sumDupCount;
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.error("Problems execution 'check-to-verify-column-names'. ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|. SQL=\n" + sql);
+//			return -1;
+//		}
+//	}
+
+	private int checkForTableColumnWithSameName(DbxConnection conn)
+	{
+		String sql = ""
+				+ "WITH tab_with_dup_cols AS \n"
+				+ "( \n"
+				+ "    SELECT \n"
+				+ "         UPPER(c.TABLE_SCHEMA) as TABLE_SCHEMA \n"
+				+ "        ,UPPER(c.TABLE_NAME)   as TABLE_NAME \n"
+				+ "        ,UPPER(c.COLUMN_NAME)  as COLUMN_NAME \n"
+				+ "    FROM INFORMATION_SCHEMA.COLUMNS c \n"
+				+ "    GROUP BY \n"
+				+ "         UPPER(c.TABLE_SCHEMA) \n"
+				+ "        ,UPPER(c.TABLE_NAME) \n"
+				+ "        ,UPPER(c.COLUMN_NAME) \n"
+				+ "    HAVING COUNT(*) > 1 \n"
+				+ ") \n"
+				+ "SELECT \n"
+				+ "     c.TABLE_SCHEMA \n"
+				+ "    ,c.TABLE_NAME \n"
+				+ "    ,COUNT(*) AS DUPLICATE_CNT \n"
+				+ "    ,LISTAGG(c.COLUMN_NAME, ', ') AS DUPLICATE_COLUMNS \n"
+				+ "FROM tab_with_dup_cols dc \n"
+				+ "INNER JOIN INFORMATION_SCHEMA.COLUMNS c \n"
+				+ "        ON  dc.TABLE_SCHEMA = UPPER(c.TABLE_SCHEMA) \n"
+				+ "        AND dc.TABLE_NAME   = UPPER(c.TABLE_NAME) \n"
+				+ "        AND dc.COLUMN_NAME  = UPPER(c.COLUMN_NAME) \n"
+				+ "GROUP BY \n"
+				+ "     c.TABLE_SCHEMA \n"
+				+ "    ,c.TABLE_NAME \n"
+				+ "    ,UPPER(c.COLUMN_NAME) \n" // Use this if you only want a SINGLE ROW for each table, and MULTIPLE Columns in the 'DUPLICATE_COLUMNS'
+				+ "";
+		
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			int sumDupCount = 0;
+
+			while(rs.next())
+			{
+				String schName  = rs.getString(1);
+				String tabName  = rs.getString(2);
+				int    dupCnt   = rs.getInt   (3);
+				String colNames = rs.getString(4);
+
+				sumDupCount += (dupCnt / 2); // The count will be 2, for each duplicate
+
+				_logger.info("Found duplicate column names in: schema='" + schName + "', tableName='" + tabName + "', duplicateCount=" + dupCnt + "columnNameList='" + colNames + "'.");
+			}
+
+			return sumDupCount;
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Problems execution 'check-to-verify-column-names'. ErrorCode=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Message=|" + ex.getMessage() + "|. SQL=\n" + sql);
+			return -1;
+		}
+	}
+	
 	public void doWork()
 	throws Exception
 	{
@@ -709,9 +811,35 @@ implements AutoCloseable
 	private void connect()
 	throws Exception
 	{
+		// Connect to the SOURCE
 		_sourceConn = connect(Type.Source, _sourceUrl, _sourceUser, _sourcePasswd);
-		_targetConn = connect(Type.Target, _targetUrl, _targetUser, _targetPasswd);
+		
+		// If target has 'CASE_INSENSITIVE_IDENTIFIERS' 
+		// Then first check source tables for "duplicate columns"
+		H2UrlHelper targetUrlHelper = new H2UrlHelper(_targetUrl);
+		String caseInsensitiveIdentifiersStr = targetUrlHelper.getUrlOptionsMap().get("CASE_INSENSITIVE_IDENTIFIERS");
+		boolean caseInsensitiveIdentifiers = caseInsensitiveIdentifiersStr == null ? false : caseInsensitiveIdentifiersStr.trim().equalsIgnoreCase("true");
+		if (caseInsensitiveIdentifiers)
+		{
+			int dupCount = checkForTableColumnWithSameName(_sourceConn);
+			
+			// If duplicates was found, REMOVE/DISABLE the 'CASE_INSENSITIVE_IDENTIFIERS=TRUE' from the TARGET URL
+			if (dupCount > 0)
+			{
+				targetUrlHelper.removeUrlOption("CASE_INSENSITIVE_IDENTIFIERS");
+				_targetUrl = targetUrlHelper.getUrl();
 
+				_logger.warn("----------------------------------------------------------------------------");
+				_logger.warn("-- The Target URL contains 'CASE_INSENSITIVE_IDENTIFIERS=true' But there are tables with duplicate column names." );
+				_logger.warn("-- When checking the source for unique 'case insensitive' column names in each table, we found " + dupCount + " duplicates. See list above." );
+				_logger.warn("-- For the TARGET URL, the option 'CASE_INSENSITIVE_IDENTIFIERS=true' will be removed." );
+				_logger.warn("-- New Target URL will be '" + _targetUrl + "'" );
+				_logger.warn("----------------------------------------------------------------------------");
+			}
+		}
+
+		// Connect to the TARGET
+		_targetConn = connect(Type.Target, _targetUrl, _targetUser, _targetPasswd);
 	}
 	
 	private DbxConnection connect(Type type, String url, String user, String passwd)

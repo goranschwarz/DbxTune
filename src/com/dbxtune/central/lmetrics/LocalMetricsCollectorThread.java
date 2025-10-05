@@ -65,7 +65,7 @@ extends CounterCollectorThreadAbstract
 	private int _sleepTime = DEFAULT_sampleTime;
 //	private int _sleepTime = 10;
 
-	private boolean _running = true;
+	private transient boolean _running = true;
 	
 	
 	public LocalMetricsCollectorThread(ICounterController counterController)

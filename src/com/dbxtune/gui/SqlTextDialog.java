@@ -71,19 +71,20 @@ implements ActionListener
 
 	public SqlTextDialog(Window owner)
 	{
-		this(owner, null, null);
+		this(owner, "", null, null);
 	}
 
-	public SqlTextDialog(Window owner, String text)
+	public SqlTextDialog(Window owner, String title, String text)
 	{
-		this(owner, text, null);
+		this(owner, title, text, null);
 	}
 
-	public SqlTextDialog(Window owner, String text, String sqlDialect)
+	public SqlTextDialog(Window owner, String title, String text, String sqlDialect)
 	{
 		super();
 		
 		_owner      = owner;
+		_title      = title;
 		_sqlText    = text;
 		_sqlDialect = sqlDialect;
 		
@@ -94,6 +95,7 @@ implements ActionListener
 	}
 
 	private Window _owner      = null;
+	private String _title      = "";
 	private String _sqlText    = null;
 	private String _sqlDialect = null;
 
@@ -106,8 +108,9 @@ implements ActionListener
 	//------------------------------------------------------------
 	private void init()
 	{
-		setTitle("DDL View"); // Set window title
-		
+//		setTitle("DDL View"); // Set window title
+		setTitle(_title == null ? "" : _title); // Set window title
+
 		// Set the icon
 		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/ddlgen_16.png");
 		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/ddlgen_32.png");

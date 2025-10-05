@@ -22,6 +22,7 @@ package com.dbxtune.cm.os;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -1569,7 +1570,7 @@ extends CounterModelHostMonitor
 					Number readsPerSec   = (Number) readsPerSec_obj;
 					Number writesPerSec  = (Number) writesPerSec_obj; 
 
-					BigDecimal totIos = new BigDecimal(readsPerSec.doubleValue() + writesPerSec.doubleValue()).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal totIos = new BigDecimal(readsPerSec.doubleValue() + writesPerSec.doubleValue()).setScale(2, RoundingMode.HALF_EVEN);
 					
 					newSample.setValueAt(totIos, rowId, totalIoPerSec_pos);
 				}
@@ -1594,12 +1595,12 @@ extends CounterModelHostMonitor
 					BigDecimal avgWriteKbPerIo = null;
 
 					if (readsPerSec.doubleValue() > 0)
-						avgReadKbPerIo = new BigDecimal(kbReadPerSec.doubleValue() / readsPerSec.doubleValue()).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						avgReadKbPerIo = new BigDecimal(kbReadPerSec.doubleValue() / readsPerSec.doubleValue()).setScale(1, RoundingMode.HALF_EVEN);
 					else
 						avgReadKbPerIo = new BigDecimal(0.0);
 
 					if (writesPerSec.doubleValue() > 0)
-						avgWriteKbPerIo = new BigDecimal(kbWritePerSec.doubleValue() / writesPerSec.doubleValue()).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						avgWriteKbPerIo = new BigDecimal(kbWritePerSec.doubleValue() / writesPerSec.doubleValue()).setScale(1, RoundingMode.HALF_EVEN);
 					else
 						avgWriteKbPerIo = new BigDecimal(0.0);
 
@@ -1626,8 +1627,8 @@ extends CounterModelHostMonitor
 					
 					if (totIos > 0)
 					{
-						readPct  = new BigDecimal(readsPerSec .doubleValue() / totIos * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-						writePct = new BigDecimal(writesPerSec.doubleValue() / totIos * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						readPct  = new BigDecimal(readsPerSec .doubleValue() / totIos * 100.0).setScale(1, RoundingMode.HALF_EVEN);
+						writePct = new BigDecimal(writesPerSec.doubleValue() / totIos * 100.0).setScale(1, RoundingMode.HALF_EVEN);
 					}
 					else
 					{

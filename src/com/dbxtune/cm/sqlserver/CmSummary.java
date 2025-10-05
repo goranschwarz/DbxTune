@@ -22,6 +22,7 @@ package com.dbxtune.cm.sqlserver;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +35,6 @@ import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
@@ -45,6 +45,7 @@ import com.dbxtune.alarm.events.AlarmEventDeadlock;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventLowOnWorkerThreads;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventOutOfWorkerThreads;
+import com.dbxtune.alarm.events.sqlserver.AlarmEventSqlAgentStatus;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventSuspectPages;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -548,16 +549,28 @@ extends CmSummaryAbstract
 //			}
 //		}
 
-		 // where ... --- https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/manage-the-suspect-pages-table-sql-server?view=sql-server-ver16
+		//-----------------------------------------------------------------------
+		// msdb.dbo.suspect_pages
+		// where ... --- https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/manage-the-suspect-pages-table-sql-server?view=sql-server-ver16
+		//-----------------------------------------------------------------------
 		String suspectPageCount  = "    , suspectPageCount                    = -1 \n";
 		String suspectPageErrors = "    , suspectPageErrors                   = -1 \n";
 		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_suspectPageCount_isEnabled, DEFAULT_suspectPageCount_isEnabled))
 		{
-			suspectPageCount  = "    , suspectPageCount                    = (select count(*)         from msdb.dbo.suspect_pages) \n";
-			suspectPageErrors = "    , suspectPageErrors                   = (select sum(error_count) from msdb.dbo.suspect_pages) \n";
+			if (ssVersionInfo.isAzureDb())
+			{
+				// Azure DB -- does NOT have: msdb.dbo.suspect_pages
+			}
+			else
+			{
+				suspectPageCount  = "    , suspectPageCount                    = (select count(*)         from msdb.dbo.suspect_pages) \n";
+				suspectPageErrors = "    , suspectPageErrors                   = (select sum(error_count) from msdb.dbo.suspect_pages) \n";
+			}
 		}
 
+		//-----------------------------------------------------------------------
 		// SQL For listeners 
+		//-----------------------------------------------------------------------
 		String listenerInfo = "" +
 				"/* Get info about Listeners (as a Comma Separated List): TYPE=ipv#[ip;port] */\n" +
 				"select @listeners = coalesce(@listeners + ', ', '') \n" +
@@ -578,6 +591,54 @@ extends CmSummaryAbstract
 		if ( !hasViewServerState || ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics() || ssVersionInfo.isAzureManagedInstance())
 			listenerInfo = "select @listeners = '-unknown-' \n";
 		
+
+		//-----------------------------------------------------------------------
+		// dm_os_sys_memory, dm_os_process_memory
+		// Needs: VIEW SERVER STATE
+		// NOT available in
+		//   - Azure DB
+		//-----------------------------------------------------------------------
+		String dm_os_sys_memory     = "/*------- dm_os_sys_memory -------*/ \n";
+		String dm_os_process_memory = "/*------- dm_os_process_memory -------*/ \n";
+
+		if ( ! hasViewServerState)
+		{
+			dm_os_sys_memory     += "/* no='VIEW SERVER STATE' */ \n";
+			dm_os_process_memory += "/* no='VIEW SERVER STATE' */ \n";
+		}
+		
+		if (ssVersionInfo.isAzureDb())
+		{
+			dm_os_sys_memory     += "/* NOT Available on Azure DB */ \n";
+			dm_os_process_memory += "/* NOT Available on Azure DB */ \n";
+		}
+		else
+		{
+			if (hasViewServerState)
+			{
+				dm_os_sys_memory += 
+					    "select \n" +
+					    "       @total_os_memory_mb                = total_physical_memory_kb     / 1024 \n" +
+					    "      ,@available_os_memory_mb            = available_physical_memory_kb / 1024 \n" +
+					    "      ,@system_high_memory_signal_state   = system_high_memory_signal_state \n" +
+					    "      ,@system_low_memory_signal_state    = system_low_memory_signal_state \n" +
+					    "from sys.dm_os_sys_memory \n";
+
+				dm_os_process_memory += 
+					    "select \n" +
+					    "       @memory_used_by_sqlserver_MB       = physical_memory_in_use_kb  / 1024 \n" +
+					    "      ,@locked_pages_used_by_sqlserver_MB = locked_page_allocations_kb / 1024 \n" +
+					    "      ,@process_memory_utilization_pct    = memory_utilization_percentage \n" +
+					    "      ,@process_physical_memory_low       = process_physical_memory_low \n" +
+					    "      ,@process_virtual_memory_low        = process_virtual_memory_low \n" +
+					    "from sys.dm_os_process_memory \n";
+			}
+		}
+
+
+		//-----------------------------------------------------------------------
+		// BUILD SQL
+		//-----------------------------------------------------------------------
 		
 		int LockWaitsThresholdSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaitsThresholdSec, DEFAULT_alarm_LockWaitsThresholdSec);
 		int oldestOpenTranInSec   = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec  , DEFAULT_alarm_oldestOpenTranInSec);
@@ -636,6 +697,8 @@ extends CmSummaryAbstract
 	    	    "declare @wt_workersWaitingForCPU             int \n" +
 	    	    "declare @wt_requestsWaitingForThreads        bigint \n" +
 	    	    "declare @wt_allocatedWorkers                 int \n" +
+			    " \n" +
+	    	    "declare @sql_agent_status                    varchar(60) = NULL \n" +
 			    "\n" +
 				listenerInfo +
 				"\n" + 
@@ -654,26 +717,9 @@ extends CmSummaryAbstract
 			    "from sys.dm_os_sys_info \n" 
 			    ) +
 			    " \n" +
-			    "/*------- dm_os_sys_memory -------*/ \n" +
-				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
-			    "select \n" +
-			    "       @total_os_memory_mb                = total_physical_memory_kb     / 1024 \n" +
-			    "      ,@available_os_memory_mb            = available_physical_memory_kb / 1024 \n" +
-			    "      ,@system_high_memory_signal_state   = system_high_memory_signal_state \n" +
-			    "      ,@system_low_memory_signal_state    = system_low_memory_signal_state \n" +
-			    "from sys.dm_os_sys_memory \n"
-				) +
+				dm_os_sys_memory + 
 			    " \n" +
-			    "/*------- dm_os_process_memory -------*/ \n" +
-				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
-			    "select \n" +
-			    "       @memory_used_by_sqlserver_MB       = physical_memory_in_use_kb  / 1024 \n" +
-			    "      ,@locked_pages_used_by_sqlserver_MB = locked_page_allocations_kb / 1024 \n" +
-			    "      ,@process_memory_utilization_pct    = memory_utilization_percentage \n" +
-			    "      ,@process_physical_memory_low       = process_physical_memory_low \n" +
-			    "      ,@process_virtual_memory_low        = process_virtual_memory_low \n" +
-			    "from sys.dm_os_process_memory \n"
-				) +
+				dm_os_process_memory +
 			    " \n" +
 			    "/*------- dm_os_performance_counters -------*/ \n" +
 				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
@@ -699,7 +745,25 @@ extends CmSummaryAbstract
 			    "from sys.dm_os_schedulers \n" +
 			    "where status = 'VISIBLE ONLINE' \n"
 			    ) +
+
 			    " \n" +
+			    "/*------- check services (like SQL Agent Scheduler -- sys.dm_server_services -------*/ \n" +
+				( ! hasViewServerState ? "SET @sql_agent_status = 'unknown:no-VIEW-SERVER-STATE' " : 
+			    "SET @sql_agent_status = ( \n" +
+				"    SELECT \n" +
+				"        CASE \n" +
+				"            WHEN @@VERSION LIKE '%Linux%'   THEN 'unknown:on-Linux' \n" +
+				"            WHEN @@VERSION LIKE '%Windows%' THEN status_desc \n" +
+				"            ELSE 'unknown:os-not-supported' \n" +
+				"        END \n" +
+				"    FROM sys.dm_server_services \n" +
+				"    WHERE servicename LIKE '%SQL Server Agent%' \n" +
+				"      AND startup_type_desc in('Automatic', 'Manual') \n" +
+				") \n" +
+			    "SET @sql_agent_status = COALESCE(@sql_agent_status, 'unknown:startup-type-not-automatic-or-manual') \n"
+			    ) +
+
+				" \n" +
 				"/*------- Get info about Open Transactions -------*/\n" +
 				( ! hasViewServerState ? "/* no='VIEW SERVER STATE' */" : 
 				"select @oldestOpenTranBeginTime = min(database_transaction_begin_time) \n" +
@@ -839,6 +903,9 @@ extends CmSummaryAbstract
 			    "    , workersWaitingForCPU                = @wt_workersWaitingForCPU \n" +
 			    "    , requestsWaitingForWorkers           = @wt_requestsWaitingForThreads \n" +
 			    "    , allocatedWorkers                    = @wt_allocatedWorkers \n" +
+
+			    // Services (like SQL Agent)
+			    "    , sql_agent_status                    = @sql_agent_status \n" +
 				"";
 
 		return sql;
@@ -1099,10 +1166,10 @@ extends CmSummaryAbstract
 				double CPUSystem = cpuSystem.doubleValue();
 //				double CPUIdle   = cpuIdle  .doubleValue();
 
-				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//				BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+//				BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 //				_cpuTime_txt          .setText(calcCPUTime      .toString());
 //				_cpuUser_txt          .setText(calcUserCPUTime  .toString());
@@ -1137,9 +1204,9 @@ extends CmSummaryAbstract
 //				double CPUSystem = process_kernel_time_ms.doubleValue();
 //				double CPUUser   = process_user_time_ms  .doubleValue();
 //
-//				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+//				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+//				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 //
 //				Double[] arr = new Double[3];
 //
@@ -1975,6 +2042,35 @@ extends CmSummaryAbstract
 				alarmHandler.addAlarm( ae );
 			}
 		}
+
+		//-------------------------------------------------------
+		// SQL Agent Scheduler Status
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("SqlAgentStatus"))
+		{
+			String statusExpectedRegEx = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_sqlAgentStatus, DEFAULT_alarm_sqlAgentStatus);
+			
+			String sqlAgentStatus  = cm.getAbsString(0, "sql_agent_status", true, "");
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): statusExpectedRegEx='"+statusExpectedRegEx+"', sqlAgentStatus='"+sqlAgentStatus+"'.");
+
+			
+			// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+			boolean doAlarm = true;
+
+			// The below could have been done with nested if(!skipXxx), if(!skipYyy) doAlarm=true; 
+			// Below is more readable, from a variable context point-of-view, but HARDER to understand (but easier to add more RegEx checks)
+			doAlarm = (doAlarm && (StringUtil.isNullOrBlank(statusExpectedRegEx) || ! sqlAgentStatus.matches(statusExpectedRegEx))); // NO match in the SKIP next
+
+			// NO match in the SKIP regEx
+			if (doAlarm)
+			{
+				AlarmEvent ae = new AlarmEventSqlAgentStatus(cm, sqlAgentStatus, statusExpectedRegEx);
+				
+				alarmHandler.addAlarm( ae );
+			}
+		}
 	}
 
 	public static final String  PROPKEY_alarm_LockWaits                         = CM_NAME + ".alarm.system.if.LockWaits.gt";
@@ -2019,6 +2115,9 @@ extends CmSummaryAbstract
 	public static final String  PROPKEY_alarm_availableWorkers                  = CM_NAME + ".alarm.system.if.availableWorkers.lt";
 	public static final int     DEFAULT_alarm_availableWorkers                  = 25;
 
+	public static final String  PROPKEY_alarm_sqlAgentStatus                    = CM_NAME + ".alarm.system.sqlAgent.expected.status";
+	public static final String  DEFAULT_alarm_sqlAgentStatus                    = "(Running|unknown:.*)";
+
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -2043,6 +2142,7 @@ extends CmSummaryAbstract
 		list.add(new CmSettingsHelper("suspectPageCount",                 isAlarmSwitch, PROPKEY_alarm_suspectPageCount                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_suspectPageCount                 , DEFAULT_alarm_suspectPageCount                 ), DEFAULT_alarm_suspectPageCount                 , "If 'suspectPageCount' (number of records in 'msdb.dbo.suspect_pages') is greater than ## then send 'AlarmEventSuspectPages'." ));
 		list.add(new CmSettingsHelper("requestsWaitingForWorkers",        isAlarmSwitch, PROPKEY_alarm_requestsWaitingForWorkers        , Integer.class, conf.getIntProperty   (PROPKEY_alarm_requestsWaitingForWorkers        , DEFAULT_alarm_requestsWaitingForWorkers        ), DEFAULT_alarm_requestsWaitingForWorkers        , "If 'requestsWaitingForWorkers' is greater than ## then send 'AlarmEventOutOfWorkerThreads'." ));
 		list.add(new CmSettingsHelper("availableWorkers",                 isAlarmSwitch, PROPKEY_alarm_availableWorkers                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_availableWorkers                 , DEFAULT_alarm_availableWorkers                 ), DEFAULT_alarm_availableWorkers                 , "If 'availableWorkers' is LESS than ## then send 'AlarmEventLowOnWorkerThreads'." ));
+		list.add(new CmSettingsHelper("SqlAgentStatus",                   isAlarmSwitch, PROPKEY_alarm_sqlAgentStatus                   , String .class, conf.getProperty      (PROPKEY_alarm_sqlAgentStatus                   , DEFAULT_alarm_sqlAgentStatus                   ), DEFAULT_alarm_sqlAgentStatus                   , "If 'sql_agent_status' is not in the regex; then send 'AlarmEventSqlAgentStatus'." ));
 
 		return list;
 	}

@@ -26,18 +26,21 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.net.InetAddress;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
-import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
@@ -50,6 +53,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.logging.log4j.Level;
@@ -57,9 +61,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
 import org.eclipse.jetty.server.CustomRequestLog;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.RequestLog.Writer;
 import org.eclipse.jetty.server.RequestLogWriter;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.dbxtune.AppDir;
@@ -72,6 +82,7 @@ import com.dbxtune.alarm.writers.AlarmWriterToMail;
 import com.dbxtune.central.check.ReceiverAlarmCheck;
 import com.dbxtune.central.cleanup.CentralDailyReportSender;
 import com.dbxtune.central.cleanup.CentralH2Defrag;
+import com.dbxtune.central.cleanup.CentralPcsDropEmptyColumns;
 import com.dbxtune.central.cleanup.CentralPcsJdbcCleaner;
 import com.dbxtune.central.cleanup.DataDirectoryCleaner;
 import com.dbxtune.central.cleanup.DsrPriorityFileWriter;
@@ -112,8 +123,11 @@ public class DbxTuneCentral
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	public static final String PROPKEY_WEB_PORT = "DbxTuneCentral.web.port";
-	public static final int    DEFAULT_WEB_PORT = 8080;
+	public static final String  PROPKEY_WEB_PORT = "DbxTuneCentral.web.port";
+	public static final int     DEFAULT_WEB_PORT = 8080;
+
+	public static final String  PROPKEY_WEB_SSL_PORT = "DbxTuneCentral.web.port";
+	public static final int     DEFAULT_WEB_SSL_PORT = 8443;
 
 	public static final String  PROPKEY_shutdown_maxWaitTime = "DbxTuneCentral.shutdown.maxWaitTime";
 	public static final int     DEFAULT_shutdown_maxWaitTime = 180*1000; // 180 sec (2.5 minutes) -- if it goes down "ugly" if **WILL** take several hours to come up "clean"
@@ -126,6 +140,17 @@ public class DbxTuneCentral
 
 	public static final String  PROPKEY_web_createRequestLog_retainDays = "DbxTuneCentral.web.createRequestLog.retainDays";
 	public static final int     DEFAULT_web_createRequestLog_retainDays = 7;
+
+	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_auth_token = "DbxCentral.management.http.auth.token";
+	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_auth_token = "";
+
+	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_auth_Basic = "DbxCentral.management.http.auth.basic";
+	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_auth_Basic = "";
+
+	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_auth_Bearer = "DbxCentral.management.http.auth.bearer";
+	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_auth_Bearer = "";
+	
+
 	
 //	public static String getAppName()           { return "DbxTuneCentral"; }
 	public static String getAppHomeEnvName()    { return "DBXTUNE_HOME"; }
@@ -137,6 +162,12 @@ public class DbxTuneCentral
 	
     private static Server _server = null;
 
+    private static String _logFilename = null;
+    private static String _cfgFilename = null;
+
+	/** Auth Token. null if not started */
+	private static String _authorizationToken = null;
+    
     private static Scheduler _scheduler = null;
 
 //	public static void main(String[] args) 
@@ -159,12 +190,12 @@ public class DbxTuneCentral
 			pw.println();
 		}
 
-		pw.println("usage: "+Version.getAppName()+" [-h] [-v] [-x]");
+		pw.println("usage: " + Version.getAppName() + " [-h] [-v] [-x]");
 		pw.println("              [-C <cfgfile>] [-L <logfile>] [-H <dirname>] [-R <dirname>] [-D <key=val>]");
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                 Usage information.");
-		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -v,--version              Display " + Version.getAppName() + " and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
 		pw.println("                            To get available option, do -x list");
 		pw.println("  -a,--createAppDir         Create application dir (~/.dbxtune) and exit.");
@@ -177,7 +208,7 @@ public class DbxTuneCentral
 		pw.println("  ");
 		pw.flush();
 
-//		pw.println("usage: "+Version.getAppName()+" [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] ");
+//		pw.println("usage: " + Version.getAppName() + " [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] ");
 //		pw.println("              [-U <user>]   [-P <passwd>]    [-S <server>]");
 //		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] ");
 //		pw.println("              [-L <logfile>] [-H <dirname>] [-R <dirname>] [-D <key=val>]");
@@ -189,7 +220,7 @@ public class DbxTuneCentral
 //		pw.println("  -c,--userConfig <cfgName> User Config file, overrides values in System cfg.");
 //		pw.println("  -t,--tmpConfig <filename> Config file where temporary stuff are stored.");
 //		pw.println("  -h,--help                 Usage information.");
-//		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+//		pw.println("  -v,--version              Display " + Version.getAppName() + " and JVM Version.");
 //		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
 //		pw.println("                            To get available option, do -x list");
 //		pw.println("  ");
@@ -302,7 +333,7 @@ public class DbxTuneCentral
 			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 
@@ -316,7 +347,7 @@ public class DbxTuneCentral
 	throws Exception
 	{
 		// Create store dir if it did not exists.
-		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out );
+		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out, cmd );
 
 		
 		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME", getConfigFileName());
@@ -351,7 +382,7 @@ public class DbxTuneCentral
 
 				boolean debug = true;
 				if (debug)
-					System.out.println("   SETTING SYSTEM PROPERTY: key=|"+key+"|, val=|"+val+"|.");
+					System.out.println("   SETTING SYSTEM PROPERTY: key=|" + key + "|, val=|" + val + "|.");
 			}
 		}
 		
@@ -368,8 +399,9 @@ public class DbxTuneCentral
 		}
 		else
 		{
-			logFilename = getAppLogDir() + File.separatorChar + "log" + File.separatorChar + Version.getAppName()+".log";
+			logFilename = getAppLogDir() + File.separatorChar + "log" + File.separatorChar + Version.getAppName() + ".log";
 		}
+		_logFilename = logFilename;
 
 //System.setProperty("log.console.debug", "true");
 		// Initialize the log file
@@ -382,41 +414,41 @@ public class DbxTuneCentral
 
 		// Print out the memory configuration
 		// And the JVM info
-		_logger.info("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
-//		_logger.info("GUI mode "+_gui);
-		_logger.info("Debug Options enabled: "+Debug.getDebugsString());
+		_logger.info("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build " + Version.getBuildStr());
+//		_logger.info("GUI mode " + _gui);
+		_logger.info("Debug Options enabled: " + Debug.getDebugsString());
 
-		_logger.info("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
-//		_logger.info("Using Java Runtime Environment Vendor: "+System.getProperty("java.vendor"));
-//		_logger.info("Using Java Vendor URL: "+System.getProperty("java.vendor.url"));
-//		_logger.info("Using Java VM Specification Version: "+System.getProperty("java.vm.specification.version"));
-//		_logger.info("Using Java VM Specification Vendor:  "+System.getProperty("java.vm.specification.vendor"));
-//		_logger.info("Using Java VM Specification Name:    "+System.getProperty("java.vm.specification.name"));
-		_logger.info("Using Java VM Implementation  Version: "+System.getProperty("java.vm.version"));
-		_logger.info("Using Java VM Implementation  Vendor:  "+System.getProperty("java.vm.vendor"));
-		_logger.info("Using Java VM Implementation  Name:    "+System.getProperty("java.vm.name"));
-		_logger.info("Using Java VM Home:    "+System.getProperty("java.home"));
+		_logger.info("Using Java Runtime Environment Version: " + System.getProperty("java.version"));
+//		_logger.info("Using Java Runtime Environment Vendor: " + System.getProperty("java.vendor"));
+//		_logger.info("Using Java Vendor URL: " + System.getProperty("java.vendor.url"));
+//		_logger.info("Using Java VM Specification Version: " + System.getProperty("java.vm.specification.version"));
+//		_logger.info("Using Java VM Specification Vendor:  " + System.getProperty("java.vm.specification.vendor"));
+//		_logger.info("Using Java VM Specification Name:    " + System.getProperty("java.vm.specification.name"));
+		_logger.info("Using Java VM Implementation  Version: " + System.getProperty("java.vm.version"));
+		_logger.info("Using Java VM Implementation  Vendor:  " + System.getProperty("java.vm.vendor"));
+		_logger.info("Using Java VM Implementation  Name:    " + System.getProperty("java.vm.name"));
+		_logger.info("Using Java VM Home:    " + System.getProperty("java.home"));
 		_logger.info("Java class format version number: " +System.getProperty("java.class.version"));
 		_logger.info("Java class path: " +System.getProperty("java.class.path"));
 		_logger.info("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
 		_logger.info("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
 		_logger.info("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
 
-		_logger.info("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
-		_logger.info("Total Physical Memory on this machine:  "+ Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Free Physical Memory on this machine:  "+ Memory.getFreePhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Running on Operating System Name:  "+System.getProperty("os.name"));
-		_logger.info("Running on Operating System Version:  "+System.getProperty("os.version"));
-		_logger.info("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
-		_logger.info("The application was started by the username:  "+System.getProperty("user.name"));
-		_logger.info("The application was started in the directory:   "+System.getProperty("user.dir"));
-		_logger.info("The user '"+System.getProperty("user.name")+"' home directory:   "+System.getProperty("user.home"));
+		_logger.info("Maximum memory is set to:  " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
+		_logger.info("Total Physical Memory on this machine:  " +  Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Free Physical Memory on this machine:  " +  Memory.getFreePhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Running on Operating System Name:  " + System.getProperty("os.name"));
+		_logger.info("Running on Operating System Version:  " + System.getProperty("os.version"));
+		_logger.info("Running on Operating System Architecture:  " + System.getProperty("os.arch"));
+		_logger.info("The application was started by the username:  " + System.getProperty("user.name"));
+		_logger.info("The application was started in the directory:   " + System.getProperty("user.dir"));
+		_logger.info("The user '" + System.getProperty("user.name") + "' home directory:   " + System.getProperty("user.home"));
 
-		_logger.info("System configuration file is '"+propFile+"'.");
-//		_logger.info("User configuration file is '"+userPropFile+"'.");
-//		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
-		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
-		_logger.info("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+		_logger.info("System configuration file is '" + propFile + "'.");
+//		_logger.info("User configuration file is '" + userPropFile + "'.");
+//		_logger.info("Storing temporary configurations in file '" + tmpPropFile + "'.");
+		_logger.info("Combined Configuration Search Order '" + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		_logger.info("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
 
 		if (crAppDirLog != null && !crAppDirLog.isEmpty())
 		{
@@ -429,24 +461,25 @@ public class DbxTuneCentral
 		// If the config file exists, read it, if not create empty
 		if ( (new File(propFile)).exists() )
 		{
-			_logger.info("Using configuration file '"+propFile+"'.");
+			_cfgFilename = propFile;
+			_logger.info("Using configuration file '" + propFile + "'.");
 			Configuration appProps = new Configuration(propFile);
 			Configuration.setInstance(Configuration.SYSTEM_CONF, appProps);
 		}
 		else
 		{
-			_logger.info("The configuration file '"+propFile+"', did not exists, starting with an empty configuration.");
+			_logger.info("The configuration file '" + propFile + "', did not exists, starting with an empty configuration.");
 			Configuration appProps = new Configuration();
 			Configuration.setInstance(Configuration.SYSTEM_CONF, appProps);
 		}
 
 
-		_logger.info("getHomeDir(): "+getAppHomeDir());
-		_logger.info("getDataDir(): "+getAppDataDir());
-		_logger.info("getConfDir(): "+getAppConfDir());
-		_logger.info("getLogDir():  "+getAppLogDir());
-		_logger.info("getInfoDir(): "+getAppInfoDir());
-		_logger.info("getWebDir():  "+getAppWebDir());
+		_logger.info("getHomeDir(): " + getAppHomeDir());
+		_logger.info("getDataDir(): " + getAppDataDir());
+		_logger.info("getConfDir(): " + getAppConfDir());
+		_logger.info("getLogDir():  " + getAppLogDir());
+		_logger.info("getInfoDir(): " + getAppInfoDir());
+		_logger.info("getWebDir():  " + getAppWebDir());
 		
 
 		//-------------------------------------------------------------------------
@@ -457,12 +490,12 @@ public class DbxTuneCentral
 		{
 			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
-			_logger.info("This DEVELOPMENT VERSION will NOT work after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', then you will have to download a later version..");
+			_logger.info("This DEVELOPMENT VERSION will NOT work after '" + df.format(Version.DEV_VERSION_EXPIRE_DATE) + "', then you will have to download a later version..");
 			if ( System.currentTimeMillis() > Version.DEV_VERSION_EXPIRE_DATE.getTime() )
 			{
 				//_hasDevVersionExpired = true;
 
-				String msg = "This DEVELOPMENT VERSION has expired. (version='"+Version.getVersionStr()+"', buildStr='"+Version.getBuildStr()+"'). The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', and the current date is '"+df.format(new Date())+"'. A new version can be downloaded here 'http://www.dbxtune.com'";
+				String msg = "This DEVELOPMENT VERSION has expired. (version='" + Version.getVersionStr() + "', buildStr='" + Version.getBuildStr() + "'). The \"time to live\" period ended at '" + df.format(Version.DEV_VERSION_EXPIRE_DATE) + "', and the current date is '" + df.format(new Date()) + "'. A new version can be downloaded here 'http://www.dbxtune.com'";
 				_logger.error(msg);
 				throw new Exception(msg);
 			}
@@ -531,7 +564,12 @@ public class DbxTuneCentral
 
 		// Possibly start the Local PCS Directory Receiver (if the directory exists, or "forceStart" is set)
 		startLocalPcsDirectoryReceiver();
-		
+
+		// Create an Authorization token that can later be used for accepting shutdown requests etc...
+		// This can be used by local admin scripts to stop the server if 'kill' is not sufficient (so possibly on a Windows System)
+		// Note: The information id written by: writeDbxTuneServiceFile()
+		createAuthorizationToken();
+
 		// 
 		// Create a file, that will be deleted when the process ends.
 		// This file will hold various configuration about the NO-GUI process
@@ -587,15 +625,15 @@ public class DbxTuneCentral
 		CheckForUpdates cfu = CheckForUpdates.getInstance();
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		_logger.info(Version.getAppName() + " new Upgrade is Available. New version is '"+cfu.getNewAppVersionStr()+"' and can be downloaded here '"+cfu.getDownloadUrl()+"'.");
+		_logger.info(Version.getAppName() + " new Upgrade is Available. New version is '" + cfu.getNewAppVersionStr() + "' and can be downloaded here '" + cfu.getDownloadUrl() + "'.");
 		
 		String msgSubject = Version.getAppName() + " new Upgrade is Available";
 		String msgBody = "<html>" +
 				Version.getAppName() + " new Upgrade is Available. <br>" + 
-				"New version is '"+cfu.getNewAppVersionStr()+"'.<br>" +
-				"And can be downloaded here: <a href='"+cfu.getDownloadUrl()+"'>"+cfu.getDownloadUrl()+"</a><br>" +
+				"New version is '" + cfu.getNewAppVersionStr() + "'.<br>" +
+				"And can be downloaded here: <a href='" + cfu.getDownloadUrl() + "'>" + cfu.getDownloadUrl() + "</a><br>" +
 				"<hr>" +
-				"Whats new: <a href='"+cfu.getWhatsNewUrl()+"'>"+cfu.getWhatsNewUrl()+"</a>" +
+				"Whats new: <a href='" + cfu.getWhatsNewUrl() + "'>" + cfu.getWhatsNewUrl() + "</a>" +
 				"</html>";
 		
 		String  smtpHostname       = conf.getProperty       (AlarmWriterToMail.PROPKEY_smtpHostname,           AlarmWriterToMail.DEFAULT_smtpHostname);
@@ -648,7 +686,7 @@ public class DbxTuneCentral
 				
 				// Connection timeout
 				if (smtpConnectTimeout >= 0)
-					email.setSocketConnectionTimeout(smtpConnectTimeout);
+					email.setSocketConnectionTimeout( Duration.ofSeconds(smtpConnectTimeout) );
 
 				// SMTP PORT
 				if (smtpPort >= 0)
@@ -660,7 +698,7 @@ public class DbxTuneCentral
 
 				// SSL PORT
 				if (useSsl && sslPort >= 0)
-					email.setSslSmtpPort(sslPort+""); // Hmm why is this a String parameter?
+					email.setSslSmtpPort(sslPort + ""); // Hmm why is this a String parameter?
 
 				// AUTHENTICATION
 				if (StringUtil.hasValue(username))
@@ -690,27 +728,27 @@ public class DbxTuneCentral
 //				email.setHtmlMsg(msgBodyHtml);
 //				email.setTextMsg(msgBodyText);
 				
-//				System.out.println("About to send the following message: \n"+msgBody);
+//				System.out.println("About to send the following message: \n" + msgBody);
 				if (_logger.isDebugEnabled())
 				{
-					_logger.debug("About to send the following message: \n"+msgBody);
+					_logger.debug("About to send the following message: \n" + msgBody);
 				}
 
 				// SEND
 				email.send();
 
-				_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', subject='"+msgSubject+"'.");
+				_logger.info("Sent mail message: msgBodySizeKb=" + msgBodySizeKb + ", host='" + smtpHostname + "', to='" + toCsv + "', subject='" + msgSubject + "'.");
 			}
 			catch (Exception ex)
 			{
-				_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', subject='"+msgSubject+"').", ex);
+				_logger.error("Problems sending mail (msgBodySizeKb=" + msgBodySizeKb + ", host='" + smtpHostname + "', to='" + toCsv + "', subject='" + msgSubject + "').", ex);
 			}
 		}
 		else // not enough params to send mail.
 		{
 			if (StringUtil.hasValue(smtpHostname) && StringUtil.hasValue(toCsv) && StringUtil.hasValue(from))
-			_logger.info(Version.getAppName() + " new Upgrade is Available. New version is '"+cfu.getNewAppVersionStr()+"' and can be downloaded here '"+cfu.getDownloadUrl()+"'.");
-			_logger.info("Not enough email parameters to send mail. One of the following parameters are blank: smtpHostname='"+smtpHostname+"', to='"+toCsv+"', from='"+from+"'. Tried to be retrived from 'AlarmWriterToMail.*', or 'ReportSenderToMail.*'.");
+			_logger.info(Version.getAppName() + " new Upgrade is Available. New version is '" + cfu.getNewAppVersionStr() + "' and can be downloaded here '" + cfu.getDownloadUrl() + "'.");
+			_logger.info("Not enough email parameters to send mail. One of the following parameters are blank: smtpHostname='" + smtpHostname + "', to='" + toCsv + "', from='" + from + "'. Tried to be retrived from 'AlarmWriterToMail.*', or 'ReportSenderToMail.*'.");
 		}
 	}
 
@@ -758,7 +796,7 @@ public class DbxTuneCentral
 	public static String getAppConfDir()
 	{
 //		String dbx = System.getProperty("DBXTUNE_CONF_DIR", getAppHomeDir() + File.separator + "conf");
-		String dbx = System.getProperty("DBXTUNE_CONF_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "conf");
+		String dbx = System.getProperty("DBXTUNE_CONF_DIR", AppDir.getDbxUserHomeDir() + File.separator + "dbxc" + File.separator + "conf");
 		String val = System.getProperty("DBXTUNE_CENTRAL_CONF_DIR", dbx);
 		
 		return val;
@@ -767,7 +805,7 @@ public class DbxTuneCentral
 	public static String getAppDataDir()
 	{
 //		String dbx = System.getProperty("DBXTUNE_SAVE_DIR", getAppHomeDir() + File.separator + "data");
-		String dbx = System.getProperty("DBXTUNE_SAVE_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "data");
+		String dbx = System.getProperty("DBXTUNE_SAVE_DIR", AppDir.getDbxUserHomeDir() + File.separator + "dbxc" + File.separator + "data");
 		String val = System.getProperty("DBXTUNE_CENTRAL_SAVE_DIR", dbx);
 		       val = System.getProperty("DBXTUNE_DATA_DIR", val);
 		       val = System.getProperty("DBXTUNE_CENTRAL_DATA_DIR", val);
@@ -778,7 +816,7 @@ public class DbxTuneCentral
 	public static String getAppLogDir()
 	{
 //		String dbx = System.getProperty("DBXTUNE_LOG_DIR", getAppHomeDir() + File.separator + "log");
-		String dbx = System.getProperty("DBXTUNE_LOG_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "log");
+		String dbx = System.getProperty("DBXTUNE_LOG_DIR", AppDir.getDbxUserHomeDir() + File.separator + "dbxc" + File.separator + "log");
 		String val = System.getProperty("DBXTUNE_CENTRAL_LOG_DIR", dbx);
 		
 		return val;
@@ -786,11 +824,11 @@ public class DbxTuneCentral
 	/** Where is DbxTune Central collector "info files" directory located */
 	public static String getAppInfoDir()
 	{
-//		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "info");
+//		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getDbxUserHomeDir() + File.separator + "dbxc" + File.separator + "info");
 //		String val = System.getProperty("DBXTUNE_CENTRAL_INFO_DIR", dbx);
 
 		// NOTE: This is placed by The Collectors... and by default they do not place it in DbxCentral catalog structure
-		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getAppStoreDir() + File.separator + "info");
+		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getDbxUserHomeDir() + File.separator + "info");
 		String val = System.getProperty("DBXTUNE_CENTRAL_INFO_DIR", dbx);
 		
 		return val;
@@ -806,7 +844,7 @@ public class DbxTuneCentral
 	public static String getAppReportsDir()
 	{
 //		String dbx = System.getProperty("DBXTUNE_REPORTS_DIR", getAppHomeDir() + File.separator + "reports");
-		String dbx = System.getProperty("DBXTUNE_REPORTS_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "reports");
+		String dbx = System.getProperty("DBXTUNE_REPORTS_DIR", AppDir.getDbxUserHomeDir() + File.separator + "dbxc" + File.separator + "reports");
 		String val = System.getProperty("DBXTUNE_CENTRAL_REPORTS_DIR", dbx);
 		
 		return val;
@@ -847,7 +885,7 @@ public class DbxTuneCentral
 		ShutdownHandler.setMaxWaitTime(maxWaitTime);
 		_logger.info("Shutdown handler will wait Gracefully for " + ShutdownHandler.getMaxWaitTime() + " seconds before doing HARD Exit.");
 	}
-//		Thread shutdownHook = new Thread("ShudtownHook-"+Version.getAppName()) 
+//		Thread shutdownHook = new Thread("ShudtownHook-" + Version.getAppName()) 
 //		{
 //			@Override
 //			public void run() 
@@ -858,7 +896,7 @@ public class DbxTuneCentral
 //				{
 //					_logger.debug("--------------------------------------------------");
 //					for (Thread th : Thread.getAllStackTraces().keySet()) 
-//						_logger.debug("1-shutdownHook: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+//						_logger.debug("1-shutdownHook: isDaemon=" + th.isDaemon() + ", threadName=|" + th.getName() + "|, th.getClass().getName()=|" + th.getClass().getName() + "|.");
 //				}
 //
 //				// Signal the main thread that it should "continue" and do shutdown
@@ -878,7 +916,7 @@ public class DbxTuneCentral
 ////					     && ! th.isDaemon() 
 ////					     && th.getClass().getName().startsWith("com.dbxtune")) 
 ////					{
-////						_logger.info("Shutdown-hook: Interrupting thread '"+th.getName()+"', at class '"+th.getClass()+"'.");
+////						_logger.info("Shutdown-hook: Interrupting thread '" + th.getName() + "', at class '" + th.getClass() + "'.");
 ////						interruptThreads.add(th);
 ////						th.interrupt();
 ////					}
@@ -888,7 +926,7 @@ public class DbxTuneCentral
 //				{
 //					_logger.debug("--------------------------------------------------");
 //					for (Thread th : Thread.getAllStackTraces().keySet()) 
-//						_logger.debug("2-shutdownHook: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+//						_logger.debug("2-shutdownHook: isDaemon=" + th.isDaemon() + ", threadName=|" + th.getName() + "|, th.getClass().getName()=|" + th.getClass().getName() + "|.");
 //				}
 //
 ////				// Wait for interupted threads
@@ -898,7 +936,7 @@ public class DbxTuneCentral
 ////					{
 ////						if (th.isInterrupted()) 
 ////						{
-////							_logger.info("Shutdown-hook: Waiting for thread '"+th.getName()+"' to terminate");
+////							_logger.info("Shutdown-hook: Waiting for thread '" + th.getName() + "' to terminate");
 ////							th.join();
 ////						}
 ////					} 
@@ -912,10 +950,10 @@ public class DbxTuneCentral
 ////				{
 ////					_logger.debug("--------------------------------------------------");
 ////					for (Thread th : Thread.getAllStackTraces().keySet()) 
-////						_logger.debug("3-shutdownHook: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+////						_logger.debug("3-shutdownHook: isDaemon=" + th.isDaemon() + ", threadName=|" + th.getName() + "|, th.getClass().getName()=|" + th.getClass().getName() + "|.");
 ////				}
 ////
-////				_logger.info("Shutdown-hook: Shutdown finished. (interrupted "+interruptThreads.size()+" threads.");
+////				_logger.info("Shutdown-hook: Shutdown finished. (interrupted " + interruptThreads.size() + " threads.");
 //
 //				_logger.info("Shutdown-hook: Shutdown finished.");
 //			}
@@ -928,7 +966,8 @@ public class DbxTuneCentral
 	throws IOException
 	{
 		// file location: ${HOME}/.dbxtune/info/${dbmsSrvName}.dbxtune
-		String centralServiceInfoFile = getAppInfoDir() + File.separator + ".dbxtune_central";
+//		String centralServiceInfoFile = getAppInfoDir() + File.separator + ".dbxtune_central";
+		String centralServiceInfoFile = getAppInfoDir() + File.separator + "DbxCentral.info";
 		File f = new File(centralServiceInfoFile);
 
 		_logger.info("Creating DbxTune - Central Service information file '" + f.getAbsolutePath() + "'.");
@@ -943,6 +982,7 @@ public class DbxTuneCentral
 		// Mark it as to be removed when the JVM ends.
 		f.deleteOnExit();
 
+		int port = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT, DEFAULT_WEB_PORT);
 
 		// Create the configuration
 		Configuration conf = new Configuration(centralServiceInfoFile);
@@ -950,15 +990,93 @@ public class DbxTuneCentral
 		
 		// Set some configuartion in the file
 		conf.setProperty("dbxtune.central.app.name",     Version.getAppName());
-		conf.setProperty("dbxtune.central.startTime",    new Timestamp(System.currentTimeMillis())+"" );
+		conf.setProperty("dbxtune.central.startTime",    new Timestamp(System.currentTimeMillis()) + "" );
 		conf.setProperty("dbxtune.central.pid",          JavaUtils.getProcessId("-1"));
-//		conf.setProperty("dbxtune.central.log.file",     logFilename);
-//		conf.setProperty("dbxtune.central.config.file",  noGuiConfigFile);
+		conf.setProperty("dbxtune.central.port",         port);
+		conf.setProperty("dbxtune.central.log.file",     _logFilename);
+		conf.setProperty("dbxtune.central.config.file",  _cfgFilename);
+
+		String hostname = InetAddress.getLocalHost().getHostName();
+		conf.setProperty("dbxtune.management.host",      hostname); // noGuiMngmntSrv.getListenerHost());
+		conf.setProperty("dbxtune.management.port",      port); // noGuiMngmntSrv.getPort());
+		conf.setProperty("dbxtune.management.info",      getAuthInfo());
+//		conf.setProperty("dbxtune.management.shutdown.url", "http://admin:" + getAuthPassword() + "@" + hostname + ":" + port + "/mgt/shutdown"); // ???
+		conf.setProperty("dbxtune.management.shutdown.url", "http://" + hostname + ":" + port + "/api/mgt/shutdown?access_token=" + getAuthTokenString(true)); // ???
+
+		// Authorization: Bearer <token>
 
 		// Save it; with override
 		conf.save(true);
 	}
 
+
+	private static void createAuthorizationToken()
+	{
+		String  authorizationToken = Configuration.getCombinedConfiguration().getProperty(PROPKEY_NOGUI_MANAGEMENT_http_auth_token, DEFAULT_NOGUI_MANAGEMENT_http_auth_token);
+		
+		String authorizationTokenBasic  = "";
+		String authorizationTokenBearer = "";
+
+		// Generate a random Authorization Token
+		if (StringUtil.isNullOrBlank(authorizationToken))
+		{
+			String authUser   = "admin";
+		//	String authPasswd = UUID.randomUUID().toString();
+//			String authPasswd = RandomStringUtils.randomAlphanumeric(32);      // Deprecated
+			String authPasswd = RandomStringUtils.secure().nextAlphabetic(32); // this may work on: commons-lang3-3.17.0.jar
+
+			String encodeThis = authUser + ":" + authPasswd;
+			String base64 = Base64.getEncoder().encodeToString(encodeThis.getBytes());
+			
+			authorizationTokenBasic  = "Basic " + base64;
+			authorizationTokenBearer = "Bearer " + authPasswd;
+
+			authorizationToken = authorizationTokenBearer;
+
+			// Possibly the below can be used...
+			// https://www.fortytools.com/blog/servlet-filter-for-http-basic-auth
+			
+			// https://github.com/riversun/jetty-basic-auth-helper/tree/master
+			// https://github.com/riversun/jetty-basic-auth-helper-examples
+			//BasicAuth basicAuth = new BasicAuth.Builder().setRealm("MgtRealm")
+			//		.addUserPath(authUser, authPasswd, "/config/set")
+			//		.addUserPath(authUser, authPasswd, "/restart")
+			//		.build();
+		}
+		_authorizationToken = authorizationToken;
+
+		// Set System Property, for easy access from Servlets
+		System.setProperty(PROPKEY_NOGUI_MANAGEMENT_http_auth_Basic , authorizationTokenBasic);
+		System.setProperty(PROPKEY_NOGUI_MANAGEMENT_http_auth_Bearer, authorizationTokenBearer);
+	}
+	/** 
+	 * Get Extra Info as a JSON String: {"authorization":"Basic uuEncodedStringWithUserAndPassword"}<br>
+	 * */
+	private static String getAuthInfo()
+	{
+		return "{\"authorization\":\"" + getAuthTokenString(false) + "\"}";
+	}
+
+	/**
+	 * Get authorization token... <code>Basic uuEncodedStringWithUserAndPassword</code>
+	 * 
+	 * @param skipType do NOT include 'Basic' or 'Bearer' only return the token
+	 * @return
+	 */
+	private static String getAuthTokenString(boolean skipType)
+	{
+		if (skipType)
+		{
+			String token = _authorizationToken;
+			if (token != null && token.contains(" "))
+			{
+				token = token.substring(token.indexOf(" ")).trim();
+				return token;
+			}
+		}
+		return _authorizationToken;
+	}
+	
 	//-------------------------------------------------------------------------------
 	//-- Start PCS
 	//-------------------------------------------------------------------------------
@@ -1045,7 +1163,7 @@ public class DbxTuneCentral
 		{
 			try
 			{
-				boolean writeDbxTuneServiceFile = false;
+//				boolean writeDbxTuneServiceFile = false;
 //				String baseDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 				String baseDir = getAppDataDir();
 
@@ -1075,14 +1193,14 @@ public class DbxTuneCentral
 				tcpSwitches.add("-tcpDaemon");         // Start the service thread as a daemon
 				tcpSwitches.add("-tcpAllowOthers");    // Allow other that the localhost to connect
 				tcpSwitches.add("-tcpPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
-				tcpSwitches.add(""+tcpBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				tcpSwitches.add("" + tcpBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
 				tcpSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
 				if (StringUtil.hasValue(baseDir))
 				{
 					tcpSwitches.add("-baseDir");
 					tcpSwitches.add(baseDir);
 					
-					writeDbxTuneServiceFile = true;
+//					writeDbxTuneServiceFile = true;
 				}
 				
 				//-------------------------------------------
@@ -1090,7 +1208,7 @@ public class DbxTuneCentral
 				webSwitches.add("-webDaemon");         // Start the service thread as a daemon
 				webSwitches.add("-webAllowOthers");    // Allow other that the localhost to connect
 				webSwitches.add("-webPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
-				webSwitches.add(""+webBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				webSwitches.add("" + webBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
 				webSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
 				if (StringUtil.hasValue(baseDir))
 				{
@@ -1103,7 +1221,7 @@ public class DbxTuneCentral
 				pgSwitches.add("-pgDaemon");         // Start the service thread as a daemon
 				pgSwitches.add("-pgAllowOthers");    // Allow other that the localhost to connect
 				pgSwitches.add("-pgPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
-				pgSwitches.add(""+pgBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				pgSwitches.add("" + pgBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
 				pgSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
 				if (StringUtil.hasValue(baseDir))
 				{
@@ -1117,27 +1235,27 @@ public class DbxTuneCentral
 				
 				if (startTcpServer)
 				{
-					_logger.info("Starting a H2 TCP server. Switches: "+tcpSwitches);
+					_logger.info("Starting a H2 TCP server. Switches: " + tcpSwitches);
 					_h2TcpServer = org.h2.tools.Server.createTcpServer(tcpSwitches.toArray(new String[0]));
 					_h2TcpServer.start();
 		
-		//			_logger.info("H2 TCP server, listening on port='"+h2TcpServer.getPort()+"', url='"+h2TcpServer.getURL()+"', service='"+h2TcpServer.getService()+"'.");
-					_logger.info("H2 TCP server, url='"+_h2TcpServer.getURL()+"', Status='"+_h2TcpServer.getStatus()+"'.");
+		//			_logger.info("H2 TCP server, listening on port='" + h2TcpServer.getPort() + "', url='" + h2TcpServer.getURL() + "', service='" + h2TcpServer.getService() + "'.");
+					_logger.info("H2 TCP server, url='" + _h2TcpServer.getURL() + "', Status='" + _h2TcpServer.getStatus() + "'.");
 				}
 	
 				if (startWebServer)
 				{
 					try
 					{
-						_logger.info("Starting a H2 WEB server. Switches: "+webSwitches);
+						_logger.info("Starting a H2 WEB server. Switches: " + webSwitches);
 						_h2WebServer = org.h2.tools.Server.createWebServer(webSwitches.toArray(new String[0]));
 						_h2WebServer.start();
 
-						_logger.info("H2 WEB server, url='"+_h2WebServer.getURL()+"', Status='"+_h2WebServer.getStatus()+"'.");
+						_logger.info("H2 WEB server, url='" + _h2WebServer.getURL() + "', Status='" + _h2WebServer.getStatus() + "'.");
 					}
 					catch (Exception e)
 					{
-						_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+						_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: " + e);
 					}
 				}
 
@@ -1145,15 +1263,15 @@ public class DbxTuneCentral
 				{
 					try
 					{
-						_logger.info("Starting a H2 Postgres server. Switches: "+pgSwitches);
+						_logger.info("Starting a H2 Postgres server. Switches: " + pgSwitches);
 						_h2PgServer = org.h2.tools.Server.createPgServer(pgSwitches.toArray(new String[0]));
 						_h2PgServer.start();
 		
-						_logger.info("H2 Postgres server, url='"+_h2PgServer.getURL()+"', Status='"+_h2PgServer.getStatus()+"'.");
+						_logger.info("H2 Postgres server, url='" + _h2PgServer.getURL() + "', Status='" + _h2PgServer.getStatus() + "'.");
 					}
 					catch (Exception e)
 					{
-						_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+						_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: " + e);
 					}
 				}
 				
@@ -1238,36 +1356,10 @@ public class DbxTuneCentral
 						DataDirectoryCleaner.class,          // Filter on this class only
 						null,                                // Extra filters
 						Level.INFO);                         // And the Log Level
-
-//				String pattern = Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_LOG_FILE_PATTERN, DataDirectoryCleaner.DEFAULT_LOG_FILE_PATTERN);
-//				PatternLayout layout = new PatternLayout(pattern);
-//				_logger.info("Adding separate log file for '"+DataDirectoryCleaner.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-//				
-//				// Create a Rolling Log File
-//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-//				appender.setMaxFileSize("10MB");
-//				appender.setMaxBackupIndex(3);
-//				appender.setName(DataDirectoryCleaner.EXTRA_LOG_NAME);
-//
-//				// Only log messages from 'DataDirectoryCleaner' in this appender
-//				appender.addFilter(new Filter()
-//				{
-//					@Override
-//					public int decide(LoggingEvent event)
-//					{
-//						if (event.getLogger().getName().equals(DataDirectoryCleaner.class.getName()))
-//							return Filter.NEUTRAL;
-//
-//						return Filter.DENY;
-//					}
-//				});
-//
-//				// Add the appender
-//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_cron,  DataDirectoryCleaner.DEFAULT_cron);
-			_logger.info("Adding 'Data Directory Cleanup' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'Data Directory Cleanup' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
 			_scheduler.schedule(cron, new DataDirectoryCleaner());
 		}
 
@@ -1291,36 +1383,10 @@ public class DbxTuneCentral
 						H2WriterStatCronTask.class,          // Filter on this class only
 						null,                                // Extra filters
 						Level.INFO);                         // And the Log Level
-
-//				String pattern = Configuration.getCombinedConfiguration().getProperty(H2WriterStatCronTask.PROPKEY_LOG_FILE_PATTERN, H2WriterStatCronTask.DEFAULT_LOG_FILE_PATTERN);
-//				PatternLayout layout = new PatternLayout(pattern);
-//				_logger.info("Adding separate log file for '"+H2WriterStatCronTask.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-//				
-//				// Create a Rolling Log File
-//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-//				appender.setMaxFileSize("10MB");
-//				appender.setMaxBackupIndex(3);
-//				appender.setName(H2WriterStatCronTask.EXTRA_LOG_NAME);
-//
-//				// Only log messages from 'H2WriterStatCronTask' in this appender
-//				appender.addFilter(new Filter()
-//				{
-//					@Override
-//					public int decide(LoggingEvent event)
-//					{
-//						if (event.getLogger().getName().equals(H2WriterStatCronTask.class.getName()))
-//							return Filter.NEUTRAL;
-//
-//						return Filter.DENY;
-//					}
-//				});
-//
-//				// Add the appender
-//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(H2WriterStatCronTask.PROPKEY_cron,  H2WriterStatCronTask.DEFAULT_cron);
-			_logger.info("Adding 'H2 Writer File Size Statistics' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'H2 Writer File Size Statistics' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
 			_scheduler.schedule(cron, new H2WriterStatCronTask());
 		}
 
@@ -1344,37 +1410,38 @@ public class DbxTuneCentral
 						CentralPcsJdbcCleaner.class,         // Filter on this class only
 						null,                                // Extra filters
 						Level.INFO);                         // And the Log Level
-
-//				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralPcsJdbcCleaner.PROPKEY_LOG_FILE_PATTERN, CentralPcsJdbcCleaner.DEFAULT_LOG_FILE_PATTERN);
-//				PatternLayout layout = new PatternLayout(pattern);
-//				_logger.info("Adding separate log file for '"+CentralPcsJdbcCleaner.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-//				
-//				// Create a Rolling Log File
-//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-//				appender.setMaxFileSize("10MB");
-//				appender.setMaxBackupIndex(3);
-//				appender.setName(CentralPcsJdbcCleaner.EXTRA_LOG_NAME);
-//
-//				// Only log messages from 'CentralPcsJdbcCleaner' in this appender
-//				appender.addFilter(new Filter()
-//				{
-//					@Override
-//					public int decide(LoggingEvent event)
-//					{
-//						if (event.getLogger().getName().equals(CentralPcsJdbcCleaner.class.getName()))
-//							return Filter.NEUTRAL;
-//
-//						return Filter.DENY;
-//					}
-//				});
-//
-//				// Add the appender
-//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralPcsJdbcCleaner.PROPKEY_cron,  CentralPcsJdbcCleaner.DEFAULT_cron);
-			_logger.info("Adding 'Central PCS Data Retention/Cleanup' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'Central PCS Data Retention/Cleanup' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
 			_scheduler.schedule(cron, new CentralPcsJdbcCleaner());
+		}
+		
+		//--------------------------------------------
+		// Central PCS Database 'Drop Empty Columns' Cleanup - Scheduling Task
+		//--------------------------------------------
+		boolean centralPcsDropEmptyColumnsStart = Configuration.getCombinedConfiguration().getBooleanProperty(CentralPcsDropEmptyColumns.PROPKEY_start, CentralPcsDropEmptyColumns.DEFAULT_start);
+		if (centralPcsDropEmptyColumnsStart)
+		{
+			File logFile = Logging.getBaseLogFile("_" + CentralPcsDropEmptyColumns.class.getSimpleName() + ".log");
+			if (logFile != null)
+			{
+				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralPcsDropEmptyColumns.PROPKEY_LOG_FILE_PATTERN, CentralPcsDropEmptyColumns.DEFAULT_LOG_FILE_PATTERN);
+
+				Log4jUtils.addRollingFileAppenderWithFilter(
+						CentralPcsDropEmptyColumns.EXTRA_LOG_NAME, // Name of the logger 
+						logFile,                             // Filename
+						pattern,                             // File layout/pattern
+						5,                                   // Number of files
+						10,                                  // MaxSize for each File in MB
+						CentralPcsDropEmptyColumns.class,    // Filter on this class only
+						null,                                // Extra filters
+						Level.INFO);                         // And the Log Level
+			}
+
+			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralPcsDropEmptyColumns.PROPKEY_cron,  CentralPcsDropEmptyColumns.DEFAULT_cron);
+			_logger.info("Adding 'Central PCS Drop-Empty-Columns Cleanup' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
+			_scheduler.schedule(cron, new CentralPcsDropEmptyColumns());
 		}
 		
 		//--------------------------------------------
@@ -1401,46 +1468,10 @@ public class DbxTuneCentral
 						CentralH2Defrag.class,               // Filter on this class only
 						extraFilter,                         // Extra filters
 						Level.INFO);                         // And the Log Level
-
-//				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralH2Defrag.PROPKEY_LOG_FILE_PATTERN, CentralH2Defrag.DEFAULT_LOG_FILE_PATTERN);
-//				PatternLayout layout = new PatternLayout(pattern);
-//				_logger.info("Adding separate log file for '"+CentralH2Defrag.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-//				
-//				// Create a Rolling Log File
-//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-//				appender.setMaxFileSize("10MB");
-//				appender.setMaxBackupIndex(3);
-//				appender.setName(CentralH2Defrag.EXTRA_LOG_NAME);
-//
-//				// Only log messages from 'CentralH2Defrag' in this appender
-//				appender.addFilter(new Filter()
-//				{
-//					@Override
-//					public int decide(LoggingEvent event)
-//					{
-//						// log all in: CentralH2Defrag
-//						if (event.getLogger().getName().equals(CentralH2Defrag.class.getName()))
-//							return Filter.NEUTRAL;
-//
-//						// log only "some" (message has H2 in the message) in: CentralPersistWriterJdbc
-//						if (event.getLogger().getName().equals(CentralPersistWriterJdbc.class.getName()))
-//						{
-//							String msg = "" + event.getMessage();
-//
-//							if (msg.indexOf(" H2 ") != -1)
-//								return Filter.NEUTRAL;
-//						}
-//
-//						return Filter.DENY;
-//					}
-//				});
-//
-//				// Add the appender
-//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralH2Defrag.PROPKEY_cron,  CentralH2Defrag.DEFAULT_cron);
-			_logger.info("Adding 'H2 Database Defrag' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'H2 Database Defrag' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
 			_scheduler.schedule(cron, new CentralH2Defrag());
 		}
 
@@ -1464,36 +1495,10 @@ public class DbxTuneCentral
 						CentralDailyReportSender.class,      // Filter on this class only
 						null,                                // Extra filters
 						Level.INFO);                         // And the Log Level
-
-//				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_LOG_FILE_PATTERN, CentralDailyReportSender.DEFAULT_LOG_FILE_PATTERN);
-//				PatternLayout layout = new PatternLayout(pattern);
-//				_logger.info("Adding separate log file for '"+CentralDailyReportSender.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
-//				
-//				// Create a Rolling Log File
-//				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
-//				appender.setMaxFileSize("10MB");
-//				appender.setMaxBackupIndex(3);
-//				appender.setName(CentralDailyReportSender.EXTRA_LOG_NAME);
-//
-//				// Only log messages from 'CentralDailyReportSender' in this appender
-//				appender.addFilter(new Filter()
-//				{
-//					@Override
-//					public int decide(LoggingEvent event)
-//					{
-//						if (event.getLogger().getName().equals(CentralDailyReportSender.class.getName()))
-//							return Filter.NEUTRAL;
-//
-//						return Filter.DENY;
-//					}
-//				});
-//
-//				// Add the appender
-//				Logger.getRootLogger().addAppender(appender);
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_cron,  CentralDailyReportSender.DEFAULT_cron);
-			_logger.info("Adding 'Central Daily Summary Report' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'Central Daily Summary Report' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
 			_scheduler.schedule(cron, new CentralDailyReportSender());
 		}
 		
@@ -1505,7 +1510,7 @@ public class DbxTuneCentral
 		if (dsrPriorityFileWriterStart)
 		{
 			String cron  = Configuration.getCombinedConfiguration().getProperty(DsrPriorityFileWriter.PROPKEY_cron,  DsrPriorityFileWriter.DEFAULT_cron);
-			_logger.info("Adding 'Daily Summary Report File Writer' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'Daily Summary Report File Writer' scheduling with cron entry '" + cron + "', human readable '" + CronUtils.getCronExpressionDescription(cron) + "'.");
 			_scheduler.schedule(cron, new DsrPriorityFileWriter());
 		}
 		
@@ -1694,7 +1699,7 @@ public class DbxTuneCentral
 		File webDir = new File( getAppHomeDir() + File.separatorChar + "resources" + File.separatorChar + "WebContent");
 		if ( ! webDir.exists() )
 		{
-			throw new Exception("The WEB Content directory '"+webDir+"' can't be found... Check env DBXTUNE_HOME and/or DBXTUNE_CENTRAL_HOME");
+			throw new Exception("The WEB Content directory '" + webDir + "' can't be found... Check env DBXTUNE_HOME and/or DBXTUNE_CENTRAL_HOME");
 		}
 		
 		startWebServerJetty();
@@ -1743,7 +1748,10 @@ public class DbxTuneCentral
 	private static void startWebServerJetty()
 	throws Exception
 	{
-		System.out.println("jetty.home = '"+System.getProperty("jetty.home")+"'.");
+//		System.out.println("jetty.home    = '" + System.getProperty("jetty.home")     + "'.");
+//		System.out.println("jetty.VERSION = '" + org.eclipse.jetty.util.Jetty.VERSION + "'.");
+		_logger.info("jetty.home = '"    + System.getProperty("jetty.home")     + "'.");
+		_logger.info("jetty.VERSION = '" + org.eclipse.jetty.util.Jetty.VERSION + "'.");
 		
 		// Start the webserver
 //		if (true)
@@ -1792,7 +1800,7 @@ public class DbxTuneCentral
 //
 //			server.setHandler( handlers );
 //
-//			_logger.info("Starting local Web server at port "+port+".");
+//			_logger.info("Starting local Web server at port " + port + ".");
 //			server.start();
 //		}
 
@@ -1800,9 +1808,78 @@ public class DbxTuneCentral
 		if (true)
 		{
 //			Server server = new Server(8080);
-			int port = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT, DEFAULT_WEB_PORT);
+			int port    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT    , DEFAULT_WEB_PORT);
+			int sslPort = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT, DEFAULT_WEB_SSL_PORT);
 			_server = new Server(port);
-	   
+
+			HttpConfiguration httpConfig = new HttpConfiguration();
+			httpConfig.setSendServerVersion(false); // disables 'Server' header
+			httpConfig.setSendXPoweredBy(false);    // disables 'X-Powered-By' header
+			
+	        // Configure SSL with PEM files
+			String sslFilePath = getAppConfDir() + "/ssl"; // must contain: 'cert.pem', 'key.pem', (optional) 'chain.pem'
+			File   sslFileFile = new File(sslFilePath);
+			if (sslFileFile.exists())
+			{
+				File sslFileCertFile  = new File(sslFilePath + "/cert.pem");
+				File sslFileKeyFile   = new File(sslFilePath + "/key.pem");
+				File sslFileChainFile = new File(sslFilePath + "/chain.pem");
+
+				boolean doSslConfig = true;
+				if (sslFileCertFile.exists())
+				{
+					_logger.info("Found SSL 'Certificate' file 'cert.pem' at '" + sslFileCertFile + "'.");
+				}
+				else
+				{
+					_logger.info("SSL will NOT be configured. Missing 'Certificate' file '" + sslFileCertFile + "'.");
+					doSslConfig = false;
+				}
+
+				if (sslFileKeyFile.exists())
+				{
+					_logger.info("Found SSL 'Private Key' file 'key.pem' at '" + sslFileKeyFile + "'.");
+				}
+				else
+				{
+					_logger.info("SSL will NOT be configured. Missing 'Private Key' file '" + sslFileKeyFile + "'.");
+					doSslConfig = false;
+				}
+
+				if (sslFileChainFile.exists())
+				{
+					_logger.info("Found optional SSL 'CA Chain' file '" + sslFileChainFile + "', which also will be used for CA Chain.");
+				}
+
+				if (doSslConfig)
+				{
+					_logger.info("SSL will be configured at port " + sslPort + ", using files ('cert.pem', 'key.pem', optional:'chain.pem') in directory '" + sslFileFile + "'.");
+
+					SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
+			        sslContextFactory.setKeyStoreType("PEM");
+			        sslContextFactory.setKeyStorePath(sslFilePath);  // must contain cert.pem, key.pem, (optional) chain.pem
+//			        sslContextFactory.setCertChainPath("cert.pem");      // your public cert or full chain
+//			        sslContextFactory.setKeyPath("key.pem");             // your private key
+//			        sslContextFactory.setTrustStoreType("PEM");          // optional for client auth
+//			        sslContextFactory.setTrustStorePath("chain.pem");    // CA chain, optional
+					
+					httpConfig.addCustomizer(new SecureRequestCustomizer());
+
+					ServerConnector sslConnector = new ServerConnector(
+							_server,
+							new SslConnectionFactory(sslContextFactory, "http/1.1"),
+							new HttpConnectionFactory(httpConfig)
+		            );
+					sslConnector.setPort(sslPort);
+					_server.addConnector(sslConnector);
+				}
+			}
+			else
+			{
+				_logger.info("SSL will NOT be configured. The directory '" + sslFileFile + "' does NOT EXISTS. Which should hold 'Certificate' file 'cert.pem' and 'Private Key' file 'key.pem' (possibly 'CA Chain' file 'chain.pem').");
+			}
+			
+			
 			// Handler for multiple web apps
 //			HandlerCollection handlers = new HandlerCollection();
 	 
@@ -1813,12 +1890,28 @@ public class DbxTuneCentral
 ////			webapp1.setDefaultsDescriptor("src/main/webdefault/webdefault.xml");
 //			handlers.addHandler(webapp1);
 			
+			// Enable Debugging
+//			org.eclipse.jetty.util.log.Log.setLog(new org.eclipse.jetty.util.log.StdErrLog());
+//			org.eclipse.jetty.util.log.Log.getLog().setDebugEnabled(true);
+
 			
 			String webDir = getAppWebDir();
+
+			// Check if "webDir" contains any symbolic links
+			Path webDirOriginPath   = Paths.get(webDir);
+			Path webDirResolvedPath = Paths.get(webDir).toRealPath();
+			if ( ! webDirOriginPath.equals(webDirResolvedPath) )
+			{
+				webDir = webDirResolvedPath.toString();
+				_logger.info("Found that 'WebAppDir' contains symlinks, which was resolved to '" + webDir + "'. Origin value was '" + webDirOriginPath + "'.");
+			}
+
 			WebAppContext webapp1 = new WebAppContext();
 			webapp1.setDescriptor(webDir + "/WEB-INF/web.xml");
 			webapp1.setResourceBase(webDir);
 			webapp1.setContextPath("/");
+			webapp1.setWelcomeFiles(new String[]{"index.html"});
+//			webapp1.setInitParameter("aliases", "true");  // Enables symlink following
 			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
 			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
 //			webapp1.getServletContext().getContextHandler().setMaxFormContentSize(10000000);
@@ -1828,7 +1921,7 @@ public class DbxTuneCentral
 			webapp1.setParentLoaderPriority(true);
 
 //			InterceptExceptionsFilter interceptFilter = new InterceptExceptionsFilter();
-			webapp1.addFilter(InterceptExceptionsFilter.class, "/*", EnumSet.of(DispatcherType.INCLUDE, DispatcherType.REQUEST));
+//			webapp1.addFilter(InterceptExceptionsFilter.class, "/*", EnumSet.of(DispatcherType.INCLUDE, DispatcherType.REQUEST));
 
 //	        // The below 4 lines is to get JSP going????
 //	        webapp1.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern",".*/[^/]*jstl.*\\.jar$");
@@ -1857,13 +1950,13 @@ public class DbxTuneCentral
 //			HashLoginService loginService = new HashLoginService("DbxTuneCentralRealm");
 //
 //			// Setting the realm configuration there the users, passwords and roles reside
-//			String userFile = Configuration.getCombinedConfiguration().getProperty("realm.users.file", webDir+"/dbxtune_central_users.txt");
+//			String userFile = Configuration.getCombinedConfiguration().getProperty("realm.users.file", webDir + "/dbxtune_central_users.txt");
 			// The above file should look like:
 			// admin: admin,admin,user
 			//user1: user1pass,user
 
 //			loginService.setConfig(userFile);
-//			_logger.info("Web Autentication. Using property 'realm.users.file', which is set to '"+userFile+"'.");
+//			_logger.info("Web Autentication. Using property 'realm.users.file', which is set to '" + userFile + "'.");
 ////			loginService.setConfig("/projects/DbxTune/resources/WebContent/dbxtune_central_users.txt");
 ////			Map<String, UserIdentity> userMap = new HashMap<>();
 ////			userMap.put("xxx", new UserIdentity()
@@ -2056,7 +2149,7 @@ public class DbxTuneCentral
 //
 ////		File fileDir1 = new File("www");
 ////		String baseDir1 = fileDir1.getAbsolutePath();
-////		System.out.println("Adding context2: "+baseDir1+", exists="+fileDir1.exists());
+////		System.out.println("Adding context2: " + baseDir1 + ", exists=" + fileDir1.exists());
 ////		Context ctx1 = tomcat.addContext("/", baseDir1);
 //
 ////		tomcat.addWebapp("/maxm",   new File("C:\\tmp\\DbxTuneCentral\\maxm").getAbsolutePath());
@@ -2064,7 +2157,7 @@ public class DbxTuneCentral
 //
 //		File fileDir2 = new File("C:\\tmp\\DbxTuneCentral\\maxm\\log");
 //		String baseDir2 = fileDir2.getAbsolutePath();
-//		System.out.println("Adding context2: "+baseDir2+", exists="+fileDir2.exists());
+//		System.out.println("Adding context2: " + baseDir2 + ", exists=" + fileDir2.exists());
 ////		Context ctx2 = tomcat.addContext("/ctx2", baseDir2);
 //		StandardContext ctx2 = (StandardContext) tomcat.addWebapp("/log", baseDir2);
 //		
@@ -2104,7 +2197,7 @@ public class DbxTuneCentral
 //			String mapping    = entry.getKey();
 //			String srvletName = entry.getValue().getClass().getName();
 //
-//			System.out.println("Adding servlet mapping '"+mapping+"' using the class/servletName '"+srvletName+"'.");
+//			System.out.println("Adding servlet mapping '" + mapping + "' using the class/servletName '" + srvletName + "'.");
 //			
 //			Tomcat.addServlet(ctx, srvletName,entry.getValue());
 //			ctx.addServletMappingDecoded(mapping, srvletName);
@@ -2127,12 +2220,12 @@ public class DbxTuneCentral
 ////				{
 ////					pathPrefix = config.getInitParameter("pathPrefix");
 ////				}
-////				System.out.println("pathPrefix='"+pathPrefix+"'.");
+////				System.out.println("pathPrefix='" + pathPrefix + "'.");
 ////			}
 ////			@Override
 ////			protected String getRelativePath(HttpServletRequest req)
 ////			{
-////				System.out.println("getRelativePath(): "+ pathPrefix + super.getRelativePath(req));
+////				System.out.println("getRelativePath(): " +  pathPrefix + super.getRelativePath(req));
 ////				return pathPrefix + super.getRelativePath(req);
 ////			}
 ////		};
@@ -2200,7 +2293,7 @@ public class DbxTuneCentral
 //				}
 //				else
 //				{
-//					_logger.warn("No 'Alarm Writers' was found in the current configuration '"+conf.getFilename()+"'. Alarm Handler will NOT be enabled. To enable the AlarmHandler, please specify any Alarm Writer classes using the configuration key '"+AlarmHandler.PROPKEY_WriterClass+"'.");
+//					_logger.warn("No 'Alarm Writers' was found in the current configuration '" + conf.getFilename() + "'. Alarm Handler will NOT be enabled. To enable the AlarmHandler, please specify any Alarm Writer classes using the configuration key '" + AlarmHandler.PROPKEY_WriterClass + "'.");
 //				}
 			}
 			catch (Exception ex)
@@ -2274,7 +2367,7 @@ public class DbxTuneCentral
 			else if ( cmd.hasOption("version") )
 			{
 				System.out.println();
-				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println(Version.getAppName() + " Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
 			}
 			//-------------------------------
@@ -2283,7 +2376,7 @@ public class DbxTuneCentral
 			else if ( cmd.hasOption("createAppDir") )
 			{
 				// Create store dir if it did not exists.
-				AppDir.checkCreateAppDir( null, System.out );
+				AppDir.checkCreateAppDir( null, System.out, cmd );
 			}
 			//-------------------------------
 			// Check for correct number of cmd line parameters
@@ -2341,10 +2434,24 @@ public class DbxTuneCentral
 			System.exit(1);
 		}
 
+		// WAIT FOR SHUTDOWN -- Possibly change this to: if ( no-gui ) { ShutdownHandler.waitforShutdown(); }
+		// Note: This method print out: 
+		//    1 - Waiting for shutdown on thread...
+		//    do: _waitforObject.wait();
+		//    2 - AFTER-Waiting for shutdown on thread
+// This was grabbed from DbxTune.java, not 100% sure we need it for DbxCentral, we do it slightly different...
+//		ShutdownHandler.waitforShutdown();
+
 		// Was the shutdown in restart...
 		if (ShutdownHandler.wasRestartSpecified())
 		{
+			_logger.info("Shutdown with 'restart' was specified, Exiting with return code: " + ShutdownHandler.RESTART_EXIT_CODE);
 			System.exit(ShutdownHandler.RESTART_EXIT_CODE);
+		}
+		else
+		{
+			_logger.info("Normal shutdown, Exiting with return code: 0");
+			System.exit(0);
 		}
 	}
 }

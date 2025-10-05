@@ -313,6 +313,8 @@ public class ConnectionDialog
 	private JLabel               _aseServer_lbl      = new JLabel("Server name");
 	private LocalSrvComboBox     _aseServer_cbx      = new LocalSrvComboBox();
 
+	private JCheckBox            _aseHostPortResolve_chk = new JCheckBox("Auto Lookup Profiles", true);
+
 	private JLabel               _aseHost_lbl        = new JLabel("Host name");
 	private JTextField           _aseHost_txt        = new JTextField();
 
@@ -2323,6 +2325,12 @@ public class ConnectionDialog
 		_aseEditIfile_but   .setToolTipText("Edit the Name/Directory Service file. Just opens a text editor.");
 		_aseServer_lbl      .setToolTipText("Name of the DB Server you are connecting to");
 		_aseServer_cbx      .setToolTipText("Name of the DB Server you are connecting to");
+		_aseHostPortResolve_chk.setToolTipText("<html>"
+		                                           + "If you want to <b>change</b> a profiles host/port, then <b>disable</b> this lookup.<br>"
+		                                           + "<br>"
+		                                           + "Check if we have this hostname/port in any other profile.<br>"
+		                                           + "If we <b>have</b> a profile with that those entries... Then set that profile.<br>"
+		                                           + "</html>");
 		_aseHost_lbl        .setToolTipText("<html>Hostname or IP address of the DB Server you are connecting to<br>Syntax: host1[,host2,...]</html>");
 		_aseHost_txt        .setToolTipText("<html>Hostname or IP address of the DB Server you are connecting to<br>Syntax: host1[,host2,...]</html>");
 		_asePort_lbl        .setToolTipText("<html>Port number of the DB Server you are connecting to<br>Syntax: port1[,port2,...]</html>");
@@ -2380,7 +2388,8 @@ public class ConnectionDialog
 		panel.add(_aseServer_cbx,        "push, grow");
 
 		panel.add(_aseHost_lbl,          "");
-		panel.add(_aseHost_txt,          "push, grow");
+		panel.add(_aseHost_txt,          "split, push, grow");
+		panel.add(_aseHostPortResolve_chk,"wrap");
 
 		panel.add(_asePort_lbl,          "");
 		panel.add(_asePort_txt,          "split, push, grow");
@@ -8284,17 +8293,16 @@ if ( ! jdbcSshTunnelUse )
 			// Check if we got a host:port combination in the properties file, if so lets load it
 			String hostPortStr = AseConnectionFactory.toHostPortStr(hosts, ports);
 
-			// if username has been stored, restore "all" other saved properties
-			String user = Configuration.getCombinedConfiguration().getProperty("conn.username."+hostPortStr);
-			if (StringUtil.hasValue(user)) 
-				loadPropsForServer(hostPortStr);
+			// If resolve is enabled, then load "known" profile
+			if (_aseHostPortResolve_chk.isSelected())
+			{
+				// if username has been stored, restore "all" other saved properties
+				String user = Configuration.getCombinedConfiguration().getProperty("conn.username."+hostPortStr);
+				if (StringUtil.hasValue(user)) 
+					loadPropsForServer(hostPortStr);
 
-			setProfileBox(hostPortStr);
-
-//			if (_logger.isDebugEnabled())
-//			{
-//				_aseServerName_lbl.setText(host + ":" + portStr);
-//			}
+				setProfileBox(hostPortStr);
+			}
 		}
 		validateContents();
 	}
@@ -10510,8 +10518,8 @@ if ( ! jdbcSshTunnelUse )
 		final String TMP_CONFIG_FILE_NAME = System.getProperty("TMP_CONFIG_FILE_NAME", "asetune.save.properties");
 		final String DBXTUNE_HOME         = System.getProperty("DBXTUNE_HOME");
 		
-		String defaultPropsFile    = (DBXTUNE_HOME            != null) ? DBXTUNE_HOME            + File.separator + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
-		String defaultTmpPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile    = (DBXTUNE_HOME               != null) ? DBXTUNE_HOME               + File.separator + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
+		String defaultTmpPropsFile = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() + File.separator + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

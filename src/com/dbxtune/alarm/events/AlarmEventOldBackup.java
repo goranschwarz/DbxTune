@@ -55,11 +55,11 @@ extends AlarmEvent
 //		setData(dbname);
 //	}
 	/**
-	 * Alarm for full transaction log for a specific database.
+	 * Alarm to indicate the we do not have any recent full backups for a specific database.
 	 * @param cm
 	 * @param dbname
 	 */
-	public AlarmEventOldBackup(CountersModel cm, Number thresholdInHours, String dbname, String lastBackupStartTime, int age)
+	public AlarmEventOldBackup(CountersModel cm, Number thresholdInHours, String dbname, String lastBackupStartOrEndTime, int age)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -71,7 +71,7 @@ extends AlarmEvent
 				AlarmEvent.ServiceState.UP, 
 				"Old or No Database Backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', Backup Age in Hours '" + age + "'" 
 						+ (age == -1 ? ", (where -1 means: Since ASE was started)" : "") 
-						+ ", lastBackupStartTime='" + lastBackupStartTime + "'. (thresholdInHours="+thresholdInHours+")",
+						+ ", lastBackupStartOrEndTime='" + lastBackupStartOrEndTime + "'. (thresholdInHours="+thresholdInHours+")",
 						thresholdInHours);
 
 		// Adjust the Alarm Full Duration with X seconds

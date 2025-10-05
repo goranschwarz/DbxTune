@@ -22,6 +22,7 @@ package com.dbxtune.cm.os;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -386,7 +387,7 @@ extends CounterModelHostMonitor
 //					Long   prevUsed = (Long)   ostr.getValue(pos_used+1);
 
 					Long       diffVal = thisUsed - prevUsed;
-					BigDecimal rateVal = new BigDecimal( (diffVal*1.0) / (getSampleInterval()/1000.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal rateVal = new BigDecimal( (diffVal*1.0) / (getSampleInterval()/1000.0) ).setScale(1, RoundingMode.HALF_EVEN);
 					
 //					System.out.println("############: getSampleInterval()="+getSampleInterval()+", pk="+StringUtil.left(pk,20)+", thisUsed="+thisUsed+", prevUsed="+prevUsed+", diffVal="+diffVal+", rateVal="+rateVal);
 

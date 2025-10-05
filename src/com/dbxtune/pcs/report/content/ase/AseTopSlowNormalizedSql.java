@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -53,6 +54,8 @@ import com.dbxtune.utils.HtmlTableProducer.ColumnCopyDef;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyRender;
 import com.dbxtune.utils.HtmlTableProducer.ColumnCopyRow;
 import com.dbxtune.utils.HtmlTableProducer.ColumnStatic;
+import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.TimeUtils;
 
 public class AseTopSlowNormalizedSql extends AseAbstract
 {
@@ -379,6 +382,34 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		int havingSumTime = 1000; // 1 second
 		int dsrSkipCount  = getDsrSkipCount();
 		
+		 // just to get Column names
+		String dummySql = "select * from [MonSqlCapStatements] where 1 = 2";
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
+		
+		// Create Column selects, but only if the column exists in the PCS Table
+		String QueryOptimizationCount = "";
+		String QueryOptimizationTime  = "";
+		if (dummyRstm.hasColumnNoCase("QueryOptimizationTime"))
+		{
+			// FIXME: This is probably NOT enough... 
+			//        for '*sq...' We also need to count 'ContextID=1' (only the ones with compile) 
+			//        for '*ss...' (some other logic: probably ContextID=2, LineNumber=0|1)
+			//    >>> for more info see: SqlCaptureStatementStatisticsSample.addExecTimeInternal(...)
+			//        All of this (QueryOptimization) seems to be VERY "un-stable" and confusing how it exactly works
+			QueryOptimizationCount = ""
+					+ "   ,cast('' as varchar(512))     as [QueryOptimizationCount__chart] \n"
+					+ "   ,sum(CASE WHEN [QueryOptimizationTime] > 0 THEN 1 ELSE 0 END) as [QueryOptimizationCount__sum] \n"
+					;
+
+			QueryOptimizationTime = ""
+					+ "   ,cast('' as varchar(512))     as [QueryOptimizationTime__chart] \n"
+					+ "   ,sum([QueryOptimizationTime]) as [QueryOptimizationTime__sum] \n"
+					+ "   ,sum([QueryOptimizationTime]) / nullif(sum(CASE WHEN [QueryOptimizationTime] > 0 THEN 1 ELSE 0 END),0) as [QueryOptimizationTime__avg] \n"
+					+ "   ,max([QueryOptimizationTime]) as [QueryOptimizationTime__max] \n"
+//				    + "   ,min(CASE WHEN [QueryOptimizationTime] > 0 THEN [QueryOptimizationTime] ELSE NULL END) as [QueryOptimizationTime__min] \n"
+		    ;
+		}
+
 		String sql = "-- source table: MonSqlCapStatements \n"
 			    + "select top " + (topRows + dsrSkipCount) + " \n"
 //			    + "    [NormJavaSqlHashCode] \n"
@@ -408,6 +439,10 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			    + "   ,sum([WaitTime])              as [WaitTime__sum] \n"
 			    + "   ,avg([WaitTime])              as [WaitTime__avg] \n"
 			    
+			    + QueryOptimizationCount // columns: QueryOptimizationCount__chart, QueryOptimizationCount__sum
+
+			    + QueryOptimizationTime  // columns: QueryOptimizationTime__chart, QueryOptimizationTime__sum, QueryOptimizationTime__avg, QueryOptimizationTime__max
+				
 			    + "   ,cast('' as varchar(512))     as [MemUsageKB__chart] \n"
 			    + "   ,sum([MemUsageKB])            as [MemUsageKB__sum] \n"
 			    + "   ,avg([MemUsageKB])            as [MemUsageKB__avg] \n"
@@ -430,9 +465,6 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			    
 			    + "   ,cast('' as varchar(512))     as [LogicalReadsPerRowsAffected__chart] \n"
 				+ "   ,sum([LogicalReads]*1.0) / nullif(sum([RowsAffected]),0) as [LogicalReadsPerRowsAffected__avg] \n"
-			    
-//			    + "   ,sum([QueryOptimizationTime]) as [QueryOptimizationTime__sum] \n"
-//			    + "   ,avg([QueryOptimizationTime]) as [QueryOptimizationTime__avg] \n"
 
 //			    + "   ,sum([PagesModified])         as [PagesModified__sum] \n"
 //			    + "   ,avg([PagesModified])         as [PagesModified__avg] \n"
@@ -447,11 +479,19 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 //				+ "   ,(sum([LogicalReads])*1.0) / nullif(sum([RowsAffected]),0) as [LogicalReadsPerRowsAffected] \n"
 //				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
 
-			    + "	  ,min([StartTime])             as [StartTime_min] \n"
-			    + "	  ,max([EndTime])               as [EndTime_max] \n"
-			    + "	  ,cast('' as varchar(30))      as [Duration] \n"
-				
-			    + "from [MonSqlCapStatements] \n"
+			    + "   ,min([StartTime])             as [StartTime_min] \n"
+			    + "   ,max([EndTime])               as [EndTime_max] \n"
+			    + "   ,cast('' as varchar(30))      as [Duration] \n"
+
+			    + "   ,count(distinct [SQLText$dcc$]) as [DistinctSQLTextCount] \n"
+			    + "   ,(select count(distinct [SsqlId]) from [MonSqlCapStatements] t where [ProcName] like '*ss%' and t.[NormJavaSqlHashCode] = base.[NormJavaSqlHashCode]) AS [StmntCacheEntryCount_ss] \n"
+			    + "   ,(select count(distinct [SsqlId]) from [MonSqlCapStatements] t where [ProcName] like '*sq%' and t.[NormJavaSqlHashCode] = base.[NormJavaSqlHashCode]) AS [PrepStmntEntryCount_sq] \n"
+			    + " \n"
+			    + "   ,cast('' as varchar(30))      as [Note] \n"
+			    + " \n"
+			    + "   ,(select LISTAGG(distinct [ProcName], ', ') from [MonSqlCapStatements] t where [ProcName] like '*s%' and t.[NormJavaSqlHashCode] = base.[NormJavaSqlHashCode]) AS [StatementCacheNames] \n"
+
+			    + "from [MonSqlCapStatements] base \n"
 			    + "where 1 = 1 \n"
 			    + "  and [ErrorStatus] = 0 \n"
 				+ getReportPeriodSqlWhere("StartTime")
@@ -459,6 +499,8 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			    + "having "   + _sqlHavingCol  + " >= " + havingSumTime + " \n"
 			    + "order by " + _sqlOrderByCol + " desc \n"
 			    + "";
+
+//TODO; // Should we "inline" this with "how we remove some rows" in Sql Capture
 		
 		_shortRstm = executeQuery(conn, sql, false, "Top SQL");
 		if (_shortRstm == null)
@@ -476,6 +518,9 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 
 			// set duration
 			setDurationColumn(_shortRstm, "StartTime_min", "EndTime_max", "Duration");
+
+			// Make a NOTE of what we see for each row
+			setNoteColumn(_shortRstm);
 
 			// Fill in a column with a "skip link" to DbxCentral
 			setSkipEntriesUrl(_shortRstm, "SkipThis", "NormJavaSqlHashCode", null);
@@ -618,6 +663,31 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 
+			if (StringUtil.hasValue(QueryOptimizationCount))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("QueryOptimizationCount__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("MonSqlCapStatements")
+						.setDbmsSampleTimeColumnName ("StartTime")
+						.setDbmsDataValueColumnName  ("sum(CASE WHEN [QueryOptimizationTime] > 0 THEN 1 ELSE 0 END)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.validate()));
+			}
+
+			if (StringUtil.hasValue(QueryOptimizationTime))
+			{
+				_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+						SparkLineParams.create       (DataSource.CounterModel)
+						.setHtmlChartColumnName      ("QueryOptimizationTime__chart")
+						.setHtmlWhereKeyColumnName   (whereKeyColumn)
+						.setDbmsTableName            ("MonSqlCapStatements")
+						.setDbmsSampleTimeColumnName ("StartTime")
+						.setDbmsDataValueColumnName  ("QueryOptimizationTime")
+						.setDbmsWhereKeyColumnName   (whereKeyColumn)
+						.validate()));
+			}
 			
 			String sqlTextTable = "MonSqlCapStatements";
 			if (DbUtils.checkIfTableExistsNoThrow(conn, null, null, "MonSqlCapSqlText"))
@@ -688,18 +758,47 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				ColumnCopyRender msToHMS    = HtmlTableProducer.MS_TO_HMS;
 				ColumnCopyRender oneDecimal = HtmlTableProducer.ONE_DECIMAL;
 				
+				// Special Renderer for column "Note"
+				ColumnCopyRender NoteRenderer = new ColumnCopyRender() 
+				{
+					@Override
+					public String render(Object in)
+					{
+						if (in == null)
+							return "";
+
+						if (in instanceof String)
+						{
+							String inStr = (String) in;
+							return inStr
+									.replace(", ", "<BR>") // Replace ALL ", " with a HTML NEWLINE
+									.replace(": ", "<BR>") // Replace ALL ": " with a HTML NEWLINE
+									;
+						}
+
+						return in.toString();
+					}
+				};
+
+				
 				HtmlTableProducer htp = new HtmlTableProducer(_shortRstm, "dsr-sub-table-chart");
 				htp.setTableHeaders("Charts at 10 minute interval", "Total;style='text-align:right!important'", "Avg per exec;style='text-align:right!important'", "");
-				htp.add("exec-cnt"  , new ColumnCopyRow().add( new ColumnCopyDef("ExecCount__chart"                   ) ).add(new ColumnCopyDef("ExecCount").setColBold())   .addEmptyCol()                                                        .addEmptyCol() );
-				htp.add("exec-time" , new ColumnCopyRow().add( new ColumnCopyDef("Elapsed_ms__chart"                  ) ).add(new ColumnCopyDef("Elapsed_ms__sum", msToHMS) ).add(new ColumnCopyDef("Elapsed_ms__avg"                 , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
-				htp.add("cpu-time"  , new ColumnCopyRow().add( new ColumnCopyDef("CpuTime__chart"                     ) ).add(new ColumnCopyDef("CpuTime__sum"   , msToHMS) ).add(new ColumnCopyDef("CpuTime__avg"                    , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
-				htp.add("wait-time" , new ColumnCopyRow().add( new ColumnCopyDef("WaitTime__chart"                    ) ).add(new ColumnCopyDef("WaitTime__sum"  , msToHMS) ).add(new ColumnCopyDef("WaitTime__avg"                   , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
-				htp.add("l-read"    , new ColumnCopyRow().add( new ColumnCopyDef("LogicalReads__chart"                ) ).add(new ColumnCopyDef("LogicalReads__sum"       ) ).add(new ColumnCopyDef("LogicalReads__avg"               , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
-				htp.add("l-read-mb" , new ColumnCopyRow().add( new ColumnCopyDef("LogicalReadsMb__chart"              ) ).add(new ColumnCopyDef("LogicalReadsMb__sum"     ) ).add(new ColumnCopyDef("LogicalReadsMb__avg"             , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
-				htp.add("p-read"    , new ColumnCopyRow().add( new ColumnCopyDef("PhysicalReads__chart"               ) ).add(new ColumnCopyDef("PhysicalReads__sum"      ) ).add(new ColumnCopyDef("PhysicalReads__avg"              , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
-				htp.add("rowcount"  , new ColumnCopyRow().add( new ColumnCopyDef("RowsAffected__chart"                ) ).add(new ColumnCopyDef("RowsAffected__sum"       ) ).add(new ColumnCopyDef("RowsAffected__avg"               , oneDecimal).setColBold()).add(new ColumnStatic("#"  )) );
-				htp.add("l-read/row", new ColumnCopyRow().add( new ColumnCopyDef("LogicalReadsPerRowsAffected__chart" ) ).add(new ColumnStatic ("n/a").setColAlign("right") ).add(new ColumnCopyDef("LogicalReadsPerRowsAffected__avg", oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
-				htp.add("mem-use"   , new ColumnCopyRow().add( new ColumnCopyDef("MemUsageKB__chart"                  ) ).add(new ColumnCopyDef("MemUsageKB__sum"         ) ).add(new ColumnCopyDef("MemUsageKB__avg"                 , oneDecimal).setColBold()).add(new ColumnStatic("kb" )) );
+				htp.add("exec-cnt"    , new ColumnCopyRow().add( new ColumnCopyDef("ExecCount__chart"                   ) ).add(new ColumnCopyDef("ExecCount").setColBold())              .addEmptyCol()                                                                      .addEmptyCol() );
+				htp.add("exec-time"   , new ColumnCopyRow().add( new ColumnCopyDef("Elapsed_ms__chart"                  ) ).add(new ColumnCopyDef("Elapsed_ms__sum", msToHMS           ) ).add(new ColumnCopyDef("Elapsed_ms__avg"                 , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
+				htp.add("cpu-time"    , new ColumnCopyRow().add( new ColumnCopyDef("CpuTime__chart"                     ) ).add(new ColumnCopyDef("CpuTime__sum"   , msToHMS           ) ).add(new ColumnCopyDef("CpuTime__avg"                    , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
+				htp.add("wait-time"   , new ColumnCopyRow().add( new ColumnCopyDef("WaitTime__chart"                    ) ).add(new ColumnCopyDef("WaitTime__sum"  , msToHMS           ) ).add(new ColumnCopyDef("WaitTime__avg"                   , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
+				if (StringUtil.hasValue(QueryOptimizationTime))
+				{
+					htp.add("compile-time", new ColumnCopyRow().add( new ColumnCopyDef("QueryOptimizationTime__chart"   ) ).add(new ColumnCopyDef("QueryOptimizationTime__sum", msToHMS) ).add(new ColumnCopyDef("QueryOptimizationTime__avg"      , oneDecimal).setColBold()).add(new ColumnStatic("ms" )) );
+					htp.add("compile-cnt" , new ColumnCopyRow().add( new ColumnCopyDef("QueryOptimizationCount__chart"  ) ).add(new ColumnCopyDef("QueryOptimizationCount__sum"        ) ).addEmptyCol()                                                                      .addEmptyCol() );
+				}
+				htp.add("l-read"      , new ColumnCopyRow().add( new ColumnCopyDef("LogicalReads__chart"                ) ).add(new ColumnCopyDef("LogicalReads__sum"                  ) ).add(new ColumnCopyDef("LogicalReads__avg"               , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+				htp.add("l-read-mb"   , new ColumnCopyRow().add( new ColumnCopyDef("LogicalReadsMb__chart"              ) ).add(new ColumnCopyDef("LogicalReadsMb__sum"                ) ).add(new ColumnCopyDef("LogicalReadsMb__avg"             , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
+				htp.add("p-read"      , new ColumnCopyRow().add( new ColumnCopyDef("PhysicalReads__chart"               ) ).add(new ColumnCopyDef("PhysicalReads__sum"                 ) ).add(new ColumnCopyDef("PhysicalReads__avg"              , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+				htp.add("rowcount"    , new ColumnCopyRow().add( new ColumnCopyDef("RowsAffected__chart"                ) ).add(new ColumnCopyDef("RowsAffected__sum"                  ) ).add(new ColumnCopyDef("RowsAffected__avg"               , oneDecimal).setColBold()).add(new ColumnStatic("#"  )) );
+				htp.add("l-read/row"  , new ColumnCopyRow().add( new ColumnCopyDef("LogicalReadsPerRowsAffected__chart" ) ).add(new ColumnStatic ("n/a").setColAlign("right"           ) ).add(new ColumnCopyDef("LogicalReadsPerRowsAffected__avg", oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+				htp.add("mem-use"     , new ColumnCopyRow().add( new ColumnCopyDef("MemUsageKB__chart"                  ) ).add(new ColumnCopyDef("MemUsageKB__sum"                    ) ).add(new ColumnCopyDef("MemUsageKB__avg"                 , oneDecimal).setColBold()).add(new ColumnStatic("kb" )) );
+				htp.add("note"        , new ColumnCopyRow().add( new ColumnCopyDef("Note", NoteRenderer                 ) ).addEmptyCol()                                                 .addEmptyCol()                                                                      .addEmptyCol());
 				htp.validate();
 
 				// add rows to Simple ResultSet
@@ -892,5 +991,62 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		} // end: _shortRstm has data
 		
 	} // end: method
+
+	private void setNoteColumn(ResultSetTableModel rstm)
+	{
+		int pos_Note                        = rstm.findColumn("Note");
+		int pos_DistinctSQLTextCount        = rstm.findColumn("DistinctSQLTextCount");
+		int pos_StmntCacheEntryCount_ss     = rstm.findColumn("StmntCacheEntryCount_ss");
+		int pos_PrepStmntEntryCount_sq      = rstm.findColumn("PrepStmntEntryCount_sq");
+//		int pos_ExecCount                   = rstm.findColumn("ExecCount");
+//		int pos_QueryOptimizationCount__sum = rstm.findColumn("QueryOptimizationCount__sum");
+		int pos_QueryOptimizationTime__sum  = rstm.findColumn("QueryOptimizationTime__sum");
+//		int pos_QueryOptimizationTime__avg  = rstm.findColumn("QueryOptimizationTime__avg");
+
+		// Threshold in milliseconds
+//		long QueryOptimizationTime__sum__warningThreshold = 30 * 60 * 1000; // 30 minutes
+		long QueryOptimizationTime__sum__warningThreshold = TimeUnit.MINUTES.toMillis(30);
+		
+
+		if (pos_Note >= 0 && pos_DistinctSQLTextCount >= 0 && pos_StmntCacheEntryCount_ss >= 0 && pos_PrepStmntEntryCount_sq >= 0)
+		{
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				long DistinctSQLTextCount        = rstm.getValueAsLong(r, pos_DistinctSQLTextCount      , -1L);
+				long StmntCacheEntryCount_ss     = rstm.getValueAsLong(r, pos_StmntCacheEntryCount_ss   , -1L);
+				long PrepStmntEntryCount_sq      = rstm.getValueAsLong(r, pos_PrepStmntEntryCount_sq    , -1L);
+				long QueryOptimizationTime__sum  = rstm.getValueAsLong(r, pos_QueryOptimizationTime__sum, -1L);
+//				long QueryOptimizationTime__avg  = rstm.getValueAsLong(r, pos_QueryOptimizationTime__avg, -1L);
+
+				if (true)
+				{
+					String noteStr = "empty...";
+					
+					if (StmntCacheEntryCount_ss == 0 && PrepStmntEntryCount_sq == 0)   noteStr = "<b>Plain Language</b> (compiled/optimized every time): Distinct Normalized SQL Text Count=" + DistinctSQLTextCount;
+					else if (StmntCacheEntryCount_ss > 0)                              noteStr = "<b>Language Stmnt</b> (handled by the Stmnt Cache): Entry Count Starting with '*ss'=" + StmntCacheEntryCount_ss;
+					else if (PrepStmntEntryCount_sq  > 0)                              noteStr = "<b>Prepared Stmnt</b> (handled by the Stmnt Cache): Entry Count Starting with '*sq'=" + PrepStmntEntryCount_sq;
+
+					if (QueryOptimizationTime__sum > 0)
+					{
+						noteStr += ", Distinct Normalized SQL Text Count=" + DistinctSQLTextCount;
+
+						// Format MS into HH:MM:SS
+						String str = TimeUtils.msToTimeStrDHMS( QueryOptimizationTime__sum );
+						if (QueryOptimizationTime__sum > QueryOptimizationTime__sum__warningThreshold)
+						{
+							// NOTE: strings ": " and ", " are replaced with "<BR>" by the NoteRenderer (so thats why |color:red| must NOT contain a space)  
+							noteStr += ", <span style='color:red;'>Summary Compile Time=" + str + "</span>";
+						}
+						else
+						{
+							noteStr += ", Summary Compile Time=" + str;
+						}
+					}
+					
+					rstm.setValueAtWithOverride(noteStr, r, pos_Note);
+				}
+			}
+		}
+	}
 	
 } // end: class

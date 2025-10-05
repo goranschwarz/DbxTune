@@ -136,7 +136,11 @@ then
 			fi
 
 			## Compose a LOG name where we can look at the last line for status during shutdown
-			logFile=$(echo "${DBXTUNE_LOG_DIR}/${srvNameOrAlias:-${srvName}}.log" | sed "s/'//g")
+			logFile=$(echo "${DBXTUNE_CENTRAL_LOG_DIR}/${srvNameOrAlias:-${srvName}}.log" | sed "s/'//g")
+			if [ ! -f ${logFile} ]
+			then
+				logFile=$(echo "${DBXTUNE_LOG_DIR}/${srvNameOrAlias:-${srvName}}.log" | sed "s/'//g")
+			fi
 
 			if [ ${longList} -eq 0 ]
 			then

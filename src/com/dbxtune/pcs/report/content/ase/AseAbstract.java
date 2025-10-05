@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.content.ase;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -2089,13 +2090,31 @@ extends ReportEntryAbstract
 	{
 		String sqlTextHashId;
 		long   execCount;
-		long   elapsed_ms;
-		long   cpuTime;
-		long   waitTime;
-		long   logicalReads;
-		long   physicalReads;
-		long   rowsAffected;
-		long   memUsageKB;
+
+		long   sum_elapsed_ms;
+		long   sum_cpuTime;
+		long   sum_waitTime;
+		long   sum_logicalReads;
+		long   sum_physicalReads;
+		long   sum_rowsAffected;
+		long   sum_memUsageKB;
+
+		long   min_elapsed_ms;
+		long   min_cpuTime;
+		long   min_waitTime;
+		long   min_logicalReads;
+		long   min_physicalReads;
+		long   min_rowsAffected;
+		long   min_memUsageKB;
+
+		long   max_elapsed_ms;
+		long   max_cpuTime;
+		long   max_waitTime;
+		long   max_logicalReads;
+		long   max_physicalReads;
+		long   max_rowsAffected;
+		long   max_memUsageKB;
+
 		String sqlText;
 	}
 
@@ -2143,25 +2162,33 @@ extends ReportEntryAbstract
 		{
 			row++;
 
-			BigDecimal avgElapsed_ms    = new BigDecimal((entry.elapsed_ms   *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal avgCpuTime       = new BigDecimal((entry.cpuTime      *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal avgWaitTime      = new BigDecimal((entry.waitTime     *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal avgLogicalReads  = new BigDecimal((entry.logicalReads *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal avgPhysicalReads = new BigDecimal((entry.physicalReads*1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal avgRowsAffected  = new BigDecimal((entry.rowsAffected *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal avgMemUsageKB    = new BigDecimal((entry.memUsageKB   *1.0)/(entry.execCount*1.0)).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal avgElapsed_ms    = new BigDecimal((entry.sum_elapsed_ms   *1.0)/(entry.execCount*1.0)).setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal avgCpuTime       = new BigDecimal((entry.sum_cpuTime      *1.0)/(entry.execCount*1.0)).setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal avgWaitTime      = new BigDecimal((entry.sum_waitTime     *1.0)/(entry.execCount*1.0)).setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal avgLogicalReads  = new BigDecimal((entry.sum_logicalReads *1.0)/(entry.execCount*1.0)).setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal avgPhysicalReads = new BigDecimal((entry.sum_physicalReads*1.0)/(entry.execCount*1.0)).setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal avgRowsAffected  = new BigDecimal((entry.sum_rowsAffected *1.0)/(entry.execCount*1.0)).setScale(1, RoundingMode.HALF_EVEN);
+			BigDecimal avgMemUsageKB    = new BigDecimal((entry.sum_memUsageKB   *1.0)/(entry.execCount*1.0)).setScale(1, RoundingMode.HALF_EVEN);
 
-			BigDecimal waitTimePct      = entry.elapsed_ms == 0 ? new BigDecimal(0) : new BigDecimal(((entry.waitTime*1.0)/(entry.elapsed_ms*1.0)) * 100.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal waitTimePct      = entry.sum_elapsed_ms == 0 ? new BigDecimal(0) : new BigDecimal(((entry.sum_waitTime*1.0)/(entry.sum_elapsed_ms*1.0)) * 100.0).setScale(1, RoundingMode.HALF_EVEN);
 			
+//			sb.append(sep);
+//			sb.append("-------- SQL Text [" + row + "] --------------------------------------------------\n");
+//			sb.append("-- Count : " + nf.format(entry.execCount) + "\n");
+//			sb.append("-- TimeMs: [Elapsed="      + nf.format(entry.sum_elapsed_ms)   + ", CpuTime="       + nf.format(entry.sum_cpuTime)       + ", WaitTime=" + nf.format(entry.sum_waitTime) + ", WaitTimePct=" + waitTimePct + "%]. Avg=[Elapsed=" + nf.format(avgElapsed_ms) + ", CpuTime=" + nf.format(avgCpuTime) + ", WaitTime=" + nf.format(avgWaitTime) + "]. \n");
+//			sb.append("-- Reads:  [LogicalReads=" + nf.format(entry.sum_logicalReads) + ", PhysicalReads=" + nf.format(entry.sum_physicalReads) + "]. Avg=[LogicalReads=" + nf.format(avgLogicalReads) + ", PhysicalReads=" + nf.format(avgPhysicalReads) + "]. \n");
+//			sb.append("-- Other:  [RowsAffected=" + nf.format(entry.sum_rowsAffected) + ", MemUsageKB="    + nf.format(entry.sum_memUsageKB)    + "]. Avg=[RowsAffected=" + nf.format(avgRowsAffected) + ", MemUsageKB="    + nf.format(avgMemUsageKB)    + "]. \n");
+//			sb.append("------------------------------------------------------------------------\n");
+//			sb.append( StringEscapeUtils.escapeHtml4(entry.sqlText) ).append("\n");
+
 			sb.append(sep);
 			sb.append("-------- SQL Text [" + row + "] --------------------------------------------------\n");
 			sb.append("-- Count : " + nf.format(entry.execCount) + "\n");
-			sb.append("-- TimeMs: [Elapsed="      + nf.format(entry.elapsed_ms)   + ", CpuTime="       + nf.format(entry.cpuTime)       + ", WaitTime=" + nf.format(entry.waitTime) + ", WaitTimePct=" + waitTimePct + "%]. Avg=[Elapsed=" + nf.format(avgElapsed_ms) + ", CpuTime=" + nf.format(avgCpuTime) + ", WaitTime=" + nf.format(avgWaitTime) + "]. \n");
-			sb.append("-- Reads:  [LogicalReads=" + nf.format(entry.logicalReads) + ", PhysicalReads=" + nf.format(entry.physicalReads) + "]. Avg=[LogicalReads=" + nf.format(avgLogicalReads) + ", PhysicalReads=" + nf.format(avgPhysicalReads) + "]. \n");
-			sb.append("-- Other:  [RowsAffected=" + nf.format(entry.rowsAffected) + ", MemUsageKB="    + nf.format(entry.memUsageKB)    + "]. Avg=[RowsAffected=" + nf.format(avgRowsAffected) + ", MemUsageKB="    + nf.format(avgMemUsageKB)    + "]. \n");
+			sb.append("-- TimeMs: [Elapsed="      + nf.format(entry.sum_elapsed_ms)   + ", CpuTime="       + nf.format(entry.sum_cpuTime)       + ", WaitTime=" + nf.format(entry.sum_waitTime) + ", WaitTimePct=" + waitTimePct + "%] --- Avg=[Elapsed="      + nf.format(avgElapsed_ms)   + ", CpuTime="       + nf.format(avgCpuTime)       + ", WaitTime=" + nf.format(avgWaitTime) + "] --- Min[Elapsed="      + entry.min_elapsed_ms   + ", CpuTime="       + entry.min_cpuTime       + ", WaitTime=" + entry.min_waitTime + "] --- Max[Elapsed="      + entry.max_elapsed_ms   + ", CpuTime="       + entry.max_cpuTime       + ", WaitTime=" + entry.max_waitTime + "] \n");
+			sb.append("-- Reads:  [LogicalReads=" + nf.format(entry.sum_logicalReads) + ", PhysicalReads=" + nf.format(entry.sum_physicalReads) +                                                                                   "] --- Avg=[LogicalReads=" + nf.format(avgLogicalReads) + ", PhysicalReads=" + nf.format(avgPhysicalReads) +                                          "] --- Min[LogicalReads=" + entry.min_logicalReads + ", PhysicalReads=" + entry.min_physicalReads +                                      "] --- Max[LogicalReads=" + entry.max_logicalReads + ", PhysicalReads=" + entry.max_physicalReads                                      + "] \n");
+			sb.append("-- Other:  [RowsAffected=" + nf.format(entry.sum_rowsAffected) + ", MemUsageKB="    + nf.format(entry.sum_memUsageKB)    +                                                                                   "] --- Avg=[RowsAffected=" + nf.format(avgRowsAffected) + ", MemUsageKB="    + nf.format(avgMemUsageKB)    +                                          "] --- Min[RowsAffected=" + entry.min_rowsAffected + ", MemUsageKB="    + entry.min_memUsageKB    +                                      "] --- Max[RowsAffected=" + entry.max_rowsAffected + ", MemUsageKB="    + entry.max_memUsageKB                                         + "] \n");
 			sb.append("------------------------------------------------------------------------\n");
 			sb.append( StringEscapeUtils.escapeHtml4(entry.sqlText) ).append("\n");
-			//org.apache.commons.text.StringEscapeUtils
 
 			sep = "\n\n";
 		}
@@ -2200,16 +2227,35 @@ extends ReportEntryAbstract
 
 		String sql = ""
 			    + "select \n"
-			    + "     [SQLText$dcc$]         as [SQLTextHashId] \n"
-			    + "    ,count(*)               as [cnt] \n"
-			    + "    ,sum(s.[Elapsed_ms])    as [Elapsed_ms] \n"
-			    + "    ,sum(s.[CpuTime])       as [CpuTime] \n"
-			    + "    ,sum(s.[WaitTime])      as [WaitTime] \n"
-			    + "    ,sum(s.[LogicalReads])  as [LogicalReads] \n"
-			    + "    ,sum(s.[PhysicalReads]) as [PhysicalReads] \n"
-			    + "    ,sum(s.[RowsAffected])  as [RowsAffected] \n"
-			    + "    ,sum(s.[MemUsageKB])    as [MemUsageKB] \n"
-			    + "    ,max(l.[colVal])        as [SQLText] \n"
+			    + "     [SQLText$dcc$]         as [SQLTextHashId] \n"       // 1 
+			    + "    ,count(*)               as [cnt] \n"                 // 2
+
+			    + "    ,sum(s.[Elapsed_ms])    as [Elapsed_ms] \n"          // 3
+			    + "    ,sum(s.[CpuTime])       as [CpuTime] \n"             // 4
+			    + "    ,sum(s.[WaitTime])      as [WaitTime] \n"            // 5
+			    + "    ,sum(s.[LogicalReads])  as [LogicalReads] \n"        // 6
+			    + "    ,sum(s.[PhysicalReads]) as [PhysicalReads] \n"       // 7
+			    + "    ,sum(s.[RowsAffected])  as [RowsAffected] \n"        // 8
+			    + "    ,sum(s.[MemUsageKB])    as [MemUsageKB] \n"          // 9
+
+		    	+ "    ,min(s.[Elapsed_ms])    as [min_Elapsed_ms] \n"      // 10
+		    	+ "    ,min(s.[CpuTime])       as [min_CpuTime] \n"         // 11
+		    	+ "    ,min(s.[WaitTime])      as [min_WaitTime] \n"        // 12
+		    	+ "    ,min(s.[LogicalReads])  as [min_LogicalReads] \n"    // 13
+		    	+ "    ,min(s.[PhysicalReads]) as [min_PhysicalReads] \n"   // 14
+		    	+ "    ,min(s.[RowsAffected])  as [min_RowsAffected] \n"    // 15
+		    	+ "    ,min(s.[MemUsageKB])    as [min_MemUsageKB] \n"      // 16
+
+		    	+ "    ,max(s.[Elapsed_ms])    as [max_Elapsed_ms] \n"      // 17
+		    	+ "    ,max(s.[CpuTime])       as [max_CpuTime] \n"         // 18
+		    	+ "    ,max(s.[WaitTime])      as [max_WaitTime] \n"        // 19
+		    	+ "    ,max(s.[LogicalReads])  as [max_LogicalReads] \n"    // 20
+		    	+ "    ,max(s.[PhysicalReads]) as [max_PhysicalReads] \n"   // 21
+		    	+ "    ,max(s.[RowsAffected])  as [max_RowsAffected] \n"    // 22
+		    	+ "    ,max(s.[MemUsageKB])    as [max_MemUsageKB] \n"      // 23
+
+			    + "    ,max(l.[colVal])        as [SQLText] \n"             // 24
+
 			    + "from [MonSqlCapStatements] s \n"
 			    + "join [MonSqlCapStatements$dcc$SQLText] l on l.[hashId] = s.[SQLText$dcc$] \n"
 			    + "where 1=1 \n"
@@ -2235,16 +2281,34 @@ extends ReportEntryAbstract
 						SqlCapExecutedSqlEntry entry = new SqlCapExecutedSqlEntry();
 
 						int colPos = 1;
-						entry.sqlTextHashId = rs.getString(colPos++);
-						entry.execCount     = rs.getLong  (colPos++);
-						entry.elapsed_ms    = rs.getLong  (colPos++);
-						entry.cpuTime       = rs.getLong  (colPos++);
-						entry.waitTime      = rs.getLong  (colPos++);
-						entry.logicalReads  = rs.getLong  (colPos++);
-						entry.physicalReads = rs.getLong  (colPos++);
-						entry.rowsAffected  = rs.getLong  (colPos++);
-						entry.memUsageKB    = rs.getLong  (colPos++);
-						entry.sqlText       = rs.getString(colPos++);
+						entry.sqlTextHashId     = rs.getString(colPos++); // 1
+						entry.execCount         = rs.getLong  (colPos++); // 2
+
+						entry.sum_elapsed_ms    = rs.getLong  (colPos++); // 3
+						entry.sum_cpuTime       = rs.getLong  (colPos++); // 4
+						entry.sum_waitTime      = rs.getLong  (colPos++); // 5
+						entry.sum_logicalReads  = rs.getLong  (colPos++); // 6
+						entry.sum_physicalReads = rs.getLong  (colPos++); // 7
+						entry.sum_rowsAffected  = rs.getLong  (colPos++); // 8
+						entry.sum_memUsageKB    = rs.getLong  (colPos++); // 9
+
+						entry.min_elapsed_ms    = rs.getLong  (colPos++); // 10
+						entry.min_cpuTime       = rs.getLong  (colPos++); // 11
+						entry.min_waitTime      = rs.getLong  (colPos++); // 12
+						entry.min_logicalReads  = rs.getLong  (colPos++); // 13
+						entry.min_physicalReads = rs.getLong  (colPos++); // 14
+						entry.min_rowsAffected  = rs.getLong  (colPos++); // 15
+						entry.min_memUsageKB    = rs.getLong  (colPos++); // 16
+
+						entry.max_elapsed_ms    = rs.getLong  (colPos++); // 17
+						entry.max_cpuTime       = rs.getLong  (colPos++); // 18
+						entry.max_waitTime      = rs.getLong  (colPos++); // 19
+						entry.max_logicalReads  = rs.getLong  (colPos++); // 20
+						entry.max_physicalReads = rs.getLong  (colPos++); // 21
+						entry.max_rowsAffected  = rs.getLong  (colPos++); // 22
+						entry.max_memUsageKB    = rs.getLong  (colPos++); // 23
+
+						entry.sqlText           = rs.getString(colPos++); // 24
 
 						entries._entryList.add(entry);
 					}

@@ -44,6 +44,7 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
+import com.dbxtune.cm.CountersModel.AggregationType;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.NoValidRowsInSample;
 import com.dbxtune.config.dict.AseErrorMessageDictionary;
@@ -119,6 +120,33 @@ extends CountersModel
 			,"sumCpuTime"
 			,"sumWaitTime"
 			,"sumRowsAffected"
+			,"cntQueryOptimizationTimeGtZero"
+			,"sumQueryOptimizationTime"
+			//------------------------------------------
+			,"compileCount"
+			,"compileCount_withTime_gt10_lt100"
+			,"compileCount_withTime_gt100_lt1000"
+			,"compileCount_withTime_gt1000"
+			,"sumCompileTime"
+
+			,"compileCount_pureLang"
+			,"compileCount_pureLang_withTime_gt10_lt100"
+			,"compileCount_pureLang_withTime_gt100_lt1000"
+			,"compileCount_pureLang_withTime_gt1000"
+			,"sumCompileTime_pureLang"
+
+			,"compileCount_langInStmntCache"
+			,"compileCount_langInStmntCache_withTime_gt10_lt100"
+			,"compileCount_langInStmntCache_withTime_gt100_lt1000"
+			,"compileCount_langInStmntCache_withTime_gt1000"
+			,"sumCompileTime_langInStmntCache"
+
+			,"compileCount_dynamicInStmntCache"
+			,"compileCount_dynamicInStmntCache_withTime_gt10_lt100"
+			,"compileCount_dynamicInStmntCache_withTime_gt100_lt1000"
+			,"compileCount_dynamicInStmntCache_withTime_gt1000"
+			,"sumCompileTime_dynamicInStmntCache"
+			//------------------------------------------
 			};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -185,6 +213,10 @@ extends CountersModel
 	public static final String GRAPH_NAME_SQL_STATEMENT_DB_SUM_CPU_TIME          = "SsDbSumCpuTime";
 	public static final String GRAPH_NAME_SQL_STATEMENT_DB_SUM_WAIT_TIME         = "SsDbSumWaitTime";
 	public static final String GRAPH_NAME_SQL_STATEMENT_DB_SUM_ROWS_AFFECTED     = "SsDbSumRowsAfct";
+
+	public static final String GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_CNT       = "SsDbSumCmplCnt";
+	public static final String GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_TIME      = "SsDbSumCmplTime";
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TYPE_CNT     = "SsSumCmplTypeCnt";
 
 	public static final String GRAPH_NAME_SQL_STATEMENT_DB_ERROR_COUNT           = "SsDbSumErrorCnt";
 	
@@ -326,6 +358,49 @@ extends CountersModel
 				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 	
 				-1);   // minimum height
 
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_CNT,
+			"SQL Statements Per DB - Sum Query Compile/Optimization Count per Sec", // Menu CheckBox text
+			"SQL Statements Per DB - Sum Query Compile/Optimization Count per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+//			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+//			LabelType.Static,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_TIME,
+			"SQL Statements Per DB - Sum Query Compile/Optimization Time", // Menu CheckBox text
+			"SQL Statements Per DB - Sum Query Compile/Optimization Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+//			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+//			LabelType.Static,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TYPE_CNT,
+			"SQL Statements - Sum Query Compile/Optimization Type Count per Sec", // Menu CheckBox text
+			"SQL Statements - Sum Query Compile/Optimization Type Count per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "Pure Language", "Language In Statement Cache", "Dynamic (Prepared) Statements In Statement Cache3" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		//---------------------------------------------------------------------------
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_ERROR_COUNT,
@@ -359,7 +434,28 @@ extends CountersModel
 		if (GRAPH_NAME_SQL_STATEMENT_DB_SUM_WAIT_TIME        .equals(tgdp.getName())) private_updateGraphData(tgdp, "sumWaitTime");
 		if (GRAPH_NAME_SQL_STATEMENT_DB_SUM_ROWS_AFFECTED    .equals(tgdp.getName())) private_updateGraphData(tgdp, "sumRowsAffected");
 
+		if (GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_CNT      .equals(tgdp.getName())) private_updateGraphData(tgdp, "cntQueryOptimizationTimeGtZero");
+		if (GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_TIME     .equals(tgdp.getName())) private_updateGraphData(tgdp, "sumQueryOptimizationTime");
+		
 		if (GRAPH_NAME_SQL_STATEMENT_DB_ERROR_COUNT          .equals(tgdp.getName())) private_updateGraphData(tgdp, "errorCount");
+
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TYPE_CNT.equals(tgdp.getName()))
+		{
+			// get Aggre
+			if (hasAggregatedRowId())
+			{
+				Double[] arr = new Double[3];
+
+				int aggRowId = getAggregatedRowId();
+
+				arr[0] = this.getRateValueAsDouble(aggRowId, "compileCount_pureLang");
+				arr[1] = this.getRateValueAsDouble(aggRowId, "compileCount_langInStmntCache");
+				arr[2] = this.getRateValueAsDouble(aggRowId, "compileCount_dynamicInStmntCache");
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+		}
 	}
 
 	private void private_updateGraphData(TrendGraphDataPoint tgdp, String serieName)
@@ -452,6 +548,57 @@ extends CountersModel
 			mtd.addColumn(tabName, "avgRowsAffected",      "<html>Average RowsAffected for this time span.<br><b>Algorithm:</b> abs.sumRowsAffected / abs.totalCount</html>");
 			mtd.addColumn(tabName, "maxRowsAffected",      "<html>Maximum RowsAffected for this time span.</html>");
 
+			mtd.addColumn(tabName, "cntQueryOptimizationTimeGtZero",    "<html>Summary of all QueryOptimizationTime with values above 0 for this time span. <br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
+			mtd.addColumn(tabName, "cntQueryOptimizationTimeGtZeroAbs", "<html>Summary of all QueryOptimizationTime with values above 0 for this time span.</html>");
+			mtd.addColumn(tabName, "sumQueryOptimizationTime",          "<html>Summary of all QueryOptimizationTime for this time span. <br>Also 'diff' and 'rate' calculated to get a sence for the changes</html>");
+			mtd.addColumn(tabName, "sumQueryOptimizationTimeAbs",       "<html>Summary of all QueryOptimizationTime for this time span.</html>");
+			mtd.addColumn(tabName, "avgQueryOptimizationTime",          "<html>Average QueryOptimizationTime for this time span.<br> <b>Algorithm:</b> abs.sumQueryOptimizationTime / abs.cntQueryOptimizationTimeGtZero</html>");
+			mtd.addColumn(tabName, "maxQueryOptimizationTime",          "<html>Maximum QueryOptimizationTime for this time span.</html>");
+			
+			mtd.addColumn(tabName, "compileCount",                                           "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCountAbs",                                        "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_withTime_gt10_lt100",                       "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_withTime_gt100_lt1000",                     "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_withTime_gt1000",                           "<html>Fixme</html>");
+
+			mtd.addColumn(tabName, "sumCompileTime",                                         "<html>Fixme</html>");
+			mtd.addColumn(tabName, "sumCompileTimeAbs",                                      "<html>Fixme</html>");
+			mtd.addColumn(tabName, "avgCompileTime",                                         "<html>Fixme</html>");
+			mtd.addColumn(tabName, "maxCompileTime",                                         "<html>Fixme</html>");
+
+			mtd.addColumn(tabName, "compileCount_pureLang",                                  "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_pureLangAbs",                               "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_pureLang_withTime_gt10_lt100",              "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_pureLang_withTime_gt100_lt1000",            "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_pureLang_withTime_gt1000",                  "<html>Fixme</html>");
+
+			mtd.addColumn(tabName, "sumCompileTime_pureLang",                                "<html>Fixme</html>");
+			mtd.addColumn(tabName, "sumCompileTime_pureLangAbs",                             "<html>Fixme</html>");
+			mtd.addColumn(tabName, "avgCompileTime_pureLang",                                "<html>Fixme</html>");
+			mtd.addColumn(tabName, "maxCompileTime_pureLang",                                "<html>Fixme</html>");
+
+			mtd.addColumn(tabName, "compileCount_langInStmntCache",                          "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_langInStmntCacheAbs",                       "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_langInStmntCache_withTime_gt10_lt100",      "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_langInStmntCache_withTime_gt100_lt1000",    "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_langInStmntCache_withTime_gt1000",          "<html>Fixme</html>");
+
+			mtd.addColumn(tabName, "sumCompileTime_langInStmntCache",                        "<html>Fixme</html>");
+			mtd.addColumn(tabName, "sumCompileTime_langInStmntCacheAbs",                     "<html>Fixme</html>");
+			mtd.addColumn(tabName, "avgCompileTime_langInStmntCache",                        "<html>Fixme</html>");
+			mtd.addColumn(tabName, "maxCompileTime_langInStmntCache",                        "<html>Fixme</html>");
+
+			mtd.addColumn(tabName, "compileCount_dynamicInStmntCache",                       "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_dynamicInStmntCacheAbs",                    "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_dynamicInStmntCache_withTime_gt10_lt100",   "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_dynamicInStmntCache_withTime_gt100_lt1000", "<html>Fixme</html>");
+			mtd.addColumn(tabName, "compileCount_dynamicInStmntCache_withTime_gt1000",       "<html>Fixme</html>");
+
+			mtd.addColumn(tabName, "sumCompileTime_dynamicInStmntCache",                     "<html>Fixme</html>");
+			mtd.addColumn(tabName, "sumCompileTime_dynamicInStmntCacheAbs",                  "<html>Fixme</html>");
+			mtd.addColumn(tabName, "avgCompileTime_dynamicInStmntCache",                     "<html>Fixme</html>");
+			mtd.addColumn(tabName, "maxCompileTime_dynamicInStmntCache",                     "<html>Fixme</html>");
+			
 //			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"=count, \"MsgNumber\"=count}.</html>");
 			mtd.addColumn(tabName, "errorMsgCountMap",      "<html>A JSON String, which contains: {\"MsgNumber\"={\"dbname\"=count}, \"MsgNumber\"={\"dbname\"=count}}.</html>");
 		}
@@ -621,44 +768,103 @@ extends CountersModel
 		tmp = new AggregationType("dynamicStmntCount",      AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("inProcedureCount",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("inProcNameNullCount",    AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
-		        
+
 		tmp = new AggregationType("totalCountAbs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("sqlBatchCountAbs",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("inStmntCacheCountAbs",   AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("dynamicStmntCountAbs",   AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("inProcedureCountAbs",    AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("inProcNameNullCountAbs", AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
-		    
+
 		tmp = new AggregationType("sumExecTimeMs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("sumExecTimeMsAbs",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("avgExecTimeMs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("maxExecTimeMs",          AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
-		        
+
 		tmp = new AggregationType("sumLogicalReads",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("sumLogicalReadsAbs",     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("avgLogicalReads",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("maxLogicalReads",        AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
-		        
+
 		tmp = new AggregationType("sumPhysicalReads",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("sumPhysicalReadsAbs",    AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("avgPhysicalReads",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("maxPhysicalReads",       AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
-		        
+
 		tmp = new AggregationType("sumCpuTime",             AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("sumCpuTimeAbs",          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("avgCpuTime",             AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("maxCpuTime",             AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
-		        
+
 		tmp = new AggregationType("sumWaitTime",            AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("sumWaitTimeAbs",         AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("avgWaitTime",            AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("maxWaitTime",            AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
-		        
+
 		tmp = new AggregationType("sumRowsAffected",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("sumRowsAffectedAbs",     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("avgRowsAffected",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
 		tmp = new AggregationType("maxRowsAffected",        AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
-		        
+
+		tmp = new AggregationType("cntQueryOptimizationTimeGtZero",     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("cntQueryOptimizationTimeGtZeroAbs",  AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumQueryOptimizationTime",           AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumQueryOptimizationTimeAbs",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgQueryOptimizationTime",           AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxQueryOptimizationTime",           AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+
+//------------------------------------------
+//TODO; // Since the name is changed "xxxQueryOptimizationTimeXxx" -->> "???compileCount|Time" we need to look at the graphs (change column names) 
+		// Count
+		tmp = new AggregationType("compileCount",                                            AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCountAbs",                                         AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_withTime_gt10_lt100",                        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_withTime_gt100_lt1000",                      AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_withTime_gt1000",                            AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		// Time                                                                              
+		tmp = new AggregationType("sumCompileTime",                                          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumCompileTimeAbs",                                       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgCompileTime",                                          AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxCompileTime",                                          AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+
+		// PURE LANGUAGE -- Count 
+		tmp = new AggregationType("compileCount_pureLang",                                   AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_pureLangAbs",                                AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_pureLang_withTime_gt10_lt100",               AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_pureLang_withTime_gt100_lt1000",             AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_pureLang_withTime_gt1000",                   AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		// PURE LANGUAGE -- Time                                                                              
+		tmp = new AggregationType("sumCompileTime_pureLang",                                 AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumCompileTime_pureLangAbs",                              AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgCompileTime_pureLang",                                 AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxCompileTime_pureLang",                                 AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+
+		// Language in Statement Cache -- Count
+		tmp = new AggregationType("compileCount_langInStmntCache",                           AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_langInStmntCacheAbs",                        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_langInStmntCache_withTime_gt10_lt100",       AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_langInStmntCache_withTime_gt100_lt1000",     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_langInStmntCache_withTime_gt1000",           AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		// Language in Statement Cache -- Time
+		tmp = new AggregationType("sumCompileTime_langInStmntCache",                         AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumCompileTime_langInStmntCacheAbs",                      AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgCompileTime_langInStmntCache",                         AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxCompileTime_langInStmntCache",                         AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+
+		// Dynamic Request in Statement Cache -- Count
+		tmp = new AggregationType("compileCount_dynamicInStmntCache",                        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_dynamicInStmntCacheAbs",                     AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_dynamicInStmntCache_withTime_gt10_lt100",    AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_dynamicInStmntCache_withTime_gt100_lt1000",  AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("compileCount_dynamicInStmntCache_withTime_gt1000",        AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		// Dynamic Request in Statement Cache -- Time
+		tmp = new AggregationType("sumCompileTime_dynamicInStmntCache",                      AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("sumCompileTime_dynamicInStmntCacheAbs",                   AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("avgCompileTime_dynamicInStmntCache",                      AggregationType.Agg.SUM);   aggColumns.put(tmp.getColumnName(), tmp);
+		tmp = new AggregationType("maxCompileTime_dynamicInStmntCache",                      AggregationType.Agg.MAX);   aggColumns.put(tmp.getColumnName(), tmp);
+		
+//------------------------------------------
+		
 //		tmp = new AggregationType("errorMsgCountMap",       Types.VARCHAR, 1024, 0);
 
 //		tmp = new AggregationType("dbid",                 Types.INTEGER,  0, 0);

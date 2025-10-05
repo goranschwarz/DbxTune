@@ -53,8 +53,9 @@ extends MonitorUpTime
 	@Override
 	public String getCommand()
 	{
+		String cmdPath = Configuration.getCombinedConfiguration().getProperty(PROPKEY_windows_typeperf_cmd_path, DEFAULT_windows_typeperf_cmd_path);
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "typeperf -si " + getSleepTime() + " \"\\System\\*\" ";
+		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\System\\*\" ";
 	}
 
 	@Override
@@ -383,18 +384,18 @@ extends MonitorUpTime
 //		
 //		// on: 5,15,30,60 minute: calculate and set scale to 2
 ////		_osLoadAverage1min  = osLoadAverage1min;
-//		_osLoadAverage1min  = cnt1m  == 0 ? -1 : new BigDecimal( sum1m  / (cnt1m  * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverage5min  = cnt5m  == 0 ? -1 : new BigDecimal( sum5m  / (cnt5m  * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverage15min = cnt15m == 0 ? -1 : new BigDecimal( sum15m / (cnt15m * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverage30min = cnt30m == 0 ? -1 : new BigDecimal( sum30m / (cnt30m * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverage60min = cnt60m == 0 ? -1 : new BigDecimal( sum60m / (cnt60m * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+//		_osLoadAverage1min  = cnt1m  == 0 ? -1 : new BigDecimal( sum1m  / (cnt1m  * 1.0) ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverage5min  = cnt5m  == 0 ? -1 : new BigDecimal( sum5m  / (cnt5m  * 1.0) ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverage15min = cnt15m == 0 ? -1 : new BigDecimal( sum15m / (cnt15m * 1.0) ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverage30min = cnt30m == 0 ? -1 : new BigDecimal( sum30m / (cnt30m * 1.0) ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverage60min = cnt60m == 0 ? -1 : new BigDecimal( sum60m / (cnt60m * 1.0) ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
 //
-////		_osLoadAverageAdjusted1min  =                    new BigDecimal( osLoadAverage1min / numOfProcs         ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();;
-//		_osLoadAverageAdjusted1min  = cnt1m  == 0 ? -1 : new BigDecimal( (sum1m  / (cnt1m  * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverageAdjusted5min  = cnt5m  == 0 ? -1 : new BigDecimal( (sum5m  / (cnt5m  * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverageAdjusted15min = cnt15m == 0 ? -1 : new BigDecimal( (sum15m / (cnt15m * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverageAdjusted30min = cnt30m == 0 ? -1 : new BigDecimal( (sum30m / (cnt30m * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-//		_osLoadAverageAdjusted60min = cnt60m == 0 ? -1 : new BigDecimal( (sum60m / (cnt60m * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+////		_osLoadAverageAdjusted1min  =                    new BigDecimal( osLoadAverage1min / numOfProcs         ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();;
+//		_osLoadAverageAdjusted1min  = cnt1m  == 0 ? -1 : new BigDecimal( (sum1m  / (cnt1m  * 1.0)) / numOfProcs ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverageAdjusted5min  = cnt5m  == 0 ? -1 : new BigDecimal( (sum5m  / (cnt5m  * 1.0)) / numOfProcs ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverageAdjusted15min = cnt15m == 0 ? -1 : new BigDecimal( (sum15m / (cnt15m * 1.0)) / numOfProcs ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverageAdjusted30min = cnt30m == 0 ? -1 : new BigDecimal( (sum30m / (cnt30m * 1.0)) / numOfProcs ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+//		_osLoadAverageAdjusted60min = cnt60m == 0 ? -1 : new BigDecimal( (sum60m / (cnt60m * 1.0)) / numOfProcs ).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
 //	}
 //
 //	/** Small Class to keep OsLoadAverage history values... so we can calculate 5 and 15 minute values */

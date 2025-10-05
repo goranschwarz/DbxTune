@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -1106,11 +1107,11 @@ extends CountersModel
 				// LockWaits / LockRequests * 100;
 				double calc = ((LockWaits+0.0) / (LockRequests+0.0)) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(2, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, destColPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, destColPos);
+				diffData.setValueAt(new BigDecimal(0).setScale(2, RoundingMode.HALF_EVEN), rowId, destColPos);
 
 			//------------------------------
 			// CALC: RowsPerPage
@@ -1126,11 +1127,11 @@ extends CountersModel
 					// RowsPerPage = TabRowCount / NumUsedPages;
 					double calc = ((TabRowCount+0.0) / (NumUsedPages+0.0));
 
-					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 					diffData.setValueAt(newVal, rowId, destColPos);
 				}
 				else
-					diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, destColPos);
+					diffData.setValueAt(new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN), rowId, destColPos);
 			}
 
 			//------------------------------
@@ -1183,12 +1184,12 @@ extends CountersModel
 				{
 					double calc = (LogicalReads+0.0) / (Scans+0.0);
 
-					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 					diffData.setValueAt(newVal, rowId, destColPos);
 				}
 				else
 				{
-					diffData.setValueAt(new BigDecimal(-1).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, destColPos);
+					diffData.setValueAt(new BigDecimal(-1).setScale(1, RoundingMode.HALF_EVEN), rowId, destColPos);
 				//	diffData.setValueAt(null, rowId, destColPos);
 				}
 			}

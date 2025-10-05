@@ -26,6 +26,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.Map;
 
@@ -254,7 +255,7 @@ extends TabularCntrPanel
 				{
 					double freePct = Math.random() * 100.0;
 					double usedPct = 100.0 - freePct;
-					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
 					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
 				}
@@ -316,7 +317,7 @@ extends TabularCntrPanel
 				{
 					double freePct = Math.random() * 100.0;
 					double usedPct = 100.0 - freePct;
-					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
 					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
 				}

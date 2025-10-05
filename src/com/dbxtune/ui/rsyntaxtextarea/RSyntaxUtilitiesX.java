@@ -148,7 +148,7 @@ public class RSyntaxUtilitiesX
 			mi.setSelected(Configuration.getCombinedConfiguration().getBooleanProperty(RSyntaxTextAreaX.PROPKEY_IS_HIGLIGHT_WORD_MODE_ENABLED, true));
 
 //			mi = new JCheckBoxMenuItem("Mark all Words, on Double Click", RSyntaxTextAreaX.isHiglightWordModeEnabled(syntaxTextArea));
-			mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+			mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 //			mi.addActionListener(new ActionListener()
 //			{
 //				@Override
@@ -164,7 +164,7 @@ public class RSyntaxUtilitiesX
 		// Format SQL
 		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.FormatSqlAction(RSyntaxTextAreaX.formatSql));
 		mi.setText("Format SQL");
-		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | InputEvent.SHIFT_DOWN_MASK));
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | InputEvent.SHIFT_DOWN_MASK));
 		menu.add(mi);
 		
 		//--------------------------------
@@ -210,13 +210,13 @@ public class RSyntaxUtilitiesX
 		//-- Upper
 		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.ToUpperCaseAction(RSyntaxTextAreaX.toUpperCase));
 		mi.setText("Upper Case");
-		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 		m.add(mi);
 		
 		//-- Lower
 		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.ToLowerCaseAction(RSyntaxTextAreaX.toLowerCase));
 		mi.setText("Lower Case");
-		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 		m.add(mi);
 		
 		//--------------------------------
@@ -437,7 +437,7 @@ public class RSyntaxUtilitiesX
 				_frame = (JFrame) _owner;
 
 			// Key Mapping
-			int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+			int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
 			int       key       = KeyEvent.VK_F;
 			KeyStroke keyStroke = KeyStroke.getKeyStroke(key, mask);
 
@@ -575,7 +575,7 @@ public class RSyntaxUtilitiesX
 				_frame = (JFrame) _owner;
 
 			// Key Mapping
-			int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+			int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
 			int       key       = KeyEvent.VK_G;
 			KeyStroke keyStroke = KeyStroke.getKeyStroke(key, mask);
 

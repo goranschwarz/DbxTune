@@ -232,10 +232,10 @@ at pc:
 
 		#active-statements {
 			position: fixed;
-			top: 115px;
+			top: 265px;
 			left: 25px;
-			max-height: 80%;
-			width: 95%;
+			max-height: 75%;
+			width: 97%;
 			overflow: auto;
 		/*	background-color: rgba(255, 195, 83, 1); */
 			background-color: rgba(229, 228, 226, 1);
@@ -648,7 +648,9 @@ at pc:
 
 	<!-- Postgres Query Plan -- PEV2 -->
 <!--	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css">-->
-	<link rel="stylesheet" href="https://unpkg.com/pev2/dist/style.css">
+<!-- 	<link rel="stylesheet" href="https://unpkg.com/pev2/dist/style.css">-->
+	<link rel="stylesheet" href="https://unpkg.com/pev2/dist/style.css" media="print" onload="this.media='all'"> <!-- DEFER the load, since it's slow sometimes -->
+	
 
 </head>
 
@@ -1132,13 +1134,46 @@ at pc:
 					sqlText = sqlText.substr(startPos + 1);
 			}
 
+			// If it's a Sybase showplan, extract the SQL Text
+			let isSybaseShowplan = false;
+			let searchForStr = 'Showplan:---- BEGIN: SQL Statement Executed ------------------------------------';
+			if (sqlText.startsWith(searchForStr))
+			{
+				let startPos = sqlText.indexOf(searchForStr) + searchForStr.length;
+				let endPos   = sqlText.indexOf('---- END: SQL Statement Executed --------------------------------------') - 1;
+				if (startPos >= 0 && endPos >= 0)
+				{
+					isSybaseShowplan = true;
+					sqlText = sqlText.substring(startPos + 1, endPos);
+
+					formatOptions = {
+						language: 'tsql', 
+						tabWidth: 4,
+						keywordCase: 'upper',
+						tabulateAlias: true,
+						paramTypes: { positional: true, numbered: [], named: ['@'] }
+
+					};
+					console.log("Sybase Showplan SQLTEXT: |" + sqlText + "|.");
+				}
+			}
+
 			console.log("Format SQL with options: " + formatOptions, formatOptions);
 
 			// NOTE 'sqlFormatter' do not do a good job at T-SQL like variables etc...
 			// SO Possibly use https://www.npmjs.com/package/poor-mans-t-sql-formatter   ... but I couldn't find a CDN to load it from
 		 	try {
 				let formattedSqlText = sqlFormatter.format( sqlText, formatOptions );
-				$("#dbx-view-sqltext-content").text(formattedSqlText);
+				if (isSybaseShowplan)
+				{
+					var originTxt = $("#dbx-view-sqltext-content").text();
+					var newTxt = originTxt.replace(sqlText, formattedSqlText);
+					$("#dbx-view-sqltext-content").text(newTxt);
+				}
+				else
+				{
+					$("#dbx-view-sqltext-content").text(formattedSqlText);
+				}
 				Prism.highlightAll();
 			} catch (error) {
 				alert(error);

@@ -205,7 +205,7 @@ public class H2Connection extends DbxConnection
 		
 		String sql = "select ROW_COUNT_ESTIMATE \n"
 				+ "from INFORMATION_SCHEMA.TABLES \n"
-				+ "where TABLE_TYPE    = 'TABLE' \n"
+				+ "where TABLE_TYPE in('TABLE', 'BASE TABLE') \n"
 				+ whereCat
 				+ whereSch
 				+ whereTab

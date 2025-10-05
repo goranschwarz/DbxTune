@@ -126,9 +126,15 @@ public class AseCpuUsageOverview extends AseAbstract
 		if (isFullMessageType())
 		{
 			_CmSqlStatement_SqlStmntSumLRead  .writeHtmlContent(w, null, null);
-			_CmSqlStatement_SqlStmntSumCpuTime.writeHtmlContent(w, null, "The above two graphs, shows what SQL Statements (<b>long or short in responce time</b>) we are spending LogicalReads & CPU Time on.<br>"
-			                                                      + "This can be used to figure out if it's <i>short</i> or <i>long</i> running Statements that uses most of the machine power...<br>"
-			                                                      + "(where should we start to look)... many 'Logical Reads'; then we might have <i>in memory table scans</i>. Lot of 'CPU Time';  it might be <i>sorting</i> or...");
+			_CmSqlStatement_SqlStmntSumCpuTime.writeHtmlContent(w, null, 
+			                                                             "The above two graphs, shows what SQL Statements (<b>long or short in responce time</b>) we are spending LogicalReads & CPU Time on.<br>"
+			                                                           + "This can be used to figure out if it's <i>short</i> or <i>long</i> running Statements that uses most of the machine power...<br>"
+			                                                           + "(where should we start to look)... many 'Logical Reads'; then we might have <i>in memory table scans</i>. Lot of 'CPU Time';  it might be <i>sorting</i> or...");
+			_CmSqlStatementPerDb_SqlStmntSumCmplCount.writeHtmlContent(w, null, null);
+			_CmSqlStatementPerDb_SqlStmntSumCmplTime .writeHtmlContent(w, null, 
+			                                                              "The above two graph indicates if we might have problems with SQL Statements: <br>"
+			                                                            + "This can be Language Requests or Prepared Statements that are not cached in the Statement Cache. <br>"
+			                                                            + "Or perhaps that Prepared Statements are not properly parameterized and is compiled/optimized <b>often</b> or takes a <b>long time</b> to optimize...");
 			_CmSummary_LogicalReadGraph       .writeHtmlContent(w, null, null);
 			_CmSummary_SelectOperationsGraph  .writeHtmlContent(w, null, null);
 			_CmSummary_IudmOperationsGraph    .writeHtmlContent(w, null, null);
@@ -184,15 +190,18 @@ public class AseCpuUsageOverview extends AseAbstract
 		if (true)
 			skip2 = ReportChartTimeSeriesLine.SKIP_COLNAME_WITH_VALUE_BELOW + "LogicalReads=" + 0; // if lower than 0 it might be a counter wrap or some other strange thing
 		
-		_CmExecutionTime_CpuUsagePct       = createTsLineChart(conn, schema, "CmExecutionTime", "CpuUsagePct",        maxValue, true,  null,  "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
-		_CmExecutionTime_TimeGraph         = createTsLineChart(conn, schema, "CmExecutionTime", "TimeGraph",          -1,       true,  skip1, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
+		_CmExecutionTime_CpuUsagePct              = createTsLineChart(conn, schema, "CmExecutionTime",     "CpuUsagePct",           maxValue, true,  null,  "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
+		_CmExecutionTime_TimeGraph                = createTsLineChart(conn, schema, "CmExecutionTime",     "TimeGraph",             -1,       true,  skip1, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
 
-		_CmSqlStatement_SqlStmntSumLRead   = createTsLineChart(conn, schema, "CmSqlStatement",  "SqlStmntSumLRead",   -1,       false, null,  "Sum Logical Reads per sec Over SQL Response Time (Object/Access->SQL Statements)");
-		_CmSqlStatement_SqlStmntSumCpuTime = createTsLineChart(conn, schema, "CmSqlStatement",  "SqlStmntSumCpuTime", -1,       false, skip1, "Sum CPU Time per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumLRead          = createTsLineChart(conn, schema, "CmSqlStatement",      "SqlStmntSumLRead",      -1,       false, null,  "Sum Logical Reads per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumCpuTime        = createTsLineChart(conn, schema, "CmSqlStatement",      "SqlStmntSumCpuTime",    -1,       false, skip1, "Sum CPU Time per sec Over SQL Response Time (Object/Access->SQL Statements)");
 
-		_CmSummary_LogicalReadGraph        = createTsLineChart(conn, schema, "CmSummary",       "LogicalReadGraph",      -1,    false, skip2, "ASE Operations - Logical Reads per Second (Summary)");
-		_CmSummary_SelectOperationsGraph   = createTsLineChart(conn, schema, "CmSummary",       "SelectOperationsGraph", -1,    false, null,  "ASE Operations - Selects per Second (Summary)");
-		_CmSummary_IudmOperationsGraph     = createTsLineChart(conn, schema, "CmSummary",       "IudmOperationsGraph",   -1,    true,  null,  "ASE Operations - Ins/Upd/Del/Merge per Second (Summary)");
+		_CmSqlStatementPerDb_SqlStmntSumCmplCount = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbSumCmplCnt",        -1,       false, null,  "SQL Statements Per DB - Sum Query Compile/Optimization Count (Object/Access->SQL Statements/DB)");
+		_CmSqlStatementPerDb_SqlStmntSumCmplTime  = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbSumCmplTime",       -1,       false, null,  "SQL Statements Per DB - Sum Query Compile/Optimization Time (Object/Access->SQL Statements/DB)");
+
+		_CmSummary_LogicalReadGraph               = createTsLineChart(conn, schema, "CmSummary",           "LogicalReadGraph",      -1,       false, skip2, "ASE Operations - Logical Reads per Second (Summary)");
+		_CmSummary_SelectOperationsGraph          = createTsLineChart(conn, schema, "CmSummary",           "SelectOperationsGraph", -1,       false, null,  "ASE Operations - Selects per Second (Summary)");
+		_CmSummary_IudmOperationsGraph            = createTsLineChart(conn, schema, "CmSummary",           "IudmOperationsGraph",   -1,       true,  null,  "ASE Operations - Ins/Upd/Del/Merge per Second (Summary)");
 
 		_CmExecutionTime_SUM_rstm = createSum_CmExecutionTime(conn);
 	}
@@ -268,6 +277,8 @@ public class AseCpuUsageOverview extends AseAbstract
 	private IReportChart _CmExecutionTime_TimeGraph;
 	private IReportChart _CmSqlStatement_SqlStmntSumLRead;
 	private IReportChart _CmSqlStatement_SqlStmntSumCpuTime;
+	private IReportChart _CmSqlStatementPerDb_SqlStmntSumCmplCount;
+	private IReportChart _CmSqlStatementPerDb_SqlStmntSumCmplTime;
 	private IReportChart _CmSummary_LogicalReadGraph;
 	private IReportChart _CmSummary_SelectOperationsGraph;
 	private IReportChart _CmSummary_IudmOperationsGraph;

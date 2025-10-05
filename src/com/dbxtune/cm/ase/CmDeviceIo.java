@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -670,7 +671,7 @@ extends CountersModel
 				// AvgServ_ms = (IOTime * 1000) / ( totIo);
 				double calc = (IOTime + 0.0) / totIo;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);;
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);;
 				diffData.setValueAt(newVal, rowId, AvgServ_msId);
 			}
 			else
@@ -684,7 +685,7 @@ extends CountersModel
 				{
 					double calc = (ReadTime + 0.0) / Reads;
 	
-					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);;
+					BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);;
 					diffData.setValueAt(newVal, rowId, pos_ReadServiceTimeMs);
 				}
 				else
@@ -699,7 +700,7 @@ extends CountersModel
 				{
 					double calc = (WriteTime + 0.0) / Writes;
 	
-					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);;
+					BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);;
 					diffData.setValueAt(newVal, rowId, pos_WriteServiceTimeMs);
 				}
 				else
@@ -712,7 +713,7 @@ extends CountersModel
 			{
 				double calc = (Reads + 0.0) / (Reads + Writes + 0.0) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, ReadsPctId);
 			}
 			else
@@ -724,7 +725,7 @@ extends CountersModel
 			{
 				double calc = (APFReads + 0.0) / (Reads + 0.0) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, APFReadsPctId);
 			}
 			else
@@ -736,7 +737,7 @@ extends CountersModel
 			{
 				double calc = (Writes + 0.0) / (Reads + Writes + 0.0) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, WritesPctId);
 			}
 			else

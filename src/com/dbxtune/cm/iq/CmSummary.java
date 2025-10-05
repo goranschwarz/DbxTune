@@ -22,6 +22,7 @@ package com.dbxtune.cm.iq;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,7 +32,6 @@ import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
@@ -375,9 +375,9 @@ extends CmSummaryAbstract
 				double msCPUUser   = ProcessCPUUser  .doubleValue() * 1000;
 				double msCPUSystem = ProcessCPUSystem.doubleValue() * 1000;
 				
-				BigDecimal pctCPU       = new BigDecimal( (msCPU       / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal pctUserCPU   = new BigDecimal( (msCPUUser   / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal pctSystemCPU = new BigDecimal( (msCPUSystem / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctCPU       = new BigDecimal( (msCPU       / interval) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal pctUserCPU   = new BigDecimal( (msCPUUser   / interval) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal pctSystemCPU = new BigDecimal( (msCPUSystem / interval) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 				arr[0] = pctCPU      .doubleValue();
 				arr[1] = pctSystemCPU.doubleValue();

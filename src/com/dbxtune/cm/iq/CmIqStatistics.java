@@ -21,6 +21,7 @@
 package com.dbxtune.cm.iq;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -222,9 +223,9 @@ extends CountersModel
 				double msCPUUser   = CpuUserTime  .doubleValue() * 1000;
 				double msCPUSystem = CpuSystemTime.doubleValue() * 1000;
 				
-				BigDecimal pctCPU       = new BigDecimal( (msCPU       / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal pctUserCPU   = new BigDecimal( (msCPUUser   / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal pctSystemCPU = new BigDecimal( (msCPUSystem / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctCPU       = new BigDecimal( (msCPU       / interval) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal pctUserCPU   = new BigDecimal( (msCPUUser   / interval) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal pctSystemCPU = new BigDecimal( (msCPUSystem / interval) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 	
 				arr[0] = pctCPU      .doubleValue();
 				arr[1] = pctSystemCPU.doubleValue();

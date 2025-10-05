@@ -631,7 +631,7 @@ extends MainFrame
 		_aseStackTraceAnalyzer_mi     .addActionListener(this);
 //		_lockTool_mi                  .addActionListener(this);
 
-		_aseConfMon_mi               .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+		_aseConfMon_mi               .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
 		menu.add(_aseConfMon_mi,            0);
 		// here should 'Tail/View DB Server Log' be, but it's added in the super.createToolsMenu();

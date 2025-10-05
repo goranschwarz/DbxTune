@@ -302,7 +302,17 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                        { return "sys.master_files"; }
 		@Override public    String     getName()                            { return ConfigType.SqlServerSysMasterFiles.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
-//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		@Override
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "sys.master_files: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn, hostMonConn);
+		}
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
 		{ 
 			String sql1 = "select dbname = db_name(database_id), SizeInMb = size/128.0, * from sys.master_files";
@@ -936,6 +946,17 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                              { return ConfigType.SqlServerSuspectPages.toString(); }
 		@Override public    String     getConfigType()                        { return getName(); }
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return CmSummary.getSql_suspectPageInfo(v); }
+		@Override
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "msdb.dbo.suspect_pages: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn, hostMonConn);
+		}
 
 		/** 
 		 * Check for 'suspect pages' 
@@ -1071,6 +1092,17 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                              { return ConfigType.SqlServerServices.toString(); }
 		@Override public    String     getConfigType()                        { return getName(); }
 		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_server_services"; }
+		@Override
+		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
+
+			// In Azure Database, skip this 
+			if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
+				return "sys.dm_server_services: is NOT supported in Azure SQL Database.";
+
+			return super.checkRequirements(conn, hostMonConn);
+		}
 
 		/** 
 		 * Check for 'instant file initialization' 
@@ -1202,8 +1234,99 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                          { return "Cluster Nodes"; }
 		@Override public    String     getName()                              { return ConfigType.SqlServerClusterNodes.toString(); }
 		@Override public    String     getConfigType()                        { return getName(); }
-//		@Override protected String     getSqlCurrentConfig(long srvVersion)   { return "select * from sys.dm_os_cluster_nodes"; }
-		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_cluster_nodes"; }
+//		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) { return "select * from sys.dm_os_cluster_nodes"; }
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
+		{ 
+			String sql = ""
+				    + "-- SQL Server topology detection and report \n"
+				    + "DECLARE @IsClustered    BIT = CONVERT(BIT, SERVERPROPERTY('IsClustered')) \n"
+				    + "DECLARE @IsHadrEnabled  BIT = CONVERT(BIT, SERVERPROPERTY('IsHadrEnabled')) \n"
+				    + "DECLARE @DeploymentType VARCHAR(100) \n"
+				    + " \n"
+				    + "IF      (@IsClustered = 1 AND @IsHadrEnabled = 1) SET @DeploymentType = 'Failover Cluster Instance + Always On AG' \n"
+				    + "ELSE IF (@IsClustered = 1 AND @IsHadrEnabled = 0) SET @DeploymentType = 'Failover Cluster Instance (no AG)' \n"
+				    + "ELSE IF (@IsClustered = 0 AND @IsHadrEnabled = 1) SET @DeploymentType = 'Always On AG' \n"
+				    + "ELSE                                              SET @DeploymentType = 'Standalone (No Clustering, No AG)' \n"
+				    + " \n"
+				    + "PRINT '==== Instance Information ====' \n"
+				    + "SELECT \n"
+				    + "     @DeploymentType AS DeploymentType \n"
+				    + "    ,SERVERPROPERTY('IsClustered')                 AS IsClustered \n"
+				    + "    ,SERVERPROPERTY('IsHadrEnabled')               AS IsHadrEnabled \n"
+				    + "    ,SERVERPROPERTY('ComputerNamePhysicalNetBIOS') AS PhysicalNodeName \n"
+				    + "    ,SERVERPROPERTY('MachineName')                 AS MachineName \n"
+				    + "    ,SERVERPROPERTY('InstanceName')                AS InstanceName \n"
+				    + "    ,SERVERPROPERTY('ServerName')                  AS ServerName \n"
+				    + "    ,SERVERPROPERTY('Edition')                     AS Edition \n"
+				    + "    ,replace(@@version, char(10), '')              AS Version \n"
+				    + " \n"
+				    + "-- List cluster nodes if clustered \n"
+				    + "IF (@IsClustered = 1) \n"
+				    + "BEGIN \n"
+				    + "    PRINT '==== WSFC Cluster Nodes ====' \n"
+				    + "    EXEC('SELECT * FROM sys.dm_os_cluster_nodes') \n"
+				    + " \n"
+				    + "    PRINT '==== WSFC Cluster Properties ====' \n"
+				    + "    EXEC('SELECT * FROM sys.dm_os_cluster_properties') \n"
+				    + "END \n"
+				    + " \n"
+				    + "-- List AGs and replicas if Always On is enabled \n"
+				    + "IF (@IsHadrEnabled = 1) \n"
+				    + "BEGIN \n"
+				    + "    /* Primary replica per AG */ \n"
+				    + "    PRINT '==== Availability Groups: Primary Replica ====' \n"
+				    + "    EXEC(' \n"
+				    + "        SELECT \n"
+				    + "            ag.name AS AGName, \n"
+				    + "            ar.replica_server_name AS PrimaryReplica, \n"
+				    + "            CASE ag.basic_features WHEN 1 THEN ''Basic'' ELSE ''Regular'' END AS AG_Type \n"
+				    + "        FROM sys.availability_groups                  ag \n"
+				    + "        JOIN sys.availability_replicas                ar ON ag.group_id   = ar.group_id \n"
+				    + "        JOIN sys.dm_hadr_availability_replica_states ars ON ar.replica_id = ars.replica_id \n"
+				    + "        WHERE ars.role_desc = ''PRIMARY'' \n"
+				    + "        ORDER BY ag.name \n"
+				    + "    ') \n"
+				    + " \n"
+				    + "    /* Replica overview (role, mode, connectivity, health) */ \n"
+				    + "    PRINT '==== AG Replicas (role/mode/connectivity/health) ====' \n"
+				    + "    EXEC(' \n"
+				    + "        SELECT \n"
+				    + "            ag.name AS AGName, \n"
+				    + "            ar.replica_server_name AS sql_server_name, \n"
+				    + "            ars.role_desc, \n"
+				    + "            ar.availability_mode_desc, \n"
+				    + "            ar.failover_mode_desc, \n"
+				    + "            CASE ag.basic_features WHEN 1 THEN ''Basic'' ELSE ''Regular'' END AS AG_Type, \n"
+				    + "            ars.connected_state_desc, \n"
+				    + "            ars.synchronization_health_desc, \n"
+				    + "            ars.is_local \n"
+				    + "        FROM sys.availability_groups                  ag \n"
+				    + "        JOIN sys.availability_replicas                ar ON ag.group_id   = ar.group_id \n"
+				    + "        JOIN sys.dm_hadr_availability_replica_states ars ON ar.replica_id = ars.replica_id \n"
+				    + "        ORDER BY ag.name, ar.replica_server_name \n"
+				    + "    ') \n"
+				    + " \n"
+				    + "    /* Database-level sync state (this is where synchronization_state_desc lives) */ \n"
+				    + "    PRINT '==== AG Databases (synchronization state) ====' \n"
+				    + "    EXEC(' \n"
+				    + "        SELECT \n"
+				    + "            ag.name AS AGName, \n"
+				    + "            DB_NAME(drs.database_id) AS dbname, \n"
+				    + "            ars.role_desc, \n"
+				    + "            drs.synchronization_state_desc, \n"
+				    + "            drs.synchronization_health_desc, \n"
+				    + "            drs.is_suspended, \n"
+				    + "            drs.suspend_reason_desc \n"
+				    + "        FROM sys.dm_hadr_database_replica_states     drs \n"
+				    + "        JOIN sys.availability_groups                  ag ON drs.group_id   = ag.group_id \n"
+				    + "        JOIN sys.dm_hadr_availability_replica_states ars ON drs.replica_id = ars.replica_id \n"
+				    + "        ORDER BY ag.name, dbname, role_desc \n"
+				    + "    ') \n"
+				    + "END \n"
+				    + "";
+
+			return sql; 
+		}
 		@Override
 		public String checkRequirements(DbxConnection conn, HostMonitorConnection hostMonConn)
 		{
@@ -1388,7 +1511,7 @@ public abstract class SqlServerConfigText
 		@Override public    String     getConfigType()                        { return getName(); }
 		@Override public    int        getSqlTimeout()                        { return 45; }
 
-		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo v) 
+		@Override protected String     getSqlCurrentConfig(DbmsVersionInfo versionInfo) 
 		{
 			int    checkUserDatabaseObjects = Configuration.getCombinedConfiguration().getIntProperty("DbmsConfig.SpBlitz.param.CheckUserDatabaseObjects", 0);
 			int    checkServerInfo          = Configuration.getCombinedConfiguration().getIntProperty("DbmsConfig.SpBlitz.param.checkServerInfo"         , 1);
@@ -1470,6 +1593,24 @@ public abstract class SqlServerConfigText
 				    + "go \n"
 				    + "";
 
+			if (((DbmsVersionInfoSqlServer)versionInfo).isAzureDb())
+			{
+				sql = ""
+					    + "if (object_id('" + procName + "') is not null) \n"
+					    + "begin \n"
+					    + "    exec " + procName + " @CheckUserDatabaseObjects = " + checkUserDatabaseObjects + ", @CheckServerInfo = " + checkServerInfo + " \n"
+					    + "end \n"
+					    + "else \n"
+					    + "begin \n"
+					    + "    select * from (values \n"
+					    + "         ('ERROR', 'The procedure ''" + procName + "'' is not installed.') \n"
+					    + "        ,('INFO' , 'For more info see: https://github.com/BrentOzarULTD/SQL-Server-First-Responder-Kit') \n"
+					    + "        ,('INFO' , 'This procedure does various ''healthchecks'' in any SQL Server.') \n"
+					    + "    ) info(Severity, Description) \n"
+					    + "end \n"
+					    + "";
+			}
+			
 			return sql;
 		}
 		

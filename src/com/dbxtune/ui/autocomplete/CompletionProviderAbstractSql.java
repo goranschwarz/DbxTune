@@ -6005,7 +6005,7 @@ if (_guiOwner == null)
 
 				if (CmdOutputType.TO_WINDOW.equals(_outputType))
 				{
-					SqlTextDialog dialog = new SqlTextDialog(null, sql);
+					SqlTextDialog dialog = new SqlTextDialog(null, "SQL Text", sql);
 					dialog.setVisible(true);
 				}
 
@@ -6073,7 +6073,7 @@ if (_guiOwner == null)
 				if (DdlOutputType.TO_EDITOR   .equals(_type)) getTextComponent(e).replaceSelection(retStr);
 				if (DdlOutputType.TO_WINDOW   .equals(_type))
 				{
-    				SqlTextDialog dialog = new SqlTextDialog(null, retStr);
+    				SqlTextDialog dialog = new SqlTextDialog(null, "DDL View", retStr);
     				dialog.setVisible(true);
 				}
 			}
@@ -6230,7 +6230,7 @@ if (_guiOwner == null)
 
 				if (CmdOutputType.TO_WINDOW.equals(_outputType))
 				{
-					SqlTextDialog dialog = new SqlTextDialog(null, text);
+					SqlTextDialog dialog = new SqlTextDialog(null, "Java Code", text);
 					dialog.setVisible(true);
 				}
 			}

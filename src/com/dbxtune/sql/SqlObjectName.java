@@ -433,6 +433,13 @@ public class SqlObjectName
 	private boolean _autoAddDboForSybaseAndSqlServer = true;
 	
 	/** 
+	 * constructor using individual name catalog, schema, object 
+	 */
+	public SqlObjectName(Connection conn, final String cat, final String schema, final String table)
+	{
+		this(conn, toString(cat, schema, table));
+	}
+	/** 
 	 * constructor using full name [catalog.][schema.][object] 
 	 */
 	public SqlObjectName(Connection conn, final String name)

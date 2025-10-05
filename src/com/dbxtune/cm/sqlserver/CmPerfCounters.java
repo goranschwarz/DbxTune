@@ -23,6 +23,7 @@ package com.dbxtune.cm.sqlserver;
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -2845,7 +2846,7 @@ extends CountersModel
 					
 					BigDecimal calc;
 					if (base > 0)
-						calc = new BigDecimal( (val*1.0 / base*1.0) * 100.0 ).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+						calc = new BigDecimal( (val*1.0 / base*1.0) * 100.0 ).setScale(2, RoundingMode.HALF_EVEN);
 					else
 						calc = new BigDecimal(0.0);
 
@@ -2898,7 +2899,7 @@ extends CountersModel
 					
 					BigDecimal calc;
 					if (diffBase > 0)
-						calc = new BigDecimal( diffVal*1.0 / diffBase*1.0 ).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+						calc = new BigDecimal( diffVal*1.0 / diffBase*1.0 ).setScale(2, RoundingMode.HALF_EVEN);
 					else
 						calc = new BigDecimal(0.0);
 
@@ -2914,7 +2915,7 @@ extends CountersModel
 				
 				BigDecimal calc;
 				if (interval > 0)
-					calc = new BigDecimal( val*1000.0 / interval*1.0 ).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					calc = new BigDecimal( val*1000.0 / interval*1.0 ).setScale(2, RoundingMode.HALF_EVEN);
 				else
 					calc = new BigDecimal(0.0);
 

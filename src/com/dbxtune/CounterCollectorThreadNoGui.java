@@ -160,7 +160,7 @@ implements Memory.MemoryListener
 	
 	private Configuration _storeProps   = null;
 	
-	private boolean       _running      = true;
+	private transient boolean _running      = true;
 
 	public static boolean checkValidCmShortcuts(String options)
 	{
@@ -1081,6 +1081,13 @@ implements Memory.MemoryListener
 	}
 
 	@Override
+	// Since we override shutdown() and we have our own _running flag , I guess we also need to override isRunning()
+	public boolean isRunning()
+	{
+		return _running;
+	}
+	
+	@Override
 	public void run()
 	{
 		// Set the Thread name
@@ -1189,7 +1196,7 @@ implements Memory.MemoryListener
 		//---------------------------
 		// NOW LOOP
 		//---------------------------
-		while (_running)
+		while (isRunning())
 		{
 			// notify the heartbeat that we are still running...
 			// This is also done right before we go to sleep (waiting for next data collection)
@@ -1267,6 +1274,10 @@ implements Memory.MemoryListener
 						
 						// THE LOOP WILL BE FALSE (_running = false)
 						_running = false;
+						
+						// Just notifies the ShutdownHandler, so we do not wait "forever" at the end...
+						// Not 100% sure this will work...
+						ShutdownHandler.shutdown("No-GUI Shutdown non-retryable error: JDBC Connect Failed.");
 
 						// GET OUT OF THE LOOP, causing us to EXIT
 						break;
@@ -1280,6 +1291,10 @@ implements Memory.MemoryListener
 					
 					// THE LOOP WILL BE FALSE (_running = false)
 					_running = false;
+
+					// Just notifies the ShutdownHandler, so we do not wait "forever" at the end...
+					// Not 100% sure this will work...
+					ShutdownHandler.shutdown("No-GUI Shutdown non-retryable error: " + ex);
 
 					// GET OUT OF THE LOOP, causing us to EXIT
 					break;
@@ -1925,6 +1940,7 @@ implements Memory.MemoryListener
 		
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending, this should lead to a server STOP.");
 		
+		
 //		_logger.info("DUMMY WHICH SHOULD BE REMOVED... ONLY FOR TESTING PURPOSES OF ShutdownHook TIMEOUT... sleeping for 99 sec...");
 //		try { Thread.sleep(99 * 1000); }
 //		catch(InterruptedException ex) { ex.printStackTrace(); }
@@ -1963,6 +1979,10 @@ implements Memory.MemoryListener
 					_logger.info("Found a refresh request. Filename='" + interuptSleepFile + "'.");
 					return;
 				}
+				
+				// If we are NOT running anymore... get out of here
+				if ( ! isRunning() )
+					return;
 			}
 			while (TimeUtils.msDiffNow(startTime) < sleepTimeMs);
 		}

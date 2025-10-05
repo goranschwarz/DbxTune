@@ -22,6 +22,7 @@ package com.dbxtune.cm.postgres;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -283,7 +284,7 @@ extends CountersModel
 		if (cnt > 0)
 		{
 			double calc = (ms * 1.0) / (cnt * 1.0);
-			return new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			return new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 		}
 		
 		return new BigDecimal(0);
@@ -294,7 +295,7 @@ extends CountersModel
 		if ((hits + reads) > 0)
 		{
 			double calc = (hits*1.0 / (reads*1.0 + hits*1.0)) * 100.0;
-			return new BigDecimal(calc).setScale(3, BigDecimal.ROUND_HALF_EVEN);
+			return new BigDecimal(calc).setScale(3, RoundingMode.HALF_EVEN);
 		}
 		
 //		return new BigDecimal(0);

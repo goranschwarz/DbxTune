@@ -41,7 +41,7 @@ public class Memory
 	// BEGIN: Memory Handler functionality
 	//-----------------------------------------------------------------------
 	private static Thread  _checkThread = null;
-	private static boolean _running = false;
+	private static transient boolean _running = false;
 	private static int     _memLimitInMb = 20;
 	private static int     _sleepTimeInSec = 3;
 	private static ArrayList<MemoryListener> _memListeners = new ArrayList<Memory.MemoryListener>();

@@ -43,6 +43,8 @@ public class TableExtraInfo
 
 	public static final String IndexIncludeColumns       = "IndexIncludeColumns";
 
+	public static final String TableOwner                = "TableOwner";
+
 	private String _name     = "";
 	private String _descName = "";
 

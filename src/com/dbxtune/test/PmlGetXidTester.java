@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PmlGetXidTester
 {
-//	private final static String URL_BASE = "jdbc:sybase:Tds:mig1-sybase.maxm.se:5000/PML?ENCRYPT_PASSWORD=true";
+//	private final static String URL_BASE = "jdbc:sybase:Tds:mig1-sybase:5000/PML?ENCRYPT_PASSWORD=true";
 	private String _url      = "";
 	private String _username = "sa";
 	private String _password = "";
@@ -163,7 +163,7 @@ public class PmlGetXidTester
 		private Thread     _thread;
 		private int        _workerId;
 		private int        _numOfCalls;
-		private boolean    _running;
+		private transient boolean    _running;
 		private int        _sleepTimeMs = 10;
 		private boolean    _autoCommit  = true;
 		
@@ -436,7 +436,7 @@ public class PmlGetXidTester
 	{
 		String  username    = "sa";
 		String password     = "dummy";
-		String  url         = "jdbc:sybase:Tds:mig1-sybase.maxm.se:5000/PML";
+		String  url         = "jdbc:sybase:Tds:mig1-sybase:5000/PML";
 		int     workerCount = 20;
 		int     numOfCalls  = 2000;
 		int     sleepTime   = 0;

@@ -28,6 +28,7 @@ package com.dbxtune.cm.ase;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -476,7 +477,7 @@ extends CountersModel
 			{
 				double calc = (IdleTicks + 0.0) / (TotalTicks + 0.0) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, pos_IdleTicksPct);
 			}
 			else
@@ -488,7 +489,7 @@ extends CountersModel
 			{
 				double calc = (SleepTicks + 0.0) / (TotalTicks + 0.0) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, pos_SleepTicksPct);
 			}
 			else
@@ -500,7 +501,7 @@ extends CountersModel
 			{
 				double calc = (BusyTicks + 0.0) / (TotalTicks + 0.0) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				diffData.setValueAt(newVal, rowId, pos_BusyTicksPct);
 			}
 			else

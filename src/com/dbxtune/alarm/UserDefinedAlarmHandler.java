@@ -111,8 +111,8 @@ public class UserDefinedAlarmHandler
 		// if DBXTUNE_UD_ALARM_SOURCE_DIR, is NOT set: set it to ${HOME}/.dbxtune
 		if ( ! conf.hasProperty("DBXTUNE_UD_ALARM_SOURCE_DIR") )
 		{
-			_logger.warn("The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set. Setting this to '"+AppDir.getAppStoreDir()+"'.");
-			System.setProperty("DBXTUNE_UD_ALARM_SOURCE_DIR", AppDir.getAppStoreDir());
+			_logger.warn("The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set. Setting this to '"+AppDir.getDbxUserHomeDir()+"'.");
+			System.setProperty("DBXTUNE_UD_ALARM_SOURCE_DIR", AppDir.getDbxUserHomeDir());
 		}
 
 		

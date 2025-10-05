@@ -459,9 +459,9 @@ public class SqlServerJobSchedulerExtractor
 					    + "        ,secs_duration=run_duration/10000*3600 \n"
 					    + "                      +run_duration%10000/100*60 \n"
 					    + "                      +run_duration%100 \n"
-					    + "  from msdb.dbo.sysjobhistory \n"
-					    + "  where step_id=0     /* Job Outcome */ \n"
-					    + "--    and run_status=1  /* Succeeded */ \n"
+					    + "    FROM msdb.dbo.sysjobhistory \n"
+					    + "    WHERE step_id=0     /* Job Outcome */ \n"
+//					    + "      AND run_status=1  /* Succeeded */ \n"
 					    + ") \n"
 					    + ",lastXHours as \n"
 					    + "( \n"
@@ -480,6 +480,7 @@ public class SqlServerJobSchedulerExtractor
 					    + "    FROM JobHistData \n"
 					    + "    WHERE date_executed >= @todayBeginTs \n"
 					    + "      AND date_executed <  @todayEndTs \n"
+//					    + "      AND run_status_desc = 'SUCCESS' \n"   // POSSIBLY if not using: AND run_status=1  /* Succeeded */
 					    + "    GROUP BY job_id \n"
 					    + ") \n"
 					    + ",lastXDays as \n"
@@ -499,6 +500,7 @@ public class SqlServerJobSchedulerExtractor
 					    + "    FROM JobHistData \n"
 					    + "    WHERE date_executed >= @lastXDaysBeginTs \n"
 					    + "      AND date_executed <  @lastXDaysEndTs \n"
+//					    + "      AND run_status_desc = 'SUCCESS' \n"   // POSSIBLY if not using: AND run_status=1  /* Succeeded */
 					    + "    GROUP BY job_id \n"
 					    + ") \n"
 					    + "SELECT \n"

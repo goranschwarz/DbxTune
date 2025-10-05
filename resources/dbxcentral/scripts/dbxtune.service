@@ -1,0 +1,40 @@
+############################################################################
+## RHEL -- DbxTune Central -- systemd service 
+############################################################################
+## install: 
+##   sudo cp /home/dbxtune/dbxtune/0/resources/dbxcentral/scripts/dbxtune.service /etc/systemd/system/dbxtune.service
+##   sudo systemctl daemon-reload
+##   sudo systemctl enable dbxtune.service
+##
+## start:
+##   sudo systemctl start  dbxtune.service
+##   sudo systemctl status dbxtune.service
+##
+## stop:
+##   sudo systemctl stop   dbxtune.service
+##   sudo systemctl status dbxtune.service
+##
+## disable: 
+##   sudo systemctl stop    dbxtune.service
+##   sudo systemctl disable dbxtune.service
+##   sudo systemctl status  dbxtune.service
+##
+## NOTE:
+##   The '/bin/bash' before command in 'ExecStart' and 'ExecStop'
+##   id a workaround to be able to start scripts in /home/ which normally gets errors EXEC spawning... Permission denied
+############################################################################
+
+[Unit]
+Description=DbxTune Central Service
+After=network.target
+
+[Service]
+Type=forking
+User=dbxtune
+Group=dbxtune
+ExecStart=/bin/bash /home/dbxtune/.dbxtune/dbxc/bin/start_ALL.sh
+ExecStop=/bin/bash /home/dbxtune/.dbxtune/dbxc/bin/stop_ALL.sh
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

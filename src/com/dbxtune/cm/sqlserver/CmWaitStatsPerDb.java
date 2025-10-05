@@ -22,6 +22,7 @@ package com.dbxtune.cm.sqlserver;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -374,7 +375,7 @@ extends CountersModel
 			{
 				double calcWaitTimePerCount = wait_time_ms / (waiting_tasks_count * 1.0);
 
-				BigDecimal newVal = new BigDecimal(calcWaitTimePerCount).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
+				BigDecimal newVal = new BigDecimal(calcWaitTimePerCount).setScale(3, RoundingMode.HALF_EVEN);;
 				diffData.setValueAt(newVal, rowId, WaitTimePerCount_pos);
 			}
 			else

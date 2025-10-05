@@ -21,6 +21,7 @@
 package com.dbxtune.cm.sqlserver;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -255,7 +256,7 @@ extends CountersModel
 			// contention
 			if (spins > 0)
 			{
-				BigDecimal contention = new BigDecimal( ((1.0 * (collisions)) / spins) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal contention = new BigDecimal( ((1.0 * (collisions)) / spins) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 				diffData.setValueAt(contention, rowId, pos_ContentionPct);
 			}
@@ -266,7 +267,7 @@ extends CountersModel
 			// spins_per_collision
 			if (collisions > 0)
 			{
-				BigDecimal spins_per_collision = new BigDecimal( ((1.0 * (spins)) / collisions) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal spins_per_collision = new BigDecimal( ((1.0 * (spins)) / collisions) ).setScale(1, RoundingMode.HALF_EVEN);
 
 				diffData.setValueAt(spins_per_collision, rowId, pos_spins_per_collision);
 			}

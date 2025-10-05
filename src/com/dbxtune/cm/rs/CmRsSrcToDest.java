@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -39,7 +40,6 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -543,19 +543,19 @@ extends CountersModel
 						Long SegsActiveOutMB = getRowCounter(rows, 6020,  dest_ldbid, 0);           // 6020	SQM: Active queue segments	SQM	SegsActive
 						Long DSICmds         = getRowCounter(rows, 5030,  dest_dbid,  -1);          // 5030	DSI: Commands read from outbound queue	DSI	cmds	DSICmdsRead
 
-						BigDecimal PerfInd = new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						BigDecimal PerfInd = new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN);
 						if ( RACmds != null && DSICmds != null)
 						{
 							if (RACmds > 0)
 							{
-								PerfInd = new BigDecimal( ((DSICmds.doubleValue()-RACmds.doubleValue())/RACmds.doubleValue())*100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+								PerfInd = new BigDecimal( ((DSICmds.doubleValue()-RACmds.doubleValue())/RACmds.doubleValue())*100.0 ).setScale(1, RoundingMode.HALF_EVEN);
 								if (PerfInd.intValue() > 100)
-									PerfInd = new BigDecimal(100).setScale(1, BigDecimal.ROUND_HALF_EVEN); 
+									PerfInd = new BigDecimal(100).setScale(1, RoundingMode.HALF_EVEN); 
 							}
 							else
 							{
 								if (DSICmds > 0)
-									PerfInd = new BigDecimal(100).setScale(1, BigDecimal.ROUND_HALF_EVEN); 
+									PerfInd = new BigDecimal(100).setScale(1, RoundingMode.HALF_EVEN); 
 							}
 						}
 
@@ -688,19 +688,19 @@ extends CountersModel
 			Long RACmds	 = (Long)diffData.getValueAt(rowId, RACmds_pos );
 			Long DSICmds = (Long)diffData.getValueAt(rowId, DSICmds_pos);
 
-			BigDecimal PerfInd = new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal PerfInd = new BigDecimal(0).setScale(1, RoundingMode.HALF_EVEN);
 			if ( RACmds != null && DSICmds != null)
 			{
 				if (RACmds > 0)
 				{
-					PerfInd = new BigDecimal( ((DSICmds.doubleValue()-RACmds.doubleValue())/RACmds.doubleValue())*100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					PerfInd = new BigDecimal( ((DSICmds.doubleValue()-RACmds.doubleValue())/RACmds.doubleValue())*100.0 ).setScale(1, RoundingMode.HALF_EVEN);
 					if (PerfInd.intValue() > 100)
-						PerfInd = new BigDecimal(100).setScale(1, BigDecimal.ROUND_HALF_EVEN); 
+						PerfInd = new BigDecimal(100).setScale(1, RoundingMode.HALF_EVEN); 
 				}
 				else
 				{
 					if (DSICmds > 0)
-						PerfInd = new BigDecimal(100).setScale(1, BigDecimal.ROUND_HALF_EVEN); 
+						PerfInd = new BigDecimal(100).setScale(1, RoundingMode.HALF_EVEN); 
 				}
 			}
 

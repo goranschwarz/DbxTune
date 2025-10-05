@@ -97,7 +97,8 @@ public class DbxTuneSample
 	public Timestamp getSessionStartTime()  { return _sessionStartTime;  }
 	public Timestamp getSessionSampleTime() { return _sessionSampleTime; }
 	public String    getServerName()        { return _serverName;        }
-	public String    getServerDisplayName() { return _serverDisplayName; }
+//	public String    getServerDisplayName() { return _serverDisplayName; }
+	public String    getServerDisplayName() { return StringUtil.hasValue(_serverDisplayName) ? _serverDisplayName : getServerName(); }
 	public String    getOnHostname()        { return _onHostname;        }
 
 //	public List<String> getCmListEnabled()         { return _cmListEnabled; }

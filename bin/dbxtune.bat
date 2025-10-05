@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal ENABLEDELAYEDEXPANSION
 rem mode con:cols=800 lines=3000
 
 set STARTDIR=%~dp0
@@ -17,6 +17,14 @@ if "%~1" neq "" (
 )
 if defined CMDLINE_ARGS set CMDLINE_ARGS=%CMDLINE_ARGS:~1%
 echo Passed cmdline parameters: %CMDLINE_ARGS%
+
+rem ------------------------------------------------------------------------
+rem --- Check if CMDLINE_ARGS contains --createAppDir
+rem ------------------------------------------------------------------------
+set "createAppDirFlag=0"
+for %%i in (%CMDLINE_ARGS%) do (
+  echo %%i | findstr /C:"--createAppDir" >nul && set "createAppDirFlag=1"
+)
 
 
 rem ------------------------------------------------------------------------
@@ -89,16 +97,19 @@ IF "%APP_NAME%" == "ase" (
 	set JAVA_START_CLASS=com.dbxtune.central.DbxTuneCentral
 	set JAVA_START_PARAMS=
 	set SPLASH=
+	set useDbxCentralEnv=1
 
 ) ELSE IF "%APP_NAME%" == "dsr" (
 	set JAVA_START_CLASS=com.dbxtune.pcs.report.DailySummaryReport
 	set JAVA_START_PARAMS=
 	set SPLASH=
+	set useDbxCentralEnv=1
 
 ) ELSE IF "%APP_NAME%" == "h2fix" (
 	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy
 	set JAVA_START_PARAMS=
 	set SPLASH=
+	set useDbxCentralEnv=1
 
 ) ELSE IF "%APP_NAME%" == "dbxcdbcopy" (
 rem set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy
@@ -107,6 +118,7 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_PARAMS=
 	set SPLASH=
 	set DBXTUNE_JVM_MEMORY_PARAMS=-Xmx4096m -Xms64m
+	set useDbxCentralEnv=1
 
 ) ELSE IF /I "%APP_NAME%" == "dbxPassword" (
 	set JAVA_START_CLASS=com.dbxtune.utils.DbxPassword
@@ -203,8 +215,9 @@ rem --- IF "%SYBASE%"=="" set SYBASE=c:\sybase
 rem ------------------------------------------------------------------------
 rem --- Source environment
 rem ------------------------------------------------------------------------
-rem set DBXTUNE_USER_ENV_FILE=%systemdrive%%homepath%\.dbxtune\DBXTUNE.env.bat
-set DBXTUNE_USER_ENV_FILE=%systemdrive%%homepath%\.dbxtune\DBXTUNE.env.bat
+rem set DBXTUNE_USER_ENV_FILE=%USERPROFILE%\.dbxtune\DBXTUNE.env.bat
+rem set DBXTUNE_USER_ENV_FILE=%USERPROFILE%\.dbxtune\DBXTUNE.env.bat
+IF NOT DEFINED DBXTUNE_USER_ENV_FILE set DBXTUNE_USER_ENV_FILE=%USERPROFILE%\.dbxtune\DBXTUNE.env.bat
 if exist "%DBXTUNE_USER_ENV_FILE%" (
 	echo .
 	echo -----------------------------------------------------------------------
@@ -217,6 +230,69 @@ if exist "%DBXTUNE_USER_ENV_FILE%" (
 	echo NOTE: you can setup local environment in file: %DBXTUNE_USER_ENV_FILE%
 	echo -----------------------------------------------------------------------
 )
+
+rem ------------------------------------------------------------------------
+rem --- If we start any of the Collectors in NO-GUI mode
+rem --- Then use environment variables from DbxCentral ... (set in next section)
+rem ------------------------------------------------------------------------
+if "%useDbxCentralEnv%"=="" set useDbxCentralEnv=0
+for %%c in (%*) do (
+	echo(%%c|findstr /r /c:"^-n"        >nul && ( set useDbxCentralEnv=1 )
+	echo(%%c|findstr /r /c:"^-n.*"      >nul && ( set useDbxCentralEnv=1 )
+	echo(%%c|findstr /r /c:"^--noGui"   >nul && ( set useDbxCentralEnv=1 )
+	echo(%%c|findstr /r /c:"^--noGui.*" >nul && ( set useDbxCentralEnv=1 )
+)
+
+rem #------------------------------------------------------------------------
+rem #--- If we are starting DbxCentral -- change some environment variables
+rem #------------------------------------------------------------------------
+set "jvmNoGuiSwitch="
+IF %useDbxCentralEnv% EQU 1 (
+
+	echo .
+	echo --------------------------------------------------------------------------
+	echo It Looks like we are starting DBX_CENTRAL or any Collector in NOGUI mode
+	echo --------------------------------------------------------------------------
+
+	IF "!APP_NAME!" == "central" (
+		set "jvmNoGuiSwitch=-DDbxCentral=true"
+	) ELSE (
+		set "jvmNoGuiSwitch=-Dnogui.!APP_NAME!.srv=!srvName!"
+	)
+
+	IF NOT DEFINED DBXTUNE_CENTRAL_SAVE_DIR    set "DBXTUNE_CENTRAL_SAVE_DIR=%USERPROFILE%\.dbxtune\dbxc\data"
+	IF NOT DEFINED DBXTUNE_CENTRAL_LOG_DIR     set "DBXTUNE_CENTRAL_LOG_DIR=%USERPROFILE%\.dbxtune\dbxc\log"
+	IF NOT DEFINED DBXTUNE_CENTRAL_CONF_DIR    set "DBXTUNE_CENTRAL_CONF_DIR=%USERPROFILE%\.dbxtune\dbxc\conf"
+	IF NOT DEFINED DBXTUNE_CENTRAL_INFO_DIR    set "DBXTUNE_CENTRAL_INFO_DIR=%USERPROFILE%\.dbxtune\dbxc\info"
+	IF NOT DEFINED DBXTUNE_CENTRAL_REPORTS_DIR set "DBXTUNE_CENTRAL_REPORTS_DIR=%USERPROFILE%\.dbxtune\dbxc\reports"
+
+	set DBXTUNE_SAVE_DIR=!DBXTUNE_CENTRAL_SAVE_DIR!
+	set DBXTUNE_LOG_DIR=!DBXTUNE_CENTRAL_LOG_DIR!
+	set DBXTUNE_CONF_DIR=!DBXTUNE_CENTRAL_CONF_DIR!
+	set DBXTUNE_INFO_DIR=!DBXTUNE_CENTRAL_INFO_DIR!
+	set DBXTUNE_REPORTS_DIR=!DBXTUNE_CENTRAL_REPORTS_DIR!
+
+	echo .
+	echo ---------------------------------------------------------------------------------
+	echo USING: DbxCentral Environments. The following Environment Variables will be used
+	echo ---------------------------------------------------------------------------------
+	echo   DBXTUNE_SAVE_DIR    = !DBXTUNE_SAVE_DIR!
+	echo   DBXTUNE_LOG_DIR     = !DBXTUNE_LOG_DIR!
+	echo   DBXTUNE_CONF_DIR    = !DBXTUNE_CONF_DIR!
+	echo   DBXTUNE_INFO_DIR    = !DBXTUNE_INFO_DIR!
+	echo   DBXTUNE_REPORTS_DIR = !DBXTUNE_REPORTS_DIR!
+	echo ---------------------------------------------------------------------------------
+
+	rem ------------------------------------------------------------------------
+	rem --- If NOT '--createAppDir' 
+	rem --- Check if any proper directories exists
+	rem ------------------------------------------------------------------------
+	if "!createAppDirFlag!"=="0" (
+		IF NOT exist "!DBXTUNE_CENTRAL_SAVE_DIR!" (
+			GOTO DBXTUNE_CENTRAL__NO_DIR
+		)
+	)
+) 
 
 
 rem ------------------------------------------------------------------------
@@ -259,9 +335,9 @@ rem --- set some default environment variables
 rem ------------------------------------------------------------------------
 set APPL_HOME=%DBXTUNE_HOME%
 
-IF "%DBXTUNE_SAVE_DIR%"=="" (
-	if exist %systemdrive%%homepath%\.dbxtune\data (
-		set DBXTUNE_SAVE_DIR=%systemdrive%%homepath%\.dbxtune\data
+IF NOT DEFINED DBXTUNE_SAVE_DIR (
+	if exist %USERPROFILE%\.dbxtune\data (
+		set DBXTUNE_SAVE_DIR=%USERPROFILE%\.dbxtune\data
 	) else (
 		set DBXTUNE_SAVE_DIR=%DBXTUNE_HOME%\data
 	)
@@ -326,9 +402,9 @@ rem --- set JVM_PARAMS=%JVM_PARAMS% -verbose:gc -XX:+PrintGCDetails -XX:+PrintGC
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Xrunhprof:cpu=samples,depth=16
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dhttp.proxyHost=www-proxy.domain.com -Dhttp.proxyPort=8080
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Djava.net.useSystemProxies=true
-set JVM_PARAMS=-noverify
-rem set JVM_PARAMS=-noverify -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=delay=1s,duration=60s,name=DbxTuneStartup,filename=C:\tmp\DbxTuneStartup.jfr,settings=profile
-rem set JVM_PARAMS=-noverify -XX:+UnlockCommercialFeatures -XX:+FlightRecorder
+set JVM_PARAMS=-XX:-UseGCOverheadLimit
+rem set JVM_PARAMS=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=delay=1s,duration=60s,name=DbxTuneStartup,filename=C:\tmp\DbxTuneStartup.jfr,settings=profile
+rem set JVM_PARAMS=-XX:+UnlockCommercialFeatures -XX:+FlightRecorder
 
 set EXTRA=%NOGUI%
 rem --- set DEBUG_OPTIONS=-Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=2323,server=y,suspend=n
@@ -371,7 +447,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jul-to-slf4j-2.0.16.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-SNAPSHOT.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-1.4.200.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-2.1.214.jar
-rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-2.3.232.jar
+rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-2.4.240.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\wizard.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-swing-5.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-core-5.2.jar
@@ -391,11 +467,11 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jakarta.mail-1.6.7.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jakarta.activation-2.0.1.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole_20131209.jar
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole-1.1.5.jar     -----------------------------
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-0.2.21.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea-3.5.2.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete-3.3.1.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsch-2.27.3.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea-3.6.0.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete-3.3.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui-3.3.1.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\languagesupport-3.3.0.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\languagesupport-3.4.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jcommon-1.0.24.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jfreechart-1.5.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\antlr-4.0-complete.jar
@@ -488,23 +564,24 @@ for /f "delims=.-_ tokens=1-2" %%v in ("%JAVA_VERSION_MAJOR%") do (
 )
 
 rem -- @echo %JAVA_VERSION_MAJOR%
-IF %JAVA_VERSION_MAJOR% LSS 7 GOTO to_low_java_version
+IF %JAVA_VERSION_MAJOR% LSS 11 GOTO to_low_java_version
 
 
 rem ------------------------------------------------------------------------
 rem -- if java is 11 or above, we need to adjust the classpath a bit
 rem ------------------------------------------------------------------------
-IF %JAVA_VERSION_MAJOR% GEQ 11 (
-	echo .
-	echo ================================================================
-	echo Adjustments for java 11 and above.
-	echo Java version %JAVA_VERSION_MAJOR% is used. This version is missing some basic JARS, which will be added
-	echo ----------------------------------------------------------------
-	echo INFO: - Adding '%DBXTUNE_HOME%\lib\jaxb-ri\*' to CLASSPATH
-	echo ----------------------------------------------------------------
-	echo .
-	set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jaxb-ri/*
-)
+rem ---IF %JAVA_VERSION_MAJOR% GEQ 11 (
+rem ---	echo .
+rem ---	echo ================================================================
+rem ---	echo Adjustments for java 11 and above.
+rem ---	echo Java version %JAVA_VERSION_MAJOR% is used. This version is missing some basic JARS, which will be added
+rem ---	echo ----------------------------------------------------------------
+rem ---	echo INFO: - Adding '%DBXTUNE_HOME%\lib\jaxb-ri\*' to CLASSPATH
+rem ---	echo ----------------------------------------------------------------
+rem ---	echo .
+rem ---	set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jaxb-ri/*
+rem ---)
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jaxb-ri/*
 
 rem ------------------------------------------------------------------------
 rem --- CHECK current Java Version
@@ -565,9 +642,9 @@ echo .
 echo -----------------------------------------------------------------------
 echo Starting %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 echo -----------------------------------------------------------------------
-echo java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_OOM_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
+echo java %jvmNoGuiSwitch% %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_OOM_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 echo -----------------------------------------------------------------------
-     java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_OOM_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
+     java %jvmNoGuiSwitch% %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_OOM_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 
 IF %ERRORLEVEL% EQU 8 GOTO restart_dbxtune
 
@@ -640,6 +717,15 @@ echo If you have a sql.ini file somewhere, %APP_NAME% looks for it under %%SYBAS
 echo If you do not have a sql.ini file, just set SYBASE=c:\whatever
 echo    and then you can to specify to what host and port when connecting to the ASE server.
 echo -----------------------------------------------------------------------
+goto exit_dbxtune
+
+:DBXTUNE_CENTRAL__NO_DIR
+echo -----------------------------------------------------------------------
+echo -- DbxCentral directory structure is NOT found
+echo -- Install DbxCentral directory structure
+echo -- Have a look at: https://github.com/goranschwarz/DbxTune/blob/master/README_dbxcentral_0_install_windows.md
+echo -----------------------------------------------------------------------
+pause
 goto exit_dbxtune
 
 :exit_dbxtune

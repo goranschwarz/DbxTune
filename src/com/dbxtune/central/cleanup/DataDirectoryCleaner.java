@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -557,8 +558,8 @@ extends Task
 		long   dateMapMaxSize = getMaxSizeMb(dateMap, SizeType.MAX_FILE_OR_SAVED);
 		double needSpaceInMb  = dateMapMaxSize * multiplyFactor;
 		
-		BigDecimal dateMapMaxSizeGb = new BigDecimal( dateMapMaxSize/1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-		BigDecimal needSpaceInGb    = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal dateMapMaxSizeGb = new BigDecimal( dateMapMaxSize/1024.0 ).setScale(1, RoundingMode.HALF_EVEN);
+		BigDecimal needSpaceInGb    = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, RoundingMode.HALF_EVEN);
 
 		logMsg = "Calculated/Esitimated Space Usage for next " + multiplyFactor + " Days is " + needSpaceInMb + " MB (" + needSpaceInGb + " GB). Maximum date-range-space-usage is " + dateMapMaxSize + " MB (" + dateMapMaxSizeGb + " GB). Number of days to reserve space for can be changed by setting property '" + PROPKEY_multiplyFactor + "=#.#'.";
 		_logger.info(_prefix + logMsg);
@@ -566,8 +567,8 @@ extends Task
 
 		// Should we deduct 'beforeFreeMb' from 'needSpaceInGb'
 //		needSpaceInMb = needSpaceInMb - beforeFreeMb;
-//		needSpaceInGb = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//		BigDecimal beforeFreeGb = new BigDecimal( beforeFreeMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//		needSpaceInGb = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, RoundingMode.HALF_EVEN);
+//		BigDecimal beforeFreeGb = new BigDecimal( beforeFreeMb /1024.0 ).setScale(1, RoundingMode.HALF_EVEN);
 //		_logger.info(_prefix + "Calculated/Esitimated space to remove is " + needSpaceInMb + " MB (" + needSpaceInGb + " GB), when Free File System usage of " + beforeFreeMb + " MB (" + beforeFreeGb + " GB) was subtracted.");
 
 
@@ -769,7 +770,7 @@ extends Task
 			// Sum H2 recording databases, size AFTER Cleanup 
 			Map<String, List<FileInfo>> afterSrvMap = getFilesByServerName();
 			long       afterSumHistoryDbFileUsageMb = getSumSizeMb(afterSrvMap, SizeType.FILE_INFO);
-			BigDecimal afterSumHistoryDbFileUsageGb = new BigDecimal( afterSumHistoryDbFileUsageMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal afterSumHistoryDbFileUsageGb = new BigDecimal( afterSumHistoryDbFileUsageMb /1024.0 ).setScale(1, RoundingMode.HALF_EVEN);
 
 			
 			_logger.info(_prefix + "---------------------------");

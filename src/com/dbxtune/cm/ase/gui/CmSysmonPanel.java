@@ -28,7 +28,6 @@ import javax.swing.JSplitPane;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
-import com.dbxtune.CounterController;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.ase.CmSpinlockSum;
 import com.dbxtune.gui.MainFrame;

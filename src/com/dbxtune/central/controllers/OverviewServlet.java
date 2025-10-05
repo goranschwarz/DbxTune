@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.InetAddress;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -850,6 +851,9 @@ public class OverviewServlet extends HttpServlet
 				List<String> allSrvList = new ArrayList<>();
 				for (DbxCentralSessions session : sessionList)
 				{
+					if (session == null)
+						continue;
+
 					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
 					{
 						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
@@ -1946,7 +1950,7 @@ public class OverviewServlet extends HttpServlet
 			double pctUsed  = 100.0 - (freeGb / totalGb * 100.0);
 			
 			long       sumH2RecordingsUsageMb = DataDirectoryCleaner.getH2RecodingFileSizeMb();
-			BigDecimal sumH2RecordingsUsageGb = new BigDecimal( sumH2RecordingsUsageMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal sumH2RecordingsUsageGb = new BigDecimal( sumH2RecordingsUsageMb /1024.0 ).setScale(1, RoundingMode.HALF_EVEN);
 
 			out.println("<p>");
 			out.println("File system usage at '"+dataDir+"', resolved to '"+dataDirRes+"'.<br>");

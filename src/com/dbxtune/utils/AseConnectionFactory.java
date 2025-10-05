@@ -212,7 +212,7 @@ public class AseConnectionFactory
 	public static String getPrivateInterfacesFile(boolean setSybaseHome)
 	{
 		String file = null;
-		String tmpSybaseEnvLocation = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : "";
+		String tmpSybaseEnvLocation = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() : "";
 
 		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
 			file = tmpSybaseEnvLocation + "\\sql.ini";

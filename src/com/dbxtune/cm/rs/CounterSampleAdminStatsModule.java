@@ -24,7 +24,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.dbxtune.CounterController;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.DbxTuneResultSetMetaData;

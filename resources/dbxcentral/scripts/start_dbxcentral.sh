@@ -36,6 +36,7 @@ dbxSwHome=${DBXTUNE_HOME:-${HOME}/dbxtune/0}
 
 export DBXTUNE_CENTRAL_CONF=${dbxCentralBase}/conf
 export DBXTUNE_CENTRAL_DATA=${dbxCentralBase}/data
+export DBXTUNE_CENTRAL_INFO=${dbxCentralBase}/info
 export DBXTUNE_CENTRAL_LOG=${dbxCentralBase}/log
 #export DBXTUNE_CENTRAL_WEB=${dbxSwHome}/resources/WebContent
 

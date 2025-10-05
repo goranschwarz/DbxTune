@@ -24,6 +24,7 @@ package com.dbxtune.test.pcs;
 import java.io.File;
 import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -102,8 +103,8 @@ implements Runnable
 //	private Properties _conf;
 	
 	private Thread _storeThread;
-	private boolean _running;
-	private boolean _runningStatsThread;
+	private transient boolean _running;
+	private transient boolean _runningStatsThread;
 	
 	private BlockingQueue<PerfCollectorContainer> _storeQueue = new LinkedBlockingQueue<>();
 	private int _warnQueueSizeThresh = 1000;
@@ -272,7 +273,7 @@ implements Runnable
 		BigDecimal rate = null;
 		try 
 		{
-			rate = new BigDecimal( ((diffVal*1.0) / (timeDiffInMs*1.0)) * 1000 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			rate = new BigDecimal( ((diffVal*1.0) / (timeDiffInMs*1.0)) * 1000 ).setScale(1, RoundingMode.HALF_EVEN);
 		} 
 		catch (NumberFormatException ex) 
 		{

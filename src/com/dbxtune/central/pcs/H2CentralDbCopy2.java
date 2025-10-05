@@ -397,7 +397,7 @@ implements AutoCloseable
 		else
 		{
 			// Decide path to the log file.
-			String logPath = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : System.getProperty("user.home");
+			String logPath = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() : System.getProperty("user.home");
 			if ( logPath != null && ! (logPath.endsWith("/") || logPath.endsWith("\\")) )
 				logPath += File.separatorChar;
 			logPath += "log" + File.separatorChar;

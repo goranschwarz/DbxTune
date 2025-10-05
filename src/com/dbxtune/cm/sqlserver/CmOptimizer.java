@@ -22,6 +22,7 @@ package com.dbxtune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -302,7 +303,7 @@ extends CountersModel
 				Long occurrence = diffData.getValueAsLong(rowId, pos_occurrence);
 				
 				double calc = (occurrence * 100.0) / (totalOccurrences * 1.0);
-				BigDecimal calcValue = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcValue = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 				
 				diffData.setValueAt(calcValue, rowId, pos_pct);
 			}

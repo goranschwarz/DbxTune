@@ -23,6 +23,7 @@ package com.dbxtune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -760,7 +761,7 @@ extends CountersModel
 				double calc = EventIdWaitTime / (Waits * 1.0);
 //				double calc = WaitTimePerWait / (Waits * 1.0);
 
-				BigDecimal newVal = new BigDecimal(calc).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
+				BigDecimal newVal = new BigDecimal(calc).setScale(3, RoundingMode.HALF_EVEN);;
 				diffData.setValueAt(newVal, rowId, pos_WaitTimePerWait);
 			}
 			else

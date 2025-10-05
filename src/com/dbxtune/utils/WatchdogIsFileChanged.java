@@ -42,13 +42,13 @@ public class WatchdogIsFileChanged
 	private Thread    _watchdogIsFileChanged = null;
 	
 	private int     _sleepTimeMs = WATCHDOG_IS_FILE_CHANGED_SLEEP_TIME_MS;
-	private boolean _running = true;
-	private boolean _paused  = false;
+	private transient boolean _running = true;
+	private transient boolean _paused  = false;
 
 	private WatchdogIsFileChangedChecker _checker = null; 
 
 	private File _currentFile             = null;
-	private long _currentFileLastModified = 0;
+	private transient long _currentFileLastModified = 0;
 
 
 	/**

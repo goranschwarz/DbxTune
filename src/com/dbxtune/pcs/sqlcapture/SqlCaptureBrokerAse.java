@@ -29,6 +29,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -192,6 +193,8 @@ extends SqlCaptureBrokerAbstract
 	public static final String  PROPKEY_sqlCap_ase_spidWaitInfo_sample = "PersistentCounterHandler.sqlCapture.ase.spidWaitInfo.sample";
 	public static final boolean DEFAULT_sqlCap_ase_spidWaitInfo_sample = true;
 
+	public static final String  PROPKEY_sqlCap_ase_onStatementError_SqlText_queueSize = "PersistentCounterHandler.sqlCapture.ase.onStatementError.sqlText.queueSize";
+	public static final int     DEFAULT_sqlCap_ase_onStatementError_SqlText_queueSize = 30;
 
 	public int _sqlText_shortLength = DEFAULT_sqlCap_ase_sqlTextAndPlan_sqlText_shortLength;
 
@@ -1930,6 +1933,12 @@ extends SqlCaptureBrokerAbstract
 			+ "    "+InstanceID+"\n"
 			+ "    SPID, \n"
 			+ "    KPID, \n"
+// Possibly ADD 'Application' to make it easier to detect WHAT application (or possibly Login) that are using up most resources.
+// I'm not sure how much extra resources this will use (everything in here counts, as it's executed OFTEN)
+// So right now... Lets NOT include it... But we might do it in the future
+// Another alternative would be to "trust" CmProcessActivity (which only refreshes every sample) and has PK<SPID, KPID> to get "extra" information
+//			+ "    Application = (select p.program_name from sysprocesses p where p.spid = ss.SPID) \n"
+//			+ "    Application = (select mp.Application from monProcess mp where mp.SPID=ss.SPID) \n"
 			+ "    DBID, \n"
 			+ "    ProcedureID, \n"
 			+ "    PlanID, \n"
@@ -1974,7 +1983,7 @@ extends SqlCaptureBrokerAbstract
 			+ "    convert(varchar(10), NULL) as PlanText, \n"           // Length of the char is NOT important
 			+ "    convert(varchar(10), NULL) as BlockedBySqlText \n"   // Length of the char is NOT important
 			
-			+ "from master.dbo.monSysStatement \n"
+			+ "from master.dbo.monSysStatement ss \n"
 			+ "where 1 = 1 \n"
 			+ "  and SPID != @@spid \n"
 			+ "  and SPID not in (select spid from master.dbo.sysprocesses where program_name like '" + Version.getAppName() + "%') \n"
@@ -2214,7 +2223,8 @@ extends SqlCaptureBrokerAbstract
 		// if the "Capture thread" dies we can probably use this value to detect the "problem"
 		if (_statementStatistics != null)
 			_statementStatistics.setLastUpdateTime();
-				
+
+
 		//------------------------------------------------
 		// SPID INFO
 		// - get SPID information on spids that are "doing something"
@@ -2223,7 +2233,16 @@ extends SqlCaptureBrokerAbstract
 		{
 			Map<Integer, SpidInfoBatchIdEntry> spidInfoJustAddedEntries  = new HashMap<>();
 			List<WaitEventEntry> addedWaitEventEntries = new ArrayList<>();
-			
+
+			// NOTE: _sql_spidInfo is ONLY getting SPID's that holds locks or 
+			// SELECT ...
+			// FROM master.dbo.monProcess p
+			// where 1=1
+			//	 and p.SPID != @@spid
+			//	 and p.Login is not null
+			//	 and p.Login != 'probe'
+			//	 and (p.BlockingSPID is not null or p.WaitEventID != 250)
+			//	  or (p.WaitEventID = 250 and p.SPID in (select spid from master.dbo.syslocks))
 			long captureStartTime = System.currentTimeMillis();
 			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(_sql_spidInfo) )
 			{
@@ -2484,8 +2503,8 @@ extends SqlCaptureBrokerAbstract
 //				if (pos_HashKey != -1) pos_HashKey++; // +1 to adjust for 'TableName' in the output storage array
 
 				int pos_SPID          = findInListToJdbcPos(colNames, "SPID");
-//				int pos_KPID          = findInListToJdbcPos(colNames, "KPID");
-//				int pos_BatchID       = findInListToJdbcPos(colNames, "BatchID");
+				int pos_KPID          = findInListToJdbcPos(colNames, "KPID");
+				int pos_BatchID       = findInListToJdbcPos(colNames, "BatchID");
 				int pos_Elapsed_ms    = findInListToJdbcPos(colNames, "Elapsed_ms");
 				int pos_LogicalReads  = findInListToJdbcPos(colNames, "LogicalReads");
 				int pos_PhysicalReads = findInListToJdbcPos(colNames, "PhysicalReads");
@@ -2494,12 +2513,13 @@ extends SqlCaptureBrokerAbstract
 				int pos_WaitTime      = findInListToJdbcPos(colNames, "WaitTime");
 				int pos_RowsAffected  = findInListToJdbcPos(colNames, "RowsAffected");
 				int pos_ProcedureID   = findInListToJdbcPos(colNames, "ProcedureID");
-//				int pos_SsqlId        = findInListToJdbcPos(colNames, "SsqlId");
-//				int pos_ContextID     = findInListToJdbcPos(colNames, "ContextID");
+				int pos_SsqlId        = findInListToJdbcPos(colNames, "SsqlId");
+				int pos_ContextID     = findInListToJdbcPos(colNames, "ContextID");
 				int pos_ProcName      = findInListToJdbcPos(colNames, "ProcName");
 				int pos_LineNumber    = findInListToJdbcPos(colNames, "LineNumber");
 				int pos_DBName        = findInListToJdbcPos(colNames, "DBName");
 				int pos_DBID          = findInListToJdbcPos(colNames, "DBID");
+				int pos_QueryOptimizationTime = findInListToJdbcPos(colNames, "QueryOptimizationTime");
 				
 				while(rs.next())
 				{
@@ -2509,9 +2529,9 @@ extends SqlCaptureBrokerAbstract
 					int physicalReads = -1; //TODO; // change this to a 'long' at some stage it is 'bigint' in ASE... PhysicalReads, LogicalReads, PagesModified, QueryOptimizationTime is bigint in ASE in version: 16.0 SP2 PL5 and 15.7 SP138
 					
 					int SPID          = rs.getInt(pos_SPID);
-//					int KPID          = rs.getInt(pos_KPID);
-//					int BatchID       = rs.getInt(pos_BatchID);
-					int execTime      = rs.getInt(pos_Elapsed_ms);
+					int KPID          = rs.getInt(pos_KPID);
+					int BatchID       = rs.getInt(pos_BatchID);
+					int elapsedTime   = rs.getInt(pos_Elapsed_ms);
 					int logicalReads  = rs.getInt(pos_LogicalReads);
 //					int physicalReads = rs.getInt(pos_PhysicalReads); // throws: java.sql.SQLException: JZ00B: Numeric overflow. sometimes
 					try { physicalReads = rs.getInt(pos_PhysicalReads); } catch (SQLException ex) { _logger.warn("Problems reading column 'PhysicalReads', strVal='" + rs.getString(pos_PhysicalReads) + "', setting this to -1 and continuing. Caught: " + ex); }
@@ -2522,8 +2542,8 @@ extends SqlCaptureBrokerAbstract
 					int rowsAffected  = rs.getInt(pos_RowsAffected); // RowsAffected was introduced in ASE 12.5.4 (but before that we genereate -1) 
 
 					int procedureId   = rs.getInt(pos_ProcedureID);
-//					int ssqlId        = rs.getInt(pos_SsqlId);
-//					int ContextID     = rs.getInt(pos_ContextID);
+					int ssqlId        = pos_SsqlId <= 0 ? 0 : rs.getInt(pos_SsqlId);
+					int contextId     = rs.getInt(pos_ContextID);
 
 					String procName   = rs.getString(pos_ProcName);
 					int    lineNumber = rs.getInt   (pos_LineNumber);
@@ -2531,6 +2551,21 @@ extends SqlCaptureBrokerAbstract
 					String DBName     = rs.getString(pos_DBName);
 					int    DBID       = rs.getInt   (pos_DBID);
 
+					int QueryOptimizationTime = -1;
+					if (pos_QueryOptimizationTime != -1)
+						QueryOptimizationTime = rs.getInt(pos_QueryOptimizationTime);
+
+					int totalTime = elapsedTime;
+
+					// 'QueryOptimizationTime' is NOT included in 'elapsedTime' so lets add it... Or is it ???
+					// Possibly do some checking here...
+					//   -- If QueryOptimizationTime + cpuTime + waitTime is HIGHER than elapsedTime THEN: Adjust some values...
+					// For now we are not changing any counter values!
+					// We just add 'QueryOptimizationTime' to the 'totalTime' which is used to FILTER OUT rows that is "unimportant"... But adding QueryOptimizationTime might still INCLUDE them for COLLECTION
+					if (QueryOptimizationTime > 0)
+					{
+						totalTime += QueryOptimizationTime;
+					}
 
 					// To be used by keep/discard Set
 //					PK pk = new PK(SPID, KPID, BatchID);
@@ -2554,12 +2589,12 @@ extends SqlCaptureBrokerAbstract
 					// For Example: how many Statements that executed, between
 					//     Also a Map for DBName exists
 					if (_statementStatistics != null)
-						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, DBName, DBID);
+						updateStatementStats(SPID, BatchID, elapsedTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, ssqlId, procedureId, procName, contextId, lineNumber, DBName, DBID, QueryOptimizationTime);
 
-					
+
 					//System.out.println("Statement CHECK if above THRESHOLD: SPID="+SPID+",KPID="+KPID+",BatchID="+BatchID+": execTime="+execTime+", logicalReads="+logicalReads+", physicalReads="+physicalReads+".   SAVE="+(execTime > saveStatement_gt_execTime && logicalReads > saveStatement_gt_logicalReads && physicalReads > saveStatement_gt_physicalReads));
 					// Add only rows that are above the limits
-					if ( (    execTime      > saveStatement_gt_execTime
+					if ( (    totalTime     > saveStatement_gt_execTime
 					       && logicalReads  > saveStatement_gt_logicalReads
 					       && physicalReads > saveStatement_gt_physicalReads
 					     )
@@ -2574,7 +2609,7 @@ extends SqlCaptureBrokerAbstract
 //								String DBName = rs.getString(pos_DBName);
 
 								// Only send if it's above the defined limits
-								if (    execTime      > sendDdlForLookup_gt_execTime
+								if (    totalTime     > sendDdlForLookup_gt_execTime
 								     && logicalReads  > sendDdlForLookup_gt_logicalReads
 								     && physicalReads > sendDdlForLookup_gt_physicalReads
 								   )
@@ -2711,7 +2746,7 @@ extends SqlCaptureBrokerAbstract
 					_lastConfigOverflowMsgVCnt_statementPipeMaxMessages++;
 					_lastConfigOverflowMsgVSum_statementPipeMaxMessages += rowCount;
 
-					// Warning on firt time or every X minute/hour
+					// Warning on first time or every X minute/hour
 					if (_lastConfigOverflowMsgTime_statementPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_statementPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
 					{
 						_logger.warn("The configuration '"+configName+"' might be to low. " 
@@ -2742,10 +2777,11 @@ extends SqlCaptureBrokerAbstract
 			_statStatementCaptureTimeDiff += captureTime;
 		}
 
+
 		//------------------------------------------------
 		// SQL TEXT
 		// - is available in the table monSysSQLText when the SQL *starts* to execute (or after it has been optimized)
-		//   The statement-information/statistics will on the other hand be available *after* the statement has finnished to execute
+		//   The statement-information/statistics will on the other hand be available *after* the statement has finished to execute
 		//------------------------------------------------
 		if (_sampleSqlText)
 		{
@@ -2791,6 +2827,7 @@ extends SqlCaptureBrokerAbstract
 						updateSqlTextStats(SPID, KPID, BatchID, SequenceInBatch, sqlText);
 					}
 
+					// UPDATE MANAGER
 					_spidSqlTextAndPlanManager.addSqlText(SPID, KPID, BatchID, SequenceInBatch, sqlText, ServerLogin, captureStartTime);
 				}
 				_statSqlTextCaptureRows       += rowCount;
@@ -2803,7 +2840,7 @@ extends SqlCaptureBrokerAbstract
 					_lastConfigOverflowMsgVCnt_sqlTextPipeMaxMessages++;
 					_lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages += rowCount;
 
-					// Warning on firt time or every X minute/hour
+					// Warning on first time or every X minute/hour
 					if (_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
 					{
 						_logger.warn("The configuration '"+configName+"' might be to low. " 
@@ -2833,6 +2870,7 @@ extends SqlCaptureBrokerAbstract
 			_statSqlTextCaptureTime     += captureTime;
 			_statSqlTextCaptureTimeDiff += captureTime;
 		}
+
 
 		//------------------------------------------------
 		// SQL PLANS
@@ -2873,6 +2911,7 @@ extends SqlCaptureBrokerAbstract
 					int SequenceNumber = rs.getInt   (pos_SequenceNumber);
 					String planText    = rs.getString(pos_PlanText);
 
+					// UPDATE MANAGER
 					_spidSqlTextAndPlanManager.addPlanText(SPID, KPID, BatchID, SequenceNumber, planText);
 				}
 				_statPlanTextCaptureRows      += rowCount;
@@ -2887,7 +2926,7 @@ extends SqlCaptureBrokerAbstract
 					_lastConfigOverflowMsgVCnt_planTextPipeMaxMessages++;
 					_lastConfigOverflowMsgVSum_planTextPipeMaxMessages += rowCount;
 
-					// Warning on firt time or every X minute/hour
+					// Warning on first time or every X minute/hour
 					if (_lastConfigOverflowMsgTime_planTextPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_planTextPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
 					{
 						_logger.warn("The configuration '"+configName+"' might be to low. " 
@@ -2919,7 +2958,8 @@ extends SqlCaptureBrokerAbstract
 			_statPlanTextCaptureTime     += captureTime;
 			_statPlanTextCaptureTimeDiff += captureTime;
 		}
-		
+
+
 		//------------------------------------------------
 		// Post processing
 		//------------------------------------------------
@@ -2927,6 +2967,9 @@ extends SqlCaptureBrokerAbstract
 		// Send counters for storage
 		int count = toPcs(pch, statementRecords);
 		
+		// Maintain the "Last Errors Queue"
+		maintainLastErrorQueue(statementRecords);
+
 		// Cleanup the structure that holds SQL-Text and SQL-ShowPlan information!
 		// This will remove SQL and PLAN text's that are "below" the last sent entry for every SPID, KPID, BatchID
 		// The "last known TEXT" entries will always be present/saved
@@ -3227,6 +3270,8 @@ extends SqlCaptureBrokerAbstract
 		_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() was called. Emtying the SPID SQL-Text, SQL-Plan and SPID-Info structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries and SPID-Info " + _spidInfoManager.getSpidSize() + " entries.");
 		_spidSqlTextAndPlanManager.clear();
 		_spidInfoManager.clear();
+		
+		_lastSqlTextWithErrorsQueue.clear();
 	}
 	@Override
 	public void outOfMemoryHandler()
@@ -3234,7 +3279,144 @@ extends SqlCaptureBrokerAbstract
 		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the SPID SQL-Text, SQL-Plan and SPID-Info structure, which has " + _spidSqlTextAndPlanManager.getSpidSize() + " SPID entries and " + _spidSqlTextAndPlanManager.getBatchIdSize() + " BatchId entries and SPID-Info " + _spidInfoManager.getSpidSize() + " entries.");
 		_spidSqlTextAndPlanManager.clear();
 		_spidInfoManager.clear();
+
+		_lastSqlTextWithErrorsQueue.clear();
 	}
+
+
+
+	//--------------------------------------------------------------------------
+	// BEGIN: Last ## SQL Text with errors 
+	//--------------------------------------------------------------------------
+	public static class AseErrorStatement
+	{
+		public int       _msgNum;
+		public int       _spid;
+		public int       _batchId;
+		public String    _dbname;
+		public String    _login;
+		public String    _appname;
+		public Timestamp _stmntStartTime;
+		public String    _sqlText;
+	}
+
+	private int _lastSqlTextWithErrorsQueueSize = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sqlCap_ase_onStatementError_SqlText_queueSize, DEFAULT_sqlCap_ase_onStatementError_SqlText_queueSize);
+	
+//	private Queue<AseErrorStatement> _lastSqlTextWithErrorsQueue = EvictingQueue.create(_lastSqlTextWithErrorsQueueSize);
+	private ArrayDeque<AseErrorStatement> _lastSqlTextWithErrorsQueue = new ArrayDeque<>(_lastSqlTextWithErrorsQueueSize);
+
+	private void maintainLastErrorQueue(List<MonSqlStatement> statementRecords)
+	{
+		if (statementRecords == null)
+			return;
+		
+		for (MonSqlStatement monSqlStatement : statementRecords)
+		{
+			// on ERRORS: Keep a list of ## entries so we can easily add last known SQL Statements to any Alarms
+			if (monSqlStatement.ErrorStatus > 0)
+			{
+//				String appName = "-unknown-";
+//				SpidInfoBatchIdEntry spidInfoEntry = _spidInfoManager.getSpidInfoBatchIdEntryLazy(monSqlStatement.SPID, monSqlStatement.KPID, monSqlStatement.BatchID);
+//				if (spidInfoEntry != null)
+//				{
+//					appName = spidInfoEntry._Application;
+//				}
+
+				AseErrorStatement errorEntry = new AseErrorStatement();
+				errorEntry._msgNum         = monSqlStatement.ErrorStatus;
+				errorEntry._spid           = monSqlStatement.SPID;
+				errorEntry._batchId        = monSqlStatement.BatchID;
+				errorEntry._dbname         = monSqlStatement.DBName;
+				errorEntry._login          = monSqlStatement.ServerLogin; 
+//				errorEntry._appname        = appName;
+				errorEntry._stmntStartTime = monSqlStatement.StartTime;
+				errorEntry._sqlText        = monSqlStatement.SQLText;
+
+				addAseErrorStatement(errorEntry);
+			}
+		}
+	}
+	
+	private void addAseErrorStatement(AseErrorStatement aseErrorStatement)
+	{
+		// Lock the Queue, if we call getAseErrorStatementsAsHtml() at the same time
+		synchronized (_lastSqlTextWithErrorsQueue)
+		{
+			if (_lastSqlTextWithErrorsQueue.size() >= _lastSqlTextWithErrorsQueueSize) 
+			{
+				_lastSqlTextWithErrorsQueue.removeFirst();
+			}
+
+			_lastSqlTextWithErrorsQueue.addLast(aseErrorStatement);
+		}
+	}
+
+	public String getAseErrorStatementsAsHtml()
+	{
+		return getAseErrorStatementsAsHtml(null, true);
+	}
+	public String getAseErrorStatementsAsHtml(String classname, boolean addBorder)
+	{
+		// Lock the Queue, if we call addAseErrorStatement() at the same time
+		synchronized (_lastSqlTextWithErrorsQueue)
+		{
+			String tableAttr = "";
+			if (addBorder)
+				tableAttr += " border=1";
+			
+			if (StringUtil.hasValue(classname))
+				tableAttr += " class='" + classname + "'";
+
+			StringBuilder sb = new StringBuilder();
+
+			sb.append("<table").append(tableAttr).append(">");
+			sb.append("<thead>");
+			sb.append("<tr>");
+			sb.append("  <th>Error</th>");         // 1
+			sb.append("  <th>SPID</th>");          // 2
+			sb.append("  <th>BatchId</th>");       // 3
+			sb.append("  <th>DB Name</th>");       // 4
+			sb.append("  <th>ASE Login</th>");     // 5
+//			sb.append("  <th>Application</th>");   // 6
+			sb.append("  <th>Start Time</th>");    // 7
+			sb.append("  <th>SQL Text</th>");      // 8
+			sb.append("</tr>");
+			sb.append("</thead>");
+
+			sb.append("<tbody>");
+			for (AseErrorStatement entry : _lastSqlTextWithErrorsQueue)
+			{
+				String sqlText = entry._sqlText;
+				if (StringUtil.hasValue(sqlText))
+				{
+					// Handles both \n and \r\n
+					sqlText = sqlText.replaceAll("\\r?\\n", "<br>");
+				}
+
+				String startTime = entry._stmntStartTime == null ? "-unknown-" : TimeUtils.toString(entry._stmntStartTime);
+
+				sb.append("<tr>");
+				sb.append("  <td>").append(entry._msgNum ).append("</td>"); // 1
+				sb.append("  <td>").append(entry._spid   ).append("</td>"); // 2
+				sb.append("  <td>").append(entry._batchId).append("</td>"); // 3
+				sb.append("  <td>").append(entry._dbname ).append("</td>"); // 4
+				sb.append("  <td>").append(entry._login  ).append("</td>"); // 5
+//				sb.append("  <td>").append(entry._appname).append("</td>"); // 6
+				sb.append("  <td>").append(startTime     ).append("</td>"); // 7
+				sb.append("  <td>").append(sqlText       ).append("</td>"); // 8
+				sb.append("</tr>");
+			}
+			sb.append("</tbody>");
+
+			sb.append("</table>");
+			
+			return sb.toString();
+		}
+	}
+	
+	//--------------------------------------------------------------------------
+	// END: Last ## SQL Text with errors 
+	//--------------------------------------------------------------------------
 
 
 
@@ -3895,6 +4077,16 @@ extends SqlCaptureBrokerAbstract
 			return size;
 		}
 
+		/** Do not add any new SpidEntry or BatchIdEntry if they do NOT exists, just return null if no existance */
+		public SpidInfoBatchIdEntry getSpidInfoBatchIdEntryLazy(int spid, int kpid, int batchId)
+		{
+			SpidInfoEntry spidInfoEntry = _spidInfoMap.get(spid);
+			if (spidInfoEntry == null)
+				return null;
+
+			return spidInfoEntry.getSpidInfoBatchIdEntry(spid, kpid, batchId);
+		}
+
 		public SpidInfoBatchIdEntry getSpidInfoBatchIdEntry(int spid, int kpid, int batchId)
 		{
 			return getSpidInfoEntry(spid, kpid).getSpidInfoBatchIdEntry(spid, kpid, batchId);
@@ -4520,7 +4712,7 @@ extends SqlCaptureBrokerAbstract
 	 *     <li> above 30 sec  </li>
 	 * </ul>
 	 * 
-	 * @param execTime
+	 * @param elapsedTime
 	 * @param logicalReads
 	 * @param physicalReads
 	 * @param waitTime 
@@ -4531,12 +4723,13 @@ extends SqlCaptureBrokerAbstract
 	 * @param dbname 
 	 * @param contextID 
 	 */
-	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int procedureId, String procName, int lineNumber, String dbname, int dbid)
+	private void updateStatementStats(int spid, int batchId, int elapsedTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, int ssqlId, int procedureId, String procName, int contextId, int lineNumber, String dbname, int dbid, int queryOptimizationTime)
 	{
 		if (_statementStatistics == null)
 			return;
-		
-		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname, dbid);
+
+//System.out.println("----------------------------------- SqlCaptureBrokerAse._statementStatistics.addStatementStats(...)");
+		_statementStatistics.addStatementStats(spid, batchId, elapsedTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, ssqlId, procedureId, procName, contextId, lineNumber, dbname, dbid, queryOptimizationTime);
 	}
 
 	public void closeStatementStats()

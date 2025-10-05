@@ -38,6 +38,7 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -873,7 +874,7 @@ public class AseStackTraceAnalyzer
 			{
 				try
 				{
-					BigDecimal pctVal = new BigDecimal( (_count*1.0 / _root._count) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					BigDecimal pctVal = new BigDecimal( (_count*1.0 / _root._count) * 100.0 ).setScale(1, RoundingMode.HALF_EVEN);
 					if ( pctVal.doubleValue() >= 0.1 )
 						pctValStr = " <i><font color='green'>(" + pctVal + "%)</font></i>";
 				}

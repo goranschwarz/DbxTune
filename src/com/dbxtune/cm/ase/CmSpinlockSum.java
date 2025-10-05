@@ -23,6 +23,7 @@ package com.dbxtune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -760,7 +761,7 @@ extends CountersModel
 			// contention
 			if (grabs > 0)
 			{
-				BigDecimal contention = new BigDecimal( ((1.0 * (waits)) / grabs) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal contention = new BigDecimal( ((1.0 * (waits)) / grabs) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 				// Keep only 3 decimals
 				// row.set(AvgServ_msId, new Double (AvgServ_ms/1000) );
@@ -772,7 +773,7 @@ extends CountersModel
 			// spinsPerWait
 			if (waits > 0)
 			{
-				BigDecimal spinWarning = new BigDecimal( ((1.0 * (spins)) / waits) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal spinWarning = new BigDecimal( ((1.0 * (spins)) / waits) ).setScale(1, RoundingMode.HALF_EVEN);
 
 				diffData.setValueAt(spinWarning, rowId, spinsPerWaitId);
 			}

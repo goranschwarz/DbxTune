@@ -262,6 +262,18 @@ public class H2UrlHelper
 			_urlOptions = urlOptions;
 	}
 
+	public void removeUrlOption(String urlOption)
+	{
+		// Get current map
+		Map<String, String> urlMap = getUrlOptionsMap();
+
+		// Remove the option
+		urlMap.remove(urlOption);
+		
+		// This rebuilds the URL String
+		setUrlOptionsMap(urlMap);
+	}
+	
 	/**
 	 * Get the Filename part passed in the URL.<br>
 	 * The format is RAW, meaning ~ is not translated into $HOME, and PATH delimiters is not changed.

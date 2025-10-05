@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -470,7 +471,7 @@ extends CountersModel
 		{
 			double calc = (val + 0.0) / (divByValue + 0.0);
 
-			BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
 			data.setValueAt(newVal, rowId, setColPos);
 		}
 		else

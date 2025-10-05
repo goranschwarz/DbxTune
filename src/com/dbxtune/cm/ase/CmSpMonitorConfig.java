@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,6 +35,7 @@ import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.dbxtune.alarm.events.AlarmEventConfigResourceIsReused;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.dbxtune.alarm.events.AlarmEventProcedureCacheLowOnMemory;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -80,7 +82,9 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-	public static final String[] DIFF_COLUMNS     = new String[] {};
+	public static final String[] DIFF_COLUMNS     = new String[] {
+			"Reuse_cnt"
+	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -133,6 +137,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_PROC_CACHE_MEM_USAGE = "ProcCacheMemUsage";
 	public static final String GRAPH_NAME_METADATA_PCT_USAGE   = "MetaDataPctUsage";
 	public static final String GRAPH_NAME_METADATA_ACTIVE      = "MetaDataActive";
+	public static final String GRAPH_NAME_METADATA_REUSE       = "MetaDataReuse";
 
 //	@Override
 //	protected TabularCntrPanel createGui()
@@ -260,6 +265,20 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_METADATA_REUSE,
+			"MetaData Cache Reuse Count", 	                                 // Menu CheckBox text
+			"MetaData Cache Reuse Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+//			new String[] { "number of open objects", "number of open indexes", "number of open partitions", "number of locks", "number of sort buffers", "number of user connections", "number of worker processes"},
+			new String[] { "number of open objects", "number of open indexes", "number of open partitions"},
+			LabelType.Static,
+			TrendGraphDataPoint.Category.SRV_CONFIG,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 	}
 
 	@Override
@@ -310,10 +329,10 @@ extends CountersModel
 				
 				//Double[] data  = new Double[5];
 				Double[] data  = new Double[4];
-				data[0]  = new BigDecimal( numFree + numActive ).setScale(1, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-				data[1]  = new BigDecimal( numFree             ).setScale(1, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-				data[2]  = new BigDecimal( numActive           ).setScale(1, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-				data[3]  = new BigDecimal( maxUsed             ).setScale(1, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+				data[0]  = new BigDecimal( numFree + numActive ).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
+				data[1]  = new BigDecimal( numFree             ).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
+				data[2]  = new BigDecimal( numActive           ).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
+				data[3]  = new BigDecimal( maxUsed             ).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
 				//data[4]  = reuseCnt;
 
 				if (_logger.isDebugEnabled())
@@ -407,6 +426,47 @@ extends CountersModel
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
 					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"', '"+pk6+"'='"+val6+"', '"+pk7+"'='"+val7+"'.");
+			}
+		}
+
+		if (GRAPH_NAME_METADATA_REUSE.equals(tgdp.getName()))
+		{
+//			Double[] arr = new Double[7];
+			Double[] arr = new Double[3];
+			
+			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+			String pk1 = createPkStr("number of open objects"    );
+			String pk2 = createPkStr("number of open indexes"    );
+			String pk3 = createPkStr("number of open partitions" );
+//			String pk4 = createPkStr("number of locks"           );
+//			String pk5 = createPkStr("number of sort buffers"    );
+//			String pk6 = createPkStr("number of user connections");
+//			String pk7 = createPkStr("number of worker processes");
+
+//CAN WE GET RATE VALUES instead of ABS
+// For the moment, I can't add columns to a stored procedure output
+			Double val1 = this.getDiffValueAsDouble(pk1, "Reuse_cnt");
+			Double val2 = this.getDiffValueAsDouble(pk2, "Reuse_cnt");
+			Double val3 = this.getDiffValueAsDouble(pk3, "Reuse_cnt");
+//			Double val4 = this.getDiffValueAsDouble(pk3, "Reuse_cnt");
+//			Double val5 = this.getDiffValueAsDouble(pk3, "Reuse_cnt");
+//			Double val6 = this.getDiffValueAsDouble(pk3, "Reuse_cnt");
+//			Double val7 = this.getDiffValueAsDouble(pk3, "Reuse_cnt");
+			
+			if (val1 != null && val2 != null && val3 != null)
+			{
+				arr[0] = val1;
+				arr[1] = val2;
+				arr[2] = val3;
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"'.");
 			}
 		}
 	}
@@ -700,6 +760,77 @@ extends CountersModel
 				System.out.println("##### sendAlarmRequest("+cm.getName()+"): name='"+cfgName+"', pctAct='"+pctAct+"', numFree='"+numFree+"'.");
 		}
 
+		
+		// Alarm for "Reuse_cnt"
+		for (int r=0; r<cm.getAbsRowCount(); r++)
+		{
+//			boolean didAlarm = false;
+
+			String cfgName   = cm.getAbsString(r,         "Name");
+			Double reuse_cnt = cm.getDiffValueAsDouble(r, "Reuse_cnt");
+
+			// The value that will be used in charts
+//			Double chartValue = reuse_cnt;
+			
+			if (reuse_cnt == null)
+				continue;
+
+			if ("number of open objects"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenObjectsReuseDiff"))
+			{
+//				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsReuseDiff, DEFAULT_alarm_NumberOfOpenObjectsReuseDiff);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", '" + cfgName + "': reuse_cnt='"+reuse_cnt+"'.");
+
+				if (reuse_cnt.intValue() > threshold)
+				{
+					AlarmEvent alarm = new AlarmEventConfigResourceIsReused(cm, cfgName, reuse_cnt, threshold);
+
+//					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
+//					didAlarm = true;
+				}
+			}
+			else if ("number of open partitions" .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenPartitionsReuseDiff"))
+			{
+//				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff, DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", '" + cfgName + "': reuse_cnt='"+reuse_cnt+"'.");
+
+				if (reuse_cnt.intValue() > threshold)
+				{
+					AlarmEvent alarm = new AlarmEventConfigResourceIsReused(cm, cfgName, reuse_cnt, threshold);
+
+//					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
+//					didAlarm = true;
+				}
+			}
+			else if ("number of open indexes"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenIndexesReuseDiff"))
+			{
+//				MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME).add(chartValue);
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesReuseDiff, DEFAULT_alarm_NumberOfOpenIndexesReuseDiff);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", '" + cfgName + "': reuse_cnt='"+reuse_cnt+"'.");
+
+				if (reuse_cnt.intValue() > threshold)
+				{
+					AlarmEvent alarm = new AlarmEventConfigResourceIsReused(cm, cfgName, reuse_cnt, threshold);
+
+//					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					AlarmHandler.getInstance().addAlarm(alarm);
+//					didAlarm = true;
+				}
+			}
+		}
+		
 	} // end: method
 
 //NOTE: The below was already done with MovingAverageCounterManager(...) <<< see above
@@ -746,7 +877,17 @@ extends CountersModel
 	
 	public static final String  PROPKEY_alarm_NumberOfUserConnectionsPct = CM_NAME + ".alarm.system.if.NumberOfUserConnectionsPct.gt";
 	public static final int     DEFAULT_alarm_NumberOfUserConnectionsPct = 90;
+
 	
+	public static final String  PROPKEY_alarm_NumberOfOpenObjectsReuseDiff     = CM_NAME + ".alarm.system.if.NumberOfOpenObjects.ReuseDiff.gt";
+	public static final int     DEFAULT_alarm_NumberOfOpenObjectsReuseDiff     = 10;
+	
+	public static final String  PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff  = CM_NAME + ".alarm.system.if.NumberOfOpenPartitions.ReuseDiff.gt";
+	public static final int     DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff  = 10;
+	
+	public static final String  PROPKEY_alarm_NumberOfOpenIndexesReuseDiff     = CM_NAME + ".alarm.system.if.NumberOfOpenIndexes.ReuseDiff.gt";
+	public static final int     DEFAULT_alarm_NumberOfOpenIndexesReuseDiff     = 10;
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -763,6 +904,10 @@ extends CountersModel
 		list.add(new CmSettingsHelper("NumberOfLocksPct",           isAlarmSwitch, PROPKEY_alarm_NumberOfLocksPct          , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfLocksPct          , DEFAULT_alarm_NumberOfLocksPct          ), DEFAULT_alarm_NumberOfLocksPct          , "If '"+"NumberOfLocksPct"          +"' is greater than ## Percent then send 'AlarmEvent...'." ));
 		list.add(new CmSettingsHelper("NumberOfUserConnectionsPct", isAlarmSwitch, PROPKEY_alarm_NumberOfUserConnectionsPct, Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct), DEFAULT_alarm_NumberOfUserConnectionsPct, "If '"+"NumberOfUserConnectionsPct"+"' is greater than ## Percent then send 'AlarmEvent...'." ));
 
+		list.add(new CmSettingsHelper("NumberOfOpenObjectsReuseDiff",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenObjectsReuseDiff    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsReuseDiff    , DEFAULT_alarm_NumberOfOpenObjectsReuseDiff    ), DEFAULT_alarm_NumberOfOpenObjectsReuseDiff    , "If '"+"NumberOfOpenObjects.Reuse_cnt.diff"    +"' is greater than ## for a sample period then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenPartitionsReuseDiff",  isAlarmSwitch, PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff , DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff ), DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff , "If '"+"NumberOfOpenPartitions.Reuse_cnt.diff" +"' is greater than ## for a sample period then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenIndexesReuseDiff",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenIndexesReuseDiff    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesReuseDiff    , DEFAULT_alarm_NumberOfOpenIndexesReuseDiff    ), DEFAULT_alarm_NumberOfOpenIndexesReuseDiff    , "If '"+"NumberOfOpenIndexes.Reuse_cnt.diff"    +"' is greater than ## for a sample period then send 'AlarmEvent...'." ));
+		
 		return list;
 	}
 

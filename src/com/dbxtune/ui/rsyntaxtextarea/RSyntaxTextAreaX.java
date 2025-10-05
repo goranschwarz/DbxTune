@@ -41,7 +41,10 @@ import javax.swing.text.StyleContext;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
+import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
+import org.fife.ui.rtextarea.FontUtil;
 import org.fife.ui.rtextarea.RTextAreaEditorKit;
+import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
@@ -76,6 +79,9 @@ extends RSyntaxTextArea
 	public static final String  PROPKEY_TAB_TO_SPACES                 = "RSyntaxTextAreaX.tabToSpaces";
 	public static final boolean DEFAULT_TAB_TO_SPACES                 = false;
 	
+	public static final String  PROPKEY_WINDOWS_FONT_USE_CONSOLAS     = "RSyntaxTextAreaX.windows.default.font.use.Consolas";
+	public static final boolean DEFAULT_WINDOWS_FONT_USE_CONSOLAS     = true;
+
 	/**
 	 * Constructor.
 	 */
@@ -169,6 +175,44 @@ extends RSyntaxTextArea
 		localInit(this);
 	}
 
+	/**
+	 * Returns the default font for text areas.
+	 *
+	 * @return The default font.
+	 */
+	public static Font getDefaultFont()
+	{
+		Font font = FontUtil.getDefaultMonospacedFont();
+//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX.getDefaultFont(): font=" + font);
+
+		int os = RSyntaxUtilities.getOS();
+
+		if (os == RSyntaxUtilities.OS_MAC_OSX) 
+		{
+		}
+		else if (os == RSyntaxUtilities.OS_WINDOWS) 
+		{
+			// FROM: org.fife.ui.rtextarea.getDefaultMonospaceFontWindows
+			//
+			// Cascadia Code was added in later Windows 10/11, default in VS
+			// and VS Code. Consolas was added in Vista, used in older VS.
+//			Font font = FontUtil.createFont("Cascadia Code", Font.PLAIN, 13);
+
+			if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_WINDOWS_FONT_USE_CONSOLAS, DEFAULT_WINDOWS_FONT_USE_CONSOLAS))
+			{
+				font = FontUtil.createFont("Consolas", Font.PLAIN, 13);
+//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: font=" + font);
+				if (font == null)
+					font = FontUtil.getDefaultMonospacedFont();
+			}
+		}
+		else if (os == RSyntaxUtilities.OS_LINUX) 
+		{
+		}
+
+		return font;
+	}
+
 	public static final String markAllWordsOnDoubleClick = "mark-all-words-on-double-click";
 	public static final String formatSql                 = "format-sql";
 //	public static final String convertTabsToSpaces       = "convert-tabs-to-spaces";
@@ -206,7 +250,7 @@ extends RSyntaxTextArea
 		// Add Ctrl+/ to comment un-comment lines
 //		am.put(RSyntaxTextAreaEditorKit.rstaToggleCommentAction, new RSyntaxTextAreaEditorKit.ToggleCommentAction());
 		// Key Mapping
-		int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_DOWN_MASK;
+		int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK;
 		int       key       = KeyEvent.VK_7;
 //		int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 //		int       key       = KeyEvent.VK_SLASH;
@@ -216,15 +260,15 @@ extends RSyntaxTextArea
 //		textArea.getInputMap().put(keyStroke, NAME); // doesn't work...
 
 		// Format SQL: Ctrl + Shift + F
-		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_DOWN_MASK), formatSql);
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK), formatSql);
 
 		// TO LOWER and UPPPER mapping
-		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), toUpperCase);
-		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), toLowerCase);
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), toUpperCase);
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), toLowerCase);
 
 		// Increase/Decrease font size with keyboard Ctrl+ and Ctrl-
-		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_PLUS,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), RTextAreaEditorKit.rtaIncreaseFontSizeAction);
-		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), RTextAreaEditorKit.rtaDecreaseFontSizeAction);
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_PLUS,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), RTextAreaEditorKit.rtaIncreaseFontSizeAction);
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), RTextAreaEditorKit.rtaDecreaseFontSizeAction);
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
@@ -243,12 +287,35 @@ extends RSyntaxTextArea
 //System.out.println("XXXXXXX: TextField.font  = " + UIManager.getFont("TextField.font"));
 //System.out.println("XXXXXXX: Label.font      = " + UIManager.getFont("Label.font"));
 //System.out.println("XXXXXXX: rstaDefaultFont = " + getDefaultFont());
+		
+		// DISABLE "smart" insertion of quotes, which just isn't working that great
+//		textArea.setInsertPairedCharacters(false);
+		// Note: The above didn't work... it introduced "strange" behavior
+
+		// Fix Font
+		if (true)
+		{
+    		Font font = getDefaultFont();
+			textArea.setFont( font );
+
+			Component parent = textArea.getParent();
+			if (parent instanceof javax.swing.JViewport) 
+			{
+				parent = parent.getParent();
+				if (parent instanceof RTextScrollPane) 
+					((RTextScrollPane)parent).getGutter().setLineNumberFont( font );
+
+				if (parent instanceof JScrollPane) 
+					parent.repaint();
+			}
+		}
+		
 		// Fix font size, use same size as JLabel
 		if (SwingUtils.isHiDpi())
 		{
 //    		Font labelFont = UIManager.getFont("Label.font");
     		Font rstaDefaultFont = getDefaultFont();
-
+    		
 //    		int scaledFontSize = labelFont.getSize(); 
 //    		int scaledFontSize = SwingUtils.hiDpiScale(13); // 13 is the default size, so lets try to scale that
     		int scaledFontSize = SwingUtils.hiDpiScale(rstaDefaultFont.getSize());

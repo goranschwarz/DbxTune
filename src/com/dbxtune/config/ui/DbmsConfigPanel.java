@@ -419,7 +419,7 @@ implements ActionListener
 			if (reverseEngineerStr != null && reverseEngineerStr.length() > 0)
 			{
 //				SqlTextDialog dialog = new SqlTextDialog(this, reverseEngineerStr);
-				SqlTextDialog dialog = new SqlTextDialog(null, reverseEngineerStr);
+				SqlTextDialog dialog = new SqlTextDialog(null, "DDL View", reverseEngineerStr);
 				dialog.setVisible(true);
 			}
 			else

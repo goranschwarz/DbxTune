@@ -1327,7 +1327,7 @@ implements SybMessageHandler, AutoCloseable
 		// Set Log4j Log Level
 		Configurator.setRootLevel(Level.DEBUG);
 
-		Configuration conf1 = new Configuration(AppDir.getAppStoreDir() + "/asetune.save.properties");
+		Configuration conf1 = new Configuration(AppDir.getDbxUserHomeDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 		
 		Configuration.setSearchOrder(Configuration.USER_TEMP);

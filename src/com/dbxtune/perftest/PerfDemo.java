@@ -100,7 +100,7 @@ implements ActionListener
 
 	
 	JXMultiSplitPane _multiSplitPane = new JXMultiSplitPane(); 
-	String _splitPaneLayoutFilename = AppDir.getAppStoreDir() + "/perfDemo.layout.save.xml";
+	String _splitPaneLayoutFilename = AppDir.getDbxUserHomeDir() + "/perfDemo.layout.save.xml";
 
 	// JDBC PANEL
 	private JComboBox<String>   _aseName	    = new JComboBox<String>();

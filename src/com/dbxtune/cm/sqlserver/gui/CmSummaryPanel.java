@@ -33,6 +33,7 @@ import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -298,6 +299,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JLabel           _totalErrors_lbl                           = new JLabel();
 	private JTextField       _totalErrors_txt                           = new JTextField();
 	private JTextField       _totalErrorsDiff_txt                       = new JTextField();
+
+	private JLabel           _sqlAgentStatus_lbl                        = new JLabel();
+	private JTextField       _sqlAgentStatus_txt                        = new JTextField();
 	
 	private static final Color NON_CONFIGURED_MONITORING_COLOR = new Color(255, 224, 115);
 	private HashMap<String, String> _originToolTip = new HashMap<String, String>(); // <name><msg>
@@ -946,6 +950,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_totalErrorsDiff_txt  .setToolTipText(tooltip);
 		_totalErrorsDiff_txt.setForeground(Color.BLUE);
 
+		tooltip = "SQL Agent/Scheduler status (from sys.dm_server_services)";
+		_sqlAgentStatus_lbl      .setText("SQL Agent Status");
+		_sqlAgentStatus_lbl      .setToolTipText(tooltip);
+		_sqlAgentStatus_txt      .setToolTipText(tooltip);
+		_sqlAgentStatus_txt      .setEditable(false);
+
 		
 		//--------------------------
 		// DO the LAYOUT
@@ -1157,8 +1167,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		                                                      
 		panel.add(_totalErrors_lbl,                           "");
 		panel.add(_totalErrors_txt,                           "growx, split");
-		panel.add(_totalErrorsDiff_txt,                       "growx, wrap");
-				
+		panel.add(_totalErrorsDiff_txt,                       "growx, wrap 20");
+		
+		// SQL Services Status
+		panel.add(_sqlAgentStatus_lbl,                        "");
+		panel.add(_sqlAgentStatus_txt,                        "growx, wrap");
+
 		setComponentProperties();
 
 		return panel;
@@ -1389,6 +1403,8 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_totalErrors_txt      .setText(cm.getAbsString (0, "total_errors"));
 		_totalErrorsDiff_txt  .setText(cm.getDiffString(0, "total_errors"));
 
+		_sqlAgentStatus_txt   .setText(cm.getAbsString (0, "sql_agent_status")); _sqlAgentStatus_txt.setCaretPosition(0);
+		
 		Double cpuUser        = cm.getDiffValueAsDouble(0, "cpu_busy");
 		Double cpuSystem      = cm.getDiffValueAsDouble(0, "cpu_io");
 		Double cpuIdle        = cm.getDiffValueAsDouble(0, "cpu_idle");
@@ -1401,14 +1417,14 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 
 			// rare cases: java.lang.NumberFormatException: Infinite or NaN
 			// at first calculation below:
-			// BigDecimal calcCPUTime = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			// BigDecimal calcCPUTime = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 			// Just added more debuging information.
 			try
 			{
-				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 				_cpuTime_txt          .setText(calcCPUTime      .toString());
 				_cpuUser_txt          .setText(calcUserCPUTime  .toString());
@@ -1729,6 +1745,8 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		_packetErrorsDiff_txt                     .setText("");
 		_totalErrors_txt                          .setText("");
 		_totalErrorsDiff_txt                      .setText("");
+
+		_sqlAgentStatus_txt                       .setText("");
 	}
 
 	@Override

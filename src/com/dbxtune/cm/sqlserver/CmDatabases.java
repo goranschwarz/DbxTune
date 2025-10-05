@@ -58,6 +58,7 @@ import com.dbxtune.alarm.events.AlarmEventOldIncrementalBackup;
 import com.dbxtune.alarm.events.AlarmEventOldTranLogBackup;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventDbNotInHadr;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventDbccCheckdbAge;
+import com.dbxtune.alarm.events.sqlserver.AlarmEventHighVirtualLogFileCount;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -731,6 +732,18 @@ extends CountersModel
 			mtd.addColumn(cmName, "LogOsDiskUsedPct"        ,"<html>On the Operating System, where the LOG file(s) are located. How much space is <b>used</b>.</html>");           //   = osvLog.osUsedPct 
 			mtd.addColumn(cmName, "DataOsDiskUsedPct"       ,"<html>On the Operating System, where the DATA file(s) are located. How much space is <b>used</b>.</html>");          //   = osvData.osUsedPct 
 
+			mtd.addColumn(cmName, "vlf_count"               ,"<html>How many Virtual Log Files does this database have.<br>"
+					+ "Read more about VLF at https://red9.com/blog/sql-server-high-vlf-count/<br>"
+					+ "<br>"
+					+ "How many VLF is to high?"
+					+ "<ul>"
+					+ "   <li>Under 100   – You can ignore it</li>"
+					+ "   <li>Between 100 and 200 – You can ignore, but better to fix</li>"
+					+ "   <li>Above 400   – It's getting urgent, so fix it.</li>"
+					+ "   <li>Above 600   – Slowdowns are happening, but it’s not easy to diagnose these. So fix it.</li>"
+					+ "   <li>above 5000  - Fix now!</li>"
+					+ "</ul>"
+					+ "</html>");
 			mtd.addColumn(cmName, "LogSizeUsedInMb"         ,"<html>How much of the allocated LOG space is actually used.</html>");                                                //   = log.usedLogSpaceInMb 
 			mtd.addColumn(cmName, "LogSizeFreeInMb"         ,"<html>How much of the allocated LOG space is NOT used.</html>");                                                     //   = log.totalLogSizeMb - log.usedLogSpaceInMb 
 			mtd.addColumn(cmName, "LogSizeUsedInMbDiff"     ,"<html>Same as 'LogSizeUsedInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");      //   = log.usedLogSpaceInMb 
@@ -1856,6 +1869,15 @@ extends CountersModel
 			availabilityGroupPrimaryServer = "    ,ag_primary_server        = (SELECT ags.primary_replica FROM sys.availability_replicas ar JOIN sys.dm_hadr_availability_group_states ags ON ar.group_id = ags.group_id WHERE ar.replica_id  = d.replica_id) \n";
 			whereAvailabilityGroup         = "  OR d.replica_id is not null \n";
 		}
+		// Not supported in Azure DB
+		if (ssVersionInfo.isAzureDb())
+		{
+			availabilityGroupName          = ""; 
+			availabilityGroupRole          = "";
+			availabilityGroupPrimaryServer = "";
+			whereAvailabilityGroup         = "";
+		}
+
 
 		// ----- SQL-Server 2014 and above
 //		String user_objects_deferred_dealloc_page_count = "0";
@@ -2071,7 +2093,6 @@ extends CountersModel
 			    + "    FROM " + master_files + " AS mf \n"
 			    + "    CROSS APPLY " + dm_os_volume_stats + " (mf.database_id, mf.file_id) AS osv \n"
 			    + "    WHERE mf.type IN (1)   /* 0=ROWS, 1=LOG, 2=FILESTREAM */ \n"
-			    + "go\n"
 			    + "\n"
 			    + "";
 		String osvLogColumns = " \n"
@@ -2106,6 +2127,63 @@ extends CountersModel
 			osvLogDropTempTable2     = "";
 		}
 
+		// Azure DB -- does not support  suser_sname(xxx) with a parameter...
+		String DBOwner = "    ,DBOwner                  = suser_sname(d.owner_sid) \n";
+		if (ssVersionInfo.isAzureDb())
+		{
+			DBOwner = "    ,DBOwner                  = 'AzureDB' \n";
+		}
+		
+		
+		// ----- VLF Info -- SQL-Server 2016, SP2 and above OR: Azure DB, Azure ManagedInstance
+		String vlfInfoCreateTempTable = "";
+		String vlfInfoColumns         = "    ,vlf_count                = CAST(-1 as INT) \n";
+		String vlfInfoJoin            = "";
+		String vlfInfoDropTempTable1  = "";
+		String vlfInfoDropTempTable2  = "";
+		if (srvVersion >= Ver.ver(2016,0,0, 2) || ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureManagedInstance()) // 2016 SP2
+		{
+//			vlfInfoCreateTempTable = ""
+//				    + "--------------------------- \n"
+//				    + "-- VLF - Virtual Log File Info \n"
+//				    + "--------------------------- \n"
+//				    + "    SELECT \n"
+//				    + "         li.database_id \n"
+//				    + "        ,vlf_count            = COUNT(li.database_id) \n"
+////				    + "        ,active_vlf           = SUM(CAST(li.vlf_active AS INT)) \n"
+////				    + "        ,inactive_vlf         = COUNT(li.database_id) - SUM(CAST(li.vlf_active AS INT)) \n"
+////				    + "        ,vlf_size_mb          = CAST(SUM(li.vlf_size_mb) AS INT) \n"
+////				    + "        ,active_vlf_size_mb   = CAST(SUM(li.vlf_active * li.vlf_size_mb) AS INT) \n"
+////				    + "        ,inactive_vlf_size_mb = CAST(SUM(li.vlf_size_mb) - SUM(li.vlf_active * li.vlf_size_mb) AS int) \n"
+//				    + "    INTO #vlfInfo \n"
+//				    + "    FROM sys.databases d \n"
+//				    + "    CROSS APPLY sys.dm_db_log_info(d.database_id) li \n"
+//				    + "    GROUP BY li.database_id \n"
+//				    + "";
+
+			// Possibly use the below (it must be cheaper... there is no GROUP BY... but I have NOT tested it)
+			vlfInfoCreateTempTable = ""
+				    + "--------------------------- \n"
+				    + "-- VLF - Virtual Log File Info \n"
+				    + "--------------------------- \n"
+				    + "    SELECT \n"
+				    + "         ls.database_id \n"
+				    + "        ,vlf_count = ls.total_vlf_count \n"
+			//	    + "        ,ls.log_since_last_checkpoint_mb \n"
+			//	    + "        ,ls.active_log_size_mb \n"
+					+ "    INTO #vlfInfo \n"
+				    + "    FROM sys.databases d \n"
+				    + "    CROSS APPLY sys.dm_db_log_stats (d.database_id) ls \n"
+				    + "";
+
+			vlfInfoColumns = "    ,vlf_count                = vlfInfo.vlf_count \n";
+			
+			vlfInfoJoin           = "LEFT OUTER JOIN #vlfInfo    vlfInfo ON d.database_id = vlfInfo .database_id \n";
+			vlfInfoDropTempTable1 = "if (object_id('tempdb..#vlfInfo')    is not null) drop table #vlfInfo  \n";
+			vlfInfoDropTempTable2 = "drop table #vlfInfo  \n";
+		}
+
+		
 		String sql = ""
 			    + "-- Drop any of the old temporary tables if they still exists \n" 
 			    + "if (object_id('tempdb..#dataSizeMb') is not null) drop table #dataSizeMb \n" 
@@ -2115,6 +2193,7 @@ extends CountersModel
 			    + osvDataDropTempTable1
 			    + osvLogDropTempTable1
 			    + queryStoreDropTempTable1
+			    + vlfInfoDropTempTable1
 			    + "go \n"
 			    + " \n"
 //			    + "--------------------------- \n"
@@ -2223,6 +2302,11 @@ extends CountersModel
 			    + osvDataCreateTempTable
 			    + osvLogCreateTempTable
 			    
+			    + vlfInfoCreateTempTable
+
+			    + "go\n"
+			    + "\n"
+
 			    + "------------------------------- \n"
 			    + "-- The final select statement   \n"
 			    + "------------------------------- \n"
@@ -2243,10 +2327,11 @@ extends CountersModel
 			    + availabilityGroupRole
 			    + availabilityGroupPrimaryServer
 			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
-			    + "    ,DBOwner                  = suser_sname(d.owner_sid) \n" // or possibly: original_login(), but that does not take a parameter
+			    + DBOwner
 			    + "    ,d.collation_name \n"
 			    + "    ,d.log_reuse_wait \n"
 			    + "    ,d.log_reuse_wait_desc \n"
+			    + vlfInfoColumns
 			    + " \n"
 			    + "    ,DbSizeInMbDiff           = data.totalDataSizeMb + log.totalLogSizeMb \n"
 			    + "    ,LogSizeInMbDiff          = log.totalLogSizeMb \n"
@@ -2325,6 +2410,7 @@ extends CountersModel
 			    + osvDataJoin
 			    + osvLogJoin
 			    + queryStoreJoin
+			    + vlfInfoJoin
 			    + "WHERE has_dbaccess(d.name) != 0   /** NOTE: if database is in SINGLE_USER mode, this will disqualify a row if 'someone' is in the database, and ALARMS will RAISED/CANCELED inpredictable **/ \n"
 			    + whereAvailabilityGroup
 			    + "go \n"
@@ -2337,6 +2423,7 @@ extends CountersModel
 			    + osvDataDropTempTable2
 			    + osvLogDropTempTable2
 			    + queryStoreDropTempTable2
+			    + vlfInfoDropTempTable2
 			    + "go \n"
 			    + "";
 
@@ -3827,8 +3914,34 @@ extends CountersModel
 						alarmHandler.addAlarm( ae );
 					}
 				}
-			}
-			
+			} // end: DbSizeInMbDiff
+
+
+			//-------------------------------------------------------
+			// vlf_count  -- Virtual Log File Count
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("vlf_count"))
+			{
+				int vlf_count = cm.getAbsValueAsInteger(r, "vlf_count", true, -1);
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_VlfCount, DEFAULT_alarm_VlfCount);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): vlf_count -- dbname='" + dbname + "', threshold=" + threshold + ", vlf_count=" + vlf_count);
+
+				if (vlf_count >= threshold)
+				{
+					String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+//					extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB , dbname);
+//					extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, dbname);
+					
+					AlarmEvent ae = new AlarmEventHighVirtualLogFileCount(cm, dbname, vlf_count, threshold);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+					alarmHandler.addAlarm( ae );
+				}
+			} // end: vlf_count
 			
 		} // end: loop dbname(s)
 	}
@@ -4472,6 +4585,9 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_DbSizeInMbDiffSkipSrv              = CM_NAME + ".alarm.system.if.DbSizeInMbDiff.skip.srv";
 	public static final String  DEFAULT_alarm_DbSizeInMbDiffSkipSrv              = "";
 	
+	public static final String  PROPKEY_alarm_VlfCount                           = CM_NAME + ".alarm.system.if.vlf_count.gt";
+	public static final int     DEFAULT_alarm_VlfCount                           = 5000;
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -4536,6 +4652,8 @@ extends CountersModel
 		list.add(new CmSettingsHelper("DbSizeInMbDiff SkipDbs",                          PROPKEY_alarm_DbSizeInMbDiffSkipDbs           , String .class, conf.getProperty      (PROPKEY_alarm_DbSizeInMbDiffSkipDbs           , DEFAULT_alarm_DbSizeInMbDiffSkipDbs           ), DEFAULT_alarm_DbSizeInMbDiffSkipDbs           , "If 'DbSizeInMbDiff' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("DbSizeInMbDiff ForSrv",                           PROPKEY_alarm_DbSizeInMbDiffForSrv            , String .class, conf.getProperty      (PROPKEY_alarm_DbSizeInMbDiffForSrv            , DEFAULT_alarm_DbSizeInMbDiffForSrv            ), DEFAULT_alarm_DbSizeInMbDiffForSrv            , "If 'DbSizeInMbDiff' is true; Only for the servers listed (regexp is used, blank=skip-no-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("DbSizeInMbDiff SkipSrv",                          PROPKEY_alarm_DbSizeInMbDiffSkipSrv           , String .class, conf.getProperty      (PROPKEY_alarm_DbSizeInMbDiffSkipSrv           , DEFAULT_alarm_DbSizeInMbDiffSkipSrv           ), DEFAULT_alarm_DbSizeInMbDiffSkipSrv           , "If 'DbSizeInMbDiff' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("vlf_count",                        isAlarmSwitch, PROPKEY_alarm_VlfCount                        , Integer.class, conf.getIntProperty   (PROPKEY_alarm_VlfCount                        , DEFAULT_alarm_VlfCount                        ), DEFAULT_alarm_VlfCount                        , "If 'vlf_count' is greater than ## then send 'AlarmEventHighVirtualLogFileCount'." ));
 
 		// TODO: Possibly: Database Options, like we do in ASE (get options from SCOPED Database Options)
 		

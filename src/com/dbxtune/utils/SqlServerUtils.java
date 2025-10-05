@@ -458,6 +458,10 @@ public class SqlServerUtils
 	public static List<LockRecord> getLockSummaryForSpid(DbxConnection conn, int spid, CountersModel cmSource) 
 	throws TimeoutException
 	{
+		String dbname = "master.";
+		if ( ((DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo()).isAzureDb())
+			dbname = "";
+//System.out.println("sqlServerVersionInfo=" + (DbmsVersionInfoSqlServer)conn.getDbmsVersionInfo());
 
 		// TODO: start using 'sys.dm_tran_locks' instead of 'syslockinfo' hopefully we will get *less* blocking locks on 'dm_tran_locks'
 
@@ -523,7 +527,7 @@ public class SqlServerUtils
 //			    + "                       ELSE '(UNKNOWN) - ' + cast(req_status as varchar(10)) \n"
 //			    + "                  END \n"
 			    + "    ,lockCount  = count(*) \n"
-			    + "from master.dbo.syslockinfo WITH (READUNCOMMITTED) \n"
+			    + "from " + dbname + "dbo.syslockinfo WITH (READUNCOMMITTED) \n"
 			    + "where rsc_type != 2  /* rsc_type=2 is 'DB' */ \n"
 			    + "  and (req_spid = ? OR req_status = 3)  /* req_status=3 is 'WAIT' */ \n"
 			    + "group by req_spid, rsc_dbid, rsc_objid, rsc_indid, rsc_type, req_mode, req_status \n"
@@ -1235,7 +1239,7 @@ public class SqlServerUtils
 			    + "DECLARE @sql    NVARCHAR(MAX)  = ''; \n"
 			    + " \n"
 			    + "/* Check if it exists in: master */ \n"
-			    + "IF EXISTS (select 1 from master.sys.all_objects where type = 'P' and name = 'sp_blitz') \n"
+			    + "IF EXISTS (select 1 from master.sys.all_objects where type = 'P' and name = '" + procName + "') \n"
 			    + "    set @dbname = 'master' \n"
 			    + " \n"
 			    + "/* Check if it exists in: 'any other database' */ \n"
@@ -1257,6 +1261,21 @@ public class SqlServerUtils
 			    + " \n"
 			    + "select @dbname AS dbname, @dblist AS dblist \n"
 			    ;
+
+		// Azure DB only supports one database, and we cant do: master.dbo.all_objects references 
+		if (((DbmsVersionInfoSqlServer)conn.getDbmsVersionInfo()).isAzureDb())
+		{
+			sql = ""
+				    + "if (object_id('" + procName + "') is not null) \n"
+				    + "begin \n"
+				    + "    select db_name(), db_name() \n"
+				    + "end \n"
+				    + "else \n"
+				    + "begin \n"
+				    + "    select '', db_name() \n"
+				    + "end \n"
+				    + "";
+		}
 		
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{

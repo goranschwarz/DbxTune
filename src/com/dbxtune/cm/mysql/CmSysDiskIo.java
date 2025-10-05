@@ -21,6 +21,7 @@
 package com.dbxtune.cm.mysql;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -288,7 +289,7 @@ extends CountersModel
 		
 		if (count > 0)
 		{
-			BigDecimal newVal = new BigDecimal( (latency/(count*1.0)) ).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
+			BigDecimal newVal = new BigDecimal( (latency/(count*1.0)) ).setScale(3, RoundingMode.HALF_EVEN);;
 			cs.setValueAt(newVal, rowId, dest_pos);
 		}
 		else

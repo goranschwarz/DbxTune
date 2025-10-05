@@ -168,6 +168,7 @@ case "${toolset}" in
 		javaMainClass="com.dbxtune.central.DbxTuneCentral"
 		javaMainParams=""
 		javaSplashScreen=""
+		useDbxCentralEnv=1
 		;;
 
 	dsr)
@@ -176,6 +177,7 @@ case "${toolset}" in
 		javaMainClass="com.dbxtune.pcs.report.DailySummaryReport"
 		javaMainParams=""
 		javaSplashScreen=""
+		useDbxCentralEnv=1
 		;;
 
 	h2fix)
@@ -184,6 +186,7 @@ case "${toolset}" in
 		javaMainClass="com.dbxtune.central.pcs.H2CentralDbCopy"
 		javaMainParams=""
 		javaSplashScreen=""
+		useDbxCentralEnv=1
 		;;
 
 	dbxcdbcopy)
@@ -195,6 +198,7 @@ case "${toolset}" in
 		javaMainParams=""
 		javaSplashScreen=""
 		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
+		useDbxCentralEnv=1
 		;;
 
 	dbxpassword|dbxPassword)
@@ -286,7 +290,7 @@ shift
 #----------------------------------
 #--- Source local environment (if we got any)
 #----------------------------------
-if [ -f ${HOME}/.dbxtune/DBXTUNE.env ]
+if [ -f ${DBXTUNE_USER_ENV_FILE:-${HOME}/.dbxtune/DBXTUNE.env} ]
 then
 	echo "Sourcing local environment from: ${HOME}/.dbxtune/DBXTUNE.env"
 	. ${HOME}/.dbxtune/DBXTUNE.env
@@ -294,6 +298,61 @@ else
 	echo ""
 	echo "NOTE: You can set local environment in file: ${HOME}/.dbxtune/DBXTUNE.env"
 fi
+
+
+#------------------------------------------------------------------------
+#--- If we start any of the Collectors in NO-GUI mode
+#--- Then use environment variables from DbxCentral ... (set in next section)
+#------------------------------------------------------------------------
+## Get options '-n or --noGui'
+## OSX-getopt: does not have '-o' option, and do not support -l --longoptions, nor -q
+OS=$(uname)
+if [ "${OS}" == "Darwin" ]
+then
+	params=( $( getopt n: "$@" 2>/dev/null ) )
+else
+	params=( $( getopt -q -o n: -l noGui: -- "$@" ) )
+fi
+
+for (( j=0; j<${#params[@]}; j++ ))
+do
+	if [ "${params[j]}" == "-n" ] || [ "${params[j]}" == "--noGui" ] 
+	then
+		useDbxCentralEnv=1
+	fi
+done
+
+#------------------------------------------------------------------------
+#--- If we are starting DbxCentral -- change some environment variables
+#------------------------------------------------------------------------
+if [ ${useDbxCentralEnv:-0} -gt 0 ]
+then
+	## If DbxCentral variables are NOT setm assigne some default values
+	if [ -z "${DBXTUNE_CENTRAL_SAVE_DIR}"    ]; then export DBXTUNE_CENTRAL_SAVE_DIR=${HOME}/.dbxtune/dbxc/data;       fi
+	if [ -z "${DBXTUNE_CENTRAL_LOG_DIR}"     ]; then export DBXTUNE_CENTRAL_LOG_DIR=${HOME}/.dbxtune/dbxc/log;         fi
+	if [ -z "${DBXTUNE_CENTRAL_CONF_DIR}"    ]; then export DBXTUNE_CENTRAL_CONF_DIR=${HOME}/.dbxtune/dbxc/conf;       fi
+	if [ -z "${DBXTUNE_CENTRAL_INFO_DIR}"    ]; then export DBXTUNE_CENTRAL_INFO_DIR=${HOME}/.dbxtune/dbxc/info;       fi
+	if [ -z "${DBXTUNE_CENTRAL_REPORTS_DIR}" ]; then export DBXTUNE_CENTRAL_REPORTS_DIR=${HOME}/.dbxtune/dbxc/reports; fi
+
+	## set DBXTUNE_xxx = DBXTUNE_CENTRAL_xxx
+	export DBXTUNE_SAVE_DIR=${DBXTUNE_CENTRAL_SAVE_DIR}
+	export DBXTUNE_LOG_DIR=${DBXTUNE_CENTRAL_LOG_DIR}
+	export DBXTUNE_CONF_DIR=${DBXTUNE_CENTRAL_CONF_DIR}
+	export DBXTUNE_INFO_DIR=${DBXTUNE_CENTRAL_INFO_DIR}
+	export DBXTUNE_REPORTS_DIR=${DBXTUNE_CENTRAL_REPORTS_DIR}
+
+	echo ""
+	echo "---------------------------------------------------------------------------------"
+	echo "USING: DbxCentral Environments. The following Environment Variables will be used"
+	echo "---------------------------------------------------------------------------------"
+	echo "  DBXTUNE_SAVE_DIR    = ${DBXTUNE_SAVE_DIR}"
+	echo "  DBXTUNE_LOG_DIR     = ${DBXTUNE_LOG_DIR}"
+	echo "  DBXTUNE_CONF_DIR    = ${DBXTUNE_CONF_DIR}"
+	echo "  DBXTUNE_INFO_DIR    = ${DBXTUNE_INFO_DIR}"
+	echo "  DBXTUNE_REPORTS_DIR = ${DBXTUNE_REPORTS_DIR}"
+	echo "---------------------------------------------------------------------------------"
+fi
+
 
 #----------------------------------
 #--- XXX_HOME
@@ -315,6 +374,7 @@ fi
 #echo "DEBUG: DBXTUNE_HOME=|${DBXTUNE_HOME}|"
 export APPL_HOME=${DBXTUNE_HOME}
 
+
 #----------------------------------
 #--- XXX_SAVE_DIR
 #----------------------------------
@@ -328,6 +388,7 @@ else
 fi
 
 export APPL_SAVE_DIR=${DBXTUNE_SAVE_DIR}
+
 
 
 #------------------------------------------------------------------------
@@ -364,7 +425,7 @@ export JVM_GC_PARAMS_32=${DBXTUNE_JVM_GC_PARAMS:-""}
 export JVM_GC_PARAMS_64=${DBXTUNE_JVM_GC_PARAMS:-""}
 
 #export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-"-noverify"}
-export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-"-noverify -XX:-UseGCOverheadLimit"}
+export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-"-XX:-UseGCOverheadLimit"}
 ## -XX:-UseGCOverheadLimit ## will turn off 'OutOfMemoryError: GC overhead limit exceeded' -- https://stackoverflow.com/questions/1393486/error-java-lang-outofmemoryerror-gc-overhead-limit-exceeded
 ## which might happen if we collects to many SQLText objects...
 ## but this is also *dangerous* to disable, since the JVM will eat *much* more CPU when this happens...
@@ -405,7 +466,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jul-to-slf4j-2.0.16.jar       ## 
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-SNAPSHOT.jar
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.200.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.1.214.jar
-#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.3.232.jar
+#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.4.240.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-5.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-5.2.jar
@@ -425,11 +486,11 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jakarta.mail-1.6.7.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jakarta.activation-2.0.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole_20131209.jar
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole-1.1.5.jar    #---------------
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsch-0.2.21.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea-3.5.2.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete-3.3.1.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsch-2.27.3.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea-3.6.0.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete-3.3.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui-3.3.1.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/languagesupport-3.3.0.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/languagesupport-3.4.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.24.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.5.5.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
@@ -522,7 +583,8 @@ fi
 echo "JAVA Location:       ${javaLocation}"
 echo "JAVA Version String: ${javaVersionStr}"
 echo "JAVA Version Number: ${javaVersionNum}"
-if [ ${javaVersionNum} -lt 7 ]
+#if [ ${javaVersionNum} -lt 7 ]
+if [ ${javaVersionNum} -lt 11 ]
 then
 	java -version
 	echo ""
@@ -539,18 +601,19 @@ fi
 ##
 ## FIX for Java 11 or above
 ##
-if [ ${javaVersionNum} -ge 11 ]
-then
-	echo ""
-	echo "================================================================"
-	echo "Adjustments for java 11 and above."
-	echo "Java version ${javaVersionNum} is used. This version is missing some basic JARS, which will be added"
-	echo "----------------------------------------------------------------"
-	echo "INFO: - Adding '${APPL_HOME}/lib/jaxb-ri/*' to CLASSPATH"
-	echo "----------------------------------------------------------------"
-	echo ""
-	export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jaxb-ri/*
-fi
+#if [ ${javaVersionNum} -ge 11 ]
+#then
+#	echo ""
+#	echo "================================================================"
+#	echo "Adjustments for java 11 and above."
+#	echo "Java version ${javaVersionNum} is used. This version is missing some basic JARS, which will be added"
+#	echo "----------------------------------------------------------------"
+#	echo "INFO: - Adding '${APPL_HOME}/lib/jaxb-ri/*' to CLASSPATH"
+#	echo "----------------------------------------------------------------"
+#	echo ""
+#	export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jaxb-ri/*
+#fi
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jaxb-ri/*
 
 
 #------------------------------------------------------------------------

@@ -21,6 +21,7 @@
 package com.dbxtune.pcs.sqlcapture;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.Types;
 import java.util.HashMap;
@@ -199,7 +200,7 @@ public class SqlCaptureSqlTextStatisticsSample
 					if (crEntry.count > 0)
 					{
 						double calcVal = (sc.count * 1.0) / (crEntry.count * 1.0);
-						xOverCr = new BigDecimal(calcVal).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+						xOverCr = new BigDecimal(calcVal).setScale(2, RoundingMode.HALF_EVEN);
 					}
 				}
 			}

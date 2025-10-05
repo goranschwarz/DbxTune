@@ -426,6 +426,8 @@ extends SqlStatementAbstract
 		//----------------------
 		if (hasConnectionProfile())
 		{
+			addDebugMessage("Connecting using: profile='" + getProfileName() + "'.");
+
 			_queryWindow.doConnect(getProfileName());
 		}
 		else if (hasConnectionUrl())
@@ -434,6 +436,13 @@ extends SqlStatementAbstract
 			String jdbcUsername = getUsername();
 			String jdbcPassword = getPassword();
 
+			addDebugMessage("Connecting using: url='" + jdbcUrl + "', Username='" + jdbcUsername + "', password='" + (_logger.isDebugEnabled() ? jdbcPassword : "***secret***") + "'.");
+
+			if (jdbcUrl.contains(";"))
+			{
+				jdbcUrl = jdbcUrl.replace(";", "\\;");
+			}
+			
 			_queryWindow.doConnect(jdbcUrl, jdbcUsername, jdbcPassword);
 		}
 		else

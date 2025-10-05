@@ -63,15 +63,18 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -263,6 +266,7 @@ import com.dbxtune.sql.pipe.PipeCommandToParquet;
 import com.dbxtune.sql.showplan.ShowplanHtmlView;
 import com.dbxtune.sql.showplan.transform.SqlServerShowPlanXmlTransformer;
 import com.dbxtune.tools.AseAppTraceDialog;
+import com.dbxtune.tools.AseStmntCacheBloatDetect;
 import com.dbxtune.tools.NormalExitException;
 import com.dbxtune.tools.WindowType;
 import com.dbxtune.tools.ddlgen.DdlGen;
@@ -471,13 +475,13 @@ public class QueryWindow
 	public final static int     DEFAULT_lastFileNameSaveMax    = 20;
 
 	public final static String  PROPKEY_historyFileName        = PROPKEY_APP_PREFIX + "CommandHistory.filename";
-	public final static String  DEFAULT_historyFileName        = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".command.history.xml";
+	public final static String  DEFAULT_historyFileName        = AppDir.getDbxUserHomeDir() + File.separator + APP_NAME + ".command.history.xml";
 
 	public final static String  PROPKEY_favoriteCmdFileNameSql = PROPKEY_APP_PREFIX + "FavoritCommands.filename.sql";
-	public final static String  DEFAULT_favoriteCmdFileNameSql = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".favorite.sql.commands.xml";
+	public final static String  DEFAULT_favoriteCmdFileNameSql = AppDir.getDbxUserHomeDir() + File.separator + APP_NAME + ".favorite.sql.commands.xml";
 
 	public final static String  PROPKEY_favoriteCmdFileNameRcl = PROPKEY_APP_PREFIX + "FavoritCommands.filename.rcl";
-	public final static String  DEFAULT_favoriteCmdFileNameRcl = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".favorite.rcl.commands.xml";
+	public final static String  DEFAULT_favoriteCmdFileNameRcl = AppDir.getDbxUserHomeDir() + File.separator + APP_NAME + ".favorite.rcl.commands.xml";
 
 	public final static String  PROPKEY_restoreWinSizeForConn  = PROPKEY_APP_PREFIX + "restoreWinSizeForConn";
 	public final static boolean DEFAULT_restoreWinSizeForConn  = false;
@@ -486,7 +490,7 @@ public class QueryWindow
 	public final static String  DEFAULT_sqlBatchTerminator     = AseSqlScriptReader.DEFAULT_sqlBatchTerminator;
 
 	public final static String  PROPKEY_untitledFileName       = PROPKEY_APP_PREFIX + "editor.untitled.filename";
-	public final static String  DEFAULT_untitledFileName       = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".editor.untitled.txt";
+	public final static String  DEFAULT_untitledFileName       = AppDir.getDbxUserHomeDir() + File.separator + APP_NAME + ".editor.untitled.txt";
 
 	public final static String  PROPKEY_rsFilterRowThresh      = PROPKEY_APP_PREFIX + "resultset.filter.threshold.rowcount";
 	public final static int     DEFAULT_rsFilterRowThresh      = 5;
@@ -512,56 +516,58 @@ public class QueryWindow
 
 	//-------------------------------------------------
 	// Actions
-	public static final String ACTION_CONNECT                   = "CONNECT";
-	public static final String ACTION_DISCONNECT                = "DISCONNECT";
-	public static final String ACTION_CLONE_CONNECT             = "CLONE_CONNECT";
-	public static final String ACTION_FILE_NEW                  = "FILE_NEW";
-	public static final String ACTION_FILE_OPEN                 = "FILE_OPEN";
-//	public static final String ACTION_FILE_CLOSE                = "FILE_CLOSE";
-	public static final String ACTION_FILE_SAVE                 = "FILE_SAVE";
-	public static final String ACTION_FILE_SAVE_AS              = "FILE_SAVE_AS";
-	public static final String ACTION_RESTORE_UNTITLED_FILE     = "RESTORE_UNTITLED_FILE";
-	public static final String ACTION_SAVE_UNTITLED_FILE        = "SAVE_UNTITLED_FILE";
-	public static final String ACTION_SAVE_PROPS                = "SAVE_PROPS";
-	public static final String ACTION_EXIT                      = "EXIT";
-
-	public static final String ACTION_EXECUTE                   = "EXECUTE";
-	public static final String ACTION_EXECUTE_GUI_SHOWPLAN      = "EXECUTE_GUI_SHOWPLAN";
-	public static final String ACTION_COMMIT                    = "COMMIT";
-	public static final String ACTION_ROLLBACK                  = "ROLLBACK";
-	public static final String ACTION_AUTOCOMMIT                = "AUTOCOMMIT";
-
-	public static final String ACTION_SPLITPANE_TOGGLE          = "SPLITPANE_TOGGLE";
-
-	public static final String ACTION_CMD_SQL                   = "CMD_SQL";
-	public static final String ACTION_CMD_RCL                   = "CMD_RCL";
-
-	public static final String ACTION_VIEW_CMD_HISTORY          = "VIEW_CMD_HISTORY";
-	public static final String ACTION_LOAD_LAST_HISTORY_ENTRY   = "LOAD_LAST_HISTORY_ENTRY";
-	public static final String ACTION_REFRESH_CODE_COMPLETION   = "REFRESH_CODE_COMPLETION";
-	public static final String ACTION_VIEW_LOG_TAIL             = "VIEW_LOG_TAIL";
-	public static final String ACTION_VIEW_DBMS_CONFIG          = "VIEW_DBMS_CONFIG";
-	public static final String ACTION_VIEW_ASE_HADR_MEMBERS     = "VIEW_ASE_HADR_MEMBERS";
-	public static final String ACTION_RS_GENERATE_CHANGED_DDL   = "RS_GENERATE_CHANGED_DDL";
-	public static final String ACTION_RS_GENERATE_ALL_DDL       = "RS_GENERATE_ALL_DDL";
-	public static final String ACTION_RS_DUMP_QUEUE             = "RS_DUMP_QUEUE";
-	public static final String ACTION_RS_WHO_IS_DOWN            = "RS_WHO_IS_DOWN";
-	public static final String ACTION_TAB_IMPORT                = "TAB_IMPORT";
-	public static final String ACTION_TAB_EXPORT                = "TAB_EXPORT";
-	public static final String ACTION_TAB_TRANSFER              = "TAB_TRANSFER";
-	public static final String ACTION_TAB_DIFF                  = "TAB_DIFF";
-	public static final String ACTION_ASE_MDA_CONFIG            = "ASE_MDA_CONFIG";
-	public static final String ACTION_ASE_CAPTURE_SQL           = "ASE_CAPTURE_SQL";
-	public static final String ACTION_ASE_APP_TRACE             = "ASE_APP_TRACE";
-	public static final String ACTION_ASE_PLAN_VIEWER           = "ASE_PLAN_VIEWER";
-	public static final String ACTION_ASE_DDL_GEN               = "ASE_DDL_GEN";
-	public static final String ACTION_VIEW_CONN_INFO            = "VIEW_CONN_INFO";
-
-	public static final String ACTION_OPEN_ABOUT                = "OPEN_ABOUT";
-	public static final String ACTION_OPEN_LOG_VIEW             = "OPEN_LOG_VIEW";
-
-	public static final String ACTION_PREV_ERROR                = "PREV_ERROR";
-	public static final String ACTION_NEXT_ERROR                = "NEXT_ERROR";
+	public static final String ACTION_CONNECT                      = "CONNECT";
+	public static final String ACTION_DISCONNECT                   = "DISCONNECT";
+	public static final String ACTION_CLONE_CONNECT                = "CLONE_CONNECT";
+	public static final String ACTION_FILE_NEW                     = "FILE_NEW";
+	public static final String ACTION_FILE_OPEN                    = "FILE_OPEN";
+//	public static final String ACTION_FILE_CLOSE                   = "FILE_CLOSE";
+	public static final String ACTION_FILE_SAVE                    = "FILE_SAVE";
+	public static final String ACTION_FILE_SAVE_AS                 = "FILE_SAVE_AS";
+	public static final String ACTION_RESTORE_UNTITLED_FILE        = "RESTORE_UNTITLED_FILE";
+	public static final String ACTION_SAVE_UNTITLED_FILE           = "SAVE_UNTITLED_FILE";
+	public static final String ACTION_SAVE_PROPS                   = "SAVE_PROPS";
+	public static final String ACTION_EXIT                         = "EXIT";
+                                                                   
+	public static final String ACTION_EXECUTE                      = "EXECUTE";
+	public static final String ACTION_EXECUTE_GUI_SHOWPLAN         = "EXECUTE_GUI_SHOWPLAN";
+	public static final String ACTION_COMMIT                       = "COMMIT";
+	public static final String ACTION_ROLLBACK                     = "ROLLBACK";
+	public static final String ACTION_AUTOCOMMIT                   = "AUTOCOMMIT";
+                                                                   
+	public static final String ACTION_SPLITPANE_TOGGLE             = "SPLITPANE_TOGGLE";
+                                                                   
+	public static final String ACTION_CMD_SQL                      = "CMD_SQL";
+	public static final String ACTION_CMD_RCL                      = "CMD_RCL";
+                                                                   
+	public static final String ACTION_VIEW_CMD_HISTORY             = "VIEW_CMD_HISTORY";
+	public static final String ACTION_LOAD_LAST_HISTORY_ENTRY      = "LOAD_LAST_HISTORY_ENTRY";
+	public static final String ACTION_REFRESH_CODE_COMPLETION      = "REFRESH_CODE_COMPLETION";
+	public static final String ACTION_VIEW_LOG_TAIL                = "VIEW_LOG_TAIL";
+	public static final String ACTION_VIEW_DBMS_CONFIG             = "VIEW_DBMS_CONFIG";
+	public static final String ACTION_VIEW_ASE_HADR_MEMBERS        = "VIEW_ASE_HADR_MEMBERS";
+	public static final String ACTION_RS_GENERATE_CHANGED_DDL      = "RS_GENERATE_CHANGED_DDL";
+	public static final String ACTION_RS_GENERATE_ALL_DDL          = "RS_GENERATE_ALL_DDL";
+	public static final String ACTION_RS_DUMP_QUEUE                = "RS_DUMP_QUEUE";
+	public static final String ACTION_RS_WHO_IS_DOWN               = "RS_WHO_IS_DOWN";
+	public static final String ACTION_TAB_IMPORT                   = "TAB_IMPORT";
+	public static final String ACTION_TAB_EXPORT                   = "TAB_EXPORT";
+	public static final String ACTION_TAB_TRANSFER                 = "TAB_TRANSFER";
+	public static final String ACTION_TAB_DIFF                     = "TAB_DIFF";
+	public static final String ACTION_ASE_MDA_CONFIG               = "ASE_MDA_CONFIG";
+	public static final String ACTION_ASE_CAPTURE_SQL              = "ASE_CAPTURE_SQL";
+	public static final String ACTION_ASE_APP_TRACE                = "ASE_APP_TRACE";
+	public static final String ACTION_ASE_PLAN_VIEWER              = "ASE_PLAN_VIEWER";
+	public static final String ACTION_ASE_DDL_GEN                  = "ASE_DDL_GEN";
+	public static final String ACTION_ASE_STMNT_CACHE_BLOAT_REPORT = "ASE_STMNT_CACHE_BLOAT_REPORT";
+	public static final String ACTION_FK_MISSING_INDEX_REPORT      = "FK_MISSING_INDEX_REPORT";
+	public static final String ACTION_VIEW_CONN_INFO               = "VIEW_CONN_INFO";
+                                                                   
+	public static final String ACTION_OPEN_ABOUT                   = "OPEN_ABOUT";
+	public static final String ACTION_OPEN_LOG_VIEW                = "OPEN_LOG_VIEW";
+                                                                   
+	public static final String ACTION_PREV_ERROR                   = "PREV_ERROR";
+	public static final String ACTION_NEXT_ERROR                   = "NEXT_ERROR";
 
 	public static final Color DEFAULT_OUTPUT_ERROR_HIGHLIGHT_COLOR	= new Color(255,255,170);
 
@@ -789,6 +795,8 @@ public class QueryWindow
 	private JMenuItem            _aseAppTrace_mi         = new JMenuItem("ASE Application Tracing...");
 	private JMenuItem            _asePlanViewer_mi       = new JMenuItem("ASE Showplan Viewer...");
 	private JMenuItem            _aseDdlGen_mi           = new JMenuItem("Extract DDL for current DB");
+	private JMenuItem            _aseStmntCacheBloat_mi  = new JMenuItem("Statement Cache Bloat Report");
+	private JMenuItem            _fkMissingIxReport_mi   = new JMenuItem("Foreign Key Index Check");
                                  
 	// Help                      
 	private JMenu                _help_m                 = new JMenu("Help");
@@ -812,7 +820,7 @@ public class QueryWindow
 		Version.setAppName(APP_NAME);
 		
 		// Create store dir if it did not exists.
-		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out );
+		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out, cmd );
 
 
 		// Initialize the "Check For Updates" subsystem
@@ -826,13 +834,13 @@ public class QueryWindow
 		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "conf" + File.separatorChar + "sqlw.save.properties");
 		final String SQLW_HOME             = System.getProperty("SQLW_HOME");
 		
-		String defaultPropsFile     = (SQLW_HOME               != null) ? SQLW_HOME               + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (SQLW_HOME                  != null) ? SQLW_HOME                  + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (AppDir.getDbxUserHomeDir() != null) ? AppDir.getDbxUserHomeDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 		// Compose MAIN CONFIG file (first USER_HOME then DBXTUNE_HOME)
-		String filename = AppDir.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
+		String filename = AppDir.getDbxUserHomeDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -959,6 +967,16 @@ public class QueryWindow
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
+		// Print some environment variables (for debugging purposes)
+    	_logger.info("Environment Variable: DBXTUNE_HOME        = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_HOME"       , "-not-set-") + "'.");
+		_logger.info("Environment Variable: DBXTUNE_USER_HOME   = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_USER_HOME"  , "-not-set-") + "'.");
+
+//		_logger.info("Environment Variable: DBXTUNE_SAVE_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_SAVE_DIR"   , "-not-set-") + "'.");
+//		_logger.info("Environment Variable: DBXTUNE_LOG_DIR     = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_LOG_DIR"    , "-not-set-") + "'.");
+//		_logger.info("Environment Variable: DBXTUNE_CONF_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_CONF_DIR"   , "-not-set-") + "'.");
+//		_logger.info("Environment Variable: DBXTUNE_INFO_DIR    = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_INFO_DIR"   , "-not-set-") + "'.");
+//		_logger.info("Environment Variable: DBXTUNE_REPORTS_DIR = '" + Configuration.getCombinedConfiguration().getProperty("DBXTUNE_REPORTS_DIR", "-not-set-") + "'.");
 
 		// Print out the memory configuration
 		// And the JVM info
@@ -1366,7 +1384,7 @@ public class QueryWindow
 						// SQLW: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.sqlw_jvm_settings.properties
 						// ELSE: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.dbxtune_jvm_settings.properties
 						
-						filename = AppDir.getAppStoreDir(true) + ".sqlw_jvm_settings.properties";
+						filename = AppDir.getDbxUserHomeDir(true) + ".sqlw_jvm_settings.properties";
 					}
 
 					int ret = JvmMemorySettingsDialog.showDialog(_jframe, Version.getAppName(), filename);
@@ -1412,39 +1430,43 @@ public class QueryWindow
 			_tools_m.add(_aseAppTrace_mi);
 			_tools_m.add(_asePlanViewer_mi);
 			_tools_m.add(_aseDdlGen_mi);
+			_tools_m.add(_aseStmntCacheBloat_mi);
+			_tools_m.add(_fkMissingIxReport_mi);
 
-			_toolDummy_mi        .setVisible(false);
-			_toolTableImport_mi  .setVisible(true);
-			_toolTableExport_mi  .setVisible(true);
-			_toolTableTransfer_mi.setVisible(true);
-			_toolTableDiff_mi    .setVisible(true);
-			_aseMdaConfig_mi     .setVisible(false);
-			_aseCaptureSql_mi    .setVisible(false);
-			_aseAppTrace_mi      .setVisible(false);
-			_asePlanViewer_mi    .setVisible(false);
-			_aseDdlGen_mi        .setVisible(false);
+			_toolDummy_mi         .setVisible(false);
+			_toolTableImport_mi   .setVisible(true);
+			_toolTableExport_mi   .setVisible(true);
+			_toolTableTransfer_mi .setVisible(true);
+			_toolTableDiff_mi     .setVisible(true);
+			_aseMdaConfig_mi      .setVisible(false);
+			_aseCaptureSql_mi     .setVisible(false);
+			_aseAppTrace_mi       .setVisible(false);
+			_asePlanViewer_mi     .setVisible(false);
+			_aseDdlGen_mi         .setVisible(false);
+			_aseStmntCacheBloat_mi.setVisible(false);
+			_fkMissingIxReport_mi .setVisible(false);
 
 			
 			_file_m .setMnemonic(KeyEvent.VK_T);
 
 			//			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionEvent.ALT_MASK));
 //			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, ActionEvent.ALT_MASK));
-			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
-			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
-			_cloneConnect_mi   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
+			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
+			_cloneConnect_mi   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
 
-			_fNew_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-			_fOpen_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-			_fSave_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-//			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+			_fNew_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+			_fOpen_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+			_fSave_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+//			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
 // reserve Ctrl+Shift+s for when we have "multiple editor tabs"
-//			_fSaveAll_mi       .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+//			_fSaveAll_mi       .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | KeyEvent.SHIFT_DOWN_MASK));
 			
-			_logView_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+			_logView_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
-			_rsWhoIsDown_mi    .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+			_rsWhoIsDown_mi    .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
-			_viewCmdHistory_mi .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+			_viewCmdHistory_mi .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
 			// TOOLBAR
 //			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DBMS",         "Connect");
@@ -1528,6 +1550,8 @@ public class QueryWindow
 			_aseAppTrace_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
 			_asePlanViewer_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_plan_viewer_16.png"));
 			_aseDdlGen_mi          .setIcon(SwingUtils.readImageIcon(Version.class, "images/ddlgen_16.png"));
+			_aseStmntCacheBloat_mi .setIcon(SwingUtils.readImageIcon(Version.class, "images/stmnt_cache_bloat_report_16.png"));
+			_fkMissingIxReport_mi  .setIcon(SwingUtils.readImageIcon(Version.class, "images/fk_missing_index_report_16.png"));
 //			_conn_viewProps_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/jdbc_conn_info.png"));
 			_about_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/about.png"));
 
@@ -1571,6 +1595,8 @@ public class QueryWindow
 			_aseAppTrace_mi             .setActionCommand(ACTION_ASE_APP_TRACE);
 			_asePlanViewer_mi           .setActionCommand(ACTION_ASE_PLAN_VIEWER);
 			_aseDdlGen_mi               .setActionCommand(ACTION_ASE_DDL_GEN);
+			_aseStmntCacheBloat_mi      .setActionCommand(ACTION_ASE_STMNT_CACHE_BLOAT_REPORT);
+			_fkMissingIxReport_mi       .setActionCommand(ACTION_FK_MISSING_INDEX_REPORT);
 			_jdbcMetaDataInfo_mi        .setActionCommand(ACTION_VIEW_CONN_INFO);
 
 			_about_mi                   .setActionCommand(ACTION_OPEN_ABOUT);
@@ -1610,6 +1636,8 @@ public class QueryWindow
 			_aseAppTrace_mi          .addActionListener(this);
 			_asePlanViewer_mi        .addActionListener(this);
 			_aseDdlGen_mi            .addActionListener(this);
+			_aseStmntCacheBloat_mi   .addActionListener(this);
+			_fkMissingIxReport_mi    .addActionListener(this);
 			_jdbcMetaDataInfo_mi     .addActionListener(this);
                                      
 			_about_mi                .addActionListener(this);
@@ -2010,6 +2038,37 @@ public class QueryWindow
 				"<html>" +
 				"Add a row number as first column when displaying data." +
 				"</html>");
+		
+		_aseDdlGen_mi.setToolTipText(
+				"<html>"
+				+ "<b>Note:</b> If you get error: <code>ASR1: SAP ASE Error Code 590: com.sybase.jdbc4.jdbc.SybSQLException: Dynamic SQL error - Prepared statement 'dyn###' does not exist.</code><br>"
+				+ "<br>"
+				+ "Use the following workaround: disable 'dynamic SQL plan pinning' and 'streamlined dynamic SQL'.<br>"
+				+ "<pre> \n"
+				+ "exec sp_configure 'dynamic SQL plan pinning', 0 \n"
+				+ "exec sp_configure 'streamlined dynamic SQL', 0 \n"
+				+ "go \n"
+				+ "</pre>"
+				+ "<br>"
+				+ "<b>&bull; Execute the <code>ddlgen</code> command again.</b><br>"
+				+ "<b>&bull; When you are done, restore the configuration.</b>"
+				+ "<br>"
+				+ "<pre> \n"
+				+ "exec sp_configure 'dynamic SQL plan pinning', 1 \n"
+				+ "exec sp_configure 'streamlined dynamic SQL', 1 \n"
+				+ "go \n"
+				+ "</pre>"
+				+ "<br>"
+				+ "<b>Finally CHECK that you have restored the configuration.</b>"
+				+ "<pre> \n"
+				+ "exec sp_configure 'dynamic SQL plan pinning' \n"
+				+ "exec sp_configure 'streamlined dynamic SQL' \n"
+				+ "go \n"
+				+ "</pre>"
+				+ "<br>"
+				+ "<b>If you have a test system it's better to do the <code>ddlgen</code> on there to NOT disturb the production system.</b>"
+				+ "</html>");
+
 //		_copy_but    .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
 //		_query_txt   .setToolTipText("<html>" +
 //									"Put your SQL query here.<br>" +
@@ -2019,6 +2078,25 @@ public class QueryWindow
 //									"<br>" +
 //								"</html>");
 //		_query_txt.setUseFocusableTips(false);
+
+//System.out.println("RSyntaxTextArea.getDefaultFont()=" + RSyntaxTextArea.getDefaultFont());
+//System.out.println("_query_txt.getFont()=" + _query_txt.getFont());
+////textArea.setFont( new Font(Font.MONOSPACED, Font.PLAIN, 12) );
+////textArea.setFont( new Font(Font.MONOSPACED, Font.PLAIN, 13) );
+////textArea.setFont( new Font("Cascadia Code", Font.PLAIN, 13) ); // This is what's picked up from RSyntaxTextArea.getDefaultFont()
+//if ("gorans2".equals(StringUtil.getHostname()))
+//if (Configuration.getCombinedConfiguration().getBooleanProperty("sqlw.windows.default.font.use.Consolas", true))
+//{
+//	if ("Cascadia Code".equals(_query_txt.getFont().getFamily()))
+//	{
+//		System.out.println("----->>> Found NON Optimal Font 'Cascadia Code' -- Setting font in '_query_txt' to Font('Consolas', Font.PLAIN, 13)");
+//		System.out.println("----->>> If DO WANT to use that font. set property 'sqlw.windows.default.font.use.Consolas=false' ");
+//		System.out.println("----->>> BEFORE CHANGE: _query_txt.getFont()=" + _query_txt.getFont());
+//		_query_txt.setFont( new Font("Consolas", Font.PLAIN, 13) );      // This looks better... BUT the LineNumbers are still picked up from RSyntaxTextArea.getDefaultFont() so they becomes TO BIG
+//		_queryScroll.getGutter().setLineNumberFont( _query_txt.getFont() );
+//		System.out.println("----->>> AFTER CHANGE: _query_txt.getFont()=" + _query_txt.getFont());
+//	}
+//}
 		
 		_query_txt.addCaretListener(this);
 		_query_txt.getDocument().addDocumentListener(this);
@@ -2135,8 +2213,8 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		_controlPane.add(_prevErr_but,             "hidemode 2, wrap");
 
 		// Keyboard shortcut for next/prev error, hmmm it didn't work 
-//		_resPanel.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_UP,   Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_PREV_ERROR);
-//		_resPanel.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_NEXT_ERROR);
+//		_resPanel.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_UP,   Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), ACTION_PREV_ERROR);
+//		_resPanel.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), ACTION_NEXT_ERROR);
 //
 //		_resPanel.getActionMap().put(ACTION_PREV_ERROR, new AbstractAction(ACTION_PREV_ERROR) { @Override public void actionPerformed(ActionEvent e) { _prevErr_but.doClick(); } });
 //		_resPanel.getActionMap().put(ACTION_NEXT_ERROR, new AbstractAction(ACTION_NEXT_ERROR) { @Override public void actionPerformed(ActionEvent e) { _nextErr_but.doClick(); } });
@@ -2192,12 +2270,12 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		_resTabbedPane     .setVisible(false);
 		
 		// ADD Ctrl+e, F5, F9
-		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), ACTION_EXECUTE);
 		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), ACTION_EXECUTE);
 		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), ACTION_EXECUTE);
 
 		// ADD Ctrl+Shift+e, Shift+F5, Shift+F9
-		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE_GUI_SHOWPLAN);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), ACTION_EXECUTE_GUI_SHOWPLAN);
 		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, InputEvent.SHIFT_DOWN_MASK), ACTION_EXECUTE_GUI_SHOWPLAN);
 		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, InputEvent.SHIFT_DOWN_MASK), ACTION_EXECUTE_GUI_SHOWPLAN);
 
@@ -2318,7 +2396,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		});
 
 		// ADD: Ctrl+Shift+R   == Refresh the Code Completion
-		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_REFRESH_CODE_COMPLETION);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), ACTION_REFRESH_CODE_COMPLETION);
 		_query_txt.getActionMap().put(ACTION_REFRESH_CODE_COMPLETION, new AbstractAction(ACTION_REFRESH_CODE_COMPLETION)
 		{
 			private static final long serialVersionUID = 1L;
@@ -2338,7 +2416,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		});
 
 		// ADD: Ctrl+Shift+H   == Load LAST history event in the editor
-		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_LOAD_LAST_HISTORY_ENTRY);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), ACTION_LOAD_LAST_HISTORY_ENTRY);
 		_query_txt.getActionMap().put(ACTION_LOAD_LAST_HISTORY_ENTRY, new AbstractAction(ACTION_LOAD_LAST_HISTORY_ENTRY)
 		{
 			private static final long serialVersionUID = 1L;
@@ -3248,6 +3326,12 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		if (ACTION_ASE_DDL_GEN.equals(actionCmd))
 			action_aseDdlGen(e);
 		
+		if (ACTION_ASE_STMNT_CACHE_BLOAT_REPORT.equals(actionCmd))
+			action_aseStmntCacheBloatReport(e);
+		
+		if (ACTION_FK_MISSING_INDEX_REPORT.equals(actionCmd))
+			action_fkMissingIndexReport(e);
+		
 		if (ACTION_VIEW_CMD_HISTORY.equals(actionCmd))
 			action_viewCmdHistory(e);
 
@@ -3912,9 +3996,14 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 					if ( StringUtil.hasValue(ppe.getProperty(key, "jdbcUrl")) )
 					{
 //System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... jdbcUrl");
+						// Un-escape any \; -->> ; 
+						String tmpJdbcUrl = ppe.getProperty(key, "jdbcUrl", "");
+						tmpJdbcUrl = tmpJdbcUrl.replace("\\;", ";");
+						
 						connDialog.setSelectedTab(ConnectionDialog.JDBC_CONN);
 						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcDriver"  ))) connDialog.setJdbcDriver(  ppe.getProperty(key, "jdbcDriver")); // do this first, it will trigger select action... which sets the URL to default value
-						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcUrl"     ))) connDialog.setJdbcUrl(     ppe.getProperty(key, "jdbcUrl"));
+//						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcUrl"     ))) connDialog.setJdbcUrl(     ppe.getProperty(key, "jdbcUrl"));
+						if (StringUtil.hasValue(tmpJdbcUrl)                          ) connDialog.setJdbcUrl(     tmpJdbcUrl);
 						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcUsername"))) connDialog.setJdbcUsername(ppe.getProperty(key, "jdbcUsername"));
 						if (StringUtil.hasValue(ppe.getProperty(key, "jdbcPassword"))) connDialog.setJdbcPassword(ppe.getProperty(key, "jdbcPassword"));
 					}
@@ -4440,6 +4529,8 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		_aseAppTrace_mi        .setVisible(false);
 		_asePlanViewer_mi      .setVisible(false);
 		_aseDdlGen_mi          .setVisible(false);
+		_aseStmntCacheBloat_mi .setVisible(false);
+		_fkMissingIxReport_mi  .setVisible(false);
 		_jdbcMetaDataInfo_mi   .setVisible(false);
 
 		// view and tools menu might be empty...
@@ -4522,6 +4613,8 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 				_aseAppTrace_mi            .setVisible(true);
 				_asePlanViewer_mi          .setVisible(true);
 				_aseDdlGen_mi              .setVisible(true);
+				_aseStmntCacheBloat_mi     .setVisible(true);
+				_fkMissingIxReport_mi      .setVisible(true);
 				_jdbcMetaDataInfo_mi       .setVisible(true);
 
 				_dbnames_cbx               .setEnabled(true);
@@ -4597,6 +4690,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 				_dbms_viewConfig_mi        .setVisible(DbmsConfigManager.hasInstance());
 //				_logger.info("Connected to the Sybase TDS service with product name '"+_connectedToProductName+"', only esential functionality is enabled.");
 				_cmdSql_but                .setVisible(true);
+				_fkMissingIxReport_mi      .setVisible(true);
 				_jdbcMetaDataInfo_mi       .setVisible(true);
 
 				_dbnames_cbx               .setVisible(false);
@@ -4633,6 +4727,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		if ( _connType == ConnectionDialog.OFFLINE_CONN)
 		{
 			_cmdSql_but                .setVisible(true);
+			_fkMissingIxReport_mi      .setVisible(true);
 			_jdbcMetaDataInfo_mi       .setVisible(true);
 
 			_dbnames_cbx               .setEnabled(false);
@@ -4669,6 +4764,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		{
 			_dbms_viewConfig_mi        .setVisible(DbmsConfigManager.hasInstance());
 			_cmdSql_but                .setVisible(true);
+			_fkMissingIxReport_mi      .setVisible(true);
 			_jdbcMetaDataInfo_mi       .setVisible(true);
 
 			_dbnames_cbx               .setEnabled(false);
@@ -5619,7 +5715,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		final String SQLW_HOME = System.getProperty("SQLW_HOME", "");
 		if (currentFilePath != null && currentFilePath.toString().equals(SQLW_HOME))
 		{
-			File defaultSaveAsDir = new File(AppDir.getAppStoreDir() + File.separator + "saved_files");
+			File defaultSaveAsDir = new File(AppDir.getDbxUserHomeDir() + File.separator + "saved_files");
 			if ( ! defaultSaveAsDir.exists() )
 			{
 				if (defaultSaveAsDir.mkdir())
@@ -6161,7 +6257,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		String retStr = (String) wait.execAndWait(bgExec);
 		if (StringUtil.hasValue(retStr))
 		{
-			SqlTextDialog dialog = new SqlTextDialog(_window, retStr);
+			SqlTextDialog dialog = new SqlTextDialog(_window, "DDL Output", retStr);
 			dialog.setVisible(true);
 		}
 //		else
@@ -6169,6 +6265,86 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 //			SqlTextDialog dialog = new SqlTextDialog(_window, "select 1 from dummy");
 //			dialog.setVisible(true);
 //		}
+	}
+
+	private void action_aseStmntCacheBloatReport(ActionEvent e)
+	{
+		// Wait pop-up while waiting for BgExecutor.doWork()
+		WaitForExecDialog wait = new WaitForExecDialog(_window, "Creating Report...");
+
+		final int duplicateThreshold = 10;
+
+		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
+		BgExecutor bgExec = new BgExecutor(wait)
+		{
+			@Override
+			public Object doWork()
+			{
+				getWaitDialog().setState("Creating Report");
+				try
+				{
+					final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+					try (PrintStream ps = new PrintStream(baos, true, StandardCharsets.UTF_8)) 
+					{
+						AseStmntCacheBloatDetect.doWork(getConnection(), false, ps, duplicateThreshold);
+					}
+					String reportText = baos.toString(StandardCharsets.UTF_8);
+					
+					return reportText;
+				}
+				catch (Throwable ex)
+				{
+					_logger.warn("Problems when ASE Statement Cache Bloat Report", ex);
+					SwingUtils.showErrorMessage(_window, "ASE Statement Cache Bloat Report", "Problems when ASE Statement Cache Bloat Report", ex);
+				}
+
+				getWaitDialog().setState("Done");
+				return null;
+			}
+		};
+
+		String retStr = (String) wait.execAndWait(bgExec);
+		if (StringUtil.hasValue(retStr))
+		{
+			SqlTextDialog dialog = new SqlTextDialog(_window, "ASE Statement Cache Bloat Report", retStr);
+			dialog.setVisible(true);
+		}
+	}
+
+	private void action_fkMissingIndexReport(ActionEvent e)
+	{
+		// Wait pop-up while waiting for BgExecutor.doWork()
+		WaitForExecDialog wait = new WaitForExecDialog(_window, "Creating Report...");
+
+		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
+		BgExecutor bgExec = new BgExecutor(wait)
+		{
+			@Override
+			public Object doWork()
+			{
+				getWaitDialog().setState("Creating Report");
+				try
+				{
+					// TODO: Create the Report and return the Report String
+					return "NOT-YET-IMPLEMENTED -- Foreign Key Missing Index Report";
+				}
+				catch (Throwable ex)
+				{
+					_logger.warn("Problems with: Foreign Key Missing Index Report", ex);
+					SwingUtils.showErrorMessage(_window, "Foreign Key Missing Index Report", "Problems with Foreign Key Missing Index Report", ex);
+				}
+
+				getWaitDialog().setState("Done");
+				return null;
+			}
+		};
+
+		String retStr = (String) wait.execAndWait(bgExec);
+		if (StringUtil.hasValue(retStr))
+		{
+			SqlTextDialog dialog = new SqlTextDialog(_window, "Foreign Key Missing Index Report", retStr);
+			dialog.setVisible(true);
+		}
 	}
 
 	private void action_viewCmdHistory(ActionEvent e)
@@ -14381,8 +14557,8 @@ checkPanelSize(_resPanel, comp);
 			// Add Ctrl-1 .. Ctrl-9   for the first 9 entries
 			keyStrokeNum++;
 			if (keyStrokeNum <=  KeyEvent.VK_9)
-//				mi.setAccelerator(KeyStroke.getKeyStroke(keyStrokeNum, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-				mi.setAccelerator(KeyStroke.getKeyStroke(keyStrokeNum, KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK));
+//				mi.setAccelerator(KeyStroke.getKeyStroke(keyStrokeNum, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+				mi.setAccelerator(KeyStroke.getKeyStroke(keyStrokeNum, KeyEvent.ALT_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK));
 
 			mi.addActionListener(new ActionListener()
 			{
@@ -15443,7 +15619,7 @@ checkPanelSize(_resPanel, comp);
 			else if ( cmd.hasOption("createAppDir") )
 			{
 				// Create store dir if it did not exists.
-				AppDir.checkCreateAppDir( null, System.out );
+				AppDir.checkCreateAppDir( null, System.out, cmd );
 			}
 			//-------------------------------
 			// Check for correct number of cmd line parameters

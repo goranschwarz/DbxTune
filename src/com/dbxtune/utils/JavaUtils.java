@@ -28,6 +28,7 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -101,10 +102,10 @@ public class JavaUtils
 //		double CPUSystem = cpuSystem.doubleValue();
 //		double CPUIdle   = cpuIdle  .doubleValue();
 //
-//		BigDecimal pctCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//		BigDecimal pctUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//		BigDecimal pctSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//		BigDecimal pctIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//		BigDecimal pctCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+//		BigDecimal pctUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+//		BigDecimal pctSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+//		BigDecimal pctIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 		ThreadInfo[] infos = threadBean.dumpAllThreads(true, true);
 		for (ThreadInfo ti : infos)
@@ -114,10 +115,12 @@ public class JavaUtils
 				long totalCpuTime  = threadBean.getThreadCpuTime(ti.getThreadId()) / 1000000L;
 				long userCpuTime   = threadBean.getThreadUserTime(ti.getThreadId()) / 1000000L;
 				long systemCpuTime = totalCpuTime - userCpuTime;
-				BigDecimal userCpuPct   = totalCpuTime <= 0 ? new BigDecimal(0) : new BigDecimal( ((1.0 * (userCpuTime))   / totalCpuTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				BigDecimal systemCpuPct = totalCpuTime <= 0 ? new BigDecimal(0) : new BigDecimal( ((1.0 * (systemCpuTime)) / totalCpuTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				
-				String extraInfo = "\t   + isInNative=" + ti.isInNative() + ", isSuspended=" + ti.isSuspended() + ", blockCnt=" + ti.getBlockedCount() + ", waitCnt=" + ti.getWaitedCount() + ", blockTime=" + ti.getBlockedTime() + ", waitTime=" + ti.getWaitedTime() + "\n"
+				BigDecimal userCpuPct   = totalCpuTime <= 0 ? new BigDecimal(0) : new BigDecimal( ((1.0 * (userCpuTime))   / totalCpuTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+				BigDecimal systemCpuPct = totalCpuTime <= 0 ? new BigDecimal(0) : new BigDecimal( ((1.0 * (systemCpuTime)) / totalCpuTime) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
+
+				// isDaemon we need Java 11
+				String extraInfo = "\t   + isDaemon=" + ti.isDaemon() + ",  isInNative=" + ti.isInNative() + ", isSuspended=" + ti.isSuspended() + ", blockCnt=" + ti.getBlockedCount() + ", waitCnt=" + ti.getWaitedCount() + ", blockTime=" + ti.getBlockedTime() + ", waitTime=" + ti.getWaitedTime() + "\n"
+//				String extraInfo = "\t   + isInNative=" + ti.isInNative() + ", isSuspended=" + ti.isSuspended() + ", blockCnt=" + ti.getBlockedCount() + ", waitCnt=" + ti.getWaitedCount() + ", blockTime=" + ti.getBlockedTime() + ", waitTime=" + ti.getWaitedTime() + "\n"
 				                 + "\t   + lockName='" + ti.getLockName() + "', ownedBy='" + ti.getLockOwnerName() + "', LockOwnerId=" + ti.getLockOwnerId() + "\n"
 				                 + "\t   + thread Cpu Time Ms: Total=" + totalCpuTime + ", User=" + userCpuTime + " (" + userCpuPct + "%), System=" + systemCpuTime + "(" + systemCpuPct + "%)\n";
 
@@ -220,5 +223,108 @@ public class JavaUtils
 		}
 		sb.append('\n');
 		return sb.toString();
+	}
+
+
+	/**
+	 * Get starting class<br>
+	 * Simply get a stacktrace and get LAST Entry, but only the class name
+	 * @return
+	 */
+	public static String getMainStartClass()
+	{
+		StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+		StackTraceElement main = stack[stack.length - 1];
+		String mainClassName = main.getClassName();
+		int lastDot = mainClassName.lastIndexOf('.');
+		if (lastDot != -1)
+			mainClassName = mainClassName.substring(lastDot + 1);
+
+		return mainClassName;
+	}
+
+	/**
+	 * Check if the "classname" is the "mainStartClass"...
+	 * 
+	 * @param classname   Check if the "classname" is the "mainStartClass"...
+	 * @return
+	 */
+	public static boolean isMainStartClass(String classname)
+	{
+		if (classname == null)
+			return false;
+
+		StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+		StackTraceElement main = stack[stack.length - 1];
+		String mainClassName = main.getClassName();
+		int lastDot = mainClassName.lastIndexOf('.');
+		if (lastDot != -1)
+			mainClassName = mainClassName.substring(lastDot + 1);
+
+		return classname.equals(mainClassName);
+	}
+
+
+
+	/**
+	 * Check if an Exception/callstack contains the <code>searchStr</code>
+	 * <p>
+	 * It's like looping the stacktrace and do <code>line.contains(searchStr)</code>
+	 * 
+	 * @param searchStr     What to search for
+	 * 
+	 * @return Simply true or false
+	 */
+	public static boolean isCalledFrom(String searchStr)
+	{
+		return isCalledFrom(new Exception(), searchStr);
+	}
+
+	/**
+	 * Check if an Exception/callstack contains the <code>searchStr</code>
+	 * <p>
+	 * It's like looping the stacktrace and do <code>line.contains(searchStr)</code>
+	 * 
+	 * @param ex            Exception (in null, one will be created)
+	 * @param searchStr     What to search for
+	 * 
+	 * @return Simply true or false
+	 */
+	public static boolean isCalledFrom(Exception ex, String searchStr)
+	{
+		return isCalledFrom(ex, searchStr, -1);
+	}
+
+	/**
+	 * Check if an Exception/callstack contains the <code>searchStr</code>
+	 * <p>
+	 * It's like looping the stacktrace and do <code>line.contains(searchStr)</code>
+	 * 
+	 * @param ex            Exception (in null, one will be created)
+	 * @param searchStr     What to search for
+	 * @param stackDepth    Whats's the search depth (if below 0, then full depth will be searched)
+	 * 
+	 * @return Simply true or false
+	 */
+	public static boolean isCalledFrom(Exception ex, String searchStr, int stackDepth)
+	{
+		if (ex == null)
+			ex = new Exception();
+		
+		StackTraceElement[] callstack = ex.getStackTrace();
+		
+		if (stackDepth < 0)
+			stackDepth = callstack.length;
+
+		stackDepth = Math.min(stackDepth, callstack.length);
+		
+		for (int i = 0; i < stackDepth; i++)
+		{
+			String line = callstack[i].toString();
+			if (line.contains(searchStr))
+				return true;
+		}
+		
+		return false;
 	}
 }

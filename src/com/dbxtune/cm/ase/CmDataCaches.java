@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -507,18 +508,18 @@ extends CountersModel
 			if (CacheSearches == 0)
 				calcCacheHitRate    = new BigDecimal( 0 );
 			else
-				calcCacheHitRate    = new BigDecimal( 100.0 - (RealPhysicalReads*1.0/CacheSearches) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//				calcCacheHitRate    = new BigDecimal( ((1.0 * CacheSearches) / LogicalReads) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				calcCacheHitRate    = new BigDecimal( 100.0 - (RealPhysicalReads*1.0/CacheSearches) * 100.0 ).setScale(1, RoundingMode.HALF_EVEN);
+//				calcCacheHitRate    = new BigDecimal( ((1.0 * CacheSearches) / LogicalReads) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 			
 //			if (PhysicalReads == 0)
 //				calcMisses     = new BigDecimal( 0 );
 //			else
-//				calcMisses     = new BigDecimal( ((1.0 * CacheSearches) / PhysicalReads) * 1 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//				calcMisses     = new BigDecimal( ((1.0 * CacheSearches) / PhysicalReads) * 1 ).setScale(1, RoundingMode.HALF_EVEN);
 //			
 //			if ((PhysicalReads + LogicalReads) == 0)
 //				calcVolatility = new BigDecimal( 0 );
 //			else
-//				calcVolatility = new BigDecimal( ((1.0 * PhysicalWrites) / (PhysicalReads + LogicalReads)) * 1 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//				calcVolatility = new BigDecimal( ((1.0 * PhysicalWrites) / (PhysicalReads + LogicalReads)) * 1 ).setScale(1, RoundingMode.HALF_EVEN);
 //
 //			if (_logger.isDebugEnabled())
 //				_logger.debug("++++CacheHitRate = "+calcCacheHitRate+", Misses = "+calcMisses+", Volatility = "+calcVolatility);
@@ -569,7 +570,7 @@ extends CountersModel
 			// contention
 			if (Grabs > 0)
 			{
-				BigDecimal contention = new BigDecimal( ((1.0 * (Waits)) / Grabs) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal contention = new BigDecimal( ((1.0 * (Waits)) / Grabs) * 100 ).setScale(1, RoundingMode.HALF_EVEN);
 
 				// Keep only 3 decimals
 				// row.set(AvgServ_msId, new Double (AvgServ_ms/1000) );
@@ -581,7 +582,7 @@ extends CountersModel
 			// spinsPerWait
 			if (Waits > 0)
 			{
-				BigDecimal spinWarning = new BigDecimal( ((1.0 * (Spins)) / Waits) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal spinWarning = new BigDecimal( ((1.0 * (Spins)) / Waits) ).setScale(1, RoundingMode.HALF_EVEN);
 
 				diffData.setValueAt(spinWarning, rowId, pos_SpinsPerWait);
 			}

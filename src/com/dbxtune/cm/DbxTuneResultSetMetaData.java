@@ -22,6 +22,7 @@ package com.dbxtune.cm;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSetMetaData;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -573,8 +574,8 @@ implements ResultSetMetaData
 			case java.sql.Types.FLOAT:        return Float  .valueOf(strVal);
 			case java.sql.Types.REAL:         return Float  .valueOf(strVal);
 			case java.sql.Types.DOUBLE:       return Double .valueOf(strVal);
-			case java.sql.Types.NUMERIC:      return new BigDecimal(strVal).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
-			case java.sql.Types.DECIMAL:      return new BigDecimal(strVal).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+			case java.sql.Types.NUMERIC:      return new BigDecimal(strVal).setScale(scale, RoundingMode.HALF_EVEN);
+			case java.sql.Types.DECIMAL:      return new BigDecimal(strVal).setScale(scale, RoundingMode.HALF_EVEN);
 			case java.sql.Types.CHAR:         return new String(strVal);
 			case java.sql.Types.VARCHAR:      return new String(strVal);
 			case java.sql.Types.LONGVARCHAR:  return new String(strVal);
@@ -636,8 +637,8 @@ implements ResultSetMetaData
 		case java.sql.Types.FLOAT:        return Float  .valueOf(0);
 		case java.sql.Types.REAL:         return Float  .valueOf(0);
 		case java.sql.Types.DOUBLE:       return Double .valueOf(0);
-		case java.sql.Types.NUMERIC:      return new BigDecimal(0).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
-		case java.sql.Types.DECIMAL:      return new BigDecimal(0).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		case java.sql.Types.NUMERIC:      return new BigDecimal(0).setScale(scale, RoundingMode.HALF_EVEN);
+		case java.sql.Types.DECIMAL:      return new BigDecimal(0).setScale(scale, RoundingMode.HALF_EVEN);
 		case java.sql.Types.CHAR:         return "";
 		case java.sql.Types.VARCHAR:      return "";
 		case java.sql.Types.LONGVARCHAR:  return "";

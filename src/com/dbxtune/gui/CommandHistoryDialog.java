@@ -637,7 +637,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 //		_logTail_txt.setToolTipText("Tail of the Log");
 		
 		// Command Execution: ADD Ctrl+e, F5, F9
-		_cmd_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE);
+		_cmd_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), ACTION_EXECUTE);
 		_cmd_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), ACTION_EXECUTE);
 		_cmd_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), ACTION_EXECUTE);
 

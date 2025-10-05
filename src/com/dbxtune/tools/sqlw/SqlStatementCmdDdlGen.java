@@ -310,7 +310,7 @@ extends SqlStatementAbstract
 				{
 					if (_params._openWindow)
 					{
-	    				SqlTextDialog dialog = new SqlTextDialog(null, retStr);
+	    				SqlTextDialog dialog = new SqlTextDialog(null, "DDL View", retStr);
 	    				dialog.setVisible(true);
 					}
 					else

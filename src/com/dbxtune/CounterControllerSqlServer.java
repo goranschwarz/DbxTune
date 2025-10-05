@@ -1566,6 +1566,12 @@ extends CounterControllerAbstract
 					_logger.info("onConnect: SQL Server URL Options, could not find 'trustServerCertificate', adding option: trustServerCertificate=true");
 				}
 			}
+			
+			if ("integratedSecurity".equals(dbmsUsername))
+			{
+				jdbcUrlOptionsMap.put("integratedSecurity", "true");
+				_logger.info("onConnect: SQL Server URL Options, looks like you want to use 'integratedSecurity', adding option: integratedSecurity=true");
+			}
 
 			jdbcUrlOptions = StringUtil.toCommaStr(jdbcUrlOptionsMap, "=", ";");
 			if (StringUtil.hasValue(jdbcUrlOptions))
