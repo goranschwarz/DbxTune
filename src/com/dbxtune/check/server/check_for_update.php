@@ -59,12 +59,17 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 600;
-	$ASEMON_LATEST_VERSION_STR = "4.5.0";
-	$ASEMON_LATEST_VERSION_STR = "2022-12-08";
+	$ASETUNE_LATEST_VERSION_SRC = 610;
+	$ASETUNE_LATEST_VERSION_STR = "4.6.0";
+	$ASETUNE_LATEST_VERSION_STR = "2025-11-30";
+	$DBXTUNE_LATEST_VERSION_SRC = 610;
+	$DBXTUNE_LATEST_VERSION_STR = "4.6.0";
+	$DBXTUNE_LATEST_VERSION_STR = "2025-11-30";
+
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.dbxtune.com/history.html";
-	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=5, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
+	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSizeParam=10, sendMdaInfoBatchSizePost=250, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
+//	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=5, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
 //	$FEEDBACK_URL              = "2011-06-09:www.dbxtune.com/feedback.html";
 	$FEEDBACK_URL              = "";
 //	$PROBLEM_URL               = "2012-06-01:www.dbxtune.com/asetune_problem.html";

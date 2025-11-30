@@ -132,9 +132,11 @@
 		<copy file="bin/dbxc_stop_ALL.sh"                               toFile="${dist}/bin/dbxc_stop_ALL.sh"/>
 		<copy file="bin/dbxPassword.sh"                                 toFile="${dist}/bin/dbxPassword.sh"/>
 
+<!--
 		<copy file="bin/dbxc_list_ALL.ps1"                               toFile="${dist}/bin/dbxc_list_ALL.ps1"/>
 		<copy file="bin/dbxc_start_ALL.ps1"                              toFile="${dist}/bin/dbxc_start_ALL.ps1"/>
 		<copy file="bin/dbxc_stop_ALL.ps1"                               toFile="${dist}/bin/dbxc_stop_ALL.ps1"/>
+-->
 		<copy file="bin/dbxPassword.bat"                                 toFile="${dist}/bin/dbxPassword.bat"/>
 
 

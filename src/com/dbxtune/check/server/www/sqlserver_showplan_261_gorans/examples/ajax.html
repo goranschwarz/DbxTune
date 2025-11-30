@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Example for html-query-plan</title>
+    <link rel="stylesheet" type="text/css" href="../css/qp.css" />
+    <script src="../dist/qp.js"></script>
+</head>
+<body>
+    <div id="container"></div>
+    <script type="text/javascript">
+        var xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 /* DONE */ ) {
+                if (xmlhttp.status == 200) {
+                    QP.showPlan(document.getElementById("container"), xmlhttp.responseText);
+                } else {
+                    alert('Problem downloading query plan');
+                }
+            }
+        };
+
+        xmlhttp.open("GET", "../test_plans/clustered index delete.sqlplan");
+        xmlhttp.send();
+    </script>
+</body>
+</html>
