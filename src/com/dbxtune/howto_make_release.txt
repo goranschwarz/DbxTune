@@ -27,7 +27,7 @@ git status
 
 -----------------------------------------------------------
 ANT BUILD
-set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
+set JAVA_HOME=c:\Program Files\Java\jdk-11
 ant
 cd dist\bin
 asetune.bat
@@ -72,7 +72,7 @@ cd c:\tmpgit
 git clone https://github.com/goranschwarz/DbxTune release
 cd release
 
-set JAVA_HOME=c:\Program Files\Java\jdk1.8.0_241
+set JAVA_HOME=c:\Program Files\Java\jdk-11
 ant
 cd dist\bin
 asetune.bat
@@ -115,7 +115,7 @@ update: check_for_update.php
 	$DBXTUNE_LATEST_VERSION_STR = "x.y.z";
 	$DBXTUNE_LATEST_VERSION_STR = "YYYY-MM-DD";
 
-update: wsql_check_for_update.php
+update: sqlw_check_for_update.php
 	$SQLW_LATEST_VERSION_SRC = nnn;
 	$SQLW_LATEST_VERSION_STR = "x.y.z";
 	$SQLW_LATEST_VERSION_STR = "YYYY-MM-DD";

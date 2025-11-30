@@ -457,15 +457,15 @@
 		doCleanup($dbconn, "delete from dbxc_store_srv_info       where userName  in('goran', 'gorans', 'i063783') ");
 
 		// based on HOSTNAME
-		doCleanup($dbconn, "delete from asemon_connect_info       where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
-		doCleanup($dbconn, "delete from asemon_mda_info           where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) AND verified IS NULL");
-		doCleanup($dbconn, "delete from asemon_udc_info           where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
-		doCleanup($dbconn, "delete from asemon_counter_usage_info where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
-		doCleanup($dbconn, "delete from asemon_error_info         where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
-		doCleanup($dbconn, "delete from asemon_error_info2        where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
-		doCleanup($dbconn, "delete from dbxc_store_info           where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
-		doCleanup($dbconn, "delete from dbxc_store_srv_info       where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
-		doCleanup($dbconn, "delete from asemon_usage              where clientHostName in('gorans-ub2') ");
+		doCleanup($dbconn, "delete from asemon_connect_info       where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) ");
+		doCleanup($dbconn, "delete from asemon_mda_info           where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) AND verified IS NULL");
+		doCleanup($dbconn, "delete from asemon_udc_info           where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) ");
+		doCleanup($dbconn, "delete from asemon_counter_usage_info where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) ");
+		doCleanup($dbconn, "delete from asemon_error_info         where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) ");
+		doCleanup($dbconn, "delete from asemon_error_info2        where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) ");
+		doCleanup($dbconn, "delete from dbxc_store_info           where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) ");
+		doCleanup($dbconn, "delete from dbxc_store_srv_info       where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub3')) ");
+		doCleanup($dbconn, "delete from asemon_usage              where clientHostName in('gorans-ub3') ");
 		
 		// doCleanup($dbconn, "delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 		// doCleanup($dbconn, "delete from asemon_udc_info");
@@ -474,7 +474,7 @@
 		//doCleanup($dbconn, "delete from asemon_error_info         where appVersion  like '2.%' ");
 		//doCleanup($dbconn, "delete from asemon_error_info2        where appVersion  like '2.%' ");
 
-		//doCleanup($dbconn, "delete from asemon_error_info         where logLocation  like 'com.dbxtune.RefreshProcess.refreshStmt(RefreshProcess.java:%)%' ");
+		//doCleanup($dbconn, "delete from asemon_error_info         where logLocation  like 'com.asetune.RefreshProcess.refreshStmt(RefreshProcess.java:%)%' ");
 		//doCleanup($dbconn, "delete from asemon_error_info         where logStacktrace  like '%SQLException, Error writing DDL to Persistent Counter DB. Caught: org.h2.jdbc.JdbcSQLException: Unknown data type%' ");
 		//doCleanup($dbconn, "delete from asemon_error_info         where logStacktrace  like 'java.lang.ClassCastException: java.lang.% cannot be cast to java.lang.%' ");
 		//doCleanup($dbconn, "delete from asemon_error_info         where logStacktrace  like 'java.lang.NumberFormatException: Infinite or NaN%' ");
