@@ -709,7 +709,7 @@ implements IDailySummaryReport
 		// initialize with default parameters, which may change below...
 		String dbxCentralProt = "http";
 		String dbxCentralHost = StringUtil.getHostnameWithDomain();
-		int    dbxCentralPort = 8080;
+		int    dbxCentralPort = DbxTuneCentral.getWebHttpPort(); // 8080;
 
 		// get where DBX CENTRAL is located.
 		String sendToDbxCentralUrl = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.url", null);

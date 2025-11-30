@@ -704,6 +704,7 @@ extends CounterModelHostMonitor
 
 					// Possibly getting info from CmOsPs
 					// This will help us to determine if OTHER processes than the DBMS is loading the server
+					extendedDescHtml += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
 					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
 
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.INFO);
@@ -739,6 +740,7 @@ extends CounterModelHostMonitor
 
 					// Possibly getting info from CmOsPs
 					// This will help us to determine if OTHER processes than the DBMS is loading the server
+					extendedDescHtml += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
 					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
 
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.WARNING);
@@ -774,6 +776,7 @@ extends CounterModelHostMonitor
 
 					// Possibly getting info from CmOsPs
 					// This will help us to determine if OTHER processes than the DBMS is loading the server
+					extendedDescHtml += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
 					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
 
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.ERROR);
@@ -834,17 +837,17 @@ extends CounterModelHostMonitor
 	public static final String  PROPKEY_alarm_cpuUsageInfo                       = CM_NAME + ".alarm.system.if.CpuUsageInfo.gt";
 	public static final double  DEFAULT_alarm_cpuUsageInfo                       = 90.0d;
 	public static final String  PROPKEY_alarm_cpuUsageInfo_delay_minutes         = CM_NAME + ".alarm.system.if.CpuUsageInfo.raise.delay.minutes";
-	public static final int     DEFAULT_alarm_cpuUsageInfo_delay_minutes         = 45; // 45 minutes
+	public static final int     DEFAULT_alarm_cpuUsageInfo_delay_minutes         = 60; // 60 minutes
 	
 	public static final String  PROPKEY_alarm_cpuUsageWarning                    = CM_NAME + ".alarm.system.if.CpuUsageWarning.gt";
 	public static final double  DEFAULT_alarm_cpuUsageWarning                    = 95.0d;
 	public static final String  PROPKEY_alarm_cpuUsageWarning_delay_minutes      = CM_NAME + ".alarm.system.if.CpuUsageWarning.raise.delay.minutes";
-	public static final int     DEFAULT_alarm_cpuUsageWarning_delay_minutes      = 15; // 15 minutes
+	public static final int     DEFAULT_alarm_cpuUsageWarning_delay_minutes      = 30; // 30 minutes
 	
 	public static final String  PROPKEY_alarm_cpuUsageError                      = CM_NAME + ".alarm.system.if.cpu.usage.error.gt";
 	public static final double  DEFAULT_alarm_cpuUsageError                      = 99.0d;
 	public static final String  PROPKEY_alarm_cpuUsageError_delay_minutes        = CM_NAME + ".alarm.system.if.CpuUsageWarning.raise.delay.minutes";
-	public static final int     DEFAULT_alarm_cpuUsageError_delay_minutes        = 15; // 15 minutes
+	public static final int     DEFAULT_alarm_cpuUsageError_delay_minutes        = 30; // 30 minutes
 	
 	
 	@Override

@@ -123,8 +123,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    Note: Aggregated rows will be discarded from CM methods like: getMaxValue(), getMinValue(), getSumValue(), getCountGtZero(), getAvgValue() </LI>
 		<LI>Source DBMS data type translation. Each CM can implement modifyResultSetMetaData() to change data type (this was implented due to Postgres 
             in some cases returned Precision and Scale with 0 values (it probably ment use "max" value, which is hard to translate into "other" DBMS 
-            when storing data in a PCS). Now there is a way to handle this. Either use SQL CAST or if not desirable, use this method to set Presision and Scale)</LI>
-		<LI>PCS: Data Type Resolver -- Prints Warnings if Presision and Scale are 0 for NUMERIC and DECIMAL datatypes. (also if Presision is 0 for other columns)</LI>
+            when storing data in a PCS). Now there is a way to handle this. Either use SQL CAST or if not desirable, use this method to set precision and Scale)</LI>
+		<LI>PCS: Data Type Resolver -- Prints Warnings if precision and Scale are 0 for NUMERIC and DECIMAL datatypes. (also if precision is 0 for other columns)</LI>
 
 		<LI><b>OsHostMonitoring (for all DbxTune Collectors)</b><br>
 			<UL>

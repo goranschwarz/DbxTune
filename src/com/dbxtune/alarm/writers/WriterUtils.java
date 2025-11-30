@@ -52,6 +52,7 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
 import com.dbxtune.alarm.events.AlarmEventDummy;
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.dbxtune.ui.autocomplete.completions.ShorthandCompletionX;
 import com.dbxtune.utils.StringUtil;
@@ -535,7 +536,7 @@ public class WriterUtils
 		
 		AlarmEvent ae = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", AlarmEvent.Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
 
-		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true, null, "http://DUMMY-dbxcentral:8080");
+		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true, null, "http://DUMMY-dbxcentral:" + DbxTuneCentral.getWebHttpPort());
 		System.out.println("OUT: "+str);
 	}
 }

@@ -73,7 +73,6 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.swing.PromptForPassword;
 import com.dbxtune.gui.swing.PromptForPassword.SaveType;
-import com.dbxtune.sql.JdbcUrlParser;
 import com.dbxtune.sql.MsSqlUrlHelper;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;

@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.dbxtune.utils.StringUtil;
-
 public class MsSqlUrlHelper
 {
 	private static final String PREFIX = "jdbc:sqlserver://";
@@ -137,6 +135,17 @@ public class MsSqlUrlHelper
 
 	public Integer getPort()
 	{
+//		if (_port == null)
+//			return 1433;
+
+		return _port;
+	}
+
+	public Integer getPort(int defaultPort)
+	{
+		if (_port == null)
+			return defaultPort;
+
 		return _port;
 	}
 
@@ -172,7 +181,8 @@ public class MsSqlUrlHelper
 		_properties.forEach((k, v) -> sb.append(k).append("=").append(v).append(";"));
 
 		// Remove last ";"
-		sb.setLength(sb.length() - 1);
+		if (sb.length() > 0)
+			sb.setLength(sb.length() - 1);
 		
 		return sb.toString();
 	}
@@ -267,6 +277,7 @@ public class MsSqlUrlHelper
 	public static void main(String[] args)
 	{
 		String original = "jdbc:sqlserver://axsealisql02.motor.local\\INST01:50001;encrypt=true;loginTimeout=30";
+//		original = "jdbc:sqlserver://prod-b1-mssql";
 
 		MsSqlUrlHelper helper = MsSqlUrlHelper.parse(original);
 

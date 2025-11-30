@@ -26,7 +26,6 @@ import java.util.List;
 
 import javax.swing.JPanel;
 
-import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSummaryAbstract;

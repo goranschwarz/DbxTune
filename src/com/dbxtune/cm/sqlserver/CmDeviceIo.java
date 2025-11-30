@@ -392,19 +392,19 @@ extends CountersModel
 			mtd.addColumn("deviceIo",  "WriteTime",       "<html>How many milliseconds were we spending on waiting for Write IO's</html>");
 			
 			mtd.addColumn("deviceIo",  "AvgServ_ms",      "<html>" +
-			                                                   "Service time on the disk.<br>" +
+			                                                   "Service time on the disk. (Avg Read and Write Stall in ms)<br>" +
 			                                                   "This is basically the average time it took to make a disk IO on this device.<br>" +
-			                                                   "<b>Formula</b>: IOTime / (Reads + Writes) <br>" +
+			                                                   "<b>Formula</b>: io_stall / (num_of_reads + num_of_writes) <br>" +
 			                                              "</html>");
 			mtd.addColumn("deviceIo",  "ReadServiceTimeMs", "<html>" +
-			                                                   "Service time on the disk for <b>Read</b> operations.<br>" +
+			                                                   "Service time on the disk for <b>Read</b> operations. (Avg Read Stall in ms)<br>" +
 			                                                   "This is basically the average time it took to make a <b>read</b> IO on this device.<br>" +
-			                                                   "<b>Formula</b>: ReadTime / Reads <br>" +
+			                                                   "<b>Formula</b>: io_stall_read_ms / num_of_reads <br>" +
 			                                              "</html>");
 			mtd.addColumn("deviceIo",  "WriteServiceTimeMs", "<html>" +
-			                                                   "Service time on the disk for <b>Write</b> operations.<br>" +
+			                                                   "Service time on the disk for <b>Write</b> operations. (Avg Write Stall in ms)<br>" +
 			                                                   "This is basically the average time it took to make a <b>write</b> IO on this device.<br>" +
-			                                                   "<b>Formula</b>: WriteTime / Writes <br>" +
+			                                                   "<b>Formula</b>: io_stall_write_ms / num_of_writes <br>" +
 			                                              "</html>");
 			mtd.addColumn("deviceIo",  "SizeOnDiskMB",    "<html>Disk size for this device</html>");
 			mtd.addColumn("deviceIo",  "lname",           "<html>The logical name</html>");

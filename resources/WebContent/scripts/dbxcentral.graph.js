@@ -150,6 +150,91 @@ function jsonToTable(json, stripHtmlInCells, trCallback, tdCallback, jsonMetaDat
 	return table;
 }
 
+/**
+ * Utility function: Create a Text Table using a HTML Table
+ * Produced by: Claude
+ * 
+ * Example usage with string:
+ * const htmlString = '<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>';
+ * console.log(htmlTableToAscii(htmlString));
+ *
+ * Example with DOM element:
+ * const table = document.querySelector('table');
+ * if (table) {
+ *     console.log(htmlTableToAscii(table));
+ * }
+ * 
+ * // Example with non-table string (returns original):
+ * console.log(htmlTableToAscii('<div>Not a table</div>')); // Returns: '<div>Not a table</div>'
+ * 
+ */
+function htmlTableToAscii(input) {
+	let tableElement;
+	
+	// Handle string input
+	if (typeof input === 'string') {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(input, 'text/html');
+		tableElement = doc.querySelector('table');
+		
+		// If no table found, return original string
+		if (!tableElement) {
+			return input;
+		}
+	} else {
+		tableElement = input;
+	}
+	
+	// Get all rows from the table
+	const rows = Array.from(tableElement.querySelectorAll('tr'));
+	
+	if (rows.length === 0) {
+		return typeof input === 'string' ? input : '';
+	}
+	
+	// Extract cell data from each row
+	const data = rows.map(row => {
+		const cells = Array.from(row.querySelectorAll('th, td'));
+		return cells.map(cell => cell.textContent.trim());
+	});
+	
+	// Calculate column widths
+	const numCols = Math.max(...data.map(row => row.length));
+	const colWidths = Array(numCols).fill(0);
+	
+	data.forEach(row => {
+		row.forEach((cell, i) => {
+			colWidths[i] = Math.max(colWidths[i], cell.length);
+		});
+	});
+	
+	// Helper function to create a separator line
+	const createSeparator = () => {
+		return '+' + colWidths.map(w => '-'.repeat(w + 2)).join('+') + '+';
+	};
+	
+	// Helper function to format a row
+	const formatRow = (row) => {
+		const cells = row.map((cell, i) => {
+			return ' ' + cell.padEnd(colWidths[i]) + ' ';
+		});
+		return '|' + cells.join('|') + '|';
+	};
+	
+	// Build the ASCII table
+	const separator = createSeparator();
+	const result = [separator];
+	
+	data.forEach((row, i) => {
+		result.push(formatRow(row));
+		// Add separator after header (first row) and at the end
+		if (i === 0 || i === data.length - 1) {
+			result.push(separator);
+		}
+	});
+	
+	return result.join('\n');
+}
 function stripHtml(html)
 {
 	var tmp = document.createElement("DIV");
@@ -1454,7 +1539,7 @@ function dbxTuneGraphSubscribe()
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
-		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
+		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + htmlTableToAscii(dataVal));
 		div.setAttribute("data-toggle"     , 'modal');
 		div.setAttribute("data-target"     , '#dbx-view-lockTable-dialog');
 		div.setAttribute("data-objectname" , labelVal);

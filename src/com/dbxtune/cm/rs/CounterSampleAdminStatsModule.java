@@ -58,8 +58,8 @@ extends CounterSample
 
 		if (rows.size() == 0)
 		//	return false;
-			throw new NoValidRowsInSample("Could not find any records of type '"+forModule+"' in CM '"+CmAdminStats.SHORT_NAME+"'.");
-		
+			throw new NoValidRowsInSample("Could not find any records of type '" + forModule + "' in CM '" + CmAdminStats.SHORT_NAME + "'.");
+
 		// Now set MetaData information...
 		setColumnNames (xrstm.getColumnNames());
 		setSqlType     (xrstm.getSqlTypes());
@@ -91,6 +91,10 @@ extends CounterSample
 			addRow(cm, row);
 		}
 		
+		// Fire any (GUI) listeners... that data/structure was changed
+//		fireTableStructureChanged();
+		// Well not in here... but possibly in CountersModel
+
 		return true;
 	}
 }

@@ -35,6 +35,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.cm.ase.CmSqlStatementPerDb;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -540,9 +541,9 @@ extends PostgresAbstract
 		String schema = getReportingInstance().getDbmsSchemaName();
 		
 		// Add Charts
-		_CmSqlStatementPerDb_SsDbTotExecCnt  = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbTotExecCnt"  , -1, true, null, "SQL Statements Per DB - Total Statements Executed/sec");
-		_CmSqlStatementPerDb_SsDbSumExecTime = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbSumExecTime" , -1, true, null, "SQL Statements Per DB - Sum Execution Time in ms");
-		_CmSqlStatementPerDb_SsDbSumLRead    = createTsLineChart(conn, schema, "CmSqlStatementPerDb", "SsDbSumLRead"    , -1, true, null, "SQL Statements Per DB - Sum Logical Reads");
+		_CmSqlStatementPerDb_SsDbTotExecCnt  = createTsLineChart(conn, schema, CmSqlStatementPerDb.CM_NAME, CmSqlStatementPerDb.GRAPH_NAME_SQL_STATEMENT_DB_TOT_EXEC_SEC,     -1, true, null, "SQL Statements Per DB - Total Statements Executed/sec");
+		_CmSqlStatementPerDb_SsDbSumExecTime = createTsLineChart(conn, schema, CmSqlStatementPerDb.CM_NAME, CmSqlStatementPerDb.GRAPH_NAME_SQL_STATEMENT_DB_SUM_EXEC_TIME,    -1, true, null, "SQL Statements Per DB - Sum Execution Time in ms");
+		_CmSqlStatementPerDb_SsDbSumLRead    = createTsLineChart(conn, schema, CmSqlStatementPerDb.CM_NAME, CmSqlStatementPerDb.GRAPH_NAME_SQL_STATEMENT_DB_SUM_LOGICAL_READ, -1, true, null, "SQL Statements Per DB - Sum Logical Reads");
 
 	}
 	

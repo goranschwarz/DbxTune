@@ -103,6 +103,11 @@
 	<classpathentry kind="lib" path="lib/log4j-core-2.24.3.jar" sourcepath="3pp/apache-log4j-2.24.3-src.zip"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-2.0.16.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/postgresql-42.7.8.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb-ri/jakarta.activation.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb-ri/jakarta.xml.bind-api.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb-ri/jaxb-impl.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb-ri/jaxb-jxc.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb-ri/jaxb-xjc.jar"/>
 	<classpathentry kind="output" path="classes"/>
 	<referencedentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="3pp/NEW/apache-mail/new/rsyntaxtextarea-3.5.1-sources.jar"/>
 </classpath>

@@ -1421,86 +1421,101 @@ finally
 					if (conn != null && _extraTasks != null)
 					{
 						// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
-						_extraTasks.initializeVersionInfo(conn, ConnectionProgressDialog.this);
+						if (_extraTasks.doInitializeVersionInfo())
+						{
+							_extraTasks.initializeVersionInfo(conn, ConnectionProgressDialog.this);
+						}
 
 						//-------------------------
 						//---- DO 'Check Monitor Configuration' (EXTRA_TASK_CHECK_MONITOR_CONFIG)
 						//-------------------------
-						setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-						if ( _extraTasks.checkMonitorConfig(conn, ConnectionProgressDialog.this) )
-							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-						else
+						if (_extraTasks.doCheckMonitorConfig())
 						{
-							try { conn.close(); } catch (SQLException ignore) {}
-							conn = null;
+							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+							if ( _extraTasks.checkMonitorConfig(conn, ConnectionProgressDialog.this) )
+								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+							else
+							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
 
-							Exception ex = new Exception("The system is not properly configured for monitoring.");
-							
-							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
-							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+								Exception ex = new Exception("The system is not properly configured for monitoring.");
+								
+								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+								setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 
-							throw ex;
+								throw ex;
+							}
 						}
 
 						//-------------------------
 						//---- DO 'Init Monitor Dictionary' (EXTRA_TASK_INIT_MONITOR_DICT)
 						//-------------------------
-						setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-						if ( _extraTasks.initMonitorDictionary(conn, ConnectionProgressDialog.this) )
-							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-						else
+						if (_extraTasks.doInitMonitorDictionary())
 						{
-							try { conn.close(); } catch (SQLException ignore) {}
-							conn = null;
+							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+							if ( _extraTasks.initMonitorDictionary(conn, ConnectionProgressDialog.this) )
+								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+							else
+							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
 
-							Exception ex = new Exception("Initializing the Monitor Dictionary Failed."); 
+								Exception ex = new Exception("Initializing the Monitor Dictionary Failed."); 
 
-							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
-							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+								setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 
-							throw ex;
+								throw ex;
+							}
 						}
 
 						//-------------------------
 						//---- DO 'Init ASE Configuration Dictionary' (EXTRA_TASK_INIT_DBMS_CONFIG_DICT)
 						//-------------------------
-						setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-						HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(_sshConnection);
-
-						if ( _extraTasks.initDbServerConfigDictionary(conn, hostMonConn, ConnectionProgressDialog.this) )
-							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-						else
+						if (_extraTasks.doInitDbServerConfigDictionary())
 						{
-							try { conn.close(); } catch (SQLException ignore) {}
-							conn = null;
+							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+							HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(_sshConnection);
 
-							Exception ex = new Exception("Initializing the DB Server Configurations Dictionary Failed."); 
+							if ( _extraTasks.initDbServerConfigDictionary(conn, hostMonConn, ConnectionProgressDialog.this) )
+								setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+							else
+							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
 
-							setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
-							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+								Exception ex = new Exception("Initializing the DB Server Configurations Dictionary Failed."); 
 
-							throw ex;
+								setTaskStatus(EXTRA_TASK_INIT_DBMS_CONFIG_DICT,  ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+
+								throw ex;
+							}
 						}
 
 						//-------------------------
 						//---- DO 'Init Counter Collector' (EXTRA_TASK_INIT_COUNTER_COLLECTOR)
 						//-------------------------
-						setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-						if ( _extraTasks.initCounterCollector(conn, ConnectionProgressDialog.this) )
-							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-						else
+						if (_extraTasks.doInitCounterCollector())
 						{
-							try { conn.close(); } catch (SQLException ignore) {}
-							conn = null;
+							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+							if ( _extraTasks.initCounterCollector(conn, ConnectionProgressDialog.this) )
+								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+							else
+							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
 
-							Exception ex = new Exception("Initializing the Counter Collector/Controller Failed."); 
+								Exception ex = new Exception("Initializing the Counter Collector/Controller Failed."); 
 
-							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
 
-							throw ex;
+								throw ex;
+							}
 						}
 					}
 					_connection = conn; 

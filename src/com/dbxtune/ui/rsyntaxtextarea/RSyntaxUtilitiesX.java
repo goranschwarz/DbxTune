@@ -21,6 +21,7 @@
 package com.dbxtune.ui.rsyntaxtextarea;
 
 import java.awt.Component;
+import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -307,6 +308,25 @@ public class RSyntaxUtilitiesX
 		menu.addSeparator();
 
 		
+		//--------------------------------
+		// Set default Font
+		if (syntaxTextArea != null)
+		{
+			mi = new JMenuItem();
+			mi.setText("Set Default Font");
+			mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+//					Font font = RSyntaxTextArea.getDefaultFont();
+					Font font = RSyntaxTextAreaX.getDefaultFont();
+					syntaxTextArea.setFont(font);
+				}
+			});
+			menu.add(mi);
+		}
+
 		//--------------------------------
 		// GOTO LINE...
 		menu.add(new JMenuItem(new GoToLineAction(textArea, owner)));

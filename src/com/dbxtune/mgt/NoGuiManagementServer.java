@@ -21,8 +21,10 @@
  ******************************************************************************/
 package com.dbxtune.mgt;
 
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.net.BindException;
+import java.net.ServerSocket;
 import java.util.Base64;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -33,6 +35,7 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import com.dbxtune.mgt.controllers.NoGuiConfigGetServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
@@ -108,8 +111,54 @@ public class NoGuiManagementServer
 	public NoGuiManagementServer()
 	{
 	}
+
 	
 	/**
+	 * Checks if a specific port is available for listening.
+	 * 
+	 * @param port the port number to check
+	 * @return true if the port is available, false otherwise
+	 */
+	private static boolean isPortAvailable(int port)
+	{
+		try (ServerSocket serverSocket = new ServerSocket(port))
+		{
+			return true;
+		}
+		catch (IOException e)
+		{
+			return false;
+		}
+	}
+
+	/**
+	 * Finds the next available port starting from the given port number.
+	 * 
+	 * @param startPort      the starting port number to check
+	 * @param tryNumOfPorts  Number of ports to try before giving up
+	 * @return the first available port found
+	 * 
+	 * @throws IllegalArgumentException if no available port is found
+	 */
+	public static int findAvailablePort(int startPort, int tryNumOfPorts)
+	{
+		int maxPort = startPort + tryNumOfPorts;
+
+		if (maxPort > 65535)
+			maxPort = 65535;
+		
+		for (int port = startPort; port <= maxPort; port++)
+		{
+			if ( isPortAvailable(port) )
+			{
+				return port;
+			}
+		}
+
+		throw new IllegalArgumentException("No available port found between " + startPort + " and " + maxPort);
+	}
+    
+    /**
 	 * Start the Server
 	 */
 	public void startServer()
@@ -135,6 +184,10 @@ public class NoGuiManagementServer
 		boolean onStartDoDump      = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_NOGUI_MANAGEMENT_http_onStartup_doDump, DEFAULT_NOGUI_MANAGEMENT_http_onStartup_doDump);
 		int     maxPort            = startPort + tryNumOfPorts;
 
+		// Lets find a "start" port to try listen to.
+		// yes we might be missing out on some port numbers if there are concurrently Management Server that does this at the exact same time... but who cares...
+		startPort = findAvailablePort(startPort, tryNumOfPorts);
+		
 		// Loop a couple of ports (if they are busy)
 		for (int i = 0; i < tryNumOfPorts; i++)
 		{
@@ -144,7 +197,14 @@ public class NoGuiManagementServer
 
 			try
 			{
-				Server server = new Server();
+				QueuedThreadPool threadPool = new QueuedThreadPool();
+				threadPool.setMinThreads(2);
+				threadPool.setMaxThreads(20);
+				threadPool.setIdleTimeout(60_000);  // 60 seconds
+				threadPool.setName("JettyThreadPool");
+
+				Server server = new Server(threadPool);
+//				Server server = new Server();
 
 				ServerConnector http = new ServerConnector(server);
 		        http.setHost(listnerAddress);

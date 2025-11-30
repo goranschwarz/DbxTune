@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content.rs;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.rs.CmWsRepLatency;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.pcs.report.content.ase.AseAbstract;
@@ -87,7 +88,7 @@ public class RsWsRepLatency extends AseAbstract
 	{
 		String schema = getReportingInstance().getDbmsSchemaName();
 
-		_CmWsRepLatency_DataAgeInSec = createTsLineChart(conn, schema, "CmWsRepLatency", "DataAgeInSec", -1, true, null, "Data Age In Seconds, from Active->Standby");
+		_CmWsRepLatency_DataAgeInSec = createTsLineChart(conn, schema, CmWsRepLatency.CM_NAME, CmWsRepLatency.GRAPH_NAME_DATA_AGE_IN_SEC, -1, true, null, "Data Age In Seconds, from Active->Standby");
 	}
 
 	private IReportChart _CmWsRepLatency_DataAgeInSec;

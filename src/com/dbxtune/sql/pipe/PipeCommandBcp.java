@@ -658,60 +658,60 @@ extends PipeCommandAbstract
 
 			if (StringUtil.hasValue(_cmdParams._server))
 			{
-    			Properties props = new Properties();
-    			
-    			if (_cmdParams._slowBcp )
-    			{
-    				// Sybase ASE
-    				if (true)
-    				{
-        				boolean slowBcpDoDynamicPrepare = Configuration.getCombinedConfiguration().getBooleanProperty("PipeCommandBcp.slowBcp.DYNAMIC_PREPARE", true);
-        				if (slowBcpDoDynamicPrepare)
-        				{
-        					String msg = "Slow BCP has been enabled. Instead of jConnect URL option 'ENABLE_BULK_LOAD=true', lets use 'DYNAMIC_PREPARE=true' (note this can be disabled with property 'PipeCommandBcp.slowBcp.DYNAMIC_PREPARE=false')";
-        					_logger.info(msg);
-       						addInfoMessage(msg);
-        					props.setProperty("DYNAMIC_PREPARE", "true");
-        				}
-    				}
-    			}
-    			else
-    			{
-    				// Sybase ASE
-    				if (true)
-    				{
-    					String msg = "Enable jConnection connection property 'ENABLE_BULK_LOAD' when connecting.";
-    					_logger.info(msg);
-    					addInfoMessage(msg);
-    					props.setProperty("ENABLE_BULK_LOAD", "true");
-    				}
-    				
-    				// Microsoft SQL-Server
-//    				if (false)
-//    				{
-//    					String msg = "Enable SQL-Server JDBC connection property 'useBulkCopyForBatchInsert' when connecting.";
-//    					_logger.info(msg);
-//    					addInfoMessage(msg);
-//        				props.setProperty("useBulkCopyForBatchInsert", "true");
-//    				}
-    			}
+				Properties props = new Properties();
+				
+				if (_cmdParams._slowBcp )
+				{
+					// Sybase ASE
+					if (true)
+					{
+						boolean slowBcpDoDynamicPrepare = Configuration.getCombinedConfiguration().getBooleanProperty("PipeCommandBcp.slowBcp.DYNAMIC_PREPARE", true);
+						if (slowBcpDoDynamicPrepare)
+						{
+							String msg = "Slow BCP has been enabled. Instead of jConnect URL option 'ENABLE_BULK_LOAD=true', lets use 'DYNAMIC_PREPARE=true' (note this can be disabled with property 'PipeCommandBcp.slowBcp.DYNAMIC_PREPARE=false')";
+							_logger.info(msg);
+							addInfoMessage(msg);
+							props.setProperty("DYNAMIC_PREPARE", "true");
+						}
+					}
+				}
+				else
+				{
+					// Sybase ASE
+					if (true)
+					{
+						String msg = "Enable jConnection connection property 'ENABLE_BULK_LOAD' when connecting.";
+						_logger.info(msg);
+						addInfoMessage(msg);
+						props.setProperty("ENABLE_BULK_LOAD", "true");
+					}
+					
+					// Microsoft SQL-Server
+//					if (false)
+//					{
+//						String msg = "Enable SQL-Server JDBC connection property 'useBulkCopyForBatchInsert' when connecting.";
+//						_logger.info(msg);
+//						addInfoMessage(msg);
+//						props.setProperty("useBulkCopyForBatchInsert", "true");
+//					}
+				}
 
-    			String hostPortStr = null;
-    			if ( _cmdParams._server.contains(":") )
-    				hostPortStr = _cmdParams._server;
-    			else
-    				hostPortStr = AseConnectionFactory.getIHostPortStr(_cmdParams._server);
-    			
-    			if (StringUtil.isNullOrBlank(hostPortStr))
-    				throw new Exception("Can't find server name information about '" + _cmdParams._server + "', hostPortStr=null. Please try with -S hostname:port");
+				String hostPortStr = null;
+				if ( _cmdParams._server.contains(":") )
+					hostPortStr = _cmdParams._server;
+				else
+					hostPortStr = AseConnectionFactory.getIHostPortStr(_cmdParams._server);
+				
+				if (StringUtil.isNullOrBlank(hostPortStr))
+					throw new Exception("Can't find server name information about '" + _cmdParams._server + "', hostPortStr=null. Please try with -S hostname:port");
 
 				if (_cmdParams._debug)
 					addDebugMessage("Creating connection to ASE: hostPortStr='" + hostPortStr + "', dbname='" + _cmdParams._db + "', user='" + _cmdParams._user + "', applicationName='sqlw-bcp'.");
 
 				_destConn = DbxConnection.createDbxConnection(AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null));
 
-    			if ( ! StringUtil.isNullOrBlank(_cmdParams._db) )
-    				AseConnectionUtils.useDbname(_destConn, _cmdParams._db);
+				if ( ! StringUtil.isNullOrBlank(_cmdParams._db) )
+					AseConnectionUtils.useDbname(_destConn, _cmdParams._db);
 			}
 			else
 			{
@@ -729,18 +729,34 @@ extends PipeCommandAbstract
 				// Special options for: Microsoft SQL-Server
 				if (StringUtil.hasValue(_cmdParams._url) && _cmdParams._url.startsWith("jdbc:sqlserver:"))
 				{
-	    			if ( ! _cmdParams._slowBcp )
-	    			{
-    					String msg = "Enable SQL-Server JDBC connection property 'useBulkCopyForBatchInsert' when connecting.";
-    					_logger.info(msg);
-    					addInfoMessage(msg);
-        				props.setProperty("useBulkCopyForBatchInsert", "true");
-	    			}
-				}
+					if ( ! _cmdParams._slowBcp )
+					{
+						String msg = "Enable SQL-Server JDBC connection property 'useBulkCopyForBatchInsert' when connecting.";
+						_logger.info(msg);
+						addInfoMessage(msg);
+						props.setProperty("useBulkCopyForBatchInsert", "true");
+					}
 
-				String msg = "Try getConnection to driver='" + _cmdParams._driver + "', url='" + _cmdParams._url + "', user='" + _cmdParams._user + "'.";
+					// Typical URL parameters: databaseName=SomeDbName;encrypt=true;trustServerCertificate=true
+					if (!props.containsKey("encrypt"))                props.put("encrypt",                "true");
+					if (!props.containsKey("trustServerCertificate")) props.put("trustServerCertificate", "true");
+					
+					if (StringUtil.hasValue(_cmdParams._db))
+					{
+						if (!props.containsKey("databaseName")) props.put("databaseName", _cmdParams._db);
+					}
+				}
+				
+				Properties tmpProps = new Properties();
+				tmpProps.putAll(props);
+				tmpProps.setProperty("password", "***secret***");
+
+				String msg = "Try getConnection to driver='" + _cmdParams._driver + "', url='" + _cmdParams._url + "', user='" + _cmdParams._user + "', props=" + tmpProps + ".";
 				if (_cmdParams._debug)
+				{
+					System.out.println("DEBUG-TO-CONSOLE: " + msg);
 					addDebugMessage(msg);
+				}
 				_logger.debug(msg);
 
 				_destConn = DbxConnection.createDbxConnection(DriverManager.getConnection(_cmdParams._url, props));
@@ -1218,7 +1234,10 @@ extends PipeCommandAbstract
 			// Check if "transfer" will work
 			if (sourceNumCols != destNumCols)
 			{
-				String msg = "Source ResultSet and Destination Table does not have the same column count (source=" + sourceNumCols + ", dest=" + destNumCols + ").";
+				String msg = "Source ResultSet and Destination Table does not have the same column count (source=" + sourceNumCols + ", dest=" + destNumCols + ")."
+						+ "\n   Source columns[" + sourceNumCols + "]: " + sourceRsmdC.getColumnNames()
+						+ "\n     Dest columns[" + destNumCols   + "]: " + destRsmdC  .getColumnNames()
+						;
 				addErrorMessage(msg);
 				_logger.error(msg);
 

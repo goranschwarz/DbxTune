@@ -4193,6 +4193,11 @@ public class ResultSetTableModel
 		return _rows.get(rowId);
 	}
 
+	public ArrayList<Object> getRowArrayList(int rowId)
+	{
+		return _rows.get(rowId);
+	}
+
 //	/**
 //	 *
 //	 */

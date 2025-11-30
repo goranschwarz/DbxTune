@@ -46,6 +46,7 @@ import com.dbxtune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerDbSize;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerDeadlocks;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerIndexOpSumPerDb;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerJobScheduler;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerMissingIndexes;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerPlanCacheHistory;
@@ -88,6 +89,7 @@ extends DailySummaryReportDefault
 		// SQL
 		addReportEntry( new SqlServerPlanCacheHistory       (this));        // Check if the Plan Cache can be trusted... https://www.brentozar.com/archive/2018/07/tsql2sday-how-much-plan-cache-history-do-you-have/
 		addReportEntry( new SqlServerDeadlocks              (this));
+		addReportEntry( new SqlServerIndexOpSumPerDb        (this));
 //		addReportEntry( new SqlServerTopCmExecQueryStatsDb  (this)); // Older version of the "DB" statistics
 		addReportEntry( new SqlServerTopCmExecQueryStatPerDb(this));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.CPU_TIME));

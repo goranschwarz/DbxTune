@@ -113,6 +113,7 @@ import com.dbxtune.utils.Log4jUtils;
 import com.dbxtune.utils.Logging;
 import com.dbxtune.utils.Memory;
 import com.dbxtune.utils.NetUtils;
+import com.dbxtune.utils.PlatformUtils;
 import com.dbxtune.utils.ShutdownHandler;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
@@ -123,11 +124,18 @@ public class DbxTuneCentral
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	public static final String  PROPKEY_WEB_PORT = "DbxTuneCentral.web.port";
+	public static final String  PROPKEY_WEB_PORT = "DbxTuneCentral.web.http.port";
 	public static final int     DEFAULT_WEB_PORT = 8080;
 
-	public static final String  PROPKEY_WEB_SSL_PORT = "DbxTuneCentral.web.port";
+	public static final String  PROPKEY_WEB_SSL_PORT = "DbxTuneCentral.web.https.port";
 	public static final int     DEFAULT_WEB_SSL_PORT = 8443;
+
+	// to implement a static method to get port numbers, based on what OS we are on
+	public static final String  PROPKEY_WEB_PORT_WINDOWS = "DbxTuneCentral.web.http.port.windows";
+	public static final int     DEFAULT_WEB_PORT_WINDOWS = 80;
+
+	public static final String  PROPKEY_WEB_SSL_PORT_WINDOWS = "DbxTuneCentral.web.https.port.windows";
+	public static final int     DEFAULT_WEB_SSL_PORT_WINDOWS = 443;
 
 	public static final String  PROPKEY_shutdown_maxWaitTime = "DbxTuneCentral.shutdown.maxWaitTime";
 	public static final int     DEFAULT_shutdown_maxWaitTime = 180*1000; // 180 sec (2.5 minutes) -- if it goes down "ugly" if **WILL** take several hours to come up "clean"
@@ -982,7 +990,8 @@ public class DbxTuneCentral
 		// Mark it as to be removed when the JVM ends.
 		f.deleteOnExit();
 
-		int port = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT, DEFAULT_WEB_PORT);
+//		int port = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT, DEFAULT_WEB_PORT);
+		int port = getWebHttpPort();
 
 		// Create the configuration
 		Configuration conf = new Configuration(centralServiceInfoFile);
@@ -1745,6 +1754,23 @@ public class DbxTuneCentral
 		}
 	}
 
+	public static int getWebHttpPort()
+	{
+		if (PlatformUtils.isWindows())
+		{
+			return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT_WINDOWS, DEFAULT_WEB_PORT_WINDOWS);
+		}
+		return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT, DEFAULT_WEB_PORT);
+	}
+	public static int getWebHttpsPort()
+	{
+		if (PlatformUtils.isWindows())
+		{
+			return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT_WINDOWS, DEFAULT_WEB_SSL_PORT_WINDOWS);
+		}
+		return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT, DEFAULT_WEB_SSL_PORT);
+	}
+
 	private static void startWebServerJetty()
 	throws Exception
 	{
@@ -1808,8 +1834,10 @@ public class DbxTuneCentral
 		if (true)
 		{
 //			Server server = new Server(8080);
-			int port    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT    , DEFAULT_WEB_PORT);
-			int sslPort = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT, DEFAULT_WEB_SSL_PORT);
+//			int port    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT    , DEFAULT_WEB_PORT);
+//			int sslPort = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT, DEFAULT_WEB_SSL_PORT);
+			int port    = getWebHttpPort();
+			int sslPort = getWebHttpsPort();
 			_server = new Server(port);
 
 			HttpConfiguration httpConfig = new HttpConfiguration();

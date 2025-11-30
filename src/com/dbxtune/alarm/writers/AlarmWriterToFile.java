@@ -33,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.utils.Configuration;
@@ -427,7 +428,7 @@ extends AlarmWriterAbstract
 
 		for (AlarmEvent alarmEvent : activeAlarms)
 		{
-			String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), alarmEvent, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:8080");
+			String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), alarmEvent, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort());
 			writeToFile.println(writeText);
 		}
 

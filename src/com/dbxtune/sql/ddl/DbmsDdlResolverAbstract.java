@@ -301,7 +301,7 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 
 			if (DbmsDdlResolverAbstract.shouldHaveNonZeroPrecisionForDataType(javaSqlType))
 			{
-				String msg = "dataTypeResolverToTarget(): Inproper Column Precision for: TableName='" + entry.getTableName() + "', ColumnName='" + entry.getColumnLabel() + "' has a Precision of " + length + ", and a Scale of " + scale + ". The PCS will use a Presision of " + newLength + " instead.";
+				String msg = "dataTypeResolverToTarget(): Inproper Column Precision for: TableName='" + entry.getTableName() + "', ColumnName='" + entry.getColumnLabel() + "' has a Precision of " + length + ", and a Scale of " + scale + ". The PCS will use a precision of " + newLength + " instead.";
 				_logger.info(msg, new RuntimeException(msg));
 			}
 

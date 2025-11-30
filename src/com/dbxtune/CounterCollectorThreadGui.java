@@ -677,6 +677,11 @@ extends CounterCollectorThreadAbstract
 							cm.setSampleException(null);
 							cm.refresh();
 							
+							if (cm.isTableStructureChanged())
+							{
+								cm.fireTableDataChanged();
+							}
+							
 							// Add it to the list of refreshed cm's
 							refreshedCms.put(cm.getName(), cm);
 

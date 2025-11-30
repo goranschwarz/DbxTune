@@ -408,6 +408,7 @@ public class ConnectionProfile
 
 	public static final String       XML_TDS_DBXTUNE_OptRecordSession            = "OptRecordSession";
 	public static final String       XML_TDS_DBXTUNE_OptOsMonitoring             = "OptOsMonitoring";
+	public static final String       XML_TDS_DBXTUNE_OptGetDbmsConfig            = "OptGetDbmsConfig";
 	public static final String       XML_TDS_DBXTUNE_OptConnectAtStartup         = "OptConnectAtStartup";
 	public static final String       XML_TDS_DBXTUNE_OptReconnectOnLostConn      = "OptReconnectOnLostConn";
 	public static final String       XML_TDS_DBXTUNE_OptConnectLater             = "OptConnectLater";
@@ -512,6 +513,7 @@ public class ConnectionProfile
 		// DbxTune options
 		public boolean       _dbxtuneOptRecordSession          = false;
 		public boolean       _dbxtuneOptOsMonitoring           = false;
+		public boolean       _dbxtuneOptGetDbmsConfig          = true;
 		public boolean       _dbxtuneOptConnectAtStartup       = false;
 		public boolean       _dbxtuneOptReconnectOnLostConn    = true;
 		public boolean       _dbxtuneOptConnectLater           = false;
@@ -579,6 +581,7 @@ public class ConnectionProfile
 			// DbxTune options
 			_dbxtuneOptRecordSession           = fromEntry._dbxtuneOptRecordSession;
 			_dbxtuneOptOsMonitoring            = fromEntry._dbxtuneOptOsMonitoring;
+			_dbxtuneOptGetDbmsConfig           = fromEntry._dbxtuneOptGetDbmsConfig;
 			_dbxtuneOptConnectAtStartup        = fromEntry._dbxtuneOptConnectAtStartup;
 			_dbxtuneOptReconnectOnLostConn     = fromEntry._dbxtuneOptReconnectOnLostConn;
 			_dbxtuneOptConnectLater            = fromEntry._dbxtuneOptConnectLater;
@@ -640,6 +643,7 @@ public class ConnectionProfile
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_UseTemplateName      , _dbxtuneUseTemplateName          , entry._dbxtuneUseTemplateName);
 			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptRecordSession         , _dbxtuneOptRecordSession         , entry._dbxtuneOptRecordSession);
 			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptOsMonitoring          , _dbxtuneOptOsMonitoring          , entry._dbxtuneOptOsMonitoring);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptGetDbmsConfig         , _dbxtuneOptGetDbmsConfig         , entry._dbxtuneOptGetDbmsConfig);
 			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectAtStartup      , _dbxtuneOptConnectAtStartup      , entry._dbxtuneOptConnectAtStartup);
 			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptReconnectOnLostConn   , _dbxtuneOptReconnectOnLostConn   , entry._dbxtuneOptReconnectOnLostConn);
 			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectLater          , _dbxtuneOptConnectLater          , entry._dbxtuneOptConnectLater);
@@ -707,6 +711,7 @@ public class ConnectionProfile
 				htmlTabRow(sb, XML_TDS_DBXTUNE_UseTemplateName      , _dbxtuneUseTemplateName);
 			htmlTabRow(sb, XML_TDS_DBXTUNE_OptRecordSession         , _dbxtuneOptRecordSession);
 			htmlTabRow(sb, XML_TDS_DBXTUNE_OptOsMonitoring          , _dbxtuneOptOsMonitoring);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptGetDbmsConfig         , _dbxtuneOptGetDbmsConfig);
 			htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectAtStartup      , _dbxtuneOptConnectAtStartup);
 			htmlTabRow(sb, XML_TDS_DBXTUNE_OptReconnectOnLostConn   , _dbxtuneOptReconnectOnLostConn);
 			htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectLater          , _dbxtuneOptConnectLater);
@@ -782,6 +787,7 @@ public class ConnectionProfile
 		
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptRecordSession,            _dbxtuneOptRecordSession);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptOsMonitoring,             _dbxtuneOptOsMonitoring);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptGetDbmsConfig,            _dbxtuneOptGetDbmsConfig);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectAtStartup,         _dbxtuneOptConnectAtStartup);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptReconnectOnLostConn,      _dbxtuneOptReconnectOnLostConn);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectLater,             _dbxtuneOptConnectLater);
@@ -849,6 +855,7 @@ public class ConnectionProfile
 			// DbxTune options
 			entry._dbxtuneOptRecordSession           = getValue(element, XML_TDS_DBXTUNE_OptRecordSession,          entry._dbxtuneOptRecordSession);
 			entry._dbxtuneOptOsMonitoring            = getValue(element, XML_TDS_DBXTUNE_OptOsMonitoring,           entry._dbxtuneOptOsMonitoring);
+			entry._dbxtuneOptGetDbmsConfig           = getValue(element, XML_TDS_DBXTUNE_OptGetDbmsConfig,          entry._dbxtuneOptGetDbmsConfig);
 			entry._dbxtuneOptConnectAtStartup        = getValue(element, XML_TDS_DBXTUNE_OptConnectAtStartup,       entry._dbxtuneOptConnectAtStartup); // should the be in here???
 			entry._dbxtuneOptReconnectOnLostConn     = getValue(element, XML_TDS_DBXTUNE_OptReconnectOnLostConn,    entry._dbxtuneOptReconnectOnLostConn);
 			entry._dbxtuneOptConnectLater            = getValue(element, XML_TDS_DBXTUNE_OptConnectLater,           entry._dbxtuneOptConnectLater); // should the be in here???

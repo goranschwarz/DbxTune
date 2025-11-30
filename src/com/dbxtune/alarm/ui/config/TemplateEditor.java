@@ -73,6 +73,7 @@ import com.dbxtune.alarm.ui.view.DummyEventDialog.AlarmEventSetCallback;
 import com.dbxtune.alarm.writers.AlarmWriterAbstract;
 import com.dbxtune.alarm.writers.IAlarmWriter;
 import com.dbxtune.alarm.writers.WriterUtils;
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.gui.swing.GLabel;
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.dbxtune.utils.Configuration;
@@ -692,7 +693,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 			try
 			{
 				String type = _setAlarmType_cbx.getSelectedItem()+"";
-				String str = WriterUtils.createMessageFromTemplate(type, _exampleAlarmEvent, _exampleAlarmEventList, _editor_txt.getText(), true, null, "http://DUMMY-dbxtune:8080");
+				String str = WriterUtils.createMessageFromTemplate(type, _exampleAlarmEvent, _exampleAlarmEventList, _editor_txt.getText(), true, null, "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort());
 				_example_lbl.setText(str);
 			}
 			catch (Exception ex)

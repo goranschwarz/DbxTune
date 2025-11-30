@@ -291,6 +291,7 @@ extends SqlServerAbstract
 		// Columns description
 		rstm.setColumnDescription("dbname"                               , "Name of the database");
 		rstm.setColumnDescription("query_hash"                           , "Binary hash value calculated on the query and used to identify queries with similar logic. \nYou can use the query hash to determine the aggregate resource usage for queries that differ only by literal values");
+		rstm.setColumnDescription("ProcName"                             , "Name of the 'procedure/trigger/etc' that executed this SQL Statement. Resolved from 'object_name(objectid, dbid)' from sys.dm_exec_sql_text(qs.sql_handle).");
 		rstm.setColumnDescription("SqlText"                              , "SQL Text typical for the 'query_hash'");
 		rstm.setColumnDescription("ExecPlan"                             , "The Execution Plan");
 		rstm.setColumnDescription("plan__count"                          , "");
@@ -555,6 +556,7 @@ extends SqlServerAbstract
 			    + "select top " + topRows + " \n"
 			    + "     [dbname] \n"
 			    + "    ,[query_hash] \n"
+			    + "    ,max([object_name])                     as [ProcName] \n"
 			    + "    ,max([" + col_SqlText +"])              as [SqlText] \n"
 			    + "    ,cast('' as varchar(30))                as [ExecPlan] \n"
 			    + "    \n"
@@ -1148,6 +1150,7 @@ extends SqlServerAbstract
 				int pos_dbname     = _shortRstm.findColumn("dbname");
 				int pos_query_hash = _shortRstm.findColumn("query_hash");
 				int pos_query      = _shortRstm.findColumn("SqlText");
+				int pos_ProcName   = _shortRstm.findColumn("ProcName");
 
 
 				ColumnCopyRender msToHMS    = HtmlTableProducer.MS_TO_HMS;
@@ -1195,6 +1198,7 @@ extends SqlServerAbstract
 						String dbname     = _shortRstm.getValueAsString    (r, pos_dbname);
 						String query_hash = _shortRstm.getValueAsString    (r, pos_query_hash);
 						String sqlText    = _shortRstm.getValueAsString    (r, pos_query);
+						String procName   = _shortRstm.getValueAsString    (r, pos_ProcName);
 						
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
 						String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
@@ -1241,7 +1245,9 @@ extends SqlServerAbstract
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
 
-						sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
+						sqlText = "<xmp>" + sqlText + "</xmp>"
+								+ (StringUtil.isNullOrBlank(procName) ? "" : "<br>Executed By: <code>" + procName + "</code> <br>")
+								+ tableInfo;
 						
 						// add record to SimpleResultSet
 						srs.addRow(dbname, query_hash, sparklines, sqlText);

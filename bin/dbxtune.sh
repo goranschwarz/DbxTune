@@ -64,6 +64,7 @@ fi
 ##-------------------------------------------------------
 ## Do settings based on the toolset
 ##
+toolset_origin="${1}"
 toolset=$(echo "${1}" | tr '[:upper:]' '[:lower:]')
 case "${toolset}" in
 	ase)
@@ -273,7 +274,7 @@ case "${toolset}" in
 	com.dbxtune.*)
 		shortAppName="classtest"
 		longAppName="ClassTest"
-		javaMainClass="${toolset}"
+		javaMainClass="${toolset_origin}"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -465,8 +466,8 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/slf4j-api-2.0.16.jar          ## 
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jul-to-slf4j-2.0.16.jar       ## Bridge for JUL to SLF4J used by SchemaCrawlerUtils
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-SNAPSHOT.jar
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.200.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.1.214.jar
-#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.4.240.jar
+#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.1.214.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-2.4.240.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-5.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-5.2.jar

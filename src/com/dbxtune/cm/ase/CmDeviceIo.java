@@ -744,4 +744,60 @@ extends CountersModel
 				diffData.setValueAt(new BigDecimal(0), rowId, WritesPctId);
 		}
 	}
+//	//--------------------------------------------------------------------------------------
+//	//--------------------------------------------------------------------------------------
+//	//-- Aggregation -- LETS DO THIS LATER... Right now I NEED to get a new Version out the door... 
+//	//--------------------------------------------------------------------------------------
+//	//--------------------------------------------------------------------------------------
+//	@Override
+//	public Map<String, AggregationType> createAggregateColumns()
+//	{
+//		HashMap<String, AggregationType> aggColumns = new HashMap<>(getColumnCount());
+//
+//		AggregationType tmp;
+//		
+//		// Create the columns :::::::::::::::::::::::::::::::::::::::::::::::::::::: And ADD it to the return Map 
+////		tmp = new AggregationType("LogicalName"           , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("TotalIOs"              , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("Reads"                 , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("ReadsPct"              , AggregationType.Agg.AVG, true, false);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("APFReads"              , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("APFReadsPct"           , AggregationType.Agg.AVG, true, false);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("Writes"                , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("WritesPct"             , AggregationType.Agg.AVG, true, false);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("DevSemaphoreRequests"  , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("DevSemaphoreWaits"     , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("IOTime"                , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("ReadTime"              , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("WriteTime"             , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("AvgServ_ms"            , AggregationType.Agg.AVG, true, false);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("ReadServiceTimeMs"     , AggregationType.Agg.AVG, true, false);          aggColumns.put(tmp.getColumnName(), tmp);
+//		tmp = new AggregationType("WriteServiceTimeMs"    , AggregationType.Agg.AVG, true, false);          aggColumns.put(tmp.getColumnName(), tmp);
+////		tmp = new AggregationType("DeviceType"            , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+////		tmp = new AggregationType("PhysicalName"          , AggregationType.Agg.SUM);          aggColumns.put(tmp.getColumnName(), tmp);
+//		
+//		return aggColumns;
+//	}
+////	TODO; // The graphs can't use "new Double[this.size()];" if we do NOT want '_Total' to be part of the graphs (but then we should put it FIRST)
+////	TODO; // Local graphs in the "extended panel" should NOT INCLUDE the "_Total" 
+////	TODO; // Implement the 'AVG_GT0' or use "special" calculation class... I tried 'AVG, onAverageTreatZeroAsNull=true' but it did NOT do it correct 
+////	TODO; // Implement this for SQL Server as well...
+//
+////	@Override
+////	public Object calculateAggregateRow_getAggregatePkColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
+////	{
+////		if ("xxxx".equalsIgnoreCase(colName)) return Integer.valueOf(-1);
+////		
+////		return addValue;
+////	}
+//
+//	@Override
+//	public Object calculateAggregateRow_nonAggregatedColumnDataProvider(CounterSample newSample, String colName, int c, int jdbcType, Object addValue)
+//	{
+//		if ("LogicalName" .equalsIgnoreCase(colName)) return "_Total";
+////		if ("DeviceType"  .equalsIgnoreCase(colName)) return "_Total";
+////		if ("PhysicalName".equalsIgnoreCase(colName)) return "_Total";
+//
+//		return null;
+//	}
 }

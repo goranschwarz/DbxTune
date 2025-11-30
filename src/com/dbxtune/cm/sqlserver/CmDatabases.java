@@ -47,6 +47,7 @@ import com.dbxtune.ICounterController.DbmsOption;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventDatabaseOption;
 import com.dbxtune.alarm.events.AlarmEventDatabaseState;
 import com.dbxtune.alarm.events.AlarmEventDbSizeChanged;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
@@ -1704,6 +1705,7 @@ extends CountersModel
 			    + "declare @sql_dataSizeMb  varchar(max) = '' \n"
 			    + "declare @sql_logSizeMb   varchar(max) = '' \n"
 			    + "declare @sql_queryStore  varchar(max) = '' \n"
+			    + "declare @sql_dbScopeCfg  varchar(max) = '' \n"
 			    + "";
 		
 		// Get DB Size Information (using a cursor to get database context, see: sql_cursorLoopAllDbs)
@@ -1788,6 +1790,39 @@ extends CountersModel
 			    + "";
 		}
 
+		// ----- DB Scoped Configuration -- SQL-Server 2016 and above OR: Azure DB, Azure ManagedInstance
+		String sql_dbScopeCfg                 = "";
+		String dbScopedConfig_Columns         = "    ,db_scoped_nondefault_configs = CAST(NULL as varchar(4096)) \n";
+		String dbScopedConfig_Join            = "";
+		String dbScopedConfig_DropTempTable1  = "";
+		String dbScopedConfig_DropTempTable2  = "";
+		if (srvVersion >= Ver.ver(2017) || ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureManagedInstance())
+		{
+			// database_scoped_configurations was introduced in 2016 but STRING_AGG(...) was introduced in 2017. So we need 2017...
+			sql_dbScopeCfg = ""
+				    + "\n"
+				    + "\n"
+				    + "--------------------------- \n"
+				    + "-- Database Scoped Configuration (Only Non Defaults) \n"
+				    + "--------------------------- \n"
+				    + "CREATE TABLE #dbScopeCfg (database_id int, nondefault_configs varchar(4096) null) \n"
+				    + "set @sql_dbScopeCfg = ' \n"
+				    + "INSERT INTO #dbScopeCfg \n"
+				    + "SELECT /*  ${cmCollectorName} */ \n"
+				    + "     DB_ID() as database_id \n"
+				    + "    ,isnull(STRING_AGG(CONVERT(VARCHAR(4096), CONCAT(name, ''='', convert(varchar(255),value))), '', '') WITHIN GROUP(ORDER BY configuration_id), '''') AS nondefault_configs \n"
+				    + "FROM sys.database_scoped_configurations \n"
+				    + "WHERE is_value_default != 1; \n"
+				    + "' \n"
+				    + "";
+
+			dbScopedConfig_Columns = "    ,db_scoped_nondefault_configs = dbsc.nondefault_configs \n";
+			
+			dbScopedConfig_Join           = "LEFT OUTER JOIN #dbScopeCfg    dbsc ON d.database_id = dbsc   .database_id \n";
+			dbScopedConfig_DropTempTable1 = "if (object_id('tempdb..#dbScopeCfg') is not null) drop table #dbScopeCfg  \n";
+			dbScopedConfig_DropTempTable2 = "drop table #dbScopeCfg  \n";
+		}
+		
 		// With the below construct: we can STOP using 'sp_MSforeachdb', and possibly remove all that code
 		String sql_cursorLoopAllDbs = ""
 			    + "\n"
@@ -1812,7 +1847,7 @@ extends CountersModel
 			    + "        BREAK; \n"
 			    + " \n"
 			    + "     SET @sql_execFull = 'USE ' + @c_dbname + ';' + CHAR(10) \n"
-			    + "         + @sql_dataSizeMb + @sql_logSizeMb + @sql_queryStore; \n"
+			    + "         + @sql_dataSizeMb + @sql_logSizeMb + @sql_queryStore + @sql_dbScopeCfg; \n"
 			    + " \n"
 			    + "    /* change context to each database and collect database properties into temp table */ \n"
 			    + "    BEGIN TRY \n"
@@ -2166,7 +2201,7 @@ extends CountersModel
 				    + "--------------------------- \n"
 				    + "-- VLF - Virtual Log File Info \n"
 				    + "--------------------------- \n"
-				    + "    SELECT \n"
+				    + "    SELECT /* ${cmCollectorName} */ \n"
 				    + "         ls.database_id \n"
 				    + "        ,vlf_count = ls.total_vlf_count \n"
 			//	    + "        ,ls.log_since_last_checkpoint_mb \n"
@@ -2178,12 +2213,11 @@ extends CountersModel
 
 			vlfInfoColumns = "    ,vlf_count                = vlfInfo.vlf_count \n";
 			
-			vlfInfoJoin           = "LEFT OUTER JOIN #vlfInfo    vlfInfo ON d.database_id = vlfInfo .database_id \n";
+			vlfInfoJoin           = "LEFT OUTER JOIN #vlfInfo    vlfInfo ON d.database_id = vlfInfo.database_id \n";
 			vlfInfoDropTempTable1 = "if (object_id('tempdb..#vlfInfo')    is not null) drop table #vlfInfo  \n";
 			vlfInfoDropTempTable2 = "drop table #vlfInfo  \n";
 		}
 
-		
 		String sql = ""
 			    + "-- Drop any of the old temporary tables if they still exists \n" 
 			    + "if (object_id('tempdb..#dataSizeMb') is not null) drop table #dataSizeMb \n" 
@@ -2194,6 +2228,7 @@ extends CountersModel
 			    + osvLogDropTempTable1
 			    + queryStoreDropTempTable1
 			    + vlfInfoDropTempTable1
+			    + dbScopedConfig_DropTempTable1
 			    + "go \n"
 			    + " \n"
 //			    + "--------------------------- \n"
@@ -2241,6 +2276,9 @@ extends CountersModel
 
 			    // Query Store Info (by cursor)
 			    + sql_queryStore
+
+			    // Database Scoped Configurations -- Only Non Defaults (by cursor)
+			    + sql_dbScopeCfg
 
 			    // Loop all databases where we need DB Context sensitive information
 			    + sql_cursorLoopAllDbs
@@ -2322,6 +2360,7 @@ extends CountersModel
 			    + "    ,rcsi                     = d.is_read_committed_snapshot_on \n"
 			    + "    ,si_state                 = d.snapshot_isolation_state_desc \n"
 			    + adr_column
+			    + dbScopedConfig_Columns
 			    + "    ,d.create_date \n"
 			    + availabilityGroupName
 			    + availabilityGroupRole
@@ -2411,6 +2450,7 @@ extends CountersModel
 			    + osvLogJoin
 			    + queryStoreJoin
 			    + vlfInfoJoin
+			    + dbScopedConfig_Join
 			    + "WHERE has_dbaccess(d.name) != 0   /** NOTE: if database is in SINGLE_USER mode, this will disqualify a row if 'someone' is in the database, and ALARMS will RAISED/CANCELED inpredictable **/ \n"
 			    + whereAvailabilityGroup
 			    + "go \n"
@@ -2424,6 +2464,7 @@ extends CountersModel
 			    + osvLogDropTempTable2
 			    + queryStoreDropTempTable2
 			    + vlfInfoDropTempTable2
+			    + dbScopedConfig_DropTempTable2
 			    + "go \n"
 			    + "";
 
@@ -3943,9 +3984,87 @@ extends CountersModel
 				}
 			} // end: vlf_count
 			
+			//-------------------------------------------------------
+			// Scoped DB Options
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("DbScopedOptions"))
+			{
+				Object o_DbScopedOptions  = cm.getAbsValue(r, "db_scoped_nondefault_configs");
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', DbScopedOptions='" + o_DbScopedOptions + "'.");
+
+				if (o_DbScopedOptions != null)
+				{
+					String currDbScopedOptions = o_DbScopedOptions.toString();
+					String prevDbScopedOptions = _prevDbScopedOptionsMap.get(dbname);
+					
+					// On first sample
+					//  - The check will be SKIPPED
+					//  - The configuration data will be added to _prevDbScopedOptionsMap AFTER this (thats why we wont get alarms on FIRST check)
+					if ( prevDbScopedOptions != null )  
+					{
+						if ( ! currDbScopedOptions.equals(prevDbScopedOptions) )
+						{
+							// Get config 'skip/allow'
+							String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbScopedOptionsForDbs,  DEFAULT_alarm_DbScopedOptionsForDbs);
+							String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbScopedOptionsSkipDbs, DEFAULT_alarm_DbScopedOptionsSkipDbs);
+							String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbScopedOptionsForSrv,  DEFAULT_alarm_DbScopedOptionsForSrv);
+							String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DbScopedOptionsSkipSrv, DEFAULT_alarm_DbScopedOptionsSkipSrv);
+
+							// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+							boolean doAlarm = true;
+
+							// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+							// Below is more readable, from a variable context point-of-view, but HARDER to understand
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+							
+							if (doAlarm)
+							{
+								// Parse the CSV Text into a List, this so we can find out what DBOption that was added or removed
+								List<String> prevDbScopedOptionsList = StringUtil.parseCommaStrToList(prevDbScopedOptions);
+								List<String> currDbScopedOptionsList = StringUtil.parseCommaStrToList(currDbScopedOptions);
+
+								List<String> addedOptions   = new ArrayList<>(currDbScopedOptionsList); 
+								addedOptions  .removeAll(prevDbScopedOptionsList);
+								
+								List<String> removedOptions = new ArrayList<>(prevDbScopedOptionsList); 
+								removedOptions.removeAll(currDbScopedOptionsList);
+
+								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+								AlarmEvent ae = new AlarmEventDatabaseOption(cm, dbname, addedOptions, removedOptions, currDbScopedOptionsList);
+								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+								
+								alarmHandler.addAlarm( ae );
+							}
+						}
+					}
+					
+					// Always set/remember the "last" DbScopedOptions so we can compare at/with next sample
+					_prevDbScopedOptionsMap.put(dbname, currDbScopedOptions);
+				}
+			} // end: Scoped DB Options
+
 		} // end: loop dbname(s)
 	}
 
+	/** Remember DbScopedOptions. key=dbname, val=DBOption, the value will be set at every call to sendAlarmRequest() */
+	private Map<String, String> _prevDbScopedOptionsMap = new HashMap<>();
+	
+	@Override
+	public void reset()
+	{
+		super.reset();
+	
+		// Or should this be done in: clear()
+		_prevDbScopedOptionsMap = new HashMap<>();
+	}
+	
 	@Override
 	public boolean isGraphDataHistoryEnabled(String name)
 	{
@@ -4588,6 +4707,17 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_VlfCount                           = CM_NAME + ".alarm.system.if.vlf_count.gt";
 	public static final int     DEFAULT_alarm_VlfCount                           = 5000;
 
+	public static final String  PROPKEY_alarm_DbScopedOptions                          = CM_NAME + ".alarm.system.if.DbScopedOptions.is.changed";
+	public static final boolean DEFAULT_alarm_DbScopedOptions                          = true;
+	public static final String  PROPKEY_alarm_DbScopedOptionsForDbs                    = CM_NAME + ".alarm.system.if.DbScopedOptions.for.dbs";
+	public static final String  DEFAULT_alarm_DbScopedOptionsForDbs                    = "";
+	public static final String  PROPKEY_alarm_DbScopedOptionsSkipDbs                   = CM_NAME + ".alarm.system.if.DbScopedOptions.skip.dbs";
+	public static final String  DEFAULT_alarm_DbScopedOptionsSkipDbs                   = "";
+	public static final String  PROPKEY_alarm_DbScopedOptionsForSrv                    = CM_NAME + ".alarm.system.if.DbScopedOptions.for.srv";
+	public static final String  DEFAULT_alarm_DbScopedOptionsForSrv                    = "";
+	public static final String  PROPKEY_alarm_DbScopedOptionsSkipSrv                   = CM_NAME + ".alarm.system.if.DbScopedOptions.skip.srv";
+	public static final String  DEFAULT_alarm_DbScopedOptionsSkipSrv                   = "";
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -4655,8 +4785,14 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("vlf_count",                        isAlarmSwitch, PROPKEY_alarm_VlfCount                        , Integer.class, conf.getIntProperty   (PROPKEY_alarm_VlfCount                        , DEFAULT_alarm_VlfCount                        ), DEFAULT_alarm_VlfCount                        , "If 'vlf_count' is greater than ## then send 'AlarmEventHighVirtualLogFileCount'." ));
 
+		list.add(new CmSettingsHelper("DbScopedOptions",                  isAlarmSwitch, PROPKEY_alarm_DbScopedOptions                 , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_DbScopedOptions                , DEFAULT_alarm_DbScopedOptions                 ), DEFAULT_alarm_DbScopedOptions                 , "If 'db_scoped_nondefault_configs' is changed then send 'AlarmEventDatabaseOption'."));
+		list.add(new CmSettingsHelper("DbScopedOptions ForDbs",                          PROPKEY_alarm_DbScopedOptionsForDbs           , String .class, conf.getProperty       (PROPKEY_alarm_DbScopedOptionsForDbs          , DEFAULT_alarm_DbScopedOptionsForDbs           ), DEFAULT_alarm_DbScopedOptionsForDbs           , "If 'db_scoped_nondefault_configs' is changed; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DbScopedOptions SkipDbs",                         PROPKEY_alarm_DbScopedOptionsSkipDbs          , String .class, conf.getProperty       (PROPKEY_alarm_DbScopedOptionsSkipDbs         , DEFAULT_alarm_DbScopedOptionsSkipDbs          ), DEFAULT_alarm_DbScopedOptionsSkipDbs          , "If 'db_scoped_nondefault_configs' is changed; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DbScopedOptions ForSrv",                          PROPKEY_alarm_DbScopedOptionsForSrv           , String .class, conf.getProperty       (PROPKEY_alarm_DbScopedOptionsForSrv          , DEFAULT_alarm_DbScopedOptionsForSrv           ), DEFAULT_alarm_DbScopedOptionsForSrv           , "If 'db_scoped_nondefault_configs' is changed; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("DbScopedOptions SkipSrv",                         PROPKEY_alarm_DbScopedOptionsSkipSrv          , String .class, conf.getProperty       (PROPKEY_alarm_DbScopedOptionsSkipSrv         , DEFAULT_alarm_DbScopedOptionsSkipSrv          ), DEFAULT_alarm_DbScopedOptionsSkipSrv          , "If 'db_scoped_nondefault_configs' is changed; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+
 		// TODO: Possibly: Database Options, like we do in ASE (get options from SCOPED Database Options)
-		
+
 		return list;
 	}
 	

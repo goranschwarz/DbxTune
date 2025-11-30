@@ -137,6 +137,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_REQUEST_PER_SEC     = "RequestPerSecGraph"; //String x=GetCounters.CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC;
 	public static final String GRAPH_NAME_HIT_RATE_PCT        = "HitRatePctGraph";    //String x=GetCounters.CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC;
 	public static final String GRAPH_NAME_INS_DEL_PER_SEC     = "StmntCacheInsDel";
+	public static final String GRAPH_NAME_INS_DEL_PER_SAMPLE  = "StmntCacheInsDelPerSample";
 	public static final String GRAPH_NAME_MEM_USAGE           = "StmntCacheMemUsage";
 	public static final String GRAPH_NAME_NUM_STMNTS_IN_CACHE = "NumStmntsInCache";
 
@@ -172,6 +173,19 @@ extends CountersModel
 			"Statement Cache Add/Remove Count", 	                           // Menu CheckBox text
 			"Statement Cache Add/Remove Count, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "NumRemovals", "NumInserts" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_INS_DEL_PER_SAMPLE,
+			"Statement Cache Add/Remove Count, per Sample Period", 	                           // Menu CheckBox text
+			"Statement Cache Add/Remove Count, per Sample Period ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumRemovals", "NumInserts" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -436,6 +450,20 @@ extends CountersModel
 			
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData(StatementCache:InsDel): NumRemovals='"+arr[0]+"', NumInserts='"+arr[1]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_INS_DEL_PER_SAMPLE.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getDiffValueSum("NumRemovals");
+			arr[1] = this.getDiffValueSum("NumInserts");
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("updateGraphData(StatementCache:InsDel per Sample): NumRemovals='"+arr[0]+"', NumInserts='"+arr[1]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

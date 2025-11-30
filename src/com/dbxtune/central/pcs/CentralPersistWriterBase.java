@@ -587,7 +587,7 @@ implements ICentralPersistWriter
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"CmName"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n"); // changed from 30 to 60 -- But I did NOT write any upgrade steps for it... possibly in the future...
 				sbSql.append("   ,"+fill(lq+"TableName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 128),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"GraphLabel"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"GraphProps"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,1024),20)+" "+getNullable(false)+"\n");

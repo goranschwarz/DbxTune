@@ -458,34 +458,34 @@ extends CounterSample
 		ResultSetMetaDataCached rsmd = new ResultSetMetaDataCached();
 		
 		//             columnName,            columnType,               columnTypeName, nullable, columnClassName             columnDisplaySize, precision, scale, 
-		rsmd.addColumn("LogicalId",           java.sql.Types.INTEGER,   "int",          false,    Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("LogicalName",         java.sql.Types.VARCHAR,   "varchar",      false,    String   .class.getName(),  80,                0,         0);
-
-		rsmd.addColumn("ActiveId",            java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("ActiveName",          java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                0,         0);
-		rsmd.addColumn("ActiveState",         java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                0,         0);
-
-		rsmd.addColumn("StandbyId",           java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("StandbyName",         java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                0,         0);
-		rsmd.addColumn("StandbyState",        java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                0,         0);
-
-		rsmd.addColumn("LatencyInSec",        java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("ApplyAgeInSec",       java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("ApplyAgeInMinutes",   java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("DataAgeInSec",        java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("DataAgeInMinutes",    java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("OriginCommitTime",    java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                0,         0);
-		rsmd.addColumn("DestCommitTime",      java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                0,         0);
-		rsmd.addColumn("ActiveLocalTime",     java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                0,         0);
-		rsmd.addColumn("StandbyLocalTime",    java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                0,         0);
-		rsmd.addColumn("StandbyMsg",          java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  1024,              0,         0);
-
-		rsmd.addColumn("RsId",                java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                0,         0);
-		rsmd.addColumn("RsName",              java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                0,         0);
-
-		rsmd.addColumn("OpInProgress",        java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  128,               0,         0);
-		rsmd.addColumn("StateOfOpInProgress", java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  128,               0,         0);
-		rsmd.addColumn("Spid",                java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  10,                0,         0);
+		rsmd.addColumn("LogicalId",           java.sql.Types.INTEGER,   "int",          false,    Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("LogicalName",         java.sql.Types.VARCHAR,   "varchar",      false,    String   .class.getName(),  80,                80,        0);
+                                                                                                                                                      
+		rsmd.addColumn("ActiveId",            java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("ActiveName",          java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                80,        0);
+		rsmd.addColumn("ActiveState",         java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                80,        0);
+                                                                                                                                                      
+		rsmd.addColumn("StandbyId",           java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("StandbyName",         java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                80,        0);
+		rsmd.addColumn("StandbyState",        java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                80,        0);
+                                                                                                                                                      
+		rsmd.addColumn("LatencyInSec",        java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("ApplyAgeInSec",       java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("ApplyAgeInMinutes",   java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("DataAgeInSec",        java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("DataAgeInMinutes",    java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("OriginCommitTime",    java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                26,        0);
+		rsmd.addColumn("DestCommitTime",      java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                26,        0);
+		rsmd.addColumn("ActiveLocalTime",     java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                26,        0);
+		rsmd.addColumn("StandbyLocalTime",    java.sql.Types.TIMESTAMP, "datetime",     true,     Timestamp.class.getName(),  26,                26,        0);
+		rsmd.addColumn("StandbyMsg",          java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  1024,              1024,      0);
+                                                                                                                                                      
+		rsmd.addColumn("RsId",                java.sql.Types.INTEGER,   "int",          true,     Integer  .class.getName(),  12,                10,        0);
+		rsmd.addColumn("RsName",              java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  80,                80,        0);
+                                                                                                                                                      
+		rsmd.addColumn("OpInProgress",        java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  128,               128,       0);
+		rsmd.addColumn("StateOfOpInProgress", java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  128,               128,       0);
+		rsmd.addColumn("Spid",                java.sql.Types.VARCHAR,   "varchar",      true,     String   .class.getName(),  10,                10,        0);
 
 		if ( ! cm.hasResultSetMetaData() )
 			cm.setResultSetMetaData( rsmd );

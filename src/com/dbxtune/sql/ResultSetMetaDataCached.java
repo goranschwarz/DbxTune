@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -52,6 +53,8 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 	private static final long   serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
+	public static final String PROPKEY_SYSTEM_onException_skipMethodsCsv = "ResultSetMetaDataCached.populate.exceptions.skip.methods.csv";
+	
 	public enum State
 	{
 		/** When the ResultSetMetaDataCached has just been created, possibly from a ResultSetMetaData */
@@ -349,8 +352,18 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 
 	protected void handlePopulateMetaDataException(String methodName, int colNum, SQLException sqle)
 	{
+		String skipMethodsCsv = System.getProperty(PROPKEY_SYSTEM_onException_skipMethodsCsv);
+		List<String> skipMethodsList = (skipMethodsCsv == null) ? Collections.emptyList() : StringUtil.parseCommaStrToList(skipMethodsCsv, true);
+
+		if ( ! skipMethodsList.isEmpty() )
+		{
+			if ( skipMethodsList.contains(methodName))
+				/* Skip some methods... */;
+			else
+				_logger.info("Problems reading ResultSetMetaData." + methodName + "(" + colNum + "). skipMethods=skipMethodsList. Caught: " + sqle);
+		}
 		// Do a bit less logging for RsTune
-		if (RsTune.APP_NAME.equals(Version.getAppName()))
+		else if (RsTune.APP_NAME.equals(Version.getAppName()))
 		{
 			if ( StringUtil.equalsAny(methodName, "isCaseSensitive", "isSearchable", "getColumnTypeName"))
 				/* Skip some methods... */;

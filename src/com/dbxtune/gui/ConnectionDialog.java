@@ -360,6 +360,7 @@ public class ConnectionDialog
 	private JCheckBox            _aseOptionReConnOnFailure_chk    = new JCheckBox("Reconnect to server if connection is lost", DEFAULT_RECONNECT_ON_FAILURE);
 //	private JCheckBox            _aseOptionUsedForNoGui_chk       = new JCheckBox("Use connection info above for no-gui mode", false);
 	private JCheckBox            _aseHostMonitor_chk              = new JCheckBox("<html>Monitor the OS Host for IO and CPU... <i>Set parameters in tab '<b>Host Monitor</b>'</i></html>", false);
+	private JCheckBox            _aseGetDbmsConfig_chk            = new JCheckBox("<html>On Connect, Get DBMS Configuration</html>", true);
 //	private JCheckBox            _aseOptionStore_chk              = new JCheckBox("Save counter data in a Persistent Counter Storage...", false);
 	private JCheckBox            _aseOptionStore_chk              = new JCheckBox("<html>Record this Performance Session in a DB... <i>Set parameters in tab '<b>Record this Session</b>'</i></html>", false);
 	private JCheckBox            _aseDeferredConnect_chk          = new JCheckBox("Make the connection later", false);
@@ -1352,6 +1353,7 @@ public class ConnectionDialog
 	public String getSshPortStr()  { return _hostmonPort_txt    .getText(); }
 	public String getSshKeyFile()  { return _hostmonKeyFile_txt .getText(); }
 
+	public boolean  isGetDbmsConfigEnabled()     { return _aseGetDbmsConfig_chk        .isSelected(); }
 	public boolean  isHostMonEnabled()           { return _aseHostMonitor_chk          .isSelected(); }
 	public boolean  isHostMonLocalOsCmd()        { return _hostMonLocalOsCmd_chk       .isSelected(); }
 	public String  getHostMonLocalOsCmdWrapper() { return _hostmonLocalOsCmdWrapper_txt.getText(); }
@@ -2532,6 +2534,7 @@ public class ConnectionDialog
 		_aseOptionReConnOnFailure_chk  .setToolTipText("If connection to the monitored server is lost in some way, try to reconnect to the server again automatically.");
 		_aseOptionStore_chk            .setToolTipText("Store GUI Counter Data in a database (Persistent Counter Storage), which can be viewed later, connect to it from the 'offline' tab");
 		_aseHostMonitor_chk            .setToolTipText("Connect to the Operating System host via SSH, to monitor IO statistics and/or CPU usage.");
+		_aseGetDbmsConfig_chk          .setToolTipText("<html>When Connectong get the DBMS Configuration<br>If the server is under <b>Heavy Load</b> this might take some extra time, and therefor you can disable it.</html>");
                                        
 		_aseOptionUseTemplate_chk      .setToolTipText("<html>Use a specific 'Performance Counter' template, which will be enabled/set when connecting to the above server.<br>So if you have specific monitoring needs for this specific server, you can easely choose a specific preconfigured monitoring template.</html>");
 		_aseOptionUseTemplate_cbx      .setToolTipText("Choose a specific 'Performance Counter' template, which will be enabled/set when connecting to the above server.");
@@ -2550,6 +2553,9 @@ public class ConnectionDialog
 		if (_options._showHostmonTab)
 			panel.add(_aseHostMonitor_chk,       "");
 
+		if (_options._showPcsTab)
+			panel.add(_aseGetDbmsConfig_chk,     "");
+		
 		if (_options._showPcsTab)
 		{
 			panel.add(_aseOptionUseTemplate_chk, "split");
@@ -2585,6 +2591,7 @@ public class ConnectionDialog
 
 		_aseOptionStore_chk            .addActionListener(this);
 		_aseHostMonitor_chk            .addActionListener(this);
+		_aseGetDbmsConfig_chk          .addActionListener(this);
 
 		_aseDeferredConnect_chk        .addActionListener(this);
 		_aseDeferredConnectHour_sp     .addChangeListener(this);
@@ -4615,6 +4622,8 @@ public class ConnectionDialog
 
 		boolean       aseSshTunnel    = _aseSshTunnel_chk.isSelected();
 		SshTunnelInfo sshTunnelInfo   = _aseSshTunnelInfo;
+		
+		boolean getDbmsConfig         = _aseGetDbmsConfig_chk.isSelected();
 
 		String        loginTimeoutStr = _aseLoginTimeout_txt.getText().trim();
 		
@@ -4624,22 +4633,31 @@ public class ConnectionDialog
 		{
 			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
 
-			sqlInit        = entry._tdsSqlInit;
-			tdsUseUrl      = entry._tdsUseUrl;
-			tdsUseUrlStr   = entry._tdsUseUrlStr;
-			tdsUrlOptions  = entry._tdsUrlOptions;
+			sqlInit         = entry._tdsSqlInit;
+			tdsUseUrl       = entry._tdsUseUrl;
+			tdsUseUrlStr    = entry._tdsUseUrlStr;
+			tdsUrlOptions   = entry._tdsUrlOptions;
 
-			username       = entry._tdsUsername;
-			password       = entry._tdsPassword;
-			hosts          = entry._tdsHosts;
-			ports          = entry._tdsPorts;
+			username        = entry._tdsUsername;
+			password        = entry._tdsPassword;
+			hosts           = entry._tdsHosts;
+			ports           = entry._tdsPorts;
 
-			sshTunnelInfo  = entry._tdsShhTunnelInfo;
-			aseSshTunnel   = entry._tdsShhTunnelUse;
+			sshTunnelInfo   = entry._tdsShhTunnelInfo;
+			aseSshTunnel    = entry._tdsShhTunnelUse;
 			
-			loginTimeoutStr= entry._tdsLoginTimout + "";
+			if (entry._dbxtuneParams != null)
+				getDbmsConfig = entry._dbxtuneParams._dbxtuneOptGetDbmsConfig;
+
+			loginTimeoutStr = entry._tdsLoginTimout + "";
 			
 			srvIcon         = ConnectionProfileManager.getIcon32(connProfile.getSrvType());
+		}
+
+		// Set if we should do: GetDbmsConfig
+		if (_options != null && _options._srvExtraChecks != null)
+		{
+			_options._srvExtraChecks.setInitDbServerConfigDictionary(getDbmsConfig);
 		}
 
 		// -------------------------------------------
@@ -4768,7 +4786,6 @@ public class ConnectionDialog
 		cp.setSshTunnelInfo( sshTunnelInfo );
 
 		DbxConnection.setDefaultConnProp(cp);
-		
 		
 		try
 		{
@@ -5664,18 +5681,23 @@ public class ConnectionDialog
 		boolean jdbcSshTunnelUse    = _jdbcSshTunnel_chk.isSelected();
 		SshTunnelInfo sshTunnelInfo = _jdbcSshTunnelInfo;
 
+		boolean getDbmsConfig       = _aseGetDbmsConfig_chk.isSelected();
+
 		if (connProfile != null)
 		{
 			ConnectionProfile.JdbcEntry entry = connProfile.getJdbcEntry();
 
-			jdbcDriver     = entry._jdbcDriver;
-			jdbcUrl        = entry._jdbcUrl;
-			jdbcUser       = entry._jdbcUsername;
-			jdbcPasswd     = entry._jdbcPassword;
-			sqlInit        = entry._jdbcSqlInit;
-			jdbcUrlOptions = entry._jdbcUrlOptions;
-			sshTunnelInfo  = entry._jdbcShhTunnelInfo;
+			jdbcDriver       = entry._jdbcDriver;
+			jdbcUrl          = entry._jdbcUrl;
+			jdbcUser         = entry._jdbcUsername;
+			jdbcPasswd       = entry._jdbcPassword;
+			sqlInit          = entry._jdbcSqlInit;
+			jdbcUrlOptions   = entry._jdbcUrlOptions;
+			sshTunnelInfo    = entry._jdbcShhTunnelInfo;
 			jdbcSshTunnelUse = entry._jdbcShhTunnelUse;
+
+			if (entry._dbxtuneParams != null)
+				getDbmsConfig = entry._dbxtuneParams._dbxtuneOptGetDbmsConfig;
 		}
 //System.out.println("jdbcConnect(): connProfile="+connProfile+", jdbcSshTunnelUse="+jdbcSshTunnelUse+", sshTunnelInfo="+sshTunnelInfo+"("+(sshTunnelInfo == null ? "-NULL-" : sshTunnelInfo.getConfigString(false, true))+")");
 if ( ! jdbcSshTunnelUse )
@@ -5690,6 +5712,12 @@ if ( ! jdbcSshTunnelUse )
 //				sqlInit,
 //				tunnelInfo);
 
+
+		// Set if we should do: GetDbmsConfig
+		if (_options != null && _options._srvExtraChecks != null)
+		{
+			_options._srvExtraChecks.setInitDbServerConfigDictionary(getDbmsConfig);
+		}
 
 		// Set DBX Connection Defaults
 		ConnectionProp cp = new ConnectionProp();
@@ -7160,6 +7188,7 @@ if ( ! jdbcSshTunnelUse )
 		boolean recordThisSession        = false;
 		boolean dbxDeferredConnect       = false;
 		boolean dbxHostMonitor           = false;
+//		boolean dbxGetDbmsConfig         = false;
 
 		// If we call the actionPerformed() from outside, we do not want to save stuff
 		if (isVisible())
@@ -7191,6 +7220,7 @@ if ( ! jdbcSshTunnelUse )
 			recordThisSession        = _aseOptionStore_chk.isSelected();
 			dbxDeferredConnect       = _aseDeferredConnect_chk.isSelected();
 			dbxHostMonitor           = _aseHostMonitor_chk.isSelected();
+//			dbxGetDbmsConfig         = _aseGetDbmsConfig_chk.isSelected();
 
 			if (_options._showDbxTuneOptionsInTds || _options._showDbxTuneOptionsInJdbc)
 			{
@@ -7202,6 +7232,7 @@ if ( ! jdbcSshTunnelUse )
 					recordThisSession        = entry._dbxtuneOptRecordSession;
 					dbxDeferredConnect       = entry._dbxtuneOptConnectLater;
 					dbxHostMonitor           = entry._dbxtuneOptOsMonitoring;
+//					dbxGetDbmsConfig         = entry._dbxtuneOptGetDbmsConfig;
 				}
 	
 				// Double check if we want to RECORD the session
@@ -7695,6 +7726,7 @@ if ( ! jdbcSshTunnelUse )
 
 		entry._dbxtuneOptRecordSession          = _aseOptionStore_chk.isSelected();
 		entry._dbxtuneOptOsMonitoring           = _aseHostMonitor_chk.isSelected();
+		entry._dbxtuneOptGetDbmsConfig          = _aseGetDbmsConfig_chk.isSelected();
 
 		entry._dbxtuneOptConnectAtStartup       = _aseOptionConnOnStart_chk    .isSelected();
 		entry._dbxtuneOptReconnectOnLostConn    = _aseOptionReConnOnFailure_chk.isSelected();
@@ -7761,8 +7793,9 @@ if ( ! jdbcSshTunnelUse )
 		_aseOptionUseTemplate_chk.setSelected(    entry._dbxtuneUseTemplate);
 		_aseOptionUseTemplate_cbx.setSelectedItem(entry._dbxtuneUseTemplateName); // FIXME default value
 
-		_aseOptionStore_chk.setSelected(entry._dbxtuneOptRecordSession);
-		_aseHostMonitor_chk.setSelected(entry._dbxtuneOptOsMonitoring);
+		_aseOptionStore_chk  .setSelected(entry._dbxtuneOptRecordSession);
+		_aseHostMonitor_chk  .setSelected(entry._dbxtuneOptOsMonitoring);
+		_aseGetDbmsConfig_chk.setSelected(entry._dbxtuneOptGetDbmsConfig);
 
 		_aseOptionConnOnStart_chk    .setSelected(entry._dbxtuneOptConnectAtStartup);
 		_aseOptionReConnOnFailure_chk.setSelected(entry._dbxtuneOptReconnectOnLostConn);
@@ -8511,6 +8544,7 @@ if ( ! jdbcSshTunnelUse )
 		conf.setProperty("conn.persistCounterStorage."+hostPort,     _aseOptionStore_chk.isSelected() );
 		conf.setProperty("conn.hostMonitoring",                      _aseHostMonitor_chk.isSelected() );
 		conf.setProperty("conn.hostMonitoring."+hostPort,            _aseHostMonitor_chk.isSelected() );
+		conf.setProperty("conn.getDbmsConfig",                       _aseGetDbmsConfig_chk.isSelected() );
 		conf.setProperty("conn.deferred.connect",                    _aseDeferredConnect_chk.isSelected() );
 		conf.setProperty("conn.deferred.connect.hour",               _aseDeferredConnectHour_sp  .getValue().toString() );
 		conf.setProperty("conn.deferred.connect.minute",             _aseDeferredConnectMinute_sp.getValue().toString() );
@@ -8788,6 +8822,9 @@ if ( ! jdbcSshTunnelUse )
 
 		bol = conf.getBooleanProperty("conn.hostMonitoring", false);
 		_aseHostMonitor_chk.setSelected(bol);
+
+		bol = conf.getBooleanProperty("conn.getDbmsConfig", false);
+		_aseGetDbmsConfig_chk.setSelected(bol);
 
 // Do not restore Deferred Connect, lets always start at FALSE / NOT CHECKED 
 //		_aseDeferredConnect_chk     .setSelected( conf.getBooleanProperty("conn.deferred.connect",        false ));

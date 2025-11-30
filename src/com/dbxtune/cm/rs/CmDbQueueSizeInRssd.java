@@ -159,6 +159,12 @@ extends CountersModel
 				if (qSize > 0.0)
 					rows++;
 			}
+
+			// Get out: if Nothing to do...
+			if (rows == 0)
+			{
+				return;
+			}
 			
 			// Write 1 "line" for every SQMRBacklogSeg row
 			Double[] dArray = new Double[rows];

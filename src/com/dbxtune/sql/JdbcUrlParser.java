@@ -130,7 +130,7 @@ public class JdbcUrlParser
 			}
 			catch (ParseException ex)
 			{
-				_logger.warn("Problem parsing the SYBASE URL '"+url+"'. Caught: "+ex);
+				_logger.warn("Problem parsing the SYBASE URL '"+url+"'. Caught: "+ex, ex);
 			}
 		}
 		else if (url.startsWith("jdbc:h2:"))
@@ -150,7 +150,7 @@ public class JdbcUrlParser
 			}
 			catch (Exception ex)
 			{
-				_logger.warn("Problem parsing the H2 URL '"+url+"'. Caught: "+ex);
+				_logger.warn("Problem parsing the H2 URL '"+url+"'. Caught: "+ex, ex);
 			}
 		}
 		else if (url.startsWith("jdbc:sqlserver:"))
@@ -160,9 +160,12 @@ public class JdbcUrlParser
 				// FIXME: make MsSqlUrlHelper a subclass of JdbcUrlParser
 				MsSqlUrlHelper msSqlHelperUrl = MsSqlUrlHelper.parse(url);
 
-				p.setDbType     ("sqlserver");
-				p.setHost       (msSqlHelperUrl.getHostInstance());
-				p.setPort       (msSqlHelperUrl.getPort());
+				p.setDbType("sqlserver");
+				p.setHost  (msSqlHelperUrl.getHostInstance());
+
+				if (msSqlHelperUrl.getPort() != null)
+					p.setPort (msSqlHelperUrl.getPort());
+
 //				p.setHostPortStr(msSqlHelperUrl.getHostPortStr());
 
 				p.setPath   (null);
@@ -170,7 +173,7 @@ public class JdbcUrlParser
 			}
 			catch (Exception ex)
 			{
-				_logger.warn("Problem parsing the MS SQL URL '" + url + "'. Caught: " + ex);
+				_logger.warn("Problem parsing the MS SQL URL '" + url + "'. Caught: " + ex, ex);
 			}
 		}
 		else if (url.startsWith("jdbc:oracle:thin:"))
@@ -214,7 +217,7 @@ public class JdbcUrlParser
 			}
 			catch (Throwable ex)
 			{
-				_logger.warn("Problem parsing the GENERIC URL '"+url+"', cleanURI '"+cleanURI+"'. Caught: "+ex);
+				_logger.warn("Problem parsing the GENERIC URL '"+url+"', cleanURI '"+cleanURI+"'. Caught: "+ex, ex);
 			}
 		}
 
@@ -321,6 +324,7 @@ public class JdbcUrlParser
 		testX("jdbc:sqlserver://AXSEALISQL02.acme.com:50001");
 		testX("jdbc:sqlserver://AXSEALISQL02\\INST01:50001");
 		testX("jdbc:sqlserver://AXSEALISQL02\\INST01");
+		testX("jdbc:sqlserver://prod-b1-mssql");
 		
 //		test2("jdbc:postgresql://host:1234/aDbName");
 //		test2("jdbc:postgresql://host:1234/database?ssl=true&user=fred&password=secret");

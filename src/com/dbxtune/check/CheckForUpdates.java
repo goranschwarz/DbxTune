@@ -22,21 +22,24 @@ package com.dbxtune.check;
 
 import java.awt.Component;
 import java.awt.GraphicsEnvironment;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,9 +52,12 @@ import org.apache.logging.log4j.Logger;
 
 import com.btr.proxy.search.ProxySearch;
 import com.btr.proxy.search.ProxySearch.Strategy;
+import com.dbxtune.CounterController;
+import com.dbxtune.ICounterController;
 import com.dbxtune.Version;
 import com.dbxtune.gui.Log4jLogRecord;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.HttpUtils;
 import com.dbxtune.utils.PlatformUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
@@ -108,13 +114,21 @@ public abstract class CheckForUpdates
 
 	private static CheckForUpdates _instance = null;
 	
-	private boolean _sendConnectInfo      = true;
-	private boolean _sendMdaInfo          = true;
-	private int     _sendMdaInfoBatchSize = 5;
-	private boolean _sendUdcInfo          = true;
-	private boolean _sendCounterUsageInfo = true;
-	private boolean _sendLogInfoWarning   = false;
-	private boolean _sendLogInfoError     = false;
+	private static final int     DEFAULT_sendMdaInfoSleepTime     = 1000;
+	private static final boolean DEFAULT_useHttpPost              = true;
+	private static final int     DEFAULT_http_maxRetries          = 7;
+	private static final int     DEFAULT_http_maxBackoffSleepTime = 30000;
+	
+	private boolean _sendConnectInfo           = true;
+	private boolean _sendMdaInfo               = true;
+	private int     _sendMdaInfoBatchSize      = 10;
+	private int     _sendMdaInfoBatchSizeParam = 10;
+	private int     _sendMdaInfoBatchSizePost  = 250;
+	private int     _sendMdaInfoSleepTime      = DEFAULT_sendMdaInfoSleepTime; // in milliseconds
+	private boolean _sendUdcInfo               = true;
+	private boolean _sendCounterUsageInfo      = true;
+	private boolean _sendLogInfoWarning        = false;
+	private boolean _sendLogInfoError          = false;
 
 	private int     _connectCount         = 0;
 
@@ -125,7 +139,7 @@ public abstract class CheckForUpdates
 	 *  true  = _POST[], HTTP POST will be used, "no" limit in size... <br>
 	 *  false = _GET[], send as: http://www.site.com?param1=var1&param2=var2 approximately 2000 chars is max<br>
 	 */
-	private boolean        _useHttpPost    = false;
+	private boolean        _useHttpPost    = DEFAULT_useHttpPost;
 	// Note: when redirecting URL from www.asetune.com -> www.dbxtune.com, it looses the POST entries
 	//       So right now we need to use the 'http://www.site.com?param1=val1&param2=val2' instead
 
@@ -161,6 +175,7 @@ public abstract class CheckForUpdates
 	protected int     getCheckId()              { return _checkId; }
 	protected int     getConnectCount()         { return _connectCount; }
 	protected int     getSendMdaInfoBatchSize() { return _sendMdaInfoBatchSize; }
+	protected int     getSendMdaInfoSleepTime() { return _sendMdaInfoSleepTime; }
 
 	public static CheckForUpdates getInstance()
 	{
@@ -371,26 +386,141 @@ public abstract class CheckForUpdates
 	{
 		return sendHttpParams(urlStr, urlParams, DEFAULT_TIMEOUT);
 	}
+//	protected InputStream sendHttpParams(String urlStr, QueryString urlParams, int timeoutInMs)
+//	throws MalformedURLException, IOException
+//	{
+//		if (_logger.isDebugEnabled())
+//		{
+//			_logger.debug("sendHttpParams() BASE URL: " + urlStr);
+//			_logger.debug("sendHttpParams() PARAMSTR: " + urlParams.toString());
+//		}
+//
+//		// Get the URL
+//		URL url = new URL( urlStr + "?" + urlParams.toString() );
+//
+//		// open the connection and prepare it to POST
+//		URLConnection conn = url.openConnection();
+//		conn.setConnectTimeout(timeoutInMs); 
+//
+//		// Return the response
+//		return conn.getInputStream();
+//	}
+
 	protected InputStream sendHttpParams(String urlStr, QueryString urlParams, int timeoutInMs)
-	throws MalformedURLException, IOException
+	throws IOException 
 	{
-		if (_logger.isDebugEnabled())
+		if (_logger.isDebugEnabled()) 
 		{
-			_logger.debug("sendHttpParams() BASE URL: "+urlStr);
-			_logger.debug("sendHttpParams() PARAMSTR: "+urlParams.toString());
+			_logger.debug("sendHttpParams() BASE URL: " + urlStr);
+			_logger.debug("sendHttpParams() PARAMSTR: " + urlParams.toString());
 		}
 
-		// Get the URL
-		URL url = new URL( urlStr + "?" + urlParams.toString() );
+		// Build the full GET URL
+		String fullUrl = urlStr + "?" + urlParams.toString();
+		URL url = new URL(fullUrl);
 
-		// open the connection and prepare it to POST
-		URLConnection conn = url.openConnection();
-		conn.setConnectTimeout(timeoutInMs); 
+		int backoffMs           = 1000;
+		int maxRetries          = DEFAULT_http_maxRetries;
+		int maxBackoffSleepTime = DEFAULT_http_maxBackoffSleepTime;
+		
+		int lastStatusCode = 0;
 
-		// Return the response
-		return conn.getInputStream();
+		for (int attempt = 1; attempt <= maxRetries; attempt++) 
+		{
+			if (CounterController.hasInstance())
+			{
+				ICounterController counterController = CounterController.getInstance();
+				if ( ! counterController.isRunning() )
+				{
+					throw new IOException("Can't continue. It looks like we are in SHUTDOWN Mode.");
+				}
+			}
+
+			HttpURLConnection conn = null;
+			try 
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("HTTP GET -- Thread: '" + Thread.currentThread().getName() + "'. url.openConnection(); attempt=" + attempt + ", backoffMs=" + backoffMs);
+
+				conn = (HttpURLConnection) url.openConnection();
+
+				// Recommended: keep-alive helps prevent overloading connection setup
+//				conn.setRequestMethod("GET");
+				conn.setConnectTimeout(timeoutInMs);
+				conn.setReadTimeout(timeoutInMs);
+				conn.setRequestProperty("Connection", "keep-alive");
+				conn.setRequestProperty("User-Agent", "MDA-Client/1.0");
+
+				int status = conn.getResponseCode();
+				lastStatusCode = status;
+
+				if (status == 200) 
+				{
+					_logger.debug("HTTP GET OK -- Status=200 -- Thread: '" + Thread.currentThread().getName() + "', url='" + urlStr + "'. url.openConnection()");
+
+					// OK - success
+//					return conn.getInputStream();
+
+					// Success: read full response into memory
+					ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+					try (InputStream in = conn.getInputStream()) 
+					{
+						in.transferTo(buffer);
+					} 
+					finally 
+					{
+						conn.disconnect();
+					}
+
+					// Return a fresh InputStream (safe even after disconnect)
+					return new ByteArrayInputStream(buffer.toByteArray());
+					
+				} 
+				else if (status == 429 || status == 503) 
+				{
+					String retryAfter = conn.getHeaderField("Retry-After");
+					int waitTime = (retryAfter != null) ? StringUtil.parseInt(retryAfter, 5) * 1000 : backoffMs;
+
+					_logger.info("HTTP GET -- Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitTime + " ms... conn.getHeaderField('Retry-After') = '" + retryAfter + "'.");
+					try { Thread.sleep(waitTime); } catch (InterruptedException ignore) { _logger.info("Sleep was interrupted. Caught: " + ignore); }
+
+					// exponential backoff up to 20s
+					backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
+
+					if (conn != null)
+						conn.disconnect();
+
+//					continue;
+				}
+				else
+				{
+					// Other HTTP errors (400, 404, 500, etc.)
+					throw new IOException("HTTP GET -- Unexpected HTTP response: " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. url: " + fullUrl);
+				}
+			} 
+			catch (IOException ex) 
+			{
+				_logger.info("HTTP GET -- Attempt " + attempt + " failed for URL: " + fullUrl + " Caught: " + ex);
+				if (attempt >= maxRetries)
+					throw ex;
+
+				try { Thread.sleep(backoffMs); } catch (InterruptedException ignore) { /* ignore */ }
+				backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
+			} 
+			finally 
+			{
+				if (conn != null) 
+				{
+					// Safe even if already disconnected
+					try { conn.disconnect(); } catch (Exception ignore) {}
+				}
+			}
+		}
+
+		// Should never get here
+		throw new IOException("HTTP GET -- Failed after " + maxRetries + " attempts. lastStatusCode=" + lastStatusCode + " '" + HttpUtils.httpResponceCodeToText(lastStatusCode) + "', url: " + fullUrl);
 	}
-
+	
 
 	/**
 	 * Send a HTTP data fields via POST handling<br>
@@ -402,34 +532,155 @@ public abstract class CheckForUpdates
 	{
 		return sendHttpPost(urlStr, urlParams, DEFAULT_TIMEOUT);
 	}
+//	protected InputStream sendHttpPost_OLD(String urlStr, QueryString urlParams, int timeoutInMs)
+//	throws MalformedURLException, IOException
+//	{
+//		if (_logger.isDebugEnabled())
+//		{
+//			_logger.debug("sendHttpPost() BASE URL: " + urlStr);
+//			_logger.debug("sendHttpPost() POST STR: " + urlParams.toString());
+//		}
+//
+//		// TODO: We should probably implement "retry" mechanism here also (like we do in sendHttpParams()...)
+//		// Get the URL
+//		URL url = new URL(urlStr);
+//
+//		// open the connection and prepare it to POST
+//		URLConnection conn = url.openConnection();
+//		conn.setConnectTimeout(timeoutInMs); 
+//		conn.setDoOutput(true);
+//		OutputStreamWriter out = new OutputStreamWriter(conn.getOutputStream(), "ASCII");
+//
+//		// The POST line, the Content-type header,
+//		// and the Content-length headers are sent by the URLConnection.
+//		// We just need to send the data
+//		out.write(urlParams.toString());
+//		out.write("\r\n");
+//		out.flush();
+//		out.close();
+//
+//		// Return the response
+//		return conn.getInputStream();
+//	}
 	protected InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs)
-	throws MalformedURLException, IOException
+	throws IOException 
 	{
-		if (_logger.isDebugEnabled())
+		if (_logger.isDebugEnabled()) 
 		{
-			_logger.debug("sendHttpPost() BASE URL: "+urlStr);
-			_logger.debug("sendHttpPost() POST STR: "+urlParams.toString());
+			_logger.debug("sendHttpPost() BASE URL: " + urlStr);
+			_logger.debug("sendHttpPost() POST STR: " + urlParams.toString());
 		}
 
-		// Get the URL
 		URL url = new URL(urlStr);
+		byte[] postData = urlParams.toString().getBytes(StandardCharsets.UTF_8);
 
-		// open the connection and prepare it to POST
-		URLConnection conn = url.openConnection();
-		conn.setConnectTimeout(timeoutInMs); 
-		conn.setDoOutput(true);
-		OutputStreamWriter out = new OutputStreamWriter(conn.getOutputStream(), "ASCII");
+		int backoffMs           = 1000;
+		int maxRetries          = DEFAULT_http_maxRetries;
+		int maxBackoffSleepTime = DEFAULT_http_maxBackoffSleepTime;
 
-		// The POST line, the Content-type header,
-		// and the Content-length headers are sent by the URLConnection.
-		// We just need to send the data
-		out.write(urlParams.toString());
-		out.write("\r\n");
-		out.flush();
-		out.close();
+		int lastStatusCode = 0;
 
-		// Return the response
-		return conn.getInputStream();
+		for (int attempt = 1; attempt <= maxRetries; attempt++) 
+		{
+			if (CounterController.hasInstance())
+			{
+				ICounterController counterController = CounterController.getInstance();
+				if ( ! counterController.isRunning() )
+				{
+					throw new IOException("Can't continue. It looks like we are in SHUTDOWN Mode.");
+				}
+			}
+
+			HttpURLConnection conn = null;
+			try 
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("HTTP POST -- Thread: '" + Thread.currentThread().getName() + "'. url.openConnection(); attempt=" + attempt + ", backoffMs=" + backoffMs);
+
+				conn = (HttpURLConnection) url.openConnection();
+
+				conn.setConnectTimeout(timeoutInMs);
+				conn.setReadTimeout(timeoutInMs);
+				conn.setDoOutput(true);
+				conn.setRequestMethod("POST");
+				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+				conn.setRequestProperty("Connection", "keep-alive");
+				conn.setRequestProperty("User-Agent", "MDA-Client/1.0");
+				conn.setFixedLengthStreamingMode(postData.length);
+
+				// --- Send the POST body ---
+				try (OutputStream out = conn.getOutputStream()) 
+				{
+					out.write(postData);
+					out.flush();
+				}
+
+				int status = conn.getResponseCode();
+				lastStatusCode = status;
+
+				if (status == 200) 
+				{
+					_logger.debug("HTTP POST OK -- Status=200 -- Thread: '" + Thread.currentThread().getName() + "', url='" + urlStr + "'. url.openConnection()");
+
+					// Success: read full response into memory
+					ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+					try (InputStream in = conn.getInputStream()) 
+					{
+						in.transferTo(buffer);
+					} 
+					finally 
+					{
+						conn.disconnect();
+					}
+
+					// Return a fresh InputStream (safe even after disconnect)
+					return new ByteArrayInputStream(buffer.toByteArray());
+				}
+
+				// RETRY: Handle throttling / transient server errors
+				//  - 429 Too Many Requests
+				//  - 503 Service Unavailable
+				if (status == 429 || status == 503) 
+				{
+					String retryAfter = conn.getHeaderField("Retry-After");
+					int waitMs = (retryAfter != null) ? StringUtil.parseInt(retryAfter, 5) * 1000 : backoffMs;
+
+					_logger.info("HTTP POST " + urlStr + " Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitMs + " ms (attempt " + attempt + "/" + maxRetries + "). conn.getHeaderField('Retry-After') = '" + retryAfter + "'.");
+
+					try { Thread.sleep(waitMs); } catch (InterruptedException ie) { _logger.info("Sleep was interrupted. Caught: " + ie); }
+					backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
+					continue;
+				}
+
+				// ERROR: Non-retryable error
+				throw new IOException("HTTP POST Unexpected status " + status + "  '" + HttpUtils.httpResponceCodeToText(status) + "' for url: " + urlStr);
+			} 
+			catch (IOException ex) 
+			{
+				// Network or connection issue
+				if (attempt == maxRetries) 
+				{
+					_logger.info("HTTP POST " + urlStr + " failed after " + maxRetries + " attempts: " + ex);
+					throw ex;
+				} 
+				else 
+				{
+					_logger.info("HTTP POST " + urlStr + " failed: " + ex.getMessage() + " -> retrying in " + backoffMs + " ms (attempt " + attempt + ").");
+					try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { _logger.info("Sleep was interrupted. Caught: " + ie); }
+					backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
+				}
+			} 
+			finally 
+			{
+				if (conn != null) 
+				{
+					// Safe even if already disconnected
+					try { conn.disconnect(); } catch (Exception ignore) {}
+				}
+			}
+		}
+
+		throw new IOException("HTTP POST Failed after " + maxRetries + " attempts. lastStatusCode=" + lastStatusCode + " '" + HttpUtils.httpResponceCodeToText(lastStatusCode) + "', url: " + urlStr);
 	}
 	/*---------------------------------------------------
 	** END: Some basic methods
@@ -494,8 +745,8 @@ public abstract class CheckForUpdates
 					if (owner != null)
 						CheckDialog.showDialog(owner, CheckForUpdates.this);
 
-					_logger.info("New Upgrade is Available. New version is '"+getNewAppVersionStr()+"' " +
-							"and can be downloaded here '"+getDownloadUrl()+"'.");
+					_logger.info("New Upgrade is Available. New version is '" + getNewAppVersionStr() + "' " +
+							"and can be downloaded here '" + getDownloadUrl() + "'.");
 				}
 				else
 				{
@@ -518,7 +769,7 @@ public abstract class CheckForUpdates
 					}
 					else
 					{
-						_logger.info("You have got the latest release of '"+Version.getAppName()+"'.");
+						_logger.info("You have got the latest release of '" + Version.getAppName() + "'.");
 					}
 				}
 			}
@@ -582,7 +833,7 @@ public abstract class CheckForUpdates
 			boolean foundActionLine = false;
 			while ((line = lr.readLine()) != null)
 			{
-				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				_logger.debug("response line " + lr.getLineNumber() + ": " + line);
 				responseLines += line;
 				if (line.startsWith("ACTION:"))
 				{
@@ -590,7 +841,7 @@ public abstract class CheckForUpdates
 					String[] sa = line.split(":");
 					for (int i=0; i<sa.length; i++)
 					{
-						_logger.debug("   - STRING["+i+"]='"+sa[i]+"'.");
+						_logger.debug("   - STRING[" + i + "]='" + sa[i] + "'.");
 
 						if (i == 1) _action        = sa[1];
 						if (i == 2) _newAppVersion = sa[2];
@@ -598,11 +849,15 @@ public abstract class CheckForUpdates
 						if (i == 4) _whatsNewUrl   = sa[4];
 					}
 				}
+
+				// ---------------------------
+				// ---- OPTIONS:
+				// ---------------------------
 				if (line.startsWith("OPTIONS:"))
 				{
 					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
 					String options = line.substring("OPTIONS:".length());
-					_logger.debug("Receiving Options from server '"+options+"'.");
+					_logger.debug("Receiving Options from server '" + options + "'.");
 					String[] sa = options.split(",");
 					for (int i=0; i<sa.length; i++)
 					{
@@ -613,75 +868,163 @@ public abstract class CheckForUpdates
 							String val = keyVal[1].trim();
 							boolean bVal = val.equalsIgnoreCase("true");
 
+							// ---------------------------
+							// ---- sendConnectInfo
+							// ---------------------------
 							if (key.equalsIgnoreCase("sendConnectInfo"))
 							{
 								_sendConnectInfo = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+								_logger.debug("Setting option '" + key + "' to '" + bVal + "'.");
 							}
+							// ---------------------------
+							// ---- sendUdcInfo
+							// ---------------------------
 							else if (key.equalsIgnoreCase("sendUdcInfo"))
 							{
 								_sendUdcInfo = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+								_logger.debug("Setting option '" + key + "' to '" + bVal + "'.");
 							}
+							// ---------------------------
+							// ---- useHttpPost
+							// ---------------------------
+							else if (key.equalsIgnoreCase("useHttpPost"))
+							{
+								_useHttpPost = bVal;
+								_logger.debug("Setting option '" + key + "' to '" + bVal + "'.");
+							}
+							// ---------------------------
+							// ---- sendMdaInfo
+							// ---------------------------
 							else if (key.equalsIgnoreCase("sendMdaInfo"))
 							{
 								_sendMdaInfo = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+								_logger.debug("Setting option '" + key + "' to '" + bVal + "'.");
 							}
+							// ---------------------------
+							// ---- sendMdaInfoBatchSize
+							// ---------------------------
 							else if (key.equalsIgnoreCase("sendMdaInfoBatchSize"))
 							{
 								try
 								{
 									int intVal = Integer.parseInt(val);
 									_sendMdaInfoBatchSize = intVal;
-									_logger.debug("Setting option '"+key+"' to '"+intVal+"'.");
+									_logger.debug("Setting option '" + key + "' to '" + intVal + "'.");
 								}
 								catch (NumberFormatException ex)
 								{
-									_logger.warn("Problems reading option '"+key+"', with value '"+val+"'. Can't convert to Integer. Caught: "+ex);
+									_logger.warn("Problems reading option '" + key + "', with value '" + val + "'. Can't convert to Integer. Caught: " + ex);
 								}
 							}
+							// ---------------------------
+							// ---- sendMdaInfoBatchSizeParam
+							// ---------------------------
+							else if (key.equalsIgnoreCase("sendMdaInfoBatchSizeParam"))
+							{
+								try
+								{
+									int intVal = Integer.parseInt(val);
+									_sendMdaInfoBatchSizeParam = intVal;
+									_logger.debug("Setting option '" + key + "' to '" + intVal + "'.");
+								}
+								catch (NumberFormatException ex)
+								{
+									_logger.warn("Problems reading option '" + key + "', with value '" + val + "'. Can't convert to Integer. Caught: " + ex);
+								}
+							}
+							// ---------------------------
+							// ---- sendMdaInfoBatchSize
+							// ---------------------------
+							else if (key.equalsIgnoreCase("sendMdaInfoBatchSizePost"))
+							{
+								try
+								{
+									int intVal = Integer.parseInt(val);
+									_sendMdaInfoBatchSizePost = intVal;
+									_logger.debug("Setting option '" + key + "' to '" + intVal + "'.");
+								}
+								catch (NumberFormatException ex)
+								{
+									_logger.warn("Problems reading option '" + key + "', with value '" + val + "'. Can't convert to Integer. Caught: " + ex);
+								}
+							}
+							// ---------------------------
+							// ---- sendMdaInfoSleepTime
+							// ---------------------------
+							else if (key.equalsIgnoreCase("sendMdaInfoSleepTime"))
+							{
+								try
+								{
+									int intVal = Integer.parseInt(val);
+									_sendMdaInfoSleepTime = intVal;
+									_logger.debug("Setting option '" + key + "' to '" + intVal + "'.");
+								}
+								catch (NumberFormatException ex)
+								{
+									_logger.warn("Problems reading option '" + key + "', with value '" + val + "'. Can't convert to Integer. Caught: " + ex);
+								}
+							}
+							// ---------------------------
+							// ---- sendCounterUsageInfo
+							// ---------------------------
 							else if (key.equalsIgnoreCase("sendCounterUsageInfo"))
 							{
 								_sendCounterUsageInfo = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+								_logger.debug("Setting option '" + key + "' to '" + bVal + "'.");
 							}
+							// ---------------------------
+							// ---- sendLogInfoWarning
+							// ---------------------------
 							else if (key.equalsIgnoreCase("sendLogInfoWarning"))
 							{
 								_sendLogInfoWarning = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+								_logger.debug("Setting option '" + key + "' to '" + bVal + "'.");
 							}
+							// ---------------------------
+							// ---- sendLogInfoError
+							// ---------------------------
 							else if (key.equalsIgnoreCase("sendLogInfoError"))
 							{
 								_sendLogInfoError = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+								_logger.debug("Setting option '" + key + "' to '" + bVal + "'.");
 							}
+							// ---------------------------
+							// ---- sendLogInfoThreshold
+							// ---------------------------
 							else if (key.equalsIgnoreCase("sendLogInfoThreshold"))
 							{
 								try
 								{
 									_sendLogInfoThreshold = Integer.parseInt(val);
-									_logger.debug("Setting option '"+key+"' to '"+val+"'.");
+									_logger.debug("Setting option '" + key + "' to '" + val + "'.");
 								}
 								catch (NumberFormatException e)
 								{
-									_logger.debug("NumberFormatException: Setting option '"+key+"' to '"+val+"'.");
+									_logger.debug("NumberFormatException: Setting option '" + key + "' to '" + val + "'.");
 								}
 							}
+							// ---------------------------
+							// ---- UNKNOWN OPTION
+							// ---------------------------
 							else
 							{
-								_logger.debug("Unknown option '"+key+"' from server with value '"+val+"'.");
+								_logger.debug("Unknown option '" + key + "' from server with value '" + val + "'.");
 							}
 						}
 						else
-							_logger.debug("Option '"+sa[i]+"' from server has strange key/valye.");
+						{
+							_logger.debug("Option '" + sa[i] + "' from server has strange key/valye.");
+						}
 					}
 				}
+				// ---------------------------
+				// ---- FEEDBACK:
+				// ---------------------------
 				if (line.startsWith("FEEDBACK:"))
 				{
 					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
 					String feedback = line.substring("FEEDBACK:".length()).trim();
-					_logger.debug("Receiving feedback from server '"+feedback+"'.");
+					_logger.debug("Receiving feedback from server '" + feedback + "'.");
 
 					if ( ! "".equals(feedback) )
 					{
@@ -701,16 +1044,22 @@ public abstract class CheckForUpdates
 						}
 					}
 				}
+				// ---------------------------
+				// ---- ERROR:
+				// ---------------------------
 				if (line.startsWith("ERROR:"))
 				{
 					_logger.warn("When checking for new version, found an 'ERROR:' response row, which looked like '" + line + "'.");
 				}
+				// ---------------------------
+				// ---- CHECK_ID:
+				// ---------------------------
 				if (line.startsWith("CHECK_ID:"))
 				{
 					String actionResponse = line.substring( "CHECK_ID:".length() ).trim();
 					try { _checkId = Integer.parseInt(actionResponse); }
 					catch (NumberFormatException ignore) {}
-					_logger.debug("Received check_id='"+_checkId+"' from update site.");
+					_logger.debug("Received check_id='" + _checkId + "' from update site.");
 				}
 			}
 			in.close();
@@ -741,9 +1090,9 @@ public abstract class CheckForUpdates
 			{
 				_hasUpgrade = true;
 				_logger.debug("-UPGRADE-");
-				_logger.debug("-to:"+_newAppVersion);
-				_logger.debug("-at:"+_downloadUrl);
-				_logger.debug("-at:"+_whatsNewUrl);
+				_logger.debug("-to:" + _newAppVersion);
+				_logger.debug("-at:" + _downloadUrl);
+				_logger.debug("-at:" + _whatsNewUrl);
 			}
 			else
 			{
@@ -757,11 +1106,33 @@ public abstract class CheckForUpdates
 				_logger.info("The above from URL='" + urlParams.getUrl() + "', with params='" + urlParams + "'.");
 			}
 
+			if (_useHttpPost)
+			{
+				_sendMdaInfoBatchSize = _sendMdaInfoBatchSizePost;
+				_logger.info("Using 'HttpPost' method to send 'Updates'. sendMdaInfoBatchSize=" + _sendMdaInfoBatchSize);
+			}
+			else
+			{
+				_sendMdaInfoBatchSize = _sendMdaInfoBatchSizeParam;
+				_logger.info("Using 'HttpGet' method to send 'Updates'. sendMdaInfoBatchSize=" + _sendMdaInfoBatchSize);
+			}
+
+			//-------------------------------------------------------------------------------------
+            // For development -- If we want to FORCE some parameters during various tests
+			//-------------------------------------------------------------------------------------
+            //_useHttpPost = true;
+            //_sendMdaInfoBatchSize = 200;
+            //_useHttpPost = false;
+            //_sendMdaInfoBatchSize = 10;
+
 			_checkSucceed = true;
 		}
 		catch (IOException ex)
 		{
-			_logger.debug("When we checking for later version, we had problems", ex);
+			_logger.warn("When we checking for later version, we had problems: Caught: " + ex);
+			_logger.debug("When we checking for later version, we had problems: Caught: " + ex, ex);
+
+			//_logger.info("When we checking for later version, we had problems: Caught: " + ex, ex);
 		}
 	}
 
@@ -839,7 +1210,7 @@ public abstract class CheckForUpdates
 			String responseLines = "";
 			while ((line = lr.readLine()) != null)
 			{
-				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				_logger.debug("response line " + lr.getLineNumber() + ": " + line);
 				responseLines += line;
 				if (line.startsWith("ERROR:"))
 				{
@@ -897,84 +1268,213 @@ public abstract class CheckForUpdates
 	}
 
 
-	public void sendMdaInfo()
-	{
-		// URL TO USE
-//		String urlStr = DBXTUNE_MDA_INFO_URL;
+//	public void sendMdaInfo_OLD()
+//	{
+//		// URL TO USE
+////		String urlStr = DBXTUNE_MDA_INFO_URL;
+//
+//		if ( ! _sendMdaInfo )
+//		{
+//			_logger.debug("Send 'MDA info' has been disabled.");
+//			return;
+//		}
+//
+//		if (_checkId < 0)
+//		{
+//			_logger.debug("No checkId was discovered when trying to send connection info, skipping this.");
+//			return;
+//		}
+//
+//		List<QueryString> sendQueryList = createSendMdaInfo();
+//		if (sendQueryList == null || (sendQueryList != null && sendQueryList.isEmpty()))
+//			return;
+//
+//
+//		if (sendQueryList.size() > 0)
+//		{
+//			int rowCountSum = 0;
+//			for (QueryString urlEntry : sendQueryList)
+//				rowCountSum += urlEntry.getCounter();
+//
+////			_logger.info("sendMdaInfo: Starting to send " + rowCountSum + " MDA information entries in " + sendQueryList.size() + " batches, for ASE Version '" + mtd.getAseExecutableVersionNum() + "'.");
+//			_logger.info("sendMdaInfo: Starting to send " + rowCountSum + " MDA information entries in " + sendQueryList.size() + " batches. (sendMdaInfoBatchSize=" + _sendMdaInfoBatchSize + ", sendMdaInfoSleepTime=" + _sendMdaInfoSleepTime+ ")");
+//			long startTime = System.currentTimeMillis();
+//			int batchId = 0;
+//			for (QueryString urlEntry : sendQueryList)
+//			{
+//				batchId++;
+//				try
+//				{
+//					// SEND OFF THE REQUEST
+//					InputStream in;
+//					if (_useHttpPost)
+//						in = sendHttpPost(urlEntry.getUrl(), urlEntry);
+//					else
+//						in = sendHttpParams(urlEntry.getUrl(), urlEntry);
+//		
+//					LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+//					String line;
+//					String responseLines = "";
+//					while ((line = lr.readLine()) != null)
+//					{
+//						_logger.debug("batchId=" + batchId + ", response line " + lr.getLineNumber() + ": " + line);
+//						responseLines += line;
+//						if (line.startsWith("ERROR:"))
+//						{
+//							_logger.warn("When doing MDA info 'ERROR:' at batchId=" + batchId + ", response row, which looked like '" + line + "'.");
+//						}
+//						if (line.startsWith("DONE:"))
+//						{
+//						}
+//					}
+//					in.close();
+//					_responseString = responseLines;
+//				}
+//				catch (IOException ex)
+//				{
+//					_logger.info("when trying to send MDA info, batchId=" + batchId + " (of " + sendQueryList.size() + "), we had problems. Caught: " + ex);
+//					_logger.debug("when trying to send MDA info, batchId=" + batchId + "(of " + sendQueryList.size() + "), we had problems", ex);
+//					
+//					// FIXME: add records to a "retry" list, and try again in a couple of seconds.
+//					//        for now sleeping 100ms seemed to workaround the issue...
+//				}
+//				
+//				// Sets sleep for a *short* period... to not overload the server...
+////				try { Thread.sleep(100); }
+////				catch(InterruptedException ignore) {}
+//
+//				// With 100ms sleep I get HTTP Errors: 
+//				//  - 429 Too Many Requests
+//				//  - 503 Service Unavailable
+//				// So lets try with a longer period 1 second (or even 2 seconds)
+//				// Ye it will take a longer time... but If we get rid of the errors... I'll take that
+//				if (_sendMdaInfoSleepTime <= 0)
+//					_sendMdaInfoSleepTime = DEFAULT_sendMdaInfoSleepTime;
+//
+//				try { Thread.sleep(_sendMdaInfoSleepTime); }
+//				catch(InterruptedException ignore) {}
+//			}
+//			String execTimeStr = TimeUtils.msToTimeStr(System.currentTimeMillis() - startTime);
+//			_logger.info("sendMdaInfo: this took '" + execTimeStr + "' for all " + sendQueryList.size() + " batches, rows send was " + rowCountSum + ".");
+//		}
+//	}
 
-		if ( ! _sendMdaInfo )
-		{
+	public void sendMdaInfo() 
+	{
+		if (!_sendMdaInfo) {
 			_logger.debug("Send 'MDA info' has been disabled.");
 			return;
 		}
 
-		if (_checkId < 0)
+		if (_checkId < 0) 
 		{
 			_logger.debug("No checkId was discovered when trying to send connection info, skipping this.");
 			return;
 		}
 
 		List<QueryString> sendQueryList = createSendMdaInfo();
-		if (sendQueryList == null || (sendQueryList != null && sendQueryList.isEmpty()))
-			return;
-
-
-		if (sendQueryList.size() > 0)
+		if (sendQueryList == null || sendQueryList.isEmpty()) 
 		{
-			int rowCountSum = 0;
-			for (QueryString urlEntry : sendQueryList)
-				rowCountSum += urlEntry.getCounter();
+			_logger.debug("No MDA info to send.");
+			return;
+		}
 
-//			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
-			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches.");
-			long startTime = System.currentTimeMillis();
-			int batchId = 0;
-			for (QueryString urlEntry : sendQueryList)
+		int rowCountSum = 0;
+		for (QueryString urlEntry : sendQueryList)
+			rowCountSum += urlEntry.getCounter();
+
+		_logger.info("sendMdaInfo: Sending " + rowCountSum + " MDA entries in " + sendQueryList.size()
+			+ " batches (sendMdaInfoBatchSize=" + _sendMdaInfoBatchSize
+			+ ", sendMdaInfoSleepTime=" + _sendMdaInfoSleepTime + " ms)");
+
+		long startTime = System.currentTimeMillis();
+		int batchId = 0;
+
+		for (QueryString urlEntry : sendQueryList) 
+		{
+			batchId++;
+
+			int maxRetries = 5;
+			int backoffMs = 1000;
+			boolean success = false;
+
+			for (int attempt = 1; attempt <= maxRetries; attempt++) 
 			{
-				batchId++;
-				try
+				try 
 				{
-					// SEND OFF THE REQUEST
 					InputStream in;
 					if (_useHttpPost)
 						in = sendHttpPost(urlEntry.getUrl(), urlEntry);
 					else
 						in = sendHttpParams(urlEntry.getUrl(), urlEntry);
-		
-					LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
-					String line;
-					String responseLines = "";
-					while ((line = lr.readLine()) != null)
+
+					// --- Process response ---
+					try (LineNumberReader lr = new LineNumberReader(new InputStreamReader(in))) 
 					{
-						_logger.debug("batchId="+batchId+", response line "+lr.getLineNumber()+": " + line);
-						responseLines += line;
-						if (line.startsWith("ERROR:"))
+						String line;
+						StringBuilder responseLines = new StringBuilder();
+
+						while ((line = lr.readLine()) != null) 
 						{
-							_logger.warn("When doing MDA info 'ERROR:' at batchId="+batchId+", response row, which looked like '" + line + "'.");
+							_logger.debug("batchId=" + batchId + ", line " + lr.getLineNumber() + ": " + line);
+							responseLines.append(line);
+							if (line.startsWith("ERROR:")) 
+							{
+								_logger.info("MDA info batchId=" + batchId + " returned error: " + line);
+							}
 						}
-						if (line.startsWith("DONE:"))
-						{
-						}
+						_responseString = responseLines.toString();
 					}
+
 					in.close();
-					_responseString = responseLines;
-				}
-				catch (IOException ex)
+
+					success = true;
+					break; // success: break out of retry loop
+
+				} 
+				catch (IOException ex) 
 				{
-					_logger.warn("when trying to send MDA info, batchId="+batchId+" (of "+sendQueryList.size()+"), we had problems. Caught: "+ex);
-					_logger.debug("when trying to send MDA info, batchId="+batchId+"(of "+sendQueryList.size()+"), we had problems", ex);
-					
-					// FIXME: add records to a "retry" list, and try again in a couple of seconds.
-					//        for now sleeping 100ms seemed to workaround the issue...
+					String msg = ex.getMessage();
+					boolean shouldRetry = msg.contains("lastStatusCode=429, ") || msg.contains("lastStatusCode=503, ");
+
+					_logger.info("Batch " + batchId + " attempt " + attempt + "/" + maxRetries
+							+ " failed: " + msg
+							+ (shouldRetry ? " -> will retry in " + backoffMs + "ms" : " -> not retrying"));
+
+					if (!shouldRetry || attempt == maxRetries) 
+					{
+						// final failure or non-retryable error
+						_logger.info("Giving up on batch " + batchId + " after " + attempt + " attempts.");
+						break;
+					}
+
+					try { Thread.sleep(backoffMs); } catch (InterruptedException ignore) {}
+					backoffMs = Math.min(backoffMs * 2, 10000); // exponential backoff up to 10s
 				}
-				
-				// Sets sleep for a *short* period... to not overload the server...
-				try { Thread.sleep(100); }
-				catch(InterruptedException ignore) {}
 			}
-			String execTimeStr = TimeUtils.msToTimeStr(System.currentTimeMillis() - startTime);
-			_logger.info("sendMdaInfo: this took '"+execTimeStr+"' for all "+sendQueryList.size()+" batches, rows send was "+rowCountSum+".");
+
+			if (success) 
+			{
+				_sendMdaInfoSleepTime = Math.max(500, _sendMdaInfoSleepTime / 2);
+			} 
+			else 
+			{
+				_sendMdaInfoSleepTime = Math.min(DEFAULT_sendMdaInfoSleepTime, _sendMdaInfoSleepTime * 2);
+			}
+
+			// Sleep briefly before next batch (even on success)
+			if (success) 
+			{
+				if (_sendMdaInfoSleepTime <= 0)
+					_sendMdaInfoSleepTime = DEFAULT_sendMdaInfoSleepTime;
+
+				try { Thread.sleep(_sendMdaInfoSleepTime); } catch (InterruptedException ignore) {}
+			}
 		}
+
+		String execTimeStr = TimeUtils.msToTimeStr(System.currentTimeMillis() - startTime);
+		_logger.info("sendMdaInfo: Finished " + sendQueryList.size() + " batches, "
+				+ rowCountSum + " rows, took " + execTimeStr + ".");
 	}
 
 
@@ -1050,7 +1550,7 @@ public abstract class CheckForUpdates
 			String responseLines = "";
 			while ((line = lr.readLine()) != null)
 			{
-				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				_logger.debug("response line " + lr.getLineNumber() + ": " + line);
 				responseLines += line;
 				if (line.startsWith("ERROR:"))
 				{
@@ -1102,7 +1602,7 @@ public abstract class CheckForUpdates
 				}
 				else
 				{
-					_logger.debug("sendCounterUsageInfo, already done (_sendCounterUsage_atConnectCount="+_sendCounterUsage_atConnectCount+", _connectCount="+_connectCount+").");
+					_logger.debug("sendCounterUsageInfo, already done (_sendCounterUsage_atConnectCount=" + _sendCounterUsage_atConnectCount + ", _connectCount=" + _connectCount + ").");
 				}
 			}
 		};
@@ -1170,7 +1670,7 @@ public abstract class CheckForUpdates
 				String responseLines = "";
 				while ((line = lr.readLine()) != null)
 				{
-					_logger.debug("response line "+lr.getLineNumber()+": " + line);
+					_logger.debug("response line " + lr.getLineNumber() + ": " + line);
 					responseLines += line;
 					if (line.startsWith("ERROR:"))
 					{
@@ -1234,11 +1734,11 @@ public abstract class CheckForUpdates
 		if (msg != null)
 		{
 			// Filter out following messages:
-			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
-			//_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
-			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' in ASE Version "+getServerVersionStr()+", I need atleast ASE Version "+getDependsOnVersionStr()+" for that.");
-			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' in ASE Cluster Edition Version "+getServerVersionStr()+", I need atleast ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
-			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$DBXTUNE_HOME/classes' or unzip dbxtune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+			//_logger.warn("When trying to initialize Counters Model '" + getName() + "' The following role(s) were needed '" + StringUtil.toCommaStr(dependsOnRole) + "', and you do not have the following role(s) '" + didNotHaveRoles + "'.");
+			//_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "' in ASE Version " + getServerVersion() + ", I found that '" + configName + "' wasn't configured (which is done with: sp_configure '" + configName + "'" + reconfigOptionStr + "), so monitoring information about '" + getDisplayName() + "' will NOT be enabled.");
+			//_logger.warn("When trying to initialize Counters Model '" + getName() + "' in ASE Version " + getServerVersionStr() + ", I need atleast ASE Version " + getDependsOnVersionStr() + " for that.");
+			//_logger.warn("When trying to initialize Counters Model '" + getName() + "' in ASE Cluster Edition Version " + getServerVersionStr() + ", I need atleast ASE Cluster Edition Version " + getDependsOnCeVersionStr() + " for that.");
+			//_logger.warn("When trying to initialize Counters Model '" + getName() + "' in ASE Version " + getServerVersion() + ", " + msg + " (connect with a user that has '" + needsRoleToRecreate + "' or load the proc from '$DBXTUNE_HOME/classes' or unzip dbxtune.jar. under the class '" + scriptLocation.getClass().getName() + "' you will find the script '" + scriptName + "').");
 			if (msg.startsWith("When trying to initialize Counters Model")) 
 				return;
 
@@ -1281,7 +1781,7 @@ public abstract class CheckForUpdates
 		
 		if (_sendLogInfoCount > _sendLogInfoThreshold)
 		{
-			_logger.debug("Send 'LOG info' has exceed sendLogInfoThreshold="+_sendLogInfoThreshold+", sendLogInfoCount="+_sendLogInfoCount);
+			_logger.debug("Send 'LOG info' has exceed sendLogInfoThreshold=" + _sendLogInfoThreshold + ", sendLogInfoCount=" + _sendLogInfoCount);
 			return;
 		}
 		// NOTE: we may need to synchronize this, but on the other hand it's just a counter incrementation
@@ -1367,7 +1867,7 @@ public abstract class CheckForUpdates
 			String responseLines = "";
 			while ((line = lr.readLine()) != null)
 			{
-				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				_logger.debug("response line " + lr.getLineNumber() + ": " + line);
 				responseLines += line;
 				if (line.startsWith("ERROR:"))
 				{
@@ -1409,7 +1909,7 @@ public abstract class CheckForUpdates
 				throw new IllegalArgumentException("ProxySelector can't be null.");
 			}
 			_defsel = def;
-			_logger.debug("Installing a new ProxySelector, but I will save and use the default '"+_defsel.getClass().getName()+"'.");
+			_logger.debug("Installing a new ProxySelector, but I will save and use the default '" + _defsel.getClass().getName() + "'.");
 
 			//===============================================
 			// Use proxy-vole project:
@@ -1424,7 +1924,7 @@ public abstract class CheckForUpdates
 				@Override
 				public boolean isLogginEnabled(com.btr.proxy.util.Logger.LogLevel logLevel)
 				{
-//					System.out.println("PROXY-VOLE.isLogginEnabled: logLevel="+logLevel);
+//					System.out.println("PROXY-VOLE.isLogginEnabled: logLevel=" + logLevel);
 //					return true;
 					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)   && _logger.isTraceEnabled()) return true;
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)   && _logger.isDebugEnabled()) return true;
@@ -1467,14 +1967,14 @@ public abstract class CheckForUpdates
 						if ( firstLogAge < _reLogTimeout )
 						{
 							if (_logger.isDebugEnabled())
-								_logger.debug("com.btr.proxy.util.Logger.LogBackEnd: Discarding log message, (firstLogAge='"+firstLogAge+"', re-logTimeout='"+_reLogTimeout+"': "+logMsg);
+								_logger.debug("com.btr.proxy.util.Logger.LogBackEnd: Discarding log message, (firstLogAge='" + firstLogAge + "', re-logTimeout='" + _reLogTimeout + "': " + logMsg);
 							return;
 						}
 					}
 					_logDiscardCache.put(logMsg, Long.valueOf(System.currentTimeMillis()));
 
 					
-//					System.out.println("PROXY-VOLE.log(logLevel="+logLevel+"): "+msg);
+//					System.out.println("PROXY-VOLE.log(logLevel=" + logLevel + "): " + msg);
 					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)  ) _logger.trace(logMsg, t);
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)  ) _logger.debug(logMsg, t);
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.INFO)   ) _logger.info( logMsg, t);
@@ -1483,7 +1983,7 @@ public abstract class CheckForUpdates
 					// downgrade WAR and ERROR to INFO, this so it wont open the log window
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.info( logMsg, t);
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.info( logMsg, t);
-					else _logger.info("Unhandled loglevel("+logLevel+"): " + logMsg, t);
+					else _logger.info("Unhandled loglevel(" + logLevel + "): " + logMsg, t);
 				}
 			});
 
@@ -1542,8 +2042,8 @@ public abstract class CheckForUpdates
 				// is thrown if we are using JVM 1.5 and the js.jar is not part of the classpath
 				// js.jar is Java Script Engine: Rhino, http://www.mozilla.org/rhino/scriptjava.html
 				// which is not part of this distribution, in JVM 6, we use the built in Java Script Engine (javax.script)
-				System.out.println("When initializing 'proxy-vole' caught exception '"+e+"', but I will continue anyway. ");
-				_logger.info("When initializing 'proxy-vole' caught exception '"+e+"', but I will continue anyway.");
+				System.out.println("When initializing 'proxy-vole' caught exception '" + e + "', but I will continue anyway. ");
+				_logger.info("When initializing 'proxy-vole' caught exception '" + e + "', but I will continue anyway.");
 			}
 		}
 
@@ -1563,11 +2063,11 @@ public abstract class CheckForUpdates
 			}
 			String protocol = uri.getScheme();
 
-			_logger.debug("called select(uri): protocoll '"+protocol+"' with uri='"+uri+"')");
+			_logger.debug("called select(uri): protocoll '" + protocol + "' with uri='" + uri + "')");
 
 			if ( "socket".equalsIgnoreCase(protocol) )
 			{
-				_logger.debug("Shortcircuting proxy resolving for the protocol '"+protocol+"'. No proxy server will be used.");
+				_logger.debug("Shortcircuting proxy resolving for the protocol '" + protocol + "'. No proxy server will be used.");
 
 				List<Proxy> proxyList = new ArrayList<Proxy>();
 				proxyList.add(Proxy.NO_PROXY);
@@ -1578,7 +2078,7 @@ public abstract class CheckForUpdates
 				List<Proxy> proxyList = null;
 				if (_proxyVole != null)
 				{
-					_logger.debug("PROXY-VOLE: Trying to resolv a proxy server for the protocoll '"+protocol+"', using the ProxySelector '"+_proxyVole.getClass().getName()+"', with uri='"+uri+"'.)");
+					_logger.debug("PROXY-VOLE: Trying to resolv a proxy server for the protocoll '" + protocol + "', using the ProxySelector '" + _proxyVole.getClass().getName() + "', with uri='" + uri + "'.)");
 
 					proxyList = _proxyVole.select(uri);
 
@@ -1586,20 +2086,20 @@ public abstract class CheckForUpdates
 					{
 						for (int i=0; i<proxyList.size(); i++)
 						{
-							_logger.debug("PROXY-VOLE: ProxyList["+i+"]: "+proxyList.get(i));
+							_logger.debug("PROXY-VOLE: ProxyList[" + i + "]: " + proxyList.get(i));
 						}
 
 						return proxyList;
 					}
 				}
 
-				_logger.debug("FALLBACK: Trying to resolv a proxy server for the protocoll '"+protocol+"', using the ProxySelector '"+_defsel.getClass().getName()+"', with uri='"+uri+"'.)");
+				_logger.debug("FALLBACK: Trying to resolv a proxy server for the protocoll '" + protocol + "', using the ProxySelector '" + _defsel.getClass().getName() + "', with uri='" + uri + "'.)");
 
 				proxyList = _defsel.select(uri);
 
 				for (int i=0; i<proxyList.size(); i++)
 				{
-					_logger.debug("FALLBACK: ProxyList["+i+"]: "+proxyList.get(i));
+					_logger.debug("FALLBACK: ProxyList[" + i + "]: " + proxyList.get(i));
 				}
 
 				return proxyList;
@@ -1614,6 +2114,7 @@ public abstract class CheckForUpdates
 		private String          _url	 = null;
 		private StringBuffer    _query	 = new StringBuffer();
 		private int             _counter = 0;
+		private int             _addCnt  = 0;
 
 		public QueryString(String url)
 		{
@@ -1669,11 +2170,19 @@ public abstract class CheckForUpdates
 				_query.append(URLEncoder.encode(name, "UTF-8"));
 				_query.append('=');
 				_query.append(URLEncoder.encode(value, "UTF-8"));
+				
+				_addCnt++;
 			}
 			catch (UnsupportedEncodingException ex)
 			{
 				throw new RuntimeException("Broken VM does not support UTF-8");
 			}
+		}
+
+		/** Number of times we have called add (or encode) */
+		public int getAddCounter()
+		{
+			return _addCnt;
 		}
 
 		/** This is just a number that can be used for "anything" */
@@ -1739,14 +2248,14 @@ public abstract class CheckForUpdates
 //			if (check.hasUpgrade())
 //			{
 //				System.out.println("-- HAS NEW UPGRADE");
-//				System.out.println("-- new version '"+check.getNewAppVersionStr()+"'.");
-//				System.out.println("-- download url '"+check.getDownloadUrl()+"'.");
+//				System.out.println("-- new version '" + check.getNewAppVersionStr() + "'.");
+//				System.out.println("-- download url '" + check.getDownloadUrl() + "'.");
 //			}
 //			else
 //			{
 //				System.out.println("-- NO NEED TO UPGRADE");
 //			}
-//			System.out.println("-- FEEDBACK_URL: '"+check.getFeedbackUrl()+"'.");
+//			System.out.println("-- FEEDBACK_URL: '" + check.getFeedbackUrl() + "'.");
 //		}
 //		else
 //		{

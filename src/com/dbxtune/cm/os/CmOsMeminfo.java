@@ -553,6 +553,7 @@ extends CounterModelHostMonitor
 				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
 				
 				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+				htmlChartImage += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
 				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
 				
 				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over " + MOVING_AVG_TIME_IN_MINUTES + " minute moving average", 
@@ -608,6 +609,7 @@ extends CounterModelHostMonitor
 				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
 				
 				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+				htmlChartImage += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
 				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
 				
 				AlarmEventOsSwapThrashing alarm = new AlarmEventOsSwapThrashing(cm, threshold, maxCap, hostname, "over " + MOVING_AVG_TIME_IN_MINUTES + " minute moving average", 

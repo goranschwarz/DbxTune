@@ -28,8 +28,6 @@ package com.dbxtune.tools.sqlw;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.util.Map;
 
 import javax.swing.JButton;
@@ -209,13 +207,13 @@ public class JsonConfigDialog
 			checkForChanges();
 		}
 	};
-	private KeyListener        _keyListener  = new KeyListener()
-	{
-		 // Changes in the fields are visible first when the key has been released.
-		@Override public void keyPressed (KeyEvent keyevent) {}
-		@Override public void keyTyped   (KeyEvent keyevent) {}
-		@Override public void keyReleased(KeyEvent keyevent) { checkForChanges(); }
-	};
+//	private KeyListener        _keyListener  = new KeyListener()
+//	{
+//		 // Changes in the fields are visible first when the key has been released.
+//		@Override public void keyPressed (KeyEvent keyevent) {}
+//		@Override public void keyTyped   (KeyEvent keyevent) {}
+//		@Override public void keyReleased(KeyEvent keyevent) { checkForChanges(); }
+//	};
 
 	private void checkForChanges()
 	{

@@ -37,6 +37,7 @@ public interface ConnectionProgressExtraActions
 	public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 	/** If this part should be executed */
 	public boolean doInitializeVersionInfo();
+	public void    setInitializeVersionInfo(boolean val);
 
 	/**
 	 * Check if the Server is Configured properly for Monitoring, If it's not you may want to initialize/configure it before we continue.
@@ -49,6 +50,7 @@ public interface ConnectionProgressExtraActions
 	public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 	/** If this part should be executed */
 	public boolean doCheckMonitorConfig();
+	public void    setCheckMonitorConfig(boolean val);
 	
 	/**
 	 * Initialize the Monitor Dictionary, that will be used to display tool tips on the column headers
@@ -61,6 +63,7 @@ public interface ConnectionProgressExtraActions
 	public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 	/** If this part should be executed */
 	public boolean doInitMonitorDictionary();
+	public void    setInitMonitorDictionary(boolean val);
 	
 	/**
 	 * Initialize the Servers Configuration Dictionary
@@ -74,6 +77,7 @@ public interface ConnectionProgressExtraActions
 	public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) throws Exception;
 	/** If this part should be executed */
 	public boolean doInitDbServerConfigDictionary();
+	public void    setInitDbServerConfigDictionary(boolean val);
 	
 	/**
 	 * Initialize the Counter Collector
@@ -86,4 +90,5 @@ public interface ConnectionProgressExtraActions
 	public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 	/** If this part should be executed */
 	public boolean doInitCounterCollector();
+	public void    setInitCounterCollector(boolean val);
 }

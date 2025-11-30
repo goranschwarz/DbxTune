@@ -21,12 +21,13 @@
  ******************************************************************************/
 package com.dbxtune.gui.swing;
 
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableModel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableModel;
 
 public class TableModelSortable
 extends AbstractTableModel

@@ -118,6 +118,8 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 			return;
 		}
 
+		//TODO; for Windows: Create a "report" that groups on DISK DRIVE (on Linux we could possibly use "mount point" like we do in CmDatabases)
+		
 		String sql = ""
 			    + "select \n"
 			    + "     max([dbname])                          as [dbname] \n"
@@ -135,6 +137,10 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 			    + "    ,cast(sum([WritesKB])/1024 as bigint)   as [WritesMB__sum] \n"
 //			    + "    ,sum([ReadsKB])                         as [ReadsKB__sum] \n"
 //			    + "    ,sum([WritesKB])                        as [WritesKB__sum] \n"
+				+ "    ,cast('' as varchar(512))               as [AvgReadKbPerIo__chart] \n"
+				+ "    ,cast('' as varchar(512))               as [AvgWriteKbPerIo__chart] \n"
+				+ "    ,cast(avg([AvgReadKbPerIo])  as int)    as [AvgReadKbPerIo] \n"
+				+ "    ,cast(avg([AvgWriteKbPerIo]) as int)    as [AvgWriteKbPerIo] \n"
 			    + "    ,sum([IOTime])                          as [IOTime__sum] \n"
 			    + "    ,sum([ReadTime])                        as [ReadTime__sum] \n"
 			    + "    ,sum([WriteTime])                       as [WriteTime__sum] \n"
@@ -191,6 +197,28 @@ public class SqlServerCmDeviceIo extends SqlServerAbstract
 					.setDbmsTableName            ("CmDeviceIo_diff")
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 					.setDbmsDataValueColumnName  ("Writes")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setSparklineTooltipPostfix  ("Number of Writes in below period")
+					.validate()));
+			
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("AvgReadKbPerIo__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmDeviceIo_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("AvgReadKbPerIo")   
+					.setDbmsWhereKeyColumnName   (whereKeyColumn)
+//					.setSparklineTooltipPostfix  ("Number of Reads in below period")
+					.validate()));
+			
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      ("AvgWriteKbPerIo__chart")
+					.setHtmlWhereKeyColumnName   (whereKeyColumn)
+					.setDbmsTableName            ("CmDeviceIo_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  ("AvgWriteKbPerIo")   
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 //					.setSparklineTooltipPostfix  ("Number of Writes in below period")
 					.validate()));

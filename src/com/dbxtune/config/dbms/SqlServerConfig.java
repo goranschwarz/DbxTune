@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
@@ -494,7 +495,7 @@ extends DbmsConfigAbstract
 			{
 				try
 				{
-					SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy HH:mm:ss");
+					SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy HH:mm:ss", Locale.ENGLISH); // (Use Locale.ENGLISH to ensure English month parsing.)
 					Date buildDate = sdf.parse(buildDateStr);
 
 					String buildDateYmdStr = new SimpleDateFormat("yyyy-MM-dd").format(buildDate);

@@ -36,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -193,12 +194,24 @@ extends Task
 				map.put(ts, list);
 			}
 		}
-		return map;
+		
+		// We should NOT have to sort the Map by key... but lets do it anyway
+		Map<String, List<FileInfo>> sortedMap = map.entrySet().stream()
+		    .sorted(Map.Entry.comparingByKey())
+		    .collect(Collectors.toMap(
+		    		Map.Entry::getKey,
+		    		Map.Entry::getValue,
+		    		(e1, e2) -> e1,
+		    		LinkedHashMap::new  // Preserve order
+		    		));
+		
+//		return map;
+		return sortedMap;
 	}
 	
 	private List<FileInfo> getTimestampedDbFiles()
 	{
-		List<String> files = getFilesH2Dbs();
+		List<String> files = getFilesH2Dbs(); // Should be sorted in dictionary order
 		List<FileInfo> output = new ArrayList<>();
 
 		for (String file : files)
@@ -206,6 +219,7 @@ extends Task
 			File f = new File(file);
 			if (f.exists() && f.isFile())
 			{
+				// servername_YYYY-MM-DD.mv.db
 				if (f.getName().toUpperCase().matches(".*_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].MV.DB"))
 				{
 					FileInfo fi = new FileInfo(f);
@@ -627,14 +641,28 @@ extends Task
 		else
 		{
 			needSpaceInMb = Math.max(needSpaceInMb, needSpaceInMb_forExceedingMaxHistorySpace);
+
+			// We should NOT remove any files that is TODAY...
+//			String todyStr = new SimpleDateFormat("yyyy-MM-dd").format( new Date(System.currentTimeMillis()) );
+			String todyStr = TimeUtils.toStringYmd(System.currentTimeMillis());
 			
 			// Compose what to be deleted
 			Map<String, List<FileInfo>> removeMap = new LinkedHashMap<>();
 			long removeMapSizeMb = 0;
 			for (Entry<String, List<FileInfo>> entry : dateMap.entrySet())
 			{
-				removeMap.put(entry.getKey(), entry.getValue());
-				removeMapSizeMb += getSizeMb(entry.getValue(), SizeType.FILE_INFO);
+				String         key = entry.getKey();
+				List<FileInfo> val = entry.getValue();
+				
+				// DO NOT Remove any of the TODAY's H2 Files
+				if (key.equals(todyStr))
+				{
+					_logger.warn("Hey, we CAN NOT delete any of TODAYS files... Skipping this entry: key='" + key + "', keySet=" + dateMap.keySet() + ", todyStr='" + todyStr + "'. Is the KeySet Ordered in the Wrong way? Or are we just out-of-space?");
+					continue;
+				}
+
+				removeMap.put(key, val);
+				removeMapSizeMb += getSizeMb(val, SizeType.FILE_INFO);
 				
 				// When we got enough MB to delete, get out of loop
 				if (removeMapSizeMb >= needSpaceInMb)

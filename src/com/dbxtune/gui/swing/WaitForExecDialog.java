@@ -33,9 +33,12 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -56,6 +59,7 @@ import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
+import com.dbxtune.utils.TimeUtils;
 import com.sybase.jdbcx.SybConnection;
 
 import net.miginfocom.swing.MigLayout;
@@ -123,6 +127,12 @@ implements PropertyChangeListener, ActionListener
 	private boolean         _cancelWasPressed= false;
 	private Connection      _conn            = null;
 
+	// incremented when in execution, decremented when done. NOTE: This is static (global variable for all instances)
+	private static volatile AtomicInteger _staticNestLevel = new AtomicInteger(0);
+
+	// Local class set after '_staticNestLevel' is incremented. Only used as a "readonly" in the instance
+	private int _classNestLevel = 0;
+	
 	/** if a JDBC Connection is passed, the cancel button is visible */
 	public WaitForExecDialog(Window owner, Connection conn, String waitForLabel)
 	{
@@ -290,11 +300,12 @@ implements PropertyChangeListener, ActionListener
 	public void propertyChange(PropertyChangeEvent event) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("WaitForExecDialog.propertyChange(): propName="+event.getPropertyName()+", newVal="+event.getNewValue()+", oldVal="+event.getOldValue()+", PropagationId="+event.getPropagationId()+", getSource="+event.getSource());
+			_logger.debug("WaitForExecDialog.propertyChange(): propName="+event.getPropertyName()+", newVal="+event.getNewValue()+", oldVal="+event.getOldValue()+", PropagationId="+event.getPropagationId()+", getSource="+event.getSource() + ", label='" + _label.getText() + "'.");
 
 		// Close this window when the Swing worker has completed
 		if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
 		{
+//System.out.println(indent() + "<<<< setVisible(false)" + ", label='" + _label.getText() + "'.");
 			_normalExit = true;
 			setVisible(false);
 			dispose();
@@ -332,41 +343,173 @@ implements PropertyChangeListener, ActionListener
 	// FIXME: add method execAndWaitWithThrow or similar, that throws Exception or Throwable
 	public Object execAndWait(final BgExecutor execClass, final int graceTime)
 	{
-		if ( SwingUtilities.isEventDispatchThread() )
+		try
 		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
-				
-//System.out.println("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
-			return internal_execAndWait(execClass, graceTime);
-		}
-		else
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
-				
-//System.out.println("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
-			Runnable doRun = new Runnable()
+			// maintain Nesting Level
+			_classNestLevel = _staticNestLevel.incrementAndGet();
+//			System.out.println(indent() + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> execAndWait: NestLevel=" + _classNestLevel + " -- label='" + _label.getText() + "'.");
+			
+			if ( SwingUtilities.isEventDispatchThread() )
 			{
-				@Override
-				public void run()
+				if (_logger.isDebugEnabled())
+					_logger.debug("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
+					
+	//System.out.println("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
+				return internal_execAndWait(execClass, graceTime);
+			}
+			else
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
+					
+	//System.out.println("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
+				Runnable doRun = new Runnable()
 				{
-					_notEdtRetObj = internal_execAndWait(execClass, graceTime);
-				}
-			};
+					@Override
+					public void run()
+					{
+						_notEdtRetObj = internal_execAndWait(execClass, graceTime);
+					}
+				};
 
-			try { SwingUtilities.invokeAndWait(doRun); }
-			catch (InterruptedException e)      { _logger.info("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e); }
-			catch (InvocationTargetException e) { _logger.warn("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e, e); }
+				try { SwingUtilities.invokeAndWait(doRun); }
+				catch (InterruptedException e)      { _logger.info("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e); }
+				catch (InvocationTargetException e) { _logger.warn("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e, e); }
 
-			return _notEdtRetObj;
+				return _notEdtRetObj;
+			}
+		}
+		finally 
+		{
+//			System.out.println(indent() + "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< execAndWait: NestLevel=" + _classNestLevel + " -- label='" + _label.getText() + "'.");
+			// maintain Nesting Level
+			_staticNestLevel.decrementAndGet();
 		}
 	}
 
+//	/**
+//	 * Internally used and called by execAndWait(final BgExecutor execClass, final int graceTime)
+//	 * @param execClass
+//	 * @param graceTime
+//	 * @return
+//	 */
+//	private Object internal_execAndWait(final BgExecutor execClass, final int graceTime)
+//	{
+//		_execClass = execClass;
+//
+//		// Execute in a Swing Thread
+//		SwingWorker<Object, Object> doBgThread = new SwingWorker<Object, Object>()
+//		{
+//			@Override
+//			protected Object doInBackground() 
+//			throws Exception
+//			{
+//				try 
+//				{
+//					_execClass.setBgThread(Thread.currentThread());
+//					Object retObject = _execClass.doWork();
+//					if (_execClass.hasException())
+//						_logger.info("WaitForExecDialog:(at try block) has problems when doing it's work.", _execClass.getException());
+//
+//					return retObject;
+//				} 
+//				catch (Throwable t) 
+//				{
+//					_logger.info("WaitForExecDialog:(at catch block) has problems when doing it's work.", t);
+////					_logger.debug("WaitForExecDialog:(at catch block) has problems when doing it's work.", t);
+//				}
+//				return null;
+//			}
+//		};
+//		doBgThread.addPropertyChangeListener(this);
+//		doBgThread.execute();
+//
+//		// Do not show Wait GUI at once, if it's a fast execution, we do not need to show...
+//		if (graceTime > 0)
+//		{
+//			// Note: this can be done better with a timer, but it will do for now...
+//			long startTime = System.currentTimeMillis();
+//			while (System.currentTimeMillis() - startTime < graceTime )
+//			{
+//				// if the BackGround job is done, get out of here
+//				if ( doBgThread.isDone() )
+//					break;
+//	
+//				// Sleep for 10ms, get out of here if we are interrupted.
+//				// or we can do a _someLockObject.wait(timeout)... and _someLockObject.notify() from the SwingWorker.done() method.
+//				try { Thread.sleep(10); }
+//				catch (InterruptedException ignore) { break; }
+//			}
+//		}
+//
+//		//the dialog will be visible until the SwingWorker is done
+//		if ( ! doBgThread.isDone() )
+//		{
+//			boolean canDoCancel = _execClass.canDoCancel();
+//			if (_conn != null && (_conn instanceof SybConnection || _conn instanceof TdsConnection) )
+//				canDoCancel = true;
+//			_cancel_but.setVisible(canDoCancel);
+//
+//			// Show the wait dialog
+//			setVisible(true);
+//		}
+//
+//		try
+//		{
+//			//return doBgThread.get();
+//			while (true)
+//			{
+//				try
+//				{
+//					return doBgThread.get(1000, TimeUnit.MILLISECONDS);
+//				}
+//				catch (TimeoutException e)
+//				{
+//					// if the POPUP is still visible, continue to wait
+//					if (isVisible())
+//						continue;
+//
+//					// If POPUP has been closed, simply returns NULL...
+//					System.out.println("WaitForExecDialog: after 1000ms timeout, POPUP was not visible anymore, RETURN NULL... otherwise the EDT will freeze... Warning: the thread will continue to execute...");
+//					return null;
+//				}
+//			}
+//		}
+//		catch (InterruptedException e)
+//		{
+//			_logger.warn("execAndWait Caught: "+e, e);
+//			return null;
+//		}
+//		catch (ExecutionException e)
+//		{
+//			_logger.warn("execAndWait Caught: "+e, e);
+//			return null;
+//		}
+//	}
+	private String indent()
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+		String ts = "## " + sdf.format(new Date(System.currentTimeMillis())) + " ";
+
+		int nestLevel = _classNestLevel - 1;
+		
+		if (_classNestLevel <= 0)
+		{
+			return ts + "";
+		}
+		
+		String str = ts + "";
+		for (int i=0; i<nestLevel; i++)
+		{
+			str += "    ";
+		}
+		return str;
+	}
 	/**
 	 * Internally used and called by execAndWait(final BgExecutor execClass, final int graceTime)
 	 * @param execClass
 	 * @param graceTime
+	 * @param NestLevel 
 	 * @return
 	 */
 	private Object internal_execAndWait(final BgExecutor execClass, final int graceTime)
@@ -377,22 +520,28 @@ implements PropertyChangeListener, ActionListener
 		SwingWorker<Object, Object> doBgThread = new SwingWorker<Object, Object>()
 		{
 			@Override
-			protected Object doInBackground() 
+			protected Object doInBackground()
 			throws Exception
 			{
-				try 
+				try
 				{
 					_execClass.setBgThread(Thread.currentThread());
+					
+					long startTime = System.currentTimeMillis();
+//System.out.println(indent() + "------ SwingWorker: BEFORE: doWork() -- label='" + _label.getText() + "'.");
+
 					Object retObject = _execClass.doWork();
+					_logger.debug("SwingWorker: AFTER: doWork(). execTime='" + TimeUtils.msDiffNowToTimeStr(startTime) + "', label='" + _label.getText() + "'.");
+//System.out.println(indent() + "------ SwingWorker: AFTER: doWork(). execTime='" + TimeUtils.msDiffNowToTimeStr(startTime) + "', label='" + _label.getText() + "'.");
+
 					if (_execClass.hasException())
 						_logger.info("WaitForExecDialog:(at try block) has problems when doing it's work.", _execClass.getException());
 
 					return retObject;
-				} 
-				catch (Throwable t) 
+				}
+				catch (Throwable t)
 				{
 					_logger.info("WaitForExecDialog:(at catch block) has problems when doing it's work.", t);
-//					_logger.debug("WaitForExecDialog:(at catch block) has problems when doing it's work.", t);
 				}
 				return null;
 			}
@@ -403,50 +552,79 @@ implements PropertyChangeListener, ActionListener
 		// Do not show Wait GUI at once, if it's a fast execution, we do not need to show...
 		if (graceTime > 0)
 		{
-			// Note: this can be done better with a timer, but it will do for now...
-			long startTime = System.currentTimeMillis();
-			while (System.currentTimeMillis() - startTime < graceTime )
+//System.out.println(indent() + "WaitForExecDialog: IN-Grace-Sleep graceTime=" + graceTime + ". label='" + _label.getText() + "'.");
+			// Sleep for 'graceTime', doCallback every 10 ms to check if we should STOP sleep
+			ModalSleep mSleep = new ModalSleep(graceTime, 10, new ModalSleep.SleepAbortCallback()
 			{
-				// if the BackGround job is done, get out of here
-				if ( doBgThread.isDone() )
-					break;
-	
-				// Sleep for 10ms, get out of here if we are interrupted.
-				// or we can do a _someLockObject.wait(timeout)... and _someLockObject.notify() from the SwingWorker.done() method.
-				try { Thread.sleep(10); }
-				catch (InterruptedException ignore) { break; }
+				@Override
+				public boolean abortSleepQuestion()
+				{
+					return doBgThread.isDone();
+				}
+			});
+			mSleep.start(); // Blocking call.. that DO NOT block the EDT -- Event Dispatch Thread
+
+			// Grace time has expired... show wait dialog
+			if (!doBgThread.isDone())
+			{
+				showWaitDialog(doBgThread);
 			}
 		}
-
-		//the dialog will be visible until the SwingWorker is done
-		if ( ! doBgThread.isDone() )
+		else
 		{
-			boolean canDoCancel = _execClass.canDoCancel();
-			if (_conn != null && (_conn instanceof SybConnection || _conn instanceof TdsConnection) )
-				canDoCancel = true;
-			_cancel_but.setVisible(canDoCancel);
-
-			// Show the wait dialog
-			setVisible(true);
+			// No grace time, show dialog immediately if needed
+			if (!doBgThread.isDone())
+			{
+				showWaitDialog(doBgThread);
+			}
 		}
+//		System.out.println(indent() + "################################## WaitForExecDialog: AFTER graceTime-check/wait. graceTime=" + graceTime + ", doBgThread.isDone()=" + doBgThread.isDone() + ", isVisible=" + isVisible() + "... label='" + _label.getText() + "'.");
 
+		// Wait for result without blocking EDT
 		try
 		{
-			//return doBgThread.get();
 			while (true)
 			{
+				if ( ! doBgThread.isDone() )
+				{
+					ModalSleep mSleep = new ModalSleep(10_000, 10, new ModalSleep.SleepAbortCallback()
+					{
+						@Override
+						public boolean abortSleepQuestion()
+						{
+//							System.out.println(indent() + "!!!!!!!!!!!!!!!!!!!!!!!!! WaitForExecDialog[MODAL-SLEEP-10000:10-CALLBACK]: doBgThread.isDone()=" + doBgThread.isDone() + ", isVisible=" + isVisible() + "... label='" + _label.getText() + "'.");
+							return doBgThread.isDone();
+						}
+					});
+//					System.out.println(indent() + "!!!!!!!!!!!!!!!!!!!!!!!!! WaitForExecDialog[MODAL-SLEEP-10000:10-START]: CHECK BEFORE BLOCKING CALL TO: doBgThread.get(). doBgThread.isDone()=" + doBgThread.isDone() + ", isVisible=" + isVisible() + "... label='" + _label.getText() + "'.");
+					mSleep.start(); // Blocking call.. that DO NOT block the EDT -- Event Dispatch Thread
+				}
+
 				try
 				{
-					return doBgThread.get(1000, TimeUnit.MILLISECONDS);
+					long startTime = System.currentTimeMillis();
+//System.out.println(indent() + "!!!!!!!!!!!!!!!!!!!!!!!!! WaitForExecDialog: BLOCKING CALL TO: doBgThread.get(). doBgThread.isDone()=" + doBgThread.isDone() + ", isVisible=" + isVisible() + "... label='" + _label.getText() + "'.");
+					Object retObj = doBgThread.get(1000, TimeUnit.MILLISECONDS);
+					long waiTime = System.currentTimeMillis() - startTime;
+//System.out.println(indent() + "!!!!!!! AFTER [" + waiTime + " ms] !!!!!!!!!!! WaitForExecDialog: BLOCKING CALL TO: doBgThread.get(). doBgThread.isDone()=" + doBgThread.isDone() + ", isVisible=" + isVisible() + "... label='" + _label.getText() + "'.");
+					return retObj;
+
+//					return doBgThread.get(1000, TimeUnit.MILLISECONDS);
+//					return doBgThread.get(500, TimeUnit.MILLISECONDS);
 				}
 				catch (TimeoutException e)
 				{
+//System.out.println(indent() + "WaitForExecDialog: TimeoutException. doBgThread.isDone()=" + doBgThread.isDone() + ", isVisible=" + isVisible() + "... (true=TheGbThreadIsStillRunning), label='" + _label.getText() + "'.");
+//					// if the POPUP is still visible, continue to wait
+//					if (isVisible())
+//						continue;
+
 					// if the POPUP is still visible, continue to wait
-					if (isVisible())
+					if ( ! doBgThread.isDone() )
 						continue;
 
 					// If POPUP has been closed, simply returns NULL...
-					System.out.println("WaitForExecDialog: after 1000ms timeout, POPUP was not visible anymore, RETURN NULL... otherwise the EDT will freeze... Warning: the thread will continue to execute...");
+//					System.out.println(indent() + "WaitForExecDialog: after 1000ms timeout, POPUP was not visible anymore, RETURN NULL... otherwise the EDT will freeze... Warning: the thread will continue to execute...");
 					return null;
 				}
 			}
@@ -461,6 +639,44 @@ implements PropertyChangeListener, ActionListener
 			_logger.warn("execAndWait Caught: "+e, e);
 			return null;
 		}
+	}
+
+	/**
+	 * Helper method to show the wait dialog with cancel button visibility
+	 * @param doBgThread 
+	 */
+	private void showWaitDialog(SwingWorker<Object, Object> doBgThread)
+	{
+//		System.out.println(indent() + "+-+-+-+-+-+-+-+-+-+-+-+-+-+- WaitForExecDialog.showWaitDialog: _classNestLevel=" + _classNestLevel + ", isVisible()=" + isVisible() + ", label='" + _label.getText() + "'.");
+
+		// do not show dialog for "nested" WaitForExecDialogs
+		// Just WAIT (emulating a Modal dialog without showing any dialog, and DO NOT BLOCK the EDT)
+//		if (_classNestLevel > 1)
+//		{
+//			// 3600_000 == 1 Hour
+//			ModalSleep mSleep = new ModalSleep(3600_000, 100, new ModalSleep.SleepAbortCallback()
+//			{
+//				@Override
+//				public boolean abortSleepQuestion()
+//				{
+//					System.out.println(indent() + "!!!!!!!!!!!!!!!!!!!!!!!!! WaitForExecDialog.showWaitDialog:[MODAL-SLEEP-1h:100ms-CALLBACK]: doBgThread.isDone()=" + doBgThread.isDone() + ", isVisible=" + isVisible() + "... label='" + _label.getText() + "'.");
+//					return doBgThread.isDone();
+//				}
+//			});
+//			mSleep.start();
+//			return;
+//		}
+
+		if (isVisible())
+			return;
+
+		boolean canDoCancel = _execClass.canDoCancel();
+		if (_conn != null && (_conn instanceof SybConnection || _conn instanceof TdsConnection))
+			canDoCancel = true;
+		_cancel_but.setVisible(canDoCancel);
+
+		// Show the wait dialog
+		setVisible(true);
 	}
 
 	/**

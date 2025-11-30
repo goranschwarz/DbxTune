@@ -34,6 +34,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterControllerSqlServer;
+import com.dbxtune.cm.sqlserver.CmPerfCounters;
+import com.dbxtune.cm.sqlserver.CmSummary;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -313,8 +315,8 @@ extends SqlServerAbstract
 				}
 				
 				// Get some Charts
-				_CmSummary_DeadlockCountSum     = createTsLineChart(conn, schema, "CmSummary",         "DeadlockCountSum", -1,       false, null,    "Deadlock Count (Summary)");
-				_CmPerfCounters_DeadlockDetails = createTsLineChart(conn, schema, "CmPerfCounters",    "DeadlockDetails" , -1,       false, null,    "Deadlock Count Details (Server->Perf Counters)");
+				_CmSummary_DeadlockCountSum     = createTsLineChart(conn, schema, CmSummary     .CM_NAME,    CmSummary     .GRAPH_NAME_DEADLOCK_COUNT_SUM, -1, false, null,    "Deadlock Count (Summary)");
+				_CmPerfCounters_DeadlockDetails = createTsLineChart(conn, schema, CmPerfCounters.CM_NAME,    CmPerfCounters.GRAPH_NAME_DEADLOCK_DETAILS  , -1, false, null,    "Deadlock Count Details (Server->Perf Counters)");
 			}
 			else
 			{

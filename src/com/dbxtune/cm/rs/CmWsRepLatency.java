@@ -515,7 +515,16 @@ if (debugPrint || _logger.isDebugEnabled())
 						// NO match in the SKIP regexp
 						if (doAlarm)
 						{
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRsReplicationAge(cm, threshold, lName, "ApplyAgeInMinutes", ApplyAgeInMinutes.intValue()) );
+							// Get a graph on RSSD Queue Size
+							CountersModel cmDbQueueSizeInRssd = getCounterController().getCmByName(CmDbQueueSizeInRssd.CM_NAME);
+
+							String extendedDescText = "";
+							String extendedDescHtml = cmDbQueueSizeInRssd == null ? "" : cmDbQueueSizeInRssd.getGraphDataHistoryAsHtmlImage(CmDbQueueSizeInRssd.GRAPH_NAME_QUEUE_SIZE);
+
+							AlarmEvent ae = new AlarmEventRsReplicationAge(cm, threshold, lName, "ApplyAgeInMinutes", ApplyAgeInMinutes.intValue());
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							AlarmHandler.getInstance().addAlarm( ae );
 						}
 					}
 				}
@@ -549,7 +558,16 @@ if (debugPrint || _logger.isDebugEnabled())
 						// NO match in the SKIP regexp
 						if (doAlarm)
 						{
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRsReplicationAge(cm, threshold, lName, "DataAgeInMinutes", DataAgeInMinutes.intValue()) );
+							// Get a graph on RSSD Queue Size
+							CountersModel cmDbQueueSizeInRssd = getCounterController().getCmByName(CmDbQueueSizeInRssd.CM_NAME);
+
+							String extendedDescText = "";
+							String extendedDescHtml = cmDbQueueSizeInRssd == null ? "" : cmDbQueueSizeInRssd.getGraphDataHistoryAsHtmlImage(CmDbQueueSizeInRssd.GRAPH_NAME_QUEUE_SIZE);
+
+							AlarmEvent ae = new AlarmEventRsReplicationAge(cm, threshold, lName, "DataAgeInMinutes", DataAgeInMinutes.intValue());
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							AlarmHandler.getInstance().addAlarm( ae );
 						}
 					}
 				}

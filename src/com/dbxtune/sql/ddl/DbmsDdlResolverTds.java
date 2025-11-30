@@ -124,7 +124,7 @@ extends DbmsDdlResolverAbstract
         	,text_c         = cast('x' as text)
         	,unitext_c      = cast('x' as unitext)
         
-        RS> Col# Label          Column Type Name Column Display Size Presision Scale JDBC Type Name            
+        RS> Col# Label          Column Type Name Column Display Size Precision Scale JDBC Type Name            
         RS> ---- -------------- ---------------- ------------------- --------- ----- --------------------------
         RS> 1    char_10        char                              10         0     0 java.sql.Types.CHAR            OK
         RS> 2    char_255       char                             255         0     0 java.sql.Types.CHAR            OK
@@ -175,17 +175,17 @@ extends DbmsDdlResolverAbstract
         
         	,image_c       = cast('xxx' as image)
         
-        RS> Col# Label         Column Type Name Column Display Size Presision Scale JDBC Type Name                 
+        RS> Col# Label         Column Type Name Column Display Size Precision Scale JDBC Type Name                 
         RS> ---- ------------- ---------------- ------------------- --------- ----- ----------------------------   
         RS> 1    bit_c         bit                                1         0     0 java.sql.Types.BIT             OK
-        RS> 2    binary_10     binary                            20         0     0 java.sql.Types.BINARY          OK (Presision = displayLen/2)
-        RS> 3    binary_255    binary                           510         0     0 java.sql.Types.BINARY          OK (Presision = displayLen/2)
-        RS> 4    binary_256    varbinary                        512         0     0 java.sql.Types.LONGVARBINARY   --> BINARY (Presision = displayLen/2)
-        RS> 5    binary_4k     varbinary                       8192         0     0 java.sql.Types.LONGVARBINARY   --> BINARY (Presision = displayLen/2)
-        RS> 6    varbinary_10  varbinary                         20         0     0 java.sql.Types.VARBINARY       OK (Presision = displayLen/2)
-        RS> 7    varbinary_255 varbinary                        510         0     0 java.sql.Types.VARBINARY       OK (Presision = displayLen/2)
-        RS> 8    varbinary_256 varbinary                        512         0     0 java.sql.Types.LONGVARBINARY   --> VARBINARY (Presision = displayLen/2)
-        RS> 9    varbinary_4k  varbinary                       8192         0     0 java.sql.Types.LONGVARBINARY   --> VARBINARY (Presision = displayLen/2)
+        RS> 2    binary_10     binary                            20         0     0 java.sql.Types.BINARY          OK (Precision = displayLen/2)
+        RS> 3    binary_255    binary                           510         0     0 java.sql.Types.BINARY          OK (Precision = displayLen/2)
+        RS> 4    binary_256    varbinary                        512         0     0 java.sql.Types.LONGVARBINARY   --> BINARY (Precision = displayLen/2)
+        RS> 5    binary_4k     varbinary                       8192         0     0 java.sql.Types.LONGVARBINARY   --> BINARY (Precision = displayLen/2)
+        RS> 6    varbinary_10  varbinary                         20         0     0 java.sql.Types.VARBINARY       OK (Precision = displayLen/2)
+        RS> 7    varbinary_255 varbinary                        510         0     0 java.sql.Types.VARBINARY       OK (Precision = displayLen/2)
+        RS> 8    varbinary_256 varbinary                        512         0     0 java.sql.Types.LONGVARBINARY   --> VARBINARY (Precision = displayLen/2)
+        RS> 9    varbinary_4k  varbinary                       8192         0     0 java.sql.Types.LONGVARBINARY   --> VARBINARY (Precision = displayLen/2)
         RS> 10   image_c       image                              1         0     0 java.sql.Types.LONGVARBINARY   --> BLOB
         
         
@@ -200,7 +200,7 @@ extends DbmsDdlResolverAbstract
         	,bigint_c     = cast(1 as bigint)
         	,u_bigint_c   = cast(1 as unsigned bigint)
         
-        RS> Col# Label         Column Type Name   Column Display Size Presision Scale JDBC Type Name               
+        RS> Col# Label         Column Type Name   Column Display Size Precision Scale JDBC Type Name               
         RS> ---- ------------- ------------------ ------------------- --------- ----- ---------------------------- 
         RS> 1    tinyint_c     tinyint                              3         3     0 java.sql.Types.TINYINT         OK
         RS> 2    smallint_c    smallint                             6         5     0 java.sql.Types.SMALLINT        OK
@@ -222,7 +222,7 @@ extends DbmsDdlResolverAbstract
         	,decimal_10_2    = cast(1.12345 as decimal(10,2))
         	,decimal_38_2    = cast(1.12345 as decimal(38,2))
         
-        RS> Col# Label        Column Type Name   Column Display Size Presision Scale JDBC Type Name               
+        RS> Col# Label        Column Type Name   Column Display Size Precision Scale JDBC Type Name               
         RS> ---- ------------ ------------------ ------------------- --------- ----- ---------------------------- 
         RS> 1    numeric_10_0 numeric                             12        10     0 java.sql.Types.NUMERIC        OK
         RS> 2    numeric_10_2 numeric                             12        10     2 java.sql.Types.NUMERIC        OK
@@ -239,7 +239,7 @@ extends DbmsDdlResolverAbstract
         	,double_c   = cast(1.12345 as double precision)
         	,real_c     = cast(1.12345 as real)
         
-        RS> Col# Label        Column Type Name   Column Display Size Presision Scale JDBC Type Name               
+        RS> Col# Label        Column Type Name   Column Display Size Precision Scale JDBC Type Name               
         RS> ---- ------------ ------------------ ------------------- --------- ----- ---------------------------- 
         RS> 1    float_c      double precision                    85        15     0 java.sql.Types.DOUBLE         OK
         RS> 2    double_c     double precision                    85        15     0 java.sql.Types.DOUBLE         OK
@@ -252,7 +252,7 @@ extends DbmsDdlResolverAbstract
         	 smallmoney_c = cast(1.12345 as smallmoney)
         	,money_c      = cast(1.12345 as money)
         
-        RS> Col# Label        Column Type Name   Column Display Size Presision Scale JDBC Type Name               
+        RS> Col# Label        Column Type Name   Column Display Size Precision Scale JDBC Type Name               
         RS> ---- ------------ ------------------ ------------------- --------- ----- ---------------------------- 
         RS> 1    smallmoney_c smallmoney                          12        10     4 java.sql.Types.DECIMAL        OK
         RS> 2    money_c      money                               21        19     4 java.sql.Types.DECIMAL        OK
@@ -268,14 +268,14 @@ extends DbmsDdlResolverAbstract
         	,bigdatetime_c   = cast('2022-11-26 21:21:21.123456' as bigdatetime)
         	,bigtime_c       = cast('2022-11-26 21:21:21.123456' as bigtime)
         
-        RS> Col# Label           Column Type Name   Column Display Size Presision Scale JDBC Type Name               
+        RS> Col# Label           Column Type Name   Column Display Size Precision Scale JDBC Type Name               
         RS> ---- --------------- ------------------ ------------------- --------- ----- ---------------------------- 
-        RS> 1    smalldatetime_c smalldatetime                       25         0     0 java.sql.Types.TIMESTAMP      OK  ?is Presision & Scale OK?
-        RS> 2    datetime_c      datetime                            25         3     0 java.sql.Types.TIMESTAMP      OK  ?is Presision & Scale OK?
-        RS> 3    date_c          date                                10         0     0 java.sql.Types.DATE           OK  ?is Presision & Scale OK?
-        RS> 4    time_c          time                                 8         3     0 java.sql.Types.TIME           OK  ?is Presision & Scale OK?
-        RS> 5    bigdatetime_c   bigdatetime                         29         6     6 java.sql.Types.TIMESTAMP      OK  ?is Presision & Scale OK?
-        RS> 6    bigtime_c       bigtime                             15         6     6 java.sql.Types.TIME           OK  ?is Presision & Scale OK?
+        RS> 1    smalldatetime_c smalldatetime                       25         0     0 java.sql.Types.TIMESTAMP      OK  ?is Precision & Scale OK?
+        RS> 2    datetime_c      datetime                            25         3     0 java.sql.Types.TIMESTAMP      OK  ?is Precision & Scale OK?
+        RS> 3    date_c          date                                10         0     0 java.sql.Types.DATE           OK  ?is Precision & Scale OK?
+        RS> 4    time_c          time                                 8         3     0 java.sql.Types.TIME           OK  ?is Precision & Scale OK?
+        RS> 5    bigdatetime_c   bigdatetime                         29         6     6 java.sql.Types.TIMESTAMP      OK  ?is Precision & Scale OK?
+        RS> 6    bigtime_c       bigtime                             15         6     6 java.sql.Types.TIME           OK  ?is Precision & Scale OK?
         
 	 * ---------------------------------------------------------------------------------------------------
 	 */

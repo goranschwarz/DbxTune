@@ -70,6 +70,7 @@ import com.dbxtune.cm.sqlserver.CmExecQueryStats;
 import com.dbxtune.cm.sqlserver.CmExecTriggerStats;
 import com.dbxtune.cm.sqlserver.CmIndexMissing;
 import com.dbxtune.cm.sqlserver.CmIndexOpStat;
+import com.dbxtune.cm.sqlserver.CmIndexOpStatSum;
 import com.dbxtune.cm.sqlserver.CmIndexPhysical;
 import com.dbxtune.cm.sqlserver.CmIndexUnused;
 import com.dbxtune.cm.sqlserver.CmIndexUsage;
@@ -244,6 +245,7 @@ extends CounterControllerAbstract
 		CmOpenTransactions   .create(counterController, guiController);
 		CmIndexUsage         .create(counterController, guiController);
 		CmIndexOpStat        .create(counterController, guiController);
+		CmIndexOpStatSum     .create(counterController, guiController);
 		CmTableSize          .create(counterController, guiController);
 		CmIndexPhysical      .create(counterController, guiController);
 		CmIndexMissing       .create(counterController, guiController);

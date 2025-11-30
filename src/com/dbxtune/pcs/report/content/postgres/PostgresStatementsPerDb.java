@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.cm.postgres.CmPgStatementsSumDb;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -552,8 +553,8 @@ extends PostgresAbstract
 			String schema = getReportingInstance().getDbmsSchemaName();
 
 			// Create some Overview Charts
-			_CmPgStatementsSumDb_CallCnt   = createTsLineChart(conn, schema, "CmPgStatementsSumDb", "CallCnt"  , -1, true, null, "SQL Statements [calls] per DB per second (Statements by DB)");
-			_CmPgStatementsSumDb_TotalTime = createTsLineChart(conn, schema, "CmPgStatementsSumDb", "TotalTime", -1, true, null, "SQL Statements [total_time] per DB per second (Statements by DB)");
+			_CmPgStatementsSumDb_CallCnt   = createTsLineChart(conn, schema, CmPgStatementsSumDb.CM_NAME, CmPgStatementsSumDb.GRAPH_NAME_CALL_COUNT, -1, true, null, "SQL Statements [calls] per DB per second (Statements by DB)");
+			_CmPgStatementsSumDb_TotalTime = createTsLineChart(conn, schema, CmPgStatementsSumDb.CM_NAME, CmPgStatementsSumDb.GRAPH_NAME_TOTAL_TIME, -1, true, null, "SQL Statements [total_time] per DB per second (Statements by DB)");
 
 		} // end: has data
 	}

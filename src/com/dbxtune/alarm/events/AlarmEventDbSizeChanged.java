@@ -53,7 +53,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Database Size changed for dbname '" + dbname + "' in Server '" + cm.getServerName() + "'. "
+				"Database Size for " + changeType(dataSizeInMbDiff, logSizeInMbDiff) + " changed for dbname '" + dbname + "' in Server '" + cm.getServerName() + "'. "
 						+ "dbSizeInMb"   + "[abs=" + dbSizeInMbAbs   + ",diff=" + dbSizeInMbDiff   + "], "
 						+ "dataSizeInMb" + "[abs=" + dataSizeInMbAbs + ",diff=" + dataSizeInMbDiff + "], "
 						+ "logSizeInMb"  + "[abs=" + logSizeInMbAbs  + ",diff=" + logSizeInMbDiff  + "]. "
@@ -65,9 +65,35 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("dbname=" + dbname + ", "
+		setData("dbname=" + dbname + ", type=" + changeType(dataSizeInMbDiff, logSizeInMbDiff) + ", "
 				+ "dbSizeInMb"   + "[abs=" + dbSizeInMbAbs   + ",diff=" + dbSizeInMbDiff   + "], "
 				+ "dataSizeInMb" + "[abs=" + dataSizeInMbAbs + ",diff=" + dataSizeInMbDiff + "], "
 				+ "logSizeInMb"  + "[abs=" + logSizeInMbAbs  + ",diff=" + logSizeInMbDiff  + "].");
+	}
+	
+	private static String changeType(Double dataSizeInMbDiff, Double logSizeInMbDiff)
+	{
+		if (dataSizeInMbDiff == null || logSizeInMbDiff == null)
+			return "-UNKNOWN-TYPE-";
+
+		if (dataSizeInMbDiff > 0 && logSizeInMbDiff > 0)
+			return "DATA-and-WAL-grow[d=" + dataSizeInMbDiff + ", l=" + logSizeInMbDiff + "]";
+
+		if (dataSizeInMbDiff < 0 && logSizeInMbDiff < 0)
+			return "DATA-and-WAL-shrink[d=" + dataSizeInMbDiff + ", l=" + logSizeInMbDiff + "]";
+
+		if (dataSizeInMbDiff > 0)
+			return "DATA-grow[+" + dataSizeInMbDiff + "]";
+
+		if (dataSizeInMbDiff < 0)
+			return "DATA-shrink[" + dataSizeInMbDiff + "]";
+
+		if (logSizeInMbDiff > 0)
+			return "WAL-grow[+" + logSizeInMbDiff + "]";
+
+		if (logSizeInMbDiff < 0)
+			return "WAL-shrink[" + logSizeInMbDiff + "]";
+
+		return "UNKNOWN-TYPE";
 	}
 }

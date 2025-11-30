@@ -2648,6 +2648,9 @@ extends SqlCaptureBrokerAbstract
 						//                                           0123456789|123456789|123456
 						if (StringUtil.hasValue(procName) && procName.startsWith("*"))
 						{
+							// NOTE: Should the 'HashKey' be a Java 'long' instead ????
+							//       Sometimes the below 'row.HashKey = Integer.valueOf(str_HashKey);' gets NumberFormatException... it looks to be an "unsigned int" even if the SAP/Sybase documentation says it should be an INT...
+							//       But if we change this to a LONG then we need to change a lot more (I think)... Table Definition... and possibly a *bunch* of logic how wee look at 'HashKey'... But I'm not sure if it will be "hard" to change ???
 							int SsqlId  = row.SsqlId; 
 							int HashKey = row.HashKey;
 							
@@ -2667,7 +2670,7 @@ extends SqlCaptureBrokerAbstract
 								}
 								catch (NumberFormatException nfe)
 								{
-									_logger.warn("Problems parsing 'ProcName' content into 'SsqlId' and 'HashKey'. Found a row with ProcName='" + procName + "'. str_SsqlId=" + str_SsqlId + ", str_SsqlId=" + str_HashKey + ". Caught: " + nfe);
+									_logger.warn("Problems parsing 'ProcName' content into 'SsqlId' and 'HashKey'. Found a row with ProcName='" + procName + "'. str_SsqlId=" + str_SsqlId + ", str_HashKey=" + str_HashKey + ". Caught: " + nfe);
 								}
 							}
 						}

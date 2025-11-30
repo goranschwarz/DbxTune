@@ -301,7 +301,7 @@ extends CounterSample
 			 
 			 *---------------------------------------------------------------------------------------------------
 			 */
-			System.out.println("XXXX: _instanceList.size()=" + _instanceList.size() );
+//			System.out.println("XXXX: _instanceList.size()=" + _instanceList.size() );
 //			int emptInstanceCount = 0;
 			RsStatCounterDictionary dict = RsStatCounterDictionary.getInstance();
 			for (Instance i : _instanceList)
@@ -413,6 +413,47 @@ extends CounterSample
 		}
 	}
 
+//	@Override
+//	protected boolean readResultset(CountersModel cm, ResultSet rs, ResultSetMetaData rsmd, ResultSetMetaData originRsmd, List<String> pkList, int rsNum)
+//	throws SQLException
+//	{
+//		String firstColName = rsmd.getColumnName(1);
+//
+//		if ( "Instance".equals(firstColName) )
+//		{
+//			rs.next();
+//			_currentInstance = new Instance(rs.getString(1), rs.getInt(2), rs.getInt(3));
+//			_instanceList.add(_currentInstance);
+//		}
+//
+//		else if ( "Observer".equals(firstColName) )
+//		{
+//			while (rs.next())
+//				_currentInstance.addObserver( new Observer(rs.getString(1), rs.getLong(2), rs.getInt(3)) );
+//		}
+//
+//		else if ( "Monitor".equals(firstColName) )
+//		{
+//			while (rs.next())
+//				_currentInstance.addMonitor( new Monitor(rs.getString(1), rs.getLong(2), rs.getLong(3), rs.getLong(4), rs.getLong(5)) );
+//		}
+//
+//		else if ( "Counter".equals(firstColName) )
+//		{
+//			while (rs.next())
+//				_currentInstance.addCounter( new Counter(rs.getString(1), rs.getLong(2), rs.getLong(3), rs.getLong(4), rs.getLong(5), rs.getLong(6), rs.getLong(7)) );
+//		}
+//
+//		else
+//		{
+//			_logger.warn("Unknown first column name '"+firstColName+"' in the ResultSet");
+//		}
+//
+//        return false;
+//	}	
+
+	private String _lastDsiExecSrvName = "-unknown-";
+
 	@Override
 	protected boolean readResultset(CountersModel cm, ResultSet rs, ResultSetMetaData rsmd, ResultSetMetaData originRsmd, List<String> pkList, int rsNum)
 	throws SQLException
@@ -422,7 +463,30 @@ extends CounterSample
 		if ( "Instance".equals(firstColName) )
 		{
 			rs.next();
-			_currentInstance = new Instance(rs.getString(1), rs.getInt(2), rs.getInt(3));
+
+			String instance       = rs.getString(1);
+			int    instanceId     = rs.getInt(2); 
+			int    modTypeInstVal = rs.getInt(3); 
+
+			// For: 'AOBJ, tablename' -- We need to remember last 'DSI servername' and add it to 
+			if (instance.startsWith("DSI EXEC, "))
+			{
+				// instance looks like 'DSI EXEC, 225(1) PROD_B1_ASE.PML' -- lets get last word
+				_lastDsiExecSrvName = StringUtil.lastWord(instance);
+			}
+
+			// For: 'AOBJ, tablename' -- Does not hold "destination server name", so we need to add it... otherwise we get "Duplicate Key" 
+			if (instance.startsWith("AOBJ, "))
+			{
+				// Lets inject srvName after 'AOBJ, tableName' into the instance name resulting in 'AOBJ, srvName.dbname, tableName'
+				String tabName = instance.substring("AOBJ, ".length());
+
+				// Lets inject srvName after 'AOBJ, tableName' into the instance name resulting in 'AOBJ, tableName, srvName'
+				instance = "AOBJ, " + _lastDsiExecSrvName + ", " + tabName;
+			}
+			
+			
+			_currentInstance = new Instance(instance, instanceId, modTypeInstVal);
 			_instanceList.add(_currentInstance);
 		}
 
