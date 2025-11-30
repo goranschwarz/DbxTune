@@ -52,12 +52,14 @@ CHECKIN
 
 
 ###########################################################
-## Subversion TAG the release
+## Git TAG the release
 ###########################################################
 #svn copy https://svn.gorans.org/projects/asetune/trunk \
 # https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
 git tag -a "YYYY-MM-DD" -m "Tagging the release."
 git push --follow-tags
+
+## And on github make a release, with current date
 
 
 ###########################################################
@@ -146,5 +148,6 @@ cd c:\tmpgit
 ## MAIL out that a new release is available
 ###########################################################
 - Maybe mail specific instructions to some users (special changes need to be done)
+  from goran_schwarz@hotmail.com -> asetune@googlegroups.com
 
 
