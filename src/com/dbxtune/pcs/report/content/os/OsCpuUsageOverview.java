@@ -31,6 +31,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.os.CmOsMeminfo;
+import com.dbxtune.cm.os.CmOsMpstat;
+import com.dbxtune.cm.os.CmOsPs;
+import com.dbxtune.cm.os.CmOsUptime;
+import com.dbxtune.cm.os.CmOsVmstat;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -131,18 +136,21 @@ public class OsCpuUsageOverview extends OsAbstract
 			if (_CmOsPs_topProcessesCpuByName != null)
 			{
 				sb.append("<p> \n");
-				sb.append("Below is basically the same as above, but instead of showing the <b>individual</b> PID's we list CPU Time by <b>ProcessName</b></i>. <br> \n");
-				sb.append("Only top/first " + _topCpuProcessCountByName + " records will be displayed in this table. <br> \n");
+				sb.append("Below is a Summary Table with Processes that has consumed the most CPU Seconds on this system for the whole Recording Period <i>(probably 24 hours)</i>. <br> \n");
+				sb.append("Only top/first " + _topCpuProcessCountByPid + " records will be displayed in this table. <br> \n");
 				sb.append("</p> \n");
 				sb.append(_CmOsPs_topProcessesCpuByName.toHtmlTableString("sortable"));
 			}
 
-			sb.append("<br> \n");
-			sb.append("<p> \n");
-			sb.append("Below is a Summary Table with Processes that has consumed the most CPU Seconds on this system for the whole Recording Period <i>(probably 24 hours)</i>. <br> \n");
-			sb.append("Only top/first " + _topCpuProcessCountByPid + " records will be displayed in this table. <br> \n");
-			sb.append("</p> \n");
-			sb.append(_CmOsPs_topProcessesCpuByPid.toHtmlTableString("sortable"));
+			if (isFullMessageType())
+			{
+				sb.append("<br> \n");
+				sb.append("<p> \n");
+				sb.append("Below is basically the same as above, but instead of showing the <b>individual</b> PID's we list CPU Time by <b>ProcessName</b></i>. <br> \n");
+				sb.append("Only top/first " + _topCpuProcessCountByName + " records will be displayed in this table. <br> \n");
+				sb.append("</p> \n");
+				sb.append(_CmOsPs_topProcessesCpuByPid.toHtmlTableString("sortable"));
+			}
 		}
 
 		// Write JavaScript code for CPU SparkLine
@@ -232,20 +240,20 @@ public class OsCpuUsageOverview extends OsAbstract
 			initSkipNewOrDiffRateRows(schema, "CmOsPs_diff", conn, localConf);
 		
 		int maxValue = 100;
-		_CmOsMpstat_MpSum          = createTsLineChart(conn, schema, "CmOsMpstat", "MpSum",          maxValue, false, idlePct, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
-		_CmOsMpstat_MpCpu          = createTsLineChart(conn, schema, "CmOsMpstat", "MpCpu",          maxValue, false, null,    "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
-		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, schema, "CmOsUptime", "AdjLoadAverage", -1,       false, null,    "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
+		_CmOsMpstat_MpSum          = createTsLineChart(conn, schema, CmOsMpstat .CM_NAME, CmOsMpstat .GRAPH_NAME_MpSum,            maxValue, false, idlePct, "mpstat: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
+		_CmOsMpstat_MpCpu          = createTsLineChart(conn, schema, CmOsMpstat .CM_NAME, CmOsMpstat .GRAPH_NAME_MpCpu,            maxValue, false, null,    "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
+		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, schema, CmOsUptime .CM_NAME, CmOsUptime .GRAPH_NAME_ADJ_LOAD_AVERAGE, -1,       false, null,    "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
 
 		if ( ! _isWindows)
-			_CmOsVmstat_SwapInOut  = createTsLineChart(conn, schema, "CmOsVmstat", "SwapInOut",      -1,       false, null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
+			_CmOsVmstat_SwapInOut  = createTsLineChart(conn, schema, CmOsVmstat .CM_NAME, CmOsVmstat .GRAPH_NAME_SWAP_IN_OUT,      -1,       false, null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
 		else
-			_CmOsMeminfo_WinPaging = createTsLineChart(conn, schema, "CmOsMeminfo", "WinPaging",     -1,       false, null,    "meminfo: Windows Paging or Swap Usage (Host Monitor->OS Memory Info)");
+			_CmOsMeminfo_WinPaging = createTsLineChart(conn, schema, CmOsMeminfo.CM_NAME, CmOsMeminfo.GRAPH_NAME_WIN_PAGING,       -1,       false, null,    "meminfo: Windows Paging or Swap Usage (Host Monitor->OS Memory Info)");
 			
-		_CmOsMeminfo_MemAvailable  = createTsLineChart(conn, schema, "CmOsMeminfo", "MemAvailable",  -1,       false, null,    "meminfo: Available Memory (Host Monitor->OS Memory Info)");
+		_CmOsMeminfo_MemAvailable  = createTsLineChart(conn, schema, CmOsMeminfo.CM_NAME, CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE,    -1,       false, null,    "meminfo: Available Memory (Host Monitor->OS Memory Info)");
 
 		if ( _isWindows )
 		{
-			_CmOsPs_WinPs                 = createTsLineChart(conn, schema, "CmOsPs", "WinPs",       -1,       false, null,    "ps: Windows Process CPU Used Seconds (per Second) (Host Monitor->OS Top Process(ps))");
+			_CmOsPs_WinPs                 = createTsLineChart(conn, schema, CmOsPs.CM_NAME, CmOsPs   .GRAPH_NAME_WIN_PS,           -1,       false, null,    "ps: Windows Process CPU Used Seconds (per Second) (Host Monitor->OS Top Process(ps))");
 			_CmOsPs_topProcessesCpuByPid  = getProcessSumTableByPid(conn);
 			_CmOsPs_topProcessesCpuByName = getProcessSumTableByName(conn);
 		}

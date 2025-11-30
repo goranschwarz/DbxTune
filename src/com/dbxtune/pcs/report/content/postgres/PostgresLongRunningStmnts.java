@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content.postgres;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.postgres.CmSummary;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 //import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer; // This needs to be here, but in case of "Organize Imports" (Ctl-O) it may disappear, leading to error !!!
@@ -348,13 +349,13 @@ extends PostgresAbstract
 		String schema = getReportingInstance().getDbmsSchemaName();
 
 		// Create charts
-		_CmSummary_oldestComboInSec = createTsLineChart(conn, schema, "CmSummary", "oldestComboInSec", -1, false, null, "Oldest Xact/Stmnt/State in Seconds");
-		_CmSummary_oldestXactInSec  = createTsLineChart(conn, schema, "CmSummary", "oldestXactInSec" , -1, false, null, "Oldest Open Transaction in Seconds");
-		_CmSummary_oldestStmntInSec = createTsLineChart(conn, schema, "CmSummary", "oldestStmntInSec", -1, false, null, "Oldest Statement in Seconds");
-		_CmSummary_oldestStateInSec = createTsLineChart(conn, schema, "CmSummary", "oldestStateInSec", -1, false, null, "Oldest State in Seconds");
+		_CmSummary_oldestComboInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC,    -1, false, null, "Oldest Xact/Stmnt/State in Seconds");
+		_CmSummary_oldestXactInSec  = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_XACT_IN_SEC ,    -1, false, null, "Oldest Open Transaction in Seconds");
+		_CmSummary_oldestStmntInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_STMNT_IN_SEC,    -1, false, null, "Oldest Statement in Seconds");
+		_CmSummary_oldestStateInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_STATE_IN_SEC,    -1, false, null, "Oldest State in Seconds");
 
-		_CmSummary_blkLockCount     = createTsLineChart(conn, schema, "CmSummary", "blkLockCount"    , -1, false, null, "Blocking Locks Count");
-		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, schema, "CmSummary", "blkMaxWaitTime"  , -1, false, null, "Max Wait Time for Blocking Locks in Seconds");
+		_CmSummary_blkLockCount     = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_BLOCKING_LOCK_COUNT,    -1, false, null, "Blocking Locks Count");
+		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_BLOCKING_MAX_WAIT_TIME, -1, false, null, "Max Wait Time for Blocking Locks in Seconds");
 	}
 
 	private IReportChart _CmSummary_oldestComboInSec;

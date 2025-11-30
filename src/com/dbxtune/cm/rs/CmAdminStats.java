@@ -20,12 +20,19 @@
  ******************************************************************************/
 package com.dbxtune.cm.rs;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.naming.NameNotFoundException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -52,6 +59,8 @@ import com.dbxtune.utils.Ver;
 public class CmAdminStats
 extends CountersModel
 {
+    /** Log4j logging. */
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmAdminStats.class.getSimpleName();
@@ -60,6 +69,8 @@ extends CountersModel
 		"<html>" +
 		"<p>RepServer Monitor And Performance Counters</p>" +
 		"Fetched using: <code>admin statistics,'ALL'</code>" +
+		"<br>" +
+		"<b>Note</b>: In Experimental Status (it may work)" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrameRs.TCP_GROUP_MC;
@@ -196,17 +207,22 @@ extends CountersModel
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("stats",  "");
 
-			mtd.addColumn("stats", "Instance",       "<html>FIXME: Instance</html>");
-			mtd.addColumn("stats", "InstanceId",     "<html>FIXME: InstanceId</html>");
-			mtd.addColumn("stats", "ModTypeInstVal", "<html>FIXME: ModTypeInstVal</html>");
-			mtd.addColumn("stats", "Type",           "<html>FIXME: Type</html>");
-			mtd.addColumn("stats", "Name",           "<html>FIXME: Name</html>");
-			mtd.addColumn("stats", "Obs",            "<html>FIXME: Obs</html>");
-			mtd.addColumn("stats", "Total",          "<html>FIXME: Total</html>");
-			mtd.addColumn("stats", "Last",           "<html>FIXME: Last</html>");
-			mtd.addColumn("stats", "Max",            "<html>FIXME: Max</html>");
-			mtd.addColumn("stats", "AvgTtlObs",      "<html>FIXME: AvgTtlObs</html>");
-			mtd.addColumn("stats", "RateXsec",       "<html>FIXME: RateXsec</html>");
+			mtd.addColumn("stats", "Instance",       "<html>A specific occurrence of a module</html>");
+			mtd.addColumn("stats", "InstanceId",     "<html>The numeric identifier for a given module instance. <br>"
+			                                             + "For example, two different SQM instances may have instance IDs 102 and 103</html>");
+			mtd.addColumn("stats", "ModTypeInstVal", "<html>In some cases, an instance may have multiple versions or module types. <br>"
+			                                             + "For example, a given SQM instance may have an inbound type and an outbound type. <br>"
+			                                             + "For SQM instances, inbound versions have a module type of 1 and outbound versions have a module type of 0</html>");
+			mtd.addColumn("stats", "Type",           "<html>Monitor, Observer, or Counter - displays the name of the statistics collector being observed. For example, SleepsWriteQ</html>");
+			mtd.addColumn("stats", "Name",           "<html>The name of the Counter. See Column 'CounterDescr' for a more detailed description.</html>");
+			mtd.addColumn("stats", "Obs",            "<html>The number of observations of a statistics collector during an observation period</html>");
+			mtd.addColumn("stats", "Total",          "<html>The sum of observed values during an observation period</html>");
+			mtd.addColumn("stats", "Last",           "<html>The last value observed during an observation period.</html>");
+			mtd.addColumn("stats", "Max",            "<html>The maximum value observed during an observation period.</html>");
+			mtd.addColumn("stats", "AvgTtlObs",      "<html>The average value observed in an observation period. This is calculated as Total/Obs</html>");
+			mtd.addColumn("stats", "RateXsec",       "<html>The change, in a period of 1 second, observed during the given observation period. <br>"
+			                                             + "Observers calculate this as Obs/seconds in an observation period. <br>"
+			                                             + "Monitors and counters calculate this as Total/second in an observation period</html>");
 		}
 		catch (NameNotFoundException e) 
 		{
@@ -295,15 +311,17 @@ extends CountersModel
 			+ "go \n"
 			+ "configure replication server set 'stats_engineering_counters' to 'on' \n"
 			+ "go \n"
+//			+ "configure replication server set 'stats_show_zero_counters' to 'on' \n" // Should we do this or not ???  -- By default, admin stats does not report counters that show 0 (zero) OBSERVATION. To change this behavior, set the stats_show_zero_counters configuration parameter on.
+//			+ "go \n"
 			+ "--admin statistics, reset \n"
 			+ "go \n";
 
-// NOTE: this should be empty when we pass a proper srvVersion number
-String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
+		// Add "stuff" for different versions of RepServer
+		String AOBJ = "";
 		if (srvVersion >= Ver.ver(15, 6))
 			AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n"
 			     + "go \n";
-		
+
 		return statsOn + AOBJ;
 	}
 
@@ -336,13 +354,178 @@ String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
 	/**
 	 * Create a new Sample based on the values in CmAdminStats object
 	 * <p>
-	 * All Counters in the table for a specific module will be a pivot table (one "module" for one "instance" will be one row, with many columns)
+	 * All Counters in the table for a specific module will be a PIVOT table (one "module" for one "instance" will be one row, with many columns)
 	 * 
 	 * @param moduleName
 	 * @param xrstm 
 	 * @return
 	 */
 	protected List<List<Object>> getModuleCounters(String moduleName, DbxTuneResultSetMetaData xrstm)
+	{
+		// How it's done
+		// Loop all rows in the CounterSample (of "CmAdminStats -- Rs Counters")
+		// only for the passed "moduleName"
+		//
+		// NOTE: Each 'INSTANCE-Name' may have *different* number of Counters 
+		//       And at the end we need to "merge" them together...
+		// 
+		// Lets have a Map where we keep key='INSTANCE-Name', val='Map<cntName, cntVal>'
+		// and at the END: We will have to loop everything to came up with "columnNames" for ALL rows
+		// Then put them into one row for each 'INSTANCE-Name' but counter-names in a "slot" for that instance.
+	
+		// Keep InstanceName -> Map<CounterName, cntVal>
+		Map<String, Map<String, Long>> instanceToCounter = new LinkedHashMap<>();
+		
+		// Get the 'CmAdminStats' counters
+		CounterSample cs = getCounterSampleAbs();
+
+		// Find column Id's
+		List<String> colNames = cs.getColNames();
+		if (colNames == null)
+			return null;
+
+		int module_pos     = cs.findColumn("Module");
+		int instance_pos   = cs.findColumn("Instance");
+		int instanceId_pos = cs.findColumn("InstanceId");
+		int type_pos       = cs.findColumn("Type");
+		int name_pos       = cs.findColumn("Name");
+		int  obs_pos       = cs.findColumn("Obs");
+		int  total_pos     = cs.findColumn("Total");
+		int  last_pos      = cs.findColumn("Last");
+//		int  rateXsec_pos  = cs.findColumn("RateXsec");
+
+		// Loop on all CounterSample rows
+		for (int rowId = 0; rowId < cs.getRowCount(); rowId++)
+		{
+			String  module       = cs.getValueAsString (rowId, module_pos);
+			
+			// SKIP if NOT Correct module
+			if ( ! moduleName.equals(module) )
+				continue;
+
+			String  instance     = cs.getValueAsString (rowId, instance_pos);
+//			Integer instanceId   = cs.getValueAsInteger(rowId, instanceId_pos);
+			Long    instanceId   = cs.getValueAsLong   (rowId, instanceId_pos);
+			String  type         = cs.getValueAsString (rowId, type_pos);
+			String  name         = cs.getValueAsString (rowId, name_pos);
+			Long    obs          = cs.getValueAsLong   (rowId, obs_pos);
+			Long    total        = cs.getValueAsLong   (rowId, total_pos);
+			Long    last         = cs.getValueAsLong   (rowId, last_pos);;
+//			Long    rateXsec     = cs.getValueAsLong   (rowId, rateXsec_pos);
+
+			
+			Map<String, Long> cntMap = instanceToCounter.get(instance);
+			if (cntMap == null)
+			{
+				cntMap = new LinkedHashMap<>();
+				instanceToCounter.put(instance, cntMap);
+
+				// FIXME: Add this as a "CounterName" for now, but remove it at the end when creating ROWS 
+				cntMap.put("InstanceId", instanceId);
+			}
+
+			// Add: CounterName and CounterValue, depending on the "source" OBSERVER or COUNTER
+			Long val;
+			if      ("OBSERVER".equals(type)) val = obs;
+			else if ("MONITOR" .equals(type)) val = obs; // Previously I used 'last' here... Which I **THINK** was wrong... But we might need to deep dive into that "some" Counters needs to grab from 'obs' and some from 'last' ??? I really do not know... 
+			else if ("COUNTER" .equals(type)) val = total;
+			else
+			{
+				val = -99L;
+				_logger.info("Unknown type of '" + type + "' for: instance='" + instance + "', instanceId='" + instanceId + "', name='" + name + "'. Adding the value -99");
+			}
+			
+			// Put the CounterName and it's value
+			Long oldValue = cntMap.put(name, val);
+			if (oldValue != null)
+			{
+				System.out.println("For module='" + module + "', CounterName='" + name + "', replacing oldValue=" + oldValue + ", newValue=" + val);
+			}
+		}
+		
+		// Create ResultSetMetaData for the returned ROWS
+		if (xrstm.addStrColumn ("Instance",   -1, false, 255, "")) { if (_logger.isDebugEnabled()) _logger.debug("    > module='" + moduleName + "': addColumn='Instance'."); }
+		if (xrstm.addIntColumn ("InstanceId", -1, false,      "")) { if (_logger.isDebugEnabled()) _logger.debug("    > module='" + moduleName + "': addColumn='InstanceId'."); }
+		for (Map<String, Long> cntMap : instanceToCounter.values())
+		{
+			for (String cntName : cntMap.keySet())
+			{
+				if (xrstm.addLongColumn(cntName, -1, true, "")) { if (_logger.isDebugEnabled()) _logger.debug("    > module='" + moduleName + "': addColumn='" + cntName + "'."); }
+			}
+		}
+		int colSize = xrstm.getColumnCount();
+		
+		// Create the ROWS to be returned
+		List<List<Object>> rows = new ArrayList<List<Object>>(instanceToCounter.size());
+
+		// Loop instances: Create a new ROW and write Counters at a specific ArrayList position
+		for (Entry<String, Map<String, Long>> instanceEntry : instanceToCounter.entrySet())
+		{
+			String instance          = instanceEntry.getKey();
+			Map<String, Long> cntMap = instanceEntry.getValue();
+
+			// Initialize the ROW, with NULL values... Just so we can do: row.set(atIndex, value);
+			List<Object> row  = new ArrayList<Object>(colSize);
+			for (int c = 0; c < colSize; c++)
+			{
+				row.add(null);
+			}
+			
+			// Set 'Instance' and 'InstanceId'
+			row.set(0, instance);
+			row.set(1, cntMap.get("InstanceId").intValue());
+			cntMap.remove("InstanceId"); // Remove from CounterMap (so it wont be part of below loop)
+
+			// Loop all Counters and add at a specific List Index Position
+			for (Entry<String, Long> cntEntry : cntMap.entrySet())
+			{
+				String cntName = cntEntry.getKey();
+				Long   cntVal  = cntEntry.getValue();
+
+				// Get at what List INDEX to set the counter
+				// NOTE: SqlPos starts at 1, and ListIndex at 0
+				int addPos = xrstm.getColumnSqlPos(cntName) - 1;
+
+				try
+				{
+					// Set at Position
+					row.set(addPos, cntVal);
+				}
+				catch (RuntimeException rte)
+				{
+					if (_logger.isDebugEnabled())
+					{
+						_logger.debug("        --------->>> RuntimeException[" + rte + "]: moduleName='" + moduleName + "': Instance='" + instance + "', cntName='" + cntName + "'... addPos=" + addPos + ", cntVal='" + cntVal + "', row.size()=" + row.size() + ", row=" + row);
+					}
+				}
+			}
+			
+			// Finally add the ROW to the output ROWS
+			rows.add(row);
+		}
+
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("getModuleCounters(moduleName='" + moduleName + "'): colCnt=" + xrstm.getColumnCount() + ", colNames=" + xrstm.getColumnNames());
+			_logger.debug("getModuleCounters(moduleName='" + moduleName + "'): returns rows.size()=" + rows.size());
+			for (int r = 0; r < rows.size(); r++)
+			{
+				_logger.debug("      row[" + r + "],size[" + rows.get(r).size() + "]: " + rows.get(r));
+			}
+		}
+		
+		return rows;
+	}
+	/**
+	 * Create a new Sample based on the values in CmAdminStats object
+	 * <p>
+	 * All Counters in the table for a specific module will be a pivot table (one "module" for one "instance" will be one row, with many columns)
+	 * 
+	 * @param moduleName
+	 * @param xrstm 
+	 * @return
+	 */
+	protected List<List<Object>> getModuleCounters_OLD(String moduleName, DbxTuneResultSetMetaData xrstm)
 	{
 		String module     = "";
 		int    module_pos = -1;
@@ -397,7 +580,7 @@ String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
 
 		String currentInstance = "";
 
-		// Loop on all diffData rows
+		// Loop on all CounterSample rows
 		for (int rowId = 0; rowId < cs.getRowCount(); rowId++)
 		{
 			module     = (String)  cs.getValueAt(rowId, module_pos);
@@ -414,13 +597,16 @@ String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
 			last       = (Long)    cs.getValueAt(rowId, last_pos);
 //			rateXsec   = (Long)    cs.getValueAt(rowId, rateXsec_pos);
 
+			System.out.println("=========>>> rowId=" + rowId + ": module='" + module + "', rows.size()=" + rows.size() + ", row.size()=" + row.size() + ": --- instance='" + instance + "', type='" + type + "', name='" + name + "'.");
+			
 			if ( ! currentInstance.equals(instance) )
 			{
+				System.out.println("     ====>>> NEW-INSTANCE. rowId=" + rowId + ": module='" + module + "': --- instance='" + instance + ".");
 				currentInstance = instance;
 
-				if (xrstm.addStrColumn ("Instance",   -1, false, 255, "")) ;//System.out.println("    > module='"+module+"': Instance='"+currentInstance+"', addColumn='Instance'.");
-				if (xrstm.addIntColumn ("InstanceId", -1, false,      "")) ;//System.out.println("    > module='"+module+"': Instance='"+currentInstance+"', addColumn='InstanceId'.");
-				if (xrstm.addLongColumn(name,         -1, true,       "")) ;//System.out.println("    > module='"+module+"': Instance='"+currentInstance+"', addColumn='"+name+"'.");
+				if (xrstm.addStrColumn ("Instance",   -1, false, 255, "")) System.out.println("    1>> module='"+module+"': Instance='"+currentInstance+"', addColumn='Instance'.");
+				if (xrstm.addIntColumn ("InstanceId", -1, false,      "")) System.out.println("    1>> module='"+module+"': Instance='"+currentInstance+"', addColumn='InstanceId'.");
+				if (xrstm.addLongColumn(name,         -1, true,       "")) System.out.println("    1>> module='"+module+"': Instance='"+currentInstance+"', addColumn='"+name+"'.");
 
 				row = new ArrayList<Object>(xrstm.getColumnCount());
 				row.add(instance);
@@ -438,8 +624,7 @@ String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
 			}
 			else
 			{
-				if (xrstm.addLongColumn(name, -1, true, ""))
-					;//System.out.println("    > module='"+module+"': Instance='"+currentInstance+"', addColumn='"+name+"'.");
+				if (xrstm.addLongColumn(name, -1, true, "")) System.out.println("    2>> module='" + module + "': Instance='" + currentInstance + "', addColumn='" + name + "'.");
 
 				int addPos = xrstm.getColumnSqlPos(name) - 1;
 				
@@ -448,8 +633,24 @@ String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
 				else if ("COUNTER" .equals(type)) val = total;
 				else                              val = last;
 
-				row.add(addPos, val);
+//				row.add(addPos, val);
 //				System.out.println("    > -addValue='"+val+"'.");
+
+				try
+				{
+//					if (row.size() < addPos)
+//					{
+//						row.add("-dummy-value-: row.size()=" + row.size() + ", addPos=" + addPos);
+//						System.out.println(">>> ADD-INSTEAD-OF-SET: addPos=" + addPos + ", val='" + val + "', row.size()=" + row.size() + ", row=" + row + ": --- currentInstance='" + currentInstance + "', instance='" + instance + "', type='" + type + "', name='" + name + "', obs='" + obs + "', total='" + total + "', last='" + last + "'.");
+//					}
+
+					row.add(addPos, val);
+				}
+				catch (RuntimeException rte)
+				{
+					System.out.println("        --------->>> RuntimeException[" + rte + "]: module='" + module + "': Instance='" + currentInstance + "', columnName='" + name + "'... addPos=" + addPos + ", val='" + val + "', row.size()=" + row.size() + ", row=" + row + ": --- currentInstance='" + currentInstance + "', instance='" + instance + "', type='" + type + "', name='" + name + "', obs='" + obs + "', total='" + total + "', last='" + last + "'.");
+				}
+				
 			}
 		}
 //		System.out.println("=========================================================");

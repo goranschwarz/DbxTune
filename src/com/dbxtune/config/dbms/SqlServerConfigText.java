@@ -338,11 +338,47 @@ public abstract class SqlServerConfigText
 		@Override
 		protected String getOsCurrentConfig(DbmsVersionInfo versionInfo, String osName)
 		{
+			// This requires Elevated Permission...
 			if (StringUtil.hasValue(osName) && osName.startsWith("Windows"))
 				return "powershell \"Get-Volume | Select-Object DriveLetter, AllocationUnitSize, FileSystemType, FileSystemLabel | ConvertTo-Json\"";
 			
 			return "echo 'Windows-Powershell: Get-Volume, is not supported on OS Name: " + osName + "'";
 		}
+//		@Override
+//		protected String getOsCurrentConfig(DbmsVersionInfo versionInfo, String osName)
+//		{
+//			// This does NOT work on newer system since 'wmic' is deprecated
+//			if (StringUtil.hasValue(osName) && osName.startsWith("Windows"))
+//			{
+//				String pwshCmd = ""
+//					+ "$drives = [System.IO.DriveInfo]::GetDrives() "
+//					+ "| Where-Object {$_.DriveType -eq 'Fixed' -and $_.IsReady}; "
+//					+ "$drives | ForEach-Object "
+//					+ "{ "
+//					    + "$drive = $_.Name.TrimEnd('\\\\').TrimEnd(':'); "
+//					    + "$blockSize = (wmic volume where \"DriveLetter='$($drive):'\" get BlockSize /format:list 2>$null | Select-String 'BlockSize').ToString().Split('=')[1].Trim(); "
+//					    + "[PSCustomObject]@{"
+//					        + "DriveLetter=$drive; "
+//					        + "AllocationUnitSize=$blockSize; "
+//					        + "FileSystemType=$_.DriveFormat; "
+//					        + "FileSystemLabel=$_.VolumeLabel"
+//					    + "} "
+//					+ "} "
+//					+ "| ConvertTo-Json";				
+//
+//				// Should we return a "clean" PowerShell command or a DOS Command which does: powershell -Command "pwshCmd" 
+//				if (osName.startsWith("Windows-Powershell-"))
+//				{
+//					return pwshCmd;
+//				}
+//				else
+//				{
+//					return "powershell -Command \"" + pwshCmd + "\"";
+//				}
+//			}
+//			
+//			return "echo 'Windows-Powershell: Get-Volume, is not supported on OS Name: " + osName + "'";
+//		}
 		/** 
 		 * Check for 'AllocationUnitSize' below 64K 
 		 */

@@ -343,11 +343,13 @@ public class SqlServerJobSchedulerExtractor
 			    	    + "        SELECT \n"
 			    	    + "             sh.job_id \n"
 			    	    + "            ,sh.schedule_id \n"
-			    	    + "            ,next_scheduled_ts = convert(datetime, convert(varchar(8), sh.next_run_date)) + ' ' + stuff(stuff(right(1000000 + sh.next_run_time,6),3,0,':'),6,0,':') \n"
+//			    	    + "            ,next_scheduled_ts = convert(datetime, convert(varchar(8), sh.next_run_date)) + ' ' + stuff(stuff(right(1000000 + sh.next_run_time,6),3,0,':'),6,0,':') \n"
+			    	    + "            ,next_scheduled_ts = CASE WHEN sh.next_run_date <= 0 THEN NULL ELSE convert(datetime, convert(varchar(8), sh.next_run_date)) + ' ' + stuff(stuff(right(1000000 + sh.next_run_time,6),3,0,':'),6,0,':') END \n" // USE This line if we want 'next_scheduled_ts' to be NULL when 'sh.next_run_date' is 0 (not initialized)... Then also remove the 'WHERE sh.next_run_date > 0' at the end. 
 			    	    + "            ,scheduler_name    = (SELECT s.name FROM msdb.dbo.sysschedules s WHERE s.schedule_id = sh.schedule_id) \n"
 			    	    + "            ,scheduler_count   = COUNT(*)     OVER (PARTITION BY job_id) \n"
 			    	    + "            ,row_num           = ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY next_run_date, next_run_time) \n"
 			    	    + "        FROM msdb.dbo.sysjobschedules sh \n"
+//			    	    + "        WHERE sh.next_run_date > 0 \n" // next_run_date might be 0 -- The Sysjobschedules will always show 0 until it gets refreshed  
 			    	    + "    ) js \n"
 			    	    + "    WHERE js.row_num = 1 \n"
     				    + ") \n"

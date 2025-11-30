@@ -148,7 +148,8 @@ extends CountersModel
 			"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
 			"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
-			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }, 
+//			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }, 
+			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
 			false, // is Percent Graph
@@ -293,13 +294,20 @@ extends CountersModel
 					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
 				else
 				{
-					Double[] arr = new Double[5];
+//					Double[] arr = new Double[5];
+//					arr[0] = this.getAbsValueAvg(rqRows, "Sample");
+//					arr[1] = this.getAbsValueAvg(rqRows, "Avg_1min");
+//					arr[2] = this.getAbsValueAvg(rqRows, "Avg_5min");
+//					arr[3] = this.getAbsValueAvg(rqRows, "Max_1min");
+//					arr[4] = this.getAbsValueAvg(rqRows, "Max_5min");
+//					_logger.debug("updateGraphData("+GRAPH_NAME_AVG_RUN_QUEUE_LENTH+"): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"', Max_1min='"+arr[3]+"', Max_5min='"+arr[4]+"'.");
+					
+					// label: "Max_1min" and "Max_5min" seems to be "flat" and do not really say anything, so lets remove it (for now)
+					Double[] arr = new Double[3];
 					arr[0] = this.getAbsValueAvg(rqRows, "Sample");
 					arr[1] = this.getAbsValueAvg(rqRows, "Avg_1min");
 					arr[2] = this.getAbsValueAvg(rqRows, "Avg_5min");
-					arr[3] = this.getAbsValueAvg(rqRows, "Max_1min");
-					arr[4] = this.getAbsValueAvg(rqRows, "Max_5min");
-					_logger.debug("updateGraphData("+GRAPH_NAME_AVG_RUN_QUEUE_LENTH+"): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"', Max_1min='"+arr[3]+"', Max_5min='"+arr[4]+"'.");
+					_logger.debug("updateGraphData("+GRAPH_NAME_AVG_RUN_QUEUE_LENTH+"): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"'.");
 
 					// Set the values
 					tgdp.setDataPoint(this.getTimestamp(), arr);

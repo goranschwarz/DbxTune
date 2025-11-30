@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content.rs;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.rs.CmDbQueueSizeInRssd;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.pcs.report.content.ase.AseAbstract;
@@ -87,7 +88,7 @@ public class RsRssdQueueSize extends AseAbstract
 	{
 		String schema = getReportingInstance().getDbmsSchemaName();
 		
-		_CmDbQueueSizeInRssd_RssdQueueSize = createTsLineChart(conn, schema, "CmDbQueueSizeInRssd", "RssdQueueSize", -1, true, null, "Queue Size from the RSSD (col 'size', Absolute Value)");
+		_CmDbQueueSizeInRssd_RssdQueueSize = createTsLineChart(conn, schema, CmDbQueueSizeInRssd.CM_NAME, CmDbQueueSizeInRssd.GRAPH_NAME_QUEUE_SIZE, -1, true, null, "Queue Size from the RSSD (col 'size', Absolute Value)");
 	}
 
 	private IReportChart _CmDbQueueSizeInRssd_RssdQueueSize;

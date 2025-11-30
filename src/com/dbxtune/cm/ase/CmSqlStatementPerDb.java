@@ -44,7 +44,6 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
-import com.dbxtune.cm.CountersModel.AggregationType;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.NoValidRowsInSample;
 import com.dbxtune.config.dict.AseErrorMessageDictionary;
@@ -393,7 +392,7 @@ extends CountersModel
 			"SQL Statements - Sum Query Compile/Optimization Type Count per Sec", // Menu CheckBox text
 			"SQL Statements - Sum Query Compile/Optimization Type Count per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
-			new String[] { "Pure Language", "Language In Statement Cache", "Dynamic (Prepared) Statements In Statement Cache3" }, 
+			new String[] { "Pure Language", "Language In Statement Cache", "Dynamic (Prepared) Statements In Statement Cache" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph

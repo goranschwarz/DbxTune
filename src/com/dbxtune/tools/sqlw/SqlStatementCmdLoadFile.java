@@ -209,15 +209,10 @@ extends SqlStatementAbstract
 		_params._fieldTermReadable = StringUtil.escapeControlChars(_params._fieldTerm);
 		_params._rowTermReadable   = StringUtil.escapeControlChars(_params._rowTerm);
 
-//		System.out.println("TOFILE Param: _append        = '"+ _params._append            + "'.");
-//		System.out.println("TOFILE Param: _overwrite     = '"+ _params._overwrite         + "'.");
-//		System.out.println("TOFILE Param: _fieldTerm     = '"+ _params._fieldTermReadable + "'.");
-//		System.out.println("TOFILE Param: _rowTerm       = '"+ _params._rowTermReadable   + "'.");
-//		System.out.println("TOFILE Param: _nullValue     = '"+ _params._nullValue         + "'.");
-//		System.out.println("TOFILE Param: _charset       = '"+ _params._charset           + "'.");
-//		System.out.println("TOFILE Param: _queryInfo     = '"+ _params._queryInfo         + "'.");
-//		System.out.println("TOFILE Param: _rsInfo        = '"+ _params._rsInfo            + "'.");
-//		System.out.println("TOFILE Param: _noGuiQuestion = '"+ _params._noGuiQuestion     + "'.");
+        System.out.println("TOFILE Param: _fieldTerm     = '"+ _params._fieldTermReadable + "'.");
+        System.out.println("TOFILE Param: _rowTerm       = '"+ _params._rowTermReadable   + "'.");
+        System.out.println("TOFILE Param: _nullValue     = '"+ _params._nullValue         + "'.");
+        System.out.println("TOFILE Param: _charset       = '"+ _params._charset           + "'.");
 
 		// List java char sets
 		if (_params._listJavaCharSets)
@@ -439,6 +434,10 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			CSVFormat format = _params._noheader 
 					? CSVFormat.DEFAULT.withIgnoreEmptyLines() 
 					: CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+			
+			if (_params._fieldTerm.equals(DEFAULT_FIELD_TERM_STRING)) format = CSVFormat.Builder.create(format).setRecordSeparator(_params._fieldTerm).build();
+			if (_params._rowTerm   .equals(DEFAULT_ROW_TERM_STRING )) format = CSVFormat.Builder.create(format).setDelimiter      (_params._fieldTerm).build();
+
 //			CSVFormat format = CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
 //			if (_params._noheader)
 //			{
@@ -687,6 +686,10 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			CSVFormat format = _params._noheader 
 					? CSVFormat.DEFAULT.withIgnoreEmptyLines() 
 					: CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+
+			if (_params._fieldTerm.equals(DEFAULT_FIELD_TERM_STRING)) format = CSVFormat.Builder.create(format).setRecordSeparator(_params._fieldTerm).build();
+			if (_params._rowTerm   .equals(DEFAULT_ROW_TERM_STRING )) format = CSVFormat.Builder.create(format).setDelimiter      (_params._fieldTerm).build();
+
 			
 			CSVParser parser = CSVParser.parse(new File(_params._filename), Charset.forName(_params._charset), format);
 //			Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(reader);
@@ -709,8 +712,20 @@ addResultMessage("parser format: "+format.toString());
 					throw new SQLException("Execution was canceled, rolling back changes.");
 
 //System.out.println("CSVRecord["+row+"]: "+record.toString());
-				setProgressState("at row "+record.getRecordNumber());
+				setProgressState("at row " + record.getRecordNumber());
 
+				if (record.size() > _tabColumns.size())
+				{
+					String debugStr = "";
+					List<String> entries = record.toList();
+					for (int f=0; f<entries.size(); f++)
+					{
+						debugStr += "\n    field[" + f + "] = '" + entries.get(f) + "'";
+					}
+					addWarningMessage("Skipping row... At row " + record.getRecordNumber() + ", found a record with " + record.size() + " fields, but the table only has " + _tabColumns.size() + " columns. Record: " + debugStr);
+					continue;
+				}
+					
 				for (int c=0; c<record.size(); c++)
 				{
 					int fpos = c;
@@ -858,6 +873,10 @@ addResultMessage("parser format: "+format.toString());
 		CSVFormat format = noheader 
 				? CSVFormat.DEFAULT.withIgnoreEmptyLines() 
 				: CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+
+//		if (_params._fieldTerm.equals(DEFAULT_FIELD_TERM_STRING)) format = CSVFormat.Builder.create(format).setRecordSeparator(_params._fieldTerm).build();
+//		if (_params._rowTerm   .equals(DEFAULT_ROW_TERM_STRING )) format = CSVFormat.Builder.create(format).setDelimiter      (_params._fieldTerm).build();
+
 		
 //		CSVFormat format = new CSVFormat(COMMA, DOUBLE_QUOTE_CHAR, null, null, null, false, true, CRLF,
 //	            null, null, null, false, false, false, false, false);

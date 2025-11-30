@@ -21,9 +21,13 @@
 package com.dbxtune.cm.ase.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.lang.invoke.MethodHandles;
 import java.text.NumberFormat;
 import java.util.List;
@@ -33,9 +37,13 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jdesktop.swingx.decorator.ColorHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -108,6 +116,9 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_generateWrite   = PROP_PREFIX + ".graph.generate.io.write";
 	private static final boolean DEFAULT_generateWrite   = false;
 
+	private static final String  PROPKEY_serviceTimeWarn = PROP_PREFIX + ".gui.service.time.warning.gt";
+	private static final int     DEFAULT_serviceTimeWarn = 10;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_generateDummy,     DEFAULT_generateDummy);
@@ -120,6 +131,8 @@ extends TabularCntrPanel
 		Configuration.registerDefaultValue(PROPKEY_generateRead,      DEFAULT_generateRead);
 		Configuration.registerDefaultValue(PROPKEY_generateApfRead,   DEFAULT_generateApfRead);
 		Configuration.registerDefaultValue(PROPKEY_generateWrite,     DEFAULT_generateWrite);
+
+		Configuration.registerDefaultValue(PROPKEY_serviceTimeWarn, DEFAULT_serviceTimeWarn);
 	}
 
 	public CmDeviceIoPanel(CountersModel cm)
@@ -134,6 +147,31 @@ extends TabularCntrPanel
 	
 	private void init()
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String colorStr = null;
+
+		// RED (or 1 cell) = AvgServ_ms
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.service.time.warning");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				int AvgServ_ms__mpos  = adapter.getColumnIndex("AvgServ_ms");
+				
+				// If CURRENT cell IS "AvgServ_ms"
+				int mcol = adapter.convertColumnIndexToModel(adapter.column);
+				if (mcol == AvgServ_ms__mpos)
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_serviceTimeWarn, DEFAULT_serviceTimeWarn);
+
+					Number AvgServ_ms = (Number) adapter.getValue(AvgServ_ms__mpos);
+					
+					return AvgServ_ms != null && AvgServ_ms.intValue() >= threshold;
+				}
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
 	private CategoryDataset createDataset(GTable dataTable)
@@ -449,6 +487,9 @@ extends TabularCntrPanel
 		updateExtendedInfoPanel();
 	}
 
+	private JLabel            l_warningAvgServ_ms_lbl;
+	private JTextField        l_warningAvgServ_ms_txt;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
@@ -468,6 +509,15 @@ extends TabularCntrPanel
 		String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
 		final JLabel            graphType_lbl    = new JLabel("Type");
 		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
+
+		l_warningAvgServ_ms_lbl = new JLabel("Mark 'AvgServ_ms' above");
+		l_warningAvgServ_ms_txt = new JTextField(5);
+		
+		l_warningAvgServ_ms_lbl.setToolTipText("When 'AvgSrv_ms' is above this value, mark the cell as 'red'... Just to get your attention.");
+		l_warningAvgServ_ms_txt.setToolTipText("When 'AvgSrv_ms' is above this value, mark the cell as 'red'... Just to get your attention.");
+		
+		String defaultCount = "" + Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_serviceTimeWarn, DEFAULT_serviceTimeWarn);
+		l_warningAvgServ_ms_txt.setText(defaultCount);
 
 		String tooltip;
 		tooltip = 
@@ -594,6 +644,46 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateWrite, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
+		final ActionListener warningAvgServ_ms_action = new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				
+				String strVal = l_warningAvgServ_ms_txt.getText();
+				int    intVal = DEFAULT_serviceTimeWarn;
+				try { intVal = Integer.parseInt(strVal);}
+				catch (NumberFormatException nfe)
+				{
+					intVal = DEFAULT_serviceTimeWarn;
+					SwingUtils.showWarnMessage(CmDeviceIoPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
+					l_warningAvgServ_ms_txt.setText(intVal+"");
+				}
+				conf.setProperty(PROPKEY_serviceTimeWarn, intVal);
+				conf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+				if (cm != null)
+					cm.setSql(null);
+			}
+		};
+		l_warningAvgServ_ms_txt.addActionListener(warningAvgServ_ms_action);
+		l_warningAvgServ_ms_txt.addFocusListener(new FocusListener()
+		{
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				// Just call the "action" on sampleTopRowsCount_txt, so we don't have to duplicate code.
+				warningAvgServ_ms_action.actionPerformed(null);
+			}
+			
+			@Override public void focusGained(FocusEvent e) {}
+		});
+
 
 		// ADD to panel
 		panel.add(enableGraph_chk,       "split");
@@ -608,6 +698,9 @@ extends TabularCntrPanel
 		panel.add(generateRvsApfPct_chk, "wrap");
 
 		panel.add(showLegend_chk,        "wrap");
+
+		panel.add(l_warningAvgServ_ms_lbl, "split");
+		panel.add(l_warningAvgServ_ms_txt, "wrap");
 
 		// enable disable all subcomponents in panel
 		SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);

@@ -39,6 +39,7 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 
 import com.dbxtune.SqlServerTune;
+import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -239,7 +240,7 @@ extends ReportEntryAbstract
 		//     That would also include "Total"...
 		String schema = getReportingInstance().getDbmsSchemaName();
 
-		_cm_sqlRefreshTimeGraph_CmSummary_CmRefreshTime = createTsLineChart(conn, schema, "CmSummary", "CmRefreshTime", -1, true, null, "Counter Models Refresh Time (in ms)");
+		_cm_sqlRefreshTimeGraph_CmSummary_CmRefreshTime = createTsLineChart(conn, schema, "CmSummary", CmSummaryAbstract.GRAPH_NAME_CM_REFRESH_TIME, -1, true, null, "Counter Models Refresh Time (in ms)");
 	}
 
 

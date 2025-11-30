@@ -2427,10 +2427,9 @@ extends CountersModel
 					String currDbOptions = o_dbOptions.toString();
 					String prevDbOptions = _prevDbOptionsMap.get(dbname);
 					
-//					-- Does this really work: isFirstTimeSample()
-//					-- or should we use: hasDiffData()
-//					-- or do this somehow different
-//					if ( ! cm.isFirstTimeSample() )
+					// On first sample
+					//  - The check will be SKIPPED
+					//  - The configuration data will be added to _prevDbScopedOptionsMap AFTER this (thats why we wont get alarms on FIRST check)
 					if ( prevDbOptions != null )
 					{
 						if ( ! currDbOptions.equals(prevDbOptions) )

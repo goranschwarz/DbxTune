@@ -47,6 +47,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
@@ -607,7 +608,8 @@ extends PersistWriterBase
 
 	public static final String  PROPKEY_url               = "{CLASSNAME}.{KEY}.url";
 //	public static final String  DEFAULT_url               = null;
-	public static final String  DEFAULT_url               = "http://localhost:8080/api/pcs/receiver";
+//	public static final String  DEFAULT_url               = "http://localhost:8080/api/pcs/receiver";
+	public static final String  DEFAULT_url               = "http://localhost:" + DbxTuneCentral.getWebHttpPort() + "/api/pcs/receiver";
 
 
 	public static final String  PROPKEY_errorSendAlarm                    = "{CLASSNAME}.{KEY}.error.sendAlarm";
@@ -819,6 +821,7 @@ extends PersistWriterBase
 				if (_errorSaveToDisk)
 				{
 					int sendCount = 0;
+					int sleepOnQueuSizeCount = 0;
 					
 					// Remove older error files
 					//removeOldErrorFiles();
@@ -867,8 +870,15 @@ extends PersistWriterBase
 									int sleepThreshold = 5;
 									if (serverSideQueueSize > sleepThreshold)
 									{
-										_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize=" + serverSideQueueSize + ", Sleeping " + _errorSaveToDiskSuccessSleepTimeMs + " ms for config name '" + _cfgName + "', srv='" + srv + "', sendCount=" + sendCount + ", after sending file '" + file + "'. This not to overload the Central Server.");
-										Thread.sleep(_errorSaveToDiskSuccessSleepTimeMs);
+										sleepOnQueuSizeCount++;
+										int sleepTime = _errorSaveToDiskSuccessSleepTimeMs * sleepOnQueuSizeCount;
+
+										_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize=" + serverSideQueueSize + ", Sleeping " + sleepTime + " ms for config name '" + _cfgName + "', srv='" + srv + "', sendCount=" + sendCount + ", sleepOnQueuSizeCount=" + sleepOnQueuSizeCount + ", after sending file '" + file + "'. This not to overload the Central Server.");
+										Thread.sleep(sleepTime);
+									}
+									else
+									{
+										sleepOnQueuSizeCount = 0;
 									}
 								}
 								catch (InterruptedException ex)

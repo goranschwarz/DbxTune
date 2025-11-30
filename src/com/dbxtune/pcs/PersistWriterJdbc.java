@@ -65,6 +65,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.internal.AlarmEventMissingH2DbFile;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.dbxtune.central.pcs.H2WriterStat;
@@ -101,6 +102,7 @@ import com.dbxtune.utils.ConnectionProvider;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.H2UrlHelper;
 import com.dbxtune.utils.NetUtils;
+import com.dbxtune.utils.ShutdownHandler;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
 import com.dbxtune.utils.TimeUtils;
@@ -276,6 +278,12 @@ public class PersistWriterJdbc
 		if (e == null)
 			return false;
 
+		String localUrl = "-unknown-";
+		if (conn != null)
+		{
+			try { localUrl = conn.getMetaData().getURL(); } catch(SQLException ignore) {}
+		}
+		
 		boolean retCode    = false;
 		boolean doShutdown = false;
 		boolean dbIsFull   = false;
@@ -320,7 +328,7 @@ public class PersistWriterJdbc
 			_logger.debug("isSevereProblem(): execptionLevel='" + exLevel + "', sqlState='" + sqlState + "', error='" + error + "', msgStr='" + msgStr + "'.");
 
 			// H2 Messages
-			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
+			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName()) || localUrl.startsWith("jdbc:h2:"))
 			{				
 				// database is full: 
 				//   NO_DISK_SPACE_AVAILABLE = 90100
@@ -345,6 +353,37 @@ public class PersistWriterJdbc
 					dbIsFull   = true;
 					retCode    = true;
 				}
+				
+				// We do the below "version check" in open() ... So I don NOT think we need this here (just extra noise in the error log) 
+				// and I do NOT think we will ever encounter this error AFTER we have made initial connection
+
+//				// Message:   Unsupported database file version or invalid file header in file "C:/Users/goran/.dbxtune/dbxc/data/PROD_A1_ASE.mv.db" [90048-240]
+//				// SQLState:  90048
+//				// ErrorCode: 90048
+//				// Trying to open an earlier DB File of H2 Version
+//				if (error == 90048 || msgStr.contains("Unsupported database file version"))
+//				{
+//					_logger.error("============================================================================");
+//					_logger.error("== The H2 Database file is probably created with an earlier version of H2 ==");
+//					_logger.error("============================================================================");
+//					_logger.error("== For the moment there is NO upgrade path for Collectors; Just delete *todays* recording(s) and start the collector(s) again.");
+//					_logger.error("== ACTION: Delete *todays* recording(s) and start the collector again.");
+//					_logger.error("============================================================================");
+//					_logger.info ("Requesting a 'shutdown' since we can't continue with the old H2 database version...");
+//
+//					// Mark it for shutdown
+//					doShutdown = true;
+//					dbIsFull   = false;
+//					retCode    = true;
+//
+////					// Stop the collector...
+////					Configuration shutdownConfig = new Configuration();
+////					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
+////
+////					String reason = "Shutdown Requested from H2_UNSUPPORTED_DB_FEIL_VERSION(90048), url='" + conn.getMetaData().getURL() + "', errors='" + msgStr + "'.";
+////					boolean doRestart = false;
+////					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
+//				}
 
 				// Check if it looks like a CORRUPT H2 database
 				Throwable rootCauseEx = ExceptionUtils.getRootCause(e);
@@ -431,13 +470,25 @@ public class PersistWriterJdbc
 				shutdownThread.setName("StopPcs");
 				shutdownThread.start();
 
+				String msg = getDatabaseProductName() + ": Severe problems " + extraMessage + "when storing Performance Counters, Disconnected from monitored server.";
 				if (DbxTune.hasGui())
 				{
-					String msg = getDatabaseProductName() + ": Severe problems " + extraMessage + "when storing Performance Counters, Disconnected from monitored server.";
 					_logger.info(msg);
 
 					MainFrame.getInstance().action_disconnect();
 					SwingUtils.showErrorMessage("PersistWriterJdbc", msg, originException);
+				}
+				else
+				{
+					// Do we need the below... Or is the 'shutdownPcs' above good enough?
+
+					// Stop the collector...
+					Configuration shutdownConfig = new Configuration();
+					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
+
+					String reason = "Shutdown Requested from isSevereProblem(), url='" + localUrl + "', errors='" + msg + "'.";
+					boolean doRestart = false;
+					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
 				}
 			}
 		}
@@ -926,7 +977,8 @@ public class PersistWriterJdbc
 		 * but only for at most the time defined by the database setting h2.maxCompactTime (see there).*/
 		COMPACT, 
 
-		/** re-orders the pages when closing the database so that table scans are faster. */
+		/** re-orders the pages when closing the database so that table scans are faster. 
+		 * Since version ???: SHUTDOWN DEFRAG is currently equivalent to COMPACT */
 		DEFRAG
 	};
 
@@ -954,7 +1006,24 @@ public class PersistWriterJdbc
 		File dbFile = urlHelper.getDbFile();
 		long dbFileSizeBefore = -1;
 		if (dbFile != null)
+		{
 			dbFileSizeBefore = dbFile.length();
+		}
+		else
+		{
+			_logger.warn("Shutdown H2 database: Could not find the data file. Has it been deleted or what's happening here? Debug info: currentUrl='" + currentUrl + "', dbFile='" + dbFile + "'.");
+
+			if (AlarmHandler.hasInstance())
+			{
+				String srvName       = urlHelper.getFilename();
+				String subSystemName = "h2Shutdown";
+				String message       = "It looks like the H2 Database File '" + urlHelper.getFilename() + "' do NOT exists. Please investigate why!";
+				
+				AlarmEventMissingH2DbFile alarmEvent = new AlarmEventMissingH2DbFile(srvName, subSystemName, currentUrl, message);
+
+				AlarmHandler.getInstance().addAlarm(alarmEvent);
+			}
+		}
 
 		// This statement closes all open connections to the database and closes the database. 
 		// This command is usually not required, as the database is closed automatically when 
@@ -989,7 +1058,7 @@ public class PersistWriterJdbc
 
 		try (Statement stmnt = h2Conn.createStatement();) 
 		{
-			_logger.info("Sending Command '" + shutdownCmd + "' to H2 database.");
+			_logger.info("Sending Command '" + shutdownCmd + "' to H2 database. (For currentUrl='" + currentUrl + "', dbFile='" + dbFile + "')");
 			stmnt.execute(shutdownCmd);
 			_logger.info("Shutdown H2 database using Command '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 		} 
@@ -1962,6 +2031,11 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException ev)
 		{
+			SQLException originException = ev;
+
+			// Check for severe problems
+//			isSevereProblem(_mainConn, ev); // we do this here instead...
+
 			boolean h2IsServerAlreadyRunning = false;
 			
 			StringBuffer sb = new StringBuffer();
@@ -1977,7 +2051,7 @@ public class PersistWriterJdbc
 				sb.append("Message="  ).append( ev.getMessage()   );
 				ev = ev.getNextException();
 			}
-			_logger.error("Problems when connecting to a datastore Server. " + sb.toString());
+			_logger.error("Problems when connecting to a datastore Server. " + sb.toString(), originException);
 			_mainConn = closeConn(_mainConn);
 			_ddlStorageConn = closeConn(_ddlStorageConn);;
 			_sqlCaptureStorageConn = closeConn(_sqlCaptureStorageConn);;
@@ -1991,6 +2065,33 @@ public class PersistWriterJdbc
 					// param 1: 0 = all servers
 					// param 3: 0 = SHUTDOWN_NORMAL, 1 = SHUTDOWN_FORCE
 					TcpServer.stopServer(0, _jdbcPasswd, 1);
+				}
+			}
+
+			// IF H2, make special things
+			if (_jdbcUrl.startsWith("jdbc:h2:"))
+			{
+				// Message:   Unsupported database file version or invalid file header in file "C:/Users/goran/.dbxtune/dbxc/data/PROD_A1_ASE.mv.db" [90048-240]
+				// SQLState:  90048
+				// ErrorCode: 90048
+				// Trying to open an earlier DB File of H2 Version
+				if (originException.getErrorCode() == 90048 || originException.getMessage().contains("Unsupported database file version"))
+				{
+					_logger.error("============================================================================");
+					_logger.error("== The H2 Database file is probably created with an earlier version of H2 ==");
+					_logger.error("============================================================================");
+					_logger.error("== For the moment there is NO upgrade path for Collectors; Just delete *todays* recording(s) and start the collector(s) again.");
+					_logger.error("== ACTION: Delete *todays* recording and start the collector again.");
+					_logger.error("============================================================================");
+					_logger.info ("Requesting a 'shutdown' since we can't continue with the old H2 database version...");
+
+					// Stop the collector...
+					Configuration shutdownConfig = new Configuration();
+					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
+	
+					String reason = "Shutdown Requested from H2_UNSUPPORTED_DB_FEIL_VERSION(90048), url='" + _jdbcUrl + "', errors='" + originException.getMessage() + "'.";
+					boolean doRestart = false;
+					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
 				}
 			}
 		}
@@ -4484,6 +4585,11 @@ public class PersistWriterJdbc
 				if (d < labelArr.length)
 					label = labelArr[d];
 
+				// Storage for Graph Tables has data type NUMERIC(16,2)
+				// So if below that decimal point... but NOT ZERO, then add at least the minimum value, meaning 0.01
+				if (data != null && data > 0.0 && data < 0.01) // NOTE if we change getGraphTableDdlString()/getGraphAlterTableDdlString() getDatatype(conn, Types.NUMERIC, 16, 2)  to 16, 3 ... We NEED to change this as well
+					data = 0.01d;
+				
 				if (label == null)
 					sb.append("NULL, ");
 				else

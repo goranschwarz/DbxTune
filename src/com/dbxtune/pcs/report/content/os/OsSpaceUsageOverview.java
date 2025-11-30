@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content.os;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -112,9 +113,9 @@ public class OsSpaceUsageOverview extends OsAbstract
 		String schema = getReportingInstance().getDbmsSchemaName();
 
 		int maxValue = 100;
-		_CmOsDiskSpace_FsUsedPct     = createTsLineChart(conn, schema, "CmOsDiskSpace", "FsUsedPct",     maxValue, false, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
-		_CmOsDiskSpace_FsAvailableMb = createTsLineChart(conn, schema, "CmOsDiskSpace", "FsAvailableMb", -1,       false, null, "df: Space Available in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
-		_CmOsDiskSpace_FsUsedMb      = createTsLineChart(conn, schema, "CmOsDiskSpace", "FsUsedMb",      -1,       false, null, "df: Space Used in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsUsedPct     = createTsLineChart(conn, schema, CmOsDiskSpace.CM_NAME, CmOsDiskSpace.GRAPH_NAME_USED_PCT,     maxValue, false, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsAvailableMb = createTsLineChart(conn, schema, CmOsDiskSpace.CM_NAME, CmOsDiskSpace.GRAPH_NAME_AVAILABLE_MB, -1,       false, null, "df: Space Available in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
+		_CmOsDiskSpace_FsUsedMb      = createTsLineChart(conn, schema, CmOsDiskSpace.CM_NAME, CmOsDiskSpace.GRAPH_NAME_USED_MB,      -1,       false, null, "df: Space Used in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
 	}
 
 	private IReportChart _CmOsDiskSpace_FsUsedPct;

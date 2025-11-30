@@ -268,7 +268,8 @@ extends CountersModel
 			    + "SELECT \n"
 			    + "     pid \n"
 //			    + "    ,cast(client_addr      as varchar(30)) AS client_addr \n"
-			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name) as varchar(30)) AS client_addr \n"
+//			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name) as varchar(30)) AS client_addr \n"
+			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name||':'||state) as varchar(40)) AS client_addr \n"
 			    + "    ,client_port \n"
 			    + "    ,cast(client_hostname  as varchar(80)) AS client_hostname \n"
 			    + "    ,cast(usename          as varchar(80)) AS user_name \n"
@@ -290,7 +291,8 @@ extends CountersModel
 			    + "SELECT \n"
 			    + "     pid \n"
 //			    + "    ,cast(client_addr      as varchar(30)) AS client_addr \n"
-			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name) as varchar(30)) AS client_addr \n"
+//			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name) as varchar(30)) AS client_addr \n"
+			    + "    ,cast(COALESCE(client_addr::text, 'local:'||application_name||':'||state) as varchar(40)) AS client_addr \n"
 			    + "    ,client_port \n"
 			    + "    ,cast(client_hostname  as varchar(80)) AS client_hostname \n"
 			    + "    ,cast(usename          as varchar(80)) AS user_name \n"
@@ -455,9 +457,11 @@ extends CountersModel
 		if (StringUtil.isNullOrBlank(client_addr))
 		{
 			String application_name = this.getAbsString(rowId, "application_name", true, "");
+			String state            = this.getAbsString(rowId, "state"           , true, "");
 			if (StringUtil.hasValue(application_name))
 			{
-				client_addr = "local:" + application_name;
+				// Same thing we do in the SQL Statement that gets data... So this will "hopefully" never happen
+				client_addr = "local:" + application_name + ":" + state;
 			}
 		}
 		
@@ -466,6 +470,7 @@ extends CountersModel
 //			// TODO: Lookup the IP and resolve it into a hostname
 //			//       Check if 'client_hostname' is NOT NULL, then we can use that
 //			//       CAUTION: This may take time... so probably cache the result (I do that in some other place, so it may be reused)
+//			//   OR: Possibly this can be done in: localCalculation(newSample)
 //		}
 		
 		return client_addr;

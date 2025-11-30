@@ -34,6 +34,7 @@ import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.sqlserver.CmExecQueryStatPerDb;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -817,14 +818,14 @@ extends SqlServerAbstract
 			String schema = getReportingInstance().getDbmsSchemaName();
 
 			// Add Charts
-			_CmExecQueryStatPerDb_DbExecCnt      = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbExecCnt"     , -1, true, null, "SQL Statements Per DB - Execution Count/sec");
-			_CmExecQueryStatPerDb_DbElapsedTime  = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbElapsedTime" , -1, true, null, "SQL Statements Per DB - Sum Elapsed Time in ms");
-			_CmExecQueryStatPerDb_DbLWrite       = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbLWrite"      , -1, true, null, "SQL Statements Per DB - Sum Logical Reads/sec");
-			_CmExecQueryStatPerDb_DbPlanCnt      = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbPlanCnt"     , -1, true, null, "SQL Statements Per DB - Plan Count");
-			_CmExecQueryStatPerDb_DbPlanDiff     = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbPlanDiff"    , -1, true, null, "SQL Statements Per DB - Plan Count Diff");
-			_CmExecQueryStatPerDb_DbRemovedPlans = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbRemovedPlans", -1, true, null, "SQL Statements Per DB - Removed Plans Since Last Sample");
-			_CmExecQueryStatPerDb_DbNewPlans     = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbNewPlans"    , -1, true, null, "SQL Statements Per DB - New Plans Since Last Sample");
-			_CmExecQueryStatPerDb_DbReUsedPlans  = createTsLineChart(conn, schema, "CmExecQueryStatPerDb", "DbReUsedPlans" , -1, true, null, "SQL Statements Per DB - (Re)Used Plans Since Last Sample");
+			_CmExecQueryStatPerDb_DbExecCnt      = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_EXEC_SEC     , -1, true, null, "SQL Statements Per DB - Execution Count/sec");
+			_CmExecQueryStatPerDb_DbElapsedTime  = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_ELAPSED_TIME , -1, true, null, "SQL Statements Per DB - Sum Elapsed Time in ms");
+			_CmExecQueryStatPerDb_DbLWrite       = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_LOGICAL_WRITE, -1, true, null, "SQL Statements Per DB - Sum Logical Reads/sec");
+			_CmExecQueryStatPerDb_DbPlanCnt      = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_PLAN_COUNT   , -1, true, null, "SQL Statements Per DB - Plan Count");
+			_CmExecQueryStatPerDb_DbPlanDiff     = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_PLAN_DIFF    , -1, true, null, "SQL Statements Per DB - Plan Count Diff");
+			_CmExecQueryStatPerDb_DbRemovedPlans = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_REMOVED_PLANS, -1, true, null, "SQL Statements Per DB - Removed Plans Since Last Sample");
+			_CmExecQueryStatPerDb_DbNewPlans     = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_NEW_PLANS    , -1, true, null, "SQL Statements Per DB - New Plans Since Last Sample");
+			_CmExecQueryStatPerDb_DbReUsedPlans  = createTsLineChart(conn, schema, CmExecQueryStatPerDb.CM_NAME, CmExecQueryStatPerDb.GRAPH_NAME_SQL_STATEMENT_DB_REUSED_PLANS , -1, true, null, "SQL Statements Per DB - (Re)Used Plans Since Last Sample");
 
 		} // end: has rstm
 	} // end: method

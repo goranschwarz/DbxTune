@@ -38,7 +38,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
-import com.dbxtune.DbxTune;
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.pcs.DbxCentralRealm;
 import com.dbxtune.central.pcs.DbxTuneSample;
@@ -46,8 +45,6 @@ import com.dbxtune.central.pcs.DbxTuneSample.MissingFieldException;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.ValidationException;
 import com.dbxtune.cm.CountersModel;
-import com.dbxtune.mgt.NoGuiManagementServer;
-import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;

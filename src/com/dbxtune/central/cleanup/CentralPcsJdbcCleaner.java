@@ -482,7 +482,7 @@ extends Task
 		}
 		catch(SQLException ex)
 		{
-			_logger.error("Problems getting tables using: conn.getMetaData().getColumns(null, 'DbxcLocalMetrics', '%', 'SessionSampleTime') ");
+			_logger.error("Problems getting tables using: conn.getMetaData().getColumns(null, 'DbxcLocalMetrics', '%', 'SessionSampleTime') ", ex);
 		}
 
 		String schema = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;

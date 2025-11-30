@@ -42,6 +42,7 @@ import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.gui.CmOsPsPanel;
+import com.dbxtune.graph.ChartDataHistoryCreator;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
@@ -138,6 +139,22 @@ extends CounterModelHostMonitor
 	// Implementation
 	//------------------------------------------------------------
 	public static final String GRAPH_NAME_WIN_PS      = "WinPs";
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_WIN_PS.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
 
 	private void addTrendGraphs()
 	{
@@ -466,4 +483,51 @@ extends CounterModelHostMonitor
 		return retStr;
 	}
 
+	/**
+	 * Get a HTML Graph/Image representation of the graph from CmOsPs
+	 * 
+	 * @param counterController         in 'null' it will do 'CounterController.getInstance()' and produce a Warning message in the output String
+	 * @param graphName                 Name of the graph in CmOsPs
+	 * 
+	 * @return A HTML Table String (if CmOsPs is not found, then "" will be returned)
+	 */
+	public static String getCmOsPs_getGraphDataHistoryAsHtmlImage(ICounterController counterController, String graphName)
+	{
+		String retStr = "";
+		String ccWarn = "";
+		
+		if (counterController == null)
+		{
+			counterController = CounterController.getInstance();
+			ccWarn = "WARNING: using Global Counter Controller [" + (counterController == null ? "-null-" : counterController.getClass().getSimpleName()) + "].<br>";
+			_logger.warn("No CounterController was passed to 'getCmOsPs_asHtmlTable', grabbing the global CounterController instance, which might NOT be the correct.");
+		}
+		
+		CounterModelHostMonitor cmOsPs = (CounterModelHostMonitor) counterController.getCmByName(CmOsPs.CM_NAME);
+		if (cmOsPs != null)
+		{
+			if (GRAPH_NAME_WIN_PS.equals(graphName))
+			{
+				if (cmOsPs.isConnectedToVendor(OsVendor.Windows))
+				{
+					int graphWidth  = ChartDataHistoryCreator.DEFAULT_WIDTH;
+					int graphHeight = ChartDataHistoryCreator.DEFAULT_HEIGHT + (32 * 2); // expect at least 2 rows in the "label" section
+
+					retStr = cmOsPs.getGraphDataHistoryAsHtmlImage(graphName, graphWidth, graphHeight);
+					if (retStr == null)
+						retStr = "Sorry No data could be presented for graph '" + graphName + "'. (cmOsPs.getGraphDataHistoryAsHtmlImage(...) returned null)";
+				}
+				else
+				{
+					retStr = "Graph 'active OS Processes' is not yet implemented for '" + cmOsPs.getConnectedToVendor() + "'. (only implemented for Windows so far)";
+				}
+			}
+		}
+		
+		// Add a newline prior to the output
+		if (StringUtil.hasValue(retStr))
+			retStr = "<br><br>" + ccWarn + retStr;
+		
+		return retStr;
+	}
 }

@@ -24,6 +24,7 @@ import com.dbxtune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
+import com.dbxtune.pcs.report.content.rs.RsMemoryUsage;
 import com.dbxtune.pcs.report.content.rs.RsRssdQueueSize;
 import com.dbxtune.pcs.report.content.rs.RsWsRepLatency;
 
@@ -40,8 +41,9 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsCpuUsageOverview(this)   );
 
 		// QUEUE SIZE & Latency
+		addReportEntry( new RsMemoryUsage  (this)      );
 		addReportEntry( new RsRssdQueueSize(this)      );
-		addReportEntry( new RsWsRepLatency(this)       );
+		addReportEntry( new RsWsRepLatency (this)      );
 
 		// Disk IO Activity
 		addReportEntry( new OsIoStatOverview(this)     );

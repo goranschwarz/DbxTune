@@ -87,6 +87,8 @@ extends CountersModel
 		+ "The backlog reported for the inbound (i) and outbound (o) queues are based on the number of active segments (in MB) in the queue in addition to the SQM Reader backlog for the inbound queue. <br> "
 		+ "An active segment is one in which there are commands on the segment that have not been completely delivered to outbound queue or RDB.  <br>"
 		+ "Active(i) or Active(o) may be high if there is a large DSI or DIST SQT cache and downstream latency is causing the SQT to buffer transactions<br>"
+		+ "<br>"
+		+ "<b>Note</b>: In Experimental Status (it may work)"
 		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrameRs.TCP_GROUP_MC;
@@ -724,8 +726,8 @@ extends CountersModel
 
 	private String getInitSqlFromFile()
 	{
-		Class<CmRsSrcToDest> clazz    = CmRsSrcToDest.class;
-		String                      filename = "CmAdminStatsSrc2Dest_init.sql";
+		Class<CmRsSrcToDest> clazz = CmRsSrcToDest.class;
+		String filename = "CmAdminStatsSrc2Dest_init.sql";
 
 		StringBuffer sb = new StringBuffer("");
 		try

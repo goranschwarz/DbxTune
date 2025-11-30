@@ -25,7 +25,10 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.lang.invoke.MethodHandles;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -67,12 +70,14 @@ import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.config.ui.AseConfigMonitoringDialog;
 import com.dbxtune.gui.ConnectionDialog.Options;
 import com.dbxtune.gui.swing.WaitForExecDialog;
+import com.dbxtune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.dbxtune.hostmon.HostMonitorConnection;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.tools.AseAppTraceDialog;
 import com.dbxtune.tools.AseStackTraceAnalyzer;
 import com.dbxtune.tools.AseStackTraceAnalyzer.AseStackTreeView;
+import com.dbxtune.tools.AseStmntCacheBloatDetect;
 import com.dbxtune.tools.WindowType;
 import com.dbxtune.tools.sqlcapture.ProcessDetailFrame;
 import com.dbxtune.tools.sqlcapture.SqlCaptureOfflineView;
@@ -128,9 +133,16 @@ extends MainFrame
 
 	public ConnectionProgressExtraActions createConnectionProgressExtraActions()
 	{
-		return new ConnectionProgressExtraActions()
+		boolean doInitializeVersionInfo        = true;
+		boolean doCheckMonitorConfig           = true;
+		boolean doInitMonitorDictionary        = true;
+		boolean doInitDbServerConfigDictionary = true;
+		boolean doInitCounterCollector         = true;
+
+		return new ConnectionProgressExtraActionsAbstract(doInitializeVersionInfo, doCheckMonitorConfig, doInitMonitorDictionary, doInitDbServerConfigDictionary, doInitCounterCollector)
+//		return new ConnectionProgressExtraActions()
 		{
-			@Override public boolean doInitializeVersionInfo() { return true; } 
+//			@Override public boolean doInitializeVersionInfo() { return true; } 
 			@Override public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
@@ -139,14 +151,14 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override public boolean doCheckMonitorConfig() { return true; } 
+//			@Override public boolean doCheckMonitorConfig() { return true; } 
 			@Override public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
 				return AseConnectionUtils.checkForMonitorOptions(conn, null, true, cpd, "enable monitoring");
 			}
 
-			@Override public boolean doInitMonitorDictionary() { return true; } 
+//			@Override public boolean doInitMonitorDictionary() { return true; } 
 			@Override public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
@@ -159,7 +171,7 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
+//			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
 			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) 
 			throws SQLException
 			{
@@ -196,7 +208,7 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override public boolean doInitCounterCollector() { return true; } 
+//			@Override public boolean doInitCounterCollector() { return true; } 
 			@Override public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
@@ -550,8 +562,58 @@ extends MainFrame
 			view.setVisible(true);
 		}
 
+		if (ACTION_OPEN_ASE_STMNT_CACHE_BLOAT_REPORT.equals(actionCmd))
+		{
+			action_aseStmntCacheBloatReport(e);
+		}
 	}
 
+	private void action_aseStmntCacheBloatReport(ActionEvent e)
+	{
+		// Wait pop-up while waiting for BgExecutor.doWork()
+		WaitForExecDialog wait = new WaitForExecDialog(getOwner(), "Creating Report...");
+
+		final int duplicateThreshold = 10;
+
+		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
+		BgExecutor bgExec = new BgExecutor(wait)
+		{
+			@Override
+			public Object doWork()
+			{
+				getWaitDialog().setState("Creating Report");
+				try
+				{
+					final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+					try (PrintStream ps = new PrintStream(baos, true, StandardCharsets.UTF_8)) 
+					{
+						AseStmntCacheBloatDetect.doWork(getConnection(), false, ps, duplicateThreshold);
+					}
+					String reportText = baos.toString(StandardCharsets.UTF_8);
+					
+					return reportText;
+				}
+				catch (Throwable ex)
+				{
+					_logger.warn("Problems when ASE Statement Cache Bloat Report", ex);
+					SwingUtils.showErrorMessage(getOwner(), "ASE Statement Cache Bloat Report", "Problems when ASE Statement Cache Bloat Report", ex);
+				}
+
+				getWaitDialog().setState("Done");
+				return null;
+			}
+		};
+
+		String retStr = (String) wait.execAndWait(bgExec);
+		if (StringUtil.hasValue(retStr))
+		{
+			SqlTextDialog dialog = new SqlTextDialog(getOwner(), "ASE Statement Cache Bloat Report", retStr);
+			dialog.setVisible(true);
+		}
+	}
+
+	
+	
 //	public static final String ACTION_OPEN_ASE_CONFIG_VIEW              = "ACTION_OPEN_ASE_CONFIG_VIEW";
 	public static final String ACTION_OPEN_ASE_CONFIG_MON               = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_CAPTURE_SQL                  = "OPEN_CAPTURE_SQL";
@@ -559,6 +621,7 @@ extends MainFrame
 	public static final String ACTION_OPEN_ASE_APP_TRACE                = "OPEN_ASE_APP_TRACE";
 	public static final String ACTION_OPEN_ASE_PLAN_VIEWER              = "OPEN_ASE_PLAN_VIEWER";
 	public static final String ACTION_OPEN_ASE_STACKTRACE_TOOL          = "OPEN_ASE_STACKTRACE_TOOL";
+	public static final String ACTION_OPEN_ASE_STMNT_CACHE_BLOAT_REPORT = "OOPEN_ASE_STMNT_CACHE_BLOAT_REPORT";
 
 //	private JMenuItem           _aseConfigView_mi;
 
@@ -568,6 +631,7 @@ extends MainFrame
 	private JMenuItem           _aseAppTrace_mi;
 	private JMenuItem           _asePlanViewer_mi;
 	private JMenuItem           _aseStackTraceAnalyzer_mi;
+	private JMenuItem           _aseStmntCacheBloat_mi;
 //	private JMenuItem           _lockTool_mi;
 	private JMenu               _preDefinedSql_m;
 
@@ -604,6 +668,7 @@ extends MainFrame
 		_aseAppTrace_mi                = new JMenuItem("ASE Application Tracing...");
 		_asePlanViewer_mi              = new JMenuItem("ASE Showplan Viewer...");
 		_aseStackTraceAnalyzer_mi      = new JMenuItem("ASE StackTrace Analyzer...");
+		_aseStmntCacheBloat_mi         = new JMenuItem("ASE Statement Cache Bloat Report...");
 		_preDefinedSql_m               = createPredefinedSqlMenu(this);
 //		_lockTool_mi                   = new JMenuItem("Lock Tool (NOT YET IMPLEMENTED)");
 
@@ -613,6 +678,7 @@ extends MainFrame
 		_aseAppTrace_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
 		_asePlanViewer_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_plan_viewer_16.png"));
 		_aseStackTraceAnalyzer_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_stack_trace_tool.png"));
+		_aseStmntCacheBloat_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/stmnt_cache_bloat_report_16.png"));
 //		_lockTool_mi                  .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
 
 		_aseConfMon_mi                .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
@@ -621,6 +687,7 @@ extends MainFrame
 		_aseAppTrace_mi               .setActionCommand(ACTION_OPEN_ASE_APP_TRACE);
 		_asePlanViewer_mi             .setActionCommand(ACTION_OPEN_ASE_PLAN_VIEWER);
 		_aseStackTraceAnalyzer_mi     .setActionCommand(ACTION_OPEN_ASE_STACKTRACE_TOOL);
+		_aseStmntCacheBloat_mi        .setActionCommand(ACTION_OPEN_ASE_STMNT_CACHE_BLOAT_REPORT);
 //		_lockTool_mi                  .setActionCommand(ACTION_OPEN_LOCK_TOOL);
 
 		_aseConfMon_mi                .addActionListener(this);
@@ -629,6 +696,7 @@ extends MainFrame
 		_aseAppTrace_mi               .addActionListener(this);
 		_asePlanViewer_mi             .addActionListener(this);
 		_aseStackTraceAnalyzer_mi     .addActionListener(this);
+		_aseStmntCacheBloat_mi        .addActionListener(this);
 //		_lockTool_mi                  .addActionListener(this);
 
 		_aseConfMon_mi               .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
@@ -640,8 +708,9 @@ extends MainFrame
 		menu.add(_aseAppTrace_mi,           4);
 		menu.add(_asePlanViewer_mi,         5);
 		menu.add(_aseStackTraceAnalyzer_mi, 6);
+		menu.add(_aseStmntCacheBloat_mi,    7);
 		if (_preDefinedSql_m != null) 
-			menu.add(_preDefinedSql_m,      7);
+			menu.add(_preDefinedSql_m,      8);
 
 		return menu;
 	}
@@ -675,6 +744,7 @@ extends MainFrame
 			_aseAppTrace_mi               .setEnabled(true);
 			_asePlanViewer_mi             .setEnabled(true); // always TRUE
 			_aseStackTraceAnalyzer_mi     .setEnabled(true); // always TRUE
+			_aseStmntCacheBloat_mi        .setEnabled(true);
 			_preDefinedSql_m              .setEnabled(true);
 //			_lockTool_mi                  .setEnabled(true);
 
@@ -696,6 +766,7 @@ extends MainFrame
 			_aseAppTrace_mi               .setEnabled(false);
 			_asePlanViewer_mi             .setEnabled(true); // always TRUE
 			_aseStackTraceAnalyzer_mi     .setEnabled(true); // always TRUE
+			_aseStmntCacheBloat_mi        .setEnabled(false);
 			_preDefinedSql_m              .setEnabled(false);
 //			_lockTool_mi                  .setEnabled(false);
 
@@ -717,6 +788,7 @@ extends MainFrame
 			_aseAppTrace_mi               .setEnabled(false);
 			_asePlanViewer_mi             .setEnabled(true); // always TRUE
 			_aseStackTraceAnalyzer_mi     .setEnabled(true); // always TRUE
+			_aseStmntCacheBloat_mi        .setEnabled(false);
 			_preDefinedSql_m              .setEnabled(false);
 //			_lockTool_mi                  .setEnabled(false);
 

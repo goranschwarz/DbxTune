@@ -695,6 +695,37 @@ implements AutoCloseable
 		_logger.info(" Total Time: " + execTimeStr);
 		_logger.info("==============================================================");
 		_logger.info("");
+
+		if ( ! hasErrors)
+		{
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
+			String yyyy_mm_dd = sdf.format( new Date() );
+
+			_logger.info("==============================================================");
+			_logger.info(" Next Step");
+			_logger.info("==============================================================");
+			_logger.info(" * rename the current/old 'DBXTUNE_CENTRAL_DB.mv.db' to 'DBXTUNE_CENTRAL_DB.mv.db___OLD_h2_database'");
+			_logger.info(" * rename the migrated database 'DBXTUNE_CENTRAL_DB_NEW.mv.db' to the active database 'DBXTUNE_CENTRAL_DB.mv.db'");
+			_logger.info("   mv ${HOME}/.dbxtune/dbxc/data/DBXTUNE_CENTRAL_DB.mv.db     ${HOME}/.dbxtune/dbxc/data/DBXTUNE_CENTRAL_DB.mv.db___OLD_h2_database");
+			_logger.info("   mv ${HOME}/.dbxtune/dbxc/data/DBXTUNE_CENTRAL_DB_NEW.mv.db ${HOME}/.dbxtune/dbxc/data/DBXTUNE_CENTRAL_DB.mv.db");
+			_logger.info("");
+			_logger.info(" * Start DbxCentral with the new/migrated database.");
+			_logger.info("   cd ${HOME}/.dbxtune/dbxc/bin");
+			_logger.info("   ./start_dbxcentral.sh");
+			_logger.info("   # Wait for it to come up CLEAN: Then press Ctrl-C to stop it agin");
+			_logger.info("");
+			_logger.info(" * If you still have active Collector recordings, remove them.");
+			_logger.info("   rm ${HOME}/.dbxtune/dbxc/data/*_" + yyyy_mm_dd + ".mv.db");
+			_logger.info("");
+			_logger.info(" * Now start *everything* up gain");
+			_logger.info("   cd ${HOME}/.dbxtune/dbxc/bin");
+			_logger.info("   ./start_ALL.sh");
+			_logger.info("");
+			_logger.info(" * When you feel that everything is working; Remove the OLD DbxCentral database file, to save some space.");
+			_logger.info("   rm ${HOME}/.dbxtune/dbxc/data/DBXTUNE_CENTRAL_DB.mv.db___OLD_h2_database");
+			_logger.info("==============================================================");
+			_logger.info("");
+		}
 	}
 	
 	private void printExecutionReport()

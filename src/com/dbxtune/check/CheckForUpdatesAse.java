@@ -28,7 +28,9 @@ import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -113,7 +115,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
 //		urlParams.add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
 //		urlParams.add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
-//		urlParams.add("gui",                DbxTune.hasGui()+"");
+//		urlParams.add("gui",                DbxTune.hasGui() + "");
 //
 //		urlParams.add("java_version",       System.getProperty("java.version"));
 //		urlParams.add("java_vm_version",    System.getProperty("java.vm.version"));
@@ -272,7 +274,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //		urlParams.add("clientAppName",       Version.getAppName());
 //		urlParams.add("userName",            System.getProperty("user.name"));
 //
-//		urlParams.add("connectId",           getConnectCount()+"");
+//		urlParams.add("connectId",           getConnectCount() + "");
 //		urlParams.add("srvVersion",          srvVersion);
 //		urlParams.add("isClusterEnabled",    isClusterEnabled);
 //
@@ -324,7 +326,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 
 		if (mtd.getDbmsMonTableVersionNum() > 0 && mtd.getDbmsExecutableVersionNum() != mtd.getDbmsMonTableVersionNum())
 		{
-			_logger.info("MonTablesDictionary srvVersionNum("+mtd.getDbmsExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getDbmsMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
+			_logger.info("MonTablesDictionary srvVersionNum(" + mtd.getDbmsExecutableVersionNum() + ") and installmaster/monTables VersionNum(" + mtd.getDbmsMonTableVersionNum() + ") is not in sync, so we don't want to send MDA info about this.");
 			return null;
 		}
 
@@ -334,7 +336,8 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 			return null;
 		}
 
-		List<QueryString> sendQueryList = new ArrayList<QueryString>();
+		List<QueryString>    sendQueryList = new ArrayList<QueryString>();
+		Map<String, Integer> sendCountByTypeMap = new LinkedHashMap<>();
 
 //		int rowCountSum = 0;
 
@@ -407,7 +410,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 			// sysobjects
 			String sql_sysobjects_rowCount = 
 				"select count(*) \n" +
-				"from sysobjects o, syscolumns c \n" +
+				"from master.dbo.sysobjects o, master.dbo.syscolumns c \n" +
 				"where o.id = c.id \n" +
 				"  and o.name like 'mon%' \n" +
 				"  and o.type = 'U' \n" +
@@ -423,7 +426,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 						+ "Length      = t.length, "
 						+ "Indicators  = -1, "
 						+ "Description = '' \n" +
-				"from sysobjects o, syscolumns c, systypes t \n" +
+				"from master.dbo.sysobjects o, master.dbo.syscolumns c, master.dbo.systypes t \n" +
 				"where o.id = c.id \n" +
 				"  and c.usertype = t.usertype \n" +
 				"  and o.name like 'mon%' \n" +
@@ -434,42 +437,60 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 			int sendMdaInfoBatchSize = getSendMdaInfoBatchSize();
 
 			// monTables
-			getMdaInfo(CounterController.getInstance().getMonConnection(), 
+			getMdaInfo("monTables", 
+					CounterController.getInstance().getMonConnection(), 
 					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
 					sql_monTables_rowCount, sql_monTables, 
-					sendMdaInfoBatchSize, sendQueryList);
+					sendMdaInfoBatchSize, sendQueryList, sendCountByTypeMap);
 
 			// monTableColumns
-			getMdaInfo(CounterController.getInstance().getMonConnection(), 
+			getMdaInfo("monTableColumns", 
+					CounterController.getInstance().getMonConnection(), 
 					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
 					sql_monTableColumns_rowCount, sql_monTableColumns, 
-					sendMdaInfoBatchSize, sendQueryList);
+					sendMdaInfoBatchSize, sendQueryList, sendCountByTypeMap);
 
 			// monTableParameters
-			getMdaInfo(CounterController.getInstance().getMonConnection(), 
+			getMdaInfo("monTableParameters", 
+					CounterController.getInstance().getMonConnection(), 
 					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
 					sql_monTableParameters_rowCount, sql_monTableParameters, 
-					sendMdaInfoBatchSize, sendQueryList);
+					sendMdaInfoBatchSize, sendQueryList, sendCountByTypeMap);
 
 			// ASE System Tables
-			getMdaInfo(CounterController.getInstance().getMonConnection(), 
+			getMdaInfo("sysobjects", 
+					CounterController.getInstance().getMonConnection(), 
 					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
 					sql_sysobjects_rowCount, sql_sysobjects, 
-					sendMdaInfoBatchSize, sendQueryList);
+					sendMdaInfoBatchSize, sendQueryList, sendCountByTypeMap);
 
-//			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
-			_logger.info("sendMdaInfo: Sending MDA information entries for ASE Version '"+mtd.getDbmsExecutableVersionNum()+"'. (sendMdaInfoBatchSize="+sendMdaInfoBatchSize+")");
+//			_logger.info("sendMdaInfo: Starting to send " + rowCountSum + " MDA information entries in " + sendQueryList.size() + " batches, for ASE Version '" + mtd.getAseExecutableVersionNum() + "'.");
+			_logger.info("sendMdaInfo: Sending MDA information entries for ASE Version '" + mtd.getDbmsExecutableVersionNum() + "'. (sendMdaInfoBatchSize=" + sendMdaInfoBatchSize + ", sendCountByType=" + sendCountByTypeMap + ")");
+
+			if (_logger.isDebugEnabled())
+			{
+				_logger.debug("sendMdaInfo: sendQueryList.size()=" + sendQueryList.size());
+				for (int i = 0; i < sendQueryList.size(); i++)
+				{
+					QueryString queryString = sendQueryList.get(i);
+					String q = queryString.getQuery();
+					int qLen = q.length();
+					q = q.substring(qLen - 255);
+					_logger.debug("  sendQueryList[" + i + "]: URL=" + queryString.getUrl() + ", QueryLength=" + qLen + ", Query[last-255-chars]=" + q);
+				}
+			}
 		}
 		catch (SQLException e)
 		{
 			sendQueryList.clear();
-			_logger.debug("Problems when getting MDA information. Caught: "+e, e);
+			_logger.debug("Problems when getting MDA information. Caught: " + e, e);
 		}
 
 		return sendQueryList;
 	}
 
 	private int getMdaInfo(
+			String name,         // Not really used, but can be used for debug printing
 			Connection conn,
 			String checkId, 
 			String clientTime, 
@@ -479,7 +500,8 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 			String sqlGetCount, 
 			String sqlGetValues,
 			int batchSize,
-			List<QueryString> sendQueryList)
+			List<QueryString> sendQueryList,
+			Map<String, Integer> sendCountByTypeMap)
 	throws SQLException
 	{
 		// URL TO USE
@@ -521,7 +543,12 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 				urlParams.add("srvVersion",         srvVersionNum);
 				urlParams.add("isClusterEnabled",   isClusterEnabled);
 
-				urlParams.add("expectedRows",       expectedRows+"");
+				urlParams.add("expectedRows",       expectedRows + "");
+
+				if (sendCountByTypeMap != null)
+				{
+					sendCountByTypeMap.put(name, expectedRows);
+				}
 			}
 
 			urlParams.add("type"        + "-" + batchCounter, rs.getString(1)); // NOTE NOT yet added to PHP and database
@@ -534,16 +561,18 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 			urlParams.add("Indicators"  + "-" + batchCounter, rs.getString(8));
 			urlParams.add("Description" + "-" + batchCounter, rs.getString(9));
 
-			urlParams.add("rowId"       + "-" + batchCounter, rowId+"");
+			urlParams.add("rowId"       + "-" + batchCounter, rowId + "");
 
 			batchCounter++;
 
+//System.out.println(Thread.currentThread().getName() + " -- getMdaInfo(" + name + "): batchCounter=" + batchCounter + ", batchSize=" + batchSize + ", rowId=" + rowId + ", expectedRows=" + expectedRows + ".");
 			// start new batch OR on last row
 			if (batchCounter >= batchSize || rowId >= expectedRows)
 			{
 				// add number of records added to this entry
-				urlParams.add("batchSize",      batchCounter+"");
-//System.out.println("QueryString: length="+urlParams.length()+", entries="+urlParams.entryCount()+".");
+				urlParams.add("batchSize",      batchCounter + "");
+//System.out.println("QueryString: length=" + urlParams.length() + ", entries=" + urlParams.entryCount() + ".");
+//System.out.println("  >>>> " + Thread.currentThread().getName() + " -- getMdaInfo(" + name + "): batchCounter=" + batchCounter + ", batchSize=" + batchSize + ", rowId=" + rowId + ", expectedRows=" + expectedRows + ". QueryString: getAddCounter()=" + urlParams.getAddCounter() + ".");
 
 				batchCounter = 0;
 				urlParams.setCounter(rowsInBatch);
@@ -677,7 +706,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //			urlParams.add("debug",    "true");
 //
 //		urlParams.add("checkId",             checkId);
-//		urlParams.add("connectId",           getConnectCount()+"");
+//		urlParams.add("connectId",           getConnectCount() + "");
 ////		urlParams.add("clientTime",          clientTime);
 //		urlParams.add("sessionType",         "online");
 //		urlParams.add("sessionStartTime",    sampleStartTime);
@@ -745,9 +774,9 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //						urlParams.add("debug",    "true");
 //
 //					urlParams.add("checkId",             checkId);
-//					urlParams.add("connectId",           getConnectCount()+"");
+//					urlParams.add("connectId",           getConnectCount() + "");
 ////					urlParams.add("clientTime",          sessionTime);
-//					urlParams.add("sessionType",         "offline-"+loopCnt);
+//					urlParams.add("sessionType",         "offline-" + loopCnt);
 //					urlParams.add("sessionStartTime",    sessionStartTime);
 //					urlParams.add("sessionEndTime",      sessionEndTime);
 //					urlParams.add("userName",            System.getProperty("user.name"));
@@ -755,13 +784,13 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //
 //					// Print info
 ////					System.out.println("sessionInfo: \n" +
-////							"   _sessionId              = "+sessionInfo._sessionId              +", \n" +
-////							"   _lastSampleTime         = "+sessionInfo._lastSampleTime         +", \n" +
-////							"   _numOfSamples           = "+sessionInfo._numOfSamples           +", \n" +
-////							"   _sampleList             = "+sessionInfo._sampleList             +", \n" +
-////							"   _sampleCmNameSumMap     = "+sessionInfo._sampleCmNameSumMap     +", \n" +
-////							"   _sampleCmNameSumMap     = "+(sessionInfo._sampleCmNameSumMap     == null ? "null" : "size="+sessionInfo._sampleCmNameSumMap.size()    +", keySet:"+sessionInfo._sampleCmNameSumMap.keySet()    ) +", \n" +
-////							"   _sampleCmCounterInfoMap = "+(sessionInfo._sampleCmCounterInfoMap == null ? "null" : "size="+sessionInfo._sampleCmCounterInfoMap.size()+", keySet:"+sessionInfo._sampleCmCounterInfoMap.keySet()) +", \n" +
+////							"   _sessionId              = " + sessionInfo._sessionId               + ", \n" +
+////							"   _lastSampleTime         = " + sessionInfo._lastSampleTime          + ", \n" +
+////							"   _numOfSamples           = " + sessionInfo._numOfSamples            + ", \n" +
+////							"   _sampleList             = " + sessionInfo._sampleList              + ", \n" +
+////							"   _sampleCmNameSumMap     = " + sessionInfo._sampleCmNameSumMap      + ", \n" +
+////							"   _sampleCmNameSumMap     = " + (sessionInfo._sampleCmNameSumMap     == null ? "null" : "size=" + sessionInfo._sampleCmNameSumMap.size()     + ", keySet:" + sessionInfo._sampleCmNameSumMap.keySet()    )  + ", \n" +
+////							"   _sampleCmCounterInfoMap = " + (sessionInfo._sampleCmCounterInfoMap == null ? "null" : "size=" + sessionInfo._sampleCmCounterInfoMap.size() + ", keySet:" + sessionInfo._sampleCmCounterInfoMap.keySet())  + ", \n" +
 ////							"   -end-.");
 //
 //					// Loop CM's
@@ -771,11 +800,11 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //						// Print info
 ////						System.out.println(
 ////							"   > CmNameSum: \n" +
-////							"   >>  _cmName           = " + cmNameSum._cmName            +", \n" +
-////							"   >>  _sessionStartTime = " + cmNameSum._sessionStartTime  +", \n" +
-////							"   >>  _absSamples       = " + cmNameSum._absSamples        +", \n" +
-////							"   >>  _diffSamples      = " + cmNameSum._diffSamples       +", \n" +
-////							"   >>  _rateSamples      = " + cmNameSum._rateSamples       +", \n" +
+////							"   >>  _cmName           = " + cmNameSum._cmName             + ", \n" +
+////							"   >>  _sessionStartTime = " + cmNameSum._sessionStartTime   + ", \n" +
+////							"   >>  _absSamples       = " + cmNameSum._absSamples         + ", \n" +
+////							"   >>  _diffSamples      = " + cmNameSum._diffSamples        + ", \n" +
+////							"   >>  _rateSamples      = " + cmNameSum._rateSamples        + ", \n" +
 ////							"   >>  -end-.");
 //
 //						int minRefresh = 1;
@@ -854,7 +883,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //			urlParams.add("debug",    "true");
 //
 //		urlParams.add("checkId",       checkId);
-//		urlParams.add("sendCounter",   sendLogInfoCount +"");
+//		urlParams.add("sendCounter",   sendLogInfoCount  + "");
 //		urlParams.add("clientTime",    clientTime);
 //		urlParams.add("userName",      System.getProperty("user.name"));
 //		urlParams.add("clientAppName",       Version.getAppName());

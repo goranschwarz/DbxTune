@@ -44,6 +44,8 @@ extends CmAdminStatsAbstract
 		"<html>" +
 		"<p>RepServer Monitor And Performance Counters</p>" +
 		"Fetched using: <code>admin statistics,'ALL'</code>" +
+		"<br>" +
+		"<b>Note</b>: In Experimental Status (it may work)" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrameRs.TCP_GROUP_MC;

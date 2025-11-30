@@ -206,6 +206,8 @@ extends CountersModel
 		if (GRAPH_NAME_XACT_SUCCEEDED.equals(tgdp.getName()))
 		{
 			List<Integer> validRows = getValidRows();
+			if (validRows.isEmpty())
+				return;
 			
 			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
@@ -225,6 +227,8 @@ extends CountersModel
 		if (GRAPH_NAME_CMD_READ.equals(tgdp.getName()))
 		{
 			List<Integer> validRows = getValidRows();
+			if (validRows.isEmpty())
+				return;
 			
 			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
@@ -244,6 +248,8 @@ extends CountersModel
 		if (GRAPH_NAME_CMD_PARSED_BY_SQT.equals(tgdp.getName()))
 		{
 			List<Integer> validRows = getValidRows();
+			if (validRows.isEmpty())
+				return;
 			
 			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];

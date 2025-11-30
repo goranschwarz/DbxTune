@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.LinkedHashMap;
 
+import com.dbxtune.cm.postgres.CmPgDatabase;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -142,7 +143,7 @@ extends PostgresAbstract
 		
 		String schema = getReportingInstance().getDbmsSchemaName();
 		
-		_CmPgDatabase_DbSizeMb = createTsLineChart(conn, schema, "CmPgDatabase", "DbSizeMb", -1, true, null, "DB Size in MB (Databases)");
+		_CmPgDatabase_DbSizeMb = createTsLineChart(conn, schema, CmPgDatabase.CM_NAME, CmPgDatabase.GRAPH_NAME_DBSIZE_MB, -1, true, null, "DB Size in MB (Databases)");
 	}
 
 	private IReportChart _CmPgDatabase_DbSizeMb;

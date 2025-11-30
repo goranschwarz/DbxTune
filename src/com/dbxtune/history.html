@@ -24,7 +24,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2024-MM-DD</H2>
+<H2>2025-11-30</H2>
 <UL>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<H3>Generic - MAJOR Changes That affects all DbxTune tools</H3>
@@ -99,6 +99,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Connection Dialog to Sybase, added checkbox to NOT lookup host/port to a profile name (which makes it easier to change host or port for an existing profile)</LI>
 		<LI>All collectors now have a shutdown URL '/mgt/shutdown' (this is used from the Windows Service to shutdown a collector)</LI>
 		<LI>Daily Summary Report -- Table details (like available indexes etc) are now collapsed by default. can be changed with property 'DailySummaryReport.TableInfo.details.open=true|false' (default=false)</LI>
+		<LI>DataDirectoryCleaner -- Sort on DATE so we remove file in DATE order. And do NOT allow to delete TODAYS recording</LI>
+		<LI>Do not start DbxCentral or Collectors if we are starting with a H2 Database of the "wrong" version (also print how to migrate older H2 databases)</LI>
+		<LI>CheckForUpdates -- If the backend is overloaded, try later...</LI>
+		<LI>GUI -- In the Connection Dialog added option 'On Connect, Get DBMS Configuration', so we can disable this if we want to connect to a DBMS that is heavily loaded</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -239,6 +243,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DbxCentral.info now also holds 'dbxtune.central.port', 'dbxtune.central.log.file', 'dbxtune.central.config.file', 'dbxtune.management.host', 'dbxtune.management.port', 'dbxtune.management.info' </LI>
 		<LI>DbxCentral.info 'dbxtune.management.shutdown.url' can be used to shutdown DbxCentral (this is used from the Windows Service to shutdown)</LI>
 		<LI>Central PCS Database 'Drop Empty Columns' Cleanup - Scheduling Task</LI>
+		<LI>On Windows default port for the WebServer is 80 (instead of 8080, because it's harder to do redirects using the firewall)<br>This can also be overridden with Property 'DbxTuneCentral.web.http.port.windows=####' and 'DbxTuneCentral.web.https.port.windows=####'</LI>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -248,6 +253,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>Changing 'RangeSlider' from 'com.jidesoft.swing.RangeSlider' to a "home made" (which is ugly but works). The JIDE did not work under Java 17 (we will se in the future if I change back)<br>
 		    Note: This is only used in: Capture SQL, Offline View</li>
 		<li>ASE Configuration -- Slightly better at some parameters to describe memory usage in MB/GB</li>
+		<li>Added Tool 'ASE Statement Cache Bloat Report...'</li>
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
@@ -258,6 +264,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added column 'TranName' -- The transaction name. (from sysprocesses.tran_name</li>
 			<li>Added column 'ConnectionTime' -- When did the client login to ASE</li>
 			<li>BlockingOthersMaxTimeInSec:AlarmEventBlockingLockAlarm -- Added some more details "Process Activity for SPID", "Process Activity for BLOCKED/WAITING SPI" and "Last Known SQL Text for BLOCKED/WAITING SPID"</li>
+		</ul>
+		</LI>
+
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmDeviceIoPanel - tab: Devices</b><br>
+		<ul>
+			<li>If 'AvgServ_ms' is above 10ms, then make the cell background "red" (only in the GUI application)</li>
 		</ul>
 		</LI>
 
@@ -322,7 +337,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 		<b>CmStatementCache - tab: Statement Cache</b><br>
 		<ul>
-			<li>New Graphs 'Statement Cache Add/Remove Count', 'Statement Cache Memory Usage', 'Number of Statement in the Statement Cache'</li>
+			<li>New Graphs 'Statement Cache Add/Remove Count, per Sample Period', 'Statement Cache Memory Usage', 'Number of Statement in the Statement Cache'</li>
 		</ul>
 		</LI>
 
@@ -385,10 +400,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added 'AseStmntCacheHistory'</li>
 			<li>Added 'AseTopCmStmntCacheDetails' -- Top Statement Cache Entries by CPU Time below ### ms (order by: TotalCpuTime__sum, origin: CmStmntCacheDetails / monCachedStatement)</li>
 			<li>Added 'AseTopCmStmntCacheDetails' -- Top Statement Cache Entries by USE/Exec Count (order by: UseCount__sum, origin: CmStmntCacheDetails / monCachedStatement)</li>
+		    <li>Added 'AseTopCmStmntCacheDetails' -- Added graphs 'Statement Cache Add/Remove Count, per Second', 'Statement Cache Add/Remove Count, per Sample Period', 'Number of Statement in the Statement Cache', 'Statement Cache Memory Usage, in KB'</LI>
 			<li>In 'Normalized SQL Text', when showing details, added 'min' and 'max' for: elapsed_ms, cpuTime, waitTime, logicalReads, physicalReads, rowsAffected, memUsageKB.</li>
-			<li>In 'AseCpuUsageOverview' -- Added 2 graphs 'SQL Statements Per DB - Sum Query Compile/Optimization Count (Object/Access->SQL Statements/DB)', 'SQL Statements Per DB - Sum Query Compile/Optimization Time (Object/Access->SQL Statements/DB)'</li>
-			<li>In 'AseTopSlowNormalizedSql' -- Also include 'QueryOptimizationCount' and 'QueryOptimizationTime' for each entry. NOTE: This is in Experimental mode (and may be changed/removed in the future)</li>
-			<li>In 'AseTopSlowNormalizedSql' -- Added a 'note' below each 'small graph' with some info about how many entries we have in the Statement Cache, and Compile time info, in RED if it looks like we spend to much time in compilation.</li>
+			<li>In 'AseCpuUsageOverview'      -- Added 2 graphs 'SQL Statements Per DB - Sum Query Compile/Optimization Count (Object/Access->SQL Statements/DB)', 'SQL Statements Per DB - Sum Query Compile/Optimization Time (Object/Access->SQL Statements/DB)'</li>
+			<li>In 'AseTopSlowNormalizedSql'  -- Also include 'QueryOptimizationCount' and 'QueryOptimizationTime' for each entry. NOTE: This is in Experimental mode (and may be changed/removed in the future)</li>
+			<li>In 'AseTopSlowNormalizedSql'  -- Added a 'note' below each 'small graph' with some info about how many entries we have in the Statement Cache, and Compile time info, in RED if it looks like we spend to much time in compilation.</li>
+			<li>In 'AseCpuUsageOverview'      -- Added 'SQL Batches/Statements Processed Per Second (Server->Processes)', 'ASE Operations - Logical Reads in MB per Second (Summary)'</li>
+			<li>In 'ErrorInfo'                -- Each Group of errors is now 'collapsable'</li>
 		</ul>
 		</LI>
 
@@ -409,7 +427,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RsTune - Sybase/SAP Replication Server</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI><b>WarmStandby</b> - When updating Active databases, now include what user name this was done with (for eaier trouble shooting, if no replication... maint_user...)</LI>
+		<LI>Set description to 'Experimental' in the 'Monitor & Counters' tab. Some work was done here, but it still needs more work</LI>
+		<LI><b>WarmStandby</b>          - When updating Active databases, now include what user name this was done with (for easier trouble shooting, if no replication... maint_user...)</LI>
+		<LI><b>CmWsRepLatency</b>       - Now works better if we do NOT have any Warm Standby Connections</LI>
+		<LI><b>CmWsRepLatency</b>       - Alarms for RsReplicationAge does now also contain some graph history</LI>
+		<LI><b>CmRsMemory</b>           - Alarms for RsMemoryUsage does now also contain some graph history</LI>
+		<LI><b>Daily Summary Report</b> - Added RsMemoryUsage, with grphs how memory was used</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -474,6 +497,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added CM: <b>CmMemoryGrantsSum    </b> - A Memory Grant Summary (from: dm_exec_query_resource_semaphores)</LI>
 		<LI>Added CM: <b>CmWaitStatsPerDb     </b> - What are we waiting on, at a database level (from: dm_exec_session_wait_stats/dm_exec_sessions)</LI>
 		<LI>Added CM: <b>CmWhoIsActive        </b> - Execute sp_whoIsActive from Adam Machanic</LI>
+		<LI>Added CM: <b>CmIndexOpStatSum     </b> - Index Op Sum -- Get Table Level Information (like Ins/Upd/Del, lock_wait_time/count etc) on a Database Level</LI>
 
 		<LI><b>DBMS Configuration </b> - Also get linked servers using 'exec sp_linkedservers'</LI>
 		<LI><b>DBMS Configuration </b> - if Linux also grab file content of '/var/opt/mssql/mssql.conf' in tab 'Server Registry' note: this needs permission 'ADMINISTER DATABASE BULK OPERATIONS'</LI>
@@ -490,7 +514,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>Host Monitoring    </b> - on connect -- kill all processes of 'typeperf.exe', since the SSH Server does NOT terminate them on disconnet (like i Unix system does)</LI>
 		<LI><b>Host Monitoring    </b> - on Windows: CmOsPs: now with a Graph on CPU Usage per Process, also a "top" processes table are included on some Alarms</LI>
-		<LI><b>Host Monitoring    </b> - on Windows: MonitorDiskSpace -- Changed from using 'gwmi win32_logicaldisk' to 'Get-CimInstance Win32_LogicalDisk' which hopefully needs less authorizations.</LI>
+		<LI><b>Host Monitoring    </b> - on Windows: MonitorDiskSpace -- Changed from using 'Get-CimInstance Win32_LogicalDisk' to 'System.IO.DriveInfo]::GetDrives()' which needs lower authorization.</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements   </b> - Added column 'tran_id' it relates with Extended Events 'transaction_id'. (easier to track SqlServerTune and XE)</LI>
@@ -536,12 +560,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases          </b> - if 'AzureDb' Skip Availability Group checking</LI>
 		<LI><b>CmDatabases          </b> - if 'AzureDb' skip suser_sname(xxx)... and just do: DBOwner = 'AzureDB'</LI>
 		<LI><b>CmDatabases          </b> - new alarm 'HighVirtualLogFileCount' if 'vlf_count' is higher than 5000 (alarm parameter 'CmDatabases.alarm.system.if.vlf_count.gt=####')</LI>
+		<LI><b>CmDatabases          </b> - new column 'db_scoped_nondefault_configs' which holds Database Scoped Configuration that is NOT Default</LI>
+		<LI><b>CmDatabases          </b> - new Alarm if 'db_scoped_nondefault_configs' has changed</LI>
 
 		<LI><b>CmDeviceIo           </b> - LogicalName - is now based om dbname and file_id (instead of master_files.name, which may not be unique enough)</LI>
 		<LI><b>CmDeviceIo           </b> - Added new columns 'lname' (master_files.name), which is the 'old' LogicaName.</LI>
 		<LI><b>CmDeviceIo           </b> - Added columns 'AvgReadKbPerIo', 'AvgWriteKbPerIo'</LI>
 		<LI><b>CmDeviceIo           </b> - Added charts 'Disk Throughput in KB (Sum,Read,Write)', 'Number of Disk Operations (Sum,Read,Write)', 'Average (Read) KB Per Disk IO, per Device', 'Average (Write) KB Per Disk IO, per Device'</LI>
 		<LI><b>CmDeviceIo           </b> - Sometimes we had Arithmetic overflow due to high counter values</LI>
+		<LI><b>CmDeviceIo           </b> - If 'AvgServ_ms' is above 10ms, then make the cell background "red" (only in the GUI application)</LI>
 
 		<LI><b>CmExecFunctionStats  </b> - Get data for records that has been used for last 25 hours (configurable)</LI>
 
@@ -641,6 +668,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>For Windows... Include CmOsPs information about most active Processes (so we can see for example if the Virus Scan takes to much resourses)</li>
 			<li>Job Scheduler information is now much better (a lot of work was done here)</li>
 			<li>In 'Recording Information' print information about 'Deployment Type' (how it's clustered), and 'Availability Group Info' (where is it Primary and what Secondary Servers exists)</li>
+			<li>Added SqlServerIndexOpSumPerDb -- To graph how much of various Operations we have done in a database.</li>
+			<li>DB File IO -- Added columns 'AvgReadKbPerIo', 'AvgWriteKbPerIo' and SparcLines so we can see how large IO's we are using (to detect if we have enabled 64K Allocation Units on Windows)</li>
+			<li>Summary Section -- Added some graphs 'SQL Batches Received per Sec', 'Insert/Update/Delete Rows Per Second at Instance Level', 'Insert/Update/Delete Rows Per Second for tempdb', 'Bookmark/Singleton Lookups Per Second per Database', 'Range Scans Per Second per Database'</li>
+			<li>Added new section -- Database Operationals Summary (origin: CmIndexOpStatSum/dm_db_index_operational_stats)</li>
+			<li>Top SQL Statements -- If a SQL Text was executed from a Stored Proc, lets print the procedure name</li>
 		</ul>
 		</LI>
 	</UL>
@@ -808,6 +840,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>go | bcp: added '-n,--slowBcpNoTran' parameter.</LI>
 		<LI>Added 'Statement Cache Bloat Report' in Menu-Tools when Connected to Sybase ASE</LI>
 		<LI>\set varname -- Now accepts "multi line" setting. (not by using </LI>
+		<LI>On Connect: If various lookups takes longer than 1 sec after connecting, show a information dialog...</LI>
+		<LI>Context menu to set 'default font', since it changes sometimes...</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -929,8 +963,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    Note: Aggregated rows will be discarded from CM methods like: getMaxValue(), getMinValue(), getSumValue(), getCountGtZero(), getAvgValue() </LI>
 		<LI>Source DBMS data type translation. Each CM can implement modifyResultSetMetaData() to change data type (this was implented due to Postgres 
             in some cases returned Precision and Scale with 0 values (it probably ment use "max" value, which is hard to translate into "other" DBMS 
-            when storing data in a PCS). Now there is a way to handle this. Either use SQL CAST or if not desirable, use this method to set Presision and Scale)</LI>
-		<LI>PCS: Data Type Resolver -- Prints Warnings if Presision and Scale are 0 for NUMERIC and DECIMAL datatypes. (also if Presision is 0 for other columns)</LI>
+            when storing data in a PCS). Now there is a way to handle this. Either use SQL CAST or if not desirable, use this method to set Precision and Scale)</LI>
+		<LI>PCS: Data Type Resolver -- Prints Warnings if Precision and Scale are 0 for NUMERIC and DECIMAL datatypes. (also if Precision is 0 for other columns)</LI>
 
 		<LI><b>OsHostMonitoring (for all DbxTune Collectors)</b><br>
 			<UL>

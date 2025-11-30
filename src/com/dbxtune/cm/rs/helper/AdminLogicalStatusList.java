@@ -20,15 +20,20 @@
  ******************************************************************************/
 package com.dbxtune.cm.rs.helper;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.dbxtune.sql.conn.DbxConnection;
 
 public class AdminLogicalStatusList
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static ArrayList<AdminLogicalStatusEntry> getList(DbxConnection conn)
 	throws SQLException
@@ -61,63 +66,82 @@ public class AdminLogicalStatusList
 
 		ArrayList<AdminLogicalStatusEntry> list = new ArrayList<>();
 
-		Statement stmnt = conn.createStatement();
-		ResultSet rs = stmnt.executeQuery(sql);
-		while(rs.next())
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql);)
 		{
-			AdminLogicalStatusEntry entry = new AdminLogicalStatusEntry(
-					rs.getString(1),
-					rs.getString(2),
-					rs.getString(3),
-					rs.getString(4),
-					rs.getString(5),
-					rs.getString(6),
-					rs.getString(7),
-					rs.getString(8),
-					rs.getString(9)	);
+			while(rs.next())
+			{
+				AdminLogicalStatusEntry entry = new AdminLogicalStatusEntry(
+						rs.getString(1),
+						rs.getString(2),
+						rs.getString(3),
+						rs.getString(4),
+						rs.getString(5),
+						rs.getString(6),
+						rs.getString(7),
+						rs.getString(8),
+						rs.getString(9)	);
 
-			// FIXME: add a SKIP and INCLUDE list that can work with regexp... just like alarms for AseDatabases
-//			if ( ! "gorans".equalsIgnoreCase(entry.getActiveConnDbName()) )
-//			{
-//				System.out.println("SKIPPING: "+entry.getLogicalConnName()+", active='"+entry.getActiveConnName()+"', standby'"+entry.getStandbyConnName()+"'.");
-//				continue;
-//			}
-			
-//			//-------------------------------------------------------
-//			// LastDbBackupAgeInHours
-//			//-------------------------------------------------------
-//			if (isSystemAlarmsForColumnEnabled("LastDbBackupAgeInHours"))
-//			{
-//				Double val = cm.getAbsValueAsDouble(r, "LastDbBackupAgeInHours");
-//				if (val != null)
+				// FIXME: add a SKIP and INCLUDE list that can work with regexp... just like alarms for AseDatabases
+//				if ( ! "gorans".equalsIgnoreCase(entry.getActiveConnDbName()) )
 //				{
-//					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
-//					if (val.intValue() > threshold)
+//					System.out.println("SKIPPING: "+entry.getLogicalConnName()+", active='"+entry.getActiveConnName()+"', standby'"+entry.getStandbyConnName()+"'.");
+//					continue;
+//				}
+				
+//				//-------------------------------------------------------
+//				// LastDbBackupAgeInHours
+//				//-------------------------------------------------------
+//				if (isSystemAlarmsForColumnEnabled("LastDbBackupAgeInHours"))
+//				{
+//					Double val = cm.getAbsValueAsDouble(r, "LastDbBackupAgeInHours");
+//					if (val != null)
 //					{
-//						// Get config 'skip some transaction names'
-//						String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForDbs,  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs);
-//						String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs);
-//						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv);
-//						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv);
-//
-//						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
-//						// Below is more readable, from a variable context point-of-view, but HARDER to understand
-//						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
-//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
-//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
-//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
-//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
-//
-//						// NO match in the SKIP regexp
-//						if (doAlarm)
+//						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
+//						if (val.intValue() > threshold)
 //						{
-//							AlarmHandler.getInstance().addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
+//							// Get config 'skip some transaction names'
+//							String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForDbs,  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs);
+//							String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs);
+//							String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv);
+//							String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv);
+	//
+//							// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+//							// Below is more readable, from a variable context point-of-view, but HARDER to understand
+//							boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+//							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+//							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+//							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+//							doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+	//
+//							// NO match in the SKIP regexp
+//							if (doAlarm)
+//							{
+//								AlarmHandler.getInstance().addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
+//							}
 //						}
 //					}
 //				}
-//			}
-			
-			list.add(entry);
+				
+				list.add(entry);
+			}
+		}
+		catch (SQLException ex)
+		{
+			//---------------------------------------------------------------------------
+			// If 'admin logical_status' doesn't have any Logical Connections...
+			//---------------------------------------------------------------------------
+			// java.sql.SQLException: JZ0R2: No result set for this query.
+			if ("JZ0R2".equals(ex.getSQLState()))
+			{
+				// Just do a DEBUG write here
+				// The upper component 'CounterSampleWsIterator' will write: 'Skipping collecting WS Latency statistics. 'admin logical_status' returned 0 rows.'
+				_logger.debug("No 'Logical Connections' was detected. The command 'admin logical_status' did NOT return any ResultSet");
+				// Note: we will still return the EMPTY List at the bottom.
+			}
+			else
+			{
+				throw ex;
+			}
 		}
 		
 		return list;

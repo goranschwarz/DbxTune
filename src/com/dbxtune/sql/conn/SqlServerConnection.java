@@ -39,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -188,7 +189,7 @@ extends DbxConnection
 						{
 							try
 							{
-								SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy HH:mm:ss");
+								SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy HH:mm:ss", Locale.ENGLISH); // (Use Locale.ENGLISH to ensure English month parsing.)
 								Date buildDate = sdf.parse(buildDateStr);
 
 								Calendar calendar = new GregorianCalendar();

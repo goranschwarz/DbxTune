@@ -362,6 +362,9 @@ implements Cloneable, ITableTooltip
 	private String[]           _graphDataColNames          = {};
 	/** What methods do we apply on _graphDataColNames */
 	private String[]           _graphDataMethods           = {};
+	
+	// If the column count was changed...
+	private boolean _isTableStructureChanged = false;
 
 	//-------------------------------------------------------
 	// END: Graph members
@@ -1387,6 +1390,16 @@ implements Cloneable, ITableTooltip
 			throw new RuntimeException("The Counter Controller is null.");
 
 		return cc.isDbmsOptionEnabled(dbmsOption);
+	}
+
+	/**
+	 * On the last refresh was there any new columns...
+	 * <p>
+	 * This so we can do: fireTableStructureChanged(); from "somewhere" 
+	 */
+	public boolean isTableStructureChanged()
+	{
+		return _isTableStructureChanged;
 	}
 
 	/**
@@ -2597,6 +2610,17 @@ implements Cloneable, ITableTooltip
 		if (seriesLabels == null)
 			seriesLabels = new String[] {""};
 		
+		// For the moment DbxCentral can only handle 30 characters for GraphName 
+		//  -- It can easy be fixed... Just alter the table...
+		// But for now, just check that the name is less than 30 chars
+		int dbxCentralMaxGraphName = 30;
+		if (name.length() > dbxCentralMaxGraphName)
+		{
+			String msg = "Graph Names can only be " + dbxCentralMaxGraphName + " characters (for the moment). It's currently a restriction in DbxCentral database repository. The graph name '" + name + "' is " + name.length() + " characters. The graph will be added for now... But if/when it reaches DbxCentral we will have a problem.";
+			Exception ex = new Exception(msg);
+			_logger.error("Problems adding graph '" + name + "'.", ex);
+		}
+		
 //		String graphProps = null; // FIXME this should be the method parameter graphProps
 
 		// Get UserDefined: graph 'category' properties
@@ -2987,7 +3011,18 @@ implements Cloneable, ITableTooltip
 	 */
 	public String getGraphDataHistoryAsHtmlImage(String graphName, String... seriesNames)
 	{
-		return getGraphDataHistoryAsHtmlImage(graphName, 0, seriesNames);
+		return getGraphDataHistoryAsHtmlImage(graphName, 0, -1, -1, seriesNames);
+	}
+
+	/**
+	 * Get a HTML 'img' tag looking something like:<br> <code>&lt;img  width='500' height='180' src='data:image/png;base64,iVBORw0...'&gt;</code>
+	 * @param graphName Name of the Graph
+	 * @param seriesNames     Only show the following series (empty for ALL series)
+	 * @return null if not found, else a HTML 'img' tag
+	 */
+	public String getGraphDataHistoryAsHtmlImage(String graphName, int graphWidth, int graphHeight)
+	{
+		return getGraphDataHistoryAsHtmlImage(graphName, 0, graphWidth, graphHeight, (String[])null);
 	}
 
 
@@ -2995,10 +3030,12 @@ implements Cloneable, ITableTooltip
 	 * Get a HTML 'img' tag looking something like:<br> <code>&lt;img  width='500' height='180' src='data:image/png;base64,iVBORw0...'&gt;</code>
 	 * @param graphName Name of the Graph
 	 * @param timeLimit       0 = All data, # = Only last # MINUTES of data points 
+	 * @param graphWidth      Width of the graph  (-1 == ChartDataHistoryCreator.DEFAULT_WIDTH)
+	 * @param graphHeight     Height of the graph (-1 == ChartDataHistoryCreator.DEFAULT_HEIGHT)
 	 * @param seriesNames     Only show the following series (empty for ALL series)
 	 * @return null if not found, else a HTML 'img' tag
 	 */
-	public String getGraphDataHistoryAsHtmlImage(String graphName, int timeLimit, String... seriesNames)
+	public String getGraphDataHistoryAsHtmlImage(String graphName, int timeLimit, int graphWidth, int graphHeight, String... seriesNames)
 	{
 		String cmName    = this.getName();
 		
@@ -3014,7 +3051,8 @@ implements Cloneable, ITableTooltip
 				throw new RuntimeException("NO_TREND_GRAPH_DATA_POINT: For cm='" + cmName + "', graphName='" + graphName + "', could not find any TrendGraphDataPoint for graphName. If this happens, something is seriously wrong. ");
 
 			// CREATE the 'img' tag
-			return ChartDataHistoryCreator.getChartAsHtmlImage(tgdp.getGraphLabel(), cdhs, seriesNames);
+//			return ChartDataHistoryCreator.getChartAsHtmlImage(tgdp.getGraphLabel(), cdhs, seriesNames);
+			return ChartDataHistoryCreator.getChartAsHtmlImage(tgdp.getGraphLabel(), cdhs, -1, graphWidth, graphHeight, seriesNames);
 		}
 		else
 		{
@@ -4673,6 +4711,27 @@ implements Cloneable, ITableTooltip
 	 */
 	private void initColumnStuff(CounterSample cnt)
 	{
+		// No changes
+		_isTableStructureChanged = false;
+
+		// Check for changes (in '_isDiffCol')... The rest: '_isDiffDissCol, _isPctCol', will also has to be changed.
+		if (_isDiffCol != null)
+		{
+			List<String> colNames = cnt.getColNames();
+			if (colNames != null)
+			{
+				if (colNames.size() != _isDiffCol.length)
+				{
+					_logger.info("Re-Initialize '_is*Col' Arrays for CM '" + getName() + "'. It looks like number of columns has changed. Details: _isDiffCol.length=" + _isDiffCol.length + ", colNames.size()=" + colNames.size() + ". colNames=" + colNames);
+					_isDiffDissCol = null;
+					_isDiffCol     = null;
+					_isPctCol      = null;
+					
+					_isTableStructureChanged = true;
+				}
+			}
+		}
+
 		// Initialize isDiffDissCol array
 		if (_isDiffDissCol == null)
 		{
@@ -4695,7 +4754,6 @@ implements Cloneable, ITableTooltip
 			}
 		}
 
-		// Initialize isDiffCol array
 		if (_isDiffCol == null)
 		{
 			List<String> colNames = cnt.getColNames();
@@ -5955,9 +6013,8 @@ implements Cloneable, ITableTooltip
 						diffRow.add(newRow.get(i));
 					else
 					{
-						//checkType(oldSample, oldRowId, i, newSample, newRowId, i);
-						//if ((newRow.get(i)).getClass().toString().equals("class java.math.BigDecimal"))
-						Object oldRowObj = oldRow.get(i);
+						// NOTE: If columns has been added the "oldRow" will be NOT contain that value: so therefore a NULL will be used
+						Object oldRowObj = (oldRow.size() < newRow.size()) ? null : oldRow.get(i);
 						Object newRowObj = newRow.get(i);
 
 						String colName = newSample.getColumnName(i);
@@ -10147,6 +10204,8 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 						minValue = privateAggregate_doMinForValue    (minValue, colVal, jdbcType);
 						maxValue = privateAggregate_doMaxForValue    (maxValue, colVal, jdbcType);
 //						System.out.println("calculateAggregateRow("+newSample.getName()+"): r="+r+", colName=|"+getColumnName(c)+"|, colVal=|"+colVal+"|, sumValue="+sumValue+", minValue="+minValue+", maxValue="+maxValue+", jdbcType="+jdbcType);
+//						rcGtZero = privateAggregate_incRowCountIfValueGtZero(rcGtZero, colVal, jdbcType);
+//TODO; // Or can/should we use 'rowCountForAverageCalculation' ... Look at how that is working
 
 						if (colVal != null && AggregationType.Agg.AVG.equals(aggregationType))
 						{
@@ -10489,7 +10548,7 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			return ((BigDecimal)sumVal).add( (BigDecimal) val );
 		}
 		
-		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in xxx_doSummaryForValue().");
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in privateAggregate_doSummaryForValue().");
 		return null;
 	}
 	/**
@@ -10546,7 +10605,7 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			return retVal;
 		}
 		
-		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in xxx_doSummaryForValue().");
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in privateAggregate_doAverageForValue().");
 		return null;
 	}
 	/**
@@ -10619,11 +10678,11 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			return val;
 		}
 		
-		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in private_doMinForValue().");
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in privateAggregate_doMinForValue().");
 		return null;
 	}
 	/**
-	 *  Responsible for doing the MIN aggregation for various data types 
+	 *  Responsible for doing the MAX aggregation for various data types 
 	 */
 	private Object privateAggregate_doMaxForValue(Object maxVal, Object val, int jdbcType)
 	{
@@ -10692,9 +10751,69 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 			return val;
 		}
 		
-		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in private_doMaxForValue().");
+		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in privateAggregate_doMaxForValue().");
 		return null;
 	}
+	/**
+	 *  Responsible for doing RowCount with values ABOVE Zero 
+	 */
+//	private int privateAggregate_incRowCountIfValueGtZero(int currentRowCount, Object val, int jdbcType)
+//	{
+//		// No need to MIN, just return "what we got so far"
+//		if (val == null)
+//			return currentRowCount;
+//
+//		boolean dummy = false;
+//		if (dummy) 
+//		{
+//			// dummy just to simplify commenting out of the first if statement
+//		}
+////		else if (jdbcType == java.sql.Types.TINYINT)
+////		{
+////		}
+//		else if (jdbcType == java.sql.Types.SMALLINT)
+//		{
+//			return ((Number)val).shortValue() == 0 ? currentRowCount : currentRowCount + 1;
+//		}
+//		else if (jdbcType == java.sql.Types.INTEGER)
+//		{
+//			return ((Number)val).intValue() == 0 ? currentRowCount : currentRowCount + 1;
+//		}
+//		else if (jdbcType == java.sql.Types.BIGINT)
+//		{
+//			return ((Number)val).longValue() == 0 ? currentRowCount : currentRowCount + 1;
+//		}
+//		else if (jdbcType == java.sql.Types.FLOAT || jdbcType == java.sql.Types.REAL)
+//		{
+//			return ((Number)val).floatValue() == 0 ? currentRowCount : currentRowCount + 1;
+//		}
+//		else if (jdbcType == java.sql.Types.DOUBLE)
+//		{
+//			return ((Number)val).doubleValue() == 0 ? currentRowCount : currentRowCount + 1;
+//		}
+//		else if (jdbcType == java.sql.Types.NUMERIC || jdbcType == java.sql.Types.DECIMAL)
+//		{
+//			return ((Number)val).doubleValue() == 0 ? currentRowCount : currentRowCount + 1;
+////			if (minVal == null) 
+////				minVal = (BigDecimal) val;
+////
+////			return ((BigDecimal)minVal).min( (BigDecimal) val );
+//		}
+//		else if (jdbcType == java.sql.Types.TIMESTAMP)
+//		{
+//			return currentRowCount + 1;
+////			if (minVal == null) 
+////				return val;
+////
+////			if ( ((Timestamp)minVal).getTime() < ((Timestamp)val).getTime() )
+////				return minVal;
+////
+////			return val;
+//		}
+//		
+//		_logger.error(getName() + ": Unhandled JDBC datatype " + jdbcType + " - " + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType) + ", in privateAggregate_doRowCountForValue().");
+//		return currentRowCount;
+//	}
 
 
 	/** 

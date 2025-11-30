@@ -269,6 +269,25 @@ extends CountersModel
 		}
 	}
 
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		// ENABLED for the following graphs
+		if (GRAPH_NAME_MEMORY_PCT  .equals(name)) return true;
+		if (GRAPH_NAME_MODULE_USAGE.equals(name)) return true;
+
+		// default: DISABLED
+		return false;
+	}
+	@Override
+	public int getGraphDataHistoryTimeInterval(String name)
+	{
+		// Keep interval: default is 60 minutes
+		return super.getGraphDataHistoryTimeInterval(name);
+	}
+
+	
+
 //	@Override
 //	protected TabularCntrPanel createGui()
 //	{
@@ -437,44 +456,18 @@ extends CountersModel
 					// If the module is in Memory Control... Alarm, since that module is "Paused" !!!
 					if (objectState != null && objectState.contains("(Ctrl)"))
 					{
+						String extendedDescText = "";
+						String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
+						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
+
 						AlarmEvent alarm = new AlarmEventRsInMemoryControl(cm, objectState, _memoryLimitSizeMb);
+						alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 						AlarmHandler.getInstance().addAlarm( alarm );
 					}
 				} // end: loop all rows
 			}
 		}
-
-//		//-------------------------------------------------------
-//		// In Memory Control -- Time
-//		//-------------------------------------------------------
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("InMemoryControlTime"))
-//		{
-//			int pos_objectState = this.findColumn("Object(State)");
-//			if (pos_objectState == -1)
-//				pos_objectState = this.findColumn("Object/State");
-//			
-//			int pos_memCtlTimeInSec = this.findColumn("Memory_Ctrl_Time(s)");
-//
-//			if (pos_objectState != -1)
-//			{
-//				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_InMemoryControlTime, DEFAULT_alarm_InMemoryControlTime);
-//
-//				for (int r=0; r<cm.getAbsRowCount(); r++)
-//				{
-//					String objectState     = cm.getAbsString(r, pos_objectState);
-//					Double memCtlTimeInSec = pos_memCtlTimeInSec == -1 ? 0d : cm.getAbsValueAsDouble(r, pos_memCtlTimeInSec, 0d);
-//
-//					// If the module is in Memory Control... Alarm, since that module is "Paused" !!!
-//					if (memCtlTimeInSec.intValue() > threshold)
-//					{
-//						AlarmEvent alarm = new AlarmEventRsInMemoryControl(cm, objectState, memCtlTimeInSec.intValue(), _memoryLimitSizeMb, threshold);
-//
-//						AlarmHandler.getInstance().addAlarm( alarm );
-//					}
-//				} // end: loop all rows
-//			}
-//		}
 
 		//-------------------------------------------------------
 		// Memory Usage in PCT
@@ -502,7 +495,14 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 1, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
+
+					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 1, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
+					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+					AlarmHandler.getInstance().addAlarm( alarm );
 				}
 
 				//---------------------------------------------------------
@@ -514,7 +514,14 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 2, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
+
+					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 2, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
+					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm( alarm );
 				}
 
 				//---------------------------------------------------------
@@ -526,7 +533,14 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 3, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
+
+					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 3, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
+					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm( alarm );
 				}
 				
 				//---------------------------------------------------------
@@ -538,7 +552,14 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					AlarmHandler.getInstance().addAlarm( new AlarmEventRsMemoryUsage(cm, threshold, 4, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb) );
+					String extendedDescText = "";
+					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
+					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
+
+					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 4, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
+					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					AlarmHandler.getInstance().addAlarm( alarm );
 				}
 			}
 		}

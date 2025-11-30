@@ -30,15 +30,15 @@ import java.util.Date;
 public class Version
 {
 	public static       String PRODUCT_STRING     = "DbxTune";      // Do not have spaces etc in this one
-//	public static final String VERSION_STRING     = "4.5.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.5.0.98.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2025-10-05/build 548";
+	public static final String VERSION_STRING     = "4.6.0";        // Use this for public releases
+//	public static final String VERSION_STRING     = "4.5.0.107.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2025-11-30/build 557";
 
-	public static final String GIT_DATE_STRING    = "2025-10-05";  // try to update this
-	public static final String GIT_REVISION_STR   = "600";         // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
+	public static final String GIT_DATE_STRING    = "2025-11-30";  // try to update this
+	public static final String GIT_REVISION_STR   = "610";         // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
-	public static final String  DEV_VERSION_EXPIRE_STR  = "2025-11-30";  // "YYYY-MM-DD" 
+	public static final String  DEV_VERSION_EXPIRE_STR  = "2027-11-30";  // "YYYY-MM-DD" 
 	public static       Date    DEV_VERSION_EXPIRE_DATE = null;
 
 	public static final String SOURCE_DATE_STRING = "$Date$";     // Subversion Specific Tag, which GIT do not have

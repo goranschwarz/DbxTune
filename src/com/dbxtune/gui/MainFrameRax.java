@@ -79,27 +79,34 @@ extends MainFrame
 
 	public ConnectionProgressExtraActions createConnectionProgressExtraActions()
 	{
-		return new ConnectionProgressExtraActions()
+		boolean doInitializeVersionInfo        = false;
+		boolean doCheckMonitorConfig           = false;
+		boolean doInitMonitorDictionary        = false;
+		boolean doInitDbServerConfigDictionary = true;
+		boolean doInitCounterCollector         = false;
+
+		return new ConnectionProgressExtraActionsAbstract(doInitializeVersionInfo, doCheckMonitorConfig, doInitMonitorDictionary, doInitDbServerConfigDictionary, doInitCounterCollector)
+//		return new ConnectionProgressExtraActions()
 		{
-			@Override public boolean doInitializeVersionInfo() { return false; } 
+//			@Override public boolean doInitializeVersionInfo() { return false; } 
 			@Override public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				return true;
 			}
 			
-			@Override public boolean doCheckMonitorConfig() { return false; } 
+//			@Override public boolean doCheckMonitorConfig() { return false; } 
 			@Override public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				return true;
 			}
 
-			@Override public boolean doInitMonitorDictionary() { return false; } 
+//			@Override public boolean doInitMonitorDictionary() { return false; } 
 			@Override public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				return true;
 			}
 			
-			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
+//			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
 			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) throws SQLException
 			{
 				if (DbmsConfigManager.hasInstance())
@@ -127,7 +134,7 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override public boolean doInitCounterCollector() { return false; } 
+//			@Override public boolean doInitCounterCollector() { return false; } 
 			@Override public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				return true;

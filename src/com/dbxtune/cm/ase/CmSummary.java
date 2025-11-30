@@ -167,8 +167,16 @@ extends CmSummaryAbstract
 	public static final String  PROPKEY_oldestOpenTranInSecThreshold     = PROP_PREFIX + ".oldestOpenTranInSecThreshold";
 	public static final int     DEFAULT_oldestOpenTranInSecThreshold     = 10;
 	
-	public static final String GRAPH_NAME_AA_CPU             = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
-	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
+	public static final String GRAPH_NAME_AA_CPU               = "aaCpuGraph";
+	public static final String GRAPH_DESC_AA_CPU_SHORT         = "CPU Summary, Global Variables";
+	public static final String GRAPH_DESC_AA_CPU_LONG          = "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (" + SHORT_NAME + ")";
+	public static final String GRAPH_PROP_AA_CPU               = TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES);
+	
+	public static final String GRAPH_NAME_BLOCKING_LOCKS       = "BlockingLocksGraph";
+	public static final String GRAPH_DESC_BLOCKING_LOCKS_SHORT = "Blocking Locks";
+	public static final String GRAPH_DESC_BLOCKING_LOCKS_LONG  = "Number of Concurrently Blocking Locks (" + SHORT_NAME + ")";
+	public static final String GRAPH_PROP_BLOCKING_LOCKS       = TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES);
+	
 	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
 	public static final String GRAPH_NAME_CONNECTION_RATE    = "ConnRateGraph";
 	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
@@ -188,10 +196,11 @@ extends CmSummaryAbstract
 
 	private void addTrendGraphs()
 	{
-		addTrendGraph(GRAPH_NAME_AA_CPU,
-			"CPU Summary, Global Variables", 	                                         // Menu CheckBox text
-			"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Graph Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+		addTrendGraph(
+			GRAPH_NAME_AA_CPU,
+			GRAPH_DESC_AA_CPU_SHORT, // Menu CheckBox text
+			GRAPH_DESC_AA_CPU_LONG,  // Graph Label 
+			GRAPH_PROP_AA_CPU,       // Graph Properties
 			new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -200,7 +209,8 @@ extends CmSummaryAbstract
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
-		addTrendGraph(GRAPH_NAME_TRANSACTION,
+		addTrendGraph(
+			GRAPH_NAME_TRANSACTION,
 			"ASE Operations - Transaction per second",                         // Menu CheckBox text
 			"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
@@ -228,7 +238,7 @@ extends CmSummaryAbstract
 			"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
 			"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
-			new String[] { "Inserts", "Updates", "Deletes", "Merges" }, 
+			new String[] { "Total DML", "Inserts", "Updates", "Deletes", "Merges" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false,   // is Percent Graph
@@ -998,13 +1008,21 @@ extends CmSummaryAbstract
 			}
 			else
 			{
-				Double[] arr = new Double[4];
+				Double[] arr = new Double[5];
 
-				arr[0] = this.getRateValueSum("Inserts");
-				arr[1] = this.getRateValueSum("Updates");
-				arr[2] = this.getRateValueSum("Deletes");
-				arr[3] = this.getRateValueSum("Merges");
-				_logger.debug("updateGraphData("+tgdp.getName()+"): Inserts='"+arr[0]+"', Updates='"+arr[1]+"', Deletes='"+arr[2]+"', Merges='"+arr[3]+"'.");
+				Double inserts = this.getRateValueSum("Inserts");
+				Double updates = this.getRateValueSum("Updates");
+				Double deletes = this.getRateValueSum("Deletes");
+				Double merges  = this.getRateValueSum("Merges");
+				
+				Double totalDml = inserts + updates + deletes + merges;
+
+				arr[0] = totalDml;
+				arr[1] = inserts;
+				arr[2] = updates;
+				arr[3] = deletes;
+				arr[4] = merges;
+				_logger.debug("updateGraphData("+tgdp.getName()+"): TotalDML='"+arr[0]+"', Inserts='"+arr[1]+"', Updates='"+arr[2]+"', Deletes='"+arr[3]+"', Merges='"+arr[4]+"'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);

@@ -93,9 +93,15 @@ extends MainFrame
 	}
 	public ConnectionProgressExtraActions createConnectionProgressExtraActions()
 	{
-		return new ConnectionProgressExtraActions()
+		boolean doInitializeVersionInfo        = true;
+		boolean doCheckMonitorConfig           = true;
+		boolean doInitMonitorDictionary        = true;
+		boolean doInitDbServerConfigDictionary = true;
+		boolean doInitCounterCollector         = true;
+
+		return new ConnectionProgressExtraActionsAbstract(doInitializeVersionInfo, doCheckMonitorConfig, doInitMonitorDictionary, doInitDbServerConfigDictionary, doInitCounterCollector)
 		{
-			@Override public boolean doInitializeVersionInfo() { return true; } 
+//			@Override public boolean doInitializeVersionInfo() { return true; } 
 			@Override public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 //				// Just get DBMS Version, this will be good for error messages, sent to WEB server, this will write DBMS Version in the info...
@@ -103,7 +109,7 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override public boolean doCheckMonitorConfig() { return true; } 
+//			@Override public boolean doCheckMonitorConfig() { return true; } 
 			@Override public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				Thread.sleep(1*1000);
@@ -111,7 +117,7 @@ extends MainFrame
 //				return AseConnectionUtils.checkForMonitorOptions(conn, null, true, cpd, "enable monitoring");
 			}
 
-			@Override public boolean doInitMonitorDictionary() { return true; } 
+//			@Override public boolean doInitMonitorDictionary() { return true; } 
 			@Override public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				MonTablesDictionaryManager.getInstance().initialize(conn, true);
@@ -119,7 +125,7 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
+//			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
 			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, HostMonitorConnection hostMonConn, ConnectionProgressDialog cpd) throws SQLException
 			{
 				if (DbmsConfigManager.hasInstance())
@@ -146,7 +152,7 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override public boolean doInitCounterCollector() { return true; } 
+//			@Override public boolean doInitCounterCollector() { return true; } 
 			@Override public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				CounterController.getInstance().initCounters(

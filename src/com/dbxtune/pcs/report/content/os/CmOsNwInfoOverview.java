@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content.os;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.os.CmOsNwInfo;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -81,9 +82,9 @@ extends OsAbstract
 	{
 		String schema = getReportingInstance().getDbmsSchemaName();
 		
-		_CmOsNwInfo_AllMbit   = createTsLineChart(conn, schema, "CmOsNwInfo", "AllMbit",   -1, false, null, "Network Received/Transmitted all NIC in Mbit per Sec (Host Monitor->Network Stat)");
-		_CmOsNwInfo_RecvMbit  = createTsLineChart(conn, schema, "CmOsNwInfo", "RecvMbit",  -1, false, null, "Network Received Mbit per Sec (Host Monitor->Network Stat)");
-		_CmOsNwInfo_TransMbit = createTsLineChart(conn, schema, "CmOsNwInfo", "TransMbit", -1, false, null, "Network Transmitted in Mbit per Sec (Host Monitor->Network Stat)");
+		_CmOsNwInfo_AllMbit   = createTsLineChart(conn, schema, CmOsNwInfo.CM_NAME, CmOsNwInfo.GRAPH_NAME_ALL_BANDWIDTH_MBIT,   -1, false, null, "Network Received/Transmitted all NIC in Mbit per Sec (Host Monitor->Network Stat)");
+		_CmOsNwInfo_RecvMbit  = createTsLineChart(conn, schema, CmOsNwInfo.CM_NAME, CmOsNwInfo.GRAPH_NAME_RECV_BANDWIDTH_MBIT,  -1, false, null, "Network Received Mbit per Sec (Host Monitor->Network Stat)");
+		_CmOsNwInfo_TransMbit = createTsLineChart(conn, schema, CmOsNwInfo.CM_NAME, CmOsNwInfo.GRAPH_NAME_TRANS_BANDWIDTH_MBIT, -1, false, null, "Network Transmitted in Mbit per Sec (Host Monitor->Network Stat)");
 	}
 
 	private IReportChart _CmOsNwInfo_AllMbit;

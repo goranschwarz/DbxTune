@@ -535,6 +535,7 @@ public class RefreshProcess extends Thread
 					if (hide_activeSqlWaitEventId250)
 						sql += "  and not (P.WaitEventID = 250 and S.WaitTime > 60000) -- get rid of incorrect rows with 'AWAITING COMMAND'... CR###### \n";
 				}
+				sql += "  and P.Command != 'LOAD DATABASE' \n";
 				sql += "  and " + extraWhere + " \n";
 				sql += "order by " + orderBy;
 

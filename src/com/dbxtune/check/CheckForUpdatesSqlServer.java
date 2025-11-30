@@ -28,7 +28,9 @@ import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -112,7 +114,7 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 
 //		if (mtd.getDbmsMonTableVersionNum() > 0 && mtd.getDbmsExecutableVersionNum() != mtd.getDbmsMonTableVersionNum())
 //		{
-//			_logger.info("MonTablesDictionary srvVersionNum("+mtd.getDbmsExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getDbmsMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
+//			_logger.info("MonTablesDictionary srvVersionNum(" + mtd.getDbmsExecutableVersionNum() + ") and installmaster/monTables VersionNum(" + mtd.getDbmsMonTableVersionNum() + ") is not in sync, so we don't want to send MDA info about this.");
 //			return null;
 //		}
 
@@ -123,6 +125,7 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 		}
 
 		List<QueryString> sendQueryList = new ArrayList<QueryString>();
+		Map<String, Integer> sendCountByTypeMap = new LinkedHashMap<>();
 
 //		int rowCountSum = 0;
 
@@ -326,22 +329,25 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 			int sendMdaInfoBatchSize = getSendMdaInfoBatchSize();
 
 			// DM VEWS/FUNCTIONS
-			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics+"", 
+			getMdaInfo("dmv_tables", 
+					CounterController.getInstance().getMonConnection(), 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics + "", 
 					sql_dmv_tables_rowCount, sql_dmv_tables, 
-					sendMdaInfoBatchSize, sendQueryList);
+					sendMdaInfoBatchSize, sendQueryList, sendCountByTypeMap);
 
 			// DM VEWS/FUNCTIONS COLUMNS
-			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics+"", 
+			getMdaInfo("dmv_columns", 
+					CounterController.getInstance().getMonConnection(), 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics + "", 
 					sql_dmv_columns_rowCount, sql_dmv_columns, 
-					sendMdaInfoBatchSize, sendQueryList);
+					sendMdaInfoBatchSize, sendQueryList, sendCountByTypeMap);
 			
 			// DM FUNCTIONS PARAMETERS
-			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics+"", 
+			getMdaInfo("dmv_parameters",
+					CounterController.getInstance().getMonConnection(), 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzureAnalytics + "", 
 					sql_dmv_parameters_rowCount, sql_dmv_parameters, 
-					sendMdaInfoBatchSize, sendQueryList);
+					sendMdaInfoBatchSize, sendQueryList, sendCountByTypeMap);
 			
 //			// DM VIEWS
 //			String sql_dm_views_rowCount = ""
@@ -413,30 +419,44 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 //
 //			// DM VIEWS (from system tables)
 //			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-//					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzure+"", 
+//					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzure + "", 
 //					sql_dm_views_rowCount, sql_dm_views, 
 //					sendMdaInfoBatchSize, sendQueryList);
 //
 //			// DM FUNCTIONS (from system tables)
 //			getMdaInfo(CounterController.getInstance().getMonConnection(), 
-//					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzure+"", 
+//					checkId, clientTime, System.getProperty("user.name"), srvVersion, isAzure + "", 
 //					sql_dm_functions_rowCount, sql_dm_functions, 
 //					sendMdaInfoBatchSize, sendQueryList);
 
 			
-//			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
-			_logger.info("sendMdaInfo: Sending DMV information entries for SQL-Server Version '"+mtd.getDbmsExecutableVersionNum()+"'. (sendDmvInfoBatchSize="+sendMdaInfoBatchSize+")");
+//			_logger.info("sendMdaInfo: Starting to send " + rowCountSum + " MDA information entries in " + sendQueryList.size() + " batches, for ASE Version '" + mtd.getAseExecutableVersionNum() + "'.");
+			_logger.info("sendMdaInfo: Sending DMV information entries for SQL-Server Version '" + mtd.getDbmsExecutableVersionNum() + "'. (sendDmvInfoBatchSize=" + sendMdaInfoBatchSize + ", sendCountByType=" + sendCountByTypeMap + ")");
+
+			if (_logger.isDebugEnabled())
+			{
+				_logger.debug("sendMdaInfo: sendQueryList.size()=" + sendQueryList.size());
+				for (int i = 0; i < sendQueryList.size(); i++)
+				{
+					QueryString queryString = sendQueryList.get(i);
+					String q = queryString.getQuery();
+					int qLen = q.length();
+					q = q.substring(qLen - 255);
+					_logger.debug("  sendQueryList[" + i + "]: URL=" + queryString.getUrl() + ", QueryLength=" + qLen + ", Query[last-255-chars]=" + q);
+				}
+			}
 		}
 		catch (SQLException e)
 		{
 			sendQueryList.clear();
-			_logger.debug("Problems when getting MDA information. Caught: "+e, e);
+			_logger.debug("Problems when getting MDA information. Caught: " + e, e);
 		}
 
 		return sendQueryList;
 	}
 
 	private int getMdaInfo(
+			String name,         // Not really used, but can be used for debug printing
 			Connection conn,
 			String checkId, 
 			String clientTime, 
@@ -446,7 +466,8 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 			String sqlGetCount, 
 			String sqlGetValues,
 			int batchSize,
-			List<QueryString> sendQueryList)
+			List<QueryString> sendQueryList,
+			Map<String, Integer> sendCountByTypeMap)			
 	throws SQLException
 	{
 		// URL TO USE
@@ -488,7 +509,12 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 				urlParams.add("srvVersion",         srvVersionNum);
 				urlParams.add("isAzure",            isAzure);
 
-				urlParams.add("expectedRows",       expectedRows+"");
+				urlParams.add("expectedRows",       expectedRows + "");
+
+				if (sendCountByTypeMap != null)
+				{
+					sendCountByTypeMap.put(name, expectedRows);
+				}
 			}
 
 			urlParams.add("type"        + "-" + batchCounter, rs.getString(1));
@@ -501,7 +527,7 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 			urlParams.add("IsNullable"  + "-" + batchCounter, rs.getString(8));
 			urlParams.add("Description" + "-" + batchCounter, rs.getString(9));
 
-			urlParams.add("rowId"       + "-" + batchCounter, rowId+"");
+			urlParams.add("rowId"       + "-" + batchCounter, rowId + "");
 
 			batchCounter++;
 
@@ -509,8 +535,8 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 			if (batchCounter >= batchSize || rowId >= expectedRows)
 			{
 				// add number of records added to this entry
-				urlParams.add("batchSize",      batchCounter+"");
-//System.out.println("QueryString: length="+urlParams.length()+", entries="+urlParams.entryCount()+".");
+				urlParams.add("batchSize",      batchCounter + "");
+//System.out.println("QueryString: length=" + urlParams.length() + ", entries=" + urlParams.entryCount() + ".");
 
 				batchCounter = 0;
 				urlParams.setCounter(rowsInBatch);

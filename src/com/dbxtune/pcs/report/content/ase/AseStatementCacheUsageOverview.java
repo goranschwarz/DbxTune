@@ -24,6 +24,8 @@ package com.dbxtune.pcs.report.content.ase;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.ase.CmSqlStatement;
+import com.dbxtune.cm.ase.CmStatementCache;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -73,9 +75,13 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 		if (_cfg != null && _cfg.getRowCount() > 0)
 			sb.append(_cfg.toHtmlTableString("sortable"));
 
-		_CmStatementCache_HitRatePctGraph   .writeHtmlContent(sb, null, null);
-		_CmStatementCache_RequestPerSecGraph.writeHtmlContent(sb, null, null);
-		_CmSqlStatement_SqlStmnt            .writeHtmlContent(sb, null, "The above graph is a bit more than just from the Statement Cache, and the origin is from monSysStatement");
+		_CmStatementCache_HitRatePctGraph          .writeHtmlContent(sb, null, null);
+		_CmStatementCache_RequestPerSecGraph       .writeHtmlContent(sb, null, null);
+		_CmStatementCache_StmntCacheInsDel         .writeHtmlContent(sb, null, null);
+		_CmStatementCache_StmntCacheInsDelPerSample.writeHtmlContent(sb, null, null);
+		_CmStatementCache_NumStmntsInCache         .writeHtmlContent(sb, null, null);
+		_CmStatementCache_StmntCacheMemUsage       .writeHtmlContent(sb, null, null);
+		_CmSqlStatement_SqlStmnt                   .writeHtmlContent(sb, null, "The above graph is a bit more than just from the Statement Cache, and the origin is from monSysStatement");
 	}
 
 	@Override
@@ -114,14 +120,22 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 		String schema = getReportingInstance().getDbmsSchemaName();
 
 		int maxValue = 100;
-		_CmStatementCache_HitRatePctGraph    = createTsLineChart(conn, schema, "CmStatementCache", "HitRatePctGraph",    maxValue, false, null, "Statement Cache Hit Rate, in Percent (Cache->Statement Cache)");
-		_CmStatementCache_RequestPerSecGraph = createTsLineChart(conn, schema, "CmStatementCache", "RequestPerSecGraph",       -1, false, null, "Number of Requests from the Statement Cache, per Second (Cache->Statement Cache)");
-
-		_CmSqlStatement_SqlStmnt             = createTsLineChart(conn, schema, "CmSqlStatement",   "SqlStmnt",                 -1, false, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
+		_CmStatementCache_HitRatePctGraph           = createTsLineChart(conn, schema, CmStatementCache.CM_NAME, CmStatementCache.GRAPH_NAME_HIT_RATE_PCT,    maxValue, false, null, "Statement Cache Hit Rate, in Percent (Cache->Statement Cache)");
+		_CmStatementCache_RequestPerSecGraph        = createTsLineChart(conn, schema, CmStatementCache.CM_NAME, CmStatementCache.GRAPH_NAME_REQUEST_PER_SEC,       -1, false, null, "Number of Requests from the Statement Cache, per Second (Cache->Statement Cache)");
+		_CmStatementCache_StmntCacheInsDel          = createTsLineChart(conn, schema, CmStatementCache.CM_NAME, CmStatementCache.GRAPH_NAME_INS_DEL_PER_SEC,       -1, false, null, "Statement Cache Add/Remove Count, per Second (Cache->Statement Cache)");
+		_CmStatementCache_StmntCacheInsDelPerSample = createTsLineChart(conn, schema, CmStatementCache.CM_NAME, CmStatementCache.GRAPH_NAME_INS_DEL_PER_SAMPLE,    -1, false, null, "Statement Cache Add/Remove Count, per Sample Period (Cache->Statement Cache)");
+		_CmStatementCache_NumStmntsInCache          = createTsLineChart(conn, schema, CmStatementCache.CM_NAME, CmStatementCache.GRAPH_NAME_NUM_STMNTS_IN_CACHE,   -1, false, null, "Number of Statement in the Statement Cache (Cache->Statement Cache)");
+		_CmStatementCache_StmntCacheMemUsage        = createTsLineChart(conn, schema, CmStatementCache.CM_NAME, CmStatementCache.GRAPH_NAME_MEM_USAGE,             -1, false, null, "Statement Cache Memory Usage, in KB (Cache->Statement Cache)");
+                                                    
+		_CmSqlStatement_SqlStmnt                    = createTsLineChart(conn, schema, CmSqlStatement  .CM_NAME, CmSqlStatement  .GRAPH_NAME_SQL_STATEMENT_SEC,     -1, false, null, "SQL Statements Executed per Sec (Object/Access->SQL Statements)");
 	}
 
 	private IReportChart _CmStatementCache_HitRatePctGraph;
 	private IReportChart _CmStatementCache_RequestPerSecGraph;
+	private IReportChart _CmStatementCache_StmntCacheInsDel;
+	private IReportChart _CmStatementCache_StmntCacheInsDelPerSample;
+	private IReportChart _CmStatementCache_NumStmntsInCache;
+	private IReportChart _CmStatementCache_StmntCacheMemUsage;
 
 	private IReportChart _CmSqlStatement_SqlStmnt;
 }

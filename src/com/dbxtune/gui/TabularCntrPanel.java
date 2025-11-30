@@ -1016,17 +1016,31 @@ implements
 	// }
 	public void adjustTableColumnWidth()
 	{
-//		// Get out of here if do not want to adjust
-//		if ( ! doAutoAdjustTableColumnWidth() )
-//			return;
+		// Is the Model and View in sync... If not lets NOT Continue;
+		int modelColCount = _dataTable.getModel().getColumnCount();
+		int viewColCount  = _dataTable.getColumnCount();
+		
+		if (modelColCount != viewColCount)
+		{
+			_logger.info("Skipping adjustTableColumnWidth() in CM '" + getCm().getName() + "': due to model and view Column Count are not in sync. Lets try to call fireTableStructureChanged(). INFO: modelColCount=" + modelColCount + ", viewColCount=" + viewColCount);
 
+			TableModel tm = _dataTable.getModel();
+			if (tm instanceof AbstractTableModel)
+			{
+				AbstractTableModel atm = (AbstractTableModel) tm;
+				atm.fireTableStructureChanged();
+			}
+			return;
+		}
+		
+		// Get if and HOW we should adjust the column width
 		final AutoAdjustTableColumnWidth autoAdjustType = getAutoAdjustTableColumnWidthType();
 		if (_logger.isDebugEnabled())
 			_logger.debug(getCm().getName()+": adjustTableColumnWidth(): autoAdjustType="+autoAdjustType);
 
 		if (AutoAdjustTableColumnWidth.AUTO_OFF.equals(autoAdjustType))
 			return;
-		
+
 		// Defer this work, a bit...
 		// probably most viable if we call it from tableChanged()... 
 		// this so all events has been processed by the Event Dispatcher before this is done

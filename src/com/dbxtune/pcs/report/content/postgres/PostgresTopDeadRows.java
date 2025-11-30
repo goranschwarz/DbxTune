@@ -26,6 +26,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.dbxtune.cm.postgres.CmPgTables;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -385,7 +386,7 @@ extends PostgresAbstract
 		
 		String schema = getReportingInstance().getDbmsSchemaName();
 
-		_CmPgTables_DeadRows = createTsLineChart(conn, schema, "CmPgTables", "DeadRows", -1, true, null, "Number of Dead Rows per Database(n_dead_tup) per Database");
+		_CmPgTables_DeadRows = createTsLineChart(conn, schema, CmPgTables.CM_NAME, CmPgTables.GRAPH_NAME_DEAD_ROWS, -1, true, null, "Number of Dead Rows per Database(n_dead_tup) per Database");
 
 	
 		// Get 'Autovacuum' server config values

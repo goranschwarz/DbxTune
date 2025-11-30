@@ -244,6 +244,7 @@ import com.dbxtune.hostmon.HostMonitorConnection;
 import com.dbxtune.parser.ParserProperties;
 import com.dbxtune.sql.CommonEedInfo;
 import com.dbxtune.sql.JdbcUrlParser;
+import com.dbxtune.sql.ResultSetMetaDataCached;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.SqlPickList;
@@ -3880,6 +3881,618 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedClientCharsetDesc = " + _connectedClientCharsetDesc );
 			_logger.debug("getDbmsProductInfoAfterConnect(): _connectedExtraInfo         = " + _connectedExtraInfo         );
 		}
+	}
+
+	/**
+	 * Do stuff after we got a valid connection
+	 * 
+	 * @param conn                             The connection...
+	 * @param connDialog                       The connection dialog...
+	 * @param waitTimeMsBeforePopup            Wait for X ms before we show a progress dialog
+	 * @param initialDbname                    Initial database name (probably only used for Sybase ASE)
+	 */
+	private void afterDbmsConnectPostProcessing(DbxConnection conn, ConnectionDialog connDialog, int waitTimeMsBeforePopup, String initialDbname)
+	{
+		if (conn == null)
+			throw new RuntimeException("afterDbmsConnectPostProcessing(): conn is null");
+
+		// Get product info
+		// In some cases this takes a long time (for instance in Postgres, getting hostname-from-ip, so lets do this in a "popup-executing-if-it-takes-a-long-time")
+		String dbProduct = conn.getDatabaseProductNameNoThhrow("-unknown-"); 
+
+		String vendorSpecificMessage = "";
+		if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
+			vendorSpecificMessage = ""
+					+ "<br>"
+					+ "<b>For Postgres</b>: If this is slow, check your: Reverse DNS Lookup setting.<br>"
+					+ "To get Servers hostname, the IP is looked up via DNS.<br>"
+					+ "https://en.wikipedia.org/wiki/Reverse_DNS_lookup"
+					+ "";
+
+		String extraPopupInfoText = ""
+				+ "<html>"
+				+ "<b>This took more than " + waitTimeMsBeforePopup + " milliseconds.</b><br>"
+				+ "<br>"
+				+ "What is done at this step: "
+				+ "<ul>"
+				+ "    <li>Initialize Auto Completion and ToolTip Provider for this DBMS Vendor</li>"
+				+ "    <li>Initialize Various DBMS <i>helper</i> Dictionaries</li>"
+				+ "    <li>Possibly other DBMS Vendor Specific Information.<br>"
+				+ "        Like: DBMS Version, NetworkInfo, Charset, SortOrder, etc"
+				+ "    </li>"
+				+ "</ul>"
+				+ "If this popup is displayed, you probably have a slower network connection than normally.<br>"
+				+ vendorSpecificMessage
+				+ "</html>"
+				+ "";
+//		if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
+//			extraPopupInfoText = "<html>"
+//					+ "If this is slow, check your: Reverse DNS Lookup setting.<br>"
+//					+ "To get Servers hostname, the IP is looked up via DNS.<br>"
+//					+ "https://en.wikipedia.org/wiki/Reverse_DNS_lookup"
+//					+ "</html>";
+
+		final ConnectionProvider connProvider = this;
+		
+		WaitForExecDialog execWait = new WaitForExecDialog(_window, "Getting Various DBMS Information for: " + dbProduct, extraPopupInfoText);
+		BgExecutor doWork = new BgExecutor(execWait)
+		{
+			@Override
+			public Object doWork()
+			{
+				try	
+				{
+					ConnectionProp connProp = conn.getConnProp();
+
+					_srvVersion                 = conn.getDbmsVersionNumber();
+					_connectedAtTime            = System.currentTimeMillis();
+					_connectedDriverName        = connDialog == null ? null : connDialog.getDriverName();
+					_connectedDriverVersion     = connDialog == null ? null : connDialog.getDriverVersion();
+					_connectedToProductName     = conn.getDatabaseProductName(); 
+					_connectedToProductVersion  = conn.getDatabaseProductVersion(); 
+					_connectedToServerName      = conn.getDbmsServerName();
+					_connectedToSysListeners    = null;
+					_connectedSrvPageSizeInKb   = conn.getDbmsPageSizeInKb();
+					_connectedSrvCharset        = conn.getDbmsCharsetName();
+					_connectedSrvSortorder      = conn.getDbmsSortOrderName();
+					_connectedAsUser            = connProp != null ? connProp.getUsername() : ( connDialog == null ? "" : connDialog.getUsername() );
+					_connectedWithUrl           = connProp != null ? connProp.getUrl()      : ( connDialog == null ? "" : connDialog.getUrl() );
+					_connectedClientCharsetId   = null;
+					_connectedClientCharsetName = null;
+					_connectedClientCharsetDesc = null;
+					_connectedExtraInfo         = conn.getDbmsExtraInfo();
+					try { _connectedInitialCatalog    = conn.getCatalog(); } catch (SQLException ex) {}
+
+					SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
+					
+					_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', srvVersionNum="+_srvVersion+" ("+Ver.versionNumToStr(_srvVersion, _connectedToProductName)+"), DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
+				} 
+				catch (Throwable ex) 
+				{
+					if (_logger.isDebugEnabled())
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex, ex);
+					else
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
+				}
+
+
+				//---------------------------------------------------
+				// Depending on DBMS Type do various things
+				//---------------------------------------------------
+				try	
+				{
+					int connType = connDialog.getConnectionType();
+
+					if ( connType == ConnectionDialog.TDS_CONN)
+					{
+						_conn = connDialog.getAseConn();
+
+						// NOTE: AutoCommit is probably only supported by ASE, IQ, ASA
+						//       NOT by RS or any OpenServer
+						// So set AutoCommit in the various server types
+
+						if (AseConnectionUtils.isConnectionOk(_conn, true, _jframe))
+						{
+							_connType = ConnectionDialog.TDS_CONN;
+
+							if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+							{
+//long execStart = System.currentTimeMillis();
+								// Set AutoCommit to the proper value
+								action_autocommitAtConnect();
+								
+								if (StringUtil.hasValue(initialDbname))
+									AseConnectionUtils.useDbname(_conn, initialDbname);
+
+//								setDbNames();
+
+								_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+								_compleationProviderAbstract.setCreateLocalConnection(true); // true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
+								_tooltipProviderAbstract     = new ToolTipSupplierAse(_window, _compleationProviderAbstract, connProvider);
+								_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+								
+//								_srvVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
+
+								// MonTableDictionary: This so that SQL-Capture can work 
+								MonTablesDictionary monTableDict = new MonTablesDictionaryAse();
+								MonTablesDictionaryManager.setInstance(monTableDict);
+								monTableDict.initialize(_conn, true);
+
+								// DBMS Configuration
+								DbmsConfigManager.setInstance( new AseConfig() );
+
+								// Only SA_ROLE can get listeners
+								_connectedToSysListeners = "Sorry you need 'sa_role' to query master..syslisteners";
+								if (AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE))
+									_connectedToSysListeners = AseConnectionUtils.getListeners(_conn, false, false, _window);
+
+								// Sortorder & charset
+								_connectedSrvCharset        = AseConnectionUtils.getAseCharset(_conn);
+								_connectedSrvSortorder      = AseConnectionUtils.getAseSortorder(_conn);
+								_connectedClientCharsetId   = AseConnectionUtils.getClientCharsetId(_conn);
+								_connectedClientCharsetName = AseConnectionUtils.getClientCharsetName(_conn);
+								_connectedClientCharsetDesc = AseConnectionUtils.getClientCharsetDesc(_conn);
+
+								// Initialize XML Plan Cache...
+								XmlPlanCache.setInstance( new XmlPlanCacheAse(connProvider) );
+								
+								// Execute some SQL Commands
+								String sql = "";
+								try
+								{
+									sql = "set flushmessage on";
+									_logger.info("On connect executing sql: "+sql);
+									Statement stmnt = _conn.createStatement();
+									stmnt.executeUpdate(sql);
+									stmnt.close();
+								}
+								catch(SQLException ex)
+								{
+									_logger.warn("During connect tried to execute sql '"+sql+"', Skipping the and continuing... caught: "+ex);
+								}
+
+								// Check ASE Grace Period
+//								String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(_conn);
+								String gracePeriodWarning   = AseLicensInfo.getAseGracePeriodWarning(_conn);
+								if (StringUtil.hasValue(gracePeriodWarning))
+									setServerWarningStatus(true, Color.RED, gracePeriodWarning);
+
+
+								// Also get "various statuses" like if we are in a transaction or not
+//								_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, true);
+//								_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
+								setWatermark();
+								
+//System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>> ASE Post Connect Logic: time: " + TimeUtils.msDiffNowToTimeStr(execStart));
+
+							}
+							else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RS))
+							{
+								// Set AutoCommit to the proper value
+								// NO NOT SET THIS FOR REPSERVER: action_autocommitAtConnect();
+
+								_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+								_tooltipProviderAbstract     = new ToolTipSupplierRepServer(_window, _compleationProviderAbstract, connProvider);
+								_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+//								_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
+
+								// DBMS Configuration
+								DbmsConfigManager.setInstance( new RsConfig() );
+
+								// Sortorder & charset
+								_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
+								_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
+
+								// JDBC Specific statuses DO NOT DO THIS FOR REPSERVER
+								//_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+								//_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+								
+								// Read / clear warnings, we received after a connect
+//								try { _conn.clearWarnings(); }
+//								catch (SQLException ignore) {} 
+
+								// Filter out 010MX: jConnect MetatData procedures are not installed
+								ArrayList<JComponent> resultCompList1 = new ArrayList<JComponent>();
+								ArrayList<JComponent> resultCompList2 = new ArrayList<JComponent>();
+								putSqlWarningMsgs(_conn, resultCompList1, null, null, 0, 0, "connect");
+
+								for (JComponent jc : resultCompList1)
+								{
+									if (jc instanceof JTextArea)
+									{
+										String msg = ((JTextArea)jc).getText();
+										if ( msg.startsWith("010MX") )
+											continue;
+										if ( msg.startsWith("010TQ") )
+											resultCompList2.add(0, new JAseMessage("NOTE: to get rid of the below message '010TQ', please set the 'Client Charset' field in the connection dialog.", "connect"));
+									}
+									resultCompList2.add(jc);
+								}
+								if ( ! resultCompList2.isEmpty() )
+									resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Server\n----------------------------------------------------------------------------------------------", "connect"));
+								addToResultsetPanel(resultCompList2, false, false, false, null);
+
+								// Check RS Grace Period
+								String gracePeriodWarning   = AseConnectionUtils.getRsGracePeriodWarning(_conn);
+								if (StringUtil.hasValue(gracePeriodWarning))
+									setServerWarningStatus(true, Color.RED, gracePeriodWarning);
+
+								// It seems like the following ResultSetMetaData methods "do not exist" in RepServer
+								// Setting this property will make it to NOT print error messages...
+								System.setProperty(ResultSetMetaDataCached.PROPKEY_SYSTEM_onException_skipMethodsCsv, "isCaseSensitive, isSearchable, getColumnTypeName");
+
+								_logger.info("Connected to Replication Server version '"+_srvVersion+"'.");
+							}
+							else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RAX))
+							{
+								_compleationProviderAbstract = CompletionProviderRax.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+								_tooltipProviderAbstract     = new ToolTipSupplierRax(_window, _compleationProviderAbstract, connProvider);
+								_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+//								_srvVersion = AseConnectionUtils.getRaxVersionNumber(_conn);
+
+								// DBMS Configuration
+								DbmsConfigManager.setInstance( new RaxConfig() );
+
+								// Sortorder & charset
+//								_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
+//								_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
+
+								// Read / clear warnings, we received after a connect
+//								try { _conn.clearWarnings(); }
+//								catch (SQLException ignore) {} 
+
+								// Filter out 010MX: jConnect MetatData procedures are not installed
+								ArrayList<JComponent> resultCompList1 = new ArrayList<JComponent>();
+								ArrayList<JComponent> resultCompList2 = new ArrayList<JComponent>();
+								putSqlWarningMsgs(_conn, resultCompList1, null, null, 0, 0, "connect");
+
+								for (JComponent jc : resultCompList1)
+								{
+									if (jc instanceof JTextArea)
+									{
+										String msg = ((JTextArea)jc).getText();
+										if ( msg.startsWith("010MX") )
+											continue;
+										if ( msg.startsWith("010TQ") )
+											resultCompList2.add(0, new JAseMessage("NOTE: to get rid of the below message '010TQ', please set the 'Client Charset' field in the connection dialog.", "connect"));
+									}
+									resultCompList2.add(jc);
+								}
+								if ( ! resultCompList2.isEmpty() )
+									resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Agent\n----------------------------------------------------------------------------------------------", "connect"));
+								addToResultsetPanel(resultCompList2, false, false, false, null);
+
+								_logger.info("Connected to Replication Agent X version '"+_srvVersion+"'.");
+							}
+							else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASA))
+							{
+								// Set AutoCommit to the proper value
+								action_autocommitAtConnect();
+								
+								_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+								_tooltipProviderAbstract     = new ToolTipSupplierAsa(_window, _compleationProviderAbstract, connProvider);
+								_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+//								_srvVersion = AseConnectionUtils.getAsaVersionNumber(_conn); // FIXME: ASA has another "system"
+
+								// Sortorder & charset
+								_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
+								_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
+
+								// JDBC Specific statuses
+//								_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//								_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+								
+								_logger.info("Connected to SQL Anywhere version '"+_srvVersion+"'.");
+							}
+							else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_IQ))
+							{
+								// Set AutoCommit to the proper value
+								action_autocommitAtConnect();
+								
+								_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+								_tooltipProviderAbstract     = new ToolTipSupplierIq(_window, _compleationProviderAbstract, connProvider);
+								_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+//								_srvVersion = AseConnectionUtils.getIqVersionNumber(_conn); // FIXME: IQ has another "system"
+
+								// Sortorder & charset
+								_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
+								_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
+
+								// JDBC Specific statuses
+//								_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//								_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+								
+								_logger.info("Connected to Sybase IQ version '"+_srvVersion+"'.");
+							}
+							else
+							{
+								// Set AutoCommit to the proper value
+								// NO NOT SET THIS FOR UNKNOWN server, it's probably an OpenServer: action_autocommitAtConnect();
+
+								_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+								_tooltipProviderAbstract     = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, connProvider);
+								_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+								_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
+							}
+
+							_setAseOptions_but.setComponentPopupMenu( createSetAseOptionButtonPopupMenu(_srvVersion) );
+
+
+							// Set title, load window size/pos, update status bar etc...
+							setVariousInfoAfterConnect(ConnectionDialog.TDS_CONN, connDialog, true);
+
+						} // end: connectionIsOk
+						else
+						{
+						}
+					}
+					else if ( connType == ConnectionDialog.OFFLINE_CONN)
+					{
+						_conn = connDialog.getOfflineConn();
+						_connType = ConnectionDialog.OFFLINE_CONN;
+
+						_srvVersion = -1;
+
+						// Set AutoCommit to the proper value
+						action_autocommitAtConnect();
+						
+						// Code Completion 
+						_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+						// Tooltip supplier
+						if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
+							_tooltipProviderAbstract = new ToolTipSupplierH2(_window, _compleationProviderAbstract, connProvider);
+						else
+							_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, connProvider);
+						_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+						// JDBC Specific statuses
+//						_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//						_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+
+						// Set title, load window size/pos, update status bar etc...
+						setVariousInfoAfterConnect(ConnectionDialog.OFFLINE_CONN, connDialog, true);
+
+					}
+					else if ( connType == ConnectionDialog.JDBC_CONN)
+					{
+						_conn = connDialog.getJdbcConn();
+						_connType = ConnectionDialog.JDBC_CONN;
+
+//						_srvVersion = -1;
+//						_srvVersion = _conn.getDbmsVersionNumber();
+
+						// Set AutoCommit to the proper value
+						action_autocommitAtConnect();
+						
+						//---------------------------------------------------
+						// Get specific stuff for various products
+						
+						// H2
+						if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_H2))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierH2(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+						}
+						// HANA
+						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_HANA))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+							// Sortorder & charset
+							_connectedSrvCharset   = "UTF8";
+							_connectedSrvSortorder = "BINARY";
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierHana(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+						}
+						// MaxDB
+						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+							// Sortorder & charset
+							_connectedSrvCharset   = DbUtils.getMaxDbCharset(_conn);
+							_connectedSrvSortorder = DbUtils.getMaxDbSortorder(_conn);
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierHana(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+						}
+						// ORACLE
+						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+							// Sortorder & charset
+							_connectedSrvCharset   = DbUtils.getOracleCharset(_conn);
+							_connectedSrvSortorder = DbUtils.getOracleSortorder(_conn);
+
+							// DBMS Configuration
+							DbmsConfigManager.setInstance( new OracleConfig() );
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierOracle(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+						}
+						// SQL-Server
+						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderSqlServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+							_compleationProviderAbstract.setCreateLocalConnection(true); // POSSIBLE: true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
+							// Testing setCreateLocalConnection(true) ... so a LOCAL Connection, since errors: CompletionProviderAbstractSql  - Problems when getting SQL Tables/columns, continuing with next lookup. Caught: com.microsoft.sqlserver.jdbc.SQLServerException: The prepared statement handle 2 is not valid in this context.  Please verify that current database, user default schema, and ANSI_NULLS and QUOTED_IDENTIFIER set options are not changed since the handle is prepared.
+
+							// Sortorder & charset
+							//_connectedSrvCharset   = DbUtils.getMsSqlCharset(_conn);
+							//_connectedSrvSortorder = DbUtils.getMsSqlSortorder(_conn);
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierMsSql(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+							
+							// DBMS Configuration
+							DbmsConfigManager.setInstance( new SqlServerConfig() );
+
+							// MonTableDictionary (MS SQL has a STATIC one) which helps with descriptions on table and columns (used by Help System for Code Completion)
+							MonTablesDictionary monTableDict = new MonTablesDictionarySqlServer();
+							MonTablesDictionaryManager.setInstance(monTableDict);
+							monTableDict.initialize(_conn, true);
+						}
+						// DB2
+						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_LUW))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+							// Sortorder & charset
+							_connectedSrvCharset   = DbUtils.getDb2Charset(_conn);
+							_connectedSrvSortorder = DbUtils.getDb2Sortorder(_conn);
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierDb2(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+						}
+						// MySQL
+						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierMySql(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+							// DBMS Configuration
+							DbmsConfigManager.setInstance( new MySqlConfig() );
+						}
+						// Postgres SQL
+						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_POSTGRES))
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+							_compleationProviderAbstract.setCreateLocalConnection(false); // false: ConnectionProvider.getConnection() is called from the CompletionProvider
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+							// DBMS Configuration
+							DbmsConfigManager.setInstance( new PostgresConfig() );
+						}
+						else
+						{
+							// Code Completion 
+							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+
+							// Tooltip supplier
+							_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, connProvider);
+							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+						}
+						
+
+						
+						//---------------------------------------------------
+						// Connection STATE information
+						//---------------------------------------------------
+						if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
+						{
+							// Connection info status: USE ASE stuff...
+//							setDbNames();
+
+							// Also get "various statuses" like if we are in a transaction or not
+//							_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, false);
+//							_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
+
+						}
+						else
+						{
+							//---------------------------------------------------
+							// JDBC Specific status - refreshed after each execution
+//							_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//							_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+						}
+
+						
+						// Set title, load window size/pos, update status bar etc...
+						setVariousInfoAfterConnect(ConnectionDialog.JDBC_CONN, connDialog, true);
+
+					}
+					
+					// Refresh the database list
+					boolean databaseAware = _conn.isDatabaseAware();
+					if (_conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES))
+						databaseAware = true;
+
+					if (databaseAware)
+					{
+						setDbNames();
+						// DO below to notify the CodeCompletion that the initial database... Everything after this will be handled by the _dbnames_cbx action
+						if (_compleationProviderAbstract != null && _compleationProviderAbstract instanceof CompletionProviderAbstractSql)
+							((CompletionProviderAbstractSql)_compleationProviderAbstract).setCatalog(_currentDbName);
+					}
+
+					// Refresh the status bar with Connection Status Information
+					_statusBar.updateConnectionStateInfo(_conn, _window);
+
+//					// What Components should be enabled/visible
+//					setComponentVisibility();
+//
+//					// Set the window border for THIS Window
+//					setBorderForConnectionProfileType(connDialog.getConnectionProfileTypeName());
+//
+//					// Finally update the WaterMark
+//					setWatermark();
+				} 
+				catch (Throwable ex) 
+				{
+					if (_logger.isDebugEnabled())
+						_logger.warn("Problems getting Various DBMS Info in afterDbmsConnectPostProcessing(...). Caught: " + ex, ex);
+					else
+						_logger.warn("Problems getting Various DBMS Info in afterDbmsConnectPostProcessing(...). Caught: " + ex);
+				}
+				
+				return null;
+			}
+		};
+		
+//long startTime = System.currentTimeMillis();
+		execWait.execAndWait(doWork, waitTimeMsBeforePopup); // After 100ms a "popup" is displayed
+//System.out.println(">>>>>>>>>>>>>>>>>>>>>>>> OUTER: execAndWait... execTime=" + TimeUtils.msDiffNowToTimeStr(startTime));
+
+
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("afterDbmsConnectPostProcessing(): conn                        = " + conn);
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedToServerName      = " + _connectedToServerName      );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedToProductName     = " + _connectedToProductName     );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedToProductVersion  = " + _connectedToProductVersion  );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedToServerName      = " + _connectedToServerName      );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedInitialCatalog    = " + _connectedInitialCatalog    );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedAsUser            = " + _connectedAsUser            );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedWithUrl           = " + _connectedWithUrl           );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedToSysListeners    = " + _connectedToSysListeners    );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedSrvPageSizeInKb   = " + _connectedSrvPageSizeInKb   );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedSrvCharset        = " + _connectedSrvCharset        );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedSrvSortorder      = " + _connectedSrvSortorder      );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedClientCharsetId   = " + _connectedClientCharsetId   );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedClientCharsetName = " + _connectedClientCharsetName );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedClientCharsetDesc = " + _connectedClientCharsetDesc );
+			_logger.debug("afterDbmsConnectPostProcessing(): _connectedExtraInfo         = " + _connectedExtraInfo         );
+		}
 		
 	}
 
@@ -4037,473 +4650,18 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		if ( connType == ConnectionDialog.CANCEL)
 			return;
 
-		// Update DBMS product info after a successfull connection has been made
-		getDbmsProductInfoAfterConnect(connDialog.getConnection(), connDialog);
-
-		if ( connType == ConnectionDialog.TDS_CONN)
-		{
-			_conn = connDialog.getAseConn();
-
-			// NOTE: AutoCommit is probably only supported by ASE, IQ, ASA
-			//       NOT by RS or any OpenServer
-			// So set AutoCommit in the various server types
-
-//			if (_conn != null)
-			if (AseConnectionUtils.isConnectionOk(_conn, true, _jframe))
-			{
-				_connType = ConnectionDialog.TDS_CONN;
-
-				if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
-				{
-					// Set AutoCommit to the proper value
-					action_autocommitAtConnect();
-					
-					if (aseDbname != null)
-						AseConnectionUtils.useDbname(_conn, aseDbname);
-
-//					setDbNames();
-
-					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_compleationProviderAbstract.setCreateLocalConnection(true); // true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
-					_tooltipProviderAbstract     = new ToolTipSupplierAse(_window, _compleationProviderAbstract, this);
-					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-					
-//					_srvVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
-
-					// MonTableDictionary: This so that SQL-Capture can work 
-					MonTablesDictionary monTableDict = new MonTablesDictionaryAse();
-					MonTablesDictionaryManager.setInstance(monTableDict);
-					monTableDict.initialize(_conn, true);
-
-					// DBMS Configuration
-					DbmsConfigManager.setInstance( new AseConfig() );
-
-					// Only SA_ROLE can get listeners
-					_connectedToSysListeners = "Sorry you need 'sa_role' to query master..syslisteners";
-					if (AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE))
-						_connectedToSysListeners = AseConnectionUtils.getListeners(_conn, false, false, _window);
-
-					// Sortorder & charset
-					_connectedSrvCharset        = AseConnectionUtils.getAseCharset(_conn);
-					_connectedSrvSortorder      = AseConnectionUtils.getAseSortorder(_conn);
-					_connectedClientCharsetId   = AseConnectionUtils.getClientCharsetId(_conn);
-					_connectedClientCharsetName = AseConnectionUtils.getClientCharsetName(_conn);
-					_connectedClientCharsetDesc = AseConnectionUtils.getClientCharsetDesc(_conn);
-
-					// Initialize XML Plan Cache...
-					XmlPlanCache.setInstance( new XmlPlanCacheAse(this) );
-					
-					// Execute some SQL Commands
-					String sql = "";
-					try
-					{
-						sql = "set flushmessage on";
-						_logger.info("On connect executing sql: "+sql);
-						Statement stmnt = _conn.createStatement();
-						stmnt.executeUpdate(sql);
-						stmnt.close();
-					}
-					catch(SQLException ex)
-					{
-						_logger.warn("During connect tried to execute sql '"+sql+"', Skipping the and continuing... caught: "+ex);
-					}
-
-					// Check ASE Grace Period
-//					String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(_conn);
-					String gracePeriodWarning   = AseLicensInfo.getAseGracePeriodWarning(_conn);
-					if (StringUtil.hasValue(gracePeriodWarning))
-						setServerWarningStatus(true, Color.RED, gracePeriodWarning);
-
-
-					// Also get "various statuses" like if we are in a transaction or not
-//					_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, true);
-//					_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
-					setWatermark();
-				}
-				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RS))
-				{
-					// Set AutoCommit to the proper value
-					// NO NOT SET THIS FOR REPSERVER: action_autocommitAtConnect();
-
-					_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_tooltipProviderAbstract     = new ToolTipSupplierRepServer(_window, _compleationProviderAbstract, this);
-					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-//					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
-
-					// DBMS Configuration
-					DbmsConfigManager.setInstance( new RsConfig() );
-
-					// Sortorder & charset
-					_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
-					_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
-
-					// JDBC Specific statuses DO NOT DO THIS FOR REPSERVER
-					//_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
-					//_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
-					
-					// Read / clear warnings, we received after a connect
-//					try { _conn.clearWarnings(); }
-//					catch (SQLException ignore) {} 
-
-					// Filter out 010MX: jConnect MetatData procedures are not installed
-					ArrayList<JComponent> resultCompList1 = new ArrayList<JComponent>();
-					ArrayList<JComponent> resultCompList2 = new ArrayList<JComponent>();
-					putSqlWarningMsgs(_conn, resultCompList1, null, null, 0, 0, "connect");
-
-					for (JComponent jc : resultCompList1)
-					{
-						if (jc instanceof JTextArea)
-						{
-							String msg = ((JTextArea)jc).getText();
-							if ( msg.startsWith("010MX") )
-								continue;
-							if ( msg.startsWith("010TQ") )
-								resultCompList2.add(0, new JAseMessage("NOTE: to get rid of the below message '010TQ', please set the 'Client Charset' field in the connection dialog.", "connect"));
-						}
-						resultCompList2.add(jc);
-					}
-					if ( ! resultCompList2.isEmpty() )
-						resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Server\n----------------------------------------------------------------------------------------------", "connect"));
-					addToResultsetPanel(resultCompList2, false, false, false, null);
-
-					// Check RS Grace Period
-					String gracePeriodWarning   = AseConnectionUtils.getRsGracePeriodWarning(_conn);
-					if (StringUtil.hasValue(gracePeriodWarning))
-						setServerWarningStatus(true, Color.RED, gracePeriodWarning);
-
-					_logger.info("Connected to Replication Server version '"+_srvVersion+"'.");
-				}
-				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RAX))
-				{
-					_compleationProviderAbstract = CompletionProviderRax.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_tooltipProviderAbstract     = new ToolTipSupplierRax(_window, _compleationProviderAbstract, this);
-					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-//					_srvVersion = AseConnectionUtils.getRaxVersionNumber(_conn);
-
-					// DBMS Configuration
-					DbmsConfigManager.setInstance( new RaxConfig() );
-
-					// Sortorder & charset
-//					_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
-//					_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
-
-					// Read / clear warnings, we received after a connect
-//					try { _conn.clearWarnings(); }
-//					catch (SQLException ignore) {} 
-
-					// Filter out 010MX: jConnect MetatData procedures are not installed
-					ArrayList<JComponent> resultCompList1 = new ArrayList<JComponent>();
-					ArrayList<JComponent> resultCompList2 = new ArrayList<JComponent>();
-					putSqlWarningMsgs(_conn, resultCompList1, null, null, 0, 0, "connect");
-
-					for (JComponent jc : resultCompList1)
-					{
-						if (jc instanceof JTextArea)
-						{
-							String msg = ((JTextArea)jc).getText();
-							if ( msg.startsWith("010MX") )
-								continue;
-							if ( msg.startsWith("010TQ") )
-								resultCompList2.add(0, new JAseMessage("NOTE: to get rid of the below message '010TQ', please set the 'Client Charset' field in the connection dialog.", "connect"));
-						}
-						resultCompList2.add(jc);
-					}
-					if ( ! resultCompList2.isEmpty() )
-						resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Agent\n----------------------------------------------------------------------------------------------", "connect"));
-					addToResultsetPanel(resultCompList2, false, false, false, null);
-
-					_logger.info("Connected to Replication Agent X version '"+_srvVersion+"'.");
-				}
-				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASA))
-				{
-					// Set AutoCommit to the proper value
-					action_autocommitAtConnect();
-					
-					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_tooltipProviderAbstract     = new ToolTipSupplierAsa(_window, _compleationProviderAbstract, this);
-					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-//					_srvVersion = AseConnectionUtils.getAsaVersionNumber(_conn); // FIXME: ASA has another "system"
-
-					// Sortorder & charset
-					_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
-					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
-
-					// JDBC Specific statuses
-//					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-//					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
-					
-					_logger.info("Connected to SQL Anywhere version '"+_srvVersion+"'.");
-				}
-				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_IQ))
-				{
-					// Set AutoCommit to the proper value
-					action_autocommitAtConnect();
-					
-					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_tooltipProviderAbstract     = new ToolTipSupplierIq(_window, _compleationProviderAbstract, this);
-					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-//					_srvVersion = AseConnectionUtils.getIqVersionNumber(_conn); // FIXME: IQ has another "system"
-
-					// Sortorder & charset
-					_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
-					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
-
-					// JDBC Specific statuses
-//					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-//					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
-					
-					_logger.info("Connected to Sybase IQ version '"+_srvVersion+"'.");
-				}
-				else
-				{
-					// Set AutoCommit to the proper value
-					// NO NOT SET THIS FOR UNKNOWN server, it's probably an OpenServer: action_autocommitAtConnect();
-
-					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_tooltipProviderAbstract     = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
-					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-					_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
-				}
-
-				_setAseOptions_but.setComponentPopupMenu( createSetAseOptionButtonPopupMenu(_srvVersion) );
-
-
-				// Set title, load window size/pos, update status bar etc...
-				setVariousInfoAfterConnect(ConnectionDialog.TDS_CONN, connDialog, true);
-
-			} // end: connectionIsOk
-			else
-			{
-			}
-		}
-		else if ( connType == ConnectionDialog.OFFLINE_CONN)
-		{
-			_conn = connDialog.getOfflineConn();
-			_connType = ConnectionDialog.OFFLINE_CONN;
-
-			_srvVersion = -1;
-
-			// Set AutoCommit to the proper value
-			action_autocommitAtConnect();
-			
-			// Code Completion 
-			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-			// Tooltip supplier
-			if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
-				_tooltipProviderAbstract = new ToolTipSupplierH2(_window, _compleationProviderAbstract, this);
-			else
-				_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
-			_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-			// JDBC Specific statuses
-//			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-//			_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
-
-			// Set title, load window size/pos, update status bar etc...
-			setVariousInfoAfterConnect(ConnectionDialog.OFFLINE_CONN, connDialog, true);
-
-		}
-		else if ( connType == ConnectionDialog.JDBC_CONN)
-		{
-			_conn = connDialog.getJdbcConn();
-			_connType = ConnectionDialog.JDBC_CONN;
-
-//			_srvVersion = -1;
-//			_srvVersion = _conn.getDbmsVersionNumber();
-
-			// Set AutoCommit to the proper value
-			action_autocommitAtConnect();
-			
-			//---------------------------------------------------
-			// Get specific stuff for various products
-			
-			// H2
-			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_H2))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierH2(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-			}
-			// HANA
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_HANA))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-				// Sortorder & charset
-				_connectedSrvCharset   = "UTF8";
-				_connectedSrvSortorder = "BINARY";
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierHana(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-			}
-			// MaxDB
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-				// Sortorder & charset
-				_connectedSrvCharset   = DbUtils.getMaxDbCharset(_conn);
-				_connectedSrvSortorder = DbUtils.getMaxDbSortorder(_conn);
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierHana(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-			}
-			// ORACLE
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-				// Sortorder & charset
-				_connectedSrvCharset   = DbUtils.getOracleCharset(_conn);
-				_connectedSrvSortorder = DbUtils.getOracleSortorder(_conn);
-
-				// DBMS Configuration
-				DbmsConfigManager.setInstance( new OracleConfig() );
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierOracle(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-			}
-			// SQL-Server
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderSqlServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-				_compleationProviderAbstract.setCreateLocalConnection(true); // POSSIBLE: true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
-				// Testing setCreateLocalConnection(true) ... so a LOCAL Connection, since errors: CompletionProviderAbstractSql  - Problems when getting SQL Tables/columns, continuing with next lookup. Caught: com.microsoft.sqlserver.jdbc.SQLServerException: The prepared statement handle 2 is not valid in this context.  Please verify that current database, user default schema, and ANSI_NULLS and QUOTED_IDENTIFIER set options are not changed since the handle is prepared.
-
-				// Sortorder & charset
-				//_connectedSrvCharset   = DbUtils.getMsSqlCharset(_conn);
-				//_connectedSrvSortorder = DbUtils.getMsSqlSortorder(_conn);
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierMsSql(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-				
-				// DBMS Configuration
-				DbmsConfigManager.setInstance( new SqlServerConfig() );
-
-				// MonTableDictionary (MS SQL has a STATIC one) which helps with descriptions on table and columns (used by Help System for Code Completion)
-				MonTablesDictionary monTableDict = new MonTablesDictionarySqlServer();
-				MonTablesDictionaryManager.setInstance(monTableDict);
-				monTableDict.initialize(_conn, true);
-			}
-			// DB2
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_LUW))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-				// Sortorder & charset
-				_connectedSrvCharset   = DbUtils.getDb2Charset(_conn);
-				_connectedSrvSortorder = DbUtils.getDb2Sortorder(_conn);
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierDb2(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-			}
-			// MySQL
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierMySql(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-				// DBMS Configuration
-				DbmsConfigManager.setInstance( new MySqlConfig() );
-			}
-			// Postgres SQL
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_POSTGRES))
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-				_compleationProviderAbstract.setCreateLocalConnection(false); // false: ConnectionProvider.getConnection() is called from the CompletionProvider
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-
-				// DBMS Configuration
-				DbmsConfigManager.setInstance( new PostgresConfig() );
-			}
-			else
-			{
-				// Code Completion 
-				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-
-				// Tooltip supplier
-				_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
-				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
-			}
-			
-
-			
-			//---------------------------------------------------
-			// Connection STATE information
-			//---------------------------------------------------
-			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
-			{
-				// Connection info status: USE ASE stuff...
-//				setDbNames();
-
-				// Also get "various statuses" like if we are in a transaction or not
-//				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, false);
-//				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
-
-			}
-			else
-			{
-				//---------------------------------------------------
-				// JDBC Specific status - refreshed after each execution
-//				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-//				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
-			}
-
-			
-			// Set title, load window size/pos, update status bar etc...
-			setVariousInfoAfterConnect(ConnectionDialog.JDBC_CONN, connDialog, true);
-
-		}
-		
-		// Refresh the database list
-		boolean databaseAware = _conn.isDatabaseAware();
-		if (_conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES))
-			databaseAware = true;
-
-		if (databaseAware)
-		{
-			setDbNames();
-			// DO below to notify the CodeCompletion that the initial database... Everything after this will be handled by the _dbnames_cbx action
-			if (_compleationProviderAbstract != null && _compleationProviderAbstract instanceof CompletionProviderAbstractSql)
-				((CompletionProviderAbstractSql)_compleationProviderAbstract).setCatalog(_currentDbName);
-		}
-
-		// Refresh the status bar with Connection Status Information
-//		_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
-		_statusBar.updateConnectionStateInfo(_conn, _window);
+		// Update DBMS product info after a successful connection has been made
+//		getDbmsProductInfoAfterConnect(connDialog.getConnection(), connDialog);
+
+		// Do post processing after we connected
+		// This might take some time; So if it does take time show a GUI Dialog what we are doing.
+		int waitTimeMsBeforePopup = 1_000; // After 1 second a "wait dialog" is displayed
+		afterDbmsConnectPostProcessing(connDialog.getConnection(), connDialog, waitTimeMsBeforePopup, aseDbname);
 
 		// What Components should be enabled/visible
 		setComponentVisibility();
 
 		// Set the window border for THIS Window
-//		setBorderForConnectionProfileType(connDialog.getSelectedConnectionProfileType(connType));
 		setBorderForConnectionProfileType(connDialog.getConnectionProfileTypeName());
 
 		// Finally update the WaterMark
@@ -14590,7 +14748,8 @@ checkPanelSize(_resPanel, comp);
 				+ "Filename is: <code>"+fileName+"</code><br>"
 				+ "This can be changed with the property: <code>"+PROPKEY_untitledFileName+"</code>"
 				+ "</html>");
-		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK));
+//		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK));
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.ALT_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK));
 
 		mi.addActionListener(new ActionListener()
 		{

@@ -322,8 +322,8 @@ public class OsIoStatSlowIo extends OsAbstract
 			_CmOsIostat_IoReadWait     = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadWaitTime,  maxValue, false, _skipDeviceNames, "iostat: Read wait Time(r_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
 			_CmOsIostat_IoWriteWait    = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteWaitTime, maxValue, false, _skipDeviceNames, "iostat: Write wait Time(w_await) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
 
-			_CmOsIostat_IoReadOp       = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadOp,       -1,        false, _skipDeviceNames, "iostat: Read Operations(readsPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
-			_CmOsIostat_IoWriteOp      = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteOp,      -1,        false, _skipDeviceNames, "iostat: Write Operations(writesPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
+			_CmOsIostat_IoReadOp       = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadOp,        -1,       false, _skipDeviceNames, "iostat: Read Operations(readsPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
+			_CmOsIostat_IoWriteOp      = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteOp,       -1,       false, _skipDeviceNames, "iostat: Write Operations(writesPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
 
 			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   -1,       false, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
 			_CmOsIostat_IoServiceTime  = createTsLineChart(conn, schema, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   maxValue, false, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");

@@ -29,8 +29,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -107,13 +109,14 @@ public class AseErrorInfo extends AseAbstract
 
 			if (_sqlTextRstm != null)
 			{
-				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-				Map<String, String> colNameValueTagMap = new HashMap<>();
-				colNameValueTagMap.put("SQLText", "xmp");
+//				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+//				Map<String, String> colNameValueTagMap = new HashMap<>();
+//				colNameValueTagMap.put("SQLText", "xmp");
 
 				String  divId       = "errorSqlText";
 				boolean showAtStart = false;
-				String  htmlContent = _sqlTextRstm.toHtmlTableString("sortable", colNameValueTagMap);
+//				String  htmlContent = _sqlTextRstm.toHtmlTableString("sortable", colNameValueTagMap);
+				String  htmlContent = buildCollapsibleHtmlTableForErrors(_sqlTextRstm);
 				
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Error SQL Text, for above errors (all text's may not be available)...", htmlContent);
 
@@ -338,4 +341,54 @@ public class AseErrorInfo extends AseAbstract
 			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
 		} 
 	}
+
+	private String buildCollapsibleHtmlTableForErrors(ResultSetTableModel rstm)
+	{
+		Map<Integer, ResultSetTableModel> errorNumberMap = new LinkedHashMap<>();
+
+		int ErrorStatus_pos = rstm.findColumn("ErrorStatus");
+
+		// Copy each ErrorStatus into it's own RSTM into the "errorNumberMap"
+		for (int r=0; r<rstm.getRowCount(); r++)
+		{
+			Integer ErrorStatus = rstm.getValueAsInteger(r, ErrorStatus_pos);
+
+			// Get the RSTM for the ErrorStatus
+			ResultSetTableModel errRstm = errorNumberMap.get(ErrorStatus);
+			if (errRstm == null)
+			{
+				// Create empty RSTM (copy structure from input rstm) and place it in the map
+				errRstm = new ResultSetTableModel(rstm, "ErrorStatus-" + ErrorStatus, false);
+				errorNumberMap.put(ErrorStatus, errRstm);
+			}
+			
+			// Add the ErrorStatus "record" to the Destination RSTM
+			ArrayList<Object> errRow = rstm.getRowArrayList(r);
+			errRstm.addRow(errRow);
+		}
+
+		// Create a HTML collapsible section for each of the ErrorStatus tables
+		StringBuilder sb = new StringBuilder();
+
+		// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+		Map<String, String> colNameValueTagMap = new HashMap<>();
+		colNameValueTagMap.put("SQLText", "xmp");
+
+		for (Entry<Integer, ResultSetTableModel> entry : errorNumberMap.entrySet())
+		{
+			Integer             key = entry.getKey();
+			ResultSetTableModel val = entry.getValue();
+			
+			String  divId       = "errorMessage_" + key;
+			boolean showAtStart = false;
+			String  label       = "<b>" + key + "</b> with " + val.getRowCount() + " entries."; // Possibly TODO -- Add "ErrorMessage" here (easier to identify that the ErrorNumber really is)
+			String  htmlContent = val.toHtmlTableString("sortable", colNameValueTagMap);
+			
+			String showHideDiv = createShowHideDiv(divId, showAtStart, label, htmlContent);
+			sb.append(showHideDiv);
+		}
+		
+		return sb.toString();
+	}
+
 }

@@ -43,6 +43,7 @@ import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.gui.swing.MultiLineLabel;
 import com.dbxtune.pcs.PersistWriterToDbxCentral;
 import com.dbxtune.pcs.PersistWriterToHttpJson;
@@ -77,7 +78,7 @@ implements ActionListener
 	private JLabel     _dbxCentralHost_lbl  = new JLabel("Hostname");
 	private JTextField _dbxCentralHost_txt  = new JTextField("localhost");
 	private JLabel     _dbxCentralPort_lbl  = new JLabel("Port");
-	private JTextField _dbxCentralPort_txt  = new JTextField("8080");
+	private JTextField _dbxCentralPort_txt  = new JTextField(DbxTuneCentral.getWebHttpPort() + "");
 
 	private JPanel     _influxDb_pan;
 	private JLabel     _influxDb_lbl        = new JLabel("<html>InfluxDB (https://www.influxdata.com/) is a Time Series database that stores Trend Graphs for any DbxTune collector<br>"

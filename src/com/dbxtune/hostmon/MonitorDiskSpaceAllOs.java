@@ -20,6 +20,9 @@
  ******************************************************************************/
 package com.dbxtune.hostmon;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import com.dbxtune.ssh.SshConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -54,37 +57,117 @@ extends HostMonitor
 		
 		if (isConnectedToVendor(OsVendor.Windows))
 		{
-//			return "powershell \"gwmi win32_logicaldisk | Format-Table -HideTableHeaders"
-//					+ " DeviceId"
-//					+ ", @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}}"
-//					+ ", @{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}"
-//					+ ", @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}}"
-//					+ ", @{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}"
-//				//	+ ", DeviceId" // use DeviceId both as 'FileSystem' and 'MountedOn'
-//					+ ", @{n='MountedOn'; e={($_.DeviceId+' ['+$_.VolumeName+']').Replace('[]','').Replace(' ','&nbsp;')}}" // MountedOn == Can be used to get: "D: [Disk Label]"
-//					+ "\" ";
-			
-			return "powershell \"Get-CimInstance Win32_LogicalDisk | Format-Table -HideTableHeaders"
-					+ " DeviceId"
-					+ ", @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}}"
-					+ ", @{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}"
-					+ ", @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}}"
-					+ ", @{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}"
-					+ ", @{n='MountedOn'; e={($_.DeviceId+' ['+$_.VolumeName+']').Replace('[]','').Replace(' ','&nbsp;')}}" // MountedOn == Can be used to get: "D: [Disk Label]"
-					+ "\" ";
-
 			// NOTE: the reader splits on "whitespace", so simulate spaces with "&nbsp;", which will be translated back again in parseRow() method 
-			
-			// TODO; Possibly use: Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name="Used(KB)";Expression={($_.Used / 1KB).ToString("F2")}}, @{Name="Free(KB)";Expression={($_.Free / 1KB).ToString("F2")}}, @{Name="Total(KB)";Expression={($_.Used + $_.Free) / 1KB}}
-			//                 OR: Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Select-Object DeviceID, @{Name="FreeSpace(KB)";Expression={($_.FreeSpace / 1KB).ToString("F2")}}, @{Name="Size(KB)";Expression={($_.Size / 1KB).ToString("F2")}}
-			//                     Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Select-Object DeviceID, VolumeName, @{Name="FreeSpace(KB)";Expression={($_.FreeSpace / 1KB).ToString("F2")}}, @{Name="Size(KB)";Expression={($_.Size / 1KB).ToString("F2")}}
-			//        since it do NOT require Administrator Privileges
-
+			return getWindowsCmd(getConnection().getOsName());
 		}
 		else
 		{
 			return "df -kP | sed '1d'";
 		}
+	}
+
+	// SMALL TEST -- via main... Just to get the Command
+	public static void main(String[] args)
+	{
+		String cmd = getWindowsCmd("Windows-CMD");
+		System.out.println("CMD: ");
+		System.out.println(cmd);
+
+		System.out.println("----------------------------------");
+
+		cmd = getWindowsCmd("Windows-Powershell-Desktop");
+		System.out.println("POWER-SHELL: ");
+		System.out.println(cmd);
+	}
+
+	/**
+	 * This one seems to work best.
+	 * 
+	 * It does NOT require any elevated permissions (plain user seems to work) <br>
+	 * It ALSO works over a SSH Connection (where Get-PSDrive did not work that great)
+	 * <p>
+	 * <b>Use .NET Classes Directly (Best for SSH)...</b>
+	 * <p>
+	 * The issue you're experiencing is a known limitation with PowerShell remoting and SSH sessions 
+	 * - they run in a constrained environment that doesn't have access to mounted drives in the same way an interactive session does.<br>
+	 * When you SSH into Windows, PowerShell runs without full access to the filesystem drives, which is why Get-PSDrive returns zeros or incomplete data. 
+	 * 
+	 * @param osName Name of the Connected OS: Linux, SunOS, AIX, HP-UX, Windows-CMD, Windows-Powershell-Core, Windows-Powershell-Desktop
+	 *  
+	 * @return
+	 */
+	private static String getWindowsCmd(String osName)
+	{
+		// maxm\dbxtune@MM-GCP-DW C:\Users\dbxtune>powershell -Command "[System.IO.DriveInfo]::GetDrives() | Where-Object {$_.DriveType -eq 'Fixed' -and $_.IsReady} | ForEach-Object { $label = if($_.VolumeLabel){'['+$_.VolumeLabel+']'}else{''}; $mountedOn = ($_.Name.TrimEnd('\') + ' ' + $label).Replace('[]','').Replace(' ','&nbsp;').TrimEnd('&nbsp;'); '{0} {1} {2} {3} {4:F2} {5}' -f $_.Name.TrimEnd('\'), [math]::Round($_.TotalSize/1KB,2), [math]::Round(($_.TotalSize-$_.AvailableFreeSpace)/1KB,2), [math]::Round($_.AvailableFreeSpace/1KB,2), (($_.TotalSize-$_.AvailableFreeSpace)/$_.TotalSize*100), $mountedOn }"
+
+		if (osName == null)
+			osName = "";
+		
+		String pwshCmd = ""
+			+ "[System.IO.DriveInfo]::GetDrives() "
+			+ "| Where-Object {$_.DriveType -eq 'Fixed' -and $_.IsReady} "
+			+ "| ForEach-Object "
+			+ "{ "
+			    + "$label = if($_.VolumeLabel){'['+$_.VolumeLabel+']'}else{''}; "
+			    + "$mountedOn = ($_.Name.TrimEnd('\\\\') + ' ' + $label).Replace('[]','').Replace(' ','&nbsp;').TrimEnd('&nbsp;'); "
+			    + "'{0} {1} {2} {3} {4:F2} {5}' -f "
+			        + "$_.Name.TrimEnd('\\\\')"
+			        + ", [math]::Round($_.TotalSize/1KB,2)"
+			        + ", [math]::Round(($_.TotalSize-$_.AvailableFreeSpace)/1KB,2)"
+			        + ", [math]::Round($_.AvailableFreeSpace/1KB,2)"
+			        + ", (($_.TotalSize-$_.AvailableFreeSpace)/$_.TotalSize*100)"
+			        + ", $mountedOn "
+			+ "}";
+
+		// Should we return a "clean" PowerShell command or a DOS Command which does: powershell -Command "pwshCmd" 
+		if (osName.startsWith("Windows-Powershell-"))
+		{
+			return pwshCmd;
+		}
+		else
+		{
+			return "powershell -Command \"" + pwshCmd + "\"";
+		}
+	}
+	
+
+	private static String getWindowsCmd_ORIGIN()
+	{
+		return "powershell \"Get-CimInstance Win32_LogicalDisk | Format-Table -HideTableHeaders"
+				+ " DeviceId"
+				+ ", @{n='SizeKb'; e={[math]::Round($_.Size/1KB,2)}}"
+				+ ", @{n='UsedKb'; e={[math]::Round(($_.Size-$_.FreeSpace)/1KB)}}"
+				+ ", @{n='AvailableKb';e={[math]::Round($_.FreeSpace/1KB,2)}}"
+				+ ", @{n='UsedPct'; e={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100.0,2)}}"
+				+ ", @{n='MountedOn'; e={($_.DeviceId+' ['+$_.VolumeName+']').Replace('[]','').Replace(' ','&nbsp;')}}" // MountedOn == Can be used to get: "D: [Disk Label]"
+				+ "\" ";
+	}
+
+	private static String getWindowsCmd_A_LittleBitBetter_butDoNotWorkOverSSH()
+	{
+		String psScript =
+				"$labels = Get-CimInstance Win32_LogicalDisk -ErrorAction SilentlyContinue | " +
+				"Select-Object DeviceID, VolumeName;" +
+				"Get-PSDrive -PSProvider FileSystem | " +
+				"Where-Object { $_.Used + $_.Free -gt 0 } | " + // skip drives with 0 size
+				"Sort-Object Name | ForEach-Object {" +
+				"  $devId = ($_.Name + ':').ToUpper();" +
+				"  $label = ($labels | Where-Object { $_.DeviceID.ToUpper() -eq $devId }).VolumeName;" +
+				"  $mount = if ($label) { \"$($_.Name):&nbsp;[$($label -replace ' ','&nbsp;')]\" } else { \"$($_.Name):&nbsp;\" };" +
+				"  $size = [math]::Round(($_.Used + $_.Free)/1KB);" +
+				"  $used = [math]::Round($_.Used/1KB);" +
+				"  $free = [math]::Round($_.Free/1KB);" +
+				"  $total = $_.Used + $_.Free;" +
+				"  $usedPct = if ($total -gt 0) { [math]::Round(($_.Used / $total * 100),2) } else { 0 };" +
+				"  \"{0,-3} {1,12} {2,12} {3,12} {4,7:N2} {5}\" -f ($_.Name + ':'), $size, $used, $free, $usedPct, $mount;" +
+				"}";
+		// Convert script to UTF-16LE bytes and Base64 encode
+		byte[] psBytes = psScript.getBytes(StandardCharsets.UTF_16LE);
+		String base64Command = Base64.getEncoder().encodeToString(psBytes);
+		
+		String command = "powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -EncodedCommand " + base64Command;
+
+		return command;
 	}
 
 //	gorans@gorans-ub2:/etc/postgresql/9.5/main$ df -k

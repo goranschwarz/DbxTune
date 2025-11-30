@@ -762,7 +762,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_MANAGER,
 			"Memory Manager", // Menu CheckBox text
 			"Memory Manager ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -775,7 +775,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MEMORY_TARGET_VS_TOTAL,
 			"Target vs Total Memory", // Menu CheckBox text
 			"Target vs Total Memory ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Target Server Memory (KB)", "Total Server Memory (KB)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,

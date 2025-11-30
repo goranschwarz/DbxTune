@@ -590,9 +590,10 @@ extends CompletionProviderAbstractSql
 				"Create table"));
 
 		list.add( new CompletionTemplate( "index",
-				"create index <TABNAME>_ix1 on <TABNAME>(c1, c2)\n" +
-				"create unique index <TABNAME>_ix1 on <TABNAME>(c1, c2)\n" +
-				"create unique clustered index <TABNAME>_ix1 on <TABNAME>(c1, c2)\n" +
+				"create index <TABNAME>_ix1 on <TABNAME>(c1, c2) \n" +
+				"create index <TABNAME>_ix1 on <TABNAME>(c1, c2) with index_compression = page \n" +
+				"create unique index <TABNAME>_ix1 on <TABNAME>(c1, c2) \n" +
+				"create unique clustered index <TABNAME>_ix1 on <TABNAME>(c1, c2) \n" +
 				"",
 				"Create index"));
 

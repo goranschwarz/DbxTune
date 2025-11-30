@@ -101,6 +101,27 @@ public class ChartDataHistoryCreator
 		ChartDataHistoryCreator chart = new ChartDataHistoryCreator(chartTitle, chartData, timeLimit, seriesNames);
 		return chart.getAsHtmlInlineImage(DEFAULT_WIDTH, DEFAULT_HEIGHT, null);
 	}
+
+	/**
+	 * 
+	 * @param chartTitle      Title on the chart
+	 * @param chartData       Chart Data
+	 * @param timeLimit       0 = All data, # = Only last # MINUTES of data points 
+	 * @param graphWidth      Width of the graph  (-1 == ChartDataHistoryCreator.DEFAULT_WIDTH)
+	 * @param graphHeight     Height of the graph (-1 == ChartDataHistoryCreator.DEFAULT_HEIGHT)
+	 * @param seriesNames     Only show the following series (empty for ALL series)
+	 * @return                A String with &lt;img  width='###' height='###' src='data:image/png;base64,iVBORw0...'&gt;
+	 */
+	public static String getChartAsHtmlImage(String chartTitle, ChartDataHistorySeries chartData, int timeLimit, int graphWidth, int graphHeight, String... seriesNames)
+	{
+		if (timeLimit   == -1) timeLimit   = ChartDataHistorySeries.DEFAULT_KEEP_AGE_IN_MINUTES;
+		if (graphWidth  == -1) graphWidth  = DEFAULT_WIDTH;
+		if (graphHeight == -1) graphHeight = DEFAULT_HEIGHT;
+
+		ChartDataHistoryCreator chart = new ChartDataHistoryCreator(chartTitle, chartData, timeLimit, seriesNames);
+		return chart.getAsHtmlInlineImage(graphWidth, graphHeight, null);
+	}
+	
 	
 	/**
 	 * Create a HTML in-line image
@@ -200,7 +221,8 @@ public class ChartDataHistoryCreator
 				if (_timeLimit != 0 && dpTime < timeThreshold)
 						continue; // Skip this entry it's "to early"
 				
-				serie.add(new FixedMillisecond(dpTime), dpValue);
+//				serie.add(new FixedMillisecond(dpTime), dpValue);
+				serie.addOrUpdate(new FixedMillisecond(dpTime), dpValue);
 			}
 
 			dataset.addSeries(serie);

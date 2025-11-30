@@ -404,7 +404,7 @@ public class StatusBar extends JPanel
 				DbxConnectionStateInfo csi = conn.refreshConnectionStateInfo();
 				
 				// emulate a slow connection
-				// try { Thread.sleep(10000); } catch(Exception ex) {}
+				//try { Thread.sleep(10000); } catch(Exception ex) {}
 				
 				return csi;
 			}

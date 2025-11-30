@@ -633,6 +633,7 @@ extends CentralPersistWriterBase
 		}
 		catch (SQLException ev)
 		{
+			SQLException originEx = ev;
 			boolean h2DbIsAlreadyOpen = false;
 			
 			StringBuffer sb = new StringBuffer();
@@ -655,8 +656,74 @@ extends CentralPersistWriterBase
 
 			// IF H2, make special things
 //			if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
-			if ( _jdbcUrl.startsWith("jdbc:h2:") && _mainConn != null)
+			if ( _jdbcUrl.startsWith("jdbc:h2:"))
 			{
+				// Message:   Unsupported database file version or invalid file header in file "C:/Users/goran/.dbxtune/dbxc/data/DBXTUNE_CENTRAL_DB.mv.db" [90048-240]
+				// SQLState:  90048
+				// ErrorCode: 90048
+				// Trying to open an earlier DB File of H2 Version
+				if (originEx.getErrorCode() == 90048 || originEx.getMessage().contains("Unsupported database file version"))
+				{
+					_logger.error("Origin H2 exception", originEx);
+
+					_logger.error("============================================================================");
+					_logger.error("== The H2 Database file is probably created with an earlier version of H2 ==");
+					_logger.error("============================================================================");
+					_logger.error("== ACTION: You need to upgrade/MIGRATE the H2 database to the DbxTune provided H2 Version.");
+					_logger.error("== There should be 2 versions of the h2-*.jar provided under ${DBXTUNE_HOME}/lib/h2-2.*.jar A never verion and an older version.");
+					_logger.error("== Note: In below command 'h2-2.x.yyy.jar' needs to be replaced with the older version JAR File, found under ${DBXTUNE_HOME}/lib/h2-2.*.jar");
+					_logger.error("== ACTION: ${DBXTUNE_HOME}/bin/dbxtune.sh dbxcdbcopy --fromOldH2Jar ${DBXTUNE_HOME}/lib/h2-2.x.yyy.jar --exec");
+					_logger.error("==         If you leave out '--exec' at the end, it will only investigate and print some information.");
+					_logger.error("== The migration will do the following:");
+					_logger.error("==  - Start a H2 server running the 'previous' H2 version.");
+					_logger.error("==  - Copy all the tables to a new H2 DB using the later/current H2 Version. Note: This takes hours...");
+					_logger.error("==  - When it's done: ");
+					_logger.error("==    o Remove or rename current db file 'DBXTUNE_CENTRAL_DB.mv.db' to something else (if you want to save it)");
+					_logger.error("==    o Rename the new db file 'DBXTUNE_CENTRAL_DB_NEW.mv.db' to 'DBXTUNE_CENTRAL_DB.mv.db'");
+					_logger.error("==    o Start DbxCentral again, and watch the log for errors or strange messages.");
+					_logger.error("==    o Then start all the collectors");
+					_logger.error("== Note: Collector databases will probably also face the same issue...");
+					_logger.error("==       For the moment there is NO upgrade path for them; Just delete *todays* recording(s) and start the collector(s) again.");
+					_logger.error("============================================================================");
+					_logger.info ("Requesting a 'shutdown' since we can't continue with the old H2 database version...");
+
+//					// Lets try to RESTART DbxCentral... and hope that it clears the error...
+//					Configuration shutdownConfig = new Configuration();
+//					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
+//
+//					String reason = "Shutdown Requested from CentralPersistWriterJdbc.open(): H2_NEEDS_TO_BE_UPGRADED(90048), url='" + localJdbcUrl + "', errors='" + errorMessages + "'.";
+//					boolean doRestart = false;
+//					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
+//					
+////					_logger.warn(getDatabaseProductName() + ": Severe problems " + extraMessage + "when storing Performance Counters, Marking the writes for SHUTDOWN.");
+//					_shutdownWithNoWait = true;
+//
+//					// Then STOP the service
+//					// NOTE: This needs it's own Thread, otherwise it's the PersistCounterHandler thread
+//					//       that will issue the shutdown, meaning store() will be "put on hold"
+//					//       until this method call is done, and continue from that point. 
+//					Runnable shutdownPcs = new Runnable()
+//					{
+//						@Override
+//						public void run()
+//						{
+//							_logger.info("Issuing STOP on the Persistent Counter Storage Handler");
+//							CentralPcsWriterHandler.getInstance().stop(true, 0);
+//							CentralPcsWriterHandler.setInstance(null);					
+//						}
+//					};
+//					Thread shutdownThread = new Thread(shutdownPcs);
+//					shutdownThread.setDaemon(true);
+//					shutdownThread.setName("StopPcs");
+//					shutdownThread.start();
+					
+					_mainConn = null;
+					
+					// Can we do a EXIT here... Or do I need to ....
+					// Since we havn't started everything yet... Lets just to EXIT...
+					_logger.info ("Since we are not 'fully started', lets just do EXIT(1) here...");
+					System.exit(1);
+				}
 				// Try to close ALL H2 servers, many might be active due to AUTO_SERVER=true
 				if (h2DbIsAlreadyOpen)
 				{
@@ -1089,6 +1156,49 @@ extends CentralPersistWriterBase
 					doShutdown = true;
 					dbIsFull   = true;
 					doThrow    = true;
+				}
+
+				// Message:   Unsupported database file version or invalid file header in file "C:/Users/goran/.dbxtune/dbxc/data/DBXTUNE_CENTRAL_DB.mv.db" [90048-240]
+				// SQLState:  90048
+				// ErrorCode: 90048
+				// Trying to open an earlier DB File of H2 Version
+				if (error == 90048 || msgStr.contains("Unsupported database file version"))
+				{
+					_logger.error("Origin H2 exception", e);
+
+					_logger.error("============================================================================");
+					_logger.error("== The H2 Database file is probably created with an earlier version of H2 ==");
+					_logger.error("============================================================================");
+					_logger.error("== ACTION: You need to upgrade/MIGRATE the H2 database to the DbxTune provided H2 Version.");
+					_logger.error("== There should be 2 versions of the h2-*.jar provided under ${DBXTUNE_HOME}/lib/h2-2.*.jar A never verion and an older version.");
+					_logger.error("== Note: In below command 'h2-2.x.yyy.jar' needs to be replaced with the older version JAR File, found under ${DBXTUNE_HOME}/lib/h2-2.*.jar");
+					_logger.error("== ACTION: ${DBXTUNE_HOME}/bin/dbxtune.sh dbxcdbcopy --fromOldH2Jar ${DBXTUNE_HOME}/lib/h2-2.x.yyy.jar --exec");
+					_logger.error("==         If you leave out '--exec' at the end, it will only investigate and print some information.");
+					_logger.error("== The migration will do the following:");
+					_logger.error("==  - Start a H2 server running the 'previous' H2 version.");
+					_logger.error("==  - Copy all the tables to a new H2 DB using the later/current H2 Version. Note: This takes hours...");
+					_logger.error("==  - When it's done: ");
+					_logger.error("==    o Remove or rename current db file 'DBXTUNE_CENTRAL_DB.mv.db' to something else (if you want to save it)");
+					_logger.error("==    o Rename the new db file 'DBXTUNE_CENTRAL_DB_NEW.mv.db' to 'DBXTUNE_CENTRAL_DB.mv.db'");
+					_logger.error("==    o Start DbxCentral again, and watch the log for errors or strange messages.");
+					_logger.error("==    o Then start all the collectors");
+					_logger.error("== Note: Collector databases will probably also face the same issue...");
+					_logger.error("==       For the moment there is NO upgrade path for them; Just delete *todays* recording(s) and start the collector(s) again.");
+					_logger.error("============================================================================");
+					_logger.info ("Requesting a 'shutdown' since we can't continue with the old H2 database version...");
+
+					// Mark it for shutdown
+					doShutdown = true;
+					dbIsFull   = false;
+					doThrow    = true;
+
+//					// Stop the collector...
+//					Configuration shutdownConfig = new Configuration();
+//					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
+//
+//					String reason = "Shutdown Requested from H2_UNSUPPORTED_DB_FEIL_VERSION(90048), url='" + conn.getMetaData().getURL() + "', errors='" + msgStr + "'.";
+//					boolean doRestart = false;
+//					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
 				}
 
 				// Check if it looks like a CORRUPT H2 database
@@ -2002,6 +2112,17 @@ extends CentralPersistWriterBase
 				}
 			}
 		}
+
+//		if (fromDbVersion <= 15)
+//		{
+//			// In next upgrade step: check Table.GRAPH_PROPERTIES and column 'GraphName' which I changed from 30 -> 60
+//			// It would be "nice" to have an upgrade/check on that... But I was to lazy right now...
+//			// For now I just throw a ERROR/WARNING when adding any graph name above 30 chars -- Then that warning can be removed: CounterModel.addTrendGraph() -- Graph Names can only be 30 characters (for the moment)... 
+// 			//     in CentralPeristWriterBase.getTableDdlString(...) approx row: 590
+//			//     sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n"); // changed from 30 to 60 -- But I did NOT write any upgrade steps for it... possibly in the future...
+//		}
+		
+
 		
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;

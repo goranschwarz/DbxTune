@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content.ase;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.ase.CmDeviceIo;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
@@ -212,11 +213,11 @@ public class AseSlowCmDeviceIo extends AseAbstract
 			String schema = getReportingInstance().getDbmsSchemaName();
 			
 			int maxValue = 10;
-			_CmDeviceIo_IoRW              = createTsLineChart(conn, schema, "CmDeviceIo", "IoRW",      -1,       true, null, "Number of Disk Operations (Read+Write), per Second and Device (Disk->Devices)");
-			_CmDeviceIo_SvcTimeRW_noLimit = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeRW", -1,       true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with NO max value]");
-			_CmDeviceIo_SvcTimeRW         = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeRW", maxValue, true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
-			_CmDeviceIo_SvcTimeR          = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeR",  maxValue, true, null, "Device IO Service Time (Read) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
-			_CmDeviceIo_SvcTimeW          = createTsLineChart(conn, schema, "CmDeviceIo", "SvcTimeW",  maxValue, true, null, "Device IO Service Time (Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_IoRW              = createTsLineChart(conn, schema, CmDeviceIo.CM_NAME, CmDeviceIo.GRAPH_NAME_RW_DISK_IO,      -1,       true, null, "Number of Disk Operations (Read+Write), per Second and Device (Disk->Devices)");
+			_CmDeviceIo_SvcTimeRW_noLimit = createTsLineChart(conn, schema, CmDeviceIo.CM_NAME, CmDeviceIo.GRAPH_NAME_RW_SERVICE_TIME, -1,       true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with NO max value]");
+			_CmDeviceIo_SvcTimeRW         = createTsLineChart(conn, schema, CmDeviceIo.CM_NAME, CmDeviceIo.GRAPH_NAME_RW_SERVICE_TIME, maxValue, true, null, "Device IO Service Time (Read+Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_SvcTimeR          = createTsLineChart(conn, schema, CmDeviceIo.CM_NAME, CmDeviceIo.GRAPH_NAME_R_SERVICE_TIME,  maxValue, true, null, "Device IO Service Time (Read) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
+			_CmDeviceIo_SvcTimeW          = createTsLineChart(conn, schema, CmDeviceIo.CM_NAME, CmDeviceIo.GRAPH_NAME_W_SERVICE_TIME,  maxValue, true, null, "Device IO Service Time (Write) in Milliseconds, per Device (Disk->Devices) [with max value=" + maxValue + "]");
 		}
 	}
 	private IReportChart _CmDeviceIo_IoRW;
