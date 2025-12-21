@@ -706,34 +706,35 @@ extends CountersModel
 			String cmName = this.getName();
 			mtd.addTable(cmName, HTML_DESC);
 
-			mtd.addColumn(cmName, "DBName"                  ,"<html>Name of the database</html>");
-			mtd.addColumn(cmName, "database_id"             ,"<html>ID of the database</html>");
-			mtd.addColumn(cmName, "compatibility_level"     ,"<html>Integer corresponding to the version of SQL Server for which behavior is compatible. (same as sys.database.compatibility_level)</html>");
-			mtd.addColumn(cmName, "user_access_desc"        ,"<html>User-access setting, MULTI_USER, SINGLE_USER , RESTRICTED_USER. (same as sys.database.compatibility_level)</html>");
-			mtd.addColumn(cmName, "is_read_only"            ,"<html>Is database in read-only or read-write mode... (same as sys.database.is_read_only)</html>");
-//			mtd.addColumn(cmName, "updateability"           ,"<html>Is database in read-only or read-write mode... Can be 'READ_ONLY' or 'READ_WRITE' (uses: sys.database.is_read_only)</html>");
-			mtd.addColumn(cmName, "state_desc"              ,"<html>Description of the database state: ONLINE, RESTORING, RECOVERING, RECOVERY_PENDING, SUSPECT, EMERGENCY, OFFLINE, COPYING, OFFLINE_SECONDARY (same as sys.database.state_desc)</html>");
-			mtd.addColumn(cmName, "recovery_model_desc"     ,"<html>Description of recovery model selected: FULL, BULK_LOGGED, SIMPLE. (same as sys.database.recovery_model_desc)</html>");
-			mtd.addColumn(cmName, "rcsi"                    ,"<html>Is RCSI (Read Comitted Snapshot Isolation) enabled on this database (same as MVCC -- Multi Version Concurrency Control on most other DBMS).<br> <code>ALTER DATABASE dbname SET READ_COMMITTED_SNAPSHOT ON/OFF</code><br> (column name sys.database.is_read_committed_snapshot_on)</html>");
-			mtd.addColumn(cmName, "si_state"                ,"<html>Is SI (Snapshot Isolation) enabled on this database (so you can '<b>opt-in</b>' on RCSI when you need it).<br> <code>ALTER DATABASE dbname SET ALLOW_SNAPSHOT_ISOLATION ON/OFF</code><br> (column name sys.database.snapshot_isolation_state_desc)</html>");
-			mtd.addColumn(cmName, "adr"                     ,"<html>Is ADR (Accelerated Database Recovery) enabled on this database (you should also have RCSI enabled).<br> <code>ALTER DATABASE dbname SET ACCELERATED_DATABASE_RECOVERY ON/OFF</code><br> (column name sys.database.is_accelerated_database_recovery_on)<br>Note: From SQL Server 2019 and above.</html>");
-			mtd.addColumn(cmName, "ag_name"                 ,"<html>Availability Group Name</html>");
-			mtd.addColumn(cmName, "ag_role"                 ,"<html>Availability Group Role</html>");
-			mtd.addColumn(cmName, "ag_primary_server"       ,"<html>Primary Server of the Availability Group (null if none)</html>");
-			mtd.addColumn(cmName, "DataFileGroupCount"      ,"<html>How many DATA <i>OS files</i> does the database consist of. Typically just ONE...</html>");
-			mtd.addColumn(cmName, "DBOwner"                 ,"<html>Username that ownes the database</html>");
-			mtd.addColumn(cmName, "log_reuse_wait"          ,"<html>Reuse of transaction log space depends on <i>this</i>, see 'log_reuse_wait_desc' for a text value (same as sys.database.log_reuse_wait)</html>");
-			mtd.addColumn(cmName, "log_reuse_wait_desc"     ,"<html>Reuse of transaction log space depends on <i>this</i>, for example if 'LOG_BACKUP' = We need do a 'backup tran' before the tran log space can be truncated or re-used. (same as sys.database.log_reuse_wait_desc)</html>");
+			mtd.addColumn(cmName, "DBName"                      ,"<html>Name of the database</html>");
+			mtd.addColumn(cmName, "database_id"                 ,"<html>ID of the database</html>");
+			mtd.addColumn(cmName, "compatibility_level"         ,"<html>Integer corresponding to the version of SQL Server for which behavior is compatible. (same as sys.database.compatibility_level)</html>");
+			mtd.addColumn(cmName, "user_access_desc"            ,"<html>User-access setting, MULTI_USER, SINGLE_USER , RESTRICTED_USER. (same as sys.database.compatibility_level)</html>");
+			mtd.addColumn(cmName, "is_read_only"                ,"<html>Is database in read-only or read-write mode... (same as sys.database.is_read_only)</html>");
+//			mtd.addColumn(cmName, "updateability"               ,"<html>Is database in read-only or read-write mode... Can be 'READ_ONLY' or 'READ_WRITE' (uses: sys.database.is_read_only)</html>");
+			mtd.addColumn(cmName, "state_desc"                  ,"<html>Description of the database state: ONLINE, RESTORING, RECOVERING, RECOVERY_PENDING, SUSPECT, EMERGENCY, OFFLINE, COPYING, OFFLINE_SECONDARY (same as sys.database.state_desc)</html>");
+			mtd.addColumn(cmName, "recovery_model_desc"         ,"<html>Description of recovery model selected: FULL, BULK_LOGGED, SIMPLE. (same as sys.database.recovery_model_desc)</html>");
+			mtd.addColumn(cmName, "rcsi"                        ,"<html>Is RCSI (Read Comitted Snapshot Isolation) enabled on this database (same as MVCC -- Multi Version Concurrency Control on most other DBMS).<br> <code>ALTER DATABASE dbname SET READ_COMMITTED_SNAPSHOT ON/OFF</code><br> (column name sys.database.is_read_committed_snapshot_on)</html>");
+			mtd.addColumn(cmName, "si_state"                    ,"<html>Is SI (Snapshot Isolation) enabled on this database (so you can '<b>opt-in</b>' on RCSI when you need it).<br> <code>ALTER DATABASE dbname SET ALLOW_SNAPSHOT_ISOLATION ON/OFF</code><br> (column name sys.database.snapshot_isolation_state_desc)</html>");
+			mtd.addColumn(cmName, "adr"                         ,"<html>Is ADR (Accelerated Database Recovery) enabled on this database (you should also have RCSI enabled).<br> <code>ALTER DATABASE dbname SET ACCELERATED_DATABASE_RECOVERY ON/OFF</code><br> (column name sys.database.is_accelerated_database_recovery_on)<br>Note: From SQL Server 2019 and above.</html>");
+			mtd.addColumn(cmName, "db_scoped_nondefault_configs","<html>This is NON Default Scoped Database Configurations<br> (From sys.database_scoped_configurations)<br>Note: From SQL Server 2016 and above.</html>");
+			mtd.addColumn(cmName, "ag_name"                     ,"<html>Availability Group Name</html>");
+			mtd.addColumn(cmName, "ag_role"                     ,"<html>Availability Group Role</html>");
+			mtd.addColumn(cmName, "ag_primary_server"           ,"<html>Primary Server of the Availability Group (null if none)</html>");
+			mtd.addColumn(cmName, "DataFileGroupCount"          ,"<html>How many DATA <i>OS files</i> does the database consist of. Typically just ONE...</html>");
+			mtd.addColumn(cmName, "DBOwner"                     ,"<html>Username that ownes the database</html>");
+			mtd.addColumn(cmName, "log_reuse_wait"              ,"<html>Reuse of transaction log space depends on <i>this</i>, see 'log_reuse_wait_desc' for a text value (same as sys.database.log_reuse_wait)</html>");
+			mtd.addColumn(cmName, "log_reuse_wait_desc"         ,"<html>Reuse of transaction log space depends on <i>this</i>, for example if 'LOG_BACKUP' = We need do a 'backup tran' before the tran log space can be truncated or re-used. (same as sys.database.log_reuse_wait_desc)</html>");
 
-			mtd.addColumn(cmName, "DbSizeInMb"              ,"<html>Total Allocated Size in MB of the database (both data and log). Note: there are probably free space within the total size. (see: 'DataSizeUsedPct/DataSizeUsedInMb/DataSizeFreeInMb' and 'LogSizeUsedPct/LogSizeUsedInMb/LogSizeFreeInMb')</html>");
-			mtd.addColumn(cmName, "LogSizeInMb"             ,"<html>Total Allocated Size of the transaction log.</html>");                                                         //  = log.totalLogSizeMb 
-			mtd.addColumn(cmName, "DataSizeInMb"            ,"<html>Total Allocated Size of the <i>data</i> part.</html>");                                                        //   = data.totalDataSizeMb 
-			mtd.addColumn(cmName, "LogSizeUsedPct"          ,"<html>How much of the allocated LOG space is actually used.</html>");                                                //   = log.usedLogSpaceInPct 
-			mtd.addColumn(cmName, "DataSizeUsedPct"         ,"<html>How much of the allocated DATA space is actually used.</html>");                                               //   = data.usedDataPct 
-			mtd.addColumn(cmName, "LogOsDiskUsedPct"        ,"<html>On the Operating System, where the LOG file(s) are located. How much space is <b>used</b>.</html>");           //   = osvLog.osUsedPct 
-			mtd.addColumn(cmName, "DataOsDiskUsedPct"       ,"<html>On the Operating System, where the DATA file(s) are located. How much space is <b>used</b>.</html>");          //   = osvData.osUsedPct 
+			mtd.addColumn(cmName, "DbSizeInMb"                  ,"<html>Total Allocated Size in MB of the database (both data and log). Note: there are probably free space within the total size. (see: 'DataSizeUsedPct/DataSizeUsedInMb/DataSizeFreeInMb' and 'LogSizeUsedPct/LogSizeUsedInMb/LogSizeFreeInMb')</html>");
+			mtd.addColumn(cmName, "LogSizeInMb"                 ,"<html>Total Allocated Size of the transaction log.</html>");                                                         //  = log.totalLogSizeMb 
+			mtd.addColumn(cmName, "DataSizeInMb"                ,"<html>Total Allocated Size of the <i>data</i> part.</html>");                                                        //   = data.totalDataSizeMb 
+			mtd.addColumn(cmName, "LogSizeUsedPct"              ,"<html>How much of the allocated LOG space is actually used.</html>");                                                //   = log.usedLogSpaceInPct 
+			mtd.addColumn(cmName, "DataSizeUsedPct"             ,"<html>How much of the allocated DATA space is actually used.</html>");                                               //   = data.usedDataPct 
+			mtd.addColumn(cmName, "LogOsDiskUsedPct"            ,"<html>On the Operating System, where the LOG file(s) are located. How much space is <b>used</b>.</html>");           //   = osvLog.osUsedPct 
+			mtd.addColumn(cmName, "DataOsDiskUsedPct"           ,"<html>On the Operating System, where the DATA file(s) are located. How much space is <b>used</b>.</html>");          //   = osvData.osUsedPct 
 
-			mtd.addColumn(cmName, "vlf_count"               ,"<html>How many Virtual Log Files does this database have.<br>"
+			mtd.addColumn(cmName, "vlf_count"                   ,"<html>How many Virtual Log Files does this database have.<br>"
 					+ "Read more about VLF at https://red9.com/blog/sql-server-high-vlf-count/<br>"
 					+ "<br>"
 					+ "How many VLF is to high?"
@@ -745,84 +746,84 @@ extends CountersModel
 					+ "   <li>above 5000  - Fix now!</li>"
 					+ "</ul>"
 					+ "</html>");
-			mtd.addColumn(cmName, "LogSizeUsedInMb"         ,"<html>How much of the allocated LOG space is actually used.</html>");                                                //   = log.usedLogSpaceInMb 
-			mtd.addColumn(cmName, "LogSizeFreeInMb"         ,"<html>How much of the allocated LOG space is NOT used.</html>");                                                     //   = log.totalLogSizeMb - log.usedLogSpaceInMb 
-			mtd.addColumn(cmName, "LogSizeUsedInMbDiff"     ,"<html>Same as 'LogSizeUsedInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");      //   = log.usedLogSpaceInMb 
-			mtd.addColumn(cmName, "LogSizeFreeInMbDiff"     ,"<html>Same as 'LogSizeFreeInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");      //   = log.totalLogSizeMb - log.usedLogSpaceInMb 
+			mtd.addColumn(cmName, "LogSizeUsedInMb"             ,"<html>How much of the allocated LOG space is actually used.</html>");                                                //   = log.usedLogSpaceInMb 
+			mtd.addColumn(cmName, "LogSizeFreeInMb"             ,"<html>How much of the allocated LOG space is NOT used.</html>");                                                     //   = log.totalLogSizeMb - log.usedLogSpaceInMb 
+			mtd.addColumn(cmName, "LogSizeUsedInMbDiff"         ,"<html>Same as 'LogSizeUsedInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");      //   = log.usedLogSpaceInMb 
+			mtd.addColumn(cmName, "LogSizeFreeInMbDiff"         ,"<html>Same as 'LogSizeFreeInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");      //   = log.totalLogSizeMb - log.usedLogSpaceInMb 
 
-			mtd.addColumn(cmName, "LogOsDisk"               ,"<html>Drive or <i>mount point</i> where the LOG files are located</html>");                                          //   = osvLog.volume_mount_point 
-			mtd.addColumn(cmName, "LogOsDiskUsedPct"        ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in Percent</html>");                         //   = osvLog.osUsedPct 
-			mtd.addColumn(cmName, "LogOsDiskFreePct"        ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in Percent</html>");                         //   = osvLog.osFreePct 
-			mtd.addColumn(cmName, "LogOsFileName"           ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvLog.physical_name 
-			mtd.addColumn(cmName, "LogFileName"             ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvLog.name 
-			mtd.addColumn(cmName, "LogFileId"               ,"<html>SQL-Servers internal ID of the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvLog.file_id 
-			mtd.addColumn(cmName, "LogFileCount"            ,"<html>Number of LOG file(s). <br>NOTE: Only the <b>first</b> file is displayed in the tab, this would be number of files.</html>");    //   = osvLog.file_count 
-			mtd.addColumn(cmName, "LogOsDiskUsedMb"         ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvLog.osUsedMb 
-			mtd.addColumn(cmName, "LogOsDiskFreeMb"         ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvLog.osFreeMb 
-			mtd.addColumn(cmName, "LogNextGrowthSizeMb"     ,"<html>Next time the database needs to grow the LOG file on the Operating System, how many MB will we grow.</html>"); //   = osvLog.nextGrowSizeMb 
+			mtd.addColumn(cmName, "LogOsDisk"                   ,"<html>Drive or <i>mount point</i> where the LOG files are located</html>");                                          //   = osvLog.volume_mount_point 
+			mtd.addColumn(cmName, "LogOsDiskUsedPct"            ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in Percent</html>");                         //   = osvLog.osUsedPct 
+			mtd.addColumn(cmName, "LogOsDiskFreePct"            ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in Percent</html>");                         //   = osvLog.osFreePct 
+			mtd.addColumn(cmName, "LogOsFileName"               ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvLog.physical_name 
+			mtd.addColumn(cmName, "LogFileName"                 ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvLog.name 
+			mtd.addColumn(cmName, "LogFileId"                   ,"<html>SQL-Servers internal ID of the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvLog.file_id 
+			mtd.addColumn(cmName, "LogFileCount"                ,"<html>Number of LOG file(s). <br>NOTE: Only the <b>first</b> file is displayed in the tab, this would be number of files.</html>");    //   = osvLog.file_count 
+			mtd.addColumn(cmName, "LogOsDiskUsedMb"             ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvLog.osUsedMb 
+			mtd.addColumn(cmName, "LogOsDiskFreeMb"             ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvLog.osFreeMb 
+			mtd.addColumn(cmName, "LogNextGrowthSizeMb"         ,"<html>Next time the database needs to grow the LOG file on the Operating System, how many MB will we grow.</html>"); //   = osvLog.nextGrowSizeMb 
 
-			mtd.addColumn(cmName, "DataSizeUsedInMb"        ,"<html>How much of the allocated DATA space is actually used.</html>");                                               //   = data.usedDataMb 
-			mtd.addColumn(cmName, "DataSizeFreeInMb"        ,"<html>How much of the allocated DATA space is NOT used.</html>");                                                    //   = data.freeDataMb 
-			mtd.addColumn(cmName, "DataSizeUsedInMbDiff"    ,"<html>Same as 'DataSizeUsedInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");     //   = data.usedDataMb 
-			mtd.addColumn(cmName, "DataSizeFreeInMbDiff"    ,"<html>Same as 'DataSizeFreeInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");     //   = data.freeDataMb 
+			mtd.addColumn(cmName, "DataSizeUsedInMb"            ,"<html>How much of the allocated DATA space is actually used.</html>");                                               //   = data.usedDataMb 
+			mtd.addColumn(cmName, "DataSizeFreeInMb"            ,"<html>How much of the allocated DATA space is NOT used.</html>");                                                    //   = data.freeDataMb 
+			mtd.addColumn(cmName, "DataSizeUsedInMbDiff"        ,"<html>Same as 'DataSizeUsedInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");     //   = data.usedDataMb 
+			mtd.addColumn(cmName, "DataSizeFreeInMbDiff"        ,"<html>Same as 'DataSizeFreeInMb', but this column is diff calculated to see how fast it grows/shrinks.</html>");     //   = data.freeDataMb 
 
-			mtd.addColumn(cmName, "DataOsDisk"              ,"<html>Drive or <i>mount point</i> where the DATA files are located</html>");                                         //   = osvData.volume_mount_point 
-			mtd.addColumn(cmName, "DataOsDiskUsedPct"       ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in Percent</html>");                         //   = osvData.osUsedPct 
-			mtd.addColumn(cmName, "DataOsDiskFreePct"       ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in Percent</html>");                         //   = osvData.osFreePct 
-			mtd.addColumn(cmName, "DataOsFileName"          ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvData.physical_name 
-			mtd.addColumn(cmName, "DataFileName"            ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvData.name 
-			mtd.addColumn(cmName, "DataFileId"              ,"<html>SQL-Servers internal ID if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvData.file_id 
-			mtd.addColumn(cmName, "DataFileCount"           ,"<html>Number of DATA file(s) available. <br>NOTE: Only the <b>first</b> file is displayed in the tab, this would be number of files.</html>");    //   = osvData.file_count 
-			mtd.addColumn(cmName, "DataOsDiskUsedMb"        ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvData.osUsedMb 
-			mtd.addColumn(cmName, "DataOsDiskFreeMb"        ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvData.osFreeMb 
-			mtd.addColumn(cmName, "DataNextGrowthSizeMb"    ,"<html>Next time the database needs to grow the DATA file on the Operating System, how many MB will we grow.</html>");//   = osvData.nextGrowSizeMb 
+			mtd.addColumn(cmName, "DataOsDisk"                  ,"<html>Drive or <i>mount point</i> where the DATA files are located</html>");                                         //   = osvData.volume_mount_point 
+			mtd.addColumn(cmName, "DataOsDiskUsedPct"           ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in Percent</html>");                         //   = osvData.osUsedPct 
+			mtd.addColumn(cmName, "DataOsDiskFreePct"           ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in Percent</html>");                         //   = osvData.osFreePct 
+			mtd.addColumn(cmName, "DataOsFileName"              ,"<html>Physical name on Operating System. <br>NOTE: Only the <b>first</b> file is visible here.</html>");             //   = osvData.physical_name 
+			mtd.addColumn(cmName, "DataFileName"                ,"<html>SQL-Servers internal name if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");  //   = osvData.name 
+			mtd.addColumn(cmName, "DataFileId"                  ,"<html>SQL-Servers internal ID if the <i>file</i>. <br>NOTE: Only the <b>first</b> file is visible here.</html>");    //   = osvData.file_id 
+			mtd.addColumn(cmName, "DataFileCount"               ,"<html>Number of DATA file(s) available. <br>NOTE: Only the <b>first</b> file is displayed in the tab, this would be number of files.</html>");    //   = osvData.file_count 
+			mtd.addColumn(cmName, "DataOsDiskUsedMb"            ,"<html>How much of the Operating System <i>disk/mount point</i> are USED in MB</html>");                              //   = osvData.osUsedMb 
+			mtd.addColumn(cmName, "DataOsDiskFreeMb"            ,"<html>How much of the Operating System <i>disk/mount point</i> are FREE in MB</html>");                              //   = osvData.osFreeMb 
+			mtd.addColumn(cmName, "DataNextGrowthSizeMb"        ,"<html>Next time the database needs to grow the DATA file on the Operating System, how many MB will we grow.</html>");//   = osvData.nextGrowSizeMb 
 
-			mtd.addColumn(cmName, "OldestTranStartTime"     ,"<html>Start time of the oldest transaction in this database.</html>");                                               //   = oti.last_request_start_time 
-			mtd.addColumn(cmName, "OldestTranWaitType"      ,"<html>What are the oldest transaction waiting for?</html>");                                                         //   = oti.wait_type 
-			mtd.addColumn(cmName, "OldestTranECT"           ,"<html>Estimated Completion Time of the oldest transaction.</html>");                                                 //   = oti.estimated_completion_time 
-			mtd.addColumn(cmName, "OldestTranInSeconds"     ,"<html>Seconds since the oldest transaction started.</html>");                                                        //   = datediff(second, oti.last_request_start_time, getdate()) 
-			mtd.addColumn(cmName, "OldestTranName"          ,"<html>Name of the oldest transaction</html>");                                                                       //   = -1 
-			mtd.addColumn(cmName, "OldestTranSpid"          ,"<html>What SPID is responsible or started the oldest transaction</html>");                                           //   = oti.session_id 
-			mtd.addColumn(cmName, "OldestTranProg"          ,"<html>What <i>program name</i> is responsible or started the oldest transaction</html>");                            //   = oti.program_name 
-			mtd.addColumn(cmName, "OldestTranUser"          ,"<html>Name of the <i>user</i> that is responsible or started the oldest transaction</html>");                        //   = oti.login_name 
-			mtd.addColumn(cmName, "OldestTranHost"          ,"<html>Name of the <i>host</i> that is responsible or started the oldest transaction</html>");                        //   = oti.host_name 
-			mtd.addColumn(cmName, "OldestTranHasSqlText"    ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END 
-			mtd.addColumn(cmName, "OldestTranHasShowPlan"   ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END 
+			mtd.addColumn(cmName, "OldestTranStartTime"         ,"<html>Start time of the oldest transaction in this database.</html>");                                               //   = oti.last_request_start_time 
+			mtd.addColumn(cmName, "OldestTranWaitType"          ,"<html>What are the oldest transaction waiting for?</html>");                                                         //   = oti.wait_type 
+			mtd.addColumn(cmName, "OldestTranECT"               ,"<html>Estimated Completion Time of the oldest transaction.</html>");                                                 //   = oti.estimated_completion_time 
+			mtd.addColumn(cmName, "OldestTranInSeconds"         ,"<html>Seconds since the oldest transaction started.</html>");                                                        //   = datediff(second, oti.last_request_start_time, getdate()) 
+			mtd.addColumn(cmName, "OldestTranName"              ,"<html>Name of the oldest transaction</html>");                                                                       //   = -1 
+			mtd.addColumn(cmName, "OldestTranSpid"              ,"<html>What SPID is responsible or started the oldest transaction</html>");                                           //   = oti.session_id 
+			mtd.addColumn(cmName, "OldestTranProg"              ,"<html>What <i>program name</i> is responsible or started the oldest transaction</html>");                            //   = oti.program_name 
+			mtd.addColumn(cmName, "OldestTranUser"              ,"<html>Name of the <i>user</i> that is responsible or started the oldest transaction</html>");                        //   = oti.login_name 
+			mtd.addColumn(cmName, "OldestTranHost"              ,"<html>Name of the <i>host</i> that is responsible or started the oldest transaction</html>");                        //   = oti.host_name 
+			mtd.addColumn(cmName, "OldestTranHasSqlText"        ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END 
+			mtd.addColumn(cmName, "OldestTranHasShowPlan"       ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END 
 
-			mtd.addColumn(cmName, "LastDbBackupTime"         ,"<html>Last Date/time a backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
-			mtd.addColumn(cmName, "LastDbBackupAgeInHours"   ,"<html>How many hours ago was the last backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
-			mtd.addColumn(cmName, "LastIncDbBackupTime"      ,"<html>Last Date/time a incremental backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
-			mtd.addColumn(cmName, "LastIncDbBackupAgeInHours","<html>How many hours ago was the last incremental backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
-			mtd.addColumn(cmName, "LastLogBackupTime"        ,"<html>Last Date/time a LOG backup was done.</html>");                                                                //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') 
-			mtd.addColumn(cmName, "LastLogBackupAgeInHours"  ,"<html>How many hours ago was the last LOG backup taken.</html>");                                                    //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) 
+			mtd.addColumn(cmName, "LastDbBackupTime"             ,"<html>Last Date/time a backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
+			mtd.addColumn(cmName, "LastDbBackupAgeInHours"       ,"<html>How many hours ago was the last backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
+			mtd.addColumn(cmName, "LastIncDbBackupTime"          ,"<html>Last Date/time a incremental backup was done.</html>");                                                                    //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') 
+			mtd.addColumn(cmName, "LastIncDbBackupAgeInHours    ","<html>How many hours ago was the last incremental backup taken.</html>");                                                        //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) 
+			mtd.addColumn(cmName, "LastLogBackupTime"            ,"<html>Last Date/time a LOG backup was done.</html>");                                                                //   =         (SELECT bi.last_backup_finish_date                            FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') 
+			mtd.addColumn(cmName, "LastLogBackupAgeInHours"      ,"<html>How many hours ago was the last LOG backup taken.</html>");                                                    //   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM #backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) 
 
-			mtd.addColumn(cmName, "QsIsEnabled"             ,"<html>If the Query Store is enabled on not for this database</html>"); 
-			mtd.addColumn(cmName, "QsIsOk"                  ,"<html>If column '' and '' is in the same state, then this is true/yes, if it's NULL means that no entry was found in the table <i>dbname</i>.sys.database_query_store_options</html>"); 
-			mtd.addColumn(cmName, "QsDesiredState"          ,"<html>Indicates the desired operation mode of Query Store, explicitly set by user.</html>"); 
-			mtd.addColumn(cmName, "QsActualState"           ,"<html>Indicates the operation mode of Query Store. In addition to list of desired states required by the user, actual state can be an error state.</html>"); 
-			mtd.addColumn(cmName, "QsMaxSizeInMb"           ,"<html>Maximum disk size for the Query Store in megabytes (MB)</html>"); 
-			mtd.addColumn(cmName, "QsUsedSpaceInMb"         ,"<html>Size of Query Store on disk in megabytes.</html>"); 
-			mtd.addColumn(cmName, "QsFreeSpaceInMb"         ,"<html>Free Space in Query Store before it gets full, and state will be set to <i>read-only</i>.</html>"); 
-			mtd.addColumn(cmName, "QsUsedPct"               ,"<html>How many Percent of the Query Store MAX Size have we used.</html>"); 
-			mtd.addColumn(cmName, "QsReadOnlyReason"        ,"<html>When the <b>desired_state_desc</b> is READ_WRITE and the <b>actual_state_desc</b> is READ_ONLY, <b>readonly_reason</b> returns a bit map to indicate why the Query Store is in readonly mode."
-			                                                + "<ul>"
-			                                                + "   <li>1 - database is in read-only mode</li>"
-			                                                + "   <li>2 - database is in single-user mode</li>"
-			                                                + "   <li>4 - database is in emergency mode</li>"
-			                                                + "   <li>8 - database is secondary replica (applies to Always On and Azure SQL Database geo-replication). This value can be effectively observed only on readable secondary replicas</li>"
-			                                                + "   <li>65536 - the Query Store has reached the size limit set by the MAX_STORAGE_SIZE_MB option. For more information about this option, see ALTER DATABASE SET options (Transact-SQL)</li>"
-			                                                + "   <li>131072 - The number of different statements in Query Store has reached the internal memory limit. Consider removing queries that you do not need or upgrading to a higher service tier to enable transferring Query Store to read-write mode.</li>"
-			                                                + "   <li>262144 - Size of in-memory items waiting to be persisted on disk has reached the internal memory limit. Query Store will be in read-only mode temporarily until the in-memory items are persisted on disk.</li>"
-			                                                + "   <li>524288 - Database has reached disk size limit. Query Store is part of user database, so if there is no more available space for a database, that means that Query Store cannot grow further anymore.</li>"
-			                                                + "</ul>"
-			                                                + "To switch the Query Store operations mode back to read-write, see Verify Query Store is Collecting Query Data Continuously section of Best Practice with the Query Store."
-			                                                + "</html>"); 
+			mtd.addColumn(cmName, "QsIsEnabled"                 ,"<html>If the Query Store is enabled on not for this database</html>"); 
+			mtd.addColumn(cmName, "QsIsOk"                      ,"<html>If column '' and '' is in the same state, then this is true/yes, if it's NULL means that no entry was found in the table <i>dbname</i>.sys.database_query_store_options</html>"); 
+			mtd.addColumn(cmName, "QsDesiredState"              ,"<html>Indicates the desired operation mode of Query Store, explicitly set by user.</html>"); 
+			mtd.addColumn(cmName, "QsActualState"               ,"<html>Indicates the operation mode of Query Store. In addition to list of desired states required by the user, actual state can be an error state.</html>"); 
+			mtd.addColumn(cmName, "QsMaxSizeInMb"               ,"<html>Maximum disk size for the Query Store in megabytes (MB)</html>"); 
+			mtd.addColumn(cmName, "QsUsedSpaceInMb"             ,"<html>Size of Query Store on disk in megabytes.</html>"); 
+			mtd.addColumn(cmName, "QsFreeSpaceInMb"             ,"<html>Free Space in Query Store before it gets full, and state will be set to <i>read-only</i>.</html>"); 
+			mtd.addColumn(cmName, "QsUsedPct"                   ,"<html>How many Percent of the Query Store MAX Size have we used.</html>"); 
+			mtd.addColumn(cmName, "QsReadOnlyReason"            ,"<html>When the <b>desired_state_desc</b> is READ_WRITE and the <b>actual_state_desc</b> is READ_ONLY, <b>readonly_reason</b> returns a bit map to indicate why the Query Store is in readonly mode."
+			                                                    + "<ul>"
+			                                                    + "   <li>1 - database is in read-only mode</li>"
+			                                                    + "   <li>2 - database is in single-user mode</li>"
+			                                                    + "   <li>4 - database is in emergency mode</li>"
+			                                                    + "   <li>8 - database is secondary replica (applies to Always On and Azure SQL Database geo-replication). This value can be effectively observed only on readable secondary replicas</li>"
+			                                                    + "   <li>65536 - the Query Store has reached the size limit set by the MAX_STORAGE_SIZE_MB option. For more information about this option, see ALTER DATABASE SET options (Transact-SQL)</li>"
+			                                                    + "   <li>131072 - The number of different statements in Query Store has reached the internal memory limit. Consider removing queries that you do not need or upgrading to a higher service tier to enable transferring Query Store to read-write mode.</li>"
+			                                                    + "   <li>262144 - Size of in-memory items waiting to be persisted on disk has reached the internal memory limit. Query Store will be in read-only mode temporarily until the in-memory items are persisted on disk.</li>"
+			                                                    + "   <li>524288 - Database has reached disk size limit. Query Store is part of user database, so if there is no more available space for a database, that means that Query Store cannot grow further anymore.</li>"
+			                                                    + "</ul>"
+			                                                    + "To switch the Query Store operations mode back to read-write, see Verify Query Store is Collecting Query Data Continuously section of Best Practice with the Query Store."
+			                                                    + "</html>"); 
 
-			mtd.addColumn(cmName, "OldestTranSqlText"       ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = oti.most_recent_sql_text 
-			mtd.addColumn(cmName, "OldestTranShowPlanText"  ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = oti.plan_text 
-			mtd.addColumn(cmName, "OldestTranLocks"         ,"<html>Summary of what locks this spid is using.</html>");                                                            //   = oti.plan_text 
-			mtd.addColumn(cmName, "LastGoodCheckDbTime"     ,"<html>Timestamp when we last executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
-			mtd.addColumn(cmName, "LastGoodCheckDbDays"     ,"<html>How many days since we executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
+			mtd.addColumn(cmName, "OldestTranSqlText"           ,"<html>SQL Text of the oldest open transaction</html>");                                                              //   = oti.most_recent_sql_text 
+			mtd.addColumn(cmName, "OldestTranShowPlanText"      ,"<html>Showplan Text of the oldest open transaction</html>");                                                         //   = oti.plan_text 
+			mtd.addColumn(cmName, "OldestTranLocks"             ,"<html>Summary of what locks this spid is using.</html>");                                                            //   = oti.plan_text 
+			mtd.addColumn(cmName, "LastGoodCheckDbTime"         ,"<html>Timestamp when we last executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
+			mtd.addColumn(cmName, "LastGoodCheckDbDays"         ,"<html>How many days since we executed a successfull DBCC CHECKDB. <br>NOTE: only in 2016 SP2 and later.</html>"); 
 		}
 		catch (NameNotFoundException e) 
 		{
@@ -2927,6 +2928,7 @@ extends CountersModel
 		int pos_OldestTranSpid         = -1; 
 		int pos_OldestTranHasLocks     = -1; 
 		int pos_OldestTranLocks        = -1;
+		int pos_most_recent_sql_text   = -1;
 		
 		// Find column Id's
 		List<String> colNames = newSample.getColNames();
@@ -2940,6 +2942,7 @@ extends CountersModel
 			if      (colName.equals("OldestTranSpid"))         pos_OldestTranSpid         = colId;
 			else if (colName.equals("OldestTranHasLocks"))     pos_OldestTranHasLocks     = colId;
 			else if (colName.equals("OldestTranLocks"))        pos_OldestTranLocks        = colId;
+			else if (colName.equals("most_recent_sql_text"))   pos_most_recent_sql_text   = colId;
 		}
 
 		// Used to NOT lookup AFTER first time it happened in THIS loop
@@ -3015,6 +3018,19 @@ extends CountersModel
 					} // end: getTempdbSpidUsage
 				} // end: OldestTranSpid > 0
 			} // end: HAS: oval_OldestTranSpid
+
+			
+			// "fix" SQL Text -- If SQL Starts with ")", simply remove it
+			if (pos_most_recent_sql_text != -1)
+			{
+				String lastKnownSql = newSample.getValueAsString(rowId, pos_most_recent_sql_text);
+				if (lastKnownSql != null && lastKnownSql.startsWith(")"))
+				{
+					lastKnownSql = lastKnownSql.substring(1);
+					newSample.setValueAt(lastKnownSql, rowId, pos_most_recent_sql_text);
+				}
+			}
+
 		} // end: Loop on all rows
 	}
 	

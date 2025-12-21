@@ -6430,7 +6430,16 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		// Wait pop-up while waiting for BgExecutor.doWork()
 		WaitForExecDialog wait = new WaitForExecDialog(_window, "Creating Report...");
 
-		final int duplicateThreshold = 10;
+		LinkedHashMap<String, String> inMap = new LinkedHashMap<>();
+		inMap.put("duplicateThreshold", "" + 10);
+		inMap.put("printAvgStat"      , "" + false);
+		inMap.put("printTotalStat"    , "" + false);
+
+		Map<String, String> retMap = ParameterDialog.showParameterDialog(_window, "Statement Cache Bloat Parameters", inMap, false);
+
+		final int     duplicateThreshold = StringUtil.parseInt(    retMap.get("duplicateThreshold"), 10);
+		final boolean printAvgStat       = StringUtil.parseBoolean(retMap.get("printAvgStat"      ), false);
+		final boolean printTotalStat     = StringUtil.parseBoolean(retMap.get("printTotalStat"    ), false);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
@@ -6444,7 +6453,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 					final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 					try (PrintStream ps = new PrintStream(baos, true, StandardCharsets.UTF_8)) 
 					{
-						AseStmntCacheBloatDetect.doWork(getConnection(), false, ps, duplicateThreshold);
+						AseStmntCacheBloatDetect.doWork(getConnection(), false, ps, duplicateThreshold, printAvgStat, printTotalStat);
 					}
 					String reportText = baos.toString(StandardCharsets.UTF_8);
 					

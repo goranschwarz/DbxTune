@@ -35,6 +35,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -573,7 +574,16 @@ extends MainFrame
 		// Wait pop-up while waiting for BgExecutor.doWork()
 		WaitForExecDialog wait = new WaitForExecDialog(getOwner(), "Creating Report...");
 
-		final int duplicateThreshold = 10;
+		LinkedHashMap<String, String> inMap = new LinkedHashMap<>();
+		inMap.put("duplicateThreshold", "" + 10);
+		inMap.put("printAvgStat"      , "" + false);
+		inMap.put("printTotalStat"    , "" + false);
+
+		Map<String, String> retMap = ParameterDialog.showParameterDialog(getOwner(), "Statement Cache Bloat Parameters", inMap, false);
+
+		final int     duplicateThreshold = StringUtil.parseInt(    retMap.get("duplicateThreshold"), 10);
+		final boolean printAvgStat       = StringUtil.parseBoolean(retMap.get("printAvgStat"      ), false);
+		final boolean printTotalStat     = StringUtil.parseBoolean(retMap.get("printTotalStat"    ), false);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
@@ -587,7 +597,7 @@ extends MainFrame
 					final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 					try (PrintStream ps = new PrintStream(baos, true, StandardCharsets.UTF_8)) 
 					{
-						AseStmntCacheBloatDetect.doWork(getConnection(), false, ps, duplicateThreshold);
+						AseStmntCacheBloatDetect.doWork(getConnection(), false, ps, duplicateThreshold, printAvgStat, printTotalStat);
 					}
 					String reportText = baos.toString(StandardCharsets.UTF_8);
 					

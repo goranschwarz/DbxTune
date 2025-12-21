@@ -85,6 +85,7 @@ extends SqlServerAbstract
 				"CmOsIostat_IoBusyPct",
 				"CmPerfCounters_SqlBatch",
 				"CmIndexOpStatSum_OpIudInstance",
+				"CmIndexOpStatSum_OpIudUserDbs",
 				"CmIndexOpStatSum_OpIudTempdb",
 				"CmIndexOpStatSum_OpSingletonLookupCount",
 				"CmIndexOpStatSum_OpRangeScanCount",
@@ -111,6 +112,7 @@ extends SqlServerAbstract
 		_CmOsIostat_IoBusyPct                   .writeHtmlContent(w, null, null);
 		_CmPerfCounters_SqlBatch                .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpIudInstance         .writeHtmlContent(w, null, null);
+		_CmIndexOpStatSum_OpIudUserDbs          .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpIudTempdb           .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpSingletonLookupCount.writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpRangeScanCount      .writeHtmlContent(w, null, "From the above 'Range Scan' and 'Singleton Lookups', comparing the below 'Buffer Cache Reads' you may possibly figure out if we are doing large Table/Index Scans...");
@@ -168,6 +170,7 @@ extends SqlServerAbstract
 		_CmOsIostat_IoBusyPct                    = createTsLineChart(conn, schema, CmOsIostat       .CM_NAME, CmOsIostat       .GRAPH_NAME_BusyPct,                       maxValue, false, null,    "OS: Disk Busy Percent(utilPct) per Device (Host Monitor->OS Disk Stat(iostat))");
 		_CmPerfCounters_SqlBatch                 = createTsLineChart(conn, schema, CmPerfCounters   .CM_NAME, CmPerfCounters   .GRAPH_NAME_SQL_BATCHES_SEC,               -1,       false, null,    "SQL Batches Received per Sec (Server->Perf Counters)");
 		_CmIndexOpStatSum_OpIudInstance          = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_IUD_INSTANCE,                  -1,       false, null,    "Insert/Update/Delete Rows Per Second at Instance Level (Object/Access->Index Op Sum)");
+		_CmIndexOpStatSum_OpIudUserDbs           = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_IUD_USER_DBS,                  -1,       false, null,    "Insert/Update/Delete Rows Per Second for User Databases (Object/Access->Index Op Sum)");
 		_CmIndexOpStatSum_OpIudTempdb            = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_IUD_TEMPDB,                    -1,       false, null,    "Insert/Update/Delete Rows Per Second for tempdb (Object/Access->Index Op Sum)");
 		_CmIndexOpStatSum_OpSingletonLookupCount = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_PER_DB_SINGLETON_LOOKUP_COUNT, -1,       true,  null,    "Bookmark/Singleton Lookups Per Second per Database [singleton_lookup_count] (Object/Access->Index Op Sum)");
 		_CmIndexOpStatSum_OpRangeScanCount       = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_PER_DB_RANGE_SCAN_COUNT,       -1,       true,  null,    "Range Scans Per Second per Database [range_scan_count] (Object/Access->Index Op Sum)");
@@ -193,6 +196,7 @@ extends SqlServerAbstract
 	private IReportChart _CmOsIostat_IoBusyPct;
 	private IReportChart _CmPerfCounters_SqlBatch;
 	private IReportChart _CmIndexOpStatSum_OpIudInstance;
+	private IReportChart _CmIndexOpStatSum_OpIudUserDbs;
 	private IReportChart _CmIndexOpStatSum_OpIudTempdb;
 	private IReportChart _CmIndexOpStatSum_OpSingletonLookupCount;
 	private IReportChart _CmIndexOpStatSum_OpRangeScanCount;

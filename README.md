@@ -147,7 +147,7 @@ for more details see: https://sourceforge.net/projects/asetune/reviews
 
 
 ## Requirements
-* Java 8 and above
+* Java 11 and above (soon to be moved to Java 17)
 
 
 

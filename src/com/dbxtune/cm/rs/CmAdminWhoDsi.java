@@ -168,7 +168,7 @@ extends CountersModel
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
-			false, // visible at start
+			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 

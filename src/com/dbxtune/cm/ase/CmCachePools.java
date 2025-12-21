@@ -155,10 +155,13 @@ extends CountersModel
 	public static final String GRAPH_NAME_POOL_TO_LRU             = "PoolToLru";
 	public static final String GRAPH_NAME_POOL_LOGICAL_READ       = "PoolLogicalRead";
 	public static final String GRAPH_NAME_POOL_REAL_PHYSICAL_READ = "PoolRealPhysicalRead";
-	public static final String GRAPH_NAME_POOL_PHYSICAL_READ      = "PoolPhysicalRead";
+	public static final String GRAPH_NAME_POOL_PHYSICAL_WRITES    = "PoolPhysicalWrites";
 	public static final String GRAPH_NAME_POOL_APF_READ           = "PoolApfRead";
 	public static final String GRAPH_NAME_POOL_APF_PCT            = "PoolApfPct";
 	public static final String GRAPH_NAME_POOL_REPLACE_SLIDE      = "PoolReplaceSlide";
+	public static final String GRAPH_NAME_POOL_PHYSICAL_READ      = "PoolPhysicalRead";
+
+//	TODO; // What about Writes... should we add a graph for that???
 
 	private void addTrendGraphs()
 	{
@@ -313,6 +316,19 @@ extends CountersModel
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
 			false, // is Percent Graph (this can be more than 100%)
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_PHYSICAL_WRITES,
+			"Cache Pools Physical Writes", 	               // Menu CheckBox text
+			"Cache Pools Physical Writes per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
 			false,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
@@ -503,6 +519,21 @@ extends CountersModel
 			{
 				lArray[i] = getLabel(i);
 				dArray[i] = this.getRateValueAsDouble(i, "CacheReplacementSlidePct");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_PHYSICAL_WRITES.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "PhysicalWrites");
 			}
 
 			// Set the values

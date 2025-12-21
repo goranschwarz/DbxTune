@@ -402,7 +402,7 @@ extends CounterModelHostMonitor
 
 	
 	/** How many minutes the Moving Average should be calculated on*/
-	private static final int MOVING_AVG_TIME_IN_MINUTES = 10;
+	private static final int MOVING_AVG_TIME_IN_MINUTES = 15;
 
 	@Override
 	public void reset()
@@ -485,6 +485,9 @@ extends CounterModelHostMonitor
 				// Get CPU Summary Usage chart
 				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
 				
+				// Get Available Memory
+				htmlChartImage += CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
+				
 				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
 				htmlChartImage += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
 				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
@@ -546,6 +549,9 @@ extends CounterModelHostMonitor
 
 				// Get CPU Summary Usage chart
 				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
+
+				// Get Available Memory
+				htmlChartImage += CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
 				
 				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
 //				htmlChartImage += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);

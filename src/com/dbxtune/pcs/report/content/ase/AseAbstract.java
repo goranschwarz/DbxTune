@@ -775,6 +775,39 @@ extends ReportEntryAbstract
 //		return retList;
 	}
 	
+	
+	private int asKb(String s1, String s2)
+	{
+		// Decide multiplier
+		int multiplier = 1;
+		if (s2.equals("MB"))
+		{
+			multiplier = 1024;
+		}
+		if (s2.equals("KB"))
+		{
+			multiplier = 1;
+		}
+
+		// Parse str to int
+		int intVal = -1;
+		s1 = StringUtil.cleanupNumberStr(s1, false);
+		try
+		{
+			intVal = Integer.parseInt(s1);
+		}
+		catch (NumberFormatException nfe)
+		{
+			System.out.println("asKb(): " + nfe);
+			return -1;
+		}
+		
+//		int intVal = StringUtil.parseInt(strVal, 0);
+
+		// return by multiplier
+		return intVal * multiplier;
+	}
+
 	/**
 	 * Parse the information from the DdlStorage columns 'objectText' and 'extraInfoText' where various information is stored in.
 	 * @param ti
@@ -832,7 +865,7 @@ extends ReportEntryAbstract
 				if (_logger.isDebugEnabled())
 					_logger.debug("############## line=|" + line + "|, for dbname='" + ti._dbName + "', schema='" + ti._schemaName + "', table='" + ti._tableName + "'");
 
-				if (line.endsWith(" KB"))
+				if (line.endsWith(" KB") || line.endsWith(" MB")) // ASE 16.1 does sp_spaceused as MB
 				{
 					String[] sa = line.split("[ \t\n\f\r]+");
 
@@ -846,10 +879,10 @@ extends ReportEntryAbstract
 
 						AseIndexInfo indexInfo = new AseIndexInfo();
 						indexInfo._indexName  = sa[0];
-						indexInfo._sizeKb     = StringUtil.parseInt(sa[1], -1);
+						indexInfo._sizeKb     = asKb(sa[1], sa[2]); // ASE 16.1 does sp_spaceused as MB //StringUtil.parseInt(sa[1], -1);
 						indexInfo._sizePages  = indexInfo._sizeKb / asePageSize;
-						indexInfo._reservedKb = StringUtil.parseInt(sa[3], -1);
-						indexInfo._unusedKb   = StringUtil.parseInt(sa[5], -1);
+						indexInfo._reservedKb = asKb(sa[3], sa[4]); // ASE 16.1 does sp_spaceused as MB //StringUtil.parseInt(sa[3], -1);
+						indexInfo._unusedKb   = asKb(sa[5], sa[6]); // ASE 16.1 does sp_spaceused as MB //StringUtil.parseInt(sa[5], -1);
 
 						// Set indexInfo fields: _keysStr, _keys, _desc, _CreationDate, _ddlTxt
 						scrapeIndexInfo(ti.getFullTableName(), indexInfo._indexName, ti._objectText, indexInfo);
@@ -866,11 +899,11 @@ extends ReportEntryAbstract
 //						AseTableInfo ti = new AseTableInfo();
 						ti._tableName  = sa[0];
 						ti._rowtotal   = StringUtil.parseInt(sa[1], -1);
-						ti._reservedKb = StringUtil.parseInt(sa[2], -1);
-						ti._dataKb     = StringUtil.parseInt(sa[4], -1);
+						ti._reservedKb = asKb(sa[2], sa[3]); // ASE 16.1 does sp_spaceused as MB //StringUtil.parseInt(sa[2], -1);
+						ti._dataKb     = asKb(sa[4], sa[5]); // ASE 16.1 does sp_spaceused as MB //StringUtil.parseInt(sa[4], -1);
 						ti._dataPages  = ti._dataKb / asePageSize;
-						ti._indexKb    = StringUtil.parseInt(sa[6], -1);
-						ti._unusedKb   = StringUtil.parseInt(sa[8], -1);
+						ti._indexKb    = asKb(sa[6], sa[7]); // ASE 16.1 does sp_spaceused as MB //StringUtil.parseInt(sa[6], -1);
+						ti._unusedKb   = asKb(sa[8], sa[9]); // ASE 16.1 does sp_spaceused as MB //StringUtil.parseInt(sa[8], -1);
 						ti._indexPages = ti._indexKb / asePageSize;
 
 						ti._indexCount = indexCount;

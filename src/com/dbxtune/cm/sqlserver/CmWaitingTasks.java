@@ -378,6 +378,8 @@ extends CountersModel
 //		int query_plan_pos      = newSample.findColumn("query_plan");
 //		int plan_handle_pos     = newSample.findColumn("plan_handle");
 
+		int pos_currentSqlText  = newSample.findColumn("currentSqlText");
+
 		if (resource_description_pos == -1 || resource_description_decoded_pos == -1)
 		{
 			_logger.error("Cant find desired columns: resource_description_pos=" + resource_description_pos +", resource_description_decoded_pos=" + resource_description_decoded_pos);
@@ -392,6 +394,17 @@ extends CountersModel
 		
 		for (int rowId=0; rowId<newSample.getRowCount(); rowId++)
 		{
+			// "fix" SQL Text -- If SQL Starts with ")", simply remove it
+			if (pos_currentSqlText != -1)
+			{
+				String lastKnownSql = newSample.getValueAsString(rowId, pos_currentSqlText);
+				if (lastKnownSql != null && lastKnownSql.startsWith(")"))
+				{
+					lastKnownSql = lastKnownSql.substring(1);
+					newSample.setValueAt(lastKnownSql, rowId, pos_currentSqlText);
+				}
+			}
+			
 			//-----------------------------------------------------------------------------------------------------
 			// Go and get 'XML Execution Plan' when 'exec_context_id' is 0 -- In a Parallel plan, thats the "owner"
 			// option is to 'OUTER APPLY' it in the Collector SQL, but that seems to take to long time, due to the fact that it does it for ALL rows

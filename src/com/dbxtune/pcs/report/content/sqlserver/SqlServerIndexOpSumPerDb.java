@@ -36,6 +36,7 @@ extends SqlServerAbstract
 //	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private IReportChart _CmIndexOpStatSum_OpIudInstance;
+	private IReportChart _CmIndexOpStatSum_OpIudUserDbs;
 	private IReportChart _CmIndexOpStatSum_OpIudTempdb;
 	
 	private IReportChart _CmIndexOpStatSum_OpLeafIudCount;
@@ -148,6 +149,7 @@ extends SqlServerAbstract
 		if (isFullMessageType())
 		{
 			_CmIndexOpStatSum_OpIudInstance                    .writeHtmlContent(sb, null, null);
+			_CmIndexOpStatSum_OpIudUserDbs                     .writeHtmlContent(sb, null, null);
 			_CmIndexOpStatSum_OpIudTempdb                      .writeHtmlContent(sb, null, null);
 
 			_CmIndexOpStatSum_OpLeafIudCount                   .writeHtmlContent(sb, null, null);
@@ -270,6 +272,7 @@ extends SqlServerAbstract
 		
 		// Add Charts
 		_CmIndexOpStatSum_OpIudInstance                    = createTsLineChart(conn, schema, CmIndexOpStatSum.CM_NAME, CmIndexOpStatSum.GRAPH_NAME_IUD_INSTANCE                             , -1, true, null, "Insert/Update/Delete Rows Per Second at Instance Level" + labelPostFix);
+		_CmIndexOpStatSum_OpIudUserDbs                     = createTsLineChart(conn, schema, CmIndexOpStatSum.CM_NAME, CmIndexOpStatSum.GRAPH_NAME_IUD_USER_DBS                             , -1, true, null, "Insert/Update/Delete Rows Per Second for User Databases" + labelPostFix);
 		_CmIndexOpStatSum_OpIudTempdb                      = createTsLineChart(conn, schema, CmIndexOpStatSum.CM_NAME, CmIndexOpStatSum.GRAPH_NAME_IUD_TEMPDB                               , -1, true, null, "Insert/Update/Delete Rows Per Second for tempdb" + labelPostFix);
 		                                                                                                                                                                                    
 		_CmIndexOpStatSum_OpLeafIudCount                   = createTsLineChart(conn, schema, CmIndexOpStatSum.CM_NAME, CmIndexOpStatSum.GRAPH_NAME_PER_DB_LEAF_IUD_COUNT                    , -1, true, null, "Insert/Update/Delete Rows Per Second per Database [leaf_IUD_count]" + labelPostFix);

@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report;
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.config.dbms.AseConfigText;
 import com.dbxtune.pcs.report.content.DbmsConfigIssues;
 import com.dbxtune.pcs.report.content.ase.AseCmDeviceIo;
 import com.dbxtune.pcs.report.content.ase.AseCmSqlStatement;
@@ -165,7 +167,8 @@ extends DailySummaryReportDefault
 		{
 			_logger.warn("Problems getting ASE Page Size from DDL Storage.", ex);
 		}
-		
+
+
 		//-------------------------------------------------------
 		// Sort Order and Charset
 		//-------------------------------------------------------
@@ -212,6 +215,7 @@ extends DailySummaryReportDefault
 		{
 			_logger.warn("Problems getting ASE COnfig Information from table 'MonSessionDbmsConfigText'.", ex);
 		}
+
 
 		//-------------------------------------------------------
 		// License Info
@@ -306,7 +310,109 @@ extends DailySummaryReportDefault
 			_logger.warn("Problems getting ASE COnfig Information from table 'MonSessionDbmsConfigText'.", ex);
 		}
 
+
+		//-------------------------------------------------------
+		// ASE MAX Memory
+		//-------------------------------------------------------
+		sql = ""
+			+ "select [UsedMemory], [ConfigValue] \n"
+			+ "from [MonSessionDbmsConfig] \n"
+			+ "where [ConfigName] = 'max memory' \n"
+			+ "  and [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfigText]) \n"
+			+ "";
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			String usedMemoryStr = "";
+			int    usedMemoryPgs = -1;
+
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+					usedMemoryStr = rs.getString(1);
+					usedMemoryPgs = rs.getInt   (2);
+				}
+			}
+			
+			NumberFormat nf = NumberFormat.getIntegerInstance();
+			String reportStr = usedMemoryStr + " or " + nf.format(usedMemoryPgs) + " 2K Pages.      (sp_configure 'max memory')";
+			
+			otherInfo.put("ASE Max Memory", reportStr);
+
+		}
+		catch(Exception ex)
+		{
+			_logger.warn("Problems getting 'ASE Max Memory' from DDL Storage.", ex);
+		}
+
 		
+		//-------------------------------------------------------
+		// ASE Memory Available
+		//-------------------------------------------------------
+		sql = ""
+			+ "select [configText] \n"
+			+ "from [MonSessionDbmsConfigText] \n"
+			+ "where [configName] = 'AseCacheConfig' \n"
+			+ "  and [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfigText]) \n"
+			+ "";
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			String configStr = "";
+
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+					configStr = rs.getString(1);
+			}
+			
+			if (configStr != null && configStr.contains(AseConfigText.Cache.MB_AVAIL_FOR_RECONF_STR))
+			{
+				// find where to copy the info
+				int stop = configStr.indexOf(AseConfigText.Cache.MB_AVAIL_FOR_RECONF_STR) - 1;
+				int start = stop;
+				for (; start>0; start--)
+				{
+					if (configStr.charAt(start) == '\n')
+					{
+						start++;
+						break;
+					}
+				}
+
+				// Then copy and parse the information
+				Double freeMemory = null;
+				if (stop >= 0)
+				{
+					String mb = configStr.substring(start, stop);
+					_logger.debug("parse Available Memory for reconfiguration: start=" + start + ", stop=" + stop + ", MB='" + mb + "'.");
+					try 
+					{
+						freeMemory = Double.parseDouble(mb);
+					}
+					catch(NumberFormatException e)
+					{
+						_logger.warn("Can't parse the Free MB for reuse, MB='" + mb + "'. Caught=" + e);
+						freeMemory = null; 
+					}
+				}
+				String freeMemoryStr =  (freeMemory == null ? "UNKNOWN" : freeMemory) + " " + AseConfigText.Cache.MB_AVAIL_FOR_RECONF_STR;
+
+				otherInfo.put("ASE Memory Available", freeMemoryStr);
+			}
+		}
+		catch(Exception ex)
+		{
+			_logger.warn("Problems getting 'ASE Memory Available' from DDL Storage.", ex);
+		}
+
+
 		//-------------------------------------------------------
 		// return
 		//-------------------------------------------------------

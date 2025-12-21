@@ -906,11 +906,13 @@ function activeAlarmsChkClick(checkbox)
 	console.log('activeAlarmsChkClick(): Checked: ' + checkbox.checked);
 	if (checkbox.checked)
 	{
-		$("#active-alarms").css("background-color", 'rgba(255, 195, 83, 1.0)');
+		$("#active-alarms-ctl").css("background-color", 'rgba(255, 195, 83, 1.0)');
+		$("#active-alarms")    .css("background-color", 'rgba(255, 195, 83, 1.0)');
 	}
 	else
 	{
-		$("#active-alarms").css("background-color", 'rgba(255, 195, 83, 0.5)');
+		$("#active-alarms-ctl").css("background-color", 'rgba(255, 195, 83, 0.5)');
+		$("#active-alarms")    .css("background-color", 'rgba(255, 195, 83, 0.5)');
 	}
 
 	// Save last known value in "WebBrowser storage"

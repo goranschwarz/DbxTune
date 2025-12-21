@@ -27,6 +27,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.dbxtune.cm.ase.CmCachePools;
 import com.dbxtune.cm.ase.CmEngines;
 import com.dbxtune.cm.ase.CmExecutionTime;
 import com.dbxtune.cm.ase.CmProcessActivity;
@@ -100,7 +101,12 @@ public class AseCpuUsageOverview extends AseAbstract
 				"CmSqlStatement_SqlStmntSumCpuTime",
 				"CmSummary_LogicalReadGraph",
 				"CmSummary_SelectOperationsGraph",
-				"CmSummary_IudmOperationsGraph"
+				"CmSummary_IudmOperationsGraph",
+				"CmCachePools_PoolUsedMb",
+				"CmCachePools_PoolUtil",
+				"CmCachePools_PoolHitRate",
+				"CmCachePools_PoolReplaceSlide",
+				"CmCachePools_PoolPhysicalWrites"
 				));
 
 		_CmSummary_aaCpuGraph            .writeHtmlContent(w, null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks.");
@@ -152,7 +158,21 @@ public class AseCpuUsageOverview extends AseAbstract
 			_CmSummary_LogicalReadGraph       .writeHtmlContent(w, null, null);
 			_CmSummary_LogicalReadMbGraph     .writeHtmlContent(w, null, null);
 			_CmSummary_SelectOperationsGraph  .writeHtmlContent(w, null, null);
+
+			_CmCachePools_PoolUsedMb          .writeHtmlContent(w, null, null);
+			_CmCachePools_PoolUtil            .writeHtmlContent(w, null, null);
 		}
+		
+
+		int slideTimeInSec = Configuration.getCombinedConfiguration().getIntProperty(CmCachePools.PROPKEY_CacheSlideTimeInSec, CmCachePools.DEFAULT_CacheSlideTimeInSec);
+
+		_CmCachePools_PoolHitRate             .writeHtmlContent(w, null, null);
+		_CmCachePools_PoolReplaceSlide        .writeHtmlContent(w, null, 
+		                                                                 "This is how much of the cache that was replaced by new pages (Turnover in sp_sysmon).<br>"
+		                                                               + "The timespan for this <i>slide or movingWindow</i> is " + slideTimeInSec + " seconds.<br>"
+		                                                               + "<b>Note:</b> If this is above 100, it simply means that the cache/pool has been replaced that many times. So 200% is 2 times the cache size within this <i>time slide window</i><br>"
+		                                                               + "<b>Formula</b>: timeSlide.PagesRead / (AllocatedKB*(1024.0/@@maxpagesize))");
+		_CmCachePools_PoolPhysicalWrites      .writeHtmlContent(w, null, null);
 
 		// Write JavaScript code for CPU SparkLine
 		if (isFullMessageType())
@@ -218,6 +238,12 @@ public class AseCpuUsageOverview extends AseAbstract
 		_CmSummary_LogicalReadMbGraph             = createTsLineChart(conn, schema, CmSummary          .CM_NAME, CmSummary          .GRAPH_NAME_LOGICAL_READ_MB,                   -1,       false, skip2, "ASE Operations - Logical Reads in MB per Second (Summary)");
 		_CmSummary_SelectOperationsGraph          = createTsLineChart(conn, schema, CmSummary          .CM_NAME, CmSummary          .GRAPH_NAME_SELECT_OPERATIONS,                 -1,       false, null,  "ASE Operations - Selects per Second (Summary)");
 		_CmSummary_IudmOperationsGraph            = createTsLineChart(conn, schema, CmSummary          .CM_NAME, CmSummary          .GRAPH_NAME_IUDM_OPERATIONS,                   -1,       true,  null,  "ASE Operations - Ins/Upd/Del/Merge per Second (Summary)");
+
+		_CmCachePools_PoolUsedMb                  = createTsLineChart(conn, schema, CmCachePools       .CM_NAME, CmCachePools       .GRAPH_NAME_POOL_USED_MB,                      -1,       false, null,  "Cache Pools Used MB (Cache->Pools)");
+		_CmCachePools_PoolUtil                    = createTsLineChart(conn, schema, CmCachePools       .CM_NAME, CmCachePools       .GRAPH_NAME_POOL_UTIL,                         -1,       false, null,  "Cache Pools Utilization Percent (Cache->Pools)");
+		_CmCachePools_PoolHitRate                 = createTsLineChart(conn, schema, CmCachePools       .CM_NAME, CmCachePools       .GRAPH_NAME_POOL_HIT_RATE,                     -1,       false, null,  "Cache Pools Hit Rate Percent (Cache->Pools)");
+		_CmCachePools_PoolReplaceSlide            = createTsLineChart(conn, schema, CmCachePools       .CM_NAME, CmCachePools       .GRAPH_NAME_POOL_REPLACE_SLIDE,                -1,       false, null,  "Cache Pools Replacement Slide Percent (Cache->Pools)");
+		_CmCachePools_PoolPhysicalWrites          = createTsLineChart(conn, schema, CmCachePools       .CM_NAME, CmCachePools       .GRAPH_NAME_POOL_PHYSICAL_WRITES,              -1,       false, null,  "Cache Pools Physical Writes per Second (Cache->Pools)");
 
 		_CmExecutionTime_SUM_rstm = createSum_CmExecutionTime(conn);
 	}
@@ -300,6 +326,11 @@ public class AseCpuUsageOverview extends AseAbstract
 	private IReportChart _CmSummary_LogicalReadMbGraph;
 	private IReportChart _CmSummary_SelectOperationsGraph;
 	private IReportChart _CmSummary_IudmOperationsGraph;
+	private IReportChart _CmCachePools_PoolUsedMb;
+	private IReportChart _CmCachePools_PoolUtil;
+	private IReportChart _CmCachePools_PoolHitRate;
+	private IReportChart _CmCachePools_PoolReplaceSlide;
+	private IReportChart _CmCachePools_PoolPhysicalWrites;
 	
 	private ResultSetTableModel _CmExecutionTime_SUM_rstm;
 }

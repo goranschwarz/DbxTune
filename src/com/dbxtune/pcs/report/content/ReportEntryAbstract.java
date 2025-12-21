@@ -75,6 +75,10 @@ implements IReportEntry
 	public static final String  PROPKEY_TABLE_INFO_DETAILS_OPEN = "DailySummaryReport.TableInfo.details.open";
 	public static final boolean DEFAULT_TABLE_INFO_DETAILS_OPEN = false;
 
+	public static final String  PROPKEY_DSR_QUERY_TIMEOUT_IN_SEC = "DailySummaryReport.queryTimeoutInSec";
+	public static final int     DEFAULT_DSR_QUERY_TIMEOUT_IN_SEC = 60 * 15; // 15 Minutes
+	
+	
 	private   Exception _problemEx;
 	private   String    _problemMsg;
 	private   List<String> _warningMsgList;
@@ -89,6 +93,12 @@ implements IReportEntry
 	private   long _execEndTime;
 	
 	private boolean _collapsedHeader = false;
+	
+	private int _dsrQueryTimeoutInSec = -1;
+
+	@Override public void setDsrQueryTimeoutInSec(int seconds) { _dsrQueryTimeoutInSec = seconds;}
+	@Override public int  getDsrQueryTimeoutInSec()            { return _dsrQueryTimeoutInSec < 0 ? getDsrQueryTimeoutInSecDefault() : _dsrQueryTimeoutInSec; }
+	@Override public int  getDsrQueryTimeoutInSecDefault()     { return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_DSR_QUERY_TIMEOUT_IN_SEC, DEFAULT_DSR_QUERY_TIMEOUT_IN_SEC); }
 	
 	@Override public void setExecTime(long ms) { _execTime = ms;}
 	@Override public void setExecStartTime()   { _execStartTime = System.currentTimeMillis(); }
@@ -335,8 +345,9 @@ implements IReportEntry
 
 		try ( Statement stmnt = conn.createStatement() )
 		{
-			// Unlimited execution time
-			stmnt.setQueryTimeout(0);
+			// Query Timeout
+			stmnt.setQueryTimeout( getDsrQueryTimeoutInSec() );
+
 			try ( ResultSet rs = stmnt.executeQuery(sql) )
 			{
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);
@@ -348,7 +359,7 @@ implements IReportEntry
 			}
 		}
 	}
-	
+
 	public ResultSetTableModel executeQuery(DbxConnection conn, String sql, boolean onErrorCreateEmptyRstm, String name)
 	{
 		return executeQuery(conn, sql, onErrorCreateEmptyRstm, name, true);
@@ -360,8 +371,9 @@ implements IReportEntry
 
 		try ( Statement stmnt = conn.createStatement() )
 		{
-			// Unlimited execution time
-			stmnt.setQueryTimeout(0);
+			// Query Timeout
+			stmnt.setQueryTimeout( getDsrQueryTimeoutInSec() );
+			
 			try ( ResultSet rs = stmnt.executeQuery(sql) )
 			{
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, doTruncate);
@@ -377,7 +389,7 @@ implements IReportEntry
 			setProblemException(ex);
 			
 			//_fullRstm = ResultSetTableModel.createEmpty(name);
-			_logger.warn("Problems getting '" + name + "': " + ex);
+			_logger.warn("Problems getting '" + name + "': " + ex + ". SQL=|" + sql + "|.");
 			
 			if (onErrorCreateEmptyRstm)
 				return ResultSetTableModel.createEmpty(name);
@@ -1045,8 +1057,11 @@ implements IReportEntry
 		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement() )
 		{
+			// Query Timeout
+			//stmnt.setQueryTimeout( getDsrQueryTimeoutInSec() );
 			// Unlimited execution time
-			stmnt.setQueryTimeout(0);
+			stmnt.setQueryTimeout(0);  // We could NOT use getDsrQueryTimeoutInSec() in here since it's a Static method
+			
 			try ( ResultSet rs = stmnt.executeQuery(sql) )
 			{
 				while(rs.next())

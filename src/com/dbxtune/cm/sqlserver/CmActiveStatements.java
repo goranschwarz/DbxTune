@@ -1005,6 +1005,8 @@ extends CountersModel
 		int pos_UsefullExecTime    = newSample.findColumn("UsefullExecTime");
 		int pos_UsefullExecTimeHms = newSample.findColumn("UsefullExecTimeHms");
 		
+		int pos_lastKnownSql       = newSample.findColumn("lastKnownSql");
+		
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
 		{
@@ -1084,6 +1086,18 @@ extends CountersModel
 
 				// Set value
 				newSample.setValueAt(newValue_UsefullExecTimeHms, rowId, pos_UsefullExecTimeHms);
+			}
+			
+			// "fix" SQL Text -- If SQL Starts with ")", simply remove it
+			if (pos_lastKnownSql != -1)
+			{
+				String lastKnownSql = newSample.getValueAsString(rowId, pos_lastKnownSql);
+				if (lastKnownSql != null && lastKnownSql.startsWith(")"))
+				{
+					lastKnownSql = lastKnownSql.substring(1);
+					newSample.setValueAt(lastKnownSql, rowId, pos_lastKnownSql);
+					
+				}
 			}
 		}
 	}

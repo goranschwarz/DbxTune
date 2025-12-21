@@ -23,6 +23,7 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.sql.SQLException;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -39,6 +40,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistReader;
+import com.dbxtune.pcs.PersistWriterJdbc.H2ShutdownType;
 import com.dbxtune.pcs.report.DailySummaryReportFactory;
 import com.dbxtune.pcs.report.IDailySummaryReport;
 import com.dbxtune.pcs.report.IProgressReporter;
@@ -47,6 +49,8 @@ import com.dbxtune.pcs.report.content.DailySummaryReportContent;
 import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.ShutdownHandler;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
@@ -108,23 +112,64 @@ public class DailySummartReportServlet extends HttpServlet
 		cp.setUsername(jdbcUser);
 		cp.setPassword(jdbcPass);
 
-		conn = DbxConnection.connect(null, cp);
+		try
+		{
+			conn = DbxConnection.connect(null, cp);
 
-		// - Check if it's a PCS database
-		// - get DbxTune TYPE (AseTune, RsTune, SqlServerTune, etc...)
-		// - get Server Name
-		// - get start/first sample Timestamp
-		// - get   end/last  sample Timestamp
-		if ( ! PersistReader.isOfflineDb(conn) )
-			throw new Exception("This do NOT look like a DbxTune recording... can't continue.");
+			// - Check if it's a PCS database
+			// - get DbxTune TYPE (AseTune, RsTune, SqlServerTune, etc...)
+			// - get Server Name
+			// - get start/first sample Timestamp
+			// - get   end/last  sample Timestamp
+			if ( ! PersistReader.isOfflineDb(conn) )
+				throw new Exception("This do NOT look like a DbxTune recording... can't continue.");
 
-		MonRecordingInfo monRecordingInfo = PersistReader.getMonRecordingInfo(conn, null);
-//		MonVersionInfo   monVersionInfo   = PersistReader.getMonVersionInfo(conn, null);
+			MonRecordingInfo monRecordingInfo = PersistReader.getMonRecordingInfo(conn, null);
+//			MonVersionInfo   monVersionInfo   = PersistReader.getMonVersionInfo(conn, null);
 
-		dbxCollector  = monRecordingInfo.getRecDbxAppName();
-		reportSrvName = monRecordingInfo.getDbmsServerName();
+			dbxCollector  = monRecordingInfo.getRecDbxAppName();
+			reportSrvName = monRecordingInfo.getDbmsServerName();
 
-		return conn;
+			return conn;
+		}
+		catch (SQLException ex)
+		{
+			// IF H2, make special things
+			if (jdbcUrl.startsWith("jdbc:h2:"))
+			{
+				// Message:   Unsupported database file version or invalid file header in file "C:/Users/goran/.dbxtune/dbxc/data/PROD_A1_ASE.mv.db" [90048-240]
+				// SQLState:  90048
+				// ErrorCode: 90048
+				// Trying to open an earlier DB File of H2 Version
+				if (ex.getErrorCode() == 90048 || ex.getMessage().contains("Unsupported database file version"))
+				{
+					_logger.error("=================================================================================");
+					_logger.error("== DSR: The H2 Database file is probably created with an earlier version of H2 ==");
+					_logger.error("=================================================================================");
+					_logger.error("== For the moment there is NO upgrade path for Collector databases.");
+					_logger.error("== WORKAROUND: ");
+					_logger.error("==  * Start a H2 Server with the old H2 Version (on the dbxcentral server).");
+					_logger.error("==    java -cp /path_to_dbxtune_software/lib/h2-olderVersion.jar org.h2.tools.Server -tcp -tcpPort #### -tcpAllowOthers -baseDir /path_to_dbxtune_data/.dbxtune/dbxc/data/");
+					_logger.error("==  * Connect to THAT server and create the DSR.");
+					_logger.error("==    jdbc:h2:tcp:####//dbxtune.acme.com/SERVERNAME_YYYY-MM-DD;IFEXISTS=TRUE");
+					_logger.error("=================================================================================");
+				}
+				String exStr = ""
+						+ "=================================================================================\n"
+						+ "== DSR: The H2 Database file is probably created with an earlier version of H2 ==\n"
+						+ "=================================================================================\n"
+						+ "== For the moment there is NO upgrade path for Collector databases.\n"
+						+ "== WORKAROUND: \n"
+						+ "==  * Start a H2 Server with the old H2 Version (on the dbxcentral server).\n"
+						+ "==    java -cp /path_to_dbxtune_software/lib/h2-olderVersion.jar org.h2.tools.Server -tcp -tcpPort #### -tcpAllowOthers -baseDir /path_to_dbxtune_data/.dbxtune/dbxc/data/\n"
+						+ "==  * Connect to THAT server and create the DSR.\n"
+						+ "==    jdbc:h2:tcp:####//dbxtune.acme.com/SERVERNAME_YYYY-MM-DD;IFEXISTS=TRUE\n"
+						+ "=================================================================================\n"
+						;
+				throw new Exception(exStr);
+			}
+			throw ex;
+		}
 	}
 
 //	@Override

@@ -116,7 +116,7 @@ public class AseErrorInfo extends AseAbstract
 				String  divId       = "errorSqlText";
 				boolean showAtStart = false;
 //				String  htmlContent = _sqlTextRstm.toHtmlTableString("sortable", colNameValueTagMap);
-				String  htmlContent = buildCollapsibleHtmlTableForErrors(_sqlTextRstm);
+				String  htmlContent = buildCollapsibleHtmlTableForErrors(_sqlTextRstm, _shortRstm);
 				
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Error SQL Text, for above errors (all text's may not be available)...", htmlContent);
 
@@ -342,28 +342,40 @@ public class AseErrorInfo extends AseAbstract
 		} 
 	}
 
-	private String buildCollapsibleHtmlTableForErrors(ResultSetTableModel rstm)
+	private String buildCollapsibleHtmlTableForErrors(ResultSetTableModel rstmSqlText, ResultSetTableModel rstmSummary)
 	{
+		Map<Integer, String> errorNumberDescMap = new HashMap<>();
+
+		// Copy all errorNumber / Messages from 'summary' to errorNumberDescMap
+		for (int r=0; r<rstmSummary.getRowCount(); r++)
+		{
+			Integer ErrorStatus  = rstmSummary.getValueAsInteger(r, "ErrorStatus" , true, -1);
+			String  ErrorMessage = rstmSummary.getValueAsString (r, "ErrorMessage", true, "");
+
+			errorNumberDescMap.put(ErrorStatus, ErrorMessage);
+		}
+		
+
 		Map<Integer, ResultSetTableModel> errorNumberMap = new LinkedHashMap<>();
 
-		int ErrorStatus_pos = rstm.findColumn("ErrorStatus");
+		int ErrorStatus_pos  = rstmSqlText.findColumn("ErrorStatus");
 
 		// Copy each ErrorStatus into it's own RSTM into the "errorNumberMap"
-		for (int r=0; r<rstm.getRowCount(); r++)
+		for (int r=0; r<rstmSqlText.getRowCount(); r++)
 		{
-			Integer ErrorStatus = rstm.getValueAsInteger(r, ErrorStatus_pos);
+			Integer ErrorStatus  = rstmSqlText.getValueAsInteger(r, ErrorStatus_pos);
 
 			// Get the RSTM for the ErrorStatus
 			ResultSetTableModel errRstm = errorNumberMap.get(ErrorStatus);
 			if (errRstm == null)
 			{
 				// Create empty RSTM (copy structure from input rstm) and place it in the map
-				errRstm = new ResultSetTableModel(rstm, "ErrorStatus-" + ErrorStatus, false);
+				errRstm = new ResultSetTableModel(rstmSqlText, "ErrorStatus-" + ErrorStatus, false);
 				errorNumberMap.put(ErrorStatus, errRstm);
 			}
 			
 			// Add the ErrorStatus "record" to the Destination RSTM
-			ArrayList<Object> errRow = rstm.getRowArrayList(r);
+			ArrayList<Object> errRow = rstmSqlText.getRowArrayList(r);
 			errRstm.addRow(errRow);
 		}
 
@@ -379,9 +391,10 @@ public class AseErrorInfo extends AseAbstract
 			Integer             key = entry.getKey();
 			ResultSetTableModel val = entry.getValue();
 			
+			String  errorDesc   = errorNumberDescMap.get(key);
 			String  divId       = "errorMessage_" + key;
 			boolean showAtStart = false;
-			String  label       = "<b>" + key + "</b> with " + val.getRowCount() + " entries."; // Possibly TODO -- Add "ErrorMessage" here (easier to identify that the ErrorNumber really is)
+			String  label       = "<b>" + key + "</b> with " + val.getRowCount() + " entries. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -- <i>" + errorDesc + "</i>";
 			String  htmlContent = val.toHtmlTableString("sortable", colNameValueTagMap);
 			
 			String showHideDiv = createShowHideDiv(divId, showAtStart, label, htmlContent);

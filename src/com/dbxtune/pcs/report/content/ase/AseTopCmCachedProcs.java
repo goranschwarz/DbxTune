@@ -295,7 +295,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 		// try to figure out if we have *new* diff values that exceeds (using column 'ExecutionCount')
 		if ( ! hasSkipNewDiffRateRows )
 		{
-			int executionCountThreshold = 10000;
+			int executionCountThreshold = 30000; // or possible do: ##### * numberOfEngines (and possibly involve sampleTime)
 			String sql = ""
 				    + "select count(*) \n"
 				    + "from [CmCachedProcs_diff] \n"

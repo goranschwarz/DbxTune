@@ -133,14 +133,103 @@ public class StatementNormalizer
 //				sb.replace(start, end, " IN (...)");
 //		}
 //
+
+		
+//		@Override
+//		public void visit(InExpression inExpression) 
+//		{
+//			StringBuilder sb = getBuffer();
+//			
+//			inExpression.getLeftExpression().accept(this);
+//			if (inExpression.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
+//				buffer.append("(+)");
+//			}
+//			if (inExpression.isNot()) {
+//				sb.append(" NOT");
+//			}
+//			sb.append(" IN ");
+//
+////System.out.println("---->>>> VISIT >> IN (xxx  xxx) ==== " + sb.toString());
+//
+//			if (inExpression.getRightExpression() != null) {
+//				inExpression.getRightExpression().accept(this);
+//			} else {
+//				inExpression.getRightItemsList().accept(this);
+//			}
+//
+//			// Get the just produced SQL... to decide if it's a SUB-SELECT or just static values, which can be normalized to '...'
+//			int start = sb.lastIndexOf(" IN ("); 
+//			int end   = start + " IN (".length();
+//			while (end < sb.length()) // Loop until we find the first end ')'  QUESTION: Should we keep track of "embedded ()" or is it enough to find next ')'
+//			{
+//				String ch = sb.substring(end, end + 1);
+////System.out.println("xxxxxxxxxxxxxxxxxxxxxxxxxxx: end=" + end + ", ch=|" + ch + "|");
+//				end++;
+//				if (")".equals(ch))
+//					break;
+//			}
+//
+//			// if it's NOT a sub-select... then: replace: "IN (?, ?, ?)" with "IN (...)" 
+//			// but KEEP all sub-selects
+//			String inSql = sb.substring(start, end);
+////System.out.println("<<<<---- VISIT >> IN (near-end) >>>> [start=" + start + ", end=" + end + "]: lastInSql=|" + inSql + "| ==== " + sb.toString());
+//			if ( ! inSql.contains("SELECT ") )
+//				sb.replace(start, end, " IN (...)");
+//		}
+//
+//		@Override
+//		public void visit(DoubleValue doubleValue) {
+//			this.getBuffer().append("?");
+//		}
+//
+//		@Override
+//		public void visit(HexValue hexValue) {
+//			this.getBuffer().append("?");
+//		}
+//
+//		@Override
+//		public void visit(LongValue longValue) {
+//			this.getBuffer().append("?");
+//		}
+//
+//		@Override
+//		public void visit(StringValue stringValue) {
+//			this.getBuffer().append("?");
+//		}
+//
+//		@Override
+//		public void visit(DateValue dateValue) {
+//			this.getBuffer().append("?");
+//		}
+//
+//		@Override
+//		public void visit(TimestampValue timestampValue) {
+//			this.getBuffer().append("?");
+//		}
+//
+//		@Override
+//		public void visit(TimeValue timeValue) {
+//			this.getBuffer().append("?");
+//		}
+//
+//		@Override
+//	    public void visit(UserVariable var) {
+//			String varStr = var.toString();
+//			// "@p0" or "@p9754" then do "?" because it's a "runtime value sent in dynamic sql"...
+//			// but if @someName then keep the original variable name
+//			if (varStr.matches("^@p[0-9]+$"))
+//				varStr = "?";
+//			this.getBuffer().append(varStr);
+//	    }
+
 		@Override
-		public void visit(InExpression inExpression) 
+		public StringBuilder visit(InExpression inExpression, Object context) 
 		{
-			StringBuilder sb = getBuffer();
+			StringBuilder sb = getBuilder();
 			
 			inExpression.getLeftExpression().accept(this);
 			if (inExpression.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
-				buffer.append("(+)");
+				getBuilder().append("(+)");
 			}
 			if (inExpression.isNot()) {
 				sb.append(" NOT");
@@ -152,7 +241,8 @@ public class StatementNormalizer
 			if (inExpression.getRightExpression() != null) {
 				inExpression.getRightExpression().accept(this);
 			} else {
-				inExpression.getRightItemsList().accept(this);
+//				inExpression.getRightItemsList().accept(this);
+				System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX. in jSqlParser 5.3 ... NO MORE: inExpression.getRightItemsList().accept(this)");
 			}
 
 			// Get the just produced SQL... to decide if it's a SUB-SELECT or just static values, which can be normalized to '...'
@@ -173,59 +263,71 @@ public class StatementNormalizer
 //System.out.println("<<<<---- VISIT >> IN (near-end) >>>> [start=" + start + ", end=" + end + "]: lastInSql=|" + inSql + "| ==== " + sb.toString());
 			if ( ! inSql.contains("SELECT ") )
 				sb.replace(start, end, " IN (...)");
+			
+			return null;
 		}
 
 		@Override
-		public void visit(DoubleValue doubleValue) {
-			this.getBuffer().append("?");
+		public StringBuilder visit(DoubleValue doubleValue, Object context) {
+			this.getBuilder().append("?");
+			return null;
 		}
 
 		@Override
-		public void visit(HexValue hexValue) {
-			this.getBuffer().append("?");
+		public StringBuilder visit(HexValue hexValue, Object context) {
+			this.getBuilder().append("?");
+			return null;
 		}
 
 		@Override
-		public void visit(LongValue longValue) {
-			this.getBuffer().append("?");
+		public StringBuilder visit(LongValue longValue, Object context) {
+			this.getBuilder().append("?");
+			return null;
 		}
 
 		@Override
-		public void visit(StringValue stringValue) {
-			this.getBuffer().append("?");
+		public StringBuilder visit(StringValue stringValue, Object context) {
+			this.getBuilder().append("?");
+			return null;
 		}
 
 		@Override
-		public void visit(DateValue dateValue) {
-			this.getBuffer().append("?");
+		public StringBuilder visit(DateValue dateValue, Object context) {
+			this.getBuilder().append("?");
+			return null;
 		}
 
 		@Override
-		public void visit(TimestampValue timestampValue) {
-			this.getBuffer().append("?");
+		public StringBuilder visit(TimestampValue timestampValue, Object context) {
+			this.getBuilder().append("?");
+			return null;
 		}
 
 		@Override
-		public void visit(TimeValue timeValue) {
-			this.getBuffer().append("?");
+		public StringBuilder visit(TimeValue timeValue, Object context) {
+			this.getBuilder().append("?");
+			return null;
 		}
 
 		@Override
-	    public void visit(UserVariable var) {
+	    public StringBuilder visit(UserVariable var, Object context) {
 			String varStr = var.toString();
 			// "@p0" or "@p9754" then do "?" because it's a "runtime value sent in dynamic sql"...
 			// but if @someName then keep the original variable name
 			if (varStr.matches("^@p[0-9]+$"))
 				varStr = "?";
-			this.getBuffer().append(varStr);
+			this.getBuilder().append(varStr);
+			return null;
 	    }
-
 	}
 
 	private StringBuilder      _buffer;
 	private ExpressionDeParser _exprDeParser;
 	private SelectDeParser     _selectDeParser;
 	private StatementDeParser  _stmtDeParser;
+
+	private transient JSQLParserException _lastParserException;
+	private transient JSQLParserException _firstParserException;
 
 	public StatementNormalizer()
 	{
@@ -235,7 +337,7 @@ public class StatementNormalizer
 		_stmtDeParser   = new StatementDeParser(_exprDeParser, _selectDeParser, _buffer);
 
 		_exprDeParser.setSelectVisitor(_selectDeParser);
-		_exprDeParser.setBuffer(_buffer);
+		_exprDeParser.setBuilder(_buffer);
 	}
 
 	public String normalizeStatement(String sql, List<String> tableList) 
@@ -330,6 +432,15 @@ public class StatementNormalizer
 		return sqlText;
 	}
 
+	public JSQLParserException getFirstParserException()
+	{
+		return _firstParserException;
+	}
+	public JSQLParserException getLastParserException()
+	{
+		return _lastParserException;
+	}
+
 	/**
 	 * Normalize SQL Text - translate all constants in SQL into question marks(?) so we can create a HashCode to easier group SQL text in reporting  
 	 * @param sqlText
@@ -345,13 +456,20 @@ public class StatementNormalizer
 		np.addStatus = AddStatus.NONE;
 
 		String normalizedSqlText = null;
+		JSQLParserException firstParserException = null;
+		JSQLParserException lastParserException = null;
 
 		try
 		{
 			// Pre Parse: for example rewrites: |exec procname "a"| -->> |exec procname 'a'|
 			sqlText = preParseStatement(sqlText);
 
-			// Parse and normalize: rewrite: |select * from 'a'| -->> |select * from ?|
+			//---------------------------------------------------------------------------------------------------------
+			// Parse and normalize: rewrite: |select * from t1 where c1 = 'a'| -->> |select * from t1 where c1 = ?|
+			//
+			// NOTE: Unfortunately JSQLParser does NOT support "keep comments"...
+			//       So:          |SELECT /* dummy-comment */ * FROM t1 where 1=1|
+			//       will become: |SELECT * FROM t1 WHERE ? = ?|
 			normalizedSqlText = normalizeStatement(sqlText, tableList);
 			
 			np.addStatus = AddStatus.NORMALIZE_SUCCESS_LEVEL_1;
@@ -360,18 +478,26 @@ public class StatementNormalizer
 		}
 		catch(JSQLParserException ex)
 		{
+			firstParserException = ex;
+			lastParserException = ex;
+
 			// go into "FIX/Workaround" the parse problem
 			// - Rewrite the SQL Statement, and comment out "known" sections where we know that the parser wont work.
 			// - Then parse the Statement again
 			// - set the "AddStatus" to XXX to indicate that this was made.
 
 			_statNormalizeErrorLevel1Count++;
-			
-			// Before we go and parse/normalize the SQL Text... check if we can short-circuit things...
+
+			//TODO; (Possibly) We probably NEED to PASS the Exception to 'getNormalizerAction(...)'
+			// So we DONT "jump to conclusions" of "resolver" we want to use
+			// For example we can't use StatementFixerDoubleQuotes2SingleQuotes for a SQL Statement with QuotedIdentifiers (select t."col1" from "table-one" t)
+
+			// Before we go and re-parse the SQL Text... check if we can short-circuit things (making a STATIC REPLACEMENT String)
 			NomalizerAction normAction = getNormalizerAction(sqlText);
 			
 			switch (normAction)
 			{
+			// This is really NO rewrite -- It's a REPLACEMENT of the SQL Text with something "static" -- Since it's not worth re-parsing the SQL Again
 			case DO_USER_DEFINED_NORMALIZATION:
 				normalizedSqlText = userDefinedNormalizeStatement(sqlText);
 				np.addStatus = AddStatus.NORMALIZE_STATIC_REPLACE;
@@ -386,6 +512,8 @@ public class StatementNormalizer
 				_statNormalizeSkipCount++;
 				break;
 
+			// We will end up in this section most cases (since if getNormalizerAction(sqlText) does NOT find any STATIC REPLACEMENT)
+			// In here any "fixer" implementation will REWRITE the SQL and PARSE it again!
 			case DO_REWRITE:
 			{
 				// go into "Workaround/ReWrite" the SQL Text we had problems with (the parser do not accept everything)
@@ -400,9 +528,9 @@ public class StatementNormalizer
 				// Get available "ReWrites" and apply them
 				for (IStatementFixer fixer : StatementFixerManager.getInstance().getFixerEntries())
 				{
-//					if (_logger.isDebugEnabled())
-//						_logger.debug("normalizeSqlText(): Checking Rewrite: name='" + fixer.getName() + "', isRewritable=" + fixer.isRewritable(sqlText) + ", SQL=|" + sqlText + "|");
-					
+					if (_logger.isDebugEnabled())
+						_logger.debug("normalizeSqlText(): Checking Rewrite: fixerName='" + fixer.getName() + "', isRewritable=" + fixer.isRewritable(sqlText) + ", SQL=|" + sqlText + "|");
+
 					// Is this "fixer" valid for this SQL Text?
 					if (fixer.isRewritable(sqlText))
 					{
@@ -413,12 +541,14 @@ public class StatementNormalizer
 						rewriteComments.add(fixer.getComment());
 						isRewritten = true;
 						
-//						System.out.println("  ++ SQL REWITE TO: " + sqlText);
+						if (_logger.isDebugEnabled())
+							_logger.debug("normalizeSqlText(): SQL RE-WITE: fixerName='" + fixer.getName() + "', NEW-SQL=|" + sqlText + "|");
 					}
-//					else
-//					{
-//						System.out.println("<< SKIPPING REWRITE: name='" + fixer.getName() + "', sqlText=|" + sqlText +"|");
-//					}
+					else
+					{
+						if (_logger.isDebugEnabled())
+							_logger.debug("normalizeSqlText(): SKIPPING REWRITE: fixerName='" + fixer.getName() + "'.");
+					}
 				}
 
 				// If we got a re-write... try to parse the "new" SQL Text
@@ -430,6 +560,8 @@ public class StatementNormalizer
 
 					try
 					{
+						lastParserException = null;
+
 						// Parse and normalize
 						normalizedSqlText = normalizeStatement(sqlText, tableList);
 
@@ -444,6 +576,8 @@ public class StatementNormalizer
 					}
 					catch(JSQLParserException ex2)
 					{
+						lastParserException = ex2;
+
 						failedInParseAfterReWrite = true;
 
 						normalizedSqlText = null;
@@ -468,6 +602,10 @@ public class StatementNormalizer
 				{
 					try
 					{
+						// If we are JUST going to add "EXEC " in front of SQL and test again... 
+						// Then we don't want to save that exception Exception as a "END Exception" 
+						//lastParserException = null;
+
 						// pretend it's a Stored Procedure EXECution
 						sqlText = "exec " + sqlText;
 
@@ -482,6 +620,10 @@ public class StatementNormalizer
 					}
 					catch(JSQLParserException ex3)
 					{
+						// If we are JUST going to add "EXEC " in front of SQL and test again... 
+						// Then we don't want to save that exception Exception as a "END Exception" 
+						// lastParserException = ex3;
+
 						normalizedSqlText = null;
 						_statNormalizeErrorLevel3Count++;
 						np.addStatus = AddStatus.NORMALIZE_FAILED;
@@ -507,6 +649,9 @@ public class StatementNormalizer
 			} // end: case {} block
 			} // end: switch
 		}
+		
+		_firstParserException = firstParserException;
+		_lastParserException  = lastParserException;
 		
 		return normalizedSqlText;
 	}
@@ -549,12 +694,23 @@ public class StatementNormalizer
 		// Check USER DEFINED Normalizers
 		for (IUserDefinedNormalizer entry : UserDefinedNormalizerManager.getInstance().getUserDefinedEntries())
 		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("getNormalizerAction ... NORMALIZER.name=" + entry.getName() + ", SQL: " + sql);
+			
 //			if (_logger.isDebugEnabled())
 //				_logger.debug("getNormalizerAction(): Checking UD Normalize: name='" + entry.getName() + "', isHandled=" + entry.isHandled(sql) + ", SQL=|" + sql + "|");
 
 			if (entry.isHandled(sql))
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("getNormalizerAction ... <<<<< DO_USER_DEFINED_NORMALIZATION, SQL: " + sql);
+
 				return NomalizerAction.DO_USER_DEFINED_NORMALIZATION;
+			}
 		}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("getNormalizerAction ... <<<<< DO_REWRITE, SQL: " + sql);
 
 		return NomalizerAction.DO_REWRITE;
 	}
@@ -696,6 +852,12 @@ public class StatementNormalizer
 		test(sn, "select T1.M_NB from ACG_ENTRY_VIEW_DBF T1  where ((((1 > 0) and (T1.M_EN_DATE<='20211231')) and T1.M_ENTITY in ('SEK AB','SEK S-SECT')) and (M_NB in ( select AE.M_NB from ACG_ENTRY_DBF AE where AE.M_NB > ( select max(M_NB) from ACCTOXOR_ID_DBF where M_SYS_DATE < (select M_ACC_DATE from TRN_ENTD_DBF where M_LABEL='SEK AB'     ))) ))");
 		test(sn, "delete MPAUD_BD_DBF where MPAUD_BD_DBF.M_LINK IN ( select MPAUD_HD_DBF.M_LINK from MPAUD_HD_DBF where MPAUD_HD_DBF.M_PARAMDATE = '20150107' )");
 		test(sn, "select * from t1 where c1 in (select c2 from t2 where c2 in (select c3 from t3 where c3 in ('val-3-1', 'val-3-2') or c3 in (select c4 from t4 where c4 in ('val-4-1', 'val-4-2') ) )) or c1 in ('val-1-1')");
+
+		test(sn, "");
+		test(sn, "");
+		test(sn, "");
+		test(sn, "");
+		test(sn, "");
 	}
 
 	private static String test(StatementNormalizer sn, String sql)

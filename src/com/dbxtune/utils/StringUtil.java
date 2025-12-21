@@ -2305,17 +2305,23 @@ public class StringUtil
 	public static boolean parseBoolean(String str, boolean defaultValue)
 	{
 		if (str == null)
-			return false;
+			return defaultValue;
 
 		str = str.trim();
 
 		// We could also test for "yes" and similar
-		if (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("1"))
-			return true;
+		if (str.equalsIgnoreCase("true")) return true;
+		if (str.equalsIgnoreCase("t"   )) return true;
+		if (str.equalsIgnoreCase("yes" )) return true;
+		if (str.equalsIgnoreCase("y"   )) return true;
+		if (str.equalsIgnoreCase("1"   )) return true;
 
 		// We could also test for "no" and similar
-		if (str.equalsIgnoreCase("false") || str.equalsIgnoreCase("0"))
-			return false;
+		if (str.equalsIgnoreCase("false")) return false;
+		if (str.equalsIgnoreCase("f"    )) return false;
+		if (str.equalsIgnoreCase("no"   )) return false;
+		if (str.equalsIgnoreCase("n"    )) return false;
+		if (str.equalsIgnoreCase("0"    )) return false;
 
 		return defaultValue;
 	}

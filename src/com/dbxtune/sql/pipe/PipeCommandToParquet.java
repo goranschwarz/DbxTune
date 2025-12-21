@@ -510,6 +510,18 @@ extends PipeCommandAbstract
 //				}
 //			}
 
+			// TODO: use 'https://github.com/manticore-projects/JDBCParquetWriter' for this
+			//       OR look at 'https://github.com/manticore-projects/JDBCParquetWriter/blob/main/src/main/java/com/manticore/jdbc/parquetwriter/JDBCParquetWriter.java' how it's implemented... it's approx 500 rows...
+//			String tableName = "execution_ref";
+//			File file = File.createTempFile(tableName, ".parquet");
+//
+//			String sqlStr = "SELECT * FROM " + tableName;
+//			try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(sqlStr);) 
+//			{
+//				JDBCParquetWriter.write(file, tableName, rs);
+//			}
+			
+			
 			int totalCount = 0;
 
 			// READ all rows from the ResultSet

@@ -29,12 +29,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -61,9 +63,9 @@ public class AseStmntCacheBloatDetect
 	private Map<String, Map<String, StmntEntry>> _dbStmntMap = new LinkedHashMap<>();
 	//          dbname      normHash 
 
+	private int     _duplicateThreshold = Configuration.getCombinedConfiguration().getIntProperty    ("AseStmntCacheBloatDetect.duplicateThreshold", 10);
 	private boolean _printAvgStat       = Configuration.getCombinedConfiguration().getBooleanProperty("AseStmntCacheBloatDetect.printAvgStat"  , false);
 	private boolean _printTotalStat     = Configuration.getCombinedConfiguration().getBooleanProperty("AseStmntCacheBloatDetect.printTotalStat", false);
-	private int     _duplicateThreshold = Configuration.getCombinedConfiguration().getIntProperty    ("AseStmntCacheBloatDetect.duplicateThreshold", 10);
 
 	private int _parseErrorCount = 0;
 
@@ -117,13 +119,22 @@ public class AseStmntCacheBloatDetect
 
 		public String getLastUsedDateAsString()
 		{
-			if (_cachedDate == null)
+			if (_lastUsedDate == null)
 				return "----------null---------";
 			//          2018-01-08 09:56:53.716
 
 			return TimeUtils.toString(_lastUsedDate);
 		}
 		
+		public String getCacheAgeAsHMS()
+		{
+			if (_cachedDate == null)
+				return "--null--";
+			//          09:56:53
+			long secondsSinceCached = (System.currentTimeMillis() - _cachedDate.getTime()) / 1000;
+			return TimeUtils.secToTimeStrLong(secondsSinceCached);
+			
+		}
 	}
 
 	private static class StmntEntry
@@ -159,30 +170,7 @@ public class AseStmntCacheBloatDetect
 		_ps = printStream != null ? printStream : System.out;
 	}
 
-	public static void main(String[] args)
-	{
-		// DBA_1_ASE
-//		String url = "jdbc:sybase:Tds:dba-1-ase:5000/master";  // Context
-
-		// PROD_A1_ASE
-		String url = "jdbc:sybase:Tds:prod-a1-ase:5000/master";
-
-		String user   = "sa";
-		String passwd = "sjhyr564s_Wq26kl73";
-
-		try
-		{
-			DbxConnection conn = AseStmntCacheBloatDetect.connect(url, user, passwd, System.out);
-
-			AseStmntCacheBloatDetect.doWork(conn, true, System.out, 10);
-		}
-		catch (SQLException ex)
-		{
-			ex.printStackTrace();
-		}
-	}
-
-	public static void doWork(DbxConnection conn, boolean closeConnection, PrintStream printStream, int duplicateThreshold)
+	public static void doWork(DbxConnection conn, boolean closeConnection, PrintStream printStream, int duplicateThreshold, boolean printAvgStat, boolean printTotalStat)
 	throws SQLException
 	{
 		if (conn == null)
@@ -191,6 +179,8 @@ public class AseStmntCacheBloatDetect
 		AseStmntCacheBloatDetect bd = new AseStmntCacheBloatDetect(printStream);
 		bd._conn = conn;
 		bd._duplicateThreshold = duplicateThreshold;
+		bd._printAvgStat       = printAvgStat;
+		bd._printTotalStat     = printTotalStat;
 		
 		bd.printReportPrologue();
 
@@ -222,7 +212,8 @@ public class AseStmntCacheBloatDetect
 			    + "    ,TotalPIO \n"
 			    + "    ,TotalCpuTime \n"
 			    + "    ,TotalElapsedTime \n"
-			    + "    ,show_cached_text(SSQLID) as SQLText \n"
+//			    + "    ,show_cached_text(SSQLID) as SQLText \n"
+			    + "    ,show_cached_text_long(SSQLID) as SQLText \n"
 			    + "FROM master.dbo.monCachedStatement \n"
 			    + "ORDER BY LastUsedDate DESC \n"
 			    + "";
@@ -272,12 +263,6 @@ public class AseStmntCacheBloatDetect
 				// Cleanup the SQL a bit 
 				//----------------------------------------------
 
-				// remove all '\n' 
-				sqlText = sqlText.replace('\n', ' ');
-
-				// and potentially extra spaces
-				sqlText = sqlText.replaceAll("\\s+", " ");
-
 				// trim
 				sqlText = sqlText.trim();
 
@@ -287,7 +272,7 @@ public class AseStmntCacheBloatDetect
 				if (sqlText.endsWith(")"))
 				{
 					String before = sqlText;
-					String after  = removeLastSybaseXxx(sqlText);
+					String after  = removeLastSybaseStatementCacheSpecifics(sqlText);
 					
 					if ( ! before.equals(after) )
 					{
@@ -301,13 +286,44 @@ public class AseStmntCacheBloatDetect
 				// Translate special variables @@@ into "normal" variables
 				sqlText = sqlText.replace("@@@", "@");
 
+				// remove any potential: PLAN '(...)'
+				sqlText = removePlanHints(sqlText);
+				
+				// remove all "single line comments" like: select a,b,c -- Remove this comment until eol
+				// If not when removing all "\n"... we will simply comment out "everything" after first '--'
+				// Regex explanation:
+				//   '--'     matches the literal comment start
+				//   '[^\n]*' matches any characters except newline (zero or more times)
+				sqlText= sqlText.replaceAll("--[^\n]*", "");
+
+				// and potentially extra spaces
+				sqlText = sqlText.replaceAll("\\s+", " ");
+
+				// trim
+				sqlText = sqlText.trim();
+
 //				String normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters, tableList);
 				String normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, null, null);
 
+				Exception firstParseEx = StatementNormalizer.getInstance().getLastParserException();
+				Exception lastParseEx  = StatementNormalizer.getInstance().getLastParserException();
+				String firstParseExStr = null;
+				String lastParseExStr  = null;
+				if (firstParseEx != null) { firstParseExStr = (firstParseEx + "").replace('\n', ' '); }
+				if (lastParseEx  != null) { lastParseExStr  = (lastParseEx  + "").replace('\n', ' '); }
+
+				// Compose a "Exception" String to append...
+				String exStr = "";
+				if (firstParseExStr != null && lastParseExStr != null && firstParseExStr.equals(lastParseExStr))
+					exStr = "   ----- Exception: " + firstParseExStr;
+				else
+					exStr = "   ----- FirstException: " + firstParseExStr + ", LastException: " + lastParseExStr;
+
+				// Parse FAILED
 				if (normalizedSqlText == null)
 				{
 					_parseErrorCount++;
-					_ps.println("   >>> WARNING: Problems parsing, skipping and continuing... sqlText=|" + sqlText + "|.");
+					_ps.println("   -->>> WARNING: Problems parsing, skipping and continuing... sqlText=|" + sqlText + "|. " + exStr);
 					
 //					if (_parseErrorCount > 20)
 //						return;
@@ -361,7 +377,7 @@ public class AseStmntCacheBloatDetect
 	}
 	
 
-	private String removeLastSybaseXxx(String sqlText)
+	private String removeLastSybaseStatementCacheSpecifics(String sqlText)
 	{
 		int end = sqlText.length() - 1;
 		if ( sqlText.charAt(end) != ')' )
@@ -404,6 +420,26 @@ public class AseStmntCacheBloatDetect
 		{
 			return sqlText;
 		}
+	}
+
+	private static final Pattern PLAN_PATTERN = Pattern.compile("\\s+PLAN\\s+'[^']*'", Pattern.CASE_INSENSITIVE);
+	/**
+	 * Removes Sybase ASE PLAN hints from SQL statements
+	 * @param sql The SQL statement to clean
+	 * @return The cleaned SQL statement
+	 */
+	public static String removePlanHints(String sql) 
+	{
+		if (sql == null || sql.isEmpty()) 
+			return sql;
+        
+		// Remove PLAN clauses with quotes
+		String cleaned = PLAN_PATTERN.matcher(sql).replaceAll("");
+
+		// Clean up any extra whitespace that may have been left
+//		cleaned = cleaned.replaceAll("\\s+", " ").trim();
+
+		return cleaned;
 	}
 
 	//	private void sort()
@@ -512,6 +548,8 @@ public class AseStmntCacheBloatDetect
 		int bloatStmntCount = 0;
 		int bloatStmntCountAboveThreshold = 0;
 
+		NumberFormat nf = NumberFormat.getInstance();
+
 		for (Entry<String, Map<String, StmntEntry>> dbEntry : _dbStmntMap.entrySet())
 		{
 			String dbname = dbEntry.getKey();
@@ -551,20 +589,39 @@ public class AseStmntCacheBloatDetect
 
 					bloatStmntCountAboveThreshold++;
 
+					String extraInfo = "";
+					if (stmntEntry._normalizedSqlText.contains(" IN (...)"))
+					{
+						extraInfo = ", Contains IN (...)";
+					}
+
 					_ps.println();
-					_ps.println("Count: " + stmntEntry._stmntCacheDetailsEntrySet.size() + ", Type=" + type);
+					_ps.println("Count: " + stmntEntry._stmntCacheDetailsEntrySet.size() + ", Type=" + type + extraInfo);
 //					_ps.println("    >>>>> Normalized SQL = " + stmntEntry._normalizedSqlText);
-					_ps.println("    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> sumPlanSizeKB=" + stmntEntry._sumPlanSizeKB + " >>>>>>>>>>>>>>> Normalized SQL = " + stmntEntry._normalizedSqlText);
-					
+					_ps.println("    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> sumPlanSizeKB=" + stmntEntry._sumPlanSizeKB + " >>>>>>>>>>>>>>> Normalized SQL = " + stmntEntry._normalizedSqlText);
+
+					long sum_maxPlanSizeKb    = 0;
+					long sum_totalLIO         = 0;
+					long sum_totalPIO         = 0;
+					long sum_totalCpuTime     = 0;
+					long sum_totalElapsedTime = 0;
+
 					int cnt = 0;
 					for (StmntCacheDetailsEntry stmntCacheDetailsEntry : stmntEntry._stmntCacheDetailsEntrySet)
 					{
 						cnt++;
+
+						sum_maxPlanSizeKb    += stmntCacheDetailsEntry._maxPlanSizeKB   ;
+						sum_totalLIO         += stmntCacheDetailsEntry._totalLIO        ;
+						sum_totalPIO         += stmntCacheDetailsEntry._totalPIO        ;
+						sum_totalCpuTime     += stmntCacheDetailsEntry._totalCpuTime    ;
+						sum_totalElapsedTime += stmntCacheDetailsEntry._totalElapsedTime;
 						
 //						_ps.println("    Entry: " + cnt + ", Origin SQL = " + originSql);
 						_ps.println("    Entry: " + cnt 
 								+ ", UseCount="         + stmntCacheDetailsEntry._useCount
 								+ ", lastUsedDate="     + stmntCacheDetailsEntry.getLastUsedDateAsString()
+								+ ", createAge="        + stmntCacheDetailsEntry.getCacheAgeAsHMS()
 								+ ", maxPlanSizeKB="    + stmntCacheDetailsEntry._maxPlanSizeKB
 								+ ( _printAvgStat ? (""
         								+ ", avgLIO="           + stmntCacheDetailsEntry._avgLIO 
@@ -573,7 +630,7 @@ public class AseStmntCacheBloatDetect
         								+ ", avgElapsedTime="   + stmntCacheDetailsEntry._avgElapsedTime
     								) : ""
 								)
-								+ ( _printAvgStat ? (""
+								+ ( _printTotalStat ? (""
         								+ ", totalLIO="         + stmntCacheDetailsEntry._totalLIO 
         								+ ", totalPIO="         + stmntCacheDetailsEntry._totalPIO 
         								+ ", totalCpuTime="     + stmntCacheDetailsEntry._totalCpuTime 
@@ -582,10 +639,21 @@ public class AseStmntCacheBloatDetect
 								)
 								+ ", Origin SQL = "     + stmntCacheDetailsEntry._sqlText
 								);
-					}
-				}
-			}
-		}
+					} // end: stmntCacheDetailsEntry
+
+					_ps.println("    SUM: "
+							+ "maxPlanSizeKB="      + nf.format(sum_maxPlanSizeKb) 
+							+ "; totalLIO="         + nf.format(sum_totalLIO)
+							+ "; totalPIO="         + nf.format(sum_totalPIO)
+							+ "; totalCpuTime="     + TimeUtils.msToTimeStrDHMSms(sum_totalCpuTime) 
+							+ "; totalElapsedTime=" + TimeUtils.msToTimeStrDHMSms(sum_totalElapsedTime) 
+							);
+
+				} // end: if (size >= _duplicateThreshold)
+				
+			} // end: for (StmntEntry stmntEntry : hashStmntEntry.values())
+			
+		} // end: for (Entry<String, Map<String, StmntEntry>> dbEntry : _dbStmntMap.entrySet())
 		
 		_ps.println("");
 		_ps.println("Found " + bloatStmntCount + " Bloated Statements, where " + bloatStmntCountAboveThreshold + " had more than " + _duplicateThreshold + " duplicates.");
@@ -626,5 +694,65 @@ public class AseStmntCacheBloatDetect
 	{
 		if (_conn != null)
 			_conn.close();
+	}
+
+	public static void main(String[] args)
+	{
+		final int defaultDuplicateThreshold = 10;
+
+//		System.out.println("args=" + args.length);
+		if (args.length < 3)
+		{
+			System.out.println("");
+			System.out.println("ERROR: Missing some parameters");
+			System.out.println("");
+			System.out.println("Usage: url/Hostname:port username password [duplicateThreshold] [printAvgStat] [printTotalStat]");
+			System.out.println("");
+			System.out.println("Example 1: dbxtune.sh com.dbxtune.tools.AseStmntCacheBloatDetect prod-a1-ase.acme.com:5000 sa secretPassword");
+			System.out.println("Example 2: dbxtune.sh com.dbxtune.tools.AseStmntCacheBloatDetect jdbc:sybase:Tds:prod-a1-ase:5000/master sa secretPassword");
+			System.out.println("Example 3: dbxtune.sh com.dbxtune.tools.AseStmntCacheBloatDetect jdbc:sybase:Tds:prod-a1-ase:5000/master sa secretPassword");
+			System.out.println("");
+			System.out.println("Note: If you run on Windows, repace '.sh' with '.bat'");
+			System.out.println("");
+			System.exit(1);
+		}
+
+		// PROD_A1_ASE
+//		String url = "jdbc:sybase:Tds:prod-a1-ase:5000/master";
+		String url    = args[0];
+		String user   = args[1];
+		String passwd = args[2];
+		int     duplicateThreshold = args.length > 3 ? StringUtil.parseInt(args[3], defaultDuplicateThreshold)     : defaultDuplicateThreshold;
+		boolean printAvgStat       = args.length > 4 ? StringUtil.parseInt(args[4], 0                        ) > 0 : false;
+		boolean printTotalStat     = args.length > 5 ? StringUtil.parseInt(args[5], 0                        ) > 0 : false;
+		
+		if ( ! url.startsWith("jdbc:sybase:Tds:") )
+		{
+			url = "jdbc:sybase:Tds:" + url;
+		}
+		
+		System.out.println("");
+		System.out.println("##============================================================================");
+		System.out.println("## URL:                " + url);
+		System.out.println("## Username:           " + user);
+		System.out.println("## Password:           " + "**secret**");
+		System.out.println("## duplicateThreshold: " + duplicateThreshold);
+		System.out.println("## printAvgStat:       " + printAvgStat);
+		System.out.println("## printTotalStat:     " + printTotalStat);
+		System.out.println("##----------------------------------------------------------------------------");
+		System.out.println("");
+
+		try
+		{
+			System.out.println(" - Connectiong to URL: " +url);
+			DbxConnection conn = AseStmntCacheBloatDetect.connect(url, user, passwd, System.out);
+
+			System.out.println(" - Executing AseStmntCacheBloatDetect");
+			AseStmntCacheBloatDetect.doWork(conn, true, System.out, duplicateThreshold, printAvgStat, printTotalStat);
+		}
+		catch (SQLException ex)
+		{
+			ex.printStackTrace();
+		}
 	}
 }

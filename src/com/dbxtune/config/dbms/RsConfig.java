@@ -100,9 +100,9 @@ extends DbmsConfigAbstract
 	//   ColumnName,           Editable, JTable type,   JDBC Type      JDBC Length JDBC Scale /* SQL Datatype,    */ Tooltip
 	//   --------------------- --------- -------------- -------------- ----------- ---------- /* ---------------- */ --------------------------------------------
 		{NON_DEFAULT,          false,    Boolean.class, Types.BOOLEAN, -1,         -1,        /* "bit",           */ "True if the value is not configured to the default value."},
-		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 60,         -1,        /* "varchar(60)",   */ "Configuration Group"},
-		{INSTANCE_NAME,        true,     String .class, Types.VARCHAR, 60,         -1,        /* "varchar(60)",   */ "Instance name, for example a Connection name"},
-		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 60,         -1,        /* "varchar(60)",   */ "Name of the configuration, same as the name in ra_config."},
+		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Configuration Group"},
+		{INSTANCE_NAME,        true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Instance name, for example a Connection name"},
+		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Name of the configuration, same as the name in ra_config."},
 		{CONFIG_VALUE,         true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Value of the configuration."},
 		{RUN_VALUE,            true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "RUN Value of the configuration."},
 		{DEFAULT_VALUE,        true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "The default configuration value."},

@@ -168,7 +168,7 @@ public abstract class CheckForUpdates
 
 //	static
 //	{
-//		_logger.setLevel(Level.DEBUG);
+//		Configurator.setLevel(MethodHandles.lookup().lookupClass(), Level.DEBUG);
 //	}
 
 	protected boolean useHttpPost()             { return _useHttpPost; }
