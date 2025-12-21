@@ -403,7 +403,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		// try to figure out if we have *new* diff values that exceeds (using column 'ExecutionCount')
 		if ( ! hasSkipNewDiffRateRows )
 		{
-			int useCountThreshold = 10000;
+			int useCountThreshold = 30000; // or possible do: ##### * numberOfEngines (and possibly involve sampleTime)
 			String sql = ""
 				    + "select count(*) \n"
 				    + "from [CmStmntCacheDetails_diff] \n"
@@ -904,6 +904,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				if (StringUtil.hasValue(col_LioDiff__chart         )) htp.add("l-read"     , new ColumnCopyRow().add( new ColumnCopyDef("LioDiff__chart"         ) ).add(new ColumnCopyDef("TotalLio__sum"                 ) ).add(new ColumnCopyDef("AvgLIO"             , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
 				if (StringUtil.hasValue(col_LioDiffMb__chart       )) htp.add("l-read-mb"  , new ColumnCopyRow().add( new ColumnCopyDef("LioDiffMb__chart"       ) ).add(new ColumnCopyDef("TotalLioMb__sum"               ) ).add(new ColumnCopyDef("AvgLioMb"           , oneDecimal).setColBold()).add(new ColumnStatic("mb" )) );
 				if (StringUtil.hasValue(col_PioDiff__chart         )) htp.add("p-read"     , new ColumnCopyRow().add( new ColumnCopyDef("PioDiff__chart"         ) ).add(new ColumnCopyDef("TotalPio__sum"                 ) ).add(new ColumnCopyDef("AvgPIO"             , oneDecimal).setColBold()).add(new ColumnStatic("pgs")) );
+				if (StringUtil.hasValue(col_AvgScanRows            )) htp.add("scan-rows"  , new ColumnCopyRow().addEmptyCol()                                      .addEmptyCol()                                            .add(new ColumnCopyDef("AvgScanRows"                    ).setColBold()).add(new ColumnStatic("#")) );
+				if (StringUtil.hasValue(col_AvgQualifyingReadRows  )) htp.add("qual-r-rows", new ColumnCopyRow().addEmptyCol()                                      .addEmptyCol()                                            .add(new ColumnCopyDef("AvgQualifyingReadRows"          ).setColBold()).add(new ColumnStatic("#")) );
+				if (StringUtil.hasValue(col_AvgQualifyingWriteRows )) htp.add("qual-w-rows", new ColumnCopyRow().addEmptyCol()                                      .addEmptyCol()                                            .add(new ColumnCopyDef("AvgQualifyingReadRows"          ).setColBold()).add(new ColumnStatic("#")) );
 				if (StringUtil.hasValue(col_LockWaitsDiff__chart   )) htp.add("lock-waits" , new ColumnCopyRow().add( new ColumnCopyDef("LockWaitsDiff__chart"   ) ).add(new ColumnCopyDef("LockWaits__sum"                ) ).add(new ColumnCopyDef("AvgLockWaits"       , oneDecimal).setColBold()).add(new ColumnStatic("#")) );
 				if (StringUtil.hasValue(col_LockWaitTimeDiff__chart)) htp.add("lock-wtime" , new ColumnCopyRow().add( new ColumnCopyDef("LockWaitTimeDiff__chart") ).add(new ColumnCopyDef("LockWaitTime__sum"    , msToHMS) ).add(new ColumnCopyDef("AvgLockWaitTime"    , oneDecimal).setColBold()).add(new ColumnStatic("ms")) );
 				if (StringUtil.hasValue(col_SortCount__chart       )) htp.add("sort-cnt"   , new ColumnCopyRow().add( new ColumnCopyDef("SortCount__chart"       ) ).add(new ColumnCopyDef("SortCount__sum"                ) ).add(new ColumnCopyDef("AvgSortCount"       , oneDecimal).setColBold()).add(new ColumnStatic("#")) );

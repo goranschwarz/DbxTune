@@ -17,11 +17,245 @@ h3 { border-bottom: 1px solid black; border-top: 1px solid black; margin-bottom:
 
 <FONT SIZE="6" COLOR="red">A new Version of AseTune is Available.</FONT><br>
 Even if AseTune tells you've got the latest version, there is a new one.<br>
-Download it at <A HREF="http://www.dbxtune.com/download.html">http://www.dbxtune.com/download.html</A><br>
+Download it at <A HREF="https://dbxtune.com/#download">https://dbxtune.com/#download</A><br>
 or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourceforge.net/projects/asetune/files/</A><br>
 <br>
-
 <H1>History of what has been done so far</H1>
+
+<!-- ========================================================================== -->
+<H2>YYYY-MM-DD</H2>
+<UL>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Generic - MAJOR Changes That affects all DbxTune tools</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+<!-- 	<LI><b>Now java 17 is needed</b></LI> -->
+		<LI>xxx</LI>
+<!-- 	<LI>Internal <i>stuff</i>... Rewrote a bunch of constructs to be able to move to Java 17 or 21. (Java 17 is needed to upgrade to Jetty 12.x, which will be done soon)</LI>  -->
+	</UL>
+	<!-- ~~~end-of-generic-major-changes~~~ -->
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Generic - Changes that affects all DbxTune tools</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI><b>OsMemory </b> -- Swapping -- Changed 'Moving Avergae' from 10 minutes to 15 minutes</LI>
+		<LI><b>OsMemory </b> -- For alarms 'Swapping' and 'SwapThrashing' also send info on current Memory Usage</LI>
+
+		<LI><b>Alarms Handling:</b>
+			<UL>
+				<LI>xxx</LI>
+			</UL>
+		</LI>
+
+		<LI><b>Daily Summary Report Changes</b><br>
+			<UL>
+				<LI>Added timeout of 15 minutes for SQL Queries in the Reports</LI>
+			</UL>
+		</LI>
+
+		<LI>
+			<b>Upgraded some of the third party libraries/jars</b><br>
+			<ul>
+<!--   			<li>To version 12.1.x           Component: Jetty Webserver</li>  -->
+<!-- 
+	  			<li>To version 2.4.240          Component: H2 Database</li>
+ 	  			<li>To version 9.4.58           Component: Jetty Webserver</li>
+	 			<li>To version 13.2.0           Component: MS SQL Server JDBC Driver</li>
+	 			<li>To version 9.4.0            Component: MySQL JDBC Driver</li>
+	 			<li>To version 42.7.8           Component: Postgres JDBC Driver</li>
+ -->
+	 			<li>To version 2.27.7           Component: Jsch</li>
+	 			<li>To version 5.3              Component: JSqlParser-</li>
+
+<!-- 
+	 			<li>To version 2.0.5            Component: sql-formatter</li>
+
+	 			<li>To version 3.7.0            Component: jquery</li>
+	 			<li>To version 1.13.2           Component: jquery UI</li>
+	 			<li>To version 2.9.2            Component: jquery-contextmenu</li>
+	 			<li>To version 3.1              Component: bootstrap-daterangepicker</li>
+ -->
+			</ul>
+		</LI>
+	</UL>
+	<!-- ~~~end-of-generic-dbxtune-tools~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>DbxCentral - The central WEB console to view Trend Graphs</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Tried SSL setup but filed with Jetty 9.4 (Jetty 11, which requires Java 11 will be tested OR Jetty 12.1, which requires Java 17)</LI>
+		<LI>Added LetsEncryptAcmeChallengeServlet to handle LetsEncript acme challenge requests.</LI>
+		<LI>PcsJdbcCleaner for DbxcLocalMetrics using a fallback method if getMetaData().getColumns() does not find any records.</LI>
+		<LI>Create a Daily Summary Report on older H2 db versions. Now gives a proper error message.</LI>
+		<LI>Create a Daily Summary Report on existing H2 database: Made the dialog slightly better ('Save File', or 'Open in New Tab')</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>ASE 16.1 'sp_spaceused tabname' does now report sizes in MB instead of KB... So adjustments for that was needed</LI>
+		<LI>PCS - Statement Normalizer JSQLParser was upgraded to use version 5.3</LI>
+		<LI>Tool: Statement Cache Bloat Detector -- some changes to minimize 'Faulty SQL Syntax'</LI>
+
+		<!-- ~~~ CM Changes ~~~ -->
+		<LI><b>CmCachePools       </b> -- Added Graph 'Cache Pools Physical Writes'</LI>
+
+		<LI><b>CmOpenDatabases    </b> -- Alarm: LastBackupFailed was made to raise 'LastDbBackupFailed' or 'LastWalBackupFailed'.</LI>
+
+		<LI><b>CmPCacheModuleUsage</b> -- Alarm: StatementCacheAboveConfig -- Refresh Statement Cache size before sending alarm.</LI>
+
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Summary Report</b><br>
+		<ul>
+			<li><b>Report Info             </b> -- Added fields for 'ASE Max Memory', 'ASE Memory Available'</li>
+			<li><b>Show Configuration      </b> -- Now also includes 'ASE Cache Configuration'</li>
+			<li><b>Usage Overview          </b> -- Added some graphs: CmCachePools_PoolUsedMb, CmCachePools_PoolUtil, CmCachePools_PoolHitRate, CmCachePools_PoolReplaceSlide, CmCachePools_PoolPhysicalWrites</li>
+			<li><b>Error Info              </b> -- Added Description for the Error number on each collapsable error number</li>
+			<li><b>Statement Cache Overview</b> -- Added some graphs: CmSpMonitorConfig_ProcCacheMemUsage, CmPCacheModuleUsage_GraphMb</li>
+			<li><b>Statement Cache Details </b> -- Added 'scan-rows', 'qual-r-rows', 'qual-w-rows' </li>
+		</ul>
+		</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>RsTune - Sybase/SAP Replication Server</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Added graph -- SQT: Number of Commands in First Tran (col 'First Trans', 'st:C,cmds:###') -- So we can see how many command that are in "closing" mode at the DSI Thread</LI>
+		<LI>Daily Summary Report -- Added section for: SQM, SQT and DSI details</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>HanaTune - SAP HANA</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>OracleTune - Oracle Database</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>SqlServerTune - Microsoft SQL-Server</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<!-- ~~~ Overall Changes ~~~ -->
+		<LI><b>ObjectId Cache</b> -- Handle more Error Codes (Skipped when databases are not recovered, offline, etc...)</LI>
+
+
+		<!-- ~~~ CM Changes ~~~ -->
+		<LI><b>CmActiveStatements  </b> -- Cleaned up SQL Statements for 'lastKnownSql' that starts with ')' and simply removed that.</LI>
+
+		<LI><b>CmDatabases         </b> -- Cleaned up SQL Statements for 'most_recent_sql_text' that starts with ')' and simply removed that.</LI>
+
+		<LI><b>CmWaitingTasks      </b> -- Cleaned up SQL Statements for 'currentSqlText' that starts with ')' and simply removed that.</LI>
+
+		<LI><b>CmIndexOpStatSum    </b> -- Added graph: Insert/Update/Delete Rows Per Second for User Databases</LI>
+
+
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Summary Report</b><br>
+		<ul>
+			<li><b>Usage Overview              </b> -- Added Graph: CmIndexOpStatSum_OpIudUserDbs</li>
+			<li><b>Database Operational Summary</b> -- Added Graph: CmIndexOpStatSum_OpIudUserDbs</li>
+		</ul>
+		</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>PostgresTune - PostgreSQL</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>MySqlTune - MySQL database</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Db2Tune - IBM DB2 LWU</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>SQL Window</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Changed the Filter field to work with JSQLParser version 5.3 (NOTE: There is still some problems and/or statements that are after IN(...)</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+	
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>Log Tail Tool</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+</UL>
+
+
+
+
+
+
+
+
+
+
 
 <!-- ========================================================================== -->
 <H2>2025-11-30</H2>
@@ -53,8 +287,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>For all collectors, Created a new Writer class PersistWriterToDbxCentral, as a complement to PersistWriterToHttpJson so we can controll it a bit better</LI>
 		<LI>Configuration (Properties), enhancement to USE_DEFAULT value (really an internal thing, but now you can use config value 'USE_DEFAULT' in more places.</LI>
 		<LI>For DBMS Configuration, it's now possible to execute OS Commands (if we have a OsMonConnection)</LI>
-		<LI></LI>
-		<LI></LI>
 		<LI>DbxCentral - Local Metrics (os monitoring on DbxCentral host), property: <code>DbxTuneCentral.start.localMetricsCollector=*true*|false</code></LI>
 		<LI>DbxCentral - Possibly start the Local PCS Directory Receiver (to not send JSON from any collector to DbxCentral) property: <code>CentralPcsDirectoryReceiver.storage.dir=${tmpDir}/DbxTune/DbxCentral/file_receiver</code></LI>
 		<LI>When sending information to HTTP/DbxCentral -- Turn off 'Meta Data' information by default</LI>
@@ -70,7 +302,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>if a ResultSet holds Types.CHAR/NCHAR it's automatically changed to Types.VARCHAR/NVARCHAR, to save space in PCS. (turn this off by override changeJdbcCharIntoVarchar())</LI>
 		<LI>Changed the default storage for Graph/Charts from LABEL_IN_SEPARATE_COLUMN to COLUMN_NAME_IS_LABEL (now using the column name as the "label name" instead of a separate column holding the name)</LI>
 		<LI>PCS: If CountersModel number of columns changes "on the fly", we will now alter the CM PCS tables on the fly (more columns will be added, but not deleted)</LI>
-
 		<LI>CmOsVmstat:    for Linux:   Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 10 minutes.</LI>
 		<LI>CmOsMeminfo:   for Windows: Raise Alarm 'AlarmEventOsSwapThrashing' when we have paging/swapping both 'in' AND 'out' at the same time. Both 'in' AND 'out' needs to be above the threshold for 10 minutes.</LI>
 		<LI>CmOsDiskSpace: On Windows add the 'disk label' to the 'drive name' for easier determination of what the disk may be used for</LI>
@@ -124,7 +355,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Bugfix: xxx</LI>
 			</UL>
 		</LI>
-		<LI>xxx</LI>
 
 		<LI><b>Daily Summary Report Changes</b><br>
 			<UL>
@@ -151,8 +381,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
 			
-<!--  			<li>To version 2.4.240          Component: H2 Database</li> -->
-	 			<li>To version 2.1.214          Component: H2 Database</li>
+	  			<li>To version 2.4.240          Component: H2 Database</li>
  	  			<li>To version 9.4.58           Component: Jetty Webserver</li>
 	 			<li>To version 13.2.0           Component: MS SQL Server JDBC Driver</li>
 	 			<li>To version 9.4.0            Component: MySQL JDBC Driver</li>

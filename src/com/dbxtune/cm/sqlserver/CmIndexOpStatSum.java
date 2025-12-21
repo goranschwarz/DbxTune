@@ -48,6 +48,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
+import com.dbxtune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -223,6 +224,7 @@ extends CountersModel
 	//------------------------------------------------------------
 	public static final String GRAPH_NAME_IUD_INSTANCE                              = "OpIudInstance";
 	public static final String GRAPH_NAME_IUD_TEMPDB                                = "OpIudTempdb";
+	public static final String GRAPH_NAME_IUD_USER_DBS                              = "OpIudUserDbs";
 //	public static final String GRAPH_NAME_IUD_PER_DB                                = "OpIudPerDb";
                                                                                     
 	public static final String GRAPH_NAME_PER_DB_LEAF_IUD_COUNT                     = "OpLeafIudCount";                   // leaf_IUD_count
@@ -295,6 +297,18 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		//-----
+		addTrendGraph(GRAPH_NAME_IUD_USER_DBS,
+			"Insert/Update/Delete Rows Per Second for User Databases", // Menu CheckBox text
+			"Insert/Update/Delete Rows Per Second for User Databases ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] {"IUD_count", "insert_count", "update_count", "delete_count", "delete_ghost_count"}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false,  // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
 
 
@@ -769,6 +783,44 @@ extends CountersModel
 			dArray[2] = this.getRateValueAsDouble(rowId, "leaf_update_count");
 			dArray[3] = this.getRateValueAsDouble(rowId, "leaf_delete_count");
 			dArray[4] = this.getRateValueAsDouble(rowId, "leaf_ghost_count");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_IUD_USER_DBS.equals(tgdp.getName()))
+		{
+			Double[] dArray = new Double[5];
+
+			double leaf_IUD_count    = 0d;
+			double leaf_insert_count = 0d;
+			double leaf_update_count = 0d;
+			double leaf_delete_count = 0d;
+			double leaf_ghost_count  = 0d;
+
+			for (int r = 0; r < this.size(); r++)
+			{
+				String dbname = this.getAbsString(r, "dbname");
+
+				// Skip "system" databases
+				if (StringUtil.equalsAny(dbname, "_Total", "master", "model", "tempdb", "msdb"))
+				{
+					continue;
+				}
+				
+				leaf_IUD_count    += this.getRateValueAsDouble(r, "leaf_IUD_count"   , true, 0d);
+				leaf_insert_count += this.getRateValueAsDouble(r, "leaf_insert_count", true, 0d);
+				leaf_update_count += this.getRateValueAsDouble(r, "leaf_update_count", true, 0d);
+				leaf_delete_count += this.getRateValueAsDouble(r, "leaf_delete_count", true, 0d);
+				leaf_ghost_count  += this.getRateValueAsDouble(r, "leaf_ghost_count" , true, 0d);
+			}
+
+			dArray[0] = leaf_IUD_count;
+			dArray[1] = leaf_insert_count;
+			dArray[2] = leaf_update_count;
+			dArray[3] = leaf_delete_count;
+			dArray[4] = leaf_ghost_count;
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), dArray);

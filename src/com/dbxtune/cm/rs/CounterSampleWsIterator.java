@@ -654,7 +654,9 @@ extends CounterSample
 //				(5 rows affected)
 
 				// Hardcode the SQL for now...
-				sendSql = "select \n" + 
+				sendSql = "" +
+						"declare @activeLocalTime varchar(30)   set @activeLocalTime = " + DbUtils.safeStr(wsEntry.getActiveTimestamp()) +
+						"select \n" + 
 						"    LogicalId           = convert(int,         " +wsEntry.getLogicalConnId()+"), \n" +
 						"    LogicalName         = convert(varchar(80), '"+wsEntry.getLogicalConnName()+"'), \n" +
 						" \n" +                  
@@ -673,7 +675,7 @@ extends CounterSample
 						"    DataAgeInMinutes    = datediff(minute,     x.origin_time, getdate()),          \n" +
 						"    OriginCommitTime    = x.origin_time,       \n" +
 						"    DestCommitTime      = x.dest_commit_time,  \n" +
-						"    ActiveLocalTime     = convert(datetime, "+DbUtils.safeStr(wsEntry.getActiveTimestamp())+"),  \n" +
+						"    ActiveLocalTime     = convert(datetime, @activeLocalTime),  \n" +
 						"    StandbyLocalTime    = getdate(),  \n" +
 						"    StandbyMsg          = convert(varchar(1024), ''),  \n" +
 						" \n" +

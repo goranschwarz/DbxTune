@@ -41,6 +41,8 @@
 			<attribute name="javadoc_location" value="https://static.javadoc.io/org.reflections/reflections/0.9.10/index.html"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/jsch-2.27.7.jar"/>
+	<classpathentry kind="lib" path="lib/jsqlparser-5.3.jar" sourcepath="3pp/NEW/jsqlparser-5.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.21.0-GA.jar"/>
 	<classpathentry kind="lib" path="lib/jsendnsca-2.1.0.jar">
 		<attributes>
@@ -94,10 +96,8 @@
 	<classpathentry kind="lib" path="lib/syslog-java-client-1.1.7.jar"/>
 	<classpathentry kind="lib" path="lib/schemacrawler-16.2.4.jar"/>
 	<classpathentry kind="lib" path="lib/velocity-engine-core-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/jsqlparser-4.5.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-13.2.0.jre8.jar"/>
 	<classpathentry kind="lib" path="lib/rsyntaxtextarea-3.6.0.jar" sourcepath="3pp/rsyntaxtextarea-3.6.0-sources.jar"/>
-	<classpathentry kind="lib" path="lib/jsch-2.27.3.jar"/>
 	<classpathentry kind="lib" path="lib/httpclient-4.5.14.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-api-2.24.3.jar" sourcepath="3pp/apache-log4j-2.24.3-src.zip"/>
 	<classpathentry kind="lib" path="lib/log4j-core-2.24.3.jar" sourcepath="3pp/apache-log4j-2.24.3-src.zip"/>

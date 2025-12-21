@@ -73,6 +73,11 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 	protected static final String DBXTUNE_COUNTER_USAGE_INFO_URL = "http://www.dbxtune.com/counter_usage_info.php";
 	protected static final String DBXTUNE_ERROR_INFO_URL         = "http://www.dbxtune.com/error_info.php";
 
+//	static
+//	{
+//		Configurator.setLevel(MethodHandles.lookup().lookupClass(), Level.DEBUG);
+//	}
+
 	public CheckForUpdatesDbx()
 	{
 		super();

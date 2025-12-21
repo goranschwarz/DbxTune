@@ -268,15 +268,21 @@ extends TdsConnection
 							String index_name = indexInfo.getValueAsString (r, "index_name", true, "");
 							if (index_name.equalsIgnoreCase("t"+table))
 							{
-								sumLobSize     += StringUtil.parseInt( indexInfo.getValueAsString(r, "size"    , true, "").replace(" KB", ""), 0);
-								sumLobReserved += StringUtil.parseInt( indexInfo.getValueAsString(r, "reserved", true, "").replace(" KB", ""), 0);
-								sumLobUnused   += StringUtil.parseInt( indexInfo.getValueAsString(r, "unused"  , true, "").replace(" KB", ""), 0);
+//								sumLobSize     += StringUtil.parseInt( indexInfo.getValueAsString(r, "size"    , true, "").replace(" KB", ""), 0);
+//								sumLobReserved += StringUtil.parseInt( indexInfo.getValueAsString(r, "reserved", true, "").replace(" KB", ""), 0);
+//								sumLobUnused   += StringUtil.parseInt( indexInfo.getValueAsString(r, "unused"  , true, "").replace(" KB", ""), 0);
+								sumLobSize     += asKb(indexInfo, r, "size");
+								sumLobReserved += asKb(indexInfo, r, "reserved");
+								sumLobUnused   += asKb(indexInfo, r, "unused");
 							}
 							else
 							{
-								int indexSize     = StringUtil.parseInt( indexInfo.getValueAsString(r, "size"    , true, "").replace(" KB", ""), 0);
-								int indexReserved = StringUtil.parseInt( indexInfo.getValueAsString(r, "reserved", true, "").replace(" KB", ""), 0);
-								int indexUnused   = StringUtil.parseInt( indexInfo.getValueAsString(r, "unused"  , true, "").replace(" KB", ""), 0);
+//								int indexSize     = StringUtil.parseInt( indexInfo.getValueAsString(r, "size"    , true, "").replace(" KB", ""), 0);
+//								int indexReserved = StringUtil.parseInt( indexInfo.getValueAsString(r, "reserved", true, "").replace(" KB", ""), 0);
+//								int indexUnused   = StringUtil.parseInt( indexInfo.getValueAsString(r, "unused"  , true, "").replace(" KB", ""), 0);
+								int indexSize     = asKb(indexInfo, r, "size"    );
+								int indexReserved = asKb(indexInfo, r, "reserved");
+								int indexUnused   = asKb(indexInfo, r, "unused"  );
 
 								sumIndexSize     += indexSize;
 								sumIndexReserved += indexReserved;
@@ -291,11 +297,16 @@ extends TdsConnection
 					}
 					
 					// Get Table Info
-					int rowtotal = StringUtil.parseInt( tableInfo.getValueAsString(0, "rowtotal"  , true, "").replace(" KB", ""), 0);
-					int reserved = StringUtil.parseInt( tableInfo.getValueAsString(0, "reserved"  , true, "").replace(" KB", ""), 0);
-					int data     = StringUtil.parseInt( tableInfo.getValueAsString(0, "data"      , true, "").replace(" KB", ""), 0);
-					int index    = StringUtil.parseInt( tableInfo.getValueAsString(0, "index_size", true, "").replace(" KB", ""), 0);
-					int unused   = StringUtil.parseInt( tableInfo.getValueAsString(0, "unused"    , true, "").replace(" KB", ""), 0);		
+//					int rowtotal = StringUtil.parseInt( tableInfo.getValueAsString(0, "rowtotal"  , true, "").replace(" KB", ""), 0);
+//					int reserved = StringUtil.parseInt( tableInfo.getValueAsString(0, "reserved"  , true, "").replace(" KB", ""), 0);
+//					int data     = StringUtil.parseInt( tableInfo.getValueAsString(0, "data"      , true, "").replace(" KB", ""), 0);
+//					int index    = StringUtil.parseInt( tableInfo.getValueAsString(0, "index_size", true, "").replace(" KB", ""), 0);
+//					int unused   = StringUtil.parseInt( tableInfo.getValueAsString(0, "unused"    , true, "").replace(" KB", ""), 0);		
+					int rowtotal = asKb(tableInfo, 0, "rowtotal"  );
+					int reserved = asKb(tableInfo, 0, "reserved"  );
+					int data     = asKb(tableInfo, 0, "data"      );
+					int index    = asKb(tableInfo, 0, "index_size");
+					int unused   = asKb(tableInfo, 0, "unused"    );		
 
 					// ADD INFO
 					extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rowtotal     , "Number of rows in the table. Note: exec dbname..sp_spaceused 'schema.tabname', 1", null));
@@ -353,6 +364,46 @@ extends TdsConnection
 		}
 		
 		return extraInfo;
+	}
+	
+	private int asKb(ResultSetTableModel rstm, int row, String colName)
+	{
+		if (rstm == null)
+			return -1;
+
+		// Get column value
+		String strVal = rstm.getValueAsString(row, colName, true, "");
+
+		// Decide multiplier
+		int multiplier = 1;
+		if (strVal.endsWith(" MB"))
+		{
+			multiplier = 1024;
+			strVal = strVal.replace(" MB", "");
+		}
+		if (strVal.endsWith(" KB"))
+		{
+			multiplier = 1;
+			strVal = strVal.replace(" KB", "");
+		}
+
+		// Parse str to int
+		int intVal = -1;
+		strVal = StringUtil.cleanupNumberStr(strVal, false);
+		try
+		{
+			intVal = Integer.parseInt(strVal);
+		}
+		catch (NumberFormatException nfe)
+		{
+			System.out.println("asKb(): " + nfe);
+			return -1;
+		}
+		
+//		int intVal = StringUtil.parseInt(strVal, 0);
+
+		// return by multiplier
+		return intVal * multiplier;
 	}
 
 	@Override

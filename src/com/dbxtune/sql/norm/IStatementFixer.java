@@ -26,6 +26,11 @@ public interface IStatementFixer
 	public static final String REWRITE_MSG_BEGIN = "/***DBXTUNE-REWRITE: ";
 	public static final String REWRITE_MSG_END   = "***/ ";
 
+	default String getPrefix()
+	{
+		return REWRITE_MSG_BEGIN + "[" + getComment() + "]" + REWRITE_MSG_END;
+	}
+
 	/** Get name of this instance */
 	String getName();
 

@@ -66,6 +66,8 @@
 	$DBXTUNE_LATEST_VERSION_STR = "4.6.0";
 	$DBXTUNE_LATEST_VERSION_STR = "2025-11-30";
 
+	$ASEMON_LATEST_VERSION_SRC  = $ASETUNE_LATEST_VERSION_SRC;
+
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.dbxtune.com/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSizeParam=10, sendMdaInfoBatchSizePost=250, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";

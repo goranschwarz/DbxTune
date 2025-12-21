@@ -279,7 +279,12 @@ extends DbmsObjectIdCache
 		
 		// First: get all databases
 		Map<Long, String> dbNameMap = new LinkedHashMap<>();
-		String sql = "select database_id, name from sys.databases WITH (READUNCOMMITTED)";
+		String sql = ""
+				+ "SELECT database_id, name \n"
+				+ "FROM sys.databases WITH (READUNCOMMITTED) \n"
+//				+ "WHERE HAS_DBACCESS(name) = 1 \n" // Should we do this... Or should we get all rows with "status" and filer out dbs's in OFFLINE etc... in "Second: Loop all databases and get info..."
+//				+ "WHERE state_desc = 'ONLINE' \n" // This does NOT seems to work for 'Basic Availability Groups'... 
+				;
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
@@ -388,10 +393,20 @@ extends DbmsObjectIdCache
 					// Azure: Error=40515, Msg='Reference to database and/or server name in 'master.sys.objects' is not supported in this version of SQL Server.'
 					_logger.info("Skipping BULK load of ObjectId's for database '" + dbname + "', Error 40515 should only happen in Azure environments where we dont have access to all databases. Error=" + ex.getErrorCode() + ", Msg=|" + ex.getMessage() + "|.");
 				}
-				else if (ex.getErrorCode() == 976)
+				else if (ex.getErrorCode() == 921 // Error=921, Msg='Database 'xxx' has not been recovered yet. Wait and try again.'
+				      || ex.getErrorCode() == 922 // Error=922, Msg='Database 'xxx' is being recovered. Waiting until recovery is finished.'
+				      || ex.getErrorCode() == 923 // Error=923, Msg='Database 'xxx' is in restricted mode. Only the database owner and members of the dbcreator and sysadmin roles can access it.'
+				      || ex.getErrorCode() == 924 // Error=924, Msg='Database 'xxx' is already open and can only have one user at a time.'
+				      || ex.getErrorCode() == 926 // Error=926, Msg='Database 'xxx' cannot be opened. It has been marked SUSPECT by recovery. See the SQL Server errorlog for more information.'
+				      || ex.getErrorCode() == 927 // Error=927, Msg='Database 'xxx' cannot be opened. It is in the middle of a restore.'
+				      || ex.getErrorCode() == 942 // Error=942, Msg='Database 'xxx' cannot be opened because it is offline.'
+				      || ex.getErrorCode() == 954 // Error=954, Msg='The database "xxx" cannot be opened. It is acting as a mirror database.'
+				      || ex.getErrorCode() == 976 // Error=976, Msg='The target database, 'xxx', is participating in an availability group and is currently not accessible for queries. Either data movement is suspended or the availability replica is not enabled for read access. To allow read-only access to this and other databases in the availability group, enable read access to one or more secondary availability replicas in the group.  For more information, see the ALTER AVAILABILITY GROUP statement in SQL Server Books Online.'
+				      || ex.getErrorCode() == 982 // Error=982, Msg='Unable to access the 'xxx' database because no online secondary replicas are enabled for read-only access. Check the availability group configuration to verify that at least one secondary replica is configured for read-only access. Wait for an enabled replica to come online, and retry your read-only operation.'
+				      || ex.getErrorCode() == 983 // Error=983, Msg='Unable to access availability database 'xxx' because the database replica is not in the PRIMARY or SECONDARY role. Connections to an availability database is permitted only when the database replica is in the PRIMARY or SECONDARY role. Try the operation again later.'
+				      )
 				{
-					// Azure: Error=976, Msg='The target database, 'xxx', is participating in an availability group and is currently not accessible for queries. Either data movement is suspended or the availability replica is not enabled for read access. To allow read-only access to this and other databases in the availability group, enable read access to one or more secondary availability replicas in the group.  For more information, see the ALTER AVAILABILITY GROUP statement in SQL Server Books Online.'
-					_logger.info("Skipping BULK load of ObjectId's for database '" + dbname + "', Error 976 should only happen in Availability Group where we dont have access to standby/failover database. Error=" + ex.getErrorCode() + ", Msg=|" + ex.getMessage() + "|.");
+					_logger.info("Skipping BULK load of ObjectId's for database '" + dbname + "', We have NO ACCESS -- Error=" + ex.getErrorCode() + ", Msg=|" + ex.getMessage() + "|.");
 				}
 				else
 				{

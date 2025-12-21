@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -199,6 +201,73 @@ public class UserDefinedNormalizerManager
 			@Override public String  getComment()          { return "Removed: boiler plate code for QueueService"; }
 			@Override public String  normalize(String sql) { return getPrefix() + " -- Queue Service Execution - 'update statistics' and/or 'reorg rebuild'"; }
 		});
+
+//		//------------------------------------------------------------
+//		// Sybase ASE Syntax: ROWS LIMIT 3001
+//		//                    ROWS OFFSET 0 LIMIT 3001
+//		// Pagination Queries Using limit and offset
+//		// https://help.sap.com/docs/SAP_ASE/e0d4539d39c34f52ae9ef822c2060077/26d84b4ddae94fed89d4e7c88bc8d1e6.html
+//		//------------------------------------------------------------
+//		add( new IUserDefinedNormalizer() 
+//		{
+//			// Regex pattern for "rows limit ### offset ##" where offset is optional
+//			// \s+ means one or more whitespace characters
+//			// \d+ means one or more digits
+//			// (?:\s+offset\s+\d+)? means the offset part is optional (non-capturing group with ?)
+//			private final Pattern LIMIT_OFFSET_PATTERN = Pattern.compile("rows\\s+limit\\s+\\d+(?:\\s+offset\\s+\\d+)?", Pattern.CASE_INSENSITIVE);
+//
+//			@Override public String  getName()             { return "ase-rows-limit"; }
+//			@Override public boolean isHandled(String sql) { return LIMIT_OFFSET_PATTERN.matcher(sql).find(); }
+//			@Override public String  getComment()          { return "Commented out: 'ROWS LIMIT #' or 'ROWS OFFSET # LIMIT #'"; }
+//			@Override public String  normalize(String sql) 
+//			{
+//				Matcher matcher = LIMIT_OFFSET_PATTERN.matcher(sql);
+//				return getPrefix() + matcher.replaceAll("/* $0 */");
+//			}
+//		});
+//
+//		//------------------------------------------------------------
+//		// Sybase ASE Syntax: select ... from tablename HOLDLOCK
+//		//------------------------------------------------------------
+//		add( new IUserDefinedNormalizer() 
+//		{
+//			// Regex pattern for table name with optional alias followed by HOLDLOCK
+//			// Matches patterns like:
+//			// - tableName HOLDLOCK
+//			// - tableName alias HOLDLOCK
+//			// - tableName WITH (HOLDLOCK)
+//			// - tableName alias WITH (HOLDLOCK)
+//			private final Pattern HOLDLOCK_PATTERN = Pattern.compile("(\\w+)\\s+(\\w+\\s+)?(with\\s*\\()?\\s*holdlock\\s*(\\))?", Pattern.CASE_INSENSITIVE);
+//			//	private static final Pattern HOLDLOCK_SIMPLE_PATTERN = Pattern.compile("\\bholdlock\\b", Pattern.CASE_INSENSITIVE);
+//
+//			@Override public String  getName()             { return "ase-tab-holdlock"; }
+////			@Override public boolean isHandled(String sql) { return HOLDLOCK_SIMPLE_PATTERN.matcher(sql).find(); }
+//			@Override public boolean isHandled(String sql) { return HOLDLOCK_PATTERN.matcher(sql).find(); }
+//			@Override public String  getComment()          { return "Commented out: 'holdlock'"; }
+////			@Override public String  normalize(String sql) 
+////			{
+////				Matcher matcher = HOLDLOCK_SIMPLE_PATTERN.matcher(sql);
+////				return getPrefix() + matcher.replaceAll("/* $0 */");
+////			}
+//			@Override public String  normalize(String sql) 
+//			{
+//				Matcher matcher = HOLDLOCK_PATTERN.matcher(sql);
+//				StringBuffer result = new StringBuffer();
+//
+//				while (matcher.find()) 
+//				{
+//					// Replace with table name followed by commented out HOLDLOCK
+//					String tableName = matcher.group(1);
+//					String withPart = matcher.group(2) != null ? matcher.group(2) : "";
+//					String closeParen = matcher.group(3) != null ? matcher.group(3) : "";
+//
+//					String replacement = tableName + " /* " + withPart + "holdlock" + closeParen + " */";
+//					matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+//				}
+//				matcher.appendTail(result);
+//				return getPrefix() + result.toString();
+//			}
+//		});
 
 		
 

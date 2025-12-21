@@ -40,6 +40,7 @@ import com.dbxtune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
 import com.dbxtune.central.pcs.CentralPersistWriterBase;
 import com.dbxtune.central.pcs.CentralPersistWriterBase.Table;
+import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
 import com.dbxtune.central.pcs.ICentralPersistWriter;
 import com.dbxtune.sql.conn.ConnectionProp;
@@ -464,29 +465,87 @@ extends Task
 		_logger.info(_prefix + "Retention period for Local Metrics CM is " + localMetricsCm_keepDays + ", so data that is older than " + localMetricsCm_keepDays + " days (or older than '" + localMetricsCm_olderThan + "') will be deleted. This can be changed with property '" + PROPKEY_localMetricsCm_keepDays + "'.");
 
 
+		String schema = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;
+		
 		// Get tables (CM and Graph tables)
 		// Use getColumns(... "SessionSampleTime") to filter out tables which looks like CM/Graph tables
 		Set<String> alarmTables = new LinkedHashSet<>();
 		Set<String> cmTables    = new LinkedHashSet<>();
 		Set<String> graphTables = new LinkedHashSet<>();
-		try (ResultSet rs = conn.getMetaData().getColumns(null, LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME, "%", "SessionSampleTime")) // (eller "CmSampleTime"
+		try (ResultSet rs = conn.getMetaData().getColumns(null, schema, "%", "SessionSampleTime")) // (eller "CmSampleTime")
 		{
 			String tabName = rs.getString(3); // "TABLE_NAME"
 
 			if (tabName.equals("MonAlarmHistory"))
+			{
 				alarmTables.add(tabName);
+			}
 			else if (tabName.endsWith("_abs") || tabName.endsWith("_diff") || tabName.endsWith("_rate"))
+			{
 				cmTables.add(tabName);
+			}
 			else
+			{
 				graphTables.add(tabName);
+			}
 		}
 		catch(SQLException ex)
 		{
-			_logger.error("Problems getting tables using: conn.getMetaData().getColumns(null, 'DbxcLocalMetrics', '%', 'SessionSampleTime') ", ex);
+			_logger.error("Problems getting tables using: conn.getMetaData().getColumns(null, '" + schema + "', '%', 'SessionSampleTime') -- ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState()+ "', Message='" + ex.getMessage() + "'.", ex);
+
+			//---------------------------------------------------------------
+			// FALLBACK -- using conn.getMetaData().getTables
+			//---------------------------------------------------------------
+			try (ResultSet rs = conn.getMetaData().getTables(null, schema, "%", null))
+			{
+				ResultSetTableModel rstm = new ResultSetTableModel(rs, "getTables");
+				_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Found " + rstm.getRowCount() + " tables");
+				if (_logger.isDebugEnabled())
+					_logger.debug("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Found tables:\n" + rstm.toAsciiTableString());
+				
+				for (int r=0; r<rstm.getRowCount(); r++)
+				{
+					String tabName = rstm.getValueAsString(r, "TABLE_NAME", false, "");
+					if (StringUtil.isNullOrBlank(tabName))
+						continue;
+					
+					// Should we investigate if table has column 'SessionSampleTime'
+					String dummySql = "select * from [" + schema + "].[" + tabName + "] where 1 = 2"; // NOTE: All [] will be translated to DBMS specific QuotedIdentifier by: ResultSetTableModel.executeQuery(...)
+					ResultSetTableModel dummyRstm = ResultSetTableModel.executeQuery(conn, dummySql, false, "getColumnNames");
+					if (dummyRstm != null)
+					{
+						if ( ! dummyRstm.hasColumnNoCase("SessionSampleTime") )
+						{
+							_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Skipping table '" + tabName + "'. The table did NOT have any column named 'SessionSampleTime'. Known Columns: " + dummyRstm.getColumnNames());
+							continue;
+						}
+					}
+
+					if (tabName.equals("MonAlarmHistory"))
+					{
+						alarmTables.add(tabName);
+					}
+					else if (tabName.endsWith("_abs") || tabName.endsWith("_diff") || tabName.endsWith("_rate"))
+					{
+						cmTables.add(tabName);
+					}
+					else if (tabName.contains("_"))
+					{
+						graphTables.add(tabName);
+					}
+					else
+					{
+						_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Skipping table '" + tabName + "'. The name did not look like: 'MonAlarmHistory', '*_(abs|diff|rate)' or '*_*'");
+					}
+				}
+			}
+			catch(SQLException ex2)
+			{
+				_logger.error("FALLBACK Problems getting tables using: conn.getMetaData().getTables(null, " + schema +", '%', null) -- ErrorCode=" + ex2.getErrorCode() + ", SqlState='" + ex2.getSQLState()+ "', Message='" + ex2.getMessage() + "'.", ex2);
+				_logger.error("Cleanup of 'LocalMetrics' IS NOT POSSIBLE!!!");
+			}
 		}
 
-		String schema = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;
-		
 		// Cleanup Alarm tables (longer retention period)
 		for (String tabName : alarmTables)
 		{

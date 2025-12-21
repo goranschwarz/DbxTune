@@ -30,11 +30,11 @@ import java.util.Date;
 public class Version
 {
 	public static       String PRODUCT_STRING     = "DbxTune";      // Do not have spaces etc in this one
-	public static final String VERSION_STRING     = "4.6.0";        // Use this for public releases
-//	public static final String VERSION_STRING     = "4.5.0.107.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2025-11-30/build 557";
+//	public static final String VERSION_STRING     = "4.6.0";        // Use this for public releases
+	public static final String VERSION_STRING     = "4.6.0.7.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2025-12-19/build 562";
 
-	public static final String GIT_DATE_STRING    = "2025-11-30";  // try to update this
+	public static final String GIT_DATE_STRING    = "2025-12-19";  // try to update this
 	public static final String GIT_REVISION_STR   = "610";         // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup

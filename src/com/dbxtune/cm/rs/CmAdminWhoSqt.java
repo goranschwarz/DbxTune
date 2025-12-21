@@ -25,6 +25,8 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -39,6 +41,7 @@ import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -73,7 +76,7 @@ extends CountersModel
 		"Trunc",
 		"Removed",
 		"Full",
-		"SQM Blocked",
+//		"SQM Blocked",
 		"Parsed",
 		"SQM Reader",
 		"Change Oqids",
@@ -126,12 +129,13 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_CLOSED  = "SqtClosed";
-	public static final String GRAPH_NAME_READ    = "SqtRead";
-	public static final String GRAPH_NAME_OPEN    = "SqtOpen";
-	public static final String GRAPH_NAME_TRUNC   = "SqtTrunc";
-	public static final String GRAPH_NAME_REMOVED = "SqtRemoved";
-	public static final String GRAPH_NAME_PARSED  = "SqtParsed";
+	public static final String GRAPH_NAME_CLOSED          = "SqtClosed";
+	public static final String GRAPH_NAME_READ            = "SqtRead";
+	public static final String GRAPH_NAME_OPEN            = "SqtOpen";
+	public static final String GRAPH_NAME_TRUNC           = "SqtTrunc";
+	public static final String GRAPH_NAME_REMOVED         = "SqtRemoved";
+	public static final String GRAPH_NAME_PARSED          = "SqtParsed";
+	public static final String GRAPH_NAME_FIRST_TRAN_CMDS = "SqtFirstTranCmds";
 
 	private void addTrendGraphs()
 	{
@@ -210,6 +214,19 @@ extends CountersModel
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
 			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_FIRST_TRAN_CMDS,
+			"SQT: Number of Commands in First Tran (col 'First Trans', 'st:C,cmds:###')", // Menu CheckBox text
+			"SQT: Number of Commands in First Tran (col 'First Trans', 'st:C,cmds:###')", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 	}
@@ -319,6 +336,49 @@ extends CountersModel
 
 				// Remove DBID and append ('in-q' or 'out-q')
 				lArray[i] = RsDbidStripper.stripDbid(lArray[i]); 
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_FIRST_TRAN_CMDS.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				String info       = this.getRateString(i, "Info");
+				String firstTrans = this.getRateString(i, "First Trans");
+				
+				// Remove DBID and append ('in-q' or 'out-q')
+				info = RsDbidStripper.stripDbid(info);
+				
+				// Column 'First Trans': This column contains information about the first transaction in the queue and can be used
+				//                       to determine if it is an unterminated transaction. The column has three pieces of information:
+				//         ST:   Followed by O (open), C (closed), R (read), or D (deleted)
+				//         Cmds: Followed by the number of commands in the first transaction
+				//         qid:  Followed by the segment, block, and row of the first transaction
+				// Example: "st:O,cmds:2,qid:37427:29:0"
+				// Example: "st:C,cmds:nnnnnnn,qid:988:57:0"   // When we are applying nnnnnnn Commands to the DSI Executor
+
+				double cmds = 0;
+				if (StringUtil.hasValue(firstTrans))
+				{
+					// Open or Closed (Closed=Is Applying Commands at the DSI Executor)
+//					if (firstTrans.startsWith("st:O,cmds:") || firstTrans.startsWith("st:C,cmds:"))
+					if (firstTrans.startsWith("st:C,cmds:")) // Closed=Is Applying Commands at the DSI Executor
+					{
+						String cmdsStr = StringUtils.substringBetween(firstTrans, "st:C,cmds:", ",qid:");
+						cmds = StringUtil.parseInt(cmdsStr, 0);
+//System.out.println("         -------: info='" + info + "', cmdsStr='" + cmdsStr + "', cmds='" + cmds + "', First Trans='" + firstTrans + "'.");
+					}
+//System.out.println("XXXXXXXXXXXXXXXX: info='" + info + "', cmds=" + cmds + ", First Trans='" + firstTrans + "'.");
+				}
+
+				lArray[i] = info;
+				dArray[i] = cmds;
 			}
 
 			// Set the values

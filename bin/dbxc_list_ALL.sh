@@ -159,14 +159,24 @@ then
 	fi
 	if [ ! -z "${pidListCental}" ]
 	then
+		## Compose a LOG name where we can look at the last line for status during shutdown
+		logFile=$(echo "${DBXTUNE_CENTRAL_LOG_DIR}/DBX_CENTRAL.log" | sed "s/'//g")
+		if [ ! -f ${logFile} ]
+		then
+			logFile=$(echo "${DBXTUNE_LOG_DIR}/DBX_CENTRAL.log" | sed "s/'//g")
+		fi
+
 		if [ ${longList} -eq 0 ]
 		then
 			echo " >> DbxCentral: DBXTUNE_CENTRAL, PID=${pidListCental}"
+			tail -1 ${logFile} | sed -e 's/^/    Last log entry: /'
 		else
 			echo ""
 			echo " >> DbxCentral: DBXTUNE_CENTRAL, PID=${pidListCental}"
 			echo "======================================================"
 			ps -fww -p ${pid}
+			echo "==== last log entry =================================="
+			tail -1 ${logFile} | sed -e 's/^/    Last log entry: /'
 			echo "======================================================"
 		fi
 	fi

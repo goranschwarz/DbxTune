@@ -504,6 +504,15 @@
 	</servlet-mapping>
 
 
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>LetsEncryptAcmeChallengeServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.LetsEncryptAcmeChallengeServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LetsEncryptAcmeChallengeServlet</servlet-name>
+		<url-pattern>/.well-known/acme-challenge/*</url-pattern>
+	</servlet-mapping>
 
 
  <!-- 

@@ -489,7 +489,7 @@ public abstract class AseConfigText
 //	public static class Cache extends AseConfigText
 	public static class Cache extends DbmsConfigTextAbstract
 	{
-		private static final String MB_AVAIL_FOR_RECONF_STR = "MB available for reconfiguration";
+		public static final String MB_AVAIL_FOR_RECONF_STR = "MB available for reconfiguration";
 
 		// xxx.x MB available for reconfiguration
 		private String _freeMemoryStr = null;
@@ -501,7 +501,7 @@ public abstract class AseConfigText
 		}
 
 		/** How much memory is available for reconfiguration */
-		public Double getFreeMemory()
+		public Double getFreeMemoryMb()
 		{
 			return _freeMemory == null ? 0 :_freeMemory;
 		}

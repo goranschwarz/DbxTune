@@ -476,6 +476,12 @@ public class OverviewServlet extends HttpServlet
 			else if (layoutEntry.isServerEntry())
 			{
 				DbxCentralSessions srvEntry = layoutEntry.getSrvSession();
+				if (srvEntry == null)
+				{
+					String info = "layoutEntry={type=" + layoutEntry.getType() + ", text=|" + layoutEntry.getText() + "|, options=" + layoutEntry.getOptions() + "}";
+					_logger.warn("In printServerLayout_CmRefreshButtons(), the layoutEntry.getSrvSession() returned NULL. " + info + ". Skipping this entry and continuing.");
+					continue;
+				}
 
 				String srvName   = srvEntry.getServerName();
 				String dbxType   = "dbx-button-" + srvEntry.getProductString().toLowerCase(); // dbx-button-asetune
@@ -2271,10 +2277,31 @@ public class OverviewServlet extends HttpServlet
 //		sb.append("					</tbody>          																								\n");      
 //		sb.append("				</table>																											\n");
 		sb.append("			</div>																													\n");
-		sb.append("			<div class='modal-footer'>																								\n");
-//		sb.append("			<button type='button' class='btn btn-primary' data-dismiss='modal' id='dbx-dsr-dialog-ok'>Create</button>				\n");
-		sb.append("			<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-ok'>Create</button>				\n");
-		sb.append("			<button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>										\n");
+		sb.append("			<div class='modal-footer d-flex w-100'>																								\n");
+//		sb.append("				<div class='d-flex w-100'>																							\n");
+//		sb.append("\n");
+//		sb.append("					<!-- Left justified... everything before 'me-auto' -->															\n");
+//		sb.append("					<button type='button' class='btn btn-primary ms-2'    id='dbx-dsr-dialog-open'>Open Report in New Tab</button>	\n");
+//		sb.append("					<button type='button' class='btn btn-primary me-auto' id='dbx-dsr-dialog-save'>Save Report to Local File...</button> \n");
+//		sb.append("\n");
+//		sb.append("					<!-- Right justified... everything after 'me-auto' -->															\n");
+//		sb.append("					<button type='button' class='btn btn-primary ms-2' id='dbx-dsr-dialog-ok'>Create</button>						\n");
+//		sb.append("					<button type='button' class='btn btn-default ms-2' data-dismiss='modal'>Close</button>							\n");
+//		sb.append("				</div>																												\n");
+		sb.append("				<!-- Left justified... everything before 'mr-auto' -->																\n");
+		sb.append("				<div>\n");
+		sb.append("					<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-open'>Open Report in New Tab</button> 			\n");
+		sb.append("					<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-save'>Save Report to Local File...</button>	\n");
+		sb.append("				</div> 																												\n");
+		sb.append("\n");
+		sb.append("				<!-- spacer pushes following buttons to the right --> \n");
+		sb.append("				<div class='mr-auto'></div>																							\n");
+		sb.append("\n");
+		sb.append("				<!-- Right justified... everything after 'mr-auto' -->																\n");
+		sb.append("				<div>																												\n");
+		sb.append("					<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-ok'>Create</button> 							\n");
+		sb.append("					<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> 							\n");
+		sb.append("				</div> 																												\n");
 		sb.append("			</div>																													\n");
 		sb.append("		</div>																														\n");
 		sb.append("		</div>																														\n");
@@ -2299,6 +2326,8 @@ public class OverviewServlet extends HttpServlet
 		sb.append("		$(this).find('.modal-body').css({																				\n");
 		sb.append("			'max-height':'100%'																							\n");
 		sb.append("		});																												\n");
+		sb.append("		$('#dbx-dsr-dialog-open').prop('disabled', true);																\n");
+		sb.append("		$('#dbx-dsr-dialog-save').prop('disabled', true);																\n");
 		sb.append("	});																													\n");
 		
 //		sb.append("	// Example starter JavaScript for disabling form submissions if there are invalid fields							\n");
@@ -2321,6 +2350,10 @@ public class OverviewServlet extends HttpServlet
 		sb.append("	// What should happen when we click OK in the dialog																\n");
 		sb.append("	$('#dbx-dsr-dialog-ok').click( function() 																			\n");
 		sb.append("	{																													\n");
+		sb.append("		$('#dbx-dsr-dialog-ok')  .prop('disabled', true);																\n");
+		sb.append("		$('#dbx-dsr-dialog-open').prop('disabled', true);																\n");
+		sb.append("		$('#dbx-dsr-dialog-save').prop('disabled', true);																\n");
+		sb.append("																														\n");
 		sb.append("		// Show progress field																							\n");
 		sb.append("		$('#dbx-dsr-progress-div').show();																				\n");
 		sb.append("		$('#dbx-dsr-progress-bar').css('width', '0%');																	\n");
@@ -2395,12 +2428,40 @@ public class OverviewServlet extends HttpServlet
 		sb.append("																														\n");
 		sb.append("			$('#dbx-dsr-progress-txt').css('color', 'black');															\n");
 		sb.append("			$('#dbx-dsr-progress-txt').text('Report is complete...');													\n");
+		sb.append("			$('#dbx-dsr-progress-txt').text('A New tab with the Daily Summary Report will been opened...'); \n");
+//		sb.append("			$('#dbx-dsr-progress-txt').text('A New tab with the Daily Summary Report will been opened... If pop-up is allowed.'); \n");
+		sb.append("			$('#dbx-dsr-dialog-ok')  .prop('disabled', false);															\n");
+		sb.append("			$('#dbx-dsr-dialog-open').prop('disabled', false);															\n");
+		sb.append("			$('#dbx-dsr-dialog-save').prop('disabled', false);															\n");
 		sb.append("																														\n");
-		sb.append("			var newDsrTab = window.open('','_blank');																	\n");
-		sb.append("			newDsrTab.document.write(data.complete);																	\n");
+//		sb.append("			var newDsrTab = window.open('','_blank');																	\n");
+//		sb.append("			newDsrTab.document.write(data.complete);																	\n");
+//		sb.append("			newDsrTab.document.close();	// ensures JS inside runs														\n");
 		sb.append("																														\n");
-		sb.append("			$('#dbx-dsr-progress-txt').text('A New tab with the Daily Summary Report has been opened.');				\n");
+		sb.append("			const blob = new Blob([data.complete], { type: 'text/html' });												\n");
+		sb.append("			const url = URL.createObjectURL(blob);																		\n");
+		sb.append("																														\n");
+		sb.append("			// Button: Open in New Tab																					\n");
+		sb.append("			document.getElementById('dbx-dsr-dialog-open').addEventListener('click', () => {							\n");
+		sb.append("				window.open(url, '_blank');																				\n");
+		sb.append("			});																											\n");
+		sb.append("																														\n");
+		sb.append("			// Save to File...																							\n");
+		sb.append("			document.getElementById('dbx-dsr-dialog-save').addEventListener('click', () => {							\n");
+		sb.append("																														\n");
+		sb.append("				const saveFilename = $('#dbx-dsr-dbname').val().split('/').pop() + '.html';								\n");
+		sb.append("																														\n");
+		sb.append("				const link = document.createElement('a');																\n");
+		sb.append("				link.href = url;																						\n");
+		sb.append("				link.download = saveFilename;   // filename for download												\n");
+		sb.append("				link.click();																							\n");
+		sb.append("			});																											\n");
+		sb.append("																														\n");
+		sb.append("			$('#dbx-dsr-progress-txt').text('A New tab with the Report has been opened... If not press: \"Open\" or \"Save...\"'); \n");
 		sb.append("			$('#dbx-dsr-progress-div').hide();																			\n");
+		sb.append("																														\n");
+		sb.append("			// Open the Blob in a new tab																				\n");
+		sb.append("			window.open(url, '_blank');																					\n");
 		sb.append("																														\n");
 //		sb.append("			// Hide the dialog																							\n");
 //		sb.append("			$('#dbx-dsr-dialog').modal('hide');																			\n");

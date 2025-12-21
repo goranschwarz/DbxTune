@@ -1886,10 +1886,13 @@ public class DbxTuneCentral
 					SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
 			        sslContextFactory.setKeyStoreType("PEM");
 			        sslContextFactory.setKeyStorePath(sslFilePath);  // must contain cert.pem, key.pem, (optional) chain.pem
-//			        sslContextFactory.setCertChainPath("cert.pem");      // your public cert or full chain
-//			        sslContextFactory.setKeyPath("key.pem");             // your private key
-//			        sslContextFactory.setTrustStoreType("PEM");          // optional for client auth
-//			        sslContextFactory.setTrustStorePath("chain.pem");    // CA chain, optional
+//			        sslContextFactory.setCertChainPath(sslFileCertFile);      // your public cert or full chain "cert.pem"
+//			        sslContextFactory.setKeyPath(sslFileKeyFile);             // your private key "key.pem"
+//			        if (sslFileChainFile.exists())
+//			        {
+//				        sslContextFactory.setTrustStoreType("PEM");               // optional for client auth
+//				        sslContextFactory.setTrustStorePath(sslFileChainFile);    // CA chain, optional "chain.pem"
+//			        }
 					
 					httpConfig.addCustomizer(new SecureRequestCustomizer());
 

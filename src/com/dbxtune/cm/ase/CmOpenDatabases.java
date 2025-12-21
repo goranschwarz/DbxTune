@@ -51,6 +51,8 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventDatabaseOption;
 import com.dbxtune.alarm.events.AlarmEventFullTranLog;
 import com.dbxtune.alarm.events.AlarmEventLastBackupFailed;
+import com.dbxtune.alarm.events.AlarmEventLastDbBackupFailed;
+import com.dbxtune.alarm.events.AlarmEventLastWalBackupFailed;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
 import com.dbxtune.alarm.events.AlarmEventLowDbFreeSpace;
 import com.dbxtune.alarm.events.AlarmEventLowLogFreeSpace;
@@ -2056,7 +2058,19 @@ extends CountersModel
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
-						AlarmEvent ae = new AlarmEventLastBackupFailed(cm, dbname, backupType, threshold);
+						AlarmEvent ae;
+						if ("DB".equals(backupType))
+						{
+							ae = new AlarmEventLastDbBackupFailed(cm, dbname, threshold);
+						}
+						else if ("TRAN".equals(backupType)) 
+						{
+							ae = new AlarmEventLastWalBackupFailed(cm, dbname, threshold);
+						}
+						else
+						{
+							ae = new AlarmEventLastBackupFailed(cm, dbname, backupType, threshold);
+						}
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
 						alarmHandler.addAlarm( ae );

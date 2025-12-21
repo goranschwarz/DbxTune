@@ -314,4 +314,13 @@ public interface IReportEntry
 
 	/** If we should start this section as a open or closed section */
 	IReportEntry withCollapsedHeader(boolean collapsedHeader);
+
+	/** Default DSR JDBC Query Timeout. Use as a fallback if NOT set by setDsrQueryTimeoutInSec() */
+	int getDsrQueryTimeoutInSecDefault();
+
+	/** Set JDBC Query Timeout for DSR Queries  */
+	void setDsrQueryTimeoutInSec(int seconds);
+
+	/** Get JDBC Query Timeout for DSR Queries  */
+	int getDsrQueryTimeoutInSec();
 }

@@ -251,6 +251,8 @@ extends CountersModel
 	{
 		if (GRAPH_NAME_MODULE_USAGE.equals(tgdp.getName()))
 		{
+			// NOTE: Possible add '_Total' to graph
+
 			// Write 1 "line" for every row
 			Double[] dArray = new Double[this.size()];
 			String[] lArray = new String[dArray.length];
@@ -266,6 +268,8 @@ extends CountersModel
 
 		if (GRAPH_NAME_MODULE_USAGE_MB.equals(tgdp.getName()))
 		{
+			// NOTE: Possible add '_Total' to graph
+
 			// Write 1 "line" for every row
 			Double[] dArray = new Double[this.size()];
 			String[] lArray = new String[dArray.length];
@@ -402,19 +406,48 @@ extends CountersModel
 
 					if (stmntCachePctUsed.intValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE_MB);
-
-						AlarmEvent ae = new AlarmEventStatementCacheAboveConfig(cm, _statementCacheConfigSizeMb, activeMb.intValue(), stmntCachePctUsed, procCachePctUsed, threshold);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-
-						AlarmHandler.getInstance().addAlarm(ae);
+						// Refresh the ASE Configuration (_statementCacheConfigSizeMb and _procedureCacheConfigSizeMb)
+						// Then check values again... so we don't send "faulty" alarms...
+						refreshAseConfigAndReCheckStatementCacheUsage(activeMb, threshold);
+						
+						// Below send: has been moved into: refreshAseConfigAndRecheckStatementCacheUsage(...)
+//						String extendedDescText = "";
+//						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE_MB);
+//
+//						AlarmEvent ae = new AlarmEventStatementCacheAboveConfig(cm, _statementCacheConfigSizeMb, activeMb.intValue(), stmntCachePctUsed, procCachePctUsed, threshold);
+//						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+//
+//						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
 		}
 	} // end: method
 
+	private void refreshAseConfigAndReCheckStatementCacheUsage(Double activeMb, int threshold)
+	{
+		CountersModel cm = this;
+		_logger.info("FORCE refresh ASE Configuration. Due to possible alarm");
+
+		// refresh configuration
+		DbxConnection conn = getCounterController().getMonConnection();
+		getAseConfig(conn, "force-send-alarm-refresh-config");
+
+		Double stmntCachePctUsed = activeMb / _statementCacheConfigSizeMb * 100.0;
+		Double procCachePctUsed  = activeMb / _procedureCacheConfigSizeMb * 100.0;
+
+		if (stmntCachePctUsed.intValue() > threshold)
+		{
+			String extendedDescText = "";
+			String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE_MB);
+
+			AlarmEvent ae = new AlarmEventStatementCacheAboveConfig(cm, _statementCacheConfigSizeMb, activeMb.intValue(), stmntCachePctUsed, procCachePctUsed, threshold);
+			ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+			AlarmHandler.getInstance().addAlarm(ae);
+		}
+	}
+	
 	@Override
 	public boolean isGraphDataHistoryEnabled(String name)
 	{
