@@ -13,7 +13,7 @@ rem    - DBXTUNE_HOME environment variable must be set
 rem    - Java 11+ must be installed
 rem
 rem  Usage:
-rem    dbxtune_service.bat install   <serviceName> <toolName> [collector args...]
+rem    dbxtune_service.bat install   <serviceName> <toolName> [--serviceUser user [--servicePassword pwd]] [collector args...]
 rem    dbxtune_service.bat uninstall <serviceName>
 rem    dbxtune_service.bat start     <serviceName>
 rem    dbxtune_service.bat stop      <serviceName>
@@ -21,6 +21,7 @@ rem    dbxtune_service.bat status    <serviceName>
 rem
 rem  Examples:
 rem    dbxtune_service.bat install DbxTune__PROD_ASE ase -n config.conf -SPROD_ASE -Usa
+rem    dbxtune_service.bat install DbxTune__PROD_ASE ase --serviceUser DOMAIN\svcDbxTune --servicePassword secret -n config.conf -SPROD_ASE -Usa
 rem    dbxtune_service.bat install DbxTune__Central  central -C dbxcentral.conf
 rem    dbxtune_service.bat start   DbxTune__PROD_ASE
 rem    dbxtune_service.bat stop    DbxTune__PROD_ASE
@@ -111,10 +112,24 @@ if "%TOOL_VALID%" == "0" (
     exit /b 1
 )
 
-rem --- Collect remaining arguments (after action, serviceName, toolName) as start params
+rem --- Parse optional --serviceUser and --servicePassword before collector args
+set SERVICE_USER=LocalSystem
+set SERVICE_PASSWORD=
+shift & shift & shift
+if /I "%~1" == "--serviceUser" (
+    shift
+    set SERVICE_USER=%~1
+    shift
+    if /I "%~1" == "--servicePassword" (
+        shift
+        set SERVICE_PASSWORD=%~1
+        shift
+    )
+)
+
+rem --- Collect remaining arguments as start params
 rem     Procrun start params are separated by semicolons
 set START_PARAMS=%TOOL_NAME%
-shift & shift & shift
 :parse_install_args
 if "%~1" neq "" (
     set START_PARAMS=!START_PARAMS!;%~1
@@ -217,7 +232,8 @@ if defined DBXTUNE_JAVA_HOME (
 
 echo.
 echo Installing service: %SERVICE_NAME%
-echo   Tool:       %TOOL_NAME%
+echo   Tool:         %TOOL_NAME%
+echo   Service User: %SERVICE_USER%
 echo   Start Params: %START_PARAMS%
 echo   DBXTUNE_HOME: %DBXTUNE_HOME%
 echo   Log Dir:      %LOG_DIR%
@@ -243,7 +259,7 @@ rem --- Install the service
     --StdOutput="%LOG_DIR%\%SERVICE_NAME%-stdout.log" ^
     --StdError="%LOG_DIR%\%SERVICE_NAME%-stderr.log" ^
     --LogLevel=Info ^
-    --ServiceUser=LocalSystem ^
+    --ServiceUser=%SERVICE_USER% ^
     --PidFile=%SERVICE_NAME%.pid ^
     --StartPath="%DBXTUNE_HOME%"
 
@@ -251,6 +267,14 @@ if %ERRORLEVEL% NEQ 0 (
     echo ERROR: Failed to install service '%SERVICE_NAME%'. Error code: %ERRORLEVEL%
     echo        Make sure you are running this script as Administrator.
     exit /b %ERRORLEVEL%
+)
+
+rem --- Set service password if provided (must be done after install via update)
+if defined SERVICE_PASSWORD (
+    "%PRUNSRV%" update %SERVICE_NAME% --ServiceUser=%SERVICE_USER% --ServicePassword=%SERVICE_PASSWORD%
+    if %ERRORLEVEL% NEQ 0 (
+        echo WARNING: Could not set service password.
+    )
 )
 
 rem --- Set Java home if found (must be done after install via update)
@@ -328,7 +352,7 @@ echo.
 echo DbxTune Windows Service Manager
 echo.
 echo Usage:
-echo   %~nx0 install   ^<serviceName^> ^<toolName^> [collector args...]
+echo   %~nx0 install   ^<serviceName^> ^<toolName^> [--serviceUser user [--servicePassword pwd]] [collector args...]
 echo   %~nx0 uninstall ^<serviceName^>
 echo   %~nx0 start     ^<serviceName^>
 echo   %~nx0 stop      ^<serviceName^>
@@ -336,8 +360,13 @@ echo   %~nx0 status    ^<serviceName^>
 echo.
 echo Tool names: ase, iq, rs, rax, hana, sqlserver, oracle, postgres, mysql, db2, central
 echo.
+echo Options:
+echo   --serviceUser      Windows account to run the service as (default: LocalSystem)
+echo   --servicePassword  Password for the service account
+echo.
 echo Examples:
 echo   %~nx0 install DbxTune__PROD_ASE ase -n config.conf -SPROD_ASE -Usa -Psecret
+echo   %~nx0 install DbxTune__PROD_ASE ase --serviceUser DOMAIN\svcDbx --servicePassword secret -n config.conf
 echo   %~nx0 install DbxTune__Central  central -C dbxcentral.conf
 echo   %~nx0 start   DbxTune__PROD_ASE
 echo   %~nx0 stop    DbxTune__PROD_ASE
