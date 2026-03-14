@@ -405,6 +405,52 @@
 
 	<!-- ============================================================ -->
 	<servlet>
+		<servlet-name>UserDefinedActionServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UserDefinedActionServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserDefinedActionServlet</servlet-name>
+		<url-pattern>/api/udaction</url-pattern>
+	</servlet-mapping>
+<servlet>
+	<servlet-name>AaaSqlExecutionServlet</servlet-name>
+	<servlet-class>com.dbxtune.test.AaaSqlExecutionServlet</servlet-class>
+</servlet>
+<servlet-mapping>
+	<servlet-name>AaaSqlExecutionServlet</servlet-name>
+	<url-pattern>/api/gorans-dummy</url-pattern>
+</servlet-mapping>
+
+<servlet>
+	<servlet-name>AaaSqlExecutionServlet2</servlet-name>
+	<servlet-class>com.dbxtune.test.AaaSqlExecutionServlet2</servlet-class>
+</servlet>
+<servlet-mapping>
+	<servlet-name>AaaSqlExecutionServlet2</servlet-name>
+	<url-pattern>/api/gorans-dummy2</url-pattern>
+</servlet-mapping>
+
+<servlet>
+	<servlet-name>AaaSqlExecutionServlet3</servlet-name>
+	<servlet-class>com.dbxtune.test.AaaSqlExecutionServlet3</servlet-class>
+</servlet>
+<servlet-mapping>
+	<servlet-name>AaaSqlExecutionServlet3</servlet-name>
+	<url-pattern>/api/gorans-dummy3</url-pattern>
+</servlet-mapping>
+
+<servlet>
+	<servlet-name>AaaOsCmdExecutionServlet</servlet-name>
+	<servlet-class>com.dbxtune.test.AaaOsCmdExecutionServlet</servlet-class>
+</servlet>
+<servlet-mapping>
+	<servlet-name>AaaOsCmdExecutionServlet</servlet-name>
+	<url-pattern>/api/gorans-dummy-os1</url-pattern>
+</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<servlet>
 		<servlet-name>ShowplanPostgresServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.ShowplanPostgresServlet</servlet-class>
 	</servlet>
@@ -422,6 +468,17 @@
 	<servlet-mapping>
 		<servlet-name>ShowplanSqlServerServlet</servlet-name>
 		<url-pattern>/showplan/sqlserver</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>SpaceForecastServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.SpaceForecastServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>SpaceForecastServlet</servlet-name>
+		<url-pattern>/api/space/forecast</url-pattern>
 	</servlet-mapping>
 
 
@@ -513,6 +570,7 @@
 		<servlet-name>LetsEncryptAcmeChallengeServlet</servlet-name>
 		<url-pattern>/.well-known/acme-challenge/*</url-pattern>
 	</servlet-mapping>
+
 
 
  <!-- 

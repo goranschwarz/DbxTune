@@ -28,10 +28,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -81,6 +87,12 @@ extends ReportEntryAbstract
 	private boolean _isHostMonitoringEnabled = false;
 	private String  _hostMonitorHostname;
 
+	private String _dbxSampleTimeInSec = "";
+	private String _dbxCfgFile         = "";
+	private String _dbxLogFile         = "";
+	private String _dbxCmInfo          = "";
+	private String _dbxCfgInfo         = "";
+
 	public RecordingInfo(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
@@ -100,6 +112,12 @@ extends ReportEntryAbstract
 	public String    getOsMemoryInfo()           { return _osMemoryInfo; }
 	public String    getHostMonitorHostname()    { return _hostMonitorHostname; }
 	public boolean   isHostMonitoringEnabled()   { return _isHostMonitoringEnabled; }
+
+	public String    getDbxSampleTimeInSec()     { return _dbxSampleTimeInSec; }
+	public String    getDbxCfgFile()             { return _dbxCfgFile; }
+	public String    getDbxLogFile()             { return _dbxLogFile; }
+	public String    getDbxCmInfo()              { return _dbxCmInfo; }
+	public String    getDbxCfgInfo()             { return _dbxCfgInfo; }
 
 	@Override
 	public boolean hasMinimalMessageText()
@@ -224,6 +242,14 @@ extends ReportEntryAbstract
 			sb.append(blankTableRow);
 			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring was Enabled:  </b></td> <td>" + _isHostMonitoringEnabled + "</td> </tr>\n");
 			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring hostname:     </b></td> <td>" + _hostMonitorHostname     + "</td> </tr>\n");
+
+			// Collector Configuration 
+			sb.append(blankTableRow);
+			sb.append("  <tr> " + tdBullet +" <td><b>Sample Period in Seconds:     </b></td> <td>" + getDbxSampleTimeInSec()  + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Config File:                  </b></td> <td>" + getDbxCfgFile()          + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Log File:                     </b></td> <td>" + getDbxLogFile()          + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Counter Information:          </b></td> <td>" + getDbxCmInfo()           + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet +" <td><b>Counter Config:               </b></td> <td>" + getDbxCfgInfo()          + "</td> </tr>\n");
 
 			// Java Version Info
 			sb.append(blankTableRow);
@@ -384,6 +410,11 @@ extends ReportEntryAbstract
 		// Get/Check if Host Monitoring was enabled
 		//-----------------------------------------
 		_isHostMonitoringEnabled = isHostMonitoringEnabled(conn);
+
+		//-----------------------------------------
+		// Get info: 
+		//-----------------------------------------
+		setDbxInfo(conn);
 
 		//-----------------------------------------
 		// Start/end time for the recording
@@ -702,4 +733,340 @@ extends ReportEntryAbstract
 		return sqlServerSysInfoMap;
 	}
 
+	/**
+	 * Get and SET various information about the DBX Recording
+	 * @param conn
+	 */
+	private void setDbxInfo(DbxConnection conn)
+	{
+		// This will set:
+		//  * _dbxCfgFile
+		//  * _dbxLogFile
+		//  * _dbxCmInfo
+		//  * _dbxCfgInfo
+		
+		String sql = "";
+		String schemaNamePrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
+
+
+		//-----------------------------------
+		// Sample Time In Seconds
+		//-----------------------------------
+		_dbxSampleTimeInSec = "-empty-";
+
+		sql = ""
+			+ "select [ParamValue] \n"
+			+ "from " + schemaNamePrefix + "[MonSessionParams] \n"
+			+ "where [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionParams]) \n"
+		    + "  and [Type]      = 'pcs.config' \n"
+		    + "  and [ParamName] = 'offline.sampleTime' \n"
+			+ "";
+				
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				_dbxSampleTimeInSec = rs.getString(1);
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'MonSessionParams' - 'pcs.config:offline.sampleTime', Caught: " + ex);
+			_dbxSampleTimeInSec = "-exception- " + ex;
+		}
+
+
+		//-----------------------------------
+		// CFG FILE
+		//-----------------------------------
+		_dbxCfgFile = "-empty-";
+
+		sql = ""
+			+ "select [ParamValue] \n"
+			+ "from " + schemaNamePrefix + "[MonSessionParams] \n"
+			+ "where [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionParams]) \n"
+		    + "  and [Type]      = 'FILE' \n"
+		    + "  and [ParamName] = 'NOGUI-CFG' \n"
+			+ "";
+				
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				_dbxCfgFile = rs.getString(1);
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'MonSessionParams' - 'FILE:NOGUI-CFG', Caught: " + ex);
+			_dbxCfgFile = "-exception- " + ex;
+		}
+
+
+		//-----------------------------------
+		// LOG FILE
+		//-----------------------------------
+		_dbxLogFile = "-empty-";
+
+		sql = ""
+			+ "select [ParamValue] \n"
+			+ "from " + schemaNamePrefix + "[MonSessionParams] \n"
+			+ "where [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionParams]) \n"
+		    + "  and [Type]      = 'FILE' \n"
+		    + "  and [ParamName] = 'LOG' \n"
+			+ "";
+				
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				_dbxLogFile = rs.getString(1);
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'MonSessionParams' - 'FILE:LOG', Caught: " + ex);
+			_dbxLogFile = "-exception- " + ex;
+		}
+
+
+		//-----------------------------------
+		// CM INFO
+		//-----------------------------------
+		_dbxCmInfo = "-empty-";
+
+		// Get 'cm.info'
+		sql = ""
+			+ "select [ParamName], [ParamValue] \n"
+			+ "from " + schemaNamePrefix + "[MonSessionParams] \n"
+			+ "where [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionParams]) \n"
+		    + "  and [Type] = 'cm.info' \n"
+			+ "";
+
+//		Configuration cmInfo = new Configuration();
+		Map<String, String> cmInfo = new LinkedHashMap<>();
+		Set<String> cmNames = new LinkedHashSet<>();
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				String paramName  = rs.getString(1);
+				String paramValue = rs.getString(2);
+
+				String cmName = StringUtils.substringBefore(paramName, ".");
+				cmNames.add(cmName);
+				
+				// Skip Passwords.
+				if (paramValue != null && (paramValue.endsWith("Password") || paramValue.endsWith("Passwd")))
+					continue;
+				
+				cmInfo.put(paramName, paramValue);
+			}
+			_dbxCmInfo = "cm.info: cmNames=" + cmNames.size() + ", cmInfoRows=" + cmInfo.size();
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'MonSessionParams' - 'cm.info', Caught: " + ex);
+			_dbxCmInfo = "-exception- " + ex;
+		}
+
+		// Get How many Samples each CM has
+		sql = ""
+		    + "select \n"
+		    + "    [CmName] \n"
+		    + "    ,sum([absSamples])  as [absSamples] \n"
+		    + "    ,sum([diffSamples]) as [diffSamples] \n"
+		    + "    ,sum([rateSamples]) as [rateSamples] \n"
+		    + "from [MonSessionSampleSum] \n"
+		    + "group by [CmName] \n"
+		    + "order by [CmName] \n"
+		    + "";
+
+		//  CmName  [abs, diff, rate]
+		Map<String, Integer[]> cmSampleSum = new HashMap<>();
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				String cmName      = rs.getString(1);
+				int    absSamples  = rs.getInt   (2);
+				int    diffSamples = rs.getInt   (3);
+				int    rateSamples = rs.getInt   (4);
+
+				cmSampleSum.put(cmName, new Integer[] {absSamples, diffSamples, rateSamples});
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'MonSessionSampleSum', Caught: " + ex);
+		}
+		
+		
+		// Build a HTML Table with What CM's that are enabled...
+		if ( ! cmInfo.isEmpty() )
+		{
+			ResultSetTableModel rstm = ResultSetTableModel.createEmpty("cmInfo");
+
+			rstm.addColumn("CM Name"                        , 0, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+			rstm.addColumn("Enabled"                        , 1, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+			rstm.addColumn("Postpone Time"                  , 2, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+			rstm.addColumn("Query Timeout"                  , 3, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+			rstm.addColumn("Reset Negative Counters to Zero", 4, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+			rstm.addColumn("Abs Samples"                    , 5, Types.INTEGER, "int"    , "int"         , 12 , 0, "", Integer.class);
+			rstm.addColumn("Diff Samples"                   , 6, Types.INTEGER, "int"    , "int"         , 12 , 0, "", Integer.class);
+			rstm.addColumn("Rate Samples"                   , 7, Types.INTEGER, "int"    , "int"         , 12 , 0, "", Integer.class);
+			
+			for (String cmName : cmNames)
+			{
+				boolean isEnabled                  = StringUtil.parseBoolean(cmInfo.getOrDefault(cmName + ".isEnabled"                 , "false"));
+				String  postponeTime               =                         cmInfo.getOrDefault(cmName + ".postponeTime"              , "");
+				String  queryTimeout               =                         cmInfo.getOrDefault(cmName + ".queryTimeout"              , "");
+				String  negativeDiffCountersToZero =                         cmInfo.getOrDefault(cmName + ".negativeDiffCountersToZero", "");
+				
+				// Get Sample from the Map which we populated earlier
+				int absSamples  = -1;
+				int diffSamples = -1;
+				int rateSamples = -1;
+				Integer[] sampleCntArr = cmSampleSum.get(cmName);
+				if (sampleCntArr != null && sampleCntArr.length >= 3)
+				{
+					absSamples  = sampleCntArr[0];
+					diffSamples = sampleCntArr[1];
+					rateSamples = sampleCntArr[2];
+				}
+
+				if ("CmSummary".equals(cmName))
+					isEnabled = true;
+
+				String isEnabledStr = isEnabled ? "<font color='green'>yes</font>" : "<font color='red'>-no-</font>";
+
+				ArrayList<Object> row = new ArrayList<>();
+				/* col:0 */ row.add(cmName);
+				/* col:1 */ row.add(isEnabledStr);
+				/* col:2 */ row.add(postponeTime);
+				/* col:3 */ row.add(queryTimeout);
+				/* col:4 */ row.add(negativeDiffCountersToZero);
+				/* col:5 */ row.add(absSamples);
+				/* col:6 */ row.add(diffSamples);
+				/* col:7 */ row.add(rateSamples);
+
+				rstm.addRow(row);
+			}
+			String htmlTable = rstm.toHtmlTableString("sortable table-hover cmInfo-table");
+
+			String showHideDiv = createShowHideDiv("", false, "Show/Hide", htmlTable);
+
+			String tmp = msOutlookAlternateText(showHideDiv, "CM Info", "NOT presented in Microsoft Outlook...");
+			
+			_dbxCmInfo = tmp;
+		}
+
+
+		//-----------------------------------
+		// PCS Config
+		//-----------------------------------
+		_dbxCfgInfo = "-empty-";
+
+		sql = ""
+				+ "select [ParamName], [ParamValue] \n"
+				+ "from " + schemaNamePrefix + "[MonSessionParams] \n"
+				+ "where [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionParams]) \n"
+			    + "  and [Type] = 'pcs.config' \n"
+				+ "";
+					
+//		Configuration pcsConfig = new Configuration();
+		Map<String, String> pcsConfig = new LinkedHashMap<>();
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				String paramName  = rs.getString(1);
+				String paramValue = rs.getString(2);
+
+				// Skip Passwords.
+				if (paramValue != null && (paramValue.endsWith("Password") || paramValue.endsWith("Passwd")))
+					continue;
+				
+				pcsConfig.put(paramName, paramValue);
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'MonSessionParams' - 'pcs.config', Caught: " + ex);
+			_dbxCfgInfo = "-exception- " + ex;
+		}
+
+
+		// ALSO Get some SYSTEM properties
+		sql = ""
+				+ "select [ParamName], [ParamValue] \n"
+				+ "from " + schemaNamePrefix + "[MonSessionParams] \n"
+				+ "where [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionParams]) \n"
+			    + "  and [Type] = 'system.properties' \n"
+				+ "";
+					
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				String paramName  = rs.getString(1);
+				String paramValue = rs.getString(2);
+
+				if (StringUtil.isNullOrBlank(paramValue))
+					continue;
+
+				// only SOME keys
+				if (   paramName.startsWith("DBXTUNE")
+					|| paramName.startsWith("JVM")
+					|| paramName.startsWith("h2.")
+				    || StringUtil.equalsAny(paramName, "USER", "HOME", "HOSTNAME", "JAVA_HOME", "os.name", "os.arch", "os.version")
+				   )
+				{
+					pcsConfig.put(paramName, paramValue);
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'MonSessionParams' - 'system.properties', Caught: " + ex);
+//			_dbxCfgInfo = "-unknown-";
+		}
+
+		// Build a HTML Table with all Key/values
+		if ( ! pcsConfig.isEmpty() )
+		{
+			ResultSetTableModel rstm = ResultSetTableModel.createEmpty("cmConfig");
+
+			rstm.addColumn("Key"  , 0, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+			rstm.addColumn("Value", 1, Types.VARCHAR, "varchar", "varchar(255)", 255, 0, "", String.class);
+			
+			for (Entry<String, String> e : pcsConfig.entrySet())
+			{
+				ArrayList<Object> row = new ArrayList<>();
+				
+				row.add(e.getKey());
+				row.add(e.getValue());
+
+				rstm.addRow(row);
+			}
+			String htmlTable = rstm.toHtmlTableString("sortable table-hover cmConfig-table");
+
+			String showHideDiv = createShowHideDiv("", false, "Show/Hide", htmlTable);
+
+			String tmp = msOutlookAlternateText(showHideDiv, "CM Info", "NOT presented in Microsoft Outlook...");
+			
+			_dbxCfgInfo = tmp;
+		}
+	}
 }
+

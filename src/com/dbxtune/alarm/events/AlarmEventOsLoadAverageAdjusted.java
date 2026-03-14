@@ -27,6 +27,15 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
+	// Can and SHOULD be cancelled by: AlarmHandler.checkForCancelations()
+	// Meaning we do NOT need any CM to be "refreshed" for this alarm to be cancelled
+	// How long the Alarms will live is dictated by TimeToLive...
+	@Override
+	public boolean isAlwaysCancelable()
+	{
+		return true;
+	}
+
 	public enum RangeType
 	{
 		RANGE_1_MINUTE, RANGE_5_MINUTE, RANGE_15_MINUTE, RANGE_30_MINUTE, RANGE_60_MINUTE

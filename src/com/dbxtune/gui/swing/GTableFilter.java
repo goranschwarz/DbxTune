@@ -77,11 +77,11 @@ import net.sf.jsqlparser.expression.CollateExpression;
 import net.sf.jsqlparser.expression.ConnectByPriorOperator;
 import net.sf.jsqlparser.expression.ConnectByRootOperator;
 import net.sf.jsqlparser.expression.DateTimeLiteralExpression;
+import net.sf.jsqlparser.expression.DateUnitExpression;
 import net.sf.jsqlparser.expression.DateValue;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
-import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
 import net.sf.jsqlparser.expression.ExtractExpression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.HexValue;
@@ -1125,8 +1125,10 @@ extends JPanel
 		//-------------------------------------------------------
 		// IN
 		//-------------------------------------------------------
-//TODO; // a BUNCH of things has changed in JSqlParser 5.3 -- So we need to look at this in MORE DETAILS...
-//TODO; // For example 'where dbid in(1,2,3) and logptr > 1000'  -- IN and AND doesn't work that good... I have NOT tested a BUNCH of other "stuff"
+		// a BUNCH of things has changed in JSqlParser 5.3 -- So we need to look at this in MORE DETAILS...
+		// For example 'where dbid in(1,2,3) and logptr > 1000'  -- IN and AND doesn't work that good... I have NOT tested a BUNCH of other "stuff"
+		// the above   'where dbid in(1,2,3) and logptr > 1000'  -- is Solved in JSQLParser 5.3-SNAPSHOT, which I build: 2025-12-22
+
 		@Override 
 		public Object visit(InExpression expr, Object context)
 		{
@@ -1135,7 +1137,7 @@ extends JPanel
 
 			if (_logger.isDebugEnabled()) in("---> InExpression-visitor: "+expr);
 
-System.out.println(":::::::::: leftExpression='"+expr.getLeftExpression().getClass().getSimpleName()+"', toStr='"+expr.getLeftExpression()+"'.");
+//System.out.println(":::::::::: leftExpression='"+expr.getLeftExpression().getClass().getSimpleName()+"', toStr='"+expr.getLeftExpression()+"'.");
 			// Handle left expression
 			if (expr.getLeftExpression() != null)
 			{
@@ -1145,10 +1147,10 @@ System.out.println(":::::::::: leftExpression='"+expr.getLeftExpression().getCla
 			// Handle right expression (the IN list)
 			Expression rightExpression = expr.getRightExpression();
 
-System.out.println(":::::::::: rightExpression='"+rightExpression.getClass().getSimpleName()+"', toStr='"+rightExpression+"'.");
+//System.out.println(":::::::::: rightExpression='"+rightExpression.getClass().getSimpleName()+"', toStr='"+rightExpression+"'.");
 			if (rightExpression instanceof ParenthesedExpressionList)
 			{
-System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 				final ArrayList<String> inListValues = new ArrayList<String>();
 
 				ParenthesedExpressionList exprList = (ParenthesedExpressionList) rightExpression;
@@ -1201,16 +1203,16 @@ System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 					if (exp instanceof LongValue) 
 					{
 						LongValue lv = (LongValue)exp;
-						System.out.println("------------------Long=" + lv.getValue());
+						System.out.println("------------------ExpressionList:Long=" + lv.getValue());
 					} 
 					else if (exp instanceof StringValue) 
 					{
 						StringValue sv = (StringValue)exp;
-						System.out.println("------------------Str=" + sv.getValue());
+						System.out.println("------------------ExpressionList:Str=" + sv.getValue());
 					}
 					else 
 					{
-						System.out.println("------------------Exp=" + exp);
+						System.out.println("------------------ExpressionList:Exp=" + exp);
 					}
 				}
 			}
@@ -1539,6 +1541,9 @@ System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		@Override public Object visit(Inverse                      expr, Object context) { throw new FilterParserException("Operation 'Inverse' not yet implemeted."); }
 		@Override public Object visit(CosineSimilarity             expr, Object context) { throw new FilterParserException("Operation 'CosineSimilarity' not yet implemeted."); }
 		@Override public Object visit(FromQuery                    expr, Object context) { throw new FilterParserException("Operation 'FromQuery' not yet implemeted."); }
+
+		// Going from version 5.3 to 5.4-SNAPSHOT we needed the below methods
+		@Override public Object visit(DateUnitExpression           expr, Object context) { throw new FilterParserException("Operation 'DateUnitExpression' not yet implemeted."); }
 	};
 	
 	

@@ -22,6 +22,8 @@
 package com.dbxtune.pcs.report.content;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
@@ -29,9 +31,14 @@ import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
+
+import javax.imageio.ImageIO;
+import javax.imageio.spi.IIORegistry;
+
 import java.util.Set;
 
 import org.apache.commons.codec.binary.Base64OutputStream;
@@ -50,6 +57,7 @@ import org.jfree.data.time.TimeSeriesDataItem;
 
 import com.dbxtune.graph.TrendGraphColors;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 
@@ -78,6 +86,12 @@ public abstract class ReportChartAbstract implements IReportChart
 	public final static int CHART_WIDTH_60   = 1130; // 60%
 	public final static int CHART_HEIGHT_50  = 150;  // 50%
 	public final static int CHART_WIDTH_50   = 950;  // 50%
+
+//	public final static int CHART_HEIGHT_FULL_MSG = CHART_HEIGHT_80;
+//	public final static int CHART_WIDTH_FULL_MSG  = CHART_WIDTH_80; 
+//
+//	public final static int CHART_HEIGHT_SHORT_MSG = CHART_HEIGHT_80;
+//	public final static int CHART_WIDTH_SHORT_MSG  = CHART_WIDTH_80; 
 
 	public final static int CHART_HEIGHT_FULL_MSG = CHART_HEIGHT_80;
 	public final static int CHART_WIDTH_FULL_MSG  = CHART_WIDTH_80; 
@@ -196,45 +210,44 @@ public abstract class ReportChartAbstract implements IReportChart
 		return this;
 	}
 
-	private int getJsChartSizeHeight()
+	protected int getJsChartSizeHeight()
 	{
 		return CHART_HEIGHT_FULL_MSG;
 	}
 	
-	private int getJsChartSizeWidth()
+	protected int getJsChartSizeWidth()
 	{
 		return CHART_WIDTH_FULL_MSG;
 	}
 
-	private int getImageSizeHeight()
+	protected int getImageSizeHeight()
 	{
-		return CHART_HEIGHT_FULL_MSG;
-//		return CHART_HEIGHT_SHORT_MSG;
-//		if (getReportEntry() != null)
-//		{
-//			if (getReportEntry().isFullMessageType())
-//				return CHART_HEIGHT_FULL_MSG;
-//			
-//			if (getReportEntry().isShortMessageType())
-//				return CHART_HEIGHT_SHORT_MSG;
-//		}
-//
 //		return CHART_HEIGHT_FULL_MSG;
+		if (getReportEntry() != null)
+		{
+			if (getReportEntry().isFullMessageType())
+				return CHART_HEIGHT_FULL_MSG;
+			
+			if (getReportEntry().isShortMessageType())
+				return CHART_HEIGHT_SHORT_MSG;
+		}
+
+		return CHART_HEIGHT_FULL_MSG;
 	}
 	
-	private int getImageSizeWidth()
+	protected int getImageSizeWidth()
 	{
-		return CHART_WIDTH_FULL_MSG;
-//		if (getReportEntry() != null)
-//		{
-//			if (getReportEntry().isFullMessageType())
-//				return CHART_WIDTH_FULL_MSG;
-//			
-//			if (getReportEntry().isShortMessageType())
-//				return CHART_WIDTH_SHORT_MSG;
-//		}
-//
 //		return CHART_WIDTH_FULL_MSG;
+		if (getReportEntry() != null)
+		{
+			if (getReportEntry().isFullMessageType())
+				return CHART_WIDTH_FULL_MSG;
+			
+			if (getReportEntry().isShortMessageType())
+				return CHART_WIDTH_SHORT_MSG;
+		}
+
+		return CHART_WIDTH_FULL_MSG;
 	}
 
 	/**
@@ -1073,37 +1086,32 @@ public abstract class ReportChartAbstract implements IReportChart
 //			String  tagName     = _cmName + "_" + _graphName;
 			String  tagName     = _chartId;
 
-			boolean asPng = true;
-			if (asPng)
+			// Choose only one of the below... it will use the FIRST that is true
+//			String imgType = "png";
+			String imgType = "jpeg";
+//			String imgType = "webp"; // This did't really work at least using TwelveMonkeys_ImageIO version: 3.13.1
+
+			// If we want to change from a configuration...
+			Configuration.getCombinedConfiguration().getProperty("DailySummaryReport.ReportChartAbstract.writeAsHtmlInlineImage.imgType", imgType);
+			
+			if ("png".equalsIgnoreCase(imgType))
 			{
 				// Write the HTML Meta data
 				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' src='data:image/png;base64,");
 
-//setWriterStartPoint(writer);
 				// Write the Base64 representation of the image
-//				ChartUtils.writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
 				writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
-
-//long size1 = getWritenChars(writer);
-//System.out.println(">>>>>> CHART SIZE-1: " + size1 + ", compression=" + compression + ", tagName='" + tagName + "'.");
-
-//compression = 9;
-//setWriterStartPoint(writer);
-//	writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
-//long size2 = getWritenChars(writer);
-////System.out.println("    >> CHART SIZE-2: " + size2 + ", compression=" + compression + ", tagName='" + tagName + "'.");
-//System.out.println("  -->> CHART DIFF: " + (size2 - size1) + "   (size2[c9]=" + size2 + " - size1[c0]=" + size1 + "), tagName='" + tagName + "'.");
-
 
 				// Write the HTML end tag
 				writer.append("'>");
 			}
-			else
+			else if ("jpeg".equalsIgnoreCase(imgType))
 			{
 				// Write the HTML Meta data
-				writer.append("<img width='" + width + "' height='" + height + "' src='data:image/jpeg;base64,");
+				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' src='data:image/jpeg;base64,");
 				
-				float   jpgQuality  = 0.0f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 
+//				float   jpgQuality  = 0.0f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 
+				float   jpgQuality  = 0.5f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 
 				ChartRenderingInfo renderInfo = null;
 //				ChartRenderingInfo renderInfo = new ChartRenderingInfo();
 //				renderInfo.
@@ -1115,6 +1123,37 @@ public abstract class ReportChartAbstract implements IReportChart
 				// Write the HTML end tag
 				writer.append("'>");
 			}
+			else if ("webp".equalsIgnoreCase(imgType))
+			{
+				// Render chart to BufferedImage
+				BufferedImage bufferedImage = _chart.createBufferedImage(width, height);
+
+//if (ImageIO_scanForPlugins)
+//{
+//	IIORegistry registry = IIORegistry.getDefaultInstance();
+////	registry.registerServiceProvider(new com.twelvemonkeys.imageio.plugins.webp.WebPImageWriterSpi());
+//	registry.registerServiceProvider("com.twelvemonkeys.imageio.plugins.webp.WebPImageWriterSpi");
+//	
+//	ImageIO.scanForPlugins();
+//	ImageIO_scanForPlugins = false;
+//
+//	String[] writers = ImageIO.getWriterFormatNames();
+//	System.out.println("writeAsHtmlInlineImage(): Available ImageIO formats: " + java.util.Arrays.toString(writers));
+//}
+				// Encode as WebP into a byte array
+				// NOTE: This needs to have a "driver" for "webp" in the classpath
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				ImageIO.write(bufferedImage, "webp", baos);
+				
+				// Write inline HTML img tag with base64 WebP
+				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' src='data:image/webp;base64,");
+				writer.append(Base64.getEncoder().encodeToString(baos.toByteArray()));
+				writer.append("'>");
+			}
+			else
+			{
+				throw new RuntimeException("writeAsHtmlInlineImage(): Not any immageType specified...");
+			}
 			
 			// We can't close them, because then the underlying Writer will be closed
 			base64out.flush();
@@ -1122,10 +1161,13 @@ public abstract class ReportChartAbstract implements IReportChart
 		}
 		catch (IOException ex)
 		{
+			_logger.error("writeAsHtmlInlineImage(): Problems writing image. Caught: " + ex, ex);
 			_exception = ex;
 			_problem = ex.toString();
 		}
 	}
+//private static boolean ImageIO_scanForPlugins = true;
+
 //	//------------------------------------
 //	// BEGIN: debugging size of written chars/bytes for ...
 //	//------------------------------------
@@ -1207,6 +1249,41 @@ public abstract class ReportChartAbstract implements IReportChart
 //		}
 	}
 
+	public static void writeChartAsPNG_notWorking_TYPE_BYTE_INDEXED(OutputStream writer, JFreeChart chart, int width, int height, boolean encodeAlpha, int compression)
+	throws IOException 
+	{
+		try 
+		{
+			// Create indexed image (TYPE_BYTE_INDEXED = max 256 colors).
+			// This minimizes raw-data with approx 60-70% compared to standard PNG.
+			BufferedImage bufferedImage = chart.createBufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, null);
+
+			// Create the streams
+//			WriterOutputStream wos = new WriterOutputStream(writer, StandardCharsets.UTF_8);
+			// Base64OutputStream adds line-breaks as standard, set lineLength=0 if you want a single long line
+			Base64OutputStream base64out = new Base64OutputStream(writer, true, 0, null);
+
+//			String idAttr = (htmlId != null && !htmlId.isEmpty()) ? "id='" + htmlId + "' " : "";
+//			writer.append("<img ").append(idAttr)
+//				.append("width='").append(String.valueOf(chartWidth))
+//				.append("' height='").append(String.valueOf(charHeight))
+//				.append("' src='data:image/png;base64,");
+
+			// Use ImageIO directly instead of ChartUtils to write the indexed image
+			ImageIO.write(bufferedImage, "png", base64out);
+
+//			writer.append("'>");
+
+			// NOTE: do NOT close the streams here, since it will close the 'writer'
+			base64out.flush();
+			writer.flush();
+		} 
+		catch (IOException ex) 
+		{
+			throw ex;
+		}
+	}
+	
 	//----------------------------------------------------------
 	// Below are code for creating Graph/Chart images that can be included in the HTML Report
 	//----------------------------------------------------------

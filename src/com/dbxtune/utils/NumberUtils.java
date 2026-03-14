@@ -145,9 +145,9 @@ public class NumberUtils
 
 		BigDecimal bd = new BigDecimal(value);
 		bd = bd.setScale(places, RoundingMode.HALF_UP);
-	    return Double.valueOf( bd.doubleValue() );
+		return Double.valueOf( bd.doubleValue() );
 
-//	    return new BigDecimal( value ).setScale(places, RoundingMode.HALF_UP).doubleValue();
+//		return new BigDecimal( value ).setScale(places, RoundingMode.HALF_UP).doubleValue();
 	}
 
 	/**

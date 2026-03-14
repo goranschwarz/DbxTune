@@ -48,7 +48,7 @@ public class LocalMetricsCounterController extends CounterControllerAbstract
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public static final String PROPKEY_cmOsUptime_alarmDisabledAtStartupForXMinutes = "DbxCentralLocalMetrics.CmOsUptime.alarm.disabled.at.startup.for.x.minutes";
-	public static final int    DEFAULT_cmOsUptime_alarmDisabledAtStartupForXMinutes = 5;
+	public static final int    DEFAULT_cmOsUptime_alarmDisabledAtStartupForXMinutes = 10;
 
 	/**
 	 * The default constructor

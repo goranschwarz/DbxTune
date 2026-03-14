@@ -1402,7 +1402,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 					{
 						try
 						{
-							lockList = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid, this);
+							lockList  = SqlServerUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid, this);
 							spidLocks = SqlServerUtils.getLockSummaryForSpid(lockList, true, false);
 							if (spidLocks == null)
 								spidLocks = "No Locks found";

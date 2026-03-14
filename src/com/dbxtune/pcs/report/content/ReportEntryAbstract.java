@@ -25,6 +25,10 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -38,6 +42,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
@@ -45,6 +51,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
+import com.dbxtune.central.controllers.SpaceForecastServlet;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.DictCompression;
@@ -60,9 +67,14 @@ import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.CountingWriter;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.HtmlQueryString;
+import com.dbxtune.utils.HttpUtils;
+import com.dbxtune.utils.SpaceForecast;
 import com.dbxtune.utils.SqlUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
+import com.dbxtune.utils.SpaceForecast.SpaceForecastResult;
+import com.dbxtune.utils.SpaceForecast.SpaceForecastResult.SpaceType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public abstract class ReportEntryAbstract
 implements IReportEntry
@@ -388,6 +400,27 @@ implements IReportEntry
 		{
 			setProblemException(ex);
 			
+			// If we get a H2 TimeoutException... Execute same SQL but with EXPLAIN to get some kind of Execution PLAN
+			if (ex instanceof org.h2.jdbc.JdbcSQLTimeoutException)
+			{
+				String explainText = executeH2WithExplain(conn, sql, name);
+				addProblemMessage(explainText);
+			}
+
+//			// If we get a SQL Server TimeoutException... Execute same SQL but with SHOWPLAN to get some kind of Execution PLAN
+//			if (ex instanceof SQLServerTimeoutException)
+//			{
+//				String explainText = executeSqlServerWithShowplan(conn, sql, name);
+//				addProblemMessage(explainText);
+//			}
+//			
+//			// If we get a Postgres TimeoutException... Execute same SQL but with EXPLAIN to get some kind of Execution PLAN
+//			if (ex instanceof PostgresTimeoutException)
+//			{
+//				String explainText = executePostgresWithExplain(conn, sql, name);
+//				addProblemMessage(explainText);
+//			}
+			
 			//_fullRstm = ResultSetTableModel.createEmpty(name);
 			_logger.warn("Problems getting '" + name + "': " + ex + ". SQL=|" + sql + "|.");
 			
@@ -397,6 +430,39 @@ implements IReportEntry
 				return null;
 		}
 	}
+	
+	private String executeH2WithExplain(DbxConnection conn, String sql, String name)
+	{
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Query Timeout
+			stmnt.setQueryTimeout( getDsrQueryTimeoutInSec() );
+			
+			try ( ResultSet rs = stmnt.executeQuery( "EXPLAIN PLAN FOR " + sql) )
+			{
+				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);
+
+				return "<br>"
+					+ "<b>H2 Execution Plan (executeH2WithExplain)</b><br>\n"
+					+ "<pre>" 
+					+ rstm.toAsciiTableString() 
+					+ "</pre> \n";
+			}
+		}
+		catch(SQLException ex)
+		{
+			return "executeH2WithExplain(): Caught: " + ex;
+		}
+	}
+	private String executeSqlServerWithShowplan(DbxConnection conn, String sql, String name)
+	{
+		return "executeSqlServerWithShowplan: -NOT-YET-IMPLEMENTED-";
+	}
+	private String executePostgresWithExplain(DbxConnection conn, String sql, String name)
+	{
+		return "executePostgresWithExplain: -NOT-YET-IMPLEMENTED-";
+	}
+
 	
 	@Override
 	public String getEndOfReportText()
@@ -985,7 +1051,7 @@ implements IReportEntry
 
 		if (pos_linkColumnName >= 0 && pos_skipColumnName >= 0)
 		{
-			String dbxCentral     = getReportingInstance().getDbxCentralBaseUrl();
+			String dbxCentral     = getReportingInstance().getDbxCentralPublicBaseUrl();
 			String srvName        = getReportingInstance().getDbmsServerName();
 			String className      = this.getClass().getSimpleName();
 			String entryType      = skipColumnName;
@@ -1102,7 +1168,7 @@ implements IReportEntry
 	}
 	public String getDbxCentralLinkForGraphs(String... graphList)
 	{
-		String dbxcLink = getReportingInstance().getDbxCentralBaseUrl();
+		String dbxcLink = getReportingInstance().getDbxCentralPublicBaseUrl();
 		RecordingInfo recordingInfo = getReportingInstance().getInstanceRecordingInfo();
 		
 		String startTime = recordingInfo.getStartTime();
@@ -1420,7 +1486,7 @@ implements IReportEntry
 
 	protected String createSkippedEntriesReport(ResultSetTableModel skipRstm)
 	{
-		String dbxCentralAdminUrl = getReportingInstance().getDbxCentralBaseUrl() + "/admin/admin.html";
+		String dbxCentralAdminUrl = getReportingInstance().getDbxCentralPublicBaseUrl() + "/admin/admin.html";
 
 		if (skipRstm == null)
 			return "--NO-SKIPPED-ROWS (null)--<br><br> \n";
@@ -2065,5 +2131,80 @@ implements IReportEntry
 		}
 	}
 
+	
+	public String getDbxCentralSpaceForecastUrl(String srvName, int days, int sampleMinutes, SpaceType spaceType, String outType) 
+	{
+		// Compose a URL
+		String dbxCentral  = DailySummaryReportAbstract.getDbxCentralInternalBaseUrl();
+		String baseUrl     = dbxCentral + "/api/space/forecast?srv=" + srvName + "&days=" + days + "&period=" + sampleMinutes + "&outType=" + outType;
+
+		String url = baseUrl;
+		if      (spaceType.equals(SpaceType.OS_DISK  )) { url += "&type=os";   }
+		else if (spaceType.equals(SpaceType.DBMS_DATA)) { url += "&type=data"; }
+		else if (spaceType.equals(SpaceType.DBMS_WAL )) { url += "&type=wal";  }
+		else
+		{
+			throw new RuntimeException("Unhandled space type of '" + spaceType + "'.");
+		}
+		
+		return url;
+	}
+
+	/**
+	 * Makes a REST Call to DbxCentral and ...
+	 * 
+	 * @param url
+	 * @return SpaceForecast object
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public SpaceForecast dbxCentralSpaceForecastRestCall(String srvName, int days, int sampleMinutes, SpaceType spaceType) 
+	throws IOException, InterruptedException
+	{
+		HttpClient   httpClient   = HttpClient.newHttpClient();
+		ObjectMapper objectMapper = new ObjectMapper();
+
+		// Compose a URL
+		String url = getDbxCentralSpaceForecastUrl(srvName, days, sampleMinutes, spaceType, SpaceForecastServlet.OUTPUT_TYPE_JSON);
+		
+		// Call DbxCentral to get a JSON Report... Then translate it into a Java Object
+		HttpRequest request = HttpRequest.newBuilder()
+				.uri(URI.create(url))
+				.header("Accept", "application/json")
+				.GET()
+				.build();
+		
+		_logger.info("Calling DbxCentral for a SpaceForecast on serverName '" + srvName + "' using url='" + url + "'.");
+		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+		String msgBody  = response.body();
+
+		// Read the response (on error, try to "parse" the message body to extract "<title>MSG</title>" to get error message.
+		int statusCode = response.statusCode();
+		if (statusCode != 200)
+		{
+			String msgTitle = "";
+			
+			// Regex to get '<title>', lets use (CASE_INSENSITIVE) and over multiple rows (DOTALL)
+			Pattern pattern = Pattern.compile("<title.*?>(.*?)</title>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+			Matcher matcher = pattern.matcher(msgBody);
+
+			if (matcher.find()) 
+			{
+				msgTitle = matcher.group(1);
+				msgTitle = msgTitle.replace("&apos;", "'").trim();
+			}
+			else
+			{
+				// <title> wasn't found... lets strip of all HTML Tags and give that as the message.
+				msgTitle = msgBody.replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim();
+			}
+
+			throw new RuntimeException("HTTP Error: statusCode=" + statusCode +" ('" + HttpUtils.httpResponceCodeToText(statusCode) + "'), url='" + url + "'. message='" + msgTitle + "'.");
+		}
+
+		// Read JSON and return an object
+		SpaceForecast forcaster = objectMapper.readValue(msgBody, SpaceForecast.class);
+		return forcaster;
+	}
 }
 

@@ -22,6 +22,7 @@
 package com.dbxtune.pcs.report.content;
 
 import java.awt.BasicStroke;
+import java.awt.Font;
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -49,6 +50,7 @@ import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.data.general.Dataset;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
@@ -138,6 +140,39 @@ extends ReportChartAbstract
 //		plot.setDomainGridlinePaint(Color.GRAY);
 //		plot.setRangeGridlinePaint(Color.GRAY);
 
+		// Should we do "smallerFont" in ReportChartTimeSeriesStackedBar also ???
+//		boolean smallerFonts = false;
+		boolean smallerFonts = getImageSizeHeight() < CHART_HEIGHT_80;
+		if (smallerFonts)
+		{
+			chart.getTitle().setFont(new Font("SansSerif", Font.BOLD, 12)); // DEFAULT: bold, 18
+			
+			plot.getDomainAxis().setLabelFont    (new Font("SansSerif", Font.PLAIN, 10)); // default: plain, 12
+			plot.getDomainAxis().setTickLabelFont(new Font("SansSerif", Font.PLAIN,  9)); // default: plain, 10
+			plot.getRangeAxis() .setLabelFont    (new Font("SansSerif", Font.PLAIN, 10)); // default: plain, 12
+			plot.getRangeAxis() .setTickLabelFont(new Font("SansSerif", Font.PLAIN,  9)); // default: plain, 10
+
+			chart.getLegend().setItemFont(new Font("SansSerif", Font.PLAIN, 9));
+		}
+		
+		// Note sure if this actually worked... so lets set it to FALSE for now
+		boolean useLessSpaceBetweenChartAndLegend = false;
+		if (useLessSpaceBetweenChartAndLegend)
+		{
+			// Reduce padding around the title
+			chart.getTitle().setPadding(2, 0, 2, 0); // top, left, bottom, right  (default is ~6)
+
+			// Reduce padding around the legend
+			chart.getLegend().setPadding(2, 2, 2, 2);  // default is ~6
+			chart.getLegend().setMargin(0, 0, 0, 0);   // outer margin around legend block
+
+			// Reduce padding inside the plot area itself
+			plot.setInsets(new RectangleInsets(2, 2, 2, 2)); // default ~4-8
+
+			// Reduce chart-level padding (space between chart border and everything inside)
+			chart.setPadding(new RectangleInsets(2, 2, 2, 2));
+		}
+
 		
 		// Set thicker lines
 		boolean thickLines = false;
@@ -191,6 +226,11 @@ extends ReportChartAbstract
 			NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
 			rangeAxis.setRange(0.0, maxValue);
 		}
+
+		// Disable anti aliasing to reduce Image size
+		// But the charts looks a lot worse (which I think we can live with if size is drastically smaller... but that does NOT seems to be the case)
+//		chart.setAntiAlias(false);
+//		chart.setTextAntiAlias(false);
 
 		return chart;
 	}

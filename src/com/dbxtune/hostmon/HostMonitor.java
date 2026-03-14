@@ -40,6 +40,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.hostmon.HostMonitorConnection.ExecutionWrapper;
+import com.dbxtune.sql.FilterPredicate;
 import com.dbxtune.ssh.SshConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -130,6 +131,17 @@ implements Runnable
 		_currentSample = new OsTable(getMetaData());
 	}
 
+	/**
+	 * Optional init method.
+	 * <br>
+	 * CAN Be called after instantiation, but has to be called manually after creation.
+	 * @param conn
+	 */
+	public void init(HostMonitorConnection conn)
+	throws Exception
+	{
+	}
+	
 //	/** Set the underlying SSH Connection */
 //	public void setConnection(SshConnection conn)
 //	{
@@ -165,6 +177,15 @@ implements Runnable
 	{
 		if (_hostMonConn != null)
 			return _hostMonConn.getHostname();
+	
+		return null;
+	}
+
+	/** Get the username for the underlying SSH Connection, if not connected it returns null */
+	public String getUsername()
+	{
+		if (_hostMonConn != null)
+			return _hostMonConn.getUsername();
 	
 		return null;
 	}
@@ -492,6 +513,48 @@ implements Runnable
 	}
 
 	/**
+	 * Here we can investigate if any "data filters" ha expected data.
+	 * 
+	 * @param osTableRow
+	 * @return true=SKIP, false=KEEP_ROW
+	 */
+	public boolean skipRow(OsTableRow osTableRow)
+	{
+		// Get filter predicates
+		//  colPos   predicate
+		Map<Integer, FilterPredicate> filterMap = osTableRow._md.getSkipRowsFilter();
+
+		// No filters: KEEP ROW
+		if (filterMap == null)   return false;
+		if (filterMap.isEmpty()) return false;
+
+		// Check filters
+		for (Map.Entry<Integer, FilterPredicate> entry : filterMap.entrySet()) 
+		{
+			Integer         colPos    = entry.getKey();
+			FilterPredicate predicate = entry.getValue();
+			
+			Object colVal = osTableRow.getValue(colPos);
+
+			// TEST simply applies the Operator EQUAL|GREATER_THAN|LESS_THAN|...
+			// and if the test is true, then we SKIP the row
+			if (predicate.test(colVal))
+			{
+				if (_logger.isDebugEnabled())
+				{
+					_logger.debug("-DISCARD-: This row was discarded due to FILTER in metadata. colPos=" + colPos + ", ColValue='" + colVal + "', FilterPredicate=" + predicate);
+				}
+
+				// SKIP ROW
+				return true;
+			}
+		}
+
+		// KEEP ROW
+		return false;
+	}
+
+	/**
 	 * This method is called from parseRow() to check if the row should be ALLOWED<br>
 	 * This is basically a FILTER IN check on specific rows/column values
 	 * <p>
@@ -717,11 +780,18 @@ implements Runnable
 				try
 				{
 					OsTableRow entry = new OsTableRow(md, strArr);
-					_currentSample.addRow(entry);
+					
+					// In here we can do stuff like "if 'colname' and 'dataValue' is less than # filter it out..."
+					// how to set filters example: md.addSkipRowsFilter("Size-KB", FilterPredicate.Operator.LESS_THAN, sizeKb)
+					if ( ! skipRow(entry) )
+					{
+						// Add the row
+						_currentSample.addRow(entry);
 
-					// If we want to use the current entry in a streaming command to calculate something "in-between" samples
-					// This can for example be used to calculate our own implementation of 1,5,15 minutes Average load on Windows...
-					addRowForCurrentSubSampleHookin(entry);
+						// If we want to use the current entry in a streaming command to calculate something "in-between" samples
+						// This can for example be used to calculate our own implementation of 1,5,15 minutes Average load on Windows...
+						addRowForCurrentSubSampleHookin(entry);
+					}
 
 					// start/restart the "auto close sample"
 					if (_closeSampleTimeout != null)
@@ -1129,7 +1199,7 @@ implements Runnable
 		try
 		{
 			_logger.info("Executing command '"+getCommand()+"', for the module '"+getModuleName()+"'.");
-			execWrapper = _hostMonConn.executeCommand(getCommand());
+			execWrapper = _hostMonConn.executeCommand(getCommand(), true); // true = Streaming OS Command
 		}
 		catch (Exception e)
 		{

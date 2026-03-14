@@ -12,11 +12,12 @@
 		======================================================================= 
 		--> 
 		<!-- JS: JQuery --> 
-		<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.min.js'></script> 
+		<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script> 
 		
 		<!-- JS: Bootstrap --> 
-		<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> 
-		<script type="text/javascript" src='/scripts/bootstrap/js/bootstrap.min.js'></script> 
+<!-- 	<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
+<!--	<script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
+		<script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 		
 		<!--  
 		======================================================================= 
@@ -25,7 +26,8 @@
 		--> 
 		
 		<!-- CSS: Bootstrap --> 
-		<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> 
+<!--	<link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> --> 
+		<link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
 		
 		<!-- CSS: Font Awsome --> 
 		<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> 
@@ -313,6 +315,27 @@
 		<h5 class='card-header'><a href='/api/collector-refresh?srv=SRVNAME'>/api/collector-refresh</a></h5>
 		<div class='card-body'>
 		Send a refresh request to a collector server.<br>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
+		<!-- ############################################################################# -->
+		<div id='/api/space/forecast' class='card border-dark mb-5'>
+		<h5 class='card-header'><a href='/api/api/space/forecast?srv=SRVNAME'>/api/space/forecast</a></h5>
+		<div class='card-body'>
+		Space Forecast for OS or Database.<br>
+		<br>
+		Parameters:
+		<table>
+			<!--     ==========          =================          =========== -->
+			<tr> <th>Name      </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==========          =================          =========== -->
+			<tr> <td>srv       </td> <td><b>mandatory</b> </td> <td>Name of the server</td> </tr>
+			<tr> <td>type      </td> <td>os</td>                <td>Type of forecast: os, data, wal</td> </tr>
+			<tr> <td>days      </td> <td>30</td>                <td>Number of Days to use in the forecast</td> </tr>
+			<tr> <td>period    </td> <td>60</td>                <td>Sample Period Grouped in this amount of minutes</td> </tr>
+			<tr> <td>outType   </td> <td>html-page</td>         <td>What to return/produce: html-page, html-table, json</td> </tr>
+		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 

@@ -51,6 +51,7 @@ import com.dbxtune.gui.swing.TableModelSortable;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
 import com.dbxtune.hostmon.OsTable;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
 import com.dbxtune.utils.TimeUtils;
@@ -115,6 +116,12 @@ extends CounterModelHostMonitor
 
 	public static final String  PROPKEY_top = "MonitorPs.top";
 	public static final int     DEFAULT_top = -1; // ALL
+	
+	public static final String  PROPKEY_minCpuPctUsage = "MonitorPs.min.cpu.pct.usage";
+	public static final double  DEFAULT_minCpuPctUsage = 0.1;
+	
+	public static final String  PROPKEY_linux_useSudo = "MonitorPs.linux.use.sudo";
+	public static final boolean DEFAULT_linux_useSudo = false;
 	
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
@@ -288,6 +295,44 @@ extends CounterModelHostMonitor
 
 
 	@Override
+	public void localCalculation(OsTable prevSample, OsTable thisSample)
+	{
+		if (prevSample == null)
+			return;
+
+		// for WINDOWS
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			int coreCount = getCounterController().getHostMonConnection().getOsCoreCount();
+			
+			int pos_cpuSec      = thisSample.findColumn("CPU(s)");
+			int pos_cpuPct      = thisSample.findColumn("%Cpu");
+			int pos_cpuAdjPct   = thisSample.findColumn("%CpuAdj");
+
+			// set '%Cpu', '%CpuAdj'
+			if (pos_cpuSec != -1 && pos_cpuPct != -1 && pos_cpuAdjPct != -1)
+			{
+				for (int r = 0; r < thisSample.getRowCount(); r++)
+				{
+					long prevCpuMs = (long) (1000 * prevSample.getValueAsDouble(r, pos_cpuSec, 0d));
+					long thisCpuMs = (long) (1000 * thisSample.getValueAsDouble(r, pos_cpuSec, 0d));
+
+					long diffCpuMs = thisCpuMs - prevCpuMs;
+
+					double cpuPct    = diffCpuMs * 100.0 / getSampleInterval();
+					double cpuAdjPct = cpuPct / coreCount;
+					
+					cpuPct    = NumberUtils.round(cpuPct   , 1);
+					cpuAdjPct = NumberUtils.round(cpuAdjPct, 1);
+
+					thisSample.setValueAt(cpuPct   , r, pos_cpuPct);
+					thisSample.setValueAt(cpuAdjPct, r, pos_cpuAdjPct);
+				}
+			}
+		}
+	}
+	
+	@Override
 	public void localCalculation(OsTable thisSample)
 	{
 		// for WINDOWS
@@ -304,9 +349,10 @@ extends CounterModelHostMonitor
 				for (int r = 0; r < thisSample.getRowCount(); r++)
 				{
 					double cpuSec = thisSample.getValueAsDouble(r, pos_cpuSec, 0d);
+					long   cpuMs  = (long) (cpuSec * 1000);
 
 					// Calculate: [#d] HH:MM:SS.ms
-					String cpuTimeHms = TimeUtils.msToTimeStrDHMSms( (long) (cpuSec * 1000) );
+					String cpuTimeHms = TimeUtils.msToTimeStrDHMSms( cpuMs );
 
 					thisSample.setValueAt(cpuTimeHms, r, pos_cpuTimeHms);
 				}

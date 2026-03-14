@@ -33,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.config.dbms.AseConfigText;
 import com.dbxtune.pcs.report.content.DbmsConfigIssues;
+import com.dbxtune.pcs.report.content.ase.AseBackupHistory;
 import com.dbxtune.pcs.report.content.ase.AseCmDeviceIo;
 import com.dbxtune.pcs.report.content.ase.AseCmSqlStatement;
 import com.dbxtune.pcs.report.content.ase.AseCmSqlStatementPerDb;
@@ -52,12 +53,14 @@ import com.dbxtune.pcs.report.content.ase.AseTopSlowDynAndStmnt;
 import com.dbxtune.pcs.report.content.ase.AseTopSlowNormalizedSql;
 import com.dbxtune.pcs.report.content.ase.AseTopSlowProcCalls;
 import com.dbxtune.pcs.report.content.ase.AseTopSlowSqlText;
+import com.dbxtune.pcs.report.content.ase.AseTopTableSize;
 import com.dbxtune.pcs.report.content.ase.AseUnusedIndexes;
 import com.dbxtune.pcs.report.content.ase.AseWaitStats;
 import com.dbxtune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
+import com.dbxtune.pcs.report.content.os.OsSpaceUsageOverview;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.StringUtil;
 
@@ -100,14 +103,13 @@ extends DailySummaryReportDefault
 		addReportEntry( new AseTopCmActiveStatements(this)  );
 
 		// SQL: Accessed Tables
-//FIXME: Add AseTopTableSize or check/use AseTopCmObjectActivityTabSize(and if rowCount/MB has timedOut, can we use getTableInformationFromMonDdlStorage)
+		addReportEntry( new AseTopTableSize(this)           );
 		addReportEntry( new AseTopCmObjectActivity(this, AseTopCmObjectActivity.ReportType.LOGICAL_READS) );
 		addReportEntry( new AseTopCmObjectActivity(this, AseTopCmObjectActivity.ReportType.LOCK_WAIT_TIME) );
-//		addReportEntry( new AseTopCmObjectActivityLockWaits(this) );
-//		addReportEntry( new AseTopCmObjectActivityTabSize(this) );
-		addReportEntry( new AseUnusedIndexes(this) );
+		addReportEntry( new AseUnusedIndexes(this)          );
 
 		// Disk IO Activity (Slow devices & Overall charts)
+		addReportEntry( new OsSpaceUsageOverview(this)      );
 		addReportEntry( new OsIoStatOverview(this)          );
 		addReportEntry( new OsIoStatSlowIo(this)            );
 		addReportEntry( new AseCmDeviceIo(this)             );
@@ -118,6 +120,7 @@ extends DailySummaryReportDefault
 
 		// Database Size
 		addReportEntry( new AseDbSize(this)                 );
+		addReportEntry( new AseBackupHistory(this)          );
 
 		// ASE Configuration
 		addReportEntry( new AseConfiguration(this)          );

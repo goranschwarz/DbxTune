@@ -46,8 +46,9 @@ extends AbstractLoginService
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	public static final String ROLE_ADMIN = "admin";
-	public static final String ROLE_USER  = "user";
+	public static final String ROLE_ADMIN     = "admin";
+	public static final String ROLE_UD_ACTION = "ud_action";
+	public static final String ROLE_USER      = "user";
 
 	public static final String PROPKEY_USER_ADMIN_FALLBACK = "DbxCentralRealm.user.admin.fallback";
 	public static final String DEFAULT_USER_ADMIN_FALLBACK = "admin";

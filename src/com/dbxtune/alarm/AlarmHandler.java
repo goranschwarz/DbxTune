@@ -985,27 +985,38 @@ implements Runnable
 		{
 			AlarmEvent cancelledAlarm = li.next();
 
-			//if (cancelledAlarm.isXxx) // NOTE: Possibly implement a method on the Alarm to check if the Alarm *must* have a "have undergone alarm detection" message
-			//                                   But for now, just check the alarm class for AlarmEventSrvDown
-			if (cancelledAlarm instanceof AlarmEventSrvDown)
+			// If it's an Alarm Raised, where we know that it's a "One Shot" Alarm that we don't need that a "check" has to be done
+			// How long the Alarms will live is dictated by TimeToLive before it can be cancelled
+			if (cancelledAlarm.isAlwaysCancelable())
 			{
-				_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'SRV-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+				_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm '" + cancelledAlarm.getAlarmClassAbriviated() + "' due to property 'isAlwaysCancelable' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
 				continue;
-			}
-			if (cancelledAlarm instanceof AlarmEventHttpDestinationDown)
-			{
-				_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'HTTP-DESTINATION-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
-				continue;
-			}
-			if (cancelledAlarm instanceof AlarmEventOsLoadAverageAdjusted)
-			{
-				if ("H2WriterStat".equals(cancelledAlarm.getServiceInfo()))
-				{
-					_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'OS-LOAD-AVERAGE-ADJUSTED' with serviceInfo='H2WriterStat' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
-					continue;
-				}
 			}
 
+			// The below is now implemented by: isAlwaysCancelable() -- But keep this comments for a while (for clarity)
+//			if (cancelledAlarm instanceof AlarmEventSrvDown)
+//			{
+//				_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'SRV-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+//				continue;
+//			}
+
+			// The below is now implemented by: isAlwaysCancelable() -- But keep this comments for a while (for clarity)
+//			if (cancelledAlarm instanceof AlarmEventHttpDestinationDown)
+//			{
+//				_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'HTTP-DESTINATION-DOWN' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+//				continue;
+//			}
+
+			// The below is now implemented by: isAlwaysCancelable() -- But keep this comments for a while (for clarity)
+//			if (cancelledAlarm instanceof AlarmEventOsLoadAverageAdjusted)
+//			{
+//				if ("H2WriterStat".equals(cancelledAlarm.getServiceInfo()))
+//				{
+//					_logger.info("AlarmHandler '" + getInstanceName() + "' Keeping Alarm 'OS-LOAD-AVERAGE-ADJUSTED' with serviceInfo='H2WriterStat' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. cancelledAlarm: " + cancelledAlarm + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection);
+//					continue;
+//				}
+//			}
+			
 			if ( ! _hasUndergoneAlarmDetection.contains( cancelledAlarm.getServiceInfo() ) )
 			{
 				_logger.info("AlarmHandler '" + getInstanceName() + "' Removing Alarm '" + cancelledAlarm.getAlarmClassAbriviated() + "' in checkForCancelations(), when checking 'hasUndergoneAlarmDetection'. Possibly a timeout or some other error when the CM sampled data. cancelledAlarm.getServiceInfo()=" + cancelledAlarm.getServiceInfo() + ", _hasUndergoneAlarmDetection=" + _hasUndergoneAlarmDetection + ", cancelledAlarm=" + cancelledAlarm);

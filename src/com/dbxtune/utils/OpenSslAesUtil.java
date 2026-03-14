@@ -312,6 +312,43 @@ public class OpenSslAesUtil
 	
 
 	/**
+	 * Decode a String that has been encoded with os command openssl, see: decode(String passwd, String base64Str)<br>
+	 * Decode using multiple decodePasswords...
+	 * 
+	 * @param base64Str
+	 * @param passwdArr
+	 * @return
+	 * @throws DecryptionException
+	 */
+	public static String decode(String base64Str, String... passwdArr)
+	throws DecryptionException
+	{
+		if (passwdArr        == null) throw new RuntimeException("passwdArr can't be null.");
+		if (passwdArr.length == 0   ) throw new RuntimeException("passwdArr can't be empty.");
+
+		DecryptionException lastEx = null;
+		for (String passwd : passwdArr)
+		{
+			try
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("OpenSslAesUtil.decode(passwd='" + passwd + "', base64Str='" + base64Str + "'.)");
+
+				return decode(passwd, base64Str);
+			}
+			catch (DecryptionException ex)
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("OpenSslAesUtil.decode(passwd='" + passwd + "', base64Str='" + base64Str + "'.): FAILED: ex=" + ex);
+
+				lastEx = ex;
+			}
+		}
+		
+		throw lastEx;
+	}
+
+	/**
 	 * Decode a String that has been encoded with os command openssl<br>
 	 * This is the same as doing the following os command:<br>
 	 * <code>echo 'U2FsdGVkX1+1dw6kuaMMFu4WkNLM1Cw09OYYWC5vRa4=' | openssl enc -aes-128-cbc -a -d -salt -pass pass:sybase</code>
@@ -535,6 +572,11 @@ public class OpenSslAesUtil
 		return passPhrase;
 	}
 	
+	public static String[] getDefaultPassPhraseFallbacks()
+	{
+		return new String[] {"sybase", "mssql"};
+	}
+	
 	/**
 	 * Read the Password file as a String
 	 * @param filename    Can be null, then the default filename is used.
@@ -658,10 +700,36 @@ public class OpenSslAesUtil
 					{
 						if (srvEntry)
 						{
-							if (serverName != null && serverName.equals(fServer))
+//							if (serverName != null && serverName.equals(fServer))
+//							{
+//								srvMatchEncPasswd      = fEncPasswd;
+//								srvMatchEncPasswdAtRow = rowNumber;
+//							}
+							if (serverName != null)
 							{
-								srvMatchEncPasswd      = fEncPasswd;
-								srvMatchEncPasswdAtRow = rowNumber;
+								_logger.debug("----- readPasswdFromFile(): row["+rowNumber+"]: serverName='" + serverName + "', fServer='" + fServer + "'");
+								if (serverName.equals(fServer))
+								{
+									_logger.debug("----- readPasswdFromFile(): MATCH: level-1, row["+rowNumber+"]");
+									srvMatchEncPasswd      = fEncPasswd;
+									srvMatchEncPasswdAtRow = rowNumber;
+									break;
+								}
+								else
+								{
+									// normalize server name -- Strip of "domain" to make it easier
+									String shortServerName = StringUtil.extractHostnameFromFqdn(serverName);
+									String shortfileServer = StringUtil.extractHostnameFromFqdn(fServer);
+
+									_logger.debug("----- readPasswdFromFile(): row["+rowNumber+"]: shortServerName='" + shortServerName + "', shortfileServer='" + shortfileServer + "'");
+									if (shortServerName.equals(shortfileServer))
+									{
+										_logger.debug("----- readPasswdFromFile(): MATCH: level-2, row["+rowNumber+"]");
+										srvMatchEncPasswd      = fEncPasswd;
+										srvMatchEncPasswdAtRow = rowNumber;
+										break;
+									}
+								}
 							}
 						}
 						else
@@ -673,15 +741,15 @@ public class OpenSslAesUtil
 				}
 			}
 			
-			boolean usedFallback        = false; 
-			String rawEncryptedStr      = null;
-			int    rawEncryptedStrAtRow = 0;
+			boolean foundUserButNoServer = false; 
+			String  rawEncryptedStr      = null;
+			int     rawEncryptedStrAtRow = 0;
 
 			// Generic password *without* server specification (use this as a FALLBACK)
 			// entry looking like |sa:encryptedPasswd|
 			if (fallbackEncPasswd != null)
 			{
-				usedFallback         = true;
+				foundUserButNoServer = true;
 				rawEncryptedStr      = fallbackEncPasswd;
 				rawEncryptedStrAtRow = fallbackEncPasswdAtRow;
 			}
@@ -690,7 +758,7 @@ public class OpenSslAesUtil
 			// entry looking like |sa:PROD_A_ASE:encryptedPasswd|
 			if (srvMatchEncPasswd != null) 
 			{
-				usedFallback         = false;
+				foundUserButNoServer = false;
 				rawEncryptedStr      = srvMatchEncPasswd;
 				rawEncryptedStrAtRow = srvMatchEncPasswdAtRow;
 			}
@@ -698,7 +766,7 @@ public class OpenSslAesUtil
 			// DECODE the rawEncryptedStr
 			if (rawEncryptedStr != null)
 			{
-				_logger.info("Found encrypted password for username '" + user + "', servername='" + serverName + "', at row " + rawEncryptedStrAtRow + ", in file '" + filename + "' usedFallback=" + usedFallback + ".");
+				_logger.info("Found encrypted password for username '" + user + "', servername='" + serverName + "', at row " + rawEncryptedStrAtRow + ", in file '" + filename + "' usedFallbacks[foundUserButNoServer=" + foundUserButNoServer + "].");
 
 				// First try with the supplied passphrase
 				try
@@ -715,8 +783,16 @@ public class OpenSslAesUtil
 					}
 					catch(DecryptionException ex)
 					{
-						throw new DecryptionException("When reading password file '" + f + "', at row " + rawEncryptedStrAtRow + ", we Caught: " + originEx.getMessage(), originEx);
-						//throw originEx;
+						// Third try with SIMPLEST fallback
+						try
+						{
+							return decode(rawEncryptedStr, getDefaultPassPhraseFallbacks());
+						}
+						catch(DecryptionException ex2)
+						{
+							throw new DecryptionException("When reading password file '" + f + "', at row " + rawEncryptedStrAtRow + ", we Caught: " + originEx.getMessage(), originEx);
+							//throw originEx;
+						}
 					}
 				}
 			}
@@ -1389,5 +1465,13 @@ public class OpenSslAesUtil
 		try { System.out.println("x1-ok="   + decode("sybase", "U2FsdGVkX1/foj2pv2V24rLfl7RLdcMGdd8jaTngzns=")); } catch(Exception e) { e.printStackTrace(); }
 //		try { System.out.println("x2-fail=" + decode("sybase", "U2FsdGVkX1+4mSAv8/x8TRYx8wPrWUovDh8HBY16ZTY=")); } catch(Exception e) { e.printStackTrace(); }
 		try { System.out.println("x3-ok="   + decode("sysopr", "U2FsdGVkX1+4mSAv8/x8TRYx8wPrWUovDh8HBY16ZTY=")); } catch(Exception e) { e.printStackTrace(); }
+
+	
+		System.out.println("readFromFile=|" + getPasswordFilename() + "|");
+		try { System.out.println("readFromFile=|" + readPasswdFromFile("dbxtune", "prod-a1-mssql", null, "mssql") + "|"); }
+		catch(Exception e) { e.printStackTrace(); }
+		try { System.out.println("readFromFile=|" + readPasswdFromFile("dbxtune", "prod-a1-mssql.maxm.se", null, "mssql") + "|"); }
+		catch(Exception e) { e.printStackTrace(); }
+		
 	}
 }

@@ -239,6 +239,10 @@ extends DbmsDdlResolverAbstract
 //	}
 
 
+	// Private helper methods if: *varchar is above max storage, then return: *varchar(max)
+	private String varcharFix (int len) { return (len > 65535) ? "text" : "varchar(" + len + ")"; }
+	private String nvarcharFix(int len) { return (len > 65535) ? "text" : "varchar(" + len + ")"; }
+
 	/**
 	 * Resolve JDBC Types -->> Postgres 
 	 */
@@ -262,7 +266,7 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.NUMERIC:                 return "numeric("+length+","+scale+")";
 		case java.sql.Types.DECIMAL:                 return "decimal("+length+","+scale+")";
 		case java.sql.Types.CHAR:                    return "char("+length+")";
-		case java.sql.Types.VARCHAR:                 return "varchar("+length+")";
+		case java.sql.Types.VARCHAR:                 return varcharFix(length);           // if ABOVE 65535 -> text
 		case java.sql.Types.LONGVARCHAR:             return "text";
 		case java.sql.Types.DATE:                    return "date";
 		case java.sql.Types.TIME:                    return "time";
@@ -285,7 +289,7 @@ extends DbmsDdlResolverAbstract
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "varchar(20)";                 // Just guessing here... from https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT1846
 		case java.sql.Types.NCHAR:                   return "char("+length+")";
-		case java.sql.Types.NVARCHAR:                return "varchar("+length+")";
+		case java.sql.Types.NVARCHAR:                return nvarcharFix(length);          // if ABOVE 65535 -> text
 		case java.sql.Types.LONGNVARCHAR:            return "text";
 		case java.sql.Types.NCLOB:                   return "text";
 		case java.sql.Types.SQLXML:                  return "xml";

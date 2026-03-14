@@ -34,6 +34,7 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventMissingMandatoryContent;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
@@ -114,14 +115,36 @@ public class AlarmHelper
 			
 			if (count == 0)
 			{
-				AlarmEvent ae = new AlarmEventMissingMandatoryContent(cm, colName, name);
-				alarmHandler.addAlarm( ae );
+				String dbmsSrvName = cm.getServerName();
+
+				// Get config 'skip/allow'
+				String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContentForSrv),  DEFAULT_alarm_MandatoryColNameContentForSrv);
+				String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContentSkipSrv), DEFAULT_alarm_MandatoryColNameContentSkipSrv);
+
+				// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+				boolean doAlarm = true;
+
+				// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+				// Below is more readable, from a variable context point-of-view, but HARDER to understand
+				doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+				doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+
+				if (doAlarm)
+				{
+					AlarmEvent ae = new AlarmEventMissingMandatoryContent(cm, colName, name);
+					alarmHandler.addAlarm( ae );
+				}
 			}
 		}
 	}
 
 	public static final String  PROPKEY_alarm_MandatoryColNameContent = "<CM_NAME>.alarm.system.mandatory.contentList.forColName.<COL_NAME>";
 	public static final String  DEFAULT_alarm_MandatoryColNameContent = "";
+
+	public static final String  PROPKEY_alarm_MandatoryColNameContentForSrv    = "<CM_NAME>.alarm.system.mandatory.contentList.forColName.<COL_NAME>.for.srv";
+	public static final String  DEFAULT_alarm_MandatoryColNameContentForSrv    = "";
+	public static final String  PROPKEY_alarm_MandatoryColNameContentSkipSrv   = "<CM_NAME>.alarm.system.mandatory.contentList.forColName.<COL_NAME>.skip.srv";
+	public static final String  DEFAULT_alarm_MandatoryColNameContentSkipSrv   = "";
 
 	public static String fixCmName(CountersModel cm, String colName, String propkey)
 	{
@@ -143,6 +166,26 @@ public class AlarmHelper
 					conf.getProperty(fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContent), DEFAULT_alarm_MandatoryColNameContent), 
 					DEFAULT_alarm_MandatoryColNameContent, 
 					"If any of the specified 'names/values' in the list is missing from the column '"+colName+"' then send alarm 'AlarmEventMissingMandatoryContent'." 
+				));
+
+			list.add(new CmSettingsHelper(
+					"Mandatory-ColumnNameContent-List-" + colName + " ForSrv",
+					fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContentForSrv), 
+					String.class, 
+					conf.getProperty(fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContentForSrv), DEFAULT_alarm_MandatoryColNameContentForSrv), 
+					DEFAULT_alarm_MandatoryColNameContentForSrv, 
+					"Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",
+					new RegExpInputValidator() 
+				));
+
+			list.add(new CmSettingsHelper(
+					"Mandatory-ColumnNameContent-List-" + colName + " SkipSrv",
+					fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContentSkipSrv), 
+					String.class, 
+					conf.getProperty(fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContentSkipSrv), DEFAULT_alarm_MandatoryColNameContentSkipSrv), 
+					DEFAULT_alarm_MandatoryColNameContentSkipSrv, 
+					"Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated.",
+					new RegExpInputValidator() 
 				));
 		}
 

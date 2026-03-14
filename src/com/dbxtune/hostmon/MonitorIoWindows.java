@@ -45,7 +45,7 @@ extends MonitorIo
 	{
 		String cmdPath = Configuration.getCombinedConfiguration().getProperty(PROPKEY_windows_typeperf_cmd_path, DEFAULT_windows_typeperf_cmd_path);
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\PhysicalDisk(*)\\*\"";
+		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\PhysicalDisk(*)\\*\" ";
 //		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\LogicalDisk(*)\\*\""; // or should we use this??? It also have: Free% & FreeMB
 	}
 

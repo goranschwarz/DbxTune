@@ -660,6 +660,9 @@ extends CompletionProviderAbstractSql
 				"",
 				"set identity identity_burn_max"));
 
+		// PLAN -- Optimizations Goals
+		list.add( new CompletionTemplate("plan", "plan '(use optgoal {fastfirstrow|allrows_oltp|allrows_mixed|allrows_dss})'") );
+
 		return list;
 	}
 	/**

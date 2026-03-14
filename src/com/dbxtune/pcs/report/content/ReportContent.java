@@ -138,7 +138,7 @@ public class ReportContent
 	 * @return never null, if short report is not available, then "" will be returned. 
 	 */
 	public String getMinimalMessage()
-	throws IOException
+//	throws IOException
 	{
 		if (_contentMinimalMessage == null)
 			return "";

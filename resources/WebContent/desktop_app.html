@@ -11,15 +11,16 @@
     =======================================================================
   -->
   <!-- JS: JQuery -->
-  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.1.min.js"></script>
   
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
   <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
 
   <!-- JS: Bootstrap -->
-  <script type="text/javascript" src="/scripts/popper/1.12.9/popper.min.js"></script>
-  <script type="text/javascript" src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+<!-- <script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
+<!-- <script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
+  <script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
@@ -33,7 +34,8 @@
   <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
 
   <!-- CSS: Bootstrap -->
-  <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
+<!-- <link rel="stylesheet" href="/scripts/bootstrap/4.0.0/css/bootstrap.min.css"> -->
+  <link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
 
   <!-- CSS: Font Awsome -->
   <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -112,7 +114,7 @@
       <p>
         <h5>Requirements to run the Native Application</h5>
         <ul>
-          <li>Java 8 or later installed on your local machine</li>
+          <li>Java 11 or <b>later</b> installed on your local machine</li>
           <li>Windows, Mac or Linux (since it's Java it will run <i>anywhere</i>)</li>
         </ul>
         <h5>Installation instructions</h5>
@@ -123,7 +125,7 @@
             <b>Note</b>: Replace <code><b><i>xxx</i></b>tune</code> with the DBMS flavor you want to view. (<code>ase</code>, <code>iq</code>, <code>rs</code>, <code>rax</code>, <code>sqlserver</code>, <code>postgres</code>, <code>mysql</code>, <code>db2</code>, <code>oracle</code>, <code>hana</code>)
           </li>
         </ul>
-        <h5>Connect to a recording (shortcut) <i>Native app needs to be running</i></h5>
+        <h5>Connect to a recording (shortcut) <i>Note: Native app needs to be running</i></h5>
         <ul>
           <li>In this web page 'nav bar' click <a href="/overview">'Server'</a>, scroll down to <a href="/overview#offline">'Available offline databases'</a></li>
           <li>Note: To view <i>active/todays</i> recording, click <a href="/overview">'Server'</a>, scroll to <a href="/overview#active">'Active Recordings'</a></li>

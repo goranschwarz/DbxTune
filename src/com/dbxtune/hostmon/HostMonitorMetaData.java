@@ -42,6 +42,9 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.gui.ResultSetTableModel;
+import com.dbxtune.sql.FilterPredicate;
+import com.dbxtune.sql.FilterPredicate.FieldMetadata;
+import com.dbxtune.sql.FilterPredicate.Operator;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MandatoryPropertyException;
 import com.dbxtune.utils.PropPropEntry;
@@ -60,6 +63,15 @@ implements ResultSetMetaData
 	public static final int STATUS_COL_SUB_SAMPLE  = 1;
 	/** This mean that it's the value System.currentTime() when the individual record/row was created, this is used when multiple rows will be displayed. meaning only 1 row per parser sample, while the output is not average/summary calculated... */
 	public static final int STATUS_COL_SAMPLE_TIME = 2;
+
+	/** A Map where we store FilterPredicates to be "skipped" for a specific column. 
+	 * NOTE: For now only one Predicate can be checked. (if we want many: we need a list of FilterPredicate and also implement AND/OR logic...)
+	 * <p>
+	 * key = Column Position <br>
+	 * val = The FilterPredicate
+	 */
+	//          ColPos   predicate
+	private Map<Integer, FilterPredicate> _skipRowsPredicateMap = null;
 
 	/** A Map where we store values to be "skipped" for a specific column */
 	private Map<String, Integer> _skipRowsList = null;
@@ -114,6 +126,9 @@ implements ResultSetMetaData
 		{
 			return (this._sqlColNum < ce._sqlColNum ? -1 : (this._sqlColNum == ce._sqlColNum ? 0 : 1));
 		}
+		
+		public String getColName() { return _colName; }
+		public int    getSqlType() { return _sqlType; }
 	}
 
 	/** Regexp to use when parsing */
@@ -217,7 +232,7 @@ implements ResultSetMetaData
 	 * @return a Meta Data ColumnEntry 
 	 * @throws RuntimeException if the column could NOT be found.
 	 */
-	protected ColumnEntry getColumn(String name)
+	public ColumnEntry getColumn(String name)
 	{
 		for (ColumnEntry e: _columns)
 		{
@@ -555,6 +570,49 @@ implements ResultSetMetaData
 		addColumn(entry);
 	}
 
+
+	/**
+	 * Add a FilterPredicate so we can check if a column contains any specific value by an operator: EQUALS, GREATER_THAN, LESS_THAN...
+	 * 
+	 * @param colName
+	 * @param operator
+	 * @param value
+	 */
+	public void addSkipRowsFilter(String colName, Operator operator, Object value)
+	{
+		ColumnEntry colEntry = getColumn(colName);
+		FieldMetadata fmd = new FieldMetadata(colEntry.getColName(), colEntry.getSqlType());
+
+		FilterPredicate predicate = new FilterPredicate(fmd, operator, value);
+
+		addSkipRowsFilter(colName, predicate);
+	}
+
+	private void addSkipRowsFilter(String colname, FilterPredicate predicate)
+	{
+		if (_skipRowsPredicateMap == null)
+			_skipRowsPredicateMap = new HashMap<>();
+		
+		ColumnEntry entry = getColumn(colname);
+		
+		// NOTE: This should be 'entry._parseColNum' and NOT 'entry._parseColNum - 1'
+		//       Since this is the column Position, and NOT the Array Position in the input String Array
+		_skipRowsPredicateMap.put(entry._parseColNum, predicate);
+	}
+
+	/** 
+	 * Get Filter Predicates for when rows are about to be skipped
+	 * @return
+	 */
+	public Map<Integer, FilterPredicate> getSkipRowsFilter()
+	{
+		if (_skipRowsPredicateMap == null)
+			return Collections.emptyMap();
+
+		return _skipRowsPredicateMap;
+	}
+	
+	
 	/**
 	 * This will be used by the parser to discard "header rows", or other unwanted rows.<br>
 	 * If the row value count matches the "parse count", the it can still be a invalid column header that we want to skip
@@ -562,7 +620,7 @@ implements ResultSetMetaData
 	 * @param colname the columns where where a specific value to search for
 	 * @param valueToSkip The regexp value in the specified column name
 	 */
-	public void setSkipRows(String colname, String valueToSkip)
+	public void addSkipRows(String colname, String valueToSkip)
 	{
 		if (_skipRowsList == null)
 			_skipRowsList = new HashMap<String, Integer>();
@@ -1491,7 +1549,7 @@ implements ResultSetMetaData
 				String colNameToSkipValueFor = option;
 				String valueToSkip           = propValue;
 				
-				md.setSkipRows(colNameToSkipValueFor, valueToSkip);
+				md.addSkipRows(colNameToSkipValueFor, valueToSkip);
 			}
 			else if (method.equals("allowRows"))
 			{
@@ -1583,7 +1641,7 @@ implements ResultSetMetaData
 				String colNameToSkipValueFor = option;
 				String valueToSkip           = propValue;
 
-				setSkipRows(colNameToSkipValueFor, valueToSkip);
+				addSkipRows(colNameToSkipValueFor, valueToSkip);
 			}
 			else if (method.equals("allowRows"))
 			{
@@ -1701,5 +1759,4 @@ implements ResultSetMetaData
 			e.printStackTrace();
 		}
 	}
-
 }

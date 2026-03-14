@@ -291,6 +291,19 @@ public abstract class DbxTune
 	public String getAppSaveDirEnvName() { return "DBXTUNE_SAVE_DIR"; }
 
 
+	private String _noGuiConfigFileName;
+	public String getNoGuiConfigFileName()
+	{
+		return _noGuiConfigFileName;
+	}
+
+	private String _logFileName;
+	public String getLogFileName()
+	{
+		return _logFileName;
+	}
+
+	
 	public abstract String getConfigFileName();
 	public abstract String getUserConfigFileName();
 	public abstract String getSaveConfigFileName();
@@ -673,6 +686,7 @@ public abstract class DbxTune
 				logFilename += Version.getAppName()+".nogui."+tmpSrvName+".log";
 			}
 		}
+		_logFileName = logFilename;
 
 
 
@@ -910,6 +924,7 @@ public abstract class DbxTune
 			if ( (new File(noGuiConfigFile)).exists() )
 			{
 				storeConfigProps.load(noGuiConfigFile);
+				_noGuiConfigFileName = noGuiConfigFile;
 			}
 			else
 			{
@@ -1016,7 +1031,7 @@ public abstract class DbxTune
 				{
 					try
 					{
-						//_logger.info("Reading password for DBMS server name '" + aseServer + "' from file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
+						_logger.info("Reading password for DBMS server name '" + aseServer + "' from file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 						// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
 						String asePasswd = OpenSslAesUtil.readPasswdFromFile(aseUser, aseServer);
@@ -1049,6 +1064,12 @@ public abstract class DbxTune
 						_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
 					}
 				}
+			}
+			else
+			{
+				_logger.info("DBMS password was specified from command line switch '-P' or '--passwd'. value='******'");
+				if (_logger.isDebugEnabled())
+					_logger.debug("DBMS password was specified from command line switch '-P' or '--passwd'. value='" + storeConfigProps.getProperty("conn.dbmsPassword") + "'");
 			}
 			
 

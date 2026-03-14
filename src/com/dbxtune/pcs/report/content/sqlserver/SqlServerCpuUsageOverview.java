@@ -32,6 +32,7 @@ import com.dbxtune.cm.sqlserver.CmMemoryGrantsSum;
 import com.dbxtune.cm.sqlserver.CmPerfCounters;
 import com.dbxtune.cm.sqlserver.CmSchedulers;
 import com.dbxtune.cm.sqlserver.CmSummary;
+import com.dbxtune.cm.sqlserver.CmWaitStats;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -84,6 +85,12 @@ extends SqlServerAbstract
 				"CmSummary_aaReadWriteGraph",
 				"CmOsIostat_IoBusyPct",
 				"CmPerfCounters_SqlBatch",
+				"CmSummary_OldestTranInSecGraph",
+				"CmSummary_DeadlockCountSum",    				
+				"CmSummary_BlockingLocksGraph",
+				"CmWaitStats_LockCount",
+				"CmWaitStats_LockTime",
+				"CmWaitStats_LockTpw",
 				"CmIndexOpStatSum_OpIudInstance",
 				"CmIndexOpStatSum_OpIudUserDbs",
 				"CmIndexOpStatSum_OpIudTempdb",
@@ -111,6 +118,12 @@ extends SqlServerAbstract
 		_CmSummary_aaReadWriteGraph             .writeHtmlContent(w, null, null);
 		_CmOsIostat_IoBusyPct                   .writeHtmlContent(w, null, null);
 		_CmPerfCounters_SqlBatch                .writeHtmlContent(w, null, null);
+		_CmSummary_OldestTranInSecGraph         .writeHtmlContent(w, null, null);
+		_CmSummary_DeadlockCountSum             .writeHtmlContent(w, null, null);
+		_CmSummary_BlockingLocksGraph           .writeHtmlContent(w, null, null);
+		_CmWaitStats_LockCount                  .writeHtmlContent(w, "If you have Waits at Server Level, please see section: '<b>Top TABLE/INDEX Activity - BY_WAITS</b>' for details (what tables that are affected).", null);
+		_CmWaitStats_LockTime                   .writeHtmlContent(w, null, null);
+		_CmWaitStats_LockTpw                    .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpIudInstance         .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpIudUserDbs          .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpIudTempdb           .writeHtmlContent(w, null, null);
@@ -162,6 +175,8 @@ extends SqlServerAbstract
 		
 		String schema = getReportingInstance().getDbmsSchemaName();
 
+		int LockWaitsThresholdSec = Configuration.getCombinedConfiguration().getIntProperty(CmSummary.PROPKEY_alarm_LockWaitsThresholdSec, CmSummary.DEFAULT_alarm_LockWaitsThresholdSec);
+		
 		int maxValue = 100;
 		_CmSummary_aaCpuGraph                    = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_AA_CPU,                        maxValue, false, null,    "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");
 		_CmSchedulers_CpuComboSch                = createTsLineChart(conn, schema, CmSchedulers     .CM_NAME, CmSchedulers     .GRAPH_NAME_CPU_COMBO_SCHEDULERS,          maxValue, false, null,    "CPU Usage in Percent, Both Average and Per Schedulers (using dm_os_schedulers.total_cpu_usage_ms)");
@@ -169,6 +184,12 @@ extends SqlServerAbstract
 		_CmSummary_aaReadWriteGraph              = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_AA_DISK_READ_WRITE,            -1,       false, null,    "Disk read/write per second, using @@total_read, @@total_write (Summary)");
 		_CmOsIostat_IoBusyPct                    = createTsLineChart(conn, schema, CmOsIostat       .CM_NAME, CmOsIostat       .GRAPH_NAME_BusyPct,                       maxValue, false, null,    "OS: Disk Busy Percent(utilPct) per Device (Host Monitor->OS Disk Stat(iostat))");
 		_CmPerfCounters_SqlBatch                 = createTsLineChart(conn, schema, CmPerfCounters   .CM_NAME, CmPerfCounters   .GRAPH_NAME_SQL_BATCHES_SEC,               -1,       false, null,    "SQL Batches Received per Sec (Server->Perf Counters)");
+		_CmSummary_OldestTranInSecGraph          = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_OLDEST_TRAN_IN_SEC,            -1,       false, null,    "Oldest Open Transaction in any Databases, in Seconds (Summary)");
+		_CmSummary_DeadlockCountSum              = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_DEADLOCK_COUNT_SUM,            -1,       false, null,    "Deadlock Count (Summary)");
+		_CmSummary_BlockingLocksGraph            = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_BLOCKING_LOCKS,                -1,       false, null,    "Number of Concurrently Blocking Locks, above " + LockWaitsThresholdSec + " sec, from sysprocesses (Summary)");
+		_CmWaitStats_LockCount                   = createTsLineChart(conn, schema, CmWaitStats      .CM_NAME, CmWaitStats      .GRAPH_NAME_LOCK_COUNT,                    -1,       true,  null,    "Server Waiting to Take Locks, by 'waiting_tasks_count' (Server->Srv Wait)");
+		_CmWaitStats_LockTime                    = createTsLineChart(conn, schema, CmWaitStats      .CM_NAME, CmWaitStats      .GRAPH_NAME_LOCK_TIME,                     -1,       true,  null,    "Server Waiting to Take Locks, by 'wait_time_ms' (Server->Srv Wait)");
+		_CmWaitStats_LockTpw                     = createTsLineChart(conn, schema, CmWaitStats      .CM_NAME, CmWaitStats      .GRAPH_NAME_LOCK_TPW,                      -1,       true,  null,    "Server Waiting to Take Locks, by 'WaitTimePerCount' (Server->Srv Wait)");
 		_CmIndexOpStatSum_OpIudInstance          = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_IUD_INSTANCE,                  -1,       false, null,    "Insert/Update/Delete Rows Per Second at Instance Level (Object/Access->Index Op Sum)");
 		_CmIndexOpStatSum_OpIudUserDbs           = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_IUD_USER_DBS,                  -1,       false, null,    "Insert/Update/Delete Rows Per Second for User Databases (Object/Access->Index Op Sum)");
 		_CmIndexOpStatSum_OpIudTempdb            = createTsLineChart(conn, schema, CmIndexOpStatSum .CM_NAME, CmIndexOpStatSum .GRAPH_NAME_IUD_TEMPDB,                    -1,       false, null,    "Insert/Update/Delete Rows Per Second for tempdb (Object/Access->Index Op Sum)");
@@ -195,6 +216,12 @@ extends SqlServerAbstract
 	private IReportChart _CmSummary_aaReadWriteGraph;
 	private IReportChart _CmOsIostat_IoBusyPct;
 	private IReportChart _CmPerfCounters_SqlBatch;
+	private IReportChart _CmSummary_OldestTranInSecGraph;
+	private IReportChart _CmSummary_DeadlockCountSum;
+	private IReportChart _CmSummary_BlockingLocksGraph;
+	private IReportChart _CmWaitStats_LockCount;
+	private IReportChart _CmWaitStats_LockTime;
+	private IReportChart _CmWaitStats_LockTpw;
 	private IReportChart _CmIndexOpStatSum_OpIudInstance;
 	private IReportChart _CmIndexOpStatSum_OpIudUserDbs;
 	private IReportChart _CmIndexOpStatSum_OpIudTempdb;

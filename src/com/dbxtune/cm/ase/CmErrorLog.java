@@ -373,8 +373,6 @@ extends CountersModelAppend
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TransactionLogFull"))
 			{
-				// ### maybe: ErrorNumber=2812, Severity=16, ErrorMessage=Stored procedure 'sp_thresholdaction' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
-
 				// ErrorNumber=7412, Severity=10, ErrorMessage=Space available in segment 'logsegment' has fallen critically low in database 'master'. All future modifications to this database will be suspended until the transaction log is successfully dumped and space becomes available.
 				// ErrorNumber=7413, Severity=10, ErrorMessage=1 task(s) are sleeping waiting for space to become available in the log segment for database GAS_prod.
 				if (errorNumber == 7412 || errorNumber == 7413)
@@ -398,6 +396,27 @@ extends CountersModelAppend
 					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+					alarmHandler.addAlarm( ae );
+				}
+
+				// If no threshold procedure was installed... And we reach LCT (Last Chance Threshold)... 
+				//   the below would/should be written to the errorlog. Which means that we are VERY CLOSE to a FULL WAL (Write Ahead Log)
+				// ErrorNumber=2812, Severity=16, ErrorMessage=Stored procedure 'sp_thresholdaction' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
+				// Not sure if this reaches 'monErrorlog' but anyway...
+				if (errorNumber == 2812 && ErrorMessage.contains("sp_thresholdaction"))
+				{
+					String extendedDescText = ErrorMessage;
+					String extendedDescHtml = ErrorMessage;
+
+					String dbname = "-unknown-";
+
+					CountersModel cmOpenDatabases = getCounterController().getCmByName(CmOpenDatabases.CM_NAME);
+					extendedDescHtml += "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_LEFT_MB,  dbname);
+					extendedDescHtml += "<br><br>" + cmOpenDatabases.getGraphDataHistoryAsHtmlImage(CmOpenDatabases.GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
+
+					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname, errorlogTs);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
 					alarmHandler.addAlarm( ae );
 				}
 			}

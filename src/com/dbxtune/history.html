@@ -39,18 +39,29 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Generic - Changes that affects all DbxTune tools</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI><b>OsMemory </b> -- Swapping -- Changed 'Moving Avergae' from 10 minutes to 15 minutes</LI>
-		<LI><b>OsMemory </b> -- For alarms 'Swapping' and 'SwapThrashing' also send info on current Memory Usage</LI>
+		<LI><b>OsMemory       </b> -- Swapping -- Changed 'Moving Avergae' from 10 minutes to 15 minutes</LI>
+		<LI><b>OsMemory       </b> -- For alarms 'Swapping' and 'SwapThrashing' also send info on current Memory Usage</LI>
+		<LI><b>CmOsDiskSpace  </b> -- Added new graph: FsSizeMb -- mainly used for: DbxCentral Space Prediction Report </LI>
+		<LI><b>CmOsPs         </b> -- Preparing for "switching from 'ps' to 'dbxtune_get_process_stats.py'", this to get better Process CPU/other statistics by using '/proc/*' files on Linux</LI>
+		<LI><b>CmOsXxx        </b> -- All the OS Monitoring GUI Panels now also shows what user we connected as.</LI>
+		<LI><b>CmOsDiskSpace  </b> -- Skipping some more file-systems. And also if the size is below 500 MB it's skipped. can be changed with property <code>hostmon.MonitorDiskSpace.skip.sizeMb.lt = ###</code></LI>
+		<LI><b>CmOsPs(Windows)</b> -- Added columns '%Cpu' & '%CpuAdj' to calculate how much Percent of the host we are using '%Cpu' Can be above 100%. '%CpuAdj' is %Cpu/numOfCores</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
-				<LI>xxx</LI>
+				<LI>New alarm: AlarmEventSpaceFullPrediction -- When we predict that we will fall "short" on space usage</LI>
 			</UL>
 		</LI>
 
 		<LI><b>Daily Summary Report Changes</b><br>
 			<UL>
 				<LI>Added timeout of 15 minutes for SQL Queries in the Reports</LI>
+				<LI>If links in the DSR pints to "strange" URL's you can override the with properties <code>DbxCentral.internal.base.url</code>, <code>DbxCentral.public.base.url</code></LI>
+				<LI>Getting JS/CSS files: First: get from local server, as a fallback use CDN's (this so we can read the DSR from "anywhere")</LI>
+				<LI>In section 'Recording Info', added fields for: 'Sample Period in Seconds', 'Config File', 'Log File'.</LI>
+				<LI>In section 'Recording Info', added fields for: 'Counter Information', 'Counter Config' -- A collapable: To view what collectors are recorded and how they are configured.</LI>
+				<LI>If any Report Sections times-out when running SQL Statements, include a "explain", so we can get the execution plan... to fix the issue...</LI>
+				<LI>In OsSpaceUsageOverview; show Estimate of "how many days until Disk is full" -- Raise Alarm if "CRITICAL" -- Meaning: in 7 days we will get full</LI>
 			</UL>
 		</LI>
 
@@ -61,18 +72,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <!-- 
 	  			<li>To version 2.4.240          Component: H2 Database</li>
  	  			<li>To version 9.4.58           Component: Jetty Webserver</li>
-	 			<li>To version 13.2.0           Component: MS SQL Server JDBC Driver</li>
+	 			<li>To version 13.2.1           Component: MS SQL Server JDBC Driver</li>
 	 			<li>To version 9.4.0            Component: MySQL JDBC Driver</li>
 	 			<li>To version 42.7.8           Component: Postgres JDBC Driver</li>
  -->
 	 			<li>To version 2.27.7           Component: Jsch</li>
-	 			<li>To version 5.3              Component: JSqlParser-</li>
+	 			<li>To version 5.4-SNAPSHOT     Component: JSqlParser-</li>
 
+	 			<li>To version 3.7.1            Component: jquery</li>
+	 			<li>To version 1.14.1           Component: jquery UI</li>
+	 			<li>To version 4.6.2            Component: Bootstrap</li>
+	 			<li>To version 1.30.0           Component: Prism</li>
+	 			<li>To version 2.7.3            Component: ChartJS</li>
 <!-- 
 	 			<li>To version 2.0.5            Component: sql-formatter</li>
 
-	 			<li>To version 3.7.0            Component: jquery</li>
-	 			<li>To version 1.13.2           Component: jquery UI</li>
 	 			<li>To version 2.9.2            Component: jquery-contextmenu</li>
 	 			<li>To version 3.1              Component: bootstrap-daterangepicker</li>
  -->
@@ -91,6 +105,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>PcsJdbcCleaner for DbxcLocalMetrics using a fallback method if getMetaData().getColumns() does not find any records.</LI>
 		<LI>Create a Daily Summary Report on older H2 db versions. Now gives a proper error message.</LI>
 		<LI>Create a Daily Summary Report on existing H2 database: Made the dialog slightly better ('Save File', or 'Open in New Tab')</LI>
+		<LI>Switch for getting JS/CSS files from various CDN to have them locally on the server. So we can work on closed networks (no access to Internet)</LI>
+		<LI>Added SSL support for the HTTP Server (but it probably needs a better implementation, using a newer version of Jetty (but then I'll have to upgrade to Java 17)</LI>
+		<LI>Skipping alarms if the collectors havn't sent any data for a while AND the server is NOT in the SERVER_LIST file.<br>This can be disabled with property <code>ReceiverAlarmCheck.skip.servers.not.in.SERVER_LIST={true|false}</code></LI>
+		<LI>In log file tail mode, press enter, will add a "marker", so it's easier to see when new lines has arrived.</LI>
+		<LI>In the 'Servers' section. Added 'User Defined Action': So we can add "self service" SQL/OS Commands. Like execute commands that normally needs a higher authorization than a normal SQL/OS login.</LI>
+		<LI>For 'User Defined Actions', I also added the ability to send mail, when it has been executed (including the output of the Action). So if you want to get notified when "anyone" has executed the User Defined Action, you are covered.</LI>
+		<LI>In the 'Servers' all sections are now "collapsible" by clicking on the section header.</LI>
+		<LI>New context menu item at the server button "Space Forecast Report" -- Creates a Forecast of space used for: OS (Data and WAL)</LI>
+		<LI>New context menu item at the server button "Select Graphs to View..." -- Opens a modal dialog so you can choose what Graphs you want to see.</LI>
+		<LI>After start, Local alarms (like CPU/Swapping etc, are disabled for 10 minutes; so that after a restart it can normalize without sending false alarms)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -102,24 +126,44 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>ASE 16.1 'sp_spaceused tabname' does now report sizes in MB instead of KB... So adjustments for that was needed</LI>
 		<LI>PCS - Statement Normalizer JSQLParser was upgraded to use version 5.3</LI>
 		<LI>Tool: Statement Cache Bloat Detector -- some changes to minimize 'Faulty SQL Syntax'</LI>
+		<LI>Backup History (from table: master.dbo.sysdumphist) is captured in no-gui config on Database rollover<BR>
+		    It can be configured with: <code>AseTune.onPcsDatabaseRollover.captureBackupHistory={true|false}</code>, and <code>AseTune.onPcsDatabaseRollover.captureBackupHistory.daysToCopy=##</code>, where default is 14 days
+		</LI>
+		<LI>In SqlCaptureBrokerAse: added 'RewrittenSqlText', 'ParseEx1', 'ParseEx2' to troble shoot why/what SQL Statements is not handled by the JSqlParser, so we can write "normalizers" for them.</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmCachePools       </b> -- Added Graph 'Cache Pools Physical Writes'</LI>
 
+		<LI><b>CmErrorLog         </b> -- If no threshold procedure was installed... And we reach LCT (Last Chance Threshold)... Which means that we are VERY CLOSE to a FULL WAL (Write Ahead Log): raise AlarmEventFullTranLog</LI>
+
 		<LI><b>CmOpenDatabases    </b> -- Alarm: LastBackupFailed was made to raise 'LastDbBackupFailed' or 'LastWalBackupFailed'.</LI>
+		<LI><b>CmOpenDatabases    </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>
 
 		<LI><b>CmPCacheModuleUsage</b> -- Alarm: StatementCacheAboveConfig -- Refresh Statement Cache size before sending alarm.</LI>
+
+		<LI><b>CmStatementCache   </b> -- Added new graphs: RecompilReason to show why it was recompile</LI>
+		
+		<LI><b>CmSummary          </b> -- Added new graphs: Deadlock Count</LI>
+
+		<LI><b>CmSysWaits         </b> -- Added new graphs: sysWaitLockTime, sysWaitLockCount & sysWaitLockTpw -- To view Server 'Waiting to Take a Lock', by WaitTime/WaitCount/WaitTimePerCount
 
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
 		<b>Daily Summary Report</b><br>
 		<ul>
-			<li><b>Report Info             </b> -- Added fields for 'ASE Max Memory', 'ASE Memory Available'</li>
-			<li><b>Show Configuration      </b> -- Now also includes 'ASE Cache Configuration'</li>
-			<li><b>Usage Overview          </b> -- Added some graphs: CmCachePools_PoolUsedMb, CmCachePools_PoolUtil, CmCachePools_PoolHitRate, CmCachePools_PoolReplaceSlide, CmCachePools_PoolPhysicalWrites</li>
-			<li><b>Error Info              </b> -- Added Description for the Error number on each collapsable error number</li>
-			<li><b>Statement Cache Overview</b> -- Added some graphs: CmSpMonitorConfig_ProcCacheMemUsage, CmPCacheModuleUsage_GraphMb</li>
-			<li><b>Statement Cache Details </b> -- Added 'scan-rows', 'qual-r-rows', 'qual-w-rows' </li>
+			<li><b>Report Info                   </b> -- Added fields for 'ASE Max Memory', 'ASE Memory Available'</li>
+			<li><b>Show Configuration            </b> -- Now also includes 'ASE Cache Configuration'</li>
+			<li><b>Usage Overview                </b> -- Added some graphs: CmCachePools_PoolUsedMb, CmCachePools_PoolUtil, CmCachePools_PoolHitRate, CmCachePools_PoolReplaceSlide, CmCachePools_PoolPhysicalWrites</li>
+			<li><b>Error Info                    </b> -- Added Description for the Error number on each collapsable error number</li>
+			<li><b>Statement Cache Overview      </b> -- Added some graphs: CmSpMonitorConfig_ProcCacheMemUsage, CmPCacheModuleUsage_GraphMb</li>
+			<li><b>Statement Cache Details       </b> -- Added 'scan-rows', 'qual-r-rows', 'qual-w-rows' </li>
+			<li><b>AseTopTableSize               </b> -- New Section</li>
+			<li><b>OsSpaceUsageOverview          </b> -- New Section</li>
+			<li><b>AseBackupHistory              </b> -- New Section</li>
+			<li><b>Usage Overview                </b> -- Added graph: CmSummary_OldestTranInSecGraph, CmSummary_DeadlockCount, CmSummary_BlockingLocksGraph, CmSysWaits_sysWaitLockTime, CmSysWaits_sysWaitLockCount, CmSysWaits_sysWaitLockTpw</li>
+			<li><b>AseDbSize                     </b> -- show Estimate of "how many days until Data/WAL is full" -- Raise Alarm if "CRITICAL" -- Meaning: in 7 days we will get full</li>
+			<li><b>AseStatementCacheUsageOverview</b> -- Show graph on CmStatementCache_RecompilReason</li>
+			<li><b>AseTopCmStmntCacheDetails     </b> -- show "AvgScanRows", "AvgQualifyingReadRows", "AvgQualifyingWriteRows" -- To see if we are scanning more rows than "needed"</li>
 		</ul>
 		</LI>
 	</UL>
@@ -178,24 +222,42 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<!-- ~~~ Overall Changes ~~~ -->
 		<LI><b>ObjectId Cache</b> -- Handle more Error Codes (Skipped when databases are not recovered, offline, etc...)</LI>
+		<LI>Backup History (from table: msdb.dbo.backupset) is captured in no-gui config on Database rollover<BR>
+		    It can be configured with: <code>SqlServerTune.onPcsDatabaseRollover.captureBackupHistory={true|false}</code>, and <code>SqlServerTune.onPcsDatabaseRollover.captureBackupHistory.daysToCopy=##</code>, where default is 14 days
+		</LI>
 
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements  </b> -- Cleaned up SQL Statements for 'lastKnownSql' that starts with ')' and simply removed that.</LI>
 
 		<LI><b>CmDatabases         </b> -- Cleaned up SQL Statements for 'most_recent_sql_text' that starts with ')' and simply removed that.</LI>
-
-		<LI><b>CmWaitingTasks      </b> -- Cleaned up SQL Statements for 'currentSqlText' that starts with ')' and simply removed that.</LI>
+		<LI><b>CmDatabases         </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>
+		<LI><b>CmDatabases         </b> -- Only get "Database Scoped Configuration (Only Non Defaults)" for databases with higher compatibility_level than 130 (or higher) </LI>
 
 		<LI><b>CmIndexOpStatSum    </b> -- Added graph: Insert/Update/Delete Rows Per Second for User Databases</LI>
+
+		<LI><b>CmMemoryClerks      </b> -- In graph "All Memory Clerks vs Target & Total Memory, in MB" -- added one line "All Other Memory Clerks" -- So we can see "memory steals" easier</LI>
+
+		<LI><b>CmSummary           </b> -- In alarm 'LockWaits' -- Added "Server LCK_M_* Wait -- Lock Information", so we easier can see what type of blocks we had</LI>
+
+		<LI><b>CmWaitStats         </b> -- Added new graphs: LockTime, LockCount & LockTpw -- To view "Server LCK_M_* Wait Types, by 'wait_time_ms/waiting_tasks_count/WaitTimePerCount'.</LI>
+		<LI><b>CmWaitStats         </b> -- In the skip list added wait_types: 'AZURE_IMDS_VERSIONS', 'PREEMPTIVE_OS_DELETESECURITYCONTEXT', 'PREEMPTIVE_OS_REPORTEVENT', 'POPULATE_LOCK_ORDINALS', 'SOS_WORKER_MIGRATION' from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql</LI>
+
+		<LI><b>CmWaitingTasks      </b> -- Cleaned up SQL Statements for 'currentSqlText' that starts with ')' and simply removed that.</LI>
 
 
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
 		<b>Daily Summary Report</b><br>
 		<ul>
-			<li><b>Usage Overview              </b> -- Added Graph: CmIndexOpStatSum_OpIudUserDbs</li>
-			<li><b>Database Operational Summary</b> -- Added Graph: CmIndexOpStatSum_OpIudUserDbs</li>
+			<li><b>Usage Overview                  </b> -- Added Graph: CmIndexOpStatSum_OpIudUserDbs</li>
+			<li><b>Database Operational Summary    </b> -- Added Graph: CmIndexOpStatSum_OpIudUserDbs</li>
+			<li><b>SqlServerBackupHistory          </b> -- New section</li>
+			<li><b>Usage Overview                  </b> -- Added Graph: CmSummary_OldestTranInSecGraph, CmSummary_DeadlockCountSum, CmSummary_BlockingLocksGraph, CmWaitStats_LockCount, CmWaitStats_LockTime, CmWaitStats_LockTpw</li>
+			<li><b>SqlServerDbSize                 </b> -- show Estimate of "how many days until Data/WAL is full" -- No Alarms is raised, instead we trust OsSpaceUsageOverview to do that for us (if autogrow is not enabled, you may want to enable alarms on this with <code>SqlServerDbSize.alarm.DaysToFull.enable=true</code>)</li>
+			<li><b>SqlServerTopCmExecQueryStatPerDb</b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
+			<li><b>SqlServerTopCmExecQueryStat     </b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
+			<li><b>SqlServerTopCmExecQueryStatDb   </b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
 		</ul>
 		</LI>
 	</UL>
@@ -206,7 +268,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>PostgresTune - PostgreSQL</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to evolve</LI>
+		<!-- ~~~~~ Daily Report ~~~~~ -->
+		<LI>
+		<b>Daily Summary Report</b><br>
+		<ul>
+			<li><b>PostgresLongRunningStmnts</b> -- Added Graph: CmPgDatabase_Deadlocks</li>
+		</ul>
+		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -234,6 +302,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>Changed the Filter field to work with JSQLParser version 5.3 (NOTE: There is still some problems and/or statements that are after IN(...)</LI>
+		<LI>Better handling of datatype translation for '| bcp' and 'ResultSetInformation'. Postgres:varchar > 65535 is translated to TEXT, SqlServer: source nvarchar/varchar MAX is translated to CLOB. </LI>
+		<LI>ASE/SQLServer/Postgres: Added some static Code Completions</LI>
+		<LI>In the editors context menu: Added 'Show Indent Guidelines'</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

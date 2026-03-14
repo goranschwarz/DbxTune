@@ -30,6 +30,7 @@ import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 
 import com.dbxtune.Version;
+import com.dbxtune.utils.HtmlUtils;
 
 public class ShowplanPostgresExternalHtmlView
 extends ShowplanHtmlView
@@ -79,14 +80,27 @@ extends ShowplanHtmlView
 			out.write("    <META http-equiv='Content-Type' content='text/html; charset=UTF-8'>   \n");
 			out.write("    <title>Postgres Execution plan</title>                                \n");
 
-			out.write("    <script src='https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'></script>                   \n");
-			out.write("    <script src='https://unpkg.com/pev2/dist/pev2.umd.js'></script>                                \n");
-			out.write("    <link rel='stylesheet' href='https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css' />  \n");
-			out.write("    <link rel='stylesheet' href='https://unpkg.com/pev2/dist/style.css' />                         \n");
+//			out.write("    <script src='https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'></script>                   \n");
+//			out.write("    <script src='https://unpkg.com/pev2/dist/pev2.umd.js'></script>                                \n");
+//			out.write("    <link rel='stylesheet' href='https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css' />  \n");
+//			out.write("    <link rel='stylesheet' href='https://unpkg.com/pev2/dist/style.css' />                         \n");
+
+//			out.write("    <script src='/scripts/vue/3.2.45/vue.global.prod.js'></script>                 \n");
+//			out.write("    <script src='/scripts/pev2/1.19.0/pev2.umd.js'></script>                       \n");
+//			out.write("    <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'/> \n");
+//			out.write("    <link rel='stylesheet' href='/scripts/pev2/1.19.0/pev2.css' />                 \n");
+
+			HtmlUtils.createJsScriptTag(out, "/scripts/vue/3.2.45/vue.global.prod.js"       , "https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js");
+			HtmlUtils.createJsScriptTag(out, "/scripts/pev2/1.19.0/pev2.umd.js"             , "https://unpkg.com/pev2/dist/pev2.umd.js");
+
+			HtmlUtils.createCssLinkTag(out, "/scripts/bootstrap/5.3.8/css/bootstrap.min.css", "https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css");
+			HtmlUtils.createCssLinkTag(out, "/scripts/pev2/1.19.0/pev2.css"                 , "https://unpkg.com/pev2/dist/style.css");
+			
 			
 //			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");
 //			out.write("    <script src='dist/qp.js' type='text/javascript'></script>             \n");
 //			out.write("    <script src='https://code.jquery.com/jquery-3.7.1.min.js' integrity='sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=' crossorigin='anonymous'></script>  \n");
+//			out.write("    <script src='/scripts/jquery/jquery-3.7.1.min.js'</script>  \n");
 
 			out.write("    <style>                                                                \n");
 			out.write("        .grow-to-bottom {                                                  \n");

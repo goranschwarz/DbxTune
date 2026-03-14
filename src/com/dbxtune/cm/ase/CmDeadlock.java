@@ -99,7 +99,6 @@ extends CountersModelAppend
 		CounterSetTemplates.register(this);
 	}
 
-
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------

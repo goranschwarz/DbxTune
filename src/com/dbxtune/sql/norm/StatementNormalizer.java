@@ -45,6 +45,7 @@ import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.SupportsOldOracleJoinSyntax;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.Statements;
 import net.sf.jsqlparser.util.TablesNamesFinder;
 import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
 import net.sf.jsqlparser.util.deparser.SelectDeParser;
@@ -314,7 +315,7 @@ public class StatementNormalizer
 			String varStr = var.toString();
 			// "@p0" or "@p9754" then do "?" because it's a "runtime value sent in dynamic sql"...
 			// but if @someName then keep the original variable name
-			if (varStr.matches("^@p[0-9]+$"))
+			if (varStr.matches("^@[pP][0-9]+$"))
 				varStr = "?";
 			this.getBuilder().append(varStr);
 			return null;
@@ -326,6 +327,7 @@ public class StatementNormalizer
 	private SelectDeParser     _selectDeParser;
 	private StatementDeParser  _stmtDeParser;
 
+	private transient String              _rewrittenSqlText;
 	private transient JSQLParserException _lastParserException;
 	private transient JSQLParserException _firstParserException;
 
@@ -340,28 +342,76 @@ public class StatementNormalizer
 		_exprDeParser.setBuilder(_buffer);
 	}
 
+//	public String normalizeStatement(String sql, List<String> tableList) 
+//	throws JSQLParserException
+//	{
+//		if (StringUtil.isNullOrBlank(sql))
+//			return "";
+//
+//		Statement stmt = CCJSqlParserUtil.parse(sql, parser -> parser.withSquareBracketQuotation(true));
+//
+//		stmt.accept(_stmtDeParser);
+//		
+//		// Get tables that TABLES are part of the "slow" statement, then send those tables to the DDL Storage
+//		// The blow might work, but I have not tested it (and what performance side effects it will add)
+//		if (tableList != null)
+//		{
+//			try 
+//			{
+//				TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
+//				List<String> tmpTableList = tablesNamesFinder.getTableList(stmt);
+//				
+//				tableList.addAll(tmpTableList);
+//			} 
+//			catch (RuntimeException ignore) {}
+//		}
+//
+//		// Get string and truncate the buffer for next statement
+//		String normalizedSql = _buffer.toString();
+//		_buffer.setLength(0);
+//
+//		if (StringUtil.isNullOrBlank(normalizedSql))
+//			return "";
+//
+//		return normalizedSql;
+//	}
 	public String normalizeStatement(String sql, List<String> tableList) 
 	throws JSQLParserException
 	{
 		if (StringUtil.isNullOrBlank(sql))
 			return "";
 
-		Statement stmt = CCJSqlParserUtil.parse(sql, parser -> parser.withSquareBracketQuotation(true));
+		// Parse ALL Statements in SQL Text (there can be multiple)
+		Statements statements = CCJSqlParserUtil.parseStatements(sql, parser -> parser.withSquareBracketQuotation(true));
 
-		stmt.accept(_stmtDeParser);
-		
-		// Get tables that TABLES are part of the "slow" statement, then send those tables to the DDL Storage
-		// The blow might work, but I have not tested it (and what performance side effects it will add)
-		if (tableList != null)
+		// Loop ALL Statements
+		int stmntCount = 0;
+		for (Statement stmnt : statements)
 		{
-			try 
+			stmntCount++;
+			if (stmntCount > 1)
+				_buffer.append("\n;\n");
+
+			stmnt.accept(_stmtDeParser);
+			
+			// Get tables that TABLES are part of the "slow" statement, then send those tables to the DDL Storage
+			// The blow might work, but I have not tested it (and what performance side effects it will add)
+			if (tableList != null)
 			{
-				TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
-				List<String> tmpTableList = tablesNamesFinder.getTableList(stmt);
-				
-				tableList.addAll(tmpTableList);
-			} 
-			catch (RuntimeException ignore) {}
+				try 
+				{
+					TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
+					List<String> tmpTableList = tablesNamesFinder.getTableList(stmnt);
+
+					// Only add tabled that does NOT exist in the output tableList
+					for (String table : tmpTableList)
+					{
+						if ( ! tableList.contains(table) )
+							tableList.add(table);
+					}
+				} 
+				catch (RuntimeException ignore) {}
+			}
 		}
 
 		// Get string and truncate the buffer for next statement
@@ -432,6 +482,10 @@ public class StatementNormalizer
 		return sqlText;
 	}
 
+	public String getRewrittenSqlText()
+	{
+		return _rewrittenSqlText;
+	}
 	public JSQLParserException getFirstParserException()
 	{
 		return _firstParserException;
@@ -456,6 +510,7 @@ public class StatementNormalizer
 		np.addStatus = AddStatus.NONE;
 
 		String normalizedSqlText = null;
+		String rewrittenSqlText  = null;
 		JSQLParserException firstParserException = null;
 		JSQLParserException lastParserException = null;
 
@@ -537,7 +592,8 @@ public class StatementNormalizer
 						// make the rewrite
 						sqlText = fixer.rewrite(sqlText);
 						
-						// mark as "re-written"
+						// mark as "re-written" 
+						// AND: since next NORMALIZATION on the rewrite removes comments, keep them here and ADD it to the returned text "at the end" of this method 
 						rewriteComments.add(fixer.getComment());
 						isRewritten = true;
 						
@@ -550,7 +606,63 @@ public class StatementNormalizer
 							_logger.debug("normalizeSqlText(): SKIPPING REWRITE: fixerName='" + fixer.getName() + "'.");
 					}
 				}
+				
+				// I could have done this as a ReWriter... But I did it here instead
+				// Check/remove any NULL bytes or other control chars
+				if (sqlText.matches(".*[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F].*")) 
+				{
+					// End result would be: Removed: Control Characters at pos {16=0x00, 36=0x08}
+					String msg = "Removed: Control Characters at pos {";
 
+					// Show which characters and where
+					for (int i = 0; i < sqlText.length(); i++) 
+					{
+						char c = sqlText.charAt(i);
+						if (c >= 0x00 && c <= 0x08 || c == 0x0B || c == 0x0C || c >= 0x0E && c <= 0x1F || c == 0x7F) 
+						{
+							// 66: xxx
+							// 66=xxx,
+							msg += String.format("%d=0x%02X, ", i, (int)c);
+						}
+					}
+					if (msg.endsWith(", "))
+						msg = msg.substring(0, msg.length()-2);
+					msg += "}";
+
+					// Clean it
+					sqlText = sqlText.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "");
+
+					// Add a comment about what you did...
+					rewriteComments.add(msg);
+					isRewritten = true;
+				}
+
+				// Since JSqlParser seems to be sensitive to some extra newlines and spaces in particular places...
+				// net.sf.jsqlparser.JSQLParserException: net.sf.jsqlparser.parser.ParseException: Encountered: <ST_SEMICOLON> / "\n\n\n", at line 83, column 121, in lexical state DEFAULT.
+				//                                                                                 Was expecting this terminal within expansion starting at 3927:5:
+				//                                                                                 <CLOSING_BRACKET> (inside 3927:5) ...
+				// So lets remove extra spaces and newlines
+				// This would be OK here since the NORMALIZING will remove any extra newlines and spaces anyway...
+				final boolean removeExtraSpacesAndNewlines = true;
+				if (removeExtraSpacesAndNewlines)
+				{
+					String originSqlText = sqlText;
+
+				    // Remove single-line comments '-- comment' 
+					// Otherwise we will comments out "rest of the SQL Statement" when we below collapse newlines...
+					sqlText = sqlText.replaceAll("--[^\n]*", "");
+
+				    // Collapse all whitespace (newlines, tabs, multiple spaces) to single spaces
+					sqlText = sqlText.replaceAll("\\s+", " ").trim();
+					
+					if ( ! originSqlText.equals(sqlText) )
+					{
+						rewriteComments.add("Removed extra spaces and newlines");
+						isRewritten = true;
+					}
+				}
+				
+				
 				// If we got a re-write... try to parse the "new" SQL Text
 				if (isRewritten)
 				{
@@ -561,6 +673,7 @@ public class StatementNormalizer
 					try
 					{
 						lastParserException = null;
+						rewrittenSqlText = sqlText;
 
 						// Parse and normalize
 						normalizedSqlText = normalizeStatement(sqlText, tableList);
@@ -568,6 +681,9 @@ public class StatementNormalizer
 						np.addStatus = AddStatus.NORMALIZE_SUCCESS_LEVEL_2;
 
 						_statNormalizeSuccessCount++;
+						
+						// Since the normalized of the rewritten SQL Text was successful, there is no need to keep/store it
+						rewrittenSqlText = null;
 
 //						if (StringUtil.hasValue(normalizedSqlText))
 //						{
@@ -646,10 +762,11 @@ public class StatementNormalizer
 					}
 				}
 				break;
-			} // end: case {} block
+			} // end: case DO_REWRITE {} block
 			} // end: switch
 		}
 		
+		_rewrittenSqlText     = rewrittenSqlText;
 		_firstParserException = firstParserException;
 		_lastParserException  = lastParserException;
 		

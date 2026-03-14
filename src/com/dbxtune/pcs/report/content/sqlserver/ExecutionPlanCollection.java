@@ -548,11 +548,17 @@ public class ExecutionPlanCollection
 	{
 		if (_planMap != null && !_planMap.isEmpty())
 		{
+//			w.append("\n");
+//			w.append("<!-- read Javascript and CSS for Showplan --> \n");
+//			w.append("<link rel='stylesheet' type='text/css' href='http://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n");
+//			w.append("<script src='http://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n");
+//			w.append("\n");
 			w.append("\n");
 			w.append("<!-- read Javascript and CSS for Showplan --> \n");
-			w.append("<link rel='stylesheet' type='text/css' href='http://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n");
-			w.append("<script src='http://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n");
+			w.append("<link rel='stylesheet' type='text/css' href='/scripts/showplan/sqlserver/css/qp.css'> \n");
+			w.append("<script type='text/javascript'          src='/scripts/showplan/sqlserver/dist/qp.min.js'></script> \n");
 			w.append("\n");
+
 //			
 //			w.append("<br> \n");
 //			w.append("<div id='showplan-list-" + getName() + "'> \n");

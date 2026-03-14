@@ -22,6 +22,7 @@
 package com.dbxtune.central.check;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.alarm.events.dbxc.AlarmEventDbxCollectorNoData;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.DbxTuneSample;
+import com.dbxtune.central.pcs.objects.DbxCentralServerDescription;
 import com.dbxtune.central.pcs.objects.DbxCentralSessions;
 import com.dbxtune.utils.Configuration;
 
@@ -49,6 +51,9 @@ implements Runnable
 
 	public static final String  PROPKEY_checkSleepTimeInSec  = "ReceiverAlarmCheck.check.sleep.time.inSeconds";
 	public static final int     DEFAULT_checkSleepTimeInSec  = 30;
+
+	public static final String  PROPKEY_skipServersNotInServerList  = "ReceiverAlarmCheck.skip.servers.not.in.SERVER_LIST";
+	public static final boolean DEFAULT_skipServersNotInServerList  = true;
 
 	public static final String PROPKEY_ALARM_INTERVAL_MULTIPLIER = "ReceiverAlarmCheck.alarm.interval.multiplier";
 //	public static final int    DEFAULT_ALARM_INTERVAL_MULTIPLIER = 40;  // multiplier -- 20 min (with 30 sec sample interval), 40 min  (with 60 sec sample interval)
@@ -143,6 +148,21 @@ implements Runnable
 		CentralPersistReader reader = CentralPersistReader.getInstance();
 
 		_receiverInfo = new HashMap<>();
+		
+		// Get information from SERVER_LIST
+		Map<String, DbxCentralServerDescription> serverListMap = null;
+		boolean skipServernNotInServerList = _conf.getBooleanProperty(PROPKEY_skipServersNotInServerList, DEFAULT_skipServersNotInServerList);
+		if (skipServernNotInServerList)
+		{
+			try 
+			{
+				serverListMap = DbxCentralServerDescription.getFromFile(DbxCentralServerDescription.getDefaultFile());
+			} 
+			catch (IOException ex) 
+			{
+				_logger.warn("Problems reading file '" + DbxCentralServerDescription.getDefaultFile() + "', Caught: " + ex);
+			}
+		}
 
 		try
 		{
@@ -153,6 +173,10 @@ implements Runnable
 				
 				// skip disabled servers (we should not expect disabled servers to send data)
 				if (s.getStatus() == DbxCentralSessions.ST_DISABLED)
+					continue;
+				
+				// If the server is NOT in the SERVER_LIST file... Should we ship it then?
+				if ( skipServernNotInServerList && serverListMap != null && ! serverListMap.containsKey(srvName) )
 					continue;
 
 				ReceiverEntry entry = new ReceiverEntry(srvName, sampleInterval);

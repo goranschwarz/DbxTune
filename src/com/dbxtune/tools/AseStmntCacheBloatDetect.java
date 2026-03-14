@@ -224,10 +224,13 @@ public class AseStmntCacheBloatDetect
 
 		StatementNormalizer.NormalizeParameters normalizeParameters = new StatementNormalizer.NormalizeParameters();
 
+		int rows = 0;
 		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
 			{
+				rows++;
+
 				String    objName          = rs.getString   (1);
 				String    dbname           = rs.getString   (2);
 				int       useCount         = rs.getInt      (3);
@@ -309,8 +312,8 @@ public class AseStmntCacheBloatDetect
 				Exception lastParseEx  = StatementNormalizer.getInstance().getLastParserException();
 				String firstParseExStr = null;
 				String lastParseExStr  = null;
-				if (firstParseEx != null) { firstParseExStr = (firstParseEx + "").replace('\n', ' '); }
-				if (lastParseEx  != null) { lastParseExStr  = (lastParseEx  + "").replace('\n', ' '); }
+				if (firstParseEx != null) { firstParseExStr = (firstParseEx + "").replace('\n', ' ').replace('\r', ' '); }
+				if (lastParseEx  != null) { lastParseExStr  = (lastParseEx  + "").replace('\n', ' ').replace('\r', ' '); }
 
 				// Compose a "Exception" String to append...
 				String exStr = "";
@@ -368,12 +371,11 @@ public class AseStmntCacheBloatDetect
 			}
 		}
 
+		_ps.println("");
+		_ps.println("Statement Read Count: " + rows);
 		if (_parseErrorCount > 0)
-		{
-			_ps.println("");
-			_ps.println("Parse Error Count: " + _parseErrorCount);
-			_ps.println("");
-		}
+			_ps.println("Parse Error Count:    " + _parseErrorCount);
+		_ps.println("");
 	}
 	
 
@@ -722,9 +724,9 @@ public class AseStmntCacheBloatDetect
 		String url    = args[0];
 		String user   = args[1];
 		String passwd = args[2];
-		int     duplicateThreshold = args.length > 3 ? StringUtil.parseInt(args[3], defaultDuplicateThreshold)     : defaultDuplicateThreshold;
-		boolean printAvgStat       = args.length > 4 ? StringUtil.parseInt(args[4], 0                        ) > 0 : false;
-		boolean printTotalStat     = args.length > 5 ? StringUtil.parseInt(args[5], 0                        ) > 0 : false;
+		int     duplicateThreshold = args.length > 3 ? StringUtil.parseInt    (args[3], defaultDuplicateThreshold) : defaultDuplicateThreshold;
+		boolean printAvgStat       = args.length > 4 ? StringUtil.parseBoolean(args[4], false                    ) : false;
+		boolean printTotalStat     = args.length > 5 ? StringUtil.parseBoolean(args[5], false                    ) : false;
 		
 		if ( ! url.startsWith("jdbc:sybase:Tds:") )
 		{

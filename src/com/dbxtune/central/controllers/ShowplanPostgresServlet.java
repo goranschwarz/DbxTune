@@ -36,6 +36,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.utils.HtmlUtils;
 import com.dbxtune.utils.StringUtil;
 
 
@@ -119,10 +120,22 @@ extends HttpServlet
 				"    <meta http-equiv='Pragma' content='no-cache' /> \n" +
 				"    <meta http-equiv='Expires' content='0' /> \n" +
 				"     \n" +
-				"    <script src='https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'></script>                 \n" +
-				"    <script src='https://unpkg.com/pev2/dist/pev2.umd.js'></script>                              \n" +
-				"    <link rel='stylesheet' href='https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css'/> \n" +
-				"    <link rel='stylesheet' href='https://unpkg.com/pev2/dist/style.css' />                       \n" +
+//				"    <script src='https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'></script>                 \n" +
+//				"    <script src='https://unpkg.com/pev2/dist/pev2.umd.js'></script>                              \n" +
+//				"    <link rel='stylesheet' href='https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css'/> \n" +
+//				"    <link rel='stylesheet' href='https://unpkg.com/pev2/dist/style.css' />                       \n" +
+
+//				"    <script src='/scripts/vue/3.2.45/vue.global.prod.js'></script>                 \n" +
+//				"    <script src='/scripts/pev2/1.19.0/pev2.umd.js'></script>                       \n" +
+//				"    <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'/> \n" +
+//				"    <link rel='stylesheet' href='/scripts/pev2/1.19.0/pev2.css' />                 \n" +
+
+				HtmlUtils.createJsScriptTag("/scripts/vue/3.2.45/vue.global.prod.js"       , "https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js") +
+				HtmlUtils.createJsScriptTag("/scripts/pev2/1.19.0/pev2.umd.js"             , "https://unpkg.com/pev2/dist/pev2.umd.js") +
+
+				HtmlUtils.createCssLinkTag("/scripts/bootstrap/5.3.8/css/bootstrap.min.css", "https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css") +
+				HtmlUtils.createCssLinkTag("/scripts/pev2/1.19.0/pev2.css"                 , "https://unpkg.com/pev2/dist/style.css") +
+
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +

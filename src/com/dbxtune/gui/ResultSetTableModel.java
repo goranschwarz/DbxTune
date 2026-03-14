@@ -1306,6 +1306,266 @@ public class ResultSetTableModel
 		return columnTypeName;
 	}
 
+	public static boolean isStringDataType(int columnType)
+	{
+		switch (columnType)
+		{
+		case java.sql.Types.BIT:           return false;
+		case java.sql.Types.TINYINT:       return false;
+		case java.sql.Types.SMALLINT:      return false;
+		case java.sql.Types.INTEGER:       return false;
+		case java.sql.Types.BIGINT:        return false;
+		case java.sql.Types.FLOAT:         return false;
+		case java.sql.Types.REAL:          return false;
+		case java.sql.Types.DOUBLE:        return false;
+		case java.sql.Types.NUMERIC:       return false;
+		case java.sql.Types.DECIMAL:       return false;
+		case java.sql.Types.CHAR:          return true;   // OK
+		case java.sql.Types.VARCHAR:       return true;   // OK
+		case java.sql.Types.LONGVARCHAR:   return true;   // OK
+		case java.sql.Types.DATE:          return false;
+		case java.sql.Types.TIME:          return false;
+		case java.sql.Types.TIMESTAMP:     return false;
+		case java.sql.Types.BINARY:        return false;
+		case java.sql.Types.VARBINARY:     return false;
+		case java.sql.Types.LONGVARBINARY: return false;
+		case java.sql.Types.NULL:          return false;
+		case java.sql.Types.OTHER:         return false;
+		case java.sql.Types.JAVA_OBJECT:   return false;
+		case java.sql.Types.DISTINCT:      return false;
+		case java.sql.Types.STRUCT:        return false;
+		case java.sql.Types.ARRAY:         return false;
+		case java.sql.Types.BLOB:          return false;
+		case java.sql.Types.CLOB:          return true;   // OK
+		case java.sql.Types.REF:           return false;
+		case java.sql.Types.DATALINK:      return false;
+		case java.sql.Types.BOOLEAN:       return false;
+
+		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
+		case java.sql.Types.ROWID:         return false;
+		case java.sql.Types.NCHAR:         return true;   // OK
+		case java.sql.Types.NVARCHAR:      return true;   // OK
+		case java.sql.Types.LONGNVARCHAR:  return true;   // OK
+		case java.sql.Types.NCLOB:         return true;   // OK
+		case java.sql.Types.SQLXML:        return false;
+
+		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
+		case java.sql.Types.REF_CURSOR:              return false;
+		case java.sql.Types.TIME_WITH_TIMEZONE:      return false;
+		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return false;
+//		case 2012:                                   return false;
+//		case 2013:                                   return false;
+//		case 2014:                                   return false;
+		
+
+		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
+//		case -100:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+//		case -101:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+//		case -102:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+//		case -103:                                   return "oracle.jdbc.OracleTypes.INTERVALYM";
+//		case -104:                                   return "oracle.jdbc.OracleTypes.INTERVALDS";
+//		case  -10:                                   return "oracle.jdbc.OracleTypes.CURSOR";
+//		case  -13:                                   return "oracle.jdbc.OracleTypes.BFILE";
+//		case 2007:                                   return "oracle.jdbc.OracleTypes.OPAQUE";
+//		case 2008:                                   return "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+//		case  -14:                                   return "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+//		case  100:                                   return "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+//		case  101:                                   return "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+////		case    2:                                   return "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+////		case   -2:                                   return "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+//		case  999:                                   return "oracle.jdbc.OracleTypes.FIXED_CHAR";
+//
+//	    case -155:                                   return "microsoft.sql.DATETIMEOFFSET";
+//	    case -153:                                   return "microsoft.sql.STRUCTURED";
+//	    case -151:                                   return "microsoft.sql.DATETIME";
+//	    case -150:                                   return "microsoft.sql.SMALLDATETIME";
+//	    case -148:                                   return "microsoft.sql.MONEY";
+//	    case -146:                                   return "microsoft.sql.SMALLMONEY";
+//	    case -145:                                   return "microsoft.sql.GUID";
+//	    case -156:                                   return "microsoft.sql.SQL_VARIANT";
+//	    case -157:                                   return "microsoft.sql.GEOMETRY";
+//	    case -158:                                   return "microsoft.sql.GEOGRAPHY";
+
+	    //------------------------- UNHANDLED TYPES  ---------------------------
+		default:
+			return false;
+		}
+	}
+
+	public static boolean isNumberDataType(int columnType)
+	{
+		switch (columnType)
+		{
+		case java.sql.Types.BIT:           return true;   // OK
+		case java.sql.Types.TINYINT:       return true;   // OK
+		case java.sql.Types.SMALLINT:      return true;   // OK
+		case java.sql.Types.INTEGER:       return true;   // OK
+		case java.sql.Types.BIGINT:        return true;   // OK
+		case java.sql.Types.FLOAT:         return true;   // OK
+		case java.sql.Types.REAL:          return true;   // OK
+		case java.sql.Types.DOUBLE:        return true;   // OK
+		case java.sql.Types.NUMERIC:       return true;   // OK
+		case java.sql.Types.DECIMAL:       return true;   // OK
+		case java.sql.Types.CHAR:          return false;
+		case java.sql.Types.VARCHAR:       return false;
+		case java.sql.Types.LONGVARCHAR:   return false;
+		case java.sql.Types.DATE:          return false;
+		case java.sql.Types.TIME:          return false;
+		case java.sql.Types.TIMESTAMP:     return false;
+		case java.sql.Types.BINARY:        return false;
+		case java.sql.Types.VARBINARY:     return false;
+		case java.sql.Types.LONGVARBINARY: return false;
+		case java.sql.Types.NULL:          return false;
+		case java.sql.Types.OTHER:         return false;
+		case java.sql.Types.JAVA_OBJECT:   return false;
+		case java.sql.Types.DISTINCT:      return false;
+		case java.sql.Types.STRUCT:        return false;
+		case java.sql.Types.ARRAY:         return false;
+		case java.sql.Types.BLOB:          return false;
+		case java.sql.Types.CLOB:          return false;
+		case java.sql.Types.REF:           return false;
+		case java.sql.Types.DATALINK:      return false;
+		case java.sql.Types.BOOLEAN:       return false;
+
+		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
+		case java.sql.Types.ROWID:         return false;
+		case java.sql.Types.NCHAR:         return false;
+		case java.sql.Types.NVARCHAR:      return false;
+		case java.sql.Types.LONGNVARCHAR:  return false;
+		case java.sql.Types.NCLOB:         return false;
+		case java.sql.Types.SQLXML:        return false;
+
+		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
+		case java.sql.Types.REF_CURSOR:              return false;
+		case java.sql.Types.TIME_WITH_TIMEZONE:      return false;
+		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return false;
+//		case 2012:                                   return false;
+//		case 2013:                                   return false;
+//		case 2014:                                   return false;
+		
+
+		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
+//		case -100:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+//		case -101:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+//		case -102:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+//		case -103:                                   return "oracle.jdbc.OracleTypes.INTERVALYM";
+//		case -104:                                   return "oracle.jdbc.OracleTypes.INTERVALDS";
+//		case  -10:                                   return "oracle.jdbc.OracleTypes.CURSOR";
+//		case  -13:                                   return "oracle.jdbc.OracleTypes.BFILE";
+//		case 2007:                                   return "oracle.jdbc.OracleTypes.OPAQUE";
+//		case 2008:                                   return "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+//		case  -14:                                   return "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+//		case  100:                                   return "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+//		case  101:                                   return "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+////		case    2:                                   return "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+////		case   -2:                                   return "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+//		case  999:                                   return "oracle.jdbc.OracleTypes.FIXED_CHAR";
+//
+//	    case -155:                                   return "microsoft.sql.DATETIMEOFFSET";
+//	    case -153:                                   return "microsoft.sql.STRUCTURED";
+//	    case -151:                                   return "microsoft.sql.DATETIME";
+	    case -150:                                   return true;   // OK
+	    case -148:                                   return true;   // OK
+	    case -146:                                   return true;   // OK
+//	    case -145:                                   return "microsoft.sql.GUID";
+//	    case -156:                                   return "microsoft.sql.SQL_VARIANT";
+//	    case -157:                                   return "microsoft.sql.GEOMETRY";
+//	    case -158:                                   return "microsoft.sql.GEOGRAPHY";
+
+	    //------------------------- UNHANDLED TYPES  ---------------------------
+		default:
+			return false;
+		}
+	}
+
+	public static boolean isTimestampDataType(int columnType)
+	{
+		switch (columnType)
+		{
+		case java.sql.Types.BIT:           return false;
+		case java.sql.Types.TINYINT:       return false;
+		case java.sql.Types.SMALLINT:      return false;
+		case java.sql.Types.INTEGER:       return false;
+		case java.sql.Types.BIGINT:        return false;
+		case java.sql.Types.FLOAT:         return false;
+		case java.sql.Types.REAL:          return false;
+		case java.sql.Types.DOUBLE:        return false;
+		case java.sql.Types.NUMERIC:       return false;
+		case java.sql.Types.DECIMAL:       return false;
+		case java.sql.Types.CHAR:          return false;
+		case java.sql.Types.VARCHAR:       return false;
+		case java.sql.Types.LONGVARCHAR:   return false;
+		case java.sql.Types.DATE:          return false;
+		case java.sql.Types.TIME:          return true;   // OK  --- Is it really ok ... can it return a Timestamp
+		case java.sql.Types.TIMESTAMP:     return true;   // OK
+		case java.sql.Types.BINARY:        return false;
+		case java.sql.Types.VARBINARY:     return false;
+		case java.sql.Types.LONGVARBINARY: return false;
+		case java.sql.Types.NULL:          return false;
+		case java.sql.Types.OTHER:         return false;
+		case java.sql.Types.JAVA_OBJECT:   return false;
+		case java.sql.Types.DISTINCT:      return false;
+		case java.sql.Types.STRUCT:        return false;
+		case java.sql.Types.ARRAY:         return false;
+		case java.sql.Types.BLOB:          return false;
+		case java.sql.Types.CLOB:          return false;
+		case java.sql.Types.REF:           return false;
+		case java.sql.Types.DATALINK:      return false;
+		case java.sql.Types.BOOLEAN:       return false;
+
+		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
+		case java.sql.Types.ROWID:         return false;
+		case java.sql.Types.NCHAR:         return false;
+		case java.sql.Types.NVARCHAR:      return false;
+		case java.sql.Types.LONGNVARCHAR:  return false;
+		case java.sql.Types.NCLOB:         return false;
+		case java.sql.Types.SQLXML:        return false;
+
+		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
+		case java.sql.Types.REF_CURSOR:              return false;
+		case java.sql.Types.TIME_WITH_TIMEZONE:      return true;   // OK
+		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return true;   // OK
+//		case 2012:                                   return false;
+//		case 2013:                                   return false;
+//		case 2014:                                   return false;
+		
+
+		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
+//		case -100:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+//		case -101:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+//		case -102:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+//		case -103:                                   return "oracle.jdbc.OracleTypes.INTERVALYM";
+//		case -104:                                   return "oracle.jdbc.OracleTypes.INTERVALDS";
+//		case  -10:                                   return "oracle.jdbc.OracleTypes.CURSOR";
+//		case  -13:                                   return "oracle.jdbc.OracleTypes.BFILE";
+//		case 2007:                                   return "oracle.jdbc.OracleTypes.OPAQUE";
+//		case 2008:                                   return "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+//		case  -14:                                   return "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+//		case  100:                                   return "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+//		case  101:                                   return "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+////		case    2:                                   return "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+////		case   -2:                                   return "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+//		case  999:                                   return "oracle.jdbc.OracleTypes.FIXED_CHAR";
+//
+	    case -155:                                   return true;   // OK
+//	    case -153:                                   return "microsoft.sql.STRUCTURED";
+	    case -151:                                   return true;   // OK
+	    case -150:                                   return true;   // OK
+//	    case -148:                                   return "microsoft.sql.MONEY";
+//	    case -146:                                   return "microsoft.sql.SMALLMONEY";
+//	    case -145:                                   return "microsoft.sql.GUID";
+//	    case -156:                                   return "microsoft.sql.SQL_VARIANT";
+//	    case -157:                                   return "microsoft.sql.GEOMETRY";
+//	    case -158:                                   return "microsoft.sql.GEOGRAPHY";
+
+	    //------------------------- UNHANDLED TYPES  ---------------------------
+		default:
+			return false;
+		}
+	}
+	
+
+
 	public static String getColumnJavaSqlTypeName(int columnType)
 	{
 //		switch (columnType)
@@ -2553,14 +2813,22 @@ public class ResultSetTableModel
 	{
 		return toHtmlTableString(className, true, true, null, null);
 	}
+
+	public String toHtmlTableString(String className, TableStringRenderer tsRenderer)
+	{
+		return toHtmlTableString(className, true, true, null, tsRenderer);
+	}
+
 	public String toHtmlTableString(String className, Map<String, String> colNameValueTagMap)
 	{
 		return toHtmlTableString(className, true, true, colNameValueTagMap, null);
 	}
+
 	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap)
 	{
 		return toHtmlTableString(className, tHeadNoWrap, tBodyNoWrap, null, null);
 	}
+
 	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap, TableStringRenderer tsRenderer)
 	{
 		StringBuilder sb = new StringBuilder(1024);
@@ -2722,6 +2990,232 @@ public class ResultSetTableModel
 
 		return sb.toString();
 	}
+
+	/**
+	 * Create a Foldable HTML table using the first column as foldable items, and the rest of the columns as table content.
+	 * <br>
+	 * The foldable will actually be a list of details/summary tags
+	 * here is an example of the output
+	 * <pre>
+	 * </pre>
+	 * 
+	 * Extra class names that will be set for various tags
+	 * <ul>
+	 *   <li>&lt;details class='             <code>rstm-foldable-details</code>&gt;</li>
+	 *   <li>&lt;summary class='             <code>rstm-foldable-summary</code>&gt;</li>
+	 *   <li>extra div surrounding the table <code>rstm-foldable-content</code></li>
+	 *   <li>&lt;table class='               <code>rstm-foldable-table</code>&gt;</li>
+	 * </ul>
+	 * 
+	 * @param className   for all the tables created
+	 * @param tsRenderer  if you want to use a TableStringRenderer to rendering table output
+	 * @return
+	 */
+	public String toHtmlTableFoldableString(String className, TableStringRenderer tsRenderer)
+	{
+		StringBuilder sb = new StringBuilder(1024 * 5);
+
+		boolean tHeadNoWrap = true;
+		boolean tDataNoWrap = true;
+
+		// Append 'rstm-foldable-table' to all tables
+		if (StringUtil.isNullOrBlank(className))
+			className = "rstm-foldable-table";
+		else 
+			className += " rstm-foldable-table";
+
+		// Use renderer to set <table ATTRIBUTES>
+		String tableAttr = tsRenderer == null ? "" : tsRenderer.tagTableAttr(this);
+		if (tableAttr == null)
+			tableAttr = "";
+
+		// If tableAttr holds any 'class' information, merge in the method parameter 'className'
+		if (StringUtil.hasValue(className))
+		{
+			int pos = tableAttr.indexOf("class=");
+			if (pos != -1)
+			{
+				List<String> list = StringUtil.splitOnWhitespaceRespectQuotes(tableAttr);
+				tableAttr = "";
+				for (String entry : list)
+				{
+					if (entry.startsWith("class="))
+					{
+						// inject the methods parameter 'className' into the: class='METHOD_PARAMETER_className_GOES_HERE CLASS_NAMES_THAT_WE_PREVIOUSLY_HAD_GOES_HERE'
+						String tmp = entry.substring("class=".length()+1, entry.length()-1);
+						entry = "class='" + className + " " + tmp + "'";
+					}
+					tableAttr += " " + entry;
+				}
+			}
+			else
+			{
+				tableAttr += " class='" + className + "'";
+			}
+		}
+		
+		// If we have attribute it has to start with a space " "
+		if (StringUtil.hasValue(tableAttr) && !tableAttr.startsWith(" "))
+			tableAttr = " " + tableAttr;
+
+		// TABLE start
+//		sb.append("<table").append(tableAttr).append(">\n");
+		
+		
+		int colCount = getColumnCount();
+		
+		String currentGroupValue = null;
+		boolean hasRows = false;
+
+		for (int r = 0; r < getRowCount(); r++)
+		{
+			String groupValue = getValueAsString(r, 0); // First column is the grouping column
+
+			// Check if we're starting a new group
+			if (currentGroupValue == null || !currentGroupValue.equals(groupValue))
+			{
+				// Close previous group if exists
+				if (currentGroupValue != null)
+				{
+					sb.append("      </tbody>\n");
+					sb.append("    </table>\n");
+					sb.append("  </div>\n");
+					sb.append("</details>\n");
+				}
+				
+				// Start new group
+				currentGroupValue = groupValue;
+				hasRows = true;
+				
+				sb.append("<details class='rstm-foldable-details'>\n");
+				sb.append("  <summary class='rstm-foldable-summary'>").append(toString(groupValue)).append("</summary>\n");
+				sb.append("  <div class='rstm-foldable-content' style='padding-left: 20px; padding-top: 5px; padding-bottom: 10px;'>\n");
+				sb.append("    <table").append(tableAttr).append(">\n");
+//				sb.append("    <table>\n");
+				sb.append("      <thead>\n");
+				sb.append("        <tr>\n");
+				
+				// Add column headers (skip first column as it's the grouping column)
+				for (int c = 0; c < colCount; c++)
+				{
+//					String colName = getColumnName(c);
+//					sb.append("          <th>").append(escapeHtml(colName)).append("</th>\n");
+					String colName = getColumnName(c);
+					String tooltip = "";
+					if (hasColumnDescriptions())
+					{
+						String colDesc = getColumnDescription(colName);
+						if (colDesc != null)
+							colDesc = colDesc.replace("'", "&apos;");
+						tooltip = " title='" + colDesc + "'";
+					}
+
+					// Use renderer to set <th ATTRIBUTES>
+					String thAttr = tsRenderer == null ? "" : tsRenderer.tagThAttr(this, c, colName, tHeadNoWrap);
+					if (thAttr == null)
+						thAttr = "";
+
+					if (StringUtil.isNullOrBlank(thAttr) && tHeadNoWrap)
+						thAttr = " nowrap";
+
+					// If we have attribute it has to start with a space " "
+					if (StringUtil.hasValue(thAttr) && !thAttr.startsWith(" "))
+						thAttr = " " + thAttr;
+
+					sb.append("          <th").append(thAttr).append(tooltip).append(">").append(colName).append("</th>\n");
+				}
+				
+				sb.append("        </tr>\n");
+				sb.append("      </thead>\n");
+				sb.append("      <tbody>\n");
+			}
+
+			// Add row to current subtable (skip first column)
+			// Use renderer to set <td ATTRIBUTES>  ... for example to set the row background: <tr style='background-color:#7f96ff;color:#ffffff;'>
+			//                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+			String trAttr = tsRenderer == null ? "" : tsRenderer.tagTrAttr(this, r);
+			if (trAttr == null)
+				trAttr = "";
+			else
+			{
+				// Add " " (space) if the attribute doesn't start with it!
+				if ( StringUtil.hasValue(trAttr) && ! trAttr.startsWith(" "))
+					trAttr = " " + trAttr;
+			}
+
+			sb.append("        <tr").append(trAttr).append("> \n");
+//			sb.append("        <tr>\n");
+			for (int c = 0; c < colCount; c++)
+			{
+//				String value = getValueAsString(r, c);
+//				sb.append("          <td>").append(escapeHtml(value)).append("</td>\n");
+				Object objVal  = getValueAt(r,c);
+				String strVal  = toString(objVal, "&nbsp;", "&nbsp;");
+				String toolTip = null;
+
+				String colName = getColumnName(c);
+				String beginTag = "";
+				String endTag   = "";
+				
+				String tdAlignRight = "";
+				if (objVal != null && objVal instanceof Number)
+					tdAlignRight = " align='right'";
+				
+				if (tsRenderer != null)
+				{
+					strVal  = tsRenderer.cellValue  (this, r, c, colName, objVal, strVal);
+					toolTip = tsRenderer.cellToolTip(this, r, c, colName, objVal, strVal);
+				}
+
+				// Set the tool tip value (if we have any)
+				toolTip = toolTip == null ? "" : " title='" + toolTip + "'";
+
+				// Use renderer to set <td ATTRIBUTES>
+				String tdAttr = tsRenderer == null ? "" : tsRenderer.tagTdAttr(this, r, c, colName, objVal, strVal, tDataNoWrap);
+				if (tdAttr == null)
+					tdAttr = "";
+				
+				if (StringUtil.isNullOrBlank(tdAttr) && tDataNoWrap)
+					tdAttr = " nowrap";
+
+				// If we have attribute it has to start with a space " "
+				if (StringUtil.hasValue(tdAttr) && !tdAttr.startsWith(" "))
+					tdAttr = " " + tdAttr;
+
+				sb.append("          <td").append(tdAlignRight).append(tdAttr).append(toolTip).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
+			}
+			sb.append("        </tr>\n");
+		}
+		
+		// Close last group if any rows were processed
+		if (hasRows)
+		{
+			sb.append("      </tbody>\n");
+			sb.append("    </table>\n");
+			sb.append("  </div>\n");
+			sb.append("</details>\n");
+		}
+		else
+		{
+//			sb.append("    <p>No data found.</p>\n");
+		}
+		
+		return sb.toString();
+	}
+//	private static String escapeHtml(String text)
+//	{
+//		if (text == null)
+//			return "";
+//
+//		return text
+//			.replace("&",  "&amp;")
+//			.replace("<",  "&lt;")
+//			.replace(">",  "&gt;")
+//			.replace("\"", "&quot;")
+//			.replace("'",  "&#39;");
+//	}
+
+	
 
 	/** Is column part of the sorted columns list, which should be highlighted */
 	public boolean isHighlightSortColumn(String colName)
@@ -4725,6 +5219,18 @@ public class ResultSetTableModel
 	{
 		StringBuilder sb = new StringBuilder();
 
+		// If no rowSpec... Create a one-2-one mapping on all columns
+		// OR: we could do a separate loop to print all ColName:Value ... either works...
+		if (rowSpec == null || rowSpec.isEmpty())
+		{
+			rowSpec = new LinkedHashMap<>(sourceRstm.getColumnCount());
+			for (int c=0; c<sourceRstm.getColumnCount(); c++)
+			{
+				String colName = sourceRstm.getColumnName(c);
+				rowSpec.put(colName, colName);
+			}
+		}
+
 		String className = "";
 		if (StringUtil.hasValue(htmlClassname))
 			className = " class='" + htmlClassname + "'";
@@ -6109,6 +6615,24 @@ public class ResultSetTableModel
 		return newRstm;
 	}
 
+	/**
+	 * Check if the object value is null
+	 * 
+	 * @param objVal
+	 * @return
+	 */
+	public boolean isNull(Object objVal)
+	{
+		if (objVal == null)
+			return true;
+		
+		if (NULL_REPLACE.equals(objVal))
+			return true;
+
+		return false;
+	}
+
+	
 //	public static void main(String[] args)
 //	{
 //		try

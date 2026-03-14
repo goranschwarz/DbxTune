@@ -91,7 +91,7 @@ extends MonitorMpstat
 		md.setParseRegexp(HostMonitorMetaData.REGEXP_IS_SPACE);
 
 		// Skip the header line
-		md.setSkipRows("CPU", "CPU");
+		md.addSkipRows("CPU", "CPU");
 
 		// Get SKIP and ALLOW from the Configuration
 		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());

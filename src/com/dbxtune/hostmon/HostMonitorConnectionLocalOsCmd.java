@@ -70,6 +70,20 @@ extends HostMonitorConnection
 	}
 
 	@Override
+	public String getUsername()
+	{
+		String username = System.getProperty("user.name");
+
+		if (StringUtil.isNullOrBlank(username))
+			username = System.getenv("USERNAME");
+
+		if (StringUtil.isNullOrBlank(username))
+			username = "-unknown-";
+
+		return username;
+	}
+
+	@Override
 	public int getOsCoreCount()
 	{
 		return Runtime.getRuntime().availableProcessors();
@@ -275,6 +289,11 @@ extends HostMonitorConnection
 	@Override
 	public ExecutionWrapper executeCommand(String cmd) throws Exception
 	{
+		return executeCommand(cmd, false);
+	}
+	@Override
+	public ExecutionWrapper executeCommand(String cmd, boolean isStreamingCommand) throws Exception
+	{
 		if (_envMap == null)
 			_envMap = new HashMap<>();
 		
@@ -317,6 +336,11 @@ extends HostMonitorConnection
 		
 		@Override
 		public void executeCommand(String cmd) throws Exception
+		{
+			executeCommand(cmd, false);
+		}
+		@Override
+		public void executeCommand(String cmd, boolean isStreamingCommand) throws Exception
 		{
 			// Reset sleepCount on every execution
 			_sleepCount = 0;

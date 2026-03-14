@@ -174,15 +174,15 @@ extends CompletionProviderAbstractSql
 				"CREATE INDEX index_name ON table_name(c1, c2, c3) WITH (SORT_IN_TEMPDB = ON, DATA_COMPRESSION = PAGE)",
 				"Create index"));
 				
-		list.add( new CompletionTemplate( "clear_plan_cache",
+		list.add( new CompletionTemplate( "dbcc_clear_plan_cache",
 				"DBCC FREEPROCCACHE WITH NO_INFOMSGS /* NOTE: DO NOT USE IN PRODUCTION SYSTEMS */ ",
 				"Removes all elements from the plan cache. New plans has to be created for all compiled objects."));
 
-		list.add( new CompletionTemplate( "clear_data_cache",
+		list.add( new CompletionTemplate( "dbcc_clear_data_cache",
 				"DBCC DROPCLEANBUFFERS WITH NO_INFOMSGS /* NOTE: DO NOT USE IN PRODUCTION SYSTEMS */ ",
 				"Removes all clean buffers from the buffer pool. Pages/Data has to be read from disk again."));
 
-		list.add( new CompletionTemplate( "opentran",
+		list.add( new CompletionTemplate( "dbcc_opentran",
 				"DBCC OPENTRAN WITH TABLERESULTS, NO_INFOMSGS /* NOTE: You need to be in the desired database */ ",
 				"Identify active transactions that may be preventing log truncation."));
 		

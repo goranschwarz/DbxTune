@@ -45,15 +45,21 @@ extends MonitorIo
 		return this.getClass().getSimpleName();
 	}
 
+//	@Override
+//	public String getCommand()
+//	{
+//		String cmd = super.getCommand();
+//		if (StringUtil.hasValue(cmd))
+//			return cmd;
+//		
+//		return "typeperf -si " + getSleepTime() + " \"\\Paging File(_Total)\\*\" \"\\Memory\\*\" ";
+//	}
 	@Override
 	public String getCommand()
 	{
+		String cmdPath = Configuration.getCombinedConfiguration().getProperty(PROPKEY_windows_typeperf_cmd_path, DEFAULT_windows_typeperf_cmd_path);
 		String cmd = super.getCommand();
-		if (StringUtil.hasValue(cmd))
-			return cmd;
-		
-		return "typeperf -si " + getSleepTime() + " \"\\Paging File(_Total)\\*\" \"\\Memory\\*\" ";
-//		return "typeperf -si " + getSleepTime() + " \"\\Memory\\*\" ";
+		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\Paging File(_Total)\\*\" \"\\Memory\\*\" ";
 	}
 
 	@Override

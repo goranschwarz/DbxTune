@@ -37,6 +37,7 @@ import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResult;
+import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResultType;
 import com.dbxtune.pcs.report.content.SparklineJfreeChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -209,7 +210,7 @@ extends SqlServerAbstract
 									0);                              // params.getDecimalScale()             
 
 							String valStr              = StringUtil.toCommaStr(result.values, ",");
-							String jfreeChartInlinePng = SparklineJfreeChart.create(result);
+							String jfreeChartInlinePng = SparklineJfreeChart.create(result, SparklineResultType.MAX, 1);
 
 							// Create the data that will be in <td>...HERE...</td>
 							sparklineDataStr_ms = "<div class='" + sparklineClassName + "' values='" + valStr + "'>" + jfreeChartInlinePng + "</div>";
@@ -252,7 +253,7 @@ extends SqlServerAbstract
 									1);                              // params.getDecimalScale()             
 
 							String valStr              = StringUtil.toCommaStr(result.values, ",");
-							String jfreeChartInlinePng = SparklineJfreeChart.create(result);
+							String jfreeChartInlinePng = SparklineJfreeChart.create(result, SparklineResultType.MAX, 1);
 
 							// Create the data that will be in <td>...HERE...</td>
 							sparklineDataStr_wtpc = "<div class='" + sparklineClassName + "' values='" + valStr + "'>" + jfreeChartInlinePng + "</div>";

@@ -22,6 +22,7 @@ package com.dbxtune.alarm.writers;
 
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,7 +113,7 @@ extends AlarmWriterAbstract
 			
 			// Connection timeout
 			if (_smtpConnectTimeout >= 0)
-				email.setSocketConnectionTimeout(_smtpConnectTimeout);
+				email.setSocketConnectionTimeout( Duration.ofSeconds(_smtpConnectTimeout) );
 
 			// SMTP PORT
 			if (_smtpPort >= 0)

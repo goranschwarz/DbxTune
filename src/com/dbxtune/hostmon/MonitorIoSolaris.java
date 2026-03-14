@@ -85,7 +85,7 @@ extends MonitorIo
 		md.setParseRegexp(HostMonitorMetaData.REGEXP_IS_SPACE);
 
 		// Skip the header line
-		md.setSkipRows("device", "device");
+		md.addSkipRows("device", "device");
 
 		// Get SKIP and ALLOW from the Configuration
 		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());

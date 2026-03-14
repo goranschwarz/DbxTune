@@ -54,6 +54,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -64,6 +65,8 @@ import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.cleanup.CentralH2Defrag;
 import com.dbxtune.central.cleanup.CentralH2Defrag.H2StorageInfo;
 import com.dbxtune.central.cleanup.DataDirectoryCleaner;
+import com.dbxtune.central.controllers.ud.action.IUserDefinedAction;
+import com.dbxtune.central.controllers.ud.action.UserDefinedActionManager;
 import com.dbxtune.central.controllers.ud.chart.IUserDefinedChart;
 import com.dbxtune.central.controllers.ud.chart.UserDefinedChartManager;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -544,14 +547,47 @@ public class OverviewServlet extends HttpServlet
 		out.println("  tr:nth-child(even) {background-color: #f2f2f2;}");
 //		out.println("  .topright { position: absolute; top: 8px; right: 16px; font-size: 14px; }"); // topright did not work with bootstrap (and navigation bar) 
 
+		out.println("    /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ ");
+		out.println("    [data-tooltip] { ");
+		out.println("        position: relative; ");
+		out.println("    } ");
+		out.println();
+		out.println("    /* 'tooltip' CSS settings for SQL Text... */ ");
+		out.println("    [data-tooltip]:hover::before { ");
+		out.println("        content: attr(data-tooltip);		 ");
+//		out.println("        content: 'Click to Open Text Dialog...'; ");
+		out.println("        position: absolute; ");
+		out.println("        z-index: 103; ");
+		out.println("        top: 20px; ");
+		out.println("        left: 30px; ");
+		out.println("        width: 1000px; ");
+		out.println("        height: 900px; ");
+//		out.println("        width: 220px; ");
+		out.println("        padding: 10px; ");
+		out.println("        background: #454545; ");
+		out.println("        color: #fff; ");
+		out.println("        font-size: 11px; ");
+		out.println("        font-family: Courier; ");
+		out.println("        white-space: pre-wrap; ");
+		out.println("    } ");
+		out.println("    [data-title]:hover::after { ");
+		out.println("        content: ''; ");
+		out.println("        position: absolute; ");
+		out.println("        bottom: -12px; ");
+		out.println("        left: 8px; ");
+		out.println("        border: 8px solid transparent; ");
+		out.println("        border-bottom: 8px solid #000; ");
+		out.println("    } ");
+		
+		
 		out.println("</style>");
 
-		out.println("<link href='/scripts/prism/prism.css' rel='stylesheet' />");
+		out.println("<link href='/scripts/prism/prism-1.30.0.css' rel='stylesheet' />");
 
 		out.println("</head>");
 		
 		out.println("<body onload='updateLastUpdatedClock()'>");
-		out.println("<script src='/scripts/prism/prism.js'></script> ");
+		out.println("<script src='/scripts/prism/prism-1.30.0.js'></script> ");
 
 		out.println(HtmlStatic.getOverviewNavbar());
 
@@ -577,6 +613,7 @@ public class OverviewServlet extends HttpServlet
 		out.println("<p>Sections");
 		out.println("<ul>");
 		out.println("  <li><a href='#ud-content'        >User Defined Content                          </a> </li>");
+		out.println("  <li><a href='#ud-actions'        >User Defined Actions                          </a> </li>");
 		out.println("  <li><a href='#cm-refresh-time'   >Collector Refresh Time                        </a> </li>");
 		out.println("  <li><a href='#active'            >Active Recordings                             </a> </li>");
 		out.println("  <li><a href='#alarms'            >Active Alarms                                 </a> </li>");
@@ -588,9 +625,53 @@ public class OverviewServlet extends HttpServlet
 		out.println("  <li><a href='#active_filecontent'>Active Recordings, full meta-data file content</a> </li>");
 		out.println("</ul>");
 		out.println("</p>");
+		out.println();
+
+		// Add: <Collapse> or <Expand> ALL Section
+		out.println("<a href='javascript:void(0);' onclick=\"collapseSection('ALL');\">Collapse</a> ");
+		out.println(" or ");
+		out.println("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
+		out.println(" ALL sections <br>");
+		out.println("<br>");
+		out.println();
+
+		out.println();
+		out.println("<script type='text/javascript'>  ");
+		out.println("    function collapseSection(name) 			");
+		out.println("    { 											");
+		out.println("       console.log('collapseSection(): name=|' + name + '|.'); ");
+		out.println("       if (name === 'ALL') 					");
+		out.println("       { 										");
+		out.println("           $('.collapse').collapse('hide');	");
+//		out.println("           $('#collapse_toc').collapse('show');	"); // But keep the TOC open
+		out.println("       } 										");
+		out.println("       else 									");
+		out.println("       { 										");
+		out.println("           $('#collapse_' + name).collapse('hide');	");
+		out.println("           $('#heading_' + name)[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });	"); // Scroll to this HEADING otherwise it may be "confusing"
+//		out.println("           document.getElementById('heading_' + name).scrollIntoView();	"); // Scroll to this HEADING otherwise it may be "confusing"
+		out.println("       } 										");
+		out.println("       return false; 							");
+		out.println("    } 											");
+		out.println();
+		out.println("    function expandSection(name) 				");
+		out.println("    { 											");
+		out.println("       console.log('expandSection(): name=|' + name + '|.'); ");
+		out.println("       if (name === 'ALL') 					");
+		out.println("       { 										");
+		out.println("           $('.collapse').collapse('show');	");
+		out.println("       } 										");
+		out.println("       else 									");
+		out.println("       { 										");
+		out.println("           $('#collapse_' + name).collapse('show');	");
+		out.println("       } 										");
+		out.println("       return false; 							");
+		out.println("    } 											");
+		out.println("</script> ");
+		out.println();
 		
 		out.println("<script>");
-		out.println("                                                      ");
+		out.println();
 		out.println("function updateLastUpdatedClock() {                   ");
 		out.println("    var ageInSec = Math.floor((new Date() - lastUpdateTime) / 1000);");
 		out.println("    document.getElementById('last-update-ts').innerHTML = ageInSec + ' seconds ago'; ");
@@ -599,7 +680,7 @@ public class OverviewServlet extends HttpServlet
 		out.println("    setTimeout(updateLastUpdatedClock, 1000); ");
 		out.println("}                                                     ");
 		out.println("var lastUpdateTime = new Date();");
-		out.println("");		
+		out.println();		
 		out.println("function toggle_visibility(id) { ");
 		out.println("    var e = document.getElementById(id); ");
 		out.println("	 if (e.style.display == 'block') ");
@@ -607,7 +688,7 @@ public class OverviewServlet extends HttpServlet
 		out.println("	 else ");
 		out.println("	     e.style.display = 'block'; ");
 		out.println("	 } ");
-		out.println("");
+		out.println();
 		out.println("</script>");
 		out.println("");
 		
@@ -718,9 +799,24 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='ud-content' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>User Defined Charts and Reports</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "User Defined Charts and Reports";
+			String divId       = "ud-content";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			
 			// If no Chart was found, get instructions on HOW to create a User Defined Chart
 			String templateText = UserDefinedChartManager.getInstance().getTemplateText();
@@ -749,15 +845,17 @@ public class OverviewServlet extends HttpServlet
 			else
 			{
 				out.println("<p>In here you can find various Chart(s), which is created by your organization!</p>");
-				out.println("Column description");
-				out.println("<ul>");
-				out.println("<li><b>Name                       </b> - Name of the chart</li>");
-				out.println("<li><b>Server                     </b> - Name of the server we are collecting data from</li>");
-				out.println("<li><b>Chart Type                 </b> - Type of chart. (timeline-gantt/line/bar)</li>");
-				out.println("<li><b>Description                </b> - Description, provided by your organization.</li>");
-				out.println("<li><b>URL                        </b> - Click here to view the chart.</li>");
-				out.println("<li><b>File Name                  </b> - Source file for the Chart.</li>");
-				out.println("</ul>");
+				out.println("<details>");
+				out.println("<summary>Column description</summary>");
+				out.println("  <ul>");
+				out.println("    <li><b>Name                       </b> - Name of the chart</li>");
+				out.println("    <li><b>Server                     </b> - Name of the server we are collecting data from</li>");
+				out.println("    <li><b>Chart Type                 </b> - Type of chart. (timeline-gantt/line/bar)</li>");
+				out.println("    <li><b>Description                </b> - Description, provided by your organization.</li>");
+				out.println("    <li><b>URL                        </b> - Click here to view the chart.</li>");
+				out.println("    <li><b>File Name                  </b> - Source file for the Chart.</li>");
+				out.println("  </ul>");
+				out.println("</details>");
 //				out.println("<br><hr>");
 //				out.println("<h3>Active Recordings</h3>");
 				out.println("<table>");
@@ -781,6 +879,9 @@ public class OverviewServlet extends HttpServlet
 					String chartType   = chart.getChartType().toString();
 					String url         = chart.getUrl(); // "/api/udc?name=" + name + "&srvName=" + srvName + "&startTime=-2");
 					String filename    = chart.getConfigFilename();
+
+					Path filenamePath = Paths.get(filename);
+					filename = "<a href='/conf?name=" + filenamePath.getFileName() + "'>" + filename + "</a>";
 
 					String td = chart.isValid() ? "<td>" : "<td style='color:red'>";
 
@@ -822,11 +923,184 @@ public class OverviewServlet extends HttpServlet
 				out.println("<hr>");
 
 				out.println("</div>");
-			}
+			}			
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
 			
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
+		}
 
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+
+
+		//----------------------------------------------------
+		// User Defined Actions
+		//----------------------------------------------------
+		if (true)
+		{
+			String sectionName = "User Defined Actions";
+			String divId       = "ud-actions";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
+			
+			// If no Chart was found, get instructions on HOW to create a User Defined Chart
+			String templateText = UserDefinedActionManager.getInstance().getTemplateText();
+
+			// -----------------------------------------------------------
+			// Loop and print values from the Manager
+			List<IUserDefinedAction> userDefinedActions = UserDefinedActionManager.getInstance().getActions();
+			if (userDefinedActions.isEmpty())
+			{
+				out.println("Below is a template how to create a User Defined Action ");
+				out.println("<a href='#' onclick=\"toggle_visibility('ud-action-template');\">show/hide template</a> ");
+				out.println("<div id='ud-action-template' style='display:none;'>");
+
+				out.println("<br><b>NO User Defined Action has been created.</b><br>");
+				out.println("Create a file with the below content in directory: <code>" + CONF_DIR + "</code><br>");
+				out.println("Name the file <code>someName.ud.action.props</code><br>");
+
+				out.println("<hr>");
+				out.println("<pre>");
+				out.println(templateText);
+				out.println("</pre>");
+				out.println("<hr>");
+
+				out.println("</div>");
+			}
+			else
+			{
+				out.println("<p>In here you can find various Action(s), which is created by your organization!</p>");
+				out.println("<details>");
+				out.println("<summary>Column description</summary>");
+				out.println("  <ul>");
+				out.println("    <li><b>Name                       </b> - Name of the action</li>");
+				out.println("    <li><b>Server                     </b> - Name of the server we are executing the action at</li>");
+				out.println("    <li><b>Action Type                </b> - Type of action. (xxx|yyy|zzz)</li>");
+				out.println("    <li><b>Description                </b> - Description, provided by your organization.</li>");
+				out.println("    <li><b>Authorization              </b> - What user/role is needed to execute this Action.</li>");
+//				out.println("    <li><b>URL                        </b> - Click here to view the chart.</li>");
+				out.println("    <li><b>Log File Name              </b> - Log file for the Action.</li>");
+				out.println("    <li><b>File Name                  </b> - Source file for the Action.</li>");
+				out.println("  </ul>");
+				out.println("</details>");
+
+//				out.println("<br><hr>");
+//				out.println("<h3>Active Recordings</h3>");
+				out.println("<table>");
+				out.println("<thead>");
+				out.println("  <tr>");
+				out.println("    <th>Name</th>");
+				out.println("    <th>Server</th>");
+				out.println("    <th>Action Type</th>");
+				out.println("    <th>Description</th>");
+//				out.println("    <th>URL</th>");
+				out.println("    <th>Authorization</th>");
+				out.println("    <th>Log File Name</th>");
+				out.println("    <th>File Name</th>");
+				out.println("  </tr>");
+				out.println("</thead>");
+				out.println("<tbody>");
+
+				for (IUserDefinedAction udAction : UserDefinedActionManager.getInstance().getActions())
+				{
+					String url         = udAction.getUrl();
+
+					String name        = udAction.getName();
+//					String srvName     = udAction.getDbmsServerName();
+					String srvName     = udAction.getOnServerName();
+					String srvDesc     = udAction.getDescription();
+					String actionType  = udAction.getActionType().toString();
+//					String url         = udAction.getUrl(); // "/api/udc?name=" + name + "&srvName=" + srvName + "&startTime=-2");
+					String logFilename = udAction.getLogFilename();
+					String filename    = udAction.getConfigFilename();
+
+					if (StringUtil.isNullOrBlank(logFilename))
+					{
+						logFilename = "-none-";
+					}
+					else
+					{
+						Path logFilenamePath = Paths.get(logFilename);
+						logFilename = "<a href='/log?name=" + logFilenamePath.getFileName() + "'>" + logFilename + "</a>";
+					}
+					
+					Path filenamePath = Paths.get(filename);
+					filename = "<a href='/conf?name=" + filenamePath.getFileName() + "'>" + filename + "</a>";
+					
+					String auth = "";
+					auth += "Roles: "   + udAction.getAuthorizedRoles();
+					auth += "; Users: " + udAction.getAuthorizedUsers();
+					if (udAction.getAuthorizedRoles().isEmpty() && udAction.getAuthorizedUsers().isEmpty())
+					{
+						auth = "-none-";
+					}
+					
+//					String td = udAction.isValid() ? "<td>" : "<td style='color:red'>";
+					String style = udAction.isValid() ? "" : "style='color:red'";
+					String typeTt = "";
+					String cmd = udAction.getCommand();
+//					actionType = "<div data-toggle='modal' data-target='#FIXME' data-objectname='" + name + "' data-tooltip=\"" + StringEscapeUtils.escapeHtml4(sql) + "\">&#x1F4AC; " + actionType + "</div>";
+					actionType = "<div data-tooltip=\"" + StringEscapeUtils.escapeHtml4(cmd) + "\">&#x1F4AC; " + actionType + "</div>";
+
+					out.println("  <tr>");
+					out.println("    <td "                       + style + ">" + "<a href='" + url + "'>" + name + "</a></td>");
+					out.println("    <td "                       + style + ">" + srvName + "</td>");
+					out.println("    <td title='" + typeTt + "'" + style + ">" + actionType + "</td>");
+					out.println("    <td "                       + style + ">" + srvDesc + "</td>");
+//					out.println("    <td "                       + style + ">" + "<a href='" + url + "' target='_blank'><code>" + url + "</code></a></td>");
+					out.println("    <td "                       + style + ">" + auth + "</td>");
+					out.println("    <td "                       + style + ">" + logFilename + "</td>");
+					out.println("    <td "                       + style + ">" + filename + "</td>");
+					out.println("  </tr>");
+				}
+
+				out.println("</tbody>");
+				out.println("</table>");
+
+			
+				out.println("Below is a template how to create a User Defined Action ");
+				out.println("<a href='#' onclick=\"toggle_visibility('ud-action-template');\">show/hide template</a> ");
+				out.println("<div id='ud-action-template' style='display:none;'>");
+
+				out.println("<br>");
+				out.println("Create a file with the below content in directory: <code>" + CONF_DIR + "</code><br>");
+				out.println("Name the file <code>someName.ud.action.props</code><br>");
+
+				out.println("<hr>");
+				out.println("<pre>");
+				out.println(templateText);
+				out.println("</pre>");
+				out.println("<hr>");
+
+				out.println("</div>");
+			}
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 		}
 
 
@@ -836,10 +1110,24 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='cm-refresh-time' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>Collector Refresh Time</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "Collector Refresh Time";
+			String divId       = "cm-refresh-time";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
 
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>");
 			out.println("Below is charts on <b><i>Refresh Time</i></b> for each individual DbxTune Collector<br>");
 			out.println("<i>This may be used to check/enhance which CM's that may be suboptimal, and may need enhancements...<br>");
@@ -907,9 +1195,15 @@ public class OverviewServlet extends HttpServlet
 					out.println(button);
 				}
 			}
-			
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 		}
 
 
@@ -919,23 +1213,40 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='active' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>Active Recordings</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "Active Recordings";
+			String divId       = "active";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>What DbxTune collectors are currently running on <b>this</b> machine.</p>");
-			out.println("Column description");
-			out.println("<ul>");
-			out.println("<li><b>AppName                    </b> - Type of DbxTune Collector</li>");
-			out.println("<li><b>Server                     </b> - Name of the server we are collecting data from</li>");
-			out.println("<li><b>Description                </b> - Description, fetched from the <code>conf/SERVER_LIST</code> file.</li>");
-			out.println("<li><b>RefreshRate                </b> - How often does this collector fetch data</li>");
-			out.println("<li><b>Age                        </b> - How many seconds since last collection was made for this server</li>");
-			out.println("<li><b>isLocal                    </b> - If the collector is running on the Dbx Central host. (which enables us to view log files etc.)</li>");
-			out.println("<li><b>URL                        </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
-			out.println("<li><b>DbxTune Log File (full)    </b> - View the DbxTune log file</li>");
-			out.println("<li><b>DbxTune Log File (discard) </b> - View the DbxTune log file, but discard lines containing 'Persisting Counters using', so it's easier to <i>spot</i> issues...</li>");
-			out.println("<li><b>DbxTune Log File (free-text discard) </b> - View the DbxTune log file, but discard the text you typed in the input field</li>");
-			out.println("</ul>");
+			out.println("<details>");
+			out.println("<summary>Column description</summary>");
+			out.println("  <ul>");
+			out.println("    <li><b>AppName                    </b> - Type of DbxTune Collector</li>");
+			out.println("    <li><b>Server                     </b> - Name of the server we are collecting data from</li>");
+			out.println("    <li><b>Description                </b> - Description, fetched from the <code>conf/SERVER_LIST</code> file.</li>");
+			out.println("    <li><b>RefreshRate                </b> - How often does this collector fetch data</li>");
+			out.println("    <li><b>Age                        </b> - How many seconds since last collection was made for this server</li>");
+			out.println("    <li><b>isLocal                    </b> - If the collector is running on the Dbx Central host. (which enables us to view log files etc.)</li>");
+			out.println("    <li><b>URL                        </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
+			out.println("    <li><b>DbxTune Log File (full)    </b> - View the DbxTune log file</li>");
+			out.println("    <li><b>DbxTune Log File (discard) </b> - View the DbxTune log file, but discard lines containing 'Persisting Counters using', so it's easier to <i>spot</i> issues...</li>");
+			out.println("    <li><b>DbxTune Log File (free-text discard) </b> - View the DbxTune log file, but discard the text you typed in the input field</li>");
+			out.println("  </ul>");
+			out.println("</details>");
 //			out.println("<br><hr>");
 //			out.println("<h3>Active Recordings</h3>");
 			out.println("<table>");
@@ -1060,8 +1371,15 @@ public class OverviewServlet extends HttpServlet
 //			}
 			out.println("</tbody>");
 			out.println("</table>");
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 		}
 
 
@@ -1071,20 +1389,37 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='alarms' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>Active Alarms</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "Active Alarms";
+			String divId       = "alarms";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>Here you can view Alarm Activity. Both alarms that are currently <b>Active</b>, and the <i>Alarm Log</i> to check what has happened in the past.</p>");
-			out.println("Column description");
-			out.println("<ul>");
-			out.println("<li><b>Server             </b> - Server that's monitored</li>");
-			out.println("<li><b>Log File (history) </b> - Click <b>file</b> or <b>table</b> to view the content of the Alarm Log file. <b>file</b>=View it in a <i>raw</i> format (append <code>&discard=Text</code> to filter out <i>stuff</i>). <b>table</b>=View it in a html table, where you can sort or filter on the content. </li>");
-			out.println("<li><b>Last Update        </b> - Last date the Alarm file was updated</li>");
-			out.println("<li><b>Age(M:s)           </b> - Last date the Alarm file was updated in Minutes:Seconds, this is also a good indication that the collector process is <i>running</i> and doing checks.</li>");
-			out.println("<li><b>Alarms             </b> - Content of the Active Alarm File. 'NO ACTIVE ALARMS.' is stating that we are in a <i>good</i> state.</li>");
-			out.println("<li><b>LLL Age(H:M)       </b> - Last Log Line Age in Houres:Minutes - Just states the age of the <b>last</b> line in the Alarm Log</li>");
-			out.println("<li><b>Last Log Line      </b> - Content of the <b>last</b> Alarm Log Line</li>");
-			out.println("</ul>");
+			out.println("<details>");
+			out.println("<summary>Column description</summary>");
+			out.println("  <ul>");
+			out.println("    <li><b>Server             </b> - Server that's monitored</li>");
+			out.println("    <li><b>Log File (history) </b> - Click <b>file</b> or <b>table</b> to view the content of the Alarm Log file. <b>file</b>=View it in a <i>raw</i> format (append <code>&discard=Text</code> to filter out <i>stuff</i>). <b>table</b>=View it in a html table, where you can sort or filter on the content. </li>");
+			out.println("    <li><b>Last Update        </b> - Last date the Alarm file was updated</li>");
+			out.println("    <li><b>Age(M:s)           </b> - Last date the Alarm file was updated in Minutes:Seconds, this is also a good indication that the collector process is <i>running</i> and doing checks.</li>");
+			out.println("    <li><b>Alarms             </b> - Content of the Active Alarm File. 'NO ACTIVE ALARMS.' is stating that we are in a <i>good</i> state.</li>");
+			out.println("    <li><b>LLL Age(H:M)       </b> - Last Log Line Age in Houres:Minutes - Just states the age of the <b>last</b> line in the Alarm Log</li>");
+			out.println("    <li><b>Last Log Line      </b> - Content of the <b>last</b> Alarm Log Line</li>");
+			out.println("  </ul>");
+			out.println("</details>");
 //			out.println("<br><hr>");
 //			out.println("<h3>Active Alarms</h3>");
 			out.println("<table>");
@@ -1274,8 +1609,15 @@ public class OverviewServlet extends HttpServlet
 //			}
 			out.println("</tbody>");
 			out.println("</table>");
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 		}
 
 
@@ -1285,9 +1627,24 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='logfiles' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>All file(s) in the LOG Directory</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "All file(s) in the LOG Directory";
+			String divId       = "logfiles";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>List all the files in the <i>log</i> directory <code>"+ (new File(LOG_DIR)) +"</code>, click the <i>Url</i> to view the content in the file.<br>");
 			out.println("Note: If you want to filter out something from the content, Type it in the column <b>Discard Text</b> and hit <i>enter</i><br>");
 			out.println("Column <b>View Options</b>");
@@ -1480,8 +1837,15 @@ public class OverviewServlet extends HttpServlet
 			}
 			out.println("</tbody>");
 			out.println("</table>");
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 
 			out.println("<script>");
 			out.println("function openLogFileWithDiscard(element, filename) {  ");
@@ -1499,9 +1863,24 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='conffiles' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>All file(s) in the CONF Directory</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "All file(s) in the CONF Directory";
+			String divId       = "conffiles";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>List all the files in the <i>conf</i> directory <code>"+ (new File(CONF_DIR)) +"</code>, click the <i>Url</i> to view the content in the file.<br>");
 			out.println("Note: If you want to filter out something from the content, Type it in the column <b>Discard Text</b> and hit <i>enter</i></p>");
 			out.println("</p>");
@@ -1528,8 +1907,15 @@ public class OverviewServlet extends HttpServlet
 			}
 			out.println("</tbody>");
 			out.println("</table>");
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 
 			out.println("<script>");
 			out.println("function openConfFileWithDiscard(element, filename) {  ");
@@ -1548,9 +1934,24 @@ public class OverviewServlet extends HttpServlet
 		String firstServerName = null;
 		if (true)
 		{
-			out.println("<div id='reportfiles' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>All file(s) in the REPORTS Directory</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "All file(s) in the REPORTS Directory";
+			String divId       = "reportfiles";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>List all the files in the <i>reports</i> directory <code>"+ (new File(REPORTS_DIR)) +"</code>, click the <i>Url</i> to view the content in the file.<br>");
 			out.println("</p>");
 			out.println("<p>File name is in the format: <i>srv</i>.<i>date(YYYY-MM-DD)</i>_<i>time(HHMM)</i>[.-NTR-].html<br>");
@@ -1673,8 +2074,15 @@ public class OverviewServlet extends HttpServlet
 			}
 			out.println("</tbody>");
 			out.println("</table>");
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 
 			out.println("");
 		}
@@ -1685,10 +2093,24 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='central' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>Dbx Central database</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "Dbx Central database";
+			String divId       = "central";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
 
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>H2 Databases used by Dbx Central</p>");
 
 			File dataDir = new File(DbxTuneCentral.getAppDataDir());
@@ -1828,14 +2250,14 @@ public class OverviewServlet extends HttpServlet
 					
 					sql = ""
 					    + "select \n"
-					    + "	   [ServerName], \n"
-					    + "	   [OnHostname], \n"
-					    + "	   [ProductString], \n"
-					    + "	   min([SessionStartTime]) as [FirstSample], \n"
-					    + "	   max([LastSampleTime])   as [LastSample], \n"
-//					    + "	   sum([NumOfSamples])     as [NumOfSamples], \n" // Note this might be off/faulty after a: Data Retention Cleanup
-					    + "	   datediff(day, max([LastSampleTime]),   CURRENT_TIMESTAMP    ) as [LastSampleAgeInDays], \n"
-					    + "	   datediff(day, min([SessionStartTime]), max([LastSampleTime])) as [NumOfDaysSampled] \n"
+					    + "    [ServerName], \n"
+					    + "    [OnHostname], \n"
+					    + "    [ProductString], \n"
+					    + "    min([SessionStartTime]) as [FirstSample], \n"
+					    + "    max([LastSampleTime])   as [LastSample], \n"
+//					    + "    sum([NumOfSamples])     as [NumOfSamples], \n" // Note this might be off/faulty after a: Data Retention Cleanup
+					    + "    datediff(day, max([LastSampleTime]),   CURRENT_TIMESTAMP    ) as [LastSampleAgeInDays], \n"
+					    + "    datediff(day, min([SessionStartTime]), max([LastSampleTime])) as [NumOfDaysSampled] \n"
 					    + "from [DbxCentralSessions] \n"
 					    + "group by [ServerName], [OnHostname], [ProductString] \n"
 					    + "order by 1 \n"
@@ -1908,9 +2330,15 @@ public class OverviewServlet extends HttpServlet
 				}
 				
 			}
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
 
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
 		}
 
 		
@@ -1920,30 +2348,47 @@ public class OverviewServlet extends HttpServlet
 		String dsrCurrentJdbcUrl = "";
 		if (true)
 		{
+			String sectionName = "Available offline databases";
+			String divId       = "offline";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			boolean isDownloadRecordingEnabled = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_enableDownloadRecordings, DEFAULT_enableDownloadRecordings);
 
-			out.println("<div id='offline' class='card border-dark mb-3'>");
-	        out.println("<h5 class='card-header'>Available offline databases</h5>");
-	        out.println("<div class='card-body'>");
-	        out.println("<p>Historical database recordings.</p>");
+			out.println("<p>Historical database recordings.</p>");
 
-	        if (isDownloadRecordingEnabled)
-	        	out.println("<p>To download a recording, simply click the 'File' column. To disable download set property: <code>" + PROPKEY_enableDownloadRecordings + " = false</code></p>");
-	        else
-	        	out.println("<p>Download Recordings is <b>not</b> enabled. This can be enabled with property: <code>" + PROPKEY_enableDownloadRecordings + " = true</code></p>");
-	        
-	        out.println("Column description");
-	        out.println("<ul>");
-	        out.println("<li><b>File             </b> - Name of the database file</li>");
-	        out.println("<li><b>DayOfWeek        </b> - What day of the week is this recording for (just extract the YYYY-MM-DD and try to convert it into a day of week)</li>");
-	        out.println("<li><b>Saved Max GB     </b> - Maximum size of the File before it was <i>compressed</i> using <code>shutdown defrag</code>, which is done with with <i>PCS H2 <b>rollover</b></i>. The value is updated by DataDirectoryCleaner.check(), when it's executed by the scheduler (default; at 23:54). This value is also the one used when calulating how much space we need for H2 databases in the next 24 hours. If the value is negative, no <i>max</i> value has yet been found/saved.</li>");
-	        out.println("<li><b>File Size GB     </b> - Current File size in GB</li>");
-	        out.println("<li><b>File Size MB     </b> - Current File size in MB</li>");
-	        out.println("<li><b>Shrink Size GB   </b> - Difference in SavedGB-CurrentGB, which is how much space is saved by doing 'shutdown defrag' when closing the db on 'rollover'.</li>");
-	        out.println("<li><b>URL              </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
-	        out.println("<li><b>DSR              </b> - Click here to create a <b>Daily Summary Report</b> from this recording. Note: You can choose detailes like begin and end time for the Reporting Period.</li>");
-	        out.println("</ul>");
-	        out.println("<p>Note: Offline databases with <b>todays</b> timestamp will be marked in <span style='background-color:rgb(204, 255, 204);'>light green</span>, which probably is the active recording.</p>");
+			if (isDownloadRecordingEnabled)
+				out.println("<p>To download a recording, simply click the 'File' column. To disable download set property: <code>" + PROPKEY_enableDownloadRecordings + " = false</code></p>");
+			else
+				out.println("<p>Download Recordings is <b>not</b> enabled. This can be enabled with property: <code>" + PROPKEY_enableDownloadRecordings + " = true</code></p>");
+			
+			out.println("<details>");
+			out.println("<summary>Column description</summary>");
+			out.println("  <ul>");
+			out.println("    <li><b>File             </b> - Name of the database file</li>");
+			out.println("    <li><b>DayOfWeek        </b> - What day of the week is this recording for (just extract the YYYY-MM-DD and try to convert it into a day of week)</li>");
+			out.println("    <li><b>Saved Max GB     </b> - Maximum size of the File before it was <i>compressed</i> using <code>shutdown defrag</code>, which is done with with <i>PCS H2 <b>rollover</b></i>. The value is updated by DataDirectoryCleaner.check(), when it's executed by the scheduler (default; at 23:54). This value is also the one used when calulating how much space we need for H2 databases in the next 24 hours. If the value is negative, no <i>max</i> value has yet been found/saved.</li>");
+			out.println("    <li><b>File Size GB     </b> - Current File size in GB</li>");
+			out.println("    <li><b>File Size MB     </b> - Current File size in MB</li>");
+			out.println("    <li><b>Shrink Size GB   </b> - Difference in SavedGB-CurrentGB, which is how much space is saved by doing 'shutdown defrag' when closing the db on 'rollover'.</li>");
+			out.println("    <li><b>URL              </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
+			out.println("    <li><b>DSR              </b> - Click here to create a <b>Daily Summary Report</b> from this recording. Note: You can choose detailes like begin and end time for the Reporting Period.</li>");
+			out.println("  </ul>");
+			out.println("</details>");
+			out.println("<p>Note: Offline databases with <b>todays</b> timestamp will be marked in <span style='background-color:rgb(204, 255, 204);'>light green</span>, which probably is the active recording.</p>");
 
 			File dataDir = new File(DbxTuneCentral.getAppDataDir());
 			File dataDirRes = null;
@@ -2103,8 +2548,16 @@ public class OverviewServlet extends HttpServlet
 			}
 			out.println("</tbody>");
 			out.println("</table>");
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
+
 		} // end: OFFLINE Databases 
 
 		
@@ -2113,9 +2566,24 @@ public class OverviewServlet extends HttpServlet
 		//----------------------------------------------------
 		if (true)
 		{
-			out.println("<div id='active_filecontent' class='card border-dark mb-3'>");
-			out.println("<h5 class='card-header'>Active Recordings, full meta-data file content</h5>");
-			out.println("<div class='card-body'>");
+			String sectionName = "Active Recordings, full meta-data file content";
+			String divId       = "active_filecontent";
+			String show        = " show"; // VISIBLE=" show"; COLLAPSED=""
+
+			// Bootstrap "card" - BEGIN
+			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
+			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
+			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("    <b>" + sectionName + "</b> ");
+			out.println("  </a> ");
+			out.println("</h5> ");
+			out.println("<div id='collapse_" + divId + "' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_" + divId + "'> ");
+			out.println("<div class='card-body'> ");
+
+			//-------------------------------
+			// BEGIN - CONTENT
+			//-------------------------------
 			out.println("<p>When a DbxTune collector starts it writes a <i>information</i> file with various content, this file is deleted when the collector stops. So this is also <i>proof</i> that the collector <i>lives</i></p>");
 			out.println("<p>This section just lists the content of those files.</p>");
 //			out.println("<br><hr>");
@@ -2146,8 +2614,16 @@ public class OverviewServlet extends HttpServlet
 				out.println("</pre>");
 				out.println("<hr>");
 			}
-			out.println("</div>"); // end: card-body
-			out.println("</div>"); // end: card
+			//-------------------------------
+			// END - CONTENT
+			//-------------------------------
+			out.println("<br><a href='javascript:void(0);' onclick=\"collapseSection('" + divId + "');\">Collapse this section</a> <br>");
+
+			// Bootstrap "card" - END
+			out.println("</div> "); // end: card-body
+			out.println("</div> "); // end: collapse
+			out.println("</div> "); // end: card
+
 			out.println("<br><br>");
 		} // end: ACTIVE Recordings (file content)
 

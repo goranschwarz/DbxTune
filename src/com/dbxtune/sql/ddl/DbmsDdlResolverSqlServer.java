@@ -93,7 +93,20 @@ extends DbmsDdlResolverAbstract
 //			entry.setColumnTypeName("char");
 //			entry.setPrecision(36);             // XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 		}
-		
+
+		// Should we change varchar(max) to CLOB ???
+		if (entry.getColumnType() == Types.VARCHAR && entry.getPrecision() == 2_147_483_646)
+		{
+			entry.setColumnType(Types.CLOB);
+		}
+
+		// Should we change nvarchar(max) to CLOB ???
+		if (entry.getColumnType() == Types.NVARCHAR && entry.getPrecision() == 1_073_741_823)
+		{
+			entry.setColumnType(Types.NCLOB);
+		}
+
+
 		switch (entry.getColumnType())
 		{
 	    case -155: // "microsoft.sql.DATETIMEOFFSET";

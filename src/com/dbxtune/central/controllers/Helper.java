@@ -91,6 +91,9 @@ public class Helper
 		if (StringUtil.isNullOrBlank(value))
 			return defaultValue;
 		
+		if (value.equals("default"))
+			return defaultValue;
+
 		if (value.equals("undefined"))
 			return defaultValue;
 		
@@ -112,6 +115,9 @@ public class Helper
 		}
 
 		if (StringUtil.isNullOrBlank(value))
+			return defaultValue;
+		
+		if (value.equals("default"))
 			return defaultValue;
 		
 		if (value.equals("undefined"))

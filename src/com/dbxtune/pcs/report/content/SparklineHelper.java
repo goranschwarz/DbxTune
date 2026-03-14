@@ -416,7 +416,7 @@ public class SparklineHelper
 						);
 				
 				String noBrowserText = params.getNoBrowserText();  
-				String jfreeChartInlinePng = SparklineJfreeChart.create(result);
+				String jfreeChartInlinePng = SparklineJfreeChart.create(result, SparklineResultType.MAX, 1);
 				
 				noBrowserText = jfreeChartInlinePng;
 
@@ -472,7 +472,7 @@ public class SparklineHelper
 		String valStr = StringUtil.toCommaStr(result.values, ",");
 		
 		String sparklineDataStr   = "<div class='" + sparklineClassName + "' values='" + valStr + "'>" + noBrowserText + "</div>";
-		String sparklineMaxValStr = "<div class='sparkline-max-val'>" + result.getMaxValueLabel() + "</div>";
+		String sparklineMaxValStr = "<div class='sparkline-ind-val'>" + result.getIndicatorValueLabel() + "</div>";
 		String sparkline          = "<div class='sparkline-wrapper'>" + sparklineDataStr + sparklineMaxValStr + "</div>";
 		
 		return sparkline;
@@ -566,8 +566,8 @@ public class SparklineHelper
 //			sb.append("        sparklineListCreated.push(sparkline); \n");
 			sb.append("        sparklineListCreated.push(tagName); \n");
 			sb.append("\n");
-			sb.append("        // now show the Max: ### overlay  \n");
-			sb.append("        $('.sparkline-max-val').css('display', 'block');  \n");
+			sb.append("        // now show the Max|Min: ### overlay  \n");
+			sb.append("        $('.sparkline-ind-val').css('display', 'block');  \n");
 			
 //			sb.append("        // HIDE the image, and SHOW the chart! \n");
 //			sb.append("        document.getElementById('img_'       + tagName).style.display = 'none'; \n");   // hide
@@ -680,29 +680,58 @@ public class SparklineHelper
 		return sb.toString();
 	}
 
+	public enum SparklineResultType
+	{
+		MIN, MAX
+	}
+
 	/**
 	 * Results when calling method getSparclineData
 	 */
 	public static class SparklineResult
 	{
-		public List<String>    tooltips = new ArrayList<>();
-		public List<Timestamp> beginTs  = new ArrayList<>();
-//		public List<Integer>   values   = new ArrayList<>();
-		public List<Number>    values   = new ArrayList<>();
-		
-		public Number getMaxValue()
+//		public SparklineResult()
+//		{
+//			this(SparklineType.MAX);
+//		}
+
+		public SparklineResult(SparklineResultType type)
 		{
-			Number maxValue = Integer.MIN_VALUE;
-			for (Number val : values)
-			{
-				maxValue = Math.max(maxValue.doubleValue(), (val == null) ? 0 : val.doubleValue());
-			}
-			return maxValue;
+			sparklineType = type;
 		}
 
-		public String getMaxValueLabel()
+		public SparklineResultType sparklineType = SparklineResultType.MAX;
+		public List<String>        tooltips      = new ArrayList<>();
+		public List<Timestamp>     beginTs       = new ArrayList<>();
+//		public List<Integer>       values        = new ArrayList<>();
+		public List<Number>        values        = new ArrayList<>();
+		
+		public Number getIndicatorValue()
 		{
-			return "Max: " + NumberFormat.getInstance().format( getMaxValue() );
+			if (SparklineResultType.MIN.equals(sparklineType))
+			{
+				Number minValue = Integer.MAX_VALUE;
+				for (Number val : values)
+				{
+					minValue = Math.min(minValue.doubleValue(), (val == null) ? 0 : val.doubleValue());
+				}
+				return minValue;
+			}
+			else
+			{
+				Number maxValue = Integer.MIN_VALUE;
+				for (Number val : values)
+				{
+					maxValue = Math.max(maxValue.doubleValue(), (val == null) ? 0 : val.doubleValue());
+				}
+				return maxValue;
+			}
+		}
+
+		public String getIndicatorValueLabel()
+		{
+			String type = SparklineResultType.MIN.equals(sparklineType) ? "Min" : "Max";
+			return type + ": " + NumberFormat.getInstance().format( getIndicatorValue() );
 		}
 	}
 
@@ -764,7 +793,7 @@ public class SparklineHelper
 	public static SparklineResult getSparclineData(DbxConnection conn, DataSource dataSource, LocalDateTime beginLdt, LocalDateTime endLdt, int durationInMinutes, AggType aggType, String schName, String tabName, String tabPeriodColName, String sumColName, boolean sumColNameIsExpr, List<String> whereColNameList, List<Object> whereColValList, String extraWhereClause, int noDataInPeriod, int decimalScale)
 	throws SQLException
 	{
-		SparklineResult res = new SparklineResult();
+		SparklineResult res = new SparklineResult(SparklineResultType.MAX);
 
 		// Check input
 		if (whereColNameList == null || whereColValList == null) throw new IllegalArgumentException("getSparclineData(): None of this can be null. whereColNameList=" + whereColNameList + ", whereColValList=" + whereColValList);

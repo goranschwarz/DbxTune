@@ -272,6 +272,22 @@ public class RSyntaxUtilitiesX
 		}
 
 		//--------------------------------
+		// Show Indent Guidelines
+		if (syntaxTextArea != null)
+		{
+			mi = new JCheckBoxMenuItem("Show Indent Guidelines", syntaxTextArea.getPaintTabLines());
+			mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					syntaxTextArea.setPaintTabLines( ! syntaxTextArea.getPaintTabLines() );
+				}
+			});
+			menu.add(mi);
+		}
+
+		//--------------------------------
 		// Visible Whitespace
 		if (syntaxTextArea != null)
 		{

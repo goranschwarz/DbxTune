@@ -23,6 +23,7 @@ package com.dbxtune.hostmon;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import com.dbxtune.sql.FilterPredicate;
 import com.dbxtune.ssh.SshConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -197,7 +198,9 @@ extends HostMonitor
 		md.addIntColumn ("Available-MB",     7, 0, false,        "Amount of space available for use, in MB");
 		md.addDecColumn ("UsedPct",          8, 5, true,  5, 2,  "<html>Amount of space used, as a percentage of the total capacity<br><br><b>Formula:</b> 100.0 - (availableKB / sizeKB * 100.0)</html>");
 		md.addStrColumn ("MountedOn",        9, 6, true,  400,   "Mount point");
-                                                 
+
+		// TODO: Possibly for Linux: Add switch '-T' to get file system type: xfs, ext4, btfs, ...
+
 		// What regexp to use to split the input row into individual fields
 		md.setParseRegexp(HostMonitorMetaData.REGEXP_IS_SPACE);
 
@@ -212,19 +215,47 @@ extends HostMonitor
 		// Skip "loop" devices
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.loop.devices", true))
 		{
-//			md.setSkipRows("Filesystem", "^loop[0-9]+");
-			md.setSkipRows("Filesystem", "^/dev/loop[0-9]+");
+//			md.addSkipRows("Filesystem", "^loop[0-9]+");
+			md.addSkipRows("Filesystem", "^/dev/loop[0-9]+");
 		}
 
 		// Skip "tmpfs" devices
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.tmpfs.devices", true))
 		{
-			md.setSkipRows("Filesystem", "^devtmpfs");
-			md.setSkipRows("Filesystem", "^tmpfs");
+			md.addSkipRows("Filesystem", "^devtmpfs");
+			md.addSkipRows("Filesystem", "^tmpfs");
+		}
+		
+		// skip "efivarfs" -- (U)EFI Variable Filesystem
+		// It is a Linux kernel pseudo-filesystem that exposes Unified Extensible Firmware Interface (UEFI) variables—stored in motherboard NVRAM—as files, 
+		// allowing userspace tools to create, delete, and modify variables, such as boot entries or security keys, by interacting with files in /sys/firmware/efi/efivars
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.efivarfs.devices", true))
+		{
+			md.addSkipRows("Filesystem", "^efivarfs");
 		}
 
+		// Skip "/boot/" mountedOn
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.mountedOn.boot", true))
+		{
+			md.addSkipRows("MountedOn", "^/boot/.*");
+		}
+
+		// Skip "/sys/" mountedOn
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.mountedOn.sys", true))
+		{
+			md.addSkipRows("MountedOn", "^/sys/.*");
+		}
+
+		// Skip any "disks" smaller than # MB
+		int skipSizeMbLessThan = Configuration.getCombinedConfiguration().getIntProperty("hostmon.MonitorDiskSpace.skip.sizeMb.lt", 500);
+		if (skipSizeMbLessThan > 0)
+		{
+			int sizeKb = skipSizeMbLessThan * 1024; // Just convert to KB
+			md.addSkipRowsFilter("Size-KB", FilterPredicate.Operator.LESS_THAN, sizeKb);
+		}
+		
 		// Skip the header line
-//		md.setSkipRows("Filesystem", "Filesystem");
+//		md.addSkipRows("Filesystem", "Filesystem");
 
 //		// Get SKIP and ALLOW from the Configuration
 //		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());

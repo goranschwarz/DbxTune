@@ -21,6 +21,9 @@
  ******************************************************************************/
 package com.dbxtune.cm.os.gui;
 
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Font;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -30,6 +33,9 @@ import javax.swing.JLabel;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jdesktop.swingx.decorator.AbstractHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
 import org.jdesktop.swingx.renderer.LabelProvider;
 import org.jdesktop.swingx.renderer.StringValue;
@@ -135,8 +141,44 @@ extends TabularCntrPanel
 				table.setDefaultRenderer(Double    .class, InExactNumberRenderer);
 				table.setDefaultRenderer(Float     .class, InExactNumberRenderer);
 			}
+			
+			// Install Highligters for "perSec" columns
+			addHighlighter( new HighlighterPerSec(new HighlightPredicate()
+			{
+				@Override
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					String colName = adapter.getColumnName(adapter.convertColumnIndexToModel(adapter.column));
+					if (colName.endsWith("PerSec") || colName.endsWith("/s"))
+						return true;
+					return false;
+				}
+			}));
 		}
 		
 		_tableCellRendersIsInitialized = true;
+	}
+
+	private static class HighlighterPerSec extends AbstractHighlighter
+	{
+		public HighlighterPerSec(HighlightPredicate predicate)
+		{
+			super(predicate);
+		}
+
+		@Override
+		protected Component doHighlight(Component comp, ComponentAdapter adapter)
+		{
+			Object value = adapter.getFilteredValueAt(adapter.row, adapter.convertColumnIndexToModel(adapter.column));
+			if ( value instanceof Number )
+			{
+				comp.setForeground(Color.BLUE);
+				if ( ((Number) value).doubleValue() != 0 )
+				{
+					comp.setFont(comp.getFont().deriveFont(Font.BOLD));
+				}
+			}
+			return comp;
+		}
 	}
 }

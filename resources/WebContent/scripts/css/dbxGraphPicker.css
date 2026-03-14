@@ -1,0 +1,143 @@
+/* ── dbxGraphPicker.css ─────────────────────────────────────────────
+   Graph Picker Modal + Dropdown Submenu styles
+   Include this in your page <head>
+──────────────────────────────────────────────────────────────────── */
+
+/* ── Dropdown Submenu ───────────────────────────────────────────── */
+.dbx-dropdown-submenu {
+	position: relative;
+}
+
+.dbx-dropdown-submenu .dropdown-menu {
+	top: 0;
+	left: 100%;
+	margin-top: -1px;
+	display: none;
+}
+
+.dbx-dropdown-submenu:hover > .dropdown-menu,
+.dbx-dropdown-submenu.show > .dropdown-menu {
+	display: block;
+}
+
+.dbx-dropdown-submenu .dropdown-menu.dropdown-menu-left {
+	left: auto;
+	right: 100%;
+}
+
+.dbx-dropdown-submenu .dbx-dropdown-submenu > a {
+	white-space: nowrap;
+	padding-right: 2rem;
+}
+
+.dbx-dropdown-submenu > a::after {
+	float: right;
+	margin-left: 0.5em;
+	margin-top: 0.4em;
+	vertical-align: middle;
+	content: "";
+	border-top: 0.3em solid transparent;
+	border-right: 0;
+	border-bottom: 0.3em solid transparent;
+	border-left: 0.3em solid;
+}
+
+/* ── Graph Picker Modal ─────────────────────────────────────────── */
+#dbxGraphPickerModal .modal-dialog {
+	margin: 5vh auto;
+	max-width: none;
+	width: 1000px;
+}
+
+#dbxGraphPickerModal .modal-content {
+	height: 90vh;
+	max-height: 90vh;
+	overflow: hidden;
+}
+
+#dbxGraphPickerModal .modal-body {
+	height: calc(100% - 120px);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+#dbxGraphPickerList {
+	flex: 1;
+	overflow-y: auto;
+	max-height: none;
+}
+
+#dbxGraphPickerModal .modal-content .ui-resizable-handle {
+	background: transparent;
+}
+
+#dbxGraphPickerModal .modal-header {
+	cursor: move;
+}
+
+/* ── Graph Picker List Items ────────────────────────────────────── */
+.dbx-gp-cm-group {
+	margin-bottom: 0.5rem;
+	border: 1px solid #dee2e6;
+	border-radius: 4px;
+}
+
+.dbx-gp-cm-header {
+	background: #f8f9fa;
+	padding: 0.4rem 0.75rem;
+	font-weight: bold;
+	cursor: pointer;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-radius: 4px;
+}
+
+.dbx-gp-cm-header:hover {
+	background: #e9ecef;
+}
+
+.dbx-gp-cm-body {
+	padding: 0.25rem 0.5rem;
+}
+
+.dbx-gp-item {
+	padding: 0.2rem 0.5rem;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.dbx-gp-item:hover {
+	background: #e9ecef;
+}
+
+.dbx-gp-item.dbx-gp-startup {
+	background: #fff3cd;
+}
+
+.dbx-gp-item.dbx-gp-startup:hover {
+	background: #ffeaa7;
+}
+
+.dbx-gp-item label {
+	cursor: pointer;
+	margin-bottom: 0;
+	width: 100%;
+}
+
+.dbx-gp-category-badge {
+	font-size: 0.7rem;
+	margin-left: 0.4rem;
+	vertical-align: middle;
+}
+
+#dbxGraphPickerSelectedCountWrap {
+	color: #6c757d;   /* muted by default */
+	font-weight: normal;
+}
+
+#dbxGraphPickerSelectedCountWrap.dbx-has-selection {
+	color: #000;
+	font-weight: bold;
+}

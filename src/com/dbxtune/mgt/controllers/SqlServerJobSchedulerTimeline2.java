@@ -163,22 +163,27 @@ extends DbxCentralPageTemplate
 		List<String> list = new ArrayList<>();
 
 		// Google's charting tools
+		// NOTE: This will probably be HARD to download, since it a bootstraper that loads "everything we need" on the fly...
+		// SOLUTION: Use another component... which is a MAJOR work
 		list.add("https://www.gstatic.com/charts/loader.js");
 
 		// Date Range Picker
 		list.add("/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js");
 
 		// Chart.js
-//		list.add("/scripts/chartjs/Chart.min.js");
-//		list.add("/scripts/chartjs/plugins/chartjs-plugin-annotation.js");
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"); 
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js"); 
+//		list.add("/scripts/chartjs/2.7.3/Chart.min.js");
+//		list.add("/scripts/chartjs/2.7.3/plugins/chartjs-plugin-annotation.js");
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"); 
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js"); 
+		list.add("/scripts/chartjs/3.7.0/dist/chart.min.js"); 
+		list.add("/scripts/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js"); 
 		
 		// Prism -- to get TEXT field(s) to look better
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js");
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js");
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js");
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js");
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js");
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js");
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js");
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js");
+		list.add("/scripts/prism/prism-1.30.0.js"); // This is a replacement that contains all of the above prism files
 
 		return list;
 	}
@@ -192,9 +197,9 @@ extends DbxCentralPageTemplate
 		list.add("/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css");
 
 		// Prism -- to get TEXT field(s) to look better
-//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css");
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css");
-		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css");
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css");
+//		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css");
+		list.add("/scripts/prism/prism-1.30.0.js"); // This is a replacement that contains all of the above prism files
 
 		return list;
 	}

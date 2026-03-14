@@ -70,6 +70,7 @@ import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.graph.ChartDataHistoryManager;
 import com.dbxtune.gui.MainFrame;
+import com.dbxtune.hostmon.HostMonitor;
 import com.dbxtune.hostmon.HostMonitorConnection;
 import com.dbxtune.hostmon.HostMonitorConnectionLocalOsCmd;
 import com.dbxtune.hostmon.HostMonitorConnectionLocalOsCmdWrapper;
@@ -92,10 +93,12 @@ import com.dbxtune.utils.MandatoryPropertyException;
 import com.dbxtune.utils.Memory;
 import com.dbxtune.utils.MemoryWarningSystem;
 import com.dbxtune.utils.MovingAverageCounterManager;
+import com.dbxtune.utils.PlatformUtils;
 import com.dbxtune.utils.PropPropEntry;
 import com.dbxtune.utils.ShutdownHandler;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
+import com.github.vertical_blank.sqlformatter.core.util.Util;
 
 
 public class CounterCollectorThreadNoGui
@@ -411,6 +414,7 @@ implements Memory.MemoryListener
 				System.out.println("-----------------------------------------------------------------------------");
 				System.out.println("No password for DBMS was specified use command line parameter -P or property 'conn.dbmsPassword' in the file '"+_storeProps.getFilename()+"'.");
 				System.out.println("Connecting to server '"+_dbmsServer+"' at '"+_dbmsHostPortStr+"' with the user name '"+_dbmsUsername+"'.");
+				System.out.println("Note: you may store the password in '${HOME}/.passwd.enc' using: ${HOME}/.dbxtune/dbxc/bin/dbxPassword.{sh|bat} set -S srvName -U username -P theSecretPassword");
 				System.out.println("-----------------------------------------------------------------------------");
 				char[] passwd = cons.readPassword("Password: ");
 				_dbmsPassword = new String(passwd);
@@ -420,7 +424,18 @@ implements Memory.MemoryListener
 		// if we started in background... stdin is not available
 		if (_dbmsPassword == null)
 		{
-			throw new MandatoryPropertyException("No Password for the DBMS could be retrived for: Server '"+_dbmsServer+"' at '"+_dbmsHostPortStr+"' with the user name '"+_dbmsUsername+"'.");
+			String userName = _dbmsUsername;
+			String srvName  = _dbmsServer;
+			if (StringUtil.hasValue(_dbmsServerAlias))
+				srvName = _dbmsServerAlias;
+
+			String dbxPasswdCmd = "${HOME}/.dbxtune/dbxc/bin/dbxPassword.sh";
+			if (PlatformUtils.isWindows())
+				dbxPasswdCmd = "${HOME}/.dbxtune/dbxc/bin/dbxPassword.bat";
+
+			String fixMsg = "Please add/specify/store the password in file '${HOME}/.passwd.enc' using command: " + dbxPasswdCmd + " set -S " + srvName + " -U " + userName + " -P theSecretPassword";
+
+			throw new MandatoryPropertyException("No Password for the DBMS could be retrieved for: Server '" + srvName + "' at '" + _dbmsHostPortStr + "' with the user name '" + userName + "'. " + fixMsg);
 		}
 		// treat "null" password, and set it to blank
 		if (_dbmsPassword.equalsIgnoreCase("null"))
@@ -438,6 +453,8 @@ implements Memory.MemoryListener
 				System.out.println("-----------------------------------------------------------------------------");
 				System.out.println("No SSH password was specified use command line parameter -p or property 'conn.sshPassword' in the file '"+_storeProps.getFilename()+"'.");
 				System.out.println("Connecting to host name '"+_sshHostname+"' with the user name '"+_sshUsername+"'.");
+				System.out.println("Note: you may store the password in '${HOME}/.passwd.enc' using: ${HOME}/.dbxtune/dbxc/bin/dbxPassword.{sh|bat} set -S srvName -U username -P theSecretPassword");
+				System.out.println("  or: Add a SSH Key File.");
 				System.out.println("-----------------------------------------------------------------------------");
 				char[] passwd = cons.readPassword("Password: ");
 				_sshPassword = new String(passwd);
@@ -447,7 +464,16 @@ implements Memory.MemoryListener
 			// if we started in background... stdin is not available
 			if (_sshPassword == null)
 			{
-				throw new MandatoryPropertyException("No Password for SSH could be retrived.");
+				String userName = _sshUsername;
+				String srvName  = _sshHostname;
+
+				String dbxPasswdCmd = "${HOME}/.dbxtune/dbxc/bin/dbxPassword.sh";
+				if (PlatformUtils.isWindows())
+					dbxPasswdCmd = "${HOME}/.dbxtune/dbxc/bin/dbxPassword.bat";
+
+				String fixMsg = "Please add/specify/store the password in file '${HOME}/.passwd.enc' using command: " + dbxPasswdCmd + " set -S " + srvName + " -U " + userName + " -P theSecretPassword";
+
+				throw new MandatoryPropertyException("No Password for SSH could be retrieved. " + fixMsg);
 			}
 		}
 		// treat "null" password, and set it to blank
@@ -1897,6 +1923,65 @@ implements Memory.MemoryListener
 
 		} // END: while(_running)
 
+		//--------------------------
+		// Close all cm's (or should we "just" close CounterModelHostMonitor ???)
+		for (CountersModel cm : CounterController.getInstance().getCmList())
+		{
+			_logger.info("Closing CM '" + cm.getDisplayName() + "'.");
+			cm.close();
+		}
+		//--------------------------
+		// Wait for all cm's to be stopped (especially important for Windows Host Monitoring)
+		long cmStartWiatTime = System.currentTimeMillis();
+		long cmWaitTimeoutMs = 5000;
+		List<String> stillRunningList = new ArrayList<>();
+		stillRunningList.add("-Dummy-Entry-");
+		while (!stillRunningList.isEmpty() && TimeUtils.msDiffNow(cmStartWiatTime) < cmWaitTimeoutMs)
+		{
+			stillRunningList.clear();
+			for (CountersModel cm : CounterController.getInstance().getCmList())
+			{
+				if (cm instanceof CounterModelHostMonitor)
+				{
+					CounterModelHostMonitor hostMonCm = (CounterModelHostMonitor) cm;
+					HostMonitor hostMonitor = hostMonCm.getHostMonitor();
+					if (hostMonitor != null)
+					{
+						if (hostMonitor.isOsCommandStreaming() && hostMonitor.isRunning())
+						{
+							stillRunningList.add( hostMonitor.getModuleName() );
+							// Should we try to stop it again here?
+							hostMonitor.shutdown();
+						}
+					}
+				}
+			}
+			if ( ! stillRunningList.isEmpty() )
+			{
+				_logger.info("Still waiting for HostMonitor(s) " + stillRunningList + " to stop. Sleeping for 1 second. (maxSleep is " + cmWaitTimeoutMs/1000 + " seconds, with " + TimeUtils.msDiffNow(cmStartWiatTime) + " ms passed.)");
+				try { Thread.sleep(1000); }
+				catch (InterruptedException ignore) 
+				{
+					break; 
+				}
+			}
+		}
+		if ( ! stillRunningList.isEmpty() )
+		{
+			_logger.info("Timeout waiting for HostMonitor " + stillRunningList + ", which was NOT stopped in a timely fashion, continuing with the shutdown sequence.");
+		}
+		
+		//--------------------------
+		// Close the database connection
+		_logger.info("Closing DBMS Connection.");
+		CounterController.getInstance().closeMonConnection();
+
+		//--------------------------
+		// Close Host Monitor connection
+		_logger.info("Closing Host Monitor Connection.");
+		CounterController.getInstance().closeHostMonConnection();
+
+		//--------------------------
 		// so lets stop the Persistent Counter Handler and it's services as well
 		if (pch != null)
 		{

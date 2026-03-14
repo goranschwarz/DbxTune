@@ -194,6 +194,9 @@ extends CmSummaryAbstract
 	public static final String GRAPH_NAME_LOGICAL_READ       = "LogicalReadGraph";         // LogicalReads
 	public static final String GRAPH_NAME_LOGICAL_READ_MB    = "LogicalReadMbGraph";       // LogicalReads in MB/sec
 
+	public static final String GRAPH_NAME_DEADLOCK_COUNT     = "DeadlockCount";
+
+	
 	private void addTrendGraphs()
 	{
 		addTrendGraph(
@@ -402,6 +405,17 @@ extends CmSummaryAbstract
 			0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);     // minimum height
 		
+		addTrendGraph(GRAPH_NAME_DEADLOCK_COUNT,
+			"Deadlock Count", // Menu CheckBox text
+			"Deadlock Count ("+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "Deadlock Count" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.LOCK,
+			false,  // is Percent Graph
+			false,  // visible at start
+			0,      // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);    // minimum height
 	}
 
 	@Override
@@ -1351,6 +1365,21 @@ extends CmSummaryAbstract
 
 			arr[0] = this.getAbsValueAsDouble(0, "oldestOpenTranInSec");
 			_logger.debug("updateGraphData("+tgdp.getName()+"): oldestOpenTranInSec='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+	
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_DEADLOCK_COUNT.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getDiffValueAsDouble(0, "NumDeadlocks");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): NumDeadlocks='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

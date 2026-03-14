@@ -297,7 +297,8 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				"How we <i>normalize</i> SQL Text: " +
 				"<ul>" +
 				"  <li>When we cross the threshold to <i>Capture SQL</i></li>" +
-				"  <li>The SQLText is parsed.</li>" +
+				"  <li>The SQLText is parsed. <i>(unfortunately any original comment and formatting in the SQL may be stripped by the SQL Parser)</i><br>" +
+				      "The original SQL Text(s) will be visible in the 'txt' column. Note: There might be many SQL Statements due to the SQL Normalization. </li>" +
 				"  <li>All constants in the where clause is replaced with a question mark (?)</li>" +
 				"  <li>All IN(list of values) are replaced with a elipse. (...)</li>" +
 				"  <li>At the end: lets grab the <i>Java Hash Code</i> of the normalized SQL Text, which is stored in 'NormJavaSqlHashCode'</li>" +
@@ -353,6 +354,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		List<ReportingIndexEntry> list = new ArrayList<>();
 		
 		list.add(new ReportingIndexEntry("MonSqlCapStatements", "SPID", "KPID", "BatchID"));
+		list.add(new ReportingIndexEntry("MonSqlCapStatements", "NormJavaSqlHashCode", "StartTime")); // Possibly missing index for 'SEK' and why it's table scanning...
 
 		list.add(new ReportingIndexEntry("CmObjectActivity_diff", "DBName", "ObjectName", "IndexName"));
 		list.add(new ReportingIndexEntry("CmObjectActivity_abs" , "DBName", "ObjectName", "IndexName", "SessionSampleTime"));

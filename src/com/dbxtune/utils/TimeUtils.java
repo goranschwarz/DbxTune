@@ -27,6 +27,7 @@ package com.dbxtune.utils;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -710,6 +711,21 @@ public class TimeUtils
 	}
 
 	/**
+	 * Format a Instant to a ISO 8601 String<br>
+	 * format is: "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"<br>
+	 * Example output: "2018-01-08T09:56:53.716+01:00"
+	 * @param ts
+	 * @return String in ISO 8601 format
+	 */
+	public static String toStringIso8601(Instant ts)
+	{
+		synchronized (ISO8601_DATE_FORMAT)
+		{
+			return ISO8601_DATE_FORMAT.format( Timestamp.from(ts) );
+		}
+	}
+
+	/**
 	 * Format a Timestamp to a ISO 8601 String<br>
 	 * format is: "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"<br>
 	 * Example output: "2018-01-08T09:56:53.716+01:00"
@@ -739,6 +755,21 @@ public class TimeUtils
 		synchronized (DATE_FORMAT)
 		{
 			return DATE_FORMAT.format(ts);
+		}
+	}
+
+	/**
+	 * Format a Instant to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm:ss.SSS"<br>
+	 * Example output: "2018-01-08 09:56:53.716"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toString(Instant ts)
+	{
+		synchronized (DATE_FORMAT)
+		{
+			return DATE_FORMAT.format( Timestamp.from(ts) );
 		}
 	}
 
@@ -809,6 +840,23 @@ public class TimeUtils
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		return sdf.format( ts );
 	}
+
+	/**
+	 * Format a Instant to a String<br>
+	 * format is: "yyyy-MM-dd"<br>
+	 * Example output: "2018-01-08 09:56"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmd(Instant ts)
+	{
+		if (ts == null)
+			return null;
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		return sdf.format( Timestamp.from(ts) );
+	}
+
 	/**
 	 * Format a long to a String<br>
 	 * format is: "yyyy-MM-dd"<br>
@@ -840,6 +888,23 @@ public class TimeUtils
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		return sdf.format( ts );
 	}
+
+	/**
+	 * Format a Instant to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm"<br>
+	 * Example output: "2018-01-08 09:56"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmdHm(Instant ts)
+	{
+		if (ts == null)
+			return null;
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		return sdf.format( Timestamp.from(ts) );
+	}
+
 	/**
 	 * Format a long to a String<br>
 	 * format is: "yyyy-MM-dd HH:mm"<br>
@@ -870,6 +935,37 @@ public class TimeUtils
 
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return sdf.format( ts );
+	}
+
+	/**
+	 * Format a Instant to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm:ss"<br>
+	 * Example output: "2018-01-08 09:56:53"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmdHms(Instant ts)
+	{
+		if (ts == null)
+			return null;
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return sdf.format( Timestamp.from(ts) );
+	}
+	/**
+	 * Format a Instant to a String<br>
+	 * format is: "yyyy-MM-dd HH:mm:ss"<br>
+	 * Example output: "2018-01-08 09:56:53"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringYmdHms(Instant ts, String ifNull)
+	{
+		if (ts == null)
+			return ifNull;
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		return sdf.format( Timestamp.from(ts) );
 	}
 
 	/**

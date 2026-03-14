@@ -125,7 +125,7 @@ extends HostMonitor
 //		md.setDiffCol( "Used-KB", "Available-KB", "Used-MB", "Available-MB" );
 
 		// Skip the header line
-		md.setSkipRows("pid", "PID");
+		md.addSkipRows("pid", "PID");
 
 //		// Get SKIP and ALLOW from the Configuration
 //		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());
@@ -198,6 +198,288 @@ extends HostMonitor
 //
 //		return data;
 //	}
-	
-	
 }
+
+/*
+A alternate way to *better* get CPU Usage
+  - Get raw values on the Linux side... from: /proc/...
+  - Parse the values (received over the SSH STDOUT stream) into Java Objects
+  - Calculate various values (like CPU Usage)... Data still needs to be stored in memory for "previous sample"
+  - etc...
+  
+Right now this might be "overkill"... But I have the following, which we might implement in the future
+
+1: A Python Script that scans /proc/... and get desired fields
+   Presented as a *single* row per PID
+
+2: Java code that parses etc
+
+See ChatGPT History 'Top vs Ps for Stats', where we talk about:
+ * why PS (on it's own) isn't good enough, because we can't remember "stuff" from previous execution
+ * Various implementations (how other tools like top, htop, atop... does this)
+ * Should we extract all /proc/... values to the client
+ * Should we execute some (stateless script) on the server side, that just returns desired counters
+ * OR: Should we have some (stetefull script) on the server side, that "does it all"... (but this leads to more problems than solutions)
+
+The end game was:
+ * Keep it stateless (remember previous sample at Java Client Side)
+ * Have a Python Script that extracts the desired data
+
+One downside of this is:
+ * We need to "transfer" the script onto the "remote host" when connecting (place it in /tmp/xxxx.sh with chmod 777 so "everyone" can write/replace it)
+
+The Python script:
+--------------------------------------------------------------------------------
+#!/usr/bin/env python3
+import os
+
+def safe_read(path, binary=False):
+    try:
+        mode = 'rb' if binary else 'r'
+        with open(path, mode) as f:
+            return f.read()
+    except (FileNotFoundError, PermissionError):
+        return None
+
+def parse_kv_block(text):
+    d = {}
+    for line in text.splitlines():
+        if ':' in line:
+            k, v = line.split(':', 1)
+            d[k.strip()] = v.strip()
+    return d
+
+# total CPU
+stat = safe_read("/proc/stat")
+if stat:
+    for line in stat.splitlines():
+        if line.startswith("cpu "):
+            print("CPU", line)
+            break
+
+for pid in os.listdir("/proc"):
+    if not pid.isdigit():
+        continue
+
+    base = f"/proc/{pid}"
+
+    stat = safe_read(f"{base}/stat")
+    if not stat:
+        continue
+
+    # --- parse /proc/PID/stat ---
+    s = stat.strip()
+    open_p = s.find('(')
+    close_p = s.rfind(')')
+    rest = s[close_p+2:].split()
+
+    utime = rest[11]
+    stime = rest[12]
+    start = rest[19]
+    rss   = rest[21]
+
+    # --- cmdline ---
+    cmd = safe_read(f"{base}/cmdline", binary=True)
+    if cmd:
+        cmd = cmd.replace(b'\0', b' ').decode(errors="ignore").strip()
+    else:
+        cmd = ""
+
+    # --- IO ---
+    io = safe_read(f"{base}/io")
+    io_kv = parse_kv_block(io) if io else {}
+
+    # --- context switches ---
+    status = safe_read(f"{base}/status")
+    ctx = {}
+    if status:
+        for line in status.splitlines():
+            if "ctxt_switches" in line:
+                k, v = line.split(':', 1)
+                ctx[k.strip()] = v.strip()
+
+    # --- emit SINGLE LINE ---
+    fields = [
+        f"PID={pid}",
+        f"UTIME={utime}",
+        f"STIME={stime}",
+        f"START={start}",
+        f"RSS_PAGES={rss}",
+    ]
+
+    for k in ("rchar","wchar","syscr","syscw",
+              "read_bytes","write_bytes","cancelled_write_bytes"):
+        if k in io_kv:
+            fields.append(f"{k.upper()}={io_kv[k]}")
+
+    if "voluntary_ctxt_switches" in ctx:
+        fields.append(f"VCS={ctx['voluntary_ctxt_switches']}")
+    if "nonvoluntary_ctxt_switches" in ctx:
+        fields.append(f"NVCS={ctx['nonvoluntary_ctxt_switches']}")
+
+    fields.append(f"CMD={cmd}")
+
+    print(" ".join(fields))
+--------------------------------------------------------------------------------
+Example of output (for one row)
+PID=88825 UTIME=12345 STIME=6789 START=456789 RSS_PAGES=1234 RCHAR=2099330 WCHAR=3471 SYSCR=4564 SYSCW=451 RBYTES=28647424 WBYTES=0 VCS=123 NVCS=45 CMD=java -Xmx2g com.foo.Main
+--------------------------------------------------------------------------------
+
+
+
+The Java Code:
+--------------------------------------------------------------------------------
+// Process key (PID reuse safe)
+record ProcKey(int pid, long startTime) {} // OR make this into a class in Java 11, records was introduced in Java 17 I think
+
+// Raw snapshot from server
+class ProcSample 
+{
+    int pid;
+    long startTime;
+    long utime;
+    long stime;
+    long rssPages;
+    long rbytes;
+    long wbytes;
+    long vcs;
+    long nvcs;
+    String cmd;
+
+    long totalCpu() 
+    {
+        return utime + stime;
+    }
+}
+
+// Stored previous state
+class PrevSample 
+{
+    long totalCpu;
+    long rbytes;
+    long wbytes;
+}
+
+// Parsing logic (fast, allocation-light)
+static ProcSample parseLine(String line) 
+{
+    ProcSample p = new ProcSample();
+
+    int i = 0;
+    while (i < line.length()) 
+    {
+        int eq = line.indexOf('=', i);
+        if (eq < 0) break;
+
+        String key = line.substring(i, eq);
+        int next = line.indexOf(' ', eq + 1);
+        if (next < 0) next = line.length();
+
+        String val = line.substring(eq + 1, next);
+
+        switch (key) 
+        {
+            case "PID"        -> p.pid = Integer.parseInt(val);
+            case "START"      -> p.startTime = Long.parseLong(val);
+            case "UTIME"      -> p.utime = Long.parseLong(val);
+            case "STIME"      -> p.stime = Long.parseLong(val);
+            case "RSS_PAGES"  -> p.rssPages = Long.parseLong(val);
+            case "RBYTES"     -> p.rbytes = Long.parseLong(val);
+            case "WBYTES"     -> p.wbytes = Long.parseLong(val);
+            case "VCS"        -> p.vcs = Long.parseLong(val);
+            case "NVCS"       -> p.nvcs = Long.parseLong(val);
+            case "CMD"        -> 
+            {
+                p.cmd = line.substring(eq + 1);
+                return p; // CMD is last field
+            }
+        }
+        i = next + 1;
+    }
+    return p;
+}
+
+
+// Delta engine + top-N selection
+import java.util.*;
+import java.util.stream.*;
+
+public class TopNCollector 
+{
+    private final Map<ProcKey, PrevSample> prev = new HashMap<>();
+
+    public List<Result> processSnapshot(List<String> lines, int topN) 
+    {
+        Map<ProcKey, PrevSample> nextPrev = new HashMap<>();
+        List<Result> results = new ArrayList<>();
+
+        for (String line : lines) 
+        {
+            if (!line.startsWith("PID=")) continue;
+
+            ProcSample cur = parseLine(line);
+            ProcKey key = new ProcKey(cur.pid, cur.startTime);
+
+            PrevSample old = prev.get(key);
+            if (old != null) 
+            {
+                long dCpu = cur.totalCpu() - old.totalCpu;
+                long dRead = cur.rbytes - old.rbytes;
+                long dWrite = cur.wbytes - old.wbytes;
+
+                if (dCpu > 0) 
+                {
+                    results.add(new Result(cur, dCpu, dRead, dWrite));
+                }
+            }
+
+            PrevSample ps = new PrevSample();
+            ps.totalCpu = cur.totalCpu();
+            ps.rbytes = cur.rbytes;
+            ps.wbytes = cur.wbytes;
+            nextPrev.put(key, ps);
+        }
+
+        prev.clear();
+        prev.putAll(nextPrev);
+
+        return results.stream()
+                .sorted(Comparator.comparingLong(Result::deltaCpu).reversed())
+                .limit(topN)
+                .toList();
+    }
+}
+
+// Result object (what your UI / exporter uses)
+record Result(
+        ProcSample proc,
+        long deltaCpu,
+        long deltaReadBytes,
+        long deltaWriteBytes
+) {}
+
+// Usage example
+TopNCollector collector = new TopNCollector();
+
+while (true) 
+{
+    List<String> snapshot = readFromSSH(); // one snapshot
+    List<Result> top = collector.processSnapshot(snapshot, 20);
+
+    for (Result r : top) {
+        System.out.printf(
+            "PID=%d CPU=%d RSS=%d CMD=%s%n",
+            r.proc.pid,
+            r.deltaCpu,
+            r.proc.rssPages,
+            r.proc.cmd
+        );
+    }
+
+    Thread.sleep(5000);
+}
+
+
+--------------------------------------------------------------------------------
+
+*/

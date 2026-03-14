@@ -1002,26 +1002,35 @@ public class PersistWriterJdbc
 		
 		// Try to get the FILES SIZE before we do 'shutdown compact'
 		// Then after 'shutdown compact', we can compare the difference / db file shrinkage
-		H2UrlHelper urlHelper = new H2UrlHelper(currentUrl);
-		File dbFile = urlHelper.getDbFile();
 		long dbFileSizeBefore = -1;
-		if (dbFile != null)
+		File dbFile = null;
+		if (currentUrl != null)
 		{
-			dbFileSizeBefore = dbFile.length();
-		}
-		else
-		{
-			_logger.warn("Shutdown H2 database: Could not find the data file. Has it been deleted or what's happening here? Debug info: currentUrl='" + currentUrl + "', dbFile='" + dbFile + "'.");
-
-			if (AlarmHandler.hasInstance())
+			H2UrlHelper urlHelper = new H2UrlHelper(currentUrl);
+			dbFile = urlHelper.getDbFile();
+			if (dbFile != null)
 			{
-				String srvName       = urlHelper.getFilename();
-				String subSystemName = "h2Shutdown";
-				String message       = "It looks like the H2 Database File '" + urlHelper.getFilename() + "' do NOT exists. Please investigate why!";
-				
-				AlarmEventMissingH2DbFile alarmEvent = new AlarmEventMissingH2DbFile(srvName, subSystemName, currentUrl, message);
+				dbFileSizeBefore = dbFile.length();
+			}
+			else
+			{
+				_logger.warn("Shutdown H2 database: Could not find the data file. Has it been deleted or what's happening here? Debug info: currentUrl='" + currentUrl + "', dbFile='" + dbFile + "'.");
 
-				AlarmHandler.getInstance().addAlarm(alarmEvent);
+				if (AlarmHandler.hasInstance())
+				{
+					String srvName = urlHelper.getFilename();
+					if (srvName == null)
+						srvName = currentUrl;					
+					if (srvName == null)
+						srvName = "-unknown-h2-filename-";					
+
+					String subSystemName = "h2Shutdown";
+					String message       = "It looks like the H2 Database File '" + srvName + "' do NOT exists (on h2Shutdown). Please investigate why!";
+					
+					AlarmEventMissingH2DbFile alarmEvent = new AlarmEventMissingH2DbFile(srvName, subSystemName, currentUrl, message);
+
+					AlarmHandler.getInstance().addAlarm(alarmEvent);
+				}
 			}
 		}
 
@@ -3053,16 +3062,46 @@ public class PersistWriterJdbc
 
 				insertSessionParam(conn, ts, schemaName, "cm", prefix + ".graphNames",Arrays.deepToString(cm.getTrendGraphNames()));
 			}
+
+			
+			// Write info about what was enabled/disabled, and various other information
+			if (CounterController.hasInstance())
+			{
+				for (CountersModel cm : CounterController.getInstance().getCmList())
+				{
+					String prefix = cm.getName();
+
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".cmName"                    , cm.getName());
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".isEnabled"                 , cm.isActive()        + "");
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".postponeTime"              , cm.getPostponeTime() + "");
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".queryTimeout"              , cm.getQueryTimeout() + "");
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".negativeDiffCountersToZero", cm.isNegativeDiffCountersToZero() + "");
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".persistCounters"           , cm.isPersistCountersEnabled()     + "");
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".persistCounters.abs"       , cm.isPersistCountersAbsEnabled()  + "");
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".persistCounters.diff"      , cm.isPersistCountersDiffEnabled() + "");
+					insertSessionParam(conn, ts, schemaName, "cm.info", prefix + ".persistCounters.rate"      , cm.isPersistCountersRateEnabled() + "");
+				}
+			}
+
 			
 			_logger.info("Storing " + Version.getAppName() + " configuration information in table " + getTableName(conn, schemaName, SESSION_PARAMS, null, false));
 			//--------------------------------
 			// STORE the configuration file
 			Configuration conf;
 
+			// NO-GUI: Various FILES
+			if ( ! DbxTune.hasGui() )
+			{
+    			insertSessionParam(conn, ts, schemaName, "FILE", "LOG",       DbxTune.getInstance().getLogFileName());
+    			insertSessionParam(conn, ts, schemaName, "FILE", "NOGUI-CFG", DbxTune.getInstance().getNoGuiConfigFileName());
+//    			insertSessionParam(conn, ts, schemaName, "FILE", "XXX", xxxxxxxxxx);
+			}
+			
 			// --------- SYSTEM_CONF
 			conf = Configuration.getInstance(Configuration.SYSTEM_CONF);
 			if (conf != null)
 			{
+				insertSessionParam(conn, ts, schemaName, "FILE", "SYSTEM_CONF", conf.getFilename());
 				for (String key : conf.getKeys())
 				{
 					String val = conf.getPropertyRaw(key);
@@ -3075,6 +3114,7 @@ public class PersistWriterJdbc
 			conf = Configuration.getInstance(Configuration.USER_CONF);
 			if (conf != null)
 			{
+				insertSessionParam(conn, ts, schemaName, "FILE", "USER_CONF", conf.getFilename());
 				for (String key : conf.getKeys())
 				{
 					String val = conf.getPropertyRaw(key);
@@ -3087,6 +3127,7 @@ public class PersistWriterJdbc
 			conf = Configuration.getInstance(Configuration.USER_TEMP);
 			if (conf != null)
 			{
+				insertSessionParam(conn, ts, schemaName, "FILE", "USER_TEMP", conf.getFilename());
 				for (String key : conf.getKeys())
 				{
 					String val = conf.getPropertyRaw(key);
@@ -3103,6 +3144,7 @@ public class PersistWriterJdbc
 			conf = Configuration.getInstance(Configuration.PCS);
 			if (conf != null)
 			{
+				insertSessionParam(conn, ts, schemaName, "FILE", "PCS", conf.getFilename());
 				for (String key : conf.getKeys())
 				{
 					String val = conf.getPropertyRaw(key);
@@ -3115,6 +3157,7 @@ public class PersistWriterJdbc
 			conf = Configuration.getCombinedConfiguration();
 			if (conf != null)
 			{
+				insertSessionParam(conn, ts, schemaName, "FILE", "COMBINED", conf.getFilename());
 				for (String key : conf.getKeys())
 				{
 					String val = conf.getPropertyRaw(key);
