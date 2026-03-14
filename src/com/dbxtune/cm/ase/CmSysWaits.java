@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.naming.NameNotFoundException;
 import javax.swing.JComponent;
@@ -409,6 +410,11 @@ extends CountersModel
 	public static final String   GRAPH_NAME_CLASS_WTIME = "sysClassWTime"; 
 	public static final String   GRAPH_NAME_CLASS_WTPW  = "sysClassWtpw"; 
 
+	// Possibly All "logical" Page/Row locks on tables...
+	public static final String   GRAPH_NAME_WAIT_LOCK_TIME   = "sysWaitLockTime";
+	public static final String   GRAPH_NAME_WAIT_LOCK_COUNT  = "sysWaitLockCount";
+	public static final String   GRAPH_NAME_WAIT_LOCK_TPW    = "sysWaitLockTpw"; // Time Per Wait
+
 	private void addTrendGraphs()
 	{
 		//----------------------------------
@@ -488,6 +494,45 @@ extends CountersModel
 			false, // visible at start
 			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
+
+		//----------------------------------
+		// Locking
+		//----------------------------------
+		addTrendGraph(GRAPH_NAME_WAIT_LOCK_TIME,
+			"Server Waiting to Take Locks, by 'WaitTime' in Seconds", 	                   // Menu CheckBox text
+			"Server Waiting to Take Locks, by 'WaitTime' in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.LOCK,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_WAIT_LOCK_COUNT,
+			"Server Waiting to Take Locks, by 'Wait Count'", 	                   // Menu CheckBox text
+			"Server Waiting to Take Locks, by 'Wait Count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.LOCK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_WAIT_LOCK_TPW,
+			"Server Waiting to Take Locks, by 'WaitTimePerWait'", 	                   // Menu CheckBox text
+			"Server Waiting to Take Locks, by 'WaitTimePerWait' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.LOCK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
 
 	}
 	
@@ -647,6 +692,8 @@ extends CountersModel
 		// loop the graphs
 		for (TrendGraphDataPoint tgdp : trendGraphsData.values()) 
 		{
+			String graphName = tgdp.getName();
+
 //			if (GRAPH_NAME_EVENT_NAME.equals(tgdp.getName()))
 //			{
 //				// Set/change the Label....
@@ -703,7 +750,7 @@ extends CountersModel
 			//--------------------------------
 			// EventId
 			//--------------------------------
-			if (GRAPH_NAME_EVENT_WAITS.equals(tgdp.getName()))
+			if (GRAPH_NAME_EVENT_WAITS.equals(graphName))
 			{
 				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
@@ -715,7 +762,7 @@ extends CountersModel
 					tgdp.setData(this.getTimestamp(), dataMap);
 			}
 
-			if (GRAPH_NAME_EVENT_WTIME.equals(tgdp.getName()))
+			if (GRAPH_NAME_EVENT_WTIME.equals(graphName))
 			{
 				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
@@ -727,7 +774,7 @@ extends CountersModel
 					tgdp.setData(this.getTimestamp(), dataMap);
 			}
 
-			if (GRAPH_NAME_EVENT_WTPW.equals(tgdp.getName()))
+			if (GRAPH_NAME_EVENT_WTPW.equals(graphName))
 			{
 				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
@@ -742,7 +789,7 @@ extends CountersModel
 			//--------------------------------
 			// CLASS
 			//--------------------------------
-			if (GRAPH_NAME_CLASS_WAITS.equals(tgdp.getName()))
+			if (GRAPH_NAME_CLASS_WAITS.equals(graphName))
 			{
 				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
@@ -754,7 +801,7 @@ extends CountersModel
 					tgdp.setData(this.getTimestamp(), dataMap);
 			}
 
-			if (GRAPH_NAME_CLASS_WTIME.equals(tgdp.getName()))
+			if (GRAPH_NAME_CLASS_WTIME.equals(graphName))
 			{
 				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
@@ -766,7 +813,7 @@ extends CountersModel
 					tgdp.setData(this.getTimestamp(), dataMap);
 			}
 
-			if (GRAPH_NAME_CLASS_WTPW.equals(tgdp.getName()))
+			if (GRAPH_NAME_CLASS_WTPW.equals(graphName))
 			{
 				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
@@ -777,9 +824,107 @@ extends CountersModel
 				if (dataMap.size() > 0)
 					tgdp.setData(this.getTimestamp(), dataMap);
 			}
+
+			//--------------------------------
+			// Locks Waits
+			//--------------------------------
+			if (GRAPH_NAME_WAIT_LOCK_TIME.equals(graphName))
+			{
+				LinkedHashMap<String, Integer> lockRows = getLockRecords();
+				if ( ! lockRows.isEmpty() )
+				{
+					Double[] dArray = new Double[lockRows.size()];
+					String[] lArray = new String[dArray.length];
+					
+					int ap = 0;
+					for (Entry<String, Integer> entry : lockRows.entrySet())
+					{
+						String waitType = entry.getKey();
+						int    rowId    = entry.getValue();
+
+						dArray[ap] = this.getDiffValueAsDouble(rowId, "WaitTime");
+						lArray[ap] = waitType;
+						ap++;
+					}
+					
+					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+				}
+			}
+
+			if (GRAPH_NAME_WAIT_LOCK_COUNT.equals(graphName))
+			{
+				LinkedHashMap<String, Integer> lockRows = getLockRecords();
+				if ( ! lockRows.isEmpty() )
+				{
+					Double[] dArray = new Double[lockRows.size()];
+					String[] lArray = new String[dArray.length];
+					
+					int ap = 0;
+					for (Entry<String, Integer> entry : lockRows.entrySet())
+					{
+						String waitType = entry.getKey();
+						int    rowId    = entry.getValue();
+
+						dArray[ap] = this.getDiffValueAsDouble(rowId, "Waits");
+						lArray[ap] = waitType;
+						ap++;
+					}
+					
+					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+				}
+			}
+
+			if (GRAPH_NAME_WAIT_LOCK_TPW.equals(graphName))
+			{
+				LinkedHashMap<String, Integer> lockRows = getLockRecords();
+				if ( ! lockRows.isEmpty() )
+				{
+					Double[] dArray = new Double[lockRows.size()];
+					String[] lArray = new String[dArray.length];
+					
+					int ap = 0;
+					for (Entry<String, Integer> entry : lockRows.entrySet())
+					{
+						String waitType = entry.getKey();
+						int    rowId    = entry.getValue();
+
+						dArray[ap] = this.getDiffValueAsDouble(rowId, "WaitTimePerWait");
+						lArray[ap] = waitType;
+						ap++;
+					}
+					
+					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+				}
+			}
 		}
 	}
 
+	/** HELPER to get all RowId's for 'LCK_M_*' */
+	private LinkedHashMap<String, Integer> getLockRecords()
+	{
+		LinkedHashMap<String, Integer> lockRows = new LinkedHashMap<>();
+		
+		int pos__waitClassDesc = findColumn("WaitClassDesc");
+		int pos__waitEventDesc = findColumn("WaitEventDesc");
+		int pos__waitEventID   = findColumn("WaitEventID");
+		if (pos__waitClassDesc == -1 || pos__waitEventDesc == -1 || pos__waitEventID == -1)
+			return lockRows; 
+
+		for (int r=0; r<getRowCount(); r++)
+		{
+			String waitClassDesc = getAbsString(r, pos__waitClassDesc);
+			if (waitClassDesc != null && waitClassDesc.equals("waiting to take a lock"))
+			{
+				String waitEventDesc = getAbsString(r, pos__waitEventDesc);
+				String waitEventID   = getAbsString(r, pos__waitEventID);
+
+				lockRows.put("[" + waitEventID + "] " + waitEventDesc, r);
+			}
+		}
+
+		return lockRows;
+	}
+	
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{

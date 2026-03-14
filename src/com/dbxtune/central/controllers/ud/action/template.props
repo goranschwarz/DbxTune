@@ -1,0 +1,165 @@
+## This is a template file to create a User Defined Action
+
+##------------------------------------------------------------
+## 'name' is MANDATORY field
+## Note:
+##   - If 'name' has FROM_FILENAME, then get first part of the filename as the name (example: NAME.SERVER_NAME.DB_NAME.ud.chart.props)
+##     in the example we will use 'xxx@server-name' as the name
+##     Example: DummyName.prod-a1-ase.master.ud.chart.props
+##              ^^^^^^^^^ ^^^^^^^^^^^ ^^^^^^
+##              111111111 22222222222 333333
+##       1: Name if this Action
+##       2: Server name to execute on
+##       3: Dbname we should connect to
+##------------------------------------------------------------
+name = FROM_FILENAME
+
+##------------------------------------------------------------
+## 'actionType' is MANDATORY field
+##  * SQL    -- SQL Command 
+##  * OS_CMD -- Operating System Command (executed on same host as DbxTune Central) 
+##------------------------------------------------------------
+actionType = SQL
+
+##------------------------------------------------------------
+## 'description'
+##------------------------------------------------------------
+description = Describe what this action does
+
+##------------------------------------------------------------
+## 'Authorized: Roles' -- A good guess 'ad_action' (this is a Comma Separated List of ROLES that are allowed)
+## 'Authorized: Users' -- This is *optional*, but if specified: Only users in this (csv) will be authorized.
+##------------------------------------------------------------
+authorized.roles = ud_action
+authorized.users = gorans
+
+##------------------------------------------------------------
+## 'command' is MANDATORY field
+## Command that is executed at the destination server
+##
+## Note: New Lines will have to be escaped by '\' at the end of the row
+##       And if you REALLY want a newline in the text you need to end it as: '\n\'
+##       The '\n' for adding a new-line, and '\' to escape the "break-line"
+##       And if you want to *preserve* spaces at the begining of a multiple line
+##       you need to add '\ ' or '\u0020' at the Start if the line.   
+##
+## Example SQL: 
+##       |command = \n\
+##       |select \n\
+##       |\     c1 \n\
+##       |\    ,c2 \n\
+##       |\    ,c3 \n\
+##       |from tableName \n\
+##       |where c1 = 'some value' 
+##       |\  and c2 like 'value%' \n\
+##
+## Example 1, OS_CMD: 
+##       |command = hostname -I; id; date; for num in {1..10}; do echo \"Loop Number: ${num}\"; sleep 1; done; echo '-end-'
+##
+## Example 2, OS_CMD: 
+##       |command = \
+##       |hostname -I ## Get the IP of the machine \n\
+##       |id          ## Who am I \n\
+##       |date        ## Get current date on the machine \n\
+##       |\n\
+##       |## Loop 10 times, and prnit something, with 1 second interval \n\
+##       |for num in {1..10} \n\
+##       |do \n\
+##       |\    echo "Loop Number: ${num}" \n\
+##       |\    sleep 1; \n\
+##       |done \n\
+##       |\n\
+##       |## Print that we are at the end
+##       |echo '-end-'
+##------------------------------------------------------------
+command = some SQL-Statement or OS-Command goes here (see above for example of multiple lines)
+
+
+
+
+##------------------------------------------------------------
+## OS_CMD properties/specifications
+##------------------------------------------------------------
+#non so far
+
+
+
+
+##------------------------------------------------------------
+## SQL/DBMS properties/specifications
+##------------------------------------------------------------
+
+##------------------------------------------------------------
+## User name, used to login to the DBMS
+## 'dbms.username' is MANDATORY field
+##------------------------------------------------------------
+dbms.username = sa
+
+##------------------------------------------------------------
+## Password
+## Note: 
+##  - if not specified: Try to get the password from the encrypted file '${HOME}/.passwd.enc'
+##    Also specify 'dbms.serverName' to search the above file for password that is for a specific server name
+##------------------------------------------------------------
+#dbms.password = password-in-plane-text 
+
+##------------------------------------------------------------
+## Used if password is not specified and we need to lookup the password from the encrypted file '${HOME}/.passwd.enc'
+## Note:
+##   - If 'dbms.servername' has FROM_FILENAME, then get second part of the filename as the server name (example: xxxx.dbms-name.db-name.ud.chart.props)
+##   - If 'dbms.dbname'     has FROM_FILENAME, then get third  part of the filename as the server name (example: xxxx.dbms-name.db-name.ud.chart.props)
+##------------------------------------------------------------
+dbms.servername = FROM_FILENAME
+dbms.dbname     = FROM_FILENAME
+
+##------------------------------------------------------------
+## The JDBC URL to the DBMS
+## Note:
+##   - For Sybase: If 'dbms.servername' is specified, the variables '${ifile-hostname}' and '${ifile-port}' will be replaced in 'dbms.url'
+##     the values is fetched from the ${SYBASE}/interfaces or ${SYBASE}/ini/sql.ini file
+##   - If 'dbms.servername' is specified, the variable '${srvName}' or '${servername}' will be replaced in 'dbms.url'
+##   - If 'dbms.dbname'     is specified, the variable '${dbname}'  will be replaced in 'dbms.url'
+## 'dbms.url' is MANDATORY field
+##------------------------------------------------------------
+dbms.url = jdbc:sybase:Tds:${ifile-hostname}:${ifile-port}/${dbname}?ENCRYPT_PASSWORD=true
+
+
+
+##------------------------------------------------------------
+## Below are some JDBC URL Examples for: Sybase, Postgres, SQL-Server, Oracle, DB2, MySQL
+##------------------------------------------------------------
+#jdbc:sybase:Tds://192.168.0.110:1600/${dbname}
+#
+#jdbc:postgresql://192.168.0.110:5432/${dbname}
+#
+#jdbc:sqlserver://192.168.0.110:1433;databaseName=${dbname};integratedSecurity=true
+#jdbc:sqlserver://${servername};databaseName=${dbname};encrypt=true;trustServerCertificate=true
+#
+#jdbc:oracle:thin:@//192.168.0.110:1539/XEPDB1
+#
+#jdbc:db2://192.168.255.130:50000/${dbname}
+#
+#jdbc:mysql://192.168.0.110:3306//${dbname}
+##------------------------------------------------------------
+
+
+
+
+
+##------------------------------------------------------------
+## If you want to mail on compleation (so anyone will be notified about the action)
+## Mandatory properties if you WANT to send mail: mail.to, mail.from, mail.smtp.hostname  
+##------------------------------------------------------------
+
+mail.to   = someone@acme.com, someone.else@acme.com
+mail.from = noreply@acme.com
+mail.cc   = email.address@acme.com
+
+mail.smtp.hostname = acme.smtp.com
+#mail.smtp.username = if we need a user/passwd to login to the SMTP Server
+#mail.smtp.password = if we need a user/passwd to login to the SMTP Server
+#mail.smtp.port     =
+#mail.ssl.port      = 
+#mail.ssl.use       = 
+#mail.start.tls     = 
+#mail.smtp.connect.timeout = Connection timeout in seconds

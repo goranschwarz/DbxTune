@@ -22,15 +22,21 @@
 package com.dbxtune.graph;
 
 import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.output.WriterOutputStream;
@@ -253,6 +259,8 @@ public class ChartDataHistoryCreator
 //		plot.setBackgroundPaint(Color.WHITE);
 //		plot.setDomainGridlinePaint(Color.GRAY);
 //		plot.setRangeGridlinePaint(Color.GRAY);
+//		plot.setBackgroundPaint(Color.LIGHT_GRAY);
+//		plot.setBackgroundAlpha(1.0f);
 
 		
 		// Set thicker lines
@@ -373,4 +381,76 @@ public class ChartDataHistoryCreator
 			throw ex;
 		}
 	}
+	public void writeAsHtmlInlineImage_v2(Writer writer, int chartWidth, int charHeight, String htmlId) 
+	throws IOException 
+	{
+		if (_chart == null)
+		{
+			writer.append("<b>Chart object is NULL... in MovingAvergaeChart.toHtmlInlineImage()</b> <br> \n");
+			return;
+		}
+
+		try 
+		{
+			// Create indexed image (TYPE_BYTE_INDEXED = max 256 colors).
+			// This minimizes raw-data with approx 60-70% compared to standard PNG.
+			BufferedImage bufferedImage = _chart.createBufferedImage(chartWidth, charHeight, BufferedImage.TYPE_BYTE_INDEXED, null);
+
+			// Create the streams
+			WriterOutputStream wos = new WriterOutputStream(writer, StandardCharsets.UTF_8);
+			// Base64OutputStream adds line-breaks as standard, set lineLength=0 if you want a single long line
+			Base64OutputStream base64out = new Base64OutputStream(wos, true, 0, null);
+
+			String idAttr = (htmlId != null && !htmlId.isEmpty()) ? "id='" + htmlId + "' " : "";
+			writer.append("<img ").append(idAttr)
+				.append("width='").append(String.valueOf(chartWidth))
+				.append("' height='").append(String.valueOf(charHeight))
+				.append("' src='data:image/png;base64,");
+
+			// Use ImageIO directly instead of ChartUtils to write the indexed image
+			ImageIO.write(bufferedImage, "png", base64out);
+
+			writer.append("'>");
+
+			// NOTE: do NOT close the streams here, since it will close the 'writer'
+			base64out.flush();
+			wos.flush();
+		} 
+		catch (IOException ex) 
+		{
+			throw ex;
+		}
+	}
+
+	public void writeAsHtmlInlineImage_v3(Writer writer, int chartWidth, int charHeight, String htmlId)
+	throws IOException
+	{
+		if (_chart == null)
+		{
+			writer.append("<b>Chart object is NULL... in MovingAvergaeChart.toHtmlInlineImage()</b> <br> \n");
+			return;
+		}
+
+		try
+		{
+			String id = StringUtil.isNullOrBlank(htmlId) ? "" : "id='" + htmlId + "' ";
+
+			// Render chart to BufferedImage
+			BufferedImage bufferedImage = _chart.createBufferedImage(chartWidth, charHeight);
+
+			// Encode as WebP into a byte array
+			// NOTE: This needs to have a "driver" for "webp" in the classpath
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ImageIO.write(bufferedImage, "webp", baos);
+
+			// Write inline HTML img tag with base64 WebP
+			writer.append("<img " + id + " width='" + chartWidth + "' height='" + charHeight + "' src='data:image/webp;base64,");
+			writer.append(Base64.getEncoder().encodeToString(baos.toByteArray()));
+			writer.append("'>");
+		}
+		catch (IOException ex)
+		{
+			throw ex;
+		}
+	}	
 }

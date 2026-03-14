@@ -178,7 +178,7 @@ extends CountersModel
 			"All Memory Clerks vs Target & Total Memory, in MB", // Menu CheckBox text
 			"All Memory Clerks vs Target & Total Memory, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
-			new String[] {"SUM of All Memory Clerks", "Target Server Memory MB", "Total Server Memory MB", "Buffer Pool Memory Clerk"}, 
+			new String[] {"SUM of All Memory Clerks", "Target Server Memory MB", "Total Server Memory MB", "Buffer Pool Memory Clerk", "All Other Memory Clerks"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
 			false,  // is Percent Graph
@@ -234,19 +234,41 @@ extends CountersModel
 		// -----------------------------------------------------------------------------------------
 		if (GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS.equals(tgdp.getName()))
 		{
-			Double[] dArray = new Double[4];
+			Double[] dArray = new Double[5];
 
+			// Get All OTHER Memory Clerks... (not the Buffer Pool, or Aggregated rows)
+			double allOtherMemoryClerks = 0;
+
+			for (int row = 0; row < size(); row++)
+			{
+				String type = this.getAbsString(row, "type");
+
+				// SKIP: Aggregated rows... "_Total"
+				if (isAggregateRow(row) || "_Total".equals(type))
+				{
+					continue;
+				}
+
+				// SKIP: Buffer Pool
+				if ("MEMORYCLERK_SQLBUFFERPOOL".equals(type))
+				{
+					continue;
+				}
+
+				allOtherMemoryClerks += this.getAbsValueAsDouble(row, "SizeMb");
+			}
+			
 			CmSummary cmSummary = (CmSummary) CounterController.getSummaryCm();
 			
 			dArray[0] = this.getAbsValueSum("SizeMb");
 			dArray[1] = Double.valueOf( cmSummary.getLastTargetServerMemoryMb() );
 			dArray[2] = Double.valueOf( cmSummary.getLastTotalServerMemoryMb() );
 			dArray[3] = this.getAbsValueAsDouble("MEMORYCLERK_SQLBUFFERPOOL", "SizeMb");
+			dArray[4] = allOtherMemoryClerks;
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), dArray);
 		}
-
 	}
 
 

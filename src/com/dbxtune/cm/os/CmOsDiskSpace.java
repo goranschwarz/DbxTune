@@ -128,6 +128,7 @@ extends CounterModelHostMonitor
 	public static final String GRAPH_NAME_USED_MB      = "FsUsedMb";
 	public static final String GRAPH_NAME_USED_PCT     = "FsUsedPct";
 	public static final String GRAPH_NAME_AVAILABLE_MB = "FsAvailableMb";
+	public static final String GRAPH_NAME_SIZE_MB      = "FsSizeMb";        // Not that important... but for DbxCentral Space Prediction Report
 
 	private void addTrendGraphs()
 	{
@@ -162,6 +163,19 @@ extends CounterModelHostMonitor
 			"df: Space Available in MB, at MountPoint", 	                                    // Menu CheckBox text
 			"df: Space Available in MB, at MountPoint (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_SIZE_MB,
+			"df: Size in MB, at MountPoint", 	                                    // Menu CheckBox text
+			"df: Size in MB, at MountPoint (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
 			Category.DISK,
@@ -247,13 +261,13 @@ extends CounterModelHostMonitor
 		// +----------+-------------+-------+------------+---------+-------+------------+-------+-----------------+
 		// |Filesystem|Size-KB      |Used-KB|Available-KB|Size-MB  |Used-MB|Available-MB|UsedPct|MountedOn        |
 		// +----------+-------------+-------+------------+---------+-------+------------+-------+-----------------+
-		// |C:        |  104 292 348|      8|           0|  101 847|      0|           0|   73,2|C:               |
-		// |D:        |2 097 148 924|      0|           0|2 047 996|      0|           0|    1,2|D: [SQL Data]    |
-		// |E:        |  209 712 124|      0|           0|  204 796|      0|           0|   61,5|E: [SQL Log]     |
-		// |F:        |  524 284 924|      0|           0|  511 996|      0|           0|   35,8|F: [SQL Backup]  |
-		// |G:        |  104 854 524|      0|           0|  102 396|      0|           0|   41,4|G: [Temp DB Data]|
-		// |H:        |   10 482 684|      0|           0|   10 236|      0|           0|   86,2|H: [Temp DB Log] |
-		// |I:        |3 145 709 564|      0|           0|3 071 981|      0|           0|     76|I: [Data]        |
+		// |C:        |  104,292,348|      8|           0|  101,847|      0|           0|   73,2|C:               |
+		// |D:        |2,097,148,924|      0|           0|2,047,996|      0|           0|    1,2|D: [SQL Data]    |
+		// |E:        |  209,712,124|      0|           0|  204,796|      0|           0|   61,5|E: [SQL Log]     |
+		// |F:        |  524,284,924|      0|           0|  511,996|      0|           0|   35,8|F: [SQL Backup]  |
+		// |G:        |  104,854,524|      0|           0|  102,396|      0|           0|   41,4|G: [Temp DB Data]|
+		// |H:        |   10,482,684|      0|           0|   10,236|      0|           0|   86,2|H: [Temp DB Log] |
+		// |I:        |3,145,709,564|      0|           0|3,071,981|      0|           0|     76|I: [Data]        |
 		// +----------+-------------+-------+------------+---------+-------+------------+-------+-----------------+
 
 		// get DRIVE-NAME
@@ -363,6 +377,21 @@ extends CounterModelHostMonitor
 			{
 				lArray[i] = this.getAbsString       (i, "MountedOn");
 				dArray[i] = this.getAbsValueAsDouble(i, "Available-MB");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+		
+		if (GRAPH_NAME_SIZE_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.getRowCount()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString       (i, "MountedOn");
+				dArray[i] = this.getAbsValueAsDouble(i, "Size-MB");
 			}
 
 			// Set the values

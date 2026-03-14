@@ -24,6 +24,7 @@ package com.dbxtune.pcs.report.content.postgres;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.dbxtune.cm.postgres.CmPgDatabase;
 import com.dbxtune.cm.postgres.CmSummary;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
@@ -97,6 +98,7 @@ extends PostgresAbstract
 			
 			_CmSummary_blkLockCount    .writeHtmlContent(sb, null, null);
 			_CmSummary_blkMaxWaitTime  .writeHtmlContent(sb, null, null);
+			_CmPgDatabase_Deadlocks    .writeHtmlContent(sb, null, null);
 		}
 		else
 		{
@@ -111,6 +113,7 @@ extends PostgresAbstract
 			
 			_CmSummary_blkLockCount    .writeHtmlContent(sb, null, null);
 			_CmSummary_blkMaxWaitTime  .writeHtmlContent(sb, null, null);
+			_CmPgDatabase_Deadlocks    .writeHtmlContent(sb, null, null);
 		}
 
 
@@ -349,13 +352,15 @@ extends PostgresAbstract
 		String schema = getReportingInstance().getDbmsSchemaName();
 
 		// Create charts
-		_CmSummary_oldestComboInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC,    -1, false, null, "Oldest Xact/Stmnt/State in Seconds");
-		_CmSummary_oldestXactInSec  = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_XACT_IN_SEC ,    -1, false, null, "Oldest Open Transaction in Seconds");
-		_CmSummary_oldestStmntInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_STMNT_IN_SEC,    -1, false, null, "Oldest Statement in Seconds");
-		_CmSummary_oldestStateInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_OLDEST_STATE_IN_SEC,    -1, false, null, "Oldest State in Seconds");
+		_CmSummary_oldestComboInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME   , CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC,    -1, false, null, "Oldest Xact/Stmnt/State in Seconds");
+		_CmSummary_oldestXactInSec  = createTsLineChart(conn, schema, CmSummary.CM_NAME   , CmSummary.GRAPH_NAME_OLDEST_XACT_IN_SEC ,    -1, false, null, "Oldest Open Transaction in Seconds");
+		_CmSummary_oldestStmntInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME   , CmSummary.GRAPH_NAME_OLDEST_STMNT_IN_SEC,    -1, false, null, "Oldest Statement in Seconds");
+		_CmSummary_oldestStateInSec = createTsLineChart(conn, schema, CmSummary.CM_NAME   , CmSummary.GRAPH_NAME_OLDEST_STATE_IN_SEC,    -1, false, null, "Oldest State in Seconds");
 
-		_CmSummary_blkLockCount     = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_BLOCKING_LOCK_COUNT,    -1, false, null, "Blocking Locks Count");
-		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, schema, CmSummary.CM_NAME, CmSummary.GRAPH_NAME_BLOCKING_MAX_WAIT_TIME, -1, false, null, "Max Wait Time for Blocking Locks in Seconds");
+		_CmSummary_blkLockCount     = createTsLineChart(conn, schema, CmSummary.CM_NAME   , CmSummary.GRAPH_NAME_BLOCKING_LOCK_COUNT,    -1, false, null, "Blocking Locks Count");
+		_CmSummary_blkMaxWaitTime   = createTsLineChart(conn, schema, CmSummary.CM_NAME   , CmSummary.GRAPH_NAME_BLOCKING_MAX_WAIT_TIME, -1, false, null, "Max Wait Time for Blocking Locks in Seconds");
+
+		_CmPgDatabase_Deadlocks     = createTsLineChart(conn, schema, CmPgDatabase.CM_NAME, CmPgDatabase.GRAPH_NAME_DEADLOCKS,           -1, false, null, "Deadlocks per second (Server -> Databases)");
 	}
 
 	private IReportChart _CmSummary_oldestComboInSec;
@@ -366,6 +371,7 @@ extends PostgresAbstract
 	private IReportChart _CmSummary_blkLockCount;
 	private IReportChart _CmSummary_blkMaxWaitTime;
 	
+	private IReportChart _CmPgDatabase_Deadlocks;
 
 	
 	/**

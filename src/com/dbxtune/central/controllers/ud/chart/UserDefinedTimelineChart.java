@@ -164,7 +164,7 @@ extends UserDefinedChartAbstract
 	{
 		return "/api/udc"
 				+ "?name="    + getName()
-				+ "&srvName=" + getDbmsServerName()
+//				+ "&srvName=" + getDbmsServerName()
 				+ ( getRefresh() <= 0 ? "" : "&refresh=" + getRefresh() )
 				+ "&showKeys=false"
 				+ "&onlyLevelZero=false"

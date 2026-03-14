@@ -39,6 +39,12 @@ public interface AsetuneSyntaxConstants extends SyntaxConstants
 	 */
 	public static final String SYNTAX_STYLE_MSSQL_TSQL			= "text/mssql-tsql";
 	
+	/**
+	 * Style for highlighting SQL.
+	 */
+//	public static final String SYNTAX_STYLE_POSTGRES_SQL		= "text/postgres-tsql";
+	public static final String SYNTAX_STYLE_POSTGRES_SQL		= "text/sql"; // Generic SQL for now, until we create a Token "file" for Postgres
+	
 	
 	/**
 	 * Style for highlighting Postgres Text Execution Plans.

@@ -57,20 +57,50 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.ui.RefineryUtilities;
 
 import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResult;
+import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResultType;
 
 public class SparklineJfreeChart
 {
 	private JFreeChart _chart;
 	private SparklineResult _data;
+	private SparklineResultType _type; 
+	private int _indicatorDecimalPoints; 
 	
-	public static String create(SparklineResult data)
+//	public static String create(SparklineResult data)
+//	{
+//		return create(data, SparklineResultType.MAX);
+//	}
+	/**
+	 * Create a <b>small</b> chart... a Sparkline...
+	 * 
+	 * @param data                        Data...
+	 * @param type                        Min/Max for the Indicator text
+	 * @param indicatorDecimalPoints      Number of decimal points for the Indicator value (-1 = Do not show the Indicator Text) 
+	 * @return
+	 */
+	public static String create(SparklineResult data, SparklineResultType type, int indicatorDecimalPoints)
 	{
-		SparklineJfreeChart chart = new SparklineJfreeChart(data);
+		SparklineJfreeChart chart = new SparklineJfreeChart(data, type, indicatorDecimalPoints);
 		return chart.toHtmlInlineImage();
 	}
-
-	public SparklineJfreeChart(SparklineResult data)
+	public static String create(SparklineResult data, SparklineResultType type, int indicatorDecimalPoints, int imgWidth, int imgHeight)
 	{
+		SparklineJfreeChart chart = new SparklineJfreeChart(data, type, indicatorDecimalPoints);
+		return chart.toHtmlInlineImage(imgWidth, imgHeight);
+	}
+
+	/**
+	 * Create a <b>small</b> chart... a Sparkline...
+	 * 
+	 * @param data                        Data...
+	 * @param type                        Min/Max for the Indicator text
+	 * @param indicatorDecimalPoints      Number of decimal points for the Indicator value (-1 = Do not show the Indicator Text) 
+	 * @return
+	 */
+	public SparklineJfreeChart(SparklineResult data, SparklineResultType type, int indicatorDecimalPoints)
+	{
+		_indicatorDecimalPoints = indicatorDecimalPoints;
+		_type = type;
 		_data = data;
 		init();
 //		init_test();
@@ -99,6 +129,8 @@ public class SparklineJfreeChart
 
 		dataSet.addSeries(data);
 
+		Color transparent = new Color(0, 0, 0, 0);
+		
 		// The sparkline is created by setting a bunch of the visible 
 		// properties on the domain, range axis and the XYPlot 
 		// to false
@@ -121,6 +153,8 @@ public class SparklineJfreeChart
 		y.setVisible(false);
 		if (allValuesAreZero)
 			y.setRange(new Range(0,1)); // So '0' do not end up in the middle of the chart
+		y.setAutoRange(true);
+		y.setAutoRangeIncludesZero(false);
 		
 		
 		XYPlot plot = new XYPlot();
@@ -136,8 +170,19 @@ public class SparklineJfreeChart
 		plot.setRangeAxis(y);
 		plot.setRenderer(new StandardXYItemRenderer(StandardXYItemRenderer.LINES));
 
-		// Print the MAX Data value in the "Top left corner"
-		plot.addAnnotation(new MaxXYAnnotation(_data.getMaxValue()));
+		if (_indicatorDecimalPoints > 0)
+		{
+			if (SparklineResultType.MIN.equals(_type))
+			{
+				// Print the MIN Data value in the "Top left corner"
+				plot.addAnnotation(new MinXYAnnotation(_data.getIndicatorValue(), _indicatorDecimalPoints));
+			}
+			else
+			{
+				// Print the MAX Data value in the "Top left corner"
+				plot.addAnnotation(new MaxXYAnnotation(_data.getIndicatorValue(), _indicatorDecimalPoints));
+			}
+		}
 
 		_chart = new JFreeChart(
 				null,
@@ -145,6 +190,10 @@ public class SparklineJfreeChart
 				plot, false
 				);
 		_chart.setBorderVisible(false);
+
+		// Set background to transparent
+		_chart.setBackgroundPaint(transparent);
+		_chart.getPlot().setBackgroundPaint(transparent);
 
 		// Background color is normally Gray, when we set inserts[bottom=1], the non filled area gets "gray", so this fixes that
 //		_chart.setBackgroundPaint(Color.WHITE); // White DID NOT work... But Yellow / Blue etc works, I dint know what the issue is? 
@@ -277,7 +326,7 @@ public class SparklineJfreeChart
 //		XYTextAnnotation an = new XYTextAnnotation("Hello!", 0.58, 0.52);
 //		plot.addAnnotation(an);
 
-		plot.addAnnotation(new MaxXYAnnotation(maxValue));
+		plot.addAnnotation(new MaxXYAnnotation(maxValue, 1));
 		
 		
 		_chart = new JFreeChart(
@@ -309,22 +358,85 @@ public class SparklineJfreeChart
 	/**
 	 * Simple Annotation to Draw a MAX value on the TOP LEFT of the chart
 	 */
+	private class MinXYAnnotation extends XYTextAnnotation
+	{
+		private static final long serialVersionUID = 1L;
+
+		private int _indicatorDecimalPoints;
+		private Number _minNumber;
+		private String _str;
+		private Font _font = new Font("Tahoma", Font.PLAIN, 9);
+
+		public MinXYAnnotation(Number minNumber, int indicatorDecimalPoints)
+		{
+			super("dummy", 0, 0);
+			
+			_indicatorDecimalPoints = indicatorDecimalPoints;
+			_minNumber = minNumber;
+
+			if (_minNumber == null)
+			{
+				_str = "Min: -";
+			}
+			else
+			{
+				NumberFormat nf = NumberFormat.getInstance();
+				nf.setMaximumFractionDigits(_indicatorDecimalPoints);
+
+				_str = "Min: " + nf.format(_minNumber);
+			}
+		}
+		
+		@Override
+		public void removeChangeListener(AnnotationChangeListener listener)
+		{
+		}
+		
+		@Override
+		public void addChangeListener(AnnotationChangeListener listener)
+		{
+		}
+		
+		@Override
+		public void draw(Graphics2D g2, XYPlot plot, Rectangle2D dataArea, ValueAxis domainAxis, ValueAxis rangeAxis, int rendererIndex, PlotRenderingInfo info)
+		{
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g2.setFont(_font);
+			g2.setColor(Color.DARK_GRAY);
+			g2.drawString(_str, 2, 7);
+		}
+	};
+	
+	/**
+	 * Simple Annotation to Draw a MAX value on the TOP LEFT of the chart
+	 */
 	private class MaxXYAnnotation extends XYTextAnnotation
 	{
 		private static final long serialVersionUID = 1L;
 
+		private int _indicatorDecimalPoints;
 		private Number _maxNumber;
 		private String _str;
 		private Font _font = new Font("Tahoma", Font.PLAIN, 9);
 
-		public MaxXYAnnotation(Number maxNumber)
+		public MaxXYAnnotation(Number maxNumber, int indicatorDecimalPoints)
 		{
 			super("dummy", 0, 0);
+
+			_indicatorDecimalPoints = indicatorDecimalPoints;
 			_maxNumber = maxNumber;
+
 			if (_maxNumber == null)
+			{
 				_str = "Max: -";
+			}
 			else
-				_str = "Max: " + NumberFormat.getInstance().format(_maxNumber);
+			{
+				NumberFormat nf = NumberFormat.getInstance();
+				nf.setMaximumFractionDigits(_indicatorDecimalPoints);
+
+				_str = "Max: " + nf.format(_maxNumber);
+			}
 		}
 		
 		@Override
@@ -349,6 +461,13 @@ public class SparklineJfreeChart
 	
 	public String toHtmlInlineImage()
 	{
+		return toHtmlInlineImage(350, 19);
+	}
+	public String toHtmlInlineImage(int imgWidth, int imgHeight)
+	{
+		if (imgWidth  <= 0) imgWidth = 350;
+		if (imgHeight <= 0) imgHeight = 19;
+
 		if (_chart == null)
 		{
 			return "<b>Chart object is NULL... in SparklineJfreeChart.toHtmlInlineImage()</b> <br> \n";
@@ -362,9 +481,9 @@ public class SparklineJfreeChart
 
 			// writeChartAsPNG produces the same size with compression="default" (just using with, height), compression=0 and compression=9
 			// So no difference here... 
-			int     width         = 350;
+			int     width         = imgWidth;
 //			int     height        = 18; //30;
-			int     height        = 19; //30;
+			int     height        = imgHeight; //30;
 //			int     paddingBottom = 2;
 			boolean encodeAlpha   = false;
 			int     compression   = 0;
@@ -418,7 +537,7 @@ public class SparklineJfreeChart
 		{
 			Random r = new Random();
 			
-			SparklineResult data = new SparklineResult();
+			SparklineResult data = new SparklineResult(SparklineResultType.MAX);
 			for (int i = 0; i < 100; i++)
 			{
 				data.beginTs.add(new Timestamp(2020, 11, 24, 13, i, 0, 0));
@@ -429,7 +548,7 @@ public class SparklineJfreeChart
 			}
 			
 			
-			SparklineJfreeChart chart = new SparklineJfreeChart(data);
+			SparklineJfreeChart chart = new SparklineJfreeChart(data, SparklineResultType.MAX, 1);
 			//return chart.toHtmlInlineImage();
 
 			boolean doWindow = false;

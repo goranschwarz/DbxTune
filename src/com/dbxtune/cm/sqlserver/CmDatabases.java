@@ -233,9 +233,11 @@ extends CountersModel
 	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB    = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
 	public static final String GRAPH_NAME_LOGSIZE_USED_MB    = "DbLogSizeUsedMbGraph";
 	public static final String GRAPH_NAME_LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph"; //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT;
+	public static final String GRAPH_NAME_LOGSIZE_MB         = "DbLogSizeMbGraph";      // Not that important... but for DbxCentral Space Prediction Report
 	public static final String GRAPH_NAME_DATASIZE_LEFT_MB   = "DbDataSizeLeftMbGraph";
 	public static final String GRAPH_NAME_DATASIZE_USED_MB   = "DbDataSizeUsedMbGraph";
 	public static final String GRAPH_NAME_DATASIZE_USED_PCT  = "DbDataSizeUsedPctGraph";
+	public static final String GRAPH_NAME_DATASIZE_MB        = "DbDataSizeMbGraph";      // Not that important... but for DbxCentral Space Prediction Report
 //	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
 	public static final String GRAPH_NAME_TEMPDB_USED_MB     = "TempdbUsedMbGraph";
 
@@ -293,6 +295,18 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_LOGSIZE_MB,
+			"DB Transaction Log Space Size in MB",     // Menu CheckBox text
+			"DB Transaction Log Space Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		addTrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
 			"DB Data Space Available in MB",        // Menu CheckBox text
 			"DB Data Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
@@ -325,6 +339,18 @@ extends CountersModel
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
 			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_DATASIZE_MB,
+			"DB Data Space Size in MB",        // Menu CheckBox text
+			"DB Data Space Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
@@ -1702,6 +1728,7 @@ extends CountersModel
 			    + "\n"
 				+ "/** declare some variables **/ \n"
 			    + "declare @c_dbname        sysname \n"
+			    + "declare @c_dbcompat_lvl  int \n"
 			    + "declare @sql_execFull    nvarchar(max) = '' \n"
 			    + "declare @sql_dataSizeMb  varchar(max) = '' \n"
 			    + "declare @sql_logSizeMb   varchar(max) = '' \n"
@@ -1817,6 +1844,7 @@ extends CountersModel
 				    + "' \n"
 				    + "";
 
+//			dbScopedConfig_Columns = "    ,db_scoped_nondefault_configs = isnull(dbsc.nondefault_configs, '-UNKNOWN-') \n";
 			dbScopedConfig_Columns = "    ,db_scoped_nondefault_configs = dbsc.nondefault_configs \n";
 			
 			dbScopedConfig_Join           = "LEFT OUTER JOIN #dbScopeCfg    dbsc ON d.database_id = dbsc   .database_id \n";
@@ -1834,7 +1862,8 @@ extends CountersModel
 			    + "DECLARE c_dbnames CURSOR LOCAL FAST_FORWARD \n"
 			    + "FOR \n"
 			    + "    SELECT /*  ${cmCollectorName} */ \n"
-			    + "        QUOTENAME(name) AS dbname \n"
+			    + "         QUOTENAME(name) AS dbname \n"
+			    + "        ,compatibility_level \n"
 			    + "    FROM sys.databases \n"
 			    + "    WHERE HAS_DBACCESS(name) = 1; \n"
 			    + " \n"
@@ -1842,13 +1871,17 @@ extends CountersModel
 			    + " \n"
 			    + "WHILE (1=1) \n"
 			    + "BEGIN \n"
-			    + "    FETCH NEXT FROM c_dbnames INTO @c_dbname; \n"
+			    + "    FETCH NEXT FROM c_dbnames INTO @c_dbname, @c_dbcompat_lvl; \n"
 			    + " \n"
 			    + "    IF (@@fetch_status <> 0) \n"
 			    + "        BREAK; \n"
 			    + " \n"
 			    + "     SET @sql_execFull = 'USE ' + @c_dbname + ';' + CHAR(10) \n"
-			    + "         + @sql_dataSizeMb + @sql_logSizeMb + @sql_queryStore + @sql_dbScopeCfg; \n"
+			    + "         + @sql_dataSizeMb + @sql_logSizeMb + @sql_queryStore; \n"
+			    + " \n"
+			    + "     /* Only add '@sql_dbScopeCfg' if we are above some compatibility_level, otherwise we might get Syntax Error... */ \n"
+			    + "     IF (@c_dbcompat_lvl >= 130) /* 130: SQL Server 2016 */ \n"
+			    + "         SET @sql_execFull = @sql_execFull + @sql_dbScopeCfg; \n"
 			    + " \n"
 			    + "    /* change context to each database and collect database properties into temp table */ \n"
 			    + "    BEGIN TRY \n"
@@ -2564,6 +2597,26 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
+		if (GRAPH_NAME_LOGSIZE_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[dbMap.size()];
+			String[] lArray = new String[dbMap.size()];
+			int d = 0;
+			for (int row : dbMap.values())
+			{
+				String dbname = this.getAbsString       (row, "DBName");
+				Double dvalue = this.getAbsValueAsDouble(row, "LogSizeInMb");
+
+				lArray[d] = dbname;
+				dArray[d] = dvalue;
+				d++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
 		if (GRAPH_NAME_DATASIZE_LEFT_MB.equals(tgdp.getName()))
 		{
 			// Write 1 "line" for every database
@@ -2614,6 +2667,26 @@ extends CountersModel
 			{
 				String dbname = this.getAbsString        (row, "DBName");
 				Double dvalue = this.getDiffValueAsDouble(row, "DataSizeUsedPct");
+
+				lArray[d] = dbname;
+				dArray[d] = dvalue;
+				d++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_DATASIZE_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[dbMap.size()];
+			String[] lArray = new String[dbMap.size()];
+			int d = 0;
+			for (int row : dbMap.values())
+			{
+				String dbname = this.getAbsString       (row, "DBName");
+				Double dvalue = this.getAbsValueAsDouble(row, "DataSizeInMb");
 
 				lArray[d] = dbname;
 				dArray[d] = dvalue;

@@ -73,6 +73,7 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 				"CmStatementCache_RequestPerSecGraph",
 				"CmStatementCache_StmntCacheInsDel",
 				"CmStatementCache_StmntCacheInsDelPerSample",
+				"CmStatementCache_RecompilReason",
 				"CmStatementCache_NumStmntsInCache",
 				"CmStatementCache_StmntCacheMemUsage",
 
@@ -90,6 +91,7 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 		_CmStatementCache_RequestPerSecGraph       .writeHtmlContent(sb, null, null);
 		_CmStatementCache_StmntCacheInsDel         .writeHtmlContent(sb, null, null);
 		_CmStatementCache_StmntCacheInsDelPerSample.writeHtmlContent(sb, null, null);
+		_CmStatementCache_RecompilReason           .writeHtmlContent(sb, null, null);
 		_CmStatementCache_NumStmntsInCache         .writeHtmlContent(sb, null, null);
 		_CmStatementCache_StmntCacheMemUsage       .writeHtmlContent(sb, null, null);
 
@@ -140,6 +142,7 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 		_CmStatementCache_RequestPerSecGraph        = createTsLineChart(conn, schema, CmStatementCache   .CM_NAME, CmStatementCache   .GRAPH_NAME_REQUEST_PER_SEC,       -1, false, null, "Number of Requests from the Statement Cache, per Second (Cache->Statement Cache)");
 		_CmStatementCache_StmntCacheInsDel          = createTsLineChart(conn, schema, CmStatementCache   .CM_NAME, CmStatementCache   .GRAPH_NAME_INS_DEL_PER_SEC,       -1, false, null, "Statement Cache Add/Remove Count, per Second (Cache->Statement Cache)");
 		_CmStatementCache_StmntCacheInsDelPerSample = createTsLineChart(conn, schema, CmStatementCache   .CM_NAME, CmStatementCache   .GRAPH_NAME_INS_DEL_PER_SAMPLE,    -1, false, null, "Statement Cache Add/Remove Count, per Sample Period (Cache->Statement Cache)");
+		_CmStatementCache_RecompilReason            = createTsLineChart(conn, schema, CmStatementCache   .CM_NAME, CmStatementCache   .GRAPH_NAME_RECOMPILE_REASON,      -1, false, null, "Number of Recompiles in the Statement Cache, per Second (Cache->Statement Cache)");
 		_CmStatementCache_NumStmntsInCache          = createTsLineChart(conn, schema, CmStatementCache   .CM_NAME, CmStatementCache   .GRAPH_NAME_NUM_STMNTS_IN_CACHE,   -1, false, null, "Number of Statement in the Statement Cache (Cache->Statement Cache)");
 		_CmStatementCache_StmntCacheMemUsage        = createTsLineChart(conn, schema, CmStatementCache   .CM_NAME, CmStatementCache   .GRAPH_NAME_MEM_USAGE,             -1, false, null, "Statement Cache Memory Usage, in KB (Cache->Statement Cache)");
                                                     
@@ -154,6 +157,7 @@ public class AseStatementCacheUsageOverview extends AseAbstract
 	private IReportChart _CmStatementCache_RequestPerSecGraph;
 	private IReportChart _CmStatementCache_StmntCacheInsDel;
 	private IReportChart _CmStatementCache_StmntCacheInsDelPerSample;
+	private IReportChart _CmStatementCache_RecompilReason;
 	private IReportChart _CmStatementCache_NumStmntsInCache;
 	private IReportChart _CmStatementCache_StmntCacheMemUsage;
 

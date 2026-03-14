@@ -92,6 +92,9 @@ public class H2WriterStat
 	// implements singleton pattern
 	private static H2WriterStat _instance = null;
 
+	public static final String      PROPKEY_alarmDisabledAtStartupForXMinutes = "H2WriterStat.alarm.disabled.at.startup.for.x.minutes";
+	public static final int         DEFAULT_alarmDisabledAtStartupForXMinutes = 10;
+
 	public static final String      PROPKEY_sampleOsLoadAverage   = "H2WriterStat.sample.osLoadAverage";
 	public static final boolean     DEFAULT_sampleOsLoadAverage   = true;
 
@@ -530,6 +533,18 @@ public class H2WriterStat
 		Configuration conf = Configuration.getCombinedConfiguration();
 		AlarmHandler ah = AlarmHandler.getInstance();
 		
+		// Disable if JVM was JUST Started (or x minutes after start)
+		int atStartupDisableMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarmDisabledAtStartupForXMinutes, DEFAULT_alarmDisabledAtStartupForXMinutes);
+		if (atStartupDisableMinutes > 0)
+		{
+			long jvmUpTimeInSec = ManagementFactory.getRuntimeMXBean().getUptime() / 1000;
+
+			if (jvmUpTimeInSec < atStartupDisableMinutes * 60)
+			{
+				return;
+			}
+		}
+
 		String groupName1 = "H2WriterStat";
 		String groupName2 = "H2WriterStat-Adjusted";
 

@@ -35,6 +35,7 @@ import com.dbxtune.cm.ase.CmSqlStatement;
 import com.dbxtune.cm.ase.CmSqlStatementPerDb;
 import com.dbxtune.cm.ase.CmSummary;
 import com.dbxtune.cm.ase.CmSysLoad;
+import com.dbxtune.cm.ase.CmSysWaits;
 import com.dbxtune.cm.os.CmOsMpstat;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -94,6 +95,13 @@ public class AseCpuUsageOverview extends AseAbstract
 				"CmEngines_aaReadWriteGraph",
 				"CmEngines_cpuSum",
 				"CmEngines_cpuEng",
+				"CmProcessActivit_BatchCountGraph",
+				"CmSummary_OldestTranInSecGraph",
+				"CmSummary_DeadlockCount",
+				"CmSummary_BlockingLocksGraph",
+				"CmSysWaits_sysWaitLockTime",
+				"CmSysWaits_sysWaitLockCount",
+				"CmSysWaits_sysWaitLockTpw",
 				"CmSysLoad_EngineRunQLengthGraph",
 				"CmExecutionTime_CpuUsagePct",
 				"CmExecutionTime_TimeGraph",
@@ -114,6 +122,12 @@ public class AseCpuUsageOverview extends AseAbstract
 		_CmOsMpstat_MpSum                .writeHtmlContent(w, null, null);
 		_CmSummary_aaDiskGraph           .writeHtmlContent(w, null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load.");
 		_CmProcessActivit_BatchCountGraph.writeHtmlContent(w, null, null);
+		_CmSummary_OldestTranInSecGraph  .writeHtmlContent(w, null, null);
+		_CmSummary_DeadlockCount         .writeHtmlContent(w, null, null);
+		_CmSummary_BlockingLocksGraph    .writeHtmlContent(w, null, null);
+		_CmSysWaits_sysWaitLockTime      .writeHtmlContent(w, "If you have Waits at Server Level, please see section: '<b>Top TABLE/INDEX Blocking Lock Wait Statistics</b>' for details (what tables that are affected).", null);
+		_CmSysWaits_sysWaitLockCount     .writeHtmlContent(w, null, null);
+		_CmSysWaits_sysWaitLockTpw       .writeHtmlContent(w, null, null);
 		_CmSummary_IudmOperationsGraph   .writeHtmlContent(w, null, null);
 		if (isFullMessageType())
 		{
@@ -211,6 +225,12 @@ public class AseCpuUsageOverview extends AseAbstract
 		_CmOsMpstat_MpSum                 = createTsLineChart(conn, schema, CmOsMpstat       .CM_NAME, CmOsMpstat       .GRAPH_NAME_MpSum,                  maxValue, false, "idlePct", "OS: CPU usage Summary (Host Monitor->OS CPU(mpstat))");
 		_CmSummary_aaDiskGraph            = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_AA_DISK_READ_WRITE,     -1,       false, null,      "Disk read/write per second, using @@total_read, @@total_write (Summary)");
 		_CmProcessActivit_BatchCountGraph = createTsLineChart(conn, schema, CmProcessActivity.CM_NAME, CmProcessActivity.GRAPH_NAME_BATCH_COUNT,            -1,       false, null,      "SQL Batches/Statements Processed Per Second (Server->Processes)");
+		_CmSummary_OldestTranInSecGraph   = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_OLDEST_TRAN_IN_SEC,     -1,       false, null,      "Oldest Open Transaction in any Databases, in Seconds (Summary)");
+		_CmSummary_DeadlockCount          = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_DEADLOCK_COUNT,         -1,       false, null,      "Deadlock Count (Summary)");
+		_CmSummary_BlockingLocksGraph     = createTsLineChart(conn, schema, CmSummary        .CM_NAME, CmSummary        .GRAPH_NAME_BLOCKING_LOCKS,         -1,       false, null,      "Number of Concurrently Blocking Locks (Summary)");
+		_CmSysWaits_sysWaitLockTime       = createTsLineChart(conn, schema, CmSysWaits       .CM_NAME, CmSysWaits       .GRAPH_NAME_WAIT_LOCK_TIME,         -1,       true , null,      "Server Waiting to Take Locks, by 'WaitTime' in Seconds (Server->Waits)");
+		_CmSysWaits_sysWaitLockCount      = createTsLineChart(conn, schema, CmSysWaits       .CM_NAME, CmSysWaits       .GRAPH_NAME_WAIT_LOCK_COUNT,        -1,       true , null,      "Server Waiting to Take Locks, by 'Wait Count' (Server->Waits)");
+		_CmSysWaits_sysWaitLockTpw        = createTsLineChart(conn, schema, CmSysWaits       .CM_NAME, CmSysWaits       .GRAPH_NAME_WAIT_LOCK_TPW,          -1,       true , null,      "Server Waiting to Take Locks, by 'WaitTimePerWait' (Server->Waits)");
 		_CmEngines_cpuSum                 = createTsLineChart(conn, schema, CmEngines        .CM_NAME, CmEngines        .GRAPH_NAME_CPU_SUM,                maxValue, false, null,      "CPU Summary for all Engines (Server->Engines)");
 		_CmEngines_cpuEng                 = createTsLineChart(conn, schema, CmEngines        .CM_NAME, CmEngines        .GRAPH_NAME_CPU_ENG,                maxValue, false, null,      "CPU Usage per Engine (System + User) (Server->Engines)");
 		_CmSysLoad_EngineRunQLengthGraph  = createTsLineChart(conn, schema, CmSysLoad        .CM_NAME, CmSysLoad        .GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, -1,       false, null,      "Run Queue Length, Average over last minute, Per Engine (Server->System Load)");
@@ -313,6 +333,12 @@ public class AseCpuUsageOverview extends AseAbstract
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmSummary_aaDiskGraph;
 	private IReportChart _CmProcessActivit_BatchCountGraph;
+	private IReportChart _CmSummary_OldestTranInSecGraph;
+	private IReportChart _CmSummary_DeadlockCount;
+	private IReportChart _CmSummary_BlockingLocksGraph;
+	private IReportChart _CmSysWaits_sysWaitLockTime;
+	private IReportChart _CmSysWaits_sysWaitLockCount;
+	private IReportChart _CmSysWaits_sysWaitLockTpw;
 	private IReportChart _CmEngines_cpuSum;
 	private IReportChart _CmEngines_cpuEng;
 	private IReportChart _CmSysLoad_EngineRunQLengthGraph;

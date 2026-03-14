@@ -303,6 +303,7 @@ import com.dbxtune.ui.autocomplete.CompletionProviderAbstract;
 import com.dbxtune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.dbxtune.ui.autocomplete.CompletionProviderAse;
 import com.dbxtune.ui.autocomplete.CompletionProviderJdbc;
+import com.dbxtune.ui.autocomplete.CompletionProviderPostgres;
 import com.dbxtune.ui.autocomplete.CompletionProviderRax;
 import com.dbxtune.ui.autocomplete.CompletionProviderRepServer;
 import com.dbxtune.ui.autocomplete.CompletionProviderSqlServer;
@@ -322,6 +323,7 @@ import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierJdbc;
 import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierMsSql;
 import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierMySql;
 import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierOracle;
+import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierPostgres;
 import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierRax;
 import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierRepServer;
 import com.dbxtune.ui.tooltip.suppliers.ToolTipSupplierTester;
@@ -4383,11 +4385,11 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 						else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_POSTGRES))
 						{
 							// Code Completion 
-							_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
+							_compleationProviderAbstract = CompletionProviderPostgres.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, connProvider);
 							_compleationProviderAbstract.setCreateLocalConnection(false); // false: ConnectionProvider.getConnection() is called from the CompletionProvider
 
 							// Tooltip supplier
-							_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, connProvider);
+							_tooltipProviderAbstract = new ToolTipSupplierPostgres(_window, _compleationProviderAbstract, connProvider);
 							_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 							// DBMS Configuration
@@ -6759,6 +6761,9 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			height  = SwingUtils.hiDpiScale(768);
 		}
 
+		if (_logger.isDebugEnabled())
+			_logger.debug(">>>>>>>>>>>>>>>>>>>>>>>>> openTheWindow() BEFORE getLayoutProperty(): width=" + width + ", height=" + height + ", winPosX=" + winPosX + ", winPosY=" + winPosY + ", divLoc=" + divLoc + ")");
+
 		String spoStr = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_horizontalOrientation, DEFAULT_horizontalOrientation) ? "horizontal" : "vertical";
 
 		width   = conf.getLayoutProperty("QueryWindow.size.width",                 width);
@@ -6769,6 +6774,21 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 
 		_splitPaneDivLastHorLoc  = conf.getLayoutProperty("QueryWindow.splitPane.location.horizontal", -1);
 		_splitPaneDivLastVerLoc  = conf.getLayoutProperty("QueryWindow.splitPane.location.vertical",   -1);
+
+		if (_logger.isDebugEnabled())
+			_logger.debug(">>>>>>>>>>>>>>>>>>>>>>>>> openTheWindow() AFTER getLayoutProperty():  width=" + width + ", height=" + height + ", winPosX=" + winPosX + ", winPosY=" + winPosY + ", divLoc=" + divLoc + ")");
+
+		// Sometimes when open from DbxTune GUI -- ContextMenu SQLWindow -- The size comes out wrong
+		// And it happens after |conf.getLayoutProperty("QueryWindow.size.width", width)| and I can't figure out why... so lets hard-code a bit here
+		if (_windowType == WindowType.JFRAME)
+		{
+			if (width <= 200 || height <= 100)
+			{
+				_logger.info("Open QueryWindow (WindowType.JFRAME) which seems to small. width=" + width + ", height=" + height + ". Setting it to some sane value: width=600, height=550");
+				width   = SwingUtils.hiDpiScale(600);
+				height  = SwingUtils.hiDpiScale(550);
+			}
+		}
 
 
 		// If this window is a "cloned" window...
@@ -6800,7 +6820,9 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		// Set size
 		if (width >= 0 && height >= 0)
 		{
-			_window.setSize(width, height);
+			Dimension dim = new Dimension(width, height);
+			_window.setSize(dim);
+			_window.setPreferredSize(dim);
 		}
 
 		//Center the window
@@ -11220,6 +11242,11 @@ checkPanelSize(_resPanel, comp);
 		{
 			// Make it into a String... since the object type is: PGobject
 			val = val.toString();
+
+			if (((String)val).contains("(cost="))
+			{
+				pgExplainPureText = true;
+			}
 
 			// If there are many rows, it must be a QUERY PALN with text content... 
 			// so: Just "collapse" all the rows into a single row  

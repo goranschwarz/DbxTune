@@ -41,7 +41,9 @@ refresh = 300
 ##       read https://developers.google.com/chart/interactive/docs/gallery/timeline
 ##       which is the component used to visualize the SQL data.
 ##
-## Note: New Lines will have to be escaped by \ at the end of the row
+## Note: New Lines will have to be escaped by '\' at the end of the row
+##       And if you REALLY want a newline in the text you need to end it as: '\n\'
+##       The '\n' for adding a new-line, and '\' to escape the "break-line"
 ##------------------------------------------------------------
 dbms.sql = SELECT \n\
      someLabelColumn, \n\

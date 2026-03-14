@@ -83,7 +83,8 @@ public class MailTest
 			
 			// Connection timeout
 //			if (_smtpConnectTimeout >= 0)
-//				email.setSocketConnectionTimeout(_smtpConnectTimeout);
+//				email.setSocketConnectionTimeout( Duration.ofSeconds(_smtpConnectTimeout) );
+
 
 			// SMTP PORT
 			if (smtpPort >= 0)

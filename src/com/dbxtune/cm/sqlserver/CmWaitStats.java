@@ -26,8 +26,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.naming.NameNotFoundException;
@@ -630,6 +632,8 @@ extends CountersModel
 	public static List<String> getDefaultLocalGraphsSkipList()
 	{
 		ArrayList<String> list = new ArrayList<>();
+
+		list.add("AZURE_IMDS_VERSIONS");                  // from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql
 		
 		// These wait types are almost 100% never a problem and so they are filtered out to avoid them skewing the results
 		list.add("BROKER_EVENTHANDLER");
@@ -687,6 +691,8 @@ extends CountersModel
 		list.add("PREEMPTIVE_OS_AUTHENTICATIONOPS");
 		list.add("PREEMPTIVE_OS_GENERICOPS");
 		list.add("PREEMPTIVE_OS_VERIFYTRUST");
+		list.add("PREEMPTIVE_OS_DELETESECURITYCONTEXT");  // from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql
+		list.add("PREEMPTIVE_OS_REPORTEVENT");            // from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql
 		list.add("PREEMPTIVE_OS_FILEOPS");
 		list.add("PREEMPTIVE_OS_DEVICEOPS");
 		list.add("PREEMPTIVE_OS_QUERYREGISTRY");
@@ -698,6 +704,7 @@ extends CountersModel
 		list.add("PREEMPTIVE_XE_SESSIONCOMMIT");
 		list.add("PREEMPTIVE_XE_TARGETINIT");
 		list.add("PREEMPTIVE_XE_TARGETFINALIZE");
+		list.add("POPULATE_LOCK_ORDINALS");               // from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql
 		list.add("PWAIT_ALL_COMPONENTS_INITIALIZED");
 		list.add("PWAIT_DIRECTLOGCONSUMER_GETNEXT");
 		list.add("PWAIT_EXTENSIBILITY_CLEANUP_TASK");     // SQL-Server 2019
@@ -722,6 +729,7 @@ extends CountersModel
 		list.add("SNI_HTTP_ACCEPT");
 		list.add("SOS_WORK_DISPATCHER");
 		list.add("SP_SERVER_DIAGNOSTICS_SLEEP");
+		list.add("SOS_WORKER_MIGRATION");                 // from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql
 		list.add("SQLTRACE_BUFFER_FLUSH");
 		list.add("SQLTRACE_INCREMENTAL_FLUSH_SLEEP");
 		list.add("SQLTRACE_WAIT_ENTRIES");
@@ -771,6 +779,10 @@ extends CountersModel
 	public static final String   GRAPH_NAME_TOXIC_COUNT        = "ToxicCount";
 	public static final String   GRAPH_NAME_TOXIC_TPW          = "ToxicTpw"; // Time Per Wait
 
+	public static final String   GRAPH_NAME_LOCK_TIME          = "LockTime";
+	public static final String   GRAPH_NAME_LOCK_COUNT         = "LockCount";
+	public static final String   GRAPH_NAME_LOCK_TPW           = "LockTpw"; // Time Per Wait
+	
 	private void addTrendGraphs()
 	{
 		addTrendGraph(GRAPH_NAME_WAIT_TYPE_TIME,
@@ -841,6 +853,42 @@ extends CountersModel
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_LOCK_TIME,
+			"Server Waiting to Take Locks, by 'wait_time_ms'", 	                   // Menu CheckBox text
+			"Server Waiting to Take Locks, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.LOCK,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
+			"Server Waiting to Take Locks, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
+			"Server Waiting to Take Locks, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.LOCK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
+
+		addTrendGraph(GRAPH_NAME_LOCK_TPW,
+			"Server Waiting to Take Locks, by 'WaitTimePerCount'", 	                   // Menu CheckBox text
+			"Server Waiting to Take Locks, by 'WaitTimePerCount' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.LOCK,
 			false, // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
@@ -986,15 +1034,114 @@ extends CountersModel
 			
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
+
+		// ---- LCK_M_*
+		if (GRAPH_NAME_LOCK_TIME.equals(graphName))
+		{
+			LinkedHashMap<String, Integer> lockRows = getLockRecords();
+			if ( ! lockRows.isEmpty() )
+			{
+				Double[] dArray = new Double[lockRows.size()];
+				String[] lArray = new String[dArray.length];
+				
+				int ap = 0;
+				for (Entry<String, Integer> entry : lockRows.entrySet())
+				{
+					String waitType = entry.getKey();
+					int    rowId    = entry.getValue();
+
+					dArray[ap] = this.getDiffValueAsDouble(rowId, "wait_time_ms");
+					lArray[ap] = waitType;
+					ap++;
+				}
+				
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+		}
+
+		// ---- LCK_M_*
+		if (GRAPH_NAME_LOCK_COUNT.equals(graphName))
+		{
+			LinkedHashMap<String, Integer> lockRows = getLockRecords();
+			if ( ! lockRows.isEmpty() )
+			{
+				Double[] dArray = new Double[lockRows.size()];
+				String[] lArray = new String[dArray.length];
+				
+				int ap = 0;
+				for (Entry<String, Integer> entry : lockRows.entrySet())
+				{
+					String waitType = entry.getKey();
+					int    rowId    = entry.getValue();
+
+					dArray[ap] = this.getDiffValueAsDouble(rowId, "waiting_tasks_count");
+					lArray[ap] = waitType;
+					ap++;
+				}
+				
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+		}
+
+		// ---- LCK_M_*
+		if (GRAPH_NAME_LOCK_TPW.equals(graphName))
+		{
+			LinkedHashMap<String, Integer> lockRows = getLockRecords();
+			if ( ! lockRows.isEmpty() )
+			{
+				Double[] dArray = new Double[lockRows.size()];
+				String[] lArray = new String[dArray.length];
+				
+				int ap = 0;
+				for (Entry<String, Integer> entry : lockRows.entrySet())
+				{
+					String waitType = entry.getKey();
+					int    rowId    = entry.getValue();
+
+					dArray[ap] = this.getDiffValueAsDouble(rowId, "WaitTimePerCount");
+					lArray[ap] = waitType;
+					ap++;
+				}
+				
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+		}
+	}
+
+	/** HELPER to get all RowId's for 'LCK_M_*' */
+	private LinkedHashMap<String, Integer> getLockRecords()
+	{
+		LinkedHashMap<String, Integer> lockRows = new LinkedHashMap<>();
+		
+		int pos__wait_type = findColumn("wait_type");
+		if (pos__wait_type == -1)
+			return lockRows; 
+
+		for (int r=0; r<getRowCount(); r++)
+		{
+			String wait_type = getAbsString(r, pos__wait_type);
+			if (wait_type != null && wait_type.startsWith("LCK_M_"))
+			{
+				// If we want a longer name, like: "LCK_M_SCH_S" --> "Schema Stability Lock - lck_m_sch_s"
+				wait_type = SqlServerWaitTypeDictionary.getLockManagerShortToLongName(wait_type);
+				lockRows.put(wait_type, r);
+			}
+		}
+
+		return lockRows;
 	}
 
 	@Override
 	public boolean isGraphDataHistoryEnabled(String name)
 	{
 		// ENABLED for the following graphs
-		if (GRAPH_NAME_TOXIC_TIME .equals(name)) return true;  // Used locally
-		if (GRAPH_NAME_TOXIC_COUNT.equals(name)) return true;  // Used locally
-		if (GRAPH_NAME_TOXIC_TPW  .equals(name)) return true;  // Used locally
+		if (GRAPH_NAME_TOXIC_TIME .equals(name)) return true;  // Used locally & CmSummary
+		if (GRAPH_NAME_TOXIC_COUNT.equals(name)) return true;  // Used locally & CmSummary
+		if (GRAPH_NAME_TOXIC_TPW  .equals(name)) return true;  // Used locally & CmSummary
+
+		if (GRAPH_NAME_LOCK_COUNT .equals(name)) return true;  // Used by: CmSummary
+		if (GRAPH_NAME_LOCK_TIME  .equals(name)) return true;  // Used by: CmSummary
+		if (GRAPH_NAME_LOCK_TPW   .equals(name)) return true;  // Used by: CmSummary
 
 		// default: DISABLED
 		return false;

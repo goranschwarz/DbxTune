@@ -20,8 +20,6 @@
  ******************************************************************************/
 package com.dbxtune.hostmon;
 
-import com.dbxtune.ssh.SshConnection.LinuxUtilType;
-
 public abstract class MonitorPs
 extends HostMonitor
 {
@@ -67,9 +65,14 @@ extends HostMonitor
 		HostMonitor mon = null;
 		if (osname.equals("Linux"))
 		{
-			int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.PS);
-			mon = new MonitorPsLinux(utilVersion, null);
+//			int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.PS);
+//			mon = new MonitorPsLinux(utilVersion, null);
+//			mon.setConnectedToVendor(OsVendor.Linux);
+
+			mon = new MonitorPsLinux();
+//			mon = new MonitorPsProcFsLinux();
 			mon.setConnectedToVendor(OsVendor.Linux);
+			mon.init(conn);
 		}
 //		else if (osname.equals("SunOS"))
 //		{

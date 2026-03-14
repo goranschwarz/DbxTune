@@ -233,6 +233,7 @@ extends SqlServerAbstract
 		String col_total_grant_kb__sum                  = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast(sum([total_grant_kb])                  as bigint       ) AS [total_grant_kb__sum]                  \n"; 
 		String col_total_grant_mb__sum                  = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast(sum([total_grant_kb]/1024.0)           as numeric(19,1)) AS [total_grant_mb__sum]                  \n"; 
 		String col_total_used_grant_kb__sum             = !dummyRstm.hasColumnNoCase("total_used_grant_kb"            ) ? "" : "    ,cast(sum([total_used_grant_kb])             as bigint       ) AS [total_used_grant_kb__sum]             \n"; 
+		String col_total_waisted_grant_kb__sum          = !dummyRstm.hasColumnNoCase("total_used_grant_kb"            ) ? "" : "    ,cast(sum([total_grant_kb]) - sum([total_used_grant_kb]) as bigint) AS [total_waisted_grant_kb__sum]     \n";
 		String col_total_ideal_grant_kb__sum            = !dummyRstm.hasColumnNoCase("total_ideal_grant_kb"           ) ? "" : "    ,cast(sum([total_ideal_grant_kb])            as bigint       ) AS [total_ideal_grant_kb__sum]            \n"; 
 		String col_total_reserved_threads__sum          = !dummyRstm.hasColumnNoCase("total_reserved_threads"         ) ? "" : "    ,cast(sum([total_reserved_threads])          as bigint       ) AS [total_reserved_threads__sum]          \n"; 
 		String col_total_used_threads__sum              = !dummyRstm.hasColumnNoCase("total_used_threads"             ) ? "" : "    ,cast(sum([total_used_threads])              as bigint       ) AS [total_used_threads__sum]              \n"; 
@@ -258,6 +259,7 @@ extends SqlServerAbstract
 		String col_AvgGrantKb                           = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast( sum([total_grant_kb])                                 * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgGrantKb]                 \n";
 		String col_AvgGrantMb                           = !dummyRstm.hasColumnNoCase("total_grant_kb"                 ) ? "" : "    ,cast( sum([total_grant_kb]/1024.0)                          * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgGrantMb]                 \n";
 		String col_AvgUsedGrantKb                       = !dummyRstm.hasColumnNoCase("total_used_grant_kb"            ) ? "" : "    ,cast( sum([total_used_grant_kb])                            * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgUsedGrantKb]             \n";
+		String col_AvgWaistedGrantKb                    = !dummyRstm.hasColumnNoCase("total_used_grant_kb"            ) ? "" : "    ,cast( (sum([total_grant_kb]) - sum([total_used_grant_kb]))  * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgWaistedGrantKb]          \n";
 		String col_AvgIdealGrantKb                      = !dummyRstm.hasColumnNoCase("total_ideal_grant_kb"           ) ? "" : "    ,cast( sum([total_ideal_grant_kb])                           * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgIdealGrantKb]            \n";
 		String col_AvgReservedThreads                   = !dummyRstm.hasColumnNoCase("total_reserved_threads"         ) ? "" : "    ,cast( sum([total_reserved_threads])                         * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgReservedThreads]         \n";
 		String col_AvgUsedThreads                       = !dummyRstm.hasColumnNoCase("total_used_threads"             ) ? "" : "    ,cast( sum([total_used_threads])                             * 1.0 / nullif(sum([execution_count]), 0) as numeric(19,1)) as [AvgUsedThreads]             \n";
@@ -357,6 +359,7 @@ extends SqlServerAbstract
 			    + col_total_grant_kb__sum                  + col_AvgGrantKb                 
 			    + col_total_grant_mb__sum                  + col_AvgGrantMb
 			    + col_total_used_grant_kb__sum             + col_AvgUsedGrantKb             
+			    + col_total_waisted_grant_kb__sum          + col_AvgWaistedGrantKb             
 			    + col_total_ideal_grant_kb__sum            + col_AvgIdealGrantKb            
 
 			    + col_total_reserved_threads__sum          + col_AvgReservedThreads         

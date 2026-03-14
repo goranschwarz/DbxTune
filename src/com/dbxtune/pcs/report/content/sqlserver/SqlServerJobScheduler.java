@@ -51,6 +51,7 @@ import com.dbxtune.pcs.SqlServerJobSchedulerExtractor.SqlAgentInfo;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResult;
+import com.dbxtune.pcs.report.content.SparklineHelper.SparklineResultType;
 import com.dbxtune.pcs.report.content.SparklineJfreeChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -1227,7 +1228,7 @@ extends SqlServerAbstract
 		if (pos_chartColumnName == -1)
 			return;
 		
-		SparklineResult result = new SparklineResult();
+		SparklineResult result = new SparklineResult(SparklineResultType.MAX);
 		for (String line : lines)
 		{
 			if ( ! line.startsWith("ts=") )
@@ -1268,7 +1269,7 @@ extends SqlServerAbstract
 		String sparklineClassName = "sparklines_" + rstm.getName() + "__chart_row_" + row;
 
 		// Create a PNG, which will displayed when the reader do not have access to JavaScript
-		String jfreeChartInlinePng = SparklineJfreeChart.create(result);
+		String jfreeChartInlinePng = SparklineJfreeChart.create(result, SparklineResultType.MAX, 1);
 
 		// Create a "div" that will be added to the table cell
 		String sparklineDiv = SparklineHelper.getSparklineDiv(result, sparklineClassName, jfreeChartInlinePng);

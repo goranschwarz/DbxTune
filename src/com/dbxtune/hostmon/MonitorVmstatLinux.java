@@ -144,7 +144,7 @@ extends MonitorVmstat
 		md.setParseRegexp(HostMonitorMetaData.REGEXP_IS_SPACE);
 
 		// Skip the header line
-		md.setSkipRows("memory_swpd", "swpd");
+		md.addSkipRows("memory_swpd", "swpd");
 
 		// Get SKIP and ALLOW from the Configuration
 		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());

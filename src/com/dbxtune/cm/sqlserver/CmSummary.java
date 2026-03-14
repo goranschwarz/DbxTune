@@ -1757,6 +1757,14 @@ extends CmSummaryAbstract
 								;
 					}
 					
+					CountersModel cmWaitStats = getCounterController().getCmByName(CmWaitStats.CM_NAME);
+					if (cmWaitStats != null)
+					{
+						extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_TIME);
+						extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_COUNT);
+						extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_TPW);
+					}
+					
 					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 					

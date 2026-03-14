@@ -48,6 +48,8 @@ import com.dbxtune.utils.Ver;
 
 public class SqlServerQueryStoreExtractor
 {
+//	TODO; // See if we can re-factor this in the same way as: SqlServerJobSchedulerExtractor & SqlServerBackupHistoryExtractor
+	
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String        _monDbName;

@@ -71,6 +71,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
+import com.dbxtune.central.controllers.ud.action.UserDefinedActionManager;
 import com.dbxtune.central.controllers.ud.chart.UserDefinedChartManager;
 
 public class Configuration
@@ -82,7 +83,7 @@ extends Properties
 	*/
 	private static final long serialVersionUID = 5707562050158600080L;
 
-	private static final String ENCRYPTED_PREFIX = "encrypted:";
+	public static final String ENCRYPTED_PREFIX = "encrypted:";
 
     public static final Configuration EMPTY_CONFIGURATION = new Configuration();
 
@@ -398,6 +399,8 @@ extends Properties
 				{
 					_logger.info("Starts to listen for Configuration file modifications in directory '" + path + "'. All Filenames: " + fileNames);
 					path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+					path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE);
+					path.register(watchService, StandardWatchEventKinds.ENTRY_DELETE);
 
 					try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) 
 					{
@@ -480,7 +483,61 @@ extends Properties
 							if (isUserDefinedContent)
 							{
 								UserDefinedChartManager udChartManager = UserDefinedChartManager.getInstance();
-								udChartManager.onConfigChange(fullPath);
+								udChartManager.onConfigFileChange(fullPath);
+							}
+
+							// Changes to: User Defined Action
+							boolean isUserDefinedAction = longFilename.endsWith(UserDefinedActionManager.USER_DEFINED_FILE_POST);
+							if (isUserDefinedAction)
+							{
+								UserDefinedActionManager udActionManager = UserDefinedActionManager.getInstance();
+								udActionManager.onConfigFileChange(fullPath);
+							}
+						}
+						else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_CREATE)
+						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("WatchService: Found NEW file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
+
+							String longFilename = fullPath.toString();
+
+							// User Defined Charts
+							boolean isUserDefinedContent = longFilename.endsWith(UserDefinedChartManager.USER_DEFINED_FILE_POST);
+							if (isUserDefinedContent)
+							{
+								UserDefinedChartManager udChartManager = UserDefinedChartManager.getInstance();
+								udChartManager.onConfigFileAdd(fullPath);
+							}
+
+							// User Defined Action
+							boolean isUserDefinedAction = longFilename.endsWith(UserDefinedActionManager.USER_DEFINED_FILE_POST);
+							if (isUserDefinedAction)
+							{
+								UserDefinedActionManager udActionManager = UserDefinedActionManager.getInstance();
+								udActionManager.onConfigFileAdd(fullPath);
+							}
+						}
+						else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_DELETE)
+						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("WatchService: Found DELETE file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
+
+							String longFilename = fullPath.toString();
+
+							// User Defined Charts
+							boolean isUserDefinedContent = longFilename.endsWith(UserDefinedChartManager.USER_DEFINED_FILE_POST);
+							if (isUserDefinedContent)
+							{
+								UserDefinedChartManager udChartManager = UserDefinedChartManager.getInstance();
+								udChartManager.onConfigFileRemove(fullPath);
+							}
+
+							// User Defined Action
+							boolean isUserDefinedAction = longFilename.endsWith(UserDefinedActionManager.USER_DEFINED_FILE_POST);
+							if (isUserDefinedAction)
+							{
+								UserDefinedActionManager udActionManager = UserDefinedActionManager.getInstance();
+								udActionManager.onConfigFileRemove(fullPath);
 							}
 						}
 
@@ -1123,8 +1180,10 @@ extends Properties
 	{
 		String monitorProp = getScreenResulutionAsString();
 		String newKey = key + ".[" + monitorProp + "]";
-		
-		return getIntProperty(newKey, defaultVal);
+
+		int intVal = getIntProperty(newKey, defaultVal);
+//System.out.println(">>>> getLayoutProperty(key='" +key + "', defaultVal=" + defaultVal + "): newKey='" + newKey + "'. RETURNS: intVal=" + intVal + " --- ConfigName=" + this.getConfName() + ", ConfigFile='" + getFilename() + "'");
+		return intVal;
 	}
 
 	/**
@@ -2301,6 +2360,13 @@ extends Properties
 			throw new RuntimeException("removeAll() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
 		}
 
+		
+		@Override
+		public String getConfName()
+		{
+			return "CombinedConfiguration";
+		}
+
 		public List<String> getFilenames()
 		{
 			List<String> list = new ArrayList<>();
@@ -2474,6 +2540,51 @@ extends Properties
 
 			Collections.sort(uniqueNames);
 			return uniqueNames;
+		}
+
+		/**
+		 * Get a Integer property (loop all configurations in CombinedConfig) that has to do with layout things.<br>
+		 * This simply means that the key will also contain some screen information.<br>
+		 * The altered key might look something like: your.key.[2560x1440;1920x1200] if you are having 2 screens
+		 * @param key
+		 * @param defaultVal
+		 * @return integer value, if the key can't be found the defaulVal is returned.
+		 */
+		// NOTE: something is WRONG here... when called to get 'QueryWindow.size.height.[2560x1600;2560x1440;2560x1440]' it SOMETIMES returns: height=39, width=136 (which I don't know where it get the values from)
+		//       I can't figure out WHY... hence all the 'println' stuff  (a GUESS is that the property file is recreated "somewhere", because it takes 1-3 second longer when it returns faulty values)
+		// The workaround in QueryWindow.openTheWindow() is to check if it's a "to small" window, and just set the size to DEFAULT values...
+		@Override
+		public int getLayoutProperty(String key, int defaultVal)
+		{
+			String monitorProp = getScreenResulutionAsString();
+			String newKey = key + ".[" + monitorProp + "]";
+
+			for (String instName : _searchOrder)
+			{
+				Configuration conf = Configuration.getInstance(instName);
+				if (conf != null && conf.hasProperty(newKey))
+				{
+					String propVal = (String) conf.getPropertyRaw(newKey);
+					int intVal = StringUtil.parseInt(propVal, defaultVal);
+//					System.out.println(">>>> RAW: CombinedConfig.getLayoutProperty(key='" +key + "', defaultVal=" + defaultVal + "): newKey='" + newKey + "'. propVal='" + propVal + "', RETURNS: intVal=" + intVal + " --- ConfigName=" + conf.getConfName() + ", ConfigFile='" + conf.getFilename() + "'");
+					return intVal;
+
+//					int intVal = getIntProperty(newKey, defaultVal);
+//					System.out.println(">>>> CombinedConfig.getLayoutProperty(key='" +key + "', defaultVal=" + defaultVal + "): newKey='" + newKey + "'. RETURNS: intVal=" + intVal + " --- ConfigName=" + conf.getConfName() + ", ConfigFile='" + conf.getFilename() + "'");
+//					return intVal;
+				}
+				else
+				{
+//					System.out.println(">>>> RAW: NOT FOUND newKey='" + newKey + "' IN='"+conf.getConfName()+"', file=|"+conf.getFilename()+"|");
+				}
+			}
+			if (_fallbackOnSystemProperties)
+			{
+				if (System.getProperty(newKey) != null)
+					return StringUtil.parseInt(System.getProperty(newKey), defaultVal);
+			}
+//			System.out.println(">>>> NOTFOUND IN: CombinedConfig.getLayoutProperty(key='" +key + "', defaultVal=" + defaultVal + "): newKey='" + newKey + "'.");
+			return defaultVal;
 		}
 
 		//---------------------------------------------------------------

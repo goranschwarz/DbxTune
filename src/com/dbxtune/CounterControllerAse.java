@@ -117,6 +117,7 @@ import com.dbxtune.cm.os.CmOsVmstat;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.swing.GTable.ITableTooltip;
+import com.dbxtune.pcs.AseBackupHistoryExtractor;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.ConnectionProp;
@@ -134,6 +135,13 @@ public class CounterControllerAse extends CounterControllerAbstract
 {
 	/** Log4j logging. */
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureBackupHistory = "AseTune.onPcsDatabaseRollover.captureBackupHistory";
+	public static final boolean DEFAULT_onPcsDatabaseRollover_captureBackupHistory = true;
+
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureBackupHistory_daysToCopy = "AseTune.onPcsDatabaseRollover.captureBackupHistory.daysToCopy";
+	public static final int     DEFAULT_onPcsDatabaseRollover_captureBackupHistory_daysToCopy = 14; // -1=ALL, 1=OneDay, 2=TwoDays...
+
 
 	/** is sp_configure 'capture missing statistics' set or not */
 	protected boolean _config_captureMissingStatistics = false;
@@ -768,7 +776,126 @@ public class CounterControllerAse extends CounterControllerAbstract
 		return new ToolTipSupplierAse(cm);
 	}
 
-	
+
+
+	//==================================================================
+	// BEGIN: Extract "things" on "Recording Database Rollover"
+	//==================================================================
+	@Override
+	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection pcsConn)
+	{
+		String srvName = getMonConnection().getDbmsServerNameNoThrow();
+
+		// Backup History Extraction
+		backupHistoryExtractor(pcsConn, srvName);
+	}
+
+	//------------------------------------------------------------------
+	// Backup History - Extractor
+	//------------------------------------------------------------------
+	private void backupHistoryExtractor(DbxConnection pcsConn, String srvName)
+	{
+		int daysToCopy = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_onPcsDatabaseRollover_captureBackupHistory_daysToCopy, DEFAULT_onPcsDatabaseRollover_captureBackupHistory_daysToCopy);
+		
+		// Check if Capture Query Store is DISABLED 
+		boolean doCapture = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_onPcsDatabaseRollover_captureBackupHistory, DEFAULT_onPcsDatabaseRollover_captureBackupHistory);
+		if ( ! doCapture)
+		{
+			_logger.info("On PCS Database Rollover: Skipping 'Capture Backup History', due to Configuration '" + PROPKEY_onPcsDatabaseRollover_captureBackupHistory + "' is set to FALSE.");
+			return;
+		}
+		
+		// Open a new connection to the monitored server
+		ConnectionProp connProp = getMonConnection().getConnPropOrDefault();
+		DbxConnection conn = null;
+		try
+		{
+			_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName + "' for extracting 'Backup History' information.");
+			conn = DbxConnection.connect(null, connProp);
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Failed to establish a new connection to server '" + srvName + "'. SKIPPING 'Backup History' extraction.", ex);
+			return;
+		}
+
+		// Check this is enabled at ASE -- sp_configure 'enable dump history' 
+		if (true)
+		{
+			String sql = ""
+					+ "SELECT dumpHistoryIsEnabled = value \n"
+					+ "FROM master.dbo.syscurconfigs \n"
+					+ "WHERE config = (SELECT config \n"
+					+ "                FROM master.dbo.sysconfigures \n"
+					+ "                WHERE name = 'enable dump history' \n"
+					+ "               )"
+					;
+			int dumpHistoryIsEnabled = 0;
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					dumpHistoryIsEnabled = rs.getInt(1);
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("On PCS Database Rollover: Problems when selecting from 'master.dbo.sysdumphist' on '" + srvName + "'. SKIPPING 'Backup History' extraction.", ex);
+				return;
+			}
+			if (dumpHistoryIsEnabled != 1)
+			{
+				_logger.error("On PCS Database Rollover: Configuration 'enable dump history' is NOT ENABLED on '" + srvName + "'. "
+						+ "ACTION: Enable it using |sp_configure 'enable dump history', 1| and create table sysdumphist using |exec sp_dump_history create_table, @name='master.dbo.sysdumphist'|. "
+						+ "SKIPPING 'Backup History' extraction.");
+				return;
+			}
+		}
+
+		// Check if we can do select on 'master.dbo.sysdumphist'... 
+		if (true)
+		{
+			String sql = ""
+					+ "SELECT 1 \n"
+					+ "FROM master.dbo.sysdumphist \n"
+					+ "WHERE 1 = 2";
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					; // do not read data... we just want to check for errors
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("On PCS Database Rollover: Problems when selecting from 'master.dbo.sysdumphist' on '" + srvName + "'. "
+						+ "ACTION: Create table sysdumphist using |exec sp_dump_history create_table, @name='master.dbo.sysdumphist'|. "
+						+ "SKIPPING 'Backup History' extraction.", ex);
+				return;
+			}
+		}
+
+		
+		// EXTRACT
+		_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName+ "'.");
+		try
+		{
+			AseBackupHistoryExtractor extractor = new AseBackupHistoryExtractor(daysToCopy, conn, pcsConn);
+			extractor.transfer();
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Problems extracting 'Backup History' information from server '" + srvName + "'.", ex);
+		}
+		
+		// Close
+		if (conn != null)
+		{
+			_logger.info("On PCS Database Rollover: Backup History Extractor - Closing connection to server '" + srvName + "'..");
+			conn.closeNoThrow();
+		}
+	}
+
+
+
+
 	//==================================================================
 	// BEGIN: NO-GUI methods
 	//==================================================================
@@ -917,4 +1044,5 @@ public class CounterControllerAse extends CounterControllerAbstract
 	//==================================================================
 	// END: NO-GUI methods
 	//==================================================================
+
 }

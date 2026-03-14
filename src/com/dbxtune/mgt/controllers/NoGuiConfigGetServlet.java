@@ -191,11 +191,17 @@ System.out.println("----------: CM name()               = |" + cm.getName() + ",
 				gen.writeStartArray();
 				for (CmSettingsHelper settings : settingsList)
 				{
+					String name = settings.getName();
+					String value = settings.getStringValue();
+					
+					if (name != null && name.toLowerCase().contains("password"))
+						value = "***secret***";
+					
 					gen.writeStartObject();
 					gen.writeStringField ("name"          , settings.getName());
 					gen.writeStringField ("datatype"      , settings.getDataTypeString());
 					gen.writeStringField ("property"      , settings.getPropName());
-					gen.writeStringField ("value"         , settings.getStringValue());
+					gen.writeStringField ("value"         , value);
 					gen.writeStringField ("defaultValue"  , settings.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
@@ -213,11 +219,17 @@ System.out.println("----------: CM name()               = |" + cm.getName() + ",
 				gen.writeStartArray();
 				for (CmSettingsHelper settings : settingsList)
 				{
+					String name = settings.getName();
+					String value = settings.getStringValue();
+					
+					if (name != null && name.toLowerCase().contains("password"))
+						value = "***secret***";
+					
 					gen.writeStartObject();
 					gen.writeStringField ("name"          , settings.getName());
 					gen.writeStringField ("datatype"      , settings.getDataTypeString());
 					gen.writeStringField ("property"      , settings.getPropName());
-					gen.writeStringField ("value"         , settings.getStringValue());
+					gen.writeStringField ("value"         , value);
 					gen.writeStringField ("defaultValue"  , settings.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
@@ -247,11 +259,17 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 
 					for (CmSettingsHelper entry : onlyPreChecks)
 					{
+						String name = entry.getName();
+						String value = entry.getStringValue();
+						
+						if (name != null && name.toLowerCase().contains("password"))
+							value = "***secret***";
+						
 						gen.writeStartObject();
 						gen.writeStringField ("name"          , entry.getName());
 						gen.writeStringField ("datatype"      , entry.getDataTypeString());
 						gen.writeStringField ("property"      , entry.getPropName());
-						gen.writeStringField ("value"         , entry.getStringValue());
+						gen.writeStringField ("value"         , value);
 						gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 						gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 						gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
@@ -475,13 +493,19 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 				gen.writeStartArray(); // START: array: settings[]
 				for (CmSettingsHelper entry : settings)
 				{
+					String name = entry.getName();
+					String value = entry.getStringValue();
+					
+					if (name != null && name.toLowerCase().contains("password"))
+						value = "***secret***";
+					
 					gen.writeStartObject(); // BEGIN: object under settings[]
 					gen.writeBooleanField("isSelected"    , entry.isSelected());
 					gen.writeBooleanField("isMandatory"   , entry.isMandatory());
 					gen.writeStringField ("name"          , entry.getName());
 					gen.writeStringField ("datatype"      , entry.getDataTypeString());
 					gen.writeStringField ("property"      , entry.getPropName());
-					gen.writeStringField ("value"         , entry.getStringValue());
+					gen.writeStringField ("value"         , value);
 					gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
@@ -499,12 +523,18 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 				gen.writeStartArray(); // START: array: filters[]
 				for (CmSettingsHelper entry : filters)
 				{
+					String name = entry.getName();
+					String value = entry.getStringValue();
+					
+					if (name != null && name.toLowerCase().contains("password"))
+						value = "***secret***";
+					
 					gen.writeStartObject(); // BEGIN: object under filters[]
 					gen.writeBooleanField("isSelected"    , entry.isSelected());
 					gen.writeStringField ("name"          , entry.getName());
 					gen.writeStringField ("datatype"      , entry.getDataTypeString());
 					gen.writeStringField ("property"      , entry.getPropName());
-					gen.writeStringField ("value"         , entry.getStringValue());
+					gen.writeStringField ("value"         , value);
 					gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
@@ -582,12 +612,19 @@ System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.siz
 	private void getAlarmParametersFor(JsonGenerator gen, CmSettingsHelper entry)
 	throws IOException
 	{
+		String name = entry.getName();
+		String value = entry.getStringValue();
+		
+		if (name != null && name.toLowerCase().contains("password"))
+			value = "***secret***";
+		
+		
 		gen.writeStartObject();
 		gen.writeStringField ("name"          , entry.getName());
 		gen.writeBooleanField("isMainParam"   , entry.isAlarmSwitch());
 		gen.writeStringField ("datatype"      , entry.getDataTypeString());
 		gen.writeStringField ("property"      , entry.getPropName());
-		gen.writeStringField ("value"         , entry.getStringValue());
+		gen.writeStringField ("value"         , value);
 		gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
 		gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 		gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));

@@ -878,6 +878,9 @@ function radionButtonGroupSetSelectedValue(name, selectdValue)
 
 function activeAlarmsRadioClick(radioBut) 
 {
+	if (radioBut === 'undefined' || radioBut === null)
+		return;
+
 	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
 	console.log('activeAlarmsRadioClick(): Active Alarm Window Size[RadioBut]: ' + rVal);
 	
@@ -920,6 +923,9 @@ function activeAlarmsChkClick(checkbox)
 }
 function activeAlarmsCompExtDescClick(checkbox) 
 {
+	if (checkbox === 'undefined' || checkbox === null)
+		return;
+
 	console.log('activeAlarmsCompExtDescClick(): Checked: ' + checkbox.checked);
 
 	// Save last known value in "WebBrowser storage"
@@ -1273,7 +1279,8 @@ function dbxTuneGraphSubscribe()
 		}
 
 		// Create a websocket
-		const wsUrl = "ws://" + location.host + "/api/chart/broadcast-ws?serverList="+_serverList+"&graphList="+encodeURIComponent(graphList);
+		const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+		const wsUrl = protocol + location.host + "/api/chart/broadcast-ws?serverList="+_serverList+"&graphList="+encodeURIComponent(graphList);
 		console.log("subscribeConnectWs(): url="+wsUrl);
 		webSocket = new WebSocket(wsUrl);
 		
@@ -2583,7 +2590,7 @@ class DbxGraph
 					// 	}
 					// },
 					resetZoomThis: {
-						name: "Reset Zoom (on this graph)",
+						name: "Reset - This graph",
 						callback: function(key, opt) 
 						{
 							var graphName = $(this).attr('id');
@@ -2592,7 +2599,7 @@ class DbxGraph
 						}
 					},
 					resetZoomAll: {
-						name: "Reset Zoom (on ALL graphs)",
+						name: "Reset - ALL graphs",
 						callback: function(key, opt) 
 						{
 							console.log("contextMenu(graphName="+opt.dbxSourceName+"): key='"+key+"'.");
@@ -2601,6 +2608,28 @@ class DbxGraph
 								const dbxGraph = _graphMap[i];
 								dbxGraph._chartObject.resetZoom();
 							}
+						}
+					},
+					setMaxValue: {
+						name: "Set Max Value in graph",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							const curVal = getGraphByName(graphName).getMaxValue()
+							const newVal = prompt("Set a new temporary MAX value (blank is auto):", curVal);
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							getGraphByName(graphName).setMaxValue(newVal);
+						}
+					},
+					setMinValue: {
+						name: "Set Min Value in graph",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							const curVal = getGraphByName(graphName).getMinValue()
+							const newVal = prompt("Set a new temporary MIN value (blank is auto):", curVal);
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							getGraphByName(graphName).setMinValue(newVal);
 						}
 					},
 					hideThis: {
@@ -2955,7 +2984,7 @@ class DbxGraph
 				dbxHistoryAction(clickTs);
 			}
 		});
-	}
+	} // END: Constructor
 
 //	findClosestTimestamp(inputDate) 
 //	{
@@ -3203,6 +3232,16 @@ class DbxGraph
 	getInitSampleType()  { return this._initSampleType;  }
 	getInitSampleValue() { return this._initSampleValue; }
 	isMultiDayChart()    { return this._isMultiDayChart; }
+
+	// Below is for chart.js 3
+//	getMaxValue()        { return this._chartConfig.options.scales.y.max; }
+//	getMinValue()        { return this._chartConfig.options.scales.y.min; }
+//	setMaxValue(val)     { return this._chartConfig.options.scales.y.max = val; }
+//	setMinValue(val)     { return this._chartConfig.options.scales.y.min = val; }
+	getMaxValue()        { return this._chartConfig.options.scales.yAxes[0].ticks.max === undefined ? "" : this._chartConfig.options.scales.yAxes[0].ticks.max; }
+	getMinValue()        { return this._chartConfig.options.scales.yAxes[0].ticks.min === undefined ? "" : this._chartConfig.options.scales.yAxes[0].ticks.min; }
+	setMaxValue(val)     { this._chartConfig.options.scales.yAxes[0].ticks.max = (val !== "" && val !== null) ? parseFloat(val) : undefined; this._chartObject.update(); }
+	setMinValue(val)     { this._chartConfig.options.scales.yAxes[0].ticks.min = (val !== "" && val !== null) ? parseFloat(val) : undefined; this._chartObject.update(); }
 
 	// Run AFTER load has been completed, so we can make any "adjustments"
 	onLoadCompetion()

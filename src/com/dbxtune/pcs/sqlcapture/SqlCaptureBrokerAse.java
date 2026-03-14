@@ -416,6 +416,9 @@ extends SqlCaptureBrokerAbstract
 			if ( ! colNames.contains("BlockedByCommand"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByCommand"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 			if ( ! colNames.contains("BlockedByApplication") ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByApplication"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 			if ( ! colNames.contains("BlockedByTranId"     ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByTranId"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("RewrittenSqlText"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"RewrittenSqlText"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("ParseEx1"            ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"ParseEx1"            +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("ParseEx2"            ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"ParseEx2"            +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
 			return list;			
 		}
@@ -562,6 +565,8 @@ extends SqlCaptureBrokerAbstract
 			int    col_BlockedBySqlText_jdbcType = Types.VARCHAR;
 			int    col_BlockedBySqlText_jdbcLen  = 65536;
 			
+			// TODO: If we want to keep "RewrittenSqlText" then we probably should do Dictionary Compression on that to
+			
 			// When we want Dictionary Compression on 'SQLText' and 'NormSQLText'
 			if ( DictCompression.isEnabled() )
 			{
@@ -640,6 +645,9 @@ extends SqlCaptureBrokerAbstract
 			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
 			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort"   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
 			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"RewrittenSqlText"       +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"ParseEx1"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"ParseEx2"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // NULLABLE
 
 			sbSql.append("   ,"+fill(lq+col_SQLText_name         +rq,40)+" "+fill(getDatatype(conn, col_SQLText_jdbcType,          col_SQLText_jdbcLen         ),20)+" "+getNullable(true) +"\n"); // NULLABLE
 			sbSql.append("   ,"+fill(lq+col_NormSQLText_name     +rq,40)+" "+fill(getDatatype(conn, col_NormSQLText_jdbcType,      col_NormSQLText_jdbcLen     ),20)+" "+getNullable(true) +"\n"); // NULLABLE
@@ -1101,6 +1109,9 @@ extends SqlCaptureBrokerAbstract
 		int        JavaSqlHashCode      ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 		int        JavaSqlHashCodeShort ; // Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
 		int        NormJavaSqlHashCode  ; // Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+		String     RewrittenSqlText     ;
+		String     ParseEx1             ;
+		String     ParseEx2             ;
 
 		String     SQLText              ;
 		String     NormSQLText          ;
@@ -1164,6 +1175,9 @@ extends SqlCaptureBrokerAbstract
 		private static int pos_JavaSqlHashCode       = -1;
 		private static int pos_JavaSqlHashCodeShort  = -1;
 		private static int pos_NormJavaSqlHashCode   = -1;
+		private static int pos_RewrittenSqlText      = -1;
+		private static int pos_ParseEx1              = -1;
+		private static int pos_ParseEx2              = -1;
 
 		private static int pos_SQLText               = -1;
 		private static int pos_NormSQLText           = -1;
@@ -1217,6 +1231,9 @@ extends SqlCaptureBrokerAbstract
 			pos_JavaSqlHashCode       = findInListToJdbcPos(colNames, "JavaSqlHashCode");
 			pos_JavaSqlHashCodeShort  = findInListToJdbcPos(colNames, "JavaSqlHashCodeShort");
 			pos_NormJavaSqlHashCode   = findInListToJdbcPos(colNames, "NormJavaSqlHashCode");
+			pos_RewrittenSqlText      = findInListToJdbcPos(colNames, "RewrittenSqlText");
+			pos_ParseEx1              = findInListToJdbcPos(colNames, "ParseEx1");
+			pos_ParseEx2              = findInListToJdbcPos(colNames, "ParseEx2");
 
 			pos_SQLText               = findInListToJdbcPos(colNames, "SQLText");
 			pos_NormSQLText           = findInListToJdbcPos(colNames, "NormSQLText");
@@ -1277,6 +1294,9 @@ extends SqlCaptureBrokerAbstract
 			JavaSqlHashCode       = rs.getInt      (pos_JavaSqlHashCode);
 			JavaSqlHashCodeShort  = rs.getInt      (pos_JavaSqlHashCodeShort);
 			NormJavaSqlHashCode   = rs.getInt      (pos_NormJavaSqlHashCode);
+			RewrittenSqlText      = rs.getString   (pos_RewrittenSqlText);
+			ParseEx1              = rs.getString   (pos_ParseEx1);
+			ParseEx2              = rs.getString   (pos_ParseEx2);
 
 			SQLText               = rs.getString   (pos_SQLText);
 			NormSQLText           = rs.getString   (pos_NormSQLText);
@@ -1331,6 +1351,9 @@ extends SqlCaptureBrokerAbstract
 			row.add(JavaSqlHashCode      );
 			row.add(JavaSqlHashCodeShort );
 			row.add(NormJavaSqlHashCode  );
+			row.add(RewrittenSqlText     );
+			row.add(ParseEx1             );
+			row.add(ParseEx2             );
 
 			row.add(SQLText              );
 			row.add(NormSQLText          );
@@ -1520,23 +1543,26 @@ extends SqlCaptureBrokerAbstract
 			sbSql.append(",").append(lq).append("JavaSqlHashCode"        ).append(rq);  // 39;
 			sbSql.append(",").append(lq).append("JavaSqlHashCodeShort"   ).append(rq);  // 40;
 			sbSql.append(",").append(lq).append("NormJavaSqlHashCode"    ).append(rq);  // 41;
+			sbSql.append(",").append(lq).append("RewrittenSqlText"       ).append(rq);  // 42;
+			sbSql.append(",").append(lq).append("ParseEx1"               ).append(rq);  // 43;
+			sbSql.append(",").append(lq).append("ParseEx2"               ).append(rq);  // 44;
                                                                          
-			sbSql.append(",").append(lq).append(col_SQLText_name         ).append(rq);  // 42;
-			sbSql.append(",").append(lq).append(col_NormSQLText_name     ).append(rq);  // 43;
-			sbSql.append(",").append(lq).append(col_PlanText_name        ).append(rq);  // 44;
-			sbSql.append(",").append(lq).append(col_BlockedBySqlText_name).append(rq);  // 45;
+			sbSql.append(",").append(lq).append(col_SQLText_name         ).append(rq);  // 45;
+			sbSql.append(",").append(lq).append(col_NormSQLText_name     ).append(rq);  // 46;
+			sbSql.append(",").append(lq).append(col_PlanText_name        ).append(rq);  // 47;
+			sbSql.append(",").append(lq).append(col_BlockedBySqlText_name).append(rq);  // 48;
                                                                          
-			sbSql.append(",").append(lq).append("WaitTimeDetails"        ).append(rq);  // 46;
-			sbSql.append(",").append(lq).append("BlockedBySpid"          ).append(rq);  // 47;
-			sbSql.append(",").append(lq).append("BlockedByKpid"          ).append(rq);  // 48;
-			sbSql.append(",").append(lq).append("BlockedByBatchId"       ).append(rq);  // 49;
-			sbSql.append(",").append(lq).append("BlockedByCommand"       ).append(rq);  // 50;
-			sbSql.append(",").append(lq).append("BlockedByApplication"   ).append(rq);  // 51;
-			sbSql.append(",").append(lq).append("BlockedByTranId"        ).append(rq);  // 52;
+			sbSql.append(",").append(lq).append("WaitTimeDetails"        ).append(rq);  // 49;
+			sbSql.append(",").append(lq).append("BlockedBySpid"          ).append(rq);  // 50;
+			sbSql.append(",").append(lq).append("BlockedByKpid"          ).append(rq);  // 51;
+			sbSql.append(",").append(lq).append("BlockedByBatchId"       ).append(rq);  // 52;
+			sbSql.append(",").append(lq).append("BlockedByCommand"       ).append(rq);  // 53;
+			sbSql.append(",").append(lq).append("BlockedByApplication"   ).append(rq);  // 54;
+			sbSql.append(",").append(lq).append("BlockedByTranId"        ).append(rq);  // 55;
 
 			sbSql.append(") \n");
-			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 52 question marks
-			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52
+			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 55 question marks
+			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55
 
 			return sbSql.toString();
 		}
@@ -1977,10 +2003,13 @@ extends SqlCaptureBrokerAbstract
 			+ "    convert(int,         -1  ) as JavaSqlHashCode, \n"
 			+ "    convert(int,         -1  ) as JavaSqlHashCodeShort, \n"
 			+ "    convert(int,         -1  ) as NormJavaSqlHashCode, \n"
+			+ "    convert(varchar(10), NULL) as RewrittenSqlText, \n"  // Length of the char is NOT important
+			+ "    convert(varchar(10), NULL) as ParseEx1, \n"          // Length of the char is NOT important
+			+ "    convert(varchar(10), NULL) as ParseEx2, \n"          // Length of the char is NOT important
 
 			+ "    convert(varchar(10), NULL) as SQLText, \n"           // Length of the char is NOT important
 			+ "    convert(varchar(10), NULL) as NormSQLText, \n"       // Length of the char is NOT important
-			+ "    convert(varchar(10), NULL) as PlanText, \n"           // Length of the char is NOT important
+			+ "    convert(varchar(10), NULL) as PlanText, \n"          // Length of the char is NOT important
 			+ "    convert(varchar(10), NULL) as BlockedBySqlText \n"   // Length of the char is NOT important
 			
 			+ "from master.dbo.monSysStatement ss \n"
@@ -3140,6 +3169,8 @@ extends SqlCaptureBrokerAbstract
 				// Normalize the SQL Statement
 				if (storeNormalizedSqlText)
 				{
+					StatementNormalizer stmntNormalizer = StatementNormalizer.getInstance();
+
 					if (normalizeParameters == null)
 						normalizeParameters = new StatementNormalizer.NormalizeParameters();
 					
@@ -3151,7 +3182,7 @@ extends SqlCaptureBrokerAbstract
 					//   - if we still have problems to parse: an null or empty string will be returned
 					// The re-writes & UserDefinedNormalizations are held in: StatementFixerManager & UserDefinedNormalizerManager 
 					List<String> tableNamesInStatement = new ArrayList<>();
-					normalizedSqlText = StatementNormalizer.getInstance().normalizeSqlText(sqlText, normalizeParameters, tableNamesInStatement);
+					normalizedSqlText = stmntNormalizer.normalizeSqlText(sqlText, normalizeParameters, tableNamesInStatement);
 
 					// Send any table names the Statement was referencing to the Persistence Counter Handler for further lookup and storage
 					if (pch != null && tableNamesInStatement != null && !tableNamesInStatement.isEmpty())
@@ -3160,6 +3191,9 @@ extends SqlCaptureBrokerAbstract
 							pch.addDdl(stRec.DBName, tableName, this.getClass().getSimpleName() + ".normalized.sql");
 					}
 
+					stRec.RewrittenSqlText = stmntNormalizer.getRewrittenSqlText();
+					stRec.ParseEx1  = stmntNormalizer.getFirstParserException() == null ? null : stmntNormalizer.getFirstParserException().toString();
+					stRec.ParseEx2  = stmntNormalizer.getLastParserException()  == null ? null : stmntNormalizer.getLastParserException() .toString();
 					stRec.AddStatus = normalizeParameters.addStatus.getIntValue();
 				}
 

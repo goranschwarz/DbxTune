@@ -307,12 +307,16 @@ extends AbstractTableModel
 
 		if (_records.size() > _maxRecords)
 		{
-			Log4jLogRecord removedRecod = _records.removeFirst();
-			if (removedRecod != null)
+			try // Sometimes we get NoSuchElementException on removeFirst...
 			{
-				try { fireTableRowsDeleted(0, 0); } 
-				catch (RuntimeException ignore) { /* ignore */ }
+				Log4jLogRecord removedRecod = _records.removeFirst();
+				if (removedRecod != null)
+				{
+					try { fireTableRowsDeleted(0, 0); } 
+					catch (RuntimeException ignore) { /* ignore */ }
+				}
 			}
+			catch (RuntimeException rte) { /* ignore */ }
 		}
 //		System.out.println("addMessage(): "+record);
 		

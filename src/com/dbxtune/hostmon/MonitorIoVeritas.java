@@ -95,7 +95,7 @@ extends MonitorIo
 		md.setParseRegexp(HostMonitorMetaData.REGEXP_IS_SPACE);
 
 		// Skip the header line
-		md.setSkipRows("name", "NAME");
+		md.addSkipRows("name", "NAME");
 
 		// Get SKIP and ALLOW from the Configuration
 		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());

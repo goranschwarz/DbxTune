@@ -41,6 +41,7 @@ import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
 import com.dbxtune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerBackupHistory;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerCmDeviceIo;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
@@ -133,11 +134,12 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerUnusedIndexes(this) );
 
 		// Database Size
-		addReportEntry( new SqlServerDbSize(this)             );
+		addReportEntry( new SqlServerDbSize       (this) );
+		addReportEntry( new SqlServerBackupHistory(this) );
 
 		// Configuration
-		addReportEntry( new SqlServerConfiguration(this)      );
-		addReportEntry( new DbmsConfigIssues(this)            );
+		addReportEntry( new SqlServerConfiguration(this) );
+		addReportEntry( new DbmsConfigIssues      (this) );
 	}
 
 

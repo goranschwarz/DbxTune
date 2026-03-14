@@ -1,5 +1,5 @@
-/*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+/***************************************-****************************************
+ * Copyright (C) 2010-2025 Goran Schwarz 
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -736,4 +736,66 @@ public class SqlServerWaitTypeDictionary
 	};
 
 	public static List<String> WAIT_CLASS_ALL_LIST = Arrays.asList(WAIT_CLASS_ALL_ARRAY);
+
+
+
+
+	/**
+	 * Simple lookup from SHORT name to LONGER names
+	 * <br>
+	 * see: https://learn.microsoft.com/en-us/sql/relational-databases/event-classes/lock-escalation-event-class
+	 * 
+	 * @param shortName
+	 * @return The Longer name of the LOCK_M_???? value
+	 */
+	public static String getLockManagerShortToLongName(String shortName)
+	{
+		//if (shortName.equals("LCK_M_NL"))  return "NULL - Compatible with all other lock modes";
+		if (shortName.equals("LCK_M_SCH_S")) return DESC_LCK_M_SCH_S;
+		if (shortName.equals("LCK_M_SCH_M")) return DESC_LCK_M_SCH_M;
+		if (shortName.equals("LCK_M_S"))     return DESC_LCK_M_S    ;
+		if (shortName.equals("LCK_M_U"))     return DESC_LCK_M_U    ;
+		if (shortName.equals("LCK_M_X"))     return DESC_LCK_M_X    ;
+		if (shortName.equals("LCK_M_IS"))    return DESC_LCK_M_IS   ;
+		if (shortName.equals("LCK_M_IU"))    return DESC_LCK_M_IU   ;
+		if (shortName.equals("LCK_M_IX"))    return DESC_LCK_M_IX   ;
+		if (shortName.equals("LCK_M_SIU"))   return DESC_LCK_M_SIU  ;
+		if (shortName.equals("LCK_M_SIX"))   return DESC_LCK_M_SIX  ;
+		if (shortName.equals("LCK_M_UIX"))   return DESC_LCK_M_UIX  ;
+		if (shortName.equals("LCK_M_BU"))    return DESC_LCK_M_BU   ;
+		if (shortName.equals("LCK_M_RS_S"))  return DESC_LCK_M_RS_S ;
+		if (shortName.equals("LCK_M_RS_U"))  return DESC_LCK_M_RS_U ;
+		if (shortName.equals("LCK_M_RI_NL")) return DESC_LCK_M_RI_NL;
+		if (shortName.equals("LCK_M_RI_S"))  return DESC_LCK_M_RI_S ;
+		if (shortName.equals("LCK_M_RI_U"))  return DESC_LCK_M_RI_U ;
+		if (shortName.equals("LCK_M_RI_X"))  return DESC_LCK_M_RI_X ;
+		if (shortName.equals("LCK_M_RX_S"))  return DESC_LCK_M_RX_S ;
+		if (shortName.equals("LCK_M_RX_U"))  return DESC_LCK_M_RX_U ;
+		if (shortName.equals("LCK_M_RX_X"))  return DESC_LCK_M_RX_X ;
+		
+		// If not found, simply return the short name
+		return shortName;
+	}
+
+	private static final String DESC_LCK_M_SCH_S = "Schema Stability Lock"         + " - lck_m_sch_s";
+	private static final String DESC_LCK_M_SCH_M = "Schema Modification Lock"      + " - lck_m_sch_m";
+	private static final String DESC_LCK_M_S     = "Shared Lock"                   + " - lck_m_s";
+	private static final String DESC_LCK_M_U     = "Update Lock"                   + " - lck_m_u";
+	private static final String DESC_LCK_M_X     = "Exclusive Lock"                + " - lck_m_x";
+	private static final String DESC_LCK_M_IS    = "Intent Shared Lock"            + " - lck_m_is";
+	private static final String DESC_LCK_M_IU    = "Intent Update Lock"            + " - lck_m_iu";
+	private static final String DESC_LCK_M_IX    = "Intent Exclusive Lock"         + " - lck_m_ix";
+	private static final String DESC_LCK_M_SIU   = "Shared with Intent to Update"  + " - lck_m_siu";
+	private static final String DESC_LCK_M_SIX   = "Shared with Intent Exclusive"  + " - lck_m_six";
+	private static final String DESC_LCK_M_UIX   = "Update with Intent Exclusive"  + " - lck_m_uix";
+	private static final String DESC_LCK_M_BU    = "Bulk Update Lock"              + " - lck_m_bu";
+	private static final String DESC_LCK_M_RS_S  = "Key Range Shared/Shared"       + " - lck_m_rs_s";
+	private static final String DESC_LCK_M_RS_U  = "Key Range Shared/Update"       + " - lck_m_rs_u";
+	private static final String DESC_LCK_M_RI_NL = "Key Range Insert NULL"         + " - lck_m_ri_nl";
+	private static final String DESC_LCK_M_RI_S  = "Key Range Insert Shared"       + " - lck_m_ri_s";
+	private static final String DESC_LCK_M_RI_U  = "Key Range Insert Update"       + " - lck_m_ri_u";
+	private static final String DESC_LCK_M_RI_X  = "Key Range Insert Exclusive"    + " - lck_m_ri_x";
+	private static final String DESC_LCK_M_RX_S  = "Key Range Exclusive Shared"    + " - lck_m_rx_s";
+	private static final String DESC_LCK_M_RX_U  = "Key Range Exclusive Update"    + " - lck_m_rx_u";
+	private static final String DESC_LCK_M_RX_X  = "Key Range Exclusive Exclusive" + " - lck_m_rx_x";
 }

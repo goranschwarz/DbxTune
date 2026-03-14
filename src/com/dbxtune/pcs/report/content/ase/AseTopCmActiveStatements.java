@@ -307,10 +307,10 @@ public class AseTopCmActiveStatements extends AseAbstract
 					String  ShowPlanText      = _shortRstm.getValueAsString (r, pos_ShowPlanText);
 
 					if (StringUtil.countLines(MonSqlText) > 5)
-						_shortRstm.setValueAtWithOverride("above 5 rows... see table below", r, pos_MonSqlText);
+						_shortRstm.setValueAtWithOverride("See SQL Table below...", r, pos_MonSqlText); // POSSIBLE: add all SQL Statements in a "collapsible" "summary section" (note: which is not available in MS Outlook)
 					
 					if (StringUtil.countLines(ShowPlanText) > 5)
-						_shortRstm.setValueAtWithOverride("above 5 rows... see table below", r, pos_ShowPlanText);
+						_shortRstm.setValueAtWithOverride("See SQL Table below...", r, pos_ShowPlanText); // POSSIBLE: add all SQL Statements in a "collapsible" "summary section" (note: which is not available in MS Outlook)
 					
 					// Remove starting/ending '<html><pre>'
 					if (MonSqlText != null && MonSqlText.startsWith("<html><pre>") && MonSqlText.endsWith("</pre></html>"))

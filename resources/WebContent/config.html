@@ -44,70 +44,77 @@ function getParameter(key, defaultValue)
     == JS imports - JAVA SCRIPTS GOES HERE
     =======================================================================
   -->
-  <!-- JS: JQuery -->
-  <!--
-  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
-  <script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
-  -->
-
-  <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
-  <!--
-  <script type="text/javascript" src="/scripts/moment/moment.js"></script>
-  <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
-  -->
-
-  <!-- JS: Bootstrap -->
-  <!--
-  <script type="text/javascript" src="/scripts/popper/1.12.9/popper.min.js"></script>
-  <script type="text/javascript" src="/scripts/bootstrap/js/bootstrap.min.js"></script>
-  -->
-
-  <!-- JS: Selectize -->
-  <!--
-  <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
-  -->
 
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
 
+  <!-- JQuery -->
+  <script type="text/javascript"  src="/scripts/jquery/jquery-3.7.1.min.js"></script>
 
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js" integrity="sha512-57oZ/vW8ANMjR/KQ6Be9v/+/h6bq9/l3f0Oc7vn6qMqyhvPd1cvKBRWWpzu0QoneImqr2SkmO4MSqU+RpHom3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js" integrity="sha512-CryKbMe7sjSCDPl18jtJI5DR5jtkUWxPXWaLCst6QjH8wxDexfRJic2WRmRXmstr2Y8SxDDWuBO6CQC6IE4KTA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-duration-format/2.3.2/moment-duration-format.min.js" integrity="sha512-ej3mVbjyGQoZGS3JkES4ewdpjD8UBxHRGW+MN5j7lg3aGQ0k170sFCj5QJVCFghZRCio7DEmyi+8/HAwmwWWiA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js" integrity="sha512-TPh2Oxlg1zp+kz3nFA0C5vVC6leG/6mm1z9+mA81MI5eaUVqasPLO8Cuk4gMF4gUfP5etR73rgU/8PNMsSesoQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js" integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/js/selectize.min.js" integrity="sha512-IOebNkvA/HZjMM7MxL0NYeLYEalloZ8ckak+NDtOViP7oiYzG5vn6WVXyrJDiJPhl4yRdmNAG49iuLmhkUdVsQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- JQuery UI -->
+  <link    rel="stylesheet"      href="/scripts/jquery/ui/1.14.1/themes/base/jquery-ui.min.css" />
+  <link    rel="stylesheet"      href="/scripts/jquery/ui/1.14.1/themes/smoothness/theme.css" />
+  <script type="text/javascript"  src="/scripts/jquery/ui/1.14.1/jquery-ui.min.js"></script>
   
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/smoothness/theme.min.css" integrity="sha512-Q2qvb9omuMvaoo6ofA3xaiD3b1aA7BlQGYxEOTij6i4HRsDNB7K2uEUHbbymUqqFDduToacMzKNYYVRwe4H2yw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/css/selectize.default.css" integrity="sha512-Uw2oepxJJm1LascwjuUQ904kRXdxvf6dLGH5GQYTg/eZBS3U4aR1+BhpIQ1nzHXoMDa5Xi5j8rEHucyi8+9kVg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Bootstrap -->
+  <link    rel="stylesheet"      href="/scripts/bootstrap/5.3.8/css/bootstrap.min.css" />
+  <script type="text/javascript"  src="/scripts/moment-duration-format/2.3.2/moment-duration-format.min.js"></script>
+  <script type="text/javascript"  src="/scripts/bootstrap/5.3.8/js/bootstrap.bundle.js"></script> <!-- bundle has popper.js built-in -->
 
-  <link href="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.css" rel="stylesheet">
-  
-<link href="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.css" rel="stylesheet">
+  <!-- Font-Awsome -->
+  <link    rel="stylesheet"      href="/scripts/font-awesome/6.2.0/css/all.min.css" />
 
-	<!--<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/bootstrap-table.js"></script>-->
-	<!--   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/editable/bootstrap-table-editable.js"></script> -->
-	<!--   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.js"></script> -->
-	<!--   <script src="https://rawgit.com/hhurz/tableExport.jquery.plugin/master/tableExport.js"></script> -->
-	<!--<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>-->
+  <!-- Selectize -->
+  <link   rel="stylesheet"       href="/scripts/selectize/0.15.2/css/selectize.default.css" />
+  <link   rel="stylesheet"       href="/scripts/selectize/0.15.2/css/selectize.bootstrap5.css" /> <!-- Should we use DEFAULT or BOOTSTRAP-5 -->
+  <script type="text/javascript"  src="/scripts/selectize/0.15.2/js/selectize.min.js"></script>
 
-<script src="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.js"></script>
-<script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/utils.min.js"></script>
-<script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/bootstrap-table-filter-control.css">
+  <!-- Bootstrap Table -->
+  <link    rel="stylesheet"      href="/scripts/bootstrap-table/1.22.1/bootstrap-table.min.css" />
+  <script type="text/javascript"  src="/scripts/bootstrap-table/1.22.1/bootstrap-table.min.js"></script>
+  <link    rel="stylesheet"      href="/scripts/bootstrap-table/1.22.1/extensions/filter-control/bootstrap-table-filter-control.css">
+  <script type="text/javascript"  src="/scripts/bootstrap-table/1.22.1/extensions/filter-control/utils.min.js"></script>
+  <script type="text/javascript"  src="/scripts/bootstrap-table/1.22.1/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
 
-<!-- <link  href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css' rel='stylesheet'> -->
-<link  href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css' rel='stylesheet' >
-<link  href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css' rel='stylesheet'>
+  <!-- Prism - Combined files -->
+  <link   rel="stylesheet"       href='/scripts/prism/prism-1.30.0.css' />
+  <script type="text/javascript"  src='/scripts/prism/prism-1.30.0.js'></script>
+<!-- Prism - Specialized files (the above SHOULD be included in above prism-1.30.0.* files) -->
+<!-- <link   rel="stylesheet"       href='/scripts/prism/1.30.0/themes/prism-okaidia.min.css' /> -->
+<!-- <link   rel="stylesheet"       href='/scripts/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css' /> -->
+<!-- <script type="text/javascript"  src='/scripts/prism/1.30.0/prism.min.js'></script> -->
+<!-- <script type="text/javascript"  src='/scripts/prism/1.30.0/components/prism-sql.min.js'></script> -->
+<!-- <script type="text/javascript"  src='/scripts/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js'></script> -->
 
-<script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script>
-<script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script>
-<script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js'></script>
+
+<!-- old CDN Code - Above is LOCAL WEB -->
+<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js" integrity="sha512-57oZ/vW8ANMjR/KQ6Be9v/+/h6bq9/l3f0Oc7vn6qMqyhvPd1cvKBRWWpzu0QoneImqr2SkmO4MSqU+RpHom3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-duration-format/2.3.2/moment-duration-format.min.js" integrity="sha512-ej3mVbjyGQoZGS3JkES4ewdpjD8UBxHRGW+MN5j7lg3aGQ0k170sFCj5QJVCFghZRCio7DEmyi+8/HAwmwWWiA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js" integrity="sha512-TPh2Oxlg1zp+kz3nFA0C5vVC6leG/6mm1z9+mA81MI5eaUVqasPLO8Cuk4gMF4gUfP5etR73rgU/8PNMsSesoQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js" integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+<!--  <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/js/selectize.min.js" integrity="sha512-IOebNkvA/HZjMM7MxL0NYeLYEalloZ8ckak+NDtOViP7oiYzG5vn6WVXyrJDiJPhl4yRdmNAG49iuLmhkUdVsQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+
+<!--  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+<!--  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/smoothness/theme.min.css" integrity="sha512-Q2qvb9omuMvaoo6ofA3xaiD3b1aA7BlQGYxEOTij6i4HRsDNB7K2uEUHbbymUqqFDduToacMzKNYYVRwe4H2yw==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+<!--  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+<!--  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+<!--  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/css/selectize.default.css" integrity="sha512-Uw2oepxJJm1LascwjuUQ904kRXdxvf6dLGH5GQYTg/eZBS3U4aR1+BhpIQ1nzHXoMDa5Xi5j8rEHucyi8+9kVg==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+
+<!--  <link href="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.css" rel="stylesheet"> -->
+
+<!--  <script src="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.js"></script> -->
+<!--  <script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/utils.min.js"></script> -->
+<!--  <script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/bootstrap-table-filter-control.min.js"></script> -->
+<!--  <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/filter-control/bootstrap-table-filter-control.css"> -->
+
+<!--<link  href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css' rel='stylesheet' > -->
+<!--<link  href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css' rel='stylesheet'> -->
+
+<!--<script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script> -->
+<!--<script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script> -->
+<!--<script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js'></script> -->
+
 
 <style type='text/css'>
         /* Override some 'prism' formatting to be smaller & wrap long lines */
@@ -125,7 +132,7 @@ function getParameter(key, defaultValue)
   -->
   <!-- CSS: jqueri-ui -->
   <!--
-  <link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
+  <link rel="stylesheet" href="/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css">
   -->
 
   <!-- CSS: DbxCentral -->
@@ -134,22 +141,16 @@ function getParameter(key, defaultValue)
   -->
 
   <!-- CSS: Bootstrap -->
-  <!--
-  <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
-  -->
+  <!-- <link rel="stylesheet" href="/scripts/bootstrap/4.0.0/css/bootstrap.min.css"> -->
 
   <!-- CSS: Font Awsome -->
-  <!--
-  <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
-  -->
+  <!-- <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css"> -->
 
   <!-- CSS: Selectize -->
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.css"> -->
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.bootstrap3.css"> -->
-  <!--
-  <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css">
-  -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
 
   <!-- Local CSS -->
   <style type='text/css'>

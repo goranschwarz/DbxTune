@@ -1032,6 +1032,12 @@ public class SshConnection
 			// Now run the command on the remote server
 //			channel.connect(60000);
 			channel.connect();
+			
+			if (requestPty)
+			{
+				channel.setPty(true);
+				channel.setPtyType("dump"); // Minimizes Control Chars
+			}
 
 			//TODO: Handle Exceptions for reconnect (as below code does)
 			return channel;
@@ -1461,6 +1467,10 @@ public class SshConnection
 		{
 			throw new IOException("The SSH connection to the host '" + _hostname + "' was null. The connection has not been initialized OR someone has closed the connection.");
 		}
+
+		// OR should we do: To get more predictive output from tools like: iostat etc...
+		//  -- export LC_ALL="en_US.UTF-8"
+		//  -- export S_TIME_FORMAT=ISO
 
 		// EXECUTE
 		String output = execCommandOutputAsStr("echo ${LC_ALL:-${LC_CTYPE:-${LANG}}}");

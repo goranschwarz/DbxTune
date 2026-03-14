@@ -479,12 +479,12 @@ extends MonitorIo
 
 		// Skip the header line
 //		md.setSkipRows("device", "Device:");
-		md.setSkipRows("device", "^[Dd]evice.*"); // later versions (11,5,7 ???) of iostat do NOT have the ':' in the string...
+		md.addSkipRows("device", "^[Dd]evice.*"); // later versions (11,5,7 ???) of iostat do NOT have the ':' in the string...
 
 		// Skip "loop" devices
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorIo.skipLoopDevices", true))
 		{
-			md.setSkipRows("device", "^loop[0-9]+");
+			md.addSkipRows("device", "^loop[0-9]+");
 //			md.setSkipRows("device", "^/dev/loop[0-9]+"); // I probably mixed this one up with 'df -kP', where we have '/dev/loop...'
 		}
 

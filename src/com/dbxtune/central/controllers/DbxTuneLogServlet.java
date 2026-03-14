@@ -317,7 +317,7 @@ public class DbxTuneLogServlet extends HttpServlet
 
 			out.println("");
 			out.println("// YYYY-MM-DD hh:mm:ss ");
-			out.println("function dateToIsoStr(now) ");
+			out.println("function dateToIsoStr(now, includeMs = false) ");
 			out.println("{ ");
 			out.println("  let year   = '' + now.getFullYear(); ");
 			out.println("  let month  = '' + (now.getMonth() + 1); if (month.length  == 1) { month  = '0' + month;  } ");
@@ -325,8 +325,14 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("  let hour   = '' + now.getHours();       if (hour.length   == 1) { hour   = '0' + hour;   } ");
 			out.println("  let minute = '' + now.getMinutes();     if (minute.length == 1) { minute = '0' + minute; } ");
 			out.println("  let second = '' + now.getSeconds();     if (second.length == 1) { second = '0' + second; } ");
-			out.println("  return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second; ");
-			out.println("} ");
+			out.println("  let str = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second; ");
+			out.println("  ");
+			out.println("  if (includeMs) {");
+			out.println("    const ms = String(now.getMilliseconds()).padStart(3, '0');");
+			out.println("    str += '.' + ms;");
+			out.println("  }");
+			out.println("  ");
+			out.println("  return str;");			out.println("} ");
 			out.println("");
 
 			out.println("");
@@ -372,7 +378,8 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("");
 			out.println("function logTailConnectWs() ");
 			out.println("{ ");
-			out.println("  logTailWebSocket = new WebSocket('ws://' + location.host + '/logtail?name="+inputName+"'); ");
+			out.println("  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'; ");
+			out.println("  logTailWebSocket = new WebSocket(protocol + location.host + '/logtail?name="+inputName+"'); ");
 			out.println("");
 			out.println("  logTailWebSocket.onopen = function(event) ");
 			out.println("  { ");
@@ -411,6 +418,15 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("} ");
 			out.println("");
 
+			out.println("");
+			out.println("  function addMarkerEntry() ");
+			out.println("  { ");
+			out.println("	 document.getElementById('logLine-feedback').innerHTML = 'Added marker -- ' + dateToIsoStr(new Date()); ");
+//			out.println("    document.getElementById('log').insertAdjacentHTML('beforeend', '<b><font color=\"blue\"><<<<<<--------- Added marker (' + dateToIsoStr(new Date()) + ') --------->>>>>> \\n</font></b>'); ");
+			out.println("    document.getElementById('log').insertAdjacentHTML('beforeend', '<b><font color=\"blue\">' + dateToIsoStr(new Date(), true) + ' -- Added marker \\n</font></b>'); ");
+			out.println("  } ");
+			out.println("");
+			
 			out.println("//----------------------------------------------------------------------");
 			out.println("// When window is loaded...");
 			out.println("//----------------------------------------------------------------------");
@@ -428,6 +444,20 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("  { ");
 			out.println("    alert('The browser does not support WebSocket, log-tail will not be done.'); ");
 			out.println("  } ");
+			out.println("");
+			out.println("  //----------------------------------------------------------------------");
+			out.println("  // Install listener on for 'Enter key' on 'document' (if not inside an input field) and insert a 'marker' for easier tracking... Just as we normally do with tail to see -where-we-are-in-time-");
+			out.println("  //----------------------------------------------------------------------");
+			out.println("  document.addEventListener('keydown', (event) => { ");
+			out.println("    const isField = event.target.matches('input, textarea, [contenteditable=\"true\"]'); ");
+			out.println("    if ( ! isField) {               ");
+			out.println("      if (event.key === 'Enter') {  ");
+			out.println("        event.preventDefault();     ");
+			out.println("        addMarkerEntry();           ");
+			out.println("      }                             ");
+			out.println("    }                               ");
+			out.println("  });                               ");
+			out.println("");
 			out.println("} ");
 			out.println("");
 		}
@@ -563,6 +593,8 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 5000) + "'/><br>");
 			out.println("<br>");
 			out.println("<button onclick='refreshWithFilter()'>Refresh page with above filter</button>");
+			out.println("&nbsp;&nbsp;");
+			out.println("<button onclick='addMarkerEntry()'>Add Marker entry in log (or just press enter)</button>");
 			out.println("</div>");
 			out.println("<br>");
 
@@ -683,7 +715,7 @@ public class DbxTuneLogServlet extends HttpServlet
 
 //		out.println("<script type='text/javascript' src='/scripts/tablefilter/tablefilter.js'></script>");
 		
-		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.js'></script>");
+		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
 		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'> ");

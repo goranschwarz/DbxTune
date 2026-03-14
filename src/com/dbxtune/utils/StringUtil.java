@@ -1005,6 +1005,39 @@ public class StringUtil
 	 * 
 	 * @return true if any match, otherwise False
 	 */
+	public static boolean equalsAny(String strToCheck, Collection<String> equalsAny)
+	{
+		if (strToCheck == null)
+			return false;
+
+		for (String str : equalsAny)
+		{
+			if (strToCheck.equals(str))
+				return true;
+		}
+		return false;
+	}
+	public static boolean equalsAnyIgnoreCase(String strToCheck, Collection<String> equalsAny)
+	{
+		if (strToCheck == null)
+			return false;
+
+		for (String str : equalsAny)
+		{
+			if (strToCheck.equalsIgnoreCase(str))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Check if "any" of the strings is equal to
+	 * 
+	 * @param strToCheck Sting to check
+	 * @param equalsAny  if strToCheck is equal to any of the strings here...
+	 * 
+	 * @return true if any match, otherwise False
+	 */
 	public static boolean equalsAny(String strToCheck, String... equalsAny)
 	{
 		if (strToCheck == null)
@@ -3746,6 +3779,24 @@ public class StringUtil
 		return str;
 	}
 	
+	/**
+	 * Just put the '<pre><code>' tab around the passed string
+	 * @param str
+	 * @return
+	 */
+	public static String toHtmlPre(String str)
+	{
+		String out = ""
+				+ "<pre>"
+				+ "<code>"
+				+ str
+				+ "</code>"
+				+ "</pre>"
+				;
+
+		return out;
+	}
+
 	/**
 	 * Produce a 2 column HTML Table from a <code>Map</code> with NO column headers
 	 * 

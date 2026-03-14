@@ -2,6 +2,7 @@
 
 ## First parameter should be the server name
 srvName=$1
+shortSrvName=${srvName%%.*} ## only keep 'host1' of the srvName (host1.acme.com)
 
 ## Check that first parameter is NOT empty or a switch
 if [ -z "${srvName}" ] || [[ ${srvName} == -* ]]
@@ -48,7 +49,7 @@ saveDir=${dbxCentralBase}/data
 #export DBXTUNE_JVM_SWITCHES="-Dnogui.password.print=true"
 
 ## Override settings for specific server names
-#case ${srvName} in
+#case ${shortSrvName} in
 #    srvname1 | srvname2)
 #        DBXTUNE_JVM_SWITCHES="-Xmx4G"
 #        ;;

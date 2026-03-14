@@ -73,6 +73,7 @@ import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.text.WordUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -2028,6 +2029,10 @@ implements Cloneable, ITableTooltip
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
+		// setting table or td: |style='width: 1200px;'| did NOT work, lets try to "inject" or "break" any *long* SQL Text into several lines
+		int     maxCellCharLen = 255;
+		boolean injectNewlines = true;
+
 		if (addOuterHtmlTags)
 			sb.append("<html>\n");
 
@@ -2036,18 +2041,20 @@ implements Cloneable, ITableTooltip
 		String cellPadding = borders ? ""               : " cellpadding=1";
 		String cellSpacing = borders ? ""               : " cellspacing=0";
 
-		String stripeColor = "#f2f2f2"; // Light gary; //Configuration.getCombinedConfiguration().getProperty(   PROPKEY_HtmlToolTip_stripeColor,   DEFAULT_HtmlToolTip_stripeColor);
+		String stripeColor = "#f2f2f2"; // Light gray; //Configuration.getCombinedConfiguration().getProperty(   PROPKEY_HtmlToolTip_stripeColor,   DEFAULT_HtmlToolTip_stripeColor);
 		int    maxStrLen   = Integer.MAX_VALUE;        //Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_HtmlToolTip_maxCellLength, DEFAULT_HtmlToolTip_maxCellLength);
 		
 		// One row for every column
-		sb.append("<table class='dbx-table-basic'").append(border).append(cellPadding).append(cellSpacing).append(">\n");
+		sb.append("<table style='width: 1200px;' class='dbx-table-basic'").append(border).append(cellPadding).append(cellSpacing).append(">\n");
 		for (int c=0; c<cols; c++)
 		{
+			String colName = getColumnName(c);
+
 			String stripeTag = "";
 			if (stripedRows && ((c % 2) == 0) )
 				stripeTag = " bgcolor='" + stripeColor + "'";
 			
-			Object objVal = getValue(whatData, mrow,c); // DATA_ABS, DATA_DIFF, DATA_RATE
+			Object objVal = getValue(whatData, mrow, c); // DATA_ABS, DATA_DIFF, DATA_RATE
 			String strVal = "";
 			if (objVal != null)
 			{
@@ -2071,8 +2078,14 @@ implements Cloneable, ITableTooltip
 						if ("TO_ESCAPED_TEXT".equals(conf))
 						{
 							// if there are any XML tag in the field... Then surround the value with a '<pre>' tag and escape all "xml" tags etc...
-							strVal = "<pre>" + StringEscapeUtils.escapeHtml4(strVal) + "</pre>";
-//							strVal = "<pre>" + StringEscapeUtils.escapeXml10(strVal) + "</pre>";
+							String tmpStr = StringEscapeUtils.escapeHtml4(strVal);
+
+							// Inject newlines if it's TO LONG
+							if (tmpStr.length() > maxCellCharLen)
+								tmpStr =  WordUtils.wrap(tmpStr, maxCellCharLen, "\n", false);
+
+							strVal = "<pre>" + tmpStr + "</pre>";
+							injectNewlines = false;
 						}
 					}
 					else if (strVal.indexOf("<ShowPlanXML xmlns=") >= 0)
@@ -2082,6 +2095,7 @@ implements Cloneable, ITableTooltip
 						{
 							// Get HTML (what type/look-and-feel) is decided by configuration in: SqlServerShowPlanXmlTransformer.PROKKEY_transform
 							strVal = t.toHtml(strVal);
+							injectNewlines = false;
 						}
 						catch (Exception ex)
 						{
@@ -2103,11 +2117,22 @@ implements Cloneable, ITableTooltip
 					strVal =  strVal.substring(0, maxStrLen);
 					strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+").</i></font>";
 				}
+
+				// Specific column that we should NOT inject newlines into
+				if (StringUtil.equalsAny(colName, "SpidLocks", "BlockedSpidsInfo", "SpidWaitInfo", "query_plan", "LiveQueryPlan")) // for: SqlServerTune
+					injectNewlines = false;
+				
+				// inject breaks in LONG Lines
+				if (injectNewlines && strValLen > maxCellCharLen)
+				{
+					strVal =  WordUtils.wrap(strVal, maxCellCharLen, "<br>\n", false);
+				}
 			}
 			
+			// To NOT make this to wide (especially on IOS devices, lets make the second column, which can be very wide, to a max width)
 			sb.append("<tr").append(stripeTag).append(">\n");
-			sb.append("  <td nowrap><b>").append(getColumnName(c)).append("</b>&nbsp;</td>\n");
-			sb.append("  <td nowrap>")   .append(strVal)          .append("</td>\n");
+			sb.append("  <td nowrap><b>")                    .append(colName).append("</b>&nbsp;</td>\n");
+			sb.append("  <td nowrap style='width: 1200px;'>").append(strVal ).append("</td>\n");
 			sb.append("</tr>\n");
 		}
 		sb.append("</table>\n");

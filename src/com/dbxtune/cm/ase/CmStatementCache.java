@@ -140,6 +140,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_INS_DEL_PER_SAMPLE  = "StmntCacheInsDelPerSample";
 	public static final String GRAPH_NAME_MEM_USAGE           = "StmntCacheMemUsage";
 	public static final String GRAPH_NAME_NUM_STMNTS_IN_CACHE = "NumStmntsInCache";
+	public static final String GRAPH_NAME_RECOMPILE_REASON    = "RecompilReason";
 
 	private void addTrendGraphs()
 	{
@@ -213,6 +214,19 @@ extends CountersModel
 			"Number of Statement in the Statement Cache ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumStatements" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_RECOMPILE_REASON,
+			"Number of Recompiles in the Statement Cache", 	                           // Menu CheckBox text
+			"Number of Recompiles in the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "SchemaChanges", "PlanFlushes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
 			false, // is Percent Graph
@@ -492,6 +506,20 @@ extends CountersModel
 			
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData(StatementCache:NumStmntsInCache): NumStatements='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_RECOMPILE_REASON.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getRateValueSum("NumRecompilesSchemaChanges");
+			arr[1] = this.getRateValueSum("NumRecompilesPlanFlushes");
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("updateGraphData(StatementCache:"+tgdp.getName()+"): NumRecompilesSchemaChanges='"+arr[0]+"', NumRecompilesPlanFlushes='"+arr[1]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

@@ -44,8 +44,8 @@ extends Throwable
 
 	private static final long serialVersionUID = 1L;
 
-	public static final String PROPKEY_AlarmDbxCentralBaseUrl = "alarm.dbxCentral.base.url";
-	public static final String DEFAULT_AlarmDbxCentralBaseUrl = ""; // NO DEFAULT
+//	public static final String PROPKEY_AlarmDbxCentralBaseUrl = "alarm.dbxCentral.base.url";
+//	public static final String DEFAULT_AlarmDbxCentralBaseUrl = ""; // NO DEFAULT
 	
 	public static String SERVICE_TYPE_GENERIC   = "GENERIC"; // probably only used in: AlarmEventCommunicationTimeout
 	public static String SERVICE_TYPE_ASE       = "ASE";
@@ -201,7 +201,7 @@ extends Throwable
 		long m5  = 5  * m1;   // 5 minutes in milliseconds. 
 		long m15 = 15 * m1;   // 15 minutes in milliseconds. 
 
-		String dbxCentralBaseUrl = Configuration.getCombinedConfiguration().getProperty(PROPKEY_AlarmDbxCentralBaseUrl, DEFAULT_AlarmDbxCentralBaseUrl);
+//		String dbxCentralBaseUrl = Configuration.getCombinedConfiguration().getProperty(PROPKEY_AlarmDbxCentralBaseUrl, DEFAULT_AlarmDbxCentralBaseUrl);
 
 		String srvName           = private_getServerName();
 		String startTime         = TimeUtils.toStringYmdHms(getCrTime() - m15); 
@@ -217,11 +217,12 @@ extends Throwable
 			markEndTime = TimeUtils.toStringYmdHms(getCancelTime());
 		}
 
-		// Base URL
-		if (StringUtil.isNullOrBlank(dbxCentralBaseUrl))
-		{
-			dbxCentralBaseUrl = DailySummaryReportAbstract.getDbxCentralBaseUrl();
-		}
+//		// Base URL
+//		if (StringUtil.isNullOrBlank(dbxCentralBaseUrl))
+//		{
+//			dbxCentralBaseUrl = DailySummaryReportAbstract.getDbxCentralPublicBaseUrl();
+//		}
+		String dbxCentralBaseUrl = DailySummaryReportAbstract.getDbxCentralPublicBaseUrl();
 		
 		// Or should we "remove": 'markStartTime' and 'markEndTime' if the Alarm is ACTIVE ???
 		
@@ -252,6 +253,19 @@ extends Throwable
 	 * @return true if we should always send, false if we should look at the "filter" settings.
 	 */
 	public boolean alwaysSend()
+	{
+		return false;
+	}
+
+	/**
+	 * If it's an Alarm Raised, where we know that it's a "One Shot" Alarm that we don't need that a "check" has to be done
+	 * How long the Alarms will live is dictated by TimeToLive before it can be cancelled
+	 * <p>
+	 * This method is primarily used by AlarmHandler.checkForCancelations()
+	 * 
+	 * @return 
+	 */
+	public boolean isAlwaysCancelable()
 	{
 		return false;
 	}

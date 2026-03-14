@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
@@ -49,15 +50,23 @@ public class UserDefinedChartManager
 
 	public static final String USER_DEFINED_FILE_POST = ".ud.content.props";
 
+	private static AtomicBoolean _reInitialize = new AtomicBoolean(true);
 
 	//----------------------------------------------------------------
 	// BEGIN: instance
 	private static UserDefinedChartManager _instance = null;
-	public static UserDefinedChartManager getInstance()
+	public static synchronized UserDefinedChartManager getInstance()
 	{
+		if (_reInitialize.get())
+		{
+			_instance = null;
+		}
+
 		if (_instance == null)
 		{
 			_instance = new UserDefinedChartManager();
+			_reInitialize.set(false);
+
 			//throw new RuntimeException("UserDefinedChartManager dosn't have an instance yet, please set with setInstance(instance).");
 		}
 		return _instance;
@@ -133,18 +142,31 @@ public class UserDefinedChartManager
 	 * Called from {@link Configuration.FileWatcher} when file has been changed.
 	 * @param fullPath
 	 */
-	public void onConfigChange(Path fullPath)
+	public void onConfigFileChange(Path fullPath)
 	{
-		_logger.info("Changes to User Defined Chart file '" + fullPath + "'.");
+		_logger.info("Reinitialize due to: CHANGED - User Defined Chart file '" + fullPath + "'.");
+		_reInitialize.set(true);
 
-		for (IUserDefinedChart chart : _charts.values())
-		{
-			Path chartCfgPath = Paths.get(chart.getConfigFilename());
-			if (chartCfgPath.equals(fullPath))
-			{
-				chart.onConfigFileChange(fullPath);
-			}
-		}
+//		_logger.info("Changes to User Defined Chart file '" + fullPath + "'.");
+//
+//		for (IUserDefinedChart chart : _charts.values())
+//		{
+//			Path chartCfgPath = Paths.get(chart.getConfigFilename());
+//			if (chartCfgPath.equals(fullPath))
+//			{
+//				chart.onConfigFileChange(fullPath);
+//			}
+//		}
+	}
+	public void onConfigFileAdd(Path fullPath)
+	{
+		_logger.info("Reinitialize due to: ADDED - User Defined Chart file '" + fullPath + "'.");
+		_reInitialize.set(true);
+	}
+	public void onConfigFileRemove(Path fullPath)
+	{
+		_logger.info("Reinitialize due to: REMOVED - User Defined Chart file '" + fullPath + "'.");
+		_reInitialize.set(true);
 	}
 
 	

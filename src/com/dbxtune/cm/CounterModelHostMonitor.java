@@ -157,6 +157,12 @@ extends CountersModel
 //		return cm;
 //	}
 
+	/** Get HostMonitor */
+	public HostMonitor getHostMonitor()
+	{
+		return _hostMonitor;
+	}
+
 	/** Check if we are connected to a specififc OS Vendor */
 	public boolean isConnectedToVendor(HostMonitor.OsVendor vendor)
 	{

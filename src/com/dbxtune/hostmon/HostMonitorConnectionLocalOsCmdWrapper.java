@@ -56,6 +56,9 @@ extends HostMonitorConnectionLocalOsCmd
 	/** hostname */
 	private String _hostname = null;
 
+	/** hostname */
+	private String _username = null;
+
 	/** output from 'uname -a', which was made while the connection was created. */
 	private String _uname = null;
 
@@ -101,6 +104,27 @@ extends HostMonitorConnectionLocalOsCmd
 		
 //		try { return InetAddress.getLocalHost().getHostName(); } // Or possibly call OS 'hostname'
 //		catch (Exception ignore) { return "-unknown-"; }
+	}
+
+	@Override
+	public String getUsername()
+	{
+		// Return CACHED value
+		if (_username != null)
+			return _username;
+
+		try
+		{
+			String output = execCommandOutputAsStr("whoami");
+			if (StringUtil.hasValue(output))
+				_username = output;
+			return output;
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Problems getting Hostname, using 'whoami', returing '-unknown-' instead.", ex);
+			return "-unknown-";
+		}
 	}
 
 	@Override
@@ -544,9 +568,15 @@ extends HostMonitorConnectionLocalOsCmd
 //System.out.println("HostMonitorConnectionLocalOsCmdWrapper.WRAPPER-1.execCommandOutputAsStr(wrapperCmd=|" + wrapperCmd + "|, sendCmd=|" + sendCmd + "|): <<<<<<<< returned=|" + output + "|");
 		return output;
 	}
-		
+
 	@Override
 	public ExecutionWrapper executeCommand(String cmd) throws Exception
+	{
+		return executeCommand(cmd, false);
+	}
+	
+	@Override
+	public ExecutionWrapper executeCommand(String cmd, boolean isStreamingCommand) throws Exception
 	{
 		if (_envMap == null)
 			_envMap = new HashMap<>();
@@ -596,6 +626,12 @@ extends HostMonitorConnectionLocalOsCmd
 
 		@Override
 		public void executeCommand(String wrapperCmd) throws Exception
+		{
+			executeCommand(wrapperCmd, false);
+		}
+
+		@Override
+		public void executeCommand(String wrapperCmd, boolean isStreamingCommand) throws Exception
 		{
 			// Reset sleepCount on every execution
 			_sleepCount = 0;

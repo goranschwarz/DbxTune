@@ -11,36 +11,39 @@
     =======================================================================
   -->
   <!-- JS: JQuery -->
-  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.0.min.js"></script>
-  <script type="text/javascript" src="/scripts/jquery/ui/1.13.2/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.7.1.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/ui/1.14.1/jquery-ui.min.js"></script>
 
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
   <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
 
   <!-- JS: Bootstrap -->
-  <script type="text/javascript" src="/scripts/popper/1.12.9/popper.min.js"></script>
-  <script type="text/javascript" src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+<!--<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
+<!--<script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
+  <script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 
   <!-- JS: Selectize -->
   <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
 
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
-
+  <script type="text/javascript" src="/scripts/js/dbxGraphPicker.js"></script>
   <!--
     =======================================================================
     == CSS imports - STYLES SHEETS GOES HERE
     =======================================================================
   -->
   <!-- CSS: jqueri-ui -->
-  <link rel="stylesheet" href="/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css">
+  <link rel="stylesheet" href="/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css">
 
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
+  <link rel="stylesheet" href="/scripts/css/dbxGraphPicker.css">
 
   <!-- CSS: Bootstrap -->
-  <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
+<!--<link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> --> 
+  <link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
 
   <!-- CSS: Font Awsome -->
   <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -145,6 +148,85 @@
 		overflow-y: auto;
 	}
   </style>
+
+
+  <!-- CSS for Bootstrap "sub menu"-->
+  <style>
+	.dropdown-submenu {
+		position: relative;
+	}
+
+	.dropdown-submenu .dropdown-menu {
+		top: 0;
+		left: 100%;
+		margin-top: -1px;
+		display: none;
+	}
+
+	.dropdown-submenu:hover > .dropdown-menu,
+	.dropdown-submenu.show > .dropdown-menu {
+		display: block;
+	}
+
+	/* Flip submenu to the left if near right edge */
+	.dropdown-submenu .dropdown-menu.dropdown-menu-left {
+		left: auto;
+		right: 100%;
+	}
+
+	.dropdown-submenu .dropdown-submenu > a {
+		white-space: nowrap;
+		padding-right: 2rem;
+	}
+
+	/* Arrow indicator */
+	.dropdown-submenu > a::after {
+		float: right;
+		margin-left: 0.5em;
+		margin-top: 0.4em;
+		vertical-align: middle;
+		content: "";
+		border-top: 0.3em solid transparent;
+		border-right: 0;
+		border-bottom: 0.3em solid transparent;
+		border-left: 0.3em solid;
+	}
+
+  </style>
+
+  <!-- JS for Bootstrap "sub menu"-->
+  <script>
+	// Initialize: Dbx Graph Picker Modal
+	dbxInitGraphPickerModal();
+  
+	// Initialize submenu behavior (call once after DOM is ready)
+	function initSubmenus() 
+	{
+		// Hover behavior (desktop)
+		$(document).on('mouseenter', '.dropdown-submenu', function() {
+			const submenu = $(this).children('.dropdown-menu');
+			// Check if submenu would overflow right edge, flip if needed
+			const rect = submenu[0].getBoundingClientRect();
+			if (rect.right > window.innerWidth) {
+				submenu.addClass('dropdown-menu-left');
+			}
+			submenu.show();
+		}).on('mouseleave', '.dropdown-submenu', function() {
+			$(this).children('.dropdown-menu').hide();
+		});
+	
+		// Click behavior (mobile/touch)
+		$(document).on('click', '.dropdown-submenu > a', function(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			const $submenu = $(this).next('.dropdown-menu');
+			const isVisible = $submenu.is(':visible');
+			// Close all sibling submenus
+			$(this).closest('.dropdown-menu').find('.dropdown-menu').hide();
+			$submenu.toggle(!isVisible);
+		});
+	}
+  </script>
 
 </head>
 
@@ -466,6 +548,49 @@
 			</div>
 		</div>
 	</div>
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: dbxGraphPickerModal
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<div class="modal fade" id="dbxGraphPickerModal" tabindex="-1" role="dialog">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Select Graphs — <span id="dbxGraphPickerServerName"></span></h5>
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+				</div>
+				<div class="modal-body">
+					<div class="input-group mb-3">
+						<input type="text" id="dbxGraphPickerSearch" class="form-control" placeholder="Search by collector, graph name or category...">
+						<div class="input-group-append">
+							<button class="btn btn-outline-secondary" type="button" id="dbxGraphPickerClearSearch">Clear</button>
+						</div>
+					</div>
+					<div class="mb-2">
+						<button class="btn btn-sm btn-outline-primary"   id="dbxGraphPickerSelectAll">Select All Visible</button>
+						<button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerClearAll">Clear All</button>
+						<button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerExpandAll">Expand all Groups</button>
+						<button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerCollapseAll">Close all Groups</button>
+						<span class="ml-3 small" id="dbxGraphPickerSelectedCountWrap"><span id="dbxGraphPickerSelectedCount">0</span> selected</span>
+						<span class="ml-3">
+							<label class="text-muted small mb-0" for="dbxGraphPickerGcol">Columns:</label>
+							<input type="number" id="dbxGraphPickerGcol" class="form-control form-control-sm d-inline-block ml-1"
+								min="1" max="10" placeholder="default" style="width: 80px;">
+						</span>
+					</div>
+					<div id="dbxGraphPickerList">
+						<!-- populated dynamically by dbxGpRender() -->
+					</div>
+				</div>
+				<div class="modal-footer">
+					<small class="text-muted mr-auto">🟡 highlighted = visible at startup by default</small>
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary"   id="dbxGraphPickerOk" data-toggle="tooltip" data-placement="top" title="Opens graphs in a new tab — Tip: Press Ctrl+D in that tab to bookmark your selection">Open Selected Graphs</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 
 	<script>
 		function loadUrlWithProgressBarIntoNewTab(url, title) {
@@ -1613,6 +1738,9 @@ Active Alarms
 						+ '    <div class="dropdown-divider"></div>';
 				}
 
+//				const graphsSubmenuHtml = "";
+				const graphsSubmenuHtml = buildGraphsSubmenu(serverName, startTime);
+
 				html += ''
 						+ '<div class="btn-group">'
 						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
@@ -1622,6 +1750,13 @@ Active Alarms
 						+ '  <div class="dropdown-menu">'
 						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
 						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
+						+ '    <a class="dropdown-item" href="#" onclick=\'dbxOpenGraphPickerModal("' + serverName + '", "' + startTime + '"); return false;\'>Select <b>Graphs</b> to View...</a>'
+//						+ '    <div class="dropdown-submenu">'
+//						+ '      <a class="dropdown-item dropdown-toggle" href="#">Browse <b>Graphs</b> by Collector Name</a>'
+//						+ '      <div class="dropdown-menu">'
+//						+ graphsSubmenuHtml
+//						+ '      </div>'
+//						+ '    </div>'
 						+ '    <div class="dropdown-divider"></div>'
 						+ '    <a class="dropdown-item" href="/report?op=viewLatest&name='+serverName+'" target="_blank">Open <b>Latest</b> Daily Summary Report</a>'
 						+ '    <a class="dropdown-item" href="/overview#dsr-srv-'+serverName+'" target="_blank">View <b>List</b> of <b>all</b> Daily Summary Report for this Server</a>'
@@ -1634,6 +1769,7 @@ Active Alarms
 						+ '    <div class="dropdown-divider"></div>'
 						+ ccMgtButton
 						+ '    <div class="dropdown-divider"></div>'
+						+ '    <a class="dropdown-item" href="/api/space/forecast?sparklineWidth=default&days=default&period=default&outType=default&type=all&srv='+serverName+'" target="_blank">Space Forecast Report</a>'
 						+ '    <a class="dropdown-item" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
 						+ '  </div>'
 						+ '</div>';
@@ -1642,6 +1778,84 @@ Active Alarms
 
 		return html;
 	}
+
+	// Build the graphs submenu from API data
+//	async function buildGraphsSubmenu(serverName, startTime) 
+	function buildGraphsSubmenu(serverName, startTime) 
+	{
+		let graphsMenuHtml = '';
+		
+		try {
+//			const response = await fetch(`/api/graphs?sessionName=${serverName}`);
+//			const graphs = await response.json();
+//			const response = fetch(`/api/graphs?sessionName=${serverName}`);
+//			const graphs = response.json();
+
+			let data = null;
+			$.ajax({
+				url: `/api/graphs?sessionName=${serverName}`,
+				async: false,
+				dataType: 'json',
+				success: function(response) {
+					data = response;
+				},
+				error: function(xhr, status, err) {
+					console.error('Failed to load graphs for ' + serverName, status, err);
+				}
+			});
+			
+			if (!data) 
+				return '<a class="dropdown-item disabled" href="#">Failed to load graphs</a>';
+
+		//	console.log('DEBUG: graphs API response:', data);
+
+			// Handle if data is wrapped in an object, e.g. { graphs: [...] } or { data: [...] }
+			let graphs = Array.isArray(data) ? data 
+			           : Array.isArray(data.graphs) ? data.graphs
+			           : Array.isArray(data.data)   ? data.data
+			           : Object.values(data).find(v => Array.isArray(v)); // fallback: first array found
+			
+			if (!graphs || graphs.length === 0) {
+				console.warn('No graphs array found in response', data);
+				return '<a class="dropdown-item disabled" href="#">No graphs available</a>';
+			}
+			
+			// Group graphs by cmName
+			const grouped = {};
+			graphs.forEach(g => {
+				if (!grouped[g.cmName]) 
+					grouped[g.cmName] = [];
+				grouped[g.cmName].push(g);
+			});
+
+			// Build submenu HTML
+			Object.entries(grouped).forEach(([cmName, entries]) => {
+				graphsMenuHtml += `
+					<div class="dropdown-submenu">
+						<a class="dropdown-item dropdown-toggle" href="#">${cmName}</a>
+						<div class="dropdown-menu">
+							${entries.map(g => `
+								<a class="dropdown-item" 
+									href="/graph.html?subscribe=true&startTime=${startTime}&sessionName=${serverName}&graphList=${g.tableName}"
+									target="_blank"
+									onclick='return openGraphPage("server-graph", "${serverName}", "${g.tableName}")'>
+									${g.graphLabel}
+								</a>
+							`).join('')}
+						</div>
+					</div>`;
+			});
+		} 
+		catch (e) 
+		{
+			console.error('Failed to load graphs menu', e);
+			graphsMenuHtml = '<a class="dropdown-item disabled" href="#">Failed to load graphs</a>';
+		}
+
+	//	console.log("DEBUG: buildGraphsSubmenu RETURNS: " + graphsMenuHtml, graphsMenuHtml);
+		return graphsMenuHtml;
+	}
+	
 
 	//-----------------------------------------------------------
 	// get SERVERS

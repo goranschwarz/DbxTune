@@ -243,7 +243,7 @@ System.out.println("DEBUG: Configuration.WatchService: Found changes for file '"
 							if (isUserDefinedContent)
 							{
 								UserDefinedChartManager udChartManager = UserDefinedChartManager.getInstance();
-								udChartManager.onConfigChange(fullPath);
+								udChartManager.onConfigFileChange(fullPath);
 							}
 						}
 

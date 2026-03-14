@@ -178,7 +178,7 @@ extends CmOsAbstractPanel
 				_hostmonThreadNotInit_lbl  .setVisible( false );
 				_hostmonThreadIsRunning_lbl.setVisible(   isRunning || !isStreamingCmd);
 				_hostmonThreadIsStopped_lbl.setVisible( ! isRunning && isStreamingCmd);
-				_hostmonHostname_lbl       .setText("<html> Host: <b>" + hostMonitor.getHostname() + "</b></html>");
+				_hostmonHostname_lbl       .setText("<html> Host: <b>" + hostMonitor.getHostname() + "</b>, as user: " + hostMonitor.getUsername() + "</html>");
 				_hostmonStart_but          .setVisible( ! isRunning && isStreamingCmd);
 				_hostmonStop_but           .setVisible(   isRunning && isStreamingCmd);
 

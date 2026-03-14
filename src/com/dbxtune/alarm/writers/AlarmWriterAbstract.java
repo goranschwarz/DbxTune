@@ -35,6 +35,7 @@ import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.pcs.IPersistWriter;
 import com.dbxtune.pcs.PersistWriterToHttpJson;
 import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
@@ -94,8 +95,8 @@ implements IAlarmWriter
 	{
 	}
 
-	public static final String  PROPKEY_dbxCentralUrl = "AlarmWriter.dbxCentralUrl";
-	public static final String  DEFAULT_dbxCentralUrl = "";
+	public static final String  PROPKEY_dbxCentralUrl = DailySummaryReportAbstract.PROPKEY_DbxCentralPublicBaseUrl;
+	public static final String  DEFAULT_dbxCentralUrl = DailySummaryReportAbstract.DEFAULT_DbxCentralPublicBaseUrl;
 
 	@Override
 	/**
@@ -104,56 +105,76 @@ implements IAlarmWriter
 	 */
 	public String getDbxCentralUrl()
 	{
-		String dbxCentralUrl = getConfiguration().getProperty(PROPKEY_dbxCentralUrl, DEFAULT_dbxCentralUrl);
-		
-		if (StringUtil.isNullOrBlank(dbxCentralUrl))
+		// Properties OVERRIDES any of the below logics
+		String baseUrl = Configuration.getCombinedConfiguration().getProperty(DailySummaryReportAbstract.PROPKEY_DbxCentralPublicBaseUrl, DailySummaryReportAbstract.DEFAULT_DbxCentralPublicBaseUrl);
+		if (StringUtil.hasValue(baseUrl))
 		{
-			// if it's not configured...
-			// can we grab the URL from PCS PersistWriterToHttpJsonRest
-			// and if it points to 'localhost:8080' then -->> get current hostname
-			if (PersistentCounterHandler.hasInstance())
-			{
-				PersistentCounterHandler pcs = PersistentCounterHandler.getInstance();
-				List<IPersistWriter> writers = pcs.getWriters();
-				for (IPersistWriter writer : writers)
-				{
-					if (writer instanceof PersistWriterToHttpJson)
-					{
-						try
-						{
-							PersistWriterToHttpJson dbxCentralWriter = (PersistWriterToHttpJson) writer;
-							Configuration conf = dbxCentralWriter.getConfig();
-							String url = conf.getProperty("PersistWriterToHttpJson.url", null);
-
-//							public static final String  PROPKEY_url               = "PersistWriterToHttpJson.url";
-//							public static final String  DEFAULT_url               = "http://localhost:8080/api/pcs/receiver";
-							
-							// yes we found it...
-							if (url != null && url.endsWith("/api/pcs/receiver"))
-							{
-								URI uri = new URI(url);
-								String host = uri.getHost();
-								int    port = uri.getPort(); // -1 if not defined
-									
-								// Try to replace 'localhost' with our current hostname...
-								if ("localhost".equals(host))
-								{
-									host = InetAddress.getLocalHost().getCanonicalHostName();
-								}
-									
-								if (port < 0)
-									dbxCentralUrl = "http://" + host;
-								else
-									dbxCentralUrl = "http://" + host + ":" + port;
-							}
-						}
-						catch(Exception ignore) {}
-					}
-				}
-			}
+			return baseUrl;
 		}
+
+		return DailySummaryReportAbstract.getDbxCentralPublicBaseUrl();
 		
-		return dbxCentralUrl;
+//		String dbxCentralUrl = getConfiguration().getProperty(PROPKEY_dbxCentralUrl, DEFAULT_dbxCentralUrl);
+//		
+//		if (StringUtil.isNullOrBlank(dbxCentralUrl))
+//		{
+//			// if it's not configured...
+//			// can we grab the URL from PCS PersistWriterToHttpJsonRest
+//			// and if it points to 'localhost:8080' then -->> get current hostname
+//			if (PersistentCounterHandler.hasInstance())
+//			{
+//				PersistentCounterHandler pcs = PersistentCounterHandler.getInstance();
+//				List<IPersistWriter> writers = pcs.getWriters();
+//				for (IPersistWriter writer : writers)
+//				{
+//					if (writer instanceof PersistWriterToHttpJson)
+//					{
+//						try
+//						{
+//							PersistWriterToHttpJson dbxCentralWriter = (PersistWriterToHttpJson) writer;
+//							Configuration conf = dbxCentralWriter.getConfig();
+//							String url = conf.getProperty("PersistWriterToHttpJson.url", null);
+//
+////							public static final String  PROPKEY_url               = "PersistWriterToHttpJson.url";
+////							public static final String  DEFAULT_url               = "http://localhost:8080/api/pcs/receiver";
+//							
+//							// yes we found it...
+//							if (url != null && url.endsWith("/api/pcs/receiver"))
+//							{
+//								URI uri = new URI(url);
+//								String host = uri.getHost();
+//								int    port = uri.getPort(); // -1 if not defined
+//									
+//								// Try to replace 'localhost' with our current hostname...
+//								if ("localhost".equals(host))
+//								{
+//									host = InetAddress.getLocalHost().getCanonicalHostName();
+//									
+//									// This is probably a host on GCP or possibly AWS, Azure or similar
+//									// GCP & AWS: ".internal"
+//									// Azure:     ".internal.cloudapp.net" or ".reddog.microsoft.com"
+//									// Then grab the 'hostname' or 'ip', and do a DNS Lookup on it 
+////									if (host != null && (host.endsWith(".internal") || host.endsWith(".internal.cloudapp.net") || host.endsWith(".reddog.microsoft.com")))
+////									{
+////										// Using InetAddress... for the lookup... Did not work
+////										// >> So we probably need to fallback on: https://github.com/dnsjava/dnsjava
+////										// >> Or just use the Property 'AlarmWriter.dbxCentralUrl = http://dbxtune.acme.com' instead...
+////									}
+//								}
+//									
+//								if (port < 0)
+//									dbxCentralUrl = "http://" + host;
+//								else
+//									dbxCentralUrl = "http://" + host + ":" + port;
+//							}
+//						}
+//						catch(Exception ignore) {}
+//					}
+//				}
+//			}
+//		}
+//		
+//		return dbxCentralUrl;
 	}
 
 	//----------------------------------------------------------------

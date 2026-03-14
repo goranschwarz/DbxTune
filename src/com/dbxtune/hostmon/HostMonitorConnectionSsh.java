@@ -59,6 +59,12 @@ extends HostMonitorConnection
 	}
 
 	@Override
+	public String getUsername()
+	{
+		return _sshConn.getUsername();
+	}
+
+	@Override
 	public int getOsCoreCount()
 	{
 		return _sshConn.getNproc();
@@ -154,11 +160,19 @@ extends HostMonitorConnection
 	@Override
 	public ExecutionWrapper executeCommand(String cmd) throws Exception
 	{
-		ExecutionWrapperShh execWrapper = new ExecutionWrapperShh(_sshConn);
-		execWrapper.executeCommand(cmd);
-		return execWrapper;
+//		ExecutionWrapperShh execWrapper = new ExecutionWrapperShh(_sshConn);
+//		execWrapper.executeCommand(cmd);
+//		return execWrapper;
+		return executeCommand(cmd, false);
 	}
 
+	@Override
+	public ExecutionWrapper executeCommand(String cmd, boolean isStreamingCommand) throws Exception
+	{
+		ExecutionWrapperShh execWrapper = new ExecutionWrapperShh(_sshConn);
+		execWrapper.executeCommand(cmd, isStreamingCommand);
+		return execWrapper;
+	}
 
 
 
@@ -268,11 +282,22 @@ extends HostMonitorConnection
 		@Override
 		public void executeCommand(String cmd) throws Exception
 		{
+//			// Reset sleepCount on every execution
+//			_sleepCount = 0;
+//			_name = cmd;
+//
+//			_sshChannel = _sshConn.execCommand(cmd);
+			executeCommand(cmd, false);
+		}
+
+		@Override
+		public void executeCommand(String cmd, boolean isStreamingCommand) throws Exception
+		{
 			// Reset sleepCount on every execution
 			_sleepCount = 0;
 			_name = cmd;
-			
-			_sshChannel = _sshConn.execCommand(cmd);
+
+			_sshChannel = _sshConn.execCommand(cmd, isStreamingCommand);
 		}
 
 //		@Override
@@ -329,7 +354,20 @@ extends HostMonitorConnection
 		@Override
 		public void close()
 		{
-			_sshChannel.disconnect();
+			try 
+			{
+				if (_sshChannel != null && !_sshChannel.isClosed()) 
+				{
+					 // JSch signal
+					_sshChannel.sendSignal("KILL");
+				}
+			} 
+			catch (Exception ignore) { /* ignore */ } 
+			finally 
+			{
+				if (_sshChannel != null) 
+					_sshChannel.disconnect();
+			}
 		}
 	}
 }

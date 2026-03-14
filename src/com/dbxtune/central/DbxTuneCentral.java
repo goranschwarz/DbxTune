@@ -1754,6 +1754,35 @@ public class DbxTuneCentral
 		}
 	}
 
+	private static void convertPemToPkcs12(File certFile, File keyFile, File chainFile, File outputFile, String password) 
+	throws Exception
+	{
+		ProcessBuilder pb = new ProcessBuilder(
+				"openssl", "pkcs12", "-export",
+				"-in", certFile.getAbsolutePath(),
+				"-inkey", keyFile.getAbsolutePath(),
+				"-out", outputFile.getAbsolutePath(),
+				"-name", "jetty",
+				"-passout", "pass:" + password
+		);
+
+		if (chainFile.exists())
+		{
+			pb.command().add("-certfile");
+			pb.command().add(chainFile.getAbsolutePath());
+		}
+
+		Process process = pb.start();
+		int exitCode = process.waitFor();
+
+		if (exitCode != 0)
+		{
+			throw new RuntimeException("Failed to convert PEM to PKCS12. Exit code: " + exitCode);
+		}
+
+		_logger.info("Successfully converted PEM files to PKCS12 keystore: " + outputFile);
+	}
+
 	public static int getWebHttpPort()
 	{
 		if (PlatformUtils.isWindows())
@@ -1844,7 +1873,7 @@ public class DbxTuneCentral
 			httpConfig.setSendServerVersion(false); // disables 'Server' header
 			httpConfig.setSendXPoweredBy(false);    // disables 'X-Powered-By' header
 			
-	        // Configure SSL with PEM files
+			// Configure SSL with PEM files
 			String sslFilePath = getAppConfDir() + "/ssl"; // must contain: 'cert.pem', 'key.pem', (optional) 'chain.pem'
 			File   sslFileFile = new File(sslFilePath);
 			if (sslFileFile.exists())
@@ -1883,26 +1912,88 @@ public class DbxTuneCentral
 				{
 					_logger.info("SSL will be configured at port " + sslPort + ", using files ('cert.pem', 'key.pem', optional:'chain.pem') in directory '" + sslFileFile + "'.");
 
-					SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
-			        sslContextFactory.setKeyStoreType("PEM");
-			        sslContextFactory.setKeyStorePath(sslFilePath);  // must contain cert.pem, key.pem, (optional) chain.pem
-//			        sslContextFactory.setCertChainPath(sslFileCertFile);      // your public cert or full chain "cert.pem"
-//			        sslContextFactory.setKeyPath(sslFileKeyFile);             // your private key "key.pem"
-//			        if (sslFileChainFile.exists())
-//			        {
-//				        sslContextFactory.setTrustStoreType("PEM");               // optional for client auth
-//				        sslContextFactory.setTrustStorePath(sslFileChainFile);    // CA chain, optional "chain.pem"
-//			        }
-					
-					httpConfig.addCustomizer(new SecureRequestCustomizer());
+					File keystoreFile        = new File(sslFilePath + "/keystore.p12");
+					File keystoreRefreshFile = new File(sslFilePath + "/keystore.p12.refresh");
+					String keystorePassword  = "SmslTVkv21GS5NJdQXxP"; // Consider making this configurable
 
-					ServerConnector sslConnector = new ServerConnector(
-							_server,
-							new SslConnectionFactory(sslContextFactory, "http/1.1"),
-							new HttpConnectionFactory(httpConfig)
-		            );
-					sslConnector.setPort(sslPort);
-					_server.addConnector(sslConnector);
+					try
+					{
+						boolean createNewKeyStoreFile = false;
+
+						// If we do NOT have a KeyStore file
+						if ( ! keystoreFile.exists() )
+						{
+							createNewKeyStoreFile = true;
+						}
+						
+						// Or if the PEM file has changed...
+						// FIXME: We need to save the last date of 'cert.pem' and check if we got any new file (save it in a properties file)
+						//  DONE: I did a simpler solution, if the file 'keystore.p12.refresh' exists... Then do refresh... Not as good as saving the time... But it's at least something...
+						if (keystoreRefreshFile.exists())
+						{
+							_logger.info("Found signal file '" + keystoreRefreshFile + "' to recreate SSL Certificate File '" + sslFileCertFile + ". So lets convert the new PEM files to PKCS12 keystore...");
+
+							// Delete the 'signal/refresh' and 'keystoreFile' file: 
+							keystoreRefreshFile.delete();
+							keystoreFile.delete();
+
+//							_logger.info("The SSL Certificate File '" + sslFileCertFile + "' has changed (lastKnownDate='', newDate=''). So lets convert the new PEM files to PKCS12 keystore...");
+							createNewKeyStoreFile = true;
+						}
+
+						// Convert PEM to PKCS12 if not already done
+						if ( createNewKeyStoreFile )
+						{
+							_logger.info("Converting PEM files to PKCS12 keystore...");
+							convertPemToPkcs12(sslFileCertFile, sslFileKeyFile, sslFileChainFile, keystoreFile, keystorePassword);
+						}
+
+						SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
+						sslContextFactory.setKeyStorePath(keystoreFile.getAbsolutePath());
+						sslContextFactory.setKeyStorePassword(keystorePassword);
+						sslContextFactory.setKeyStoreType("PKCS12");
+						sslContextFactory.setKeyManagerPassword(keystorePassword);
+
+						httpConfig.addCustomizer(new SecureRequestCustomizer());
+
+						ServerConnector sslConnector = new ServerConnector(
+								_server,
+								new SslConnectionFactory(sslContextFactory, "http/1.1"),
+								new HttpConnectionFactory(httpConfig)
+						);
+						sslConnector.setPort(sslPort);
+						_server.addConnector(sslConnector);
+						
+					}
+					catch (Exception ex)
+					{
+						_logger.error("Failed to configure SSL", ex);
+					}
+
+					boolean useOldCode = false;
+					if (useOldCode)
+					{
+						SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
+				        sslContextFactory.setKeyStoreType("PEM");
+				        sslContextFactory.setKeyStorePath(sslFilePath);  // must contain cert.pem, key.pem, (optional) chain.pem
+//				        sslContextFactory.setCertChainPath(sslFileCertFile);      // your public cert or full chain "cert.pem"
+//				        sslContextFactory.setKeyPath(sslFileKeyFile);             // your private key "key.pem"
+//				        if (sslFileChainFile.exists())
+//				        {
+//					        sslContextFactory.setTrustStoreType("PEM");               // optional for client auth
+//					        sslContextFactory.setTrustStorePath(sslFileChainFile);    // CA chain, optional "chain.pem"
+//				        }
+						
+						httpConfig.addCustomizer(new SecureRequestCustomizer());
+
+						ServerConnector sslConnector = new ServerConnector(
+								_server,
+								new SslConnectionFactory(sslContextFactory, "http/1.1"),
+								new HttpConnectionFactory(httpConfig)
+			            );
+						sslConnector.setPort(sslPort);
+						_server.addConnector(sslConnector);
+					}
 				}
 			}
 			else

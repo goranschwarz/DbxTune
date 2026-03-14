@@ -320,6 +320,32 @@ public class HtmlTableProducer
 		}
 	};
 	
+	public static ColumnCopyRender ZERO_DECIMAL = new ColumnCopyRender() 
+	{
+		NumberFormat nf = null;
+		{ // init/constructor section
+			try
+			{
+				nf = new DecimalFormat();
+				nf.setMinimumFractionDigits(0);
+				nf.setMaximumFractionDigits(0);
+			}
+			catch (Throwable t)
+			{
+				nf = NumberFormat.getInstance();
+			}
+		}
+
+		@Override
+		public String render(Object in)
+		{
+			if (in instanceof Number)
+				return nf.format(in);
+
+			return in == null ? "" : in.toString();
+		}
+	};
+
 	public static ColumnCopyRender ONE_DECIMAL = new ColumnCopyRender() 
 	{
 		NumberFormat nf = null;

@@ -73,44 +73,37 @@ extends HttpServlet
 		out.println("	  == JS imports - JAVA SCRIPTS GOES HERE ");
 		out.println("	  ======================================================================= ");
 		out.println("	--> ");
-		out.println("	<!-- <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css' integrity='sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm' crossorigin='anonymous'> --> ");
+//		out.println("	<!-- <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css' integrity='sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm' crossorigin='anonymous'> --> ");
 		out.println("	<!-- Custom styles for this template --> ");
-		out.println("	<!-- <link href='/scripts/bootstrap/css/navbar-top-fixed.css' rel='stylesheet'> --> ");
-		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.7.0.min.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.13.2/jquery-ui.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.14.1/jquery-ui.min.js'></script> ");
 		out.println("	 ");
-		out.println("	<!-- ");
-		out.println("<script type='text/javascript' src='http://www.chartjs.org/dist/2.7.1/Chart.bundle.js'></script> ");
-		out.println("<script type='text/javascript' src='http://www.chartjs.org/samples/latest/utils.js'></script> ");
-		out.println("--> ");
 		out.println("	<!-- JS: Moment; used by: ChartJs, DateRangePicker --> ");
 		out.println("	<script type='text/javascript' src='/scripts/moment/moment.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Chart JS --> ");
-		out.println("	<script type='text/javascript' src='/scripts/chartjs/Chart.bundle.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/chartjs/samples/utils.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/chartjs/plugins/chartjs-plugin-zoom.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/chartjs/plugins/chartjs-plugin-annotation.js'></script> ");
-		out.println("<!--<script type='text/javascript' src='/scripts/chartjs/plugins/chartjs-plugin-datalabels.js'></script>--> ");
-		out.println("<!--<script type='text/javascript' src='/scripts/chartjs/plugins/chartjs-plugin-colorschemes.js'></script>--> ");
+		out.println("	<script type='text/javascript' src='/scripts/chartjs/2.7.3/Chart.bundle.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/chartjs/2.7.3/samples/utils.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/chartjs/2.7.3/plugins/chartjs-plugin-zoom.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/chartjs/2.7.3/plugins/chartjs-plugin-annotation.js'></script> ");
+		out.println("<!--<script type='text/javascript' src='/scripts/chartjs/2.7.3/plugins/chartjs-plugin-datalabels.js'></script>--> ");
+		out.println("<!--<script type='text/javascript' src='/scripts/chartjs/2.7.3/plugins/chartjs-plugin-colorschemes.js'></script>--> ");
 		out.println(" ");
 		out.println("	<!-- JS: DbxCentral --> ");
 		out.println("	<script type='text/javascript' src='/scripts/dbxcentral.utils.js'></script> ");
 		out.println("	<script type='text/javascript' src='/scripts/dbxcentral.graph.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap --> ");
-		out.println("	<!-- <link href='/scripts/bootstrap/css/bootstrap.min.css' rel='stylesheet'> --> ");
-		out.println("	<script type='text/javascript' src='/scripts/bootstrap/js/bootstrap.min.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> ");
+//		out.println("	<!-- <link href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css' rel='stylesheet'> --> ");
+//		out.println("	<script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> ");
+//		out.println("	<script type='text/javascript' src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> ");
+		out.println("   <script type='text/javascript' src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
 		out.println(" ");
 		out.println("	<!-- JS: DateRangePicker --> ");
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap - TABLE --> ");
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.12.1/bootstrap-table.js'></script> ");
-		out.println("	<!-- <script src='https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/editable/bootstrap-table-editable.js'></script> --> ");
-		out.println("	<!-- <script src='https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.js'></script> --> ");
-		out.println("	<!-- <script src='https://rawgit.com/hhurz/tableExport.jquery.plugin/master/tableExport.js'></script> --> ");
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
@@ -122,7 +115,7 @@ extends HttpServlet
 		out.println("	  ======================================================================= ");
 		out.println("	--> ");
 		out.println("	<!-- CSS: jqueri-ui --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.13.2/themes/smoothness/jquery-ui.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DbxCentral --> ");
 		out.println("	<link rel='stylesheet' href='/scripts/css/dbxcentral.css'> ");
@@ -140,8 +133,8 @@ extends HttpServlet
 		out.println("	<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: W2UI --> ");
-		out.println("	<!-- <link rel='stylesheet' href='scripts/w2ui/w2ui-1.5.rc1.css' type='text/css'> --> ");
-		out.println("	<!-- <script src='scripts/w2ui/w2ui-1.5.rc1.js' type='text/javascript'></script> --> ");
+		out.println("	<!-- <link rel='stylesheet' href='/scripts/w2ui/w2ui-1.5.rc1.css' type='text/css'> --> ");
+		out.println("	<!-- <script src='/scripts/w2ui/w2ui-1.5.rc1.js' type='text/javascript'></script> --> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap - TABLE --> ");
 		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-table/1.12.1/bootstrap-table.min.css'> ");
@@ -159,13 +152,13 @@ extends HttpServlet
 ////		out.println("  .topright { position: absolute; top: 8px; right: 16px; font-size: 14px; }"); // topright did not work with bootstrap (and navigation bar)
 //		out.println("</style>");
 
-		out.println("<link href='/scripts/prism/prism.css' rel='stylesheet' />");
+		out.println("<link href='/scripts/prism/prism-1.30.0.css' rel='stylesheet' />");
 
 		out.println("</head>");
 
 //		out.println("<body onload='updateLastUpdatedClock()'>");
 		out.println("<body>");
-		out.println("<script src='/scripts/prism/prism.js'></script> ");
+		out.println("<script src='/scripts/prism/prism-1.30.0.js'></script> ");
 
 		out.println(HtmlStatic.getOverviewNavbar());
 

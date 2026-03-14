@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -27,6 +28,7 @@ import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -40,6 +42,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.pcs.PersistWriterToHttpJson;
 import com.dbxtune.pcs.report.IProgressReporter.State;
 import com.dbxtune.pcs.report.content.AlarmsActive;
@@ -56,6 +59,8 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.CountingWriter;
 import com.dbxtune.utils.HeartbeatMonitor;
+import com.dbxtune.utils.HtmlUtils;
+import com.dbxtune.utils.SpaceFullPredictor;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 
@@ -67,7 +72,8 @@ extends DailySummaryReportAbstract
 
 	public boolean useBootstrap()                              { return true; }	
 	public boolean isCollapsedHeaderForTocSection()            { return false; }
-	public boolean isCollapsedHeaderForExecTimeReportSection() { return false; }
+//	public boolean isCollapsedHeaderForExecTimeReportSection() { return false; }
+	public boolean isCollapsedHeaderForExecTimeReportSection() { return true; }
 	public boolean createTocSection()                          { return true; }
 	public boolean createExecTimeReportSection()               { return true; }
 	public String  getReportName()                             { return "Daily Summary Report"; }
@@ -245,9 +251,9 @@ extends DailySummaryReportAbstract
 	@Override
 	public void addReportEntriesBottom()
 	{
-		addReportEntry( new DbxTuneErrors(this) );
-		addReportEntry( new DbxTunePcsTablesSize(this) );
-		addReportEntry( new DbxTuneCmRefreshInfo(this) );
+		addReportEntry( new DbxTuneErrors       (this).withCollapsedHeader(true) );
+		addReportEntry( new DbxTunePcsTablesSize(this).withCollapsedHeader(true) );
+		addReportEntry( new DbxTuneCmRefreshInfo(this).withCollapsedHeader(true) );
 	}
 
 	@Override
@@ -569,8 +575,8 @@ extends DailySummaryReportAbstract
 		w.append("            margin-left: 0px;      \n");
 		w.append("        }                          \n");
 		w.append("\n");
-		w.append("        /* Display the 'max' value as text 'over' the sparkline mini-chart */ \n");
-		w.append("        .sparkline-max-val {					\n"); // write on top of 'sparkline-wrapper' where the real sparkline chart is located
+		w.append("        /* Display the 'max/min' indicator value as text 'over' the sparkline mini-chart */ \n");
+		w.append("        .sparkline-ind-val {					\n"); // write on top of 'sparkline-wrapper' where the real sparkline chart is located
 		w.append("            position:  absolute; 			\n"); 
 		w.append("            z-index:     2; 					\n"); // Sparkline has 1 ... so write "above" the sparkline
 		w.append("            left:        2px; 				\n");
@@ -722,7 +728,11 @@ extends DailySummaryReportAbstract
 			// if we want to "read/import" the CSS from local file
 			try 
 			{
-				bootstrapCss = com.dbxtune.utils.FileUtils.readFile(ReportContent.class, "bootstrap_453.css");
+				// Reads scripts/bootstrap/4.5.3/css/bootstrap.css -- Which is copied into bootstrap_453.css at com.dbxtune.pcs.report.content.bootstrap_453.css
+//				bootstrapCss = com.dbxtune.utils.FileUtils.readFile(ReportContent.class, "bootstrap_453.css");
+
+				// Reads scripts/bootstrap/4.6.2/css/bootstrap.css -- Which is copied into bootstrap_462.css at com.dbxtune.pcs.report.content.bootstrap_462.css
+				bootstrapCss = com.dbxtune.utils.FileUtils.readFile(ReportContent.class, "bootstrap_462.css");
 			}
 			catch (Exception ex)
 			{
@@ -738,6 +748,8 @@ extends DailySummaryReportAbstract
 			w.append(bootstrapCss);
 			w.append("</style> \n");
 
+			w.append(SpaceFullPredictor.getHtmlCss());
+			
 //			w.append("<!--<![endif]--> \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 //			w.append(" \n");
 
@@ -763,43 +775,60 @@ extends DailySummaryReportAbstract
 			//sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		}
 		
-//		sb.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css'> \n");
-		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css'> \n");
-		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css'> \n");
+//		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css'> \n");
+//		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css'> \n");
+
+		// In local the 'prism-line-numbers.min.css' and 'prism-okaidia.min.css' is included in '/scripts/prism/prism-1.30.0.css'
+		addCssFile(w, "/scripts/prism/prism-1.30.0.css", "https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css"
+		                                                ,"https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-okaidia.min.css");
 
 		createDbxTuneCss(w);
 
-		w.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
+//		w.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
+//		w.append("    <SCRIPT src='/scripts/sorttable/sorttable.js'></SCRIPT> \n");
+		addJavaScriptFile(w, "/scripts/sorttable/sorttable.js", "http://www.dbxtune.com/sorttable.js");
 
-		w.append("    <SCRIPT src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js'></SCRIPT> \n");
-		w.append("    <SCRIPT src='https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js'></SCRIPT> \n");
+//		w.append("    <SCRIPT src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js'></SCRIPT> \n");
+//		w.append("    <SCRIPT src='https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js'></SCRIPT> \n");
+		addJavaScriptFile(w, "/scripts/jquery/jquery-3.7.1.min.js"                     , "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js");
+		addJavaScriptFile(w, "/scripts/jquery-sparklines/2.1.2/jquery.sparkline.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js");
 		
 		if (useBootstrap())
 		{
-//			sb.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js' integrity='sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q' crossorigin='anonymous'></script> \n");
-//			sb.append("    <script src='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js'       integrity='sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl' crossorigin='anonymous'></script> \n");
-			w.append("    <script src='https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js'      integrity='sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN' crossorigin='anonymous'></script> \n");
-			w.append("    <script src='https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js'     integrity='sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s' crossorigin='anonymous'></script> \n");
+//			w.append("    <script src='https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js'      integrity='sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN' crossorigin='anonymous'></script> \n");
+//			w.append("    <script src='https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js'     integrity='sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s' crossorigin='anonymous'></script> \n");
+//			addJavaScriptFile(w, "/scripts/bootstrap/4.5.3/js/bootstrap.bundle.min.js", "https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js");
+			addJavaScriptFile(w, "/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js", "https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js");
 		}
-		
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script> \n");
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script> \n");
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js'></script> \n");
-		w.append("    <script src=''></script> \n");
+
+		// In local the 'prism.min.js' and 'components/prism-sql.min.js', 'plugins/line-numbers/prism-line-numbers.min.js'.
+		// Is included in '/scripts/prism/prism-1.30.0.js'
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'></script> \n");
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js'></script> \n");
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js'></script> \n");
+		addJavaScriptFile(w, "/scripts/prism/prism-1.30.0.js", "https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"
+		                                                      ,"https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"
+		                                                      ,"https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js");
 
 		// chart.js
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js'   integrity='sha512-TW5s0IT/IppJtu76UbysrBH9Hy/5X41OTAbQuffZFU6lQ1rdcLHzpU5BzVvr/YFykoiMYZVWlr/PX1mDcfM9Qg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js'   integrity='sha512-TW5s0IT/IppJtu76UbysrBH9Hy/5X41OTAbQuffZFU6lQ1rdcLHzpU5BzVvr/YFykoiMYZVWlr/PX1mDcfM9Qg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+		addJavaScriptFile(w, "/scripts/chartjs/3.7.0/dist/chart.min.js", "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js");
 
 		// chart.js plugins
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js' integrity='sha512-qF3T5CaMgSRNrxzu69V3ZrYGnrbRMIqrkE+OrE01DDsYDNo8R1VrtYL8pk+fqhKxUBXQ2z+yV/irk+AbbHtBAg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js' integrity='sha512-qF3T5CaMgSRNrxzu69V3ZrYGnrbRMIqrkE+OrE01DDsYDNo8R1VrtYL8pk+fqhKxUBXQ2z+yV/irk+AbbHtBAg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+//		addJavaScriptFile(w, "/scripts/chartjs/chartjs-plugin-annotation-2.2.1/package/dist/chartjs-plugin-annotation.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js");
+		addJavaScriptFile(w, "/scripts/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js");
 
 
 		// moment.js
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
-		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js' integrity='sha512-oh5t+CdSBsaVVAvxcZKy3XJdP7ZbYUBSRCXDTVn0ODewMDDNnELsrG9eDm8rVZAQg7RsDD/8K3MjPAFB13o6eA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+//		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js' integrity='sha512-oh5t+CdSBsaVVAvxcZKy3XJdP7ZbYUBSRCXDTVn0ODewMDDNnELsrG9eDm8rVZAQg7RsDD/8K3MjPAFB13o6eA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
+		addJavaScriptFile(w, "/scripts/moment/2.29.1/dist/moment.min.js"                          , "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js");
+		addJavaScriptFile(w, "/scripts/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js");
 
 		// font awesome
-		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' integrity='sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==' crossorigin='anonymous' referrerpolicy='no-referrer' /> \n");
+//		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' integrity='sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==' crossorigin='anonymous' referrerpolicy='no-referrer' /> \n");
+		addCssFile(w, "/scripts/font-awesome/6.2.0/css/all.min.css", "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css");
 
 		w.append("\n");
 		w.append("    <script type='text/javascript'>  \n");
@@ -867,6 +896,117 @@ extends DailySummaryReportAbstract
 		w.append("</head> \n");
 		w.append("\n");
 	}
+
+
+	// TODO: BEGIN - Possibly move this to DailySummaryReportAbstract
+	public enum AddMethodForJsAndCss
+	{
+		EMBEDDED, LOCAL_FILE, REMOTE_URL
+	};
+	public AddMethodForJsAndCss getAddMethodForJsAndCss()
+	{
+		return AddMethodForJsAndCss.LOCAL_FILE;
+	}
+	public String getEmbeddedBasePath()
+	{
+		return DbxTuneCentral.getAppWebDir();
+	}
+	
+	public void addCssFile(Writer w, String localUrl, String... remoteUrl)
+	throws IOException
+	{
+//		AddMethodForJsAndCss addMethod = getAddMethodForJsAndCss();
+		
+//		// Embedding needs the "localUrl"
+//		if (StringUtil.isNullOrBlank(localUrl))
+//		{
+//			// LOCAL_FILE needs: localUrl
+//			if (AddMethodForJsAndCss.LOCAL_FILE.equals(addMethod))
+//				return;
+//
+//			// EMBEDDED needs: localUrl
+//			if (AddMethodForJsAndCss.EMBEDDED.equals(addMethod))
+//				return;
+//		}
+
+		// LOCAL_FILE or REMOTE_URL
+		if ( ! AddMethodForJsAndCss.EMBEDDED.equals(getAddMethodForJsAndCss()) )
+		{
+//			String url = AddMethodForJsAndCss.LOCAL_FILE.equals(getAddMethodForJsAndCss()) ? localUrl : remoteUrl;
+//
+//			w.append("    <link rel='stylesheet' type='text/css' href='" + url + "' title='Style'> \n");
+
+			HtmlUtils.createCssLinkTag(w, localUrl, remoteUrl);
+		}
+		else // EMBEDDED
+		{
+			// Embedding needs the "localUrl"
+			if (StringUtil.isNullOrBlank(localUrl))
+				return;
+
+			Path path = Path.of(getEmbeddedBasePath(), localUrl);
+
+			w.append("\n");
+			w.append("<!-- BEGIN: EMBEDDING local CSS file '" + localUrl + "' --> \n");
+			w.append("<style> \n");
+//			w.append(Files.readString(path));
+			try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) 
+			{
+				reader.transferTo(w);
+			}
+			w.append("\n");
+			w.append("</style> \n");
+			w.append("<!-- END: EMBEDDING local CSS file '" + localUrl + "' --> \n");
+			w.append("\n");
+		}
+	}
+
+	public void addJavaScriptFile(Writer w, String localUrl, String... remoteUrl)
+	throws IOException
+	{
+//		AddMethodForJsAndCss addMethod = getAddMethodForJsAndCss();
+		
+//		// Embedding needs the "localUrl"
+//		if (StringUtil.isNullOrBlank(localUrl))
+//		{
+//			// LOCAL_FILE needs: localUrl
+//			if (AddMethodForJsAndCss.LOCAL_FILE.equals(addMethod))
+//				return;
+//
+//			// EMBEDDED needs: localUrl
+//			if (AddMethodForJsAndCss.EMBEDDED.equals(addMethod))
+//				return;
+//		}
+
+		if ( ! AddMethodForJsAndCss.EMBEDDED.equals(getAddMethodForJsAndCss()) )
+		{
+//			String url = AddMethodForJsAndCss.LOCAL_FILE.equals(addMethod) ? localUrl : remoteUrl;
+//
+//			w.append("    <SCRIPT src='" + url + "' type='text/javascript'></SCRIPT> \n");
+
+			HtmlUtils.createJsScriptTag(w, localUrl, remoteUrl);
+		}
+		else // EMBEDDED
+		{
+			Path path = Path.of(getEmbeddedBasePath(), localUrl);
+
+			w.append("\n");
+			w.append("<!-- BEGIN: EMBEDDING local JS file '" + localUrl + "' --> \n");
+			w.append("<script> \n");
+//			w.append(Files.readString(path));
+			try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) 
+			{
+				reader.transferTo(w);
+			}
+			w.append("\n");
+			w.append("</script> \n");
+			w.append("<!-- END: EMBEDDING local JS file '" + localUrl + "' --> \n");
+			w.append("\n");
+
+			throw new RuntimeException("NOT-YET-IMPLEMENTED");
+		}
+	}
+	// TODO: END - Possibly move this to DailySummaryReportAbstract
 
 
 	/**
@@ -1160,9 +1300,9 @@ extends DailySummaryReportAbstract
 		writer.append("</div> \n"); // END: Bootstrap 4 container
 		
 		writer.append("\n");
-		writer.append("    //----------------------------------------------------------- \n");
-		writer.append("    // AT the BOTTOM: do stuff when the page is loaded. \n");
-		writer.append("    //----------------------------------------------------------- \n");
+		writer.append("    <!-- ================================================================================= -->\n");
+		writer.append("    <!-- == AT the BOTTOM: do stuff when the page is loaded. -->\n");
+		writer.append("    <!-- ================================================================================= -->\n");
 		writer.append("    <script type='text/javascript'>  \n");
 		writer.append("\n");
 		writer.append("        // Functionality to CLOSE ALL 'details' sections of class 'dsr-details-tableinfo' \n");

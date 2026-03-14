@@ -544,7 +544,7 @@ public class SqlServerUtils
 //			    + "--								+----------------------+-----------+--------+----------------+----------------------+---------+-----------------------+----------------+---------------------+ \n"
 //			    + "--								|partition_id          |object_id  |index_id|partition_number|hobt_id               |rows     |filestream_filegroup_id|data_compression|data_compression_desc| \n"
 //			    + "--								+----------------------+-----------+--------+----------------+----------------------+---------+-----------------------+----------------+---------------------+ \n"
-//			    + "--								|72 057 784 525 783 040|242 153 994|       1|               1|72 057 784 525 783 040|4 301 078|                      0|               0|NONE                 | \n"
+//			    + "--								|72,057,784,525,783,040|242,153,994|       1|               1|72,057,784,525,783,040|4,301,078|                      0|               0|NONE                 | \n"
 //			    + "--								+----------------------+-----------+--------+----------------+----------------------+---------+-----------------------+----------------+---------------------+ \n"
 //			    + "    ,resource_type \n"
 //			    + "    ,request_mode \n"
@@ -555,6 +555,33 @@ public class SqlServerUtils
 //			    + "  and (request_session_id = 62 OR request_status = 'WAIT') -- req_status=3 is 'WAIT' \n"
 //			    + "group by request_session_id, resource_database_id, resource_associated_entity_id/*, rsc_indid*/, resource_type, request_mode, request_status ; \n"
 //			    + "";
+		
+		// The below is more or less the same thing as above (but it does the lookup to 'partitions')
+		// BUT: it NEEDS cross database lookups... SO LETS KEEP the solution with using 'syslockinfo' for now
+//		String sql = ""
+//				+ "SELECT \n"
+//				+ "     spid       = request_session_id \n"
+//				+ "    ,dbid       = resource_database_id \n"
+//				+ "    ,objectid   = CASE \n"
+//				+ "                     WHEN resource_type = 'OBJECT' THEN resource_associated_entity_id \n"
+//				+ "                     WHEN resource_type IN ('PAGE', 'KEY', 'RID') THEN \n"
+//				+ "                         (SELECT TOP 1 object_id FROM " + dbname + ".sys.partitions WITH (READUNCOMMITTED) WHERE hobt_id = resource_associated_entity_id) \n"
+//				+ "                     ELSE 0 \n"
+//				+ "                  END \n"
+//				+ "    ,indexId    = CASE \n"
+//				+ "                     WHEN resource_type IN ('PAGE', 'KEY', 'RID') THEN \n"
+//				+ "                         (SELECT TOP 1 index_id FROM " + dbname + ".sys.partitions WITH (READUNCOMMITTED) WHERE hobt_id = resource_associated_entity_id) \n"
+//				+ "                     ELSE 0 \n"
+//				+ "                  END \n"
+//				+ "    ,rsc_type   = resource_type \n"
+//				+ "    ,req_mode   = request_mode \n"
+//				+ "    ,req_status = request_status \n"
+//				+ "    ,lockCount  = COUNT(*) \n"
+//				+ "FROM " + dbname + ".sys.dm_tran_locks WITH (READUNCOMMITTED) \n"
+//				+ "WHERE resource_type != 'DATABASE' \n"
+//				+ "  AND (request_session_id = ? OR request_status = 'WAIT') \n"
+//				+ "GROUP BY request_session_id, resource_database_id, resource_associated_entity_id, resource_type, request_mode, request_status";
+		
 
 		// Here is another resource to look at 'WhatsUpLocks'
 		// https://github.com/erikdarlingdata/DarlingData/blob/07393ce85488b1bb237e276fa34e83d0c7a47858/Helper%20Views/WhatsUpLocks.sql

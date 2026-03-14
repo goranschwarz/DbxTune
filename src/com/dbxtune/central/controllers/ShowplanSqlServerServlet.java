@@ -33,6 +33,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.utils.HtmlUtils;
 import com.dbxtune.utils.StringUtil;
 
 
@@ -49,7 +50,7 @@ extends HttpServlet
 	}
 
 	/**
-	 * Take a STRING input and build up a PEV2 page
+	 * Take a STRING input and build up a SHOWPLAN page
 	 */
 	// curl -X POST -d @/mnt/c/tmp/Alarm.tmp.json http://localhost:8080/pev
 	@Override
@@ -119,11 +120,15 @@ extends HttpServlet
 
 				// Possibly use local install:
 //				"    <script src='https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js'></script> \n" +
-				"    <script src='https://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n" +
+//				"    <script src='https://www.dbxtune.com/sqlserver_showplan/dist/qp.js' type='text/javascript'></script> \n" +
+//				"    <script src='/scripts/showplan/sqlserver/dist/qp.js' type='text/javascript'></script> \n" +
+				HtmlUtils.createJsScriptTag("/scripts/showplan/sqlserver/dist/qp.js", "https://www.dbxtune.com/sqlserver_showplan/dist/qp.js") +
 
 				// Possibly use local install:
 //				"    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/css/qp.min.css' /> \n" +
-				"    <link rel='stylesheet' type='text/css' href='https://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n" +
+//				"    <link rel='stylesheet' type='text/css' href='https://www.dbxtune.com/sqlserver_showplan/css/qp.css'> \n" +
+//				"    <link rel='stylesheet' type='text/css' href='/scripts/showplan/sqlserver/css/qp.css'> \n" +
+				HtmlUtils.createCssLinkTag("/scripts/showplan/sqlserver/css/qp.css", "https://www.dbxtune.com/sqlserver_showplan/css/qp.css") +
 
 				"</head> \n" +
 				" \n" +

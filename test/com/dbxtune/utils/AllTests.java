@@ -26,10 +26,11 @@ import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({ 
-	StringUtilTest.class, 
 	JsonUtilsTest.class, 
 	MovingAverageCounterTest.class, 
 	OpenSslAesUtilTest.class, 
+	SpaceFullPredictorTest.class, 
+	StringUtilTest.class, 
 	VersionShortTest.class, 
 	VerTest.class 
 })

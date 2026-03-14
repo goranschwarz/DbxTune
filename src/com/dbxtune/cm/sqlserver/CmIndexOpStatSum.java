@@ -1023,7 +1023,7 @@ extends CountersModel
 			dm_db_index_operational_stats = "dm_db_index_operational_stats";   // IS THIS THE SAME NAME IN AZURE ?????
 
 		String sql = ""
-			    + "select \n"
+			    + "select /* ${cmCollectorName} */ \n"
 			    + "     DB_NAME(database_id)                    as dbname \n"
 			    + "    ,SUM(leaf_insert_count) \n"
 			    + "     + SUM(leaf_delete_count) \n"

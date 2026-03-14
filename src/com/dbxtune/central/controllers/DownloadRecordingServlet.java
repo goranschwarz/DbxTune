@@ -74,7 +74,8 @@ extends HttpServlet
 		if (StringUtil.isNullOrBlank(userName))
 		{
 			// Write information about this in the log
-			_logger.warn("Unauthorized download of Recording file '" + fileName + "' detected from '" + request.getRemoteAddr() + "' [" + StringUtil.getHostnameWithDomain(request.getRemoteAddr()) + "], UserAgent='" + request.getHeader("User-Agent") + "'.");
+//			_logger.warn("Unauthorized download of Recording file '" + fileName + "' detected from '" + request.getRemoteAddr() + "' [" + StringUtil.getHostnameWithDomain(request.getRemoteAddr()) + "], UserAgent='" + request.getHeader("User-Agent") + "'.");
+			_logger.warn("Unauthorized download of Recording file '" + fileName + "' detected from '" + request.getRemoteAddr() + "' [" + request.getRemoteHost() + "], UserAgent='" + request.getHeader("User-Agent") + "'.");
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "To download Recordings, you need to login.");
 			return;
 		}

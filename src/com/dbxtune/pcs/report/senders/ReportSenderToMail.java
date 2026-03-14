@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report.senders;
 import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,6 +39,7 @@ import com.dbxtune.pcs.report.content.DailySummaryReportContent;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.FileUtils;
 import com.dbxtune.utils.JsonUtils;
+import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
 
 public class ReportSenderToMail 
@@ -67,7 +69,7 @@ extends ReportSenderAbstract
 		
 		// Connection timeout
 		if (_smtpConnectTimeout >= 0)
-			email.setSocketConnectionTimeout(_smtpConnectTimeout);
+			email.setSocketConnectionTimeout( Duration.ofSeconds(_smtpConnectTimeout) );
 
 		// SMTP PORT
 		if (_smtpPort >= 0)
@@ -270,14 +272,22 @@ extends ReportSenderAbstract
 		}
 		catch (Exception ex)
 		{
-			String msg = "Problems sending mail (fullSizeKb=" + fullSizeKb + ", fullSizeMb=" + fullSizeMb + ", msgSizeKb=" + msgSizeKb + ", msgSizeMb=" + msgSizeMb + ", hasAttachment=" + hasAttachment + ", zipAttachment=" + zipAttachment + ", zipSaveMb=" + zipSaveMb + ", attachSizeKb=" + attachSizeKb + ", attachSizeMb=" + attachSizeMb + ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb + ", host='" + _smtpHostname + "', toList=" + toList + ", subject='" + msgSubject + "', for server name '" + serverName + "').";
+			String msg = "Problems sending mail ("
+					+   "fullSizeKb="      + fullSizeKb
+					+ ", fullSizeMb="      + NumberUtils.round(fullSizeKb/1024.0, 1)
+					+ ", msgSizeKb="       + msgSizeKb
+					+ ", msgSizeMb="       + NumberUtils.round(msgSizeKb/1024.0, 1)
+					+ ", hasAttachment="   + hasAttachment
+					+ ", zipAttachment="   + zipAttachment
+					+ ", zipSaveMb="       + zipSaveMb
+					+ ", attachSizeKb="    + attachSizeKb
+					+ ", attachSizeMb="    + NumberUtils.round(attachSizeKb/1024.0, 1)
+					+ ", attachMaxSizeMb=" + _attachHtmlContentMaxSizeMb
+					+ ", host='"           + _smtpHostname + "'"
+					+ ", toList="          + toList
+					+ ", subject='"        + msgSubject + "'"
+					+ ", for server name '" + serverName + "').";
 			_logger.error(msg, ex);
-			
-			// Fallback: Send mail (if possible) with the error information!
-			// This will of course only work if the mail is setup correctly... 
-			// Typically this will be send for:
-			//   * message file too big (when the mail server says the content is to *big*
-			sendExceptionMail(toList, "(full mail)", serverName, msg, ex);
 			
 			//-------------------------------------------------------------------------
 			// Below is a typical Exception, where the mail is TO BIG
@@ -310,13 +320,30 @@ extends ReportSenderAbstract
 			
 			// Should we try to send this once again, WITHOUT any Attachment?
 			// Note: do not trust 'message file too big' the message may be localized
+			boolean messageIsToBig = false;
+			String nextStep = "";
 			String exStr = StringUtil.exceptionToString(ex); 
 			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
 			{
-				// Possibly send mail again without any attachment
+				messageIsToBig = true;
+
+				long sizeBytes = msgBody.length();
+
+				nextStep = "Sending same content without the ZIP file Attachement<br>"
+						+ "The message size is expected to be approx " + sizeBytes/1024 + " KB (" + NumberUtils.round(sizeBytes/1024.0/1024.0, 1) + " MB).";
+			}
+
+			// Fallback: Send mail (if possible) with the error information!
+			// This will of course only work if the mail is setup correctly... 
+			// Typically this will be send for:
+			//   * message file too big (when the mail server says the content is to *big*
+			sendExceptionMail(toList, "(full mail)", serverName, msg, nextStep, ex);
+			
+			// Possibly send mail again without any attachment
+			if (messageIsToBig)
+			{
 				sendNoAttachmentMail(reportContent, toList, msgSubject, msgBody, reportContent.isShortMessageOfHtml());
 			}
-			
 		}
 		finally
 		{
@@ -365,17 +392,42 @@ extends ReportSenderAbstract
 			String msg = "Problems sending DSR FALLBACK(no-attachement) Error mail. Subject: " + msgSubject;
 			_logger.error(msg, ex);
 
+
+			// Should we try to send this once again, WITHOUT any Attachment?
+			// Note: do not trust 'message file too big' the message may be localized
+			boolean messageIsToBig = false;
+			String nextStep = "";
+			String exStr = StringUtil.exceptionToString(ex); 
+			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+			{
+				messageIsToBig = true;
+
+				if (_attachmentFile != null)
+				{
+					long sizeBytes = _attachmentFile.length();
+
+					// Possibly send mail again without any attachment
+					nextStep = "Sending content again, but this time ONLY the ZIP file Attached<br>"
+							+ "The message size is expected to be approx " + sizeBytes/1024 + " KB (" + NumberUtils.round(sizeBytes/1024.0/1024.0, 1) + " MB).";
+				}
+				else
+				{
+					long sizeBytes = reportContent.getMinimalMessage().length();
+					
+					// Possibly send mail again without MINIMAL message
+					nextStep = "Sending MINIMAL mail (making the mail as small as possible)<br>"
+							+ "The message size is expected to be approx " + sizeBytes/1024 + " KB (" + NumberUtils.round(sizeBytes/1024.0/1024.0, 1) + " MB).";
+				}
+			}
+
 			// Fallback: Send mail (if possible) with the error information!
 			// This will of course only work if the mail is setup correctly... 
 			// Typically this will be send for:
 			//   * message file too big (when the mail server says the content is to *big*
-			sendExceptionMail(toList, "(no-attachement)", reportContent.getDisplayOrServerName(), msg, ex);
-
-
-			// Should we try to send this once again, WITHOUT any ???
-			// Note: do not trust 'message file too big' the message may be localized
-			String exStr = StringUtil.exceptionToString(ex); 
-			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+			sendExceptionMail(toList, "(no-attachement)", reportContent.getDisplayOrServerName(), msg, nextStep, ex);
+			
+			// Possibly send mail again without any attachment
+			if (messageIsToBig)
 			{
 				if (_attachmentFile != null)
 				{
@@ -437,16 +489,30 @@ extends ReportSenderAbstract
 			String msg = "Problems sending DSR FALLBACK(only-attachement) Error mail. Subject: " + msgSubject;
 			_logger.error(msg, ex);
 
+			// Should we try to send this once again, WITHOUT any Attachment?
+			// Note: do not trust 'message file too big' the message may be localized
+			boolean messageIsToBig = false;
+			String nextStep = "";
+			String exStr = StringUtil.exceptionToString(ex); 
+			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+			{
+				messageIsToBig = true;
+
+				long sizeBytes = reportContent.getMinimalMessage().length();
+				
+				// Possibly send mail again without MINIMAL message
+				nextStep = "Sending MINIMAL mail (making the mail as small as possible)<br>"
+						+ "The message size is expected to be approx " + sizeBytes/1024 + " KB (" + NumberUtils.round(sizeBytes/1024.0/1024.0, 1) + " MB).";
+			}
+
 			// Fallback: Send mail (if possible) with the error information!
 			// This will of course only work if the mail is setup correctly... 
 			// Typically this will be send for:
 			//   * message file too big (when the mail server says the content is to *big*
-			sendExceptionMail(toList, "(only-attachement)", reportContent.getDisplayOrServerName(), msg, ex);
-
-			// Should we try to send this once again, WITHOUT any ???
-			// Note: do not trust 'message file too big' the message may be localized
-			String exStr = StringUtil.exceptionToString(ex); 
-			if (exStr.contains("Exception: 552 5.3.4 Error: ") || exStr.contains("message file too big")) 
+			sendExceptionMail(toList, "(only-attachement)", reportContent.getDisplayOrServerName(), msg, nextStep, ex);
+			
+			// Possibly send mail again without any attachment
+			if (messageIsToBig)
 			{
 				// Possibly send mail again: MINIMAL Mail
 				sendMinimalMail(reportContent, toList, subject);
@@ -472,15 +538,8 @@ extends ReportSenderAbstract
 					+ "Trying to send the Daily Summary Report, with a MINIMAL Content..."
 					+ "</html>";
 
-			try 
-			{
-				// SET THE MINIMAL CONTENT
-				msgBody = reportContent.getMinimalMessage();
-			} 
-			catch (IOException ex) 
-			{
-				_logger.error("Problems reading Report Content.", ex);
-			}
+			// SET THE MINIMAL CONTENT
+			msgBody = reportContent.getMinimalMessage();
 			
 			// CONTENT HTML or PLAIN
 			if (isMsgHtml)
@@ -507,7 +566,7 @@ extends ReportSenderAbstract
 			// This will of course only work if the mail is setup correctly... 
 			// Typically this will be send for:
 			//   * message file too big (when the mail server says the content is to *big*
-			sendExceptionMail(toList, "(minimal-content)", reportContent.getDisplayOrServerName(), msg, ex);
+			sendExceptionMail(toList, "(minimal-content)", reportContent.getDisplayOrServerName(), msg, "", ex);
 
 //			// Should we try to send this once again, WITHOUT any ???
 //			// Note: do not trust 'message file too big' the message may be localized
@@ -527,9 +586,10 @@ extends ReportSenderAbstract
 	 * @param levelStr           A String describing at what "level" we had problems (can be blank or null)
 	 * @param serverName         Name of the DBMS server name we tried to send message for
 	 * @param problemDesc        Short info about sizes etc
+	 * @param nextStep 
 	 * @param problemException   The Exception originally grabbed when sending mail
 	 */
-	private void sendExceptionMail(List<String> toList, String levelStr, String serverName, String problemDesc, Exception problemException)
+	private void sendExceptionMail(List<String> toList, String levelStr, String serverName, String problemDesc, String nextStep, Exception problemException)
 	{
 		// If level String does NOT end with a space... add one
 		if (StringUtil.hasValue(levelStr) && !levelStr.endsWith(" "))
@@ -542,6 +602,20 @@ extends ReportSenderAbstract
 				+ "Exception: "   + problemException + "\n"
 				+ "";
 
+		String nextStepText = "";
+		if (StringUtil.hasValue(nextStep))
+		{
+			nextStepText = ""
+					+ ""
+					+ "<b>Next Step:</b> \n"
+					+ "<pre> \n"
+					+ nextStep + "\n"
+					+ "</pre> \n"
+					+ "<br>"
+					+ ""
+					;
+		}
+		
 		String msgHtmlContent  = "" 
 				+ "<html> \n"
 				+ "<head> \n"
@@ -552,7 +626,7 @@ extends ReportSenderAbstract
 				+ "</head> \n"
 				+ "<body> \n"
 				+ ""
-				+ "<b>For Server:</b> " + serverName + "\n"
+				+ "<b>For Server:</b> " + serverName + "<br>\n"
 				+ "<br>"
 				+ ""
 				+ "<b>Problem Description:</b> \n"
@@ -560,6 +634,8 @@ extends ReportSenderAbstract
 				+ problemDesc + "\n"
 				+ "</pre> \n"
 				+ "<br>"
+				+ ""
+				+ nextStepText
 				+ ""
 				+ "<b>Exception:</b> \n"
 				+ "<pre> \n"

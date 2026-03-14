@@ -3025,12 +3025,17 @@ public class CentralPersistReader
 				{
 					while (rs.next())
 					{
-						user = new DbxCentralUser(
-								rs.getString   (1), // UserName
-								rs.getString   (2), // Password
-								rs.getString   (3), // Email
-								rs.getString   (4)  // Roles
-								);
+						String user_username = rs.getString(1); // UserName
+						String user_password = rs.getString(2); // Password
+						String user_email    = rs.getString(3); // Email
+						String user_roles    = rs.getString(4); // Roles
+
+						if (user_password.startsWith(Configuration.ENCRYPTED_PREFIX))
+						{
+							user_password = Configuration.decryptPropertyValue(user_username, user_password);
+						}
+						
+						user = new DbxCentralUser(user_username, user_password, user_email, user_roles);
 					}
 				}
 			}

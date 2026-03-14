@@ -115,11 +115,11 @@ public class StatementFixerManager
 		    // - (LIMIT\s+\d+|OFFSET\s+\d+): matches either "LIMIT ###" or "OFFSET ###"
 		    // - (\s+(OFFSET|LIMIT)\s+\d+)?: optionally matches the second clause
 		    // - (?i): case-insensitive flag
-			private final Pattern LIMIT_OFFSET_PATTERN = Pattern.compile("(?i)\\bROWS\\b\\s+(LIMIT\\s+\\d+|OFFSET\\s+\\d+)(\\s+(OFFSET|LIMIT)\\s+\\d+)?", Pattern.CASE_INSENSITIVE);
+			private final Pattern PATTERN = Pattern.compile("(?i)\\bROWS\\b\\s+(LIMIT\\s+\\d+|OFFSET\\s+\\d+)(\\s+(OFFSET|LIMIT)\\s+\\d+)?", Pattern.CASE_INSENSITIVE);
 
 			@Override public String  getName()                { return "ase-rows-limit"; }
 			@Override public String  getDescrition()          { return getComment(); }
-			@Override public boolean isRewritable(String sql) { return LIMIT_OFFSET_PATTERN.matcher(sql).find(); }
+			@Override public boolean isRewritable(String sql) { return PATTERN.matcher(sql).find(); }
 			@Override public String  getComment()             { return "Commented out: 'ROWS LIMIT #' or 'ROWS OFFSET # LIMIT #'"; }
 			@Override public String  rewrite(String sql) 
 			{
@@ -127,7 +127,7 @@ public class StatementFixerManager
 				if (sql.startsWith(getPrefix()))
 					return sql;
 
-				Matcher matcher = LIMIT_OFFSET_PATTERN.matcher(sql);
+				Matcher matcher = PATTERN.matcher(sql);
 				return getPrefix() + matcher.replaceAll(IStatementFixer.REWRITE_MSG_BEGIN + " $0 " + IStatementFixer.REWRITE_MSG_END);
 			}
 		});
@@ -146,11 +146,11 @@ public class StatementFixerManager
 	        //                        \\s+ matches whitespace between TOP and the number
 	        //                        \\d+ matches one or more digits (the number after TOP)
 	        // \\s+                 - Matches trailing whitespace after the number
-			private final Pattern DEL_UPD_TOP_PATTERN = Pattern.compile("(?i)(DELETE|UPDATE)\\s+(TOP\\s+\\d+)\\s+", Pattern.CASE_INSENSITIVE);
+			private final Pattern PATTERN = Pattern.compile("(?i)(DELETE|UPDATE)\\s+(TOP\\s+\\d+)\\s+", Pattern.CASE_INSENSITIVE);
 			
 			@Override public String  getName()                { return "ase-del-upd-top-rows"; }
 			@Override public String  getDescrition()          { return getComment(); }
-			@Override public boolean isRewritable(String sql) { return DEL_UPD_TOP_PATTERN.matcher(sql).find(); }
+			@Override public boolean isRewritable(String sql) { return PATTERN.matcher(sql).find(); }
 			@Override public String  getComment()             { return "Commented out: 'HOLDLOCK'"; }
 			@Override public String  rewrite(String sql) 
 			{
@@ -158,7 +158,7 @@ public class StatementFixerManager
 				if (sql.startsWith(getPrefix()))
 					return sql;
 
-				Matcher matcher = DEL_UPD_TOP_PATTERN.matcher(sql);
+				Matcher matcher = PATTERN.matcher(sql);
 				return getPrefix() + matcher.replaceAll("$1 " + IStatementFixer.REWRITE_MSG_BEGIN + " $2 " + IStatementFixer.REWRITE_MSG_END);
 			}
 		});
@@ -175,12 +175,12 @@ public class StatementFixerManager
 			// - tableName WITH (HOLDLOCK)
 			// - tableName alias WITH (HOLDLOCK)
 //			private final Pattern HOLDLOCK_PATTERN = Pattern.compile("(\\w+)\\s+(\\w+\\s+)?(WITH\\s*\\()?\\s*HOLDLOCK\\s*(\\))?", Pattern.CASE_INSENSITIVE);
-			private final Pattern HOLDLOCK_SIMPLE_PATTERN = Pattern.compile("\\bHOLDLOCK\\b", Pattern.CASE_INSENSITIVE);
+			private final Pattern PATTERN = Pattern.compile("\\bHOLDLOCK\\b", Pattern.CASE_INSENSITIVE);
 
 			@Override public String  getName()                { return "ase-tab-holdlock"; }
 			@Override public String  getDescrition()          { return getComment(); }
 //			@Override public boolean isRewritable(String sql) { return HOLDLOCK_PATTERN.matcher(sql).find(); }
-			@Override public boolean isRewritable(String sql) { return HOLDLOCK_SIMPLE_PATTERN.matcher(sql).find(); }
+			@Override public boolean isRewritable(String sql) { return PATTERN.matcher(sql).find(); }
 			@Override public String  getComment()             { return "Commented out: 'HOLDLOCK'"; }
 			@Override public String  rewrite(String sql) 
 			{
@@ -188,7 +188,7 @@ public class StatementFixerManager
 				if (sql.startsWith(getPrefix()))
 					return sql;
 
-				Matcher matcher = HOLDLOCK_SIMPLE_PATTERN.matcher(sql);
+				Matcher matcher = PATTERN.matcher(sql);
 				return getPrefix() + matcher.replaceAll(IStatementFixer.REWRITE_MSG_BEGIN + " $0 " + IStatementFixer.REWRITE_MSG_END);
 //				return getPrefix() + matcher.replaceAll("/*** HOLDLOCK ****/");
 			}
@@ -212,6 +212,57 @@ public class StatementFixerManager
 //			}
 		});
 		
+		//------------------------------------------------------------
+		// Sybase ASE Syntax: insert... insert... insert...
+		// fix: add ';' after each 'insert'
+		//------------------------------------------------------------
+		add( new IStatementFixer() 
+		{
+			// Compiled regex pattern for adding semicolons to INSERT statements
+			// Pattern breakdown:
+			// (?i)                          - Case-insensitive flag (matches INSERT, insert, Insert, etc.)
+			// (                             - Start of capturing group 1
+			//   INSERT\\s+INTO\\s+          - Match "INSERT INTO" with one or more whitespace characters
+			//   .*?                         - Match any characters (non-greedy) - this captures table name, columns, VALUES keyword, and data
+			//   \\)                         - Match the closing parenthesis of the VALUES clause
+			// )                             - End of capturing group 1
+			// [\\s]*                        - Match zero or more whitespace characters after the closing parenthesis
+			// (?=INSERT|$)                  - Positive lookahead: ensure next content is either another INSERT or end of string
+			//	                             - This ensures we don't match beyond the current INSERT statement
+			private final Pattern PATTERN = Pattern.compile("(?i)(INSERT\\s+INTO\\s+.*?\\))[\\s]*(?=INSERT|$)", Pattern.CASE_INSENSITIVE);
+			
+			@Override public String  getName()                { return "ase-many-insert-in-same-batch"; }
+			@Override public String  getDescrition()          { return getComment(); }
+			@Override public boolean isRewritable(String sql) { return PATTERN.matcher(sql).find(); }
+			@Override public String  getComment()             { return "Added simicolon on multiple inserts"; }
+			@Override public String  rewrite(String sql) 
+			{
+				// Check if it was already fixed
+				if (sql.startsWith(getPrefix()))
+					return sql;
+
+				// Replace each matched INSERT statement with itself ($1) plus a semicolon and newline
+				// $1 refers to the content captured in group 1
+				Matcher matcher = PATTERN.matcher(sql);
+				String result = matcher.replaceAll("$1;\n");
+
+				// Clean up: remove any duplicate semicolons that might have been created
+				// ;+ matches one or more consecutive semicolons and replaces with single semicolon
+				result = result.replaceAll(";+", ";");
+
+				// Remove leading/trailing whitespace
+				result = result.trim();
+
+//				// Ensure the entire SQL text ends with exactly one semicolon
+//				if (!result.endsWith(";")) 
+//				{
+//					result += ";";
+//				}
+
+				return result;
+			}
+		});
+
 		//------------------------------------------------------------
 		// Get USER Defined Fixers (from Properties). 
 		//------------------------------------------------------------

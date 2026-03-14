@@ -29,6 +29,7 @@ import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 
 import com.dbxtune.Version;
+import com.dbxtune.utils.HtmlUtils;
 
 public class ShowplanSqlServerExternalHtmlView
 extends ShowplanHtmlView
@@ -91,7 +92,10 @@ extends ShowplanHtmlView
 			out.write("    <link rel='stylesheet' type='text/css' href='css/qp.css'>             \n");
 //			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");
 			out.write("    <script src='dist/qp.js' type='text/javascript'></script>             \n");
-			out.write("    <script src='https://code.jquery.com/jquery-3.7.1.min.js' integrity='sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=' crossorigin='anonymous'></script>  \n");
+//			out.write("    <script src='https://code.jquery.com/jquery-3.7.1.min.js' integrity='sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=' crossorigin='anonymous'></script>  \n");
+//			out.write("    <script src='/scripts/jquery/jquery-3.7.1.min.js'</script>  \n");
+// Do we REALLY NEED jquery here... If so use a fallback strategy, like below
+//			HtmlUtils.createJsScriptTag(html, "/scripts/jquery/jquery-3.7.1.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js");
 			out.write("</head>                                                                   \n");
 			out.write("                                                                          \n");
 			out.write("<body>                                                                    \n");

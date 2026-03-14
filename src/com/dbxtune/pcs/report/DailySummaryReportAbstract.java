@@ -71,6 +71,13 @@ implements IDailySummaryReport
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
+	public static final String PROPKEY_DbxCentralInternalBaseUrl = "DbxCentral.internal.base.url";
+	public static final String DEFAULT_DbxCentralInternalBaseUrl = "";
+	
+	public static final String PROPKEY_DbxCentralPublicBaseUrl   = "DbxCentral.public.base.url";
+	public static final String DEFAULT_DbxCentralPublicBaseUrl   = "";
+
+
 	private DbxConnection _conn = null;
 	private IReportSender _sender = null;
 	private String        _serverName = null;
@@ -704,8 +711,67 @@ implements IDailySummaryReport
 //	}
 
 
-	public static String getDbxCentralBaseUrl()
+	/**
+	 * Get <i>internal</i> DbxCentral site/URL <br>
+	 * Used to access DbxCentral Collectors to DbxCentral.
+	 * <p>
+	 * This can/will be used when the <i>public</i> address (which is used to view stuff), for example is 'dbxtune.acme.com' <br>
+	 * And the machine that hosts DbxCentral is "something else", like 'dbxtune-vm.some.long.domain.internal:8080'<br>
+	 * <p>
+	 * Then we want the internal communication to be to 'dbxtune-vm.some.long.domain.internal:8080' and NOT to 'dbxtune.acme.com'.<br>
+	 * @return
+	 */
+	public static String getDbxCentralInternalBaseUrl()
 	{
+		// Properties OVERRIDES any of the below logics
+		String baseUrl = Configuration.getCombinedConfiguration().getProperty(PROPKEY_DbxCentralInternalBaseUrl, DEFAULT_DbxCentralInternalBaseUrl);
+		if (StringUtil.hasValue(baseUrl))
+		{
+			return baseUrl;
+		}
+
+		// initialize with default parameters, which may change below...
+		String dbxCentralProt = "http";
+		String dbxCentralHost = StringUtil.getHostnameWithDomain();
+		int    dbxCentralPort = DbxTuneCentral.getWebHttpPort(); // 8080;
+		
+		// get where DBX CENTRAL is located (or where the 'PersistWriterToHttpJson' send it's data to)
+		String sendToDbxCentralUrl = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.url", null);
+		if (StringUtil.hasValue(sendToDbxCentralUrl))
+		{
+			// Parse the URL and get protocol/host/port
+			try
+			{
+				URL url = new URL(sendToDbxCentralUrl);
+				
+				dbxCentralProt = url.getProtocol();
+				dbxCentralHost = url.getHost();
+				dbxCentralPort = url.getPort();
+			}
+			catch (MalformedURLException ex)
+			{
+				_logger.info("Daily Report: Problems parsing DbxCentral URL '" + sendToDbxCentralUrl + "', using defaults. Caught:" + ex);
+			}
+		}
+		
+		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
+		return dbxCentralBaseUrl;
+	}
+
+	/**
+	 * Get public DbxCentral site/URL<br>
+	 * Used to access DbxCentral from any links etc (like the Alarms Mail/Event) 
+	 * @return
+	 */
+	public static String getDbxCentralPublicBaseUrl()
+	{
+		// Properties OVERRIDES any of the below logics
+		String baseUrl = Configuration.getCombinedConfiguration().getProperty(PROPKEY_DbxCentralPublicBaseUrl, DEFAULT_DbxCentralPublicBaseUrl);
+		if (StringUtil.hasValue(baseUrl))
+		{
+			return baseUrl;
+		}
+
 		// initialize with default parameters, which may change below...
 		String dbxCentralProt = "http";
 		String dbxCentralHost = StringUtil.getHostnameWithDomain();
@@ -729,6 +795,9 @@ implements IDailySummaryReport
 				_logger.info("Daily Report: Problems parsing DbxCentral URL '" + sendToDbxCentralUrl + "', using defaults. Caught:" + ex);
 			}
 		}
+		
+		// OR POSSIBLE LOOP ALL ALARM WRITERS AND CHECK FOR THERE ENTRIES...
+		// The code is in 'AlarmWriterAbstract.getDbxCentralUrl()' BUT commented out and now are using a call to THIS METHOD
 		
 		// Collector and DBX Central is located on the same host
 		// if 'localhost' or '127.0.0.1' then get REAL localhost name
@@ -777,7 +846,7 @@ implements IDailySummaryReport
 
 	public String createDbxCentralLink(boolean isFullText)
 	{
-		String dbxCentralBaseUrl = getDbxCentralBaseUrl();
+		String dbxCentralBaseUrl = getDbxCentralPublicBaseUrl();
 		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name="+getServerName();
 		String dbxCentralUrlAll  = dbxCentralBaseUrl + "/overview#reportfiles";
 
@@ -836,7 +905,7 @@ implements IDailySummaryReport
 			return Collections.emptyList();
 		}
 		
-		String dbxCentralBaseUrl = getDbxCentralBaseUrl();
+		String dbxCentralBaseUrl = getDbxCentralInternalBaseUrl();
 		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip?srvName="+srvName;
 //		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip;
 

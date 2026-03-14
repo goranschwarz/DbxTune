@@ -94,10 +94,12 @@ extends HostMonitor
 		md.addIntColumn("WS(K)",        4,  4, false,        "The size of the working set of the process, in kilobytes. The working set consists of the pages of memory that were recently referenced by the process.");
 //		md.addIntColumn("VM(M)",        5,  5, false,        "The amount of virtual memory that the process is using, in megabytes. Virtual memory includes storage in the paging files on disk.");
 		md.addDecColumn("CPU(s)",       5,  5, false, 20, 2, "The amount of processor time that the process has used on all processors, in seconds.");
-		md.addStrColumn("CpuTimeHms",   6, -1, false, 20,    "CPU(s) transformed into #d #h:#m:#s.#ms so it's easier to read ohow many CPU Seconds it really is");
-		md.addIntColumn("Id",           7,  6, false,        "The process ID (PID) of the process.");
-		md.addIntColumn("SI",           8,  7, false,        "This is the Session ID. Session 0 is shown for all services, Session 1 for first logged on user and 2 because you switch from user 1 to a new user logon.");
-		md.addStrColumn("ProcessName",  9,  8, false, 4096,  "The name of the process. For explanations of the concepts related to processes, see the Glossary in Help and Support Center and the Help for Task Manager.");
+		md.addDecColumn("%Cpu",         6, -1, true,  6, 1,  "CPU Percent Used... Note: This can show more than 100% if process is using more than one thread. Algorithm: CpuTimeMs * 100 / sample time");
+		md.addDecColumn("%CpuAdj",      7, -1, true,  6, 1,  "CPU Adjusted Percent Used... Note: This should NOT go above 100%. Algorithm: %Cpu / cores");
+		md.addStrColumn("CpuTimeHms",   8, -1, false, 20,    "CPU(s) transformed into #d #h:#m:#s.#ms so it's easier to read ohow many CPU Seconds it really is");
+		md.addIntColumn("Id",           9,  6, false,        "The process ID (PID) of the process.");
+		md.addIntColumn("SI",          10,  7, false,        "This is the Session ID. Session 0 is shown for all services, Session 1 for first logged on user and 2 because you switch from user 1 to a new user logon.");
+		md.addStrColumn("ProcessName", 11,  8, false, 4096,  "The name of the process. For explanations of the concepts related to processes, see the Glossary in Help and Support Center and the Help for Task Manager.");
 //		md.addStrColumn("Description", 10, -1, true , 4096,  "Description of the process name.");
 
 		// NOTE: 'CpuTimeHms' is calculated in CmOsPs.localCalculation(OsTable thisSample)
@@ -107,7 +109,7 @@ extends HostMonitor
 
 		md.setOsCommandStreaming(false);
 		
-//		md.setPercentCol("pmem", "pcpu");
+		md.setPercentCol("%Cpu", "%CpuAdj");
 
 		md.setPkCol("Id");
 		
@@ -115,8 +117,8 @@ extends HostMonitor
 		md.setDiffCol( "Handles", "NPM(K)", "PM(K)", "WS(K)", "CPU(s)" );
 
 		// Skip the header line
-		md.setSkipRows("Handles", "Handles");
-		md.setSkipRows("Handles", "-------");
+		md.addSkipRows("Handles", "Handles");
+		md.addSkipRows("Handles", "-------");
 
 //		// Get SKIP and ALLOW from the Configuration
 //		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());
