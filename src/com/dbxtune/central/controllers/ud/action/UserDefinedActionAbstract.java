@@ -362,7 +362,7 @@ implements IUserDefinedAction
 //		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
 //		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
 
-		String msgSubject = "DbxCentral: User Action '" + getName() + "' on server '" + getOnServerName() + "' was executed";
+		String msgSubject = "Dbx: User Action '" + getName() + "' on '" + getOnServerName() + "' was executed";
 		String msgBody    = msg;
 		
 		int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
