@@ -1025,7 +1025,17 @@ implements Runnable
 	{
 		return _writerClasses;
 	}
-	
+
+	public CentralPersistWriterJdbc getJdbcWriter()
+	{
+		for (ICentralPersistWriter writer : _writerClasses)
+		{
+			if (writer instanceof CentralPersistWriterJdbc)
+				return (CentralPersistWriterJdbc) writer;
+		}
+		return null;
+	}
+
 
 	/*---------------------------------------------------
 	** sub classes

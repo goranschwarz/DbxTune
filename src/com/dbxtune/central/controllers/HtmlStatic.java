@@ -186,7 +186,7 @@ public class HtmlStatic
 				writer.println("              <i class='fa fa-user'></i> <span id='dbx-nb-isLoggedInUser-div'></span> <!-- current username will be in here --> ");
 				writer.println("            </a> ");
 				writer.println("            <div class='dropdown-menu dropdown-menu-right' aria-labelledby='navbarDropdownMenuLink'> ");
-				writer.println("            <a class='dropdown-item' href='#'> <i class='fa fa-cog'></i> Settings [not-yet-implemented]</a> ");
+				writer.println("            <a class='dropdown-item' href='#' onclick='dbxOpenSettings(); return false;'> <i class='fa fa-cog'></i> Settings</a> ");
 				writer.println("            <a class='dropdown-item' href='/logout'> <i class='fa fa-sign-out'></i> Logout</a> ");
 				writer.println("            </div> ");
 				writer.println("          </li> ");
@@ -207,7 +207,7 @@ public class HtmlStatic
 	public static String getJavaScriptAtEnd(boolean addScriptTag)
 	{
 		StringBuilder sb = new StringBuilder();
-		
+
 		if (addScriptTag)
 			sb.append("<script>");
 
@@ -220,10 +220,109 @@ public class HtmlStatic
 		sb.append("	{ \n");
 		sb.append("		console.log('isLoggedIn-callback: isLogedIn=|'+isLogedIn+'|, asUserName=|'+asUserName+'|.'); \n");
 		sb.append("	}); \n");
+		sb.append("\n");
+		sb.append("	//----------------------------------------------------------- \n");
+		sb.append("	// Settings dialog \n");
+		sb.append("	//----------------------------------------------------------- \n");
+		sb.append("	function dbxOpenSettings() \n");
+		sb.append("	{ \n");
+		sb.append("		$('#dbx-settings-email-msg').html(''); \n");
+		sb.append("		$('#dbx-settings-pw-msg').html(''); \n");
+		sb.append("		$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val(''); \n");
+		sb.append("		$.ajax({ \n");
+		sb.append("			url: '/api/user/settings?op=profile', \n");
+		sb.append("			method: 'GET', \n");
+		sb.append("			dataType: 'json', \n");
+		sb.append("			success: function(r) { \n");
+		sb.append("				$('#dbx-settings-username').val(r.username || ''); \n");
+		sb.append("				$('#dbx-settings-email').val(r.email || ''); \n");
+		sb.append("			} \n");
+		sb.append("		}); \n");
+		sb.append("		$('#dbx-settings-dialog').modal('show'); \n");
+		sb.append("	} \n");
+		sb.append("\n");
+		sb.append("	function dbxSaveEmail() \n");
+		sb.append("	{ \n");
+		sb.append("		var email = $('#dbx-settings-email').val().trim(); \n");
+		sb.append("		if (!email || !email.includes('@')) { $('#dbx-settings-email-msg').html('<span class=\"text-danger\">Please enter a valid email address.</span>'); return; } \n");
+		sb.append("		$('#dbx-settings-email-msg').html('<span class=\"text-muted\">Saving...</span>'); \n");
+		sb.append("		$.ajax({ \n");
+		sb.append("			url: '/api/user/settings', method: 'POST', \n");
+		sb.append("			data: { op: 'changeEmail', email: email }, dataType: 'json', \n");
+		sb.append("			success: function(r) { var cls = r.success ? 'text-success' : 'text-danger'; $('#dbx-settings-email-msg').html('<span class=\"'+cls+'\">'+r.message+'</span>'); }, \n");
+		sb.append("			error: function() { $('#dbx-settings-email-msg').html('<span class=\"text-danger\">Request failed.</span>'); } \n");
+		sb.append("		}); \n");
+		sb.append("	} \n");
+		sb.append("\n");
+		sb.append("	function dbxSavePassword() \n");
+		sb.append("	{ \n");
+		sb.append("		var cur = $('#dbx-settings-current-pw').val(); \n");
+		sb.append("		var np  = $('#dbx-settings-new-pw').val(); \n");
+		sb.append("		var cp  = $('#dbx-settings-confirm-pw').val(); \n");
+		sb.append("		if (!cur)          { $('#dbx-settings-pw-msg').html('<span class=\"text-danger\">Enter your current password.</span>'); return; } \n");
+		sb.append("		if (np.length < 6) { $('#dbx-settings-pw-msg').html('<span class=\"text-danger\">New password must be at least 6 characters.</span>'); return; } \n");
+		sb.append("		if (np !== cp)     { $('#dbx-settings-pw-msg').html('<span class=\"text-danger\">Passwords do not match.</span>'); return; } \n");
+		sb.append("		$('#dbx-settings-pw-msg').html('<span class=\"text-muted\">Saving...</span>'); \n");
+		sb.append("		$.ajax({ \n");
+		sb.append("			url: '/api/user/settings', method: 'POST', \n");
+		sb.append("			data: { op: 'changePassword', currentPassword: cur, newPassword: np, confirmPassword: cp }, dataType: 'json', \n");
+		sb.append("			success: function(r) { \n");
+		sb.append("				var cls = r.success ? 'text-success' : 'text-danger'; \n");
+		sb.append("				$('#dbx-settings-pw-msg').html('<span class=\"'+cls+'\">'+r.message+'</span>'); \n");
+		sb.append("				if (r.success) $('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val(''); \n");
+		sb.append("			}, \n");
+		sb.append("			error: function() { $('#dbx-settings-pw-msg').html('<span class=\"text-danger\">Request failed.</span>'); } \n");
+		sb.append("		}); \n");
+		sb.append("	} \n");
 
 		if (addScriptTag)
 			sb.append("</script>");
-		
+
+		// Settings modal HTML (Bootstrap 4) -- placed outside the <script> block
+		sb.append("\n");
+		sb.append("<!-- ============================================================ -->\n");
+		sb.append("<!-- Settings Modal (Bootstrap 4)                                 -->\n");
+		sb.append("<!-- ============================================================ -->\n");
+		sb.append("<div class='modal fade' id='dbx-settings-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-settings-title'>\n");
+		sb.append("    <div class='modal-dialog' role='document'>\n");
+		sb.append("        <div class='modal-content'>\n");
+		sb.append("            <div class='modal-header'>\n");
+		sb.append("                <h5 class='modal-title' id='dbx-settings-title'><i class='fa fa-cog'></i> Account Settings</h5>\n");
+		sb.append("                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>\n");
+		sb.append("            </div>\n");
+		sb.append("            <div class='modal-body'>\n");
+		sb.append("                <div class='form-group'>\n");
+		sb.append("                    <label class='small font-weight-bold'>Username</label>\n");
+		sb.append("                    <input type='text' class='form-control form-control-sm' id='dbx-settings-username' readonly>\n");
+		sb.append("                </div>\n");
+		sb.append("                <hr>\n");
+		sb.append("                <h6>Change Email</h6>\n");
+		sb.append("                <div class='form-group mt-2'>\n");
+		sb.append("                    <input type='email' class='form-control form-control-sm' id='dbx-settings-email' placeholder='Email address'>\n");
+		sb.append("                </div>\n");
+		sb.append("                <button class='btn btn-sm btn-primary' type='button' onclick='dbxSaveEmail()'>Update Email</button>\n");
+		sb.append("                <div id='dbx-settings-email-msg' class='mt-1 small'></div>\n");
+		sb.append("                <hr>\n");
+		sb.append("                <h6>Change Password</h6>\n");
+		sb.append("                <div class='form-group mt-2'>\n");
+		sb.append("                    <input type='password' class='form-control form-control-sm' id='dbx-settings-current-pw' placeholder='Current password' autocomplete='current-password'>\n");
+		sb.append("                </div>\n");
+		sb.append("                <div class='form-group'>\n");
+		sb.append("                    <input type='password' class='form-control form-control-sm' id='dbx-settings-new-pw' placeholder='New password (min 6 characters)' autocomplete='new-password'>\n");
+		sb.append("                </div>\n");
+		sb.append("                <div class='form-group'>\n");
+		sb.append("                    <input type='password' class='form-control form-control-sm' id='dbx-settings-confirm-pw' placeholder='Confirm new password' autocomplete='new-password'>\n");
+		sb.append("                </div>\n");
+		sb.append("                <button class='btn btn-sm btn-primary' type='button' onclick='dbxSavePassword()'>Change Password</button>\n");
+		sb.append("                <div id='dbx-settings-pw-msg' class='mt-1 small'></div>\n");
+		sb.append("            </div>\n");
+		sb.append("            <div class='modal-footer'>\n");
+		sb.append("                <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>\n");
+		sb.append("            </div>\n");
+		sb.append("        </div>\n");
+		sb.append("    </div>\n");
+		sb.append("</div>\n");
+
 		return sb.toString();
 	}
 }

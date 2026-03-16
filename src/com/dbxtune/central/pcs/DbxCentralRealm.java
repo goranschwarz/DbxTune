@@ -38,6 +38,7 @@ import org.eclipse.jetty.server.UserIdentity;
 import org.eclipse.jetty.util.security.Credential;
 
 import com.dbxtune.central.pcs.objects.DbxCentralUser;
+import com.dbxtune.central.utils.PasswordHashUtil;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
@@ -46,9 +47,40 @@ extends AbstractLoginService
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	public static final String ROLE_ADMIN     = "admin";
-	public static final String ROLE_UD_ACTION = "ud_action";
-	public static final String ROLE_USER      = "user";
+	/**
+	 * All roles known to the system. Adding a new entry here is sufficient —
+	 * the admin UI reads the list dynamically via {@code /admin/users?op=roles}.
+	 */
+	public enum Role
+	{
+		ADMIN    ("admin"),
+		UD_ACTION("ud_action"),
+		USER     ("user");
+
+		private final String _roleName;
+
+		Role(String roleName) { this._roleName = roleName; }
+
+		/** Returns the role name string stored in the database, e.g. {@code "admin"}. */
+		public String getRoleName() { return _roleName; }
+
+		/** Returns all role names as a String array (preserves declaration order). */
+		public static String[] getAllRoleNames()
+		{
+			Role[]   vals  = values();
+			String[] names = new String[vals.length];
+			for (int i = 0; i < vals.length; i++)
+				names[i] = vals[i]._roleName;
+			return names;
+		}
+
+		@Override public String toString() { return _roleName; }
+	}
+
+	// Convenience String constants — kept for backward compatibility with existing code.
+	public static final String ROLE_ADMIN     = Role.ADMIN    .getRoleName();
+	public static final String ROLE_UD_ACTION = Role.UD_ACTION.getRoleName();
+	public static final String ROLE_USER      = Role.USER     .getRoleName();
 
 	public static final String PROPKEY_USER_ADMIN_FALLBACK = "DbxCentralRealm.user.admin.fallback";
 	public static final String DEFAULT_USER_ADMIN_FALLBACK = "admin";
@@ -152,7 +184,7 @@ extends AbstractLoginService
 				_userRoleMap.put(username, roles);
 
 				// and create a "login object"
-				uid = new UserPrincipal(username, Credential.getCredential(passwd));
+				uid = new UserPrincipal(username, PasswordHashUtil.toCredential(passwd));
 			}
 
 			return uid;

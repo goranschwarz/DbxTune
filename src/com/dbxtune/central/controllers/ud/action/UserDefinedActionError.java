@@ -67,6 +67,9 @@ implements IUserDefinedAction
 	@Override public void setPageRefreshTime(int time) {}
 	@Override public int  getPageRefreshTime()         { return -1; }
 
+	@Override public void   setExecutedByUser(String username) {}
+	@Override public String getExecutedByUser()                { return "-unknown-"; }
+
 	@Override
 	public void createInfoContent(PrintWriter out) throws IOException
 	{

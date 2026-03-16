@@ -238,7 +238,7 @@ function getParameter(key, defaultValue)
 						<i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
 					</a>
 					<div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
-						<a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+						<a class="dropdown-item" href="#" onclick="dbxOpenSettings(); return false;"> <i class="fa fa-cog"></i> Settings</a>
 						<a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
 					</div>
 				</li>
@@ -1624,7 +1624,121 @@ console.log("response:", response);
 			$("#dbx-cfg-prop").modal('show');
 		}
 		
+
+
+	//-----------------------------------------------------------
+	// Settings dialog
+	//-----------------------------------------------------------
+	function dbxOpenSettings()
+	{
+		$('#dbx-settings-email-msg').html('');
+		$('#dbx-settings-pw-msg').html('');
+		$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
+		$.ajax({
+			url: '/api/user/settings?op=profile',
+			method: 'GET',
+			dataType: 'json',
+			success: function(r) {
+				$('#dbx-settings-username').val(r.username || '');
+				$('#dbx-settings-email').val(r.email || '');
+			}
+		});
+		var modal = new bootstrap.Modal(document.getElementById('dbx-settings-dialog'));
+		modal.show();
+	}
+
+	function dbxSaveEmail()
+	{
+		var email = $('#dbx-settings-email').val().trim();
+		if (!email || !email.includes('@'))
+		{
+			$('#dbx-settings-email-msg').html('<span class="text-danger">Please enter a valid email address.</span>');
+			return;
+		}
+		$('#dbx-settings-email-msg').html('<span class="text-muted">Saving...</span>');
+		$.ajax({
+			url: '/api/user/settings',
+			method: 'POST',
+			data: { op: 'changeEmail', email: email },
+			dataType: 'json',
+			success: function(r) {
+				var cls = r.success ? 'text-success' : 'text-danger';
+				$('#dbx-settings-email-msg').html('<span class="' + cls + '">' + r.message + '</span>');
+			},
+			error: function() { $('#dbx-settings-email-msg').html('<span class="text-danger">Request failed.</span>'); }
+		});
+	}
+
+	function dbxSavePassword()
+	{
+		var cur = $('#dbx-settings-current-pw').val();
+		var np  = $('#dbx-settings-new-pw').val();
+		var cp  = $('#dbx-settings-confirm-pw').val();
+		if (!cur)          { $('#dbx-settings-pw-msg').html('<span class="text-danger">Enter your current password.</span>'); return; }
+		if (np.length < 6) { $('#dbx-settings-pw-msg').html('<span class="text-danger">New password must be at least 6 characters.</span>'); return; }
+		if (np !== cp)     { $('#dbx-settings-pw-msg').html('<span class="text-danger">Passwords do not match.</span>'); return; }
+		$('#dbx-settings-pw-msg').html('<span class="text-muted">Saving...</span>');
+		$.ajax({
+			url: '/api/user/settings',
+			method: 'POST',
+			data: { op: 'changePassword', currentPassword: cur, newPassword: np, confirmPassword: cp },
+			dataType: 'json',
+			success: function(r) {
+				var cls = r.success ? 'text-success' : 'text-danger';
+				$('#dbx-settings-pw-msg').html('<span class="' + cls + '">' + r.message + '</span>');
+				if (r.success)
+					$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
+			},
+			error: function() { $('#dbx-settings-pw-msg').html('<span class="text-danger">Request failed.</span>'); }
+		});
+	}
+
 	</script>
+
+<!-- ============================================================ -->
+<!-- Settings Modal (Bootstrap 5)                                 -->
+<!-- ============================================================ -->
+<div class="modal fade" id="dbx-settings-dialog" tabindex="-1" aria-labelledby="dbx-settings-title" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dbx-settings-title"><i class="fa fa-cog"></i> Account Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Username</label>
+                    <input type="text" class="form-control form-control-sm" id="dbx-settings-username" readonly>
+                </div>
+
+                <hr>
+                <h6>Change Email</h6>
+                <div class="mb-2 mt-2">
+                    <input type="email" class="form-control form-control-sm" id="dbx-settings-email" placeholder="Email address">
+                </div>
+                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSaveEmail()">Update Email</button>
+                <div id="dbx-settings-email-msg" class="mt-1 small"></div>
+
+                <hr>
+                <h6>Change Password</h6>
+                <div class="mb-2 mt-2">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-current-pw" placeholder="Current password" autocomplete="current-password">
+                </div>
+                <div class="mb-2">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-new-pw" placeholder="New password (min 6 characters)" autocomplete="new-password">
+                </div>
+                <div class="mb-2">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-confirm-pw" placeholder="Confirm new password" autocomplete="new-password">
+                </div>
+                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSavePassword()">Change Password</button>
+                <div id="dbx-settings-pw-msg" class="mt-1 small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 </body>

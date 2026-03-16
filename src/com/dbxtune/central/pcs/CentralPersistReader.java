@@ -3048,6 +3048,84 @@ public class CentralPersistReader
 		}
 	}
 
+	public List<DbxCentralUser> getDbxCentralUsers()
+	throws SQLException
+	{
+		List<DbxCentralUser> list = new ArrayList<>();
+
+		DbxConnection conn = getConnection();
+		try
+		{
+			String lq      = conn.getLeftQuote();
+			String rq      = conn.getRightQuote();
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+
+			String sql = "SELECT " + lq+"UserName"+rq + ", " + lq+"Password"+rq + ", " + lq+"Email"+rq + ", " + lq+"Roles"+rq
+					+ " FROM "     + tabName
+					+ " ORDER BY " + lq+"UserName"+rq;
+
+			try (PreparedStatement pstmt = conn.prepareStatement(sql);
+			     ResultSet rs = pstmt.executeQuery())
+			{
+				while (rs.next())
+				{
+					list.add(new DbxCentralUser(
+							rs.getString("UserName"),
+							rs.getString("Password"),
+							rs.getString("Email"),
+							rs.getString("Roles")));
+				}
+			}
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+
+		return list;
+	}
+
+	public DbxCentralUser getDbxCentralUserByEmail(String email)
+	throws SQLException
+	{
+		if (StringUtil.isNullOrBlank(email))
+			return null;
+
+		DbxConnection conn = getConnection();
+		try
+		{
+			String lq      = conn.getLeftQuote();
+			String rq      = conn.getRightQuote();
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+
+			String sql = "SELECT " + lq+"UserName"+rq + ", " + lq+"Password"+rq + ", " + lq+"Email"+rq + ", " + lq+"Roles"+rq
+					+ " FROM "  + tabName
+					+ " WHERE " + lq+"Email"+rq + " = ?";
+
+			try (PreparedStatement pstmt = conn.prepareStatement(sql))
+			{
+				pstmt.setString(1, email);
+				try (ResultSet rs = pstmt.executeQuery())
+				{
+					if (rs.next())
+					{
+						return new DbxCentralUser(
+								rs.getString("UserName"),
+								rs.getString("Password"),
+								rs.getString("Email"),
+								rs.getString("Roles"));
+					}
+				}
+			}
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+
+		return null;
+	}
+
 
 
 

@@ -280,7 +280,43 @@
 		<servlet-name>LoginCheckServlet</servlet-name>
 		<url-pattern>/login-check</url-pattern>
 	</servlet-mapping>
- 
+
+	<servlet>
+		<servlet-name>UserRegistrationServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UserRegistrationServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserRegistrationServlet</servlet-name>
+		<url-pattern>/api/user/register</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>UserRecoverPasswordServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UserRecoverPasswordServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserRecoverPasswordServlet</servlet-name>
+		<url-pattern>/api/user/forgot-password</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>UsersAdminServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UsersAdminServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UsersAdminServlet</servlet-name>
+		<url-pattern>/admin/users</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>UserSettingsServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UserSettingsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserSettingsServlet</servlet-name>
+		<url-pattern>/api/user/settings</url-pattern>
+	</servlet-mapping>
+
 
 	<!-- ============================================================ -->
 	<servlet>

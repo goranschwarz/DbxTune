@@ -40,7 +40,7 @@ public class DbxCentralUser
 	{
 		_username = username;
 		_password = password;
-		_email    = password;
+		_email    = email;
 		_roles    = StringUtil.commaStrToList(roleCsv);
 	}
 	

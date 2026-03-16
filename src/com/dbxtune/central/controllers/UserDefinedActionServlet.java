@@ -194,6 +194,7 @@ extends HttpServlet
 		}
 		
 		udAction.setPageRefreshTime(refresh);
+		udAction.setExecutedByUser(userName);
 		
 
 
