@@ -260,7 +260,7 @@
               <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
             </a>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
-            <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+            <a class="dropdown-item" href="#" onclick="dbxOpenSettings(); return false;"> <i class="fa fa-cog"></i> Settings</a>
             <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
             </div>
           </li>
@@ -423,49 +423,84 @@
       <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
               <div class="modal-header">
-                  <!--<h3><i class="fa fa-sign-in"></i> DbxCentral - Login</h3>-->
                   <h3>DbxCentral - Login</h3>
                   <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
               </div>
-              <form class="form" role="form" autocomplete="off" id="dbx-login-form" novalidate="" method="POST" action="j_security_check">
-                  <div class="modal-body">
-                      <div class="form-group">
-                          <a href="" class="float-right">Create New User (not-yet-impl)</a>
-
-                          <label for="dbx-login-user-txt">Username</label>
-                          <span class="fa fa-question-circle" data-toggle="tooltip" data-placement="bottom" data-html="true" title="The default 'admin' user is <code>admin</code><br>With the password <code>ip-address</code> where DbxcCentral is running or <code>admin</code>.<br>Check DxcCentral's error log, where the password is written in case no password has been specified for the admin user, search  for ADMIN_USER_PASSWORD<br><br>But hopefully it has been changed on this system :)">&nbsp;</span>
-                          <input type="text" class="form-control" name="j_username" id="dbx-login-user-txt" required="">
-                          <div class="invalid-feedback">Oops, you missed this one.</div>
+              <div class="modal-body p-0">
+                  <!-- Tab navigation -->
+                  <ul class="nav nav-tabs px-3 pt-2" id="dbx-login-tabs" role="tablist">
+                      <li class="nav-item">
+                          <a class="nav-link active" id="dbx-tab-login" data-toggle="tab" href="#dbx-pane-login" role="tab">Login</a>
+                      </li>
+                      <li class="nav-item">
+                          <a class="nav-link" id="dbx-tab-register" data-toggle="tab" href="#dbx-pane-register" role="tab">Create Account</a>
+                      </li>
+                  </ul>
+                  <div class="tab-content px-3 pt-3">
+                      <!-- LOGIN TAB -->
+                      <div class="tab-pane fade show active" id="dbx-pane-login" role="tabpanel">
+                          <form class="form" role="form" autocomplete="off" id="dbx-login-form" novalidate="" method="POST" action="j_security_check">
+                              <div class="form-group">
+                                  <label for="dbx-login-user-txt">Username</label>
+                                  <span class="fa fa-question-circle" data-toggle="tooltip" data-placement="bottom" data-html="true" title="The default 'admin' user is <code>admin</code><br>With the password <code>ip-address</code> where DbxcCentral is running or <code>admin</code>.<br>Check DxcCentral's error log, where the password is written in case no password has been specified for the admin user, search  for ADMIN_USER_PASSWORD<br><br>But hopefully it has been changed on this system :)">&nbsp;</span>
+                                  <input type="text" class="form-control" name="j_username" id="dbx-login-user-txt" required="">
+                                  <div class="invalid-feedback">Oops, you missed this one.</div>
+                              </div>
+                              <div class="form-group">
+                                  <label for="dbx-login-passwd-txt">Password</label>
+                                  <input type="password" class="form-control" name="j_password" id="dbx-login-passwd-txt" required="" autocomplete="new-password">
+                                  <div class="invalid-feedback">Enter your password too!<br>Default 'admin' password is IP Address of the DbxCentral hostname.</div>
+                              </div>
+                              <!-- Adding a hidden submit field here, enables: submit on RETURN on any of the input fields, if fields have not been filled in, then the validation will show what's wrong -->
+                              <input type="submit" hidden />
+                              <div id="dbx-loginFailed-div" class="custom-control mb-2" style="display: none;">
+                                  <b><font color="red">Login failed!</font></b>
+                              </div>
+                              <div class="form-group">
+                                  <a href="" class="small" onclick="dbxToggleForgotPassword(); return false;">Forgot password?</a>
+                                  <div id="dbx-forgotpw-div" style="display:none;" class="mt-2 p-2 border rounded bg-light">
+                                      <p class="mb-1 small">Enter your email address and we will send you a temporary password.</p>
+                                      <div class="input-group input-group-sm">
+                                          <input type="email" class="form-control" id="dbx-forgot-email-txt" placeholder="Email address">
+                                          <div class="input-group-append">
+                                              <button class="btn btn-success" type="button" onclick="dbxSendForgotPassword()">Send</button>
+                                          </div>
+                                      </div>
+                                      <div id="dbx-forgot-msg" class="mt-1 small"></div>
+                                  </div>
+                              </div>
+                              <div class="modal-footer px-0">
+                                  <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                                  <button type="submit" class="btn btn-success float-right" id="dbx-login-btn">Login</button>
+                              </div>
+                          </form>
                       </div>
-                      <div class="form-group">
-                          <a href="" class="float-right">Forgot password? (not-yet-impl)</a>
-
-                          <labelfor="dbx-login-passwd-txt">Password</label>
-                          <input type="password" class="form-control" name="j_password" id="dbx-login-passwd-txt" required="" autocomplete="new-password">
-                          <div class="invalid-feedback">Enter your password too!<br>Default 'admin' password is IP Address of the DbxCentral hostname.</div>
-                      </div>
-                      <!-- Adding a hidden submit field here, enables: submit on RETURN on any of the input fields, if fields have not been filled in, then the validation will show what's wrong -->
-                      <input type="submit" hidden />
-
-                      <!--
-                      <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="rememberMe">
-                        <label class="custom-control-label" for="rememberMe">Remember me on this computer</label>
-                      </div>
-                      <div class="form-group py-4">
-                          <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
-                          <button type="submit" class="btn btn-success float-right" id="dbx-login-btn">Login</button>
-                      </div>
-                      -->
-                      <div id="dbx-loginFailed-div" class="custom-control" style="display: none;">
-                        <b><font color="red">Login failed!</font></b>
+                      <!-- CREATE ACCOUNT TAB -->
+                      <div class="tab-pane fade" id="dbx-pane-register" role="tabpanel">
+                          <div class="form-group">
+                              <label for="dbx-reg-username-txt">Username</label>
+                              <input type="text" class="form-control" id="dbx-reg-username-txt" maxlength="128" placeholder="Choose a username">
+                          </div>
+                          <div class="form-group">
+                              <label for="dbx-reg-email-txt">Email</label>
+                              <input type="email" class="form-control" id="dbx-reg-email-txt" placeholder="your@email.com">
+                          </div>
+                          <div class="form-group">
+                              <label for="dbx-reg-password-txt">Password</label>
+                              <input type="password" class="form-control" id="dbx-reg-password-txt" placeholder="At least 6 characters">
+                          </div>
+                          <div class="form-group">
+                              <label for="dbx-reg-confirm-txt">Confirm Password</label>
+                              <input type="password" class="form-control" id="dbx-reg-confirm-txt" placeholder="Repeat password">
+                          </div>
+                          <div id="dbx-reg-msg" class="mb-2"></div>
+                          <div class="modal-footer px-0">
+                              <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                              <button type="button" class="btn btn-primary float-right" onclick="dbxRegisterUser()">Create Account</button>
+                          </div>
                       </div>
                   </div>
-                  <div class="modal-footer">
-                      <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
-                      <button type="submit" class="btn btn-success float-right" id="dbx-login-btn">Login</button>
-                  </div>
-              </form>
+              </div>
           </div>
       </div>
   </div>
@@ -2400,19 +2435,250 @@ Active Alarms
 	isLoggedIn( function(isLoggedIn, asUserName)
 	{
 		console.log("isLoggedIn-callback: isLoggedIn='"+isLoggedIn+"', asUserName='"+asUserName+"'.");
-		if (isParameter('login') && !isLoggedIn)
+		if (isParameter('login'))
 		{
-			console.log("isLoggedIn-callback: is true, open modal login dialog.");
+			if (!isLoggedIn)
+			{
+				console.log("isLoggedIn-callback: is true, open modal login dialog.");
 
-			var loginFailed = getParameter("login", "open");
-			if (loginFailed === "failed")
-				$('#dbx-loginFailed-div').css("display", "block");
+				// Remember where the user came from so we can send them back after login.
+				// Priority: explicit ?returnUrl= parameter, then document.referrer (if same origin, not index.html).
+				var returnUrl = getParameter("returnUrl", "");
+				if (!returnUrl && document.referrer)
+				{
+					try
+					{
+						var ref = new URL(document.referrer);
+						if (ref.origin === window.location.origin
+								&& ref.pathname !== '/index.html'
+								&& ref.pathname !== '/'
+								&& ref.pathname !== '/index.jsp')
+							returnUrl = ref.pathname + ref.search + ref.hash;
+					}
+					catch(e) {}
+				}
+				if (returnUrl)
+					sessionStorage.setItem('dbxReturnAfterLogin', returnUrl);
+				else
+					sessionStorage.removeItem('dbxReturnAfterLogin');
 
-			$('#dbx-login-dialog').modal({backdrop: 'static', keyboard: false});
-			$('#dbx-login-dialog').modal('show');
+				var loginFailed = getParameter("login", "open");
+				if (loginFailed === "failed")
+					$('#dbx-loginFailed-div').css("display", "block");
+
+				$('#dbx-login-dialog').modal({backdrop: 'static', keyboard: false});
+				$('#dbx-login-dialog').modal('show');
+			}
+			else
+			{
+				// User just logged in (Jetty redirected back here with ?login=... but they are now authenticated).
+				// Redirect to the page they came from, if we saved one.
+				var returnUrl = sessionStorage.getItem('dbxReturnAfterLogin');
+				if (returnUrl)
+				{
+					console.log("isLoggedIn-callback: login successful, returning to: " + returnUrl);
+					sessionStorage.removeItem('dbxReturnAfterLogin');
+					window.location.href = returnUrl;
+				}
+			}
 		}
 	});
 
+	//-----------------------------------------------------------
+	// Login dialog: Forgot Password
+	//-----------------------------------------------------------
+	function dbxToggleForgotPassword()
+	{
+		$('#dbx-forgotpw-div').slideToggle(200, function()
+		{
+			// Disable the Login button while the forgot-password form is visible
+			// so the user doesn't accidentally submit the login form instead.
+			var visible = $(this).is(':visible');
+			$('#dbx-login-btn').prop('disabled', visible);
+		});
+	}
+
+	function dbxSendForgotPassword()
+	{
+		var email = $('#dbx-forgot-email-txt').val().trim();
+		if (!email)
+		{
+			$('#dbx-forgot-msg').html('<span class="text-danger">Please enter your email address.</span>');
+			return;
+		}
+		$('#dbx-forgot-msg').html('<span class="text-muted">Sending...</span>');
+		$.ajax({
+			url: '/api/user/forgot-password',
+			method: 'POST',
+			data: { email: email },
+			dataType: 'json',
+			success: function(r)
+			{
+				var cls = r.success ? 'text-success' : 'text-danger';
+				$('#dbx-forgot-msg').html('<span class="' + cls + '">' + r.message + '</span>');
+				if (r.success)
+				{
+					setTimeout(function()
+					{
+						$('#dbx-forgotpw-div').slideUp(200);
+						$('#dbx-login-btn').prop('disabled', false);
+					}, 10000);
+				}
+			},
+			error: function()
+			{
+				$('#dbx-forgot-msg').html('<span class="text-danger">Request failed. Please try again later.</span>');
+			}
+		});
+	}
+
+	//-----------------------------------------------------------
+	// Login dialog: Create Account (self-registration)
+	//-----------------------------------------------------------
+	function dbxRegisterUser()
+	{
+		var username = $('#dbx-reg-username-txt').val().trim();
+		var email    = $('#dbx-reg-email-txt').val().trim();
+		var password = $('#dbx-reg-password-txt').val();
+		var confirm  = $('#dbx-reg-confirm-txt').val();
+		$('#dbx-reg-msg').html('');
+		$.ajax({
+			url: '/api/user/register',
+			method: 'POST',
+			data: { username: username, email: email, password: password, confirmPassword: confirm },
+			dataType: 'json',
+			success: function(r)
+			{
+				if (r.success)
+				{
+					$('#dbx-reg-msg').html('<span class="text-success">' + r.message + '</span>');
+					setTimeout(function() { $('#dbx-tab-login').tab('show'); }, 1500);
+				}
+				else
+				{
+					$('#dbx-reg-msg').html('<span class="text-danger">' + r.message + '</span>');
+				}
+			},
+			error: function()
+			{
+				$('#dbx-reg-msg').html('<span class="text-danger">Registration failed. Please try again later.</span>');
+			}
+		});
+	}
+
+
+	//-----------------------------------------------------------
+	// Settings dialog
+	//-----------------------------------------------------------
+	function dbxOpenSettings()
+	{
+		$('#dbx-settings-email-msg').html('');
+		$('#dbx-settings-pw-msg').html('');
+		$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
+		$.ajax({
+			url: '/api/user/settings?op=profile',
+			method: 'GET',
+			dataType: 'json',
+			success: function(r) {
+				$('#dbx-settings-username').val(r.username || '');
+				$('#dbx-settings-email').val(r.email || '');
+			}
+		});
+		$('#dbx-settings-dialog').modal('show');
+	}
+
+	function dbxSaveEmail()
+	{
+		var email = $('#dbx-settings-email').val().trim();
+		if (!email || !email.includes('@'))
+		{
+			$('#dbx-settings-email-msg').html('<span class="text-danger">Please enter a valid email address.</span>');
+			return;
+		}
+		$('#dbx-settings-email-msg').html('<span class="text-muted">Saving...</span>');
+		$.ajax({
+			url: '/api/user/settings',
+			method: 'POST',
+			data: { op: 'changeEmail', email: email },
+			dataType: 'json',
+			success: function(r) {
+				var cls = r.success ? 'text-success' : 'text-danger';
+				$('#dbx-settings-email-msg').html('<span class="' + cls + '">' + r.message + '</span>');
+			},
+			error: function() { $('#dbx-settings-email-msg').html('<span class="text-danger">Request failed.</span>'); }
+		});
+	}
+
+	function dbxSavePassword()
+	{
+		var cur = $('#dbx-settings-current-pw').val();
+		var np  = $('#dbx-settings-new-pw').val();
+		var cp  = $('#dbx-settings-confirm-pw').val();
+		if (!cur)        { $('#dbx-settings-pw-msg').html('<span class="text-danger">Enter your current password.</span>'); return; }
+		if (np.length < 6) { $('#dbx-settings-pw-msg').html('<span class="text-danger">New password must be at least 6 characters.</span>'); return; }
+		if (np !== cp)   { $('#dbx-settings-pw-msg').html('<span class="text-danger">Passwords do not match.</span>'); return; }
+		$('#dbx-settings-pw-msg').html('<span class="text-muted">Saving...</span>');
+		$.ajax({
+			url: '/api/user/settings',
+			method: 'POST',
+			data: { op: 'changePassword', currentPassword: cur, newPassword: np, confirmPassword: cp },
+			dataType: 'json',
+			success: function(r) {
+				var cls = r.success ? 'text-success' : 'text-danger';
+				$('#dbx-settings-pw-msg').html('<span class="' + cls + '">' + r.message + '</span>');
+				if (r.success)
+					$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
+			},
+			error: function() { $('#dbx-settings-pw-msg').html('<span class="text-danger">Request failed.</span>'); }
+		});
+	}
+
 </script>
+
+<!-- ============================================================ -->
+<!-- Settings Modal (Bootstrap 4)                                 -->
+<!-- ============================================================ -->
+<div class="modal fade" id="dbx-settings-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-settings-title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dbx-settings-title"><i class="fa fa-cog"></i> Account Settings</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="small font-weight-bold">Username</label>
+                    <input type="text" class="form-control form-control-sm" id="dbx-settings-username" readonly>
+                </div>
+
+                <hr>
+                <h6>Change Email</h6>
+                <div class="form-group mt-2">
+                    <input type="email" class="form-control form-control-sm" id="dbx-settings-email" placeholder="Email address">
+                </div>
+                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSaveEmail()">Update Email</button>
+                <div id="dbx-settings-email-msg" class="mt-1 small"></div>
+
+                <hr>
+                <h6>Change Password</h6>
+                <div class="form-group mt-2">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-current-pw" placeholder="Current password" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-new-pw" placeholder="New password (min 6 characters)" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-confirm-pw" placeholder="Confirm new password" autocomplete="new-password">
+                </div>
+                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSavePassword()">Change Password</button>
+                <div id="dbx-settings-pw-msg" class="mt-1 small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

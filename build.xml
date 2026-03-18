@@ -14,6 +14,9 @@
 	<property name="dist"         location="dist"/>
 	<property name="launch4j.dir" location="c:/Program Files/Launch4j" />
 
+	<property name="scpPrivateFile" value="ant_push_private.properties"/>
+	<property file="${scpPrivateFile}"/>
+
 	<path id="project.class.path">
 		<fileset dir="lib"              includes="*.jar"/>
 		<fileset dir="lib/jetty"        includes="*.jar"/>
@@ -34,7 +37,7 @@
 		<echo>    ant -p                               --- List things that can be done</echo>
 		<echo>    ant                                  --- just build a ZIP file</echo>
 		<echo>    ant clean                            --- Remove various files</echo>
-		<echo>    ant -Dpassword=theSecretPasswd push  --- build and pushes a build to gorans.org</echo>
+		<echo>    ant [-DscpPrivateFile=filename] push --- build and pushes a build to host in file 'ant_push_private.properties'</echo>
 	</target>
 
 
@@ -247,45 +250,30 @@
 
 	</target>
 
+	<!-- - - - - - - - - - - - - - - - - - -->
+	<!--  target: check-scp-private-props  -->
+	<!-- - - - - - - - - - - - - - - - - - -->
+	<target name="check-scp-private-props">
+		<available file="ant_push_private.properties" property="scp-private.props.exists"/>
+		<fail unless="scp-private.props.exists" 
+			  message="Missing file 'ant_push_private.properties' -- copy 'ant_push_private.properties.TEMPLATE' and fill it in."/>
+	</target>
 
 	<!-- - - - - - - - - - - - - - -->
 	<!--  target: push            -->
 	<!-- - - - - - - - - - - - - - -->
-	<target name="push" depends="init,clean,dist" description="Push a temporary drop" >
-		<echo> ================================================================</echo>
-		<echo> Note: specify password with: ant -Dpassword=theSecretPasswd push</echo>
-		<echo> ----------------------------------------------------------------</echo>
-		<!-- use: ant -Dpassword=xxx push -->
-		<scp file="dbxtune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/dbxtune/tmp/" trust="true" />
+	<target name="push" depends="init,check-scp-private-props,clean,dist" description="Push a temporary drop" >
+		<echo> =====================================================================</echo>
+		<echo> Note: specify scp props file with: ant -DscpPrivateFile=filename push</echo>
+		<echo> ---------------------------------------------------------------------</echo>
+		<scp file="dbxtune_${DSTAMP}.zip" todir="${scp.user}:${scp.password}@${scp.host}:${scp.path}" port="${scp.port}" trust="true" />
+		<!--<scp file="dbxtune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/dbxtune/tmp/" trust="true" />-->
 		<!-- <scp file="dbxtune_${DSTAMP}.zip" todir="gorans@gorans.org:www/dbxtune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
 
 		<!-- Delete the ${build} and ${dist} directory trees -->
 		<delete dir="${build}"/>
 		<delete dir="${dist}"/>
 		
-		<!-- echo datetime -->
-		<tstamp>
-		  <format property="BUILD_DATE" pattern="yyyy-MM-dd HH:mm:ss.sss zzz" locale="en,UK"/>
-		</tstamp>
-		<echo>PUSH END TIME: ${BUILD_DATE}</echo>
-	</target>
-
-
-	<!-- - - - - - - - - - - - - - -->
-	<!--  target: push2 (via 443 instead of 22) -->
-	<!-- - - - - - - - - - - - - - -->
-	<target name="push2" depends="init,clean,dist" description="Push a temporary drop" >
-		<echo> ================================================================</echo>
-		<echo> Note: specify password with: ant -Dpassword=theSecretPasswd push</echo>
-		<echo> ----------------------------------------------------------------</echo>
-		<!-- use: ant -Dpassword=xxx push -->
-		<scp port="443" file="dbxtune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/dbxtune/tmp/" trust="true" />
-		<!-- <scp file="dbxtune_${DSTAMP}.zip" todir="gorans@gorans.org:www/dbxtune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
-
-		<!-- Delete the ${build} and ${dist} directory trees -->
-		<delete dir="${build}"/>
-		<delete dir="${dist}"/>
-
 		<!-- echo datetime -->
 		<tstamp>
 		  <format property="BUILD_DATE" pattern="yyyy-MM-dd HH:mm:ss.sss zzz" locale="en,UK"/>

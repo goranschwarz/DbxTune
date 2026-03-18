@@ -109,7 +109,8 @@ implements IUserDefinedAction
 	private List<String> _authorizedRoles;
 	private List<String> _authorizedUsers;
 	private String       _logFilename    ;
-	
+	private String       _executedByUser ;  // DbxTune login name of the user who triggered this action
+
 	private Configuration _conf;
 	private boolean       _isValid;
 	private Map<String, String> _urlParameterMap;
@@ -156,6 +157,8 @@ implements IUserDefinedAction
 	          public void setDescription       (String description    ) { _description     = description; }
 	          public void setLogFilename       (String logFilename    ) { _logFilename     = logFilename; }
 	@Override public void setPageRefreshTime   (int    refresh        ) { _refresh         = refresh; }
+	@Override public void setExecutedByUser    (String username       ) { _executedByUser  = username; }
+	@Override public String getExecutedByUser  ()                       { return StringUtil.nullToValue(_executedByUser, "-unknown-"); }
 
 	
 
@@ -362,7 +365,7 @@ implements IUserDefinedAction
 //		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
 //		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
 
-		String msgSubject = "DbxCentral: User Action '" + getName() + "' on server '" + getOnServerName() + "' was executed";
+		String msgSubject = "Dbx: User Action '" + getName() + "' on '" + getOnServerName() + "' was executed by '" + getExecutedByUser() + "'";
 		String msgBody    = msg;
 		
 		int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
@@ -891,6 +894,8 @@ implements IUserDefinedAction
 		println(pageOut, mailOut, "<div id='ud-content'>");
 
 		println(pageOut, mailOut, "<h3 class='mb-4'>" + getActionType() + " Action: " + getName() + "</h2>");
+		if (mailOut != null)
+			mailOut.println("<p style='color:#666; font-size:0.9em; margin-top:-8px;'>Executed by: <strong>" + escapeHtml(getExecutedByUser()) + "</strong></p>");
 		println(pageOut, mailOut, "<div id='dbx-uda-output'></div>"); // We will ADD stuff in here via JavaScript
 
 		//-------------------------------------------------------

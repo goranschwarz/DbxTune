@@ -118,7 +118,7 @@
               <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
             </a>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
-            <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+            <a class="dropdown-item" href="#" onclick="dbxOpenSettings(); return false;"> <i class="fa fa-cog"></i> Settings</a>
             <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
             </div>
           </li>
@@ -289,13 +289,26 @@
       <div id='dbxc-user' class='card border-dark mb-3'>
         <h5 class='card-header'>User Administration</h5>
         <div class='card-body'>
-          <b>Add</b> User - Done in the main window
 
-          <br>
-          <b>Change</b> User (Password or Roles) - Not yet implemented
-
-          <br>
-          <b>Remove</b> User - Not yet implemented
+          <button type="button" class="btn btn-sm btn-primary mb-2" onclick="dbxLoadUsers()">
+            <i class="fa fa-refresh"></i> Refresh
+          </button>
+          &nbsp;
+          <button type="button" class="btn btn-sm btn-success mb-2" data-toggle="modal" data-target="#dbx-adduser-dialog">
+            <i class="fa fa-user-plus"></i> Add User
+          </button>
+          <div id="dbx-user-msg" class="mb-2"></div>
+          <table class="table table-sm table-bordered table-hover" id="dbx-user-table" style="display:none;">
+            <thead class="thead-light">
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Roles</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="dbx-user-tbody"></tbody>
+          </table>
 
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
@@ -391,6 +404,86 @@
     </div>
   </div>
 
+
+  <!-- Modal Dialog: Add User -->
+  <div class="modal fade" id="dbx-adduser-dialog" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add User</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" class="form-control form-control-sm" id="dbx-adduser-username" maxlength="128" placeholder="Username">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-control form-control-sm" id="dbx-adduser-email" placeholder="Email">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" class="form-control form-control-sm" id="dbx-adduser-password" placeholder="Password">
+          </div>
+          <div class="form-group">
+            <label>Roles</label>
+            <div id="dbx-adduser-roles-div"><!-- populated dynamically --></div>
+          </div>
+          <div id="dbx-adduser-msg" class="mt-1 small"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success btn-sm" onclick="dbxAddUser()">Add User</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Edit Roles -->
+  <div class="modal fade" id="dbx-editroles-dialog" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Roles for <b id="dbx-editroles-username-title"></b></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="dbx-editroles-username">
+          <div id="dbx-editroles-roles-div"><!-- populated dynamically --></div>
+          <div id="dbx-editroles-msg" class="mt-1 small"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="dbxSaveRoles()">Save Roles</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Reset Password -->
+  <div class="modal fade" id="dbx-resetpw-dialog" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Reset Password for <b id="dbx-resetpw-username-title"></b></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="dbx-resetpw-username">
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" class="form-control form-control-sm" id="dbx-resetpw-password" placeholder="New password">
+          </div>
+          <div id="dbx-resetpw-msg" class="mt-1 small"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning btn-sm" onclick="dbxResetPassword()">Reset Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Dialog: Change User Defined Profiles for Graphs -->
   <div class="modal fade" id="dbx-change-udp-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-change-udp-dialog" aria-hidden="true">
@@ -1743,6 +1836,235 @@
 	}
 
 	//-----------------------------------------------------------
+	// User Administration
+	//-----------------------------------------------------------
+
+	var _dbxRoles = [];   // cached role names from op=roles
+
+	function dbxLoadRoles(callback)
+	{
+		if (_dbxRoles.length > 0) { if (callback) callback(_dbxRoles); return; }
+		$.ajax({
+			url: '/admin/users?op=roles',
+			method: 'GET',
+			dataType: 'json',
+			success: function(r) { _dbxRoles = r; if (callback) callback(_dbxRoles); },
+			error:   function()  { _dbxRoles = ['user','admin']; if (callback) callback(_dbxRoles); }
+		});
+	}
+
+	function dbxBuildRoleCheckboxes(containerId, currentRolesCsv)
+	{
+		var current = currentRolesCsv ? currentRolesCsv.split(',').map(function(s){ return s.trim(); }) : [];
+		var html = '';
+		for (var i = 0; i < _dbxRoles.length; i++)
+		{
+			var r = _dbxRoles[i];
+			var checked = current.indexOf(r) >= 0 ? 'checked' : '';
+			html += '<div class="form-check form-check-inline">'
+				  + '<input class="form-check-input dbx-role-chk" type="checkbox" id="dbx-role-' + containerId + '-' + r + '" value="' + r + '" ' + checked + '>'
+				  + '<label class="form-check-label" for="dbx-role-' + containerId + '-' + r + '">' + r + '</label>'
+				  + '</div>';
+		}
+		$('#' + containerId).html(html);
+	}
+
+	function dbxGetCheckedRoles(containerId)
+	{
+		var roles = [];
+		$('#' + containerId + ' .dbx-role-chk:checked').each(function() { roles.push($(this).val()); });
+		return roles.join(',');
+	}
+
+	function dbxShowMsg(elementId, msg, isError)
+	{
+		var cls = isError ? 'text-danger' : 'text-success';
+		$('#' + elementId).html('<span class="' + cls + '">' + msg + '</span>');
+	}
+
+	function dbxLoadUsers()
+	{
+		$('#dbx-user-msg').html('<i class="fa fa-spinner fa-spin"></i> Loading users...');
+		$.ajax({
+			url: '/admin/users?op=list',
+			method: 'GET',
+			dataType: 'json',
+			success: function(users)
+			{
+				$('#dbx-user-msg').html('');
+				var html = '';
+				for (var i = 0; i < users.length; i++)
+				{
+					var u = users[i];
+					var un = $('<span>').text(u.username).html();
+					html += '<tr>'
+					      + '<td>' + un + '</td>'
+					      + '<td>' + $('<span>').text(u.email).html() + '</td>'
+					      + '<td>' + $('<span>').text(u.roles).html() + '</td>'
+					      + '<td>'
+					      + '<button class="btn btn-xs btn-outline-primary mr-1" onclick=\'dbxOpenEditRoles("' + un + '","' + $('<span>').text(u.roles).html() + '")\'>Roles</button>'
+					      + '<button class="btn btn-xs btn-outline-warning mr-1" onclick=\'dbxOpenResetPassword("' + un + '")\'>Reset PW</button>'
+					      + (u.username.toLowerCase() !== 'admin'
+					            ? '<button class="btn btn-xs btn-outline-danger" onclick=\'dbxDeleteUser("' + un + '")\'>Delete</button>'
+					            : '')
+					      + '</td>'
+					      + '</tr>';
+				}
+				$('#dbx-user-tbody').html(html);
+				$('#dbx-user-table').show();
+			},
+			error: function(xhr)
+			{
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load users.';
+				dbxShowMsg('dbx-user-msg', msg, true);
+			}
+		});
+	}
+
+	function dbxAddUser()
+	{
+		var username = $('#dbx-adduser-username').val().trim();
+		var email    = $('#dbx-adduser-email').val().trim();
+		var password = $('#dbx-adduser-password').val();
+		var roles    = dbxGetCheckedRoles('dbx-adduser-roles-div');
+		$('#dbx-adduser-msg').html('');
+		$.ajax({
+			url: '/admin/users?op=add',
+			method: 'POST',
+			data: { username: username, email: email, password: password, roles: roles },
+			dataType: 'json',
+			success: function(r)
+			{
+				if (r.success)
+				{
+					$('#dbx-adduser-dialog').modal('hide');
+					dbxLoadUsers();
+				}
+				else
+				{
+					dbxShowMsg('dbx-adduser-msg', r.message, true);
+				}
+			},
+			error: function(xhr)
+			{
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error adding user.';
+				dbxShowMsg('dbx-adduser-msg', msg, true);
+			}
+		});
+	}
+
+	function dbxOpenEditRoles(username, currentRoles)
+	{
+		$('#dbx-editroles-username').val(username);
+		$('#dbx-editroles-username-title').text(username);
+		$('#dbx-editroles-msg').html('');
+		dbxLoadRoles(function() { dbxBuildRoleCheckboxes('dbx-editroles-roles-div', currentRoles); });
+		$('#dbx-editroles-dialog').modal('show');
+	}
+
+	function dbxSaveRoles()
+	{
+		var username = $('#dbx-editroles-username').val();
+		var roles    = dbxGetCheckedRoles('dbx-editroles-roles-div');
+		$('#dbx-editroles-msg').html('');
+		$.ajax({
+			url: '/admin/users?op=updateRoles',
+			method: 'POST',
+			data: { username: username, roles: roles },
+			dataType: 'json',
+			success: function(r)
+			{
+				if (r.success)
+				{
+					$('#dbx-editroles-dialog').modal('hide');
+					dbxLoadUsers();
+				}
+				else
+				{
+					dbxShowMsg('dbx-editroles-msg', r.message, true);
+				}
+			},
+			error: function(xhr)
+			{
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error updating roles.';
+				dbxShowMsg('dbx-editroles-msg', msg, true);
+			}
+		});
+	}
+
+	function dbxOpenResetPassword(username)
+	{
+		$('#dbx-resetpw-username').val(username);
+		$('#dbx-resetpw-username-title').text(username);
+		$('#dbx-resetpw-password').val('');
+		$('#dbx-resetpw-msg').html('');
+		$('#dbx-resetpw-dialog').modal('show');
+	}
+
+	function dbxResetPassword()
+	{
+		var username = $('#dbx-resetpw-username').val();
+		var password = $('#dbx-resetpw-password').val();
+		$('#dbx-resetpw-msg').html('');
+		$.ajax({
+			url: '/admin/users?op=resetPassword',
+			method: 'POST',
+			data: { username: username, password: password },
+			dataType: 'json',
+			success: function(r)
+			{
+				if (r.success)
+				{
+					$('#dbx-resetpw-dialog').modal('hide');
+					dbxShowMsg('dbx-user-msg', 'Password reset for \'' + username + '\'.', false);
+				}
+				else
+				{
+					dbxShowMsg('dbx-resetpw-msg', r.message, true);
+				}
+			},
+			error: function(xhr)
+			{
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error resetting password.';
+				dbxShowMsg('dbx-resetpw-msg', msg, true);
+			}
+		});
+	}
+
+	function dbxDeleteUser(username)
+	{
+		if (!confirm('Delete user \'' + username + '\'? This cannot be undone.')) return;
+		$.ajax({
+			url: '/admin/users?op=delete',
+			method: 'POST',
+			data: { username: username },
+			dataType: 'json',
+			success: function(r)
+			{
+				if (r.success)
+					dbxLoadUsers();
+				else
+					dbxShowMsg('dbx-user-msg', r.message, true);
+			},
+			error: function(xhr)
+			{
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error deleting user.';
+				dbxShowMsg('dbx-user-msg', msg, true);
+			}
+		});
+	}
+
+	// Pre-load roles when Add User modal opens, so checkboxes are ready
+	$('#dbx-adduser-dialog').on('show.bs.modal', function()
+	{
+		$('#dbx-adduser-username').val('');
+		$('#dbx-adduser-email').val('');
+		$('#dbx-adduser-password').val('');
+		$('#dbx-adduser-msg').html('');
+		dbxLoadRoles(function() { dbxBuildRoleCheckboxes('dbx-adduser-roles-div', 'user'); });
+	});
+
+	//-----------------------------------------------------------
 	// Check for login and set props
 	//-----------------------------------------------------------
 	isLoggedIn( function(isLogedIn, asUserName)
@@ -1750,6 +2072,119 @@
 		console.log("isLoggedIn-callback: isLogedIn='"+isLogedIn+"', asUserName='"+asUserName+"'.");
 	});
 
+
+	//-----------------------------------------------------------
+	// Settings dialog
+	//-----------------------------------------------------------
+	function dbxOpenSettings()
+	{
+		$('#dbx-settings-email-msg').html('');
+		$('#dbx-settings-pw-msg').html('');
+		$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
+		$.ajax({
+			url: '/api/user/settings?op=profile',
+			method: 'GET',
+			dataType: 'json',
+			success: function(r) {
+				$('#dbx-settings-username').val(r.username || '');
+				$('#dbx-settings-email').val(r.email || '');
+			}
+		});
+		$('#dbx-settings-dialog').modal('show');
+	}
+
+	function dbxSaveEmail()
+	{
+		var email = $('#dbx-settings-email').val().trim();
+		if (!email || !email.includes('@'))
+		{
+			$('#dbx-settings-email-msg').html('<span class="text-danger">Please enter a valid email address.</span>');
+			return;
+		}
+		$('#dbx-settings-email-msg').html('<span class="text-muted">Saving...</span>');
+		$.ajax({
+			url: '/api/user/settings',
+			method: 'POST',
+			data: { op: 'changeEmail', email: email },
+			dataType: 'json',
+			success: function(r) {
+				var cls = r.success ? 'text-success' : 'text-danger';
+				$('#dbx-settings-email-msg').html('<span class="' + cls + '">' + r.message + '</span>');
+			},
+			error: function() { $('#dbx-settings-email-msg').html('<span class="text-danger">Request failed.</span>'); }
+		});
+	}
+
+	function dbxSavePassword()
+	{
+		var cur = $('#dbx-settings-current-pw').val();
+		var np  = $('#dbx-settings-new-pw').val();
+		var cp  = $('#dbx-settings-confirm-pw').val();
+		if (!cur)          { $('#dbx-settings-pw-msg').html('<span class="text-danger">Enter your current password.</span>'); return; }
+		if (np.length < 6) { $('#dbx-settings-pw-msg').html('<span class="text-danger">New password must be at least 6 characters.</span>'); return; }
+		if (np !== cp)     { $('#dbx-settings-pw-msg').html('<span class="text-danger">Passwords do not match.</span>'); return; }
+		$('#dbx-settings-pw-msg').html('<span class="text-muted">Saving...</span>');
+		$.ajax({
+			url: '/api/user/settings',
+			method: 'POST',
+			data: { op: 'changePassword', currentPassword: cur, newPassword: np, confirmPassword: cp },
+			dataType: 'json',
+			success: function(r) {
+				var cls = r.success ? 'text-success' : 'text-danger';
+				$('#dbx-settings-pw-msg').html('<span class="' + cls + '">' + r.message + '</span>');
+				if (r.success)
+					$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
+			},
+			error: function() { $('#dbx-settings-pw-msg').html('<span class="text-danger">Request failed.</span>'); }
+		});
+	}
+
 </script>
+
+<!-- ============================================================ -->
+<!-- Settings Modal (Bootstrap 4)                                 -->
+<!-- ============================================================ -->
+<div class="modal fade" id="dbx-settings-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-settings-title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dbx-settings-title"><i class="fa fa-cog"></i> Account Settings</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="small font-weight-bold">Username</label>
+                    <input type="text" class="form-control form-control-sm" id="dbx-settings-username" readonly>
+                </div>
+
+                <hr>
+                <h6>Change Email</h6>
+                <div class="form-group mt-2">
+                    <input type="email" class="form-control form-control-sm" id="dbx-settings-email" placeholder="Email address">
+                </div>
+                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSaveEmail()">Update Email</button>
+                <div id="dbx-settings-email-msg" class="mt-1 small"></div>
+
+                <hr>
+                <h6>Change Password</h6>
+                <div class="form-group mt-2">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-current-pw" placeholder="Current password" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-new-pw" placeholder="New password (min 6 characters)" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control form-control-sm" id="dbx-settings-confirm-pw" placeholder="Confirm new password" autocomplete="new-password">
+                </div>
+                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSavePassword()">Change Password</button>
+                <div id="dbx-settings-pw-msg" class="mt-1 small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

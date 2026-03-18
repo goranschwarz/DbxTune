@@ -65,7 +65,7 @@ implements ICentralPersistWriter
 	 *   <li> 11 - Change column 'data', 'lastData' from varchar(160) -> 512    in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
 	 *   <li> 12 - Change column 'duration' from 10 to 80                        in table 'DbxAlarmActive', 'DbxAlarmHistory' </li>
 	 *   <li> 13 - Add column 'graphCollectedCount', 'absCollectedRows', 'diffCollectedRows', 'rateCollectedRows'   in tables *schema*.'DbxSessionSampleDetailes'</li>
-	 * </ul> 
+	 * </ul>
 	 */
 	public static int DBX_CENTRAL_DB_VERSION = 15;
 	

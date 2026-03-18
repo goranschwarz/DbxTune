@@ -1,3 +1,6 @@
 /classes
 /3pp/jflex-1.4.3
 /lib/jetty/jetty-all-9.4.57.v20241219-uber.jar
+
+## Ant private SCP properties file
+/ant_push_private.properties

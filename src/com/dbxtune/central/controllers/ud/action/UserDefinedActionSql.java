@@ -443,8 +443,6 @@ extends UserDefinedActionAbstract
 					"}");			
 
 			mailOut.println("</style>");
-
-			
 		}
 		
 	}
@@ -458,11 +456,11 @@ extends UserDefinedActionAbstract
 		pageOut.println("<div class='modal' id='dbx-uda-executionModal' data-backdrop='static' data-keyboard='false' tabindex='-1' role='dialog'>");
 		pageOut.println("  <div class='modal-dialog modal-dialog-centered dbx-uda-modal-dialog'>");
 		pageOut.println("    <div class='modal-content'>");
-//		out.println("      <div class='modal-header bg-primary text-white'>");
+//		pageOut.println("      <div class='modal-header bg-primary text-white'>");
 		pageOut.println("      <div class='modal-header bg-secondary text-white'>");
-//		out.println("      <div class='modal-header bg-dark text-white'>");
-//		out.println("      <div class='modal-header bg-success text-white'>");
-//		out.println("      <div class='modal-header'>");
+//		pageOut.println("      <div class='modal-header bg-dark text-white'>");
+//		pageOut.println("      <div class='modal-header bg-success text-white'>");
+//		pageOut.println("      <div class='modal-header'>");
 		pageOut.println("        <h5 class='modal-title'>SQL Execution in Progress</h5>");
 		pageOut.println("      </div>");
 		pageOut.println("      <div class='modal-body'>");
@@ -938,7 +936,7 @@ extends UserDefinedActionAbstract
 		tableHtml.append("<thead><tr> \n");
 		for (int col = 1; col <= columnCount; col++)
 		{
-			tableHtml.append("<th data-sortable='true'>").append(escapeHtml(metaData.getColumnName(col))).append("</th> \n");
+			tableHtml.append("<th data-sortable='true'>").append(escapeHtml(metaData.getColumnLabel(col))).append("</th> \n");
 		}
 		tableHtml.append("</tr></thead> \n");
 		
@@ -1000,7 +998,7 @@ extends UserDefinedActionAbstract
 		// 'dbx-uda-output' is already written by class: UserDefinedActionServlet
 
 		pageOut.println("<div id='dbx-uda-output-container'>"); // We will ADD stuff in here via JavaScript
-		pageOut.println("  <div id='dbx-uda-scroll-spacer'>");
+		pageOut.println("  <div id='dbx-uda-scroll-spacer'></div>");
 		pageOut.println("</div>");
 		
 		// Small delay to ensure modal is visible
@@ -1029,8 +1027,28 @@ extends UserDefinedActionAbstract
 //			addMessage(pageOut, mailOut, "<div class='markdown-style'>Connected as user <code>" + jdbcUser + "</code> to DBMS URL: <code>" + jdbcUrl + "</code></div>", Status.SUCCESS);
 //			addMessage(pageOut, mailOut, "<div class='markdown-style'>DBMS ServerName <code>" + conn.getDbmsServerName() + "</code>, Product Name <code>" + _connectedToProductName + "</code>, Version <code>" + dbmsProductVersion + "</code></div>", Status.SUCCESS);
 
-			sendAddText(pageOut, mailOut, "<div class='alert alert-success markdown-style'><strong>Connected as user</strong> <code>" + jdbcUser + "</code> <strong>to DBMS URL</strong> <code>" + jdbcUrl + "</code></div>");
-			sendAddText(pageOut, mailOut, "<div class='alert alert-success markdown-style'><strong>DBMS ServerName</strong> <code>" + conn.getDbmsServerName() + "</code><strong>, Product Name</strong> <code>" + _connectedToProductName + "</code><strong>, Version</strong> <code>" + dbmsProductVersion + "</code></div>");
+			// Connect info: to PAGE
+			sendAddText(pageOut, null, "<div class='alert alert-success markdown-style'><strong>Connected as user</strong> <code>" + jdbcUser + "</code> <strong>to DBMS URL</strong> <code>" + jdbcUrl + "</code></div>");
+			sendAddText(pageOut, null, "<div class='alert alert-success markdown-style'><strong>DBMS ServerName</strong> <code>" + conn.getDbmsServerName() + "</code><strong>, Product Name</strong> <code>" + _connectedToProductName + "</code><strong>, Version</strong> <code>" + dbmsProductVersion + "</code></div>");
+
+			// Connect info: to MAIL  (not so fancy output, due to rendering problems on Outlook Classic)
+			if (mailOut != null)
+			{
+				mailOut.println("<div class='alert-success'><b>Connected to DBMS using:</b>");
+				mailOut.println("<ul>");
+				mailOut.println("  <li><b>User</b>: " + jdbcUser + "</li>");
+				mailOut.println("  <li><b>URL</b>:  " + jdbcUrl + "</li>");
+				mailOut.println("</ul>");
+				mailOut.println("</div>");
+
+				mailOut.println("<div class='alert-success'>");
+				mailOut.println("<ul>");
+				mailOut.println("  <li><b>ServerName</b>: "    + conn.getDbmsServerName() + "</li>");
+				mailOut.println("  <li><b>Product Name</b>:  " + _connectedToProductName  + "</li>");
+				mailOut.println("  <li><b>Version</b>:  "      + dbmsProductVersion       + "</li>");
+				mailOut.println("</ul>");
+				mailOut.println("</div>");
+			}
 			
 			// Add Sybase and SQL Server -- Message handler...
 			installConnectionMessageHandler(conn, pageOut, mailOut);

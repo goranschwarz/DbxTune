@@ -2117,13 +2117,11 @@ extends CentralPersistWriterBase
 //		{
 //			// In next upgrade step: check Table.GRAPH_PROPERTIES and column 'GraphName' which I changed from 30 -> 60
 //			// It would be "nice" to have an upgrade/check on that... But I was to lazy right now...
-//			// For now I just throw a ERROR/WARNING when adding any graph name above 30 chars -- Then that warning can be removed: CounterModel.addTrendGraph() -- Graph Names can only be 30 characters (for the moment)... 
+//			// For now I just throw a ERROR/WARNING when adding any graph name above 30 chars -- Then that warning can be removed: CounterModel.addTrendGraph() -- Graph Names can only be 30 characters (for the moment)...
 // 			//     in CentralPeristWriterBase.getTableDdlString(...) approx row: 590
 //			//     sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n"); // changed from 30 to 60 -- But I did NOT write any upgrade steps for it... possibly in the future...
 //		}
-		
 
-		
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;
 	}
@@ -4436,5 +4434,114 @@ return -1;
 		}
 	}
 
+
+	// -------------------------------------------------------------------------
+	// DbxCentralUsers — CRUD methods
+	// -------------------------------------------------------------------------
+
+	public void addDbxCentralUser(String username, String passwordHash, String email, String roles)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+
+		String sql = "INSERT INTO " + tabName
+				+ " (" + lq+"UserName"+rq + ", " + lq+"Password"+rq + ", " + lq+"Email"+rq + ", " + lq+"Roles"+rq + ")"
+				+ " VALUES (?, ?, ?, ?)";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, username);
+			pstmt.setString(2, passwordHash);
+			pstmt.setString(3, email);
+			pstmt.setString(4, roles);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void updateDbxCentralUserRoles(String username, String roles)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+
+		String sql = "UPDATE " + tabName
+				+ " SET "   + lq+"Roles"+rq    + " = ?"
+				+ " WHERE " + lq+"UserName"+rq  + " = ?";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, roles);
+			pstmt.setString(2, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void updateDbxCentralUserPassword(String username, String passwordHash)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+
+		String sql = "UPDATE " + tabName
+				+ " SET "   + lq+"Password"+rq  + " = ?"
+				+ " WHERE " + lq+"UserName"+rq   + " = ?";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, passwordHash);
+			pstmt.setString(2, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void updateDbxCentralUserEmail(String username, String email)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+
+		String sql = "UPDATE " + tabName
+				+ " SET "   + lq+"Email"+rq     + " = ?"
+				+ " WHERE " + lq+"UserName"+rq  + " = ?";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, email);
+			pstmt.setString(2, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void deleteDbxCentralUser(String username)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+
+		String sql = "DELETE FROM " + tabName
+				+ " WHERE " + lq+"UserName"+rq + " = ?";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, username);
+			pstmt.executeUpdate();
+		}
+	}
 
 }

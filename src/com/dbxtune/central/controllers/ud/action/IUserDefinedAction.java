@@ -218,4 +218,8 @@ public interface IUserDefinedAction
 	void setPageRefreshTime(int refresh);
 	int  getPageRefreshTime();
 
+	/** The DbxTune username that triggered this action (set by the servlet before produce()). */
+	void   setExecutedByUser(String username);
+	String getExecutedByUser();
+
 }

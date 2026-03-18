@@ -280,7 +280,43 @@
 		<servlet-name>LoginCheckServlet</servlet-name>
 		<url-pattern>/login-check</url-pattern>
 	</servlet-mapping>
- 
+
+	<servlet>
+		<servlet-name>UserRegistrationServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UserRegistrationServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserRegistrationServlet</servlet-name>
+		<url-pattern>/api/user/register</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>UserRecoverPasswordServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UserRecoverPasswordServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserRecoverPasswordServlet</servlet-name>
+		<url-pattern>/api/user/forgot-password</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>UsersAdminServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UsersAdminServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UsersAdminServlet</servlet-name>
+		<url-pattern>/admin/users</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>UserSettingsServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.UserSettingsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserSettingsServlet</servlet-name>
+		<url-pattern>/api/user/settings</url-pattern>
+	</servlet-mapping>
+
 
 	<!-- ============================================================ -->
 	<servlet>
@@ -412,42 +448,7 @@
 		<servlet-name>UserDefinedActionServlet</servlet-name>
 		<url-pattern>/api/udaction</url-pattern>
 	</servlet-mapping>
-<servlet>
-	<servlet-name>AaaSqlExecutionServlet</servlet-name>
-	<servlet-class>com.dbxtune.test.AaaSqlExecutionServlet</servlet-class>
-</servlet>
-<servlet-mapping>
-	<servlet-name>AaaSqlExecutionServlet</servlet-name>
-	<url-pattern>/api/gorans-dummy</url-pattern>
-</servlet-mapping>
-
-<servlet>
-	<servlet-name>AaaSqlExecutionServlet2</servlet-name>
-	<servlet-class>com.dbxtune.test.AaaSqlExecutionServlet2</servlet-class>
-</servlet>
-<servlet-mapping>
-	<servlet-name>AaaSqlExecutionServlet2</servlet-name>
-	<url-pattern>/api/gorans-dummy2</url-pattern>
-</servlet-mapping>
-
-<servlet>
-	<servlet-name>AaaSqlExecutionServlet3</servlet-name>
-	<servlet-class>com.dbxtune.test.AaaSqlExecutionServlet3</servlet-class>
-</servlet>
-<servlet-mapping>
-	<servlet-name>AaaSqlExecutionServlet3</servlet-name>
-	<url-pattern>/api/gorans-dummy3</url-pattern>
-</servlet-mapping>
-
-<servlet>
-	<servlet-name>AaaOsCmdExecutionServlet</servlet-name>
-	<servlet-class>com.dbxtune.test.AaaOsCmdExecutionServlet</servlet-class>
-</servlet>
-<servlet-mapping>
-	<servlet-name>AaaOsCmdExecutionServlet</servlet-name>
-	<url-pattern>/api/gorans-dummy-os1</url-pattern>
-</servlet-mapping>
-
+	
 
 	<!-- ============================================================ -->
 	<servlet>

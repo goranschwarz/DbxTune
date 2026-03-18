@@ -297,9 +297,9 @@ public class AseConfiguration extends AseAbstract
 //+------------------+------------+----------------+-----------+--------+------------------+---------------+-----------------+--------------+--------+-------+----------+------+
 //|cache_name        |cache_status|cache_type      |config_size|run_size|config_replacement|run_replacement|config_partitions|run_partitions|overhead|cacheid|instanceid|scope |
 //+------------------+------------+----------------+-----------+--------+------------------+---------------+-----------------+--------------+--------+-------+----------+------+
-//|default data cache|Active      |Default         |     95 000|  95 000|Strict LRU        |Strict LRU     |                4|             4|3 874,29|      0|         0|Global|
+//|default data cache|Active      |Default         |     95ï¿½000|  95ï¿½000|Strict LRU        |Strict LRU     |                4|             4|3ï¿½874,29|      0|         0|Global|
 //|log_cache         |Active      |Log Only        |        512|     512|Relaxed LRU       |Relaxed LRU    |                1|             1|   20,54|      1|         0|Global|
-//|tempdb_cache      |Active      |Mixed, HK Ignore|      1 024|   1 024|Strict LRU        |Strict LRU     |                4|             4|   41,12|      2|         0|Global|
+//|tempdb_cache      |Active      |Mixed, HK Ignore|      1ï¿½024|   1ï¿½024|Strict LRU        |Strict LRU     |                4|             4|   41,12|      2|         0|Global|
 //+------------------+------------+----------------+-----------+--------+------------------+---------------+-----------------+--------------+--------+-------+----------+------+
 //Rows 3
 // 
@@ -309,12 +309,12 @@ public class AseConfiguration extends AseAbstract
 //+------------------+-------+-----------+--------+-----------+---------+-------+----------+------+
 //|cache_name        |io_size|config_size|run_size|apf_percent|wash_size|cacheid|instanceid|scope |
 //+------------------+-------+-----------+--------+-----------+---------+-------+----------+------+
-//|default data cache|8      |     75 446|  75 446|         10|245760   |      0|         0|Global|
+//|default data cache|8      |     75ï¿½446|  75ï¿½446|         10|245760   |      0|         0|Global|
 //|log_cache         |8      |         52|      52|         10|10648    |      1|         0|Global|
 //|tempdb_cache      |8      |        624|     624|         10|127776   |      2|         0|Global|
 //|log_cache         |16     |        460|     460|         10|61440    |      1|         0|Global|
 //|tempdb_cache      |64     |        400|     400|         10|81920    |      2|         0|Global|
-//|default data cache|64     |     19 554|  19 554|         30|10011648 |      0|         0|Global|
+//|default data cache|64     |     19ï¿½554|  19ï¿½554|         30|10011648 |      0|         0|Global|
 //+------------------+-------+-----------+--------+-----------+---------+-------+----------+------+
 //Rows 6
 // 
@@ -324,11 +324,11 @@ public class AseConfiguration extends AseAbstract
 //+------------------+------------+----------------+-----------------+--------------+------------------------+---------------------+-----------------------+--------------------+--------------+------------+----------------+-------------+----------------+--------------+-------+----------+------+
 //|cache_name        |cache_status|cache_type      |cache_config_size|cache_run_size|cache_config_replacement|cache_run_replacement|cache_config_partitions|cache_run_partitions|cache_overhead|pool_io_size|pool_config_size|pool_run_size|pool_apf_percent|pool_wash_size|cacheid|instanceid|scope |
 //+------------------+------------+----------------+-----------------+--------------+------------------------+---------------------+-----------------------+--------------------+--------------+------------+----------------+-------------+----------------+--------------+-------+----------+------+
-//|default data cache|Active      |Default         |           95 000|        95 000|Strict LRU              |Strict LRU           |                      4|                   4|      3 874,29|8           |          75 446|       75 446|              10|245760        |      0|         0|Global|
-//|default data cache|Active      |Default         |           95 000|        95 000|Strict LRU              |Strict LRU           |                      4|                   4|      3 874,29|64          |          19 554|       19 554|              30|10011648      |      0|         0|Global|
+//|default data cache|Active      |Default         |           95ï¿½000|        95ï¿½000|Strict LRU              |Strict LRU           |                      4|                   4|      3ï¿½874,29|8           |          75ï¿½446|       75ï¿½446|              10|245760        |      0|         0|Global|
+//|default data cache|Active      |Default         |           95ï¿½000|        95ï¿½000|Strict LRU              |Strict LRU           |                      4|                   4|      3ï¿½874,29|64          |          19ï¿½554|       19ï¿½554|              30|10011648      |      0|         0|Global|
 //|log_cache         |Active      |Log Only        |              512|           512|Relaxed LRU             |Relaxed LRU          |                      1|                   1|         20,54|8           |              52|           52|              10|10648         |      1|         0|Global|
 //|log_cache         |Active      |Log Only        |              512|           512|Relaxed LRU             |Relaxed LRU          |                      1|                   1|         20,54|16          |             460|          460|              10|61440         |      1|         0|Global|
-//|tempdb_cache      |Active      |Mixed, HK Ignore|            1 024|         1 024|Strict LRU              |Strict LRU           |                      4|                   4|         41,12|64          |             400|          400|              10|81920         |      2|         0|Global|
-//|tempdb_cache      |Active      |Mixed, HK Ignore|            1 024|         1 024|Strict LRU              |Strict LRU           |                      4|                   4|         41,12|8           |             624|          624|              10|127776        |      2|         0|Global|
+//|tempdb_cache      |Active      |Mixed, HK Ignore|            1ï¿½024|         1ï¿½024|Strict LRU              |Strict LRU           |                      4|                   4|         41,12|64          |             400|          400|              10|81920         |      2|         0|Global|
+//|tempdb_cache      |Active      |Mixed, HK Ignore|            1ï¿½024|         1ï¿½024|Strict LRU              |Strict LRU           |                      4|                   4|         41,12|8           |             624|          624|              10|127776        |      2|         0|Global|
 //+------------------+------------+----------------+-----------------+--------------+------------------------+---------------------+-----------------------+--------------------+--------------+------------+----------------+-------------+----------------+--------------+-------+----------+------+
 //Rows 6
