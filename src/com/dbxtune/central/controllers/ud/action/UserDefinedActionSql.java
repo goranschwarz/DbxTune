@@ -936,7 +936,7 @@ extends UserDefinedActionAbstract
 		tableHtml.append("<thead><tr> \n");
 		for (int col = 1; col <= columnCount; col++)
 		{
-			tableHtml.append("<th data-sortable='true'>").append(escapeHtml(metaData.getColumnName(col))).append("</th> \n");
+			tableHtml.append("<th data-sortable='true'>").append(escapeHtml(metaData.getColumnLabel(col))).append("</th> \n");
 		}
 		tableHtml.append("</tr></thead> \n");
 		

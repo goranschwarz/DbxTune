@@ -227,7 +227,7 @@ extends HostMonitor
 		}
 		
 		// skip "efivarfs" -- (U)EFI Variable Filesystem
-		// It is a Linux kernel pseudo-filesystem that exposes Unified Extensible Firmware Interface (UEFI) variables—stored in motherboard NVRAM—as files, 
+		// It is a Linux kernel pseudo-filesystem that exposes Unified Extensible Firmware Interface (UEFI) variablesï¿½stored in motherboard NVRAMï¿½as files, 
 		// allowing userspace tools to create, delete, and modify variables, such as boot entries or security keys, by interacting with files in /sys/firmware/efi/efivars
 		if (Configuration.getCombinedConfiguration().getBooleanProperty("hostmon.MonitorDiskSpace.skip.efivarfs.devices", true))
 		{

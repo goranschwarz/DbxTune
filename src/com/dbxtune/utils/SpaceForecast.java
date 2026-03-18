@@ -494,7 +494,7 @@ public class SpaceForecast
 
 	
 	
-	// ETA confidence levels based on R²
+	// ETA confidence levels based on Rï¿½
 	enum EtaConfidence 
 	{ 
 		HIGH, 
@@ -565,7 +565,7 @@ public class SpaceForecast
 
 		private final int      minSamples             = DEFAULT_minSamples;
 		private final int      rollingWindowSize      = DEFAULT_rollingWindowSize;
-		// NOTE: R² is no longer used to suppress ETA — it qualifies confidence instead.
+		// NOTE: Rï¿½ is no longer used to suppress ETA ï¿½ it qualifies confidence instead.
 		// r2Threshold is kept for reference but classify() no longer gates on it.
 //		private final double   r2Threshold            = 0.001; // effectively disabled as gate
 		private final double   anomalyZScoreThreshold = DEFAULT_anomalyZScoreThreshold;
@@ -653,22 +653,22 @@ public class SpaceForecast
 			// +----------------------+-----------------------+-----------------------+------+-------------+------------+---------------+------------+
 			// |SessionStartTime      |SessionSampleTime      |CmSampleTime           |C:    |D: [SQL Data]|E: [SQL Log]|F: [SQL Backup]|G: [Temp DB]|
 			// +----------------------+-----------------------+-----------------------+------+-------------+------------+---------------+------------+
-			// |2026-02-13 23:03:21.91|2026-02-20 11:49:35.237|2026-02-20 11:49:36.125|59 263|    1 561 089|     354 599|      1 047 134|     503 690|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:50:07.203|2026-02-20 11:50:08.102|59 262|    1 561 089|     354 599|      1 047 134|     503 690|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:50:39.19 |2026-02-20 11:50:40.337|59 262|    1 561 089|     354 599|      1 047 134|     503 690|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:51:11.453|2026-02-20 11:51:12.44 |59 262|    1 561 089|     354 599|      1 047 134|     503 690|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:51:43.53 |2026-02-20 11:51:44.77 |59 262|    1 561 089|     354 599|      1 047 134|     503 690|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:49:35.237|2026-02-20 11:49:36.125|59ï¿½263|    1ï¿½561ï¿½089|     354ï¿½599|      1ï¿½047ï¿½134|     503ï¿½690|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:50:07.203|2026-02-20 11:50:08.102|59ï¿½262|    1ï¿½561ï¿½089|     354ï¿½599|      1ï¿½047ï¿½134|     503ï¿½690|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:50:39.19 |2026-02-20 11:50:40.337|59ï¿½262|    1ï¿½561ï¿½089|     354ï¿½599|      1ï¿½047ï¿½134|     503ï¿½690|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:51:11.453|2026-02-20 11:51:12.44 |59ï¿½262|    1ï¿½561ï¿½089|     354ï¿½599|      1ï¿½047ï¿½134|     503ï¿½690|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:51:43.53 |2026-02-20 11:51:44.77 |59ï¿½262|    1ï¿½561ï¿½089|     354ï¿½599|      1ï¿½047ï¿½134|     503ï¿½690|
 			// +----------------------+-----------------------+-----------------------+------+-------------+------------+---------------+------------+
 
 			// select * from "SERVER_NAME"."CmDatabases_DbDataSizeLeftMbGraph"
 			// +----------------------+-----------------------+-----------------------+----+---------+-------------+------------+-----+----------+----------+---------+--------+-----+-----+------------------+
 			// |SessionStartTime      |SessionSampleTime      |CmSampleTime           |FPA |Gladiator|Datawarehouse|ReportServer|Shelf|Leveranser|Provanalys|Analytics|tempdb  |msdb |model|ReportServerTempDB|
 			// +----------------------+-----------------------+-----------------------+----+---------+-------------+------------+-----+----------+----------+---------+--------+-----+-----+------------------+
-			// |2026-02-13 23:03:21.91|2026-02-20 11:50:39.19 |2026-02-20 11:50:39.21 |56,9|     24,3|    387 602,7|        78,2|513,1|     238,1|        22|  4 156,4|20 444,6|492,9|  5,1|             188,4|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:51:11.453|2026-02-20 11:51:11.473|56,9|     24,3|    387 602,7|        78,2|513,1|     238,1|        22|  4 156,4|20 444,6|492,9|  5,1|             188,4|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:51:43.53 |2026-02-20 11:51:43.55 |56,9|     24,3|    387 602,7|        78,2|513,1|     238,1|        22|  4 156,4|20 444,5|492,9|  5,1|             188,4|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:52:15.847|2026-02-20 11:52:15.87 |56,9|     24,3|    387 602,7|        78,2|513,1|     238,1|        22|  4 156,4|20 444,6|492,9|  5,1|             188,4|
-			// |2026-02-13 23:03:21.91|2026-02-20 11:52:47.82 |2026-02-20 11:52:47.843|56,9|     24,3|    387 602,7|        78,2|513,1|     238,1|        22|  4 156,4|20 444,5|492,9|  5,1|             188,4|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:50:39.19 |2026-02-20 11:50:39.21 |56,9|     24,3|    387ï¿½602,7|        78,2|513,1|     238,1|        22|  4ï¿½156,4|20ï¿½444,6|492,9|  5,1|             188,4|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:51:11.453|2026-02-20 11:51:11.473|56,9|     24,3|    387ï¿½602,7|        78,2|513,1|     238,1|        22|  4ï¿½156,4|20ï¿½444,6|492,9|  5,1|             188,4|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:51:43.53 |2026-02-20 11:51:43.55 |56,9|     24,3|    387ï¿½602,7|        78,2|513,1|     238,1|        22|  4ï¿½156,4|20ï¿½444,5|492,9|  5,1|             188,4|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:52:15.847|2026-02-20 11:52:15.87 |56,9|     24,3|    387ï¿½602,7|        78,2|513,1|     238,1|        22|  4ï¿½156,4|20ï¿½444,6|492,9|  5,1|             188,4|
+			// |2026-02-13 23:03:21.91|2026-02-20 11:52:47.82 |2026-02-20 11:52:47.843|56,9|     24,3|    387ï¿½602,7|        78,2|513,1|     238,1|        22|  4ï¿½156,4|20ï¿½444,5|492,9|  5,1|             188,4|
 			// +----------------------+-----------------------+-----------------------+----+---------+-------------+------------+-----+----------+----------+---------+--------+-----+-----+------------------+
 
 			
@@ -1072,7 +1072,7 @@ public class SpaceForecast
 		 * Downsamples raw per-minute samples into fixed, clock-aligned buckets.
 		 *
 		 * <p>Buckets are anchored to UTC epoch boundaries so that every disk series
-		 * snaps to the same grid (e.g. always 07:00, 08:00 — never 07:02, 08:03),
+		 * snaps to the same grid (e.g. always 07:00, 08:00 ï¿½ never 07:02, 08:03),
 		 * eliminating the timestamp drift that occurs when buckets are anchored to
 		 * the first sample's arrival time.
 		 *
@@ -1088,7 +1088,7 @@ public class SpaceForecast
 		 * least half a full bucket's worth of elapsed time, preventing a small sliver
 		 * of fresh data from over-influencing the most-recent slope.
 		 *
-		 * <p>Gaps in the data (missing buckets) are handled naturally — empty buckets
+		 * <p>Gaps in the data (missing buckets) are handled naturally ï¿½ empty buckets
 		 * are simply skipped rather than filled with synthetic zero values.
 		 *
 		 * @param rawData  one {@link DiskInfoEntry} per disk / database name
@@ -1124,14 +1124,14 @@ public class SpaceForecast
 
 						if (sampleBucket == currentBucketStart)
 						{
-							// Same bucket — accumulate
+							// Same bucket ï¿½ accumulate
 							min    = Math.min(min, s.freeMbMin);
 							sum   += s.freeMbMin;
 							count++;
 						}
 						else
 						{
-							// Bucket boundary crossed — emit the completed bucket
+							// Bucket boundary crossed ï¿½ emit the completed bucket
 							if (count > 0)
 							{
 								result.add(new DiskSample(
@@ -1211,7 +1211,7 @@ public class SpaceForecast
 			if (cleanSamples.size() < minSamples)
 				return null; // handled in runForecast() with null check
 
-			// Use cleanSamples for all regression/analysis — not the raw samples
+			// Use cleanSamples for all regression/analysis ï¿½ not the raw samples
 			// but keep original samples for sparkline so zeros are visible
 			
 			SimpleRegression regression = new SimpleRegression();
@@ -1234,7 +1234,7 @@ public class SpaceForecast
 			double ciLower = slope - 1.96 * slopeStdErr;
 			double ciUpper = slope + 1.96 * slopeStdErr;
 
-			// NEW: compute ETA regardless of R² — R² only qualifies confidence
+			// NEW: compute ETA regardless of Rï¿½ ï¿½ Rï¿½ only qualifies confidence
 			Double hoursToFull = null;
 			Instant predicted = null;
 
@@ -1244,7 +1244,7 @@ public class SpaceForecast
 				predicted = Instant.now().plus(Duration.ofMillis((long)(hoursToFull * 3600000)));
 			}
 
-			// NEW: R² -> ETA confidence (replaces old binary gate)
+			// NEW: Rï¿½ -> ETA confidence (replaces old binary gate)
 			EtaConfidence etaConfidence = r2 >= 0.6 ? EtaConfidence.HIGH
 										: r2 >= 0.3 ? EtaConfidence.MEDIUM
 										:             EtaConfidence.LOW;
@@ -1264,7 +1264,7 @@ public class SpaceForecast
 //			{
 //				if (current < dipStats.maxTmpFilesDropMb)
 //				{
-//					// Already overflowing NOW — baseline can't absorb the max TmpFiles
+//					// Already overflowing NOW ï¿½ baseline can't absorb the max TmpFiles
 //					hoursUntilTmpFilesOverflow = 0.0;
 //					predictedTmpFilesOverflow  = Instant.now();
 //				}
@@ -1286,7 +1286,7 @@ public class SpaceForecast
 			//  - sawtooth pattern detected
 			//  - dip magnitude exists
 			//  - slope is meaningfully negative
-			//  - regression has signal (avoid R² noise instability)
+			//  - regression has signal (avoid Rï¿½ noise instability)
 			if (sawtooth
 					&& dipStats.maxTmpFilesDropMb > 0
 					&& slope < -5                    // avoid near-zero slope instability
@@ -1430,7 +1430,7 @@ public class SpaceForecast
 		}
 
 		/**
-		 * Analyze backup/TmpFiles dip events — points significantly lower than their neighbors.
+		 * Analyze backup/TmpFiles dip events ï¿½ points significantly lower than their neighbors.
 		 * Identifies each dip's minimum, the drop size, and whether a future TmpFiles is
 		 * projected to push free space below zero given the current baseline trend.
 		 * @param mount 
@@ -1622,14 +1622,14 @@ public class SpaceForecast
 			if (zeroMbEventCount > 0)
 			{
 				// Only suppress states that were CAUSED by zero readings.
-				// First check if there's a real slope-driven CRITICAL/WARNING — if so, let it through.
+				// First check if there's a real slope-driven CRITICAL/WARNING ï¿½ if so, let it through.
 				boolean realFillThreat = hoursToFull != null
 						&& Duration.ofMillis((long)(hoursToFull * 3600000))
 								   .compareTo(warningThreshold) < 0;
 
 				if (!realFillThreat)
 				{
-					// No real fill threat — suppress fake sawtooth and fake dip-CRITICAL
+					// No real fill threat ï¿½ suppress fake sawtooth and fake dip-CRITICAL
 					if (sawtooth)
 						return DiskHealthState.ANOMALY;
 
@@ -1639,7 +1639,7 @@ public class SpaceForecast
 				// If realFillThreat is true, fall through to normal classification below
 			}
 
-//			// offline/zero readings detected — override sawtooth and dip-driven CRITICAL
+//			// offline/zero readings detected ï¿½ override sawtooth and dip-driven CRITICAL
 //			// since those are caused by fake zeros, not real disk events
 //			if (zeroMbEventCount > 0)
 //			{
@@ -1650,7 +1650,7 @@ public class SpaceForecast
 //					return DiskHealthState.ANOMALY; // CRITICAL caused by inflated maxBackupDrop from zero
 //			}
 
-			// Check TmpFiles overflow risk first — more specific than generic sawtooth
+			// Check TmpFiles overflow risk first ï¿½ more specific than generic sawtooth
 			if (sawtooth && tmpFilesWillFill && hoursUntilTmpFilesOverflow != null)
 			{
 				Duration eta = Duration.ofMillis((long)(hoursUntilTmpFilesOverflow * 3600000));

@@ -1,0 +1,10 @@
+##-------------------------------------------------------------------------------------------------------
+## TEMPLATE FOR: ant_push_private.properties
+## Which will be used to build a ZIP file and **push** any builds to a specififc location.
+##-------------------------------------------------------------------------------------------------------
+scp.user=YOUR_USERNAME
+scp.password=YOUR_PASSWORD
+scp.host=YOUR_HOST
+scp.port=22
+scp.path=www/dbxtune/tmp/
+#scp.path=www/dbxtune/pre-release

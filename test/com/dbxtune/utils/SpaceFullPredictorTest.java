@@ -144,8 +144,8 @@ public class SpaceFullPredictorTest
 		// Should predict running out of space
 		assertTrue("Should predict depletion", result._hoursUntilFull > 0);
 		
-		// R² should be very high for perfect linear data
-		assertTrue("R² should be > 0.99 for linear data", result._rSquared > 0.99);
+		// Rï¿½ should be very high for perfect linear data
+		assertTrue("Rï¿½ should be > 0.99 for linear data", result._rSquared > 0.99);
 	}
 
 	/**
