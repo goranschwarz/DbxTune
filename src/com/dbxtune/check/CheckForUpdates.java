@@ -23,15 +23,12 @@ package com.dbxtune.check;
 import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.ProxySelector;
@@ -39,13 +36,19 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -134,6 +137,9 @@ public abstract class CheckForUpdates
 
 	private int     _sendLogInfoThreshold = 100;
 	private int     _sendLogInfoCount     = 0;
+
+	private final BlockingQueue<Runnable> _infoSenderQueue = new LinkedBlockingQueue<>(100);
+	private Thread _infoSender;
 
 	/** What PHP variables will be used to pick up variables <br>
 	 *  true  = _POST[], HTTP POST will be used, "no" limit in size... <br>
@@ -231,9 +237,51 @@ public abstract class CheckForUpdates
 	public CheckForUpdates()
 	{
 		init();
+		startInfoSender();
 	}
 	/*---------------------------------------------------
 	** END: constructors
+	**---------------------------------------------------
+	*/
+
+	/*---------------------------------------------------
+	** BEGIN: infoSender queue
+	**---------------------------------------------------
+	*/
+	private void startInfoSender()
+	{
+		_infoSender = new Thread(() ->
+		{
+			while (!Thread.currentThread().isInterrupted())
+			{
+				try
+				{
+					_infoSenderQueue.take().run();
+				}
+				catch (InterruptedException ex)
+				{
+					Thread.currentThread().interrupt(); // clean exit
+				}
+				catch (Exception ex)
+				{
+					_logger.info("Unexpected error in infoSender thread. Caught: " + ex, ex);
+					// keep looping — one bad task should not kill the worker
+				}
+			}
+			_logger.info("infoSender thread exiting.");
+		});
+		_infoSender.setName("dbxtune-infoSender");
+		_infoSender.setDaemon(true);
+		_infoSender.start();
+	}
+
+	private void enqueue(String name, Runnable task)
+	{
+		if (!_infoSenderQueue.offer(task))
+			_logger.info("infoSender queue is full (capacity=100), dropping '" + name + "'.");
+	}
+	/*---------------------------------------------------
+	** END: infoSender queue
 	**---------------------------------------------------
 	*/
 
@@ -407,9 +455,9 @@ public abstract class CheckForUpdates
 //	}
 
 	protected InputStream sendHttpParams(String urlStr, QueryString urlParams, int timeoutInMs)
-	throws IOException 
+	throws IOException
 	{
-		if (_logger.isDebugEnabled()) 
+		if (_logger.isDebugEnabled())
 		{
 			_logger.debug("sendHttpParams() BASE URL: " + urlStr);
 			_logger.debug("sendHttpParams() PARAMSTR: " + urlParams.toString());
@@ -417,15 +465,20 @@ public abstract class CheckForUpdates
 
 		// Build the full GET URL
 		String fullUrl = urlStr + "?" + urlParams.toString();
-		URL url = new URL(fullUrl);
 
 		int backoffMs           = 1000;
 		int maxRetries          = DEFAULT_http_maxRetries;
 		int maxBackoffSleepTime = DEFAULT_http_maxBackoffSleepTime;
-		
+
 		int lastStatusCode = 0;
 
-		for (int attempt = 1; attempt <= maxRetries; attempt++) 
+		// Create HttpClient locally so it picks up the current ProxySelector (set in constructor/init)
+		HttpClient httpClient = HttpClient.newBuilder()
+				.proxy(ProxySelector.getDefault())
+				.followRedirects(HttpClient.Redirect.NORMAL)
+				.build();
+
+		for (int attempt = 1; attempt <= maxRetries; attempt++)
 		{
 			if (CounterController.hasInstance())
 			{
@@ -436,60 +489,37 @@ public abstract class CheckForUpdates
 				}
 			}
 
-			HttpURLConnection conn = null;
-			try 
+			try
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("HTTP GET -- Thread: '" + Thread.currentThread().getName() + "'. url.openConnection(); attempt=" + attempt + ", backoffMs=" + backoffMs);
+					_logger.debug("HTTP GET -- Thread: '" + Thread.currentThread().getName() + "'. sending request; attempt=" + attempt + ", backoffMs=" + backoffMs);
 
-				conn = (HttpURLConnection) url.openConnection();
+				HttpRequest request = HttpRequest.newBuilder()
+						.uri(URI.create(fullUrl))
+						.timeout(Duration.ofMillis(timeoutInMs))
+						.header("User-Agent", "MDA-Client/1.0")
+						.GET()
+						.build();
 
-				// Recommended: keep-alive helps prevent overloading connection setup
-//				conn.setRequestMethod("GET");
-				conn.setConnectTimeout(timeoutInMs);
-				conn.setReadTimeout(timeoutInMs);
-				conn.setRequestProperty("Connection", "keep-alive");
-				conn.setRequestProperty("User-Agent", "MDA-Client/1.0");
-
-				int status = conn.getResponseCode();
+				HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+				int status = response.statusCode();
 				lastStatusCode = status;
 
-				if (status == 200) 
+				if (status == 200)
 				{
-					_logger.debug("HTTP GET OK -- Status=200 -- Thread: '" + Thread.currentThread().getName() + "', url='" + urlStr + "'. url.openConnection()");
-
-					// OK - success
-//					return conn.getInputStream();
-
-					// Success: read full response into memory
-					ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-					try (InputStream in = conn.getInputStream()) 
-					{
-						in.transferTo(buffer);
-					} 
-					finally 
-					{
-						conn.disconnect();
-					}
-
-					// Return a fresh InputStream (safe even after disconnect)
-					return new ByteArrayInputStream(buffer.toByteArray());
-					
-				} 
-				else if (status == 429 || status == 503) 
+					_logger.debug("HTTP GET OK -- Status=200 -- Thread: '" + Thread.currentThread().getName() + "', url='" + urlStr + "'.");
+					return new ByteArrayInputStream(response.body());
+				}
+				else if (status == 429 || status == 503)
 				{
-					String retryAfter = conn.getHeaderField("Retry-After");
+					String retryAfter = response.headers().firstValue("Retry-After").orElse(null);
 					int waitTime = (retryAfter != null) ? StringUtil.parseInt(retryAfter, 5) * 1000 : backoffMs;
 
-					_logger.info("HTTP GET -- Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitTime + " ms... conn.getHeaderField('Retry-After') = '" + retryAfter + "'.");
+					_logger.info("HTTP GET -- Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitTime + " ms... Retry-After='" + retryAfter + "'.");
 					try { Thread.sleep(waitTime); } catch (InterruptedException ignore) { _logger.info("Sleep was interrupted. Caught: " + ignore); }
 
-					// exponential backoff up to 20s
+					// exponential backoff
 					backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
-
-					if (conn != null)
-						conn.disconnect();
-
 //					continue;
 				}
 				else
@@ -497,8 +527,13 @@ public abstract class CheckForUpdates
 					// Other HTTP errors (400, 404, 500, etc.)
 					throw new IOException("HTTP GET -- Unexpected HTTP response: " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. url: " + fullUrl);
 				}
-			} 
-			catch (IOException ex) 
+			}
+			catch (InterruptedException ex)
+			{
+				Thread.currentThread().interrupt();
+				throw new IOException("HTTP GET -- Thread was interrupted. url: " + fullUrl, ex);
+			}
+			catch (IOException ex)
 			{
 				_logger.info("HTTP GET -- Attempt " + attempt + " failed for URL: " + fullUrl + " Caught: " + ex);
 				if (attempt >= maxRetries)
@@ -506,14 +541,6 @@ public abstract class CheckForUpdates
 
 				try { Thread.sleep(backoffMs); } catch (InterruptedException ignore) { /* ignore */ }
 				backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
-			} 
-			finally 
-			{
-				if (conn != null) 
-				{
-					// Safe even if already disconnected
-					try { conn.disconnect(); } catch (Exception ignore) {}
-				}
 			}
 		}
 
@@ -528,7 +555,7 @@ public abstract class CheckForUpdates
 	 * in a PHP page they could be picked up by: _POST['param1']
 	 */
 	protected InputStream sendHttpPost(String urlStr, QueryString urlParams)
-	throws MalformedURLException, IOException
+	throws IOException
 	{
 		return sendHttpPost(urlStr, urlParams, DEFAULT_TIMEOUT);
 	}
@@ -563,15 +590,14 @@ public abstract class CheckForUpdates
 //		return conn.getInputStream();
 //	}
 	protected InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs)
-	throws IOException 
+	throws IOException
 	{
-		if (_logger.isDebugEnabled()) 
+		if (_logger.isDebugEnabled())
 		{
 			_logger.debug("sendHttpPost() BASE URL: " + urlStr);
 			_logger.debug("sendHttpPost() POST STR: " + urlParams.toString());
 		}
 
-		URL url = new URL(urlStr);
 		byte[] postData = urlParams.toString().getBytes(StandardCharsets.UTF_8);
 
 		int backoffMs           = 1000;
@@ -580,7 +606,13 @@ public abstract class CheckForUpdates
 
 		int lastStatusCode = 0;
 
-		for (int attempt = 1; attempt <= maxRetries; attempt++) 
+		// Create HttpClient locally so it picks up the current ProxySelector (set in constructor/init)
+		HttpClient httpClient = HttpClient.newBuilder()
+				.proxy(ProxySelector.getDefault())
+				.followRedirects(HttpClient.Redirect.NORMAL)
+				.build();
+
+		for (int attempt = 1; attempt <= maxRetries; attempt++)
 		{
 			if (CounterController.hasInstance())
 			{
@@ -591,61 +623,38 @@ public abstract class CheckForUpdates
 				}
 			}
 
-			HttpURLConnection conn = null;
-			try 
+			try
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("HTTP POST -- Thread: '" + Thread.currentThread().getName() + "'. url.openConnection(); attempt=" + attempt + ", backoffMs=" + backoffMs);
+					_logger.debug("HTTP POST -- Thread: '" + Thread.currentThread().getName() + "'. sending request; attempt=" + attempt + ", backoffMs=" + backoffMs);
 
-				conn = (HttpURLConnection) url.openConnection();
+				HttpRequest request = HttpRequest.newBuilder()
+						.uri(URI.create(urlStr))
+						.timeout(Duration.ofMillis(timeoutInMs))
+						.header("Content-Type", "application/x-www-form-urlencoded")
+						.header("User-Agent", "MDA-Client/1.0")
+						.POST(HttpRequest.BodyPublishers.ofByteArray(postData))
+						.build();
 
-				conn.setConnectTimeout(timeoutInMs);
-				conn.setReadTimeout(timeoutInMs);
-				conn.setDoOutput(true);
-				conn.setRequestMethod("POST");
-				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-				conn.setRequestProperty("Connection", "keep-alive");
-				conn.setRequestProperty("User-Agent", "MDA-Client/1.0");
-				conn.setFixedLengthStreamingMode(postData.length);
-
-				// --- Send the POST body ---
-				try (OutputStream out = conn.getOutputStream()) 
-				{
-					out.write(postData);
-					out.flush();
-				}
-
-				int status = conn.getResponseCode();
+				HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+				int status = response.statusCode();
 				lastStatusCode = status;
 
-				if (status == 200) 
+				if (status == 200)
 				{
-					_logger.debug("HTTP POST OK -- Status=200 -- Thread: '" + Thread.currentThread().getName() + "', url='" + urlStr + "'. url.openConnection()");
-
-					// Success: read full response into memory
-					ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-					try (InputStream in = conn.getInputStream()) 
-					{
-						in.transferTo(buffer);
-					} 
-					finally 
-					{
-						conn.disconnect();
-					}
-
-					// Return a fresh InputStream (safe even after disconnect)
-					return new ByteArrayInputStream(buffer.toByteArray());
+					_logger.debug("HTTP POST OK -- Status=200 -- Thread: '" + Thread.currentThread().getName() + "', url='" + urlStr + "'.");
+					return new ByteArrayInputStream(response.body());
 				}
 
 				// RETRY: Handle throttling / transient server errors
 				//  - 429 Too Many Requests
 				//  - 503 Service Unavailable
-				if (status == 429 || status == 503) 
+				if (status == 429 || status == 503)
 				{
-					String retryAfter = conn.getHeaderField("Retry-After");
+					String retryAfter = response.headers().firstValue("Retry-After").orElse(null);
 					int waitMs = (retryAfter != null) ? StringUtil.parseInt(retryAfter, 5) * 1000 : backoffMs;
 
-					_logger.info("HTTP POST " + urlStr + " Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitMs + " ms (attempt " + attempt + "/" + maxRetries + "). conn.getHeaderField('Retry-After') = '" + retryAfter + "'.");
+					_logger.info("HTTP POST " + urlStr + " Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitMs + " ms (attempt " + attempt + "/" + maxRetries + "). Retry-After='" + retryAfter + "'.");
 
 					try { Thread.sleep(waitMs); } catch (InterruptedException ie) { _logger.info("Sleep was interrupted. Caught: " + ie); }
 					backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
@@ -654,28 +663,25 @@ public abstract class CheckForUpdates
 
 				// ERROR: Non-retryable error
 				throw new IOException("HTTP POST Unexpected status " + status + "  '" + HttpUtils.httpResponceCodeToText(status) + "' for url: " + urlStr);
-			} 
-			catch (IOException ex) 
+			}
+			catch (InterruptedException ex)
+			{
+				Thread.currentThread().interrupt();
+				throw new IOException("HTTP POST -- Thread was interrupted. url: " + urlStr, ex);
+			}
+			catch (IOException ex)
 			{
 				// Network or connection issue
-				if (attempt == maxRetries) 
+				if (attempt == maxRetries)
 				{
 					_logger.info("HTTP POST " + urlStr + " failed after " + maxRetries + " attempts: " + ex);
 					throw ex;
-				} 
-				else 
+				}
+				else
 				{
 					_logger.info("HTTP POST " + urlStr + " failed: " + ex.getMessage() + " -> retrying in " + backoffMs + " ms (attempt " + attempt + ").");
 					try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { _logger.info("Sleep was interrupted. Caught: " + ie); }
 					backoffMs = Math.min(backoffMs * 2, maxBackoffSleepTime);
-				}
-			} 
-			finally 
-			{
-				if (conn != null) 
-				{
-					// Safe even if already disconnected
-					try { conn.disconnect(); } catch (Exception ignore) {}
 				}
 			}
 		}
@@ -1152,20 +1158,7 @@ public abstract class CheckForUpdates
 			return;
 		}
 
-		Runnable doLater = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				sendConnectInfo(params);
-
-				sendUdcInfo();
-			}
-		};
-		Thread checkThread = new Thread(doLater);
-		checkThread.setName("sendConnectInfo");
-		checkThread.setDaemon(true);
-		checkThread.start();
+		enqueue("sendConnectInfo", () -> { sendConnectInfo(params); sendUdcInfo(); });
 	}
 
 	/**
@@ -1253,18 +1246,7 @@ public abstract class CheckForUpdates
 			return;
 		}
 
-		Runnable doLater = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				sendMdaInfo();
-			}
-		};
-		Thread checkThread = new Thread(doLater);
-		checkThread.setName("sendMdaInfo");
-		checkThread.setDaemon(true);
-		checkThread.start();
+		enqueue("sendMdaInfo", () -> sendMdaInfo());
 	}
 
 
@@ -1485,30 +1467,13 @@ public abstract class CheckForUpdates
 
 	public void sendUdcInfoNoBlock()
 	{
-		// TRACE IN DEVELOPMENT
-//		if (_printDevTrace && _checkId < 0)
-//		{
-//			System.out.println("DEV-TRACE(CheckForUpdates): sendUdcInfoNoBlock(): ");
-//		}
-
 		if ( ! _sendUdcInfo )
 		{
 			_logger.debug("Send 'UDC info' has been disabled.");
 			return;
 		}
 
-		Runnable doLater = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				sendUdcInfo();
-			}
-		};
-		Thread checkThread = new Thread(doLater);
-		checkThread.setName("sendUdcInfo");
-		checkThread.setDaemon(true);
-		checkThread.start();
+		enqueue("sendUdcInfo", () -> sendUdcInfo());
 	}
 
 	/**
@@ -1607,18 +1572,9 @@ public abstract class CheckForUpdates
 			}
 		};
 		if (blockingCall)
-		{
-			// if synchronous, just call the run method on current thread
 			doLater.run();
-		}
 		else
-		{
-			// no blocking call, start a thread that does it.
-			Thread checkThread = new Thread(doLater);
-			checkThread.setName("sendCounterUsageInfo");
-			checkThread.setDaemon(true);
-			checkThread.start();
-		}
+			enqueue("sendCounterUsageInfo", doLater);
 	}
 
 	/**
@@ -1787,19 +1743,7 @@ public abstract class CheckForUpdates
 		// NOTE: we may need to synchronize this, but on the other hand it's just a counter incrementation
 		final int sendLogInfoCount = _sendLogInfoCount++;
 
-		// SEND This using a thread
-		Runnable doLater = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				sendLogInfo(record, sendLogInfoCount);
-			}
-		};
-		Thread checkThread = new Thread(doLater);
-		checkThread.setName("sendLogInfo");
-		checkThread.setDaemon(true);
-		checkThread.start();
+		enqueue("sendLogInfo", () -> sendLogInfo(record, sendLogInfoCount));
 	}
 	
 	/**

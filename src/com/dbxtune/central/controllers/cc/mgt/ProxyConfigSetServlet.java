@@ -22,8 +22,12 @@ package com.dbxtune.central.controllers.cc.mgt;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+
+import org.apache.commons.io.IOUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -55,20 +59,28 @@ extends ProxyHelper
 		}
 		
 
-		URL url = new URL(getCollectorBaseUrl() + "/api/mgt/config/set");
-		HttpURLConnection httpConn = (HttpURLConnection)url.openConnection();
+		// Read request body from the incoming servlet request
+		String requestBody = IOUtils.toString(req.getReader());
+		byte[] requestBodyBytes = requestBody.getBytes(StandardCharsets.UTF_8);
 
-		// set request header if required
-		httpConn.setRequestProperty("Authentication", getMgtAuthentication());
-//		httpConn.setRequestProperty("header1", "value1");
+		HttpRequest request = HttpRequest.newBuilder()
+				.uri(URI.create(getCollectorBaseUrl() + "/api/mgt/config/set"))
+				.header("Content-Type", "application/json")
+				.header("Accept", "application/json")
+				.header("Authentication", getMgtAuthentication())
+				.POST(HttpRequest.BodyPublishers.ofByteArray(requestBodyBytes))
+				.build();
 
-		httpConn.setRequestMethod("POST");
-
-		// PROXY: Transfer data from the Caller to the HTTP end point 
-		sendData(req, httpConn);
-
-		// PROXY: Transfer data from the HTTP Call to the caller 
-		sendResult(httpConn, resp, APPLICATION_JSON);
+		try
+		{
+			HttpResponse<byte[]> httpResponse = _httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+			sendResult(httpResponse, resp, APPLICATION_JSON);
+		}
+		catch (InterruptedException ex)
+		{
+			Thread.currentThread().interrupt();
+			throw new IOException("HTTP request was interrupted for URL: " + getCollectorBaseUrl() + "/api/mgt/config/set", ex);
+		}
 	}
 
 }

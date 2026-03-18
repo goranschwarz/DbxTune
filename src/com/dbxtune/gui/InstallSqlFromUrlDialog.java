@@ -31,10 +31,13 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -480,38 +483,42 @@ implements ActionListener
 		try
 		{
 			// first get the SQL Code
-			URL url = new URL(urlStr);
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setRequestMethod("GET");
-			int    responseCode = conn.getResponseCode();
-			String responseMsg  = conn.getResponseMessage();
+			HttpClient httpClient = HttpClient.newBuilder()
+					.followRedirects(HttpClient.Redirect.NORMAL)
+					.build();
+
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(urlStr))
+					.GET()
+					.build();
+
+			HttpResponse<byte[]> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+			int responseCode = httpResponse.statusCode();
 
 			// success
-			if (responseCode == HttpURLConnection.HTTP_OK) 
+			if (responseCode == 200)
 			{
 				StringBuffer response = new StringBuffer();
 
-//				BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-				// If the file has a BOM (Byte order mark), then read/discard it... 
+				// If the file has a BOM (Byte order mark), then read/discard it...
 				// If the BOM is NOT removed, then strange problems may appear, as "Incorrect Syntax near ''" or similar, due to the BOM character is in the text (but NOT visible)
-				BufferedReader in = new BufferedReader(new InputStreamReader( new BOMInputStream(conn.getInputStream()) ));
+				BufferedReader in = new BufferedReader(new InputStreamReader( new BOMInputStream(new ByteArrayInputStream(httpResponse.body())) ));
 				String inputLine;
 
-				while ((inputLine = in.readLine()) != null) 
+				while ((inputLine = in.readLine()) != null)
 				{
 					response.append(inputLine).append("\n");
 				}
 				in.close();
 
 				output = response.toString();
-			} 
-			else 
+			}
+			else
 			{
-				SwingUtils.showErrorMessage("Problems Getting Procedure code from '" + urlStr + "'.", responseCode + " - " + responseMsg, null);
+				SwingUtils.showErrorMessage("Problems Getting Procedure code from '" + urlStr + "'.", responseCode + "", null);
 				_sqlUrlDdlText = ""
-						+ "-- Problems Getting Procedure code from '" + urlStr + "'.\n" 
-						+ "-- URL Response Code: " + responseCode + "\n"
-						+ "-- URL Response Message: " + responseMsg;
+						+ "-- Problems Getting Procedure code from '" + urlStr + "'.\n"
+						+ "-- URL Response Code: " + responseCode + "\n";
 				return;
 			}
 		}
@@ -519,7 +526,7 @@ implements ActionListener
 		{
 			SwingUtils.showErrorMessage("Problems Getting Procedure code from '" + urlStr + "'.", t.getMessage(), t);
 			_sqlUrlDdlText = ""
-					+ "-- Problems Getting Procedure code from '" + urlStr + "'.\n" 
+					+ "-- Problems Getting Procedure code from '" + urlStr + "'.\n"
 					+ "-- Exception Message: " + t.getMessage() + "\n";
 			return;
 		}

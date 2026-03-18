@@ -20,16 +20,17 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Socket;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -892,6 +893,9 @@ implements IDailySummaryReport
 //	private List<DsrSkipEntry> _local_dsrSkipEntriesForServerName = null;
 
 	private int _loadAttemts = 0;
+	private HttpClient _httpClient = HttpClient.newBuilder()
+			.followRedirects(HttpClient.Redirect.NORMAL)
+			.build();
 	
 	public List<DsrSkipEntry> getDsrSkipEntries(String srvName)
 	{
@@ -913,38 +917,37 @@ implements IDailySummaryReport
 		
 		try
 		{
-			URL getRequest = new URL(dbxCentralUrlSkip);
-			HttpURLConnection conection = (HttpURLConnection) getRequest.openConnection();
-			conection.setRequestMethod("GET");
-//			conection.setRequestProperty("srvName", srvName); // set userId its a sample here
-			int    responseCode = conection.getResponseCode();
-			String responseMsg  = conection.getResponseMessage();
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(dbxCentralUrlSkip))
+					.GET()
+					.build();
 
-			if(responseCode == HttpURLConnection.HTTP_OK) 
+			HttpResponse<String> httpResponse = _httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			int responseCode = httpResponse.statusCode();
+
+			if (responseCode == 200)
 			{
-				String readLine = null;
-				BufferedReader in = new BufferedReader(new InputStreamReader(conection.getInputStream()));
-				StringBuilder response = new StringBuilder();
-				while ((readLine = in .readLine()) != null) 
-				{
-					response.append(readLine);
-				}
-				in .close();
+				String responseBody = httpResponse.body();
 
 				// print result
 				if (_logger.isDebugEnabled())
-					_logger.debug("JSON String Result " + response.toString());
-				
+					_logger.debug("JSON String Result " + responseBody);
+
 				ObjectMapper mapper = new ObjectMapper();
-				List<DsrSkipEntry> entries = mapper.readValue(response.toString(), new TypeReference<List<DsrSkipEntry>>(){});
+				List<DsrSkipEntry> entries = mapper.readValue(responseBody, new TypeReference<List<DsrSkipEntry>>(){});
 
 				_dsrSkipEntriesForServerName = entries;
-			} 
-			else 
+			}
+			else
 			{
-				_logger.error("Problems getting Daily Summary Report SKIP entries, received responseCode=" + responseCode + ", Message='" + responseMsg + "', from URL: " + dbxCentralUrlSkip);
+				_logger.error("Problems getting Daily Summary Report SKIP entries, received responseCode=" + responseCode + ", from URL: " + dbxCentralUrlSkip);
 				//return null;
 			}
+		}
+		catch (InterruptedException ex)
+		{
+			Thread.currentThread().interrupt();
+			_logger.error("Problems getting Daily Summary Report SKIP Entries from DbxCentral using URL: " + dbxCentralUrlSkip);
 		}
 		catch (Exception ex)
 		{

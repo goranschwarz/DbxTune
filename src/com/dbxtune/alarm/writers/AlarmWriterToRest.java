@@ -20,15 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.alarm.writers;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,11 +74,11 @@ extends AlarmWriterAbstract
 		sendMessage(ACTION_CANCEL, alarmEvent);
 	}
 
-	/** 
-	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code> 
-	 * @throws exception if it can't find any ':' char in the keyVal string 
+	/**
+	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code>
+	 * @throws exception if it can't find any ':' char in the keyVal string
 	 */
-	private void addHeader(HttpURLConnection conn, String keyVal)
+	private void addHeader(HttpRequest.Builder builder, String keyVal)
 	throws Exception
 	{
 		if (StringUtil.isNullOrBlank(keyVal))
@@ -87,11 +87,11 @@ extends AlarmWriterAbstract
 		int firstColonPos = keyVal.indexOf(':');
 		if (firstColonPos == -1)
 			throw new Exception("Problem parsing the value '"+keyVal+"', can't find any ':' in it.");
-		
+
 		String key = keyVal.substring(0, firstColonPos);
 		String val = keyVal.substring(firstColonPos+1).trim();
 
-		conn.addRequestProperty(key, val);
+		builder.header(key, val);
 	}
 
 	/**
@@ -106,31 +106,26 @@ extends AlarmWriterAbstract
 
 		try
 		{
-			URL url = new URL(_url);
-
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setDoOutput(true);
-			conn.setRequestMethod("POST");
-			conn.setRequestProperty("Content-Type", "application/json");
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.uri(URI.create(_url))
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(jsonMessage));
 
 			// add headers
-			addHeader(conn, _header_1);
-			addHeader(conn, _header_2);
-			addHeader(conn, _header_3);
-			addHeader(conn, _header_4);
-			addHeader(conn, _header_5);
-			addHeader(conn, _header_6);
-			addHeader(conn, _header_7);
-			addHeader(conn, _header_8);
-			addHeader(conn, _header_9);
+			addHeader(builder, _header_1);
+			addHeader(builder, _header_2);
+			addHeader(builder, _header_3);
+			addHeader(builder, _header_4);
+			addHeader(builder, _header_5);
+			addHeader(builder, _header_6);
+			addHeader(builder, _header_7);
+			addHeader(builder, _header_8);
+			addHeader(builder, _header_9);
 
-			// Write the output
-			OutputStream os = conn.getOutputStream();
-			os.write(jsonMessage.getBytes());
-			os.flush();
+			HttpResponse<String> response = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 
 			// Check responce
-			int responceCode = conn.getResponseCode();
+			int responceCode = response.statusCode();
 			if ( responceCode >= 203) // see 'https://httpstatuses.com/' for http codes... or at the bottom of this source code
 			{
 				throw new Exception("Failed : HTTP error code : " + responceCode);
@@ -141,23 +136,23 @@ extends AlarmWriterAbstract
 			}
 
 			// Read responce and print the output...
-			BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-
-			String output;
-			while ((output = br.readLine()) != null)
+			for (String output : response.body().split("\n"))
 			{
 				_logger.info("Responce from server: " + output);
 				_logger.debug("Responce from server: " + output);
 			}
-
-			conn.disconnect();
 		}
-		catch (Exception  ex)
+		catch (InterruptedException ex)
+		{
+			Thread.currentThread().interrupt();
+			_logger.error("Problems sending REST call to '"+_url+"'. Caught: "+ex, ex);
+		}
+		catch (Exception ex)
 		{
 			_logger.error("Problems sending REST call to '"+_url+"'. Caught: "+ex , ex);
 		}
 	}
-	
+
 	@Override
 	public String getDescription()
 	{
@@ -192,6 +187,10 @@ extends AlarmWriterAbstract
 	//-------------------------------------------------------
 	// class members
 	//-------------------------------------------------------
+	private HttpClient _httpClient = HttpClient.newBuilder()
+			.followRedirects(HttpClient.Redirect.NORMAL)
+			.build();
+
 	private String  _url          = "";
 	private String  _jsonTemplate = "";
 	private String  _header_1     = "";

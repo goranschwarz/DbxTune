@@ -1,10 +1,43 @@
 ##-------------------------------------------------------------------------------------------------------
 ## TEMPLATE FOR: ant_push_private.properties
-## Which will be used to build a ZIP file and **push** any builds to a specififc location.
+## Which will be used to build a ZIP file and **push** any builds to a specific location.
+##
+## Usage:
+##   Copy this file to 'ant_push_private.properties' and fill in your values.
+##   Then run: ant push
+##   Or specify a different file: ant -DscpPrivateFile=myfile.properties push
+##
+## NOTE: ant_push_private.properties is listed in .gitignore -- it will NOT be committed to git.
+##-------------------------------------------------------------------------------------------------------
+
+##-------------------------------------------------------------------------------------------------------
+## SSH connection settings
 ##-------------------------------------------------------------------------------------------------------
 scp.user=YOUR_USERNAME
-scp.password=YOUR_PASSWORD
 scp.host=YOUR_HOST
 scp.port=22
+
+##-------------------------------------------------------------------------------------------------------
+## Target path on the remote server
+##-------------------------------------------------------------------------------------------------------
 scp.path=www/dbxtune/tmp/
 #scp.path=www/dbxtune/pre-release
+
+##-------------------------------------------------------------------------------------------------------
+## Authentication -- key-based auth is tried first, password is used as fallback.
+##
+## Key-based auth (recommended):
+##   Set scp.keyfile to your private key. Common locations:
+##     Windows:  ${user.home}/.ssh/id_rsa   or   ${user.home}/.ssh/id_ed25519
+##     Linux:    ${user.home}/.ssh/id_rsa   or   ${user.home}/.ssh/id_ed25519
+##   If your key has a passphrase, set scp.passphrase. Leave blank if no passphrase.
+##
+## Password auth (fallback):
+##   Set scp.password to your SSH password.
+##   If key auth succeeds, the password is never sent.
+##   To use password auth only, leave scp.keyfile pointing to a non-existent file.
+##-------------------------------------------------------------------------------------------------------
+scp.keyfile=${user.home}/.ssh/id_rsa
+#scp.keyfile=${user.home}/.ssh/id_ed25519
+scp.passphrase=
+scp.password=YOUR_PASSWORD
