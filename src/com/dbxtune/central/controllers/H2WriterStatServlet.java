@@ -90,8 +90,8 @@ extends HttpServlet
 		out.println("<!--<script type='text/javascript' src='/scripts/chartjs/2.7.3/plugins/chartjs-plugin-colorschemes.js'></script>--> ");
 		out.println(" ");
 		out.println("	<!-- JS: DbxCentral --> ");
-		out.println("	<script type='text/javascript' src='/scripts/dbxcentral.utils.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/dbxcentral.graph.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.utils.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.graph.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap --> ");
 //		out.println("	<!-- <link href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css' rel='stylesheet'> --> ");
@@ -118,10 +118,10 @@ extends HttpServlet
 		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DbxCentral --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/css/dbxcentral.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: iota - layout --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/css/iota.css' type='text/css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/dbxtune/css/iota.css' type='text/css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: Bootstrap --> ");
 		out.println("	<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> ");

@@ -240,7 +240,7 @@ public class DbxTuneConfServlet extends HttpServlet
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
 		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'> ");
-		out.println("<link rel='stylesheet' href='/scripts/css/dbxcentral_tablesorter.css'> ");
+		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'> ");
 		
 		out.println("<!-- Tablesorter script: required --> ");
 		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script> ");

@@ -177,40 +177,11 @@ function jsonToTable(json, stripHtmlInCells)
 			tabCell.noWrap = true;
 			tabCell.style.border = borderStyle;
 			
-			var originTxt   = json[i][col[j]];
-			var strippedTxt = stripHtml( originTxt );
+			var originTxt = json[i][col[j]];
 
-			// If originTxt contains HTML Tags, then add both ORIGIN & STRIPPED and a button where we can "switch" between the two fields
-			if (isHTML(originTxt))
-			{
-				var newDiv = document.createElement('div');
-
-				var newlink = document.createElement('a');
-				newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
-				newlink.setAttribute('href', 'javascript:toggleActiveAlarmsExtendedDescription();');
-				
-				var originDiv   = document.createElement('div');
-				var strippedDiv = document.createElement('div');
-				originDiv  .setAttribute('class', 'active-alarms-extDesc-origin-class');
-				strippedDiv.setAttribute('class', 'active-alarms-extDesc-stripped-class');
-				
-				originDiv  .innerHTML = originTxt;
-				strippedDiv.innerHTML = strippedTxt;
-				
-				originDiv  .style.display = stripHtmlInCells ? 'none'  : 'block';
-				strippedDiv.style.display = stripHtmlInCells ? 'block' : 'none';
-				
-				newDiv.appendChild(newlink);
-				newDiv.appendChild(originDiv);
-				newDiv.appendChild(strippedDiv);
-
-				tabCell.appendChild(newDiv);
-			}
-			else
-			{
-				//var cellContent = stripHtmlInCells ? strippedTxt : originTxt;
-				tabCell.innerHTML = originTxt;
-			}
+			// Render cell value directly — full content always visible;
+			// details available via the row-detail modal (click any row).
+			tabCell.innerHTML = originTxt;
 		}
 	}
 	return table;
@@ -234,18 +205,6 @@ function isHTML(str) {
 	}
 
 	return false;
-}
-
-function toggleActiveAlarmsExtendedDescription()
-{
-//	var extDesc = document.getElementsByClassName("active-alarms-extDesc-origin-class active-alarms-extDesc-stripped-class");
-	var extDesc = document.querySelectorAll('.active-alarms-extDesc-origin-class,.active-alarms-extDesc-stripped-class')
-
-	// Toggle all elements in the above clases
-	for (let i=0; i<extDesc.length; i++)
-	{
-		extDesc[i].style.display = extDesc[i].style.display === 'none' ? 'block' : 'none';
-	}
 }
 
 /**
@@ -405,3 +364,16 @@ function getStorage(key_prefix)
         };
     }
 }
+
+// ── HTML escaping ───────────────────────────────────────────────────────────
+// Defined here so it is available to dbxAlarm.js and dbxcentral.graph.js alike.
+
+function escHtml(s)
+{
+	if (s == null) return '';
+	return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Alarm callbacks, modal helpers and mute dialog are in dbxAlarm.js
+
+// (placeholder — nothing below this line)

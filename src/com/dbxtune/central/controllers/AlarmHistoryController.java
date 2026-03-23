@@ -67,11 +67,12 @@ extends HttpServlet
 		try
 		{
 			// Check for known input parameters
-			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName", "age", "type", "category"))
+			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName", "age", "startTime", "endTime", "type", "category"))
 				return;
 
 			String srv      = Helper.getParameter(req, new String[] {"srv", "srvName"});
-			String age      = Helper.getParameter(req, "age");
+			String age      = Helper.getParameter(req, new String[] {"age", "startTime"});
+			String endTime  = Helper.getParameter(req, "endTime");
 			String type     = Helper.getParameter(req, "type");
 			String category = Helper.getParameter(req, "category");
 
@@ -86,7 +87,7 @@ extends HttpServlet
 			}
 
 			// get Data
-			List<DbxAlarmHistory> list = reader.getAlarmHistory( srv, age, type, category );
+			List<DbxAlarmHistory> list = reader.getAlarmHistory( srv, age, endTime, type, category );
 
 			// to JSON
 			ObjectMapper om = Helper.createObjectMapper();

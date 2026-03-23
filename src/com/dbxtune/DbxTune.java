@@ -1460,7 +1460,11 @@ if (_gui && startEvenIfGui_justToTestTheService)
 				
 				// Save it; with override
 				conf.save(true);
-				
+
+				// Push info file to DbxCentral (for remote/cross-host deployments).
+				// If Central is not configured or not yet reachable, a background thread retries.
+				com.dbxtune.mgt.CollectorRegistrationPusher.push(dbmsSrvOrAliasName, noGuiServiceInfoFile);
+
 				// Later of, for instance in the PCS JDBC Writer will write information on where a recording is stored etc.
 
 			} // end: writeDbxTuneServiceFile

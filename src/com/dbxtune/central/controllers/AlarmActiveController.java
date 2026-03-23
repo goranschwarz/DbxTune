@@ -33,6 +33,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.alarm.AlarmMuteManager;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.objects.DbxAlarmActive;
 import com.dbxtune.utils.StringUtil;
@@ -83,6 +84,25 @@ extends HttpServlet
 
 			// get Data
 			List<DbxAlarmActive> list = reader.getAlarmActive(srv);
+
+			// Enrich each alarm with current mute state from AlarmMuteManager
+			AlarmMuteManager muteMgr = AlarmMuteManager.getInstance();
+			for (DbxAlarmActive alarm : list)
+			{
+				String alarmId = alarm.getAlarmId();
+				if (alarmId != null && muteMgr.isMuted(alarmId))
+				{
+					AlarmMuteManager.MuteRecord rec = muteMgr.getMute(alarmId);
+					if (rec != null)
+					{
+						alarm.setIsMuted(true);
+						alarm.setMuteReason(rec.reason);
+						alarm.setMutedByUser(rec.mutedByUser);
+						alarm.setMutedTime(rec.mutedTime);
+						alarm.setMuteExpiresAt(rec.expiresAt);
+					}
+				}
+			}
 
 			// to JSON
 			ObjectMapper om = Helper.createObjectMapper();

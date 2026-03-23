@@ -609,7 +609,7 @@ public class CentralPersistReader
 	 * @param age       YYYY-MM-DD hh:mm:ss or -10, 10m, 10h, 10d, 10l   (-10=last-10-rows, 10m=last-10-minutes, 10h=last-10-hours, 10d=last-10-days, 10l=last-10-rows)
 	 * @return
 	 */
-	public List<DbxAlarmHistory> getAlarmHistory(String servername, String age, String type, String category)
+	public List<DbxAlarmHistory> getAlarmHistory(String servername, String age, String endTime, String type, String category)
 	throws SQLException
 	{
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
@@ -619,7 +619,7 @@ public class CentralPersistReader
 
 			if (StringUtil.hasValue(servername))
 			{
-				getAlarmHistory(conn, list, servername, age, type, category);
+				getAlarmHistory(conn, list, servername, age, endTime, type, category);
 			}
 			else // for ALL SCHEMAS
 			{
@@ -644,7 +644,7 @@ public class CentralPersistReader
 			
 					if( tabExists )
 					{
-						getAlarmHistory(conn, list, schemaName, age, type, category);
+						getAlarmHistory(conn, list, schemaName, age, endTime, type, category);
 					}
 				}
 			}
@@ -656,7 +656,7 @@ public class CentralPersistReader
 			releaseConnection(conn);
 		}
 	}
-	private void getAlarmHistory(DbxConnection conn, List<DbxAlarmHistory> list, String schema, String age, String type, String category)
+	private void getAlarmHistory(DbxConnection conn, List<DbxAlarmHistory> list, String schema, String age, String endTime, String type, String category)
 	throws SQLException
 	{
 //System.out.println("----- getAlarmHistory(conn, list='" + list + "', schema='" + schema + "', age='" + age + "', type='" + type + "', category='" + category + "')");
@@ -727,6 +727,10 @@ public class CentralPersistReader
 				}
 			}
 		}
+
+		// eventTime <= ${endTime}
+		if (StringUtil.hasValue(endTime))
+			whereStr += "   and " + lq + "eventTime" + rq + " <= '" + endTime.trim() + "' \n";
 		
 		String sql = "select "
 					+ "  '"+schema+"' as " + lq + "srvName"     + rq

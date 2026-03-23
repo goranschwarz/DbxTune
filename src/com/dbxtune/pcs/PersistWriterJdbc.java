@@ -1581,12 +1581,11 @@ public class PersistWriterJdbc
 				// if we get error: we will end up in the catch(SQLException) and later on we will try to make a new connection
 				if (sql != null)
 				{
-					Statement stmnt = _mainConn.createStatement();
-					ResultSet rs = stmnt.executeQuery(sql);
-					while(rs.next())
-						/* do nothing */;
-					rs.close();
-					stmnt.close();
+					try ( Statement stmnt = _mainConn.createStatement();
+					      ResultSet rs    = stmnt.executeQuery(sql) )
+					{
+						while (rs.next()) /* do nothing */;
+					}
 					
 					// return the GOOD connection
 					return _mainConn;
@@ -2396,6 +2395,110 @@ public class PersistWriterJdbc
 	public DbxConnection getStorageConnection()
 	{
 		return _mainConn;
+	}
+
+	/**
+	 * Returns true when the writer is configured to roll to a new H2 database
+	 * at each date boundary (i.e. the JDBC URL contains a rolling {@code ${DATE}} variable).
+	 */
+	public boolean isH2DateRolling()
+	{
+		return _h2NewDbOnDateChange;
+	}
+
+	/**
+	 * Formats the given date using the same date-key pattern the writer uses for
+	 * database file naming (e.g. {@code "2026-03-14"} or {@code "2026-03-14_06.00"}).
+	 *
+	 * @param  date  the date to format
+	 * @return       formatted date string, or null if date rolling is not active
+	 */
+	public String formatDateKeyForDb(java.util.Date date)
+	{
+		if (!_h2NewDbOnDateChange) return null;
+		return new java.text.SimpleDateFormat(_h2DbDateParseFormat).format(date);
+	}
+
+	/**
+	 * Returns the date key of the currently open H2 database
+	 * (e.g. {@code "2026-03-20"} for a daily-rolling database).
+	 * Returns null when date rolling is not active or the first sample has not yet been written.
+	 */
+	public String getCurrentDbDateKey()
+	{
+		return _h2LastDateChange;
+	}
+
+	/**
+	 * Opens a new <em>read-only</em> DbxConnection to the H2 database file that corresponds
+	 * to the given date. The caller is responsible for closing the returned connection when done.
+	 * <p>
+	 * Returns {@code null} when:
+	 * <ul>
+	 *   <li>date-based rolling is not active ({@code h2NewDbOnDateChange=false}),</li>
+	 *   <li>the current database URL cannot be adapted to the requested date,</li>
+	 *   <li>the target {@code .mv.db} file does not exist on disk, or</li>
+	 *   <li>the JDBC connection cannot be established.</li>
+	 * </ul>
+	 * <p>
+	 * The {@code ;ACCESS_MODE_DATA=r} option is appended to the JDBC URL to open H2 in
+	 * read-only mode, preventing any accidental writes to the historical database.
+	 *
+	 * @param  date  the target date / sample timestamp
+	 * @return       a read-only DbxConnection, or null
+	 * @throws Exception if the JDBC driver cannot be loaded or the connection fails
+	 */
+	public DbxConnection openHistoricalConnection(java.util.Date date) throws Exception
+	{
+		if (!_h2NewDbOnDateChange)     return null;
+		if (_h2LastDateChange == null) return null;
+
+		// _lastUsedUrl is the fully-substituted URL (date already resolved in the string).
+		// Fall back to asking the live connection's metadata if _lastUsedUrl is somehow null.
+		String currentUrl = _lastUsedUrl;
+		if (currentUrl == null && _mainConn != null)
+		{
+			try { currentUrl = _mainConn.getMetaData().getURL(); }
+			catch (Exception ex) { return null; }
+		}
+		if (currentUrl == null) return null;
+
+		String newDateStr = new java.text.SimpleDateFormat(_h2DbDateParseFormat).format(date);
+
+		// Safety check: if the current date key is not in the URL, we cannot substitute it
+		if (!currentUrl.contains(_h2LastDateChange))
+		{
+			_logger.warn("openHistoricalConnection: Cannot locate current date key '" + _h2LastDateChange
+					+ "' in URL '" + currentUrl + "'. Cannot derive historical URL.");
+			return null;
+		}
+
+		String histUrl = currentUrl.replace(_h2LastDateChange, newDateStr);
+
+		// Verify the .mv.db file exists BEFORE connecting.
+		// Without this check, H2 would silently CREATE a new (empty) database at that path.
+		H2UrlHelper urlHelper = new H2UrlHelper(histUrl);
+		java.io.File dbFile = urlHelper.getDbFile();
+		if (dbFile == null || !dbFile.exists())
+		{
+			_logger.debug("openHistoricalConnection: H2 database file not found for dateKey='"
+					+ newDateStr + "', expected file: " + dbFile);
+			return null;
+		}
+
+		// Append ;ACCESS_MODE_DATA=r so H2 opens the file read-only
+		String roUrl = histUrl + ";ACCESS_MODE_DATA=r";
+
+		ConnectionProp connProp = new ConnectionProp();
+		connProp.setDriverClass(_jdbcDriver);
+		connProp.setUsername(_jdbcUser);
+		connProp.setPassword(_jdbcPasswd);
+		connProp.setUrl(roUrl);
+		connProp.setAppName(Version.getAppName() + "-cmHistoricalReader");
+
+		_logger.info("openHistoricalConnection: Opening read-only connection to historical H2 database."
+				+ " dateKey='" + newDateStr + "', file='" + dbFile.getAbsolutePath() + "'");
+		return DbxConnection.connect(null, connProp);
 	}
 
 	private boolean dbExecSetting(DbxConnection conn, String sql, boolean logInfo)

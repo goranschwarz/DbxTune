@@ -53,6 +53,17 @@
 
 	<!-- ============================================================ -->
 	<servlet>
+		<servlet-name>AlarmMuteServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.AlarmMuteServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>AlarmMuteServlet</servlet-name>
+		<url-pattern>/api/alarm/mute</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<servlet>
 		<servlet-name>AlarmFormatterController</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.AlarmFormatterController</servlet-class>
 	</servlet>
@@ -531,6 +542,46 @@
 
 	<!-- ============================================================ -->
 	<servlet>
+		<servlet-name>ProxyCmListServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyCmListServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyCmListServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/cm/list</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>ProxyCmDataServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyCmDataServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyCmDataServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/cm/data</url-pattern>
+	</servlet-mapping>
+
+    <servlet>
+        <servlet-name>CollectorRegisterServlet</servlet-name>
+        <servlet-class>com.dbxtune.central.controllers.cc.mgt.CollectorRegisterServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>CollectorRegisterServlet</servlet-name>
+        <url-pattern>/api/cc/mgt/collector/register</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>CmIconServlet</servlet-name>
+        <servlet-class>com.dbxtune.central.controllers.cc.mgt.CmIconServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>CmIconServlet</servlet-name>
+        <url-pattern>/api/cc/mgt/cm/icon</url-pattern>
+    </servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<servlet>
 		<servlet-name>LoadPageProgress</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.LoadPageProgress</servlet-class>
 	</servlet>
@@ -559,6 +610,16 @@
 	<servlet-mapping>
 		<servlet-name>NoGuiRestartServlet</servlet-name>
 		<url-pattern>/api/mgt/restart</url-pattern>
+	</servlet-mapping>
+
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>ProxyDbmsConfigServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyDbmsConfigServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyDbmsConfigServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/dbms-config</url-pattern>
 	</servlet-mapping>
 
 

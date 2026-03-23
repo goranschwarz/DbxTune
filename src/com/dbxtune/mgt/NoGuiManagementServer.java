@@ -37,6 +37,9 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import com.dbxtune.mgt.controllers.CmDataServlet;
+import com.dbxtune.mgt.controllers.CmListServlet;
+import com.dbxtune.mgt.controllers.DbmsConfigServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigGetServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
 import com.dbxtune.mgt.controllers.NoGuiRefreshServlet;
@@ -50,6 +53,15 @@ import com.dbxtune.utils.StringUtil;
 public class NoGuiManagementServer
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/**
+	 * Shared Bearer token used to authenticate collector→Central registration requests.
+	 * Both the collector (sender) and DbxCentral (receiver) reference this constant.
+	 * Change this value — and redeploy both sides — if the token is ever compromised.
+	 * Can be overridden via config property: {@code DbxTune.central.registration.token}
+	 */
+	public static final String DEFAULT_collectorRegToken    = "DbxTune-CollectorReg-2026-v1";
+	public static final String PROPKEY_collectorRegToken    = "DbxTune.central.registration.token";
 
 	public static final String  PROPKEY_NOGUI_MANAGEMENT_START = "DbxTune.nogui.management.start";
 	public static final boolean DEFAULT_NOGUI_MANAGEMENT_START = true;
@@ -234,6 +246,12 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new NoGuiShutdownServlet())  , "/mgt/shutdown");
 				context.addServlet(new ServletHolder(new NoGuiRestartServlet())   , "/mgt/restart");
 				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())   , "/mgt/refresh");
+				context.addServlet(new ServletHolder(new CmListServlet())         , "/mgt/cm/list");
+				context.addServlet(new ServletHolder(new CmDataServlet())         , "/mgt/cm/data");
+				context.addServlet(new ServletHolder(new DbmsConfigServlet())     , "/mgt/dbms-config");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/list");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/data");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/dbms-config");
 
 				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
 				// AND: I guess the below implementations will just "stream" over HTML as the "end-result", or how should we do it ???
