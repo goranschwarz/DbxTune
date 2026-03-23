@@ -60,11 +60,11 @@ public class NoGuiManagementServer
 	 * Change this value — and redeploy both sides — if the token is ever compromised.
 	 * Can be overridden via config property: {@code DbxTune.central.registration.token}
 	 */
-	public static final String DEFAULT_collectorRegToken    = "DbxTune-CollectorReg-2026-v1";
-	public static final String PROPKEY_collectorRegToken    = "DbxTune.central.registration.token";
+	public static final String  PROPKEY_collectorRegToken                      = "DbxTune.central.registration.token";
+	public static final String  DEFAULT_collectorRegToken                      = "DbxTune-CollectorReg-2026-v1";
 
-	public static final String  PROPKEY_NOGUI_MANAGEMENT_START = "DbxTune.nogui.management.start";
-	public static final boolean DEFAULT_NOGUI_MANAGEMENT_START = true;
+	public static final String  PROPKEY_NOGUI_MANAGEMENT_START                 = "DbxTune.nogui.management.start";
+	public static final boolean DEFAULT_NOGUI_MANAGEMENT_START                 = true;
 
 	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_listener_address = "DbxTune.nogui.management.http.listener.address";
 	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_listener_address = "127.0.0.1";
@@ -249,9 +249,6 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new CmListServlet())         , "/mgt/cm/list");
 				context.addServlet(new ServletHolder(new CmDataServlet())         , "/mgt/cm/data");
 				context.addServlet(new ServletHolder(new DbmsConfigServlet())     , "/mgt/dbms-config");
-				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/list");
-				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/data");
-				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/dbms-config");
 
 				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
 				// AND: I guess the below implementations will just "stream" over HTML as the "end-result", or how should we do it ???
@@ -311,6 +308,9 @@ public class NoGuiManagementServer
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/shutdown");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/restart");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/refresh");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/list");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/data");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/dbms-config");
 				
 				// Get out of the "start on port number" loop
 				break;

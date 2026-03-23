@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.config.dbms.DbmsConfigTextManager;
 import com.dbxtune.config.dbms.IDbmsConfigText;
 import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
 
@@ -71,11 +72,13 @@ public class DbmsConfigServlet extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
+	// NOTE: The below is OVERKILL since, fallback wont happen (but keep it for now)
 	// --- table-name fallback chains (try primary name first, then legacy) ----------
-	private static final String[] PARAM_TABLES  = { "MonSessionDbmsConfig",      "MonSessionAseConfig"     };
-	private static final String[] TEXT_TABLES   = { "MonSessionDbmsConfigText",   "MonSessionAseConfigText" };
-	private static final String[] ISSUES_TABLES = { "MonSessionDbmsConfigIssues" };
+	private static final String[] PARAM_TABLES  = { "MonSessionDbmsConfig" };      // OR: Should we get the table name from PCS -- PersistWriterBase.getTableName(PersistWriterBase.SESSION_DBMS_CONFIG)
+	private static final String[] TEXT_TABLES   = { "MonSessionDbmsConfigText" };  // OR: Should we get the table name from PCS -- PersistWriterBase.getTableName(PersistWriterBase.SESSION_DBMS_CONFIG_TEXT)
+	private static final String[] ISSUES_TABLES = { "MonSessionDbmsConfigIssues" };// OR: Should we get the table name from PCS -- PersistWriterBase.getTableName(PersistWriterBase.SESSION_DBMS_CONFIG_ISSUES)
 
+	// NOTE: The below is OVERKILL since the PCS Storage will probably hold just 24 Hours of data (and will most likely just hold 1 DBMS Configuration)
 	// How far back (in ms) to look for the most-recent SessionStartTime <= requested ts.
 	// DBMS Config is only captured at collector restart, so a session can run for many
 	// days. We look back up to 30 days to find the last session start before the
@@ -109,7 +112,8 @@ public class DbmsConfigServlet extends HttpServlet
 		if (tsParam == null || tsParam.trim().isEmpty())
 		{
 			out.println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: ts\"}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close();
+			return;
 		}
 
 		srvParam = srvParam.trim();
@@ -124,7 +128,8 @@ public class DbmsConfigServlet extends HttpServlet
 		catch (ParseException ex)
 		{
 			out.println("{\"error\":\"bad-param\",\"message\":" + jsonStr("Cannot parse ts: " + tsParam) + "}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close();
+			return;
 		}
 
 		// Resolve connection (live or historical H2)
@@ -138,7 +143,8 @@ public class DbmsConfigServlet extends HttpServlet
 		if (conn == null)
 		{
 			out.println("{\"error\":\"no-data\",\"message\":\"No storage connection available\"}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close();
+			return;
 		}
 
 		try
@@ -149,7 +155,8 @@ public class DbmsConfigServlet extends HttpServlet
 			{
 				out.println("{\"error\":\"no-data\",\"message\":"
 						+ jsonStr("No DBMS configuration data found near " + tsParam) + "}");
-				out.flush(); out.close(); return;
+				out.flush(); out.close();
+				return;
 			}
 
 			String outTs = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(resolvedTs);
@@ -352,7 +359,7 @@ public class DbmsConfigServlet extends HttpServlet
 							if (!first) sb.append(",");
 							first = false;
 							sb.append("{\"configName\":").append(jsonStr(configName))
-							  .append(",\"tabLabel\":") .append(jsonStr(tabLabel))
+							  .append(",\"tabLabel\":"  ).append(jsonStr(tabLabel))
 							  .append(",\"configText\":").append(jsonStr(configText))
 							  .append("}");
 						}

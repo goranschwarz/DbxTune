@@ -257,8 +257,7 @@ extends HttpServlet
 			}
 			catch (Exception ex)
 			{
-				_logger.warn("CmDataServlet: failed to open historical connection for dateKey='"
-						+ dateKey + "': " + ex.getMessage(), ex);
+				_logger.warn("CmDataServlet: failed to open historical connection for dateKey='" + dateKey + "': " + ex.getMessage(), ex);
 			}
 		}
 
@@ -279,12 +278,14 @@ extends HttpServlet
 		if (cmName == null || cmName.trim().isEmpty())
 		{
 			out.println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: cm\"}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close(); 
+			return;
 		}
 		if (timeParam == null || timeParam.trim().isEmpty())
 		{
 			out.println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: time\"}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close(); 
+			return;
 		}
 		cmName    = cmName.trim();
 		timeParam = timeParam.trim();
@@ -298,7 +299,8 @@ extends HttpServlet
 		if (!cmName.matches("[A-Za-z0-9_]+"))
 		{
 			out.println("{\"error\":\"invalid-param\",\"message\":\"Invalid CM name\"}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close(); 
+			return;
 		}
 
 		// Parse timestamp
@@ -313,7 +315,8 @@ extends HttpServlet
 		catch (ParseException ex)
 		{
 			out.println("{\"error\":\"invalid-param\",\"message\":\"Invalid time format, expected: yyyy-MM-dd HH:mm:ss\"}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close(); 
+			return;
 		}
 
 		// Get storage connection — live (today) or cached read-only (historical date)
@@ -339,7 +342,8 @@ extends HttpServlet
 		if (conn == null)
 		{
 			out.println("{\"error\":\"no-data\",\"message\":" + jsonStr(noConnMsg) + "}");
-			out.flush(); out.close(); return;
+			out.flush(); out.close(); 
+			return;
 		}
 
 		// Table name with [bracket] quoting — translated by quotifySqlString() below
@@ -399,7 +403,8 @@ extends HttpServlet
 						+ "\"cmName\":"        + jsonStr(cmName)    + ","
 						+ "\"type\":"          + jsonStr(typeParam)  + ","
 						+ "\"requestedTime\":" + jsonStr(timeParam)  + "}");
-				out.flush(); out.close(); return;
+				out.flush(); out.close();
+				return;
 			}
 
 			// ------------------------------------------------------------------

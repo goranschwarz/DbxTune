@@ -162,7 +162,7 @@ extends HttpServlet
 			groups.computeIfAbsent(groupName, k -> new ArrayList<>()).add(cm);
 		}
 
-		// Build JSON
+		// Build JSON -- NOTE: Claude didn't use Jackson Writer... it will probably be cleaner with that...
 		SimpleDateFormat tsFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		StringBuilder sb = new StringBuilder();
 		sb.append("{");
@@ -310,14 +310,15 @@ extends HttpServlet
 			{
 				while (rs.next())
 				{
-					String    cmName   = rs.getString("CmName");
+					String    cmName   = rs.getString   ("CmName");
 					Timestamp sst      = rs.getTimestamp("SessionSampleTime");
-					boolean   hasValid = rs.getBoolean("hasValidSampleData");
-					int       absR     = rs.getInt("absRows");
-					int       diffR    = rs.getInt("diffRows");
-					int       rateR    = rs.getInt("rateRows");
-					String    excMsg   = rs.getString("exceptionMsg");
-					String    excFull  = rs.getString("exceptionFullText");
+					boolean   hasValid = rs.getBoolean  ("hasValidSampleData");
+					int       absR     = rs.getInt      ("absRows");
+					int       diffR    = rs.getInt      ("diffRows");
+					int       rateR    = rs.getInt      ("rateRows");
+					String    excMsg   = rs.getString   ("exceptionMsg");
+					String    excFull  = rs.getString   ("exceptionFullText");
+
 					if (excMsg  != null && excMsg .trim().isEmpty()) excMsg  = null;
 					if (excFull != null && excFull.trim().isEmpty()) excFull = null;
 

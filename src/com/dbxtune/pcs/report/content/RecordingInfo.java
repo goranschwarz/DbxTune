@@ -42,6 +42,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventDbmsVersionString;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -206,6 +209,13 @@ extends ReportEntryAbstract
 				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS Version String CHANGE Time: </b></td> <td>" + _dbmsVersionStringChangeTime + "</td> </tr>\n");
 				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS MIN Version String:         </b></td> <td>" + _dbmsVersionStringMin        + "</td> </tr>\n");
 				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS MAX Version String:         </b></td> <td>" + _dbmsVersionStringMax        + "</td> </tr>\n");
+				
+				// Also send alarm about this
+				if (AlarmHandler.hasInstance())
+				{
+					AlarmEvent ae = new AlarmEventDbmsVersionString(_dbmsServerName, "DSR:" + this.getClass().getSimpleName(), _dbmsVersionStringMin, _dbmsVersionStringMax);
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
 			}
 			
 			sb.append(blankTableRow);
