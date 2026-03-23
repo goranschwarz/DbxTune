@@ -80,7 +80,7 @@ public class HtmlStatic
 		writer.println("  <script type='text/javascript' src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
 		writer.println();
 		writer.println("  <!-- JS: DbxCentral --> ");
-		writer.println("  <script type='text/javascript' src='/scripts/dbxcentral.utils.js'></script> ");
+		writer.println("  <script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.utils.js'></script> ");
 		writer.println();
 		writer.println("  <!--  ");
 		writer.println("    ======================================================================= ");
@@ -88,7 +88,7 @@ public class HtmlStatic
 		writer.println("    ======================================================================= ");
 		writer.println("  --> ");
 		writer.println("  <!-- CSS: DbxCentral --> ");
-		writer.println("  <link rel='stylesheet' href='/scripts/css/dbxcentral.css'> ");
+		writer.println("  <link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral.css'> ");
 		writer.println();
 		writer.println("  <!-- CSS: Bootstrap --> ");
 //		writer.println("  <link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> ");

@@ -20,16 +20,16 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -75,6 +75,9 @@ extends PersistWriterBase
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _srvName;
+	private HttpClient _httpClient = HttpClient.newBuilder()
+			.followRedirects(HttpClient.Redirect.NORMAL)
+			.build();
 	
 	/** Configuration, if we should convert the Local Time into UTC */
 //	private boolean _convertSampleTimeToUtc = true;
@@ -512,37 +515,35 @@ extends PersistWriterBase
 		qs.add("q", "CREATE DATABASE \"" + dbname + "\"");
 		
 		String urlStr = qs.toString();
-		URL url = new URL(urlStr);
-
-		// Set for debugging purposes
-//		slot._urlLastUsed = url.toString();
 		slot._urlLastUsed = urlStr;
 
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-		conn.setDoOutput(true);
-		conn.setRequestMethod("POST");
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(urlStr))
+				.POST(HttpRequest.BodyPublishers.noBody());
 
 		// Basic Authentication
 		if (StringUtil.hasValue(slot._username))
 		{
 			String userpass = slot._username + ":" + slot._password;
 			String basicAuth = "Basic " + new String(Base64.getEncoder().encode(userpass.getBytes()));
-			conn.setRequestProperty("Authorization", basicAuth);
+			builder.header("Authorization", basicAuth);
 		}
 
 		// add headers
-		addHeader(conn, slot._header_1);
-		addHeader(conn, slot._header_2);
-		addHeader(conn, slot._header_3);
-		addHeader(conn, slot._header_4);
-		addHeader(conn, slot._header_5);
-		addHeader(conn, slot._header_6);
-		addHeader(conn, slot._header_7);
-		addHeader(conn, slot._header_8);
-		addHeader(conn, slot._header_9);
+		addHeader(builder, slot._header_1);
+		addHeader(builder, slot._header_2);
+		addHeader(builder, slot._header_3);
+		addHeader(builder, slot._header_4);
+		addHeader(builder, slot._header_5);
+		addHeader(builder, slot._header_6);
+		addHeader(builder, slot._header_7);
+		addHeader(builder, slot._header_8);
+		addHeader(builder, slot._header_9);
+
+		HttpResponse<String> response = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 
 		// Check response
-		int responceCode = conn.getResponseCode();
+		int responceCode = response.statusCode();
 		if ( responceCode >= 203) // see 'https://httpstatuses.com/' for http codes... or at the bottom of this source code
 		{
 			throw new Exception("Create InfluxDB database '" + dbname + "': Failed : HTTP error code : " + responceCode + " ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'.");
@@ -552,22 +553,11 @@ extends PersistWriterBase
 			_logger.debug("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'.");
 		}
 
-		// Read response and print the output...
-		BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-
-		String outputRow;
-		StringBuilder sb = new StringBuilder();
-		while ((outputRow = br.readLine()) != null)
-		{
-			sb.append(outputRow);
-		}
-		String output = sb.toString().trim();
+		String output = response.body().trim();
 		_logger.info("Create InfluxDB database '" + dbname + "': Responce from server: " + output);
 		_logger.debug("Responce from server: " + output);
-		
-		conn.disconnect();
-		
-		return true;		
+
+		return true;
 	}
 	/**
 	 * Here is where the send happens
@@ -596,49 +586,41 @@ extends PersistWriterBase
 		qs.add("precision", "ms");
 		
 		String urlStr = qs.toString();
-		URL url = new URL(urlStr);
-
-		// Set for debugging purposes
-//		slot._urlLastUsed = url.toString();
 		slot._urlLastUsed = urlStr;
 
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-		conn.setDoOutput(true);
-		conn.setRequestMethod("POST");
-
-		// Binary send
-		conn.setRequestProperty("Content-Type", "binary/octet-stream");
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(urlStr))
+				.header("Content-Type", "binary/octet-stream")
+				.POST(HttpRequest.BodyPublishers.ofByteArray(text.getBytes()));
 
 		// Basic Authentication
 		if (StringUtil.hasValue(slot._username) && StringUtil.hasValue(slot._password))
 		{
 			String userpass = slot._username + ":" + slot._password;
 			String basicAuth = "Basic " + new String(Base64.getEncoder().encode(userpass.getBytes()));
-			conn.setRequestProperty("Authorization", basicAuth);
+			builder.header("Authorization", basicAuth);
 		}
 
 		// add headers
-		addHeader(conn, slot._header_1);
-		addHeader(conn, slot._header_2);
-		addHeader(conn, slot._header_3);
-		addHeader(conn, slot._header_4);
-		addHeader(conn, slot._header_5);
-		addHeader(conn, slot._header_6);
-		addHeader(conn, slot._header_7);
-		addHeader(conn, slot._header_8);
-		addHeader(conn, slot._header_9);
+		addHeader(builder, slot._header_1);
+		addHeader(builder, slot._header_2);
+		addHeader(builder, slot._header_3);
+		addHeader(builder, slot._header_4);
+		addHeader(builder, slot._header_5);
+		addHeader(builder, slot._header_6);
+		addHeader(builder, slot._header_7);
+		addHeader(builder, slot._header_8);
+		addHeader(builder, slot._header_9);
 
 		// Write the output
 		long startTime = System.currentTimeMillis();
-		OutputStream os = conn.getOutputStream();
-		os.write(text.getBytes());
-		os.flush();
+		HttpResponse<String> response = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 		long sendTime = TimeUtils.msDiffNow(startTime);
-		
+
 		getStatistics().setLastSendTimeInMs(sendTime);
 
 		// Check response
-		int responceCode = conn.getResponseCode();
+		int responceCode = response.statusCode();
 		if (responceCode == 204)
 		{
 			// SUCCESS
@@ -647,15 +629,12 @@ extends PersistWriterBase
 		{
 			// HTTP/1.1 404 Not Found
 			// {"error":"database not found: \"mydb1\""}
-			
+
 			_logger.warn("Database '"+_srvName+"' NOT FOUND in InfluxDB... Lets try to create it.  INFO: Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'.");
 
-			// If Create database SUCCEEDS, call this method agin... to retry sending the message...
+			// If Create database SUCCEEDS, call this method again... to retry sending the message...
 			if ( createDatabase(_srvName, slot) )
 			{
-				// Disconnect CURRENT connection
-				conn.disconnect();
-
 				// Resends the message
 				sendMessage_internal(text, slot, true);
 
@@ -679,28 +658,17 @@ extends PersistWriterBase
 		// Mark last success time
 		slot._lastSendSuccess = System.currentTimeMillis();
 
-		// Read response and print the output...
-		BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-
-		String outputRow;
-		StringBuilder sb = new StringBuilder();
-		while ((outputRow = br.readLine()) != null)
-		{
-			sb.append(outputRow);
-		}
-		String output = sb.toString().trim();
+		String output = response.body().trim();
 		if (StringUtil.hasValue(output))
 			_logger.info("Send to InfluxDB database '" + _srvName + "': responceCode=" + responceCode + ", Responce from server: " + output);
-		
-		conn.disconnect();
-		
+
 		return 0;
 	}
-	/** 
-	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code> 
-	 * @throws exception if it can't find any ':' char in the keyVal string 
+	/**
+	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code>
+	 * @throws exception if it can't find any ':' char in the keyVal string
 	 */
-	private void addHeader(HttpURLConnection conn, String keyVal)
+	private void addHeader(HttpRequest.Builder builder, String keyVal)
 	throws Exception
 	{
 		if (StringUtil.isNullOrBlank(keyVal))
@@ -709,11 +677,11 @@ extends PersistWriterBase
 		int firstColonPos = keyVal.indexOf(':');
 		if (firstColonPos == -1)
 			throw new Exception("Problem parsing the value '"+keyVal+"', can't find any ':' in it.");
-		
+
 		String key = keyVal.substring(0, firstColonPos);
 		String val = keyVal.substring(firstColonPos+1).trim();
 
-		conn.addRequestProperty(key, val);
+		builder.header(key, val);
 	}
 
 	@Override

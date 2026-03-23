@@ -20,16 +20,16 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -64,6 +64,10 @@ extends PersistWriterBase
 //implements IPersistWriter
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	private HttpClient _httpClient = HttpClient.newBuilder()
+			.followRedirects(HttpClient.Redirect.NORMAL)
+			.build();
 
 	/** Some statistics for this Writer */
 	private PersistWriterStatisticsRest _writerStatistics = new PersistWriterStatisticsRest();
@@ -250,36 +254,31 @@ extends PersistWriterBase
 	 */
 	protected int sendMessage(String text, HttpConfigSlot slot) throws Exception
 	{
-		URL url = new URL(slot._url);
-
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-		conn.setDoOutput(true);
-		conn.setRequestMethod("POST");
-//		conn.setRequestProperty("Content-Type", "application/json");
-// Moved this to: _header_1
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(slot._url))
+				.POST(HttpRequest.BodyPublishers.ofString(text));
+//		Content-Type is set via _header_1
 
 		// add headers
-		addHeader(conn, slot._header_1);
-		addHeader(conn, slot._header_2);
-		addHeader(conn, slot._header_3);
-		addHeader(conn, slot._header_4);
-		addHeader(conn, slot._header_5);
-		addHeader(conn, slot._header_6);
-		addHeader(conn, slot._header_7);
-		addHeader(conn, slot._header_8);
-		addHeader(conn, slot._header_9);
+		addHeader(builder, slot._header_1);
+		addHeader(builder, slot._header_2);
+		addHeader(builder, slot._header_3);
+		addHeader(builder, slot._header_4);
+		addHeader(builder, slot._header_5);
+		addHeader(builder, slot._header_6);
+		addHeader(builder, slot._header_7);
+		addHeader(builder, slot._header_8);
+		addHeader(builder, slot._header_9);
 
 		// Write the output
 		long startTime = System.currentTimeMillis();
-		OutputStream os = conn.getOutputStream();
-		os.write(text.getBytes());
-		os.flush();
+		HttpResponse<String> response = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 		long sendTime = TimeUtils.msDiffNow(startTime);
-		
+
 		getStatistics().setLastSendTimeInMs(sendTime);
 
 		// Check response
-		int responceCode = conn.getResponseCode();
+		int responceCode = response.statusCode();
 		if ( responceCode >= 203) // see 'https://httpstatuses.com/' for http codes... or at the bottom of this source code
 		{
 			throw new Exception("Failed : HTTP error code : " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._url + "'. Sent JSON content.length: " + text.length());
@@ -296,18 +295,9 @@ extends PersistWriterBase
 		// Mark last success time
 		slot._lastSendSuccess = System.currentTimeMillis();
 
-		// Read response and print the output...
-		BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-
-		String outputRow;
-		StringBuilder sb = new StringBuilder();
-		while ((outputRow = br.readLine()) != null)
-		{
-			sb.append(outputRow);
-		}
-		String output = sb.toString().trim();
+		String output = response.body().trim();
 		_logger.debug("Responce from server: " + output);
-		
+
 		int serverSideQueueSize = -1;
 		// Check if output looks like a JSON message
 		if (JsonUtils.isPossibleJson(output))
@@ -321,7 +311,7 @@ extends PersistWriterBase
 			if ( startPos >= 0 && endPos > startPos)
 			{
 				startPos = startPos + str.length();
-				
+
 				String queueSizeStr = output.substring(startPos, endPos).trim();
 				serverSideQueueSize = StringUtil.parseInt(queueSizeStr, -1);
 			}
@@ -331,15 +321,13 @@ extends PersistWriterBase
 			_logger.info("Responce from server: " + output);
 		}
 
-		conn.disconnect();
-		
 		return serverSideQueueSize;
 	}
-	/** 
-	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code> 
-	 * @throws exception if it can't find any ':' char in the keyVal string 
+	/**
+	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code>
+	 * @throws exception if it can't find any ':' char in the keyVal string
 	 */
-	private void addHeader(HttpURLConnection conn, String keyVal)
+	private void addHeader(HttpRequest.Builder builder, String keyVal)
 	throws Exception
 	{
 		if (StringUtil.isNullOrBlank(keyVal))
@@ -348,11 +336,11 @@ extends PersistWriterBase
 		int firstColonPos = keyVal.indexOf(':');
 		if (firstColonPos == -1)
 			throw new Exception("Problem parsing the value '" + keyVal + "', can't find any ':' in it.");
-		
+
 		String key = keyVal.substring(0, firstColonPos);
 		String val = keyVal.substring(firstColonPos+1).trim();
 
-		conn.addRequestProperty(key, val);
+		builder.header(key, val);
 	}
 
 	@Override

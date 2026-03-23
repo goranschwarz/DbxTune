@@ -21,12 +21,11 @@
  ******************************************************************************/
 package com.dbxtune.test;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
 public class HfAiSqlOptimizer
@@ -43,34 +42,27 @@ public class HfAiSqlOptimizer
 	{
 		String prompt = buildPrompt(sql, schema, indexes, triggers, dbVendor);
 
-		URL url    = new URL(HF_API_URL);
-		HttpURLConnection conn   = (HttpURLConnection) url.openConnection();
-		conn.setRequestMethod("POST");
-		conn.setRequestProperty("Authorization", "Bearer " + HF_API_TOKEN);
-		conn.setRequestProperty("Content-Type", "application/json");
-		conn.setDoOutput(true);
-
 //		String body = "{ \"inputs\": \"" + prompt.replace("\"", "\\\"") + "\" }";
-	    String body = "{ \"inputs\": \"" + prompt.replace("\"", "\\\"") + "\", \"options\": {\"wait_for_model\": true} }";
+		String body = "{ \"inputs\": \"" + prompt.replace("\"", "\\\"") + "\", \"options\": {\"wait_for_model\": true} }";
 
-		try (OutputStream os = conn.getOutputStream())
+		HttpClient httpClient = HttpClient.newBuilder().build();
+		HttpRequest request = HttpRequest.newBuilder()
+				.uri(URI.create(HF_API_URL))
+				.header("Authorization", "Bearer " + HF_API_TOKEN)
+				.header("Content-Type", "application/json")
+				.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+				.build();
+
+		try
 		{
-			byte[] input = body.getBytes(StandardCharsets.UTF_8);
-			os.write(input, 0, input.length);
+			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+			return response.body();
 		}
-
-		StringBuilder response;
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)))
+		catch (InterruptedException ex)
 		{
-			response = new StringBuilder();
-			String line;
-			while ((line = br.readLine()) != null)
-			{
-				response.append(line.trim());
-			}
+			Thread.currentThread().interrupt();
+			throw new IOException("HTTP request was interrupted", ex);
 		}
-
-		return response.toString();
 	}
 
 //	private static String buildPrompt(String sql, String schema, String indexes, String triggers, String dbVendor)
@@ -157,32 +149,21 @@ public class HfAiSqlOptimizer
 //
 //        System.out.println("Response: " + response);
 //    }
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         String apiUrl = "https://api-inference.huggingface.co/models/google/flan-t5-small";
-
-        URL url = new URL(apiUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Bearer " + HF_API_TOKEN);
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setDoOutput(true);
 
         String prompt = "Translate to French: 'Hello, how are you?'";
         String body = "{ \"inputs\": \"" + prompt.replace("\"", "\\\"") + "\" }";
 
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(body.getBytes(StandardCharsets.UTF_8));
-        }
+        HttpClient httpClient = HttpClient.newBuilder().build();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Authorization", "Bearer " + HF_API_TOKEN)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                .build();
 
-        StringBuilder response;
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-        }
-
-        System.out.println("Response: " + response);
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        System.out.println("Response: " + response.body());
     }
 }

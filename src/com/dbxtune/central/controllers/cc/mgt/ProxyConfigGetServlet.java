@@ -22,8 +22,9 @@ package com.dbxtune.central.controllers.cc.mgt;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Base64;
 
 import javax.servlet.ServletException;
@@ -102,16 +103,21 @@ if (auth != null)
 		// Get "stuff" from the PCS or LOCAL-INFO-FILE (based on the Server Name)
 
 
-//		URL url = new URL("http://otherserver:otherport/url");
-		URL url = new URL(getCollectorBaseUrl() + "/api/mgt/config/get");
-		HttpURLConnection httpConn = (HttpURLConnection)url.openConnection();
-		httpConn.setRequestMethod("GET");
+		HttpRequest request = HttpRequest.newBuilder()
+				.uri(URI.create(getCollectorBaseUrl() + "/api/mgt/config/get"))
+				.GET()
+				.build();
 
-		// set request header if required
-//		httpConn.setRequestProperty("Authentication", "value1");
-//		httpConn.setRequestProperty("header1", "value1");
-
-		sendResult(httpConn, resp, APPLICATION_JSON);
+		try
+		{
+			HttpResponse<byte[]> httpResponse = _httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+			sendResult(httpResponse, resp, APPLICATION_JSON);
+		}
+		catch (InterruptedException ex)
+		{
+			Thread.currentThread().interrupt();
+			throw new IOException("HTTP request was interrupted for URL: " + getCollectorBaseUrl() + "/api/mgt/config/get", ex);
+		}
 	}
 
 }

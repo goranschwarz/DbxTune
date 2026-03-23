@@ -78,7 +78,14 @@ public class DbxAlarmActive
 	private String    _lastDescription        ;
 	private String    _extendedDescription    ;
 	private String    _lastExtendedDescription;
-	
+
+	// Mute state — populated by AlarmActiveController from AlarmMuteManager, not stored in DB
+	private boolean _isMuted       = false;
+	private String  _muteReason    = null;
+	private String  _mutedByUser   = null;
+	private String  _mutedTime     = null;  // ISO-8601
+	private String  _muteExpiresAt = null;  // ISO-8601, null = permanent
+
 	public String    getSrvName                    () { return _srvName                    ; }
 	public String    getAlarmClass                 () { return _alarmClass                 ; }
 	public String    getServiceType                () { return _serviceType                ; }
@@ -130,7 +137,19 @@ public class DbxAlarmActive
 	public void setLastDescription            (String    lastDescription            ) { _lastDescription             = lastDescription            ; }
 	public void setExtendedDescription        (String    extendedDescription        ) { _extendedDescription         = extendedDescription        ; }
 	public void setLastExtendedDescription    (String    lastExtendedDescription    ) { _lastExtendedDescription     = lastExtendedDescription    ; }
-	
+
+	public boolean getIsMuted      () { return _isMuted;       }
+	public String  getMuteReason   () { return _muteReason;    }
+	public String  getMutedByUser  () { return _mutedByUser;   }
+	public String  getMutedTime    () { return _mutedTime;     }
+	public String  getMuteExpiresAt() { return _muteExpiresAt; }
+
+	public void setIsMuted      (boolean isMuted)       { _isMuted       = isMuted;       }
+	public void setMuteReason   (String  muteReason)    { _muteReason    = muteReason;    }
+	public void setMutedByUser  (String  mutedByUser)   { _mutedByUser   = mutedByUser;   }
+	public void setMutedTime    (String  mutedTime)     { _mutedTime     = mutedTime;     }
+	public void setMuteExpiresAt(String  muteExpiresAt) { _muteExpiresAt = muteExpiresAt; }
+
 	public DbxAlarmActive(String srvName, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, String alarmId, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription)
 	{
 		_srvName                     = srvName;

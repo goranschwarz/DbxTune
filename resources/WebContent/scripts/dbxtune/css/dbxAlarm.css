@@ -1,0 +1,25 @@
+/**
+ * dbxAlarm.css  — Alarm-related styles for DbxCentral
+ * Shared between index.html, graph.html, and any future alarm-displaying pages.
+ */
+
+/* ── Alarm row severity indicators ─────────────────────────────────────────
+   Works for any table containing alarm rows, regardless of container id.   */
+tr.alarm-row-error   td:first-child { border-left: 3px solid #dc3545; }
+tr.alarm-row-warning td:first-child { border-left: 3px solid #ffc107; }
+tr.alarm-row-info    td:first-child { border-left: 3px solid #17a2b8; }
+
+/* ── Dark mode — alarm rows inside the graph.html alarm panel ───────────── */
+#alarm-panel.alarm-dark #alarm-panel-body tr.alarm-row-error   td { background: #2a1010 !important; }
+#alarm-panel.alarm-dark #alarm-panel-body tr.alarm-row-warning td { background: #2a2000 !important; }
+#alarm-panel.alarm-dark #alarm-panel-body tr.alarm-row-info    td { background: #0d1e2a !important; }
+
+/* ── Dark modal theme (applied via JS _dbxModalApplyDark) ───────────────── */
+.dbx-modal-dark                      { background-color: #1e1e1e !important; color: #e0e0e0 !important; }
+.dbx-modal-dark .modal-header        { background-color: #2d2d2d !important; color: #e0e0e0 !important; border-bottom-color: #444; }
+.dbx-modal-dark .modal-header .close { color: #e0e0e0 !important; }
+.dbx-modal-dark .modal-footer        { background-color: #2d2d2d !important; border-top-color: #444; }
+.dbx-modal-dark .table               { color: #e0e0e0 !important; }
+.dbx-modal-dark .table th            { background-color: #2d2d2d !important; color: #ddd !important; border-color: #444 !important; }
+.dbx-modal-dark .table td            { background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #3a3a3a !important; }
+.dbx-modal-dark pre                  { color: #e0e0e0 !important; background: transparent; }

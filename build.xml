@@ -266,9 +266,9 @@
 		<echo> =====================================================================</echo>
 		<echo> Note: specify scp props file with: ant -DscpPrivateFile=filename push</echo>
 		<echo> ---------------------------------------------------------------------</echo>
-		<scp file="dbxtune_${DSTAMP}.zip" todir="${scp.user}:${scp.password}@${scp.host}:${scp.path}" port="${scp.port}" trust="true" />
-		<!--<scp file="dbxtune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/dbxtune/tmp/" trust="true" />-->
-		<!-- <scp file="dbxtune_${DSTAMP}.zip" todir="gorans@gorans.org:www/dbxtune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
+		<!-- tries key auth first, falls back to password if key auth fails -->
+		<scp file="dbxtune_${DSTAMP}.zip" todir="${scp.user}@${scp.host}:${scp.path}" port="${scp.port}" trust="true"
+		     keyfile="${scp.keyfile}" passphrase="${scp.passphrase}" password="${scp.password}" />
 
 		<!-- Delete the ${build} and ${dist} directory trees -->
 		<delete dir="${build}"/>

@@ -21,10 +21,10 @@
  ******************************************************************************/
 package com.dbxtune.test;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -934,46 +934,40 @@ public class DbmsLoginTester
 				int page = 1;
 				int totalPages = 1;
 				
+				HttpClient httpClient = HttpClient.newBuilder()
+						.followRedirects(HttpClient.Redirect.NORMAL)
+						.build();
+
 				while (page <= totalPages)
 				{
-					URL url = new URL(getApiUrl(page));
-					System.out.println("     INFO: Getting Gitlab Secrets [page=" + page + "/" + (totalPages == 1 ? "?" : totalPages) + "] at URL: " + url);
+					String apiUrl = getApiUrl(page);
+					System.out.println("     INFO: Getting Gitlab Secrets [page=" + page + "/" + (totalPages == 1 ? "?" : totalPages) + "] at URL: " + apiUrl);
 
-					HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-					conn.setRequestMethod("GET");
-					conn.setRequestProperty("PRIVATE-TOKEN", getGitlabToken());
+					HttpRequest request = HttpRequest.newBuilder()
+							.uri(URI.create(apiUrl))
+							.header("PRIVATE-TOKEN", getGitlabToken())
+							.GET()
+							.build();
 
-					int responseCode = conn.getResponseCode();
+					HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+					int responseCode = httpResponse.statusCode();
 					if ( responseCode == 200 )
 					{
-						BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-						String inputLine;
-						StringBuilder response = new StringBuilder();
-
-						while ((inputLine = in.readLine()) != null)
-						{
-							response.append(inputLine);
-						}
-						in.close();
-
-//						System.out.println("Secret Value: " + response.toString());
-
 						// Parse JSON using Jackson
 						ObjectMapper objectMapper = new ObjectMapper();
-						List<GitLabSecret> thisPageSecrets = objectMapper.readValue(response.toString(), new TypeReference<List<GitLabSecret>>() {});
+						List<GitLabSecret> thisPageSecrets = objectMapper.readValue(httpResponse.body(), new TypeReference<List<GitLabSecret>>() {});
 
 						secrets.addAll(thisPageSecrets);
-						
+
 						// Get total pages from headers
 						//  - First  try: 'X-Total-Pages'
 						//  - Second try: 'x-total-pages'
-						Map<String, List<String>> headers = conn.getHeaderFields();
-						List<String> totalPagesHeader = headers.get("X-Total-Pages");
-						if (totalPagesHeader == null) 
-							totalPagesHeader = headers.get("x-total-pages");
-						if (totalPagesHeader != null && !totalPagesHeader.isEmpty()) 
+						String totalPagesHeader = httpResponse.headers().firstValue("X-Total-Pages")
+								.or(() -> httpResponse.headers().firstValue("x-total-pages"))
+								.orElse(null);
+						if (totalPagesHeader != null)
 						{
-							totalPages = Integer.parseInt(totalPagesHeader.get(0));
+							totalPages = Integer.parseInt(totalPagesHeader);
 						}
 
 						page++; // Move to next page
@@ -981,8 +975,6 @@ public class DbmsLoginTester
 					else
 					{
 						throw new Exception("Failed to retrieve secret. Response Code: " + responseCode);
-//						System.out.println("Failed to retrieve secret. Response Code: " + responseCode);
-//						return null;
 					}
 				}
 

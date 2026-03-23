@@ -23,8 +23,9 @@ package com.dbxtune.central.controllers.cc.report;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -86,34 +87,31 @@ extends ProxyHelper
 		
 
 		// Call the remote URL
-		URL url = new URL(getCollectorBaseUrl() + "/api/reports/" + urlStr + queryString);
+		String targetUrl = getCollectorBaseUrl() + "/api/reports/" + urlStr + queryString;
 
-//System.out.println("ProxyReportsServlet: CALLING URL: " + url);
 		if (_logger.isDebugEnabled())
-			_logger.debug("ProxyReportsServlet: CALLING URL: " + url);
+			_logger.debug("ProxyReportsServlet: CALLING URL: " + targetUrl);
 
 		// GET request
-		HttpURLConnection httpConn = (HttpURLConnection)url.openConnection();
-		httpConn.setRequestMethod("GET");
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(targetUrl))
+				.GET();
 
-		// Do we really need to do this?
-		forwardRequestHeaders(request, httpConn);
+		// Forward incoming request headers
+		forwardRequestHeaders(request, builder);
 
 		// set request header if required
-		httpConn.setRequestProperty("Authentication", getMgtAuthentication());
+		builder.header("Authentication", getMgtAuthentication());
 
-
-//		// PROXY: Transfer data from the Caller to the HTTP end point (NOT in a GET request)
-//		sendData(req, httpConn);
-
-		// PROXY: Transfer data from the HTTP Call to the caller 
 		try
 		{
-			sendResult(httpConn, response, TEXT_HTML);
+			HttpResponse<byte[]> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+			sendResult(httpResponse, response, TEXT_HTML);
 		}
-		finally
+		catch (InterruptedException ex)
 		{
-			httpConn.disconnect();
+			Thread.currentThread().interrupt();
+			throw new IOException("HTTP request was interrupted for URL: " + targetUrl, ex);
 		}
 		
 

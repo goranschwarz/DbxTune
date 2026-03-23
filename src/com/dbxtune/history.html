@@ -62,6 +62,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>In section 'Recording Info', added fields for: 'Counter Information', 'Counter Config' -- A collapable: To view what collectors are recorded and how they are configured.</LI>
 				<LI>If any Report Sections times-out when running SQL Statements, include a "explain", so we can get the execution plan... to fix the issue...</LI>
 				<LI>In OsSpaceUsageOverview; show Estimate of "how many days until Disk is full" -- Raise Alarm if "CRITICAL" -- Meaning: in 7 days we will get full</LI>
+				<LI>Sending AlarmEventDbmsVersionString in Daily Summary Report if version string has changed</LI>
 			</UL>
 		</LI>
 
@@ -117,6 +118,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>After start, Local alarms (like CPU/Swapping etc, are disabled for 10 minutes; so that after a restart it can normalize without sending false alarms)</LI>
 		<LI>Added user self-service: user-registration, login-modal, password-recovery, account-settings(change password)... <br>
 		    Most of this things was done: to get 'User Defined Actions' to work in a better way.</LI>
+		<LI>The Web UI got a bunch of new functionality
+		  <ul>
+		    <li>CM Detail Dialog: <br>
+		        - Show Abs/Diff/Rate Counters for any of the Collectors.<br>
+		        - In the Dialog: There is a "tabbed" panel system that is similar to the Native GUI Tool<br>
+		        Records are fetched from the DbxTune Collectors detailed database recording.<br>
+		        Not as much functionality as in the Native GUI, but it's a start!
+		        </li>
+		    <li>Alarms Dialog: A new hopefully better Alarm Dialog is in both index.html and in graph.html<br>
+		        - Now you can also "mute" Alarms (for X hours)<br>
+		        - In graph.html, when in history mode... If alarms were present at a specififc time in the timeline, they will show up
+		        </li>
+		    <li>DBMS Config Dialog: Just like in the Native GUI, you can look at the latest stored DBMS Configurations</li>
+		  </ul>
+		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

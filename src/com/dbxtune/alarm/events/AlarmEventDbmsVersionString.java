@@ -49,4 +49,36 @@ extends AlarmEvent
 		// Set the raw data
 		setData("prevVersionStr='" + prevVersionStr + "', newVersionStr='" + newVersionStr + "'");
 	}
+
+
+	public AlarmEventDbmsVersionString(String srvName, String sectionName, String prevVersionStr, String newVersionStr)
+	{
+		super(
+				Version.getAppName(), // serviceType
+				srvName,              // serviceName
+				sectionName,          // serviceInfo
+				null,                 // extraInfo
+				AlarmEvent.Category.OTHER,
+				AlarmEvent.Severity.INFO, 
+				AlarmEvent.ServiceState.UP, 
+				"New DBMS Version String was detected in Server '" + srvName + "'. prevVersionStr='" + prevVersionStr + "', newVersionStr='" + newVersionStr + "'.",
+				null // crossedThreshold... well this one do not have a number.
+				);
+
+//		// Set: Time To Live if postpone is enabled
+//		setTimeToLive(cm);
+
+		// Set the raw data
+		setData("prevVersionStr='" + prevVersionStr + "', newVersionStr='" + newVersionStr + "'");
+	}
+
+	// Can and SHOULD be cancelled by: AlarmHandler.checkForCancelations()
+	// Meaning we do NOT need any CM to be "refreshed" for this alarm to be cancelled
+	// How long the Alarms will live is dictated by TimeToLive...
+	@Override
+	public boolean isAlwaysCancelable()
+	{
+		return true;
+	}
+	
 }
