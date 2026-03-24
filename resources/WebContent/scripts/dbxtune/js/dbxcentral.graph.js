@@ -378,6 +378,9 @@ var _showSrvTimer = null;
 var _lastHistoryMomentsArray = null;
 var _hasActiveHistoryStatementArr = null;
 
+// Alarm badge refresh throttle for history mode
+var _lastAlarmRefreshMs = 0;
+
 // CM Detail Panel state
 var _cmSrvName      = null;
 var _cmTimestamp    = null;
@@ -1924,17 +1927,18 @@ function alarmPanelLoadActive()
 function alarmPanelLoadHistory(ts)
 {
 	_alarmHistoryTs = ts;
-	if (!_alarmPanelOpen) return;
 	_alarmPanelTab = 'history';
 	var mTs = moment(ts, "YYYY-MM-DD HH:mm:ss");
-	$('#alarm-panel-title').text('Active Alarms at  ' + mTs.format('YYYY-MM-DD HH:mm:ss'));
-	$('#alarm-history-range').hide();
-	// Capture scroll pos and freeze listener BEFORE replacing content — shrinking the content
-	// fires a scroll event that would otherwise reset _alarmScrollPos to 0.
-	_alarmScrollPos.top  = $('#alarm-panel-body').scrollTop();
-	_alarmScrollPos.left = $('#alarm-panel-body').scrollLeft();
-	_alarmScrollFrozen   = true;
-	$('#alarm-panel-content').html('<em style="color:#777">Loading&hellip;</em>');
+	if (_alarmPanelOpen) {
+		$('#alarm-panel-title').text('Active Alarms at  ' + mTs.format('YYYY-MM-DD HH:mm:ss'));
+		$('#alarm-history-range').hide();
+		// Capture scroll pos and freeze listener BEFORE replacing content — shrinking the content
+		// fires a scroll event that would otherwise reset _alarmScrollPos to 0.
+		_alarmScrollPos.top  = $('#alarm-panel-body').scrollTop();
+		_alarmScrollPos.left = $('#alarm-panel-body').scrollLeft();
+		_alarmScrollFrozen   = true;
+		$('#alarm-panel-content').html('<em style="color:#777">Loading&hellip;</em>');
+	}
 	// Fetch up to 24h before T so we catch alarms raised well before the clicked timestamp
 	var start = mTs.clone().subtract(24, 'hours').format("YYYY-MM-DD HH:mm:ss");
 	var end   = mTs.clone().add(5, 'minutes').format("YYYY-MM-DD HH:mm:ss");
@@ -1945,7 +1949,8 @@ function alarmPanelLoadHistory(ts)
 		success: function(data) {
 			var jsonResp;
 			try { jsonResp = JSON.parse(data); } catch(e) {
-				$('#alarm-panel-content').html('<em>Parse error</em>'); return;
+				if (_alarmPanelOpen) $('#alarm-panel-content').html('<em>Parse error</em>');
+				return;
 			}
 			// Filter to servers currently shown in this graph page
 			if (Array.isArray(jsonResp) && _serverList && _serverList.length > 0)
@@ -1954,10 +1959,27 @@ function alarmPanelLoadHistory(ts)
 			// For each unique alarm keep the latest event before T, then check
 			// createTime <= T and (cancelTime is null/empty or cancelTime > T)
 			var activeAtT = alarmComputeActiveAt(jsonResp, mTs);
-			alarmPanelRenderHistory(activeAtT, mTs);
+			// Always update the badge to reflect alarms active at this history time
+			var nonMuted = activeAtT.filter(function(a) { return !a.isMuted; });
+			var muted    = activeAtT.filter(function(a) { return  a.isMuted; });
+			alarmPanelUpdateBtn(nonMuted.length, muted.length);
+
+			// Auto Open / Close in history mode
+			if ($('#alarm-auto-open-chk').prop('checked')) {
+				if (nonMuted.length > 0 && !_alarmPanelOpen) {
+					alarmPanelToggle(); // opens panel and re-calls alarmPanelLoadHistory to render
+					return;             // let the second fetch handle rendering
+				} else if (nonMuted.length === 0 && _alarmPanelOpen) {
+					alarmPanelToggle(); // close panel — no alarms at this time
+					return;
+				}
+			}
+			if (_alarmPanelOpen) {
+				alarmPanelRenderHistory(activeAtT, mTs);
+			}
 		},
 		error: function() {
-			$('#alarm-panel-content').html('<em style="color:red">Failed to load alarm history.</em>');
+			if (_alarmPanelOpen) $('#alarm-panel-content').html('<em style="color:red">Failed to load alarm history.</em>');
 		}
 	});
 }
@@ -2026,13 +2048,20 @@ function alarmPanelSliderRefresh(ts)
 
 // Fetch alarm events covering the full timeline range and render orange tick marks
 // on the slider for any timestamp where a RAISE event occurred.
+function _fmtDurationMs(ms)
+{
+	if (ms == null || ms < 0) return '?';
+	var s   = Math.floor(ms / 1000);
+	var m   = Math.floor(s / 60);  s = s % 60;
+	var h   = Math.floor(m / 60);  m = m % 60;
+	if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+	if (m > 0) return m + 'm ' + s + 's';
+	return s + 's';
+}
+
 function renderAlarmTimelineMarkers(oldestTsStr, newestTsStr, momentsArray)
 {
 	if (!momentsArray || momentsArray.length < 2) return;
-	var oldestMs = moment(oldestTsStr, 'YYYY-MM-DD HH:mm:ss').valueOf();
-	var newestMs = moment(newestTsStr, 'YYYY-MM-DD HH:mm:ss').valueOf();
-	var rangeMs  = newestMs - oldestMs;
-	if (rangeMs <= 0) return;
 	$.ajax({
 		url: 'api/alarm/history',
 		data: { startTime: oldestTsStr, endTime: newestTsStr },
@@ -2045,34 +2074,129 @@ function renderAlarmTimelineMarkers(oldestTsStr, newestTsStr, momentsArray)
 			if (_serverList && _serverList.length > 0)
 				alarms = alarms.filter(function(a) { return _serverList.indexOf(a.srvName) >= 0; });
 			if (alarms.length === 0) return;
+
+			// Match RAISE ↔ CANCEL by alarmId (primary) or class+svc+info (fallback)
+			var cancelById  = {}, cancelByKey = {};
+			alarms.forEach(function(a) {
+				if ((a.action || '').toUpperCase() !== 'CANCEL') return;
+				if (a.alarmId) cancelById[a.alarmId] = a;
+				var k = (a.alarmClass || '') + '|' + (a.serviceName || '') + '|' + (a.serviceInfo || '');
+				if (!cancelByKey[k]) cancelByKey[k] = [];
+				cancelByKey[k].push(a);
+			});
+			alarms.forEach(function(a) {
+				if ((a.action || '').toUpperCase() !== 'RAISE') return;
+				var raiseMs = moment(a.eventTime).valueOf();
+				var best = null, bestDiff = Infinity;
+				if (a.alarmId && cancelById[a.alarmId]) {
+					var diff = moment(cancelById[a.alarmId].eventTime).valueOf() - raiseMs;
+					if (diff >= 0) { best = cancelById[a.alarmId]; bestDiff = diff; }
+				}
+				if (!best) {
+					var k = (a.alarmClass || '') + '|' + (a.serviceName || '') + '|' + (a.serviceInfo || '');
+					(cancelByKey[k] || []).forEach(function(c) {
+						var diff = moment(c.eventTime).valueOf() - raiseMs;
+						if (diff >= 0 && diff < bestDiff) { bestDiff = diff; best = c; }
+					});
+				}
+				a._matchedCancel = best;
+				a._durationMs    = best ? bestDiff : null;
+				if (best) best._matchedRaise = a;
+			});
+
 			var slider = document.getElementById('dbx-history-timeline-slider');
 			if (!slider) return;
 			var parent = slider.parentNode;
 			// Clear any old alarm markers before adding new ones
 			var old = parent.getElementsByClassName('dbx-history-alarm-marker');
 			while (old[0]) old[0].parentNode.removeChild(old[0]);
-			// Add one marker per alarm event (deduplicated by ~10s buckets)
+
+			var FMT = 'YYYY-MM-DD HH:mm:ss';
 			var lastPos = -999;
 			alarms.forEach(function(alarm) {
 				var evtTime = alarm.eventTime || alarm.SessionSampleTime;
 				if (!evtTime) return;
-				var evtMs = moment(evtTime, ['YYYY-MM-DD HH:mm:ss', moment.ISO_8601]).valueOf();
-				var pct   = (evtMs - oldestMs) / rangeMs * 100;
-				if (pct < 0 || pct > 100) return;
+				var evtMs  = moment(evtTime, ['YYYY-MM-DD HH:mm:ss', moment.ISO_8601]).valueOf();
+				var action = (alarm.action || '').toUpperCase();
+
+				// Find the nearest index in momentsArray (same index-space as slider.max)
+				var nearestIdx = 0, minDiff = Infinity;
+				for (var i = 0; i < momentsArray.length; i++) {
+					var diff = Math.abs(momentsArray[i].valueOf() - evtMs);
+					if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
+				}
+
+				// Compute targetIdx the same way the click handler does, so the blip sits
+				// exactly where the slider thumb lands when the user clicks the blip.
+				// Slider is 1-indexed: slider.value = targetIdx+1 -> thumb at (targetIdx+1)/max*100
+				var targetIdx = nearestIdx;
+				if (action === 'RAISE') {
+					for (var ri = 0; ri < momentsArray.length; ri++) {
+						if (momentsArray[ri].valueOf() >= evtMs) { targetIdx = ri; break; }
+					}
+				} else if (action === 'CANCEL') {
+					for (var ci = momentsArray.length - 1; ci >= 0; ci--) {
+						if (momentsArray[ci].valueOf() < evtMs) { targetIdx = ci; break; }
+					}
+				}
+				var pct = ((targetIdx + 1) / slider.max) * 100;
 				if (Math.abs(pct - lastPos) < 0.5) return; // deduplicate close markers
 				lastPos = pct;
+
+				// Build tooltip
+				var tip = (alarm.alarmClass || '') + (alarm.serviceName ? ' / ' + alarm.serviceName : '');
+				if (action === 'RAISE') {
+					tip += '\nRAISE  @ ' + moment(evtMs).format(FMT);
+					if (alarm._matchedCancel) {
+						var cancelMs = moment(alarm._matchedCancel.eventTime).valueOf();
+						tip += '\nCANCEL @ ' + moment(cancelMs).format(FMT);
+						tip += '\nDuration: ' + _fmtDurationMs(alarm._durationMs);
+					} else {
+						tip += '\n(no CANCEL found in range)';
+					}
+				} else if (action === 'CANCEL') {
+					if (alarm._matchedRaise) {
+						tip += '\nRAISE  @ ' + moment(alarm._matchedRaise.eventTime).format(FMT);
+						var durMs = evtMs - moment(alarm._matchedRaise.eventTime).valueOf();
+						tip += '\nCANCEL @ ' + moment(evtMs).format(FMT);
+						tip += '\nDuration: ' + _fmtDurationMs(durMs);
+					} else {
+						tip += '\nCANCEL @ ' + moment(evtMs).format(FMT);
+					}
+				} else {
+					tip += '\n' + (alarm.action || '') + ' @ ' + moment(evtMs).format(FMT);
+				}
+
 				var el = document.createElement('div');
 				el.className = 'dbx-history-alarm-marker';
 				el.style.left = pct + '%';
-				var action = (alarm.action || '').toUpperCase();
+				el.style.cursor = 'pointer';
 				el.style.backgroundColor = (action === 'CANCEL') ? 'rgba(0,180,0,0.7)' : 'rgba(255,100,0,0.85)';
-				var tip = (alarm.alarmClass || '') + (alarm.serviceName ? ' / ' + alarm.serviceName : '')
-					+ '\n' + (alarm.action || '') + ' @ ' + evtTime;
 				el.title = tip;
-				el.addEventListener('click', function() {
-					alarmPanelLoadHistory(moment(evtMs).format('YYYY-MM-DD HH:mm:ss'));
-					if (!_alarmPanelOpen) alarmPanelToggle();
-				});
+
+				// Click: move slider to correct sample for this event type.
+				// Slider is 1-indexed (change handler does value-1 to get array index),
+				// so we always set slider.value = targetIdx + 1.
+				//   RAISE  → first sample ON OR AFTER eventTime (alarm already created)
+				//   CANCEL → last sample BEFORE cancelTime (alarm still active)
+				(function(evtMsVal, actionStr) {
+					el.addEventListener('click', function() {
+						var targetIdx = nearestIdx; // fallback
+						if (actionStr === 'RAISE') {
+							for (var i = 0; i < momentsArray.length; i++) {
+								if (momentsArray[i].valueOf() >= evtMsVal) { targetIdx = i; break; }
+							}
+						} else if (actionStr === 'CANCEL') {
+							for (var i = momentsArray.length - 1; i >= 0; i--) {
+								if (momentsArray[i].valueOf() < evtMsVal) { targetIdx = i; break; }
+							}
+						}
+						slider.value = targetIdx + 1; // +1: slider is 1-indexed
+						slider.dispatchEvent(new Event('change'));
+						if (!_alarmPanelOpen) alarmPanelToggle();
+					});
+				})(evtMs, action);
+
 				parent.appendChild(el);
 			});
 		},
@@ -2319,7 +2443,17 @@ function dbxTuneGraphSubscribe()
 //				$("#subscribe-feedback-time").html("History View &nbsp;&nbsp;");
 //			else
 //				$("#subscribe-feedback-time").text("> History View <");
-			
+
+			// Keep alarm badge + auto-open alive in history mode (WebSocket is closed).
+			// Throttle to once every 15 seconds to avoid hammering the server.
+			var _now = Date.now();
+			if (_now - _lastAlarmRefreshMs > 15000) {
+				_lastAlarmRefreshMs = _now;
+				if (typeof alarmPanelLiveRefresh === 'function') {
+					alarmPanelLiveRefresh(null);
+				}
+			}
+
 			return;
 		}
 		
@@ -5818,6 +5952,10 @@ function graphLoadIsComplete()
 
 	// Check if we got any alarms that are active
 	alarmPanelLiveRefresh(null);
+
+	// Keep alarm badge + auto-open alive even in history mode (WebSocket is closed there).
+	// Run every 30s independently of the subscribe data-push cycle.
+	window.setInterval(function() { alarmPanelLiveRefresh(null); }, 30 * 1000);
 
 	// Update various info in NavBar: like First/Last time stamp
 	updateNavbarInfo();

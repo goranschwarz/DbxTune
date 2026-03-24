@@ -209,11 +209,16 @@ extends HttpServlet
 		{
 			String headerName  = headerNames.nextElement();
 			String headerValue = request.getHeader(headerName);
-			// Skip headers that URLConnection sets automatically
-			if ( !headerName.equalsIgnoreCase("host") && !headerName.equalsIgnoreCase("content-length") )
-			{
-				builder.header(headerName, headerValue);
-			}
+
+			// Skip some headers
+			if ( headerName.equalsIgnoreCase("connection"      )) continue;
+			if ( headerName.equalsIgnoreCase("content-length"  )) continue;
+			if ( headerName.equalsIgnoreCase("host"            )) continue;
+			if ( headerName.equalsIgnoreCase("upgrade"         )) continue;
+			if ( headerName.equalsIgnoreCase("proxy-connection")) continue;
+			if ( headerName.equalsIgnoreCase("via"             )) continue;
+
+			builder.header(headerName, headerValue);
 		}
 	}
 
