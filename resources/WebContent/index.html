@@ -29,6 +29,7 @@
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.utils.js"></script>
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarm.js"></script>
+  <script type="text/javascript" src="/scripts/dbxtune/js/dbxHistAlarms.js"></script>
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphPicker.js"></script>
   <!--
     =======================================================================
@@ -117,6 +118,13 @@
 
 	.modal-content.ui-resizable {
 		/* overflow: scroll; */
+	}
+
+	/* Server Info modal: auto-height body so it fits its table content */
+	#dbx-server-info-modal .modal-body {
+		height: auto;
+		max-height: 70vh;
+		overflow: auto;
 	}
 
 	.modal-body {
@@ -709,6 +717,7 @@ List of stuff that can be done
 	// Global Params
 	//-----------------------------------------------------------
 	var _global_disabledServers = [];
+	var _serverInfoContent      = {};  // serverName → HTML table string for the Server Info dialog
 
 //	function resizeExampleImage() {
 //		// Origin size is: 378
@@ -1612,9 +1621,11 @@ List of stuff that can be done
 						+ '    <a class="dropdown-item" href="/log?name='+serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'
 						+ '    <div class="dropdown-divider"></div>'
 						+ ccMgtButton
+						+ '    <a class="dropdown-item" href="#" onclick=\'histAlarmOpen("' + serverName + '"); return false;\'>View <b>Historical Alarms</b></a>'
 						+ '    <div class="dropdown-divider"></div>'
 						+ '    <a class="dropdown-item" href="/api/space/forecast?sparklineWidth=default&days=default&period=default&outType=default&type=all&srv='+serverName+'" target="_blank">Space Forecast Report</a>'
-						+ '    <a class="dropdown-item" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
+						+ ((_serverInfoContent[serverName] = tt) && '') // store tt in map (side-effect in expression)
+					+ '    <a class="dropdown-item dbx-server-info-link" data-srvname="'+serverName+'" href="#">Server <b>Info</b></a>'
 						+ '  </div>'
 						+ '</div>';
 			}
@@ -1737,6 +1748,35 @@ List of stuff that can be done
 
 			// Enable bootstrap tooltip...
 			$('[data-toggle="tooltip"]').tooltip();
+
+			// Initialize Server Info modal trigger (set up after HTML is in DOM)
+			$('#dbx-quick-access-server-list').on('click', '.dbx-server-info-link', function(e) {
+				e.preventDefault();
+				var srvName = $(this).data('srvname');
+				var content = _serverInfoContent[srvName] || 'No info available';
+				$('#dbx-server-info-modal-title').text('Server Info — ' + srvName);
+				$('#dbx-server-info-modal-body').html(content);
+				$('#dbx-server-info-modal').modal('show');
+			});
+
+			// Server Info modal: center + make draggable/resizable when shown
+			$('#dbx-server-info-modal').on('shown.bs.modal', function() {
+				var $modal   = $(this);
+				var $dialog  = $modal.find('.modal-dialog');
+				var $content = $modal.find('.modal-content');
+				// Switch to absolute positioning so jQuery UI draggable works
+				$modal.css('overflow', 'visible');
+				var w   = $dialog.outerWidth(true);
+				var h   = $dialog.outerHeight(true);
+				var top  = Math.max(10, Math.round(($(window).height() - h) / 2));
+				var left = Math.max(10, Math.round(($(window).width()  - w) / 2));
+				$dialog.css({ position: 'absolute', margin: 0, top: top, left: left });
+				// Apply jQuery UI only once
+				if (!$dialog.data('ui-draggable')) {
+					$dialog.draggable({ handle: '.modal-header', containment: 'window' });
+					$content.resizable({ alsoResize: $dialog, minWidth: 350, minHeight: 150 });
+				}
+			});
 
 			// Get ACTIVE Alarms (initial)
 			setTimeout(dbxTuneCheckActiveAlarms, 100);
@@ -2263,6 +2303,22 @@ List of stuff that can be done
             </div>
         </div>
     </div>
+</div>
+
+<!-- Server Info Modal -->
+<div class="modal fade" id="dbx-server-info-modal" tabindex="-1" role="dialog" aria-labelledby="dbx-server-info-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dbx-server-info-modal-title">Server Info</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <div class="modal-body" id="dbx-server-info-modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 </body>
