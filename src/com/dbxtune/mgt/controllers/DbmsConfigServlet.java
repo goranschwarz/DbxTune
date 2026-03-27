@@ -11,6 +11,7 @@
 package com.dbxtune.mgt.controllers;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
 import java.sql.Clob;
 import java.sql.PreparedStatement;
@@ -22,10 +23,11 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -39,6 +41,9 @@ import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+
+import com.dbxtune.central.controllers.Helper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Serves DBMS configuration data stored in the PCS for a given server and timestamp.
@@ -102,16 +107,15 @@ public class DbmsConfigServlet extends HttpServlet
 	{
 		resp.setContentType("application/json");
 		resp.setCharacterEncoding("UTF-8");
-		ServletOutputStream out = resp.getOutputStream();
+		ObjectMapper om  = Helper.createObjectMapper();
+		PrintWriter  out = resp.getWriter();
 
-		String srvParam = req.getParameter("srv");
-		String tsParam  = req.getParameter("ts");
+		String srvParam = Helper.getParameter(req, "srv", "");
+		String tsParam  = Helper.getParameter(req, "ts");
 
-		// srv is optional — the collector echoes it back in the response for the UI
-		if (srvParam == null) srvParam = "";
-		if (tsParam == null || tsParam.trim().isEmpty())
+		if (tsParam == null)
 		{
-			out.println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: ts\"}");
+			om.writeValue(out, errMap("missing-param", "Missing required parameter: ts"));
 			out.flush(); out.close();
 			return;
 		}
@@ -127,7 +131,7 @@ public class DbmsConfigServlet extends HttpServlet
 		}
 		catch (ParseException ex)
 		{
-			out.println("{\"error\":\"bad-param\",\"message\":" + jsonStr("Cannot parse ts: " + tsParam) + "}");
+			om.writeValue(out, errMap("bad-param", "Cannot parse ts: " + tsParam));
 			out.flush(); out.close();
 			return;
 		}
@@ -142,7 +146,7 @@ public class DbmsConfigServlet extends HttpServlet
 		}
 		if (conn == null)
 		{
-			out.println("{\"error\":\"no-data\",\"message\":\"No storage connection available\"}");
+			om.writeValue(out, errMap("no-data", "No storage connection available"));
 			out.flush(); out.close();
 			return;
 		}
@@ -153,32 +157,29 @@ public class DbmsConfigServlet extends HttpServlet
 			Timestamp resolvedTs = findClosestSessionStart(conn, ts);
 			if (resolvedTs == null)
 			{
-				out.println("{\"error\":\"no-data\",\"message\":"
-						+ jsonStr("No DBMS configuration data found near " + tsParam) + "}");
+				om.writeValue(out, errMap("no-data",
+						"No DBMS configuration data found near " + tsParam));
 				out.flush(); out.close();
 				return;
 			}
 
 			String outTs = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(resolvedTs);
 
-			StringBuilder sb = new StringBuilder(65536);
-			sb.append("{");
-			sb.append("\"srv\":").append(jsonStr(srvParam)).append(",");
-			sb.append("\"ts\":").append(jsonStr(tsParam)).append(",");
-			sb.append("\"resolvedTs\":").append(jsonStr(outTs)).append(",");
+			Map<String, Object> root = new LinkedHashMap<>();
+			root.put("srv",        srvParam);
+			root.put("ts",         tsParam);
+			root.put("resolvedTs", outTs);
+			root.put("params",     buildParamsMap (conn, resolvedTs));
+			root.put("texts",      buildTextsList (conn, resolvedTs));
+			root.put("issues",     buildIssuesMap (conn, resolvedTs));
 
-			sb.append("\"params\":");  appendParamsJson (sb, conn, resolvedTs); sb.append(",");
-			sb.append("\"texts\":");   appendTextsJson  (sb, conn, resolvedTs); sb.append(",");
-			sb.append("\"issues\":");  appendIssuesJson (sb, conn, resolvedTs);
-			sb.append("}");
-
-			out.println(sb.toString());
+			om.writeValue(out, root);
 			out.flush(); out.close();
 		}
 		catch (Exception ex)
 		{
 			_logger.warn("DbmsConfigServlet: error: " + ex.getMessage(), ex);
-			out.println("{\"error\":\"query-error\",\"message\":" + jsonStr(ex.getMessage()) + "}");
+			om.writeValue(out, errMap("query-error", ex.getMessage()));
 			out.flush(); out.close();
 		}
 	}
@@ -258,7 +259,7 @@ public class DbmsConfigServlet extends HttpServlet
 	// Skip SessionStartTime column in the JSON output (housekeeping, already in resolvedTs)
 	// -------------------------------------------------------------------------
 
-	private void appendParamsJson(StringBuilder sb, DbxConnection conn, Timestamp ts) throws Exception
+	private Map<String, Object> buildParamsMap(DbxConnection conn, Timestamp ts) throws Exception
 	{
 		for (String tableName : PARAM_TABLES)
 		{
@@ -296,37 +297,37 @@ public class DbmsConfigServlet extends HttpServlet
 							for (int idx : useIdx)
 							{
 								int sqlType = meta.getColumnType(idx);
-								row.add(readValue(rs, idx, sqlType));
+								row.add(normalizeValue(readValue(rs, idx, sqlType)));
 							}
 							rows.add(row);
 						}
 					}
 				}
 
-				sb.append("{\"columns\":[");
-				for (int i = 0; i < columns.size(); i++) { if (i > 0) sb.append(","); sb.append(jsonStr(columns.get(i))); }
-				sb.append("],\"rows\":[");
-				appendRowsJson(sb, rows);
-				sb.append("]}");
-				return; // success — stop trying fallback names
+				Map<String, Object> result = new LinkedHashMap<>();
+				result.put("columns", columns);
+				result.put("rows",    rows);
+				return result;
 			}
 			catch (Exception ex)
 			{
-				_logger.debug("DbmsConfigServlet.appendParamsJson: table '{}' unavailable: {}",
+				_logger.debug("DbmsConfigServlet.buildParamsMap: table '{}' unavailable: {}",
 						tableName, ex.getMessage());
 			}
 		}
-		sb.append("{\"columns\":[],\"rows\":[]}");
+		Map<String, Object> empty = new LinkedHashMap<>();
+		empty.put("columns", new ArrayList<>());
+		empty.put("rows",    new ArrayList<>());
+		return empty;
 	}
 
 	// -------------------------------------------------------------------------
 	// Text snippets: SELECT configName, configText FROM MonSessionDbmsConfigText
 	// -------------------------------------------------------------------------
 
-	private void appendTextsJson(StringBuilder sb, DbxConnection conn, Timestamp ts) throws Exception
+	private List<Map<String, Object>> buildTextsList(DbxConnection conn, Timestamp ts) throws Exception
 	{
-		sb.append("[");
-		boolean first = true;
+		List<Map<String, Object>> list = new ArrayList<>();
 
 		for (String tableName : TEXT_TABLES)
 		{
@@ -356,12 +357,11 @@ public class DbmsConfigServlet extends HttpServlet
 							if (inst != null)
 								tabLabel = inst.getTabLabel();
 
-							if (!first) sb.append(",");
-							first = false;
-							sb.append("{\"configName\":").append(jsonStr(configName))
-							  .append(",\"tabLabel\":"  ).append(jsonStr(tabLabel))
-							  .append(",\"configText\":").append(jsonStr(configText))
-							  .append("}");
+							Map<String, Object> entry = new LinkedHashMap<>();
+							entry.put("configName", configName);
+							entry.put("tabLabel",   tabLabel);
+							entry.put("configText", configText);
+							list.add(entry);
 						}
 					}
 				}
@@ -369,12 +369,12 @@ public class DbmsConfigServlet extends HttpServlet
 			}
 			catch (Exception ex)
 			{
-				_logger.debug("DbmsConfigServlet.appendTextsJson: table '{}' unavailable: {}",
+				_logger.debug("DbmsConfigServlet.buildTextsList: table '{}' unavailable: {}",
 						tableName, ex.getMessage());
 			}
 		}
 
-		sb.append("]");
+		return list;
 	}
 
 	// -------------------------------------------------------------------------
@@ -382,7 +382,7 @@ public class DbmsConfigServlet extends HttpServlet
 	//         AND Discarded = 0
 	// -------------------------------------------------------------------------
 
-	private void appendIssuesJson(StringBuilder sb, DbxConnection conn, Timestamp ts) throws Exception
+	private Map<String, Object> buildIssuesMap(DbxConnection conn, Timestamp ts) throws Exception
 	{
 		for (String tableName : ISSUES_TABLES)
 		{
@@ -430,7 +430,7 @@ public class DbmsConfigServlet extends HttpServlet
 									for (int idx : useIdx)
 									{
 										int sqlType = meta.getColumnType(idx);
-										row.add(readValue(rs, idx, sqlType));
+										row.add(normalizeValue(readValue(rs, idx, sqlType)));
 									}
 									rows.add(row);
 								}
@@ -440,52 +440,50 @@ public class DbmsConfigServlet extends HttpServlet
 					}
 					catch (Exception inner)
 					{
-						_logger.debug("DbmsConfigServlet.appendIssuesJson: query variant failed for '{}': {}",
+						_logger.debug("DbmsConfigServlet.buildIssuesMap: query variant failed for '{}': {}",
 								tableName, inner.getMessage());
 					}
 				}
 
 				if (loaded)
 				{
-					sb.append("{\"columns\":[");
-					for (int i = 0; i < columns.size(); i++) { if (i > 0) sb.append(","); sb.append(jsonStr(columns.get(i))); }
-					sb.append("],\"rows\":[");
-					appendRowsJson(sb, rows);
-					sb.append("]}");
-					return;
+					Map<String, Object> result = new LinkedHashMap<>();
+					result.put("columns", columns);
+					result.put("rows",    rows);
+					return result;
 				}
 			}
 			catch (Exception ex)
 			{
-				_logger.debug("DbmsConfigServlet.appendIssuesJson: table '{}' unavailable: {}",
+				_logger.debug("DbmsConfigServlet.buildIssuesMap: table '{}' unavailable: {}",
 						tableName, ex.getMessage());
 			}
 		}
-		sb.append("{\"columns\":[],\"rows\":[]}");
+		Map<String, Object> empty = new LinkedHashMap<>();
+		empty.put("columns", new ArrayList<>());
+		empty.put("rows",    new ArrayList<>());
+		return empty;
 	}
 
 	// -------------------------------------------------------------------------
 	// Helpers
 	// -------------------------------------------------------------------------
 
-	private static void appendRowsJson(StringBuilder sb, List<List<Object>> rows)
+	/**
+	 * Normalises a raw DB value to a type Jackson will serialise correctly.
+	 * <ul>
+	 *   <li>null     → null  (JSON null)</li>
+	 *   <li>Boolean  → Boolean (JSON true/false)</li>
+	 *   <li>Number   → Number  (JSON number)</li>
+	 *   <li>anything else (Timestamp, Date, …) → String via toString()</li>
+	 * </ul>
+	 */
+	private static Object normalizeValue(Object v)
 	{
-		for (int r = 0; r < rows.size(); r++)
-		{
-			if (r > 0) sb.append(",");
-			sb.append("[");
-			List<Object> row = rows.get(r);
-			for (int c = 0; c < row.size(); c++)
-			{
-				if (c > 0) sb.append(",");
-				Object v = row.get(c);
-				if      (v == null)              sb.append("null");
-				else if (v instanceof Number)    sb.append(v.toString());
-				else if (v instanceof Boolean)   sb.append(v.toString());
-				else                             sb.append(jsonStr(v.toString()));
-			}
-			sb.append("]");
-		}
+		if (v == null)            return null;
+		if (v instanceof Boolean) return v;
+		if (v instanceof Number)  return v;
+		return v.toString();
 	}
 
 	private static Object readValue(ResultSet rs, int col, int sqlType) throws Exception
@@ -529,31 +527,12 @@ public class DbmsConfigServlet extends HttpServlet
 		return obj.toString();
 	}
 
-	/** Serialises a Java string as a JSON string literal. */
-	private static String jsonStr(String s)
+	/** Builds a simple error response map for Jackson serialisation. */
+	private static Map<String, Object> errMap(String code, String message)
 	{
-		if (s == null) return "null";
-		StringBuilder sb = new StringBuilder(s.length() + 2);
-		sb.append('"');
-		for (int i = 0; i < s.length(); i++)
-		{
-			char c = s.charAt(i);
-			switch (c)
-			{
-				case '"':  sb.append("\\\""); break;
-				case '\\': sb.append("\\\\"); break;
-				case '\n': sb.append("\\n");  break;
-				case '\r': sb.append("\\r");  break;
-				case '\t': sb.append("\\t");  break;
-				case '\f': sb.append("\\f");  break;
-				case '\b': sb.append("\\b");  break;
-				default:
-					if (c < 0x20) sb.append(String.format("\\u%04x", (int) c));
-					else sb.append(c);
-					break;
-			}
-		}
-		sb.append('"');
-		return sb.toString();
+		Map<String, Object> m = new LinkedHashMap<>();
+		m.put("error",   code);
+		m.put("message", message);
+		return m;
 	}
 }

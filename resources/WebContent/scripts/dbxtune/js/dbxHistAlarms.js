@@ -15,11 +15,14 @@
  */
 
 // ── State ────────────────────────────────────────────────────────────────────
-var _histAlarmSrv       = null;   // server currently being viewed
+var _histAlarmSrv       = null;   // server currently being viewed (null = ALL)
 var _histAlarmData      = [];     // raw data from API
 var _histAlarmFiltered  = [];     // after action + text filter
 var _histAlarmDetailIdx = -1;     // row index shown in detail modal
 var _histAlarmDark      = false;  // dark mode toggle
+var _histAlarmSrvList   = [];     // cached server list for dropdown
+var _histAlarmSortCol   = 'eventTime'; // active sort column key (null = unsorted)
+var _histAlarmSortDir   = 'asc';       // 'asc' | 'desc' | 'none'
 
 // ── Panel + detail-modal HTML injection ──────────────────────────────────────
 $(function()
@@ -36,7 +39,7 @@ $(function()
 
 		// ── Floating panel ─────────────────────────────────────────────────
 		"<div id='hist-alarm-panel'",
-		"     style='display:none;position:fixed;top:40px;left:5%;width:88%;height:72vh;",
+		"     style='display:none;position:fixed;top:65px;left:5%;width:88%;height:72vh;",
 		"            z-index:1050;background:#fff;border:1px solid #aaa;border-radius:4px;",
 		"            flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3);'>",
 
@@ -45,10 +48,14 @@ $(function()
 		"       style='display:flex;align-items:center;gap:8px;flex-shrink:0;",
 		"              padding:5px 10px;background:#f8f9fa;border-bottom:1px solid #dee2e6;",
 		"              border-radius:4px 4px 0 0;cursor:move;user-select:none;'>",
-		"    <span style='font-weight:700;font-size:0.95em;'>",
-		"      <i class='fa fa-history'></i>&nbsp; Historical Alarms &mdash;",
-		"      <span id='hist-alarm-srv-label'></span>",
+		"    <span style='font-weight:700;font-size:0.95em;white-space:nowrap;'>",
+		"      <i class='fa fa-history'></i>&nbsp; Historical Alarms",
 		"    </span>",
+		"    <select id='hist-alarm-srv-sel' class='form-control form-control-sm'",
+		"            style='width:auto;max-width:280px;'",
+		"            onchange='histAlarmSrvChange();'>",
+		"      <option value=''>-- All Servers --</option>",
+		"    </select>",
 		"    <span style='font-size:0.82em;border:1px solid gray;border-radius:5px;",
 		"                 margin-left:6px;padding:1px 6px;'>",
 		"      Options: &nbsp;",
@@ -69,9 +76,10 @@ $(function()
 
 		// Search bar
 		"    <div style='display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex-shrink:0;'>",
-		"      <label style='margin:0;font-size:0.9em;font-weight:600;'>Last:</label>",
+		"      <label style='margin:0;font-size:0.9em;font-weight:600;'>Period:</label>",
 		"      <select id='hist-alarm-preset' class='form-control form-control-sm' style='width:auto;' onchange='histAlarmSearch();'>",
-		"        <option value='1d' selected>1 day</option>",
+		"        <option value='today' selected>Today</option>",
+		"        <option value='1d'>Last 24 Hours</option>",
 		"        <option value='3d'>3 days</option>",
 		"        <option value='7d'>7 days</option>",
 		"        <option value='14d'>14 days</option>",
@@ -195,23 +203,70 @@ $(function()
 
 function histAlarmOpen(srvName)
 {
-	_histAlarmSrv       = srvName;
+	// normalise — null / undefined / empty all mean -- All Servers --
+	_histAlarmSrv       = (srvName && srvName.trim()) ? srvName.trim() : null;
 	_histAlarmData      = [];
 	_histAlarmFiltered  = [];
 	_histAlarmDetailIdx = -1;
+	_histAlarmSortCol   = 'eventTime';
+	_histAlarmSortDir   = 'asc';
 
-	$('#hist-alarm-srv-label').text(srvName);
 	$('#hist-alarm-table-wrap').html(
 		'<span style="color:#888;font-size:0.9em;"><i class="fa fa-spinner fa-spin"></i> Loading\u2026</span>');
 	$('#hist-alarm-count').text('');
 	$('#hist-alarm-filter').val('');
 	$('input[name="hist-alarm-action"][value="RAISE"]').prop('checked', true);
-	$('#hist-alarm-preset').val('1d');
+	$('#hist-alarm-preset').val('today');
 	$('#hist-alarm-custom-range').hide();
 
 	$('#hist-alarm-backdrop').show();
 	$('#hist-alarm-panel').css('display', 'flex');
 
+	// Populate server dropdown (fetch once, then reuse)
+	if (_histAlarmSrvList.length === 0) {
+		$.ajax({
+			url: 'api/sessions', type: 'GET',
+			success: function(raw) {
+				try {
+					var sessions = JSON.parse(raw);
+					if (Array.isArray(sessions)) {
+						_histAlarmSrvList = sessions
+							.map(function(s) {
+								return s.srvSession ? s.srvSession.serverName : (s.serverName || null);
+							})
+							.filter(function(n) { return n; });
+					}
+				} catch(e) {}
+				_histAlarmPopulateSrvSel(_histAlarmSrv);
+				histAlarmSearch();
+			},
+			error: function() {
+				_histAlarmPopulateSrvSel(_histAlarmSrv);
+				histAlarmSearch();
+			}
+		});
+	} else {
+		_histAlarmPopulateSrvSel(_histAlarmSrv);
+		histAlarmSearch();
+	}
+}
+
+function _histAlarmPopulateSrvSel(selected)
+{
+	var $sel = $('#hist-alarm-srv-sel');
+	$sel.empty().append('<option value="">-- All Servers --</option>');
+	_histAlarmSrvList.forEach(function(name) {
+		$sel.append('<option value="' + escHtml(name) + '">' + escHtml(name) + '</option>');
+	});
+	// "DbxCentral" — special hidden server (schema: DbxcLocalMetrics)
+	$sel.append('<option value="DbxcLocalMetrics">DbxCentral</option>');
+	$sel.val(selected || '');
+}
+
+function histAlarmSrvChange()
+{
+	var val = $('#hist-alarm-srv-sel').val();
+	_histAlarmSrv = val || null;
 	histAlarmSearch();
 }
 
@@ -239,7 +294,7 @@ function histAlarmDetailClose()
 
 function histAlarmSearch()
 {
-	if (!_histAlarmSrv || !$('#hist-alarm-panel').is(':visible')) return;
+	if (!$('#hist-alarm-panel').is(':visible')) return;
 
 	var startTime, endTime;
 	var preset = $('#hist-alarm-preset').val();
@@ -248,6 +303,9 @@ function histAlarmSearch()
 		startTime = ($('#hist-alarm-from').val() || '').replace('T', ' ');
 		endTime   = ($('#hist-alarm-to'  ).val() || '').replace('T', ' ');
 		if (!startTime || !endTime) { alert('Please enter both From and To dates.'); return; }
+	} else if (preset === 'today') {
+		startTime = moment().startOf('day').format('YYYY-MM-DD HH:mm:ss');
+		endTime   = moment().format('YYYY-MM-DD HH:mm:ss');
 	} else {
 		var unit  = preset.slice(-1);
 		var num   = parseInt(preset, 10);
@@ -261,6 +319,9 @@ function histAlarmSearch()
 	$('#hist-alarm-count').text('');
 
 	// Fetch history + active alarms in parallel, then match and render
+	// _histAlarmSrv === null means -- All Servers --; pass '' to the API
+	var srvParam = _histAlarmSrv || '';
+
 	var histDone   = false, activeDone  = false;
 	var histData   = [],    activeData  = [];
 
@@ -273,7 +334,7 @@ function histAlarmSearch()
 
 	$.ajax({
 		url:  'api/alarm/history',
-		data: { srv: _histAlarmSrv, startTime: startTime, endTime: endTime },
+		data: { srv: srvParam, startTime: startTime, endTime: endTime },
 		type: 'GET',
 		success: function(raw) {
 			try   { histData = JSON.parse(raw); } catch(e) { histData = []; }
@@ -289,7 +350,7 @@ function histAlarmSearch()
 
 	$.ajax({
 		url:  'api/alarm/active',
-		data: { srv: _histAlarmSrv },
+		data: { srv: srvParam },
 		type: 'GET',
 		success: function(raw) {
 			try   { activeData = JSON.parse(raw); } catch(e) { activeData = []; }
@@ -343,6 +404,22 @@ function histAlarmApplyFilter()
 	histAlarmRender(data);
 }
 
+// ── Sort ──────────────────────────────────────────────────────────────────────
+
+function histAlarmSort(colKey)
+{
+	if (_histAlarmSortCol === colKey) {
+		// Cycle: asc → desc → none (original order)
+		if      (_histAlarmSortDir === 'asc' ) { _histAlarmSortDir = 'desc'; }
+		else if (_histAlarmSortDir === 'desc') { _histAlarmSortDir = 'none'; _histAlarmSortCol = null; }
+		else                                   { _histAlarmSortDir = 'asc';  _histAlarmSortCol = colKey; }
+	} else {
+		_histAlarmSortCol = colKey;
+		_histAlarmSortDir = 'asc';
+	}
+	histAlarmRender(_histAlarmFiltered);
+}
+
 // ── Render table ──────────────────────────────────────────────────────────────
 
 function histAlarmRender(data)
@@ -354,25 +431,62 @@ function histAlarmRender(data)
 		return;
 	}
 
+	// Sort data before rendering (skip when unsorted / original order)
+	var sortedData = data.slice();
+	if (_histAlarmSortCol && _histAlarmSortDir !== 'none') {
+		var sortKey = _histAlarmSortCol;
+		var sortDir = _histAlarmSortDir;
+		sortedData.sort(function(a, b) {
+			var av, bv;
+			if (sortKey === '_duration') {
+				av = a._durationMs != null ? a._durationMs
+				   : a._isActive           ? 1e15
+				   : a._closedByRestart    ? 1e16 : 1e17;
+				bv = b._durationMs != null ? b._durationMs
+				   : b._isActive           ? 1e15
+				   : b._closedByRestart    ? 1e16 : 1e17;
+			} else if (sortKey === 'eventTime' || sortKey === 'cancelTime') {
+				av = a[sortKey] ? moment(a[sortKey]).valueOf() : 0;
+				bv = b[sortKey] ? moment(b[sortKey]).valueOf() : 0;
+			} else {
+				av = (a[sortKey] == null ? '' : String(a[sortKey])).toLowerCase();
+				bv = (b[sortKey] == null ? '' : String(b[sortKey])).toLowerCase();
+			}
+			if (av < bv) return sortDir === 'asc' ? -1 : 1;
+			if (av > bv) return sortDir === 'asc' ?  1 : -1;
+			return 0;
+		});
+	}
+
 	var cols = [
-		{ key: 'eventTime',   label: 'Time'       },
-		{ key: 'action',      label: 'Action'     },
-		{ key: '_duration',   label: 'Duration'    },
-		{ key: 'severity',    label: 'Severity'    },
-		{ key: 'category',    label: 'Category'    },
-		{ key: 'state',       label: 'State'       },
-		{ key: 'alarmClass',  label: 'Alarm Class' },
-		{ key: 'serviceName', label: 'Service'     },
-		{ key: 'extraInfo',   label: 'Extra Info'  },
-		{ key: 'description', label: 'Description' }
+		{ key: 'eventTime',   label: 'Time'        },
+		{ key: 'serviceName', label: 'Server Name'  },
+		{ key: 'action',      label: 'Action'       },
+		{ key: '_duration',   label: 'Duration'     },
+		{ key: 'severity',    label: 'Severity'     },
+		{ key: 'category',    label: 'Category'     },
+		{ key: 'state',       label: 'State'        },
+		{ key: 'serviceInfo', label: 'CM Name'      },
+		{ key: 'alarmClass',  label: 'Alarm Class'  },
+		{ key: 'extraInfo',   label: 'Extra Info'   },
+		{ key: 'description', label: 'Description'  }
 	];
 
 	var html = '<table class="table table-sm table-hover table-bordered mb-0"'
 	         + ' style="font-size:0.82em;white-space:nowrap;width:auto;">';
 	html += '<thead class="thead-light"><tr>';
 	html += '<th style="width:36px;"></th>';  // button column first
-	cols.forEach(function(c) { html += '<th>' + escHtml(c.label) + '</th>'; });
+	cols.forEach(function(c) {
+		var arrow = '';
+		if (c.key === _histAlarmSortCol && _histAlarmSortDir !== 'none')
+			arrow = ' ' + (_histAlarmSortDir === 'asc' ? '&#9650;' : '&#9660;');
+		html += '<th style="cursor:pointer;white-space:nowrap;" onclick="histAlarmSort(\'' + c.key + '\');">'
+		      + escHtml(c.label) + arrow + '</th>';
+	});
 	html += '</tr></thead><tbody>';
+
+	// use the sorted copy for rendering
+	data = sortedData;
 
 	data.forEach(function(row, idx)
 	{
@@ -409,7 +523,7 @@ function histAlarmRender(data)
 				html += '<td>' + escHtml(ts) + '</td>';
 			} else if (c.key === 'description') {
 				var val = (row[c.key] == null) ? '' : String(row[c.key]).replace(/<[^>]*>/g, '');
-				html += '<td style="white-space:normal;">' + escHtml(val) + '</td>';
+				html += '<td>' + escHtml(val) + '</td>';
 			} else {
 				var val = (row[c.key] == null) ? '' : String(row[c.key]);
 				html += '<td>' + escHtml(val) + '</td>';
@@ -432,44 +546,56 @@ function histAlarmShowDetail(idx)
 	if (!row) return;
 
 	var duration = '';
+	var durationOrange = false;
 	if ((row.action || '').toUpperCase() === 'RAISE') {
 		if (row._durationMs != null)
 			duration = _histAlarmFmtDuration(row._durationMs);
 		else if (row._isActive)
 			duration = 'Still Active';
-		else if (row._closedByRestart)
-			duration = 'Unknown (likely closed by collector restart)';
+		else if (row._closedByRestart) {
+			duration = 'Unknown (Still Active? or Closed by collector restart)';
+			durationOrange = true;
+		}
 	}
 
 	var fields = [
 		['Server',               row.srvName,              false],
-		['Time',                 row.eventTime ? moment(row.eventTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
+		['Time',                 row.eventTime  ? moment(row.eventTime ).format('YYYY-MM-DD HH:mm:ss') : '', false],
 		['Action',               row.action,               false],
 		['Severity',             null,                     false],  // badge
 		['Cancel Time',          row.cancelTime ? moment(row.cancelTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
-		['Duration',             duration,                 false],
+		['Duration',             duration,                 false, durationOrange],
 		['Category',             row.category,             false],
 		['State',                row.state,                false],
 		['Alarm Class',          row.alarmClass,           false],
 		['Service Type',         row.serviceType,          false],
 		['Service Name',         row.serviceName,          false],
-		['Service Info',         row.serviceInfo,          false],
+		['CM Name (serviceInfo)',row.serviceInfo,           false],
 		['Extra Info',           row.extraInfo,            false],
 		['Alarm ID',             row.alarmId,              false],
 		['Repeat Count',         row.repeatCnt,            false],
 		['Threshold',            row.threshold,            false],
+		['Time To Live',         row.timeToLive,           false],
+		['Create Time',          row.createTime ? moment(row.createTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
+		['Alarm Duration (raw)', row.alarmDuration,        false],
+		['Full Duration',        row.fullDuration,         false],
+		['Full Duration Adj(s)', row.fullDurationAdjustmentInSec, false],
+		['Session Start',        row.SessionStartTime ? moment(row.SessionStartTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
+		['Session Sample',       row.SessionSampleTime ? moment(row.SessionSampleTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
 		['Description',          row.description,          true ],
 		['Last Description',     row.lastDescription,      true ],
 		['Extended Description', row.extendedDescription,  true ],
+		['Last Ext. Description',row.lastExtendedDescription, true ],
 		['Data',                 row.data,                 true ],
 		['Last Data',            row.lastData,             true ]
 	];
 
 	var html = '<table class="table table-sm table-bordered mb-0" style="font-size:0.85em;">';
 	fields.forEach(function(f) {
-		var label  = f[0];
-		var val    = f[1];
-		var isHtml = f[2];
+		var label    = f[0];
+		var val      = f[1];
+		var isHtml   = f[2];
+		var isOrange = !!f[3];
 
 		if (label === 'Severity') {
 			html += '<tr>'
@@ -497,9 +623,11 @@ function histAlarmShowDetail(idx)
 		var cell = isHtml ? String(val) : escHtml(String(val));
 		if (label === 'Alarm Class')
 			cell = '<strong>' + escHtml(String(val)) + '</strong>';
+		if (isOrange)
+			cell = '<span style="color:orange;">' + cell + '</span>';
 		html += '<tr>'
 		      + '<td style="font-weight:600;white-space:nowrap;width:170px;">' + escHtml(label) + '</td>'
-		      + '<td style="word-break:break-word;white-space:normal;">' + cell + '</td>'
+		      + '<td style="white-space:normal;">' + cell + '</td>'
 		      + '</tr>';
 	});
 	html += '</table>';
@@ -596,10 +724,14 @@ function _histAlarmMatchEvents(allData, activeAlarms)
 		cancelByKey[key].push(row);
 	});
 
-	// Build active alarm lookup
+	// Build active alarm lookup — both by alarmId (primary) and fallback key
 	var activeKeys = {};
+	var activeById = {};
 	if (Array.isArray(activeAlarms)) {
-		activeAlarms.forEach(function(a) { activeKeys[_histAlarmEventKey(a)] = true; });
+		activeAlarms.forEach(function(a) {
+			activeKeys[_histAlarmEventKey(a)] = true;
+			if (a.alarmId) activeById[a.alarmId] = true;
+		});
 	}
 
 	allData.forEach(function(row) {
@@ -628,8 +760,8 @@ function _histAlarmMatchEvents(allData, activeAlarms)
 		var key = _histAlarmEventKey(row);
 		row._matchedCancel   = bestCancel;
 		row._durationMs      = bestCancel ? bestDiff : null;
-		row._isActive        = !bestCancel &&  !!activeKeys[key];
-		row._closedByRestart = !bestCancel && !activeKeys[key];
+		row._isActive        = !bestCancel && (!!activeById[row.alarmId] || !!activeKeys[key]);
+		row._closedByRestart = !bestCancel && !row._isActive;
 
 		// Back-link: let the CANCEL row know its RAISE
 		if (bestCancel && !bestCancel._matchedRaise)
@@ -655,7 +787,7 @@ function _histAlarmDurationCell(row)
 	if (row._isActive)
 		return '<span style="color:red;font-weight:600;">Active</span>';
 	if (row._closedByRestart)
-		return '<span style="color:orange;" title="No CANCEL event found — likely closed by collector restart">Restart?</span>';
+		return '<span style="color:orange;" title="No CANCEL found — still active? or closed by collector restart">Active?</span>';
 	return '';
 }
 

@@ -23,7 +23,6 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
-import java.sql.Timestamp;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -32,6 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -121,8 +121,9 @@ extends HttpServlet
 		String name      = Helper.getParameter(req, "name"    ,"");
 //		String srvName   = Helper.getParameter(req, "srvName" ,"");
 		int    refresh   = StringUtil.parseInt( Helper.getParameter(req, "refresh",  "-1"),  -1);
+		String reason    = Helper.getParameter(req, "reason"  ,"");
 
-		String[] knownParams = new String[] {"name", "srvName", "refresh"};
+		String[] knownParams = new String[] {"name", "srvName", "refresh", "reason"};
 		
 		// Check MANDATORY generic input parameters
 		if (StringUtil.isNullOrBlank(name)) 
@@ -163,7 +164,9 @@ extends HttpServlet
 		if (StringUtil.isNullOrBlank(userName))
 		{
 			_logger.warn("Unauthorized UserDefinedAction of for '" + udAction.getName() + "' detected from '" + req.getRemoteAddr() + "' [" + StringUtil.getHostnameWithDomain(req.getRemoteAddr()) + "], UserAgent='" + req.getHeader("User-Agent") + "'.");
-			resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Not logged in when trying to execute User Defined Action '" + udAction.getName() + "'. Please login.");
+			renderLoginRequired(out, udAction);
+			out.flush();
+			out.close();
 			return;
 		}
 
@@ -171,7 +174,9 @@ extends HttpServlet
 		{
 			// Write information about this in the log
 			_logger.warn("Unauthorized UserDefinedAction of for '" + udAction.getName() + "' detected from '" + req.getRemoteAddr() + "' [" + StringUtil.getHostnameWithDomain(req.getRemoteAddr()) + "], UserAgent='" + req.getHeader("User-Agent") + "'.");
-			resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Not Authorized to execute User Defined Action '" + udAction.getName() + "'. Please login with an authorized user.");
+			renderNotAuthorized(out, udAction, userName);
+			out.flush();
+			out.close();
 			return;
 		}
 		
@@ -195,155 +200,17 @@ extends HttpServlet
 		
 		udAction.setPageRefreshTime(refresh);
 		udAction.setExecutedByUser(userName);
-		
 
+		// If this action requires a reason and none was supplied, show the reason-entry form
+		if (udAction.isReasonMessageRequired() && StringUtil.isNullOrBlank(reason))
+		{
+			renderReasonForm(out, udAction, refresh);
+			out.flush();
+			out.close();
+			return;
+		}
+		udAction.setExecutionReason(reason);
 
-////		String username = System.getProperty("user.name");
-////		String hostname = InetAddress.getLocalHost().getHostName();
-//		
-//		out.println("<!DOCTYPE html>");
-//		out.println("<html>");
-//		out.println("<head>");
-//
-//		out.println("<title>" + udAction.getOnServerName() + " - " + udAction.getName() + "</title> ");
-//		
-//		if (refresh > 0)
-//			out.println("<meta http-equiv='refresh' content='"+refresh+"' />");
-//
-//		out.println(HtmlStatic.getUserDefinedContentHead());
-//		
-////		out.println("<style type='text/css'>");
-////		out.println("  table {border-collapse: collapse;}");
-////		out.println("  th {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; background-color:gray; color:white;}");
-////		out.println("  td {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; }");
-////		out.println("  tr:nth-child(even) {background-color: #f2f2f2;}");
-//////		out.println("  .topright { position: absolute; top: 8px; right: 16px; font-size: 14px; }"); // topright did not work with bootstrap (and navigation bar) 
-////		out.println("</style>");
-//
-//		out.println("<style type='text/css'>");
-//		out.println("    /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ ");
-//		out.println("    [data-tooltip] { ");
-//		out.println("        position: relative; ");
-//		out.println("    } ");
-//		out.println();
-//		out.println("    /* 'tooltip' CSS settings for SQL Text... */ ");
-//		out.println("    [data-tooltip]:hover::before { ");
-//		out.println("        content: attr(data-tooltip);		 ");
-////		out.println("        content: 'Click to Open Text Dialog...'; ");
-//		out.println("        position: absolute; ");
-//		out.println("        z-index: 103; ");
-//		out.println("        top: 20px; ");
-//		out.println("        left: 30px; ");
-//		out.println("        width: 1000px; ");
-//		out.println("        height: 900px; ");
-////		out.println("        width: 220px; ");
-//		out.println("        padding: 10px; ");
-//		out.println("        background: #454545; ");
-//		out.println("        color: #fff; ");
-//		out.println("        font-size: 11px; ");
-//		out.println("        font-family: Courier; ");
-//		out.println("        white-space: pre-wrap; ");
-//		out.println("    } ");
-//		out.println("    [data-title]:hover::after { ");
-//		out.println("        content: ''; ");
-//		out.println("        position: absolute; ");
-//		out.println("        bottom: -12px; ");
-//		out.println("        left: 8px; ");
-//		out.println("        border: 8px solid transparent; ");
-//		out.println("        border-bottom: 8px solid #000; ");
-//		out.println("    } ");
-//		out.println();
-////		out.println("    table, th, td { ");
-////		out.println("    parameter-description, parameter-description th, parameter-description td { ");
-//		out.println("    table.parameter-description th, ");
-//		out.println("    table.parameter-description td { ");
-//		out.println("        border: 1px solid black; ");
-//		out.println("        border-collapse: collapse; ");
-//		out.println("        padding: 5px; ");
-//		out.println("    } ");
-//		out.println("</style>");
-//
-//		out.println("</head>");
-//		
-//		out.println("<body onload='updateLastUpdatedClock()'>");
-//
-//		out.println(HtmlStatic.getUserDefinedContentNavbar());
-//
-//		out.println("<script>");
-//		out.println("function updateLastUpdatedClock() {                   ");
-//		out.println("    var ageInSec = Math.floor((new Date() - lastUpdateTime) / 1000);");
-//		out.println("    document.getElementById('last-update-ts').innerHTML = ageInSec + ' seconds ago'; ");
-////		out.println("    console.log('updateLastUpdatedClock(): ' + document.getElementById('last-update-ts'));");
-////		out.println("    console.log('updateLastUpdatedClock(): ' + ageInSec + ' seconds ago');");
-//		out.println("    setTimeout(updateLastUpdatedClock, 1000); ");
-//		out.println("}                                                     ");
-//		out.println("var lastUpdateTime = new Date();");
-//		out.println("</script>");
-//		out.println("");
-//		
-//		for (String cssLocation : udAction.getCssList())
-//		{
-//			out.println("<link rel='stylesheet' href='" + cssLocation + "'>");
-//		}
-//
-//		for (String scriptLocation : udAction.getJavaScriptList())
-//		{
-//			out.println("<script type='text/javascript' src='" + scriptLocation + "'></script>");
-//		}
-//
-//		out.println("<div class='container-fluid'>");
-////		out.println("<div class='container mt-5'>");
-//
-////		String ver = "Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
-////		out.println("<h1>DbxTune - Central - " + username + "@" + hostname + "</h1>");
-////		out.println("<div class='topright'>"+ver+"</div>");
-//
-//		// Create a "drop down section" where we will have
-//		// - When was the page loaded
-//		// - And various User Defined Information content
-//		out.println("<details>");
-//		out.println("<summary>");
-//		out.println("Show parameters, Page loaded: <span id='last-update-ts'>" + (new Timestamp(System.currentTimeMillis())) + "</span>, ");
-//		if (refresh > 0)
-//			out.println("This page will 'auto-refresh' every " + refresh + " second. This can be changed with URL parameter 'refresh=##' (where ## is seconds)<br>" );
-//		else
-//			out.println("To 'auto-refresh' this page every ## second. This can be changed with URL parameter 'refresh=##' (where ## is seconds)<br>" );
-//		out.println("</summary>");
-//		udAction.createInfoContent(out);
-//		out.println("</details>");
-//
-//		out.println("<div id='ud-content'>");
-//
-//		out.println("<h3 class='mb-4'>" + udAction.getActionType() + " Action: " + udAction.getName() + "</h2>");
-//		out.println("<div id='dbx-uda-output'></div>"); // We will ADD stuff in here via JavaScript
-//
-//		//-------------------------------------------------------
-//		// BEGIN: Produce the User Defined Content
-//		//-------------------------------------------------------
-//		try
-//		{
-//			// Execute the User Defined Logic
-////			udAction.produce(out);
-//			udAction.createContent(out);
-//		}
-//		catch (Exception ex)
-//		{
-//			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Error when creating User Defined Action. Caught: " + ex.getMessage());
-//			return;
-//		}
-//		//-------------------------------------------------------
-//		// END: Produce the User Defined Content
-//		//-------------------------------------------------------
-//		
-//		out.println("</div>"); // ud-content
-//		
-//		out.println("</div>"); // container-fluid
-//
-//		// Write some JavaScript code
-//		out.println(HtmlStatic.getJavaScriptAtEnd(true));
-//
-//		out.println("</body>");
-//		out.println("</html>");
 
 		//-------------------------------------------------------
 		// BEGIN: Produce the User Defined Content
@@ -365,4 +232,177 @@ extends HttpServlet
 		out.close();
 
 	} // end: doGet
+
+	/**
+	 * Renders a Bootstrap-styled "reason required" form page.<br>
+	 * When submitted the browser re-calls the same servlet with {@code reason=...} appended,
+	 * so the action executes normally on the second pass.
+	 */
+	private void renderReasonForm(PrintWriter out, IUserDefinedAction udAction, int refresh)
+	{
+		String safeName = StringEscapeUtils.escapeHtml4(udAction.getName());
+		String safeDesc = StringUtil.hasValue(udAction.getDescription()) ? StringEscapeUtils.escapeHtml4(udAction.getDescription()) : "";
+
+		out.println("<!DOCTYPE html>");
+		out.println("<html>");
+		out.println("<head>");
+		out.println("  <title>Reason Required \u2014 " + safeName + "</title>");
+		out.println(HtmlStatic.getUserDefinedContentHead());
+		out.println("</head>");
+		out.println("<body>");
+		out.println(HtmlStatic.getUserDefinedContentNavbar());
+
+		out.println("<div class='container mt-5' style='max-width:640px;'>");
+		out.println("  <div class='card border-warning shadow-sm'>");
+		out.println("    <div class='card-header bg-warning text-dark'>");
+		out.println("      <h5 class='mb-0'>&#9888; Reason Required &mdash; Execute Action: <strong>" + safeName + "</strong></h5>");
+		out.println("    </div>");
+		out.println("    <div class='card-body'>");
+
+		if (StringUtil.hasValue(safeDesc))
+			out.println("      <p class='text-muted mb-3'>" + safeDesc + "</p>");
+
+		out.println("      <p>This action requires a reason before it can be executed.</p>");
+
+		out.println("      <form method='get' action='/api/udaction'>");
+		out.println("        <input type='hidden' name='name' value='" + safeName + "'>");
+		if (refresh > 0)
+			out.println("        <input type='hidden' name='refresh' value='" + refresh + "'>");
+
+		out.println("        <div class='form-group'>");
+		out.println("          <label for='uda-reason'><strong>Reason for Execution:</strong></label>");
+		out.println("          <textarea class='form-control mt-1' id='uda-reason' name='reason'");
+		out.println("                    rows='4' required autofocus");
+		out.println("                    placeholder='Enter your reason for executing this action...'></textarea>");
+		out.println("        </div>");
+		out.println("        <button type='submit' class='btn btn-warning'>Execute Action</button>");
+		out.println("        <a href='javascript:history.back()' class='btn btn-secondary ml-2'>Cancel</a>");
+		out.println("      </form>");
+
+		out.println("    </div>"); // card-body
+		out.println("  </div>"); // card
+		out.println("</div>"); // container
+
+		out.println(HtmlStatic.getJavaScriptAtEnd(true));
+		out.println("</body>");
+		out.println("</html>");
+	}
+
+	/**
+	 * Renders a Bootstrap-styled "login required" page.<br>
+	 * The page includes {@code dbxLoginModal.js} (via HtmlStatic head) which will open
+	 * the login modal automatically.  After a successful login Jetty redirects to {@code /},
+	 * and {@code dbxLoginModal.js} reads {@code sessionStorage.dbxReturnAfterLogin} to
+	 * bring the user back to the original action URL.
+	 */
+	private void renderLoginRequired(PrintWriter out, IUserDefinedAction udAction)
+	{
+		String safeName = StringEscapeUtils.escapeHtml4(udAction.getName());
+		String safeDesc = StringUtil.hasValue(udAction.getDescription()) ? StringEscapeUtils.escapeHtml4(udAction.getDescription()) : "";
+
+		out.println("<!DOCTYPE html>");
+		out.println("<html>");
+		out.println("<head>");
+		out.println("  <title>Login Required \u2014 " + safeName + "</title>");
+		out.println(HtmlStatic.getUserDefinedContentHead());
+		out.println("</head>");
+		out.println("<body>");
+		out.println(HtmlStatic.getUserDefinedContentNavbar());
+
+		out.println("<div class='container mt-5' style='max-width:640px;'>");
+		out.println("  <div class='card border-primary shadow-sm'>");
+		out.println("    <div class='card-header bg-primary text-white'>");
+		out.println("      <h5 class='mb-0'>&#128274; Login Required &mdash; Execute Action: <strong>" + safeName + "</strong></h5>");
+		out.println("    </div>");
+		out.println("    <div class='card-body'>");
+
+		if (StringUtil.hasValue(safeDesc))
+			out.println("      <p class='text-muted mb-3'>" + safeDesc + "</p>");
+
+		out.println("      <p>You must be logged in to execute this action.</p>");
+		out.println("      <button class='btn btn-primary' onclick='dbxOpenLogin();'>Login</button>");
+		out.println("      <a href='javascript:history.back()' class='btn btn-secondary ml-2'>Cancel</a>");
+
+		out.println("    </div>"); // card-body
+		out.println("  </div>"); // card
+		out.println("</div>"); // container
+
+		// On page-load: open the login modal automatically.
+		// dbxOpenLogin() will save window.location.href (= the udaction URL) to
+		// sessionStorage.dbxReturnAfterLogin so the user is brought back here after login.
+		out.println("<script>");
+		out.println("$(document).ready(function() {");
+		out.println("  if (typeof dbxOpenLogin === 'function') { dbxOpenLogin(); }");
+		out.println("});");
+		out.println("</script>");
+
+		out.println(HtmlStatic.getJavaScriptAtEnd(true));
+		out.println("</body>");
+		out.println("</html>");
+	}
+
+	/**
+	 * Renders a Bootstrap-styled "not authorized" page.<br>
+	 * Shows who the current user is, which roles/users are allowed, and offers
+	 * a "Login as different user" button that opens the login modal.
+	 */
+	private void renderNotAuthorized(PrintWriter out, IUserDefinedAction udAction, String currentUser)
+	{
+		String safeName = StringEscapeUtils.escapeHtml4(udAction.getName());
+		String safeDesc = StringUtil.hasValue(udAction.getDescription()) ? StringEscapeUtils.escapeHtml4(udAction.getDescription()) : "";
+		String safeUser = StringEscapeUtils.escapeHtml4(currentUser);
+
+		List<String> authorizedRoles = udAction.getAuthorizedRoles();
+		List<String> authorizedUsers = udAction.getAuthorizedUsers();
+
+		out.println("<!DOCTYPE html>");
+		out.println("<html>");
+		out.println("<head>");
+		out.println("  <title>Not Authorized \u2014 " + safeName + "</title>");
+		out.println(HtmlStatic.getUserDefinedContentHead());
+		out.println("</head>");
+		out.println("<body>");
+		out.println(HtmlStatic.getUserDefinedContentNavbar());
+
+		out.println("<div class='container mt-5' style='max-width:640px;'>");
+		out.println("  <div class='card border-danger shadow-sm'>");
+		out.println("    <div class='card-header bg-danger text-white'>");
+		out.println("      <h5 class='mb-0'>&#128683; Not Authorized &mdash; Execute Action: <strong>" + safeName + "</strong></h5>");
+		out.println("    </div>");
+		out.println("    <div class='card-body'>");
+
+		if (StringUtil.hasValue(safeDesc))
+			out.println("      <p class='text-muted mb-3'>" + safeDesc + "</p>");
+
+		out.println("      <p>You are logged in as <strong>" + safeUser + "</strong> but are not authorized to execute this action.</p>");
+
+		if (!authorizedRoles.isEmpty())
+		{
+			out.println("      <p class='mb-1'><strong>Required role(s):</strong></p>");
+			out.println("      <ul>");
+			for (String role : authorizedRoles)
+				out.println("        <li>" + StringEscapeUtils.escapeHtml4(role) + "</li>");
+			out.println("      </ul>");
+		}
+
+		if (!authorizedUsers.isEmpty())
+		{
+			out.println("      <p class='mb-1'><strong>Authorized user(s):</strong></p>");
+			out.println("      <ul>");
+			for (String user : authorizedUsers)
+				out.println("        <li>" + StringEscapeUtils.escapeHtml4(user) + "</li>");
+			out.println("      </ul>");
+		}
+
+		out.println("      <button class='btn btn-warning' onclick='dbxOpenLogin();'>Login as Different User</button>");
+		out.println("      <a href='javascript:history.back()' class='btn btn-secondary ml-2'>Cancel</a>");
+
+		out.println("    </div>"); // card-body
+		out.println("  </div>"); // card
+		out.println("</div>"); // container
+
+		out.println(HtmlStatic.getJavaScriptAtEnd(true));
+		out.println("</body>");
+		out.println("</html>");
+	}
 }

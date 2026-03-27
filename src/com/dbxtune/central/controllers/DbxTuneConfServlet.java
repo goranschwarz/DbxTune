@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,11 +33,11 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,23 +51,23 @@ public class DbxTuneConfServlet extends HttpServlet
 
 	private final String CONF_DIR  = DbxTuneCentral.getAppConfDir();
 
-	ServletOutputStream out = null;
+	PrintWriter out = null;
 	HttpServletResponse _resp = null;
 	
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
 		_resp = resp;
-		out = resp.getOutputStream();
+		out = resp.getWriter();
 
-		
-		String inputName     = req.getParameter("name");
-		String inputType     = req.getParameter("type");
-		String inputMethod   = req.getParameter("method");
-		String discardRegExp = req.getParameter("discard");
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "name", "type", "method", "discard"))
+			return;
 
-		if (StringUtil.isNullOrBlank(inputMethod))
-			inputMethod = "plain";
+		String inputName     = Helper.getParameter(req, "name");
+		String inputType     = Helper.getParameter(req, "type");
+		String inputMethod   = Helper.getParameter(req, "method", "plain");
+		String discardRegExp = Helper.getParameter(req, "discard");
 
 //		System.out.println("DbxTuneConfServlet: name   = '"+inputName+"'.");
 //		System.out.println("DbxTuneConfServlet: type   = '"+inputType+"'.");
@@ -117,30 +118,21 @@ public class DbxTuneConfServlet extends HttpServlet
 	{
 		File f = new File(CONF_DIR+"/"+inputName);
 
-		out.println("<html> ");
-		
-		out.println("<head> ");
-		out.println("<title>"+inputName+"</title> ");
-
-		out.println("<style type='text/css'> ");
-		out.println("body {                  ");
-		out.println("	  height: 100%;      ");
-//		out.println("	  overflow: hidden;  ");
-		out.println("	}                    ");
-        out.println("                        ");
-//		out.println("	textarea {           ");
-//		out.println("	  width: 100%;       ");
-//		out.println("	  height: 100vw;     ");
-//		out.println("	  overflow: hidden;  ");
-//		out.println("	}                    ");
-		out.println("</style> ");
+		out.println("<!DOCTYPE html>");
+		out.println("<html>");
+		out.println("<head>");
+		out.println("<title>" + inputName + "</title>");
+		out.println(HtmlStatic.getUserDefinedContentHead());
 		out.println("<link href='/scripts/prism/prism-1.30.0.css' rel='stylesheet' />");
-		out.println("</head> ");
-
-		out.println("<body> ");
-		out.println("<script src='/scripts/prism/prism-1.30.0.js'></script> ");
-
-		out.println("<h2>"+f.getAbsolutePath()+"</h2>");
+		out.println("<script src='/scripts/prism/prism-1.30.0.js'></script>");
+		out.println("<style type='text/css'>");
+		out.println("body { height: 100%; }");
+		out.println("</style>");
+		out.println("</head>");
+		out.println("<body>");
+		out.println(HtmlStatic.getUserDefinedContentNavbar());
+		out.println("<div class='container-fluid mt-3'>");
+		out.println("<h5>" + StringEscapeUtils.escapeHtml4(f.getAbsolutePath()) + "</h5>");
 
 		// Compile the regexp; if we got any
 		Pattern pattern = null;
@@ -220,8 +212,10 @@ public class DbxTuneConfServlet extends HttpServlet
 //		out.println("  }); ");
 //		out.println("</script> ");
 
-		out.println("</body> ");
-		out.println("</html> ");
+		out.println("</div>"); // end container-fluid
+		out.println(HtmlStatic.getUserDefinedContentJavaScriptAtEnd());
+		out.println("</body>");
+		out.println("</html>");
 
 		out.flush();
 		out.close();
@@ -231,26 +225,23 @@ public class DbxTuneConfServlet extends HttpServlet
 	throws ServletException, IOException
 	{
 		
+		out.println("<!DOCTYPE html>");
 		out.println("<html>");
+		out.println("<head>");
+		out.println("<title>" + inputName + "</title>");
+		out.println(HtmlStatic.getUserDefinedContentHead());
+		out.println("<!-- Tablesorter theme -->");
+		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'>");
+		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'>");
+		out.println("<!-- Tablesorter scripts -->");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script>");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script>");
+		out.println("</head>");
 
-		out.println("<head> ");
-		out.println("<title>"+inputName+"</title> ");
-
-		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.js'></script>");
-		
-		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
-		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'> ");
-		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'> ");
-		
-		out.println("<!-- Tablesorter script: required --> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script> ");
-//		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/widgets/widget-scroller.js'></script> ");
-
-		out.println("</head> ");
-		
 		out.println("<body>");
-		out.println("<h1>" + inputName + "</h1>");
+		out.println(HtmlStatic.getUserDefinedContentNavbar());
+		out.println("<div class='container-fluid mt-3'>");
+		out.println("<h5>" + StringEscapeUtils.escapeHtml4(inputName) + "</h5>");
 		out.println();
 //		out.println("<input type='text' id='filterInput' width='800' onkeyup='filterFunction()' placeholder='Filter...' title='Filter'>");
 //		out.println("<br>");
@@ -311,9 +302,9 @@ public class DbxTuneConfServlet extends HttpServlet
 					}
 				}
 
+				out.println("<tr>");
 				out.println("  <td nowrap>" + key + "</td>");
 				out.println("  <td nowrap>" + val + "</td>");
-				
 				out.println("</tr>");
 			}
 			in.close();
@@ -359,9 +350,11 @@ public class DbxTuneConfServlet extends HttpServlet
 		
 		out.println("</tbody>");
 		out.println("</table>");
+		out.println("</div>"); // end container-fluid
+		out.println(HtmlStatic.getUserDefinedContentJavaScriptAtEnd());
 		out.println("</body></html>");
-		
-		
+
+
 		out.flush();
 		out.close();
 	}

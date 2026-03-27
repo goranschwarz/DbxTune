@@ -106,6 +106,8 @@
 	padding: 0.2rem 0.5rem;
 	border-radius: 3px;
 	cursor: pointer;
+	display: flex;
+	align-items: center;
 }
 
 .dbx-gp-item:hover {
@@ -123,7 +125,118 @@
 .dbx-gp-item label {
 	cursor: pointer;
 	margin-bottom: 0;
+	flex: 1;
+}
+
+/* ── Order badge (load order, right side of each item) ─────────── */
+.dbx-gp-order-wrap {
+	flex-shrink: 0;
+	margin-left: 8px;
+	width: 32px;
+	text-align: center;
+}
+
+.dbx-gp-order-badge {
+	display: inline-block;
+	width: 28px;
+	height: 22px;
+	line-height: 22px;
+	text-align: center;
+	font-size: 0.78rem;
+	font-weight: bold;
+	border-radius: 4px;
+	background: #dee2e6;
+	color: #495057;
+	cursor: pointer;
+	user-select: none;
+	border: 1px solid transparent;
+	transition: background 0.12s;
+}
+
+.dbx-gp-order-badge:hover {
+	background: #adb5bd;
+	color: #000;
+}
+
+.dbx-gp-order-badge.active {
+	border-color: #80bdff;
+	background: #cfe2ff;
+}
+
+/* ── Shared popup base (position picker + context menu) ─────────── */
+.dbx-gp-popup {
+	position: fixed;
+	z-index: 9999;
+	background: #fff;
+	border: 1px solid #ced4da;
+	border-radius: 6px;
+	box-shadow: 0 4px 16px rgba(0,0,0,.18);
+	padding: 4px;
+	display: none;
+}
+
+.dbx-gp-popup .popup-title {
+	font-size: 0.72rem;
+	color: #6c757d;
+	text-align: center;
+	padding: 2px 4px 4px;
+	border-bottom: 1px solid #e9ecef;
+	margin-bottom: 3px;
+	white-space: nowrap;
+}
+
+/* ── Position picker popup ──────────────────────────────────────── */
+#dbx-gp-pos-popup {
+	min-width: 80px;
+}
+
+.dbx-gp-pos-btn {
+	display: block;
 	width: 100%;
+	text-align: center;
+	padding: 3px 0;
+	font-size: 0.85rem;
+	border-radius: 4px;
+	cursor: pointer;
+	border: none;
+	background: none;
+}
+
+.dbx-gp-pos-btn:hover {
+	background: #e9ecef;
+}
+
+.dbx-gp-pos-btn.current {
+	background: #0d6efd;
+	color: #fff;
+	font-weight: bold;
+}
+
+.dbx-gp-pos-btn.current:hover {
+	background: #0b5ed7;
+}
+
+/* ── Context menu popup ─────────────────────────────────────────── */
+#dbx-gp-ctx-popup {
+	min-width: 170px;
+	padding: 4px 0;
+}
+
+.dbx-gp-ctx-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	padding: 5px 14px;
+	font-size: 0.85rem;
+	border-radius: 4px;
+	cursor: pointer;
+	border: none;
+	background: none;
+	white-space: nowrap;
+}
+
+.dbx-gp-ctx-item:hover {
+	background: #e9ecef;
 }
 
 .dbx-gp-category-badge {

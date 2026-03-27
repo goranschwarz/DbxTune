@@ -3923,14 +3923,26 @@ class DbxGraph
 			$.contextMenu({
 				selector: '.dbx-graph-context-menu',
 				items: {
-					// test: {
-					// 	name: "Test",
-					// 	callback: function(key, opt) 
-					// 	{
-					// 		console.log("Clicked on:'"+key+"', opt='"+opt+"', this='"+this+"'.", this, opt);
-					// 		alert("Clicked on:'"+key+", opt='"+opt+"'.");
-					// 	}
-					// },
+					selectGraphs: {
+						name: "Select Graphs\u2026",
+						callback: function(key, opt) {
+							// sessionName + times from URL (date picker always reloads page on change)
+							var srv       = getParameter('sessionName', '');
+							var startTime = getParameter('startTime',   '2h');
+							var endTime   = getParameter('endTime',     '');
+							// Pre-select from _graphMap — works for graphList=all, specific, or empty
+							// Each DbxGraph has ._fullName === tableName (e.g. "CmSummary_DatabaseSizeGraph")
+							var preSel = (_graphMap || []).map(function(g) { return g._fullName; });
+							// For multi-server pages, use the first server for the graph API call
+							var apiSrv = srv ? srv.split(',')[0].trim() : srv;
+							dbxOpenGraphPickerModal(apiSrv, startTime, {
+								target:      '_self',
+								preSelected: preSel,
+								endTime:     endTime
+							});
+						}
+					},
+					sep_selectGraphs: '---',
 					resetZoomThis: {
 						name: "Reset - This graph",
 						callback: function(key, opt) 

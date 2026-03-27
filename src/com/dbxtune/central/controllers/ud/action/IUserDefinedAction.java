@@ -222,4 +222,16 @@ public interface IUserDefinedAction
 	void   setExecutedByUser(String username);
 	String getExecutedByUser();
 
+	/**
+	 * If {@code true} the servlet will show a "reason required" form before executing.
+	 * Configured via {@code requiresReasonMessage=true} in the action .props file.
+	 */
+	boolean isReasonMessageRequired();
+
+	/** Set the free-text reason provided by the user before execution. */
+	void   setExecutionReason(String reason);
+
+	/** Get the free-text reason provided by the user before execution (may be null/empty). */
+	String getExecutionReason();
+
 }

@@ -70,6 +70,10 @@ implements IUserDefinedAction
 	@Override public void   setExecutedByUser(String username) {}
 	@Override public String getExecutedByUser()                { return "-unknown-"; }
 
+	@Override public boolean isReasonMessageRequired()         { return false; }
+	@Override public void    setExecutionReason(String reason) {}
+	@Override public String  getExecutionReason()              { return null; }
+
 	@Override
 	public void createInfoContent(PrintWriter out) throws IOException
 	{

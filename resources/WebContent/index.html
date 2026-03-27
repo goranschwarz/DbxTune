@@ -28,6 +28,7 @@
 
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.utils.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxLoginModal.js"></script>
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarm.js"></script>
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxHistAlarms.js"></script>
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphPicker.js"></script>
@@ -41,7 +42,7 @@
 
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/dbxtune/css/dbxcentral.css">
-  <link rel="stylesheet" href="/scripts/dbxtune/css/dbxGraphPicker.css">
+  <!-- dbxGraphPicker.css is injected automatically by dbxGraphPicker.js -->
 
   <!-- CSS: Bootstrap -->
 <!--<link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> --> 
@@ -187,9 +188,8 @@
 
   <!-- JS for Bootstrap "sub menu"-->
   <script>
-	// Initialize: Dbx Graph Picker Modal
-	dbxInitGraphPickerModal();
-  
+	// dbxGraphPicker auto-initialises via $(function(){...}) inside dbxGraphPicker.js
+
 	// Initialize submenu behavior (call once after DOM is ready)
 	function initSubmenus() 
 	{
@@ -294,8 +294,6 @@
 
       <div id="x"> <!-- So we can "skip" the top image in an easy way -->
         <button type="button" class="btn btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
-        &nbsp;&nbsp;&nbsp;<b>Alarm Info:</b> <span id="dbx-alarm-cnt">0</span> Active / <span id="dbx-alarm-muted-cnt">0</span> Muted<span id="dbx-alarm-srv-cnt">, in 0 Server(s).</span>
-        &nbsp;&middot;&nbsp;Next Check in <span id="dbx-alarm-next-poll">15</span>s
       </div>
       <p></p>
       <p>
@@ -325,6 +323,15 @@
       <div id="dbx-quick-access-profile-list">
 <!--        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>-->
         <button type="button" class="btn btn-sm btn-primary mb-2 btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">New Profile...</button>
+      </div>
+
+      <br>
+      <div>
+        <b>Alarm Info:</b> <span id="dbx-alarm-cnt">0</span> Active / <span id="dbx-alarm-muted-cnt">0</span> Muted<span id="dbx-alarm-srv-cnt">, in 0 Server(s)</span>
+        &nbsp;&rarr;&nbsp;Next Check in <span id="dbx-alarm-next-poll">...</span>s
+        &nbsp;&nbsp;<a href="#" onclick="histAlarmOpen(null); return false;" style="white-space:nowrap;"
+           data-toggle="tooltip" data-placement="bottom" data-html="true"
+           title="Click this link to view alarms for &lt;b&gt;all servers&lt;/b&gt;&lt;br&gt;— or —&lt;br&gt;Click a &lt;b&gt;Server button&lt;/b&gt; above and choose &lt;i&gt;View Historical Alarms&lt;/i&gt;"><i class="fa fa-history"></i> View Historical Alarms&hellip;</a>
       </div>
       <!-- Error message: browser support -->
       <div id="browser-not-supported"></div>
@@ -418,94 +425,7 @@
   </div>
 
 
-  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   - - Modal Dialog: LOGIN
-   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-  <div id="dbx-login-dialog" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-              <div class="modal-header">
-                  <h3>DbxCentral - Login</h3>
-                  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-              </div>
-              <div class="modal-body p-0">
-                  <!-- Tab navigation -->
-                  <ul class="nav nav-tabs px-3 pt-2" id="dbx-login-tabs" role="tablist">
-                      <li class="nav-item">
-                          <a class="nav-link active" id="dbx-tab-login" data-toggle="tab" href="#dbx-pane-login" role="tab">Login</a>
-                      </li>
-                      <li class="nav-item">
-                          <a class="nav-link" id="dbx-tab-register" data-toggle="tab" href="#dbx-pane-register" role="tab">Create Account</a>
-                      </li>
-                  </ul>
-                  <div class="tab-content px-3 pt-3">
-                      <!-- LOGIN TAB -->
-                      <div class="tab-pane fade show active" id="dbx-pane-login" role="tabpanel">
-                          <form class="form" role="form" autocomplete="off" id="dbx-login-form" novalidate="" method="POST" action="j_security_check">
-                              <div class="form-group">
-                                  <label for="dbx-login-user-txt">Username</label>
-                                  <span class="fa fa-question-circle" data-toggle="tooltip" data-placement="bottom" data-html="true" title="The default 'admin' user is <code>admin</code><br>With the password <code>ip-address</code> where DbxcCentral is running or <code>admin</code>.<br>Check DxcCentral's error log, where the password is written in case no password has been specified for the admin user, search  for ADMIN_USER_PASSWORD<br><br>But hopefully it has been changed on this system :)">&nbsp;</span>
-                                  <input type="text" class="form-control" name="j_username" id="dbx-login-user-txt" required="">
-                                  <div class="invalid-feedback">Oops, you missed this one.</div>
-                              </div>
-                              <div class="form-group">
-                                  <label for="dbx-login-passwd-txt">Password</label>
-                                  <input type="password" class="form-control" name="j_password" id="dbx-login-passwd-txt" required="" autocomplete="new-password">
-                                  <div class="invalid-feedback">Enter your password too!<br>Default 'admin' password is IP Address of the DbxCentral hostname.</div>
-                              </div>
-                              <!-- Adding a hidden submit field here, enables: submit on RETURN on any of the input fields, if fields have not been filled in, then the validation will show what's wrong -->
-                              <input type="submit" hidden />
-                              <div id="dbx-loginFailed-div" class="custom-control mb-2" style="display: none;">
-                                  <b><font color="red">Login failed!</font></b>
-                              </div>
-                              <div class="form-group">
-                                  <a href="" class="small" onclick="dbxToggleForgotPassword(); return false;">Forgot password?</a>
-                                  <div id="dbx-forgotpw-div" style="display:none;" class="mt-2 p-2 border rounded bg-light">
-                                      <p class="mb-1 small">Enter your email address and we will send you a temporary password.</p>
-                                      <div class="input-group input-group-sm">
-                                          <input type="email" class="form-control" id="dbx-forgot-email-txt" placeholder="Email address">
-                                          <div class="input-group-append">
-                                              <button class="btn btn-success" type="button" onclick="dbxSendForgotPassword()">Send</button>
-                                          </div>
-                                      </div>
-                                      <div id="dbx-forgot-msg" class="mt-1 small"></div>
-                                  </div>
-                              </div>
-                              <div class="modal-footer px-0">
-                                  <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
-                                  <button type="submit" class="btn btn-success float-right" id="dbx-login-btn">Login</button>
-                              </div>
-                          </form>
-                      </div>
-                      <!-- CREATE ACCOUNT TAB -->
-                      <div class="tab-pane fade" id="dbx-pane-register" role="tabpanel">
-                          <div class="form-group">
-                              <label for="dbx-reg-username-txt">Username</label>
-                              <input type="text" class="form-control" id="dbx-reg-username-txt" maxlength="128" placeholder="Choose a username">
-                          </div>
-                          <div class="form-group">
-                              <label for="dbx-reg-email-txt">Email</label>
-                              <input type="email" class="form-control" id="dbx-reg-email-txt" placeholder="your@email.com">
-                          </div>
-                          <div class="form-group">
-                              <label for="dbx-reg-password-txt">Password</label>
-                              <input type="password" class="form-control" id="dbx-reg-password-txt" placeholder="At least 6 characters">
-                          </div>
-                          <div class="form-group">
-                              <label for="dbx-reg-confirm-txt">Confirm Password</label>
-                              <input type="password" class="form-control" id="dbx-reg-confirm-txt" placeholder="Repeat password">
-                          </div>
-                          <div id="dbx-reg-msg" class="mb-2"></div>
-                          <div class="modal-footer px-0">
-                              <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
-                              <button type="button" class="btn btn-primary float-right" onclick="dbxRegisterUser()">Create Account</button>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </div>
-  </div>
+  <!-- Login modal injected by dbxLoginModal.js -->
 
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    - - Modal Dialog: dbx-loading-url-dialog
@@ -534,47 +454,7 @@
 		</div>
 	</div>
 
-  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   - - Modal Dialog: dbxGraphPickerModal
-   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-	<div class="modal fade" id="dbxGraphPickerModal" tabindex="-1" role="dialog">
-		<div class="modal-dialog modal-lg" role="document">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title">Select Graphs — <span id="dbxGraphPickerServerName"></span></h5>
-					<button type="button" class="close" data-dismiss="modal">&times;</button>
-				</div>
-				<div class="modal-body">
-					<div class="input-group mb-3">
-						<input type="text" id="dbxGraphPickerSearch" class="form-control" placeholder="Search by collector, graph name or category...">
-						<div class="input-group-append">
-							<button class="btn btn-outline-secondary" type="button" id="dbxGraphPickerClearSearch">Clear</button>
-						</div>
-					</div>
-					<div class="mb-2">
-						<button class="btn btn-sm btn-outline-primary"   id="dbxGraphPickerSelectAll">Select All Visible</button>
-						<button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerClearAll">Clear All</button>
-						<button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerExpandAll">Expand all Groups</button>
-						<button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerCollapseAll">Close all Groups</button>
-						<span class="ml-3 small" id="dbxGraphPickerSelectedCountWrap"><span id="dbxGraphPickerSelectedCount">0</span> selected</span>
-						<span class="ml-3">
-							<label class="text-muted small mb-0" for="dbxGraphPickerGcol">Columns:</label>
-							<input type="number" id="dbxGraphPickerGcol" class="form-control form-control-sm d-inline-block ml-1"
-								min="1" max="10" placeholder="default" style="width: 80px;">
-						</span>
-					</div>
-					<div id="dbxGraphPickerList">
-						<!-- populated dynamically by dbxGpRender() -->
-					</div>
-				</div>
-				<div class="modal-footer">
-					<small class="text-muted mr-auto">🟡 highlighted = visible at startup by default</small>
-					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-					<button type="button" class="btn btn-primary"   id="dbxGraphPickerOk" data-toggle="tooltip" data-placement="top" title="Opens graphs in a new tab — Tip: Press Ctrl+D in that tab to bookmark your selection">Open Selected Graphs</button>
-				</div>
-			</div>
-		</div>
-	</div>
+  <!-- dbxGraphPickerModal HTML injected by dbxGraphPicker.js -->
 
 
 	<script>
@@ -707,7 +587,7 @@ List of stuff that can be done
 	//-----------------------------------------------------------
 	// get input parameters
 	//-----------------------------------------------------------
-	var _refresh = getParameter("refresh", 300);
+	var _refresh = getParameter("refresh", 15);  // seconds; used for alarm polling + stale-server re-check
 	var _debug   = getParameter("debug",   0);
 
 	console.log("_refresh="+_refresh);
@@ -718,6 +598,7 @@ List of stuff that can be done
 	//-----------------------------------------------------------
 	var _global_disabledServers = [];
 	var _serverInfoContent      = {};  // serverName → HTML table string for the Server Info dialog
+	var _staleServers           = new Set(); // server names currently yellow (stale last-sample)
 
 //	function resizeExampleImage() {
 //		// Origin size is: 378
@@ -1291,22 +1172,6 @@ List of stuff that can be done
 
 
 
-	//-----------------------------------------------------------
-	// LOGIN - DIALOG
-	//-----------------------------------------------------------
-//	$("#dbx-login-btn").click(function(event) {
-	$("#dbx-login-form").submit(function(event) {
-		console.log("dbx-login-form.SUBMIT.");
-		//Fetch form to apply custom Bootstrap validation
-		var form = $("#dbx-login-form")
-
-		if (form[0].checkValidity() === false) {
-			event.preventDefault()
-			event.stopPropagation()
-		}
-
-		form.addClass('was-validated');
-	});
 
 
 
@@ -1759,19 +1624,23 @@ List of stuff that can be done
 				$('#dbx-server-info-modal').modal('show');
 			});
 
-			// Server Info modal: center + make draggable/resizable when shown
+			// Server Info modal: center + make draggable/resizable when shown.
+			// Pre-position on 'show' (before animation) using CSS transform so there
+			// is no visible hop when the fade-in starts.
+			$('#dbx-server-info-modal').on('show.bs.modal', function() {
+				$(this).find('.modal-dialog').css({
+					position: 'absolute', margin: 0,
+					top: '50%', left: '50%',
+					transform: 'translate(-50%, -50%)'
+				});
+			});
 			$('#dbx-server-info-modal').on('shown.bs.modal', function() {
-				var $modal   = $(this);
-				var $dialog  = $modal.find('.modal-dialog');
-				var $content = $modal.find('.modal-content');
-				// Switch to absolute positioning so jQuery UI draggable works
-				$modal.css('overflow', 'visible');
-				var w   = $dialog.outerWidth(true);
-				var h   = $dialog.outerHeight(true);
-				var top  = Math.max(10, Math.round(($(window).height() - h) / 2));
-				var left = Math.max(10, Math.round(($(window).width()  - w) / 2));
-				$dialog.css({ position: 'absolute', margin: 0, top: top, left: left });
-				// Apply jQuery UI only once
+				var $dialog  = $(this).find('.modal-dialog');
+				var $content = $(this).find('.modal-content');
+				$(this).css('overflow', 'visible');
+				// Convert transform-based centering to explicit px so jQuery UI works
+				var offset = $dialog.offset();
+				$dialog.css({ transform: '', top: offset.top, left: offset.left });
 				if (!$dialog.data('ui-draggable')) {
 					$dialog.draggable({ handle: '.modal-header', containment: 'window' });
 					$content.resizable({ alsoResize: $dialog, minWidth: 350, minHeight: 150 });
@@ -1780,10 +1649,18 @@ List of stuff that can be done
 
 			// Get ACTIVE Alarms (initial)
 			setTimeout(dbxTuneCheckActiveAlarms, 100);
-			// Poll every 15 seconds instead of reloading the whole page
-			setInterval(dbxTuneCheckActiveAlarms, 15000);
+			// Poll using _refresh interval (default 15s, overridable via ?refresh=N)
+			setInterval(dbxTuneCheckActiveAlarms, _refresh * 1000);
+
+			// Start adaptive server-staleness refresh loop
+			dbxScheduleStalenessCheck();
 			// Full page reload after 12 hours — picks up new releases and keeps dashboards fresh
 			setTimeout(function() { location.reload(true); }, 12 * 60 * 60 * 1000);
+
+			// URL: ?alarms  or  ?alarms&srv=MY_SERVER  — auto-open Historical Alarms dialog
+			if (isParameter('alarms')) {
+				setTimeout(function() { histAlarmOpen(getParameter('srv', '') || null); }, 200);
+			}
 		},
 		error: function(xhr, desc, err)
 		{
@@ -1791,6 +1668,47 @@ List of stuff that can be done
 			console.log("Details: " + desc + "\nError: " + err);
 		}
 	}); // end: ajax call
+
+	// ── Server staleness refresh ─────────────────────────────────────────────
+	// Re-checks lastSampleTime for each server and updates button colour.
+	// Fast when any server is stale (_refresh s), slow when all are OK (15 min).
+
+	function dbxCheckServerStaleness()
+	{
+		var lastSampleWarnThresh = 5; // minutes — mirrors the threshold used at page load
+		$.ajax({
+			url: '/api/sessions', type: 'GET',
+			success: function(raw) {
+				try {
+					var sessions = JSON.parse(raw);
+					if (!Array.isArray(sessions)) return;
+					_staleServers = new Set();
+					sessions.forEach(function(srv) {
+						if (!srv || !srv.serverName) return;
+						if ((parseInt(srv.status) & 1) === 1) return; // disabled
+						var age   = moment.duration(moment().diff(srv.lastSampleTime));
+						var stale = age.asMinutes() >= lastSampleWarnThresh;
+						var btn   = document.getElementById('btn-qa-normal-' + srv.serverName);
+						if (btn) {
+							$(btn).removeClass('btn-primary btn-warning')
+							      .addClass(stale ? 'btn-warning' : 'btn-primary');
+						}
+						if (stale) _staleServers.add(srv.serverName);
+					});
+				} catch(e) { console.warn('dbxCheckServerStaleness error', e); }
+				dbxScheduleStalenessCheck();
+			},
+			error: function() { dbxScheduleStalenessCheck(); }
+		});
+	}
+
+	function dbxScheduleStalenessCheck()
+	{
+		// If any servers are stale: re-check every _refresh seconds
+		// If all servers OK:       re-check every 15 minutes
+		var intervalMs = (_staleServers.size > 0) ? (_refresh * 1000) : (15 * 60 * 1000);
+		setTimeout(dbxCheckServerStaleness, intervalMs);
+	}
 
 	/** Open any graphs */
 	function openGraphPage(type, name, urlOptions)
@@ -2032,7 +1950,7 @@ List of stuff that can be done
 	//-----------------------------------------------------------
 	// update "### seconds ago"
 	//-----------------------------------------------------------
-	var _pollIntervalSec = 15;
+	var _pollIntervalSec = _refresh;
 	function updateLastUpdatedClock()
 	{
 		var ageInSec      = Math.floor((new Date() - lastUpdateTime) / 1000);
@@ -2043,148 +1961,7 @@ List of stuff that can be done
 	var lastUpdateTime = new Date();
 	updateLastUpdatedClock();
 
-	//-----------------------------------------------------------
-	// If this is a login request... open the dialog
-	//-----------------------------------------------------------
-//	var user = getCurrentLogin();
-//	if (isParameter('login') && user === "")
-//	{
-//		console.log("DO_LOGIN: is true, open modal login dialog.");
-//		setTimeout(function() { $('#dbx-login-dialog').modal('show'); }, 10);
-//	}
-	isLoggedIn( function(isLoggedIn, asUserName)
-	{
-		console.log("isLoggedIn-callback: isLoggedIn='"+isLoggedIn+"', asUserName='"+asUserName+"'.");
-		if (isParameter('login'))
-		{
-			if (!isLoggedIn)
-			{
-				console.log("isLoggedIn-callback: is true, open modal login dialog.");
 
-				// Remember where the user came from so we can send them back after login.
-				// Priority: explicit ?returnUrl= parameter, then document.referrer (if same origin, not index.html).
-				var returnUrl = getParameter("returnUrl", "");
-				if (!returnUrl && document.referrer)
-				{
-					try
-					{
-						var ref = new URL(document.referrer);
-						if (ref.origin === window.location.origin
-								&& ref.pathname !== '/index.html'
-								&& ref.pathname !== '/'
-								&& ref.pathname !== '/index.jsp')
-							returnUrl = ref.pathname + ref.search + ref.hash;
-					}
-					catch(e) {}
-				}
-				if (returnUrl)
-					sessionStorage.setItem('dbxReturnAfterLogin', returnUrl);
-				else
-					sessionStorage.removeItem('dbxReturnAfterLogin');
-
-				var loginFailed = getParameter("login", "open");
-				if (loginFailed === "failed")
-					$('#dbx-loginFailed-div').css("display", "block");
-
-				$('#dbx-login-dialog').modal({backdrop: 'static', keyboard: false});
-				$('#dbx-login-dialog').modal('show');
-			}
-			else
-			{
-				// User just logged in (Jetty redirected back here with ?login=... but they are now authenticated).
-				// Redirect to the page they came from, if we saved one.
-				var returnUrl = sessionStorage.getItem('dbxReturnAfterLogin');
-				if (returnUrl)
-				{
-					console.log("isLoggedIn-callback: login successful, returning to: " + returnUrl);
-					sessionStorage.removeItem('dbxReturnAfterLogin');
-					window.location.href = returnUrl;
-				}
-			}
-		}
-	});
-
-	//-----------------------------------------------------------
-	// Login dialog: Forgot Password
-	//-----------------------------------------------------------
-	function dbxToggleForgotPassword()
-	{
-		$('#dbx-forgotpw-div').slideToggle(200, function()
-		{
-			// Disable the Login button while the forgot-password form is visible
-			// so the user doesn't accidentally submit the login form instead.
-			var visible = $(this).is(':visible');
-			$('#dbx-login-btn').prop('disabled', visible);
-		});
-	}
-
-	function dbxSendForgotPassword()
-	{
-		var email = $('#dbx-forgot-email-txt').val().trim();
-		if (!email)
-		{
-			$('#dbx-forgot-msg').html('<span class="text-danger">Please enter your email address.</span>');
-			return;
-		}
-		$('#dbx-forgot-msg').html('<span class="text-muted">Sending...</span>');
-		$.ajax({
-			url: '/api/user/forgot-password',
-			method: 'POST',
-			data: { email: email },
-			dataType: 'json',
-			success: function(r)
-			{
-				var cls = r.success ? 'text-success' : 'text-danger';
-				$('#dbx-forgot-msg').html('<span class="' + cls + '">' + r.message + '</span>');
-				if (r.success)
-				{
-					setTimeout(function()
-					{
-						$('#dbx-forgotpw-div').slideUp(200);
-						$('#dbx-login-btn').prop('disabled', false);
-					}, 10000);
-				}
-			},
-			error: function()
-			{
-				$('#dbx-forgot-msg').html('<span class="text-danger">Request failed. Please try again later.</span>');
-			}
-		});
-	}
-
-	//-----------------------------------------------------------
-	// Login dialog: Create Account (self-registration)
-	//-----------------------------------------------------------
-	function dbxRegisterUser()
-	{
-		var username = $('#dbx-reg-username-txt').val().trim();
-		var email    = $('#dbx-reg-email-txt').val().trim();
-		var password = $('#dbx-reg-password-txt').val();
-		var confirm  = $('#dbx-reg-confirm-txt').val();
-		$('#dbx-reg-msg').html('');
-		$.ajax({
-			url: '/api/user/register',
-			method: 'POST',
-			data: { username: username, email: email, password: password, confirmPassword: confirm },
-			dataType: 'json',
-			success: function(r)
-			{
-				if (r.success)
-				{
-					$('#dbx-reg-msg').html('<span class="text-success">' + r.message + '</span>');
-					setTimeout(function() { $('#dbx-tab-login').tab('show'); }, 1500);
-				}
-				else
-				{
-					$('#dbx-reg-msg').html('<span class="text-danger">' + r.message + '</span>');
-				}
-			},
-			error: function()
-			{
-				$('#dbx-reg-msg').html('<span class="text-danger">Registration failed. Please try again later.</span>');
-			}
-		});
-	}
 
 
 	//-----------------------------------------------------------

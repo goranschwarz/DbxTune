@@ -77,7 +77,7 @@ $(function()
 	if ($('#alarm-mute-dialog').length === 0) {
 		$('body').append([
 			"<div class='modal fade' id='alarm-mute-dialog' tabindex='-1' role='dialog'>",
-			"  <div class='modal-dialog modal-md' role='document'>",
+			"  <div class='modal-dialog modal-md' role='document' style='margin-top:70px;'>",
 			"    <div class='modal-content'>",
 			"      <div class='modal-header' id='alarm-mute-dialog-header'",
 			"           style='background:#1e2d40;color:#e8edf2;padding:10px 16px;'>",
@@ -111,9 +111,13 @@ $(function()
 			"                    style='font-size:0.8rem;border:1px solid #ced4da;border-radius:4px;padding:3px 8px;'>",
 			"              <option value='0'>Never (permanent)</option>",
 			"              <option value='1'>1 hour</option>",
+			"              <option value='2'>2 hours</option>",
 			"              <option value='4' selected>4 hours</option>",
 			"              <option value='8'>8 hours</option>",
+			"              <option value='12'>12 hours</option>",
 			"              <option value='24'>24 hours</option>",
+			"              <option value='eod'>End of day</option>",
+			"              <option value='eow'>End of week</option>",
 			"              <option value='168'>7 days</option>",
 			"            </select>",
 			"          </div>",
@@ -376,6 +380,23 @@ function alarmShowMuteDialog(alarmRow)
 	$('#alarm-mute-dialog').modal('show');
 }
 
+function _alarmMuteCalcHours(val)
+{
+	var now = new Date();
+	if (val === 'eod') {
+		var eod = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+		return Math.max(1, Math.ceil((eod - now) / 3600000));
+	}
+	if (val === 'eow') {
+		// End of this Sunday; if today is Sunday, use next Sunday
+		var day = now.getDay(); // 0=Sun
+		var daysToSunday = day === 0 ? 7 : 7 - day;
+		var eow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToSunday, 23, 59, 59);
+		return Math.max(1, Math.ceil((eow - now) / 3600000));
+	}
+	return parseInt(val, 10);
+}
+
 function alarmMuteSubmit(action)
 {
 	if (!_alarmMuteCurrentRow) return;
@@ -387,7 +408,8 @@ function alarmMuteSubmit(action)
 	};
 	if (action === 'mute') {
 		body.reason       = document.getElementById('alarm-mute-reason').value.trim();
-		var expiresHours  = parseInt(document.getElementById('alarm-mute-expires').value, 10);
+		var expiresVal    = document.getElementById('alarm-mute-expires').value;
+		var expiresHours  = _alarmMuteCalcHours(expiresVal);
 		body.expiresHours = expiresHours > 0 ? expiresHours : null;
 	}
 	$.ajax({

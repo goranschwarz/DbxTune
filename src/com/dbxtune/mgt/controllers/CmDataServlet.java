@@ -21,6 +21,7 @@
 package com.dbxtune.mgt.controllers;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.lang.invoke.MethodHandles;
 import java.sql.Blob;
@@ -49,7 +50,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -64,6 +64,9 @@ import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+
+import com.dbxtune.central.controllers.Helper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Collector-side servlet: GET /api/mgt/cm/data?cm=CmName&amp;time=YYYY-MM-DD HH:mm:ss&amp;type=abs|diff|rate
@@ -269,27 +272,28 @@ extends HttpServlet
 	{
 		resp.setContentType("application/json");
 		resp.setCharacterEncoding("UTF-8");
-		ServletOutputStream out = resp.getOutputStream();
+		ObjectMapper om  = Helper.createObjectMapper();
+		PrintWriter  out = resp.getWriter();
 
-		String cmName    = req.getParameter("cm");
-		String timeParam = req.getParameter("time");
-		String typeParam = req.getParameter("type");
+		String cmName    = Helper.getParameter(req, "cm");
+		String timeParam = Helper.getParameter(req, "time");
+		String typeParam = Helper.getParameter(req, "type", "abs");
 
-		if (cmName == null || cmName.trim().isEmpty())
+		if (cmName == null)
 		{
-			out.println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: cm\"}");
-			out.flush(); out.close(); 
+			om.writeValue(out, errMap("missing-param", "Missing required parameter: cm"));
+			out.flush(); out.close();
 			return;
 		}
-		if (timeParam == null || timeParam.trim().isEmpty())
+		if (timeParam == null)
 		{
-			out.println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: time\"}");
-			out.flush(); out.close(); 
+			om.writeValue(out, errMap("missing-param", "Missing required parameter: time"));
+			out.flush(); out.close();
 			return;
 		}
 		cmName    = cmName.trim();
 		timeParam = timeParam.trim();
-		typeParam = (typeParam == null || typeParam.trim().isEmpty()) ? "abs" : typeParam.trim().toLowerCase();
+		typeParam = typeParam.trim().toLowerCase();
 
 		// Validate type
 		if (!typeParam.equals("abs") && !typeParam.equals("diff") && !typeParam.equals("rate"))
@@ -298,8 +302,8 @@ extends HttpServlet
 		// Validate CM name — only safe identifier characters allowed
 		if (!cmName.matches("[A-Za-z0-9_]+"))
 		{
-			out.println("{\"error\":\"invalid-param\",\"message\":\"Invalid CM name\"}");
-			out.flush(); out.close(); 
+			om.writeValue(out, errMap("invalid-param", "Invalid CM name"));
+			out.flush(); out.close();
 			return;
 		}
 
@@ -314,8 +318,8 @@ extends HttpServlet
 		}
 		catch (ParseException ex)
 		{
-			out.println("{\"error\":\"invalid-param\",\"message\":\"Invalid time format, expected: yyyy-MM-dd HH:mm:ss\"}");
-			out.flush(); out.close(); 
+			om.writeValue(out, errMap("invalid-param", "Invalid time format, expected: yyyy-MM-dd HH:mm:ss"));
+			out.flush(); out.close();
 			return;
 		}
 
@@ -341,8 +345,8 @@ extends HttpServlet
 
 		if (conn == null)
 		{
-			out.println("{\"error\":\"no-data\",\"message\":" + jsonStr(noConnMsg) + "}");
-			out.flush(); out.close(); 
+			om.writeValue(out, errMap("no-data", noConnMsg));
+			out.flush(); out.close();
 			return;
 		}
 
@@ -399,10 +403,11 @@ extends HttpServlet
 
 			if (closest == null)
 			{
-				out.println("{\"error\":\"no-data-in-window\",\"message\":\"No rows found for this CM at the requested sample time\","
-						+ "\"cmName\":"        + jsonStr(cmName)    + ","
-						+ "\"type\":"          + jsonStr(typeParam)  + ","
-						+ "\"requestedTime\":" + jsonStr(timeParam)  + "}");
+				Map<String, Object> noData = errMap("no-data-in-window", "No rows found for this CM at the requested sample time");
+				noData.put("cmName",        cmName);
+				noData.put("type",          typeParam);
+				noData.put("requestedTime", timeParam);
+				om.writeValue(out, noData);
 				out.flush(); out.close();
 				return;
 			}
@@ -514,19 +519,8 @@ extends HttpServlet
 				}
 			}
 
-			// Build JSON response
-			SimpleDateFormat outFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-			StringBuilder sb = new StringBuilder();
-			sb.append("{");
-			sb.append("\"cmName\":").append(jsonStr(cmName)).append(",");
-			sb.append("\"type\":").append(jsonStr(typeParam)).append(",");
-			sb.append("\"requestedTime\":").append(jsonStr(timeParam)).append(",");
-			sb.append("\"resolvedTime\":").append(jsonStr(outFmt.format(closest))).append(",");
-			sb.append("\"cmSampleTime\":").append(cmSampleTime != null ? jsonStr(outFmt.format(cmSampleTime)) : "null").append(",");
-			sb.append("\"cmSampleMs\":").append(cmSampleMs != null ? cmSampleMs.toString() : "null").append(",");
-			sb.append("\"rowCount\":").append(rows.size()).append(",");
-
 			// CM metadata: diff columns + per-column tooltips from dictionary/local descriptions
+			SimpleDateFormat outFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 			String[]     diffCols = new String[0];
 			List<String> tooltips = new ArrayList<>(columns.size());
 			if (CounterController.hasInstance())
@@ -555,70 +549,53 @@ extends HttpServlet
 			// Pad tooltips list so it always has the same length as columns (null = no tooltip)
 			while (tooltips.size() < columns.size()) tooltips.add(null);
 
-			sb.append("\"diffColumns\":[");
-			for (int i = 0; i < diffCols.length; i++) { if (i > 0) sb.append(","); sb.append(jsonStr(diffCols[i])); }
-			sb.append("],");
-
-			// isNumeric[i] == true means column i is a numeric SQL type (right-align in UI)
-			sb.append("\"isNumeric\":[");
-			for (int i = 0; i < colTypes.size(); i++) { if (i > 0) sb.append(","); sb.append(colTypes.get(i) ? "true" : "false"); }
-			sb.append("],");
-
-			// Tooltips array (parallel to columns; null entries are omitted as JSON null)
-			sb.append("\"tooltips\":[");
-			for (int i = 0; i < tooltips.size(); i++) { if (i > 0) sb.append(","); String tt = tooltips.get(i); sb.append(tt == null ? "null" : jsonStr(tt)); }
-			sb.append("],");
-
-			// Columns array
-			sb.append("\"columns\":[");
-			for (int i = 0; i < columns.size(); i++) { if (i > 0) sb.append(","); sb.append(jsonStr(columns.get(i))); }
-			sb.append("],");
-
-			// Rows array
-			sb.append("\"rows\":[");
-			for (int r = 0; r < rows.size(); r++)
+			// Normalise rows: Timestamp → formatted string, byte[] → hex, null → null
+			List<List<Object>> normRows = new ArrayList<>(rows.size());
+			for (List<Object> row : rows)
 			{
-				if (r > 0) sb.append(",");
-				sb.append("[");
-				List<Object> row = rows.get(r);
-				for (int c = 0; c < row.size(); c++)
-				{
-					if (c > 0) sb.append(",");
-					Object val = row.get(c);
-					if (val == null)                   sb.append("null");
-					else if (val instanceof Timestamp) sb.append(jsonStr(outFmt.format((Timestamp) val)));
-					else if (val instanceof Number)    sb.append(val.toString());
-					else if (val instanceof Boolean)   sb.append(val.toString());
-					else if (val instanceof byte[])    sb.append(jsonStr(bytesToHex((byte[]) val)));
-					else                               sb.append(jsonStr(val.toString()));
-				}
-				sb.append("]");
+				List<Object> normRow = new ArrayList<>(row.size());
+				for (Object val : row)
+					normRow.add(normalizeRowValue(val, outFmt));
+				normRows.add(normRow);
 			}
-			sb.append("]}");
 
-			out.println(sb.toString());
+			// Build JSON response via Jackson
+			Map<String, Object> root = new LinkedHashMap<>();
+			root.put("cmName",        cmName);
+			root.put("type",          typeParam);
+			root.put("requestedTime", timeParam);
+			root.put("resolvedTime",  outFmt.format(closest));
+			root.put("cmSampleTime",  cmSampleTime != null ? outFmt.format(cmSampleTime) : null);
+			root.put("cmSampleMs",    cmSampleMs);
+			root.put("rowCount",      rows.size());
+			root.put("diffColumns",   Arrays.asList(diffCols));
+			root.put("isNumeric",     colTypes);
+			root.put("tooltips",      tooltips);
+			root.put("columns",       columns);
+			root.put("rows",          normRows);
+
+			om.writeValue(out, root);
 			out.flush();
 			out.close();
 		}
 		catch (Exception ex)
 		{
 			String msg = ex.getMessage();
+			Map<String, Object> errResp;
 			if (msg != null && (msg.contains("not found") || msg.contains("Table") || msg.contains("table")))
 			{
 				_logger.debug("CmDataServlet: table " + tableName + " not found: " + msg);
-				out.println("{\"error\":\"table-not-found\",\"message\":\"Table " + tableName.replace("\"", "\\\"") + " not found\","
-						+ "\"cmName\":"        + jsonStr(cmName)    + ","
-						+ "\"type\":"          + jsonStr(typeParam)  + ","
-						+ "\"requestedTime\":" + jsonStr(timeParam)  + "}");
+				errResp = errMap("table-not-found", "Table " + tableName + " not found");
 			}
 			else
 			{
 				_logger.warn("CmDataServlet: error querying " + tableName + ": " + msg, ex);
-				out.println("{\"error\":\"query-error\",\"message\":" + jsonStr(msg) + ","
-						+ "\"cmName\":"        + jsonStr(cmName)    + ","
-						+ "\"type\":"          + jsonStr(typeParam)  + ","
-						+ "\"requestedTime\":" + jsonStr(timeParam)  + "}");
+				errResp = errMap("query-error", msg);
 			}
+			errResp.put("cmName",        cmName);
+			errResp.put("type",          typeParam);
+			errResp.put("requestedTime", timeParam);
+			om.writeValue(out, errResp);
 			out.flush();
 			out.close();
 		}
@@ -754,40 +731,25 @@ extends HttpServlet
 	}
 
 	/**
-	 * Serialises a Java string as a JSON string literal.
-	 * All characters in the range 0x00-0x1F (control characters, including
-	 * tab, newline, carriage-return, form-feed, backspace) are escaped using their
-	 * 4-hex-digit unicode escape or short-form (\\n, \\r, \\t, ...)
-	 * representation so that the output is always valid JSON — even when the
-	 * source data contains embedded newlines, tabs, or other control chars
-	 * (e.g. the CmSummary "summary" column which uses tab-separated entries).
+	 * Normalises a raw row value to a type Jackson will serialise correctly.
+	 * Preserves the same output format as the previous manual StringBuilder approach.
 	 */
-	private static String jsonStr(String s)
+	private static Object normalizeRowValue(Object val, SimpleDateFormat fmt)
 	{
-		if (s == null) return "null";
-		StringBuilder sb = new StringBuilder(s.length() + 2);
-		sb.append('"');
-		for (int i = 0; i < s.length(); i++)
-		{
-			char c = s.charAt(i);
-			switch (c)
-			{
-				case '"':  sb.append("\\\""); break;
-				case '\\': sb.append("\\\\"); break;
-				case '\n': sb.append("\\n");  break;
-				case '\r': sb.append("\\r");  break;
-				case '\t': sb.append("\\t");  break;
-				case '\f': sb.append("\\f");  break;
-				case '\b': sb.append("\\b");  break;
-				default:
-					if (c < 0x20)
-						sb.append(String.format("\\u%04x", (int) c));
-					else
-						sb.append(c);
-					break;
-			}
-		}
-		sb.append('"');
-		return sb.toString();
+		if (val == null)               return null;
+		if (val instanceof Timestamp)  return fmt.format((Timestamp) val);
+		if (val instanceof Number)     return val;
+		if (val instanceof Boolean)    return val;
+		if (val instanceof byte[])     return bytesToHex((byte[]) val);
+		return val.toString();
+	}
+
+	/** Builds a simple error response map for Jackson serialisation. */
+	private static Map<String, Object> errMap(String code, String message)
+	{
+		Map<String, Object> m = new LinkedHashMap<>();
+		m.put("error",   code);
+		m.put("message", message);
+		return m;
 	}
 }
