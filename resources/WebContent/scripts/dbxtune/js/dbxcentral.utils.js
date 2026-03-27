@@ -107,18 +107,21 @@ function isLoggedIn(callback)
 			if (jsonResp.hasOwnProperty("isAdmin"))
 				isAdmin    = jsonResp.isAdmin;
 
-			// Set some stuff in the NavigationBar
+			// Set some stuff in the NavigationBar (elements may not exist on all pages)
+			var elIn   = document.getElementById("dbx-nb-isLoggedIn-div");
+			var elOut  = document.getElementById("dbx-nb-isLoggedOut-div");
+			var elUser = document.getElementById("dbx-nb-isLoggedInUser-div");
 			if (isLoggedIn)
 			{
-				document.getElementById("dbx-nb-isLoggedIn-div")    .style.display = "block";
-				document.getElementById("dbx-nb-isLoggedOut-div")   .style.display = "none";
-				document.getElementById("dbx-nb-isLoggedInUser-div").textContent   = asUserName;
+				if (elIn)   elIn  .style.display = "block";
+				if (elOut)  elOut .style.display = "none";
+				if (elUser) elUser.textContent   = asUserName;
 			}
 			else
 			{
-				document.getElementById("dbx-nb-isLoggedIn-div")    .style.display = "none";
-				document.getElementById("dbx-nb-isLoggedOut-div")   .style.display = "block";
-				document.getElementById("dbx-nb-isLoggedInUser-div").textContent   = "";
+				if (elIn)   elIn  .style.display = "none";
+				if (elOut)  elOut .style.display = "block";
+				if (elUser) elUser.textContent   = "";
 			}
 			
 			callback(isLoggedIn, asUserName, isAdmin);

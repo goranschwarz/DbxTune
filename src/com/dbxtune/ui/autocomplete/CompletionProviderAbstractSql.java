@@ -1215,12 +1215,20 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 //		System.out.println("getCurrentWord()='"+currentWord+"'.");
 //		System.out.println("getAlreadyEnteredText()='"+enteredText+"'.");
 
-		// Strip off any begin/end character that is a SQL Quoted Identifier
-		// NOTE: Not sure if this is the right place to do it or if we should do it LATER on, but lets start here
-		if (enteredText.startsWith(getDbIdentifierQuoteStringStart() ))  enteredText = enteredText.substring(getDbIdentifierQuoteStringStart().length());
-		if (currentWord.startsWith(getDbIdentifierQuoteStringStart() ))  currentWord = currentWord.substring(getDbIdentifierQuoteStringStart().length());
-		if (enteredText.endsWith  (getDbIdentifierQuoteStringEnd  () ))  enteredText = enteredText.substring(0, enteredText.length() - getDbIdentifierQuoteStringEnd().length());
-		if (currentWord.endsWith  (getDbIdentifierQuoteStringEnd  () ))  currentWord = currentWord.substring(0, currentWord.length() - getDbIdentifierQuoteStringEnd().length());
+		// Strip off any begin/end character that is a SQL Quoted Identifier.
+		// IMPORTANT: Only strip from enteredText when it is a simple (non-dot-qualified) identifier.
+		// If enteredText contains a dot outside of bracket quotes (e.g. "[MM-GCP-DW].DbxSess"),
+		// the bracket-quoted prefix must be preserved intact so that setFullName() can parse it
+		// correctly via splitBracketAware().  stripping only the leading '[' would leave a
+		// dangling ']' in the middle and corrupt the lookup.
+		if (!SqlObjectName.hasOuterDot(enteredText))
+		{
+			if (enteredText.startsWith(getDbIdentifierQuoteStringStart()))  enteredText = enteredText.substring(getDbIdentifierQuoteStringStart().length());
+			if (enteredText.endsWith  (getDbIdentifierQuoteStringEnd  ()))  enteredText = enteredText.substring(0, enteredText.length() - getDbIdentifierQuoteStringEnd().length());
+		}
+		// Always strip quotes from the partial currentWord (the suffix being typed after the last dot)
+		if (currentWord.startsWith(getDbIdentifierQuoteStringStart()))  currentWord = currentWord.substring(getDbIdentifierQuoteStringStart().length());
+		if (currentWord.endsWith  (getDbIdentifierQuoteStringEnd  ()))  currentWord = currentWord.substring(0, currentWord.length() - getDbIdentifierQuoteStringEnd().length());
 
 
 		// Code Completion Refresh

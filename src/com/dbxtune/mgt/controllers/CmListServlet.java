@@ -21,6 +21,7 @@
 package com.dbxtune.mgt.controllers;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -36,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -50,6 +50,9 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+
+import com.dbxtune.central.controllers.Helper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Collector-side servlet: GET /api/mgt/cm/list?time=YYYY-MM-DD HH:mm:ss
@@ -81,12 +84,13 @@ extends HttpServlet
 	{
 		resp.setContentType("application/json");
 		resp.setCharacterEncoding("UTF-8");
-		ServletOutputStream out = resp.getOutputStream();
+		ObjectMapper om  = Helper.createObjectMapper();
+		PrintWriter  out = resp.getWriter();
 
-		String timeParam = req.getParameter("time");
-		if (timeParam == null || timeParam.trim().isEmpty())
+		String timeParam = Helper.getParameter(req, "time");
+		if (timeParam == null)
 		{
-			out.println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: time\"}");
+			om.writeValue(out, errMap("missing-param", "Missing required parameter: time"));
 			out.flush();
 			out.close();
 			return;
@@ -104,7 +108,7 @@ extends HttpServlet
 		}
 		catch (ParseException ex)
 		{
-			out.println("{\"error\":\"invalid-param\",\"message\":\"Invalid time format, expected: yyyy-MM-dd HH:mm:ss\"}");
+			om.writeValue(out, errMap("invalid-param", "Invalid time format, expected: yyyy-MM-dd HH:mm:ss"));
 			out.flush();
 			out.close();
 			return;
@@ -121,7 +125,7 @@ extends HttpServlet
 
 		if (conn == null)
 		{
-			out.println("{\"error\":\"no-data\",\"message\":\"No storage connection available\"}");
+			om.writeValue(out, errMap("no-data", "No storage connection available"));
 			out.flush();
 			out.close();
 			return;
@@ -129,7 +133,7 @@ extends HttpServlet
 
 		if (!CounterController.hasInstance())
 		{
-			out.println("{\"error\":\"no-data\",\"message\":\"No CounterController instance available\"}");
+			om.writeValue(out, errMap("no-data", "No CounterController instance available"));
 			out.flush();
 			out.close();
 			return;
@@ -139,7 +143,7 @@ extends HttpServlet
 		List<CountersModel> cmList = cc.getCmList();
 		if (cmList == null || cmList.isEmpty())
 		{
-			out.println("{\"error\":\"no-data\",\"message\":\"No CounterModels registered\"}");
+			om.writeValue(out, errMap("no-data", "No CounterModels registered"));
 			out.flush();
 			out.close();
 			return;
@@ -162,25 +166,20 @@ extends HttpServlet
 			groups.computeIfAbsent(groupName, k -> new ArrayList<>()).add(cm);
 		}
 
-		// Build JSON -- NOTE: Claude didn't use Jackson Writer... it will probably be cleaner with that...
+		// Build JSON response via Jackson
 		SimpleDateFormat tsFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-		StringBuilder sb = new StringBuilder();
-		sb.append("{");
-		sb.append("\"requestedTime\":").append(jsonStr(timeParam)).append(",");
-		if (sampleDetails != null && sampleDetails.resolvedTime != null)
-			sb.append("\"resolvedTime\":").append(jsonStr(tsFmt.format(sampleDetails.resolvedTime))).append(",");
-		sb.append("\"groups\":[");
 
-		boolean firstGroup = true;
+		Map<String, Object> root = new LinkedHashMap<>();
+		root.put("requestedTime", timeParam);
+		if (sampleDetails != null && sampleDetails.resolvedTime != null)
+			root.put("resolvedTime", tsFmt.format(sampleDetails.resolvedTime));
+
+		List<Map<String, Object>> groupList = new ArrayList<>();
 		for (Map.Entry<String, List<CountersModel>> entry : groups.entrySet())
 		{
-			if (!firstGroup) sb.append(",");
-			firstGroup = false;
-
 			String groupName = entry.getKey();
 			List<CountersModel> cms = entry.getValue();
 
-			// Use the icon of the first CM in the group as the group-level icon
 			String groupIcon = null;
 			for (CountersModel cm : cms)
 			{
@@ -188,24 +187,15 @@ extends HttpServlet
 				if (f != null && !f.trim().isEmpty()) { groupIcon = f.trim(); break; }
 			}
 
-			sb.append("{");
-			sb.append("\"groupName\":").append(jsonStr(groupName)).append(",");
-			sb.append("\"groupIcon\":").append(groupIcon == null ? "null" : jsonStr(groupIcon)).append(",");
-			sb.append("\"cms\":[");
-
-			boolean firstCm = true;
+			List<Map<String, Object>> cmList2 = new ArrayList<>();
 			for (CountersModel cm : cms)
 			{
-				if (!firstCm) sb.append(",");
-				firstCm = false;
-
 				String cmName      = cm.getName();
 				String displayName = cm.getDisplayName();
 				if (displayName == null || displayName.trim().isEmpty())
 					displayName = cmName;
 				String iconFile = cm.getIconFile();
 
-				// Default: assume no data if we couldn't query MonSessionSampleDetailes
 				boolean hasData           = false;
 				int     absRows           = 0;
 				int     diffRows          = 0;
@@ -218,38 +208,37 @@ extends HttpServlet
 					CmSampleInfo info = sampleDetails.cms.get(cmName);
 					if (info != null)
 					{
-						// Mirror PersistReader.getPrevSample()/getNextSample(): a CM "has data" only
-						// when it actually saved rows — not just that it ran (hasValidSampleData).
-						// CmLocks/CmSqlDynamic etc. may have hasValidSampleData=1 but absRows=0
-						// when nothing was found that sample; no point showing an empty table as blue.
-						absRows          = info.absRows;
-						diffRows         = info.diffRows;
-						rateRows         = info.rateRows;
-						hasData          = (absRows > 0 || diffRows > 0 || rateRows > 0);
-						exceptionMsg     = info.exceptionMsg;
+						absRows           = info.absRows;
+						diffRows          = info.diffRows;
+						rateRows          = info.rateRows;
+						hasData           = (absRows > 0 || diffRows > 0 || rateRows > 0);
+						exceptionMsg      = info.exceptionMsg;
 						exceptionFullText = info.exceptionFullText;
 					}
 				}
 
-				sb.append("{");
-				sb.append("\"cmName\":").append(jsonStr(cmName)).append(",");
-				sb.append("\"displayName\":").append(jsonStr(displayName)).append(",");
-				sb.append("\"iconFile\":").append(iconFile == null ? "null" : jsonStr(iconFile)).append(",");
-				sb.append("\"hasData\":").append(hasData).append(",");
-				sb.append("\"absRows\":") .append(absRows) .append(",");
-				sb.append("\"diffRows\":").append(diffRows).append(",");
-				sb.append("\"rateRows\":").append(rateRows);
-				if (exceptionMsg      != null) sb.append(",\"exceptionMsg\":")     .append(jsonStr(exceptionMsg));
-				if (exceptionFullText != null) sb.append(",\"exceptionFullText\":").append(jsonStr(exceptionFullText));
-				sb.append("}");
+				Map<String, Object> cmMap = new LinkedHashMap<>();
+				cmMap.put("cmName",      cmName);
+				cmMap.put("displayName", displayName);
+				cmMap.put("iconFile",    iconFile);
+				cmMap.put("hasData",     hasData);
+				cmMap.put("absRows",     absRows);
+				cmMap.put("diffRows",    diffRows);
+				cmMap.put("rateRows",    rateRows);
+				if (exceptionMsg      != null) cmMap.put("exceptionMsg",      exceptionMsg);
+				if (exceptionFullText != null) cmMap.put("exceptionFullText", exceptionFullText);
+				cmList2.add(cmMap);
 			}
 
-			sb.append("]}");
+			Map<String, Object> groupMap = new LinkedHashMap<>();
+			groupMap.put("groupName", groupName);
+			groupMap.put("groupIcon", groupIcon);
+			groupMap.put("cms",       cmList2);
+			groupList.add(groupMap);
 		}
+		root.put("groups", groupList);
 
-		sb.append("]}");
-
-		out.println(sb.toString());
+		om.writeValue(out, root);
 		out.flush();
 		out.close();
 	}
@@ -353,9 +342,12 @@ extends HttpServlet
 		}
 	}
 
-	private static String jsonStr(String s)
+	/** Builds a simple error response map for Jackson serialisation. */
+	private static Map<String, Object> errMap(String code, String message)
 	{
-		if (s == null) return "null";
-		return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\"";
+		Map<String, Object> m = new LinkedHashMap<>();
+		m.put("error",   code);
+		m.put("message", message);
+		return m;
 	}
 }

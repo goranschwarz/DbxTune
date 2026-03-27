@@ -23,6 +23,8 @@ package com.dbxtune.sql;
 import java.lang.invoke.MethodHandles;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -545,19 +547,19 @@ public class SqlObjectName
 		_schNameUnModified  = "";
 		_objNameUnModified  = name;
 		
-		int dot1 = name.indexOf('.');
-		if (dot1 >= 0)
+		// Split on '.' outside bracket-quoted [...] segments so that names like
+		// [MM-GCP-DW].DbxSess and [abc[]]def].[dbo].[Table] are parsed correctly.
+		List<String> parts = splitBracketAware(name);
+		if (parts.size() >= 3)
 		{
-			_schNameUnModified = name.substring(0, dot1);
-			_objNameUnModified = name.substring(dot1+1);
-
-			int dot2 = name.indexOf('.', dot1+1);
-			if (dot2 >= 0)
-			{
-				_catNameUnModified = name.substring(0, dot1);
-				_schNameUnModified = name.substring(dot1+1, dot2);
-				_objNameUnModified = name.substring(dot2+1);
-			}
+			_catNameUnModified = parts.get(0);
+			_schNameUnModified = parts.get(1);
+			_objNameUnModified = parts.get(2);
+		}
+		else if (parts.size() == 2)
+		{
+			_schNameUnModified = parts.get(0);
+			_objNameUnModified = parts.get(1);
 		}
 		
 		// in some cases check schema/owner name
@@ -697,38 +699,188 @@ public class SqlObjectName
 	
 	
 	
-	/** 
-	 * Strip out quote characters and square brackets at start/end of the string<br>
-	 * '"colname"' and '[colname]' will be 'colname'
-	 * @param str
-	 * @return
+	/**
+	 * Strip bracket or DBMS quote characters from a SQL identifier.<br>
+	 * Handles the SQL Server QUOTENAME convention where a literal {@code ]}
+	 * inside a {@code [...]} quoted name is escaped as {@code ]]}.<br>
+	 * <br>
+	 * Examples:<br>
+	 * {@code "[colname]"    → "colname"}<br>
+	 * {@code "[abc[]]def]"  → "abc[]def"}  (]] unescaped to ])<br>
+	 * {@code '"colname"'    → "colname"}<br>
+	 * {@code "[partial"     → "partial"}   (unclosed bracket — partial input)<br>
+	 *
+	 * @param str                   the raw SQL identifier token
+	 * @param dbIdentifierQuoteString  the DBMS-specific quote char (e.g. {@code "})
+	 * @return unquoted identifier, or {@code null} if input is {@code null}
 	 */
 	public static String stripQuote(String str, String dbIdentifierQuoteString)
 	{
 		if (str == null)
 			return str;
 
+		// --- bracket [...] quoting (SQL Server QUOTENAME style) ----------------
+		if (str.startsWith("["))
+		{
+			// Walk to find the real closing ']' — a doubled ']]' is an escaped literal ']'
+			int closePos = -1;
+			for (int i = 1; i < str.length(); i++)
+			{
+				if (str.charAt(i) == ']')
+				{
+					if (i + 1 < str.length() && str.charAt(i + 1) == ']')
+						i++; // skip escaped ]], keep scanning
+					else
+					{
+						closePos = i;
+						break;
+					}
+				}
+			}
+			if (closePos == str.length() - 1)
+				// Fully bracket-quoted: strip outer [ ] and unescape ]] → ]
+				return str.substring(1, closePos).replace("]]", "]");
+			else
+				// Unclosed bracket (partial user input): just strip the leading [
+				return str.substring(1);
+		}
+
+		// --- DBMS identifier quote (e.g. " for standard SQL) ------------------
 		String quoteStr = dbIdentifierQuoteString;
 		if (StringUtil.isNullOrBlank(quoteStr))
 			quoteStr = "\"";
 
-		// Strip leading/trailing '"' or whatever chars the database are using as quoted identifiers
-		if (str.startsWith(quoteStr) && str.endsWith(quoteStr))
-			str = str.substring(str.indexOf(quoteStr)+1, str.lastIndexOf(quoteStr));
-		
-		// Strip leading '"' or whatever chars the database are using as quoted identifiers
-		else if (str.startsWith(quoteStr))
-			str = str.substring(str.indexOf(quoteStr)+1);
-		
-		// Strip leading/trailing '[' and ']' 
-		else if (str.startsWith("[") && str.endsWith("]"))
-			str = str.substring(1, str.lastIndexOf(']'));
-
-		// Strip leading '['
-		else if (str.startsWith("["))
-			str = str.substring(1);
+		if (!quoteStr.equals("["))   // avoid double-handling brackets
+		{
+			if (str.startsWith(quoteStr) && str.endsWith(quoteStr) && str.length() > quoteStr.length())
+				return str.substring(quoteStr.length(), str.length() - quoteStr.length());
+			else if (str.startsWith(quoteStr))
+				return str.substring(quoteStr.length());
+		}
 
 		return str;
+	}
+
+	/**
+	 * Wraps a raw SQL identifier in bracket quotes, escaping any embedded {@code ]}
+	 * as {@code ]]} per the SQL Server QUOTENAME convention.<br>
+	 * Example: {@code "abc[]def" → "[abc[]]def]"}
+	 *
+	 * @param name  raw (unquoted) identifier
+	 * @return bracket-quoted identifier, or {@code null} if input is {@code null}
+	 */
+	public static String addBracketQuote(String name)
+	{
+		if (name == null) return null;
+		return "[" + name.replace("]", "]]") + "]";
+	}
+
+	/**
+	 * Splits a (possibly bracket-quoted) multi-part SQL name on {@code '.'} separators
+	 * that are <em>outside</em> any {@code [...]} quoted segment.<br>
+	 * Handles the {@code ]]} escape sequence inside brackets correctly.<br>
+	 * <br>
+	 * Examples:<br>
+	 * {@code "[MM-GCP-DW].DbxSess"       → ["[MM-GCP-DW]", "DbxSess"]}<br>
+	 * {@code "[a[]]b].[dbo].[MyTable]"   → ["[a[]]b]", "[dbo]", "[MyTable]"]}<br>
+	 * {@code "schema.table"              → ["schema", "table"]}<br>
+	 *
+	 * @param name  raw multi-part SQL name (may contain bracket-quoted segments)
+	 * @return list of parts in order; never {@code null}
+	 */
+	public static List<String> splitBracketAware(String name)
+	{
+		List<String> parts = new ArrayList<>();
+		if (name == null)
+			return parts;
+
+		StringBuilder cur = new StringBuilder();
+		int i = 0;
+		while (i < name.length())
+		{
+			char c = name.charAt(i);
+			if (c == '[')
+			{
+				// Consume the entire bracket-quoted segment verbatim (preserving [, ]], ])
+				cur.append(c);
+				i++;
+				while (i < name.length())
+				{
+					char d = name.charAt(i);
+					cur.append(d);
+					i++;
+					if (d == ']')
+					{
+						if (i < name.length() && name.charAt(i) == ']')
+						{
+							// Escaped ]] inside bracket — consume both and stay inside
+							cur.append(']');
+							i++;
+						}
+						else
+						{
+							break; // real closing bracket
+						}
+					}
+				}
+			}
+			else if (c == '.')
+			{
+				parts.add(cur.toString());
+				cur.setLength(0);
+				i++;
+			}
+			else
+			{
+				cur.append(c);
+				i++;
+			}
+		}
+		if (cur.length() > 0)
+			parts.add(cur.toString());
+
+		return parts;
+	}
+
+	/**
+	 * Returns {@code true} if {@code name} contains a {@code '.'} that is
+	 * <em>outside</em> any {@code [...]} bracket-quoted segment.<br>
+	 * Used to determine whether a token is a simple identifier or a multi-part
+	 * qualified name before stripping leading quote characters.
+	 */
+	public static boolean hasOuterDot(String name)
+	{
+		if (name == null)
+			return false;
+		int i = 0;
+		while (i < name.length())
+		{
+			char c = name.charAt(i);
+			if (c == '[')
+			{
+				i++;
+				while (i < name.length())
+				{
+					char d = name.charAt(i++);
+					if (d == ']')
+					{
+						if (i < name.length() && name.charAt(i) == ']')
+							i++; // skip escaped ]]
+						else
+							break; // real closing ]
+					}
+				}
+			}
+			else if (c == '.')
+			{
+				return true;
+			}
+			else
+			{
+				i++;
+			}
+		}
+		return false;
 	}
 
 	/**

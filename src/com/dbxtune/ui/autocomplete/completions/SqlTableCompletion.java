@@ -54,15 +54,21 @@ extends SqlCompletion
 //			addSchema = addCatalog; // if catalog is true, we need to add a simple '.'
 //		}
 
-		String dbmsDefaultSchemaName = provider.getDbDefaultSchemaName();
-		if (StringUtil.hasValue(dbmsDefaultSchemaName) && dbmsDefaultSchemaName.equals(ti._tabSchema))
-			addSchema = false;
-		
-		String[] dbmsSkipResolvSchemaName = provider.getDbSkipResolvSchemaName();
-		for (String schName : dbmsSkipResolvSchemaName)
+		// Omit the default schema (e.g. "dbo") only for simple 2-part names.
+		// When a catalog is also included we need the full 3-part name
+		// (dbname.schema.tablename), so the schema must never be dropped.
+		if (!addCatalog)
 		{
-			if (StringUtil.hasValue(schName) && schName.equals(ti._tabSchema))
+			String dbmsDefaultSchemaName = provider.getDbDefaultSchemaName();
+			if (StringUtil.hasValue(dbmsDefaultSchemaName) && dbmsDefaultSchemaName.equals(ti._tabSchema))
 				addSchema = false;
+
+			String[] dbmsSkipResolvSchemaName = provider.getDbSkipResolvSchemaName();
+			for (String schName : dbmsSkipResolvSchemaName)
+			{
+				if (StringUtil.hasValue(schName) && schName.equals(ti._tabSchema))
+					addSchema = false;
+			}
 		}
 
 		String out = "";

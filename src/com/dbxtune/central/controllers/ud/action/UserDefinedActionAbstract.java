@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.io.output.TeeWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.commons.text.StringEscapeUtils;
@@ -57,14 +56,17 @@ implements IUserDefinedAction
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	public static final String PROPKEY_name             = "name";
-	public static final String PROPKEY_actionType       = "actionType";
-	public static final String PROPKEY_command          = "command";
-	public static final String PROPKEY_description      = "description";
-	public static final String PROPKEY_refresh          = "refresh";
-	public static final String PROPKEY_authorizedRoles  = "authorized.roles";
-	public static final String PROPKEY_authorizedUsers  = "authorized.users";
-	public static final String PROPKEY_logFilename      = "logFilename";
+	public static final String  PROPKEY_name                   = "name";
+	public static final String  PROPKEY_actionType             = "actionType";
+	public static final String  PROPKEY_command                = "command";
+	public static final String  PROPKEY_description            = "description";
+	public static final String  PROPKEY_refresh                = "refresh";
+	public static final String  PROPKEY_authorizedRoles        = "authorized.roles";
+	public static final String  PROPKEY_authorizedUsers        = "authorized.users";
+	public static final String  PROPKEY_logFilename            = "logFilename";
+
+	public static final String  PROPKEY_requiresReasonMessage  = "requiresReasonMessage";
+	public static final boolean DEFAULT_requiresReasonMessage  = false;
 
 	public static final String  PROPKEY_mail_smtpHostname           = "mail.smtp.hostname";
 	public static final String  DEFAULT_mail_smtpHostname           = "";
@@ -109,7 +111,9 @@ implements IUserDefinedAction
 	private List<String> _authorizedRoles;
 	private List<String> _authorizedUsers;
 	private String       _logFilename    ;
-	private String       _executedByUser ;  // DbxTune login name of the user who triggered this action
+	private String       _executedByUser ;         // DbxTune login name of the user who triggered this action
+	private boolean      _requiresReasonMessage = DEFAULT_requiresReasonMessage;
+	private String       _executionReason       = null; // free-text reason entered before execution
 
 	private Configuration _conf;
 	private boolean       _isValid;
@@ -151,14 +155,18 @@ implements IUserDefinedAction
 	@Override public String       getLogFilename()     { return _logFilename; }
 	@Override public String       getConfigFilename()  { return _conf.getFilename(); }
 	@Override public int          getPageRefreshTime() { return _refresh; }
+	@Override public String       getExecutedByUser()  { return StringUtil.nullToValue(_executedByUser, "-unknown-"); }
+	@Override public String       getExecutionReason() { return _executionReason; }
 
-	          public void setName              (String name           ) { _name            = name; }
-	          public void setCommand           (String command        ) { _command         = command; }
-	          public void setDescription       (String description    ) { _description     = description; }
-	          public void setLogFilename       (String logFilename    ) { _logFilename     = logFilename; }
-	@Override public void setPageRefreshTime   (int    refresh        ) { _refresh         = refresh; }
-	@Override public void setExecutedByUser    (String username       ) { _executedByUser  = username; }
-	@Override public String getExecutedByUser  ()                       { return StringUtil.nullToValue(_executedByUser, "-unknown-"); }
+	@Override public boolean      isReasonMessageRequired() { return _requiresReasonMessage; }
+
+	          public void setName           (String name       ) { _name            = name; }
+	          public void setCommand        (String command    ) { _command         = command; }
+	          public void setDescription    (String description) { _description     = description; }
+	          public void setLogFilename    (String logFilename) { _logFilename     = logFilename; }
+	@Override public void setPageRefreshTime(int    refresh    ) { _refresh         = refresh; }
+	@Override public void setExecutedByUser (String username   ) { _executedByUser  = username; }
+	@Override public void setExecutionReason(String reason     ) { _executionReason = (reason == null ? null : reason.trim()); }
 
 	
 
@@ -231,15 +239,16 @@ implements IUserDefinedAction
 	public void init(Configuration conf)
 	throws Exception
 	{
-		_name            = conf.getMandatoryProperty(PROPKEY_name           );
-		_actionType      = ActionType.fromString(conf.getMandatoryProperty(PROPKEY_actionType));
-		_command         = conf.getMandatoryProperty(PROPKEY_command);
-		_description     = conf.getProperty         (PROPKEY_description    , null);
-//		_authorization   = conf.getProperty         (PROPKEY_authorization  , null);
-		_authorizedRoles = StringUtil.parseCommaStrToList(conf.getProperty(PROPKEY_authorizedRoles, null));
-		_authorizedUsers = StringUtil.parseCommaStrToList(conf.getProperty(PROPKEY_authorizedUsers, null));
-		_logFilename     = conf.getProperty         (PROPKEY_logFilename    , null);
-		_refresh         = conf.getIntProperty      (PROPKEY_refresh        , -1);
+		_name                    = conf.getMandatoryProperty(PROPKEY_name);
+		_actionType              = ActionType.fromString(conf.getMandatoryProperty(PROPKEY_actionType));
+		_command                 = conf.getMandatoryProperty(PROPKEY_command);
+		_description             = conf.getProperty         (PROPKEY_description           , null);
+//		_authorization           = conf.getProperty         (PROPKEY_authorization         , null);
+		_authorizedRoles         = StringUtil.parseCommaStrToList(conf.getProperty(PROPKEY_authorizedRoles, null));
+		_authorizedUsers         = StringUtil.parseCommaStrToList(conf.getProperty(PROPKEY_authorizedUsers, null));
+		_logFilename             = conf.getProperty         (PROPKEY_logFilename           , null);
+		_refresh                 = conf.getIntProperty      (PROPKEY_refresh               , -1);
+		_requiresReasonMessage   = conf.getBooleanProperty  (PROPKEY_requiresReasonMessage , DEFAULT_requiresReasonMessage);
 
 		// Mail stuff
 		_mailSmtpHostname           = conf.getProperty       (PROPKEY_mail_smtpHostname,           DEFAULT_mail_smtpHostname);
@@ -365,7 +374,8 @@ implements IUserDefinedAction
 //		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
 //		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
 
-		String msgSubject = "Dbx: User Action '" + getName() + "' on '" + getOnServerName() + "' was executed by '" + getExecutedByUser() + "'";
+		String reasonSuffix = StringUtil.hasValue(getExecutionReason()) ? " [reason: " + getExecutionReason() + "]" : "";
+		String msgSubject = "Dbx: User Action '" + getName() + "' on '" + getOnServerName() + "' was executed by '" + getExecutedByUser() + "'" + reasonSuffix;
 		String msgBody    = msg;
 		
 		int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
@@ -894,8 +904,13 @@ implements IUserDefinedAction
 		println(pageOut, mailOut, "<div id='ud-content'>");
 
 		println(pageOut, mailOut, "<h3 class='mb-4'>" + getActionType() + " Action: " + getName() + "</h2>");
-		if (mailOut != null)
-			mailOut.println("<p style='color:#666; font-size:0.9em; margin-top:-8px;'>Executed by: <strong>" + escapeHtml(getExecutedByUser()) + "</strong></p>");
+		// Show execution metadata on both the page and in the mail report
+		String metaHtml = "<p style='color:#666; font-size:0.9em; margin-top:-8px;'>"
+				+ "Executed by: <strong>" + escapeHtml(getExecutedByUser()) + "</strong>";
+		if (StringUtil.hasValue(getExecutionReason()))
+			metaHtml += "<br>Reason: <strong>" + escapeHtml(getExecutionReason()) + "</strong>";
+		metaHtml += "</p>";
+		println(pageOut, mailOut, metaHtml);
 		println(pageOut, mailOut, "<div id='dbx-uda-output'></div>"); // We will ADD stuff in here via JavaScript
 
 		//-------------------------------------------------------

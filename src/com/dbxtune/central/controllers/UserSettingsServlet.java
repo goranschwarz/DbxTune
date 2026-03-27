@@ -63,7 +63,7 @@ public class UserSettingsServlet extends HttpServlet
 		if (!"profile".equals(op))
 		{
 			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			new ObjectMapper().writeValue(resp.getWriter(), buildError("Unknown op: " + op));
+			Helper.createObjectMapper().writeValue(resp.getWriter(), buildError("Unknown op: " + op));
 			return;
 		}
 
@@ -77,13 +77,13 @@ public class UserSettingsServlet extends HttpServlet
 			ProfileResult pr = new ProfileResult();
 			pr.username = username;
 			pr.email    = (user != null) ? StringUtil.nullToValue(user.getEmail(), "") : "";
-			new ObjectMapper().writeValue(resp.getWriter(), pr);
+			Helper.createObjectMapper().writeValue(resp.getWriter(), pr);
 		}
 		catch (SQLException e)
 		{
 			_logger.error("UserSettingsServlet.doGet: DB error for user '{}'.", username, e);
 			resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			new ObjectMapper().writeValue(resp.getWriter(), buildError("Database error."));
+			Helper.createObjectMapper().writeValue(resp.getWriter(), buildError("Database error."));
 		}
 	}
 

@@ -81,6 +81,7 @@ public class HtmlStatic
 		writer.println();
 		writer.println("  <!-- JS: DbxCentral --> ");
 		writer.println("  <script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.utils.js'></script> ");
+		writer.println("  <script type='text/javascript' src='/scripts/dbxtune/js/dbxLoginModal.js'></script> ");
 		writer.println();
 		writer.println("  <!--  ");
 		writer.println("    ======================================================================= ");
@@ -193,7 +194,7 @@ public class HtmlStatic
 				writer.println("        </div> ");
 				writer.println("        <!-- IS LOGGED OUT --> ");
 				writer.println("        <div id='dbx-nb-isLoggedOut-div'> ");
-				writer.println("          <a class='nav-link' href='/index.html?login'> <i class='fa fa-sign-in'></i> <span data-toggle='tooltip' title='Log in as a specific user.'>Login</span></a> ");
+				writer.println("          <a class='nav-link' href='#'> <i class='fa fa-sign-in'></i> <span data-toggle='tooltip' title='Log in as a specific user.'>Login</span></a> ");
 				writer.println("        </div> ");
 			}
 			writer.println("      </ul> <!-- end right hand side --> ");

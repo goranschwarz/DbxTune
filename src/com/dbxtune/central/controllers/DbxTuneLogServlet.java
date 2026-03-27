@@ -33,8 +33,9 @@ import java.util.LinkedList;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import java.io.PrintWriter;
+
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -56,14 +57,14 @@ public class DbxTuneLogServlet extends HttpServlet
 
 	private final String LOG_DIR  = DbxTuneCentral.getAppLogDir();
 
-	ServletOutputStream out = null;
+	PrintWriter out = null;
 	HttpServletResponse _resp = null;
 	
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
 		_resp = resp;
-		out = resp.getOutputStream();
+		out = resp.getWriter();
 
 		// Check for known input parameters
 		if (Helper.hasUnKnownParameters(req, resp, "name", "type", "method", "discard", "tail"))
@@ -233,23 +234,15 @@ public class DbxTuneLogServlet extends HttpServlet
 	{
 		File f = new File(LOG_DIR+"/"+inputName);
 
-		out.println("<html> ");
-		
-		out.println("<head> ");
-		out.println("<title>"+inputName+"</title> ");
-		
-		out.println("<style type='text/css'> ");
-		out.println("body {                  ");
-		out.println("	  height: 100%;      ");
-//		out.println("	  overflow: hidden;  ");
-		out.println("	}                    ");
-        out.println("                        ");
-//		out.println("	textarea {           ");
-//		out.println("	  width: 100%;       ");
-//		out.println("	  height: 100vw;     ");
-//		out.println("	  overflow: hidden;  ");
-//		out.println("	}                    ");
-		out.println("</style> ");
+		out.println("<!DOCTYPE html>");
+		out.println("<html>");
+		out.println("<head>");
+		out.println("<title>" + inputName + "</title>");
+		out.println(HtmlStatic.getUserDefinedContentHead());
+		out.println("<style type='text/css'>");
+		out.println("body { height: 100%; }");
+		out.println("pre#log { font-size: 0.8rem; line-height: 1.2; }");
+		out.println("</style>");
 
 		out.println("");
 		out.println("<script type='text/javascript'>");
@@ -479,11 +472,11 @@ public class DbxTuneLogServlet extends HttpServlet
 		out.println("</script>");
 		out.println("");
 
-		out.println("</head> ");
-		out.println("");
-
-		out.println("<body> ");
-		out.println("<h2>"+f.getAbsolutePath()+"</h2>");
+		out.println("</head>");
+		out.println("<body>");
+		out.println(HtmlStatic.getUserDefinedContentNavbar());
+		out.println("<div class='container-fluid mt-3'>");
+		out.println("<h5>" + StringEscapeUtils.escapeHtml4(f.getAbsolutePath()) + "</h5>");
 
 		// Compile the regexp; if we got any
 		Pattern pattern = null;
@@ -640,8 +633,10 @@ public class DbxTuneLogServlet extends HttpServlet
 //		out.println("  }); ");
 //		out.println("</script> ");
 
-		out.println("</body> ");
-		out.println("</html> ");
+		out.println("</div>"); // end container-fluid
+		out.println(HtmlStatic.getUserDefinedContentJavaScriptAtEnd());
+		out.println("</body>");
+		out.println("</html>");
 
 		out.flush();
 		out.close();
@@ -673,64 +668,24 @@ public class DbxTuneLogServlet extends HttpServlet
 	throws ServletException, IOException
 	{
 		
+		out.println("<!DOCTYPE html>");
 		out.println("<html>");
-		
-		out.println("<head> ");
-		out.println("<title>"+inputName+"</title> ");
-
-//		out.println("<style type='text/css'>");
-//		out.println("  table {border-collapse: collapse;}");
-//		out.println("  th, td {border: 1px solid black; text-align: left; padding: 2px;}");
-//		out.println("  tr:nth-child(even) {background-color: #f2f2f2;}");
-//		out.println("</style>");
-		
-//		out.println("<script>");
-//		out.println("function filterFunction()                                     ");
-//		out.println("{                                                             ");
-//		out.println("  var input, filter, table, tr, td, i;                        ");
-//		out.println("  input  = document.getElementById('filterInput');            ");
-//		out.println("  filter = input.value.toUpperCase();                         ");
-//		out.println("  table  = document.getElementById('alarmTable');             ");
-//		out.println("  tr     = table.getElementsByTagName('tr');                  ");
-//		out.println("  for (r = 0; r < tr.length; r++)                             ");
-//		out.println("  {                                                           ");
-//		out.println("    tdArr = tr[r].getElementsByTagName('td');                 ");
-//		out.println("    show = false;                                             ");
-//		out.println("    for (c = 0; c < tdArr.length; c++)                        ");
-//		out.println("    {                                                         ");
-//		out.println("      td = tr[r].getElementsByTagName('td')[c];               ");
-//		out.println("      if (td)                                                 ");
-//		out.println("      {                                                       ");
-//		out.println("        if (td.innerHTML.toUpperCase().indexOf(filter) > -1)  ");
-//		out.println("        {                                                     ");
-//		out.println("          show = true;                                        ");
-//		out.println("          break;                                              ");
-//		out.println("        }                                                     ");
-//		out.println("      }                                                       ");
-//		out.println("    }                                                         ");
-//		out.println("    tr[r].style.display = show ? '' : 'none';                 ");
-//		out.println("  }                                                           ");
-//		out.println("}                                                             ");
-//		out.println("</script>");
-
-//		out.println("<script type='text/javascript' src='/scripts/tablefilter/tablefilter.js'></script>");
-		
-		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.js'></script>");
-		
-		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
-		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'> ");
-		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'> ");
-		
-		out.println("<!-- Tablesorter script: required --> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script> ");
-//		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/widgets/widget-scroller.js'></script> ");
-
-		out.println("</head> ");
-		out.println(" ");
+		out.println("<head>");
+		out.println("<title>" + inputName + "</title>");
+		out.println(HtmlStatic.getUserDefinedContentHead());
+		out.println("<!-- Tablesorter theme -->");
+		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'>");
+		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'>");
+		out.println("<!-- Tablesorter scripts -->");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script>");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script>");
+		out.println("</head>");
+		out.println();
 		
 		out.println("<body>");
-		out.println("<h1>" + inputName + "</h1>");
+		out.println(HtmlStatic.getUserDefinedContentNavbar());
+		out.println("<div class='container-fluid mt-3'>");
+		out.println("<h5>" + StringEscapeUtils.escapeHtml4(inputName) + "</h5>");
 		out.println("<p><b>Note:</b> Only <code>CANCEL</code> records are in the table.<br>Look for in <i>Duration</i> column, to get the time this Alarm was <i>active</i></p>");
 		out.println("<p>Error records are marked with red.</p>");
 		out.println();
@@ -867,9 +822,11 @@ public class DbxTuneLogServlet extends HttpServlet
 		
 		out.println("</tbody>");
 		out.println("</table>");
+		out.println("</div>"); // end container-fluid
+		out.println(HtmlStatic.getUserDefinedContentJavaScriptAtEnd());
 		out.println("</body></html>");
-		
-		
+
+
 		out.flush();
 		out.close();
 	}

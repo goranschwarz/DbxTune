@@ -34,6 +34,13 @@ authorized.roles = ud_action
 authorized.users = gorans
 
 ##------------------------------------------------------------
+## 'Requires Reason Message'
+## If you want the user to add a "reason" message why this was executed
+## requiresReasonMessage = true|false (default is false, if not specified)
+##------------------------------------------------------------
+requiresReasonMessage = false
+
+##------------------------------------------------------------
 ## 'command' is MANDATORY field
 ## Command that is executed at the destination server
 ##
