@@ -33,6 +33,7 @@ import com.dbxtune.CounterControllerAse;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -264,5 +265,20 @@ extends CountersModel
 			else
 				diffData.setValueAt(new BigDecimal(0), rowId, AvgServ_msId);
 		}
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("io-queue")
+				.title("IO Queue Summary")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("IOType")
+				.valueColumns("IOs", "IOTime", "AvgServ_ms")
+				.seriesLabels("IOs", "IO Time", "Avg Service (ms)")
+				.splitRatio(0.3),
+		};
 	}
 }

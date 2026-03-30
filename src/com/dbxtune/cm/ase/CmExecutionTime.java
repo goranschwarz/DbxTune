@@ -30,6 +30,7 @@ import javax.naming.NameNotFoundException;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -445,5 +446,31 @@ extends CountersModel
 				rateData.setValueAt(newVal, rowId, CpuUsagePct_pos);
 			}
 		}
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("exec-time")
+				.title("Execution Count/Time Distribution")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("OperationName")
+				.valueColumns("ExecutionCnt", "ExecutionTime", "ExecutionTimePerCnt")
+				.seriesLabels("Exec Count", "Exec Time", "Avg Time/Exec")
+				.pieOtherLimit(0.05)
+				.splitRatio(0.5),
+			new CmChartDescriptor()
+				.id("cpu-usage")
+				.title("CPU Usage by Operation (%)")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("OperationName")
+				.valueColumns("CpuUsagePct")
+				.seriesLabels("CPU Usage %")
+				.isPercent(true)
+				.pieOtherLimit(0.03)
+				.splitRatio(0.5),
+		};
 	}
 }

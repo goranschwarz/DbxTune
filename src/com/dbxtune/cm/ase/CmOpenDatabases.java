@@ -59,6 +59,7 @@ import com.dbxtune.alarm.events.AlarmEventLowLogFreeSpace;
 import com.dbxtune.alarm.events.AlarmEventOldBackup;
 import com.dbxtune.alarm.events.AlarmEventOldTranLogBackup;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -3009,4 +3010,37 @@ extends CountersModel
 //		test(Ver.ver(15,7,0, 138));
 //		test(Ver.ver(16,0));
 //	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("log-usage")
+				.title("Transaction Log Space Usage in Percent")
+				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+				.labelColumn("DBName")
+				.valueColumns("LogSizeUsedPct")
+				.seriesLabels("Log Used %")
+				.barLabelColumn("LogSizeFreeInMb")
+				.isPercent(true)
+				.thresholdWarn(80)
+				.thresholdCrit(90)
+				.skipZeroRows(true),
+			new CmChartDescriptor()
+				.id("data-usage")
+				.title("Data Space Usage in Percent")
+				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+				.labelColumn("DBName")
+				.valueColumns("DataSizeUsedPct")
+				.seriesLabels("Data Used %")
+				.barLabelColumn("DataSizeFreeInMb")
+				.isPercent(true)
+				.thresholdWarn(80)
+				.thresholdCrit(90)
+				.skipZeroRows(true),
+		};
+	}
 }

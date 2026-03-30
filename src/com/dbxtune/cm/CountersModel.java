@@ -1793,6 +1793,25 @@ implements Cloneable, ITableTooltip
 	public boolean discardDiffHighlighterOnAbsTable() { return getDataSource() == DATA_ABS; }
 	public boolean discardPctHighlighterOnAbsTable()  { return false; } // false == SHOW PCT values as RED even in ABS samples
 
+	/**
+	 * Override in subclasses to declare charts that the web UI (Counter Details panel)
+	 * should render alongside the tabular data.
+	 * <p>
+	 * Each {@link CmChartDescriptor} describes one chart: its type (pie, bar, stacked-bar,
+	 * dual-pie-bar), which columns to use for labels and values, optional aggregation,
+	 * percentage thresholds, etc.
+	 * <p>
+	 * The servlet serialises these as JSON; the JavaScript renderer (Chart.js) creates
+	 * the charts automatically — no per-CM JS code needed.
+	 *
+	 * @return array of chart descriptors, or {@code null} if this CM has no charts.
+	 * @see CmChartDescriptor
+	 */
+	public CmChartDescriptor[] getChartDescriptors() 
+	{
+		return null; 
+	}
+
 
 	public List<String> getPk()
 	{

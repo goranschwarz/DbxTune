@@ -63,6 +63,7 @@ import com.dbxtune.alarm.events.sqlserver.AlarmEventHighVirtualLogFileCount;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -4905,7 +4906,55 @@ extends CountersModel
 //		System.out.println(getParentDir("C:\\var\\opt\\mssql\\data\\gorans_log.ldf"));
 //		System.out.println(getParentDir("/var/opt/mssql/data/gorans_data2.mdf"));
 //		System.out.println(getParentDir("/var/opt/mssql/data/sek_emdb.mdf    "));
-//		System.out.println(getParentDir("/var/opt/mssql/data/sek_emdb_log.ldf"));	
+//		System.out.println(getParentDir("/var/opt/mssql/data/sek_emdb_log.ldf"));
 //	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("log-usage")
+				.title("Transaction Log Space Usage in Percent")
+				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+				.labelColumn("DBName")
+				.valueColumns("LogSizeUsedPct")
+				.seriesLabels("Log Used %")
+				.barLabelColumn("LogSizeFreeInMb")
+				.isPercent(true)
+				.thresholdWarn(80)
+				.thresholdCrit(90)
+				.skipZeroRows(true),
+			new CmChartDescriptor()
+				.id("data-usage")
+				.title("Data Space Usage in Percent")
+				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+				.labelColumn("DBName")
+				.valueColumns("DataSizeUsedPct")
+				.seriesLabels("Data Used %")
+				.barLabelColumn("DataSizeFreeInMb")
+				.isPercent(true)
+				.thresholdWarn(80)
+				.thresholdCrit(90)
+				.skipZeroRows(true),
+			new CmChartDescriptor()
+				.id("os-disk-usage")
+				.title("Operating System Disk Space Usage in Percent")
+				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+				.labelColumn("DataOsDisk")
+				.groupByColumn("DataOsDisk")
+				.groupAggFunc(CmChartDescriptor.AGG_MAX)
+				.valueColumns("DataOsDiskUsedPct")
+				.seriesLabels("OS Disk Used %")
+				.barLabelColumn("DataOsDiskFreeMb")
+				.isPercent(true)
+				.thresholdWarn(80)
+				.thresholdCrit(90)
+				.skipZeroRows(true),
+		};
+	}
 }
 

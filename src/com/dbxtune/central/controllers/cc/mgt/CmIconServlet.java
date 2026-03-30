@@ -54,6 +54,9 @@ extends HttpServlet
 	/** Classpath root under which all CM icons live. */
 	private static final String ICON_CLASSPATH_PREFIX = "/com/dbxtune/images/";
 
+	/** Default icon served when the requested icon file is not found. */
+	private static final String DEFAULT_ICON = "CmNoIcon.png";
+
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 	throws ServletException, IOException
@@ -89,15 +92,26 @@ extends HttpServlet
 		}
 
 		String resourcePath = ICON_CLASSPATH_PREFIX + filename;
-		try (InputStream is = CmIconServlet.class.getResourceAsStream(resourcePath))
-		{
-			if (is == null)
-			{
-				_logger.debug("CmIconServlet: icon not found in classpath: " + resourcePath);
-				resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Icon not found: " + filename);
-				return;
-			}
+		InputStream is = CmIconServlet.class.getResourceAsStream(resourcePath);
 
+		// If the requested icon doesn't exist, serve the default icon instead of a 404.
+		// This avoids repeated 404s from the browser (404 responses aren't cached) and
+		// eliminates the need for client-side fallback logic.
+		if (is == null)
+		{
+			_logger.debug("CmIconServlet: icon not found '{}', serving default icon", resourcePath);
+			is = CmIconServlet.class.getResourceAsStream(ICON_CLASSPATH_PREFIX + DEFAULT_ICON);
+		}
+
+		if (is == null)
+		{
+			// Even the default icon is missing — nothing we can do
+			resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Icon not found: " + filename);
+			return;
+		}
+
+		try (InputStream iconStream = is)
+		{
 			String contentType = lower.endsWith(".png")  ? "image/png"
 			                   : lower.endsWith(".gif")  ? "image/gif"
 			                   :                           "image/jpeg";
@@ -108,7 +122,7 @@ extends HttpServlet
 
 			byte[] buf = new byte[8192];
 			int    n;
-			while ((n = is.read(buf)) >= 0)
+			while ((n = iconStream.read(buf)) >= 0)
 				resp.getOutputStream().write(buf, 0, n);
 		}
 	}

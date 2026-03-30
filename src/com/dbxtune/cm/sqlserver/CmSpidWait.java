@@ -41,6 +41,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -615,5 +616,31 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("wait-by-type")
+				.title("SPID Wait Distribution by Type")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("wait_type")
+				.valueColumns("wait_time_ms", "waiting_tasks_count", "WaitTimePerCount")
+				.seriesLabels("Wait Time (ms)", "Waiting Tasks", "Avg Wait (ms)")
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+			new CmChartDescriptor()
+				.id("wait-by-class")
+				.title("SPID Wait Distribution by Class")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("wait_type")
+				.groupByColumn("WaitClass")
+				.valueColumns("wait_time_ms", "waiting_tasks_count")
+				.seriesLabels("Wait Time (ms)", "Waiting Tasks")
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+		};
 	}
 }

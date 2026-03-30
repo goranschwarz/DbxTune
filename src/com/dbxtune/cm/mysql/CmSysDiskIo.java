@@ -29,6 +29,7 @@ import javax.naming.NameNotFoundException;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -294,5 +295,22 @@ extends CountersModel
 		}
 		else
 			cs.setValueAt(new BigDecimal(0), rowId, dest_pos);
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("disk-io")
+				.title("Disk IO Distribution")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("file")
+				.valueColumns("total", "count_read", "count_write", "count_misc")
+				.seriesLabels("Total IOs", "Reads", "Writes", "Misc")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.03)
+				.splitRatio(0.7),
+		};
 	}
 }

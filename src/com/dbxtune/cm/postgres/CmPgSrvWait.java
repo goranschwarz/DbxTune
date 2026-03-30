@@ -38,6 +38,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -484,4 +485,30 @@ extends CountersModel
 //		// But right now I don't know what waits should be considered as that... 
 //		// So I need to investigate that and implement this later!
 //	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("wait-by-event")
+				.title("Wait Distribution by Event")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("event")
+				.valueColumns("est_wait_time_ms", "wait_count")
+				.seriesLabels("Est Wait Time (ms)", "Wait Count")
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+			new CmChartDescriptor()
+				.id("wait-by-type")
+				.title("Wait Distribution by Type")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("event")
+				.groupByColumn("event_type")
+				.valueColumns("est_wait_time_ms", "wait_count")
+				.seriesLabels("Est Wait Time (ms)", "Wait Count")
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+		};
+	}
 }

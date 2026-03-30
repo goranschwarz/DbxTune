@@ -43,6 +43,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventToxicWait;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -1329,5 +1330,33 @@ extends CountersModel
 		list.add(new CmSettingsHelper("WaitTime_THREADPOOL"        , isAlarmSwitch, PROPKEY_alarm_WaitTime_THREADPOOL        , Integer.class, conf.getIntProperty(PROPKEY_alarm_WaitTime_THREADPOOL        , DEFAULT_alarm_WaitTime_THREADPOOL        ), DEFAULT_alarm_WaitTime_THREADPOOL        , "If 'wait_time_ms' for 'THREADPOOL' is greater than ## then send 'AlarmEventToxicWait'." ));
 
 		return list;
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("wait-by-type")
+				.title("Wait Distribution by Type")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("wait_type")
+				.valueColumns("wait_time_ms", "waiting_tasks_count", "WaitTimePerCount")
+				.seriesLabels("Wait Time (ms)", "Waiting Tasks", "Avg Wait (ms)")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+			new CmChartDescriptor()
+				.id("wait-by-class")
+				.title("Wait Distribution by Class")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("wait_type")
+				.groupByColumn("WaitClass")
+				.valueColumns("wait_time_ms", "waiting_tasks_count")
+				.seriesLabels("Wait Time (ms)", "Waiting Tasks")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+		};
 	}
 }

@@ -381,22 +381,6 @@ var _hasActiveHistoryStatementArr = null;
 // Alarm badge refresh throttle for history mode
 var _lastAlarmRefreshMs = 0;
 
-// CM Detail Panel state
-var _cmSrvName      = null;
-var _cmTimestamp    = null;
-var _cmGroup        = null;
-var _cmName         = null;
-var _cmType         = 'rate';
-var _cmListData     = null;
-var _cmCurrentData  = null;   // last fetched data result (for re-filtering without re-fetching)
-var _cmFilter       = '';     // current filter string
-var _cmSort         = { col: -1, stage: 0 }; // sort state for current CM: stage 0=original 1=desc 2=asc
-var _cmSortMap      = {};                    // per-CM sort state, keyed by cmName — survives tab switching
-var _cmDetailClickRows = null;               // {columns, tooltips, rows} — row store for click-to-detail modal
-// Sticky "last viewed" — survive close so re-opening returns to the same tab
-var _cmLastGroup    = null;
-var _cmLastCm       = null;
-
 // This was previously part of ChartJS 2.x -- WebContent\scripts\chartjs\samples\utils.js and it's used in function: addData(jsonData)
 window.chartColors = {
 	red:    'rgb(255, 99, 132)',
@@ -444,815 +428,6 @@ function isHistoryViewActive()
 {
 	return $("#dbx-history-container-div").is(":visible");
 }
-
-//-----------------------------------------------------------
-// CM DETAIL PANEL
-//-----------------------------------------------------------
-
-function cmDetailLoadList(srvName, timestamp)
-{
-	if (!srvName || !timestamp) return;
-
-	// Normalize timestamp to "yyyy-MM-dd HH:mm:ss" — handles ISO strings, JS Date strings, moment objects
-	timestamp = moment(timestamp).format("YYYY-MM-DD HH:mm:ss");
-
-	_cmSrvName   = srvName;
-	_cmTimestamp = timestamp;
-
-	$('#cm-detail-panel').css('display', 'flex');
-	$('#cm-detail-srv').text('[' + srvName + ']');
-	$('#cm-detail-ts').text('@ ' + timestamp);
-	$('#cm-detail-loading').show();
-	$('#cm-detail-table').html('');
-
-	$.ajax({
-		url: '/api/cc/mgt/cm/list',
-		data: { srv: srvName, time: timestamp },
-		dataType: 'text',
-		success: function(data) {
-			$('#cm-detail-loading').hide();
-			try {
-				var r = JSON.parse(data);
-				if (r.error) { cmDetailShowMsg(r.message || r.error); return; }
-				_cmListData = r;
-				// Use the exact SessionSampleTime the server resolved (ms-precision match from MonSessionSampleDetailes)
-				if (r.resolvedTime) { _cmTimestamp = r.resolvedTime.substring(0, 19); $('#cm-detail-ts').text('@ ' + _cmTimestamp); }
-				cmDetailRenderGroups(r.groups);
-			} catch(ex) { cmDetailShowMsg('Parse error: ' + ex); }
-		},
-		error: function(xhr) {
-			$('#cm-detail-loading').hide();
-			cmDetailShowMsg('HTTP ' + xhr.status + ': ' + xhr.responseText);
-		}
-	});
-}
-
-function cmDetailRenderGroups(groups)
-{
-	var $gt = $('#cm-group-tabs').empty();
-	if (!groups || !groups.length) { cmDetailShowMsg('No groups'); return; }
-
-	// Auto-select: prefer last viewed group (if still present), otherwise first non-Other group with data
-	var groupNames = groups.map(function(g) { return g.groupName; });
-	var selGroup;
-	if (_cmLastGroup && groupNames.indexOf(_cmLastGroup) >= 0) {
-		selGroup = _cmLastGroup;
-	} else {
-		// First pass: first group with data that isn't 'Other'
-		selGroup = null;
-		for (var i = 0; i < groups.length; i++) {
-			if (groups[i].groupName !== 'Other' && groups[i].cms.some(function(c) { return c.hasData; })) {
-				selGroup = groups[i].groupName; break;
-			}
-		}
-		// Second pass: allow 'Other' if nothing else has data
-		if (!selGroup) {
-			for (var i = 0; i < groups.length; i++) {
-				if (groups[i].cms.some(function(c) { return c.hasData; })) { selGroup = groups[i].groupName; break; }
-			}
-		}
-		if (!selGroup) selGroup = groups[0].groupName;
-	}
-
-	groups.forEach(function(g) {
-		var hasAny = g.cms.some(function(c) { return c.hasData; });
-		var li = $('<li class="nav-item ' + (hasAny ? 'cm-tab-has-data' : 'cm-tab-no-data') + '"></li>').attr('data-group-name', g.groupName);
-		var a  = $('<a class="nav-link' + (g.groupName === selGroup ? ' active' : '') + '" href="#"></a>');
-		if (g.groupIcon)
-			a.append(cmMakeIcon(g.groupIcon));
-		a.append(document.createTextNode(g.groupName));
-		a.on('click', (function(gn) { return function(e) { e.preventDefault(); cmDetailSelectGroup(gn); }; })(g.groupName));
-		li.append(a);
-		$gt.append(li);
-	});
-
-	_cmGroup = selGroup;
-	_cmLastGroup = selGroup;
-	var selGroupData = null;
-	for (var i = 0; i < groups.length; i++) {
-		if (groups[i].groupName === selGroup) { selGroupData = groups[i]; break; }
-	}
-	if (selGroupData) cmDetailRenderCms(selGroupData.cms);
-}
-
-function cmDetailRenderCms(cms)
-{
-	var $ct = $('#cm-name-tabs').empty();
-	if (!cms || !cms.length) { cmDetailShowMsg('No CMs in this group'); return; }
-
-	// Auto-select: prefer last viewed CM (if present in this group), otherwise first CM with data
-	var cmNames = cms.map(function(c) { return c.cmName; });
-	var selCm = (_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)
-		? _cmLastCm
-		: cms[0].cmName;
-	if (selCm === cms[0].cmName && !(_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)) {
-		// No last-CM match — fall back to first CM with data
-		for (var i = 0; i < cms.length; i++) {
-			if (cms[i].hasData) { selCm = cms[i].cmName; break; }
-		}
-	}
-
-	cms.forEach(function(c) {
-		var li = $('<li class="nav-item ' + (c.hasData ? 'cm-tab-has-data' : 'cm-tab-no-data') + '"></li>').attr('data-cm-name', c.cmName);
-		var a  = $('<a class="nav-link' + (c.cmName === selCm ? ' active' : '') + '" href="#"></a>');
-		if (c.iconFile)
-			a.append(cmMakeIcon(c.iconFile));
-		a.append(document.createTextNode(c.displayName));
-		a.on('click', (function(cn) { return function(e) { e.preventDefault(); cmDetailSelectCm(cn); }; })(c.cmName));
-		li.append(a);
-		$ct.append(li);
-	});
-
-	if (_cmName && _cmName !== selCm) _cmSortMap[_cmName] = _cmSort;  // save sort for previous CM
-	_cmSort  = _cmSortMap[selCm] || { col: -1, stage: 0 };            // restore sort for new CM
-	_cmName  = selCm;
-	_cmLastCm = selCm;
-	cmDetailLoadData(_cmSrvName, selCm, _cmTimestamp, _cmType);
-}
-
-function cmDetailSelectGroup(groupName)
-{
-	_cmGroup = groupName;
-	_cmLastGroup = groupName;
-	$('#cm-group-tabs .nav-link').removeClass('active');
-	$('#cm-group-tabs li[data-group-name="' + groupName + '"] .nav-link').addClass('active');
-	if (!_cmListData) return;
-	var g = null;
-	for (var i = 0; i < _cmListData.groups.length; i++) {
-		if (_cmListData.groups[i].groupName === groupName) { g = _cmListData.groups[i]; break; }
-	}
-	if (g) cmDetailRenderCms(g.cms);
-}
-
-function cmDetailSelectCm(cmName)
-{
-	if (_cmName !== cmName) {
-		if (_cmName) _cmSortMap[_cmName] = _cmSort;          // save sort for the tab we're leaving
-		_cmSort = _cmSortMap[cmName] || { col: -1, stage: 0 }; // restore sort for the tab we're entering
-	}
-	_cmName = cmName;
-	_cmLastCm = cmName;
-	// Toggle active class only — no need to re-render the whole tab list
-	$('#cm-name-tabs .nav-link').removeClass('active');
-	$('#cm-name-tabs li[data-cm-name="' + cmName + '"] .nav-link').addClass('active');
-	cmDetailLoadData(_cmSrvName, cmName, _cmTimestamp, _cmType);
-}
-
-function cmDetailTypeChanged(type)
-{
-	_cmType = type;
-	if (_cmSrvName && _cmName && _cmTimestamp)
-		cmDetailLoadData(_cmSrvName, _cmName, _cmTimestamp, _cmType);
-}
-
-// Fallback icon shown when a CM icon file is missing (404). Update path when known.
-var _cmIconFallback = '/api/cc/mgt/cm/icon?file=' + encodeURIComponent('images/CmNoIcon.png');
-
-// Helper: build a CM tab icon <img> element with a 404 fallback
-function cmMakeIcon(iconFile)
-{
-	var src = '/api/cc/mgt/cm/icon?file=' + encodeURIComponent(iconFile);
-	return $('<img>').attr({ src: src, width: 16, height: 16 })
-		.css({ verticalAlign: 'middle', marginRight: '3px', marginBottom: '2px' })
-		.on('error', function() {
-			if (this.src !== _cmIconFallback) {
-				this.src = _cmIconFallback;
-			} else {
-				$(this).hide(); // fallback itself is also missing — hide img entirely
-			}
-		});
-}
-
-// Helper: find the CmSampleInfo object for cmName in the last loaded list
-function cmDetailFindCmInfo(cmName)
-{
-	if (!_cmListData || !_cmListData.groups) return null;
-	for (var gi = 0; gi < _cmListData.groups.length; gi++) {
-		var cms = _cmListData.groups[gi].cms;
-		for (var ci = 0; ci < cms.length; ci++) {
-			if (cms[ci].cmName === cmName) return cms[ci];
-		}
-	}
-	return null;
-}
-
-function cmDetailLoadData(srvName, cmName, timestamp, type)
-{
-	if (!srvName || !cmName || !timestamp) return;
-
-	// Check collector status for this CM at this sample time
-	var cmInfo = cmDetailFindCmInfo(cmName);
-	if (cmInfo && cmInfo.exceptionMsg) {
-		// Collector threw an exception — show warning, no point querying CmDataServlet
-		$('#cm-detail-loading').hide();
-		var full = cmInfo.exceptionFullText || '';
-		var html = '<div class="alert alert-warning mt-2" style="font-size:0.85em;">'
-			+ '<strong>&#9888; Collector problem at sample time</strong><br>'
-			+ $('<span>').text(cmInfo.exceptionMsg).html();
-		if (full) {
-			html += '<br><details style="margin-top:4px"><summary style="cursor:pointer;">Full stack trace</summary>'
-				+ '<pre style="font-size:0.8em;white-space:pre-wrap;margin-top:4px;">'
-				+ $('<span>').text(full).html()
-				+ '</pre></details>';
-		}
-		html += '</div>';
-		$('#cm-detail-table').html(html);
-		return;
-	}
-	if (cmInfo && !cmInfo.hasData) {
-		// CM exists but saved no rows this sample (postponed, or nothing matched filter)
-		$('#cm-detail-loading').hide();
-		$('#cm-detail-table').html('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
-			+ 'No data collected for <strong>' + $('<span>').text(cmName).html() + '</strong>'
-			+ ' at sample time <strong>' + $('<span>').text(timestamp).html() + '</strong>.'
-			+ '</div>');
-		return;
-	}
-
-	$('#cm-detail-loading').show();
-	$('#cm-detail-table').html('');
-	// Show spinner after 100ms (avoids flicker on fast responses)
-	var busyTimer = setTimeout(function() {
-		document.getElementById('dbx-history-get-data-bussy').style.visibility = 'visible';
-	}, 100);
-	$.ajax({
-		url: '/api/cc/mgt/cm/data',
-		data: { srv: srvName, cm: cmName, time: timestamp, type: type },
-		dataType: 'text',
-		success: function(data) {
-			clearTimeout(busyTimer);
-			document.getElementById('dbx-history-get-data-bussy').style.visibility = 'hidden';
-			$('#cm-detail-loading').hide();
-			try {
-				var r = JSON.parse(data);
-				if (r.error) { cmDetailShowMsg(r.message || r.error); return; }
-				cmDetailRenderTable(r);
-			} catch(ex) { cmDetailShowMsg('Parse error: ' + ex); }
-		},
-		error: function(xhr) {
-			clearTimeout(busyTimer);
-			document.getElementById('dbx-history-get-data-bussy').style.visibility = 'hidden';
-			$('#cm-detail-loading').hide();
-			cmDetailShowMsg('HTTP ' + xhr.status);
-		}
-	});
-}
-
-function cmDetailRenderTable(r)
-{
-	_cmCurrentData = r;
-	$('#cm-detail-filter-bar').css('display', 'flex');
-	_cmFilter = $('#cm-detail-filter-input').val() || '';
-	cmDetailRenderFiltered(r, _cmFilter);
-}
-
-function cmDetailApplyFilter(filter)
-{
-	_cmFilter = filter;
-	if (!_cmCurrentData) return;
-	cmDetailRenderFiltered(_cmCurrentData, filter);
-}
-
-function cmDetailRenderFiltered(r, filter)
-{
-	var rows = r.rows || [];
-	var result = applyRowFilter(rows, r.columns, filter);
-	var filteredRows = result.filteredRows;
-	var filterError  = result.filterError;
-	filter = (filter || '').trim();
-
-	// Apply column sort (stage 1=desc, stage 2=asc, stage 0=original order)
-	if (_cmSort.col >= 0 && _cmSort.stage > 0) {
-		var sc   = _cmSort.col;
-		var desc = _cmSort.stage === 1;
-		filteredRows = filteredRows.slice().sort(function(a, b) {
-			var va = a[sc], vb = b[sc];
-			if (va === null || va === undefined) va = '';
-			if (vb === null || vb === undefined) vb = '';
-			var na = Number(va), nb = Number(vb);
-			if (!isNaN(na) && !isNaN(nb)) return desc ? nb - na : na - nb;
-			var sa = String(va).toLowerCase(), sb = String(vb).toLowerCase();
-			return desc ? (sa > sb ? -1 : sa < sb ? 1 : 0) : (sa < sb ? -1 : sa > sb ? 1 : 0);
-		});
-	}
-
-	var countText = filterError
-		? filterError
-		: (filter ? (filteredRows.length + ' / ' + rows.length + ' rows') : (rows.length + ' rows'));
-	$('#cm-detail-filter-count').text(countText);
-	$('#cm-detail-row-count').text(filter ? (filteredRows.length + ' / ' + rows.length + ' rows') : (rows.length + ' rows'));
-
-	// Build diff-column name set (case-insensitive) for blue colouring
-	var diffSet = {};
-	if (r.diffColumns) r.diffColumns.forEach(function(dc) { diffSet[dc.toLowerCase()] = true; });
-
-	// Per-column flags
-	var isNumeric = r.isNumeric || [];
-	var isDiff    = r.columns ? r.columns.map(function(c) { return !!diffSet[c.toLowerCase()]; }) : [];
-
-	// Info bar: show cmSampleTime and cmSampleMs alongside resolved time and row count
-	var sampleInfo = '';
-	if (r.cmSampleTime) sampleInfo += '&nbsp; SampleTime: <b>' + escHtml(r.cmSampleTime) + '</b>';
-	if (r.cmSampleMs  ) sampleInfo += '&nbsp; SampleMs: <b>'   + escHtml(String(r.cmSampleMs)) + '</b>';
-
-	var h = '<p style="color:#6c757d;font-size:0.8em;margin:2px 0;">'
-		+ 'CM: <b>' + escHtml(r.cmName) + '</b>'
-		+ '&nbsp; Type: <b>' + escHtml(r.type) + '</b>'
-		+ sampleInfo
-		+ '&nbsp; Rows: <b>' + r.rowCount + '</b></p>'
-		+ '<table class="table table-sm table-bordered table-hover" style="font-size:0.78em;white-space:nowrap;width:auto;">'
-		+ '<thead class="thead-light"><tr>'
-		+ r.columns.map(function(c, i) {
-			var indicator = (_cmSort.col === i) ? (_cmSort.stage === 1 ? ' &#9660;' : ' &#9650;') : '';
-			var tt = (r.tooltips && r.tooltips[i]) ? r.tooltips[i] : '';
-			var ttAttr = '';
-			if (tt) {
-				// Some tooltips are wrapped in <html>...</html> -- strip the outer wrapper so
-				// inner HTML (tables, bold, line-breaks etc.) renders correctly in the tooltip.
-				var ttHtml = tt.replace(/^\s*<html>\s*/i, '').replace(/\s*<\/html>\s*$/i, '').trim();
-				// Bootstrap tooltip with html:true renders markup instead of raw text.
-				ttAttr = ' data-toggle="tooltip" data-html="true" data-placement="bottom" title="'
-					+ ttHtml.replace(/"/g, '&quot;') + '"';
-			}
-			return '<th style="cursor:pointer;user-select:none;" onclick="cmDetailSortCol(' + i + ');"' + ttAttr + '>'
-				+ escHtml(c) + indicator + '</th>';
-		}).join('')
-		+ '</tr></thead><tbody>';
-
-	if (!filteredRows || filteredRows.length === 0) {
-		h += '<tr><td colspan="' + r.columns.length + '" style="text-align:center;color:#6c757d;">'
-			+ (filter ? 'No rows match filter' : 'No rows') + '</td></tr>';
-	} else {
-		// Store rows for click-to-detail (index stored on <tr data-ri>)
-		_cmDetailClickRows = { columns: r.columns, tooltips: r.tooltips || [], rows: filteredRows };
-		filteredRows.forEach(function(row, ri) {
-			h += '<tr data-ri="' + ri + '" style="cursor:pointer;" title="Click to view full row details">'
-				+ row.map(function(v, i) {
-				var style = 'style="';
-				if (isNumeric[i])                    style += 'text-align:right;';
-				if (isDiff[i] && _cmType !== 'abs') style += 'color:#0066cc;';
-				style += '"';
-				var cell;
-				if (v === null || v === undefined)
-					cell = '<span style="color:#aaa">null</span>';
-				else if (v === true || v === false)
-					cell = '<input type="checkbox"' + (v ? ' checked' : '') + ' onclick="return false;" style="cursor:default;pointer-events:none;">';
-				else {
-					var s = String(v);
-					if (s.length > 60) {
-						var plain = s.replace(/<[^>]+>/g, '').trim();
-						cell = '<span title="' + escHtml(plain.substring(0, 300)) + '">'
-							+ escHtml(plain.substring(0, 60)) + '\u2026</span>';
-					} else {
-						cell = escHtml(s);
-					}
-				}
-				return '<td ' + style + '>' + cell + '</td>';
-			}).join('') + '</tr>';
-		});
-	}
-	h += '</tbody></table>';
-
-	// Restore scroll position from localStorage (persists across tab switches and panel close/reopen)
-	// Pattern mirrors Active Statements: save on scroll event, restore after render + setTimeout fallback
-	var $body      = $('#cm-detail-body');
-	var scrollKey  = 'cmDetail-scroll-' + (r.cmName || 'default');
-	var savedTop   = 0, savedLeft = 0;
-	try {
-		var saved = JSON.parse(localStorage.getItem(scrollKey) || 'null');
-		if (saved) { savedTop = saved.top || 0; savedLeft = saved.left || 0; }
-	} catch(e) {}
-
-	// Destroy existing tooltip instances before replacing the DOM (prevents orphaned tooltip divs)
-	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip('dispose');
-	$('#cm-detail-table').html(h);
-
-	// Activate Bootstrap tooltips on the freshly rendered column headers
-	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip({ container: '#cm-detail-panel', boundary: 'window' });
-
-	// Row click → detail modal (delegated so it survives re-renders)
-	$('#cm-detail-table tbody').off('click', 'tr').on('click', 'tr', function() {
-		var ri = parseInt($(this).attr('data-ri'), 10);
-		if (isNaN(ri) || !_cmDetailClickRows) return;
-		cmDetailRowShowModal(_cmDetailClickRows.columns, _cmDetailClickRows.rows[ri], _cmDetailClickRows.tooltips);
-	});
-
-	// Restore immediately (works when content height is already known)
-	$body.scrollTop(savedTop).scrollLeft(savedLeft);
-	// Also restore after a tick in case the browser resets scroll after DOM update
-	setTimeout(function() { $body.scrollTop(savedTop).scrollLeft(savedLeft); }, 1);
-}
-
-/**
- * Show a click-to-detail modal for a Counter Details row.
- * Unpivots the column array + value array into a 2-column table rendered client-side.
- * Column tooltips (descriptions) are shown as a third column when available.
- */
-/**
- * Returns true if the string value appears to be an HTML fragment —
- * i.e. it starts with '<' (after leading whitespace) and contains '>'.
- * Used by the row-detail modals to decide whether to render a value as
- * HTML or escape it as plain text.
- */
-function looksLikeHtml(s) {
-	var t = s.replace(/^\s+/, '');
-	return t.charAt(0) === '<' && t.indexOf('>') >= 0;
-}
-
-function cmDetailRowShowModal(columns, row, tooltips)
-{
-	var $modal = $('#dbx-view-alarmView-dialog');
-	if ($modal.length === 0) return;
-
-	var topZ = (window._dbxTopZ || 910) + 200;
-	$modal.css('z-index', topZ);
-	setTimeout(function() { $('.modal-backdrop').css('z-index', topZ - 1); }, 30);
-	_dbxModalApplyDark($modal);
-
-	$('#dbx-view-alarmView-label').text('Row Detail');
-	$('#dbx-view-alarmView-objectName').text('');
-
-	var hasTooltips = tooltips && tooltips.some(function(t) { return t && t.length > 0; });
-	var html = '<table class="table table-sm table-bordered" style="font-size:0.85em;word-break:break-word;">'
-		+ '<thead class="thead-light"><tr><th style="white-space:nowrap">Column</th><th>Value</th>'
-		+ (hasTooltips ? '<th>Description</th>' : '') + '</tr></thead><tbody>';
-
-	columns.forEach(function(col, i) {
-		var v = row[i];
-		var cellHtml;
-		if (v === null || v === undefined)
-			cellHtml = '<span style="color:#aaa">null</span>';
-		else if (v === true || v === false)
-			cellHtml = v ? '<i class="fa fa-check-square-o text-success"></i>'
-			             : '<i class="fa fa-square-o text-muted"></i>';
-		else {
-			var s = String(v);
-			if (looksLikeHtml(s))
-				cellHtml = '<div style="overflow:auto;">' + s + '</div>';
-			else
-				cellHtml = '<pre style="white-space:pre-wrap;margin:0;font-size:0.9em;">' + escHtml(s) + '</pre>';
-		}
-
-		var ttHtml = '';
-		if (hasTooltips && tooltips[i]) {
-			ttHtml = '<td style="font-size:0.8em;color:#555;">'
-				+ tooltips[i].replace(/^\s*<html>\s*/i,'').replace(/\s*<\/html>\s*$/i,'') + '</td>';
-		}
-
-		html += '<tr><td style="white-space:nowrap;font-weight:bold;">' + escHtml(col) + '</td>'
-			+ '<td>' + cellHtml + '</td>' + ttHtml + '</tr>';
-	});
-
-	html += '</tbody></table>';
-	$('#dbx-view-alarmView-content').html(html);
-	$modal.modal('show');
-}
-
-//-----------------------------------------------------------
-// Client-side WHERE filter
-// Supports:  col = val   col != val   col <> val
-//            col > val   col >= val   col < val   col <= val
-//            col LIKE 'pattern'  (% = .*)
-/**
- * Shared row-filter utility used by CM Detail and DBMS Config panels.
- * Supports two modes:
- *   "where <expr>"  — SQL-like WHERE evaluated by cmDetailWhereFilter()
- *   anything else   — case-insensitive regex matched against each cell
- *
- * Returns { filteredRows, filterError }.  filteredRows === rows when
- * filter is empty or an error occurs (callers never receive undefined).
- */
-function applyRowFilter(rows, columns, filter)
-{
-	filter = (filter || '').trim();
-	if (filter === '') return { filteredRows: rows || [], filterError: '' };
-
-	var filteredRows = rows || [];
-	var filterError  = '';
-
-	if (filter.match(/^where\s+/i)) {
-		try   { filteredRows = cmDetailWhereFilter(rows, columns, filter.replace(/^where\s+/i, '')); }
-		catch (e) { filterError = '(where error: ' + e.message + ')'; filteredRows = rows; }
-	} else {
-		try {
-			var re = new RegExp(filter, 'i');
-			filteredRows = (rows || []).filter(function(row) {
-				return row.some(function(cell) {
-					return re.test(cell === null || cell === undefined ? '' : String(cell));
-				});
-			});
-		} catch (e) { filterError = '(invalid regex)'; filteredRows = rows; }
-	}
-
-	return { filteredRows: filteredRows, filterError: filterError };
-}
-
-//            col IS NULL   col IS NOT NULL
-// Values:    'quoted string'   number   null
-// Joining:   AND / OR  (left-to-right evaluation)
-//-----------------------------------------------------------
-function cmDetailWhereFilter(rows, columns, whereExpr)
-{
-	// Build column-name → index map (case-insensitive)
-	var colIndex = {};
-	columns.forEach(function(c, i) { colIndex[c.toLowerCase()] = i; });
-
-	// Tokenise respecting single-quoted strings, then split on AND/OR
-	var conditions = cmDetailSplitConditions(whereExpr);
-
-	return rows.filter(function(row) {
-		var result = cmDetailEvalCondition(conditions[0].expr, colIndex, row);
-		for (var i = 1; i < conditions.length; i++) {
-			var right = cmDetailEvalCondition(conditions[i].expr, colIndex, row);
-			if (conditions[i].op === 'OR')
-				result = result || right;
-			else
-				result = result && right;
-		}
-		return result;
-	});
-}
-
-function cmDetailSplitConditions(expr)
-{
-	// Split on AND/OR that are NOT inside single quotes
-	var parts  = [];
-	var ops    = [];
-	var cur    = '';
-	var inQuote = false;
-	var i = 0;
-	while (i < expr.length)
-	{
-		if (!inQuote && expr[i] === "'") { inQuote = true;  cur += expr[i++]; continue; }
-		if ( inQuote && expr[i] === "'") { inQuote = false; cur += expr[i++]; continue; }
-		if (!inQuote)
-		{
-			var rest = expr.substring(i);
-			var andM = rest.match(/^AND\b/i);
-			var orM  = rest.match(/^OR\b/i);
-			if (andM) { parts.push(cur.trim()); ops.push('AND'); cur = ''; i += andM[0].length; continue; }
-			if (orM)  { parts.push(cur.trim()); ops.push('OR');  cur = ''; i += orM[0].length;  continue; }
-		}
-		cur += expr[i++];
-	}
-	if (cur.trim()) parts.push(cur.trim());
-
-	return parts.map(function(p, idx) { return { expr: p, op: idx === 0 ? null : ops[idx - 1] }; });
-}
-
-function cmDetailEvalCondition(expr, colIndex, row)
-{
-	expr = expr.trim();
-
-	// IS NOT NULL
-	var m = expr.match(/^(\w+)\s+IS\s+NOT\s+NULL$/i);
-	if (m) {
-		var ci = cmDetailColIdx(m[1], colIndex);
-		return row[ci] !== null && row[ci] !== undefined && row[ci] !== '';
-	}
-	// IS NULL
-	m = expr.match(/^(\w+)\s+IS\s+NULL$/i);
-	if (m) {
-		var ci = cmDetailColIdx(m[1], colIndex);
-		return row[ci] === null || row[ci] === undefined || row[ci] === '';
-	}
-	// LIKE 'pattern'
-	m = expr.match(/^(\w+)\s+LIKE\s+'([^']*)'$/i);
-	if (m) {
-		var ci = cmDetailColIdx(m[1], colIndex);
-		var pat = '^' + m[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/_/g, '.') + '$';
-		return new RegExp(pat, 'i').test(row[ci] === null ? '' : String(row[ci]));
-	}
-	// Comparison: col op val
-	m = expr.match(/^(\w+)\s*(=|!=|<>|>=|<=|>|<)\s*(.+)$/i);
-	if (m) {
-		var ci     = cmDetailColIdx(m[1], colIndex);
-		var op     = m[2];
-		var valRaw = m[3].trim();
-		var cell   = row[ci];
-		var val;
-
-		if (valRaw.match(/^'[^']*'$/)) {            // quoted string
-			val  = valRaw.slice(1, -1);
-			cell = cell === null || cell === undefined ? '' : String(cell);
-		} else if (valRaw.toLowerCase() === 'null') { // null literal
-			val  = null;
-		} else if (!isNaN(Number(valRaw))) {           // number
-			val  = Number(valRaw);
-			cell = Number(cell);
-		} else {                                        // bare word → string
-			val  = valRaw;
-			cell = cell === null || cell === undefined ? '' : String(cell);
-		}
-
-		switch (op) {
-			case '=':            return cell == val;
-			case '!=': case '<>':return cell != val;
-			case '>':            return cell >  val;
-			case '>=':           return cell >= val;
-			case '<':            return cell <  val;
-			case '<=':           return cell <= val;
-		}
-	}
-	throw new Error('Cannot parse: ' + expr);
-}
-
-function cmDetailColIdx(name, colIndex)
-{
-	var idx = colIndex[name.toLowerCase()];
-	if (idx === undefined) throw new Error('Unknown column: ' + name);
-	return idx;
-}
-
-function cmDetailShowMsg(msg)
-{
-	$('#cm-detail-table').html('<div style="padding:15px;text-align:center;color:#6c757d;">' + escHtml(String(msg)) + '</div>');
-}
-
-function cmDetailToggle()
-{
-	var $panel = $('#cm-detail-panel');
-	if ($panel.is(':visible')) {
-		cmDetailClose();
-		return;
-	}
-	// Restore dark-mode preference from localStorage; default to page colour scheme on first visit
-	var savedDarkCm = null;
-	try { savedDarkCm = localStorage.getItem('cmDetailDark'); } catch(e) {}
-	var dark = (savedDarkCm !== null) ? (savedDarkCm === '1') : (_colorSchema === 'dark');
-	$('#cm-detail-dark').prop('checked', dark);
-	if (dark) $panel.addClass('cm-dark'); else $panel.removeClass('cm-dark');
-
-	// Attach scroll listener once — saves position to localStorage per CM (mirrors Active Statements)
-	var $body = $('#cm-detail-body');
-	if (!$body.data('cmScrollListenerAttached')) {
-		$body.data('cmScrollListenerAttached', true);
-		var _cmScrollTimer = null;
-		$body.on('scroll', function() {
-			clearTimeout(_cmScrollTimer);
-			_cmScrollTimer = setTimeout(function() {
-				if (_cmName) {
-					try {
-						localStorage.setItem('cmDetail-scroll-' + _cmName,
-							JSON.stringify({ top: $body.scrollTop(), left: $body.scrollLeft() }));
-					} catch(e) {}
-				}
-			}, 500);
-		});
-	}
-
-	$panel.css('display', 'flex');
-	// Auto-load on first open (both live and history mode)
-	if (!_cmSrvName && _serverList && _serverList.length > 0) {
-		var _autoTs;
-		if (isHistoryViewActive()) {
-			// History mode: use last-known timestamp or read from the slider display text
-			_autoTs = _cmTimestamp;
-			if (!_autoTs) {
-				var _sliderTxt = ($('#dbx-history-slider-center-text').text() || '').trim();
-				_autoTs = _sliderTxt.split(' - ')[0].trim();
-			}
-		} else {
-			_autoTs = moment().format('YYYY-MM-DD HH:mm:ss');
-		}
-		if (_autoTs && _autoTs.match(/^\d{4}-\d{2}-\d{2}/))
-			cmDetailLoadList(_serverList[0], _autoTs);
-	}
-}
-
-// Toggle dark mode on the CM detail panel and persist the preference
-function cmDetailDarkToggle(on)
-{
-	var $panel = $('#cm-detail-panel');
-	if (on) $panel.addClass('cm-dark'); else $panel.removeClass('cm-dark');
-	try { localStorage.setItem('cmDetailDark', on ? '1' : '0'); } catch(e) {}
-}
-
-// Called from addData() on every live sample — refresh current CM if panel is open and not paused
-function cmDetailLiveRefresh(srvName)
-{
-	if (!$('#cm-detail-panel').is(':visible')) return;
-	if ($('#cm-detail-paused').prop('checked')) return;
-	var srv = _cmSrvName || srvName;
-	if (!srv) return;
-	var ts = moment().format('YYYY-MM-DD HH:mm:ss');
-	_cmTimestamp = ts;
-	$('#cm-detail-ts').text('@ ' + ts);
-
-	if (!_cmName)
-	{
-		// No CM selected yet — do a full load (builds tabs, selects first CM with data)
-		cmDetailLoadList(srv, ts);
-		return;
-	}
-
-	// Re-query MonSessionSampleDetailes to update tab colours (same as native GUI on every sample),
-	// then refresh data for the currently selected CM — without rebuilding the tab DOM.
-	$.ajax({
-		url: '/api/cc/mgt/cm/list',
-		data: { srv: srv, time: ts },
-		dataType: 'text',
-		success: function(data) {
-			try {
-				var r = JSON.parse(data);
-				if (!r.error) {
-					_cmListData = r;
-					cmDetailUpdateTabColors(r.groups);
-					// Use exact SessionSampleTime from MonSessionSampleDetailes
-					if (r.resolvedTime) { _cmTimestamp = r.resolvedTime.substring(0, 19); $('#cm-detail-ts').text('@ ' + _cmTimestamp); }
-				}
-			} catch(ex) {}
-			cmDetailLoadData(srv, _cmName, _cmTimestamp, _cmType);
-		},
-		error: function() {
-			// Still refresh CM data even if list call failed
-			cmDetailLoadData(srv, _cmName, ts, _cmType);
-		}
-	});
-}
-
-// Update only the has-data/no-data classes on existing tab <li> elements.
-// Called on live refresh so tab colours stay current without rebuilding the DOM.
-function cmDetailUpdateTabColors(groups)
-{
-	if (!groups) return;
-	groups.forEach(function(g) {
-		var hasAny = g.cms.some(function(c) { return c.hasData; });
-		$('#cm-group-tabs li[data-group-name]').each(function() {
-			if ($(this).attr('data-group-name') === g.groupName) {
-				$(this).toggleClass('cm-tab-has-data', hasAny).toggleClass('cm-tab-no-data', !hasAny);
-			}
-		});
-		g.cms.forEach(function(c) {
-			$('#cm-name-tabs li[data-cm-name]').each(function() {
-				if ($(this).attr('data-cm-name') === c.cmName) {
-					$(this).toggleClass('cm-tab-has-data', c.hasData).toggleClass('cm-tab-no-data', !c.hasData);
-				}
-			});
-		});
-	});
-}
-
-// Called when the history slider moves — refresh CM data for the selected time
-function cmDetailSliderRefresh(startTime)
-{
-	if (!$('#cm-detail-panel').is(':visible')) return;
-	var srv = _cmSrvName || (_serverList && _serverList.length > 0 ? _serverList[0] : null);
-	if (!srv || !startTime) return;
-	cmDetailLoadList(srv, startTime);
-}
-
-// Column sort: 3-stage cycle — desc → asc → original
-function cmDetailSortCol(colIdx)
-{
-	// Force-hide any stuck Bootstrap tooltip before re-rendering the table
-	$('[data-toggle="tooltip"]').tooltip('hide');
-
-	if (_cmSort.col === colIdx) {
-		_cmSort.stage = (_cmSort.stage === 1) ? 2 : (_cmSort.stage === 2) ? 0 : 1;
-		if (_cmSort.stage === 0) _cmSort.col = -1;
-	} else {
-		_cmSort.col   = colIdx;
-		_cmSort.stage = 1;   // start with desc (highest first)
-	}
-	cmDetailApplyFilter(_cmFilter);
-}
-
-function cmDetailClose()
-{
-	$('#cm-detail-panel').hide();
-	_cmSrvName = _cmTimestamp = _cmGroup = _cmName = _cmListData = _cmCurrentData = null;
-	_cmFilter = '';
-	_cmSort    = { col: -1, stage: 0 };
-	_cmSortMap = {};
-	$('#cm-group-tabs,#cm-name-tabs').empty();
-	$('#cm-detail-filter-bar').hide();
-	$('#cm-detail-filter-input').val('');
-	$('#cm-detail-filter-count').text('');
-	$('#cm-detail-row-count').text('');
-	$('#cm-detail-table').html('');
-}
-
-/**
- * Render a single table cell value.
- * - URLs (http/https) become clickable links opening in a new tab.
- * - Native booleans and the strings "true"/"false" become disabled checkboxes.
- * - Everything else is HTML-escaped text.
- */
-function renderCell(val)
-{
-	if (val === null || val === undefined) return '<span style="color:#aaa;">null</span>';
-	if (val === true  || String(val).toLowerCase() === 'true')
-		return '<input type="checkbox" checked onclick="return false;" style="cursor:default;pointer-events:none;">';
-	if (val === false || String(val).toLowerCase() === 'false')
-		return '<input type="checkbox" onclick="return false;" style="cursor:default;pointer-events:none;">';
-	var s = String(val);
-	if (s.match(/^https?:\/\//i))
-		return '<a href="' + escHtml(s) + '" target="_blank" rel="noopener noreferrer">' + escHtml(s) + '</a>';
-	return escHtml(s);
-}
-
-// escHtml() defined in dbxcentral.utils.js
 
 //-----------------------------------------------------------
 // ACTIVE STATEMENTS
@@ -1309,11 +484,21 @@ function activeStatementsCounterTypeClick(radioBut)
 
 	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
 	console.log('activeStatementsCounterTypeClick(): Active Statement CounterType[RadioBut]: ' + rVal);
-	
+
 	// Save last known value in "WebBrowser storage"
 	getStorage('dbxtune_checkboxes_').set("active-statements-counter-type", rVal);
-	
-	// get Counters...
+
+	// Re-render from cached data — the raw JSON is unchanged, only the display type
+	// changed, so dbxTuneCheckActiveStatements() would short-circuit on the
+	// data === _lastActiveStatementData guard and never re-render.
+	if (_lastActiveStatementData) {
+		try {
+			setActiveStatement(JSON.parse(_lastActiveStatementData));
+			return;
+		} catch(e) { /* fall through */ }
+	}
+
+	// No cached data yet — fetch from server
 	dbxTuneCheckActiveStatements();
 }
 function activeStatementsPausedChkClick(checkbox) 
@@ -1790,6 +975,9 @@ var _alarmPanelTab      = 'active';  // graph-specific: 'active' or 'history'
 var _alarmHistoryTs     = null;
 var _alarmHistoryBefore = 30;  // minutes before clicked timestamp
 var _alarmHistoryAfter  = 5;   // minutes after clicked timestamp
+// History mode alarm cache: fetched once per history range, reused on every slider tick.
+var _alarmHistoryCache    = null; // cached raw event array for the full history range
+var _alarmHistoryCacheKey = null; // fetchStart string used as the cache key
 // Note: _alarmPanelOpen and _alarmPanelAllData are defined in dbxAlarm.js (shared)
 
 function activeStatementsDarkToggle(on)
@@ -1924,27 +1112,49 @@ function alarmPanelLoadActive()
 	});
 }
 
-function alarmPanelLoadHistory(ts)
+function alarmPanelLoadHistory(ts, historyStart)
 {
 	_alarmHistoryTs = ts;
-	_alarmPanelTab = 'history';
+	_alarmPanelTab  = 'history';
 	var mTs = moment(ts, "YYYY-MM-DD HH:mm:ss");
+
 	if (_alarmPanelOpen) {
 		$('#alarm-panel-title').text('Active Alarms at  ' + mTs.format('YYYY-MM-DD HH:mm:ss'));
 		$('#alarm-history-range').hide();
-		// Capture scroll pos and freeze listener BEFORE replacing content — shrinking the content
-		// fires a scroll event that would otherwise reset _alarmScrollPos to 0.
+		// Capture scroll pos and freeze listener BEFORE replacing content
 		_alarmScrollPos.top  = $('#alarm-panel-body').scrollTop();
 		_alarmScrollPos.left = $('#alarm-panel-body').scrollLeft();
 		_alarmScrollFrozen   = true;
-		$('#alarm-panel-content').html('<em style="color:#777">Loading&hellip;</em>');
 	}
-	// Fetch up to 24h before T so we catch alarms raised well before the clicked timestamp
-	var start = mTs.clone().subtract(24, 'hours').format("YYYY-MM-DD HH:mm:ss");
-	var end   = mTs.clone().add(5, 'minutes').format("YYYY-MM-DD HH:mm:ss");
+
+	// Compute fetch window start: whichever is earlier — historyStart or 30 days ago.
+	var thirtyDaysAgo = mTs.clone().subtract(30, 'days');
+	var histMoment    = historyStart ? moment(historyStart, "YYYY-MM-DD HH:mm:ss") : null;
+	var fetchFrom     = (histMoment && histMoment.isBefore(thirtyDaysAgo)) ? histMoment : thirtyDaysAgo;
+	// Cache key MUST be fixed for the whole history session, not derived from the
+	// sliding mTs (which changes every tick). historyStart is the slider's fixed
+	// left-edge; use it directly. Fall back to computed fetchFrom only when
+	// historyStart is not available (e.g. panel opened via button with no slider active).
+	var cacheKey = historyStart || fetchFrom.format("YYYY-MM-DD HH:mm:ss");
+
+	// In history mode the data never changes: if the cache covers this range,
+	// just recompute active-at-T locally -- no network call needed.
+	if (_alarmHistoryCache !== null && _alarmHistoryCacheKey === cacheKey) {
+		_alarmHistoryComputeAndRender(_alarmHistoryCache, mTs);
+		return;
+	}
+
+	// Cache miss: fetch the FULL range (fetchFrom to now+1h) in one request so
+	// every subsequent slider tick is served from cache without another fetch.
+	// NOTE: fetchStart uses fetchFrom (30 days ago or historyStart, whichever is earlier),
+	// NOT cacheKey — the cache key is just the session identifier, not the fetch window.
+	var fetchStart = fetchFrom.format("YYYY-MM-DD HH:mm:ss");
+	var fetchEnd   = moment().add(1, 'hour').format("YYYY-MM-DD HH:mm:ss");
+	if (_alarmPanelOpen)
+		$('#alarm-panel-content').html('<em style="color:#777">Loading&hellip;</em>');
 	$.ajax({
 		url: "api/alarm/history",
-		data: { startTime: start, endTime: end },
+		data: { startTime: fetchStart, endTime: fetchEnd },
 		type: 'get',
 		success: function(data) {
 			var jsonResp;
@@ -1952,36 +1162,34 @@ function alarmPanelLoadHistory(ts)
 				if (_alarmPanelOpen) $('#alarm-panel-content').html('<em>Parse error</em>');
 				return;
 			}
-			// Filter to servers currently shown in this graph page
+			// Filter to servers shown in this graph page, then cache the result
 			if (Array.isArray(jsonResp) && _serverList && _serverList.length > 0)
 				jsonResp = jsonResp.filter(function(e) { return _serverList.indexOf(e.srvName) >= 0; });
-			// Compute which alarms were ACTIVE at the clicked timestamp:
-			// For each unique alarm keep the latest event before T, then check
-			// createTime <= T and (cancelTime is null/empty or cancelTime > T)
-			var activeAtT = alarmComputeActiveAt(jsonResp, mTs);
-			// Always update the badge to reflect alarms active at this history time
-			var nonMuted = activeAtT.filter(function(a) { return !a.isMuted; });
-			var muted    = activeAtT.filter(function(a) { return  a.isMuted; });
-			alarmPanelUpdateBtn(nonMuted.length, muted.length);
-
-			// Auto Open / Close in history mode
-			if ($('#alarm-auto-open-chk').prop('checked')) {
-				if (nonMuted.length > 0 && !_alarmPanelOpen) {
-					alarmPanelToggle(); // opens panel and re-calls alarmPanelLoadHistory to render
-					return;             // let the second fetch handle rendering
-				} else if (nonMuted.length === 0 && _alarmPanelOpen) {
-					alarmPanelToggle(); // close panel — no alarms at this time
-					return;
-				}
-			}
-			if (_alarmPanelOpen) {
-				alarmPanelRenderHistory(activeAtT, mTs);
-			}
+			_alarmHistoryCache    = Array.isArray(jsonResp) ? jsonResp : [];
+			_alarmHistoryCacheKey = cacheKey;
+			_alarmHistoryComputeAndRender(_alarmHistoryCache, mTs);
 		},
 		error: function() {
 			if (_alarmPanelOpen) $('#alarm-panel-content').html('<em style="color:red">Failed to load alarm history.</em>');
 		}
 	});
+}
+
+/**
+ * Compute which alarms were active at mTs from the (cached) event array,
+ * update the badge, and render the panel if open.
+ * Called on both cache-hit (sync) and after a fresh network fetch.
+ */
+function _alarmHistoryComputeAndRender(events, mTs)
+{
+	var activeAtT = alarmComputeActiveAt(events, mTs);
+	var nonMuted  = activeAtT.filter(function(a) { return !a.isMuted; });
+	var muted     = activeAtT.filter(function(a) { return  a.isMuted; });
+	alarmPanelUpdateBtn(nonMuted.length, muted.length);
+	// In history mode: never auto-open/close -- panel stays as the user left it.
+	if (_alarmPanelOpen) {
+		alarmPanelRenderHistory(activeAtT, mTs);
+	}
 }
 
 /**
@@ -2011,10 +1219,10 @@ function alarmComputeActiveAt(events, mTs)
 
 	var active = [];
 	Object.keys(alarmMap).forEach(function(key) {
-		var ev         = alarmMap[key];
-		var createTime = ev.createTime  ? moment(ev.createTime)  : null;
-		var cancelTime = ev.cancelTime  ? moment(ev.cancelTime)  : null;
-		var createdBeforeT = createTime && !createTime.isAfter(mTs);
+		var ev          = alarmMap[key];
+		var createTime  = ev.createTime ? moment(ev.createTime) : null;
+		var cancelTime  = ev.cancelTime ? moment(ev.cancelTime) : null;
+		var createdBeforeT  = createTime && !createTime.isAfter(mTs);
 		var notCancelledAtT = !cancelTime || cancelTime.isAfter(mTs);
 		if (createdBeforeT && notCancelledAtT) {
 			active.push(ev);
@@ -2041,9 +1249,9 @@ function alarmPanelRenderHistory(jsonResp, mTs)
 	alarmPanelApplyFilter();
 }
 
-function alarmPanelSliderRefresh(ts)
+function alarmPanelSliderRefresh(ts, historyStart)
 {
-	alarmPanelLoadHistory(ts);
+	alarmPanelLoadHistory(ts, historyStart);
 }
 
 // Fetch alarm events covering the full timeline range and render orange tick marks
@@ -2598,14 +1806,9 @@ function dbxTuneGraphSubscribe()
 
 		let appName     = graphHead.appName;
 
-		// Build a new Active Statements (read data for current servers from DbxCentral)
-		dbxTuneCheckActiveStatements();
-
-		// CM Detail live refresh: reload current CM when new data arrives (not history, not paused)
-		cmDetailLiveRefresh(graphServerName);
-
-		// Alarm panel: update button badge + refresh if panel is open
-		alarmPanelLiveRefresh(graphServerName);
+		// Dispatch live data to all module panels via GraphBus
+		if (typeof GraphBus !== 'undefined')
+			GraphBus.emit('ws-data', { srvName: graphServerName });
 
 		// TODO:
 		// to let the Browser update it's GUI it would have been nice with a yield() method
@@ -4337,8 +3540,9 @@ class DbxGraph
 				// Then switch to history mode
 				dbxHistoryAction(clickTs);
 
-				// Load CM detail data for the clicked server and timestamp
-				cmDetailLoadList(thisClass.getServerName(), clickTs);
+				// Counter Details: only refresh if already open (open via button, not graph click)
+				if ($('#cm-detail-panel').is(':visible'))
+					cmDetailLoadList(thisClass.getServerName(), clickTs);
 
 				// Refresh DBMS Config panel if it is open
 				if ($('#dbms-config-panel').is(':visible'))
@@ -6056,622 +5260,5 @@ function updateNavbarInfo()
 		console.log("oldestTs: "+oldestTs+" ["+oldestTs.format("YYYY-MM-DD HH:mm:ss")+"], newestTs: "+newestTs+" ["+newestTs.format("YYYY-MM-DD HH:mm:ss")+"], hourDiff="+hourDiff);
 	}
 	// window.dispatchEvent(new Event('resize'));
-}
-
-//-----------------------------------------------------------
-// DBMS CONFIG PANEL
-//-----------------------------------------------------------
-
-var _dcSrvName   = null;   // server name currently displayed
-var _dcTimestamp = null;   // timestamp currently displayed
-var _dcData      = null;   // last loaded JSON response
-var _dcMainTab   = 'params';  // 'params' | 'texts' | 'issues'
-var _dcTextTab   = null;   // currently selected configName sub-tab
-var _dcFilter    = '';     // active filter text
-
-/** Toggle the DBMS Config panel open/closed */
-function dbmsConfigToggle()
-{
-	var $panel = $('#dbms-config-panel');
-	if ($panel.is(':visible')) {
-		dbmsConfigClose();
-		return;
-	}
-
-	// On first open: center horizontally, near the top (just below the navbar)
-	if (!_dcSrvName) {
-		$panel.css('display', 'flex'); // must be visible to measure width
-		var panelW = $panel.outerWidth();
-		var left   = Math.max(0, Math.round((window.innerWidth - panelW) / 2));
-		$panel.css({ top: '100px', left: left + 'px' });
-	}
-
-	$panel.css('display', 'flex');
-
-	// Restore dark mode
-	var saved = getStorage('dbxtune_checkboxes_').get('dbms-config-dark-chk');
-	var dark  = (saved === 'checked') ? true
-	          : (saved === 'not')     ? false
-	          : (_colorSchema === 'dark');
-	$('#dbms-config-dark').prop('checked', dark);
-	if (dark) $panel.addClass('dc-dark'); else $panel.removeClass('dc-dark');
-
-	// Auto-load on every open
-	dbmsConfigRefresh();
-}
-
-/** Reload DBMS config data for the current (or best-available) server + timestamp */
-function dbmsConfigRefresh()
-{
-	var srv = _dcSrvName || (_serverList && _serverList.length > 0 ? _serverList[0] : null);
-	var ts;
-	if (isHistoryViewActive()) {
-		ts = _dcTimestamp || _cmTimestamp;
-		if (!ts) {
-			var txt = ($('#dbx-history-slider-center-text').text() || '').trim();
-			ts = txt.split(' - ')[0].trim();
-		}
-	} else {
-		ts = _dcTimestamp || moment().format('YYYY-MM-DD HH:mm:ss');
-	}
-	if (srv && ts && ts.match(/^\d{4}-\d{2}-\d{2}/))
-		dbmsConfigLoad(srv, ts);
-}
-
-/** Close and reset the DBMS Config panel */
-function dbmsConfigClose()
-{
-	$('#dbms-config-panel').hide();
-	_dcSrvName = _dcTimestamp = _dcData = _dcTextTab = null;
-	_dcMainTab = 'params';
-	_dcFilter  = '';
-	$('#dbms-config-text-subtabs').hide().empty();
-	$('#dbms-config-filter-bar').hide();
-	$('#dbms-config-filter-input').val('');
-	$('#dbms-config-filter-count').text('');
-	$('#dbms-config-content').html('');
-	// Reset main tab active state
-	$('#dbms-config-tabs-main .nav-link').removeClass('active');
-	$('#dbms-config-tabs-main .nav-link').first().addClass('active');
-}
-
-/** Toggle dark mode for the DBMS Config panel */
-function dbmsConfigDarkToggle(on)
-{
-	if (on) $('#dbms-config-panel').addClass('dc-dark');
-	else    $('#dbms-config-panel').removeClass('dc-dark');
-	getStorage('dbxtune_checkboxes_').set('dbms-config-dark-chk', on ? 'checked' : 'not');
-}
-
-/** Load DBMS config data from the API for the given server+timestamp */
-function dbmsConfigLoad(srvName, timestamp)
-{
-	if (!srvName || !timestamp) return;
-	_dcSrvName   = srvName;
-	_dcTimestamp = timestamp;
-	$('#dbms-config-srv').text('[' + srvName + ']');
-	$('#dbms-config-ts' ).text('@ ' + timestamp);
-	$('#dbms-config-loading').show();
-	$('#dbms-config-content').html('');
-
-	$.ajax({
-		url:      '/api/cc/mgt/dbms-config',
-		data:     { srv: srvName, ts: timestamp },
-		dataType: 'text',
-		success: function(data) {
-			$('#dbms-config-loading').hide();
-			try {
-				var r = JSON.parse(data);
-				if (r.error) { dbmsConfigShowMsg(r.message || r.error); return; }
-				_dcData = r;
-				// Show the actual capture time (SessionStartTime) from the response
-				var captureTs = r.resolvedTs || r.ts || _dcTimestamp;
-				$('#dbms-config-ts').text('Captured: ' + captureTs);
-				dbmsConfigRender(_dcMainTab);
-			} catch(ex) { dbmsConfigShowMsg('Parse error: ' + ex); }
-		},
-		error: function(xhr) {
-			$('#dbms-config-loading').hide();
-			dbmsConfigShowMsg('HTTP ' + xhr.status + ': ' + xhr.statusText);
-		}
-	});
-}
-
-/** Render the currently selected main tab */
-function dbmsConfigRender(tab)
-{
-	_dcMainTab = tab;
-	_dcFilter  = '';
-	$('#dbms-config-filter-input').val('');
-	$('#dbms-config-filter-count').text('');
-
-	// Highlight the correct main tab link
-	$('#dbms-config-tabs-main .nav-link').removeClass('active');
-	$('#dbms-config-tabs-main .nav-link').each(function() {
-		if ($(this).attr('onclick') && $(this).attr('onclick').indexOf("'" + tab + "'") >= 0)
-			$(this).addClass('active');
-	});
-
-	if (!_dcData) return;
-
-	if (tab === 'params') {
-		$('#dbms-config-text-subtabs').hide().empty();
-		$('#dbms-config-filter-bar').css('display','flex');
-		dbmsConfigRenderParams(_dcData.params);
-	} else if (tab === 'texts') {
-		$('#dbms-config-filter-bar').hide();
-		dbmsConfigRenderTexts(_dcData.texts);
-	} else if (tab === 'issues') {
-		$('#dbms-config-text-subtabs').hide().empty();
-		$('#dbms-config-filter-bar').css('display','flex');
-		dbmsConfigRenderIssues(_dcData.issues);
-	}
-}
-
-/** Handle main tab click */
-function dbmsConfigMainTabClick(evt, tab)
-{
-	evt.preventDefault();
-	dbmsConfigRender(tab);
-}
-
-// ── Parameters tab ──────────────────────────────────────────────────────────
-
-function dbmsConfigRenderParams(params)
-{
-	if (!params || !params.columns || params.columns.length === 0) {
-		$('#dbms-config-content').html('<div class="p-3 text-muted">No parameter data available.</div>');
-		return;
-	}
-	// Default filter: show only non-default values (if the column exists)
-	var hasNonDefault = params.columns.some(function(c) { return c.toLowerCase() === 'nondefault'; });
-	var defaultFilter = hasNonDefault ? 'where NonDefault = true' : '';
-	_dcFilter = defaultFilter;
-	$('#dbms-config-filter-input').val(defaultFilter);
-	dbmsConfigApplyFilterToData(params.columns, params.rows, 'dc-params-table', defaultFilter);
-}
-
-// ── Text Snippets tab ────────────────────────────────────────────────────────
-
-function dbmsConfigRenderTexts(texts)
-{
-	var $st = $('#dbms-config-text-subtabs').css('display','flex').empty();
-
-	if (!texts || texts.length === 0) {
-		$('#dbms-config-content').html('<div class="p-3 text-muted">No text snippets available.</div>');
-		return;
-	}
-
-	// Build sub-tabs
-	texts.forEach(function(t, idx) {
-		var name  = t.configName || ('snippet-' + idx);
-		var label = t.tabLabel   || name;   // human-readable label, falls back to configName
-		var isFirst = (idx === 0);
-		if (idx === 0) _dcTextTab = name;
-		$st.append('<li class="nav-item"><a class="nav-link' + (isFirst ? ' active' : '') + '" href="#"'
-			+ ' onclick="dbmsConfigTextTabClick(event,\'' + name.replace(/'/g,"\\'") + '\');return false;">'
-			+ escHtml(label) + '</a></li>');
-	});
-
-	// Show first tab's content
-	if (texts.length > 0)
-		dbmsConfigShowTextContent(texts[0]);
-}
-
-function dbmsConfigTextTabClick(evt, configName)
-{
-	evt.preventDefault();
-	_dcTextTab = configName;
-	$('#dbms-config-text-subtabs .nav-link').removeClass('active');
-	$('#dbms-config-text-subtabs .nav-link').each(function() {
-		if ($(this).text() === configName) $(this).addClass('active');
-	});
-	if (_dcData && _dcData.texts) {
-		var found = null;
-		for (var i = 0; i < _dcData.texts.length; i++) {
-			if (_dcData.texts[i].configName === configName) { found = _dcData.texts[i]; break; }
-		}
-		if (found) dbmsConfigShowTextContent(found);
-	}
-}
-
-/**
- * Render a single text snippet entry.
- * ASCII tables (isql-style) are converted to sortable/filterable HTML tables.
- * Other text is shown in a <pre>.
- */
-function dbmsConfigShowTextContent(entry)
-{
-	var text = entry.configText || '';
-	if (!text) {
-		$('#dbms-config-content').html('<div class="p-3 text-muted">No content.</div>');
-		return;
-	}
-
-	var segments = parseAsciiContent(text);
-	var html = '';
-	segments.forEach(function(seg, idx) {
-		if (seg.type === 'table') {
-			html += renderAsciiTable(seg, 'dc-ascii-' + idx);
-		} else {
-			html += '<pre style="white-space:pre-wrap;font-size:0.82em;border:1px solid #dee2e6;border-radius:3px;padding:6px;margin-bottom:6px;">'
-				+ escHtml(seg.text) + '</pre>';
-		}
-	});
-	$('#dbms-config-content').html(html || '<div class="p-3 text-muted">Empty.</div>');
-}
-
-// ── Issues tab ───────────────────────────────────────────────────────────────
-
-function dbmsConfigRenderIssues(issues)
-{
-	if (!issues || !issues.columns || issues.columns.length === 0 ||
-		(issues.rows && issues.rows.length === 0 && issues.columns.length > 0)) {
-		var emptyMsg = (!issues || !issues.columns || issues.columns.length === 0)
-			? 'No issues data available.'
-			: 'No configuration issues detected.';
-		$('#dbms-config-content').html('<div class="p-3 text-muted">' + emptyMsg + '</div>');
-		dbmsConfigApplyFilter('');
-		return;
-	}
-	var html = dbmsConfigBuildTable('dc-issues-table', issues.columns, issues.rows);
-	$('#dbms-config-content').html(html);
-	dbmsConfigApplyFilter('');
-}
-
-// ── Shared table builder ─────────────────────────────────────────────────────
-
-/**
- * Build a Bootstrap table with sortable column headers and filter support.
- * The filter bar (#dbms-config-filter-bar) must already be shown before calling.
- */
-function dbmsConfigBuildTable(tableId, columns, rows)
-{
-	var html = '<table id="' + tableId + '" class="table table-sm table-bordered table-hover" style="font-size:0.82em;white-space:nowrap;">';
-	html += '<thead class="thead-light"><tr>';
-	columns.forEach(function(col, idx) {
-		html += '<th style="cursor:pointer;user-select:none;" onclick="dbmsConfigSortTable(\'' + tableId + '\',' + idx + ');">'
-			+ escHtml(col) + ' <span class="sort-icon" style="font-size:0.75em;color:#999;"></span></th>';
-	});
-	html += '</tr></thead><tbody>';
-	if (!rows || rows.length === 0) {
-		html += '<tr><td colspan="' + columns.length + '" class="text-center text-muted">No rows</td></tr>';
-	} else {
-		rows.forEach(function(row) {
-			html += '<tr>';
-			row.forEach(function(val) {
-				html += '<td>' + renderCell(val) + '</td>';
-			});
-			html += '</tr>';
-		});
-	}
-	html += '</tbody></table>';
-	return html;
-}
-
-/** Sort a table by column index (cycle: asc → desc → original) */
-function dbmsConfigSortTable(tableId, colIdx)
-{
-	var $tbl  = $('#' + tableId);
-	var $th   = $tbl.find('thead th').eq(colIdx);
-	var cur   = $th.data('sort') || 0;  // 0=none, 1=asc, 2=desc
-	var next  = (cur + 1) % 3;
-	$th.data('sort', next);
-
-	// Reset other headers
-	$tbl.find('thead th').not($th).data('sort', 0)
-		.find('.sort-icon').text('');
-	$th.find('.sort-icon').text(next === 1 ? ' ▲' : next === 2 ? ' ▼' : '');
-
-	var $tbody = $tbl.find('tbody');
-	var rows   = $tbody.find('tr').toArray();
-
-	if (next === 0) {
-		// Restore original order (stored as data-orig-idx)
-		rows.sort(function(a, b) {
-			return ($(a).data('orig-idx') || 0) - ($(b).data('orig-idx') || 0);
-		});
-	} else {
-		rows.sort(function(a, b) {
-			var av = $(a).find('td').eq(colIdx).text();
-			var bv = $(b).find('td').eq(colIdx).text();
-			var an = parseFloat(av), bn = parseFloat(bv);
-			if (!isNaN(an) && !isNaN(bn))
-				return next === 1 ? an - bn : bn - an;
-			return next === 1 ? av.localeCompare(bv) : bv.localeCompare(av);
-		});
-	}
-
-	// Remember original order on first sort
-	$tbody.find('tr').each(function(i) {
-		if ($(this).data('orig-idx') === undefined) $(this).data('orig-idx', i);
-	});
-
-	$tbody.empty().append(rows);
-	// Re-apply filter after sort
-	dbmsConfigApplyFilter(_dcFilter);
-}
-
-/** Called from the filter input — re-renders the active params/issues table with the new filter */
-function dbmsConfigApplyFilter(text)
-{
-	_dcFilter = text;
-	if (!_dcData) return;
-
-	if (_dcMainTab === 'params' && _dcData.params) {
-		dbmsConfigApplyFilterToData(_dcData.params.columns, _dcData.params.rows, 'dc-params-table', text);
-	} else if (_dcMainTab === 'issues' && _dcData.issues) {
-		dbmsConfigApplyFilterToData(_dcData.issues.columns, _dcData.issues.rows, 'dc-issues-table', text);
-	}
-}
-
-/**
- * Filter columns/rows and rebuild the table inside #dbms-config-content.
- * Supports:
- *   - "where col = val"  SQL-style (reuses cmDetailWhereFilter)
- *   - plain regex against full row text
- */
-function dbmsConfigApplyFilterToData(columns, rows, tableId, text)
-{
-	var result = applyRowFilter(rows || [], columns, text);
-	var filteredRows = result.filteredRows;
-	var filterError  = result.filterError;
-	var filter = (text || '').trim();
-
-	var total   = (rows || []).length;
-	var visible = filteredRows.length;
-
-	var html = dbmsConfigBuildTable(tableId, columns, filteredRows);
-	$('#dbms-config-content').html(html);
-
-	if (filter)
-		$('#dbms-config-filter-count').text(filterError || ('Showing ' + visible + ' / ' + total));
-	else
-		$('#dbms-config-filter-count').text(total + ' rows');
-}
-
-// ── ASCII table parser ───────────────────────────────────────────────────────
-
-/**
- * Parse isql-style ASCII output into an array of segments:
- *   { type: 'table', headers: [...], rows: [[...], ...] }
- *   { type: 'text',  text: '...' }
- *
- * Isql format (example):
- *   colA    colB    colC
- *   ------- ------- ------
- *   value1  value2  value3
- */
-/** Split a pipe-delimited row:  |val1|val2|val3|  →  ['val1','val2','val3'] */
-function splitPipeRow(line)
-{
-	var s = line.trim();
-	if (s.charAt(0) === '|') s = s.slice(1);
-	if (s.charAt(s.length - 1) === '|') s = s.slice(0, -1);
-	return s.split('|').map(function(c) { return c.trim(); });
-}
-
-/**
- * Parse text that may contain one or more ASCII tables into segments.
- *
- * Handles two formats:
- *
- * 1. Box format (SAP ASE / MySQL isql):
- *      +--------+------+
- *      |ColA    |ColB  |
- *      +--------+------+
- *      |val1    |val2  |
- *      +--------+------+
- *      Rows N              ← optional trailing line
- *
- * 2. Dash-separator format (older isql):
- *      ColA    ColB
- *      ------- ----
- *      val1    val2
- *
- * Returns array of  { type:'table', headers:[...], rows:[[...], ...] }
- *                or { type:'text',  text:'...' }
- */
-function parseAsciiContent(text)
-{
-	if (!text) return [{ type: 'text', text: '' }];
-
-	var lines    = text.split('\n');
-	var segments = [];
-	var i        = 0;
-
-	function isBoxSep(l)  { return /^\+[-+]+\+\s*$/.test(l.trim()); }
-	function isBoxRow(l)  { return /^\|.*\|\s*$/.test(l.trim()); }
-	function isDashSep(l) { var t = l.trim(); return t.length > 2 && /^[-\s]+$/.test(t) && t.indexOf('-') >= 0; }
-
-	while (i < lines.length) {
-		var trimmed = lines[i].trim();
-
-		// ── Box-style +---+---+ table ────────────────────────────────────
-		if (isBoxSep(trimmed)) {
-			i++; // skip opening separator
-
-			// Expect header row  |col1|col2|
-			if (i < lines.length && isBoxRow(lines[i].trim())) {
-				var headers = splitPipeRow(lines[i]);
-				i++;
-
-				// Skip separator after header
-				if (i < lines.length && isBoxSep(lines[i].trim())) i++;
-
-				// Collect data rows
-				var tableRows = [];
-				while (i < lines.length) {
-					var rl = lines[i].trim();
-					if (isBoxSep(rl))      { i++; break; }   // closing separator
-					if (isBoxRow(rl))      { tableRows.push(splitPipeRow(lines[i])); i++; }
-					else                    break;
-				}
-
-				// Skip optional "Rows N" line
-				if (i < lines.length && /^Rows\s+\d+/i.test(lines[i].trim())) i++;
-
-				segments.push({ type: 'table', headers: headers, rows: tableRows });
-			} else {
-				// Lone separator — treat as text
-				segments.push({ type: 'text', text: trimmed });
-			}
-			continue;
-		}
-
-		// ── Dash-separator style  header\n-------\ndata ─────────────────
-		if (i + 1 < lines.length && isDashSep(lines[i + 1])) {
-			var headerLine = lines[i];
-			var sepLine    = lines[i + 1];
-			var cols = [];
-			var dm, dre = /-+/g;
-			while ((dm = dre.exec(sepLine)) !== null)
-				cols.push({ start: dm.index, end: dm.index + dm[0].length });
-
-			if (cols.length > 0) {
-				var headers2 = cols.map(function(c) { return headerLine.substring(c.start, c.end).trim(); });
-				i += 2;
-				var tableRows2 = [];
-				while (i < lines.length) {
-					var rl2 = lines[i];
-					if (rl2.trim() === '' || isDashSep(rl2)) { if (rl2.trim() === '') i++; break; }
-					tableRows2.push(cols.map(function(c) {
-						return rl2.length > c.start ? rl2.substring(c.start, Math.min(c.end + 1, rl2.length)).trim() : '';
-					}));
-					i++;
-				}
-				segments.push({ type: 'table', headers: headers2, rows: tableRows2 });
-				continue;
-			}
-		}
-
-		// ── Plain text ────────────────────────────────────────────────────
-		var textLines = [];
-		while (i < lines.length) {
-			if (isBoxSep(lines[i].trim())) break;
-			if (i + 1 < lines.length && isDashSep(lines[i + 1])) break;
-			textLines.push(lines[i]);
-			i++;
-		}
-		var t = textLines.join('\n').trim();
-		if (t) segments.push({ type: 'text', text: t });
-	}
-
-	return segments.length > 0 ? segments : [{ type: 'text', text: text }];
-}
-
-/**
- * Render one parsed ASCII table segment as a sortable/filterable Bootstrap table.
- * @param {object} seg - { type:'table', headers:[...], rows:[[...], ...] }
- * @param {string} tableId - unique HTML id for the <table>
- */
-function renderAsciiTable(seg, tableId)
-{
-	var html = '<div style="margin-bottom:6px;">';
-
-	// Filter row — only shown when table has more than 5 rows
-	if (seg.rows.length > 5) {
-		html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">'
-			+ '<span style="font-size:0.8em;color:#6c757d;">Filter:</span>'
-			+ '<input type="text" style="font-size:0.8em;height:20px;padding:0 4px;width:200px;font-family:monospace;"'
-			+ ' placeholder="regex..." oninput="dbmsAsciiFilter(this,\'' + tableId + '\');">'
-			+ '<span id="' + tableId + '-cnt" style="font-size:0.78em;color:#6c757d;"></span>'
-			+ '</div>';
-	}
-
-	html += '<table id="' + tableId + '" class="table table-sm table-bordered table-hover" style="font-size:0.8em;white-space:nowrap;width:auto;">';
-	html += '<thead class="thead-light"><tr>';
-	seg.headers.forEach(function(h, idx) {
-		html += '<th style="cursor:pointer;user-select:none;" onclick="dbmsAsciiSort(this,\'' + tableId + '\',' + idx + ');">'
-			+ escHtml(h) + ' <span class="sort-icon" style="font-size:0.75em;color:#999;"></span></th>';
-	});
-	html += '</tr></thead><tbody>';
-	if (seg.rows.length === 0) {
-		html += '<tr><td colspan="' + seg.headers.length + '" class="text-center text-muted">No rows</td></tr>';
-	} else {
-		seg.rows.forEach(function(row, ri) {
-			html += '<tr data-orig="' + ri + '">';
-			row.forEach(function(cell) {
-				html += '<td>' + renderCell(cell) + '</td>';
-			});
-			html += '</tr>';
-		});
-	}
-	html += '</tbody></table></div>';
-	return html;
-}
-
-/** Filter rows of an ASCII-parsed table */
-function dbmsAsciiFilter(input, tableId)
-{
-	var text   = input.value;
-	var $rows  = $('#' + tableId + ' tbody tr');
-	var total   = $rows.length;
-	var visible = 0;
-	var re = null;
-	if (text) { try { re = new RegExp(text, 'i'); } catch(e) {} }
-
-	$rows.each(function() {
-		var show = !re || re.test($(this).text());
-		$(this).toggle(show);
-		if (show) visible++;
-	});
-
-	var $cnt = $('#' + tableId + '-cnt');
-	$cnt.text(text ? ('Showing ' + visible + ' / ' + total) : (total + ' rows'));
-}
-
-/** Sort an ASCII-parsed table by column */
-function dbmsAsciiSort(th, tableId, colIdx)
-{
-	var $th   = $(th);
-	var cur   = parseInt($th.data('sort') || 0);
-	var next  = (cur + 1) % 3;
-	$th.data('sort', next);
-
-	$('#' + tableId + ' thead th').not($th).each(function() {
-		$(this).data('sort', 0);
-		$(this).find('.sort-icon').text('');
-	});
-	$th.find('.sort-icon').text(next === 1 ? ' ▲' : next === 2 ? ' ▼' : '');
-
-	var $tbody = $('#' + tableId + ' tbody');
-	var rows   = $tbody.find('tr').toArray();
-
-	if (next === 0) {
-		rows.sort(function(a, b) {
-			return parseInt($(a).data('orig') || 0) - parseInt($(b).data('orig') || 0);
-		});
-	} else {
-		rows.sort(function(a, b) {
-			var av = $(a).find('td').eq(colIdx).text();
-			var bv = $(b).find('td').eq(colIdx).text();
-			var an = parseFloat(av), bn = parseFloat(bv);
-			if (!isNaN(an) && !isNaN(bn))
-				return next === 1 ? an - bn : bn - an;
-			return next === 1 ? av.localeCompare(bv) : bv.localeCompare(av);
-		});
-	}
-	$tbody.empty().append(rows);
-}
-
-/** Show a plain message in the DBMS Config body */
-function dbmsConfigShowMsg(msg)
-{
-	$('#dbms-config-loading').hide();
-	$('#dbms-config-content').html('<div style="padding:15px;text-align:center;color:#6c757d;">' + escHtml(msg) + '</div>');
-}
-
-/**
- * Called from the history slider when the timestamp changes.
- * Refreshes the DBMS Config panel if it is open.
- */
-function dbmsConfigSliderRefresh(ts)
-{
-	if ($('#dbms-config-panel').is(':visible') && _dcSrvName && ts) {
-		_dcTimestamp = ts;
-		$('#dbms-config-ts').text('@ ' + ts);
-		dbmsConfigLoad(_dcSrvName, ts);
-	}
 }
 
