@@ -37,6 +37,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventStatementCacheAboveConfig;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -481,4 +482,20 @@ extends CountersModel
 		return list;
 	}
 
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("module-memory")
+				.title("Active Memory per Module")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("ModuleName")
+				.valueColumns("Active")
+				.seriesLabels("Active Pages")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.03)
+				.splitRatio(0.6),
+		};
+	}
 }

@@ -154,6 +154,15 @@ function getParameter(key, defaultValue)
 
   <!-- Local CSS -->
   <style type='text/css'>
+    /* Global compact sizing — reduce Bootstrap 5's default 16px base */
+    body { font-size: 0.88rem; }
+    .container-fluid .nav-tabs .nav-link { font-size: 0.88rem; padding: 0.35rem 0.75rem; }
+    .table { font-size: 0.85rem; }
+    .table th, .table td { padding: 0.25rem 0.5rem; }
+    .form-control-sm { font-size: 0.82rem; }
+    .col-form-label-sm { font-size: 0.82rem; }
+    .modal-body { font-size: 0.85rem; }
+
     /* table {border-collapse: collapse;}
     th, td {border: 1px solid black; text-align: left; padding: 2px;}
     tr:nth-child(even) {background-color: #f2f2f2;} */
@@ -161,6 +170,11 @@ function getParameter(key, defaultValue)
     .dbx-quick-access-tooltip-table th, td {border: 1px solid white; text-align: left; padding: 2px;}
 
     .tooltip-inner { max-width: 1000px; }
+
+    /* Prevent bootstrap-table's fixed-table-container from overflowing tab panes
+       and creating invisible overlays that block clicks on sibling tab buttons */
+    #aw-sub-tabbed-pane-tabList { position: relative; z-index: 10; }
+    #aw-sub-tabbed-pane > .tab-pane { overflow: hidden; }
 
     .jumbotron{ margin-top:-30px; }
 
@@ -263,10 +277,10 @@ function getParameter(key, defaultValue)
 			<button class="nav-link active" id="cc-cfg-tab-head" data-bs-toggle="tab" data-bs-target="#cc-cfg-tab" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Collector Configuration</b></button>
 		</li>
 		<li class="nav-item" role="presentation">
-			<button class="nav-link" id="alarm-writer-tab-head" data-bs-toggle="tab" data-bs-target="#alarm-writer-tab" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Alarm Writers Configuration</b></button>
+			<button class="nav-link" id="alarm-writer-tab-head" data-bs-toggle="tab" data-bs-target="#alarm-writer-tab" type="button" role="tab" aria-controls="alarm-writer-tab" aria-selected="false"><b>Alarm Writers Configuration</b></button>
 		</li>
 		<li class="nav-item" role="presentation">
-			<button class="nav-link" id="dsr-cfg-tab-head" data-bs-toggle="tab" data-bs-target="#dsr-cfg-tab" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Daily Summary Report Configuration</b></button>
+			<button class="nav-link" id="dsr-cfg-tab-head" data-bs-toggle="tab" data-bs-target="#dsr-cfg-tab" type="button" role="tab" aria-controls="dsr-cfg-tab" aria-selected="false"><b>Daily Summary Report Configuration</b></button>
 		</li>
 	</ul>
 
@@ -312,7 +326,7 @@ function getParameter(key, defaultValue)
 					<button class="nav-link active" id="cm-info-tab" data-bs-toggle="tab" data-bs-target="#cm-info" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Info</b></button>
 				</li>
 				<li class="nav-item" role="presentation">
-					<button class="nav-link" id="cm-options-tab" data-bs-toggle="tab" data-bs-target="#cm-options" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Options</b></button>
+					<button class="nav-link" id="cm-options-tab" data-bs-toggle="tab" data-bs-target="#cm-options" type="button" role="tab" aria-controls="cm-options" aria-selected="false"><b>Options</b></button>
 				</li>
 				<li class="nav-item" role="presentation">
 					<button class="nav-link" id="cm-settings-tab" data-bs-toggle="tab" data-bs-target="#cm-settings" type="button" role="tab" aria-controls="profile" aria-selected="false"><b>Local Settings</b></button>
@@ -564,16 +578,16 @@ function getParameter(key, defaultValue)
 
 			<ul class="nav nav-tabs" id="aw-sub-tabbed-pane-tabList" role="tablist">
 				<li class="nav-item" role="presentation">
-					<button class="nav-link active" id="aw-settings-tab" data-bs-toggle="tab" data-bs-target="#aw-settings" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Settings</b></button>
+					<button class="nav-link active" id="aw-settings-tab" type="button" onclick="awSubTabSwitch('aw-settings');"><b>Settings</b></button>
 				</li>
 				<li class="nav-item" role="presentation">
-					<button class="nav-link" id="aw-filters-tab" data-bs-toggle="tab" data-bs-target="#aw-filters" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Filters</b></button>
+					<button class="nav-link" id="aw-filters-tab" type="button" onclick="awSubTabSwitch('aw-filters');"><b>Filters</b></button>
 				</li>
 			</ul>
 			<div class="tab-content" id="aw-sub-tabbed-pane">
 
 				<!-- ================= AW SETTINGS ================== -->
-				<div class="tab-pane fade" id="aw-settings" role="tabpanel" aria-labelledby="options-tab">
+				<div class="tab-pane fade show active" id="aw-settings" role="tabpanel" aria-labelledby="aw-settings-tab">
 					<br>
 					<b>Alarm Writer Settings for the above selected Alarm Writer</b> <i>Click the row, to change the value...</i>
 					<table
@@ -599,7 +613,7 @@ function getParameter(key, defaultValue)
 				</div> <!-- END: AW SETTINGS -->
 
 				<!-- ================= AW FILTERS ================== -->
-				<div class="tab-pane fade" id="aw-filters" role="tabpanel" aria-labelledby="options-tab">
+				<div class="tab-pane fade" id="aw-filters" role="tabpanel" aria-labelledby="aw-filters-tab">
 					<br>
 					<b>Alarm Writer Filters for the above selected Alarm Writer</b> <i>Click the row, to change the value...</i>
 					<table
@@ -680,6 +694,18 @@ function getParameter(key, defaultValue)
 	$('#alarmWritersTable'       ).on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
 	$('#alarmWriterSettingsTable').on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
 	$('#alarmWriterFiltersTable' ).on('click', 'tbody tr', function(event) { $(this).addClass('highlight').siblings().removeClass('highlight'); });
+
+	// Manual tab switch for Alarm Writer sub-tabs (Settings / Filters).
+	// Bootstrap 5's data-bs-toggle="tab" is unreliable inside nested hidden panes,
+	// so we handle it ourselves with plain DOM manipulation.
+	function awSubTabSwitch(paneId) {
+		// Toggle nav-link active
+		$('#aw-sub-tabbed-pane-tabList .nav-link').removeClass('active');
+		$('#' + paneId + '-tab').addClass('active');
+		// Toggle tab-pane visibility
+		$('#aw-sub-tabbed-pane .tab-pane').removeClass('show active');
+		$('#' + paneId).addClass('show active');
+	}
 
 	function detailFormatter(index, row) {
 		var html = [];

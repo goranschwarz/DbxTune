@@ -42,6 +42,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSybMessageHandler;
 import com.dbxtune.cm.CounterSample;
@@ -928,5 +929,31 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("wait-by-event")
+				.title("Wait Distribution by Event")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("WaitEventDesc")
+				.valueColumns("WaitTime", "Waits", "WaitTimePerWait")
+				.seriesLabels("Wait Time", "Waits", "Avg Wait Time")
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+			new CmChartDescriptor()
+				.id("wait-by-class")
+				.title("Wait Distribution by Class")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("WaitEventDesc")
+				.groupByColumn("WaitClassDesc")
+				.valueColumns("WaitTime", "Waits")
+				.seriesLabels("Wait Time", "Waits")
+				.pieOtherLimit(0.05)
+				.splitRatio(0.6),
+		};
 	}
 }

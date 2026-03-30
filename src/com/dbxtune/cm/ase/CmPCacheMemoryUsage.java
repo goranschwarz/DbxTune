@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -214,5 +215,33 @@ extends CountersModel
 			optGoalPlan;
 
 		return sql;
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("memory-summary")
+				.title("Memory Usage - All Modules")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("AllocatorName")
+				.valueColumns("Active")
+				.seriesLabels("Active Pages")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.03)
+				.splitRatio(0.6),
+			new CmChartDescriptor()
+				.id("memory-per-module")
+				.title("Memory Usage per Module")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("AllocatorName")
+				.groupByColumn("ModuleName")
+				.valueColumns("Active")
+				.seriesLabels("Active Pages")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.03)
+				.splitRatio(0.6),
+		};
 	}
 }

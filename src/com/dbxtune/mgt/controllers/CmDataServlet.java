@@ -59,6 +59,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.pcs.PersistentCounterHandler;
@@ -519,9 +520,24 @@ extends HttpServlet
 				}
 			}
 
-			// CM metadata: diff columns + per-column tooltips from dictionary/local descriptions
+			// CM metadata: diff/pct columns + per-column tooltips
+			//
+			// Diff/Pct columns:
+			//   Regular CMs store column names in String[] arrays (getDiffColumns / getPctColumns).
+			//   HostMonitor CMs (CounterModelHostMonitor) don't populate those arrays — they
+			//   override isDiffColumn(int) / isPctColumn(int) to delegate to HostMonitorMetaData.
+			//   Strategy: use String[] getters first (fast, index-safe); if empty, fall back to
+			//   the polymorphic per-column methods with the CM's own column model indices.
+			//
+			// Tooltips:
+			//   getToolTipTextOnTableColumnHeader(String) is polymorphic and takes a name (not
+			//   an index), so it's safe for all CM types. CounterModelHostMonitor overrides it
+			//   to read from HostMonitorMetaData.getDescription().
+			//   For regular CMs _cmToolTipSupplier may be null in NoGUI/collector mode, so we
+			//   add a manual fallback via getLocalToolTipTextOnTableColumnHeader + MonTablesDictionary.
 			SimpleDateFormat outFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-			String[]     diffCols = new String[0];
+			List<String> diffCols = new ArrayList<>();
+			List<String> pctCols  = new ArrayList<>();
 			List<String> tooltips = new ArrayList<>(columns.size());
 			if (CounterController.hasInstance())
 			{
@@ -529,18 +545,60 @@ extends HttpServlet
 				CountersModel      cmMeta = cc2.getCmByName(cmName);
 				if (cmMeta != null)
 				{
+					// --- Diff/Pct columns ---
+					// Try String[] getters first (works for regular CMs, returns null for HostMonitor)
+					Set<String> diffSet = new HashSet<>();
+					Set<String> pctSet  = new HashSet<>();
 					if (cmMeta.getDiffColumns() != null)
-						diffCols = cmMeta.getDiffColumns();
+						for (String d : cmMeta.getDiffColumns()) diffSet.add(d);
+					if (cmMeta.getPctColumns() != null)
+						for (String p : cmMeta.getPctColumns()) pctSet.add(p);
+
+					if (diffSet.isEmpty() && pctSet.isEmpty())
+					{
+						// Fallback for HostMonitor CMs: use the polymorphic per-column methods.
+						// These take an int index into the CM's internal column model. For
+						// HostMonitor, the columns list returned by the DB query matches the
+						// HostMonitorMetaData column order (no housekeeping prefix to strip).
+						// For safety, iterate over the CM's own column list and match by name.
+						try
+						{
+							List<String> cmColNames = cmMeta.getColNames(CountersModel.DATA_ABS);
+							if (cmColNames != null)
+							{
+								for (int ci = 0; ci < cmColNames.size(); ci++)
+								{
+									String cn = cmColNames.get(ci);
+									try { if (cmMeta.isDiffColumn(ci)) diffSet.add(cn); } catch (Exception ignored) {}
+									try { if (cmMeta.isPctColumn(ci))  pctSet.add(cn);  } catch (Exception ignored) {}
+								}
+							}
+						}
+						catch (Exception ignored) {}
+					}
+
+					// Intersect with the actual columns returned by the query
 					for (String col : columns)
 					{
-						// Two-step lookup mirrors CountersModel.getToolTipTextOnTableColumnHeader().
-						// We cannot call that method directly because _cmToolTipSupplier is null
-						// in NoGUI/collector mode (guiController == null at CM construction time).
-						String tt = cmMeta.getLocalToolTipTextOnTableColumnHeader(col);
+						if (diffSet.contains(col)) diffCols.add(col);
+						if (pctSet.contains(col))  pctCols.add(col);
+					}
+
+					// --- Tooltips ---
+					for (String col : columns)
+					{
+						// Polymorphic: HostMonitor overrides to use HostMonitorMetaData.getDescription()
+						String tt = null;
+						try { tt = cmMeta.getToolTipTextOnTableColumnHeader(col); } catch (Exception ignored) {}
+						// Fallback for regular CMs where _cmToolTipSupplier is null in NoGUI mode
 						if (tt == null || tt.trim().isEmpty())
 						{
-							try { tt = MonTablesDictionaryManager.getInstance().getDescription(cmMeta.getMonTablesInQuery(), col); }
-							catch (Exception ignored) {}
+							tt = cmMeta.getLocalToolTipTextOnTableColumnHeader(col);
+							if (tt == null || tt.trim().isEmpty())
+							{
+								try { tt = MonTablesDictionaryManager.getInstance().getDescription(cmMeta.getMonTablesInQuery(), col); }
+								catch (Exception ignored) {}
+							}
 						}
 						tooltips.add(tt);
 					}
@@ -559,6 +617,15 @@ extends HttpServlet
 				normRows.add(normRow);
 			}
 
+			// Chart descriptors (declared by the CM for the web UI)
+			CmChartDescriptor[] chartDescriptors = null;
+			if (CounterController.hasInstance())
+			{
+				CountersModel cmForCharts = CounterController.getInstance().getCmByName(cmName);
+				if (cmForCharts != null)
+					chartDescriptors = cmForCharts.getChartDescriptors();
+			}
+
 			// Build JSON response via Jackson
 			Map<String, Object> root = new LinkedHashMap<>();
 			root.put("cmName",        cmName);
@@ -568,11 +635,14 @@ extends HttpServlet
 			root.put("cmSampleTime",  cmSampleTime != null ? outFmt.format(cmSampleTime) : null);
 			root.put("cmSampleMs",    cmSampleMs);
 			root.put("rowCount",      rows.size());
-			root.put("diffColumns",   Arrays.asList(diffCols));
+			root.put("diffColumns",   diffCols);
+			root.put("pctColumns",    pctCols);
 			root.put("isNumeric",     colTypes);
 			root.put("tooltips",      tooltips);
 			root.put("columns",       columns);
 			root.put("rows",          normRows);
+			if (chartDescriptors != null)
+				root.put("chartDescriptors", chartDescriptors);
 
 			om.writeValue(out, root);
 			out.flush();

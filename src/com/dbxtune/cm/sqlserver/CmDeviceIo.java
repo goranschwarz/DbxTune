@@ -31,6 +31,7 @@ import com.dbxtune.CounterControllerAse;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -893,5 +894,22 @@ extends CountersModel
 			else
 				diffData.setValueAt(new BigDecimal(0), rowId, pos_AvgWriteKbPerIo);
 		}
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("device-io")
+				.title("Device IO Distribution")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("LogicalName")
+				.valueColumns("TotalIOs", "Reads", "Writes")
+				.seriesLabels("Total IOs", "Reads", "Writes")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.03)
+				.splitRatio(0.7),
+		};
 	}
 }

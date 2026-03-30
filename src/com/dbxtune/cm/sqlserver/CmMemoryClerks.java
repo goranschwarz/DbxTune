@@ -40,6 +40,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventMemoryClerkWarning;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -549,5 +550,23 @@ extends CountersModel
 		list.add(new CmSettingsHelper("USERSTORE_TOKENPERM", isAlarmSwitch, PROPKEY_alarm_USERSTORE_TOKENPERM, Integer.class, conf.getIntProperty(PROPKEY_alarm_USERSTORE_TOKENPERM, DEFAULT_alarm_USERSTORE_TOKENPERM), DEFAULT_alarm_USERSTORE_TOKENPERM, "If 'SizeMB' for type='USERSTORE_TOKENPERM', name='TokenAndPermUserStore' is greater than ## then send 'AlarmEventMemoryClerkWarning'." ));
 
 		return list;
+	}
+
+	@Override
+	public CmChartDescriptor[] getChartDescriptors()
+	{
+		return new CmChartDescriptor[] {
+			new CmChartDescriptor()
+				.id("memory-distribution")
+				.title("Memory Clerk Distribution")
+				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+				.labelColumn("type")
+				.valueColumns("SizeMb")
+				.seriesLabels("Size (MB)")
+				.skipValue("_Total")
+				.skipZeroRows(true)
+				.pieOtherLimit(0.03)
+				.splitRatio(0.5),
+		};
 	}
 }
