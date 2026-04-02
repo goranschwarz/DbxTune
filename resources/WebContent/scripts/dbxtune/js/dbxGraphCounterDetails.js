@@ -10,6 +10,7 @@ var _cmListData     = null;
 var _cmCurrentData  = null;   // last fetched data result (for re-filtering without re-fetching)
 var _cmFilter       = '';     // current filter string
 var _cmTrendCache   = null;  // cached /api/graphs response (all graphs for this server)
+var _cmSplitInstance = null; // current Split.js instance (destroyed + recreated on layout change)
 var _cmSort         = { col: -1, stage: 0 }; // sort state for current CM: stage 0=original 1=desc 2=asc
 var _cmSortMap      = {};                    // per-CM sort state, keyed by cmName — survives tab switching
 var _cmFilterMap    = {};                    // per-CM filter text (session only, not persisted to localStorage)
@@ -51,7 +52,11 @@ function cmDetailLoadList(srvName, timestamp)
 				if (r.error) { cmDetailShowMsg(r.message || r.error); return; }
 				_cmListData = r;
 				// Use the exact SessionSampleTime the server resolved (ms-precision match from MonSessionSampleDetailes)
-				if (r.resolvedTime) { _cmTimestamp = r.resolvedTime.substring(0, 19); $('#cm-detail-ts').text('@ ' + _cmTimestamp); }
+				if (r.resolvedTime) {
+					_cmTimestampMs = r.resolvedTime;                        // full precision for << >> nav
+					_cmTimestamp   = r.resolvedTime.substring(0, 19);       // truncated for display / other APIs
+					$('#cm-detail-ts').text('@ ' + _cmTimestamp);
+				}
 				// Pre-fetch trend graph cache (async, non-blocking)
 				_cmTrendEnsureCache(function() { cmTrendGraphsUpdateButton(); });
 				cmDetailRenderGroups(r.groups);
@@ -142,6 +147,7 @@ function _cmApplyPrefsForCm(cmName)
 	// Without this, the disabled state from a previous abs-only CM bleeds into the next CM.
 	$('#cm-detail-type-diff').prop('disabled', false).attr('title', 'Delta values \u2014 the difference between this sample and the previous one. Displayed in blue.');
 	$('#cm-detail-type-rate').prop('disabled', false).attr('title', 'Rate per second \u2014 the delta divided by the elapsed time between samples, giving a per-second rate. Displayed in blue.');
+	$('#cm-detail-label-diff, #cm-detail-label-rate').css('text-decoration', 'none');
 
 	// Hide Unchanged — persisted per CM in localStorage, default false
 	var savedHz = null;
@@ -154,8 +160,76 @@ function _cmApplyPrefsForCm(cmName)
 	$('#cm-detail-filter-input').val(_cmFilter);
 }
 
+/**
+ * Shared options for all CM-tab Bootstrap tooltips.
+ */
+var _cmTabTooltipOpts = {
+	container:   'body',
+	boundary:    'window',
+	html:        true,
+	placement:   'bottom',
+	trigger:     'hover',
+	delay:       { show: 600, hide: 150 },
+	customClass: 'cm-tab-tooltip',
+	title: function() { return $(this).data('cmTabTooltip') || ''; }
+};
+
+/**
+ * Build tooltip inner HTML from a description string and an array of
+ * CmHighlighterDescriptor objects.  Either argument may be null/undefined.
+ */
+function _cmBuildTooltipHtml(desc, hls)
+{
+	var parts = [];
+
+	// --- Description ---
+	var d = (desc || '').trim();
+	if (d) {
+		d = d.replace(/^\s*<html>\s*/i, '').replace(/\s*<\/html>\s*$/i, '');
+		parts.push('<div style="font-weight:normal">' + d + '</div>');
+	}
+
+	// --- Color legend ---
+	if (hls && hls.length) {
+		var rows = '';
+		for (var i = 0; i < hls.length; i++) {
+			var h    = hls[i];
+			var bg   = h.bgColor || '#eeeeee';
+			var fg   = h.fgColor || '#000000';
+			var name = $('<span>').text(h.name || h.column || '').html();
+			var sc   = (h.scope === 'CELL') ? ' <small style="opacity:0.7">(cell)</small>' : '';
+			rows += '<tr>'
+				+ '<td style="width:14px;height:12px;min-width:14px;background:' + bg + ';color:' + fg
+				+     ';border:1px solid rgba(0,0,0,0.25);border-radius:2px">&nbsp;</td>'
+				+ '<td style="padding-left:6px;white-space:nowrap">' + name + sc + '</td>'
+				+ '</tr>';
+		}
+		parts.push('<hr style="margin:5px 0"><b>Color Legend:</b>'
+			+ '<table style="margin-top:3px;border-spacing:0 2px">' + rows + '</table>');
+	}
+
+	return parts.join('');
+}
+
+/**
+ * Update (or set) the tooltip for a specific CM tab.
+ * Called from the data-load callback so the legend is always current.
+ */
+function _cmSetTabTooltip(cmName, desc, hls)
+{
+	var $a = $('#cm-name-tabs li[data-cm-name="' + cmName + '"] .nav-link');
+	if (!$a.length) return;
+	var html = _cmBuildTooltipHtml(desc, hls);
+	$a.data('cmTabTooltip', html);
+	// Re-init if not already initialised (e.g. description was empty on list load)
+	if (!$a.data('bs.tooltip'))
+		$a.tooltip(_cmTabTooltipOpts);
+}
+
 function cmDetailRenderCms(cms)
 {
+	// Dispose existing tooltips before clearing the DOM — prevents orphaned tooltip divs
+	$('#cm-name-tabs .nav-link').tooltip('dispose');
 	var $ct = $('#cm-name-tabs').empty();
 	if (!cms || !cms.length) { cmDetailShowMsg('No CMs in this group'); return; }
 
@@ -172,7 +246,11 @@ function cmDetailRenderCms(cms)
 	}
 
 	cms.forEach(function(c) {
-		var li = $('<li class="nav-item ' + (c.hasData ? 'cm-tab-has-data' : 'cm-tab-no-data') + '"></li>').attr('data-cm-name', c.cmName);
+		var tabClass = 'nav-item';
+		if (c.hasData)                      tabClass += ' cm-tab-has-data';
+		else                                tabClass += ' cm-tab-no-data';
+		if (c.isActive === false)           tabClass += ' cm-tab-disabled';
+		var li = $('<li class="' + tabClass + '"></li>').attr('data-cm-name', c.cmName);
 		var a  = $('<a class="nav-link' + (c.cmName === selCm ? ' active' : '') + '" href="#"></a>');
 		if (c.iconFile)
 			a.append(cmMakeIcon(c.iconFile));
@@ -180,9 +258,15 @@ function cmDetailRenderCms(cms)
 		a.on('click', (function(cn) { return function(e) { e.preventDefault(); cmDetailSelectCm(cn); }; })(c.cmName));
 		// Right-click → context menu with "Properties…"
 		a.on('contextmenu', (function(cn) { return function(e) { e.preventDefault(); _cmShowContextMenu(e, cn); }; })(c.cmName));
+		// Store initial tooltip content (description from list; legend filled in on data load)
+		a.data('cmTabTooltip', _cmBuildTooltipHtml(c.description, c.highlighterDescriptors));
 		li.append(a);
 		$ct.append(li);
 	});
+
+	// Initialise Bootstrap tooltips on all CM tabs using shared options.
+	// Using a title callback avoids HTML-escaping issues with the title attribute.
+	$('#cm-name-tabs .nav-link').tooltip(_cmTabTooltipOpts);
 
 	if (_cmName && _cmName !== selCm) {
 		_cmSortMap[_cmName]  = _cmSort;   // save sort for previous CM
@@ -271,9 +355,10 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 	_cmChartInstances.forEach(function(c) { try { c.destroy(); } catch(e) {} });
 	_cmChartInstances = [];
 	$('#cm-detail-charts').empty().hide();
-	// Reset table-wrap to full width (no chart pane)
-	$('#cm-detail-table-wrap').css({ flex: '1 1 100%', order: '' });
+	// Destroy previous split pane and reset to table-only layout
+	if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
 	$('#cm-detail-content').css({ flexDirection: 'row' });
+	$('#cm-detail-table-wrap').css({ width: '100%', height: '100%' });
 
 	// Check collector status for this CM at this sample time
 	var cmInfo = cmDetailFindCmInfo(cmName);
@@ -336,10 +421,12 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 						if (isTableMissing)
 							try { localStorage.setItem('cmDetail-type-' + cmName, 'abs'); } catch(e) {}
 						$('#cm-detail-type-abs').prop('checked', true);
-						if (isTableMissing)
+						if (isTableMissing) {
 							$('#cm-detail-type-diff, #cm-detail-type-rate')
 								.prop('disabled', true)
 								.attr('title', 'No Diff/Rate data for this CM');
+							$('#cm-detail-label-diff, #cm-detail-label-rate').css('text-decoration', 'line-through');
+						}
 						cmDetailLoadData(srvName, cmName, timestamp, 'abs');
 						return;
 					}
@@ -352,6 +439,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				$('#cm-detail-type-diff, #cm-detail-type-rate')
 					.prop('disabled', hasNoDiffCols)
 					.attr('title', hasNoDiffCols ? 'No Diff/Rate data for this CM' : '');
+				$('#cm-detail-label-diff, #cm-detail-label-rate').css('text-decoration', hasNoDiffCols ? 'line-through' : 'none');
 				if (!hasNoDiffCols) {
 					$('#cm-detail-type-diff').attr('title', 'Delta values \u2014 the difference between this sample and the previous one. Displayed in blue.');
 					$('#cm-detail-type-rate').attr('title', 'Rate per second \u2014 the delta divided by the elapsed time between samples, giving a per-second rate. Displayed in blue.');
@@ -366,6 +454,8 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				}
 				r._effectiveType = type;
 				$('#cm-detail-type-' + type).prop('checked', true);
+				// Update the CM tab tooltip with the confirmed description + legend from data response
+				_cmSetTabTooltip(cmName, r.description, r.highlighterDescriptors);
 				cmDetailRenderTable(r);
 			} catch(ex) { cmDetailShowMsg('Parse error: ' + ex); }
 		},
@@ -380,11 +470,91 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 
 function cmDetailRenderTable(r)
 {
+	// Apply preferred column order if the CM declares one
+	if (r.preferredColumnOrder && r.preferredColumnOrder.length > 0)
+		r = _cmApplyPreferredColumnOrder(r);
+
 	_cmCurrentData = r;
 	$('#cm-detail-type-bar').css('display', 'flex');
 	$('#cm-detail-filter-bar').css('display', 'flex');
 	_cmFilter = $('#cm-detail-filter-input').val() || '';
 	cmDetailRenderFiltered(r, _cmFilter);
+}
+
+/**
+ * Reorder columns, tooltips, isNumeric, and row values according to
+ * preferredColumnOrder from the server (mirrors GTable.loadColumnLayout).
+ *
+ * Each entry: { columnName, viewPos, visible }
+ *   viewPos = desired position (0-based); Integer.MAX_VALUE (2147483647) = last
+ *   visible = false → hide the column entirely
+ *
+ * Columns NOT in the preferred list keep their original relative order and are
+ * placed after all explicitly positioned columns (before any AS_LAST ones).
+ */
+function _cmApplyPreferredColumnOrder(r)
+{
+	var cols     = r.columns   || [];
+	var tooltips = r.tooltips  || [];
+	var isNum    = r.isNumeric || [];
+	var rows     = r.rows      || [];
+	if (cols.length === 0) return r;
+
+	var AS_LAST = 2147483647; // ColumnHeaderPropsEntry.AS_LAST_VIEW_COLUMN
+
+	// Build lookup: columnName → { viewPos, visible }
+	var prefMap = {};
+	r.preferredColumnOrder.forEach(function(p) { prefMap[p.columnName] = p; });
+
+	// Build indices for three buckets:
+	//   positioned: has explicit viewPos (not AS_LAST)
+	//   unprefixed: not mentioned in preferred list — keep original order
+	//   last:       viewPos === AS_LAST
+	var positioned = [], unmentioned = [], last = [], hidden = [];
+	cols.forEach(function(colName, origIdx) {
+		var p = prefMap[colName];
+		if (!p) {
+			unmentioned.push(origIdx);
+		} else if (p.visible === false) {
+			hidden.push(origIdx);
+		} else if (p.viewPos === AS_LAST) {
+			last.push(origIdx);
+		} else {
+			positioned.push({ origIdx: origIdx, viewPos: p.viewPos });
+		}
+	});
+
+	// Sort positioned by viewPos
+	positioned.sort(function(a, b) { return a.viewPos - b.viewPos; });
+
+	// Merge: positioned first, then unmentioned (original order), then last
+	var newOrder = positioned.map(function(e) { return e.origIdx; })
+		.concat(unmentioned)
+		.concat(last);
+	// hidden columns are excluded
+
+	// Rebuild arrays in new order
+	var newCols = [], newTT = [], newIsNum = [];
+	newOrder.forEach(function(oi) {
+		newCols.push(cols[oi]);
+		newTT.push(tooltips[oi] != null ? tooltips[oi] : null);
+		newIsNum.push(isNum[oi] != null ? isNum[oi] : false);
+	});
+
+	var newRows = rows.map(function(row) {
+		var nr = [];
+		newOrder.forEach(function(oi) { nr.push(row[oi]); });
+		return nr;
+	});
+
+	// Return a shallow copy with reordered arrays
+	var out = {};
+	for (var k in r) { if (r.hasOwnProperty(k)) out[k] = r[k]; }
+	out.columns  = newCols;
+	out.tooltips = newTT;
+	out.isNumeric = newIsNum;
+	out.rows     = newRows;
+	return out;
 }
 
 function cmDetailApplyFilter(filter)
@@ -494,6 +664,9 @@ function cmDetailRenderFiltered(r, filter)
 		}).join('')
 		+ '</tr></thead><tbody>';
 
+	// Pre-process highlighter descriptors: build column-index lookups, sort by priority
+	var hlRules = _cmHighlighterPrepare(r.highlighterDescriptors, r.columns);
+
 	if (!filteredRows || filteredRows.length === 0) {
 		h += '<tr><td colspan="' + r.columns.length + '" style="text-align:center;color:#6c757d;">'
 			+ (filter ? 'No rows match filter' : 'No rows') + '</td></tr>';
@@ -501,6 +674,13 @@ function cmDetailRenderFiltered(r, filter)
 		// Store rows for click-to-detail (index stored on <tr data-ri>)
 		_cmDetailClickRows = { columns: r.columns, tooltips: r.tooltips || [], rows: filteredRows };
 		filteredRows.forEach(function(row, ri) {
+			// Evaluate highlighter rules for this row
+			var hlResult = _cmHighlighterEval(hlRules, row);
+
+			// Row background/foreground from ROW-scope highlighter rules.
+			// We push the color down to each <td> instead of <tr> because
+			// Bootstrap's td backgrounds (striping, hover) would otherwise
+			// override a <tr> background-color.
 			h += '<tr data-ri="' + ri + '" style="cursor:pointer;" title="Click to view full row details">'
 				+ row.map(function(v, i) {
 				var style = 'style="';
@@ -522,6 +702,15 @@ function cmDetailRenderFiltered(r, filter)
 					var _numVal = parseFloat(v);
 					if (isNumeric[i] && !isNaN(_numVal) && _numVal !== 0) style += 'font-weight:bold;';
 				}
+				// Apply row-level highlight to each td (beats Bootstrap's td striping/hover)
+				if (hlResult.rowBg && !isPct[i]) style += 'background-color:' + hlResult.rowBg + ';';
+				if (hlResult.rowFg) style += 'color:' + hlResult.rowFg + ';';
+				// Cell-level highlighter overrides (win over row-level)
+				var cellHl = hlResult.cells[i];
+				if (cellHl) {
+					if (cellHl.bg) style += 'background-color:' + cellHl.bg + ';';
+					if (cellHl.fg) style += 'color:' + cellHl.fg + ';';
+				}
 				style += '"';
 				var cell;
 				if (v === null || v === undefined)
@@ -529,7 +718,9 @@ function cmDetailRenderFiltered(r, filter)
 				else if (v === true || v === false)
 					cell = '<input type="checkbox"' + (v ? ' checked' : '') + ' onclick="return false;" style="cursor:default;pointer-events:none;">';
 				else {
-					var s = String(v);
+					// Format large numbers with thousands separators for readability
+					var formatted = isNumeric[i] ? _cmFmtNum(v) : null;
+					var s = formatted !== null ? formatted : String(v);
 					if (s.length > 60) {
 						var plain = s.replace(/<[^>]+>/g, '').trim();
 						cell = '<span title="' + escHtml(plain.substring(0, 300)) + '">'
@@ -545,10 +736,10 @@ function cmDetailRenderFiltered(r, filter)
 	h += '</tbody></table>';
 
 	// Restore scroll position from localStorage (persists across tab switches and panel close/reopen)
-	// Pattern mirrors Active Statements: save on scroll event, restore after render + setTimeout fallback
-	var $body      = $('#cm-detail-body');
-	var scrollKey  = 'cmDetail-scroll-' + (r.cmName || 'default');
-	var savedTop   = 0, savedLeft = 0;
+	// The scrollable element is #cm-detail-table-wrap (inside the Split.js pane)
+	var $scrollPane = $('#cm-detail-table-wrap');
+	var scrollKey   = 'cmDetail-scroll-' + (r.cmName || 'default');
+	var savedTop    = 0, savedLeft = 0;
 	try {
 		var saved = JSON.parse(localStorage.getItem(scrollKey) || 'null');
 		if (saved) { savedTop = saved.top || 0; savedLeft = saved.left || 0; }
@@ -569,13 +760,261 @@ function cmDetailRenderFiltered(r, filter)
 	});
 
 	// Restore immediately (works when content height is already known)
-	$body.scrollTop(savedTop).scrollLeft(savedLeft);
+	$scrollPane.scrollTop(savedTop).scrollLeft(savedLeft);
 	// Also restore after a tick in case the browser resets scroll after DOM update
-	setTimeout(function() { $body.scrollTop(savedTop).scrollLeft(savedLeft); }, 1);
+	setTimeout(function() { $scrollPane.scrollTop(savedTop).scrollLeft(savedLeft); }, 1);
 
 	// Render chart(s) if the CM declares any chart descriptors
 	cmChartRender(r, filteredRows);
 }
+
+//-----------------------------------------------------------
+// HIGHLIGHTER ENGINE — evaluates CmHighlighterDescriptor rules
+//-----------------------------------------------------------
+
+/**
+ * Pre-process highlighter descriptors: resolve column indices,
+ * sort by priority.  Returns an array of rule objects ready for _cmHighlighterEval.
+ * @param descriptors  Array of {name,column,operator,value,compareColumn,scope,highlightColumns,bgColor,fgColor,priority}
+ * @param columns      Array of column names (from the data response)
+ * @returns Array of pre-processed rules, or empty array if no descriptors
+ */
+function _cmHighlighterPrepare(descriptors, columns)
+{
+	if (!descriptors || !descriptors.length || !columns) return [];
+
+	// Build case-insensitive column name → index map
+	var colIdx = {};
+	for (var i = 0; i < columns.length; i++)
+		colIdx[columns[i].toLowerCase()] = i;
+
+	var rules = [];
+	for (var d = 0; d < descriptors.length; d++) {
+		var desc = descriptors[d];
+		var ci = (desc.column) ? colIdx[desc.column.toLowerCase()] : undefined;
+		// Skip rules where the condition column doesn't exist in this result set
+		if (ci === undefined && desc.operator !== 'NOT_EMPTY' && desc.operator !== 'IS_EMPTY') {
+			// For NOT_EMPTY / IS_EMPTY we still need the column index
+			if (desc.column) continue;
+		}
+		if (ci === undefined && desc.column) ci = colIdx[desc.column.toLowerCase()];
+		if (ci === undefined) continue;
+
+		var rule = {
+			name:       desc.name || '',
+			colIdx:     ci,
+			op:         desc.operator || 'GT',
+			value:      desc.value,
+			scope:      desc.scope || 'ROW',
+			bgColor:    desc.bgColor || null,
+			fgColor:    desc.fgColor || null,
+			priority:   desc.priority || 100,
+			// Column-to-column: resolve the other column index
+			cmpColIdx:  undefined,
+			// Cell scope: resolve highlight column indices
+			hlColIdxs:  null
+		};
+
+		// Column-to-column comparison
+		if (desc.compareColumn) {
+			var cci = colIdx[desc.compareColumn.toLowerCase()];
+			if (cci === undefined) continue; // compare column missing
+			rule.cmpColIdx = cci;
+		}
+
+		// Cell scope highlight columns
+		if (rule.scope === 'CELL') {
+			var hcols = desc.highlightColumns;
+			if (!hcols || !hcols.length) hcols = [desc.column]; // default to condition column
+			rule.hlColIdxs = [];
+			for (var hi = 0; hi < hcols.length; hi++) {
+				var hci = colIdx[hcols[hi].toLowerCase()];
+				if (hci !== undefined) rule.hlColIdxs.push(hci);
+			}
+			if (rule.hlColIdxs.length === 0) continue; // no valid highlight columns
+		}
+
+		rules.push(rule);
+	}
+
+	// Sort by priority (lower first — later rules override earlier ones)
+	rules.sort(function(a, b) { return a.priority - b.priority; });
+	return rules;
+}
+
+/**
+ * Evaluate all prepared highlighter rules against a single row.
+ * @param rules  Pre-processed rules from _cmHighlighterPrepare
+ * @param row    Array of cell values
+ * @returns {rowBg, rowFg, cells: {}} where cells is a sparse map: colIdx → {bg,fg}
+ */
+function _cmHighlighterEval(rules, row)
+{
+	var result = { rowBg: null, rowFg: null, cells: {} };
+	if (!rules || !rules.length) return result;
+
+	for (var r = 0; r < rules.length; r++) {
+		var rule = rules[r];
+		var val  = row[rule.colIdx];
+
+		// Evaluate condition
+		var match = false;
+		switch (rule.op) {
+			// Numeric comparisons against constant
+			case 'GT': match = _hlNum(val) !== null && _hlNum(val) >  Number(rule.value); break;
+			case 'GE': match = _hlNum(val) !== null && _hlNum(val) >= Number(rule.value); break;
+			case 'LT': match = _hlNum(val) !== null && _hlNum(val) <  Number(rule.value); break;
+			case 'LE': match = _hlNum(val) !== null && _hlNum(val) <= Number(rule.value); break;
+			case 'EQ': match = _hlNum(val) !== null && _hlNum(val) === Number(rule.value); break;
+			case 'NE': match = _hlNum(val) !== null && _hlNum(val) !== Number(rule.value); break;
+
+			// Column-to-column comparisons
+			case 'GT_COL': match = _hlNum(val) !== null && _hlNum(row[rule.cmpColIdx]) !== null && _hlNum(val) >  _hlNum(row[rule.cmpColIdx]); break;
+			case 'GE_COL': match = _hlNum(val) !== null && _hlNum(row[rule.cmpColIdx]) !== null && _hlNum(val) >= _hlNum(row[rule.cmpColIdx]); break;
+			case 'LT_COL': match = _hlNum(val) !== null && _hlNum(row[rule.cmpColIdx]) !== null && _hlNum(val) <  _hlNum(row[rule.cmpColIdx]); break;
+			case 'LE_COL': match = _hlNum(val) !== null && _hlNum(row[rule.cmpColIdx]) !== null && _hlNum(val) <= _hlNum(row[rule.cmpColIdx]); break;
+			case 'EQ_COL': match = _hlNum(val) !== null && _hlNum(row[rule.cmpColIdx]) !== null && _hlNum(val) === _hlNum(row[rule.cmpColIdx]); break;
+			case 'NE_COL': match = _hlNum(val) !== null && _hlNum(row[rule.cmpColIdx]) !== null && _hlNum(val) !== _hlNum(row[rule.cmpColIdx]); break;
+
+			// String operations
+			case 'STARTS_WITH': match = val !== null && val !== undefined && String(val).toLowerCase().indexOf(String(rule.value).toLowerCase()) === 0; break;
+			case 'CONTAINS':    match = val !== null && val !== undefined && String(val).toLowerCase().indexOf(String(rule.value).toLowerCase()) >= 0; break;
+			case 'EQUALS':      match = val !== null && val !== undefined && String(val).toLowerCase() === String(rule.value).toLowerCase(); break;
+			case 'NOT_EQUALS':  match = val !== null && val !== undefined && String(val).toLowerCase() !== String(rule.value).toLowerCase(); break;
+			case 'NOT_EMPTY':   match = val !== null && val !== undefined && String(val).trim() !== ''; break;
+			case 'IS_EMPTY':    match = val === null || val === undefined || String(val).trim() === ''; break;
+
+			// Boolean
+			case 'IS_TRUE':  match = val === true  || String(val).toLowerCase() === 'true'  || val === 1; break;
+			case 'IS_FALSE': match = val === false || String(val).toLowerCase() === 'false' || val === 0 || val === null || val === undefined; break;
+		}
+
+		if (!match) continue;
+
+		// Apply styling
+		if (rule.scope === 'CELL' && rule.hlColIdxs) {
+			for (var ci = 0; ci < rule.hlColIdxs.length; ci++) {
+				var idx = rule.hlColIdxs[ci];
+				if (!result.cells[idx]) result.cells[idx] = {};
+				if (rule.bgColor) result.cells[idx].bg = rule.bgColor;
+				if (rule.fgColor) result.cells[idx].fg = rule.fgColor;
+			}
+		} else {
+			// ROW scope
+			if (rule.bgColor) result.rowBg = rule.bgColor;
+			if (rule.fgColor) result.rowFg = rule.fgColor;
+		}
+	}
+
+	return result;
+}
+
+/** Parse value as number, return null if not numeric. */
+function _hlNum(v)
+{
+	if (v === null || v === undefined) return null;
+	if (typeof v === 'number') return v;
+	var n = parseFloat(v);
+	return isNaN(n) ? null : n;
+}
+
+
+//-----------------------------------------------------------
+// NUMBER FORMATTING — locale-aware thousands separators
+//-----------------------------------------------------------
+
+// Persisted number format: 'locale' or 'spaces' (default 'spaces')
+var _cmNumFmtMode = (function() {
+	try { return localStorage.getItem('cmDetail-numFmt') || 'spaces'; } catch(e) { return 'spaces'; }
+}());
+
+// Lazily created formatters
+var _cmNumFmtLocale = null;  // Intl.NumberFormat for 'locale' mode
+var _cmNumFmtDecSep = null;  // locale decimal separator (for 'spaces' mode)
+
+/** Called when the user changes the Number Format radio. */
+function cmDetailNumFmtChanged(mode)
+{
+	_cmNumFmtMode = mode;
+	try { localStorage.setItem('cmDetail-numFmt', mode); } catch(e) {}
+	// Reset cached formatters so they are rebuilt with the new mode
+	_cmNumFmtLocale = null;
+	_cmNumFmtDecSep = null;
+	// Re-render the current table without re-fetching
+	if (_cmCurrentData) cmDetailRenderFiltered(_cmCurrentData, _cmFilter);
+}
+
+/** Initialise the radio buttons from the persisted setting (call once on page load). */
+function cmDetailNumFmtInit()
+{
+	var el = document.getElementById('cm-detail-numfmt-' + _cmNumFmtMode);
+	if (el) el.checked = true;
+}
+
+/**
+ * Format a numeric value with thousands separators for readability.
+ * Returns the formatted string, or null if the value is not numeric
+ * or doesn't benefit from formatting (integer part < 1000).
+ *
+ * Mode 'locale' : uses Intl.NumberFormat with the browser locale for everything
+ *                 e.g. US → "1,234,567.89"  SE/DE → "1 234 567,89"
+ * Mode 'spaces' : forces a space as thousands separator; decimal from the locale
+ *                 e.g. US → "1 234 567.89"  SE/DE → "1 234 567,89"
+ */
+function _cmFmtNum(v)
+{
+	if (v === null || v === undefined) return null;
+	var n = (typeof v === 'number') ? v : parseFloat(v);
+	if (isNaN(n)) return null;
+
+	// Only format when the integer part is >= 1000
+	if (Math.abs(n) < 1000) return null;
+
+	// Count decimal places in original string (preserve them exactly)
+	var srcStr  = String(v);
+	var dotPos  = srcStr.indexOf('.');
+	var decDigs = (dotPos >= 0) ? srcStr.length - dotPos - 1 : 0;
+
+	try {
+		if (_cmNumFmtMode === 'locale') {
+			// Full locale formatting
+			if (!_cmNumFmtLocale) {
+				_cmNumFmtLocale = new Intl.NumberFormat(undefined, {
+					minimumFractionDigits: 0,
+					maximumFractionDigits: 6
+				});
+			}
+			return _cmNumFmtLocale.format(n);
+
+		} else {
+			// 'spaces' mode: space thousands separator + locale decimal
+			if (_cmNumFmtDecSep === null) {
+				// Detect locale decimal separator using Intl
+				var sample = new Intl.NumberFormat(undefined).format(1.1);
+				_cmNumFmtDecSep = sample.charAt(1); // character between the two 1s
+			}
+
+			// Format integer part with space thousands separator
+			var intPart  = Math.trunc(Math.abs(n));
+			var intStr   = String(intPart).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0'); // non-breaking space
+			var sign     = n < 0 ? '-' : '';
+
+			if (decDigs === 0) {
+				return sign + intStr;
+			} else {
+				// Decimal part: round to original precision
+				var factor  = Math.pow(10, decDigs);
+				var decPart = Math.round(Math.abs(n) * factor) % factor;
+				var decStr  = String(decPart).padStart(decDigs, '0');
+				return sign + intStr + _cmNumFmtDecSep + decStr;
+			}
+		}
+	} catch(e) {
+		// Safe fallback
+		return null;
+	}
+}
+
 
 /**
  * Show a click-to-detail modal for a Counter Details row.
@@ -817,21 +1256,25 @@ function cmDetailToggle()
 	$('#cm-detail-dark').prop('checked', dark);
 	if (dark) $panel.addClass('cm-dark'); else $panel.removeClass('cm-dark');
 
-	// Attach scroll listener once — saves position to localStorage per CM (mirrors Active Statements)
-	var $body = $('#cm-detail-body');
-	if (!$body.data('cmScrollListenerAttached')) {
-		$body.data('cmScrollListenerAttached', true);
+	// Restore number-format radio from localStorage
+	cmDetailNumFmtInit();
+
+	// Attach scroll listener once — saves position to localStorage per CM
+	// Targets #cm-detail-table-wrap (the scrollable pane inside Split.js)
+	var $tw = $('#cm-detail-table-wrap');
+	if (!$tw.data('cmScrollListenerAttached')) {
+		$tw.data('cmScrollListenerAttached', true);
 		var _cmScrollTimer = null;
-		$body.on('scroll', function() {
+		$tw.on('scroll', function() {
 			clearTimeout(_cmScrollTimer);
 			_cmScrollTimer = setTimeout(function() {
 				if (_cmName) {
 					try {
 						localStorage.setItem('cmDetail-scroll-' + _cmName,
-							JSON.stringify({ top: $body.scrollTop(), left: $body.scrollLeft() }));
+							JSON.stringify({ top: $tw.scrollTop(), left: $tw.scrollLeft() }));
 					} catch(e) {}
 				}
-			}, 500);
+			}, 200);
 		});
 	}
 
@@ -993,7 +1436,7 @@ function cmDetailClose()
 {
 	try { localStorage.setItem('cmDetail-panelOpen', '0'); } catch(e) {}
 	$('#cm-detail-panel').hide();
-	_cmSrvName = _cmTimestamp = _cmGroup = _cmName = _cmListData = _cmCurrentData = null;
+	_cmSrvName = _cmTimestamp = _cmTimestampMs = _cmGroup = _cmName = _cmListData = _cmCurrentData = null;
 	_cmFilter = '';
 	_cmSort    = { col: -1, stage: 0 };
 	_cmSortMap = {};
@@ -1009,6 +1452,133 @@ function cmDetailClose()
 	$('#cm-detail-row-count').text('');
 	$('#cm-detail-table').html('');
 }
+
+//-----------------------------------------------------------
+// << >> NAVIGATION — prev / next sample with data for this CM
+//
+// Instead of reloading only Counter Details, we move the
+// timeline slider to the found timestamp.  This triggers ALL
+// panels (Active Statements, Alarm History, DBMS Config, etc.)
+// via GraphBus 'slider-change'.
+//
+// If we're not in history mode yet, dbxHistoryAction() enters
+// it automatically.
+//-----------------------------------------------------------
+
+var _cmNavBusy     = false; // guard against double-clicks
+var _cmTimestampMs = null;  // full-precision timestamp (with millis) for nav queries
+
+/**
+ * Navigate to the previous sample that has data for the currently selected CM.
+ */
+function cmDetailNavPrev() { _cmDetailNav('prev'); }
+
+/**
+ * Navigate to the next sample that has data for the currently selected CM.
+ */
+function cmDetailNavNext() { _cmDetailNav('next'); }
+
+function _cmDetailNav(dir)
+{
+	if (_cmNavBusy) return;
+	// Need at least a CM and a server name.  Timestamp may come from the
+	// slider or from the Counter Details panel — use whatever is available.
+	if (!_cmName) return;
+	var srv = _cmSrvName || (_serverList && _serverList.length > 0 ? _serverList[0] : null);
+	if (!srv) return;
+
+	_cmNavBusy = true;
+
+	// Use full-precision timestamp (with millis) so the SQL > / < comparison
+	// doesn't re-match the current sample.  Falls back to the truncated one.
+	var navTime = _cmTimestampMs || _cmTimestamp;
+	if (!navTime) { _cmNavBusy = false; return; }
+
+	$.ajax({
+		url: '/api/cc/mgt/cm/navSample',
+		data: { srv: srv, time: navTime, cm: _cmName, dir: dir },
+		dataType: 'json',
+		success: function(r) {
+			_cmNavBusy = false;
+			if (r.error) {
+				console.warn('cmNav: ' + (r.message || r.error));
+				_cmNavShowToast('Error: ' + (r.message || r.error));
+				return;
+			}
+			if (!r.found) {
+				var label = (dir === 'prev') ? 'previous' : 'next';
+				_cmNavShowToast('No ' + label + ' sample with data for this CM.');
+				return;
+			}
+
+			// Store full-precision timestamp for subsequent nav calls
+			_cmTimestampMs = r.sampleTime;
+
+			// Move the timeline slider — this drives everything:
+			// Active Statements, Alarm History, Counter Details, DBMS Config.
+			// dbxHistoryAction() enters history mode if not already active.
+			if (typeof dbxHistoryAction === 'function') {
+				dbxHistoryAction(r.sampleTime);
+			}
+		},
+		error: function(xhr) {
+			_cmNavBusy = false;
+			console.warn('cmNav HTTP error: ' + xhr.status);
+			_cmNavShowToast('Navigation failed (HTTP ' + xhr.status + ')');
+		}
+	});
+}
+
+/**
+ * Show a transient message overlay in the data table area.
+ * Fades out and removes itself after 3 seconds.
+ */
+function _cmNavShowToast(msg)
+{
+	var $toast = $('<div>')
+		.text(msg)
+		.css({
+			position:       'absolute',
+			top:            '50%',
+			left:           '50%',
+			transform:      'translate(-50%, -50%)',
+			background:     'rgba(0,0,0,0.75)',
+			color:          '#fff',
+			padding:        '10px 20px',
+			borderRadius:   '6px',
+			fontSize:       '0.9em',
+			zIndex:         9999,
+			pointerEvents:  'none',
+			whiteSpace:     'nowrap'
+		});
+
+	// Insert into the table wrap (which is position:relative via Split.js)
+	var $wrap = $('#cm-detail-table-wrap');
+	if (!$wrap.length) $wrap = $('#cm-detail-body');
+	$wrap.css('position', 'relative').append($toast);
+
+	setTimeout(function() {
+		$toast.fadeOut(600, function() { $toast.remove(); });
+	}, 3000);
+}
+
+// Keyboard shortcuts: Alt+Left = prev sample, Alt+Right = next sample
+// Only active when the Counter Details panel is visible.
+$(document).on('keydown', function(e) {
+	if (!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
+	if (!$('#cm-detail-panel').is(':visible')) return;
+	// Don't intercept if focus is in a text input / textarea
+	var tag = (e.target.tagName || '').toLowerCase();
+	if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+	if (e.key === 'ArrowLeft') {
+		e.preventDefault();
+		cmDetailNavPrev();
+	} else if (e.key === 'ArrowRight') {
+		e.preventDefault();
+		cmDetailNavNext();
+	}
+});
 
 /**
  * Render a single table cell value.
@@ -1080,9 +1650,10 @@ function cmChartRender(r, filteredRows) {
 	var descriptors = r.chartDescriptors;
 	if (!descriptors || descriptors.length === 0) {
 		$container.hide();
-		// Reset layout: table takes full width
-		$('#cm-detail-table-wrap').css({ flex: '1 1 100%' });
+		// Destroy split pane, table takes full space
+		if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
 		$('#cm-detail-content').css({ flexDirection: 'row' });
+		$('#cm-detail-table-wrap').css({ width: '100%', height: '100%' });
 		return;
 	}
 
@@ -1093,27 +1664,73 @@ function cmChartRender(r, filteredRows) {
 	// "vertical"   = charts above the table
 	var splitDir  = (descriptors[0].splitDir || 'horizontal');
 	var splitRatio = descriptors[0].splitRatio || 0.5; // table fraction
+	var defaultTablePct = Math.round(splitRatio * 100);
+	var defaultChartPct = 100 - defaultTablePct;
 
-	if (splitDir === 'horizontal') {
-		// Side-by-side: table on left, charts on right
-		var tablePct = Math.round(splitRatio * 100);
-		var chartPct = 100 - tablePct;
-		$('#cm-detail-content').css({ flexDirection: 'row' });
-		$('#cm-detail-table-wrap').css({ flex: '1 1 ' + tablePct + '%', order: '' });
-		$container.css({ flex: '0 1 ' + chartPct + '%', minWidth: '250px', maxWidth: '', borderLeft: '1px solid #ccc', borderBottom: '', order: '' });
-	} else {
-		// Vertical: charts ABOVE table
-		$('#cm-detail-content').css({ flexDirection: 'column' });
-		$('#cm-detail-table-wrap').css({ flex: '1 1 auto', order: 1 });
-		$container.css({ flex: '0 0 auto', width: '100%', minWidth: '', maxWidth: '', borderLeft: 'none', borderBottom: '1px solid #ccc', order: 0 });
+	// Restore saved divider position (per splitDir) from localStorage
+	var storageKey = 'cmDetail-split-' + splitDir;
+	var savedSizes = null;
+	try {
+		var s = JSON.parse(localStorage.getItem(storageKey));
+		if (s && Array.isArray(s) && s.length === 2 && s[0] > 5 && s[1] > 5)
+			savedSizes = s;
+	} catch(e) {}
+
+	// Destroy previous Split instance before creating a new one
+	if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
+
+	// Reset inline styles that Split.js or previous layout may have set
+	$('#cm-detail-table-wrap').attr('style', 'overflow:auto;');
+	$container.attr('style', 'padding:4px 6px;overflow:auto;');
+
+	// Save handler — persist sizes to localStorage on drag end
+	function onDragEnd(sizes) {
+		try { localStorage.setItem(storageKey, JSON.stringify(sizes)); } catch(e) {}
 	}
 
-	// For vertical layout: charts sit side-by-side above the table, sharing full width
-	// For horizontal layout: charts stack vertically in the right pane
-	if (splitDir === 'vertical') {
-		$container.css({ display: 'flex', flexWrap: 'wrap' });
-	} else {
+	function makeGutter(index, direction) {
+		var g = document.createElement('div');
+		g.className = 'cm-gutter cm-gutter-' + direction;
+		return g;
+	}
+
+	// Split.js inserts gutters based on DOM order, so we must physically
+	// reorder the elements to match the desired visual layout.
+	var $content = $('#cm-detail-content');
+
+	if (splitDir === 'horizontal') {
+		var sizes = savedSizes || [defaultTablePct, defaultChartPct];
+		$content.css({ flexDirection: 'row' });
 		$container.css({ display: 'block' });
+		// DOM order: table first, charts second → left | right
+		$content.append($('#cm-detail-table-wrap'));
+		$content.append($container);
+		_cmSplitInstance = Split(['#cm-detail-table-wrap', '#cm-detail-charts'], {
+			sizes:      sizes,
+			minSize:    [200, 150],
+			gutterSize: 5,
+			direction:  'horizontal',
+			gutterAlign: 'center',
+			gutter:     makeGutter,
+			onDragEnd:  onDragEnd
+		});
+	} else {
+		// Vertical: charts ABOVE table
+		var sizes = savedSizes || [defaultChartPct, defaultTablePct];
+		$content.css({ flexDirection: 'column' });
+		$container.css({ display: 'flex', flexWrap: 'wrap' });
+		// DOM order: charts first, table second → top | bottom
+		$content.append($container);
+		$content.append($('#cm-detail-table-wrap'));
+		_cmSplitInstance = Split(['#cm-detail-charts', '#cm-detail-table-wrap'], {
+			sizes:      sizes,
+			minSize:    [80, 100],
+			gutterSize: 5,
+			direction:  'vertical',
+			gutterAlign: 'center',
+			gutter:     makeGutter,
+			onDragEnd:  onDragEnd
+		});
 	}
 
 	// Build column-name → index map
@@ -1238,20 +1855,22 @@ function _cmChartExtractData(desc, colIdx, rows) {
 	var barLabelIdx = desc.barLabelColumn ? colIdx[desc.barLabelColumn] : undefined;
 
 	// Aggregate rows into: { label -> [agg_per_value_column] }
-	// groupAggFunc: "sum" (default), "avg", "max"
+	// groupAggFunc: "sum" (default), "avg", "max", "first"
 	var aggFunc    = desc.groupAggFunc || 'sum';
 	var aggregated = {};
 	var aggCounts  = {};   // label -> row count (for avg calculation)
 	var barLabels  = {};   // label -> barLabelColumn value (max-wins for grouped rows)
 	var labelOrder = [];
 
-	rows.forEach(function(row) {
-		var label = groupByIdx !== undefined ? String(row[groupByIdx] || '') : String(row[labelIdx] || '');
+	// Inner function: process one row with given label/value/barLabel indices
+	function processRow(row, lIdx, gIdx, vIdxs, blIdx) {
+		var label = gIdx !== undefined ? String(row[gIdx] || '') : String(row[lIdx] || '');
+		if (!label || label === 'null' || label === 'undefined') return;
 
 		// skipValue filter
-		if (desc.skipValue && String(row[labelIdx] || '') === desc.skipValue) return;
+		if (desc.skipValue && String(row[lIdx] || '') === desc.skipValue) return;
 
-		var vals = valIdxs.map(function(vi) {
+		var vals = vIdxs.map(function(vi) {
 			var v = row[vi];
 			return (v === null || v === undefined) ? 0 : parseFloat(v) || 0;
 		});
@@ -1263,6 +1882,9 @@ function _cmChartExtractData(desc, colIdx, rows) {
 			aggregated[label] = vals.slice();
 			aggCounts[label]  = 1;
 			labelOrder.push(label);
+		} else if (aggFunc === 'first') {
+			// first-wins deduplication: ignore subsequent rows with same label
+			return;
 		} else {
 			aggCounts[label]++;
 			for (var i = 0; i < vals.length; i++) {
@@ -1274,12 +1896,32 @@ function _cmChartExtractData(desc, colIdx, rows) {
 		}
 
 		// Capture bar label value (for "FREE MB: xxx" text on bars) — use max for grouped
-		if (barLabelIdx !== undefined) {
-			var blv = row[barLabelIdx];
+		if (blIdx !== undefined) {
+			var blv = row[blIdx];
 			var parsed = (blv === null || blv === undefined) ? 0 : parseFloat(blv) || 0;
 			barLabels[label] = Math.max(barLabels[label] || 0, parsed);
 		}
+	}
+
+	// Pass 1: main columns
+	rows.forEach(function(row) {
+		processRow(row, labelIdx, groupByIdx, valIdxs, barLabelIdx);
 	});
+
+	// Pass 2+: extra sources (e.g. LogOsDisk columns merged into same chart)
+	if (desc.extraSources && desc.extraSources.length > 0) {
+		desc.extraSources.forEach(function(es) {
+			var esLabelIdx    = colIdx[es.labelColumn];
+			var esValIdx      = es.valueColumn ? colIdx[es.valueColumn] : undefined;
+			var esBarLabelIdx = es.barLabelColumn ? colIdx[es.barLabelColumn] : undefined;
+			if (esLabelIdx === undefined || esValIdx === undefined) return;
+			// Extra sources contribute one value column mapped to the first valueColumn slot
+			var esValIdxs = [esValIdx];
+			rows.forEach(function(row) {
+				processRow(row, esLabelIdx, esLabelIdx, esValIdxs, esBarLabelIdx);
+			});
+		});
+	}
 
 	// For avg: divide sums by count
 	if (aggFunc === 'avg') {

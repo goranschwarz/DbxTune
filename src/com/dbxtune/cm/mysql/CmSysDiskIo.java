@@ -22,6 +22,7 @@ package com.dbxtune.cm.mysql;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -298,19 +299,21 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("disk-io")
-				.title("Disk IO Distribution")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("file")
-				.valueColumns("total", "count_read", "count_write", "count_misc")
-				.seriesLabels("Total IOs", "Reads", "Writes", "Misc")
-				.skipZeroRows(true)
-				.pieOtherLimit(0.03)
-				.splitRatio(0.7),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("disk-io")
+			.title("Disk IO Distribution")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("file")
+			.valueColumns("total", "count_read", "count_write", "count_misc")
+			.seriesLabels("Total IOs", "Reads", "Writes", "Misc")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.03)
+			.splitRatio(0.7));
+
+		return list;
 	}
 }

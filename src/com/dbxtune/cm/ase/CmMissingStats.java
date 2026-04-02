@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.ase;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -35,6 +36,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.AseConnectionUtils;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -160,5 +162,21 @@ extends CountersModel
 	{
 		String sql = "exec sp_missing_stats";
 		return sql;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// PINK cell: colList contains "(not indexed!)" → column has no index
+		list.add(new CmHighlighterDescriptor()
+			.name("Not Indexed Column")
+			.contains("colList", "(not indexed!)")
+			.scopeCell()
+			.highlightColumns("colList")
+			.bgColor("#FFB6C1"));
+
+		return list;
 	}
 }

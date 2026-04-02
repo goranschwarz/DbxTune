@@ -54,6 +54,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSybaseAse;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.TimeUtils;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -1038,5 +1039,19 @@ extends CountersModel
 
 		long timeDiff = lastEntry._sampleTime.getTime() - firstEntry._sampleTime.getTime();
 		return TimeUtils.msToTimeStr("%HH:%MM:%SS", timeDiff);
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// RED row: Stalls > 0 → cache pool is stalling
+		list.add(new CmHighlighterDescriptor()
+			.name("Cache Pool Stalling")
+			.gt("Stalls", 0)
+			.bgColor("#FF9999"));
+
+		return list;
 	}
 }

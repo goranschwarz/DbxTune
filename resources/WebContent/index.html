@@ -13,6 +13,7 @@
   <!-- JS: JQuery -->
   <script type="text/javascript" src="/scripts/jquery/jquery-3.7.1.min.js"></script>
   <script type="text/javascript" src="/scripts/jquery/ui/1.14.1/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js"></script>
 
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
@@ -1466,8 +1467,8 @@ List of stuff that can be done
 						+ '    <span id="btn-qa-normal-muted-'+serverName+'" class="badge badge-pill" style="background:#6c757d;color:#fff;display:none;margin-left:2px;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event)">&#128276;</span>'
 						+ '  </button>'
 						+ '  <div class="dropdown-menu">'
-						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
-						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
+						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default" onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
+						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=all"     onclick=\'return openGraphPage("server-all", "'+serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
 						+ '    <a class="dropdown-item" href="#" onclick=\'dbxOpenGraphPickerModal("' + serverName + '", "' + startTime + '"); return false;\'>Select <b>Graphs</b> to View...</a>'
 //						+ '    <div class="dropdown-submenu">'
 //						+ '      <a class="dropdown-item dropdown-toggle" href="#">Browse <b>Graphs</b> by Collector Name</a>'
@@ -1738,7 +1739,7 @@ List of stuff that can be done
 		// Construct the URL to use
 		if (type === "server-ssp")
 		{
-			url = "/graph.html?subscribe="+subscribe+colorSchema+gcols+"&startTime="+startTime+"&sessionName="+name+urlOptions;
+			url = "/graph.html?subscribe="+subscribe+colorSchema+gcols+"&startTime="+startTime+"&sessionName="+name+"&graphList=default"+urlOptions;
 		}
 		else if (type === "server-all")
 		{

@@ -47,6 +47,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -424,6 +425,57 @@ extends CountersModel
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "program_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "loginame") );
 		
+		return list;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// YELLOW row — system process (not a user process)
+		list.add(new CmHighlighterDescriptor()
+			.name("System Process")
+			.isFalse("is_user_process")
+			.bgColor("#FFFF80"));
+
+		// GREEN row — session is running or runnable
+		list.add(new CmHighlighterDescriptor()
+			.name("Running Process")
+			.startsWith("status", "runn")
+			.bgColor("#90EE90"));
+
+		// LIGHT_GREEN row — execution is suspended
+		list.add(new CmHighlighterDescriptor()
+			.name("Suspended Process")
+			.startsWith("status", "suspended")
+			.bgColor("#D4FFA3"));
+
+		// PINK row — blocked by another spid
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked Process")
+			.ne("blocked", 0)
+			.bgColor("#FFB6C1"));
+
+		// ORANGE row — has an open transaction
+		list.add(new CmHighlighterDescriptor()
+			.name("Open Transaction")
+			.ne("open_tran", 0)
+			.bgColor("#FFD480"));
+
+		// BEIGE row — worker process (ecid > 0)
+		list.add(new CmHighlighterDescriptor()
+			.name("Worker Process")
+			.gt("ecid", 0)
+			.bgColor("#FFF5D8"));
+
+		// RED row — blocking other spids (highest priority)
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocking Process")
+			.notEmpty("BlockingOtherSpids")
+			.bgColor("#FF9999")
+			.priority(110));
+
 		return list;
 	}
 }

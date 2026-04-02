@@ -55,6 +55,7 @@ import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -593,5 +594,44 @@ extends CountersModel
 	// RS> 19   start_time          java.sql.Types.TIMESTAMP datetime          -none-      
 	// RS> 20   login_time          java.sql.Types.TIMESTAMP datetime          -none-      
 	// RS> 21   request_id          java.sql.Types.INTEGER   int               -none-      
-	// RS> 22   collection_time     java.sql.Types.TIMESTAMP datetime          -none-      	
+	// RS> 22   collection_time     java.sql.Types.TIMESTAMP datetime          -none-
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// YELLOW row — background/system process
+		list.add(new CmHighlighterDescriptor()
+			.name("Background Process")
+			.strEquals("status", "background")
+			.bgColor("#FFFF80"));
+
+		// LIGHT_GREEN row — execution is suspended
+		list.add(new CmHighlighterDescriptor()
+			.name("Suspended Process")
+			.startsWith("status", "suspended")
+			.bgColor("#D4FFA3"));
+
+		// ORANGE row — has an open transaction
+		list.add(new CmHighlighterDescriptor()
+			.name("Open Transaction")
+			.ne("open_tran_count", 0)
+			.bgColor("#FFD480"));
+
+		// PINK row — blocked by another session
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked Process")
+			.ne("blocking_session_id", 0)
+			.bgColor("#FFB6C1"));
+
+		// RED row — blocking other sessions (highest priority)
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocking Process")
+			.gt("blocked_session_count", 0)
+			.bgColor("#FF9999")
+			.priority(110));
+
+		return list;
+	}
 }

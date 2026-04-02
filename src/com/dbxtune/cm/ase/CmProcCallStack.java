@@ -21,6 +21,7 @@
 package com.dbxtune.cm.ase;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSybaseAse;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -285,12 +287,26 @@ extends CountersModel
 	} // end: localCalculation
 
 
-	/** 
-	 * Get number of rows to save/request ddl information for 
+	/**
+	 * Get number of rows to save/request ddl information for
 	 */
 	@Override
 	public int getMaxNumOfDdlsToPersist()
 	{
 		return Integer.MAX_VALUE; // Basically ALL Rows
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// GREEN row: MaxContextID == ContextID → currently executing
+		list.add(new CmHighlighterDescriptor()
+			.name("Currently Executing")
+			.eqCol("MaxContextID", "ContextID")
+			.bgColor("#90EE90"));
+
+		return list;
 	}
 }

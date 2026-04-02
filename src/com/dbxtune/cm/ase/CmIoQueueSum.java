@@ -23,6 +23,7 @@ package com.dbxtune.cm.ase;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -268,17 +269,19 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("io-queue")
-				.title("IO Queue Summary")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("IOType")
-				.valueColumns("IOs", "IOTime", "AvgServ_ms")
-				.seriesLabels("IOs", "IO Time", "Avg Service (ms)")
-				.splitRatio(0.3),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("io-queue")
+			.title("IO Queue Summary")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("IOType")
+			.valueColumns("IOs", "IOTime", "AvgServ_ms")
+			.seriesLabels("IOs", "IO Time", "Avg Service (ms)")
+			.splitRatio(0.3));
+
+		return list;
 	}
 }

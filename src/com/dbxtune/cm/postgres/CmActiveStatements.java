@@ -71,6 +71,7 @@ import com.dbxtune.utils.MathUtils;
 import com.dbxtune.utils.PostgresUtils;
 import com.dbxtune.utils.PostgresUtils.PgLockRecord;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -1482,6 +1483,45 @@ extends CountersModel
 
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "application_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "usename") );
+
+		return list;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// GREEN row: state equals "active"
+		list.add(new CmHighlighterDescriptor()
+			.name("Active")
+			.strEquals("state", "active")
+			.bgColor("#90EE90"));
+
+		// YELLOW row: state equals "idle in transaction"
+		list.add(new CmHighlighterDescriptor()
+			.name("Idle In Transaction")
+			.strEquals("state", "idle in transaction")
+			.bgColor("#FFFF80"));
+
+		// ORANGE row: multi_sampled is not empty → seen in multiple samples
+		list.add(new CmHighlighterDescriptor()
+			.name("Multi-Sampled")
+			.notEmpty("multi_sampled")
+			.bgColor("#FFD480"));
+
+		// PINK row: im_blocked_by_pids is not empty → blocked by other process
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked")
+			.notEmpty("im_blocked_by_pids")
+			.bgColor("#FFB6C1"));
+
+		// RED row: im_blocking_other_pids is not empty → blocking other processes
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocking Others")
+			.notEmpty("im_blocking_other_pids")
+			.bgColor("#FF9999")
+			.priority(110));
 
 		return list;
 	}

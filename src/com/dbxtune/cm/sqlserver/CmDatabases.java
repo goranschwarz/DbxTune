@@ -64,6 +64,7 @@ import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreLowFreeSpace;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventQueryStoreUnexpectedState;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmChartDescriptor;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -2813,14 +2814,14 @@ extends CountersModel
 			setDiskDescription(LogOsDisk , LogOsDiskLabel);
 			setDiskDescription(DataOsDisk, DataOsDiskLabel);
 			
-			String logOsName  = LogOsDisk;
-			String dataOsName = DataOsDisk;
+			String logOsName  = LogOsDisk  == null ? "" : LogOsDisk;
+			String dataOsName = DataOsDisk == null ? "" : DataOsDisk;
 			
 			if (StringUtil.isNullOrBlank(logOsName))  logOsName  = CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName);
 			if (StringUtil.isNullOrBlank(dataOsName)) dataOsName = CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName);
 			
-			if (StringUtil.hasValue(LogOsDiskLabel))  logOsName  += " [" + LogOsDiskLabel  + "]";
-			if (StringUtil.hasValue(DataOsDiskLabel)) dataOsName += " [" + DataOsDiskLabel + "]";
+			if (StringUtil.hasValue(LogOsDiskLabel)  && !logOsName .contains(" [")) logOsName  += " [" + LogOsDiskLabel  + "]";
+			if (StringUtil.hasValue(DataOsDiskLabel) && !dataOsName.contains(" [")) dataOsName += " [" + DataOsDiskLabel + "]";
 
 			diskMap.put(logOsName,  LogColValue);
 			diskMap.put(dataOsName, DataColValue);
@@ -3017,6 +3018,60 @@ extends CountersModel
 			else if (colName.equals("OldestTranHasLocks"))     pos_OldestTranHasLocks     = colId;
 			else if (colName.equals("OldestTranLocks"))        pos_OldestTranLocks        = colId;
 			else if (colName.equals("most_recent_sql_text"))   pos_most_recent_sql_text   = colId;
+		}
+
+		// Fix 'DataOsDisk' and 'LogOsDisk'
+		// For Windows it means ... in {log|data}OsDisk set value: X: [disk Label]
+		// For Linux   it means ... in {log|data}OsDisk set value: Linux Directory name from the {Log|Data}OsFileName
+		boolean fixOsDisk = true;
+		if (fixOsDisk)
+		{
+			int LogOsDiskLabel_pos      = newSample.findColumn("LogOsDiskLabel");
+			int LogOsDisk_pos           = newSample.findColumn("LogOsDisk");
+			int LogOsFileName_pos       = newSample.findColumn("LogOsFileName");
+
+			int DataOsDiskLabel_pos     = newSample.findColumn("DataOsDiskLabel");
+			int DataOsDisk_pos          = newSample.findColumn("DataOsDisk");
+			int DataOsFileName_pos      = newSample.findColumn("DataOsFileName");
+			
+			if (LogOsDisk_pos != -1 && DataOsDisk_pos != -1) // On Azure the OS Log/Data is unknown
+			{
+				for(int r=0; r<newSample.getRowCount(); r++)
+				{
+					String LogOsDiskLabel      = ((LogOsDiskLabel_pos == -1) ? "" : newSample.getValueAsString(r, LogOsDiskLabel_pos));
+					String LogOsDisk           = newSample.getValueAsString(r, LogOsDisk_pos);
+					String LogOsFileName       = newSample.getValueAsString(r, LogOsFileName_pos);
+					
+					String DataOsDiskLabel     = ((DataOsDiskLabel_pos == -1) ? "" : newSample.getValueAsString(r, DataOsDiskLabel_pos));
+					String DataOsDisk          = newSample.getValueAsString(r, DataOsDisk_pos);
+					String DataOsFileName      = newSample.getValueAsString(r, DataOsFileName_pos);
+					
+					if (_logger.isDebugEnabled())
+						_logger.debug("createDataset():GRAPH-OS-DISK: "+getName()+": "
+								+ "LogOsDiskLabel("    + LogOsDiskLabel_pos    + ")='" + LogOsDiskLabel    + "', "
+								+ "LogOsDisk("         + LogOsDisk_pos         + ")='" + LogOsDisk         + "', "
+								+ "LogOsFileName("     + LogOsFileName_pos     + ")='" + LogOsFileName     + "', "
+								+ "DataOsDiskLabel("   + DataOsDiskLabel_pos   + ")='" + DataOsDiskLabel   + "', "
+								+ "DataOsDisk("        + DataOsDisk_pos        + ")='" + DataOsDisk        + "', "
+								+ "DataOsFileName("    + DataOsFileName_pos    + ")='" + DataOsFileName    + "'.");
+
+					String logOsName  = LogOsDisk  == null ? "" : LogOsDisk ;
+					String dataOsName = DataOsDisk == null ? "" : DataOsDisk;
+					
+					if (StringUtil.isNullOrBlank(logOsName))  logOsName  = CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName);
+					if (StringUtil.isNullOrBlank(dataOsName)) dataOsName = CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName);
+
+					if (StringUtil.hasValue(LogOsDiskLabel)  && !logOsName .contains(" [")) logOsName  += " [" + LogOsDiskLabel  + "]";
+					if (StringUtil.hasValue(DataOsDiskLabel) && !dataOsName.contains(" [")) dataOsName += " [" + DataOsDiskLabel + "]";
+
+//System.out.println("localCalculation(CounterSample newSample) -- {log|data}OsDisk to value: r=" + r + ": logOsName=|" + logOsName + "|, dataOsName=|" + dataOsName + "|.     LogOsFileName=|"+LogOsFileName+"|, DataOsFileName=|"+DataOsFileName+"|. RESOLVED: L=|"+CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName)+"|, D=|"+CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName)+"|.");
+					if (_logger.isDebugEnabled())
+						_logger.debug("localCalculation(CounterSample newSample) -- {log|data}OsDisk to value: r=" + r + ": logOsName=|" + logOsName + "|, dataOsName=|" + dataOsName + "|.");
+						
+					newSample.setValueAt(logOsName , r, LogOsDisk_pos);
+					newSample.setValueAt(dataOsName, r, DataOsDisk_pos);
+				}
+			}
 		}
 
 		// Used to NOT lookup AFTER first time it happened in THIS loop
@@ -3610,7 +3665,7 @@ extends CountersModel
 							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
 
-							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+							if (StringUtil.hasValue(osVolume) && !osVolume.contains(" [") && StringUtil.hasValue(lbl))
 								osVolume += " [" + lbl + "]";
 						}
 
@@ -3620,7 +3675,7 @@ extends CountersModel
 							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
 
-							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+							if (StringUtil.hasValue(osVolume) && !osVolume.contains(" [") && StringUtil.hasValue(lbl))
 								osVolume += " [" + lbl + "]";
 						}
 						
@@ -3690,7 +3745,7 @@ extends CountersModel
 							osVolume    = cm.getAbsString(r, "LogOsDisk");
 							osFileName  = cm.getAbsString(r, "LogOsFileName");
 
-							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+							if (StringUtil.hasValue(osVolume) && !osVolume.contains(" [")  && StringUtil.hasValue(lbl))
 								osVolume += " [" + lbl + "]";
 						}
 						if (usedPct.equals(dataUsedPct))
@@ -3699,7 +3754,7 @@ extends CountersModel
 							osVolume    = cm.getAbsString(r, "DataOsDisk");
 							osFileName  = cm.getAbsString(r, "DataOsFileName");
 
-							if (StringUtil.hasValue(osVolume) && StringUtil.hasValue(lbl))
+							if (StringUtil.hasValue(osVolume) && !osVolume.contains(" [")  && StringUtil.hasValue(lbl))
 								osVolume += " [" + lbl + "]";
 						}
 
@@ -4910,51 +4965,106 @@ extends CountersModel
 //	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("log-usage")
-				.title("Transaction Log Space Usage in Percent")
-				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
-				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
-				.labelColumn("DBName")
-				.valueColumns("LogSizeUsedPct")
-				.seriesLabels("Log Used %")
-				.barLabelColumn("LogSizeFreeInMb")
-				.isPercent(true)
-				.thresholdWarn(80)
-				.thresholdCrit(90)
-				.skipZeroRows(true),
-			new CmChartDescriptor()
-				.id("data-usage")
-				.title("Data Space Usage in Percent")
-				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
-				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
-				.labelColumn("DBName")
-				.valueColumns("DataSizeUsedPct")
-				.seriesLabels("Data Used %")
-				.barLabelColumn("DataSizeFreeInMb")
-				.isPercent(true)
-				.thresholdWarn(80)
-				.thresholdCrit(90)
-				.skipZeroRows(true),
-			new CmChartDescriptor()
-				.id("os-disk-usage")
-				.title("Operating System Disk Space Usage in Percent")
-				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
-				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
-				.labelColumn("DataOsDisk")
-				.groupByColumn("DataOsDisk")
-				.groupAggFunc(CmChartDescriptor.AGG_MAX)
-				.valueColumns("DataOsDiskUsedPct")
-				.seriesLabels("OS Disk Used %")
-				.barLabelColumn("DataOsDiskFreeMb")
-				.isPercent(true)
-				.thresholdWarn(80)
-				.thresholdCrit(90)
-				.skipZeroRows(true),
-		};
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// YELLOW — row has an open transaction
+		list.add(new CmHighlighterDescriptor()
+			.name("Oldest Open Transaction")
+			.gt("OldestTranInSeconds", 0)
+			.bgColor("#FFFF80"));
+
+		// RED cell — Log size larger than Data size
+		list.add(new CmHighlighterDescriptor()
+			.name("Log Larger Than Data")
+			.gtCol("LogSizeInMb", "DataSizeInMb")
+			.scopeCell()
+			.highlightColumns("LogSizeInMb")
+			.bgColor("#FF6666")
+			.fgColor("#fff"));
+
+		// RED cell — VLF count high
+		list.add(new CmHighlighterDescriptor()
+			.name("High VLF Count")
+			.ge("vlf_count", Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_VlfCount, DEFAULT_alarm_VlfCount))
+			.scopeCell()
+			.highlightColumns("vlf_count")
+			.bgColor("#FF6666")
+			.fgColor("#fff"));
+
+		// ORANGE cell — Log usage > 80%
+		list.add(new CmHighlighterDescriptor()
+			.name("Log Space Warning")
+			.gt("LogSizeUsedPct", 80)
+			.scopeCell()
+			.highlightColumns("LogSizeUsedPct")
+			.bgColor("#FFB347"));
+
+		// RED cell — Log usage > 95%
+		list.add(new CmHighlighterDescriptor()
+			.name("Log Space Critical")
+			.gt("LogSizeUsedPct", 95)
+			.scopeCell()
+			.highlightColumns("LogSizeUsedPct")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		return list;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("log-usage")
+			.title("Transaction Log Space Usage in Percent")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("DBName")
+			.valueColumns("LogSizeUsedPct")
+			.seriesLabels("Log Used %")
+			.barLabelColumn("LogSizeFreeInMb")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90)
+			.skipZeroRows(true));
+
+		list.add(new CmChartDescriptor()
+			.id("data-usage")
+			.title("Data Space Usage in Percent")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("DBName")
+			.valueColumns("DataSizeUsedPct")
+			.seriesLabels("Data Used %")
+			.barLabelColumn("DataSizeFreeInMb")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90)
+			.skipZeroRows(true));
+
+		list.add(new CmChartDescriptor()
+			.id("os-disk-usage")
+			.title("Operating System Disk Space Usage in Percent")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("DataOsDisk")
+			.groupByColumn("DataOsDisk")
+			.groupAggFunc(CmChartDescriptor.AGG_FIRST)
+			.valueColumns("DataOsDiskUsedPct")
+			.seriesLabels("OS Disk Used %")
+			.barLabelColumn("DataOsDiskFreeMb")
+			.addExtraSource("LogOsDisk", "LogOsDiskUsedPct", "LogOsDiskFreeMb")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90)
+			.skipZeroRows(true));
+
+		return list;
 	}
 }
 

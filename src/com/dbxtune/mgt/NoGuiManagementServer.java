@@ -39,6 +39,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import com.dbxtune.mgt.controllers.CmDataServlet;
 import com.dbxtune.mgt.controllers.CmListServlet;
+import com.dbxtune.mgt.controllers.CmNavSampleServlet;
 import com.dbxtune.mgt.controllers.DbmsConfigServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigGetServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
@@ -248,6 +249,7 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())   , "/mgt/refresh");
 				context.addServlet(new ServletHolder(new CmListServlet())         , "/mgt/cm/list");
 				context.addServlet(new ServletHolder(new CmDataServlet())         , "/mgt/cm/data");
+				context.addServlet(new ServletHolder(new CmNavSampleServlet())    , "/mgt/cm/navSample");
 				context.addServlet(new ServletHolder(new DbmsConfigServlet())     , "/mgt/dbms-config");
 
 				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
@@ -310,6 +312,7 @@ public class NoGuiManagementServer
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/refresh");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/list");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/data");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/navSample");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/dbms-config");
 				
 				// Get out of the "start on port number" loop

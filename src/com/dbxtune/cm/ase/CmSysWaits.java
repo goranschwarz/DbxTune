@@ -932,28 +932,31 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("wait-by-event")
-				.title("Wait Distribution by Event")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("WaitEventDesc")
-				.valueColumns("WaitTime", "Waits", "WaitTimePerWait")
-				.seriesLabels("Wait Time", "Waits", "Avg Wait Time")
-				.pieOtherLimit(0.05)
-				.splitRatio(0.6),
-			new CmChartDescriptor()
-				.id("wait-by-class")
-				.title("Wait Distribution by Class")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("WaitEventDesc")
-				.groupByColumn("WaitClassDesc")
-				.valueColumns("WaitTime", "Waits")
-				.seriesLabels("Wait Time", "Waits")
-				.pieOtherLimit(0.05)
-				.splitRatio(0.6),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("wait-by-event")
+			.title("Wait Distribution by Event")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("WaitEventDesc")
+			.valueColumns("WaitTime", "Waits", "WaitTimePerWait")
+			.seriesLabels("Wait Time", "Waits", "Avg Wait Time")
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("wait-by-class")
+			.title("Wait Distribution by Class")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("WaitEventDesc")
+			.groupByColumn("WaitClassDesc")
+			.valueColumns("WaitTime", "Waits")
+			.seriesLabels("Wait Time", "Waits")
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		return list;
 	}
 }

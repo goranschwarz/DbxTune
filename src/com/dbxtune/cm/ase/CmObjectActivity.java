@@ -58,6 +58,7 @@ import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MathUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -1227,5 +1228,32 @@ extends CountersModel
 			else                               { map.put(pkCol,        getAbsString(modelRow, pkCol));        }
 		}
 		return map;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// ORANGE row: IndexID > 0 → index entry
+		list.add(new CmHighlighterDescriptor()
+			.name("Index Entry")
+			.gt("IndexID", 0)
+			.bgColor("#FFD480"));
+
+		// BLOB_COLOR row: IndexID == 255 → BLOB/text object
+		list.add(new CmHighlighterDescriptor()
+			.name("BLOB/Text Object")
+			.eq("IndexID", 255)
+			.bgColor("#CCF5FF")
+			.priority(110));
+
+		// WORK_TABLE row: LockScheme equals "WORK-TABLE" → tempdb work table
+		list.add(new CmHighlighterDescriptor()
+			.name("Work Table")
+			.strEquals("LockScheme", "WORK-TABLE")
+			.bgColor("#FFFFCC"));
+
+		return list;
 	}
 }

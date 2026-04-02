@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -40,6 +41,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -288,5 +290,19 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// PINK row: granted is false → lock not yet granted (waiting)
+		list.add(new CmHighlighterDescriptor()
+			.name("Lock Not Granted")
+			.isFalse("granted")
+			.bgColor("#FFB6C1"));
+
+		return list;
 	}
 }

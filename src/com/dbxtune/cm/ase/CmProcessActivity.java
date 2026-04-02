@@ -66,6 +66,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSybaseAse;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -1532,6 +1533,57 @@ extends CountersModel
 		
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Application") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Login") );
+
+		return list;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// DARKER_BEIGE row: FamilyID == SPID → parent of worker processes
+		list.add(new CmHighlighterDescriptor()
+			.name("Worker Process Parent")
+			.eqCol("FamilyID", "SPID")
+			.bgColor("#E5C295"));
+
+		// BEIGE row: Command equals "WORKER PROCESS" → worker process
+		list.add(new CmHighlighterDescriptor()
+			.name("Worker Process")
+			.strEquals("Command", "WORKER PROCESS")
+			.bgColor("#FFF5D8"));
+
+		// YELLOW row: Login is empty → system process (null/empty login)
+		list.add(new CmHighlighterDescriptor()
+			.name("System Process (no login)")
+			.isEmpty("Login")
+			.bgColor("#FFFF80"));
+
+		// YELLOW row: Login equals "probe" → system process
+		list.add(new CmHighlighterDescriptor()
+			.name("System Process (probe)")
+			.strEquals("Login", "probe")
+			.bgColor("#FFFF80")
+			.priority(101));
+
+		// GREEN row: status starts with "runn" → running/runnable
+		list.add(new CmHighlighterDescriptor()
+			.name("Running/Runnable")
+			.startsWith("status", "runn")
+			.bgColor("#90EE90"));
+
+		// VERY_LIGHT_GREEN row: status starts with "send sleep"
+		list.add(new CmHighlighterDescriptor()
+			.name("Send Sleep")
+			.startsWith("status", "send sleep")
+			.bgColor("#80FF80"));
+
+		// PINK row: BlockingSPID != 0 → blocked by another process
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked")
+			.ne("BlockingSPID", 0)
+			.bgColor("#FFB6C1"));
 
 		return list;
 	}

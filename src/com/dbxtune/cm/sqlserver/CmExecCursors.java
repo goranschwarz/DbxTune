@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,6 +34,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -174,5 +176,19 @@ extends CountersModel
 			    + "";
 
 		return sql;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// ORANGE row — cursor is declared as GLOBAL (prefer LOCAL STATIC)
+		list.add(new CmHighlighterDescriptor()
+			.name("Global Cursor")
+			.contains("properties", "Global")
+			.bgColor("#FFD480"));
+
+		return list;
 	}
 }

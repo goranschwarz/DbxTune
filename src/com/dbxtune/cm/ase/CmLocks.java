@@ -38,6 +38,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -250,7 +251,28 @@ extends CountersModel
 	@Override
 	public void updateGraphData()
 	{
-		for (TrendGraphDataPoint tgdp : getTrendGraphData().values()) 
+		for (TrendGraphDataPoint tgdp : getTrendGraphData().values())
 			updateGraphData(tgdp);
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// PINK row: BlockedState contains "Blocked"
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked")
+			.contains("BlockedState", "Blocked")
+			.bgColor("#FFB6C1"));
+
+		// RED row: BlockedState contains "Blocking"
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocking")
+			.contains("BlockedState", "Blocking")
+			.bgColor("#FF9999")
+			.priority(110));
+
+		return list;
 	}
 }

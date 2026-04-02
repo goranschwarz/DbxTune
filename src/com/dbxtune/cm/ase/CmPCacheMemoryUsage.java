@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.ase;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -218,30 +219,33 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("memory-summary")
-				.title("Memory Usage - All Modules")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("AllocatorName")
-				.valueColumns("Active")
-				.seriesLabels("Active Pages")
-				.skipZeroRows(true)
-				.pieOtherLimit(0.03)
-				.splitRatio(0.6),
-			new CmChartDescriptor()
-				.id("memory-per-module")
-				.title("Memory Usage per Module")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("AllocatorName")
-				.groupByColumn("ModuleName")
-				.valueColumns("Active")
-				.seriesLabels("Active Pages")
-				.skipZeroRows(true)
-				.pieOtherLimit(0.03)
-				.splitRatio(0.6),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("memory-summary")
+			.title("Memory Usage - All Modules")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("AllocatorName")
+			.valueColumns("Active")
+			.seriesLabels("Active Pages")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.03)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("memory-per-module")
+			.title("Memory Usage per Module")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("AllocatorName")
+			.groupByColumn("ModuleName")
+			.valueColumns("Active")
+			.seriesLabels("Active Pages")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.03)
+			.splitRatio(0.6));
+
+		return list;
 	}
 }

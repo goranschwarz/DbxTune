@@ -619,28 +619,31 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("wait-by-type")
-				.title("SPID Wait Distribution by Type")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("wait_type")
-				.valueColumns("wait_time_ms", "waiting_tasks_count", "WaitTimePerCount")
-				.seriesLabels("Wait Time (ms)", "Waiting Tasks", "Avg Wait (ms)")
-				.pieOtherLimit(0.05)
-				.splitRatio(0.6),
-			new CmChartDescriptor()
-				.id("wait-by-class")
-				.title("SPID Wait Distribution by Class")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("wait_type")
-				.groupByColumn("WaitClass")
-				.valueColumns("wait_time_ms", "waiting_tasks_count")
-				.seriesLabels("Wait Time (ms)", "Waiting Tasks")
-				.pieOtherLimit(0.05)
-				.splitRatio(0.6),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("wait-by-type")
+			.title("SPID Wait Distribution by Type")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("wait_type")
+			.valueColumns("wait_time_ms", "waiting_tasks_count", "WaitTimePerCount")
+			.seriesLabels("Wait Time (ms)", "Waiting Tasks", "Avg Wait (ms)")
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("wait-by-class")
+			.title("SPID Wait Distribution by Class")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("wait_type")
+			.groupByColumn("WaitClass")
+			.valueColumns("wait_time_ms", "waiting_tasks_count")
+			.seriesLabels("Wait Time (ms)", "Waiting Tasks")
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		return list;
 	}
 }

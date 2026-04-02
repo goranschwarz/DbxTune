@@ -52,6 +52,7 @@ import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
 
 import com.dbxtune.central.controllers.Helper;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -218,13 +219,19 @@ extends HttpServlet
 				}
 
 				Map<String, Object> cmMap = new LinkedHashMap<>();
+				String description = cm.getDescription();
+				List<CmHighlighterDescriptor> highlighterDescriptors = cm.getHighlighterDescriptors();
+
 				cmMap.put("cmName",      cmName);
 				cmMap.put("displayName", displayName);
 				cmMap.put("iconFile",    iconFile);
+				cmMap.put("isActive",    cm.isActive());
 				cmMap.put("hasData",     hasData);
 				cmMap.put("absRows",     absRows);
 				cmMap.put("diffRows",    diffRows);
 				cmMap.put("rateRows",    rateRows);
+				if (description            != null) cmMap.put("description",            description);
+				if (highlighterDescriptors != null) cmMap.put("highlighterDescriptors", highlighterDescriptors);
 				if (exceptionMsg      != null) cmMap.put("exceptionMsg",      exceptionMsg);
 				if (exceptionFullText != null) cmMap.put("exceptionFullText", exceptionFullText);
 				cmList2.add(cmMap);

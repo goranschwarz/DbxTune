@@ -4425,6 +4425,10 @@ function dbxTuneLoadCharts(destinationDivId)
 		loadAllGraphs = true;
 		graphList = undefined;
 	}
+	if (graphList !== undefined && graphList === "default")
+	{
+		graphList = undefined; // This will load "System default selected graphs"
+	}
 
 	window.addEventListener("resize", function() { console.log("received-resize-event"); });
 

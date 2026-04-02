@@ -88,6 +88,7 @@ import com.dbxtune.utils.OpenSslAesUtil.DecryptionException;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 import com.dbxtune.utils.Ver;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -2832,5 +2833,79 @@ extends CountersModel
 		list.add(new CmSettingsHelper("SecondaryCommitTimeLag", isAlarmSwitch, PROPKEY_alarm_SecondaryCommitTimeLagInSeconds , Integer.class, conf.getIntProperty    (PROPKEY_alarm_SecondaryCommitTimeLagInSeconds , DEFAULT_alarm_SecondaryCommitTimeLagInSeconds ), DEFAULT_alarm_SecondaryCommitTimeLagInSeconds , "If 'SecondaryCommitTimeLag' is greater than ### Seconds, for any entry where 'locality' is 'REMOTE' and this is the PRIMARY server, then send 'AlarmEventAgSecondaryCommitTimeLag'." ));
 
 		return list;
-	}	
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// GREEN row — AG replica is validated (confirmed healthy)
+		list.add(new CmHighlighterDescriptor()
+			.name("Validated")
+			.strEquals("Validated", "YES")
+			.bgColor("#90EE90"));
+
+		// RED cell — availability group/replica not operational
+		list.add(new CmHighlighterDescriptor()
+			.name("Not Operational")
+			.notEquals("operational_state_desc", "ONLINE")
+			.scopeCell()
+			.highlightColumns("operational_state_desc")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		// RED cell — replica not connected
+		list.add(new CmHighlighterDescriptor()
+			.name("Not Connected")
+			.notEquals("connected_state_desc", "CONNECTED")
+			.scopeCell()
+			.highlightColumns("connected_state_desc")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		// RED cell — recovery health not online
+		list.add(new CmHighlighterDescriptor()
+			.name("Recovery Not Online")
+			.notEquals("recovery_health_desc", "ONLINE")
+			.scopeCell()
+			.highlightColumns("recovery_health_desc")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		// RED cell — synchronization health not healthy
+		list.add(new CmHighlighterDescriptor()
+			.name("Sync Not Healthy")
+			.notEquals("synchronization_health_desc", "HEALTHY")
+			.scopeCell()
+			.highlightColumns("synchronization_health_desc")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		// RED cell — database not online
+		list.add(new CmHighlighterDescriptor()
+			.name("Database Not Online")
+			.notEquals("database_state_desc", "ONLINE")
+			.scopeCell()
+			.highlightColumns("database_state_desc")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		// RED cell — data movement is suspended (suspension reason present)
+		list.add(new CmHighlighterDescriptor()
+			.name("Data Movement Suspended")
+			.notEmpty("suspended_reason_desc")
+			.scopeCell()
+			.highlightColumns("suspended_reason_desc")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		return list;
+	}
 }
