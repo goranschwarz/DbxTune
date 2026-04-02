@@ -47,7 +47,7 @@ function printUsage
 	echo " dbxPassword - Manage Encrypted Passwords"
 	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
 	echo "               Property/Configuration encryption utility"
-	echo " configEnc   - Encrypt a password that you can insert into a config file"
+	echo " configUtil  - Encrypt a password that you can insert into a config file"
 	echo ""
 
 	exit 1

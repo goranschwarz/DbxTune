@@ -4517,6 +4517,23 @@ public class PersistWriterJdbc
 					colObj           = rows.get(r).get(c);
 					int jdbcDataType = rsmd.getColumnType(c + 1);
 
+					boolean isDeltaOrPct    = false;
+//					if (whatData == DIFF)
+//					{
+//						if ( cm.isPctColumn(c) )
+//							isDeltaOrPct = true;
+//					}
+					if (whatData == RATE)
+					{
+						if ( cm.isDiffColumn(c) || cm.isPctColumn(c) )
+							isDeltaOrPct = true;
+					}
+					// Adjust to NUMERIC JDBC DataType for RATE means that we need to use NUMERIC instead of origin data type (due to 1/10s == 0.1)
+					if (isDeltaOrPct)
+					{
+						jdbcDataType = Types.NUMERIC;
+					}
+
 					if (onErrorPrintDataInfo || _logger.isDebugEnabled())
 					{
 						// Save information (about the row we are about to insert) that will be printed on Exception
@@ -4525,12 +4542,13 @@ public class PersistWriterJdbc
 								+ ", row="              + r
 								+ ", col="              + (c+1)
 								+ ", colName="          + StringUtil.left(rsmd.getColumnLabel(c+1),30) 
+								+ ", isDeltaOrPct="     + isDeltaOrPct
 								+ ", jdbcDataTypeName=" + StringUtil.left(ResultSetTableModel.getColumnJavaSqlTypeName(jdbcDataType), 30) 
 								+ ", colObj.class="     + StringUtil.left((colObj == null ? "-null-" : colObj.getClass().getSimpleName()), 20) 
 								+ ", colObj.val=|"      + colObj + "|"
 								+ "\n";
 					}
-					
+
 					// Timestamp is stored with appending nanoseconds etc in a strange format
 					// if you are using setObject() so use setString() instead...
 					if (colObj != null && colObj instanceof Timestamp)

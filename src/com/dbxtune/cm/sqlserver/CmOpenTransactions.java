@@ -49,6 +49,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.SqlServerUtils.LockRecord;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -377,4 +378,25 @@ extends CountersModel
 		} // end: loop rows
 
 	} // end: method
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// PINK row — this session is blocked by another spid
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked Process")
+			.ne("BlockedBySpid", 0)
+			.bgColor("#FFB6C1"));
+
+		// RED row — this session is blocking other spids
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocking Process")
+			.gt("BlockingOtherSpidCount", 0)
+			.bgColor("#FF9999")
+			.priority(110));
+
+		return list;
+	}
 }

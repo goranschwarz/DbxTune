@@ -46,6 +46,7 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventExtensiveUsage;
 import com.dbxtune.alarm.events.AlarmEventHoldingLocksWhileWaitForClientInput;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSample;
@@ -2334,4 +2335,50 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 		return list;
 	}
 
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors(){
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// YELLOW — system process
+		list.add(new CmHighlighterDescriptor()
+			.name("System Process")
+			.isFalse("is_user_process")
+			.bgColor("#FFFF80"));
+
+		// ORANGE — multi-sampled (long running)
+		list.add(new CmHighlighterDescriptor()
+			.name("Multi-Sampled")
+			.notEmpty("multiSampled")
+			.bgColor("#FFD480"));
+
+		// LIGHT BLUE — waiting for memory grant
+		list.add(new CmHighlighterDescriptor()
+			.name("Waiting for Memory Grant")
+			.gt("memory_grant_wait_time_ms", 0)
+			.bgColor("#ADD8E6"));
+
+		// PINK — blocked by another session
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked")
+			.ne("ImBlockedBySessionId", 0)
+			.bgColor("#FFB6C1"));
+
+		// RED — blocking other sessions (root blocker)
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocking Others")
+			.notEmpty("ImBlockingOtherSessionIds")
+			.bgColor("#FF6666")
+			.fgColor("#fff")
+			.priority(110));
+
+		// GREEN cell — DOP > 1
+		list.add(new CmHighlighterDescriptor()
+			.name("Parallel Execution")
+			.gt("dop", 1)
+			.scopeCell()
+			.highlightColumns("dop")
+			.bgColor("#90EE90"));
+
+		return list;
+	}
 }

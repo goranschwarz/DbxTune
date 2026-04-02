@@ -2215,8 +2215,8 @@ public class OverviewServlet extends HttpServlet
 //			out.println("<p><br></p>");
 
 			out.println("<br>");
-			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxCentral'                     target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
-			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all' target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
+			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=default' target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
+			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all'     target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
 			out.println("<br>");
 			
 			

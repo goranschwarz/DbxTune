@@ -50,6 +50,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -823,5 +824,44 @@ extends CountersModel
 				}
 			}
 		}
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// VERY_LIGHT_BLUE2 row: LockSchema equals "allpages" → allpages lock scheme
+		list.add(new CmHighlighterDescriptor()
+			.name("Allpages Lock Scheme")
+			.strEquals("LockSchema", "allpages")
+			.bgColor("#E6F2FF"));
+
+		// VERY_LIGHT_PINK row: IndexCount == 0 → no indexes on table
+		list.add(new CmHighlighterDescriptor()
+			.name("No Indexes")
+			.eq("IndexCount", 0)
+			.bgColor("#FFE6E6"));
+
+		// ORANGE row: IndexID > 0 → index entry
+		list.add(new CmHighlighterDescriptor()
+			.name("Index Entry")
+			.gt("IndexID", 0)
+			.bgColor("#FFD480"));
+
+		// BLOB_COLOR row: IndexID == 255 → BLOB/text object
+		list.add(new CmHighlighterDescriptor()
+			.name("BLOB/Text Object")
+			.eq("IndexID", 255)
+			.bgColor("#CCF5FF")
+			.priority(110));
+
+		// YELLOW row: ObjectID < 100 → system table
+		list.add(new CmHighlighterDescriptor()
+			.name("System Table")
+			.lt("ObjectID", 100)
+			.bgColor("#FFFF80"));
+
+		return list;
 	}
 }

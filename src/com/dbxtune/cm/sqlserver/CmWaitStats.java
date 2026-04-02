@@ -44,6 +44,7 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventToxicWait;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmChartDescriptor;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -1333,30 +1334,54 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("wait-by-type")
-				.title("Wait Distribution by Type")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("wait_type")
-				.valueColumns("wait_time_ms", "waiting_tasks_count", "WaitTimePerCount")
-				.seriesLabels("Wait Time (ms)", "Waiting Tasks", "Avg Wait (ms)")
-				.skipZeroRows(true)
-				.pieOtherLimit(0.05)
-				.splitRatio(0.6),
-			new CmChartDescriptor()
-				.id("wait-by-class")
-				.title("Wait Distribution by Class")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("wait_type")
-				.groupByColumn("WaitClass")
-				.valueColumns("wait_time_ms", "waiting_tasks_count")
-				.seriesLabels("Wait Time (ms)", "Waiting Tasks")
-				.skipZeroRows(true)
-				.pieOtherLimit(0.05)
-				.splitRatio(0.6),
-		};
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// BEIGE row — wait type is excluded from trend graphs
+		list.add(new CmHighlighterDescriptor()
+			.name("Skip in Trend Graphs")
+			.isTrue("SkipInTrendGraphs")
+			.bgColor("#FFF5D8"));
+
+		// DARKER BEIGE row — wait type is excluded from local graphs
+		list.add(new CmHighlighterDescriptor()
+			.name("Skip in Local Graphs")
+			.isTrue("SkipInLocalGraphs")
+			.bgColor("#E5C295")
+			.priority(110));
+
+		return list;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("wait-by-type")
+			.title("Wait Distribution by Type")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("wait_type")
+			.valueColumns("wait_time_ms", "waiting_tasks_count", "WaitTimePerCount")
+			.seriesLabels("Wait Time (ms)", "Waiting Tasks", "Avg Wait (ms)")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("wait-by-class")
+			.title("Wait Distribution by Class")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("wait_type")
+			.groupByColumn("WaitClass")
+			.valueColumns("wait_time_ms", "waiting_tasks_count")
+			.seriesLabels("Wait Time (ms)", "Waiting Tasks")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		return list;
 	}
 }

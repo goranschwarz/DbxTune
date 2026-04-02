@@ -1089,22 +1089,21 @@ extends CounterControllerAbstract
 		{
 			CounterControllerSqlServer instance = (CounterControllerSqlServer) CounterController.getInstance();
 
+			// If not windows: remove drive letter, and fix backslash '\' to forward slash '/'
+			if (instance.isLinux())
+			{
+				osFileName = osFileName.replace('\\', '/');
+
+				if (osFileName.matches("(?is)[A-Z]:.*"))
+					osFileName = osFileName.substring(2);
+			}
+
 			File f = new File(osFileName);
 			String dir = f.getParent();
 			if (dir == null)
 				dir = osFileName;
 
-			// If not windows: remove drive letter, and fix backslash '\' to forward slash '/'
-			if ( dir != null && instance.isLinux() )
-			{
-				// if starts with 'c:', then remove the drive, since it's Linux 
-				if (dir.matches("(?is)[A-Z]:.*"))
-					dir = dir.substring(2);
-				
-				dir = dir.replace('\\', '/');
-			}
-
-			return dir;
+			return dir;	
 		}
 		else
 		{

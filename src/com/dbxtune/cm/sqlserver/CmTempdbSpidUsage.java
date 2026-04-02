@@ -52,6 +52,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -730,6 +731,32 @@ extends CountersModel
 		list.add(new CmSettingsHelper("TotalUsageMb_abs SkipCommands",             PROPKEY_alarm_TotalUsageMb_abs_SkipProgram , String .class, conf.getProperty       (PROPKEY_alarm_TotalUsageMb_abs_SkipProgram , DEFAULT_alarm_TotalUsageMb_abs_SkipProgram ), DEFAULT_alarm_TotalUsageMb_abs_SkipProgram , "If 'TotalUsageMb_abs' is true; Discard program_name's listed (regexp is used)." , new RegExpInputValidator()));
 //		list.add(new CmSettingsHelper("TotalUsageMb_abs SkipCommands",             PROPKEY_alarm_TotalUsageMb_abs_SkipCmd     , String .class, conf.getProperty       (PROPKEY_alarm_TotalUsageMb_abs_SkipCmd     , DEFAULT_alarm_TotalUsageMb_abs_SkipCmd     ), DEFAULT_alarm_TotalUsageMb_abs_SkipCmd     , "If 'TotalUsageMb_abs' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
 //		list.add(new CmSettingsHelper("TotalUsageMb_abs SkipTranNames",            PROPKEY_alarm_TotalUsageMb_abs_SkipTranName, String .class, conf.getProperty       (PROPKEY_alarm_TotalUsageMb_abs_SkipTranName, DEFAULT_alarm_TotalUsageMb_abs_SkipTranName), DEFAULT_alarm_TotalUsageMb_abs_SkipTranName, "If 'TotalUsageMb_abs' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
+
+		return list;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// YELLOW row — system process (not a user process)
+		list.add(new CmHighlighterDescriptor()
+			.name("System Process")
+			.isFalse("is_user_process")
+			.bgColor("#FFFF80"));
+
+		// GREEN row — session is running or runnable
+		list.add(new CmHighlighterDescriptor()
+			.name("Running Process")
+			.startsWith("session_status", "runn")
+			.bgColor("#90EE90"));
+
+		// ORANGE row — has an open transaction
+		list.add(new CmHighlighterDescriptor()
+			.name("Open Transaction")
+			.ne("open_transaction_count", 0)
+			.bgColor("#FFD480"));
 
 		return list;
 	}

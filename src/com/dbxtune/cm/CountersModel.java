@@ -1793,23 +1793,93 @@ implements Cloneable, ITableTooltip
 	public boolean discardDiffHighlighterOnAbsTable() { return getDataSource() == DATA_ABS; }
 	public boolean discardPctHighlighterOnAbsTable()  { return false; } // false == SHOW PCT values as RED even in ABS samples
 
+	// -------------------------------------------------------------------------
+	// Chart descriptors — lazy-init pattern
+	// -------------------------------------------------------------------------
+
+	private List<CmChartDescriptor> _chartDescriptors = null;
+
 	/**
-	 * Override in subclasses to declare charts that the web UI (Counter Details panel)
-	 * should render alongside the tabular data.
+	 * Override in subclasses to build the chart descriptor list once.
+	 * Called automatically by {@link #getChartDescriptors()} on first access.
 	 * <p>
-	 * Each {@link CmChartDescriptor} describes one chart: its type (pie, bar, stacked-bar,
-	 * dual-pie-bar), which columns to use for labels and values, optional aggregation,
-	 * percentage thresholds, etc.
+	 * Each {@link CmChartDescriptor} describes one chart: its type (pie, bar,
+	 * stacked-bar, dual-pie-bar), which columns to use for labels and values,
+	 * optional aggregation, percentage thresholds, etc.
 	 * <p>
-	 * The servlet serialises these as JSON; the JavaScript renderer (Chart.js) creates
-	 * the charts automatically — no per-CM JS code needed.
+	 * The servlet serialises these as JSON; the JavaScript renderer (Chart.js)
+	 * creates the charts automatically — no per-CM JS code needed.
 	 *
-	 * @return array of chart descriptors, or {@code null} if this CM has no charts.
+	 * @return list of chart descriptors, or {@code null} if this CM has no charts.
 	 * @see CmChartDescriptor
 	 */
-	public CmChartDescriptor[] getChartDescriptors() 
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return null; 
+		return null;
+	}
+
+	/** Explicitly set the chart descriptors (overrides what {@code createChartDescriptors} would return). */
+	public void setChartDescriptors(List<CmChartDescriptor> descriptors)
+	{
+		_chartDescriptors = descriptors;
+	}
+
+	/**
+	 * Returns the chart descriptors, creating them on first call via
+	 * {@link #createChartDescriptors()} and caching the result.
+	 */
+	public List<CmChartDescriptor> getChartDescriptors()
+	{
+		if (_chartDescriptors == null)
+			_chartDescriptors = createChartDescriptors();
+		return _chartDescriptors;
+	}
+
+
+	// -------------------------------------------------------------------------
+	// Highlighter descriptors — lazy-init pattern
+	// -------------------------------------------------------------------------
+
+	private List<CmHighlighterDescriptor> _highlighterDescriptors = null;
+
+	/**
+	 * Override in subclasses to build the highlighter descriptor list once.
+	 * Called automatically by {@link #getHighlighterDescriptors()} on first access.
+	 * <p>
+	 * Each {@link CmHighlighterDescriptor} describes one rule: which column to
+	 * evaluate, the comparison operator, the threshold/value, the scope
+	 * (entire row or specific cell), and the highlight colour.
+	 * <p>
+	 * The servlet serialises these as JSON; the JavaScript renderer applies CSS
+	 * styling automatically — no per-CM JS code needed.
+	 * <p>
+	 * The native Swing GUI (CmNamePanel) can also read these descriptors and
+	 * translate them into SwingX {@code ColorHighlighter}s, providing a single
+	 * source of truth.
+	 *
+	 * @return list of highlighter descriptors, or {@code null} if this CM has no highlighting.
+	 * @see CmHighlighterDescriptor
+	 */
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		return null;
+	}
+
+	/** Explicitly set the highlighter descriptors (overrides what {@code createHighlighterDescriptors} would return). */
+	public void setHighlighterDescriptors(List<CmHighlighterDescriptor> descriptors)
+	{
+		_highlighterDescriptors = descriptors;
+	}
+
+	/**
+	 * Returns the highlighter descriptors, creating them on first call via
+	 * {@link #createHighlighterDescriptors()} and caching the result.
+	 */
+	public List<CmHighlighterDescriptor> getHighlighterDescriptors()
+	{
+		if (_highlighterDescriptors == null)
+			_highlighterDescriptors = createHighlighterDescriptors();
+		return _highlighterDescriptors;
 	}
 
 

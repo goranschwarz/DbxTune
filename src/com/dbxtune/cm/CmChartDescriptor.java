@@ -20,7 +20,9 @@
 package com.dbxtune.cm;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Declarative descriptor for a chart to show alongside a CM's tabular data
@@ -108,6 +110,8 @@ public class CmChartDescriptor implements Serializable
 	public static final String AGG_AVG = "avg";
 	/** Take the maximum value. */
 	public static final String AGG_MAX = "max";
+	/** Keep first occurrence only (deduplication — subsequent duplicates are ignored). */
+	public static final String AGG_FIRST = "first";
 
 	/**
 	 * Aggregation function used when {@link #groupByColumn} causes multiple rows
@@ -167,6 +171,42 @@ public class CmChartDescriptor implements Serializable
 	public String   barLabelPrefix  = "FREE MB: ";
 
 
+	// ---- Extra data sources (for merging multiple column sets into one chart) ----
+
+	/**
+	 * Additional column sets to merge into this chart.
+	 * <p>
+	 * Use this when the same chart should include data from multiple columns
+	 * (e.g. both DataOsDisk and LogOsDisk for an OS disk chart).
+	 * Each extra source provides its own label, value, and barLabel columns.
+	 * The JS renderer does one pass per source, merging into the same
+	 * label→value map with the configured {@link #groupAggFunc} (typically "first"
+	 * for deduplication by disk name).
+	 */
+	public List<ExtraSource> extraSources = null;
+
+	/**
+	 * An additional column-set to merge into a chart.
+	 * Each ExtraSource provides: labelColumn, valueColumn, barLabelColumn.
+	 */
+	public static class ExtraSource implements Serializable
+	{
+		private static final long serialVersionUID = 1L;
+
+		public String labelColumn;
+		public String valueColumn;
+		public String barLabelColumn;
+
+		public ExtraSource() {}
+
+		public ExtraSource(String labelColumn, String valueColumn, String barLabelColumn)
+		{
+			this.labelColumn    = labelColumn;
+			this.valueColumn    = valueColumn;
+			this.barLabelColumn = barLabelColumn;
+		}
+	}
+
 	// ---- Layout ----
 
 	/**
@@ -206,6 +246,15 @@ public class CmChartDescriptor implements Serializable
 	public CmChartDescriptor maxItems(int n)                { this.maxItems       = n;        return this; }
 	public CmChartDescriptor barLabelColumn(String col)     { this.barLabelColumn = col;      return this; }
 	public CmChartDescriptor barLabelPrefix(String prefix)  { this.barLabelPrefix = prefix;   return this; }
+
+	/** Add an extra data source (label/value/barLabel columns) to merge into this chart. */
+	public CmChartDescriptor addExtraSource(String labelCol, String valueCol, String barLabelCol)
+	{
+		if (this.extraSources == null)
+			this.extraSources = new ArrayList<>();
+		this.extraSources.add(new ExtraSource(labelCol, valueCol, barLabelCol));
+		return this;
+	}
 
 	@Override
 	public String toString()

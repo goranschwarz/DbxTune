@@ -485,8 +485,9 @@ function histAlarmRender(data)
 	});
 	html += '</tr></thead><tbody>';
 
-	// use the sorted copy for rendering
+	// use the sorted copy for rendering AND for click-handler lookups
 	data = sortedData;
+	_histAlarmFiltered = sortedData;
 
 	data.forEach(function(row, idx)
 	{

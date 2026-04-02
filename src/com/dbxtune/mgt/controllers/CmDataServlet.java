@@ -60,6 +60,8 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.cm.CmChartDescriptor;
+import com.dbxtune.cm.CmHighlighterDescriptor;
+import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.pcs.PersistentCounterHandler;
@@ -539,10 +541,11 @@ extends HttpServlet
 			List<String> diffCols = new ArrayList<>();
 			List<String> pctCols  = new ArrayList<>();
 			List<String> tooltips = new ArrayList<>(columns.size());
+			CountersModel cmMeta  = null;
 			if (CounterController.hasInstance())
 			{
-				ICounterController cc2    = CounterController.getInstance();
-				CountersModel      cmMeta = cc2.getCmByName(cmName);
+				ICounterController cc2 = CounterController.getInstance();
+				cmMeta = cc2.getCmByName(cmName);
 				if (cmMeta != null)
 				{
 					// --- Diff/Pct columns ---
@@ -617,13 +620,19 @@ extends HttpServlet
 				normRows.add(normRow);
 			}
 
-			// Chart descriptors (declared by the CM for the web UI)
-			CmChartDescriptor[] chartDescriptors = null;
+			// Chart / highlighter descriptors (declared by the CM for the web UI)
+			List<CmChartDescriptor>       chartDescriptors       = null;
+			List<CmHighlighterDescriptor> highlighterDescriptors = null;
+			String description = null;
 			if (CounterController.hasInstance())
 			{
-				CountersModel cmForCharts = CounterController.getInstance().getCmByName(cmName);
-				if (cmForCharts != null)
-					chartDescriptors = cmForCharts.getChartDescriptors();
+				CountersModel cmMeta2 = CounterController.getInstance().getCmByName(cmName);
+				if (cmMeta2 != null)
+				{
+					description            = cmMeta2.getDescription();
+					chartDescriptors       = cmMeta2.getChartDescriptors();
+					highlighterDescriptors = cmMeta2.getHighlighterDescriptors();
+				}
 			}
 
 			// Build JSON response via Jackson
@@ -641,8 +650,28 @@ extends HttpServlet
 			root.put("tooltips",      tooltips);
 			root.put("columns",       columns);
 			root.put("rows",          normRows);
-			if (chartDescriptors != null)
-				root.put("chartDescriptors", chartDescriptors);
+			if (description            != null) root.put("description",            description);
+			if (chartDescriptors       != null) root.put("chartDescriptors",       chartDescriptors);
+			if (highlighterDescriptors != null) root.put("highlighterDescriptors", highlighterDescriptors);
+
+			// Preferred column order (declared by the CM for a better visual layout)
+			if (cmMeta != null)
+			{
+				LinkedHashMap<String, ColumnHeaderPropsEntry> prefCols = cmMeta.getPreferredColumnProps();
+				if (prefCols != null && !prefCols.isEmpty())
+				{
+					List<Map<String, Object>> prefList = new ArrayList<>();
+					for (ColumnHeaderPropsEntry e : prefCols.values())
+					{
+						Map<String, Object> entry = new LinkedHashMap<>();
+						entry.put("columnName", e.getColumnName());
+						entry.put("viewPos",    e.getViewPos());
+						entry.put("visible",    e.isVisible());
+						prefList.add(entry);
+					}
+					root.put("preferredColumnOrder", prefList);
+				}
+			}
 
 			om.writeValue(out, root);
 			out.flush();

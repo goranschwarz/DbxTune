@@ -89,8 +89,20 @@ public class DbxCentralSessions
 			thisHostname = addr.getCanonicalHostName();
 		}
 		catch (UnknownHostException ignore) {}
+		
+		// Check if the stored value for column 'collectorHostname' has been truncated... 
+		// if so also truncate the variable "thisHostname" 
+		String collectorHostname = getCollectorHostname();
+		if (StringUtil.hasValue(collectorHostname))
+		{
+			if (collectorHostname.endsWith("..."))
+			{
+				int len = collectorHostname.length() - 3;
+				thisHostname = thisHostname.substring(0, len) + "...";
+			}
+		}
 
-		return thisHostname.equalsIgnoreCase(getCollectorHostname());
+		return thisHostname.equalsIgnoreCase(collectorHostname);
 	}
 
 	public long getLastSampleAgeInSec()

@@ -22,6 +22,7 @@ package com.dbxtune.cm.sqlserver;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -46,6 +47,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -897,19 +899,38 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("device-io")
-				.title("Device IO Distribution")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("LogicalName")
-				.valueColumns("TotalIOs", "Reads", "Writes")
-				.seriesLabels("Total IOs", "Reads", "Writes")
-				.skipZeroRows(true)
-				.pieOtherLimit(0.03)
-				.splitRatio(0.7),
-		};
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// RED cell — high average service time (default threshold: >= 10 ms)
+		list.add(new CmHighlighterDescriptor()
+			.name("High Service Time")
+			.ge("AvgServ_ms", 10)
+			.scopeCell()
+			.highlightColumns("AvgServ_ms")
+			.bgColor("#FF6666")
+			.fgColor("#fff"));
+
+		return list;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("device-io")
+			.title("Device IO Distribution")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("LogicalName")
+			.valueColumns("TotalIOs", "Reads", "Writes")
+			.seriesLabels("Total IOs", "Reads", "Writes")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.03)
+			.splitRatio(0.7));
+
+		return list;
 	}
 }

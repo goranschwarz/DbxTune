@@ -88,6 +88,7 @@ import com.dbxtune.utils.AseConnectionUtils;
 import com.dbxtune.utils.CollectionUtils;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -3012,35 +3013,80 @@ extends CountersModel
 //	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("log-usage")
-				.title("Transaction Log Space Usage in Percent")
-				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
-				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
-				.labelColumn("DBName")
-				.valueColumns("LogSizeUsedPct")
-				.seriesLabels("Log Used %")
-				.barLabelColumn("LogSizeFreeInMb")
-				.isPercent(true)
-				.thresholdWarn(80)
-				.thresholdCrit(90)
-				.skipZeroRows(true),
-			new CmChartDescriptor()
-				.id("data-usage")
-				.title("Data Space Usage in Percent")
-				.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
-				.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
-				.labelColumn("DBName")
-				.valueColumns("DataSizeUsedPct")
-				.seriesLabels("Data Used %")
-				.barLabelColumn("DataSizeFreeInMb")
-				.isPercent(true)
-				.thresholdWarn(80)
-				.thresholdCrit(90)
-				.skipZeroRows(true),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("log-usage")
+			.title("Transaction Log Space Usage in Percent")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("DBName")
+			.valueColumns("LogSizeUsedPct")
+			.seriesLabels("Log Used %")
+			.barLabelColumn("LogSizeFreeInMb")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90)
+			.skipZeroRows(true));
+
+		list.add(new CmChartDescriptor()
+			.id("data-usage")
+			.title("Data Space Usage in Percent")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("DBName")
+			.valueColumns("DataSizeUsedPct")
+			.seriesLabels("Data Used %")
+			.barLabelColumn("DataSizeFreeInMb")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90)
+			.skipZeroRows(true));
+
+		return list;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// VERY_LIGHT_BLUE row: BackupInProgress > 0 → backup running
+		list.add(new CmHighlighterDescriptor()
+			.name("Backup Running")
+			.gt("BackupInProgress", 0)
+			.bgColor("#8080FF"));
+
+		// YELLOW row: OldestTranInSeconds > 0 → open transaction
+		list.add(new CmHighlighterDescriptor()
+			.name("Open Transaction")
+			.gt("OldestTranInSeconds", 0)
+			.bgColor("#FFFF80"));
+
+		// PINK row: LogSizeUsedPct > 90 → log almost full
+		list.add(new CmHighlighterDescriptor()
+			.name("Log Almost Full")
+			.gt("LogSizeUsedPct", 90)
+			.bgColor("#FFB6C1"));
+
+		// RED row: TransactionLogFull > 0 → log is full
+		list.add(new CmHighlighterDescriptor()
+			.name("Transaction Log Full")
+			.gt("TransactionLogFull", 0)
+			.bgColor("#FF9999")
+			.priority(110));
+
+		// RED cell: LastBackupFailed > 0 → last backup failed
+		list.add(new CmHighlighterDescriptor()
+			.name("Last Backup Failed")
+			.gt("LastBackupFailed", 0)
+			.scopeCell()
+			.highlightColumns("LastBackupFailed")
+			.bgColor("#FF6666")
+			.fgColor("#fff"));
+
+		return list;
 	}
 }

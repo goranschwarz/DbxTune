@@ -21,6 +21,7 @@
 package com.dbxtune.cm.sqlserver;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +53,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSqlServer;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -594,7 +596,21 @@ extends CountersModel
 	@Override
 	public void updateGraphData()
 	{
-		for (TrendGraphDataPoint tgdp : getTrendGraphData().values()) 
+		for (TrendGraphDataPoint tgdp : getTrendGraphData().values())
 			updateGraphData(tgdp);
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// PINK row — task is blocked by another session
+		list.add(new CmHighlighterDescriptor()
+			.name("Blocked Task")
+			.ne("blocking_session_id", 0)
+			.bgColor("#FFB6C1"));
+
+		return list;
 	}
 }

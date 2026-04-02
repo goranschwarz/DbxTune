@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.ase;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -38,6 +39,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoSybaseAse;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -246,12 +248,33 @@ extends CountersModel
 		return sql;
 	}
 
-	/** 
-	 * Get number of rows to save/request ddl information for 
+	/**
+	 * Get number of rows to save/request ddl information for
 	 */
 	@Override
 	public int getMaxNumOfDdlsToPersist()
 	{
 		return Integer.MAX_VALUE; // Basically ALL Rows
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// ORANGE row: IndexID > 0 → index entry
+		list.add(new CmHighlighterDescriptor()
+			.name("Index Entry")
+			.gt("IndexID", 0)
+			.bgColor("#FFD480"));
+
+		// BLOB_COLOR row: IndexID == 255 → BLOB/text object
+		list.add(new CmHighlighterDescriptor()
+			.name("BLOB/Text Object")
+			.eq("IndexID", 255)
+			.bgColor("#CCF5FF")
+			.priority(110));
+
+		return list;
 	}
 }

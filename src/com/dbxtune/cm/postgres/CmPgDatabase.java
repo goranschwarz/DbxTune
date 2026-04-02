@@ -58,6 +58,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MathUtils;
 import com.dbxtune.utils.TimeUtils;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -1078,6 +1079,23 @@ extends CountersModel
 		
 		list.add(new CmSettingsHelper("free_connections" , isAlarmSwitch, PROPKEY_alarm_FreeConnections , Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeConnections , DEFAULT_alarm_FreeConnections ), DEFAULT_alarm_FreeConnections , "If 'free_connections' is less than this value, send 'AlarmEventConfigResourceIsLow'." ));
 		list.add(new CmSettingsHelper("checksum_failures", isAlarmSwitch, PROPKEY_alarm_ChecksumFailures, Integer.class, conf.getIntProperty(PROPKEY_alarm_ChecksumFailures, DEFAULT_alarm_ChecksumFailures), DEFAULT_alarm_ChecksumFailures, "If 'checksum_failures_diff' is greater than this value, send 'AlarmEventPgChecksumFailure'." ));
+
+		return list;
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// RED cell: checksum_failures > 0 → checksum failures detected
+		list.add(new CmHighlighterDescriptor()
+			.name("Checksum Failures")
+			.gt("checksum_failures", 0)
+			.scopeCell()
+			.highlightColumns("checksum_failures", "checksum_last_failure")
+			.bgColor("#FF6666")
+			.fgColor("#fff"));
 
 		return list;
 	}

@@ -144,7 +144,7 @@ at pc:
 		}
 */
 
-		#cm-detail-counter-type, #cm-detail-options, #dbms-config-options {
+		#cm-detail-counter-type, #cm-detail-options, #cm-detail-numfmt, #dbms-config-options {
 			border: 1px solid gray;
 			border-radius: 5px;
 			margin-left: 10px;
@@ -532,16 +532,44 @@ at pc:
 		#cm-detail-body {
 			flex: 1;
 			min-height: 0;   /* required for flex child to shrink/scroll */
-			overflow: auto;
+			overflow: hidden; /* panes scroll individually */
 			background: #fff;
-			padding: 6px;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+		}
+		/* Split.js gutter styling */
+		.cm-gutter {
+			background-color: #e9ecef;
+			background-repeat: no-repeat;
+			background-position: 50%;
+			z-index: 5;
+		}
+		.cm-gutter:hover { background-color: #ced4da; }
+		.cm-gutter-horizontal {
+			cursor: col-resize;
+			width: 5px !important;
+			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfwY8gJGREV8VDAC5AwAA//9DCAAZAA2oJAAAAABJRU5ErkJggg==');
+		}
+		.cm-gutter-vertical {
+			cursor: row-resize;
+			height: 5px !important;
+			width: 100% !important;
+			flex-shrink: 0;
+			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFCAYAAABSIVz6AAAAGklEQVQoU2M4c+bMfwYKACMjIwMjNQwcegYCAKb/CAAPoGBOAAAAAElFTkSuQmCC');
 		}
 		/* Tab styling: blue = has data, strikethrough = no data */
 	#cm-detail-panel .nav-link                 { padding: 3px 8px !important; font-size: 0.85em; }
+	#cm-detail-table .table-sm td,
+	#cm-detail-table .table-sm th             { padding: 1px 4px !important; }
 	.cm-tab-has-data > a.nav-link              { color: #0066cc !important; }
 	.cm-tab-has-data > a.nav-link.active       { color: #0066cc !important; font-weight: 600; }
 	.cm-tab-no-data  > a.nav-link              { color: #6c757d !important; text-decoration: line-through; }
-	.cm-tab-no-data  > a.nav-link.active       { color: #6c757d !important; text-decoration: line-through !important; font-weight: 600; }
+	.cm-tab-no-data  > a.nav-link.active       { color: #6c757d !important; text-decoration: line-through; font-weight: 600; }
+	.cm-tab-disabled > a.nav-link              { color: #b0b0b0 !important; text-decoration: line-through double !important; opacity: 0.7; }
+	.cm-tab-disabled > a.nav-link.active       { color: #b0b0b0 !important; text-decoration: line-through double !important; opacity: 0.7; font-weight: 600; }
+	/* Wide tooltip for CM tab descriptions + color legend */
+	.cm-tab-tooltip .tooltip-inner             { max-width: 560px !important; text-align: left; }
 
 	/* ── Dark mode — Active Statements ─────────────────────────────────── */
 	#active-statements.as-dark                      { background-color:#1e1e1e !important; border-color:#555; color:#e0e0e0; }
@@ -582,6 +610,8 @@ at pc:
 	#cm-detail-panel.cm-dark #cm-trend-popup .cm-tg-item:hover { background:#3a3a3a; }
 	#cm-detail-panel.cm-dark #cm-trend-popup .cm-tg-hdr  { background:#333; border-bottom-color:#555; color:#aaa; }
 	#cm-detail-panel.cm-dark #cm-detail-body             { background:#1e1e1e; color:#e0e0e0; }
+	#cm-detail-panel.cm-dark .cm-gutter                  { background-color:#3a3a3a; }
+	#cm-detail-panel.cm-dark .cm-gutter:hover            { background-color:#555; }
 	#cm-detail-panel.cm-dark .table                      { color:#e0e0e0; }
 	#cm-detail-panel.cm-dark .table th                   { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 	#cm-detail-panel.cm-dark .table td                   { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
@@ -842,6 +872,7 @@ at pc:
 	<!-- Custom styles for this template -->
 	<script type="text/javascript" src="/scripts/jquery/jquery-3.7.1.min.js"></script>
 	<script type="text/javascript" src="/scripts/jquery/ui/1.14.1/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js"></script>
 
 	<!--<script type="text/javascript" src="http://www.chartjs.org/dist/2.7.1/Chart.bundle.js"></script>-->
 	<!--<script type="text/javascript" src="http://www.chartjs.org/samples/latest/utils.js"></script>-->
@@ -876,6 +907,7 @@ at pc:
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxLoginModal.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarm.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphBus.js"></script>
+	<script type="text/javascript" src="/scripts/splitjs/split.min.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphCounterDetails.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphDbmsConfig.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.graph.js"></script>
@@ -1152,9 +1184,9 @@ at pc:
 				<input type="radio" name="cm-detail-type" id="cm-detail-type-abs"  onclick="cmDetailTypeChanged('abs');"  value="abs"
 					title="Absolute values — the raw counter values as reported by the server."> Absolute
 				<input type="radio" name="cm-detail-type" id="cm-detail-type-diff" onclick="cmDetailTypeChanged('diff');" value="diff"
-					title="Delta values — the difference between this sample and the previous one. Displayed in blue."> <font color="blue">Delta</font>
+					title="Delta values — the difference between this sample and the previous one. Displayed in blue."> <span id="cm-detail-label-diff"><font color="blue">Delta</font></span>
 				<input type="radio" name="cm-detail-type" id="cm-detail-type-rate" onclick="cmDetailTypeChanged('rate');" value="rate" checked
-					title="Rate per second — the delta divided by the elapsed time between samples, giving a per-second rate. Displayed in blue."> <font color="blue">Rate/s</font>
+					title="Rate per second — the delta divided by the elapsed time between samples, giving a per-second rate. Displayed in blue."> <span id="cm-detail-label-rate"><font color="blue">Rate/s</font></span>
 				&nbsp;&nbsp;<font color="red" title="Percent columns are highlighted in red. This is not a warning — it simply indicates that the column represents a percentage value." style="cursor:help;">Percent</font>
 			</span>
 			<span style="color:#ccc;">|</span>
@@ -1175,7 +1207,33 @@ at pc:
 				</button>
 				<div id="cm-trend-popup" style="display:none;position:absolute;top:100%;left:0;z-index:1050;min-width:280px;max-width:400px;max-height:340px;overflow-y:auto;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.82em;margin-top:2px;"></div>
 			</span>
+			<span style="color:#ccc;">|</span>
+			<span style="flex-shrink:0;white-space:nowrap;">
+				<button id="cm-nav-prev" class="btn btn-sm btn-outline-secondary"
+					style="font-size:0.78em;padding:1px 5px;line-height:1.4;"
+					onclick="cmDetailNavPrev();"
+					title="Go to previous sample that has data for this CM (moves timeline slider) &#10;Keyboard: Alt + &#8592;">&laquo;</button>
+				<button id="cm-nav-next" class="btn btn-sm btn-outline-secondary"
+					style="font-size:0.78em;padding:1px 5px;line-height:1.4;"
+					onclick="cmDetailNavNext();"
+					title="Go to next sample that has data for this CM (moves timeline slider) &#10;Keyboard: Alt + &#8594;">&raquo;</button>
+			</span>
 			<span style="flex:1;"></span>
+			<span id="cm-detail-numfmt" style="white-space:nowrap;flex-shrink:0;">
+				Number&nbsp;Format:&nbsp;
+				<label style="margin:0;font-weight:normal;cursor:pointer;"
+					title="Use the browser's locale to format numbers&#10;e.g. 1,234,567.89 (US) · 1.234.567,89 (DE) · 1 234 567,89 (SE)">
+					<input type="radio" name="cm-detail-numfmt" id="cm-detail-numfmt-locale"
+						onchange="cmDetailNumFmtChanged('locale');"> Localized
+				</label>
+				&nbsp;
+				<label style="margin:0;font-weight:normal;cursor:pointer;"
+					title="Use a space as the thousands separator, with the locale's decimal symbol&#10;e.g. 1 234 567.89 (US decimal) · 1 234 567,89 (SE/DE decimal)">
+					<input type="radio" name="cm-detail-numfmt" id="cm-detail-numfmt-spaces"
+						onchange="cmDetailNumFmtChanged('spaces');"> Spaces
+				</label>
+			</span>
+			<span style="color:#ccc;flex-shrink:0;">|</span>
 			<span id="cm-detail-row-count" style="color:#6c757d;white-space:nowrap;"></span>
 		</div>
 		<div id="cm-detail-filter-bar" style="display:none;flex-shrink:0;padding:3px 8px;background:#e9ecef;border-bottom:1px solid #dee2e6;display:flex;align-items:center;gap:5px;">
@@ -1189,12 +1247,12 @@ at pc:
 				oninput="cmDetailApplyFilter(this.value);">
 		</div>
 		<div id="cm-detail-body">
-			<div id="cm-detail-loading" style="display:none;color:#6c757d;padding:15px;text-align:center;">Loading...</div>
-			<div id="cm-detail-content" style="display:flex;flex-wrap:wrap;min-height:0;">
-				<div id="cm-detail-table-wrap" style="flex:1 1 50%;min-width:300px;overflow:auto;">
+			<div id="cm-detail-loading" style="display:none;color:#6c757d;padding:15px;text-align:center;flex-shrink:0;">Loading...</div>
+			<div id="cm-detail-content" style="display:flex;flex:1;min-height:0;height:100%;">
+				<div id="cm-detail-table-wrap" style="overflow:auto;padding:4px 6px;">
 					<div id="cm-detail-table"></div>
 				</div>
-				<div id="cm-detail-charts" style="display:none;padding:4px 6px;flex:0 1 auto;overflow:auto;max-height:100%;"></div>
+				<div id="cm-detail-charts" style="display:none;padding:4px 6px;overflow:auto;"></div>
 			</div>
 		</div>
 	</div>

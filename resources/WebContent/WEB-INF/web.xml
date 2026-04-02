@@ -561,6 +561,19 @@
 		<url-pattern>/api/cc/mgt/cm/data</url-pattern>
 	</servlet-mapping>
 
+
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>ProxyCmNavSampleServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyCmNavSampleServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyCmNavSampleServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/cm/navSample</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
     <servlet>
         <servlet-name>CollectorRegisterServlet</servlet-name>
         <servlet-class>com.dbxtune.central.controllers.cc.mgt.CollectorRegisterServlet</servlet-class>
@@ -570,6 +583,8 @@
         <url-pattern>/api/cc/mgt/collector/register</url-pattern>
     </servlet-mapping>
 
+
+	<!-- ============================================================ -->
     <servlet>
         <servlet-name>CmIconServlet</servlet-name>
         <servlet-class>com.dbxtune.central.controllers.cc.mgt.CmIconServlet</servlet-class>

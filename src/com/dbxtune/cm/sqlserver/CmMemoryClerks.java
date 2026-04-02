@@ -553,20 +553,22 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("memory-distribution")
-				.title("Memory Clerk Distribution")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("type")
-				.valueColumns("SizeMb")
-				.seriesLabels("Size (MB)")
-				.skipValue("_Total")
-				.skipZeroRows(true)
-				.pieOtherLimit(0.03)
-				.splitRatio(0.5),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("memory-distribution")
+			.title("Memory Clerk Distribution")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("type")
+			.valueColumns("SizeMb")
+			.seriesLabels("Size (MB)")
+			.skipValue("_Total")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.03)
+			.splitRatio(0.5));
+
+		return list;
 	}
 }

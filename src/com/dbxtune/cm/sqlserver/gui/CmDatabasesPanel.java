@@ -450,14 +450,14 @@ extends TabularCntrPanel
 								+ "DataOsDiskFreeMb("  + DataOsDiskFreeMb_pos  + ")='" + DataOsDiskFreeMb  + "', "
 								+ "DataOsDiskUsedPct(" + DataOsDiskUsedPct_pos + ")='" + DataOsDiskUsedPct + "'.");
 
-					String logOsName  = LogOsDisk;
-					String dataOsName = DataOsDisk;
+					String logOsName  = LogOsDisk  == null ? "" : LogOsDisk;
+					String dataOsName = DataOsDisk == null ? "" : DataOsDisk;
 					
 					if (StringUtil.isNullOrBlank(logOsName))  logOsName  = CounterControllerSqlServer.resolvFileNameToDirectory(LogOsFileName);
 					if (StringUtil.isNullOrBlank(dataOsName)) dataOsName = CounterControllerSqlServer.resolvFileNameToDirectory(DataOsFileName);
 
-					if (StringUtil.hasValue(LogOsDiskLabel))  logOsName  += " [" + LogOsDiskLabel  + "]";
-					if (StringUtil.hasValue(DataOsDiskLabel)) dataOsName += " [" + DataOsDiskLabel + "]";
+					if (StringUtil.hasValue(LogOsDiskLabel)  && !logOsName .contains(" [")) logOsName  += " [" + LogOsDiskLabel  + "]";
+					if (StringUtil.hasValue(DataOsDiskLabel) && !dataOsName.contains(" [")) dataOsName += " [" + DataOsDiskLabel + "]";
 
 					DiskOsEntry logEntry  = diskMap.get(logOsName);
 					DiskOsEntry dataEntry = diskMap.get(dataOsName);

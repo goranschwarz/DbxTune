@@ -22,6 +22,7 @@ package com.dbxtune.cm.ase;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -449,28 +450,31 @@ extends CountersModel
 	}
 
 	@Override
-	public CmChartDescriptor[] getChartDescriptors()
+	public List<CmChartDescriptor> createChartDescriptors()
 	{
-		return new CmChartDescriptor[] {
-			new CmChartDescriptor()
-				.id("exec-time")
-				.title("Execution Count/Time Distribution")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("OperationName")
-				.valueColumns("ExecutionCnt", "ExecutionTime", "ExecutionTimePerCnt")
-				.seriesLabels("Exec Count", "Exec Time", "Avg Time/Exec")
-				.pieOtherLimit(0.05)
-				.splitRatio(0.5),
-			new CmChartDescriptor()
-				.id("cpu-usage")
-				.title("CPU Usage by Operation (%)")
-				.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
-				.labelColumn("OperationName")
-				.valueColumns("CpuUsagePct")
-				.seriesLabels("CPU Usage %")
-				.isPercent(true)
-				.pieOtherLimit(0.03)
-				.splitRatio(0.5),
-		};
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("exec-time")
+			.title("Execution Count/Time Distribution")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("OperationName")
+			.valueColumns("ExecutionCnt", "ExecutionTime", "ExecutionTimePerCnt")
+			.seriesLabels("Exec Count", "Exec Time", "Avg Time/Exec")
+			.pieOtherLimit(0.05)
+			.splitRatio(0.5));
+
+		list.add(new CmChartDescriptor()
+			.id("cpu-usage")
+			.title("CPU Usage by Operation (%)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("OperationName")
+			.valueColumns("CpuUsagePct")
+			.seriesLabels("CPU Usage %")
+			.isPercent(true)
+			.pieOtherLimit(0.03)
+			.splitRatio(0.5));
+
+		return list;
 	}
 }

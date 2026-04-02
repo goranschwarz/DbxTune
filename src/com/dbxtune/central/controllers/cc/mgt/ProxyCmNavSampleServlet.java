@@ -43,12 +43,12 @@ import com.dbxtune.central.controllers.cc.ProxyHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Central-side proxy: GET /api/cc/mgt/cm/list?srv=SRVNAME&amp;time=YYYY-MM-DD HH:mm:ss
+ * Central-side proxy: GET /api/cc/mgt/cm/navSample?srv=SRVNAME&amp;time=...&amp;cm=...&amp;dir=prev|next
  * <p>
- * Forwards the request to the collector's /api/mgt/cm/list endpoint and
+ * Forwards the request to the collector's /api/mgt/cm/navSample endpoint and
  * returns the JSON response to the browser.
  */
-public class ProxyCmListServlet
+public class ProxyCmNavSampleServlet
 extends ProxyHelper
 {
 	private static final long serialVersionUID = 1L;
@@ -65,7 +65,7 @@ extends ProxyHelper
 		}
 		catch (IOException ex)
 		{
-			_logger.warn("ProxyCmListServlet.getSrvInfo failed: " + ex.getMessage());
+			_logger.warn("ProxyCmNavSampleServlet.getSrvInfo failed: " + ex.getMessage());
 			Map<String, Object> err = new LinkedHashMap<>();
 			err.put("error",   "srv-not-found");
 			err.put("message", ex.getMessage());
@@ -79,7 +79,7 @@ extends ProxyHelper
 		String collectorBaseUrl = getCollectorBaseUrl();
 		if (collectorBaseUrl == null)
 		{
-			_logger.error("ProxyCmListServlet: Can't find Base URL for server '" + getSrvName() + "'.");
+			_logger.error("ProxyCmNavSampleServlet: Can't find Base URL for server '" + getSrvName() + "'.");
 			Map<String, Object> err = new LinkedHashMap<>();
 			err.put("error",   "collector-offline");
 			err.put("message", "Cannot determine collector URL for server: " + getSrvName());
@@ -90,10 +90,14 @@ extends ProxyHelper
 			return;
 		}
 
-		String timeParam = req.getParameter("time");
-		if (timeParam == null) timeParam = "";
+		String timeParam = req.getParameter("time") != null ? req.getParameter("time") : "";
+		String cmName    = req.getParameter("cm")   != null ? req.getParameter("cm")   : "";
+		String dir       = req.getParameter("dir")  != null ? req.getParameter("dir")  : "next";
 
-		String url = collectorBaseUrl + "/api/mgt/cm/list?time=" + URLEncoder.encode(timeParam, StandardCharsets.UTF_8);
+		String url = collectorBaseUrl + "/api/mgt/cm/navSample"
+				+ "?time=" + URLEncoder.encode(timeParam, StandardCharsets.UTF_8)
+				+ "&cm="   + URLEncoder.encode(cmName,    StandardCharsets.UTF_8)
+				+ "&dir="  + URLEncoder.encode(dir,       StandardCharsets.UTF_8);
 
 		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
@@ -112,7 +116,7 @@ extends ProxyHelper
 		}
 		catch (ConnectException ex)
 		{
-			_logger.warn("ProxyCmListServlet: Collector at " + collectorBaseUrl + " is offline: " + ex.getMessage());
+			_logger.warn("ProxyCmNavSampleServlet: Collector at " + collectorBaseUrl + " is offline: " + ex.getMessage());
 			Map<String, Object> err = new LinkedHashMap<>();
 			err.put("error",   "collector-offline");
 			err.put("message", "Collector at " + collectorBaseUrl + " is not reachable");

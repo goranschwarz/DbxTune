@@ -44,6 +44,7 @@ import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
+import com.dbxtune.cm.CmHighlighterDescriptor;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -283,5 +284,25 @@ extends CountersModel
 				}
 			}
 		}
+	}
+
+	@Override
+	public List<CmHighlighterDescriptor> createHighlighterDescriptors()
+	{
+		List<CmHighlighterDescriptor> list = new ArrayList<>();
+
+		// PINK row — granted memory is less than requested memory
+		list.add(new CmHighlighterDescriptor()
+			.name("Insufficient Memory Grant")
+			.ltCol("granted_memory_kb", "requested_memory_kb")
+			.bgColor("#FFB6C1"));
+
+		// ORANGE row — waiting in queue for a memory grant
+		list.add(new CmHighlighterDescriptor()
+			.name("Waiting for Memory Grant")
+			.gt("queue_id", 0)
+			.bgColor("#FFD480"));
+
+		return list;
 	}
 }
