@@ -7515,4 +7515,344 @@ public class CentralPersistReader
 //	** END: DDL reader
 //	**---------------------------------------------------
 //	*/
+
+	// -----------------------------------------------------------------------
+	// Local-metrics helper classes and query methods (for DbxcLocalMetrics)
+	// Data lives in standard PCS tables: {CmName}_abs, {CmName}_diff, {CmName}_rate
+	// -----------------------------------------------------------------------
+
+	/** One CM entry returned by {@link #getLocalMetricsCmsNearTime}. */
+	public static class LocalMetricsCmInfo
+	{
+		public final String cmName;
+		public final int    absRows;
+		public final int    diffRows;
+		public final int    rateRows;
+		public LocalMetricsCmInfo(String cmName, int absRows, int diffRows, int rateRows)
+		{
+			this.cmName   = cmName;
+			this.absRows  = absRows;
+			this.diffRows = diffRows;
+			this.rateRows = rateRows;
+		}
+	}
+
+	/** Return value of {@link #getLocalMetricsCmsNearTime}. */
+	public static class LocalMetricsCmListResult
+	{
+		public final Timestamp               resolvedTime;
+		public final List<LocalMetricsCmInfo> cms;
+		public LocalMetricsCmListResult(Timestamp resolvedTime, List<LocalMetricsCmInfo> cms)
+		{
+			this.resolvedTime = resolvedTime;
+			this.cms          = cms;
+		}
+	}
+
+	/** Return value of {@link #getLocalMetricsCmDataNearTime}. */
+	public static class LocalMetricsCmDataResult
+	{
+		public final Timestamp         resolvedTime;
+		public final List<String>      columns;      // CM data columns (excl. session cols)
+		public final List<List<Object>>rows;
+		public final List<Boolean>     isNumeric;    // parallel to columns
+		public final boolean           isDerivedType; // true for diff / rate tables
+		public LocalMetricsCmDataResult(Timestamp resolvedTime, List<String> columns,
+		        List<List<Object>> rows, List<Boolean> isNumeric, boolean isDerivedType)
+		{
+			this.resolvedTime  = resolvedTime;
+			this.columns       = columns;
+			this.rows          = rows;
+			this.isNumeric     = isNumeric;
+			this.isDerivedType = isDerivedType;
+		}
+	}
+
+	/**
+	 * Returns resolved time and per-CM row counts for the given CM names (ordered by the caller,
+	 * typically from {@code CounterController.getCmList()}).
+	 * <p>
+	 * Uses the first CM's {@code _abs} table to find the closest sample timestamp within the window,
+	 * then counts rows in abs/diff/rate tables for every CM at that resolved time.
+	 *
+	 * @param cmNames  ordered list of CM names (e.g. "CmOsCpu", "CmOsMeminfo", …)
+	 * @param requested the reference timestamp
+	 * @param windowSec half-window in seconds (±)
+	 * @return result, or {@code null} if no data found in the window
+	 */
+	public LocalMetricsCmListResult getLocalMetricsCmsNearTime(List<String> cmNames, Timestamp requested, int windowSec)
+	throws SQLException
+	{
+		String schema = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;
+
+		if (cmNames == null || cmNames.isEmpty())
+			return null;
+
+		DbxConnection conn = getConnection();
+		try
+		{
+			DatabaseMetaData dbmd = conn.getMetaData();
+
+			long      windowMs = windowSec * 1000L;
+			Timestamp tsFrom   = new Timestamp(requested.getTime() - windowMs);
+			Timestamp tsTo     = new Timestamp(requested.getTime() + windowMs);
+
+			// Find the closest distinct SessionSampleTime from the first CM's _abs table
+			String firstAbsTab = "[" + schema + "].[" + cmNames.get(0) + "_abs]";
+			String tsSql = "SELECT [SessionSampleTime]"
+					+ " FROM " + firstAbsTab
+					+ " WHERE [SessionSampleTime] >= " + DbUtils.safeStr(tsFrom)
+					+ "   AND [SessionSampleTime] <= " + DbUtils.safeStr(tsTo)
+					+ " GROUP BY [SessionSampleTime]"
+					+ " ORDER BY [SessionSampleTime]";
+			tsSql = conn.quotifySqlString(tsSql);
+
+			Timestamp best     = null;
+			long      bestDiff = Long.MAX_VALUE;
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+				try (ResultSet rs = stmnt.executeQuery(tsSql))
+				{
+					while (rs.next())
+					{
+						Timestamp ts   = rs.getTimestamp(1);
+						long      diff = Math.abs(ts.getTime() - requested.getTime());
+						if (diff < bestDiff) { bestDiff = diff; best = ts; }
+					}
+				}
+			}
+
+			if (best == null)
+				return null;
+
+			// For each CM count rows at the resolved time for abs / diff / rate
+			List<LocalMetricsCmInfo> cmInfoList = new ArrayList<>();
+			for (String cmName : cmNames)
+			{
+				int absRows  = countLocalMetricsRowsAtTime(conn, dbmd, schema, cmName + "_abs",  best);
+				int diffRows = countLocalMetricsRowsAtTime(conn, dbmd, schema, cmName + "_diff", best);
+				int rateRows = countLocalMetricsRowsAtTime(conn, dbmd, schema, cmName + "_rate", best);
+				cmInfoList.add(new LocalMetricsCmInfo(cmName, absRows, diffRows, rateRows));
+			}
+
+			return new LocalMetricsCmListResult(best, cmInfoList);
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+
+	/** Counts rows in a local-metrics table at an exact timestamp; returns 0 if the table does not exist. */
+	private int countLocalMetricsRowsAtTime(DbxConnection conn, DatabaseMetaData dbmd, String schema, String tableName, Timestamp ts)
+	{
+		try
+		{
+			// Check table existence via metadata
+			try (ResultSet colRs = dbmd.getColumns(null, schema, tableName, "%"))
+			{
+				if (!colRs.next())
+					return 0; // table does not exist
+			}
+
+			String sql = "SELECT COUNT(*) FROM [" + schema + "].[" + tableName + "] WHERE [SessionSampleTime] = " + DbUtils.safeStr(ts);
+			sql = conn.quotifySqlString(sql);
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					if (rs.next()) return rs.getInt(1);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("countLocalMetricsRowsAtTime(): error for table '{}.{}': {}", schema, tableName, ex.getMessage());
+		}
+		return 0;
+	}
+
+	/**
+	 * Returns the counter data for a specific CM at the sample time closest to
+	 * {@code requested} within ±{@code windowSec} seconds.
+	 * <p>
+	 * Reads from the standard PCS table {@code {CmName}_abs}, {@code {CmName}_diff},
+	 * or {@code {CmName}_rate} depending on {@code type}.
+	 *
+	 * @param type  {@code "abs"}, {@code "diff"}, or {@code "rate"}
+	 * @return result, or {@code null} if the table does not exist or has no data in window
+	 */
+	public LocalMetricsCmDataResult getLocalMetricsCmDataNearTime(String cmName, Timestamp requested, int windowSec, String type)
+	throws SQLException
+	{
+		String schema = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;
+		String suffix = "diff".equalsIgnoreCase(type) ? "_diff"
+		              : "rate".equalsIgnoreCase(type) ? "_rate" : "_abs";
+		boolean isDerivedType = !"abs".equalsIgnoreCase(type);
+
+		DbxConnection conn = getConnection();
+		try
+		{
+			DatabaseMetaData dbmd = conn.getMetaData();
+
+			// Check table existence
+			String onlyTableName = cmName + suffix;
+			try (ResultSet colRs = dbmd.getColumns(null, schema, onlyTableName, "%"))
+			{
+				if (!colRs.next())
+					return null; // table does not exist
+			}
+
+			long      windowMs = windowSec * 1000L;
+			Timestamp tsFrom   = new Timestamp(requested.getTime() - windowMs);
+			Timestamp tsTo     = new Timestamp(requested.getTime() + windowMs);
+
+			// Find closest distinct SessionSampleTime in window
+			String tsSql = "SELECT [SessionSampleTime]"
+					+ " FROM [" + schema + "].[" + onlyTableName + "]"
+					+ " WHERE [SessionSampleTime] >= " + DbUtils.safeStr(tsFrom)
+					+ "   AND [SessionSampleTime] <= " + DbUtils.safeStr(tsTo)
+					+ " GROUP BY [SessionSampleTime]"
+					+ " ORDER BY [SessionSampleTime]";
+			tsSql = conn.quotifySqlString(tsSql);
+
+			Timestamp best     = null;
+			long      bestDiff = Long.MAX_VALUE;
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+				try (ResultSet rs = stmnt.executeQuery(tsSql))
+				{
+					while (rs.next())
+					{
+						Timestamp ts   = rs.getTimestamp(1);
+						long      diff = Math.abs(ts.getTime() - requested.getTime());
+						if (diff < bestDiff) { bestDiff = diff; best = ts; }
+					}
+				}
+			}
+
+			if (best == null)
+				return null;
+
+			// Fetch all rows at the resolved time
+			String dataSql = "SELECT * FROM [" + schema + "].[" + onlyTableName + "]"
+					+ " WHERE [SessionSampleTime] = " + DbUtils.safeStr(best)
+					+ " ORDER BY [SessionSampleTime]";
+			dataSql = conn.quotifySqlString(dataSql);
+
+			List<String>         columns   = new ArrayList<>();
+			List<Boolean>        isNumeric = new ArrayList<>();
+			List<List<Object>>   rows      = new ArrayList<>();
+			List<Integer>        colIdxs   = new ArrayList<>();
+
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+				try (ResultSet rs = stmnt.executeQuery(dataSql))
+				{
+					ResultSetMetaData rsmd = rs.getMetaData();
+					int colCount = rsmd.getColumnCount();
+
+					// Identify data columns — skip session/internal housekeeping columns,
+					// mirroring CmDataServlet.SKIP_COLS used by the real collector servlet
+					for (int i = 1; i <= colCount; i++)
+					{
+						String colName  = rsmd.getColumnName(i);
+						String colLower = colName.toLowerCase();
+						if (colLower.equals("sessionstarttime")  ||
+						    colLower.equals("sessionsampletime") ||
+						    colLower.equals("sampletime")        ||
+						    colLower.equals("samplems")          ||
+						    colLower.equals("cmsampletime")      ||
+						    colLower.equals("cmsamplems")        ||
+						    colLower.equals("cmnewdiffratrow")   ||
+						    colLower.equals("cmrowstate"))
+							continue;
+						colIdxs.add(i);
+						columns.add(colName);
+						int sqlType = rsmd.getColumnType(i);
+						boolean numeric = (sqlType == java.sql.Types.DOUBLE   ||
+						                  sqlType == java.sql.Types.FLOAT    ||
+						                  sqlType == java.sql.Types.REAL     ||
+						                  sqlType == java.sql.Types.BIGINT   ||
+						                  sqlType == java.sql.Types.INTEGER  ||
+						                  sqlType == java.sql.Types.SMALLINT ||
+						                  sqlType == java.sql.Types.TINYINT  ||
+						                  sqlType == java.sql.Types.NUMERIC  ||
+						                  sqlType == java.sql.Types.DECIMAL);
+						isNumeric.add(numeric);
+					}
+
+					while (rs.next())
+					{
+						List<Object> row = new ArrayList<>();
+						for (int idx : colIdxs)
+							row.add(rs.getObject(idx));
+						rows.add(row);
+					}
+				}
+			}
+
+			return new LocalMetricsCmDataResult(best, columns, rows, isNumeric, isDerivedType);
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+
+	/**
+	 * Returns the next or previous sample timestamp for a given CM in the local-metrics schema.
+	 * Uses the {@code _abs} table as the canonical timing reference.
+	 *
+	 * @param cmName    the counter monitor name
+	 * @param requested the reference timestamp
+	 * @param dir       {@code "next"} or {@code "prev"}
+	 * @return the found timestamp, or {@code null} if none exists
+	 */
+	public Timestamp getLocalMetricsCmNavTime(String cmName, Timestamp requested, String dir)
+	throws SQLException
+	{
+		String schema    = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;
+		String tableName = "[" + schema + "].[" + cmName + "_abs]";
+
+		DbxConnection conn = getConnection();
+		try
+		{
+			String sql;
+			if ("prev".equalsIgnoreCase(dir))
+			{
+				sql = "SELECT MAX([SessionSampleTime])"
+					+ " FROM " + tableName
+					+ " WHERE [SessionSampleTime] < " + DbUtils.safeStr(requested);
+			}
+			else // next (default)
+			{
+				sql = "SELECT MIN([SessionSampleTime])"
+					+ " FROM " + tableName
+					+ " WHERE [SessionSampleTime] > " + DbUtils.safeStr(requested);
+			}
+			sql = conn.quotifySqlString(sql);
+
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					if (rs.next())
+						return rs.getTimestamp(1); // null if aggregate found nothing
+				}
+			}
+
+			return null;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+
 }

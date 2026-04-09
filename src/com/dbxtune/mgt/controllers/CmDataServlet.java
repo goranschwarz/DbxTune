@@ -63,10 +63,12 @@ import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.TimeUtils;
 
 import com.dbxtune.central.controllers.Helper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -278,9 +280,10 @@ extends HttpServlet
 		ObjectMapper om  = Helper.createObjectMapper();
 		PrintWriter  out = resp.getWriter();
 
-		String cmName    = Helper.getParameter(req, "cm");
-		String timeParam = Helper.getParameter(req, "time");
-		String typeParam = Helper.getParameter(req, "type", "abs");
+		String cmName       = Helper.getParameter(req, "cm");
+		String timeParam    = Helper.getParameter(req, "time");
+		String typeParam    = Helper.getParameter(req, "type", "abs");
+		String showAllParam = Helper.getParameter(req, "showAll", "false");
 
 		if (cmName == null)
 		{
@@ -310,21 +313,35 @@ extends HttpServlet
 			return;
 		}
 
-		// Parse timestamp
+		// Parse timestamp — delegates to TimeUtils.parseToTimestampX() which tries
+		// multiple formats (ISO-8601, with/without millis, date-only, …) so we
+		// handle whatever navSample or the JS slider hands us.
 		Timestamp ts;
 		try
 		{
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			sdf.setLenient(false);
-			Date d = sdf.parse(timeParam);
-			ts = new Timestamp(d.getTime());
+			ts = TimeUtils.parseToTimestampX(timeParam);
 		}
 		catch (ParseException ex)
 		{
-			om.writeValue(out, errMap("invalid-param", "Invalid time format, expected: yyyy-MM-dd HH:mm:ss"));
+			om.writeValue(out, errMap("invalid-param", "Invalid time format: " + timeParam));
 			out.flush(); out.close();
 			return;
 		}
+
+		// Detect Append CM early — affects SQL strategy and SKIP_COLS behaviour
+		boolean isAppend = false;
+		if (CounterController.hasInstance())
+		{
+			CountersModel earlyMeta = CounterController.getInstance().getCmByName(cmName);
+			if (earlyMeta instanceof CountersModelAppend) isAppend = true;
+		}
+		// Append CMs only have _abs tables; force type to abs
+		if (isAppend) typeParam = "abs";
+		// Trust the client's showAll flag — JS only sends it for Append CMs.
+		// Do NOT gate on isAppend here: CounterController may not have the CM
+		// registered at request time (e.g. CM not yet active), which would
+		// silently disable showAll even when the user has it switched on.
+		boolean showAll = "true".equalsIgnoreCase(showAllParam);
 
 		// Get storage connection — live (today) or cached read-only (historical date)
 		DbxConnection conn     = null;
@@ -368,37 +385,53 @@ extends HttpServlet
 		try
 		{
 			// ------------------------------------------------------------------
-			// Step 1: find the SessionSampleTime in the window closest to 'ts'.
+			// Step 1: find the SessionSampleTime to use as the query anchor.
 			//
-			// SQL written with [bracket] quoting; translated to DBMS-specific
-			// quote chars via conn.quotifySqlString() before execution.
-			//
-			// Intentionally avoids vendor-specific date-diff functions — see
-			// class Javadoc for the rationale.
+			// Regular / showLast: closest timestamp within ±WINDOW_MS.
+			// Append + showAll  : latest timestamp at or before 'ts' (covers
+			//                     samples where no row was logged at exactly ts).
 			// ------------------------------------------------------------------
-			String sqlTimes = conn.quotifySqlString(
-					  "SELECT DISTINCT [SessionSampleTime]"
-					+ " FROM " + tableName
-					+ " WHERE [SessionSampleTime] BETWEEN ? AND ?"
-					+ " ORDER BY [SessionSampleTime]");
-
 			Timestamp closest = null;
-			long      minDiff = Long.MAX_VALUE;
-
-			try (PreparedStatement pstmt = conn.prepareStatement(sqlTimes))
+			if (showAll)
 			{
-				pstmt.setTimestamp(1, tsFrom);
-				pstmt.setTimestamp(2, tsTo);
-				try (ResultSet rs = pstmt.executeQuery())
+				// Use tsTo (ts + WINDOW_MS) so stored timestamps with sub-second
+				// precision (e.g. 14:30:15.234) are not missed when ts has 0 ms.
+				String sqlMax = conn.quotifySqlString(
+						  "SELECT MAX([SessionSampleTime])"
+						+ " FROM " + tableName
+						+ " WHERE [SessionSampleTime] <= ?");
+				try (PreparedStatement pstmt = conn.prepareStatement(sqlMax))
 				{
-					while (rs.next())
+					pstmt.setTimestamp(1, tsTo);
+					try (ResultSet rs = pstmt.executeQuery())
 					{
-						Timestamp t    = rs.getTimestamp(1);
-						long      diff = Math.abs(t.getTime() - ts.getTime());
-						if (diff < minDiff)
+						if (rs.next()) closest = rs.getTimestamp(1);
+					}
+				}
+			}
+			else
+			{
+				String sqlTimes = conn.quotifySqlString(
+						  "SELECT DISTINCT [SessionSampleTime]"
+						+ " FROM " + tableName
+						+ " WHERE [SessionSampleTime] BETWEEN ? AND ?"
+						+ " ORDER BY [SessionSampleTime]");
+				long minDiff = Long.MAX_VALUE;
+				try (PreparedStatement pstmt = conn.prepareStatement(sqlTimes))
+				{
+					pstmt.setTimestamp(1, tsFrom);
+					pstmt.setTimestamp(2, tsTo);
+					try (ResultSet rs = pstmt.executeQuery())
+					{
+						while (rs.next())
 						{
-							minDiff = diff;
-							closest = t;
+							Timestamp t    = rs.getTimestamp(1);
+							long      diff = Math.abs(t.getTime() - ts.getTime());
+							if (diff < minDiff)
+							{
+								minDiff = diff;
+								closest = t;
+							}
 						}
 					}
 				}
@@ -416,21 +449,40 @@ extends HttpServlet
 			}
 
 			// ------------------------------------------------------------------
-			// Step 2: fetch all rows for the closest SessionSampleTime.
+			// Step 2: fetch rows.
 			//
-			// SQL written with [bracket] quoting; translated to DBMS-specific
-			// quote chars via conn.quotifySqlString() before execution.
+			// Regular / showLast: all rows for the exact closest timestamp.
+			// Append + showAll  : all rows from session-start up to closest,
+			//                     in chronological order (mirrors PersistReader).
 			// ------------------------------------------------------------------
-			String sqlData = conn.quotifySqlString(
-					  "SELECT * FROM " + tableName
-					+ " WHERE [SessionSampleTime] = ?"
-					+ " ORDER BY [SessionSampleTime]");
+			String sqlData;
+			if (showAll)
+				// Mirror PersistReader.loadSessionCm(): scope to the session that owns 'closest'
+				// (SessionStartTime subquery is safe here because 'closest' is an exact value
+				// returned by the MAX query above — guaranteed to find rows).
+				sqlData = conn.quotifySqlString(
+						  "SELECT * FROM " + tableName
+						+ " WHERE [SessionStartTime] = (SELECT MIN([SessionStartTime]) FROM " + tableName + " WHERE [SessionSampleTime] = ?)"
+						+ "   AND [SessionSampleTime] <= ?"
+						+ " ORDER BY [SessionSampleTime]");
+			else
+				sqlData = conn.quotifySqlString(
+						  "SELECT * FROM " + tableName
+						+ " WHERE [SessionSampleTime] = ?"
+						+ " ORDER BY [SessionSampleTime]");
 
-			List<List<Object>> rows    = new ArrayList<>();
+			List<List<Object>> rows      = new ArrayList<>();
+			Map<String, List<String>> rowStates = new LinkedHashMap<>();
 
 			try (PreparedStatement pstmt = conn.prepareStatement(sqlData))
 			{
-				pstmt.setTimestamp(1, closest);
+				if (showAll)
+				{
+					pstmt.setTimestamp(1, closest); // subquery: find SessionStartTime for this sample
+					pstmt.setTimestamp(2, closest); // main filter: SessionSampleTime <= closest
+				}
+				else
+					pstmt.setTimestamp(1, closest);
 				try (ResultSet rs = pstmt.executeQuery())
 				{
 					ResultSetMetaData rsMeta = rs.getMetaData();
@@ -445,13 +497,17 @@ extends HttpServlet
 					Set<Integer> skipIdx         = new HashSet<>();
 					int          cmSampleTimeIdx = -1;
 					int          cmSampleMsIdx   = -1;
+					int          cmRowStateIdx   = -1;
 					for (int i = 1; i <= colCount; i++)
 					{
 						String label = rsMeta.getColumnLabel(i);
 						String lower = label.toLowerCase();
 						if      ("cmsampletime".equals(lower)) { cmSampleTimeIdx = i; skipIdx.add(i); }
 						else if ("cmsamplems"  .equals(lower)) { cmSampleMsIdx   = i; skipIdx.add(i); }
-						else if (SKIP_COLS.contains(lower))    { skipIdx.add(i); }
+						else if ("cmrowstate"  .equals(lower) || "cmnewdiffratrow".equals(lower)) { cmRowStateIdx = i; skipIdx.add(i); }
+						// For Append CMs keep SessionSampleTime as a visible column so
+						// the user can see when each event was logged
+						else if (SKIP_COLS.contains(lower) && !(isAppend && "sessionsampletime".equals(lower))) { skipIdx.add(i); }
 						else
 						{
 							columns.add(label);
@@ -516,6 +572,18 @@ extends HttpServlet
 								if (resolved != null) val = resolved;
 							}
 							row.add(val);
+						}
+						// Capture CmRowState as a sparse rowStates entry (only when non-zero)
+						if (cmRowStateIdx > 0)
+						{
+							int cmRowState = rs.getInt(cmRowStateIdx);
+							if (cmRowState != 0)
+							{
+								List<String> states = new ArrayList<>();
+								if ((cmRowState & CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) != 0) states.add("firstDiffOrRateRow");
+								if ((cmRowState & CountersModel.ROW_STATE__IS_AGGREGATED_ROW)   != 0) states.add("aggRow");
+								if (!states.isEmpty()) rowStates.put(String.valueOf(rows.size()), states);
+							}
 						}
 						rows.add(row);
 					}
@@ -610,6 +678,19 @@ extends HttpServlet
 			// Pad tooltips list so it always has the same length as columns (null = no tooltip)
 			while (tooltips.size() < columns.size()) tooltips.add(null);
 
+			// Aggregate columns: per-column aggregation type declared by the CM
+			Map<String, String> aggregateCols = null;
+			if (cmMeta != null)
+			{
+				Map<String, CountersModel.AggregationType> aggMap = cmMeta.getAggregateColumns();
+				if (aggMap != null && !aggMap.isEmpty())
+				{
+					aggregateCols = new LinkedHashMap<>();
+					for (Map.Entry<String, CountersModel.AggregationType> e : aggMap.entrySet())
+						aggregateCols.put(e.getKey(), e.getValue().getAggregationType().name());
+				}
+			}
+
 			// Normalise rows: Timestamp → formatted string, byte[] → hex, null → null
 			List<List<Object>> normRows = new ArrayList<>(rows.size());
 			for (List<Object> row : rows)
@@ -638,6 +719,8 @@ extends HttpServlet
 			// Build JSON response via Jackson
 			Map<String, Object> root = new LinkedHashMap<>();
 			root.put("cmName",        cmName);
+			root.put("isAppend",      isAppend);
+			root.put("showAll",       showAll);
 			root.put("type",          typeParam);
 			root.put("requestedTime", timeParam);
 			root.put("resolvedTime",  outFmt.format(closest));
@@ -650,6 +733,8 @@ extends HttpServlet
 			root.put("tooltips",      tooltips);
 			root.put("columns",       columns);
 			root.put("rows",          normRows);
+			if (!rowStates.isEmpty())  root.put("rowStates",        rowStates);
+			if (aggregateCols != null) root.put("aggregateColumns", aggregateCols);
 			if (description            != null) root.put("description",            description);
 			if (chartDescriptors       != null) root.put("chartDescriptors",       chartDescriptors);
 			if (highlighterDescriptors != null) root.put("highlighterDescriptors", highlighterDescriptors);

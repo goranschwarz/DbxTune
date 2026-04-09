@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.invoke.MethodHandles;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -42,6 +41,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.controllers.OverviewServlet;
+import com.dbxtune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.dbxtune.central.pcs.DbxCentralRealm;
 import com.dbxtune.central.pcs.DbxTuneSample;
 import com.dbxtune.utils.Configuration;
@@ -56,6 +56,7 @@ extends HttpServlet
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private String _srvName = null;
+	protected boolean _isLocalMetrics = false;
 
 	protected HttpClient _httpClient = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.NORMAL)
@@ -92,14 +93,25 @@ extends HttpServlet
 	protected void getSrvInfo(HttpServletRequest req)
 	throws IOException
 	{
+		_isLocalMetrics = false; // reset per-request — servlet is a singleton
+
 		_srvName = Helper.getParameter(req, new String[] {"sessionName", "srv", "srvName"} );
-		
+
 		if (_srvName == null)
 			throw new IOException("Parameter 'srvName' was not given, for: " + req.getServletPath());
 
+		// DbxcLocalMetrics is DbxCentral monitoring itself — no collector and no info file on disk
+		if (LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME.equals(_srvName)
+		        || "DbxCentral".equals(_srvName))
+		{
+			_srvName        = LocalMetricsPersistWriterJdbc.LOCAL_METRICS_SCHEMA_NAME;
+			_isLocalMetrics = true;
+			return; // skip info-file lookup — no collector
+		}
+
 		System.out.println("PROXY.getSrvInfo() >>>>>>>>>>>> getServletPath = |" + req.getServletPath() + "|.");
 		
-		boolean xxx = true;
+		boolean xxx = false;
 		if (xxx)
 		{
 			HttpSession session = req.getSession(false);

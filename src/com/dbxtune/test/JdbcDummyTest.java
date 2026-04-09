@@ -52,7 +52,7 @@ public class JdbcDummyTest
 
 			// java -cp "classes;lib\jdbc_drivers\mssql-jdbc-7.2.2.jre8.jar"  com.dbxtune.test.JdbcDummyTest sa "dx7Nvk+XKH0ugrbB" "jdbc:sqlserver://prod-2a-mssql:1433"             20 10000 0 "select getdate()"
 			// java -cp "classes;lib\jdbc_drivers\ojdbc7.jar"                 com.dbxtune.test.JdbcDummyTest system "sybase123"    "jdbc:oracle:thin:@//gs-11-ora:1521/XE"           20 10000 0 "select CURRENT_TIMESTAMP from dual"
-			// java -cp "classes;lib\jdbc_drivers\postgresql-42.2.5.jre7.jar" com.dbxtune.test.JdbcDummyTest gorans "1niss2e"      "jdbc:postgresql://192.168.0.110:5432/postgres"   20 10000 0 "select now()"
+			// java -cp "classes;lib\jdbc_drivers\postgresql-42.2.5.jre7.jar" com.dbxtune.test.JdbcDummyTest gorans "dummy"        "jdbc:postgresql://192.168.0.110:5432/postgres"   20 10000 0 "select now()"
 			// java -cp "classes;lib\jconn4.jar"                              com.dbxtune.test.JdbcDummyTest sa     "sybase"       "jdbc:sybase:Tds:192.168.0.110:1600"              20 10000 0 "select getdate()"
 		}
 		

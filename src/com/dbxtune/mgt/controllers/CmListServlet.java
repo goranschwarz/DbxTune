@@ -47,9 +47,11 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.TimeUtils;
 
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.cm.CmHighlighterDescriptor;
@@ -98,18 +100,17 @@ extends HttpServlet
 		}
 		timeParam = timeParam.trim();
 
-		// Parse timestamp
+		// Parse timestamp — delegates to TimeUtils.parseToTimestampX() which tries
+		// multiple formats (ISO-8601, with/without millis, date-only, …) so we
+		// handle whatever navSample or the JS slider hands us.
 		Timestamp ts;
 		try
 		{
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			sdf.setLenient(false);
-			Date d = sdf.parse(timeParam);
-			ts = new Timestamp(d.getTime());
+			ts = TimeUtils.parseToTimestampX(timeParam);
 		}
 		catch (ParseException ex)
 		{
-			om.writeValue(out, errMap("invalid-param", "Invalid time format, expected: yyyy-MM-dd HH:mm:ss"));
+			om.writeValue(out, errMap("invalid-param", "Invalid time format: " + timeParam));
 			out.flush();
 			out.close();
 			return;
@@ -226,6 +227,7 @@ extends HttpServlet
 				cmMap.put("displayName", displayName);
 				cmMap.put("iconFile",    iconFile);
 				cmMap.put("isActive",    cm.isActive());
+				cmMap.put("isAppend",    cm instanceof CountersModelAppend);
 				cmMap.put("hasData",     hasData);
 				cmMap.put("absRows",     absRows);
 				cmMap.put("diffRows",    diffRows);

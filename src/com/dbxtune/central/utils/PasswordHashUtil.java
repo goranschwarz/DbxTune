@@ -71,7 +71,9 @@ public class PasswordHashUtil
 	 */
 	public static boolean verifyPassword(String plaintext, String storedHash)
 	{
-		if (plaintext == null || storedHash == null) return false;
+		if (plaintext == null || storedHash == null) 
+			return false;
+
 		return toCredential(storedHash).check(plaintext);
 	}
 
@@ -81,7 +83,9 @@ public class PasswordHashUtil
 	 */
 	public static boolean isAlreadyHashed(String password)
 	{
-		if (password == null) return false;
+		if (password == null) 
+			return false;
+
 		return password.startsWith("$2") || password.startsWith("MD5:");
 	}
 

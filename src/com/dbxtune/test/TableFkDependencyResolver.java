@@ -50,14 +50,14 @@ public class TableFkDependencyResolver
 		{
 			url    = "jdbc:postgresql://gorans-ub3.home:5432/six_new_finbas";
 			user   = "gorans";
-			passwd = "1niss2e";
+			passwd = "dummy";
 						
 		}
 		if (true)
 		{
 			url    = "jdbc:sqlserver://localhost:1433;databaseName=AdventureWorks2019;encrypt=true;trustServerCertificate=true";
 			user   = "gorans_sa";
-			passwd = "1niss2e";
+			passwd = "dummy";
 						
 		}
 

@@ -649,6 +649,37 @@
 	</servlet-mapping>
 
 
+	<!-- ============================================================ -->
+	<!-- OAuth2 / External Login Providers                            -->
+	<!-- ============================================================ -->
+	<servlet>
+		<servlet-name>LoginProvidersServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.LoginProvidersServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LoginProvidersServlet</servlet-name>
+		<url-pattern>/api/login/providers</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>OAuthStartServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.OAuthStartServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>OAuthStartServlet</servlet-name>
+		<url-pattern>/oauth/start</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>OAuthCallbackServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.OAuthCallbackServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>OAuthCallbackServlet</servlet-name>
+		<url-pattern>/oauth/callback</url-pattern>
+	</servlet-mapping>
+
+
 
  <!-- 
     <servlet id="jsp">

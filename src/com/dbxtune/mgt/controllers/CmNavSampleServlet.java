@@ -43,6 +43,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.TimeUtils;
 
 import com.dbxtune.central.controllers.Helper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -100,19 +101,16 @@ extends HttpServlet
 		timeParam = timeParam.trim();
 		cmName    = cmName.trim();
 
-		// --- Parse timestamp (accepts both "yyyy-MM-dd HH:mm:ss" and "yyyy-MM-dd HH:mm:ss.SSS") ---
+		// --- Parse timestamp — delegates to TimeUtils.parseToTimestampX() which tries
+		// multiple formats (ISO-8601, with/without millis, date-only, …)
 		Timestamp ts;
 		try
 		{
-			String fmt = timeParam.contains(".") ? "yyyy-MM-dd HH:mm:ss.SSS" : "yyyy-MM-dd HH:mm:ss";
-			SimpleDateFormat sdf = new SimpleDateFormat(fmt);
-			sdf.setLenient(false);
-			Date d = sdf.parse(timeParam);
-			ts = new Timestamp(d.getTime());
+			ts = TimeUtils.parseToTimestampX(timeParam);
 		}
 		catch (ParseException ex)
 		{
-			om.writeValue(out, errMap("invalid-param", "Invalid time format, expected: yyyy-MM-dd HH:mm:ss[.SSS]"));
+			om.writeValue(out, errMap("invalid-param", "Invalid time format: " + timeParam));
 			out.flush(); out.close();
 			return;
 		}

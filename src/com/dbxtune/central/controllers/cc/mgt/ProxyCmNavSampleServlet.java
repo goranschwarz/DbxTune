@@ -28,6 +28,8 @@ import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -40,6 +42,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.controllers.cc.ProxyHelper;
+import com.dbxtune.central.pcs.CentralPersistReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -73,6 +76,12 @@ extends ProxyHelper
 			resp.setContentType(APPLICATION_JSON);
 			resp.setCharacterEncoding("UTF-8");
 			om.writeValue(resp.getOutputStream(), err);
+			return;
+		}
+
+		if (_isLocalMetrics)
+		{
+			serveLocalMetrics(req, resp, om);
 			return;
 		}
 
@@ -130,5 +139,79 @@ extends ProxyHelper
 			Thread.currentThread().interrupt();
 			throw new IOException("HTTP request was interrupted for URL: " + url, ex);
 		}
+	}
+
+	// -----------------------------------------------------------------------
+	// Local-metrics path (DbxcLocalMetrics / DbxCentral self-monitoring)
+	// -----------------------------------------------------------------------
+
+	private void serveLocalMetrics(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om)
+	throws IOException
+	{
+		String timeParam = req.getParameter("time") != null ? req.getParameter("time") : "";
+		String cmName    = req.getParameter("cm")   != null ? req.getParameter("cm")   : "";
+		String dir       = req.getParameter("dir")  != null ? req.getParameter("dir")  : "next";
+
+		Timestamp requested;
+		try
+		{
+			requested = Timestamp.valueOf(timeParam.trim());
+		}
+		catch (IllegalArgumentException ex)
+		{
+			Map<String, Object> err = new LinkedHashMap<>();
+			err.put("error",   "bad-time-param");
+			err.put("message", "Cannot parse time parameter: " + timeParam);
+			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			om.writeValue(resp.getOutputStream(), err);
+			return;
+		}
+
+		if (!CentralPersistReader.hasInstance())
+		{
+			Map<String, Object> err = new LinkedHashMap<>();
+			err.put("error",   "no-reader");
+			err.put("message", "CentralPersistReader not available");
+			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			om.writeValue(resp.getOutputStream(), err);
+			return;
+		}
+
+		Timestamp navTime;
+		try
+		{
+			navTime = CentralPersistReader.getInstance().getLocalMetricsCmNavTime(cmName, requested, dir);
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("ProxyCmNavSampleServlet.serveLocalMetrics: DB error for CM '{}': {}", cmName, ex.getMessage(), ex);
+			Map<String, Object> err = new LinkedHashMap<>();
+			err.put("error",   "db-error");
+			err.put("message", "Database error reading local metrics");
+			resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			om.writeValue(resp.getOutputStream(), err);
+			return;
+		}
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		if (navTime != null)
+		{
+			response.put("found",      true);
+			response.put("sampleTime", navTime.toString());
+		}
+		else
+		{
+			response.put("found", false);
+		}
+
+		resp.setContentType(APPLICATION_JSON);
+		resp.setCharacterEncoding("UTF-8");
+		om.writeValue(resp.getOutputStream(), response);
 	}
 }

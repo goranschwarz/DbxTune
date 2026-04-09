@@ -379,4 +379,231 @@ function escHtml(s)
 
 // Alarm callbacks, modal helpers and mute dialog are in dbxAlarm.js
 
-// (placeholder — nothing below this line)
+// ── Row filter (shared by Counter Details, DBMS Config, Alarm History) ────────
+//
+// applyRowFilter(rows, columns, filter)
+//   rows    – array of arrays  (each row is an array of cell values)
+//   columns – array of column name strings, parallel to row cells
+//   filter  – free-text: plain regex  OR  "where col op val [AND/OR ...]"
+//
+// Returns { filteredRows, filterError }
+
+function applyRowFilter(rows, columns, filter)
+{
+	filter = (filter || '').trim();
+	if (filter === '') return { filteredRows: rows || [], filterError: '' };
+
+	var filteredRows = rows || [];
+	var filterError  = '';
+
+	if (filter.match(/^where\s+/i)) {
+		try   { filteredRows = _whereFilter(rows, columns, filter.replace(/^where\s+/i, '')); }
+		catch (e) { filterError = '(where error: ' + e.message + ')'; filteredRows = rows; }
+	} else {
+		try {
+			var re = new RegExp(filter, 'i');
+			filteredRows = (rows || []).filter(function(row) {
+				return row.some(function(cell) {
+					return re.test(cell === null || cell === undefined ? '' : String(cell));
+				});
+			});
+		} catch (e) { filterError = '(invalid regex)'; filteredRows = rows; }
+	}
+
+	return { filteredRows: filteredRows, filterError: filterError };
+}
+
+function _whereFilter(rows, columns, whereExpr)
+{
+	var colIndex = {};
+	columns.forEach(function(c, i) { colIndex[c.toLowerCase()] = i; });
+	var conditions = _splitWhereConditions(whereExpr);
+	return rows.filter(function(row) {
+		var result = _evalWhereCondition(conditions[0].expr, colIndex, row);
+		for (var i = 1; i < conditions.length; i++) {
+			var right = _evalWhereCondition(conditions[i].expr, colIndex, row);
+			result = (conditions[i].op === 'OR') ? result || right : result && right;
+		}
+		return result;
+	});
+}
+
+function _splitWhereConditions(expr)
+{
+	var parts = [], ops = [], cur = '', inQuote = false, i = 0;
+	while (i < expr.length) {
+		if (!inQuote && expr[i] === "'") { inQuote = true;  cur += expr[i++]; continue; }
+		if ( inQuote && expr[i] === "'") { inQuote = false; cur += expr[i++]; continue; }
+		if (!inQuote) {
+			var rest = expr.substring(i);
+			var andM = rest.match(/^AND\b/i), orM = rest.match(/^OR\b/i);
+			if (andM) { parts.push(cur.trim()); ops.push('AND'); cur = ''; i += andM[0].length; continue; }
+			if (orM)  { parts.push(cur.trim()); ops.push('OR');  cur = ''; i += orM[0].length;  continue; }
+		}
+		cur += expr[i++];
+	}
+	if (cur.trim()) parts.push(cur.trim());
+	return parts.map(function(p, idx) { return { expr: p, op: idx === 0 ? null : ops[idx - 1] }; });
+}
+
+function _evalWhereCondition(expr, colIndex, row)
+{
+	expr = expr.trim();
+	var m, ci;
+
+	m = expr.match(/^(\w+)\s+IS\s+NOT\s+NULL$/i);
+	if (m) { ci = _whereColIdx(m[1], colIndex); return row[ci] !== null && row[ci] !== undefined && row[ci] !== ''; }
+
+	m = expr.match(/^(\w+)\s+IS\s+NULL$/i);
+	if (m) { ci = _whereColIdx(m[1], colIndex); return row[ci] === null || row[ci] === undefined || row[ci] === ''; }
+
+	m = expr.match(/^(\w+)\s+LIKE\s+'([^']*)'$/i);
+	if (m) {
+		ci = _whereColIdx(m[1], colIndex);
+		var pat = '^' + m[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/_/g, '.') + '$';
+		return new RegExp(pat, 'i').test(row[ci] === null ? '' : String(row[ci]));
+	}
+
+	m = expr.match(/^(\w+)\s*(=|!=|<>|>=|<=|>|<)\s*(.+)$/i);
+	if (m) {
+		ci = _whereColIdx(m[1], colIndex);
+		var op = m[2], valRaw = m[3].trim(), cell = row[ci], val;
+		if      (valRaw.match(/^'[^']*'$/))             { val = valRaw.slice(1, -1); cell = cell === null || cell === undefined ? '' : String(cell); }
+		else if (valRaw.toLowerCase() === 'null')        { val = null; }
+		else if (!isNaN(Number(valRaw)))                 { val = Number(valRaw); cell = Number(cell); }
+		else                                             { val = valRaw; cell = cell === null || cell === undefined ? '' : String(cell); }
+		switch (op) {
+			case '=':  return cell == val;
+			case '!=': case '<>': return cell != val;
+			case '>':  return cell >  val;
+			case '>=': return cell >= val;
+			case '<':  return cell <  val;
+			case '<=': return cell <= val;
+		}
+	}
+	throw new Error('Cannot parse: ' + expr);
+}
+
+function _whereColIdx(name, colIndex)
+{
+	var idx = colIndex[name.toLowerCase()];
+	if (idx === undefined) throw new Error('Unknown column: ' + name);
+	return idx;
+}
+
+// ── Column-name completion  (Ctrl+Space in filter inputs) ─────────────────────
+//
+// Usage:
+//   dbxFilterKeydown(event, function() { return myColumns; })
+//
+// The second argument is a zero-arg function that returns the current column
+// names array.  Each filter input calls a thin wrapper that supplies its own
+// column source:
+//   onkeydown="cmDetailFilterKeydown(event);"
+//   onkeydown="dbmsConfigFilterKeydown(event);"
+//   onkeydown="alarmFilterKeydown(event);"
+//   onkeydown="dbmsAsciiFilterKeydown(event, 'tableId');"
+
+var _colComp    = null;   // { inputEl, $drop, matches, partial }
+var _colCompIdx = -1;
+
+function dbxFilterKeydown(e, getColumnsFn)
+{
+	if (e.ctrlKey && e.key === ' ') {
+		e.preventDefault();
+		_showColCompletion(e.target, getColumnsFn());
+		return;
+	}
+	_colCompKeydown(e);
+}
+
+function _showColCompletion(inputEl, columns)
+{
+	if (!columns || !columns.length) return;
+
+	// Word before cursor — includes * and % as wildcard chars
+	var pos     = inputEl.selectionStart;
+	var partial = (inputEl.value.substring(0, pos).match(/([\w*%]*)$/) || ['',''])[1];
+
+	// Match: wildcards → regex; otherwise substring (contains)
+	var matches;
+	if (!partial) {
+		matches = columns.slice();
+	} else if (/[*%]/.test(partial)) {
+		var reStr = partial.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/[*%]/g, '.*');
+		var wcRe  = new RegExp(reStr, 'i');
+		matches = columns.filter(function(h) { return wcRe.test(h); });
+	} else {
+		var lc = partial.toLowerCase();
+		matches = columns.filter(function(h) { return h.toLowerCase().indexOf(lc) >= 0; });
+	}
+	if (!matches.length) { _hideColCompletion(); return; }
+
+	_hideColCompletion();
+	_colCompIdx = -1;
+
+	var rect  = inputEl.getBoundingClientRect();
+	var $drop = $('<div>').css({
+		position: 'fixed', left: rect.left + 'px', top: (rect.bottom + 1) + 'px',
+		zIndex: 9999, background: '#fff', border: '1px solid #adb5bd',
+		borderRadius: '3px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+		maxHeight: '200px', overflowY: 'auto',
+		minWidth: Math.max(160, rect.width) + 'px',
+		fontSize: '0.82em', fontFamily: 'monospace'
+	});
+
+	matches.forEach(function(col, idx) {
+		$('<div>').text(col).css({ padding: '2px 8px', cursor: 'pointer', whiteSpace: 'nowrap' })
+			.on('mouseover', function() { $drop.children().css('background',''); $(this).css('background','#e8f0fe'); _colCompIdx = idx; })
+			.on('mousedown', function(e) {
+				e.preventDefault();
+				_insertColCompletion(inputEl, col, partial.length);
+				_hideColCompletion();
+			})
+			.appendTo($drop);
+	});
+
+	$('body').append($drop);
+	_colComp = { inputEl: inputEl, $drop: $drop, matches: matches, partial: partial };
+	$(document).one('mousedown.colcomp', function(e) {
+		if (!$(e.target).closest($drop).length) _hideColCompletion();
+	});
+}
+
+function _colCompKeydown(e)
+{
+	if (!_colComp) return;
+	var items = _colComp.$drop.children();
+	var n     = items.length;
+
+	if      (e.key === 'ArrowDown') { e.preventDefault(); _colCompIdx = (_colCompIdx + 1) % n; }
+	else if (e.key === 'ArrowUp'  ) { e.preventDefault(); _colCompIdx = (_colCompIdx - 1 + n) % n; }
+	else if (e.key === 'Escape'   ) { e.preventDefault(); _hideColCompletion(); return; }
+	else if (e.key === 'Enter' || e.key === 'Tab') {
+		if (_colCompIdx >= 0) {
+			e.preventDefault();
+			_insertColCompletion(_colComp.inputEl, _colComp.matches[_colCompIdx], _colComp.partial.length);
+			_hideColCompletion();
+		} else { _hideColCompletion(); }
+		return;
+	} else { return; }
+
+	items.css('background','');
+	items.eq(_colCompIdx).css('background','#e8f0fe')[0].scrollIntoView({ block: 'nearest' });
+}
+
+function _hideColCompletion()
+{
+	if (_colComp) { _colComp.$drop.remove(); _colComp = null; }
+	_colCompIdx = -1;
+	$(document).off('mousedown.colcomp');
+}
+
+function _insertColCompletion(inputEl, col, partialLen)
+{
+	var pos = inputEl.selectionStart, val = inputEl.value;
+	inputEl.value = val.substring(0, pos - partialLen) + col + val.substring(pos);
+	var np = pos - partialLen + col.length;
+	inputEl.setSelectionRange(np, np);
+	$(inputEl).trigger('input');
+}

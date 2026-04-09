@@ -1196,6 +1196,14 @@ at pc:
 					onchange="cmDetailApplyFilter(document.getElementById('cm-detail-filter-input').value);">
 				Hide&nbsp;unchanged
 			</label>
+			<span id="cm-detail-append-bar" style="display:none;align-items:center;gap:8px;">
+				<span style="color:#ccc;">|</span>
+				<label style="margin:0;font-weight:normal;cursor:pointer;white-space:nowrap;flex-shrink:0;"
+					title="Show all recorded entries from session start up to this sample time (mirrors the native GUI 'Show All Rows' option)">
+					<input type="checkbox" id="cm-detail-show-all" onchange="cmDetailShowAllChanged();">
+					Show&nbsp;all&nbsp;records
+				</label>
+			</span>
 			<span style="color:#ccc;">|</span>
 			<span style="position:relative;flex-shrink:0;">
 				<button id="cm-detail-trend-btn" class="btn btn-sm btn-outline-secondary" disabled
@@ -1242,9 +1250,10 @@ at pc:
 			<span id="cm-detail-filter-count" style="color:#6c757d;font-size:0.8em;white-space:nowrap;flex-shrink:0;"></span>
 			<span style="font-size:0.82em;flex-shrink:0;">Filter:</span>
 			<input type="text" id="cm-detail-filter-input"
-				placeholder="regex  or  where col = val  (AND/OR supported)"
+				placeholder="regex  or  where col = val  (Ctrl+Space for columns)"
 				style="flex:1;min-width:0;font-size:0.82em;height:20px;padding:0 4px;font-family:monospace;"
-				oninput="cmDetailApplyFilter(this.value);">
+				oninput="cmDetailApplyFilter(this.value);"
+				onkeydown="cmDetailFilterKeydown(event);">
 		</div>
 		<div id="cm-detail-body">
 			<div id="cm-detail-loading" style="display:none;color:#6c757d;padding:15px;text-align:center;flex-shrink:0;">Loading...</div>
@@ -1346,9 +1355,10 @@ at pc:
 			<span id="dbms-config-filter-count" style="color:#6c757d;font-size:0.8em;white-space:nowrap;flex-shrink:0;"></span>
 			<span style="font-size:0.82em;flex-shrink:0;">Filter:</span>
 			<input type="text" id="dbms-config-filter-input"
-				placeholder="regex or text..."
+				placeholder="regex  or  where col = 'val'  (Ctrl+Space for columns)"
 				style="flex:1;min-width:0;font-size:0.82em;height:20px;padding:0 4px;font-family:monospace;"
-				oninput="dbmsConfigApplyFilter(this.value);">
+				oninput="dbmsConfigApplyFilter(this.value);"
+				onkeydown="dbmsConfigFilterKeydown(event);">
 		</div>
 
 		<div id="dbms-config-body">
@@ -1419,9 +1429,10 @@ at pc:
 				<button style="font-size:0.85em;height:20px;padding:0 4px;cursor:pointer;" title="Clear filter" onclick="document.getElementById('alarm-filter-input').value='';alarmPanelFilterInput('');">&#x2715;</button>
 				<span id="alarm-filter-count" style="color:#fff;white-space:nowrap;flex-shrink:0;"></span>
 				<span style="white-space:nowrap;">Filter:</span>
-				<input type="text" id="alarm-filter-input" placeholder="regex  or  where col = val"
+				<input type="text" id="alarm-filter-input" placeholder="regex  or  where col = val  (Ctrl+Space for columns)"
 					style="font-size:0.85em;height:20px;padding:0 4px;width:400px;font-family:monospace;"
-					oninput="alarmPanelFilterInput(this.value);">
+					oninput="alarmPanelFilterInput(this.value);"
+					onkeydown="alarmFilterKeydown(event);">
 			</span>
 			<span style="margin-left:auto;"></span>
 			<label style="font-size:0.8em;font-weight:normal;margin:0 8px 0 0;cursor:pointer;" title="Auto: Open when there are Active Alarms, Close when no alarms">

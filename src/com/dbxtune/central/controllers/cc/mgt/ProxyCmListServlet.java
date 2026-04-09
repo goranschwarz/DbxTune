@@ -28,7 +28,12 @@ import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -38,8 +43,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.CounterController;
+import com.dbxtune.ICounterController;
+import com.dbxtune.cm.CmHighlighterDescriptor;
+import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.controllers.cc.ProxyHelper;
+import com.dbxtune.central.pcs.CentralPersistReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -73,6 +84,12 @@ extends ProxyHelper
 			resp.setContentType(APPLICATION_JSON);
 			resp.setCharacterEncoding("UTF-8");
 			om.writeValue(resp.getOutputStream(), err);
+			return;
+		}
+
+		if (_isLocalMetrics)
+		{
+			serveLocalMetrics(req, resp, om);
 			return;
 		}
 
@@ -126,5 +143,168 @@ extends ProxyHelper
 			Thread.currentThread().interrupt();
 			throw new IOException("HTTP request was interrupted for URL: " + url, ex);
 		}
+	}
+
+	// -----------------------------------------------------------------------
+	// Local-metrics path (DbxcLocalMetrics / DbxCentral self-monitoring)
+	// -----------------------------------------------------------------------
+
+	private void serveLocalMetrics(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om)
+	throws IOException
+	{
+		String timeParam = req.getParameter("time");
+		if (timeParam == null || timeParam.isEmpty())
+			timeParam = new Timestamp(System.currentTimeMillis()).toString();
+
+		Timestamp requested;
+		try
+		{
+			requested = Timestamp.valueOf(timeParam.trim());
+		}
+		catch (IllegalArgumentException ex)
+		{
+			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			resp.getWriter().write("{\"error\":\"bad-time-param\",\"message\":\"Cannot parse time parameter: " + timeParam + "\"}");
+			return;
+		}
+
+		// ---- Get CM metadata from the live CounterController ----
+		if (!CounterController.hasInstance())
+		{
+			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			resp.getWriter().write("{\"error\":\"no-counter-controller\",\"message\":\"LocalMetrics CounterController not available\"}");
+			return;
+		}
+
+		ICounterController cc = CounterController.getInstance();
+		List<CountersModel> cmList = cc.getCmList();
+		if (cmList == null || cmList.isEmpty())
+		{
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			resp.getWriter().write("{\"error\":\"no-cms\",\"message\":\"No CounterModels registered\"}");
+			return;
+		}
+
+		// Build ordered CM name list for DB query
+		List<String> cmNames = new ArrayList<>();
+		for (CountersModel cm : cmList)
+			cmNames.add(cm.getName());
+
+		// ---- Get resolved time + row counts from DB ----
+		if (!CentralPersistReader.hasInstance())
+		{
+			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			resp.getWriter().write("{\"error\":\"no-reader\",\"message\":\"CentralPersistReader not available\"}");
+			return;
+		}
+
+		CentralPersistReader.LocalMetricsCmListResult dbResult;
+		try
+		{
+			dbResult = CentralPersistReader.getInstance().getLocalMetricsCmsNearTime(cmNames, requested, 60);
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("ProxyCmListServlet.serveLocalMetrics: DB error: " + ex.getMessage(), ex);
+			resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			resp.getWriter().write("{\"error\":\"db-error\",\"message\":\"Database error reading local metrics\"}");
+			return;
+		}
+
+		if (dbResult == null)
+		{
+			resp.setContentType(APPLICATION_JSON);
+			resp.setCharacterEncoding("UTF-8");
+			resp.getWriter().write("{\"error\":\"no-data-in-window\",\"message\":\"No local metrics data near requested time\"}");
+			return;
+		}
+
+		// Build a map of cmName -> CmInfo for quick lookup
+		Map<String, CentralPersistReader.LocalMetricsCmInfo> countMap = new LinkedHashMap<>();
+		for (CentralPersistReader.LocalMetricsCmInfo info : dbResult.cms)
+			countMap.put(info.cmName, info);
+
+		// ---- Group CMs preserving CounterController registration order ----
+		Map<String, List<CountersModel>> groups = new LinkedHashMap<>();
+		for (CountersModel cm : cmList)
+		{
+			String groupName = cm.getGroupName();
+			if (groupName == null || groupName.isEmpty())
+				groupName = "Other";
+			groups.computeIfAbsent(groupName, k -> new ArrayList<>()).add(cm);
+		}
+
+		SimpleDateFormat tsFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+		// ---- Build response ----
+		List<Map<String, Object>> groupList = new ArrayList<>();
+		for (Map.Entry<String, List<CountersModel>> entry : groups.entrySet())
+		{
+			String             groupName = entry.getKey();
+			List<CountersModel> groupCms = entry.getValue();
+
+			// Pick group icon from first CM that has one
+			String groupIcon = null;
+			for (CountersModel cm : groupCms)
+			{
+				String f = cm.getIconFile();
+				if (f != null && !f.trim().isEmpty()) { groupIcon = f.trim(); break; }
+			}
+
+			List<Map<String, Object>> cmsList = new ArrayList<>();
+			for (CountersModel cm : groupCms)
+			{
+				String cmName      = cm.getName();
+				String displayName = cm.getDisplayName();
+				if (displayName == null || displayName.trim().isEmpty())
+					displayName = cmName;
+
+				CentralPersistReader.LocalMetricsCmInfo info = countMap.get(cmName);
+				int     absRows  = info != null ? info.absRows  : 0;
+				int     diffRows = info != null ? info.diffRows : 0;
+				int     rateRows = info != null ? info.rateRows : 0;
+				boolean hasData  = absRows > 0 || diffRows > 0 || rateRows > 0;
+
+				List<CmHighlighterDescriptor> highlighterDescriptors = cm.getHighlighterDescriptors();
+				String description = cm.getDescription();
+
+				Map<String, Object> cmEntry = new LinkedHashMap<>();
+				cmEntry.put("cmName",      cmName);
+				cmEntry.put("displayName", displayName);
+				cmEntry.put("iconFile",    cm.getIconFile());
+				cmEntry.put("isActive",    cm.isActive());
+				cmEntry.put("isAppend",    cm instanceof CountersModelAppend);
+				cmEntry.put("hasData",     hasData);
+				cmEntry.put("absRows",     absRows);
+				cmEntry.put("diffRows",    diffRows);
+				cmEntry.put("rateRows",    rateRows);
+				if (description            != null) cmEntry.put("description",            description);
+				if (highlighterDescriptors != null) cmEntry.put("highlighterDescriptors", highlighterDescriptors);
+				cmsList.add(cmEntry);
+			}
+
+			Map<String, Object> groupMap = new LinkedHashMap<>();
+			groupMap.put("groupName", groupName);
+			groupMap.put("groupIcon", groupIcon);
+			groupMap.put("cms",       cmsList);
+			groupList.add(groupMap);
+		}
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("resolvedTime", tsFmt.format(dbResult.resolvedTime));
+		response.put("groups",       groupList);
+
+		resp.setContentType(APPLICATION_JSON);
+		resp.setCharacterEncoding("UTF-8");
+		om.writeValue(resp.getOutputStream(), response);
 	}
 }

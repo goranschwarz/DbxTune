@@ -28,6 +28,7 @@ import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.ServletRequest;
 
@@ -48,7 +49,7 @@ extends AbstractLoginService
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/**
-	 * All roles known to the system. Adding a new entry here is sufficient —
+	 * All roles known to the system. Adding a new entry here is sufficient -
 	 * the admin UI reads the list dynamically via {@code /admin/users?op=roles}.
 	 */
 	public enum Role
@@ -77,7 +78,7 @@ extends AbstractLoginService
 		@Override public String toString() { return _roleName; }
 	}
 
-	// Convenience String constants — kept for backward compatibility with existing code.
+	// Convenience String constants - kept for backward compatibility with existing code.
 	public static final String ROLE_ADMIN     = Role.ADMIN    .getRoleName();
 	public static final String ROLE_UD_ACTION = Role.UD_ACTION.getRoleName();
 	public static final String ROLE_USER      = Role.USER     .getRoleName();
@@ -91,6 +92,51 @@ extends AbstractLoginService
 
 //	private UserStore _userStore;
 	private Map<String, String[]> _userRoleMap = new HashMap<>();
+
+	// -----------------------------------------------------------------------
+	// OAuth2 one-time-token support
+	// -----------------------------------------------------------------------
+
+	/** Entry stored by the OAuth callback flow before calling request.login(). */
+	private static class OAuthEntry
+	{
+		final String token;
+		final long   expiryMs;
+
+		OAuthEntry(String token, long expiryMs)
+		{
+			this.token    = token;
+			this.expiryMs = expiryMs;
+		}
+	}
+
+	/** Map of username -> pending OAuth one-time token, consumed on first use. */
+	private final ConcurrentHashMap<String, OAuthEntry> _oauthTokens = new ConcurrentHashMap<>();
+
+	/**
+	 * Pre-loads the role map for an OAuth user so that {@link #loadRoleInfo} returns
+	 * the correct roles when Jetty calls it immediately after the login.
+	 * Must be called by {@code OAuthCallbackServlet} <em>before</em>
+	 * {@link #registerOAuthLogin}.
+	 */
+	public void prepareOAuthUserRoles(String username, String[] roles)
+	{
+		_userRoleMap.put(username, roles);
+	}
+
+	/**
+	 * Registers a short-lived one-time token for the given username.
+	 * The token is valid for 30 seconds - enough time for the immediately
+	 * following {@code request.login(username, token)} call to consume it.
+	 * <p>
+	 * Must be called by {@code OAuthCallbackServlet} after
+	 * {@link #prepareOAuthUserRoles} and before {@code request.login()}.
+	 */
+	public void registerOAuthLogin(String username, String token)
+	{
+		_oauthTokens.put(username, new OAuthEntry(token, System.currentTimeMillis() + 30_000));
+		_logger.debug("registerOAuthLogin: registered one-time token for user '{}'", username);
+	}
 
 
 	public DbxCentralRealm(String string)
@@ -120,6 +166,24 @@ extends AbstractLoginService
 	{
 		_logger.debug("DbxCentralRealm.loadUserInfo(String): userName=" + username);
 
+		// ---- OAuth one-time-token path ----
+		// OAuthCallbackServlet registers a short-lived token immediately before
+		// calling request.login(username, token).  Consume it here (single use).
+		OAuthEntry oauthEntry = _oauthTokens.remove(username);
+		if (oauthEntry != null)
+		{
+			if (System.currentTimeMillis() > oauthEntry.expiryMs)
+			{
+				_logger.warn("loadUserInfo({}): OAuth one-time token has expired - rejecting login", username);
+				return null;
+			}
+
+			// Roles were already loaded into _userRoleMap by prepareOAuthUserRoles()
+			_logger.debug("loadUserInfo({}): OAuth one-time token accepted", username);
+			return new UserPrincipal(username, Credential.getCredential(oauthEntry.token));
+		}
+
+		// ---- Normal database-backed path ----
 		try
 		{
 			if ( ! CentralPersistReader.hasInstance() )
@@ -176,7 +240,14 @@ extends AbstractLoginService
 				}
 			}
 				
-			// If use was found: Put the information in the (super MappedLoginService) user table... 
+			// Block form-based login for OAuth-provisioned accounts
+			if (passwd != null && passwd.startsWith("oauth:"))
+			{
+				_logger.warn("loadUserInfo({}): account is OAuth-provisioned — form-based login blocked", username);
+				return null;
+			}
+
+			// If use was found: Put the information in the (super MappedLoginService) user table...
 			UserPrincipal uid = null;
 			if (passwd != null)
 			{

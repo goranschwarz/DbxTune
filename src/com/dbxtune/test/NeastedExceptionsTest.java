@@ -40,7 +40,7 @@ public class NeastedExceptionsTest
 		String host = "localhost";
 		String port = "1433";
 		String user = "gorans_sa";
-		String pawd = "1niss2e";
+		String pawd = "dummy";
 		String fUrl = "";
 		
 		if (args.length > 0) host = args[0];
