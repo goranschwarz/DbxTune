@@ -701,6 +701,16 @@ function alarmPanelApplyFilter()
 function alarmPanelFilterInput(val)     { alarmPanelApplyFilter(); }
 function alarmPanelShowMutedToggle(chk) { alarmPanelApplyFilter(); }
 
+/** Ctrl+Space column completion for the Alarm History filter input */
+function alarmFilterKeydown(e)
+{
+	dbxFilterKeydown(e, function() {
+		return (_alarmPanelAllData && _alarmPanelAllData.length > 0)
+			? Object.keys(_alarmPanelAllData[0])
+			: [];
+	});
+}
+
 function alarmPanelRevealMuted(event)
 {
 	event.stopPropagation();

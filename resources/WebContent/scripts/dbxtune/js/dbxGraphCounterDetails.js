@@ -6,6 +6,7 @@ var _cmGroup        = null;
 var _cmName         = null;
 var _cmType         = 'rate';
 var _cmHideZero     = false;  // hide rows where all diff/rate values are 0
+var _cmShowAll      = false;  // Append CMs: show all records from session start
 var _cmListData     = null;
 var _cmCurrentData  = null;   // last fetched data result (for re-filtering without re-fetching)
 var _cmFilter       = '';     // current filter string
@@ -139,15 +140,36 @@ function _cmApplyPrefsForCm(cmName)
 	}
 
 	// Abs/Diff/Rate — persisted per CM in localStorage, default 'rate'
-	var savedType = null;
-	try { savedType = localStorage.getItem('cmDetail-type-' + cmName); } catch(e) {}
-	_cmType = savedType || 'rate';
-	$('#cm-detail-type-' + _cmType).prop('checked', true);
-	// Re-enable Diff/Rate buttons — the data response will disable them again if this CM has no diff columns.
-	// Without this, the disabled state from a previous abs-only CM bleeds into the next CM.
-	$('#cm-detail-type-diff').prop('disabled', false).attr('title', 'Delta values \u2014 the difference between this sample and the previous one. Displayed in blue.');
-	$('#cm-detail-type-rate').prop('disabled', false).attr('title', 'Rate per second \u2014 the delta divided by the elapsed time between samples, giving a per-second rate. Displayed in blue.');
-	$('#cm-detail-label-diff, #cm-detail-label-rate').css('text-decoration', 'none');
+	var cmInfo = cmDetailFindCmInfo(cmName);
+	var isAppendCm = !!(cmInfo && cmInfo.isAppend);
+
+	if (isAppendCm) {
+		// Append CMs only have ABS data — lock type to abs and hide diff/rate
+		_cmType = 'abs';
+		$('#cm-detail-type-abs').prop('checked', true);
+		$('#cm-detail-counter-type').hide();
+		$('#cm-detail-append-bar').css('display', 'flex');
+		// Restore "show all" state from localStorage — default is ON
+		var savedShowAll = null;
+		try { savedShowAll = localStorage.getItem('cmDetail-showAll-' + cmName); } catch(e) {}
+		_cmShowAll = savedShowAll !== '0';  // default true; only false if explicitly saved as '0'
+		$('#cm-detail-show-all').prop('checked', _cmShowAll);
+	} else {
+		// Regular CM — show diff/rate controls, hide the append bar
+		$('#cm-detail-counter-type').show();
+		$('#cm-detail-append-bar').hide();
+		_cmShowAll = false;
+		$('#cm-detail-show-all').prop('checked', false);
+		var savedType = null;
+		try { savedType = localStorage.getItem('cmDetail-type-' + cmName); } catch(e) {}
+		_cmType = savedType || 'rate';
+		$('#cm-detail-type-' + _cmType).prop('checked', true);
+		// Re-enable Diff/Rate buttons — the data response will disable them again if this CM has no diff columns.
+		// Without this, the disabled state from a previous abs-only CM bleeds into the next CM.
+		$('#cm-detail-type-diff').prop('disabled', false).attr('title', 'Delta values \u2014 the difference between this sample and the previous one. Displayed in blue.');
+		$('#cm-detail-type-rate').prop('disabled', false).attr('title', 'Rate per second \u2014 the delta divided by the elapsed time between samples, giving a per-second rate. Displayed in blue.');
+		$('#cm-detail-label-diff, #cm-detail-label-rate').css('text-decoration', 'none');
+	}
 
 	// Hide Unchanged — persisted per CM in localStorage, default false
 	var savedHz = null;
@@ -314,6 +336,14 @@ function cmDetailSelectCm(cmName)
 	cmDetailLoadData(_cmSrvName, cmName, _cmTimestamp, _cmType);
 }
 
+function cmDetailShowAllChanged()
+{
+	_cmShowAll = document.getElementById('cm-detail-show-all').checked;
+	if (_cmName) try { localStorage.setItem('cmDetail-showAll-' + _cmName, _cmShowAll ? '1' : '0'); } catch(e) {}
+	if (_cmSrvName && _cmName && _cmTimestamp)
+		cmDetailLoadData(_cmSrvName, _cmName, _cmTimestamp, _cmType);
+}
+
 function cmDetailTypeChanged(type)
 {
 	_cmType = type;
@@ -379,8 +409,9 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 		$('#cm-detail-table').html(html);
 		return;
 	}
-	if (cmInfo && !cmInfo.hasData) {
-		// CM exists but saved no rows this sample (postponed, or nothing matched filter)
+	if (cmInfo && !cmInfo.hasData && !cmInfo.isAppend) {
+		// CM exists but saved no rows this sample (postponed, or nothing matched filter).
+		// Append CMs are exempt: "no rows at this sample" is normal — showAll may still find data.
 		$('#cm-detail-loading').hide();
 		$('#cm-detail-table').html('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
 			+ 'No data collected for <strong>' + $('<span>').text(cmName).html() + '</strong>'
@@ -397,7 +428,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 	}, 100);
 	$.ajax({
 		url: '/api/cc/mgt/cm/data',
-		data: { srv: srvName, cm: cmName, time: timestamp, type: type },
+		data: { srv: srvName, cm: cmName, time: timestamp, type: type, showAll: _cmShowAll ? 'true' : 'false' },
 		dataType: 'text',
 		success: function(data) {
 			clearTimeout(busyTimer);
@@ -571,10 +602,42 @@ function cmDetailApplyFilter(filter)
 	cmDetailRenderFiltered(_cmCurrentData, filter);
 }
 
+/** Returns an HTML badge for an aggregate column type (SUM/AVG/MIN/MAX), or '' if none. */
+function _cmAggSymbol(aggregateColumns, colName) {
+	if (!aggregateColumns || !colName) return '';
+	var agg = aggregateColumns[colName];
+	if (!agg) return '';
+	var sym = agg === 'SUM' ? '\u03A3'   // Σ
+	        : agg === 'AVG' ? '~'
+	        : agg === 'MIN' ? '\u2193'   // ↓
+	        : agg === 'MAX' ? '\u2191'   // ↑
+	        : '';
+	var tt  = agg === 'SUM' ? 'Aggregated SUM'
+	        : agg === 'AVG' ? 'Aggregated AVG (average)'
+	        : agg === 'MIN' ? 'Aggregated MIN (minimum)'
+	        : agg === 'MAX' ? 'Aggregated MAX (maximum)'
+	        : '';
+	return sym ? '<span title="' + tt + '" style="color:#888;font-size:0.85em;margin-right:2px;cursor:help;">' + sym + '</span>' : '';
+}
+
 function cmDetailRenderFiltered(r, filter)
 {
 	var rows = r.rows || [];
-	var result = applyRowFilter(rows, r.columns, filter);
+	// Separate aggregate (footer) rows — they go to <tfoot> and bypass filter/sort
+	var rowStates    = r.rowStates || {};
+	var aggRows      = [];
+	var firstDiffSet = new Set();
+	var bodyRows     = [];
+	rows.forEach(function(row, i) {
+		var state = rowStates[String(i)];
+		if (state && state.indexOf('aggRow') >= 0)
+			aggRows.push(row);
+		else {
+			if (state && state.indexOf('firstDiffOrRateRow') >= 0) firstDiffSet.add(row);
+			bodyRows.push(row);
+		}
+	});
+	var result = applyRowFilter(bodyRows, r.columns, filter);
 	var filteredRows = result.filteredRows;
 	var filterError  = result.filterError;
 
@@ -623,12 +686,47 @@ function cmDetailRenderFiltered(r, filter)
 		}
 	}
 
+	// ---- Smart truncation limit ------------------------------------------------
+	// Estimate whether the table would overflow the container and, if so, how
+	// tightly we need to truncate long text cells.  This avoids needlessly
+	// truncating wide error-message columns on Append CMs while still keeping
+	// narrow tables that fit the viewport fully readable.
+	var CHR_W    = 7.5;  // approximate pixels per character at 0.78em (~12px)
+	var CELL_PAD = 18;   // Bootstrap table-sm horizontal padding (left+right) + border
+	var colCount = r.columns ? r.columns.length : 1;
+	// Sample max raw-string length per column across ALL rows (body + agg + tfoot)
+	var allSampleRows = bodyRows.concat(aggRows);
+	var maxColLen = [];
+	for (var _ci = 0; _ci < colCount; _ci++) maxColLen.push(0);
+	allSampleRows.forEach(function(row) {
+		row.forEach(function(v, ci) {
+			if (v === null || v === undefined || v === true || v === false) return;
+			var s = String(v);
+			if (s.length > maxColLen[ci]) maxColLen[ci] = s.length;
+		});
+	});
+	// estimatedW = sum of each column's contribution (capped at 200 chars wide)
+	var estimatedW = maxColLen.reduce(function(acc, len) {
+		return acc + Math.min(len, 200) * CHR_W + CELL_PAD;
+	}, 0);
+	var containerW = ($('#cm-detail-table-wrap').width() || 900);
+	var truncLimit;
+	if (estimatedW <= containerW * 1.25) {
+		// Table fits comfortably — no truncation needed
+		truncLimit = Infinity;
+	} else {
+		// Distribute available width equally across columns
+		var availableW = containerW * 1.1 - colCount * CELL_PAD;
+		truncLimit = Math.max(40, Math.floor(availableW / colCount / CHR_W));
+	}
+	// ---------------------------------------------------------------------------
+
 	// Row count — computed AFTER hide-zero so the displayed number matches what's visible
 	var countText = filterError
 		? filterError
 		: (filter || _cmHideZero)
-			? (filteredRows.length + ' / ' + rows.length + ' rows')
-			: (rows.length + ' rows');
+			? (filteredRows.length + ' / ' + bodyRows.length + ' rows')
+			: (bodyRows.length + ' rows');
 	$('#cm-detail-filter-count').text(countText);
 	$('#cm-detail-row-count').text(countText);
 
@@ -704,6 +802,7 @@ function cmDetailRenderFiltered(r, filter)
 				}
 				// Apply row-level highlight to each td (beats Bootstrap's td striping/hover)
 				if (hlResult.rowBg && !isPct[i]) style += 'background-color:' + hlResult.rowBg + ';';
+				else if (firstDiffSet.has(row) && !isPct[i]) style += 'background-color:rgb(102,205,170);';
 				if (hlResult.rowFg) style += 'color:' + hlResult.rowFg + ';';
 				// Cell-level highlighter overrides (win over row-level)
 				var cellHl = hlResult.cells[i];
@@ -721,10 +820,10 @@ function cmDetailRenderFiltered(r, filter)
 					// Format large numbers with thousands separators for readability
 					var formatted = isNumeric[i] ? _cmFmtNum(v) : null;
 					var s = formatted !== null ? formatted : String(v);
-					if (s.length > 60) {
+					if (s.length > truncLimit) {
 						var plain = s.replace(/<[^>]+>/g, '').trim();
-						cell = '<span title="' + escHtml(plain.substring(0, 300)) + '">'
-							+ escHtml(plain.substring(0, 60)) + '\u2026</span>';
+						cell = '<span title="' + escHtml(plain.substring(0, 500)) + '">'
+							+ escHtml(plain.substring(0, truncLimit)) + '\u2026</span>';
 					} else {
 						cell = escHtml(s);
 					}
@@ -733,7 +832,45 @@ function cmDetailRenderFiltered(r, filter)
 			}).join('') + '</tr>';
 		});
 	}
-	h += '</tbody></table>';
+	h += '</tbody>';
+	// Aggregate rows → <tfoot> (pinned at bottom, excluded from sort/filter)
+	if (aggRows.length > 0) {
+		h += '<tfoot>';
+		aggRows.forEach(function(row) {
+			h += '<tr>'
+				+ row.map(function(v, i) {
+					var colName = r.columns ? r.columns[i] : null;
+					var agg     = (r.aggregateColumns && colName) ? r.aggregateColumns[colName] : null;
+					var aggTt   = agg === 'SUM' ? 'Aggregated SUM'
+					            : agg === 'AVG' ? 'Aggregated AVG (average)'
+					            : agg === 'MIN' ? 'Aggregated MIN (minimum)'
+					            : agg === 'MAX' ? 'Aggregated MAX (maximum)'
+					            : '';
+					var style = 'style="background-color:rgb(222,246,250);';
+					if (isNumeric[i]) style += 'text-align:right;';
+					style += '"';
+					var titleAttr = aggTt ? ' title="' + aggTt + '"' : '';
+					var sym = _cmAggSymbol(r.aggregateColumns, colName);
+					var cellContent;
+					if (v === null || v === undefined)
+						cellContent = sym + '<span style="color:#aaa">null</span>';
+					else {
+						var formatted = isNumeric[i] ? _cmFmtNum(v) : null;
+						var s = formatted !== null ? formatted : String(v);
+						if (s.length > truncLimit) {
+							var plain = s.replace(/<[^>]+>/g, '').trim();
+							cellContent = sym + '<span title="' + escHtml(plain.substring(0, 500)) + '">'
+								+ escHtml(plain.substring(0, truncLimit)) + '\u2026</span>';
+						} else {
+							cellContent = sym + escHtml(s);
+						}
+					}
+					return '<td ' + style + titleAttr + '>' + cellContent + '</td>';
+				}).join('') + '</tr>';
+		});
+		h += '</tfoot>';
+	}
+	h += '</table>';
 
 	// Restore scroll position from localStorage (persists across tab switches and panel close/reopen)
 	// The scrollable element is #cm-detail-table-wrap (inside the Split.js pane)
@@ -1095,146 +1232,14 @@ function cmDetailRowShowModal(columns, row, tooltips)
  * Returns { filteredRows, filterError }.  filteredRows === rows when
  * filter is empty or an error occurs (callers never receive undefined).
  */
-function applyRowFilter(rows, columns, filter)
+// applyRowFilter and where-filter helpers live in dbxcentral.utils.js (shared)
+
+/** Ctrl+Space column completion for the Counter Details filter input */
+function cmDetailFilterKeydown(e)
 {
-	filter = (filter || '').trim();
-	if (filter === '') return { filteredRows: rows || [], filterError: '' };
-
-	var filteredRows = rows || [];
-	var filterError  = '';
-
-	if (filter.match(/^where\s+/i)) {
-		try   { filteredRows = cmDetailWhereFilter(rows, columns, filter.replace(/^where\s+/i, '')); }
-		catch (e) { filterError = '(where error: ' + e.message + ')'; filteredRows = rows; }
-	} else {
-		try {
-			var re = new RegExp(filter, 'i');
-			filteredRows = (rows || []).filter(function(row) {
-				return row.some(function(cell) {
-					return re.test(cell === null || cell === undefined ? '' : String(cell));
-				});
-			});
-		} catch (e) { filterError = '(invalid regex)'; filteredRows = rows; }
-	}
-
-	return { filteredRows: filteredRows, filterError: filterError };
-}
-
-//            col IS NULL   col IS NOT NULL
-// Values:    'quoted string'   number   null
-// Joining:   AND / OR  (left-to-right evaluation)
-//-----------------------------------------------------------
-function cmDetailWhereFilter(rows, columns, whereExpr)
-{
-	// Build column-name → index map (case-insensitive)
-	var colIndex = {};
-	columns.forEach(function(c, i) { colIndex[c.toLowerCase()] = i; });
-
-	// Tokenise respecting single-quoted strings, then split on AND/OR
-	var conditions = cmDetailSplitConditions(whereExpr);
-
-	return rows.filter(function(row) {
-		var result = cmDetailEvalCondition(conditions[0].expr, colIndex, row);
-		for (var i = 1; i < conditions.length; i++) {
-			var right = cmDetailEvalCondition(conditions[i].expr, colIndex, row);
-			if (conditions[i].op === 'OR')
-				result = result || right;
-			else
-				result = result && right;
-		}
-		return result;
+	dbxFilterKeydown(e, function() {
+		return (_cmCurrentData && _cmCurrentData.columns) ? _cmCurrentData.columns : [];
 	});
-}
-
-function cmDetailSplitConditions(expr)
-{
-	// Split on AND/OR that are NOT inside single quotes
-	var parts  = [];
-	var ops    = [];
-	var cur    = '';
-	var inQuote = false;
-	var i = 0;
-	while (i < expr.length)
-	{
-		if (!inQuote && expr[i] === "'") { inQuote = true;  cur += expr[i++]; continue; }
-		if ( inQuote && expr[i] === "'") { inQuote = false; cur += expr[i++]; continue; }
-		if (!inQuote)
-		{
-			var rest = expr.substring(i);
-			var andM = rest.match(/^AND\b/i);
-			var orM  = rest.match(/^OR\b/i);
-			if (andM) { parts.push(cur.trim()); ops.push('AND'); cur = ''; i += andM[0].length; continue; }
-			if (orM)  { parts.push(cur.trim()); ops.push('OR');  cur = ''; i += orM[0].length;  continue; }
-		}
-		cur += expr[i++];
-	}
-	if (cur.trim()) parts.push(cur.trim());
-
-	return parts.map(function(p, idx) { return { expr: p, op: idx === 0 ? null : ops[idx - 1] }; });
-}
-
-function cmDetailEvalCondition(expr, colIndex, row)
-{
-	expr = expr.trim();
-
-	// IS NOT NULL
-	var m = expr.match(/^(\w+)\s+IS\s+NOT\s+NULL$/i);
-	if (m) {
-		var ci = cmDetailColIdx(m[1], colIndex);
-		return row[ci] !== null && row[ci] !== undefined && row[ci] !== '';
-	}
-	// IS NULL
-	m = expr.match(/^(\w+)\s+IS\s+NULL$/i);
-	if (m) {
-		var ci = cmDetailColIdx(m[1], colIndex);
-		return row[ci] === null || row[ci] === undefined || row[ci] === '';
-	}
-	// LIKE 'pattern'
-	m = expr.match(/^(\w+)\s+LIKE\s+'([^']*)'$/i);
-	if (m) {
-		var ci = cmDetailColIdx(m[1], colIndex);
-		var pat = '^' + m[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/_/g, '.') + '$';
-		return new RegExp(pat, 'i').test(row[ci] === null ? '' : String(row[ci]));
-	}
-	// Comparison: col op val
-	m = expr.match(/^(\w+)\s*(=|!=|<>|>=|<=|>|<)\s*(.+)$/i);
-	if (m) {
-		var ci     = cmDetailColIdx(m[1], colIndex);
-		var op     = m[2];
-		var valRaw = m[3].trim();
-		var cell   = row[ci];
-		var val;
-
-		if (valRaw.match(/^'[^']*'$/)) {            // quoted string
-			val  = valRaw.slice(1, -1);
-			cell = cell === null || cell === undefined ? '' : String(cell);
-		} else if (valRaw.toLowerCase() === 'null') { // null literal
-			val  = null;
-		} else if (!isNaN(Number(valRaw))) {           // number
-			val  = Number(valRaw);
-			cell = Number(cell);
-		} else {                                        // bare word → string
-			val  = valRaw;
-			cell = cell === null || cell === undefined ? '' : String(cell);
-		}
-
-		switch (op) {
-			case '=':            return cell == val;
-			case '!=': case '<>':return cell != val;
-			case '>':            return cell >  val;
-			case '>=':           return cell >= val;
-			case '<':            return cell <  val;
-			case '<=':           return cell <= val;
-		}
-	}
-	throw new Error('Cannot parse: ' + expr);
-}
-
-function cmDetailColIdx(name, colIndex)
-{
-	var idx = colIndex[name.toLowerCase()];
-	if (idx === undefined) throw new Error('Unknown column: ' + name);
-	return idx;
 }
 
 function cmDetailShowMsg(msg)

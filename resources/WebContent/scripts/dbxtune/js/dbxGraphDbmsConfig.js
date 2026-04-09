@@ -1,4 +1,26 @@
 /** dbxGraphDbmsConfig.js — DBMS Configuration panel for graph.html */
+// applyRowFilter, _showColCompletion, dbxFilterKeydown live in dbxcentral.utils.js
+
+/** Ctrl+Space column completion for the DBMS Config params / issues filter */
+function dbmsConfigFilterKeydown(e)
+{
+	dbxFilterKeydown(e, function() {
+		if (!_dcData) return [];
+		if (_dcMainTab === 'params')  return (_dcData.params  && _dcData.params.columns)  ? _dcData.params.columns  : [];
+		if (_dcMainTab === 'issues')  return (_dcData.issues  && _dcData.issues.columns)  ? _dcData.issues.columns  : [];
+		return [];
+	});
+}
+
+/** Ctrl+Space completion for ASCII-table filter inputs in the Other Config tab.
+ *  Column names are stored as JSON in data-headers on the <table> element. */
+function dbmsAsciiFilterKeydown(e, tableId)
+{
+	dbxFilterKeydown(e, function() {
+		try { return JSON.parse($('#' + tableId).attr('data-headers') || '[]'); } catch(ex) { return []; }
+	});
+}
+
 //-----------------------------------------------------------
 // DBMS CONFIG PANEL
 //-----------------------------------------------------------
@@ -546,13 +568,17 @@ function renderAsciiTable(seg, tableId)
 	if (seg.rows.length > 5) {
 		html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">'
 			+ '<span style="font-size:0.8em;color:#6c757d;">Filter:</span>'
-			+ '<input type="text" style="font-size:0.8em;height:20px;padding:0 4px;width:200px;font-family:monospace;"'
-			+ ' placeholder="regex..." oninput="dbmsAsciiFilter(this,\'' + tableId + '\');">'
+			+ '<input type="text" style="font-size:0.8em;height:20px;padding:0 4px;width:280px;font-family:monospace;"'
+			+ ' placeholder="regex  or  where col = \'val\'  (Ctrl+Space for columns)"'
+			+ ' oninput="dbmsAsciiFilter(this,\'' + tableId + '\');"'
+			+ ' onkeydown="dbmsAsciiFilterKeydown(event,\'' + tableId + '\');">'
 			+ '<span id="' + tableId + '-cnt" style="font-size:0.78em;color:#6c757d;"></span>'
 			+ '</div>';
 	}
 
-	html += '<table id="' + tableId + '" class="table table-sm table-bordered table-hover" style="font-size:0.8em;white-space:nowrap;width:auto;">';
+	// Store headers as JSON on the table so dbmsAsciiFilter can resolve column names for "where" expressions
+	var headersJson = JSON.stringify(seg.headers).replace(/"/g, '&quot;');
+	html += '<table id="' + tableId + '" data-headers="' + headersJson + '" class="table table-sm table-bordered table-hover" style="font-size:0.8em;white-space:nowrap;width:auto;">';
 	html += '<thead class="thead-light"><tr>';
 	seg.headers.forEach(function(h, idx) {
 		html += '<th style="cursor:pointer;user-select:none;" onclick="dbmsAsciiSort(this,\'' + tableId + '\',' + idx + ');">'
@@ -574,24 +600,56 @@ function renderAsciiTable(seg, tableId)
 	return html;
 }
 
-/** Filter rows of an ASCII-parsed table */
+/** Filter rows of an ASCII-parsed table — supports "where col = 'val'" and plain regex */
 function dbmsAsciiFilter(input, tableId)
 {
-	var text   = input.value;
-	var $rows  = $('#' + tableId + ' tbody tr');
-	var total   = $rows.length;
+	var text  = (input.value || '').trim();
+	var $tbl  = $('#' + tableId);
+	var $rows = $tbl.find('tbody tr');
+	var total = $rows.length;
 	var visible = 0;
-	var re = null;
-	if (text) { try { re = new RegExp(text, 'i'); } catch(e) {} }
+	var filterError = '';
 
-	$rows.each(function() {
-		var show = !re || re.test($(this).text());
-		$(this).toggle(show);
-		if (show) visible++;
-	});
+	if (!text) {
+		$rows.show();
+		$('#' + tableId + '-cnt').text(total + ' rows');
+		return;
+	}
 
-	var $cnt = $('#' + tableId + '-cnt');
-	$cnt.text(text ? ('Showing ' + visible + ' / ' + total) : (total + ' rows'));
+	if (/^where\s+/i.test(text)) {
+		// "where col = 'val'" — use applyRowFilter with column names from data-headers
+		var headers = [];
+		try { headers = JSON.parse($tbl.attr('data-headers') || '[]'); } catch(e) {}
+
+		// Extract cell values from DOM into an array-of-arrays
+		var domRows = [];
+		$rows.each(function() {
+			var cells = [];
+			$(this).find('td').each(function() { cells.push($(this).text()); });
+			domRows.push(cells);
+		});
+
+		var result = applyRowFilter(domRows, headers, text);
+		filterError = result.filterError;
+		var visibleSet = new Set(result.filteredRows);
+
+		$rows.each(function(i) {
+			var show = visibleSet.has(domRows[i]);
+			$(this).toggle(show);
+			if (show) visible++;
+		});
+	} else {
+		// Plain regex
+		var re = null;
+		try { re = new RegExp(text, 'i'); } catch(e) { filterError = '(invalid regex)'; }
+		$rows.each(function() {
+			var show = !re || re.test($(this).text());
+			$(this).toggle(show);
+			if (show) visible++;
+		});
+	}
+
+	$('#' + tableId + '-cnt').text(filterError || ('Showing ' + visible + ' / ' + total));
 }
 
 /** Sort an ASCII-parsed table by column */

@@ -70,8 +70,8 @@ public class JschGuiTest
 		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } 
 		catch(Exception ex) { ex.printStackTrace();	}
 
-//		DummyApp app = new DummyApp("gorans.org", "gorans", "1niss2e", "", "id; uname -a; hostname; date", "iostat -xdtck 5");
-		DummyApp app = new DummyApp("pg-1a-gs"  , "gorans", "1niss2e", "", "id; uname -a; hostname; date", "iostat -xdtck 5");
+//		DummyApp app = new DummyApp("gorans.org", "gorans", "dummy", "", "id; uname -a; hostname; date", "iostat -xdtck 5");
+		DummyApp app = new DummyApp("pg-1a-gs"  , "gorans", "dummy", "", "id; uname -a; hostname; date", "iostat -xdtck 5");
 
         app.setVisible(true);
         

@@ -82,7 +82,7 @@ public class PgQueryIdRepro
 //
 //		Properties props = new Properties();
 //		props.setProperty("user"    , "gorans");
-//		props.setProperty("password", "1niss2e");
+//		props.setProperty("password", "dummy");
 		
 			
 		// Kick of a 'pg_sleep'

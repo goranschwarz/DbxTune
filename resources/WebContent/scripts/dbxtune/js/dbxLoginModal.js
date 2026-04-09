@@ -202,6 +202,9 @@
             dbxOpenLogin();
         });
 
+        // Fetch enabled OAuth providers and inject buttons into the login tab
+        fetchAndInjectOAuthButtons();
+
         // Always call isLoggedIn() on every page load:
         //   - updates the navbar (logged-in dropdown vs Login link)
         //   - handles ?login URL parameter (Jetty-intercepted auth redirect)
@@ -272,7 +275,56 @@
     });
 
     //--------------------------------------------------------------------------
-    // 4. Global API
+    // 4. OAuth provider buttons
+    //--------------------------------------------------------------------------
+
+    /**
+     * Calls GET /api/login/providers and, for each enabled provider, injects
+     * a "Sign in with …" button into the login-tab footer above Cancel/Login.
+     */
+    function fetchAndInjectOAuthButtons()
+    {
+        $.ajax({
+            url: '/api/login/providers',
+            method: 'GET',
+            dataType: 'json',
+            success: function (providers)
+            {
+                if (!providers || providers.length === 0)
+                    return;
+
+                // Remember current page so OAuth redirect can return here
+                sessionStorage.setItem('dbxReturnAfterLogin', window.location.href);
+
+                var html = '<div id="dbx-oauth-section" class="mt-1 mb-1">';
+
+                $.each(providers, function (i, p)
+                {
+                    html +=
+                        '<a href="' + p.startUrl + '" class="btn btn-outline-secondary btn-block mb-1" style="text-align:left;">' +
+                        p.iconHtml +
+                        'Sign in with ' + $('<span>').text(p.displayName).html() +
+                        '</a>';
+                });
+
+                html +=
+                    '<div class="d-flex align-items-center mt-2 mb-1">' +
+                    '  <hr class="flex-grow-1 m-0"><span class="px-2 text-muted small">or sign in with username</span><hr class="flex-grow-1 m-0">' +
+                    '</div>' +
+                    '</div>';
+
+                // Insert at the top of the login form, before the Username field
+                $(document).find('#dbx-pane-login form').prepend(html);
+            },
+            error: function ()
+            {
+                // Silently ignore — OAuth providers are optional
+            }
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    // 5. Global API
     //--------------------------------------------------------------------------
 
     /** Open the login modal from anywhere (e.g. navbar Login link). */

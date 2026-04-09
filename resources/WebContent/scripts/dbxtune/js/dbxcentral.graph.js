@@ -1127,10 +1127,10 @@ function alarmPanelLoadHistory(ts, historyStart)
 		_alarmScrollFrozen   = true;
 	}
 
-	// Compute fetch window start: whichever is earlier — historyStart or 30 days ago.
-	var thirtyDaysAgo = mTs.clone().subtract(30, 'days');
-	var histMoment    = historyStart ? moment(historyStart, "YYYY-MM-DD HH:mm:ss") : null;
-	var fetchFrom     = (histMoment && histMoment.isBefore(thirtyDaysAgo)) ? histMoment : thirtyDaysAgo;
+	// Compute fetch window start: whichever is earlier — historyStart or 7 days ago.
+	var sevenDaysAgo = mTs.clone().subtract(7, 'days');
+	var histMoment   = historyStart ? moment(historyStart, "YYYY-MM-DD HH:mm:ss") : null;
+	var fetchFrom    = (histMoment && histMoment.isBefore(sevenDaysAgo)) ? histMoment : sevenDaysAgo;
 	// Cache key MUST be fixed for the whole history session, not derived from the
 	// sliding mTs (which changes every tick). historyStart is the slider's fixed
 	// left-edge; use it directly. Fall back to computed fetchFrom only when
@@ -1146,7 +1146,7 @@ function alarmPanelLoadHistory(ts, historyStart)
 
 	// Cache miss: fetch the FULL range (fetchFrom to now+1h) in one request so
 	// every subsequent slider tick is served from cache without another fetch.
-	// NOTE: fetchStart uses fetchFrom (30 days ago or historyStart, whichever is earlier),
+	// NOTE: fetchStart uses fetchFrom (7 days ago or historyStart, whichever is earlier),
 	// NOT cacheKey — the cache key is just the session identifier, not the fetch window.
 	var fetchStart = fetchFrom.format("YYYY-MM-DD HH:mm:ss");
 	var fetchEnd   = moment().add(1, 'hour').format("YYYY-MM-DD HH:mm:ss");

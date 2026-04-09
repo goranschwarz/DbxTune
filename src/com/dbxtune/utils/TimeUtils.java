@@ -568,7 +568,7 @@ public class TimeUtils
 	}
 
 	/**
-	 * Parse the string into a Tiemstamp<br>
+	 * Parse the string into a Timestamp<br>
 	 * The format is tried in the following order 
 	 * <ul>
 	 *     <li> <code>yyyy-MM-dd'T'HH:mm:ss.SSSXXX</code> - ISO 8601</li>
