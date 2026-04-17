@@ -1,504 +1,654 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<title>API Documentation</title>
-		<!-- Required meta tags -->
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<head>
+	<title>DbxCentral — API Reference</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-		<!--  
-		======================================================================= 
-		== JS imports - JAVA SCRIPTS GOES HERE 
-		======================================================================= 
-		--> 
-		<!-- JS: JQuery --> 
-		<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script> 
-		
-		<!-- JS: Bootstrap --> 
-<!-- 	<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
-<!--	<script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
-		<script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
-		
-		<!--  
-		======================================================================= 
-		== CSS imports - STYLES SHEETS GOES HERE 
-		======================================================================= 
-		--> 
-		
-		<!-- CSS: Bootstrap --> 
-<!--	<link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> --> 
-		<link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
-		
-		<!-- CSS: Font Awsome --> 
-		<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> 
-	
+	<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script>
+	<script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>
+	<link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'>
+	<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'>
 
-		<style type='text/css'>
-		  table {border-collapse: collapse;}
-		  th {border: 1px solid black; text-align: left; padding: 2px; background-color:gray; color:white;}
-		  td {border: 1px solid black; text-align: left; padding: 2px; }
-		/*  th {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; background-color:gray; color:white;} */
-		/*  td {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; } */
-		  tr:nth-child(even) {background-color: #f2f2f2;}
-		</style>
-	</head>
+	<style>
+		body        { font-size: 0.9rem; }
+		h2          { margin-top: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid #343a40; padding-bottom: 4px; }
+		h3          { margin-top: 1.5rem; }
+		.card       { margin-bottom: 1.5rem; }
+		.card-header{ font-family: monospace; font-size: 1rem; background-color: #343a40; color: #fff; }
+		.card-header a { color: #adb5bd; }
+		.card-header a:hover { color: #fff; }
+		.card-header .badge-method { font-size: 0.7rem; vertical-align: middle; margin-right: 6px; }
+		table       { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+		th          { border: 1px solid #adb5bd; text-align: left; padding: 4px 6px; background-color: #6c757d; color: #fff; }
+		td          { border: 1px solid #dee2e6; text-align: left; padding: 4px 6px; }
+		tr:nth-child(even) { background-color: #f8f9fa; }
+		td:first-child { font-family: monospace; white-space: nowrap; }
+		td.mandatory{ color: #dc3545; font-weight: bold; }
+		pre         { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px; font-size: 0.8rem; }
+		.toc        { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 1rem 1.5rem; margin-bottom: 2rem; }
+		.toc ul     { margin-bottom: 0; }
+		.toc a      { color: #495057; }
+		.note       { font-style: italic; color: #6c757d; font-size: 0.85rem; }
+		.badge-get  { background-color: #28a745; }
+		.badge-post { background-color: #007bff; }
+		.badge-ws   { background-color: #6f42c1; }
+		.new-badge  { font-size: 0.65rem; background-color: #fd7e14; color: #fff; border-radius: 3px; padding: 1px 5px; vertical-align: middle; margin-left: 4px; }
+	</style>
+</head>
+<body>
+<div class="container">
 
-	<body>
-	<div class="container">
-<!--	<div class="container-fluid">-->
+	<h1 class="mt-4">DbxCentral — API Reference</h1>
+	<p class="text-muted">REST endpoints, WebSocket feeds, and the MCP (Model Context Protocol) server.</p>
 
-		<h2>API interface, description</h2>
-
-
-		<!-- ############################################################################# -->
-		<div id='/api/sessions' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/sessions?type=last&graphs=false&status=all'>/api/sessions</a></h5>
-		<div class='card-body'>
-		What sessions are available, and some basic information about that session.<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ======          =================          =========== -->
-			<tr> <th>Name  </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ======          =================          =========== -->
-			<tr> <td>type  </td> <td>last             </td>     <td>
-			                                                        <code>last</code> Show info about last available session<br>
-			                                                        <code>all</code> Show all available recordings for this server/session<br>
-			                                                    </td> </tr>
-			<tr> <td>graphs</td> <td>false            </td>     <td><code>true|false</code> if we should include available graphs for this session in the output</td> </tr>
-			<tr> <td>status</td> <td>all              </td>     <td>Show only with some specific status. </td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-		
-
-		<!-- ############################################################################# -->
-		<div id='/api/server-layout' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/server-layout'>/api/server-layout</a></h5>
-		<div class='card-body'>
-		What Server/Sessions are available, and how they should be laid out on the landing page (where all Servers are shown).<br>
-		<br>
-		Parameters: none
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-		
-
-		<!-- ############################################################################# -->
-		<div id='/api/graphs' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/graphs?sessionName=SRVNAME'>/api/graphs</a></h5>
-		<div class='card-body'>
-		What graphs are available for a specific server/session or profile<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ================          =================          =========== -->
-			<tr> <th>Name            </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ================          =================          =========== -->
-			<tr> <td>sessionName     </td> <td><b>mandatory</b> </td> <td>Name of the server/session/profile</td> </tr>
-			<tr> <td>sessionStartTime</td> <td>last session     </td> <td>Specify a specific start time (default is "last session") </td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/api/graph/profiles' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/graph/profiles?name=PROFILE_NAME'>/api/graph/profiles</a></h5>
-		<div class='card-body'>
-		What graph profiles are available<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ===========          =================          =========== -->
-			<tr> <th>Name       </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ===========          =================          =========== -->
-			<tr> <td>name       </td> <td><b>mandatory</b> </td> <td>name of the profile we want to get details for</td> </tr>
-			<tr> <td>user       </td> <td>                 </td> <td>If the profile is for a specific user </td> </tr>
-			<tr> <td>dbxTypeName</td> <td>                 </td> <td>If the profile is for a specific product (AseTune, RsTune, PostgresTune, SqlServerTune...) </td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/api/graph/description' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/graph/description'>/api/graph/description</a></h5>
-		<div class='card-body'>
-		What graph profiles are available<br>
-		<br>
-		Parameters:
-<!-- 
-		<table>
-			<tr> <th>Name       </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<tr> <td>name       </td> <td>                 </td> <td>name of the profile we want to get details for</td> </tr>
-			<tr> <td>user       </td> <td>                 </td> <td>If the profile is for a specific user </td> </tr>
-			<tr> <td>dbxTypeName</td> <td>                 </td> <td>If the profile is for a specific product (AseTune, RsTune, PostgresTune, SqlServerTune...) </td> </tr>
-		</table>
--->
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/api/healthcheck' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/healthcheck?srvInfo=false&srv='>/api/healthcheck</a></h5>
-		<div class='card-body'>
-		If the server is healthy or not<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ====             =================          =========== -->
-			<tr> <th>Name   </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ====             =================          =========== -->
-			<tr> <td>srv    </td> <td>all-servers      </td> <td>name of the server we want to get details for</td> </tr>
-			<tr> <td>age    </td> <td>sampleInterval*20</td> <td>Number of minutes the collector has not sent any data to DbxCentral
-			                                                     <ul>
-			                                                         <li><code>Less than 0: </code> Do not check Data Received</li>
-			                                                         <li><code>Equal to 0:  </code> Calculate the threshold by: CollectorSampleInterval * 20 (so for 30 seconds interval, the result will be 10 minutes)</li>
-			                                                         <li><code>Above 0:     </code> Number of <b>minutes</b> we havn't received any data... if above = mark as "not healthy"</li>
-			                                                     </ul>
-			                                                 </td> </tr>
-			<tr> <td>srvInfo</td> <td>true</td>              <td>Include server info in the result</td> </tr>
-			<tr> <td>result </td> <td>array</td>             <td>Result type, can be 'arr', 'array' or 'map'</td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/api/last-sample' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/last-sample'>/api/last-sample?srv=SRV_NAME&cm=CmActiveStatements</a></h5>
-		<div class='card-body'>
-		Get info about <b>LAST Counters</b> for a specific CmName<br>
-		An empty JSON Map, means that there are no Counters found.<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ====          =================          =========== -->
-			<tr> <th>Name</th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ====          =================          =========== -->
-			<tr> <td>srv </td> <td>all servers      </td> <td>name of the server we want to get details for</td> </tr>
-			<tr> <td>cm  </td> <td>mandatory        </td> <td>name of the CM (CounterModel) we want to get details for</td> </tr>
-		</table>
-		<br>
-		JSON Output Example:
-		<pre>
-			[ {
-			  "srvName" : "GORAN_UB3_DS",
-			  "appName" : "AseTune",
-			  "cmNames" : [ {
-			    "cmName" : "CmActiveStatements",
-			    "lastSample" : {
-			      "counters" : { 
-			        "metaData" : [ { "columnName" : "xxx", "jdbcTypeName" : "xxx", "javaClassName" : "xxx", "guessedDbmsType" : "xxx", "isDiffColumn" : false, "isPctColumn" : false }, ...moreMetaDataColumns... ],
-			        "absCounters" : [ {row0}, {row1}, ...moreRows... ],
-			        "diffCounters" : [ {row0}, {row1}, ...moreRows... ],
-			        "rateCounters" : [ {row0}, {row1}, ...moreRows... ],
-			      }
-			    }
-			  }, ...moreCmNames... ]
-			}, ...moreSrvNames... ]
-		</pre>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/api/alarm/active' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/alarm/active'>/api/alarm/active</a></h5>
-		<div class='card-body'>
-		Get info about <b>active</b> alarms<br>
-		An empty JSON array, means that there are no active alarms.<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ====          =================          =========== -->
-			<tr> <th>Name</th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ====          =================          =========== -->
-			<tr> <td>srv </td> <td>all servers      </td> <td>name of the server we want to get details for</td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/api/alarm/history' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/alarm/history?srv=SRVNAME'>/api/alarm/history</a></h5>
-		<div class='card-body'>
-		Get info about <b>historical</b> alarms, all alarms that has been triggered in the past<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ==========        =================          =========== -->
-			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==========        =================          =========== -->
-			<tr> <td>srv     </td> <td>                 </td> <td>name of the server we want to get details for</td> </tr>
-			<tr> <td>age     </td> <td>                 </td> <td>not yet implemented: only within X hours</td> </tr>
-			<tr> <td>type    </td> <td>                 </td> <td>not yet implemented: only 'RAISE', 'RE-RAISE', 'CANCEL'</td> </tr>
-			<tr> <td>category</td> <td>                 </td> <td>not yet implemented: only for category 'CPU', 'DISK'...</td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/api/graph/data' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/graph/data?sessionName=SRVNAME&cmName=CmSummary&graphName=aaCpuGraph&startTime=2h'>/api/graph/data</a></h5>
-		<div class='card-body'>
-		Get graph data<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ==============          =================          =========== -->
-			<tr> <th>Name          </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==============          =================          =========== -->
-			<tr> <td>sessionName   </td> <td><b>mandatory</b> </td> <td>Name of the server</td> </tr>
-			<tr> <td>cmName        </td> <td>                 </td> <td>Name of a specific collector</td> </tr>
-			<tr> <td>graphName     </td> <td>                 </td> <td>Name of a specific graph</td> </tr>
-			<tr> <td>startTime     </td> <td>2h               </td> <td>Optional: From what time: Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) (default=2h)</td> </tr>
-			<tr> <td>endTime       </td> <td>                 </td> <td>Optional: To what time Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) if startTime is 'date' then #mhd is added to startTime (default='')</td> </tr>
-			<tr> <td>sampleType    </td> <td>AUTO             </td> <td>Optional: (default=AUTO)<br>
-			                                                               <code>ALL             </code> get <b>all</b> saved data points<br>
-			                                                               <code>AUTO            </code> Uses a automatic formula, normally uses ALL, if there are to many data-points in the sample intervall, then switch over to: MAX_OVER_SAMPLES or MIN_OVER_SAMPLES<br>
-			                                                               <code>MAX_OVER_SAMPLES</code> Only take the MAX value from X samples, this can be used if there are to many samples<br>
-			                                                               <code>MIN_OVER_SAMPLES</code> Only take the MIN value from X samples, this can be used if there are to many samples<br>
-			                                                               <code>MAX_OVER_MINUTES</code> Only take the MAX value from a sample over X minutes, this can be used if there are to many samples<br>
-			                                                               <code>MIN_OVER_MINUTES</code> Only take the MIN value from a sample over X minutes, this can be used if there are to many samples<br>
-			                                                               <code>AVG_OVER_MINUTES</code> Only take the Average value from a sample over X minutes, this can be used if there are to many samples<br>
-			                                                               <code>SUM_OVER_MINUTES</code> Sum all values from a sample over X minutes, this can be used if there are to many samples<br>
-			                                                               > </tr>
-			<tr> <td>sampleValue   </td> <td>                 </td> <td>Optional: Used when NOT ALL or AUTO to set how many data-points/samples or minutes that we should do MIN/MAX/AVG/SUM over</td> </tr>
-			<tr> <td>autoOverflow  </td> <td>                 </td> <td>Optional: Used with 'AUTO' to "skip" data-points if there are to many. (default='360', if we find more than 360 data-points, then switch to 'MAX_OVER_SAMPLES')</td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/api/chart/broadcast-ws' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/chart/broadcast-ws'>/api/chart/broadcast-ws</a></h5>
-		<div class='card-body'>
-		Start to subscribe (using a WebSocket) to graph data (graph data will be "pushed" from DbxCentral to your browser/client)<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ==========          =================          =========== -->
-			<tr> <th>Name      </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==========          =================          =========== -->
-			<tr> <td>serverList</td> <td><b>mandatory</b> </td> <td>comma separated list of server/session names we want to subscribe to</td> </tr>
-			<tr> <td>graphList </td> <td></td>                  <td>comma separated list of graph names we want to subscribe to</td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/api/pcs/receiver' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/pcs/receiver'>/api/pcs/receiver</a></h5>
-		<div class='card-body'>
-		This is where Dbx Central receives data from any DbxTune Collector.<br>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/api/pcs/queueInfo' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/pcs/queueInfo'>/api/pcs/queueInfo</a></h5>
-		<div class='card-body'>
-		Inbound PCS Queue Size. How many entries are in the Queue waiting to be stored by the Persistence Storage.<br>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/api/collector-refresh' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/collector-refresh?srv=SRVNAME'>/api/collector-refresh</a></h5>
-		<div class='card-body'>
-		Send a refresh request to a collector server.<br>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/api/space/forecast' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/api/api/space/forecast?srv=SRVNAME'>/api/space/forecast</a></h5>
-		<div class='card-body'>
-		Space Forecast for OS or Database.<br>
-		<br>
-		Parameters:
-		<table>
-			<!--     ==========          =================          =========== -->
-			<tr> <th>Name      </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==========          =================          =========== -->
-			<tr> <td>srv       </td> <td><b>mandatory</b> </td> <td>Name of the server</td> </tr>
-			<tr> <td>type      </td> <td>os</td>                <td>Type of forecast: os, data, wal</td> </tr>
-			<tr> <td>days      </td> <td>30</td>                <td>Number of Days to use in the forecast</td> </tr>
-			<tr> <td>period    </td> <td>60</td>                <td>Sample Period Grouped in this amount of minutes</td> </tr>
-			<tr> <td>outType   </td> <td>html-page</td>         <td>What to return/produce: html-page, html-table, json</td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		
-		
-		<h2>Other URL, descriptions</h2>
-
-		<!-- ############################################################################# -->
-		<div id='/admin' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/admin'>/admin</a></h5>
-		<div class='card-body'>
-		Various admin commands (not published yet).<br>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/admin/shutdown' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/admin/shutdown'>/admin/shutdown</a></h5>
-		<div class='card-body'>
-		Shutdown or restart DbxCentral.<br>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/alarmLog' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/alarmLog?name=ALARM.LOG.SRVNAME.log'>/alarmLog</a></h5>
-		<div class='card-body'>
-		Get alarm log file
-		<br>
-		Parameters:
-		<table>
-			<!--     ==========        =================          =========== -->
-			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==========        =================          =========== -->
-			<tr> <td>name    </td> <td><b>mandatory</b> </td> <td>Name of the file (only the filename, not full path)</td> </tr>
-			<tr> <td>type    </td> <td>                 </td> <td>for example: RAISE, CANCEL</td> </tr>
-			<tr> <td>method  </td> <td>html             </td> <td>can be: 'pcs', 'json', 'html'</td> </tr>
-			<tr> <td>age     </td> <td>                 </td> <td>for 'pcs' only: YYYY-MM-DD hh:mm:ss or -10, 10m, 10h, 10d, 10l (-10=last-10-rows, 10m=last-10-minutes, 10h=last-10-hours, 10d=last-10-days, 10l=last-10-rows)</td> </tr>
-		</table>
-		
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/log' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/log?name=SRVNAME.log&method=plain&discard=&tail=500'>/log</a></h5>
-		<div class='card-body'>
-		Get log file
-		<br>
-		Parameters:
-		<table>
-			<!--     ==========        =================          =========== -->
-			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==========        =================          =========== -->
-			<tr> <td>name    </td> <td><b>mandatory</b> </td> <td>Name of the file (only the filename, not full path)</td> </tr>
-<!--		<tr> <td>type    </td> <td>                 </td> <td></td> </tr>-->
-			<tr> <td>method  </td> <td>plain            </td> <td>can be: 'plain', 'json', 'html'</td> </tr>
-			<tr> <td>discard </td> <td>                 </td> <td>Only if method='plain': RegEx for log rows to <b>discard</b> from output</td> </tr>
-			<tr> <td>tail    </td> <td>                 </td> <td>Only if method='plain': Print new output if file is changed (on the server side).</td> </tr>
-		</table>
-		Note: method: 'json', 'html' might be depricated.
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/logtail' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/logtail'>/logtail</a></h5>
-		<div class='card-body'>
-		(internal): WebSocket feeder if we have <b>tail -f</b> enabled on a file.
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/conf' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/conf?name=ase.GENERIC.conf'>/conf</a></h5>
-		<div class='card-body'>
-		Get configuration file
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/report' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/report?name=SRVNAME&op=viewLatest'>/report</a></h5>
-		<div class='card-body'>
-		Access <i>Daily Report</i> files.
-		<br>
-		Parameters:
-		<table>
-			<!--     ==========        =================          =========== -->
-			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==========        =================          =========== -->
-			<tr> <td>name    </td> <td><b>mandatory</b> </td> <td>Server name to view report for.<br>OR: Full name of the report file (format: srvName.YYYY-MM-DD_hhmm.html, example: <code>DEV_ASE.2019-09-05_0003.html</code>)</td> </tr>
-			<tr> <td>op      </td> <td><b>mandatory</b> </td> <td>can be: 'viewLatest', 'view' or 'remove'</td> </tr>
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/download-local-dbxtune' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/download-local-dbxtune'>/download-local-dbxtune</a></h5>
-		<div class='card-body'>
-		Download the local latest DbxTune ZIP package located at DbxCentral server.<br>
-		This could be a later version than the "public" found at the official download page.
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-		
-		<!-- ############################################################################# -->
-		<div id='/overview' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/overview'>/overview</a></h5>
-		<div class='card-body'>
-		Get an overview page with all managed server and there statuses
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/logout' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/logout'>/logout</a></h5>
-		<div class='card-body'>
-		Logout
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/login-check' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/login-check'>/login-check</a></h5>
-		<div class='card-body'>
-		Check if we a signed-in or not
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
-
-		<!-- ############################################################################# -->
-		<div id='/h2ws' class='card border-dark mb-5'>
-		<h5 class='card-header'><a href='/h2ws?filename=DBX_CENTRAL_H2WriterStatCronTask.log&startDate=YYYY-MM-DDThh:mm&endDate=YYYY-MM-DDThh:mm'>/h2ws</a></h5>
-		<div class='card-body'>
-		H2 Central Writer Statistics (chart info)
-		<br>
-		Parameters:
-		<table>
-			<!--     ==========           =================          =========== -->
-			<tr> <th>Name       </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
-			<!--     ==========           =================          =========== -->
-			<tr> <td>filename   </td> <td><b>mandatory</b> </td> <td>Name of the file (only the filename, not full path), probably=DBX_CENTRAL_H2WriterStatCronTask.log</td> </tr>
-			<tr> <td>startDate  </td> <td><b>mandatory</b> </td> <td>YYYY-MM-DDThh:mm  <i>date in format: RFC 3339</i></td> </tr>
-			<tr> <td>endDate    </td> <td><b>mandatory</b> </td> <td>YYYY-MM-DDThh:mm  <i>date in format: RFC 3339</i></td> </tr>
-<!--			<tr> <td>minDuration</td> <td>                 </td> <td>not used for the moment</td> </tr>-->
-		</table>
-		</div> <!-- end: card-body -->
-		</div> <!-- end: card -->
-
+	<!-- ===================================================================== -->
+	<div class="toc">
+		<strong>Contents</strong>
+		<ul class="mt-2">
+			<li><a href="#mcp">MCP Server</a> — AI agent integration (Claude, Cursor, etc.)</li>
+			<li><a href="#collector-proxy">Collector Proxy APIs</a> — <code>/api/cc/mgt/</code> &nbsp;(CM data, DDL storage, Query Store, DBMS config)</li>
+			<li><a href="#sessions">Sessions &amp; Servers</a></li>
+			<li><a href="#graph-data">Graph Data</a></li>
+			<li><a href="#alarms">Alarms</a></li>
+			<li><a href="#reports">Reports &amp; Logs</a></li>
+			<li><a href="#admin">Admin &amp; Misc</a></li>
+		</ul>
 	</div>
-	</body>
+
+
+	<!-- ===================================================================== -->
+	<h2 id="mcp">MCP Server <span class="new-badge">NEW</span></h2>
+	<p>
+		DbxCentral implements the <a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol (MCP)</a>
+		over HTTP/SSE, enabling AI agents (Claude, Cursor, VS Code Copilot, etc.) to query database
+		performance data directly. The endpoint must be enabled in <code>DBX_CENTRAL.conf</code>.
+	</p>
+
+	<!-- /mcp POST -->
+	<div id="/mcp" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-post badge-method">POST</span>
+		<span class="badge badge-get badge-method">GET</span>
+		/mcp
+	</h5>
+	<div class="card-body">
+		<p>
+			<strong>POST</strong> — JSON-RPC 2.0 endpoint for MCP tool calls.<br>
+			<strong>GET</strong> — Server-Sent Events (SSE) stream for alarm push notifications (when <code>mcp.sseNotificationsEnabled=true</code>).
+		</p>
+
+		<h6>Authentication</h6>
+		<p>
+			Set <code>DbxTuneCentral.mcp.apiToken</code> in <code>DBX_CENTRAL.conf</code> and pass it as:<br>
+			<code>Authorization: Bearer &lt;token&gt;</code> &nbsp;or&nbsp; <code>X-Api-Token: &lt;token&gt;</code>
+		</p>
+
+		<h6>MCP Client Configuration (Claude Desktop example)</h6>
+		<pre>{
+  "mcpServers": {
+    "dbxcentral": {
+      "url": "http://your-host:8080/mcp",
+      "headers": { "Authorization": "Bearer your-secret-token-here" }
+    }
+  }
+}</pre>
+
+		<h6>Available Tools</h6>
+		<table>
+			<tr><th>Tool</th><th>Description</th></tr>
+			<tr><td>list_servers</td><td>List all monitored servers currently registered in DbxCentral</td></tr>
+			<tr><td>list_metrics</td><td>List available graph metrics for a server (CmName + graphName)</td></tr>
+			<tr><td>list_cms</td><td>List all Counter Models on the collector with active/data status</td></tr>
+			<tr><td>get_metric_data</td><td>Fetch raw or aggregated time-series data for a specific graph</td></tr>
+			<tr><td>get_performance_summary</td><td>CPU, I/O, memory, connections overview (CmSummary)</td></tr>
+			<tr><td>get_wait_stats</td><td>Top wait types ranked by total time (CmWaitStats)</td></tr>
+			<tr><td>get_blocking_info</td><td>Current and historical blocking chains</td></tr>
+			<tr><td>get_top_queries</td><td>Most expensive queries ranked by CPU, reads, elapsed, or executions</td></tr>
+			<tr><td>get_active_statements</td><td>Live active SQL statements with session context, referenced tables, and execution plans</td></tr>
+			<tr><td>get_spid_waits</td><td>Per-session wait breakdown from the collector</td></tr>
+			<tr><td>get_memory_analysis</td><td>Memory clerk allocations and grant wait analysis</td></tr>
+			<tr><td>get_io_analysis</td><td>Disk I/O activity by database and file</td></tr>
+			<tr><td>get_tempdb_usage</td><td>TempDB space usage by session</td></tr>
+			<tr><td>get_query_context</td><td>Table size, index health, and SQL activity context for a specific table (DSR + live CMs)</td></tr>
+			<tr><td>get_table_schema</td><td>Table/index DDL and statistics from DSR + live collector CMs</td></tr>
+			<tr><td>get_object_ddl</td><td>DDL definitions, table metadata, and execution plans from MonDdlStorage</td></tr>
+			<tr><td>compare_baseline</td><td>Diff performance between two time windows (summary, waits, queries)</td></tr>
+			<tr><td>list_daily_reports</td><td>List available Daily Summary Report (DSR) files</td></tr>
+			<tr><td>get_daily_report_section</td><td>Extract a named section from a DSR as plain text</td></tr>
+			<tr><td>trigger_query_store_extract</td><td>SQL Server: trigger an on-demand Query Store extraction (runs at midnight normally); poll with action=status</td></tr>
+			<tr><td>get_query_store_databases</td><td>SQL Server: list databases with captured Query Store data + health/storage metrics</td></tr>
+			<tr><td>get_query_store_top_queries</td><td>SQL Server: top N queries from Query Store ranked by duration/cpu/reads/executions/memory</td></tr>
+			<tr><td>get_query_store_query_detail</td><td>SQL Server: full detail for a query_id — all plans, wait stats, timeline, plan regression signal</td></tr>
+			<tr><td>get_active_alarms</td><td>Currently active alarms across all or one server</td></tr>
+			<tr><td>get_alarm_history</td><td>Historical alarm events in a time range</td></tr>
+			<tr><td>get_dbms_config</td><td>Full DBMS configuration (gated by <code>mcp.exposeDbmsConfig=true</code>)</td></tr>
+		</table>
+
+		<h6 class="mt-3">Time range formats (accepted by most tools)</h6>
+		<table>
+			<tr><th>Format</th><th>Example</th><th>Meaning</th></tr>
+			<tr><td>Relative</td><td><code>-1h</code>, <code>-30m</code>, <code>-7d</code></td><td>Last N hours/minutes/days from now</td></tr>
+			<tr><td>Absolute</td><td><code>2026-04-10 14:30:00</code></td><td>Exact timestamp</td></tr>
+			<tr><td>Now</td><td><code>now</code></td><td>Current time</td></tr>
+		</table>
+
+		<h6 class="mt-3">Key DBX_CENTRAL.conf settings</h6>
+		<table>
+			<tr><th>Property</th><th>Default</th><th>Description</th></tr>
+			<tr><td>DbxTuneCentral.mcp.enabled</td><td>false</td><td>Enable the /mcp endpoint</td></tr>
+			<tr><td>DbxTuneCentral.mcp.apiToken</td><td>(none)</td><td>Bearer token for authentication</td></tr>
+			<tr><td>DbxTuneCentral.mcp.allowedHosts</td><td>127.0.0.1</td><td>Comma-separated IP allowlist</td></tr>
+			<tr><td>DbxTuneCentral.mcp.maxTimeRangeHours</td><td>168</td><td>Max query window (hours)</td></tr>
+			<tr><td>DbxTuneCentral.mcp.exposeDbmsConfig</td><td>false</td><td>Enable get_dbms_config tool</td></tr>
+			<tr><td>DbxTuneCentral.mcp.sseNotificationsEnabled</td><td>false</td><td>Push alarm events via SSE GET /mcp</td></tr>
+		</table>
+	</div>
+	</div><!-- /card -->
+
+
+	<!-- ===================================================================== -->
+	<h2 id="collector-proxy">Collector Proxy APIs <span class="new-badge">NEW</span></h2>
+	<p>
+		These endpoints proxy requests from DbxCentral to the appropriate collector (DbxTune PCS).
+		All require <code>srv=SERVERNAME</code>. The collector must be online and registered.
+	</p>
+
+	<div id="/api/cc/mgt/cm/list" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/cc/mgt/cm/list?srv=SRVNAME&amp;time=now">/api/cc/mgt/cm/list</a>
+	</h5>
+	<div class="card-body">
+		List all Counter Models on the collector with their active/data status.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+			<tr><td>time</td><td>now</td><td>Timestamp for hasData window: <code>now</code> or <code>yyyy-MM-dd HH:mm:ss</code></td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/cc/mgt/cm/data" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/cc/mgt/cm/data?srv=SRVNAME&amp;cm=CmWaitStats&amp;time=now&amp;type=abs">/api/cc/mgt/cm/data</a>
+	</h5>
+	<div class="card-body">
+		Fetch the latest snapshot for a single Counter Model from the collector.
+		Returns <code>{ "columns": [...], "rows": [[...], ...] }</code>.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+			<tr><td>cm</td><td class="mandatory">mandatory</td><td>CM name, e.g. <code>CmWaitStats</code>, <code>CmActiveStatements</code></td></tr>
+			<tr><td>time</td><td>now</td><td>Sample timestamp</td></tr>
+			<tr><td>type</td><td>abs</td><td><code>abs</code>, <code>diff</code>, or <code>rate</code></td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/cc/mgt/ddl-storage" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/cc/mgt/ddl-storage?srv=SRVNAME&amp;objectName=MyTable&amp;type=U">/api/cc/mgt/ddl-storage</a>
+	</h5>
+	<div class="card-body">
+		Retrieve DDL definitions, table/index metadata, and execution plans from MonDdlStorage on the collector.
+		MonDdlStorage is automatically populated during monitoring with CREATE statements, table size info,
+		optimizer diagnostics, and captured execution plans.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+			<tr><td>objectName</td><td>(all)</td><td>Case-insensitive partial match on object name</td></tr>
+			<tr><td>dbname</td><td>(all)</td><td>Database name filter. Use <code>statement_cache</code> for execution plans</td></tr>
+			<tr><td>type</td><td>(all)</td><td>Comma-separated type codes: <code>U</code>=Table, <code>V</code>=View, <code>P</code>=Proc/Func, <code>TR</code>=Trigger, <code>SS</code>=Execution plan</td></tr>
+			<tr><td>includeText</td><td>true</td><td><code>true/false</code> — include DDL text blobs (objectText, extraInfoText, etc.)</td></tr>
+			<tr><td>ts</td><td>now</td><td>Timestamp for H2 date-rolling: selects the correct historical database file</td></tr>
+			<tr><td>limit</td><td>200</td><td>Max items returned</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/cc/mgt/query-store" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/cc/mgt/query-store?srv=SRVNAME&amp;action=listDatabases">/api/cc/mgt/query-store</a>
+	</h5>
+	<div class="card-body">
+		SQL Server Query Store data captured nightly by the collector into H2 schemas named <code>qs:&lt;DatabaseName&gt;</code>.
+		Extraction runs automatically at midnight (<code>doLastRecordingActionBeforeDatabaseRollover</code>).
+		Use <code>ts</code> to select data from a specific day's H2 recording.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+			<tr><td>action</td><td class="mandatory">mandatory</td><td>
+				<strong>GET actions (read-only):</strong><br>
+				<code>listDatabases</code> — all databases with QS data + health info<br>
+				<code>topQueries</code> — top N queries ranked by cost metric<br>
+				<code>queryDetail</code> — full detail for a specific query_id<br>
+				<code>extractStatus</code> — poll the status of a running/completed extraction<br>
+				<strong>POST actions (write):</strong><br>
+				<code>extract</code> — trigger an on-demand extraction (async, returns immediately)
+			</td></tr>
+			<tr><td>dbname</td><td>(all)</td><td>Database name. Required for topQueries/queryDetail.</td></tr>
+			<tr><td>queryId</td><td></td><td>Required for queryDetail: the query_id to inspect</td></tr>
+			<tr><td>rankBy</td><td>duration</td><td>topQueries ranking: <code>duration</code> | <code>cpu</code> | <code>reads</code> | <code>executions</code> | <code>memory</code></td></tr>
+			<tr><td>topN</td><td>25</td><td>Max queries returned (topQueries)</td></tr>
+			<tr><td>minExecutions</td><td>2</td><td>Minimum execution count filter (noise reduction)</td></tr>
+			<tr><td>includePlan</td><td>false</td><td>queryDetail: include XML execution plan text (can be large)</td></tr>
+			<tr><td>type</td><td>QUERY_STORE</td><td>extract/extractStatus: <code>QUERY_STORE</code> | <code>DEADLOCK</code> | <code>JOB_SCHEDULER</code> | <code>BACKUP_HISTORY</code></td></tr>
+			<tr><td>ts</td><td>now</td><td>Timestamp for H2 date-rolling (selects the correct historical DB file)</td></tr>
+		</table>
+		<p class="note">
+			<strong>On-demand extraction pattern:</strong>
+			<code>POST ?action=extract&amp;type=QUERY_STORE</code> → returns <code>{"status":"started",...}</code> →
+			poll <code>GET ?action=extractStatus&amp;type=QUERY_STORE</code> until <code>lastStatus="ok"</code> →
+			then call <code>topQueries</code> or <code>queryDetail</code> for today's data.
+			Extraction typically takes 1–3 minutes.
+		</p>
+	</div>
+	</div>
+
+	<div id="/api/cc/mgt/dbms-config" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/cc/mgt/dbms-config?srv=SRVNAME">/api/cc/mgt/dbms-config</a>
+	</h5>
+	<div class="card-body">
+		Full DBMS configuration captured at collector startup: sp_configure values, database options,
+		trace flags, and detected configuration issues.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+			<tr><td>ts</td><td>(latest)</td><td>Timestamp to find the closest session start</td></tr>
+		</table>
+	</div>
+	</div>
+
+
+	<!-- ===================================================================== -->
+	<h2 id="sessions">Sessions &amp; Servers</h2>
+
+	<div id="/api/sessions" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/sessions?type=last&amp;graphs=false&amp;status=all">/api/sessions</a>
+	</h5>
+	<div class="card-body">
+		Available sessions and basic information about each.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>type</td><td>last</td><td><code>last</code> — last available session; <code>all</code> — all recordings</td></tr>
+			<tr><td>graphs</td><td>false</td><td>Include available graphs for each session</td></tr>
+			<tr><td>status</td><td>all</td><td>Filter by session status</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/server-layout" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/server-layout">/api/server-layout</a>
+	</h5>
+	<div class="card-body">
+		Server list and layout configuration for the landing page. No parameters.
+	</div>
+	</div>
+
+	<div id="/api/healthcheck" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/healthcheck?srvInfo=true">/api/healthcheck</a>
+	</h5>
+	<div class="card-body">
+		Health status for one or all collectors.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td>(all)</td><td>Server name to check</td></tr>
+			<tr><td>age</td><td>sampleInterval×20</td><td>
+				Minutes without data before marking unhealthy.<br>
+				<code>&lt;0</code> = skip data-received check;&nbsp;
+				<code>0</code> = auto (interval×20);&nbsp;
+				<code>&gt;0</code> = explicit minutes
+			</td></tr>
+			<tr><td>srvInfo</td><td>true</td><td>Include server info in response</td></tr>
+			<tr><td>result</td><td>array</td><td><code>array</code> or <code>map</code></td></tr>
+		</table>
+	</div>
+	</div>
+
+
+	<!-- ===================================================================== -->
+	<h2 id="graph-data">Graph Data</h2>
+
+	<div id="/api/graphs" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/graphs?sessionName=SRVNAME">/api/graphs</a>
+	</h5>
+	<div class="card-body">
+		Available graphs for a server or profile.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>sessionName</td><td class="mandatory">mandatory</td><td>Server/session/profile name</td></tr>
+			<tr><td>sessionStartTime</td><td>(last session)</td><td>Specific session start time</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/graph/data" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/graph/data?sessionName=SRVNAME&amp;cmName=CmSummary&amp;graphName=aaCpuGraph&amp;startTime=-2h">/api/graph/data</a>
+	</h5>
+	<div class="card-body">
+		Time-series graph data for a specific CM and graph.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>sessionName</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+			<tr><td>cmName</td><td></td><td>Counter Model name (e.g. <code>CmSummary</code>, <code>CmWaitStats</code>)</td></tr>
+			<tr><td>graphName</td><td></td><td>Graph name within the CM</td></tr>
+			<tr><td>startTime</td><td>-2h</td><td>Start time: <code>-Nm</code>, <code>-Nh</code>, <code>-Nd</code>, or <code>yyyy-MM-dd HH:mm:ss</code></td></tr>
+			<tr><td>endTime</td><td>(now)</td><td>End time, same formats as startTime</td></tr>
+			<tr><td>sampleType</td><td>AUTO</td><td>
+				<code>ALL</code> — every data point<br>
+				<code>AUTO</code> — automatic downsampling when &gt;360 points<br>
+				<code>MAX_OVER_SAMPLES</code>, <code>MIN_OVER_SAMPLES</code> — peak/min per N samples<br>
+				<code>MAX_OVER_MINUTES</code>, <code>MIN_OVER_MINUTES</code>, <code>AVG_OVER_MINUTES</code>, <code>SUM_OVER_MINUTES</code> — bucketed by time
+			</td></tr>
+			<tr><td>sampleValue</td><td></td><td>N for non-ALL/AUTO sample types</td></tr>
+			<tr><td>autoOverflow</td><td>360</td><td>Point threshold before AUTO switches to downsampling</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/graph/profiles" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/graph/profiles?name=PROFILE_NAME">/api/graph/profiles</a>
+	</h5>
+	<div class="card-body">
+		Details for a named graph profile.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>name</td><td class="mandatory">mandatory</td><td>Profile name</td></tr>
+			<tr><td>user</td><td></td><td>User-specific profile</td></tr>
+			<tr><td>dbxTypeName</td><td></td><td>Product name (SqlServerTune, AseTune, PostgresTune, …)</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/chart/broadcast-ws" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-ws badge-method">WS</span>
+		<a href="/api/chart/broadcast-ws">/api/chart/broadcast-ws</a>
+	</h5>
+	<div class="card-body">
+		WebSocket subscription for live graph data push.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>serverList</td><td class="mandatory">mandatory</td><td>Comma-separated server names</td></tr>
+			<tr><td>graphList</td><td></td><td>Comma-separated graph names to subscribe to</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/last-sample" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/last-sample?srv=SRVNAME&amp;cm=CmActiveStatements">/api/last-sample</a>
+	</h5>
+	<div class="card-body">
+		Latest counter snapshot for a specific CM (raw counters format with absCounters/diffCounters/rateCounters).
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td>(all)</td><td>Server name</td></tr>
+			<tr><td>cm</td><td class="mandatory">mandatory</td><td>CM name (e.g. <code>CmActiveStatements</code>)</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/space/forecast" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/space/forecast?srv=SRVNAME&amp;type=os&amp;days=30">/api/space/forecast</a>
+	</h5>
+	<div class="card-body">
+		Space usage forecast for OS disk, data files, or WAL/log.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+			<tr><td>type</td><td>os</td><td><code>os</code>, <code>data</code>, or <code>wal</code></td></tr>
+			<tr><td>days</td><td>30</td><td>Number of history days to use for the forecast</td></tr>
+			<tr><td>period</td><td>60</td><td>Sample aggregation period in minutes</td></tr>
+			<tr><td>outType</td><td>html-page</td><td><code>html-page</code>, <code>html-table</code>, or <code>json</code></td></tr>
+		</table>
+	</div>
+	</div>
+
+
+	<!-- ===================================================================== -->
+	<h2 id="alarms">Alarms</h2>
+
+	<div id="/api/alarm/active" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/alarm/active">/api/alarm/active</a>
+	</h5>
+	<div class="card-body">
+		Currently active alarms. Returns an empty array if none.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td>(all)</td><td>Filter by server name</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/api/alarm/history" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/alarm/history?srv=SRVNAME">/api/alarm/history</a>
+	</h5>
+	<div class="card-body">
+		Historical alarm events (RAISE, RE-RAISE, CANCEL).
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td>(all)</td><td>Filter by server name</td></tr>
+			<tr><td>age</td><td></td><td>Time window, e.g. <code>-24h</code> or <code>-7d</code></td></tr>
+			<tr><td>type</td><td></td><td>Filter by event type: <code>RAISE</code>, <code>RE-RAISE</code>, <code>CANCEL</code></td></tr>
+			<tr><td>category</td><td></td><td>Filter by alarm category: <code>CPU</code>, <code>DISK</code>, etc.</td></tr>
+		</table>
+	</div>
+	</div>
+
+
+	<!-- ===================================================================== -->
+	<h2 id="reports">Reports &amp; Logs</h2>
+
+	<div id="/report" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/report?name=SRVNAME&amp;op=viewLatest">/report</a>
+	</h5>
+	<div class="card-body">
+		Access Daily Summary Report (DSR) HTML files.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>name</td><td class="mandatory">mandatory</td><td>Server name, or full report filename (<code>SRVNAME.2026-04-10_0003.html</code>)</td></tr>
+			<tr><td>op</td><td class="mandatory">mandatory</td><td><code>viewLatest</code>, <code>view</code>, or <code>remove</code></td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/alarmLog" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/alarmLog?name=ALARM.LOG.SRVNAME.log">/alarmLog</a>
+	</h5>
+	<div class="card-body">
+		Retrieve an alarm log file.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>name</td><td class="mandatory">mandatory</td><td>Filename only (not full path)</td></tr>
+			<tr><td>type</td><td></td><td><code>RAISE</code>, <code>CANCEL</code></td></tr>
+			<tr><td>method</td><td>html</td><td><code>pcs</code>, <code>json</code>, <code>html</code></td></tr>
+			<tr><td>age</td><td></td><td>For <code>pcs</code>: <code>-10l</code> (last 10 rows), <code>-10m</code> (last 10 min), <code>-10h</code>, <code>-10d</code>, or <code>yyyy-MM-dd HH:mm:ss</code></td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/log" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/log?name=SRVNAME.log&amp;method=plain&amp;tail=500">/log</a>
+	</h5>
+	<div class="card-body">
+		Retrieve a log file.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>name</td><td class="mandatory">mandatory</td><td>Filename only (not full path)</td></tr>
+			<tr><td>method</td><td>plain</td><td><code>plain</code>, <code>json</code>, <code>html</code></td></tr>
+			<tr><td>discard</td><td></td><td>RegEx for lines to exclude (plain mode only)</td></tr>
+			<tr><td>tail</td><td></td><td>Number of lines to tail (plain mode only)</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/logtail" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-ws badge-method">WS</span>
+		/logtail
+	</h5>
+	<div class="card-body">
+		WebSocket feeder for live log tail (<code>tail -f</code> style). Used internally by the log viewer.
+	</div>
+	</div>
+
+	<div id="/h2ws" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/h2ws?filename=DBX_CENTRAL_H2WriterStatCronTask.log&amp;startDate=2026-04-01T00:00&amp;endDate=2026-04-11T00:00">/h2ws</a>
+	</h5>
+	<div class="card-body">
+		H2 writer statistics chart (internal storage performance).
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>filename</td><td class="mandatory">mandatory</td><td>Log filename (typically <code>DBX_CENTRAL_H2WriterStatCronTask.log</code>)</td></tr>
+			<tr><td>startDate</td><td class="mandatory">mandatory</td><td>RFC 3339: <code>yyyy-MM-ddThh:mm</code></td></tr>
+			<tr><td>endDate</td><td class="mandatory">mandatory</td><td>RFC 3339: <code>yyyy-MM-ddThh:mm</code></td></tr>
+		</table>
+	</div>
+	</div>
+
+
+	<!-- ===================================================================== -->
+	<h2 id="admin">Admin &amp; Misc</h2>
+
+	<div id="/api/pcs/receiver" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-post badge-method">POST</span>
+		/api/pcs/receiver
+	</h5>
+	<div class="card-body">
+		Inbound data receiver — this is where DbxTune collectors push monitoring data to DbxCentral.
+		Not intended for direct external use.
+	</div>
+	</div>
+
+	<div id="/api/pcs/queueInfo" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/pcs/queueInfo">/api/pcs/queueInfo</a>
+	</h5>
+	<div class="card-body">
+		Inbound PCS queue depth — how many entries are waiting to be written to persistent storage.
+	</div>
+	</div>
+
+	<div id="/api/collector-refresh" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/api/collector-refresh?srv=SRVNAME">/api/collector-refresh</a>
+	</h5>
+	<div class="card-body">
+		Send a configuration refresh request to a collector.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srv</td><td class="mandatory">mandatory</td><td>Server name</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/conf" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/conf?name=ase.GENERIC.conf">/conf</a>
+	</h5>
+	<div class="card-body">
+		Retrieve a configuration file by name.
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>name</td><td class="mandatory">mandatory</td><td>Configuration filename</td></tr>
+		</table>
+	</div>
+	</div>
+
+	<div id="/overview" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/overview">/overview</a>
+	</h5>
+	<div class="card-body">Overview page with all managed servers and their current status.</div>
+	</div>
+
+	<div id="/download-local-dbxtune" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/download-local-dbxtune">/download-local-dbxtune</a>
+	</h5>
+	<div class="card-body">
+		Download the latest local DbxTune ZIP package from the DbxCentral server.
+		May be a newer version than the public release.
+	</div>
+	</div>
+
+	<div id="/admin" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/admin">/admin</a>
+	</h5>
+	<div class="card-body">Admin panel with internal management commands.</div>
+	</div>
+
+	<div id="/admin/shutdown" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/admin/shutdown">/admin/shutdown</a>
+	</h5>
+	<div class="card-body">Shutdown or restart DbxCentral.</div>
+	</div>
+
+	<div id="/login-check" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/login-check">/login-check</a>
+	</h5>
+	<div class="card-body">Check whether the current browser session is authenticated.</div>
+	</div>
+
+	<div id="/logout" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-get badge-method">GET</span>
+		<a href="/logout">/logout</a>
+	</h5>
+	<div class="card-body">Log out and invalidate the current session.</div>
+	</div>
+
+
+	<div class="mt-4 mb-5 text-muted note">
+		DbxCentral API Reference — kept in <code>resources/WebContent/api/index.html</code>
+	</div>
+
+</div><!-- /container -->
+</body>
 </html>
-
-

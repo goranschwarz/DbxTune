@@ -34,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxTuneCentral;
+import com.dbxtune.central.controllers.cc.ProxyHelper;
 import com.dbxtune.mgt.NoGuiManagementServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -85,16 +86,14 @@ extends HttpServlet
 		if (authHeader == null || !authHeader.startsWith(bearerPrefix))
 		{
 			_logger.warn("CollectorRegisterServlet: Missing or malformed Authorization header from " + req.getRemoteHost());
-			resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			resp.getOutputStream().println("{\"error\":\"unauthorized\",\"message\":\"Missing Authorization: Bearer header\"}");
+			ProxyHelper.sendJsonError(resp, HttpServletResponse.SC_UNAUTHORIZED, "unauthorized", "Missing Authorization: Bearer header");
 			return;
 		}
 		String receivedToken = authHeader.substring(bearerPrefix.length()).trim();
 		if (!expectedToken.equals(receivedToken))
 		{
 			_logger.warn("CollectorRegisterServlet: Invalid registration token from " + req.getRemoteHost());
-			resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			resp.getOutputStream().println("{\"error\":\"forbidden\",\"message\":\"Invalid registration token\"}");
+			ProxyHelper.sendJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "forbidden", "Invalid registration token");
 			return;
 		}
 
@@ -102,8 +101,7 @@ extends HttpServlet
 		String srvName = req.getParameter("srv");
 		if (StringUtil.isNullOrBlank(srvName))
 		{
-			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			resp.getOutputStream().println("{\"error\":\"missing-param\",\"message\":\"Missing required parameter: srv\"}");
+			ProxyHelper.sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "missing-param", "Missing required parameter: srv");
 			return;
 		}
 		srvName = srvName.trim();
@@ -111,8 +109,7 @@ extends HttpServlet
 		// Only allow safe filename characters
 		if (!srvName.matches("[A-Za-z0-9_\\-\\.]+"))
 		{
-			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			resp.getOutputStream().println("{\"error\":\"invalid-param\",\"message\":\"Invalid server name\"}");
+			ProxyHelper.sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "invalid-param", "Invalid server name");
 			return;
 		}
 
@@ -124,8 +121,7 @@ extends HttpServlet
 		}
 		if (StringUtil.isNullOrBlank(body))
 		{
-			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			resp.getOutputStream().println("{\"error\":\"empty-body\",\"message\":\"Request body is empty\"}");
+			ProxyHelper.sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "empty-body", "Request body is empty");
 			return;
 		}
 

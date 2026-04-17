@@ -1808,7 +1808,7 @@ function dbxTuneGraphSubscribe()
 
 		// Dispatch live data to all module panels via GraphBus
 		if (typeof GraphBus !== 'undefined')
-			GraphBus.emit('ws-data', { srvName: graphServerName });
+			GraphBus.emit('ws-data', { srvName: graphServerName, appName: appName });
 
 		// TODO:
 		// to let the Browser update it's GUI it would have been nice with a yield() method
@@ -4389,6 +4389,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	const sampleType     = getParameter("sampleType",    "");
 	const sampleValue    = getParameter("sampleValue",   "");
 	const colorSchema    = getParameter("cs",            "dark");
+	const openSpvParam   = getParameter("openShowplanViewer", "");
 
 	_debug = debug;
 	_colorSchema = colorSchema;
@@ -4810,6 +4811,19 @@ function dbxTuneLoadCharts(destinationDivId)
 			_serverList.push(serverName);
 	}
 	console.log("Unique Server List: "+_serverList);
+
+	// Notify other modules that _serverList is now fully populated.
+	// dbxGraphQueryStore.js (and others) listen for this to do early server-type detection.
+	if (typeof GraphBus !== 'undefined')
+		GraphBus.emit('server-list-ready', { serverList: _serverList });
+
+	// If the Showplan Viewer was requested via URL param, auto-open it once
+	// dbxShowplan.js has had time to inject its modals (800 ms delay).
+	if (openSpvParam === '1') {
+		setTimeout(function() {
+			if (typeof window.openShowplanViewer === 'function') window.openShowplanViewer();
+		}, 800);
+	}
 
 	// Set the window/tab title name
 	document.title = _serverList;

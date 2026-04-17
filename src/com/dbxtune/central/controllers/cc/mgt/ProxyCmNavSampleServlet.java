@@ -24,10 +24,8 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.LinkedHashMap;
@@ -42,6 +40,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.controllers.cc.ProxyHelper;
+import com.dbxtune.utils.HtmlQueryString;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -69,13 +68,7 @@ extends ProxyHelper
 		catch (IOException ex)
 		{
 			_logger.warn("ProxyCmNavSampleServlet.getSrvInfo failed: " + ex.getMessage());
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "srv-not-found");
-			err.put("message", ex.getMessage());
-			resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_NOT_FOUND, "srv-not-found", ex.getMessage());
 			return;
 		}
 
@@ -89,13 +82,8 @@ extends ProxyHelper
 		if (collectorBaseUrl == null)
 		{
 			_logger.error("ProxyCmNavSampleServlet: Can't find Base URL for server '" + getSrvName() + "'.");
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "collector-offline");
-			err.put("message", "Cannot determine collector URL for server: " + getSrvName());
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+					"collector-offline", "Cannot determine collector URL for server: " + getSrvName());
 			return;
 		}
 
@@ -103,10 +91,11 @@ extends ProxyHelper
 		String cmName    = req.getParameter("cm")   != null ? req.getParameter("cm")   : "";
 		String dir       = req.getParameter("dir")  != null ? req.getParameter("dir")  : "next";
 
-		String url = collectorBaseUrl + "/api/mgt/cm/navSample"
-				+ "?time=" + URLEncoder.encode(timeParam, StandardCharsets.UTF_8)
-				+ "&cm="   + URLEncoder.encode(cmName,    StandardCharsets.UTF_8)
-				+ "&dir="  + URLEncoder.encode(dir,       StandardCharsets.UTF_8);
+		HtmlQueryString qs = new HtmlQueryString(collectorBaseUrl + "/api/mgt/cm/navSample");
+		qs.add("time", timeParam);
+		qs.add("cm",   cmName);
+		qs.add("dir",  dir);
+		String url = qs.toString();
 
 		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
@@ -126,13 +115,8 @@ extends ProxyHelper
 		catch (ConnectException ex)
 		{
 			_logger.warn("ProxyCmNavSampleServlet: Collector at " + collectorBaseUrl + " is offline: " + ex.getMessage());
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "collector-offline");
-			err.put("message", "Collector at " + collectorBaseUrl + " is not reachable");
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+					"collector-offline", "Collector at " + collectorBaseUrl + " is not reachable");
 		}
 		catch (InterruptedException ex)
 		{
@@ -159,25 +143,13 @@ extends ProxyHelper
 		}
 		catch (IllegalArgumentException ex)
 		{
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "bad-time-param");
-			err.put("message", "Cannot parse time parameter: " + timeParam);
-			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "bad-time-param", "Cannot parse time parameter: " + timeParam);
 			return;
 		}
 
 		if (!CentralPersistReader.hasInstance())
 		{
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "no-reader");
-			err.put("message", "CentralPersistReader not available");
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "no-reader", "CentralPersistReader not available");
 			return;
 		}
 
@@ -189,13 +161,7 @@ extends ProxyHelper
 		catch (SQLException ex)
 		{
 			_logger.error("ProxyCmNavSampleServlet.serveLocalMetrics: DB error for CM '{}': {}", cmName, ex.getMessage(), ex);
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "db-error");
-			err.put("message", "Database error reading local metrics");
-			resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "db-error", "Database error reading local metrics");
 			return;
 		}
 

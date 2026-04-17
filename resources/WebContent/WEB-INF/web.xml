@@ -640,12 +640,122 @@
 
 	<!-- ============================================================ -->
 	<servlet>
+		<servlet-name>ProxyDdlStorageServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyDdlStorageServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyDdlStorageServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/ddl-storage</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<!-- Available H2 recording database date keys for a collector    -->
+	<servlet>
+		<servlet-name>ProxyRecordingDatabasesServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyRecordingDatabasesServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyRecordingDatabasesServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/recording-databases</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<!-- SQL Server Query Store data (captured nightly by collector)  -->
+	<servlet>
+		<servlet-name>ProxyQueryStoreServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyQueryStoreServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyQueryStoreServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/query-store</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<!-- SQL Server deadlock data (sp_BlitzLock, captured nightly by collector) -->
+	<servlet>
+		<servlet-name>ProxyDeadlockServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyDeadlockServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyDeadlockServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/deadlock</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<!-- SQL Server Agent job history (captured nightly by collector) -->
+	<servlet>
+		<servlet-name>ProxyJobSchedulerServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.cc.mgt.ProxyJobSchedulerServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ProxyJobSchedulerServlet</servlet-name>
+		<url-pattern>/api/cc/mgt/job-scheduler</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- ============================================================ -->
+	<servlet>
 		<servlet-name>LetsEncryptAcmeChallengeServlet</servlet-name>
 		<servlet-class>com.dbxtune.central.controllers.LetsEncryptAcmeChallengeServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>LetsEncryptAcmeChallengeServlet</servlet-name>
 		<url-pattern>/.well-known/acme-challenge/*</url-pattern>
+	</servlet-mapping>
+
+	<!-- RFC 9728: OAuth Protected Resource Metadata                          -->
+	<!-- Tells mcp-remote the resource URI and supported bearer method        -->
+	<servlet>
+		<servlet-name>OAuthProtectedResourceServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.OAuthProtectedResourceServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>OAuthProtectedResourceServlet</servlet-name>
+		<url-pattern>/.well-known/oauth-protected-resource</url-pattern>
+	</servlet-mapping>
+
+	<!-- Minimal OAuth 2.0 AS stubs so mcp-remote can complete its OAuth dance -->
+	<!-- and obtain the configured MCP API token as the access_token.          -->
+	<servlet>
+		<servlet-name>OAuthStubServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.OAuthStubServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>OAuthStubServlet</servlet-name>
+		<url-pattern>/.well-known/oauth-authorization-server</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>OAuthStubServlet</servlet-name>
+		<url-pattern>/register</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>OAuthStubServlet</servlet-name>
+		<url-pattern>/oauth/authorize</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>OAuthStubServlet</servlet-name>
+		<url-pattern>/oauth/token</url-pattern>
+	</servlet-mapping>
+
+
+
+
+
+	<!-- ============================================================ -->
+	<!-- MCP (Model Context Protocol) endpoint for AI assistant access -->
+	<!-- Enable via DBX_CENTRAL.conf: DbxTuneCentral.mcp.enabled = true -->
+	<servlet>
+		<servlet-name>McpController</servlet-name>
+		<servlet-class>com.dbxtune.central.mcp.McpController</servlet-class>
+		<async-supported>true</async-supported>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>McpController</servlet-name>
+		<url-pattern>/mcp</url-pattern>
 	</servlet-mapping>
 
 

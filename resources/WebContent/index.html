@@ -1453,6 +1453,7 @@ List of stuff that can be done
 					collectorMenuOptions = ''
 						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-report"                                     , "Job Scheduler Report for Today")\'>SQL Agent/Scheduler <b>Report</b> for <b>Today</b></a>'
 						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-timeline&startTime=TODAY&onlyLevelZero=true", "Job Scheduler Activity View Today")\'>SQL Agent/Scheduler <b>Timeline</b> View for <b>Today</b></a>'
+						+ '    <a class="dropdown-item" href=\'/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default&openShowplanViewer=1\' onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "openShowplanViewer=1")\'>&#128269; <b>Showplan</b> Loader</a>'
 						+ '    <div class="dropdown-divider"></div>';
 				}
 

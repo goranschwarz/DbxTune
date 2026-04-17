@@ -228,10 +228,10 @@ extends HttpServlet
 		if (!writer.isH2DateRolling())
 			return writer.getStorageConnection();
 
-		String dateKey = writer.formatDateKeyForDb(new Date(ts.getTime()));
+		String dateKey = writer.formatDateKeyForDbRecording(new Date(ts.getTime()));
 
 		// Same date as the live database — use the live connection directly
-		if (dateKey != null && dateKey.equals(writer.getCurrentDbDateKey()))
+		if (dateKey != null && dateKey.equals(writer.getCurrentRecordingDatabaseDateKey()))
 			return writer.getStorageConnection();
 
 		// Historical date — try the cache first
@@ -354,8 +354,8 @@ extends HttpServlet
 				conn = getConnectionForTimestamp(ts, writer);
 				if (conn == null && writer.isH2DateRolling())
 				{
-					String dateKey = writer.formatDateKeyForDb(new Date(ts.getTime()));
-					String liveKey = writer.getCurrentDbDateKey();
+					String dateKey = writer.formatDateKeyForDbRecording(new Date(ts.getTime()));
+					String liveKey = writer.getCurrentRecordingDatabaseDateKey();
 					if (dateKey != null && !dateKey.equals(liveKey))
 						noConnMsg = "No historical database found for date '" + dateKey + "'. "
 								+ "The .mv.db file may have been deleted or is beyond the retention period.";

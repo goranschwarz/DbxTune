@@ -117,7 +117,7 @@ extends DbmsExtractorAbstract
 			}
 
 			String sql = ""
-				    + "select \n"
+				    + "SELECT \n"
 //				    + "    server       = @@servername \n"
 				    + "    backup_date  = cast(backup_start_date as date) \n"
 				    + "   ,backup_day   = datename(dw, cast(backup_start_date as date)) \n"
@@ -128,10 +128,11 @@ extends DbmsExtractorAbstract
 				    + "   ,size_GB      = cast(sum(backup_size)            / 1024.0 / 1024.0 / 1024.0 as bigint) \n"
 				    + "   ,z_size_GB    = cast(sum(compressed_backup_size) / 1024.0 / 1024.0 / 1024.0 as bigint) \n"
 				    + backup_order_and_duration_hms
-				    + "from msdb.dbo.backupset bus \n"
-				    + "where bus.type IN ('D', 'I') \n" // D=DATABASE, I=DIFF DATABASE
-				    + "group by cast(backup_start_date as date) \n"
-				    + "order by cast(backup_start_date as date) desc \n"
+				    + "FROM msdb.dbo.backupset bus \n"
+				    + "WHERE bus.type IN ('D', 'I') \n" // D=DATABASE, I=DIFF DATABASE
+				    + "  AND (CONVERT(datetime, bus.backup_start_date, 102) >= GETDATE() - " + _period + ") \n"
+				    + "GROUP BY cast(backup_start_date as date) \n"
+				    + "ORDER BY cast(backup_start_date as date) desc \n"
 				    + "";
 				
 			return sql;

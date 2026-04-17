@@ -24,10 +24,8 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -50,6 +48,7 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.controllers.cc.ProxyHelper;
+import com.dbxtune.utils.HtmlQueryString;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -77,13 +76,7 @@ extends ProxyHelper
 		catch (IOException ex)
 		{
 			_logger.warn("ProxyCmListServlet.getSrvInfo failed: " + ex.getMessage());
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "srv-not-found");
-			err.put("message", ex.getMessage());
-			resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_NOT_FOUND, "srv-not-found", ex.getMessage());
 			return;
 		}
 
@@ -97,20 +90,17 @@ extends ProxyHelper
 		if (collectorBaseUrl == null)
 		{
 			_logger.error("ProxyCmListServlet: Can't find Base URL for server '" + getSrvName() + "'.");
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "collector-offline");
-			err.put("message", "Cannot determine collector URL for server: " + getSrvName());
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+					"collector-offline", "Cannot determine collector URL for server: " + getSrvName());
 			return;
 		}
 
 		String timeParam = req.getParameter("time");
 		if (timeParam == null) timeParam = "";
 
-		String url = collectorBaseUrl + "/api/mgt/cm/list?time=" + URLEncoder.encode(timeParam, StandardCharsets.UTF_8);
+		HtmlQueryString qs = new HtmlQueryString(collectorBaseUrl + "/api/mgt/cm/list");
+		qs.add("time", timeParam);
+		String url = qs.toString();
 
 		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
@@ -130,13 +120,8 @@ extends ProxyHelper
 		catch (ConnectException ex)
 		{
 			_logger.warn("ProxyCmListServlet: Collector at " + collectorBaseUrl + " is offline: " + ex.getMessage());
-			Map<String, Object> err = new LinkedHashMap<>();
-			err.put("error",   "collector-offline");
-			err.put("message", "Collector at " + collectorBaseUrl + " is not reachable");
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			om.writeValue(resp.getOutputStream(), err);
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+					"collector-offline", "Collector at " + collectorBaseUrl + " is not reachable");
 		}
 		catch (InterruptedException ex)
 		{
@@ -163,20 +148,14 @@ extends ProxyHelper
 		}
 		catch (IllegalArgumentException ex)
 		{
-			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getWriter().write("{\"error\":\"bad-time-param\",\"message\":\"Cannot parse time parameter: " + timeParam + "\"}");
+			sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "bad-time-param", "Cannot parse time parameter: " + timeParam);
 			return;
 		}
 
 		// ---- Get CM metadata from the live CounterController ----
 		if (!CounterController.hasInstance())
 		{
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getWriter().write("{\"error\":\"no-counter-controller\",\"message\":\"LocalMetrics CounterController not available\"}");
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "no-counter-controller", "LocalMetrics CounterController not available");
 			return;
 		}
 
@@ -184,9 +163,7 @@ extends ProxyHelper
 		List<CountersModel> cmList = cc.getCmList();
 		if (cmList == null || cmList.isEmpty())
 		{
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getWriter().write("{\"error\":\"no-cms\",\"message\":\"No CounterModels registered\"}");
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "no-cms", "No CounterModels registered");
 			return;
 		}
 
@@ -198,10 +175,7 @@ extends ProxyHelper
 		// ---- Get resolved time + row counts from DB ----
 		if (!CentralPersistReader.hasInstance())
 		{
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getWriter().write("{\"error\":\"no-reader\",\"message\":\"CentralPersistReader not available\"}");
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "no-reader", "CentralPersistReader not available");
 			return;
 		}
 
@@ -213,18 +187,13 @@ extends ProxyHelper
 		catch (SQLException ex)
 		{
 			_logger.error("ProxyCmListServlet.serveLocalMetrics: DB error: " + ex.getMessage(), ex);
-			resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getWriter().write("{\"error\":\"db-error\",\"message\":\"Database error reading local metrics\"}");
+			sendJsonError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "db-error", "Database error reading local metrics");
 			return;
 		}
 
 		if (dbResult == null)
 		{
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getWriter().write("{\"error\":\"no-data-in-window\",\"message\":\"No local metrics data near requested time\"}");
+			sendJsonError(resp, HttpServletResponse.SC_NOT_FOUND, "no-data-in-window", "No local metrics data near requested time");
 			return;
 		}
 

@@ -1092,7 +1092,7 @@ public abstract class ReportChartAbstract implements IReportChart
 //			String imgType = "webp"; // This did't really work at least using TwelveMonkeys_ImageIO version: 3.13.1
 
 			// If we want to change from a configuration...
-			Configuration.getCombinedConfiguration().getProperty("DailySummaryReport.ReportChartAbstract.writeAsHtmlInlineImage.imgType", imgType);
+			imgType = Configuration.getCombinedConfiguration().getProperty("DailySummaryReport.ReportChartAbstract.writeAsHtmlInlineImage.imgType", imgType);
 			
 			if ("png".equalsIgnoreCase(imgType))
 			{

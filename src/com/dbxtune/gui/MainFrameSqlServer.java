@@ -215,6 +215,14 @@ extends MainFrame
 	@Override
 	public void actionPerformed(ActionEvent e, Object source, String actionCmd)
 	{
+		//-----------------------------
+		// MENU - TOOLS
+		//-----------------------------
+		if (ACTION_OPEN_SQL_SERVER_PLAN_VIEWER.equals(actionCmd))
+		{
+			SqlServerPlanViewer planViewer = new SqlServerPlanViewer();
+			planViewer.setVisible(true);
+		}
 	}
 
 	/**
@@ -231,6 +239,9 @@ extends MainFrame
 			return super.getGroupIcon(groupName);
 	}
 	public static final ImageIcon TCP_GROUP_ICON_SERVER        = SwingUtils.readImageIcon(Version.class, "images/sqlserver_16.png");
+
+	public static final String ACTION_OPEN_SQL_SERVER_PLAN_VIEWER = "OPEN_SQL_SERVER_PLAN_VIEWER";
+	private JMenuItem           _sqlServerPlanViewer_mi;
 
 	@Override
 	protected boolean addTabGroup(String groupName)
@@ -258,10 +269,17 @@ extends MainFrame
 	{
 		JMenu menu = super.createToolsMenu();
 
+		_sqlServerPlanViewer_mi       = new JMenuItem("Showplan Viewer...");
+		_sqlServerPlanViewer_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/sqlserver_plan_viewer_16.png"));
+		_sqlServerPlanViewer_mi      .setActionCommand(ACTION_OPEN_SQL_SERVER_PLAN_VIEWER);
+		_sqlServerPlanViewer_mi      .addActionListener(this);
+
+		menu.add(_sqlServerPlanViewer_mi, 0);
+
 		_installProcs_m               = createInstallProcsMenu(this);
 
 		if (_installProcs_m != null) 
-			menu.add(_installProcs_m,      7);
+			menu.add(_installProcs_m,      8);
 
 		return menu;
 	}
@@ -281,6 +299,7 @@ extends MainFrame
 //			_aseConfigView_mi             .setEnabled(true);
 			
 			// Tools
+			_sqlServerPlanViewer_mi      .setEnabled(true);
 			_installProcs_m              .setEnabled(true);
 
 			// Help
@@ -295,6 +314,7 @@ extends MainFrame
 //			_aseConfigView_mi             .setEnabled(true);
 
 			// Tools
+			_sqlServerPlanViewer_mi      .setEnabled(true);
 			_installProcs_m              .setEnabled(false);
 
 			// Help
@@ -309,6 +329,7 @@ extends MainFrame
 //			_aseConfigView_mi             .setEnabled(false);
 
 			// Tools
+			_sqlServerPlanViewer_mi      .setEnabled(true);
 			_installProcs_m              .setEnabled(false);
 
 			// Help
