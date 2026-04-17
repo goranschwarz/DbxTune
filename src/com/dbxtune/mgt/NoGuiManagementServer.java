@@ -41,6 +41,11 @@ import com.dbxtune.mgt.controllers.CmDataServlet;
 import com.dbxtune.mgt.controllers.CmListServlet;
 import com.dbxtune.mgt.controllers.CmNavSampleServlet;
 import com.dbxtune.mgt.controllers.DbmsConfigServlet;
+import com.dbxtune.mgt.controllers.DdlStorageServlet;
+import com.dbxtune.mgt.controllers.QueryStoreServlet;
+import com.dbxtune.mgt.controllers.RecordingDatabasesServlet;
+import com.dbxtune.mgt.controllers.DeadlockServlet;
+import com.dbxtune.mgt.controllers.JobSchedulerServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigGetServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
 import com.dbxtune.mgt.controllers.NoGuiRefreshServlet;
@@ -242,15 +247,20 @@ public class NoGuiManagementServer
 
 				// Add Servlet's 
 //					context.addServlet(new DbxTuneNoGuiManagementHandler(), "/*");
-				context.addServlet(new ServletHolder(new NoGuiConfigGetServlet()) , "/mgt/config/get"); // can we do regex like: "/config/(get|set)"
-				context.addServlet(new ServletHolder(new NoGuiConfigSetServlet()) , "/mgt/config/set"); // can we do regex like: "/config/(get|set)"
-				context.addServlet(new ServletHolder(new NoGuiShutdownServlet())  , "/mgt/shutdown");
-				context.addServlet(new ServletHolder(new NoGuiRestartServlet())   , "/mgt/restart");
-				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())   , "/mgt/refresh");
-				context.addServlet(new ServletHolder(new CmListServlet())         , "/mgt/cm/list");
-				context.addServlet(new ServletHolder(new CmDataServlet())         , "/mgt/cm/data");
-				context.addServlet(new ServletHolder(new CmNavSampleServlet())    , "/mgt/cm/navSample");
-				context.addServlet(new ServletHolder(new DbmsConfigServlet())     , "/mgt/dbms-config");
+				context.addServlet(new ServletHolder(new NoGuiConfigGetServlet())    , "/mgt/config/get"); // can we do regex like: "/config/(get|set)"
+				context.addServlet(new ServletHolder(new NoGuiConfigSetServlet())    , "/mgt/config/set"); // can we do regex like: "/config/(get|set)"
+				context.addServlet(new ServletHolder(new NoGuiShutdownServlet())     , "/mgt/shutdown");
+				context.addServlet(new ServletHolder(new NoGuiRestartServlet())      , "/mgt/restart");
+				context.addServlet(new ServletHolder(new NoGuiRefreshServlet())      , "/mgt/refresh");
+				context.addServlet(new ServletHolder(new CmListServlet())            , "/mgt/cm/list");
+				context.addServlet(new ServletHolder(new CmDataServlet())            , "/mgt/cm/data");
+				context.addServlet(new ServletHolder(new CmNavSampleServlet())       , "/mgt/cm/navSample");
+				context.addServlet(new ServletHolder(new DbmsConfigServlet())        , "/mgt/dbms-config");
+				context.addServlet(new ServletHolder(new DdlStorageServlet())        , "/mgt/ddl-storage");
+				context.addServlet(new ServletHolder(new QueryStoreServlet())        , "/mgt/query-store");
+				context.addServlet(new ServletHolder(new RecordingDatabasesServlet()), "/mgt/recording-databases");
+				context.addServlet(new ServletHolder(new DeadlockServlet())          , "/mgt/deadlock");
+				context.addServlet(new ServletHolder(new JobSchedulerServlet())      , "/mgt/job-scheduler");
 
 				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
 				// AND: I guess the below implementations will just "stream" over HTML as the "end-result", or how should we do it ???
@@ -314,7 +324,12 @@ public class NoGuiManagementServer
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/data");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/cm/navSample");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/dbms-config");
-				
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/ddl-storage");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/query-store");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/recording-databases");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/deadlock");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/job-scheduler");
+
 				// Get out of the "start on port number" loop
 				break;
 			}

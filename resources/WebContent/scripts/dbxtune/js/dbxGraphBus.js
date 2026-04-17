@@ -95,4 +95,25 @@ $(document).ready(function () {
 			alarmPanelLiveRefresh(d.srvName);
 	});
 
+	// Query Store: show button when SqlServerTune data arrives; auto-open only for SQL Server pages
+	GraphBus.on('ws-data', function (d) {
+		if (typeof queryStoreCheckAppName === 'function')
+			queryStoreCheckAppName(d.appName || '');
+		// Only restore the panel when we know this is a SQL Server session.
+		// This prevents the panel from popping open when the user navigates to
+		// a non-SQL Server DBMS while queryStore-panelOpen='1' is still in localStorage.
+		if (d.appName === 'SqlServerTune' && typeof _qsAutoOpenChecked !== 'undefined' && !_qsAutoOpenChecked) {
+			_qsAutoOpenChecked = true;
+			if (!$('#query-store-panel').is(':visible')) {
+				try { if (localStorage.getItem('queryStore-panelOpen') === '1') queryStoreToggle(); } catch(e) {}
+			}
+		}
+	});
+
+	// Query Store: respond to history slider changes
+	GraphBus.on('slider-change', function (d) {
+		if (typeof queryStoreSliderRefresh === 'function')
+			queryStoreSliderRefresh(d.startTime);
+	});
+
 });

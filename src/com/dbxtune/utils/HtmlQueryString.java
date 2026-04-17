@@ -21,17 +21,17 @@
  ******************************************************************************/
 package com.dbxtune.utils;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 public class HtmlQueryString
 {
-	private String          _url	 = null;
-	private StringBuffer    _query	 = new StringBuffer();
+	private String          _url     = null;
+	private StringBuilder   _query   = new StringBuilder();
 	private int             _counter = 0;
 
 	public HtmlQueryString()
@@ -104,97 +104,68 @@ public class HtmlQueryString
 	public static Map<String, String> parseQueryString(String queryString) 
 	{
 		Map<String, String> map = new LinkedHashMap<>();
-		if ((queryString == null) || (queryString.equals(""))) 
+		if (queryString == null || queryString.isEmpty())
 		{
 			return map;
 		}
 		String[] params = queryString.split("&");
-		for (String param : params) 
+		for (String param : params)
 		{
-			try 
-			{
-				String[] keyValuePair = param.split("=", 2);
-				String name = URLDecoder.decode(keyValuePair[0], "UTF-8");
-				if (name == "") 
-					continue;
+			String[] keyValuePair = param.split("=", 2);
+			String name = URLDecoder.decode(keyValuePair[0], StandardCharsets.UTF_8);
+			if (name.isEmpty())
+				continue;
 
-				String value = keyValuePair.length > 1 ? URLDecoder.decode(keyValuePair[1], "UTF-8") : "";
-				map.put(name, value);
-			} 
-			catch (UnsupportedEncodingException e) 
-			{
-				// ignore this parameter if it can't be decoded
-			}
+			String value = keyValuePair.length > 1 ? URLDecoder.decode(keyValuePair[1], StandardCharsets.UTF_8) : "";
+			map.put(name, value);
 		}
 		return map;
 	}
 	
-	public synchronized void add(String name, String value)
+	/**
+	 * Add a name/value pair to the query string. Both name and value are URL-encoded.
+	 * Spaces are translated to {@code +}.
+	 */
+	public void add(String name, String value)
 	{
 		if (_query.length() > 0)
 			_query.append('&');
 		encode(name, value);
 	}
 
-	public synchronized void add(String name, int value)
+	public void add(String name, int value)
 	{
-		if (_query.length() > 0)
-			_query.append('&');
-		encode(name, Integer.toString(value));
+		add(name, Integer.toString(value));
 	}
 
-	public synchronized void add(String name, long value)
+	public void add(String name, long value)
 	{
-		if (_query.length() > 0)
-			_query.append('&');
-		encode(name, Long.toString(value));
+		add(name, Long.toString(value));
 	}
 
-	private synchronized void encode(String name, String value)
+	/**
+	 * Add a name/value pair only when {@code value} is non-null and non-empty.
+	 * Convenient for optional parameters so callers don't need an {@code if} guard.
+	 */
+	public void addIfNotEmpty(String name, String value)
+	{
+		if (value != null && !value.isEmpty())
+			add(name, value);
+	}
+
+	private void encode(String name, String value)
 	{
 		if (value == null)
-		value = "";
+			value = "";
 
-		// replace all '\', with '/', which makes some fields more readable.
+		// Normalise Windows paths that may appear in parameter values.
 		value = value.replace('\\', '/');
 
-//		// The below translates ' ' -->> '+' -->> '%20'
-//		try
-//		{
-//			_query.append(URLEncoder.encode(name, StandardCharsets.UTF_8.toString()).replace("+", "%20"));
-//			_query.append('=');
-//			_query.append(URLEncoder.encode(value, StandardCharsets.UTF_8.toString()).replace("+", "%20"));
-//		}
-//		catch (UnsupportedEncodingException ex)
-//		{
-//			throw new RuntimeException("Broken VM does not support UTF-8");
-//		}
-
-		// The below translates ' ' -->> '+'
-//		try
-//		{
-//			URLCodec urlCodec = new URLCodec("UTF-8");
-//			
-//			_query.append(urlCodec.encode(name));
-//			_query.append('=');
-//			_query.append(urlCodec.encode(value));
-//		}
-//		catch (EncoderException ex)
-//		{
-//			throw new RuntimeException("Problems encoding URL parameters as UTF-8", ex);
-//		}
-		
-		// The below translates ' ' -->> '+'
-		try
-		{
-			_query.append(URLEncoder.encode(name, "UTF-8"));
-			_query.append('=');
-			_query.append(URLEncoder.encode(value, "UTF-8"));
-		}
-		catch (UnsupportedEncodingException ex)
-		{
-			throw new RuntimeException("Broken VM does not support UTF-8");
-		}
+		// URLEncoder translates ' ' → '+'.  Use StandardCharsets to avoid the
+		// deprecated String-charset overload and its checked exception.
+		_query.append(URLEncoder.encode(name,  StandardCharsets.UTF_8));
+		_query.append('=');
+		_query.append(URLEncoder.encode(value, StandardCharsets.UTF_8));
 	}
 
 	/** This is just a number that can be used for "anything" */

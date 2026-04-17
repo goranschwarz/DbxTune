@@ -120,10 +120,12 @@ extends CountersModel
 		"exec_phys_reads_mb",
 		"exec_logical_reads_mb",
 		"exec_writes_mb",
+		"exec_row_count",
 		"sess_cpu_time",
 		"sess_reads",
 		"sess_logical_reads",
-		"sess_writes"
+		"sess_writes",
+		"sess_row_count"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -272,6 +274,9 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("SpidWaitTimeMsSum",           "Summary of wait time in MS from CmSpidWait/dm_exec_session_wait_stats  (if enabled).");
 		setLocalToolTipTextOnTableColumnHeader("HasSpidWaitInfo",             "True/false if wait info was available from CmSpidWait/dm_exec_session_wait_stats  (if enabled).");
 		setLocalToolTipTextOnTableColumnHeader("SpidWaitInfo",                "A 'table' with all WaitTypes/WaitCount/WaitTimeMs from CmSpidWait/dm_exec_session_wait_stats  (if enabled).");
+
+		setLocalToolTipTextOnTableColumnHeader("exec_row_count",              "Number of rows that have been returned to the client by this request");
+		setLocalToolTipTextOnTableColumnHeader("sess_row_count",              "Number of rows returned on the session up to this point");
 	}
 
 	@Override
@@ -524,10 +529,12 @@ extends CountersModel
 			"    ,exec_phys_reads_mb        = CAST(der.reads         / 128.0 AS numeric(10,1)) \n" +
 			"    ,exec_logical_reads_mb     = CAST(der.logical_reads / 128.0 AS numeric(10,1)) \n" +
 			"    ,exec_writes_mb            = CAST(der.writes        / 128.0 AS numeric(10,1)) \n" +
+			"    ,exec_row_count            = der.row_count \n" +
 			"    ,sess_cpu_time             = des.cpu_time \n" +
 			"    ,sess_reads                = des.reads \n" +
 			"    ,sess_logical_reads        = des.logical_reads \n" +
 			"    ,sess_writes               = des.writes \n" +
+			"    ,sess_row_count            = des.row_count \n" +
 			"    ,memory_grant_requested    = CASE WHEN dem.session_id IS NULL THEN convert(bit,0) ELSE convert(bit,1) END \n" +
 			"    ,memory_grant_wait_time_ms = dem.wait_time_ms \n" +
 			"    ,requested_memory_kb       = dem.requested_memory_kb \n" +
@@ -655,10 +662,12 @@ extends CountersModel
 			"    ,CAST(0 AS numeric(10,1))                     --exec_phys_reads_mb    \n" +
 			"    ,CAST(0 AS numeric(10,1))                     --exec_logical_reads_mb \n" +
 			"    ,CAST(0 AS numeric(10,1))                     --exec_writes_mb        \n" +
+			"    ,0                                            --exec_row_count   \n" +
 			"    ,0                                            --des.cpu_time \n" +
 			"    ,0                                            --des.reads   \n" +
 			"    ,0                                            --des.logical_reads   \n" +
 			"    ,0                                            --des.writes   \n" +
+			"    ,0                                            --sess_row_count   \n" +
 			"    ,memory_grant_requested    = convert(bit,0) \n" +
 			"    ,memory_grant_wait_time_ms = -1 \n" +
 			"    ,requested_memory_kb       = -1 \n" +

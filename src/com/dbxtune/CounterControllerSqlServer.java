@@ -26,15 +26,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.PatternSyntaxException;
 
 import javax.swing.JOptionPane;
@@ -105,6 +109,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.swing.GTable.ITableTooltip;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.SqlServerBackupHistoryExtractor;
 import com.dbxtune.pcs.SqlServerJobSchedulerExtractor;
@@ -1119,6 +1124,9 @@ extends CounterControllerAbstract
 	@Override
 	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection pcsConn)
 	{
+//		// Store for on-demand extraction (servlet/MCP can trigger outside midnight rollover)
+//		_lastPcsConn = pcsConn;
+
 		String srvName = getMonConnection().getDbmsServerNameNoThrow();
 
 		// Query Store
@@ -1145,6 +1153,186 @@ extends CounterControllerAbstract
 		//---------------------------------------------------------
 		// END: DbxTune - Specific Extended Event Sessions
 		//---------------------------------------------------------
+	}
+
+	//------------------------------------------------------------------
+	// On-demand extraction: ICounterController overrides
+	//------------------------------------------------------------------
+
+	/** Supported extraction types for SQL Server. */
+	private static final Set<ExtractionType> _SUPPORTED_EXTRACTIONS =
+			Collections.unmodifiableSet(EnumSet.of(
+					ExtractionType.QUERY_STORE,
+					ExtractionType.DEADLOCK,
+					ExtractionType.JOB_SCHEDULER,
+					ExtractionType.BACKUP_HISTORY));
+
+//	/** Last PCS (H2) connection seen — either from midnight rollover or on-demand. */
+//	private volatile DbxConnection _lastPcsConn = null;
+
+	// Per-type: running flag, last-run instant, last status message
+	private final AtomicBoolean _qsRunning   = new AtomicBoolean(false);
+	private final AtomicBoolean _dlRunning   = new AtomicBoolean(false);
+	private final AtomicBoolean _jsRunning   = new AtomicBoolean(false);
+	private final AtomicBoolean _bhRunning   = new AtomicBoolean(false);
+
+	private volatile Instant _qsLastRun = null;
+	private volatile Instant _dlLastRun = null;
+	private volatile Instant _jsLastRun = null;
+	private volatile Instant _bhLastRun = null;
+
+	private volatile String _qsLastStatus = "never";
+	private volatile String _dlLastStatus = "never";
+	private volatile String _jsLastStatus = "never";
+	private volatile String _bhLastStatus = "never";
+
+	@Override
+	public Set<ExtractionType> getSupportedExtractionTypes()
+	{
+		return _SUPPORTED_EXTRACTIONS;
+	}
+
+	@Override
+	public void triggerExtractionOf(ExtractionType type)
+	{
+		switch (type)
+		{
+			case QUERY_STORE:   asyncExtract(type, _qsRunning); break;
+			case DEADLOCK:      asyncExtract(type, _dlRunning); break;
+			case JOB_SCHEDULER: asyncExtract(type, _jsRunning); break;
+			case BACKUP_HISTORY:asyncExtract(type, _bhRunning); break;
+			default:
+				throw new UnsupportedOperationException(
+						"Extraction type " + type + " is not supported by CounterControllerSqlServer");
+		}
+	}
+
+	@Override
+	public Map<String, Object> getExtractionStatus(ExtractionType type)
+	{
+		boolean running;
+		Instant lastRun;
+		String  lastStatus;
+
+		switch (type)
+		{
+			case QUERY_STORE:    running = _qsRunning.get(); lastRun = _qsLastRun; lastStatus = _qsLastStatus; break;
+			case DEADLOCK:       running = _dlRunning.get(); lastRun = _dlLastRun; lastStatus = _dlLastStatus; break;
+			case JOB_SCHEDULER:  running = _jsRunning.get(); lastRun = _jsLastRun; lastStatus = _jsLastStatus; break;
+			case BACKUP_HISTORY: running = _bhRunning.get(); lastRun = _bhLastRun; lastStatus = _bhLastStatus; break;
+			default:
+				Map<String, Object> ns = new LinkedHashMap<>();
+				ns.put("running",    false);
+				ns.put("lastRun",    null);
+				ns.put("lastStatus", "not-supported");
+				return ns;
+		}
+
+		Map<String, Object> m = new LinkedHashMap<>();
+		m.put("running",    running);
+		m.put("lastRun",    lastRun != null ? lastRun.toString() : null);
+		m.put("lastStatus", lastStatus);
+		return m;
+	}
+
+	/**
+	 * Run an extraction type in a background daemon thread.
+	 * Guards against concurrent runs with the supplied {@link AtomicBoolean}.
+	 */
+	private void asyncExtract(ExtractionType type, AtomicBoolean runningFlag)
+	{
+		if (!runningFlag.compareAndSet(false, true))
+			throw new IllegalStateException(
+					"Extraction " + type + " is already in progress for server "
+					+ getMonConnection().getDbmsServerNameNoThrow());
+
+		// Resolve PCS connection: prefer the stored one; fall back to PersistentCounterHandler
+//		DbxConnection pcsConn = _lastPcsConn;
+		DbxConnection pcsConn = null; // ALWAYS Clone a connection to do the extraction!
+		if (pcsConn == null && PersistentCounterHandler.hasInstance())
+		{
+			PersistWriterJdbc writer = PersistentCounterHandler.getInstance().getPersistWriterJdbc();
+//			if (writer != null)
+//				pcsConn = writer.getStorageConnection();
+			if (writer != null)
+			{
+				try { pcsConn = writer.cloneStorageConnection(type.name()); }
+				catch (Exception ex) 
+				{ 
+					runningFlag.set(false);
+					throw new IllegalStateException("Problems cloning the PCS Writer Connection. For " + type + " extraction. Msg=" + ex.getMessage(), ex);
+				}
+			}
+		}
+		if (pcsConn == null)
+		{
+			runningFlag.set(false);
+			throw new IllegalStateException(
+					"No PCS storage connection available for on-demand " + type + " extraction. "
+					+ "The collector may not have completed its first recording cycle yet.");
+		}
+
+		final DbxConnection finalPcsConn = pcsConn;
+		final String        srvName      = getMonConnection().getDbmsServerNameNoThrow();
+
+		Thread t = new Thread(() ->
+		{
+			setRunningStatus(type, "running");
+			try
+			{
+				_logger.info("On-demand extraction started: type={}, server={}", type, srvName);
+				switch (type)
+				{
+					case QUERY_STORE:    queryStoreExtractor    (finalPcsConn, srvName); break;
+					case DEADLOCK:       deadlockExtractor      (finalPcsConn, srvName); break;
+					case JOB_SCHEDULER:  jobSchedulerExtractor  (finalPcsConn, srvName); break;
+					case BACKUP_HISTORY: backupHistoryExtractor (finalPcsConn, srvName); break;
+					default: break;
+				}
+				setLastRun(type, Instant.now());
+				setRunningStatus(type, "ok");
+				_logger.info("On-demand extraction completed: type={}, server={}", type, srvName);
+			}
+			catch (Exception ex)
+			{
+				String errMsg = "error: " + ex.getMessage();
+				setRunningStatus(type, errMsg);
+				_logger.warn("On-demand extraction failed: type=" + type + ", server=" + srvName, ex);
+			}
+			finally
+			{
+				if (finalPcsConn != null)
+					finalPcsConn.closeNoThrow();
+
+				runningFlag.set(false);
+			}
+		}, "OnDemand-" + type + "-" + srvName);
+		t.setDaemon(true);
+		t.start();
+	}
+
+	private void setRunningStatus(ExtractionType type, String status)
+	{
+		switch (type)
+		{
+			case QUERY_STORE:    _qsLastStatus = status; break;
+			case DEADLOCK:       _dlLastStatus = status; break;
+			case JOB_SCHEDULER:  _jsLastStatus = status; break;
+			case BACKUP_HISTORY: _bhLastStatus = status; break;
+			default: break;
+		}
+	}
+
+	private void setLastRun(ExtractionType type, Instant when)
+	{
+		switch (type)
+		{
+			case QUERY_STORE:    _qsLastRun = when; break;
+			case DEADLOCK:       _dlLastRun = when; break;
+			case JOB_SCHEDULER:  _jsLastRun = when; break;
+			case BACKUP_HISTORY: _bhLastRun = when; break;
+			default: break;
+		}
 	}
 	
 	//------------------------------------------------------------------

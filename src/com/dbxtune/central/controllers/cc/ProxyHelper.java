@@ -23,7 +23,10 @@ package com.dbxtune.central.controllers.cc;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -49,11 +52,14 @@ import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class ProxyHelper 
+public class ProxyHelper
 extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/** Shared ObjectMapper for error responses — ObjectMapper is thread-safe after configuration. */
+	private static final ObjectMapper _errorMapper = new ObjectMapper();
 
 	private String _srvName = null;
 	protected boolean _isLocalMetrics = false;
@@ -212,6 +218,31 @@ extends HttpServlet
 			outputStream.write(httpResponse.body());
 			outputStream.flush();
 		}
+	}
+
+	/**
+	 * Write a JSON error response: {@code {"error":"<errorCode>","message":"<message>"}}.
+	 * <p>
+	 * Centralises the repeated setStatus / setContentType / write pattern that used to
+	 * be duplicated across every proxy servlet.
+	 *
+	 * @param resp       the servlet response
+	 * @param httpStatus HTTP status code (e.g. {@code SC_NOT_FOUND})
+	 * @param errorCode  short machine-readable error token (e.g. {@code "srv-not-found"})
+	 * @param message    human-readable description
+	 */
+	public static void sendJsonError(HttpServletResponse resp, int httpStatus, String errorCode, String message)
+	throws IOException
+	{
+		resp.setStatus(httpStatus);
+		resp.setContentType(APPLICATION_JSON);
+		resp.setCharacterEncoding("UTF-8");
+		Map<String, Object> body = new LinkedHashMap<>();
+		body.put("error",   errorCode);
+		body.put("message", message);
+		PrintWriter out = resp.getWriter();
+		_errorMapper.writeValue(out, body);
+		out.flush();
 	}
 
 	protected void forwardRequestHeaders(HttpServletRequest request, HttpRequest.Builder builder)

@@ -24,10 +24,8 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -50,6 +48,7 @@ import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.central.controllers.cc.ProxyHelper;
+import com.dbxtune.utils.HtmlQueryString;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -76,10 +75,7 @@ extends ProxyHelper
 		catch (IOException ex)
 		{
 			_logger.warn("ProxyCmDataServlet.getSrvInfo failed: " + ex.getMessage());
-			resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getOutputStream().println("{\"error\":\"srv-not-found\",\"message\":" + jsonStr(ex.getMessage()) + "}");
+			sendJsonError(resp, HttpServletResponse.SC_NOT_FOUND, "srv-not-found", ex.getMessage());
 			return;
 		}
 
@@ -93,10 +89,8 @@ extends ProxyHelper
 		if (collectorBaseUrl == null)
 		{
 			_logger.error("ProxyCmDataServlet: Can't find Base URL for server '" + getSrvName() + "'.");
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getOutputStream().println("{\"error\":\"collector-offline\",\"message\":\"Cannot determine collector URL for server: " + getSrvName() + "\"}");
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+					"collector-offline", "Cannot determine collector URL for server: " + getSrvName());
 			return;
 		}
 
@@ -105,11 +99,12 @@ extends ProxyHelper
 		String typeParam  = req.getParameter("type")    != null ? req.getParameter("type")    : "abs";
 		String showAllParam = req.getParameter("showAll") != null ? req.getParameter("showAll") : "false";
 
-		String url = collectorBaseUrl + "/api/mgt/cm/data"
-				+ "?cm="      + URLEncoder.encode(cmName,       StandardCharsets.UTF_8)
-				+ "&time="    + URLEncoder.encode(timeParam,    StandardCharsets.UTF_8)
-				+ "&type="    + URLEncoder.encode(typeParam,    StandardCharsets.UTF_8)
-				+ "&showAll=" + URLEncoder.encode(showAllParam, StandardCharsets.UTF_8);
+		HtmlQueryString qs = new HtmlQueryString(collectorBaseUrl + "/api/mgt/cm/data");
+		qs.add("cm",      cmName);
+		qs.add("time",    timeParam);
+		qs.add("type",    typeParam);
+		qs.add("showAll", showAllParam);
+		String url = qs.toString();
 
 		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
@@ -129,10 +124,8 @@ extends ProxyHelper
 		catch (ConnectException ex)
 		{
 			_logger.warn("ProxyCmDataServlet: Collector at " + collectorBaseUrl + " is offline: " + ex.getMessage());
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getOutputStream().println("{\"error\":\"collector-offline\",\"message\":\"Collector at " + collectorBaseUrl + " is not reachable\"}");
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+					"collector-offline", "Collector at " + collectorBaseUrl + " is not reachable");
 		}
 		catch (InterruptedException ex)
 		{
@@ -141,11 +134,7 @@ extends ProxyHelper
 		}
 	}
 
-	private static String jsonStr(String s)
-	{
-		if (s == null) return "null";
-		return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\"";
-	}
+
 
 	// -----------------------------------------------------------------------
 	// Local-metrics path (DbxcLocalMetrics / DbxCentral self-monitoring)
@@ -160,10 +149,7 @@ extends ProxyHelper
 
 		if (cmName.isEmpty())
 		{
-			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getOutputStream().println("{\"error\":\"missing-cm-param\",\"message\":\"Parameter 'cm' is required\"}");
+			sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "missing-cm-param", "Parameter 'cm' is required");
 			return;
 		}
 
@@ -174,19 +160,13 @@ extends ProxyHelper
 		}
 		catch (IllegalArgumentException ex)
 		{
-			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getOutputStream().println("{\"error\":\"bad-time-param\",\"message\":" + jsonStr(timeParam) + "}");
+			sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "bad-time-param", timeParam);
 			return;
 		}
 
 		if (!CentralPersistReader.hasInstance())
 		{
-			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getOutputStream().println("{\"error\":\"no-reader\",\"message\":\"CentralPersistReader not available\"}");
+			sendJsonError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "no-reader", "CentralPersistReader not available");
 			return;
 		}
 
@@ -198,10 +178,7 @@ extends ProxyHelper
 		catch (SQLException ex)
 		{
 			_logger.error("ProxyCmDataServlet.serveLocalMetrics: DB error for CM '{}': {}", cmName, ex.getMessage(), ex);
-			resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			resp.setContentType(APPLICATION_JSON);
-			resp.setCharacterEncoding("UTF-8");
-			resp.getOutputStream().println("{\"error\":\"db-error\",\"message\":\"Database error reading local metrics\"}");
+			sendJsonError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "db-error", "Database error reading local metrics");
 			return;
 		}
 
@@ -209,17 +186,9 @@ extends ProxyHelper
 		if (result == null)
 		{
 			if (!"abs".equalsIgnoreCase(typeParam))
-			{
-				resp.setContentType(APPLICATION_JSON);
-				resp.setCharacterEncoding("UTF-8");
-				resp.getOutputStream().println("{\"error\":\"table-not-found\",\"message\":\"No " + typeParam + " counters for CM: " + cmName + "\"}");
-			}
+				sendJsonError(resp, HttpServletResponse.SC_NOT_FOUND, "table-not-found", "No " + typeParam + " counters for CM: " + cmName);
 			else
-			{
-				resp.setContentType(APPLICATION_JSON);
-				resp.setCharacterEncoding("UTF-8");
-				resp.getOutputStream().println("{\"error\":\"no-data-in-window\",\"message\":\"No local metrics data near requested time for CM: " + cmName + "\"}");
-			}
+				sendJsonError(resp, HttpServletResponse.SC_NOT_FOUND, "no-data-in-window", "No local metrics data near requested time for CM: " + cmName);
 			return;
 		}
 

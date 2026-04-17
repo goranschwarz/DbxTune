@@ -139,6 +139,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Login modal now appears in-place on any page - no more redirecting to index.html to log in and back</LI>
 		<LI>/log and /conf pages now have the full navbar and consistent styling</LI>
 		<LI>At the Graph Page - Right click 'Select Graphs...' open the "Select Graphs to View..." modal so you can add/remove/re-order graphs you want to view</LI>
+		<LI>You can now use 'Microsoft Entra ID' or 'Google' (OAuth) to login to DbxCentral -- For example see: /DbxTune/resources/dbxcentral/scripts/conf/DBX_CENTRAL.conf</LI>
+		<LI>in graph.html: In the Navbar, added "Tools" dropdown menu</LI>
+		<LI>for SQL Server: In the context menu at index.html added "Showplan Loader"</LI>
+		<LI>for SQL Server: Added "Query Store" button at the top right</LI>
+		<LI>for SQL Server: Showplan View, got some brushup, like: Plan Analyze section, the various seconds are now foldable</LI>		
+		<LI>Implemented MCP for LLM integration. See file README_MCP.md for how to enable and use it</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -253,6 +259,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements  </b> -- Cleaned up SQL Statements for 'lastKnownSql' that starts with ')' and simply removed that.</LI>
+		<LI><b>CmActiveStatements  </b> -- Added columns: exec_row_count, sess_row_count -- To view rows delivered to client.</LI>
 
 		<LI><b>CmDatabases         </b> -- Cleaned up SQL Statements for 'most_recent_sql_text' that starts with ')' and simply removed that.</LI>
 		<LI><b>CmDatabases         </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>

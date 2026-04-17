@@ -2413,10 +2413,12 @@ public class PersistWriterJdbc
 	 * @param  date  the date to format
 	 * @return       formatted date string, or null if date rolling is not active
 	 */
-	public String formatDateKeyForDb(java.util.Date date)
+	public String formatDateKeyForDbRecording(java.util.Date date)
 	{
-		if (!_h2NewDbOnDateChange) return null;
-		return new java.text.SimpleDateFormat(_h2DbDateParseFormat).format(date);
+		if (!_h2NewDbOnDateChange) 
+			return null;
+
+		return new SimpleDateFormat(_h2DbDateParseFormat).format(date);
 	}
 
 	/**
@@ -2424,7 +2426,7 @@ public class PersistWriterJdbc
 	 * (e.g. {@code "2026-03-20"} for a daily-rolling database).
 	 * Returns null when date rolling is not active or the first sample has not yet been written.
 	 */
-	public String getCurrentDbDateKey()
+	public String getCurrentRecordingDatabaseDateKey()
 	{
 		return _h2LastDateChange;
 	}
@@ -2499,6 +2501,93 @@ public class PersistWriterJdbc
 		_logger.info("openHistoricalConnection: Opening read-only connection to historical H2 database."
 				+ " dateKey='" + newDateStr + "', file='" + dbFile.getAbsolutePath() + "'");
 		return DbxConnection.connect(null, connProp);
+	}
+
+	/**
+	 * Returns all available H2 date-rolled database date keys, sorted newest-first.
+	 * <p>
+	 * Scans the directory that contains the currently-active H2 database file for
+	 * sibling {@code .mv.db} files that share the same name prefix and suffix but
+	 * differ only in the date-key segment.  The current (live) date key is always
+	 * included in the result.
+	 * <p>
+	 * Returns an empty list when:
+	 * <ul>
+	 *   <li>date rolling is not active ({@code isH2DateRolling() == false}),</li>
+	 *   <li>the current date key is not yet known (first sample not yet written), or</li>
+	 *   <li>the database directory cannot be listed.</li>
+	 * </ul>
+	 *
+	 * @return sorted (newest first) list of date key strings,
+	 *         e.g. {@code ["2026-04-13", "2026-04-12", "2026-04-11"]}
+	 */
+	public List<String> getAvailableRecordingDatabasesDateKeys()
+	{
+		List<String> result = new ArrayList<>();
+
+		if (!_h2NewDbOnDateChange)     return result;
+		if (_h2LastDateChange == null) return result;
+
+		String currentUrl = _lastUsedUrl;
+		if (currentUrl == null && _mainConn != null)
+		{
+			try { currentUrl = _mainConn.getMetaData().getURL(); }
+			catch (Exception ex) 
+			{ 
+				return result; 
+			}
+		}
+
+		if (currentUrl == null)
+			return result;
+		if (!currentUrl.contains(_h2LastDateChange))
+			return result;
+
+		H2UrlHelper urlHelper = new H2UrlHelper(currentUrl);
+		File dbFile = urlHelper.getDbFile();
+		if (dbFile == null) 
+			return result;
+
+		File dir = dbFile.getParentFile();
+		if (dir == null || !dir.isDirectory()) 
+			return result;
+
+		// Derive prefix and suffix that surround the date key in the base filename.
+		// For example: "SqlServerTune_PROD_2026-04-13" with dateKey "2026-04-13"
+		//   → prefix = "SqlServerTune_PROD_", suffix = ""
+		String baseName = dbFile.getName();
+		if      (baseName.endsWith(".mv.db")) baseName = baseName.substring(0, baseName.length() - ".mv.db".length());
+		else if (baseName.endsWith(".h2.db")) baseName = baseName.substring(0, baseName.length() - ".h2.db".length());
+
+		int dateIdx = baseName.indexOf(_h2LastDateChange);
+		if (dateIdx < 0) 
+			return result;
+
+		String prefix = baseName.substring(0, dateIdx);
+		String suffix = baseName.substring(dateIdx + _h2LastDateChange.length());
+
+		File[] files = dir.listFiles();
+		if (files == null) 
+			return result;
+
+		for (File f : files)
+		{
+			String name = f.getName();
+			if (!name.endsWith(".mv.db")) 
+				continue;
+			String base = name.substring(0, name.length() - ".mv.db".length());
+			if (!base.startsWith(prefix)) 
+				continue;
+			if (!suffix.isEmpty() && !base.endsWith(suffix)) 
+				continue;
+
+			String dateKey = base.substring(prefix.length(), base.length() - suffix.length());
+			if (!dateKey.isEmpty())
+				result.add(dateKey);
+		}
+
+		Collections.sort(result, Collections.reverseOrder());
+		return result;
 	}
 
 	private boolean dbExecSetting(DbxConnection conn, String sql, boolean logInfo)

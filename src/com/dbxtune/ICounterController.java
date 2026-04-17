@@ -22,8 +22,10 @@ package com.dbxtune;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.dbxtune.cm.CmSummaryAbstract;
@@ -327,6 +329,65 @@ public interface ICounterController
 	 * @param recordingDbConn Connection to the recording database!
 	 */
 	void doLastRecordingActionBeforeDatabaseRollover(DbxConnection recordingDbConn);
+
+	// =========================================================================
+	// On-demand extraction
+	// =========================================================================
+
+	/**
+	 * Returns the set of {@link ExtractionType} values this controller supports.
+	 * <p>
+	 * Use this before calling {@link #triggerExtractionOf} to check whether the
+	 * requested type is available for the connected DBMS.
+	 * <p>
+	 * The default implementation returns an empty set — subclasses override as needed.
+	 */
+	default Set<ExtractionType> getSupportedExtractionTypes()
+	{
+		return Collections.emptySet();
+	}
+
+	/**
+	 * Trigger an on-demand extraction of the given type asynchronously.
+	 * <p>
+	 * The same logic that runs at midnight during
+	 * {@link #doLastRecordingActionBeforeDatabaseRollover} is executed in a background
+	 * thread so the caller returns immediately.  Poll
+	 * {@link #getExtractionStatus(ExtractionType)} for progress.
+	 * <p>
+	 * The default implementation throws {@link UnsupportedOperationException}.
+	 * Subclasses that support the type must override both this method and
+	 * {@link #getSupportedExtractionTypes()}.
+	 *
+	 * @throws UnsupportedOperationException if this controller does not support {@code type}
+	 * @throws IllegalStateException         if an extraction of this type is already running
+	 */
+	default void triggerExtractionOf(ExtractionType type)
+	{
+		throw new UnsupportedOperationException("Extraction type " + type + " is not supported by this controller");
+	}
+
+	/**
+	 * Returns a status snapshot for the given extraction type.
+	 * <p>
+	 * Keys in the returned map:
+	 * <ul>
+	 *   <li>{@code running}    — {@code boolean}: true while the extraction thread is active</li>
+	 *   <li>{@code lastRun}    — ISO-8601 string of the last completed run, or {@code null}</li>
+	 *   <li>{@code lastStatus} — {@code "never"}, {@code "running"}, {@code "ok"}, or {@code "error: <msg>"}</li>
+	 * </ul>
+	 * <p>
+	 * The default implementation returns {@code running=false}, {@code lastRun=null},
+	 * {@code lastStatus="not-supported"}.
+	 */
+	default Map<String, Object> getExtractionStatus(ExtractionType type)
+	{
+		Map<String, Object> m = new java.util.LinkedHashMap<>();
+		m.put("running",    false);
+		m.put("lastRun",    null);
+		m.put("lastStatus", "not-supported");
+		return m;
+	}
 
 	/**
 	 * Create any cron4j.Scheduler

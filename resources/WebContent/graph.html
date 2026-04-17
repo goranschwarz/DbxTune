@@ -37,6 +37,13 @@ at pc:
 			z-index: 99999;
 		}
 
+		/* ── Top navbar dropdown menus — always dark to match bg-dark navbar ── */
+		.navbar-dark .dropdown-menu                              { background-color:#343a40; border-color:#555; }
+		.navbar-dark .dropdown-menu .dropdown-item               { color:#ddd; }
+		.navbar-dark .dropdown-menu .dropdown-item:hover,
+		.navbar-dark .dropdown-menu .dropdown-item:focus         { background-color:#495057; color:#fff; }
+		.navbar-dark .dropdown-menu .dropdown-divider            { border-top-color:#555; }
+
 		canvas {
 			user-select: none;
 			-moz-user-select: none;
@@ -144,7 +151,7 @@ at pc:
 		}
 */
 
-		#cm-detail-counter-type, #cm-detail-options, #cm-detail-numfmt, #dbms-config-options {
+		#cm-detail-counter-type, #cm-detail-options, #cm-detail-numfmt, #dbms-config-options, #query-store-options, #qs-numfmt {
 			border: 1px solid gray;
 			border-radius: 5px;
 			margin-left: 10px;
@@ -339,7 +346,6 @@ at pc:
 			outline: none;
 			border: none;
 			cursor: pointer;
-			z-index: 1040;
 		}
 		#dbms-config-btn:active { background: rgba(0, 0, 0, 1); }
 
@@ -418,6 +424,128 @@ at pc:
 		#dbms-config-panel.dc-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
 		#dbms-config-panel.dc-dark pre                        { color:#e0e0e0 !important; background:#1a1a1a !important; border-color:#444 !important; }
 
+		/* ── Query Store button (SQL Server only — shown by JS) ── */
+		#query-store-btn {
+			width: 50px;
+			height: 30px;
+			background: rgba(32, 32, 32, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-decoration: none;
+			border-radius: 10px 0px 0px 10px;
+			color: #ffffff;
+			font-size: 13px;
+			box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.25);
+			position: fixed;
+			right: 0px;
+			top: 225px;
+			transition: background 0.25s;
+			outline: none;
+			border: none;
+			cursor: pointer;
+		}
+		#query-store-btn:active { background: rgba(0, 0, 0, 1); }
+
+		/* ── Query Store floating panel ── */
+		#query-store-panel {
+			display: none;
+			flex-direction: column;
+			position: fixed;
+			top: 100px;
+			left: 17%;
+			height: 55%;
+			width: 65%;
+			overflow: hidden;
+			background-color: rgba(229, 228, 226, 1);
+			border: 2px solid darkgray;
+			border-radius: 5px;
+			z-index: 910;
+		}
+		#query-store-header {
+			flex-shrink: 0;
+			display: flex;
+			align-items: center;
+			background: #f8f9fa;
+			padding: 4px 10px;
+			border-bottom: 1px solid #dee2e6;
+			cursor: move;
+			gap: 6px;
+		}
+		#query-store-header label { margin-bottom: 0; }
+		#query-store-tabs-main {
+			flex-shrink: 0;
+			padding: 4px 8px 0;
+			background: #e9ecef;
+		}
+		#query-store-panel .nav-link { padding: 3px 8px !important; font-size: 0.85em; }
+		#query-store-tq-bar {
+			flex-shrink: 0;
+			display: none;
+			padding: 3px 8px;
+			background: #e9ecef;
+			border-bottom: 1px solid #dee2e6;
+			align-items: center;
+			gap: 6px;
+			font-size: 0.82em;
+			flex-wrap: wrap;
+		}
+		#query-store-detail-bar {
+			flex-shrink: 0;
+			display: none;
+			padding: 3px 8px;
+			background: #e9ecef;
+			border-bottom: 1px solid #dee2e6;
+			align-items: center;
+			gap: 6px;
+			font-size: 0.82em;
+		}
+		#query-store-body {
+			flex: 1;
+			min-height: 0;
+			overflow: auto;
+			background: #fff;
+			padding: 6px;
+		}
+
+		/* ── Dark mode — Query Store panel ── */
+		#query-store-panel.qs-dark                              { background-color:#1e1e1e; border-color:#555; }
+		#query-store-panel.qs-dark #query-store-header         { background:#2d2d2d; border-bottom-color:#444; color:#e0e0e0; }
+		#query-store-panel.qs-dark #query-store-header strong  { color:#e0e0e0; }
+		#query-store-panel.qs-dark #query-store-header span    { color:#aaa !important; }
+		#query-store-panel.qs-dark #query-store-header label   { color:#ccc !important; }
+		#query-store-panel.qs-dark #query-store-header button  { background:#3d3d3d; color:#ddd; border-color:#555; }
+		#query-store-panel.qs-dark ul.nav-tabs                 { background:#252525 !important; border-bottom-color:#444; }
+		#query-store-panel.qs-dark .nav-link                   { color:#999 !important; }
+		#query-store-panel.qs-dark .nav-link.active            { background:#3a3a3a !important; border-color:#555 #555 #3a3a3a !important; color:#ddd !important; }
+		#query-store-panel.qs-dark #query-store-tq-bar         { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
+		#query-store-panel.qs-dark #query-store-tq-bar select,
+		#query-store-panel.qs-dark #query-store-tq-bar input   { background:#333; color:#e0e0e0; border-color:#555; }
+		#query-store-panel.qs-dark #qs-tq-filter-count         { color:#aaa; }
+		#query-store-panel.qs-dark #query-store-detail-bar     { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
+		#query-store-panel.qs-dark #query-store-detail-bar a   { color:#5bc8ff; }
+		#query-store-panel.qs-dark #query-store-body           { background:#1e1e1e; color:#e0e0e0; }
+		#query-store-panel.qs-dark .table                      { color:#e0e0e0; }
+		#query-store-panel.qs-dark .table th                   { background:#2d2d2d !important; color:#ddd; border-color:#444; }
+		#query-store-panel.qs-dark .table td                   { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
+		#query-store-panel.qs-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
+		#query-store-panel.qs-dark pre                         { color:#e0e0e0 !important; background:#1a1a1a !important; border-color:#444 !important; }
+		#query-store-panel.qs-dark #qs-date-select             { background:#333 !important; color:#e0e0e0 !important; border-color:#555 !important; }
+		.qs-rank-hl                                            { background:#d0e8ff !important; }
+		#query-store-panel.qs-dark th.qs-rank-hl               { background:#1a3a5c !important; color:#a8d4ff !important; }
+
+		/* ── Showplan Loader input dialog — dark mode ── */
+		#dbx-showplan-viewer-input-dialog.spv-dark .modal-content            { background:#1e1e1e; color:#e0e0e0; border-color:#555; }
+		#dbx-showplan-viewer-input-dialog.spv-dark .modal-header             { background:#2d2d2d; border-bottom-color:#444; }
+		#dbx-showplan-viewer-input-dialog.spv-dark .modal-header h5          { color:#e0e0e0; }
+		#dbx-showplan-viewer-input-dialog.spv-dark .modal-header .close      { color:#aaa; text-shadow:none; }
+		#dbx-showplan-viewer-input-dialog.spv-dark .modal-footer             { background:#2d2d2d; border-top-color:#444; }
+		#dbx-showplan-viewer-input-dialog.spv-dark textarea                  { background:#2a2a2a !important; color:#e0e0e0 !important; border-color:#555 !important; }
+		#dbx-showplan-viewer-input-dialog.spv-dark small.text-muted          { color:#999 !important; }
+		#dbx-showplan-viewer-input-dialog.spv-dark code                      { color:#a8d4ff; }
+		#dbx-showplan-viewer-input-dialog.spv-dark .btn-outline-secondary    { color:#aaa; border-color:#666; }
+		#dbx-showplan-viewer-input-dialog.spv-dark .btn-outline-secondary:hover { background:#3a3a3a; color:#ddd; border-color:#888; }
+
 		/* ── Alarm Panel button ── */
 		#alarm-panel-btn {
 			width: 50px;
@@ -439,7 +567,6 @@ at pc:
 			outline: none;
 			border: none;
 			cursor: pointer;
-			z-index: 1040;
 		}
 		#alarm-panel-btn:active { background: rgba(0, 0, 0, 1); }
 		#alarm-panel-btn.alarm-active {
@@ -910,9 +1037,11 @@ at pc:
 	<script type="text/javascript" src="/scripts/splitjs/split.min.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphCounterDetails.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphDbmsConfig.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphQueryStore.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.graph.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphPicker.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxSqlText.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanAnalyzer.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplan.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphPage.js"></script>
 
@@ -1032,6 +1161,12 @@ at pc:
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" href="/admin/admin.html">Admin</a>
+				</li>
+				<li class="nav-item dropdown">
+					<a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+					<div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
+						<a class="dropdown-item" href="#" onclick="openShowplanViewer(); return false;" title="Paste or load a SQL Server Showplan XML and view it">&#128269; Showplan Loader</a>
+					</div>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" href="/desktop_app.html">Desktop App</a>
@@ -1160,6 +1295,9 @@ at pc:
 	<!-- Toggle DBMS Config Panel -->
 	<button id="dbms-config-btn" onclick="dbmsConfigToggle();" title="DBMS Configuration"><i class="fa fa-cog"></i></button>
 
+	<!-- Toggle Query Store Panel (SQL Server only — shown by JS when SqlServerTune is detected) -->
+	<button id="query-store-btn" onclick="queryStoreToggle();" title="Query Store (SQL Server)" style="display:none;"><i class="fa fa-database"></i></button>
+
 	<!-- CM Detail Panel — fixed overlay, draggable & resizable like Active Statements -->
 	<div id="cm-detail-panel" class="cm-detail-class">
 		<div id="cm-detail-header" class="cm-detail-ctl-class">
@@ -1171,6 +1309,20 @@ at pc:
 				Options: &nbsp;
 				<label style="margin:0;font-weight:normal;cursor:pointer;"><input type="checkbox" id="cm-detail-paused"> Pause</label> &nbsp;&nbsp;
 				<label style="margin:0;font-weight:normal;cursor:pointer;"><input type="checkbox" id="cm-detail-dark" onchange="cmDetailDarkToggle(this.checked);"> Dark mode</label>
+			</span>
+			<span id="cm-detail-numfmt" style="font-size:0.85em;white-space:nowrap;">
+				Number&nbsp;Format:&nbsp;
+				<label style="margin:0;font-weight:normal;cursor:pointer;"
+					title="Use the browser's locale to format numbers&#10;e.g. 1,234,567.89 (US) · 1.234.567,89 (DE) · 1 234 567,89 (SE)">
+					<input type="radio" name="cm-detail-numfmt" id="cm-detail-numfmt-locale"
+						onchange="cmDetailNumFmtChanged('locale');"> Localized
+				</label>
+				&nbsp;
+				<label style="margin:0;font-weight:normal;cursor:pointer;"
+					title="Use a space as the thousands separator, with the locale's decimal symbol&#10;e.g. 1 234 567.89 (US decimal) · 1 234 567,89 (SE/DE decimal)">
+					<input type="radio" name="cm-detail-numfmt" id="cm-detail-numfmt-spaces"
+						onchange="cmDetailNumFmtChanged('spaces');"> Spaces
+				</label>
 			</span>
 
 			<span style="margin-left:auto;"></span>
@@ -1227,21 +1379,6 @@ at pc:
 					title="Go to next sample that has data for this CM (moves timeline slider) &#10;Keyboard: Alt + &#8594;">&raquo;</button>
 			</span>
 			<span style="flex:1;"></span>
-			<span id="cm-detail-numfmt" style="white-space:nowrap;flex-shrink:0;">
-				Number&nbsp;Format:&nbsp;
-				<label style="margin:0;font-weight:normal;cursor:pointer;"
-					title="Use the browser's locale to format numbers&#10;e.g. 1,234,567.89 (US) · 1.234.567,89 (DE) · 1 234 567,89 (SE)">
-					<input type="radio" name="cm-detail-numfmt" id="cm-detail-numfmt-locale"
-						onchange="cmDetailNumFmtChanged('locale');"> Localized
-				</label>
-				&nbsp;
-				<label style="margin:0;font-weight:normal;cursor:pointer;"
-					title="Use a space as the thousands separator, with the locale's decimal symbol&#10;e.g. 1 234 567.89 (US decimal) · 1 234 567,89 (SE/DE decimal)">
-					<input type="radio" name="cm-detail-numfmt" id="cm-detail-numfmt-spaces"
-						onchange="cmDetailNumFmtChanged('spaces');"> Spaces
-				</label>
-			</span>
-			<span style="color:#ccc;flex-shrink:0;">|</span>
 			<span id="cm-detail-row-count" style="color:#6c757d;white-space:nowrap;"></span>
 		</div>
 		<div id="cm-detail-filter-bar" style="display:none;flex-shrink:0;padding:3px 8px;background:#e9ecef;border-bottom:1px solid #dee2e6;display:flex;align-items:center;gap:5px;">
@@ -1364,6 +1501,110 @@ at pc:
 		<div id="dbms-config-body">
 			<div id="dbms-config-loading" style="display:none;color:#6c757d;padding:15px;text-align:center;">Loading...</div>
 			<div id="dbms-config-content"></div>
+		</div>
+	</div>
+
+	<!-- Query Store Panel — fixed overlay, draggable & resizable (SQL Server only) -->
+	<div id="query-store-panel" class="query-store-class">
+		<div id="query-store-header" class="query-store-ctl-class">
+			<strong><i class="fa fa-database"></i> Query Store</strong>
+			&nbsp;<span id="query-store-srv" style="color:#555;font-size:0.85em;"></span>
+			&nbsp;<select id="qs-date-select" onchange="queryStoreDateChanged();"
+				title="Select collector database date"
+				style="font-size:0.8em;height:22px;padding:0 4px;margin-left:4px;display:none;"></select>
+			&nbsp;<span id="query-store-ts"  style="color:#c07000;font-size:0.8em;font-weight:600;display:none;">&#128337; Historical</span>
+
+			<button type="button" style="font-size:0.8em;padding:1px 6px;margin-left:8px;" onclick="queryStoreRefresh();" title="Reload data">&#x21BB; Refresh</button>
+
+			<span id="query-store-options" style="font-size:0.85em;">
+				Options: &nbsp;
+				<label style="margin:0;font-weight:normal;cursor:pointer;"><input type="checkbox" id="query-store-dark" onchange="queryStoreDarkToggle(this.checked);"> Dark mode</label>
+			</span>
+			<span id="qs-numfmt" style="font-size:0.85em;white-space:nowrap;">
+				Number&nbsp;Format:&nbsp;
+				<label style="margin:0;font-weight:normal;cursor:pointer;"
+					title="Use the browser's locale to format numbers&#10;e.g. 1,234,567.89 (US) · 1.234.567,89 (DE) · 1 234 567,89 (SE)">
+					<input type="radio" name="qs-numfmt" id="qs-numfmt-locale"
+						onchange="qsNumFmtChanged('locale');"> Localized
+				</label>
+				&nbsp;
+				<label style="margin:0;font-weight:normal;cursor:pointer;"
+					title="Use a space as the thousands separator, with the locale's decimal symbol&#10;e.g. 1 234 567.89 (US decimal) · 1 234 567,89 (SE/DE decimal)">
+					<input type="radio" name="qs-numfmt" id="qs-numfmt-spaces"
+						onchange="qsNumFmtChanged('spaces');"> Spaces
+				</label>
+			</span>
+
+			<span style="margin-left:auto;"></span>
+			<button type="button" class="close" style="font-size:1.2em;" onclick="queryStoreClose();">&times;</button>
+		</div>
+
+		<!-- Main tabs: Databases | Top Queries | Query Detail -->
+		<ul class="nav nav-tabs" id="query-store-tabs-main" style="flex-shrink:0;padding:4px 8px 0;background:#e9ecef;">
+			<li class="nav-item"><a class="nav-link active" href="#" onclick="queryStoreMainTabClick(event,'databases');return false;">Databases</a></li>
+			<li class="nav-item"><a class="nav-link"        href="#" onclick="queryStoreMainTabClick(event,'topqueries');return false;">Top Queries</a></li>
+			<li class="nav-item"><a class="nav-link"        href="#" onclick="queryStoreMainTabClick(event,'detail');return false;">Query Detail</a></li>
+		</ul>
+
+		<!-- Top Queries toolbar (visible on the Top Queries tab) -->
+		<div id="query-store-tq-bar" style="flex-shrink:0;display:none;padding:3px 8px;background:#e9ecef;border-bottom:1px solid #dee2e6;align-items:center;gap:6px;font-size:0.82em;flex-wrap:wrap;">
+			<span style="white-space:nowrap;">DB: <strong id="query-store-tq-dbname">—</strong></span>
+			<span style="color:#ccc;">|</span>
+			<span style="white-space:nowrap;">Rank&nbsp;by:
+				<select id="query-store-rankby" onchange="queryStoreTopQueriesLoad();" style="font-size:0.85em;height:20px;padding:0 2px;">
+					<option value="duration">Elapsed time</option>
+					<option value="cpu">CPU</option>
+					<option value="reads">Logical reads</option>
+					<option value="physical_reads">Physical reads</option>
+					<option value="writes">Logical writes</option>
+					<option value="executions">Executions</option>
+					<option value="rowcount">Row count</option>
+					<option value="memory">Memory</option>
+					<option value="tempdb">Tempdb</option>
+					<option value="log">Log / WAL</option>
+					<option value="compile">Compile time</option>
+				</select>
+			</span>
+			<span style="white-space:nowrap;">Top:
+				<input type="number" id="query-store-topn" value="25" min="1" max="500" style="width:55px;font-size:0.85em;height:20px;padding:0 3px;" onchange="queryStoreTopQueriesLoad();">
+			</span>
+			<span style="white-space:nowrap;">Min&nbsp;executions:
+				<input type="number" id="query-store-minexec" value="2" min="1" style="width:50px;font-size:0.85em;height:20px;padding:0 3px;" onchange="queryStoreTopQueriesLoad();">
+			</span>
+			<span style="color:#ccc;">|</span>
+			<button type="button" style="font-size:0.8em;height:20px;padding:0 6px;" onclick="queryStoreTriggerExtract();" title="Trigger an on-demand Query Store extraction from the live SQL Server now (runs in background)">Extract now</button>
+			<span id="query-store-extract-status" style="color:#6c757d;font-size:0.8em;white-space:nowrap;"></span>
+			<span style="color:#ccc;">|</span>
+			<span style="white-space:nowrap;display:flex;align-items:center;gap:4px;">
+				Filter:
+				<input type="text" id="qs-tq-filter"
+					style="font-size:0.85em;height:20px;padding:0 4px;width:160px;border:1px solid #ced4da;border-radius:3px;"
+					placeholder="regex  or  where col &gt; val"
+					title="Regex filter across all columns, or WHERE clause&#10;e.g.: SELECT  or  where avgDurationUs &gt; 50000&#10;Ctrl+Space for column name completion"
+					oninput="qsTqFilterChanged(this.value);"
+					onkeydown="qsFilterKeydown(event);">
+				<span id="qs-tq-filter-count" style="color:#6c757d;font-size:0.8em;white-space:nowrap;"></span>
+			</span>
+		</div>
+
+		<!-- Query Detail breadcrumb bar (visible on the Query Detail tab) -->
+		<div id="query-store-detail-bar" style="flex-shrink:0;display:none;padding:3px 8px;background:#e9ecef;border-bottom:1px solid #dee2e6;align-items:center;gap:6px;font-size:0.82em;">
+			<a href="#" onclick="queryStoreMainTabClick(event,'topqueries');return false;" style="text-decoration:none;">&#8592; Top Queries</a>
+			<span style="color:#ccc;">|</span>
+			DB:&nbsp;<strong id="query-store-detail-dbname">—</strong>
+			<span style="color:#ccc;">|</span>
+			Query&nbsp;ID:&nbsp;<strong id="query-store-detail-qid">—</strong>
+			<span style="flex:1;"></span>
+			<label style="margin:0;font-size:0.9em;cursor:pointer;" title="Include XML execution plan in the response (may be large — triggers a fresh fetch)">
+				<input type="checkbox" id="query-store-include-plan" onchange="queryStoreIncludePlanChanged();">
+				&nbsp;Include XML plan
+			</label>
+		</div>
+
+		<!-- Body -->
+		<div id="query-store-body">
+			<div id="query-store-loading" style="display:none;color:#6c757d;padding:15px;text-align:center;">Loading...</div>
+			<div id="query-store-content"></div>
 		</div>
 	</div>
 

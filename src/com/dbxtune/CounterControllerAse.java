@@ -28,10 +28,16 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
@@ -120,6 +126,8 @@ import com.dbxtune.gui.swing.GTable.ITableTooltip;
 import com.dbxtune.pcs.AseBackupHistoryExtractor;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
+import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.TdsConnection;
@@ -784,10 +792,104 @@ public class CounterControllerAse extends CounterControllerAbstract
 	@Override
 	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection pcsConn)
 	{
+		// Store for on-demand extraction
+		_lastPcsConn = pcsConn;
+
 		String srvName = getMonConnection().getDbmsServerNameNoThrow();
 
 		// Backup History Extraction
 		backupHistoryExtractor(pcsConn, srvName);
+	}
+
+	//------------------------------------------------------------------
+	// On-demand extraction: ICounterController overrides
+	//------------------------------------------------------------------
+
+	private static final Set<ExtractionType> _SUPPORTED_EXTRACTIONS =
+			Collections.unmodifiableSet(EnumSet.of(ExtractionType.BACKUP_HISTORY));
+
+	private volatile DbxConnection _lastPcsConn  = null;
+	private final AtomicBoolean    _bhRunning     = new AtomicBoolean(false);
+	private volatile Instant       _bhLastRun     = null;
+	private volatile String        _bhLastStatus  = "never";
+
+	@Override
+	public Set<ExtractionType> getSupportedExtractionTypes()
+	{
+		return _SUPPORTED_EXTRACTIONS;
+	}
+
+	@Override
+	public void triggerExtractionOf(ExtractionType type)
+	{
+		if (type != ExtractionType.BACKUP_HISTORY)
+			throw new UnsupportedOperationException(
+					"Extraction type " + type + " is not supported by CounterControllerAse");
+
+		if (!_bhRunning.compareAndSet(false, true))
+			throw new IllegalStateException(
+					"BACKUP_HISTORY extraction is already in progress for server "
+					+ getMonConnection().getDbmsServerNameNoThrow());
+
+		DbxConnection pcsConn = _lastPcsConn;
+		if (pcsConn == null && PersistentCounterHandler.hasInstance())
+		{
+			PersistWriterJdbc writer = PersistentCounterHandler.getInstance().getPersistWriterJdbc();
+			if (writer != null)
+				pcsConn = writer.getStorageConnection();
+		}
+		if (pcsConn == null)
+		{
+			_bhRunning.set(false);
+			throw new IllegalStateException(
+					"No PCS storage connection available for on-demand BACKUP_HISTORY extraction.");
+		}
+
+		final DbxConnection finalPcsConn = pcsConn;
+		final String        srvName      = getMonConnection().getDbmsServerNameNoThrow();
+
+		Thread t = new Thread(() ->
+		{
+			_bhLastStatus = "running";
+			try
+			{
+				_logger.info("On-demand extraction started: type=BACKUP_HISTORY, server={}", srvName);
+				backupHistoryExtractor(finalPcsConn, srvName);
+				_bhLastRun    = Instant.now();
+				_bhLastStatus = "ok";
+				_logger.info("On-demand extraction completed: type=BACKUP_HISTORY, server={}", srvName);
+			}
+			catch (Exception ex)
+			{
+				_bhLastStatus = "error: " + ex.getMessage();
+				_logger.warn("On-demand BACKUP_HISTORY extraction failed for server " + srvName, ex);
+			}
+			finally
+			{
+				_bhRunning.set(false);
+			}
+		}, "OnDemand-BACKUP_HISTORY-" + srvName);
+		t.setDaemon(true);
+		t.start();
+	}
+
+	@Override
+	public Map<String, Object> getExtractionStatus(ExtractionType type)
+	{
+		Map<String, Object> m = new LinkedHashMap<>();
+		if (type == ExtractionType.BACKUP_HISTORY)
+		{
+			m.put("running",    _bhRunning.get());
+			m.put("lastRun",    _bhLastRun != null ? _bhLastRun.toString() : null);
+			m.put("lastStatus", _bhLastStatus);
+		}
+		else
+		{
+			m.put("running",    false);
+			m.put("lastRun",    null);
+			m.put("lastStatus", "not-supported");
+		}
+		return m;
 	}
 
 	//------------------------------------------------------------------

@@ -348,10 +348,15 @@
 				$('.dbms-config-class').draggable({ handle: ".dbms-config-ctl-class", stop: function() { _saveDialogGeom('dbms-config-panel'); } });
 				_restoreDialogGeom('dbms-config-panel');
 
+				// Query Store Panel
+				$('.query-store-class').resizable({ handles: 'n, e, s, w, ne, nw, se, sw', stop: function() { _saveDialogGeom('query-store-panel'); } });
+				$('.query-store-class').draggable({ handle: ".query-store-ctl-class", stop: function() { _saveDialogGeom('query-store-panel'); } });
+				_restoreDialogGeom('query-store-panel');
+
 				// Bring-to-front on click — last clicked panel always wins z-order
 				// window._dbxTopZ is global so alarmDetailShowModal() can bump modal above panels
 				window._dbxTopZ = 910;
-				$('#active-statements, #cm-detail-panel, #dbms-config-panel, #alarm-panel').on('mousedown', function() {
+				$('#active-statements, #cm-detail-panel, #dbms-config-panel, #alarm-panel, #query-store-panel').on('mousedown', function() {
 					$(this).css('z-index', ++window._dbxTopZ);
 				});
 			}

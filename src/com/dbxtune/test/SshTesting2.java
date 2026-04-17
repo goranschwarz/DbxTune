@@ -54,7 +54,7 @@ public class SshTesting2
 //		try
 //		{
 //			c.connect();
-//			if ( !c.authenticateWithPassword("gorans", "1niss2e") )
+//			if ( !c.authenticateWithPassword("gorans", "dummy") )
 //			{
 //				throw new IOException("Authentification failed");
 //			}
