@@ -37,7 +37,7 @@ extends AlarmEvent
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
 				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.INFO, 
+				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
 				"New DBMS Version String was detected in Server '" + cm.getServerName() + "'. prevVersionStr='" + prevVersionStr + "', newVersionStr='" + newVersionStr + "'.",
 				null // crossedThreshold... well this one do not have a number.
@@ -59,7 +59,7 @@ extends AlarmEvent
 				sectionName,          // serviceInfo
 				null,                 // extraInfo
 				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.INFO, 
+				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
 				"New DBMS Version String was detected in Server '" + srvName + "'. prevVersionStr='" + prevVersionStr + "', newVersionStr='" + newVersionStr + "'.",
 				null // crossedThreshold... well this one do not have a number.

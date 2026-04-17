@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content.sqlserver;
 
+import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -42,6 +43,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.gui.ModelMissmatchException;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -298,8 +300,35 @@ extends ReportEntryAbstract
 		if (tableInfoSet.isEmpty())
 			return "";
 
-		// And make it into a HTML table with various information about the table and indexes 
+		// And make it into a HTML table with various information about the table and indexes
 		return getTableInfoAsHtmlTable(currentDbname, tableInfoSet, tableList, includeIndexInfo, classname);
+	}
+
+	/**
+	 * Static convenience method — look up table/index info from DDL Storage without needing
+	 * a full report-entry instance (e.g. from a servlet context).
+	 *
+	 * @param conn             H2 connection
+	 * @param dbname           current database name (used for filtering)
+	 * @param tableList        tables to look up
+	 * @param includeIndexInfo include index details
+	 * @param classname        CSS class name applied to the generated HTML table
+	 * @return                 HTML fragment, or "" if nothing found
+	 */
+	public static String getTableInfoHtml(DbxConnection conn, String dbname, Set<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		// Create a minimal throwaway instance — the DDL-Storage lookup methods do not use
+		// _reportingInstance, so null is safe.  The abstract interface methods are stubs.
+		SqlServerAbstract inst = new SqlServerAbstract(null)
+		{
+			@Override public boolean hasIssueToReport()       { return false; }
+			@Override public String  getSubject()             { return ""; }
+			@Override public boolean hasMinimalMessageText()  { return false; }
+			@Override public boolean hasShortMessageText()    { return false; }
+			@Override public void    writeMessageText(Writer w, IReportEntry.MessageType t) {}
+			@Override public void    create(DbxConnection c, String s, Configuration p, Configuration l) {}
+		};
+		return inst.getDbmsTableInfoAsHtmlTable(conn, dbname, tableList, includeIndexInfo, classname);
 	}
 
 	/**
@@ -663,7 +692,7 @@ extends ReportEntryAbstract
 		if ( tableEntry._missingIndexInfo.isEmpty() )
 			sb.append("&emsp; &bull; <b>No</b> Missing Index Recomendations was found.");
 		else
-			sb.append(toHtmlTable(tableEntry._missingIndexInfo));
+			sb.append(toHtmlTable(tableEntry._missingIndexInfo, "dsr-missing-index-table"));
 
 		sb.append("</details> \n");
 

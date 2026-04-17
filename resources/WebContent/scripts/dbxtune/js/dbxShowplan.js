@@ -33,10 +33,276 @@
 	}
 
 	// -------------------------------------------------------------------------
-	// Inject modal HTML
+	// Lightweight SQL table-name extractor (JS port of TableNameParser.java)
+	// Looks for tokens immediately after: FROM, JOIN, INTO, TABLE, USING, UPDATE, CALL
+	// Filters out variables (@...), temp tables (#...), and known non-table tokens.
+	// -------------------------------------------------------------------------
+	function _sqlExtractTables(sql) {
+		if (!sql) return [];
+
+		// 1. Strip single-line comments (-- ...)
+		var noComments = sql.replace(/--[^\r\n]*/g, ' ');
+
+		// 2. Strip block comments (/* ... */) but preserve Oracle hints /*+ ... */
+		noComments = noComments.replace(/\/\*(?!\+)[\s\S]*?\*\//g, ' ');
+
+		// 3. Normalize: collapse whitespace, pad commas and parens with spaces
+		var normalized = noComments
+			.replace(/[\r\n]+/g, ' ')
+			.replace(/,/g, ' , ')
+			.replace(/\(/g, ' ( ')
+			.replace(/\)/g, ' ) ')
+			.replace(/\s+/g, ' ')
+			.trim();
+
+		// Remove trailing semicolon
+		if (normalized.charAt(normalized.length - 1) === ';')
+			normalized = normalized.slice(0, -1);
+
+		var tokens  = normalized.split(' ');
+		var trigger = { 'from':1, 'join':1, 'into':1, 'table':1, 'using':1, 'update':1, 'call':1 };
+		var skip    = { '(':1, 'set':1, 'of':1, 'dual':1 };
+		var seen    = {};
+		var result  = [];
+
+		for (var i = 0; i < tokens.length; i++) {
+			var tok = tokens[i].toLowerCase();
+			if (!trigger[tok]) continue;
+
+			// Collect one or more comma-separated table names after the keyword
+			i++;
+			while (i < tokens.length) {
+				var name = tokens[i];
+				var nameLo = name.toLowerCase();
+				i++;
+				if (!name || skip[nameLo]) break;
+
+				// Accept as a table name if it doesn't look like a keyword/variable/temp
+				if (!nameLo.startsWith('@') && !nameLo.startsWith('#') &&
+				    nameLo !== 'row_number' && !skip[nameLo]) {
+					// Strip schema prefix (schema.table or db..table)
+					var bare = name.replace(/^.*[.\[]/, '').replace(/[\[\]"`]/g, '');
+					if (bare && !seen[bare.toLowerCase()]) {
+						seen[bare.toLowerCase()] = true;
+						result.push(bare);
+					}
+				}
+
+				// Continue only if the next token is a comma (multi-table FROM clause)
+				if (i < tokens.length && tokens[i] === ',') {
+					i++;   // skip the comma, loop continues to grab next name
+				} else {
+					break;
+				}
+			}
+			i--;   // outer loop will increment again
+		}
+		return result;
+	}
+
+	// -------------------------------------------------------------------------
+	// node-sql-parser (T-SQL UMD bundle) — lazy loader + async table extractor
+	// Falls back to _sqlExtractTables() if the script fails to load or parse fails.
+	// -------------------------------------------------------------------------
+	var _nspState    = 'idle';   // 'idle' | 'loading' | 'ready' | 'failed'
+	var _nspWaiters  = [];       // callbacks queued while loading
+
+	function _nspLoad(cb) {
+		if (_nspState === 'ready')  { cb(true);  return; }
+		if (_nspState === 'failed') { cb(false); return; }
+		_nspWaiters.push(cb);
+		if (_nspState === 'loading') return;
+		_nspState = 'loading';
+		var s = document.createElement('script');
+		s.src = '/scripts/node-sql-parser/4.18.0/transactsql.umd.js';
+		s.onload = function() {
+			_nspState = 'ready';
+			_nspWaiters.forEach(function(fn) { fn(true);  }); _nspWaiters = [];
+		};
+		s.onerror = function() {
+			_nspState = 'failed';
+			_nspWaiters.forEach(function(fn) { fn(false); }); _nspWaiters = [];
+		};
+		document.head.appendChild(s);
+	}
+
+	// Async wrapper: uses node-sql-parser when available, falls back to tokenizer.
+	// callback(tables[]) is always called.
+	function _extractTablesAsync(sql, callback) {
+		_nspLoad(function(ok) {
+			if (!ok || typeof NodeSQLParser === 'undefined') {
+				callback(_sqlExtractTables(sql));
+				return;
+			}
+			try {
+				var parser = new NodeSQLParser.Parser();
+				var opt    = { database: 'TransactSQL' };
+
+				// Collect CTE names from the AST so we can exclude them
+				var cteNames = {};
+				try {
+					var ast   = parser.astify(sql, opt);
+					var stmts = Array.isArray(ast) ? ast : [ast];
+					stmts.forEach(function(stmt) {
+						(stmt.with || []).forEach(function(w) {
+							if (w.name && w.name.value)
+								cteNames[w.name.value.toLowerCase()] = true;
+						});
+					});
+				} catch(e2) { /* ignore — we still have tableList below */ }
+
+				var list  = parser.tableList(sql, opt);
+				var seen  = {};
+				var tables = [];
+				list.forEach(function(entry) {
+					var name = entry.split('::')[2];
+					if (!name || name === 'null') return;
+					if (cteNames[name.toLowerCase()])  return;   // skip CTE alias
+					if (seen[name.toLowerCase()])      return;   // dedup
+					seen[name.toLowerCase()] = true;
+					tables.push(name);
+				});
+
+				// Fall back to tokenizer if parser returned nothing useful
+				callback(tables.length ? tables : _sqlExtractTables(sql));
+			} catch(e) {
+				callback(_sqlExtractTables(sql));
+			}
+		});
+	}
+
+	// -------------------------------------------------------------------------
+	// Inject modal HTML + scoped styles
 	// -------------------------------------------------------------------------
 	function _injectHtml() {
 		if (document.getElementById('dbx-view-pgShowplan-dialog')) return;
+
+		// Scoped CSS for the Table Information section inside the showplan dialog.
+		// Uses #dbx-ssp-tableinfo-body as scope so the DSR stylesheet is not affected.
+		var style = document.createElement('style');
+		style.textContent = [
+			/* ── outer wrapper table ── */
+			'#dbx-ssp-tableinfo-body table.qs-tableinfo {',
+			'  border-collapse: collapse;',
+			'  width: 100%;',
+			'  font-size: 0.8em;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.qs-tableinfo > thead > tr > th {',
+			'  background: #4a6fa5;',
+			'  color: #fff;',
+			'  font-weight: 600;',
+			'  padding: 4px 8px;',
+			'  border: 1px solid #3a5f95;',
+			'  white-space: nowrap;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.qs-tableinfo > tbody > tr > td {',
+			'  border: 1px solid #c8c8c8;',
+			'  padding: 4px 6px;',
+			'  vertical-align: top;',
+			'  white-space: nowrap;',
+			'}',
+			/* ── key/value table inside "Table Info" cell ── */
+			'#dbx-ssp-tableinfo-body table.dsr-sub-table-other-info {',
+			'  border-collapse: collapse;',
+			'  width: 100%;',
+			'  font-size: 1em;',  /* already inside 0.8em context */
+			'}',
+			'#dbx-ssp-tableinfo-body table.dsr-sub-table-other-info td {',
+			'  border: 1px solid #d0d0d0;',
+			'  padding: 2px 6px;',
+			'  vertical-align: top;',
+			'  white-space: nowrap;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.dsr-sub-table-other-info td:first-child {',
+			'  white-space: nowrap;',
+			'  min-width: 90px;',
+			'}',
+			/* ── nested index table inside "Index Info" cell ── */
+			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo {',
+			'  width: 100%;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo > thead > tr > th {',
+			'  background: #5a7fa8;',
+			'  font-size: 0.9em;',
+			'  padding: 2px 5px;',
+			'  white-space: nowrap;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo > tbody > tr > td {',
+			'  border: 1px solid #d0d0d0;',
+			'  padding: 2px 5px;',
+			'  white-space: nowrap;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo > tbody > tr:nth-child(even) > td {',
+			'  background: #f4f7fb;',
+			'}',
+			/* ── missing index table ── */
+			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table {',
+			'  border-collapse: collapse;',
+			'  width: 100%;',
+			'  font-size: 0.8em;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table > thead > tr > th {',
+			'  background: #a05a00;',
+			'  color: #fff;',
+			'  font-weight: 600;',
+			'  padding: 4px 8px;',
+			'  border: 1px solid #804800;',
+			'  white-space: nowrap;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table > tbody > tr > td {',
+			'  border: 1px solid #c8c8c8;',
+			'  padding: 4px 6px;',
+			'  vertical-align: top;',
+			'  white-space: nowrap;',
+			'}',
+			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table > tbody > tr:nth-child(even) > td {',
+			'  background: #fdf5ec;',
+			'}',
+			/* ── tooltip-div trigger links (data-toggle="modal" data-target="#dbx-view-sqltext-dialog") ── */
+			'#dbx-ssp-tableinfo-body [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"] {',
+			'  cursor: pointer;',
+			'  color: #1a56a0;',
+			'  text-decoration: underline;',
+			'  text-decoration-style: dotted;',
+			'  display: inline-block;',
+			'  border-radius: 3px;',
+			'  padding: 0 2px;',
+			'}',
+			'#dbx-ssp-tableinfo-body [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"]:hover {',
+			'  background: #e8f0fb;',
+			'  color: #0a3a7a;',
+			'}',
+			/* ── DSR-style hover tooltip (shows full text on hover, same as Daily Summary Report) ── */
+			'#dbx-ssp-tableinfo-body [data-tooltip] {',
+			'  position: relative;',
+			'}',
+			'#dbx-ssp-tableinfo-body [data-tooltip]:hover::before {',
+			'  content: attr(data-tooltip);',
+			'  position: absolute;',
+			'  z-index: 1200;',
+			'  top: 20px;',
+			'  left: 30px;',
+			'  width: 800px;',
+			'  max-width: 90vw;',
+			'  padding: 10px;',
+			'  background: #454545;',
+			'  color: #fff;',
+			'  font-size: 11px;',
+			'  font-family: Courier, monospace;',
+			'  white-space: pre-wrap;',
+			'  border-radius: 4px;',
+			'  box-shadow: 0 2px 8px rgba(0,0,0,0.4);',
+			'  pointer-events: none;',
+			'}',
+			/* ── text-viewer modal sits above the showplan modal (Bootstrap default is 1050) ── */
+			'#dbx-view-sqltext-dialog {',
+			'  z-index: 1100;',
+			'}',
+			'.modal-backdrop + .modal-backdrop {',
+			'  z-index: 1090;',
+			'}'
+		].join('\n');
+		document.head.appendChild(style);
 
 		document.body.insertAdjacentHTML('beforeend', [
 			// ---- Postgres Execution Plan dialog ----
@@ -74,7 +340,7 @@
 
 			// ---- SQL Server Showplan dialog ----
 			"<div class='modal fade' id='dbx-view-ssShowplan-dialog' role='dialog' aria-labelledby='dbx-view-ssShowplan-dialog' aria-hidden='true'>",
-			"	<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>",
+			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header' style='cursor:move;'>",
 			"				<span style='color:#999;margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
@@ -116,10 +382,11 @@
 			"					</div>",
 			"				</details>",
 
-			"				<!-- ▶ Parameters (shown/hidden by ssShowplanGetParameters) -->",
-			"				<details id='dbx-ssp-sect-params' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;display:none;'>",
+			"				<!-- ▶ Parameters -->",
+			"				<details id='dbx-ssp-sect-params' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#9881;&#65039; Parameters</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
+			"						<div id='dbx-ssp-no-params' style='display:none;color:#888;font-size:0.85em;'>No parameters in this plan.</div>",
 			"						<div id='dbx-ssp-compile-block'>",
 			"							<div style='font-size:0.8em;font-weight:600;color:#555;margin:4px 0 2px 0;'>Compile-time values</div>",
 			"							<button type='button' id='dbx-view-ssShowplan-compileParameterValuesButton' class='btn btn-outline-secondary btn-sm' style='margin-bottom:3px;' onclick=\"ssShowplanSetParametersInSql('compile');\">Apply to SQL Text</button>",
@@ -136,6 +403,14 @@
 			"								<pre><code id='dbx-view-ssShowplan-runtimeParameterValues' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"							</div>",
 			"						</div>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
+			"				<details id='dbx-ssp-sect-tableinfo' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
+			"					<div id='dbx-ssp-tableinfo-body' style='padding:4px 8px 8px 8px;'>",
+			"						<span style='color:#888;font-size:0.85em;'>&#9203; Loading table information…</span>",
 			"					</div>",
 			"				</details>",
 
@@ -195,6 +470,27 @@
 			+ "    </div>"
 			+ "  </div>"
 			+ "</div>");
+
+		// ── Text viewer dialog (used by DSR tooltip-divs: data-target="#dbx-view-sqltext-dialog") ──
+		if (!document.getElementById('dbx-view-sqltext-dialog')) {
+			document.body.insertAdjacentHTML('beforeend',
+				  "<div class='modal fade' id='dbx-view-sqltext-dialog' tabindex='-1' role='dialog' aria-hidden='true' style='z-index:1100;'>"
+				+ "  <div class='modal-dialog modal-lg modal-dialog-centered'>"
+				+ "    <div class='modal-content'>"
+				+ "      <div class='modal-header'>"
+				+ "        <h5 class='modal-title' id='dbx-sqltext-dlg-title'></h5>"
+				+ "        <button type='button' class='close' data-dismiss='modal'><span>&times;</span></button>"
+				+ "      </div>"
+				+ "      <div class='modal-body' style='padding:8px;'>"
+				+ "        <pre id='dbx-sqltext-dlg-content' style='font-size:0.8em;max-height:70vh;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;'></pre>"
+				+ "      </div>"
+				+ "      <div class='modal-footer'>"
+				+ "        <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>"
+				+ "      </div>"
+				+ "    </div>"
+				+ "  </div>"
+				+ "</div>");
+		}
 
 		// Explicitly wire up drag + resize since dbxGraphPage.js may have already
 		// scanned the DOM before this modal was injected.
@@ -447,35 +743,37 @@
 		compileArr = compileArr.reverse();
 		runtimeArr = runtimeArr.reverse();
 
-		var $paramSect = $('#dbx-ssp-sect-params');
+		var $paramSect  = $('#dbx-ssp-sect-params');
+		var $noParams   = $('#dbx-ssp-no-params');
+		var hasAny      = compileArr.length > 0 || runtimeArr.length > 0;
 
-		if (compileArr.length > 0) {
-			$('#dbx-view-ssShowplan-compileParameterValues').text(compileArr.join('\n'));
-			$('#dbx-view-ssShowplan-compileParameterValuesButton').show();
-			$('#dbx-ssp-compile-block').show();
+		if (hasAny) {
+			$noParams.hide();
+
+			if (compileArr.length > 0) {
+				$('#dbx-view-ssShowplan-compileParameterValues').text(compileArr.join('\n'));
+				$('#dbx-view-ssShowplan-compileParameterValuesButton').show();
+				$('#dbx-ssp-compile-block').show();
+			} else {
+				$('#dbx-ssp-compile-block').hide();
+			}
+
+			if (runtimeArr.length > 0) {
+				$('#dbx-view-ssShowplan-runtimeParameterValues').text(runtimeArr.join('\n'));
+				$('#dbx-view-ssShowplan-runtimeParameterValuesButton').show();
+				$('#dbx-ssp-runtime-block').show();
+			} else {
+				$('#dbx-ssp-runtime-block').hide();
+			}
 		} else {
-			$('#dbx-view-ssShowplan-compileParameterValues').text('-- No compile parameters found in this plan.');
-			$('#dbx-view-ssShowplan-compileParameterValuesButton').hide();
 			$('#dbx-ssp-compile-block').hide();
-		}
-
-		if (runtimeArr.length > 0) {
-			$('#dbx-view-ssShowplan-runtimeParameterValues').text(runtimeArr.join('\n'));
-			$('#dbx-view-ssShowplan-runtimeParameterValuesButton').show();
-			$('#dbx-ssp-runtime-block').show();
-		} else {
-			$('#dbx-view-ssShowplan-runtimeParameterValues').text('-- No runtime parameters found in this plan.');
-			$('#dbx-view-ssShowplan-runtimeParameterValuesButton').hide();
 			$('#dbx-ssp-runtime-block').hide();
+			$noParams.show();
 		}
 
-		// Show/hide the whole Parameters section; collapse it if re-opening with new plan
-		if (compileArr.length > 0 || runtimeArr.length > 0) {
-			$paramSect.show();
-			$paramSect[0].open = false;   // collapsed — user opens on demand
-		} else {
-			$paramSect.hide();
-		}
+		// Always show the Parameters section; collapse it so the user opens on demand
+		$paramSect.show();
+		$paramSect[0].open = false;
 	};
 
 	window.ssShowplanSetParametersInSql = function (paramType) {
@@ -540,13 +838,132 @@
 
 		// SQL Server: draw plan after modal is visible
 		$('#dbx-view-ssShowplan-dialog').on('shown.bs.modal', function (e) {
-			// When opened programmatically the plan is drawn via the .one() handler
-			// registered in showSqlServerShowplanDialog — skip here.
+			var $modal = $(this);
+			var $dlg   = $modal.find('.modal-dialog');
+			var $cont  = $modal.find('.modal-content');
+
+			// ── Restore or default size ───────────────────────────────────────
+			var savedW = null, savedH = null, savedL = null, savedT = null;
+			try {
+				savedW = localStorage.getItem('ssShowplan-dlg-width');
+				savedH = localStorage.getItem('ssShowplan-dlg-height');
+				savedL = localStorage.getItem('ssShowplan-dlg-left');
+				savedT = localStorage.getItem('ssShowplan-dlg-top');
+			} catch(ex) {}
+			var w = savedW ? parseInt(savedW) : Math.round(window.innerWidth  * 0.90);
+			var h = savedH ? parseInt(savedH) : Math.round(window.innerHeight * 0.88);
+			$cont.css({ width: w + 'px', height: h + 'px' });
+
+			// ── Switch from Bootstrap centering to absolute positioning ───────
+			$dlg.removeClass('modal-dialog-centered');
+			$dlg.css({ margin: '0', 'max-width': 'none', position: 'absolute' });
+			$modal.css({ overflow: 'hidden' });
+
+			var l = savedL ? parseInt(savedL) : Math.round((window.innerWidth  - w) / 2);
+			var t = savedT ? parseInt(savedT) : Math.round((window.innerHeight - h) / 2);
+			// Clamp so dialog is never completely off-screen
+			l = Math.max(0, Math.min(l, window.innerWidth  - 120));
+			t = Math.max(0, Math.min(t, window.innerHeight -  60));
+			$dlg.css({ left: l + 'px', top: t + 'px' });
+
+			// ── Draggable (set up once) ────────────────────────────────────────
+			if ($.fn.draggable && !$dlg.hasClass('ui-draggable')) {
+				$dlg.draggable({
+					handle: '.modal-header',
+					stop: function(ev, ui) {
+						try {
+							localStorage.setItem('ssShowplan-dlg-left', Math.round(ui.position.left));
+							localStorage.setItem('ssShowplan-dlg-top',  Math.round(ui.position.top));
+						} catch(ex) {}
+					}
+				});
+			}
+
+			// ── Resizable (set up once) ───────────────────────────────────────
+			if ($.fn.resizable && !$cont.hasClass('ui-resizable')) {
+				$cont.resizable({
+					handles:   'all',
+					minWidth:  500,
+					minHeight: 300,
+					stop: function(ev, ui) {
+						try {
+							localStorage.setItem('ssShowplan-dlg-width',  Math.round(ui.size.width));
+							localStorage.setItem('ssShowplan-dlg-height', Math.round(ui.size.height));
+						} catch(ex) {}
+					}
+				});
+			}
+
+			// ── Draw plan (data-toggle path only) ────────────────────────────
 			if (!e.relatedTarget) return;
 			var data = $(e.relatedTarget).data();
 			try { QP.showPlan(document.getElementById('dbx-view-ssShowplan-content'), data.tooltip); } catch(ex) {}
 			if (typeof Prism !== 'undefined') Prism.highlightAll();
 			ssShowplanRunAnalysis(data.tooltip);
+		});
+
+		// Text viewer dialog — populate from the clicked trigger's data-tooltip attribute
+		// (DSR generates: data-toggle="modal" data-target="#dbx-view-sqltext-dialog" data-tooltip="...")
+		$(document).on('show.bs.modal', '#dbx-view-sqltext-dialog', function(e) {
+			var $trigger = $(e.relatedTarget);
+			var title    = $trigger.attr('title') || 'Text';
+			var text     = $trigger.attr('data-tooltip') || '';
+			$('#dbx-sqltext-dlg-title').text(title);
+			$('#dbx-sqltext-dlg-content').text(text);
+		});
+
+		// Table Information: lazy-load on first expand
+		document.getElementById('dbx-ssp-sect-tableinfo').addEventListener('toggle', function() {
+			if (!this.open) return;                          // closing — do nothing
+			var body = document.getElementById('dbx-ssp-tableinfo-body');
+			if (!body || body.getAttribute('data-loaded') === 'true') return;  // already loaded
+
+			var srv     = body.getAttribute('data-srv')     || '';
+			var dbname  = body.getAttribute('data-dbname')  || '';
+			var ts      = body.getAttribute('data-ts')      || '';
+			var sqlText = body.getAttribute('data-sqltext')  || '';
+
+			if (!srv || !dbname) {
+				body.innerHTML = '<em style="color:#888;">Table information is not available — no server context.</em>';
+				body.setAttribute('data-loaded', 'true');
+				return;
+			}
+
+			// Parse table names client-side (node-sql-parser w/ T-SQL AST; falls back to tokenizer)
+			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+
+			_extractTablesAsync(sqlText, function(tables) {
+				if (!tables.length) {
+					body.setAttribute('data-loaded', 'true');
+					body.innerHTML = '<em style="color:#888;">No tables could be parsed from the SQL text.</em>';
+					return;
+				}
+
+				body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+
+				$.ajax({
+					url:      '/api/cc/mgt/query-store',
+					data:     { srv: srv, action: 'tableInfo', dbname: dbname, tables: tables.join(','), ts: ts },
+					dataType: 'json',
+					success:  function(r) {
+						body.setAttribute('data-loaded', 'true');
+						if (r && r.html) {
+							var parsedMsg = '<div style="font-size:0.8em;color:#555;margin-bottom:6px;">Tables: '
+								+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
+								+ '</div>';
+							body.innerHTML = parsedMsg + r.html;
+						} else {
+							body.innerHTML = '<em style="color:#888;">No table information found in DDL Storage.</em>';
+						}
+					},
+					error:    function(xhr) {
+						body.setAttribute('data-loaded', 'true');
+						var msg = 'HTTP ' + xhr.status;
+						try { var j = JSON.parse(xhr.responseText); msg += ': ' + (j.message || j.error || ''); } catch(e) {}
+						body.innerHTML = '<span class="text-danger">Failed to load table info: ' + msg + '</span>';
+					}
+				});
+			});
 		});
 	}
 
@@ -561,7 +978,8 @@
 	 * @param {string} xmlText      — raw XML showplan string
 	 * @param {string} [sqlText]    — optional SQL text to display on the SQL tab
 	 * @param {string} [objectName] — optional object/query label shown in the header
-	 * @param {Object} [meta]       — optional metadata: { lastCompileStartTime, lastSeen, source }
+	 * @param {Object} [meta]       — optional metadata: { lastCompileStartTime, lastSeen, source, srv, dbname, ts }
+	 *                                meta.srv / meta.dbname / meta.ts are used for lazy-loading Table Information.
 	 */
 	window.showSqlServerShowplanDialog = function(xmlText, sqlText, objectName, meta) {
 		var $dlg = $('#dbx-view-ssShowplan-dialog');
@@ -595,6 +1013,30 @@
 		ssShowplanSetPlanType(xmlText);
 		ssShowplanGetParameters();
 		ssShowplanResetZoom();
+
+		// Reset Table Information section — store context for lazy loading on first expand
+		var tiSect = document.getElementById('dbx-ssp-sect-tableinfo');
+		var tiBody = document.getElementById('dbx-ssp-tableinfo-body');
+		if (tiSect && tiBody) {
+			var tiSrv    = (meta && meta.srv)    ? meta.srv    : '';
+			var tiDb     = (meta && meta.dbname) ? meta.dbname : '';
+			var tiTs     = (meta && meta.ts)     ? meta.ts     : '';
+			var tiSql    = sqlText || '';
+			tiBody.setAttribute('data-srv',     tiSrv);
+			tiBody.setAttribute('data-dbname',  tiDb);
+			tiBody.setAttribute('data-ts',      tiTs);
+			tiBody.setAttribute('data-sqltext', tiSql);
+			tiBody.setAttribute('data-loaded',  'false');
+			tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+			// Show or hide the section depending on whether we have a server context
+			if (tiSrv && tiDb) {
+				tiSect.style.display = '';
+			} else {
+				tiSect.style.display = 'none';
+			}
+			// Collapse it so the user opens it on demand
+			tiSect.removeAttribute('open');
+		}
 
 		// Draw the plan + run analysis once the modal is fully visible.
 		// If the dialog is already open (hasClass('show')), Bootstrap's modal('show')

@@ -223,7 +223,9 @@ function dbxGpRender(searchTerm) {
 		html += '<div class="dbx-gp-cm-group">';
 		html +=   '<div class="dbx-gp-cm-header" data-cm="' + cmName + '">'
 			+       '<span>' + cmName + '</span>'
-			+       '<small class="text-muted">'
+			+       '<button type="button" class="dbx-gp-cm-selectall btn btn-sm btn-outline-secondary" data-cm="' + cmName + '" title="Select all graphs in this group">Select All</button>'
+			+       '<button type="button" class="dbx-gp-cm-deselectall btn btn-sm btn-outline-secondary" data-cm="' + cmName + '" title="Deselect all graphs in this group">None</button>'
+			+       '<small class="text-muted ml-auto">'
 			+         '<span class="dbx-gp-cm-selected-count" data-cm="' + cmName + '">0</span>'
 			+         ' / ' + entries.length + ' selected'
 			+       '</small>'
@@ -506,9 +508,54 @@ function dbxInitGraphPickerModal() {
 	});
 
 	// Collapse / expand cm group on header click
-	$(document).on('click', '.dbx-gp-cm-header', function() {
+	$(document).on('click', '.dbx-gp-cm-header', function(e) {
+		// Ignore clicks that originated from the per-CM select/deselect buttons
+		if ($(e.target).closest('.dbx-gp-cm-selectall, .dbx-gp-cm-deselectall').length) return;
 		$(this).next('.dbx-gp-cm-body').toggle();
 		dbxGpSyncGroupButtons();
+	});
+
+	// "Select All" button — check every graph in that CM group
+	$(document).on('click', '.dbx-gp-cm-selectall', function(e) {
+		e.stopPropagation();
+		var cmName = $(this).data('cm');
+		$('.dbx-gp-cm-body input[type=checkbox][data-cm="' + cmName + '"]').each(function() {
+			if (!$(this).is(':checked')) {
+				$(this).prop('checked', true);
+				var t = $(this).val();
+				dbxGraphPickerSelected.add(t);
+				var nextNum = Object.keys(dbxGraphPickerOrder).length + 1;
+				dbxGraphPickerOrder[t] = nextNum;
+				$(this).closest('.dbx-gp-item').find('.dbx-gp-order-badge')
+					.text(nextNum).css('visibility', 'visible');
+			}
+		});
+		dbxGpUpdateCount();
+	});
+
+	// "None" button — uncheck every graph in that CM group
+	$(document).on('click', '.dbx-gp-cm-deselectall', function(e) {
+		e.stopPropagation();
+		var cmName = $(this).data('cm');
+		$('.dbx-gp-cm-body input[type=checkbox][data-cm="' + cmName + '"]').each(function() {
+			if ($(this).is(':checked')) {
+				$(this).prop('checked', false);
+				var t = $(this).val();
+				dbxGraphPickerSelected.delete(t);
+				delete dbxGraphPickerOrder[t];
+				$(this).closest('.dbx-gp-item').find('.dbx-gp-order-badge')
+					.text('').css('visibility', 'hidden');
+			}
+		});
+		// Re-number remaining selections so order badges stay consecutive
+		var remaining = Object.keys(dbxGraphPickerOrder).sort(function(a, b) {
+			return dbxGraphPickerOrder[a] - dbxGraphPickerOrder[b];
+		});
+		remaining.forEach(function(t, i) {
+			dbxGraphPickerOrder[t] = i + 1;
+			$('.dbx-gp-order-badge[data-table="' + t + '"]').text(i + 1);
+		});
+		dbxGpUpdateCount();
 	});
 
 	// OK — open / reload with selected graphs in chosen order

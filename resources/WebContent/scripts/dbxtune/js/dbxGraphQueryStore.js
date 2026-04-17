@@ -1491,12 +1491,28 @@ function queryStoreRenderDetail(r)
 			var tip  = _qsPagesToMb(pages);
 			return tip ? '<span title="' + escHtml(tip) + '">' + disp + '</span>' : String(disp);
 		};
-		// _nms: millisecond value — render with h/m/s tooltip when >= 1 s
+		// _nms: millisecond value — render integer-formatted; tooltip shows decimal precision + h/m/s
+		// dec: when supplied the value is a float — show rounded integer in cell,
+		//      put precise decimal value in tooltip (only when fractional part is non-zero).
 		var _nms = function(ms, dec) {
 			if (ms == null) return '—';
-			var disp = (dec != null && typeof ms === 'number') ? ms.toFixed(dec) : (_qsFmtNum(ms) || ms);
-			var tip  = ms >= 1000 ? _qsUsToHms(ms * 1000) : '';
-			return tip ? '<span title="' + escHtml(tip) + '">' + disp + '</span>' : String(disp);
+			var tips = [];
+			var disp;
+			if (dec != null && typeof ms === 'number') {
+				// Cell: integer with thousands separator (same style as Total/Max columns)
+				disp = _qsFmtNum(Math.round(ms)) || String(Math.round(ms));
+				// Tooltip line 1: precise decimal value — only when there is a fractional part
+				if (ms !== Math.round(ms)) {
+					var precise = ms.toFixed(dec);
+					tips.push((_qsFmtNum(precise) || precise) + ' ms');
+				}
+			} else {
+				disp = _qsFmtNum(ms) || String(ms);
+			}
+			// Tooltip line 2 (or 1): h/m/s breakdown for values >= 1 s
+			if (typeof ms === 'number' && ms >= 1000) tips.push(_qsUsToHms(ms * 1000));
+			var tip = tips.join('\n');
+			return tip ? '<span title="' + escHtml(tip) + '">' + disp + '</span>' : disp;
 		};
 		var _th = function(label, tip) {
 			return '<th' + (tip ? ' title="' + escHtml(tip) + '"' : '') + '>' + escHtml(label) + '</th>';
@@ -1761,7 +1777,12 @@ function qsShowXmlPlan(slotOrXml)
 	if (!entry || !entry.xml) return;
 
 	if (typeof showSqlServerShowplanDialog === 'function') {
-		showSqlServerShowplanDialog(entry.xml, entry.sqlText, entry.objectName);
+		var planMeta = {
+			srv:    _qsSrvName || '',
+			dbname: entry.dbname || '',
+			ts:     entry.ts    || ''
+		};
+		showSqlServerShowplanDialog(entry.xml, entry.sqlText, entry.objectName, planMeta);
 	} else {
 		// Fallback: open raw XML in a new window
 		var w = window.open('', '_blank', 'width=900,height=600,scrollbars=yes');
@@ -1810,7 +1831,10 @@ function qsGetLastActual(slot)
 				var meta = {
 					lastCompileStartTime: entry.lastCompileStartTime,
 					lastSeen:             entry.lastSeen,
-					source:               r.source
+					source:               r.source,
+					srv:                  _qsSrvName || '',
+					dbname:               entry.dbname || '',
+					ts:                   entry.ts    || ''
 				};
 				if (typeof showSqlServerShowplanDialog === 'function') {
 					showSqlServerShowplanDialog(r.xml, entry.sqlText, entry.objectName + ' \u2014 ' + sourceLabel, meta);

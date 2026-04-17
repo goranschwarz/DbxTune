@@ -303,9 +303,27 @@ implements IReportEntry
 	 * @param rstm   The ResultSet to create a HTML table for
 	 * @return a HTML Table 
 	 */
+	public String toHtmlTable(ResultSetTableModel rstm, String classNames)
+	{
+		if (rstm == null)
+			return "";
+		
+		String extraClassNames = "sortable";
+		if (StringUtil.hasValue(classNames))
+			extraClassNames += extraClassNames + " " + classNames;
+		
+		// use a renderer ReportEntryTableStringRenderer
+		return rstm.toHtmlTableString(extraClassNames, true, true, null, new ReportEntryTableStringRenderer());
+	}
+
+	/**
+	 * More or less same as ResultSetTableModel.toHtmlTableString(...) but a default renderer that has column names like '*Time*', '*_ms*' or '*Ms*' a tool tip with the milliseconds transformed to HH:MM:SS.ms 
+	 * @param rstm   The ResultSet to create a HTML table for
+	 * @return a HTML Table 
+	 */
 	public String toHtmlTable(ResultSetTableModel rstm)
 	{
-		return toHtmlTable(rstm, null);
+		return toHtmlTable(rstm, (Map<String, String>)null);
 	}
 	/**
 	 * More or less same as ResultSetTableModel.toHtmlTableString(...) but a default renderer that has column names like '*Time*', '*_ms*' or '*Ms*' a tool tip with the milliseconds transformed to HH:MM:SS.ms 
