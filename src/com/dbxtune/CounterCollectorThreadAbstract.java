@@ -169,6 +169,10 @@ extends Thread
 					{
 						serverName = conn.getDbmsServerName();							
 						jdbcUrl    = conn.getMetaData().getURL();
+						
+						// If it's a long URL, simply strip off all the various options, and just keep the BASE url
+						//JdbcUrlParser urlParser = JdbcUrlParser.parse(jdbcUrl);
+						jdbcUrl = JdbcUrlParser.getBaseUrl(jdbcUrl);
 					}
 					catch (Throwable ignore) {}
 				}
@@ -180,7 +184,6 @@ extends Thread
 				_logger.info("Sending AlarmEventSrvDown(serverName='"+serverName+"', jdbcUrl='"+jdbcUrl+"') to the AlarmHandler.");
 
 				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
-//				AlarmHandler.getInstance().addAlarmToQueue(alarmEventSrvDown);
 				AlarmHandler.getInstance().addAlarm(alarmEventSrvDown);
 
 				// Make the AlarmHandler act NOW
@@ -197,7 +200,6 @@ extends Thread
 				jdbcUrl    = "unknown-url";
 
 				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
-//				AlarmHandler.getInstance().addAlarmToQueue(alarmEventSrvDown);
 				AlarmHandler.getInstance().addAlarm(alarmEventSrvDown);
 
 				// Make the AlarmHandler act NOW

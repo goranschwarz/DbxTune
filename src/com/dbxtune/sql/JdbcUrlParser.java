@@ -106,6 +106,73 @@ public class JdbcUrlParser
 	}
 	
 
+	/**
+	 * Returns the "base" part of a JDBC URL by stripping all driver-specific
+	 * properties (everything from the first '?' or ';' onwards).
+	 *
+	 * Examples:
+	 *   jdbc:sqlserver://host:1433;databaseName=mydb;encrypt=true  →  jdbc:sqlserver://host:1433
+	 *   jdbc:postgresql://host:5432/mydb?ssl=true                  →  jdbc:postgresql://host:5432/mydb
+	 *   jdbc:mysql://host:3306/mydb?useSSL=true&serverTimezone=UTC →  jdbc:mysql://host:3306/mydb
+	 *   jdbc:jtds:sybase://host:5000/mydb;appName=foo              →  jdbc:jtds:sybase://host:5000/mydb
+	 *   jdbc:h2:file:/data/mydb;AUTO_SERVER=TRUE                   →  jdbc:h2:file:/data/mydb
+	 *   If you also need to handle DB2's : separator
+	 *      DB2 uses jdbc:db2://host:50000/mydb:currentSchema=x; — a third : after the database name. You can handle it by only looking for : past the //host:port/ section:
+	 */
+//	public static String getBaseUrl(String url)
+//	{
+//	    if (url == null) return null;
+//	    int q   = url.indexOf('?');
+//	    int s   = url.indexOf(';');
+//	    int cut = (q < 0) ? s : (s < 0) ? q : Math.min(q, s);
+//	    return cut < 0 ? url : url.substring(0, cut);
+//	}
+	public static String getBaseUrl(String url)
+	{
+	    if (url == null) return null;
+
+	    // Find cut point from first '?' or ';'
+	    int q   = url.indexOf('?');
+	    int s   = url.indexOf(';');
+	    int cut = (q < 0) ? s : (s < 0) ? q : Math.min(q, s);
+
+	    // DB2: extra ':' after the database path — only look past "jdbc:xx://host:port/"
+	    // i.e. past the third slash that ends the db-name segment
+	    int slashSlash = url.indexOf("//");
+	    if (slashSlash >= 0)
+	    {
+	        int afterHost = url.indexOf('/', slashSlash + 2); // slash before db name
+	        if (afterHost >= 0)
+	        {
+	            int dbColon = url.indexOf(':', afterHost + 1); // ':' after db name
+	            if (dbColon >= 0 && (cut < 0 || dbColon < cut))
+	                cut = dbColon;
+	        }
+	    }
+
+	    return cut < 0 ? url : url.substring(0, cut);
+	}
+	private static void dummyTest()
+	{
+		System.out.println(getBaseUrl("jdbc:sqlserver://myhost:1433;databaseName=foo;encrypt=true"));
+		// jdbc:sqlserver://myhost:1433
+
+		System.out.println(getBaseUrl("jdbc:postgresql://myhost:5432/mydb?ssl=true"));
+		// jdbc:postgresql://myhost:5432/mydb
+
+		System.out.println(getBaseUrl("jdbc:mysql://myhost:3306/mydb?useSSL=true&serverTimezone=UTC"));
+		// jdbc:mysql://myhost:3306/mydb
+
+		System.out.println(getBaseUrl("jdbc:db2://myhost:50000/mydb:currentSchema=dbo;"));
+		// jdbc:db2://myhost:50000/mydb
+
+		System.out.println(getBaseUrl("jdbc:h2:file:/data/mydb;AUTO_SERVER=TRUE"));
+		// jdbc:h2:file:/data/mydb
+
+		System.out.println(getBaseUrl("jdbc:oracle:thin:@myhost:1521:MYSID"));
+		// jdbc:oracle:thin:@myhost:1521:MYSID  (no change — Oracle has no props here)	
+	}
+
 	public static JdbcUrlParser parse(String url)
 	{
 		if (StringUtil.isNullOrBlank(url))

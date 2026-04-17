@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +53,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
@@ -296,10 +298,18 @@ extends HttpServlet
 					break;
 				}
 
+				case "tableinfo":
+				{
+					String tablesParam = Helper.getParameter(req, "tables", "").trim();
+					Map<String, Object> tiResult = actionTableInfo(conn, dbnameParam.trim(), tablesParam);
+					om.writeValue(out, tiResult);
+					break;
+				}
+
 				default:
 					resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 					om.writeValue(out, errMap("bad-param", "Unknown action '" + action
-							+ "'. Use: listDatabases | topQueries | queryDetail | lastActualPlan | extractStatus"));
+							+ "'. Use: listDatabases | topQueries | queryDetail | lastActualPlan | extractStatus | tableInfo"));
 					break;
 			}
 
@@ -336,7 +346,7 @@ extends HttpServlet
 		{
 			resp.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 			om.writeValue(out, errMap("method-not-allowed",
-					"POST is only supported for action=extract. Use GET for all read actions."));
+					"POST is only supported for action=extract or action=tableInfo. Use GET for all other read actions."));
 			out.flush(); out.close();
 			return;
 		}
@@ -420,6 +430,55 @@ extends HttpServlet
 	// =========================================================================
 	// Action: extractStatus (poll running/lastRun/lastStatus)
 	// =========================================================================
+
+	// -------------------------------------------------------------------------
+	// action=tableInfo — parse SQL, look up table / index info from DDL Storage
+	// -------------------------------------------------------------------------
+	private Map<String, Object> actionTableInfo(DbxConnection conn, String dbname, String tablesParam)
+	{
+		Map<String, Object> result = new LinkedHashMap<>();
+
+		if (tablesParam == null || tablesParam.isBlank())
+		{
+			result.put("html", "<em>No tables provided.</em>");
+			return result;
+		}
+
+		// Table names were already parsed client-side; split the comma-separated list
+		Set<String> tableList = new LinkedHashSet<>();
+		for (String t : tablesParam.split(","))
+		{
+			String trimmed = t.trim();
+			if (!trimmed.isEmpty())
+				tableList.add(trimmed);
+		}
+
+		if (tableList.isEmpty())
+		{
+			result.put("html", "<em>No tables provided.</em>");
+			return result;
+		}
+
+		try
+		{
+			String html = SqlServerAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo");
+			if (StringUtil.isNullOrBlank(html))
+			{
+				StringBuilder sb = new StringBuilder();
+				for (String t : tableList)
+					sb.append("&emsp;&bull; Table <code>").append(t).append("</code> was not found in the DDL Storage.<br>\n");
+				html = sb.toString();
+			}
+			result.put("html", html);
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("actionTableInfo: error fetching table info for dbname={} tables={}: {}", dbname, tableList, ex.getMessage(), ex);
+			result.put("html", "<span class='text-danger'>Error fetching table info: " + ex.getMessage() + "</span>");
+		}
+
+		return result;
+	}
 
 	private Map<String, Object> actionExtractStatus(String typeName)
 	{

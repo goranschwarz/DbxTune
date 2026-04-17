@@ -106,6 +106,7 @@ extends ProxyHelper
 		String includePlan   = Helper.getParameter(req, "includePlan",   "");
 		String ts            = Helper.getParameter(req, "ts",            "");
 		String type          = Helper.getParameter(req, "type",          "");
+		String tables        = Helper.getParameter(req, "tables",        "");
 
 		HtmlQueryString qs = new HtmlQueryString(collectorBaseUrl + "/api/mgt/query-store");
 		qs.add          ("action",        action);
@@ -118,6 +119,7 @@ extends ProxyHelper
 		qs.addIfNotEmpty("includePlan",   includePlan);
 		qs.addIfNotEmpty("ts",            ts);
 		qs.addIfNotEmpty("type",          type);
+		qs.addIfNotEmpty("tables",        tables);
 
 		String url = qs.toString();
 
