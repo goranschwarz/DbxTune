@@ -9,7 +9,8 @@ DbxCentral is the Central Web Console to view Trend graphs and other information
 ## Overview of the installation:
  * Create a new Virtual machine that will host DbxCentral and all DbxTune collectors    
    The machine can be called anything but `dbxtune.acme.com` is a good name.
- * Create a user on the above machine (`dbxtune` is a good name)
+ * Create a user on the above machine (`dbxtune` is a good name)    
+   Or even better: Create a service account, that will be used on both the VM and to talk to SQL Server
  * Connect to the above machine
  * Download the software
  * Initialize the software (create appdir)
@@ -25,7 +26,7 @@ Make a connection to the host you are going to install on
 Remote Desktop Connection to `username@dbxtune.acme.com`   
 
 Create a Windows User on the machine, that will _host_ the DbxCentral installation    
-Adding the user as `Administrator` is the simplest, otherwise it will be complicated...     
+Adding the user as `Administrator` is the simplest, otherwise it will be a bit more complicated...     
 To add a user that does **not** have Administrator role is covered in another section.    
 > You can use any Windows username, but I recommend creating a separate user called `dbxtune`    
 ```
@@ -45,6 +46,7 @@ net localgroup administrators dbxtune /add
 
 ## Create Windows Username that does **not** have `Administrator` role
 > NOTE: This is much harder to maintain than a local admin user....
+> But this is **probably** how you would do it for a Enterprise Installation
 
 Required roles or authorizations
 * `Create symbolic links`
@@ -89,7 +91,7 @@ To check if the dbxtune user can create symbolic links:
 
 
 ## Download and install the binaries 
-* A good place to install the software is: `c:\Users\dbxtune\dbxtune`
+* A good place to install the software is: `c:\Users\dbxtune\dbxtune_sw`
 * You get the software from: https://sourceforge.net/projects/asetune/files/   
   The downloaded file are named: dbxtune_YYYY-MM-DD.zip
 
@@ -99,10 +101,10 @@ To check if the dbxtune user can create symbolic links:
 ## the downloaded file are named: dbxtune_YYYY-MM-DD.zip
 set timestamp="2022-12-08"  
 cd c:\Users\dbxtune
-mkdir dbxtune
-cd dbxtune
+mkdir dbxtune_sw
+cd dbxtune_sw
 
-## Put the downloaded ZIP file user c:\Users\dbxtune\dbxtune
+## Put the downloaded ZIP file user c:\Users\dbxtune\dbxtune_sw
 ## or download it again: (note: file name will soon change from 'asetune_YYYY-MM-DD.zip' to 'dbxtune_YYYY-MM-DD.zip')
 curl -L https://sourceforge.net/projects/asetune/files/asetune_%timestamp%.zip/download -o dbxtune_%timestamp%.zip
 
@@ -116,7 +118,7 @@ or in mklink in powershell: `New-Item -Path 0 -ItemType SymbolicLink -Value dbxt
 
 ## Some extra info about the DbxTune directory structures...
 DbxTune/DbxCentral consists of 2 distinct directory locations
- 1. The binary software, which resides under `c:\Users\dbxtune\dbxtune\0`    
+ 1. The binary software, which resides under `c:\Users\dbxtune\dbxtune_sw\0`    
     (where 0 is a soft link to the latest sw release)
  2. User configurations, log files, customized start files, etc...   
     Are located at `c:\Users\dbxtune\.dbxtune`
@@ -136,7 +138,7 @@ Below is output from when I did it
 **Note**: this example was done with a zip file: dbxtune_2018-06-28.zip    
 *(which is an earlier version than you are installing, so there might be some differences in the output)*   
 ```
-dbxtune@gorans-ub2:~/dbxtune$ 0/bin/dbxcentral.sh --createAppDir
+dbxtune@gorans-ub2:~/dbxtune_sw$ 0/bin/dbxcentral.sh --createAppDir
 
 NOTE: You can set local environment in file: /home/dbxtune/.dbxtune/DBXTUNE.env
 
@@ -147,8 +149,8 @@ NOTE: Set/Change JVM Memory parameters by setting Environment variable: DBXTUNE_
 Information about some environment variables
 ----------------------------------------------------------------
 SYBASE=/opt/sybase/16.0
-DBXTUNE_HOME=/home/dbxtune/dbxtune/dbxtune_2018-06-28
-DBXTUNE_SAVE_DIR=/home/dbxtune/dbxtune/dbxtune_2018-06-28/data
+DBXTUNE_HOME=/home/dbxtune/dbxtune_sw/dbxtune_2018-06-28
+DBXTUNE_SAVE_DIR=/home/dbxtune/dbxtune_sw/dbxtune_2018-06-28/data
 DBXTUNE_JAVA_HOME=
 JAVA_HOME=
 

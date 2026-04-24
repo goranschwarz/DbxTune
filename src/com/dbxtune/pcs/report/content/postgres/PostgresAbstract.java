@@ -302,6 +302,8 @@ extends ReportEntryAbstract
 
 			LinkedHashMap<String, String> tableInfoMap = new LinkedHashMap<>();
 
+//			tableInfoMap.put("SampleTime", entry.getSampleTime() + ""); // Note: This is already added as "Sampled" on tables
+
 			if (entry.isView())
 			{
 				tableInfoMap.put("Type"       ,            "<b>VIEW</b>"              );

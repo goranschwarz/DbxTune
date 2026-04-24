@@ -104,6 +104,31 @@ public class CompletionProviderStaticTemplates
 		list.add( new CompletionTemplate(":sv", ":sv", "Show all system views") );
 		list.add( new CompletionTemplate(":r",  ":r",  "Refresh the Code Completion") );
 
+		// FreeMarker templates
+		String freeMarkerExampleList = ""
+				+ "<#-- Below is loop of strings --> \n"
+				+ "-- First some text... Then the loop \n"
+				+ "<#list ['str-1', 'str-2', 'str-3', 'str-4'] as name> \n"
+				+ "print 'dummy ${name}' \n"
+				+ "</#list> \n"
+				;
+		String freeMarkerExample     = freeMarkerExampleList + "print-template\n";
+		String freeMarkerExampleRsql = ""
+				+ "<#list ['YYYY-04-10', 'YYYY-04-11', 'YYYY-04-12', 'YYYY-04-13', 'YYYY-04-14'] as dbdate> \n"
+				+ "\\rsql -U sa -P null -u jdbc:h2:tcp://dbxtune.acme.com/SRVNAME_${dbdate};IFEXISTS=TRUE \n"
+				+ "SELECT \n"
+				+ "     CURRENT_CATALOG() \n"
+				+ "    ,COUNT(*) AS rowc \n"
+				+ "FROM [someTableName] \n"
+				+ "go \n"
+				+ "</#list> \n"
+				;
+
+		list.add( new CompletionTemplate(":template",      freeMarkerExample,     "Small FreeMarker template") );
+		list.add( new CompletionTemplate(":template-rsql", freeMarkerExampleRsql, "Remote SQL template") );
+		list.add( new CompletionTemplate(":template-doc",  "https://freemarker.apache.org/docs/ref_directive_list.html",  "FreeMarker documentation") );
+		list.add( new CompletionTemplate("<#list",         freeMarkerExampleList, "FreeMarker list of strings") );
+
 		return list;
 	}
 

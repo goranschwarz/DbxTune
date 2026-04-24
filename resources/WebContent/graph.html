@@ -1087,7 +1087,7 @@ at pc:
 	<script src="/scripts/sql-formatter/12.1.3/sql-formatter.min.js"></script>
 
 	<!-- JQuery Sparklines -->
-	<!--<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js'></script> -->
+	<script src='/scripts/jquery-sparklines/2.1.2/jquery.sparkline.min.js'></script>
 
 	<!-- Postgres Query Plan -- PEV2 -->
 <!--<script src="https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js"></script>-->
@@ -1553,7 +1553,7 @@ at pc:
 			<span style="white-space:nowrap;">Rank&nbsp;by:
 				<select id="query-store-rankby" onchange="queryStoreTopQueriesLoad();" style="font-size:0.85em;height:20px;padding:0 2px;">
 					<option value="duration">Elapsed time</option>
-					<option value="cpu">CPU</option>
+					<option value="cpu" selected>CPU</option>
 					<option value="reads">Logical reads</option>
 					<option value="physical_reads">Physical reads</option>
 					<option value="writes">Logical writes</option>
@@ -1563,6 +1563,9 @@ at pc:
 					<option value="tempdb">Tempdb</option>
 					<option value="log">Log / WAL</option>
 					<option value="compile">Compile time</option>
+					<option value="waittime">Wait time</option>
+					<option value="plancount">Plan count</option>
+					<option value="aborted">Aborted / Exceptions</option>
 				</select>
 			</span>
 			<span style="white-space:nowrap;">Top:

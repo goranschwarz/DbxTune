@@ -507,6 +507,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-9.2.1.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\schemacrawler-16.2.4.jar
 rem    set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\schemacrawler-16.22.2.jar  --------------------------------
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\sql-formatter-2.0.5.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\freemarker-2.3.34.jar
 
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\tomcat\*
 

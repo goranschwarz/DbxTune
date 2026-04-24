@@ -123,6 +123,34 @@ function _qsFmt1Dec(v)
 }
 
 /**
+ * Format a millisecond duration as a human-readable string.
+ *   < 1 000 ms  →  "800 ms"
+ *   < 60 000 ms →  "12.3 s"
+ *   < 3 600 000 →  "4m 32s"
+ *   ≥ 3 600 000 →  "2h 15m"
+ */
+function _qsFmtMsDur(ms)
+{
+	if (ms == null || isNaN(ms)) return String(ms);
+	var v = Number(ms);
+	if (v < 1000)       return (_qsFmtNum(Math.round(v)) || String(Math.round(v))) + '\u00a0ms';
+	if (v < 60000)      return _qsFmt1Dec(v / 1000) + '\u00a0s';
+	if (v < 3600000) {
+		var m = Math.floor(v / 60000);
+		var s = Math.round((v % 60000) / 1000);
+		return m + 'm\u00a0' + s + 's';
+	}
+	if (v < 86400000) {
+		var h = Math.floor(v / 3600000);
+		var m = Math.round((v % 3600000) / 60000);
+		return h + 'h\u00a0' + m + 'm';
+	}
+	var d = Math.floor(v / 86400000);
+	var h = Math.round((v % 86400000) / 3600000);
+	return d + 'd\u00a0' + h + 'h';
+}
+
+/**
  * Format an 8-KB page count as a human-readable size — used as tooltip on
  * logical/physical read page-count cells.
  * Each page = 8 KB, so MB = pages / 128.
@@ -466,11 +494,15 @@ function queryStoreRenderDatabases(r)
 			+ '<p style="margin-bottom:10px;">No databases with Query Store data found on this server.</p>'
 			+ '<p style="color:#6c757d;font-size:0.88em;margin-bottom:14px;">'
 			+ 'Data is collected during the nightly database rollover. '
-			+ 'Click <b>Extract now</b> to pull Query Store data from the live SQL Server immediately. <br>'
-			+ 'Or select an older date to view in the Dropdown that say <b>Today (live)</b></p>'
+			+ 'Click <b>Extract now</b> to pull Query Store data from the live SQL Server immediately.<br>'
+			+ 'Or click <b>Look at Yesterday\'s data</b> to switch to the most recent historical recording.</p>'
+			+ '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
 			+ '<button class="btn btn-sm btn-primary" onclick="queryStoreTriggerExtractInline(this);">'
 			+ '<i class="fa fa-download"></i>&nbsp; Extract now</button>'
-			+ '&nbsp;<span id="qs-inline-extract-status" style="font-size:0.85em;margin-left:8px;"></span>'
+			+ '<button class="btn btn-sm btn-outline-secondary" onclick="qsShowYesterdayData();">'
+			+ '&#128197;&nbsp; Look at Yesterday\'s data</button>'
+			+ '</div>'
+			+ '<span id="qs-inline-extract-status" style="display:block;font-size:0.85em;margin-top:8px;"></span>'
 			+ '</div>');
 		return;
 	}
@@ -605,7 +637,7 @@ function qsQuerySelectedDbs()
 
 	var period    = parseInt($('#qs-db-period').val()) || 7;
 	var aggregate = $('#qs-db-aggregate').prop('checked');
-	var rankBy    = $('#query-store-rankby').val()           || 'duration';
+	var rankBy    = $('#query-store-rankby').val()           || 'cpu';
 	var topN      = parseInt($('#query-store-topn').val())   || 25;
 	var minExec   = parseInt($('#query-store-minexec').val()) || 2;
 
@@ -856,6 +888,9 @@ function _qsRankMetricKey(rankBy)
 		case 'tempdb':         return 'totalTempdbMb';
 		case 'log':            return 'totalLogMb';
 		case 'compile':        return 'avgCompileDurationUs';
+		case 'waittime':       return 'totalWaitMs';
+		case 'plancount':      return 'planCount';
+		case 'aborted':        return 'totalAbortedException';
 		default:               return 'totalDurationUs';
 	}
 }
@@ -898,7 +933,7 @@ function queryStoreTopQueriesLoad()
 {
 	// In multi-db mode, re-rank from cached rows without re-fetching
 	if (_qsMultiDbMode && _qsMultiDbAllRows) {
-		var rankBy    = $('#query-store-rankby').val()          || 'duration';
+		var rankBy    = $('#query-store-rankby').val()          || 'cpu';
 		var topN      = parseInt($('#query-store-topn').val())  || 25;
 		var aggregate = _qsMultiDbSchemaFlags && _qsMultiDbSchemaFlags._aggregate !== false;
 		_qsMergeAndRender(_qsMultiDbAllRows, _qsMultiDbSchemaFlags || {}, rankBy, topN, aggregate);
@@ -909,7 +944,7 @@ function queryStoreTopQueriesLoad()
 	var dbname = _qsDbname;
 	if (!srv || !dbname) return;
 
-	var rankBy  = $('#query-store-rankby').val()  || 'duration';
+	var rankBy  = $('#query-store-rankby').val()  || 'cpu';
 	var topN    = $('#query-store-topn').val()     || '25';
 	var minExec = $('#query-store-minexec').val()  || '2';
 	var ts      = _qsTimestamp || '';
@@ -954,47 +989,52 @@ function queryStoreRenderTopQueries(r)
 		return;
 	}
 
-	var rankBy     = r.rankBy             || 'duration';
-	var hasMemory  = r.hasMemoryCols      === true;
-	var has2017    = r.has2017Cols        === true;
-	var hasCompile = r.hasCompileDuration === true;
-	var isMultiDb  = r._multiDb           === true;
-	var showDay    = isMultiDb && r._aggregate === false;
+	var rankBy      = r.rankBy             || 'cpu';
+	var hasMemory   = r.hasMemoryCols      === true;
+	var has2017     = r.has2017Cols        === true;
+	var hasCompile  = r.hasCompileDuration === true;
+	var hasAborted  = r.hasAbortedCols     === true;
+	var hasWaitStat = r.hasWaitStats       === true;
+	var isMultiDb   = r._multiDb           === true;
+	var showDay     = isMultiDb && r._aggregate === false;
 
 	// ── Build column list dynamically based on server capabilities ────────────
 	// Columns are grouped by metric — each metric's avg/max/total together for easy scanning.
-	var cols   = ['queryId','objectContext','querySqlTextPreview','planCount','totalExecutions','_efficiencyPct'];
-	var labels = ['Query ID','Object / Context','SQL Preview','Plans','Executions','CPU Eff %'];
+	var cols   = ['queryId','objectContext','querySqlTextPreview','planCount','totalExecutions','_spark_executions','_efficiencyPct'];
+	var labels = ['Query ID','Object / Context','SQL Preview','Plans','Executions','📈 Executions','CPU Eff %'];
 	// Duration group
-	cols.push('avgDurationUs','maxDurationUs','totalDurationUs');
-	labels.push('Avg Elapsed (ms)','Max Elapsed (ms)','Total Elapsed (ms)');
+	cols.push('avgDurationUs','maxDurationUs','totalDurationUs','_spark_duration');
+	labels.push('Avg Elapsed (ms)','Max Elapsed (ms)','Total Elapsed (ms)','📈 Avg Elapsed');
 	// CPU group
-	cols.push('avgCpuUs','totalCpuUs');
-	labels.push('Avg CPU (ms)','Total CPU (ms)');
+	cols.push('avgCpuUs','totalCpuUs','_spark_cpu');
+	labels.push('Avg CPU (ms)','Total CPU (ms)','📈 Avg CPU');
+	// Wait time group
+	cols.push('avgWaitMs','maxWaitMs','totalWaitMs','_spark_waitMs');
+	labels.push('Avg Wait (ms)','Max Wait (ms)','Total Wait (ms)','📈 Wait Time');
 	// Logical reads group
-	cols.push('avgLogicalReads','maxLogicalReads','totalLogicalReads');
-	labels.push('Avg Reads','Max Reads','Total Reads');
+	cols.push('avgLogicalReads','maxLogicalReads','totalLogicalReads','_spark_reads');
+	labels.push('Avg Reads','Max Reads','Total Reads','📈 Avg Reads');
 	// Physical reads group
-	cols.push('avgPhysicalReads','totalPhysicalReads');
-	labels.push('Avg Phys Reads','Total Phys Reads');
+	cols.push('avgPhysicalReads','totalPhysicalReads','_spark_physReads');
+	labels.push('Avg Phys Reads','Total Phys Reads','📈 Avg Phys Reads');
 	// Logical writes group
-	cols.push('avgLogicalWrites','totalLogicalWrites');
-	labels.push('Avg Writes','Total Writes');
+	cols.push('avgLogicalWrites','totalLogicalWrites','_spark_writes');
+	labels.push('Avg Writes','Total Writes','📈 Avg Writes');
 	// Rows group
-	cols.push('avgRowcount','totalRowcount');
-	labels.push('Avg Rows','Total Rows');
+	cols.push('avgRowcount','totalRowcount','_spark_rowcount');
+	labels.push('Avg Rows','Total Rows','📈 Avg Rows');
 	// Optional groups — pushed in metric order, avg+total together
 	if (hasMemory) {
-		cols.push('avgMemoryMb','totalMemoryMb');
-		labels.push('Avg Mem (MB)','Total Mem (MB)');
+		cols.push('avgMemoryMb','totalMemoryMb','_spark_memory');
+		labels.push('Avg Mem (MB)','Total Mem (MB)','📈 Avg Mem');
 	}
 	if (has2017) {
 		cols.push('avgDop');
 		labels.push('Avg DOP');
-		cols.push('avgTempdbMb','totalTempdbMb');
-		labels.push('Avg Tempdb (MB)','Total Tempdb (MB)');
-		cols.push('avgLogMb','totalLogMb');
-		labels.push('Avg Log (MB)','Total Log (MB)');
+		cols.push('avgTempdbMb','totalTempdbMb','_spark_tempdb');
+		labels.push('Avg Tempdb (MB)','Total Tempdb (MB)','📈 Avg Tempdb');
+		cols.push('avgLogMb','totalLogMb','_spark_log');
+		labels.push('Avg Log (MB)','Total Log (MB)','📈 Avg Log');
 	} else if (r.schemaHasDopCol === true) {
 		cols.push('avgDop');
 		labels.push('Avg DOP');
@@ -1003,6 +1043,8 @@ function queryStoreRenderTopQueries(r)
 		cols.push('avgCompileDurationUs','countCompiles');
 		labels.push('Avg Compile (ms)','# Compiles');
 	}
+	cols.push('totalAbortedException');
+	labels.push('Aborted+Exc');
 	cols.push('firstSeen','lastSeen');
 	labels.push('First seen','Last seen');
 
@@ -1046,9 +1088,24 @@ function queryStoreRenderTopQueries(r)
 		totalLogMb:            'Total transaction log generated across all executions in MB (SQL Server 2017+)',
 		avgCompileDurationUs:  'Average query compile/recompile duration in milliseconds (from query_store_query — SQL Server 2019+)',
 		countCompiles:         'Number of times this query was compiled or recompiled (from query_store_query — SQL Server 2019+)',
+		avgWaitMs:             'Average total wait time per execution in milliseconds (SQL Server 2017+)',
+		maxWaitMs:             'Maximum total wait time observed in a single Query Store interval (SQL Server 2017+)',
+		totalWaitMs:           'Total wait time accumulated across all executions in milliseconds (SQL Server 2017+)',
+		_spark_waitMs:         'Timeline: Total Wait Time (ms) per Query Store interval — shows WHEN this query was waiting',
+		totalAbortedException: 'Total count of aborted + exception executions in this recording period',
 		firstSeen:             'Timestamp when this query was first recorded in the Query Store',
 		lastSeen:              'Timestamp of the most recent execution recorded',
-		querySqlTextPreview:   'First 90 characters of the query SQL text — hover for full text'
+		querySqlTextPreview:   'First 90 characters of the query SQL text — hover for full text',
+		_spark_executions:     'Timeline: Execution count per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_duration:       'Timeline: Avg Elapsed (ms) per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_cpu:            'Timeline: Avg CPU (ms) per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_reads:          'Timeline: Avg Logical Reads per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_physReads:      'Timeline: Avg Physical Reads per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_writes:         'Timeline: Avg Logical Writes per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_rowcount:       'Timeline: Avg Row Count per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_memory:         'Timeline: Avg Memory Grant (MB) per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_tempdb:         'Timeline: Avg Tempdb Usage (MB) per Query Store interval — all queries aligned to the same time range; zero where the query had no executions',
+		_spark_log:            'Timeline: Avg Log Usage (MB) per Query Store interval — all queries aligned to the same time range; zero where the query had no executions'
 	};
 
 	// Apply filter
@@ -1084,7 +1141,10 @@ function queryStoreRenderTopQueries(r)
 	else if (rankBy === 'memory')          { rankColSet['avgMemoryMb']          = true; rankColSet['totalMemoryMb']          = true; }
 	else if (rankBy === 'tempdb')          { rankColSet['avgTempdbMb']          = true; rankColSet['totalTempdbMb']           = true; }
 	else if (rankBy === 'log')             { rankColSet['avgLogMb']             = true; rankColSet['totalLogMb']              = true; }
-	else if (rankBy === 'compile')         { rankColSet['avgCompileDurationUs'] = true; }
+	else if (rankBy === 'compile')         { rankColSet['avgCompileDurationUs']  = true; }
+	else if (rankBy === 'waittime')        { rankColSet['avgWaitMs'] = true; rankColSet['maxWaitMs'] = true; rankColSet['totalWaitMs'] = true; rankColSet['_spark_waitMs'] = true; }
+	else if (rankBy === 'plancount')       { rankColSet['planCount']             = true; }
+	else if (rankBy === 'aborted')         { rankColSet['totalAbortedException'] = true; }
 
 	var html = '<table id="qs-tq-table" class="table table-sm table-bordered table-hover" style="font-size:0.82em;white-space:nowrap;cursor:pointer;width:auto;">';
 	html += '<thead class="thead-light"><tr>';
@@ -1108,7 +1168,8 @@ function queryStoreRenderTopQueries(r)
 		avgLogicalWrites:1, totalLogicalWrites:1,
 		avgRowcount:1, totalRowcount:1,
 		avgCompileDurationUs:1, countCompiles:1,
-		avgDop:1
+		avgDop:1,
+		avgWaitMs:1, maxWaitMs:1, totalWaitMs:1, totalAbortedException:1
 	};
 	// µs columns — also get a human-readable h/m/s tooltip
 	var usCols = {
@@ -1168,6 +1229,26 @@ function queryStoreRenderTopQueries(r)
 				var preview = (val || '').substring(0, 90) + ((val || '').length > 90 ? '…' : '');
 				html += '<td style="font-family:monospace;font-size:0.88em;max-width:300px;overflow:hidden;text-overflow:ellipsis;"'
 				      + ' title="' + escHtml(val || '') + '">' + escHtml(preview) + '</td>';
+			} else if (col.indexOf('_spark_') === 0) {
+				var sparkKey   = col.substring(7);   // strip '_spark_'
+				var sparkVals  = (q.spark  && q.spark[sparkKey])  || [];
+				var sparkDates = (q.sparkDates) || [];
+				// unit hint for tooltip: ms / pages / MB / (blank)
+				var sparkUnit  = (sparkKey === 'duration' || sparkKey === 'cpu' || sparkKey === 'waitMs') ? 'ms'
+				               : (sparkKey === 'memory' || sparkKey === 'tempdb' || sparkKey === 'log') ? 'MB'
+				               : (sparkKey === 'reads'  || sparkKey === 'physReads' || sparkKey === 'writes') ? 'pages'
+				               : '';
+				var sparkColor = undefined;
+				html += '<td style="padding:2px 4px;vertical-align:middle;">'
+				      + (sparkVals.length
+				            ? '<span class="qs-sparkline"'
+				            +   ' data-vals="'  + escHtml(sparkVals .join(',')) + '"'
+				            +   ' data-dates="' + escHtml(sparkDates.join('|')) + '"'
+				            +   ' data-unit="'  + escHtml(sparkUnit) + '"'
+				            +   (sparkColor ? ' data-color="' + sparkColor + '"' : '')
+				            +   '></span>'
+				            : '<span style="color:#ccc;">—</span>')
+				      + '</td>';
 			} else if (usCols[col]) {
 				var ur = _qsFmtUsAsMs(val);
 				html += '<td style="text-align:right;"' + (ur.tip ? ' title="' + escHtml(ur.tip) + '"' : '') + '>'
@@ -1205,7 +1286,77 @@ function queryStoreRenderTopQueries(r)
 	var chartHtml = '<div id="qs-tq-chart-container" style="height:230px;margin-bottom:10px;"></div>';
 	$('#query-store-content').html(chartHtml + html);
 
+	_qsInitSparklines();
 	_qsRenderChart(queries, rankBy);
+}
+
+/**
+ * Render jquery sparklines inside #qs-tq-table after the table has been inserted
+ * into the DOM. Each .qs-sparkline span carries:
+ *   data-vals  — comma-separated numeric values (oldest→newest)
+ *   data-dates — pipe-separated "MM/dd HH:mm" labels (parallel to vals)
+ *   data-unit  — optional unit suffix shown in tooltip (ms, MB, or blank)
+ */
+function _qsInitSparklines()
+{
+	if (typeof $.fn.sparkline === 'undefined') return;
+	_qsRenderSparklineSet('.qs-sparkline');
+}
+
+/**
+ * Render all .qs-sparkline elements inside a given CSS selector context.
+ * Supports optional data-color and data-width attributes per element.
+ */
+function _qsRenderSparklineSet(selector)
+{
+	if (typeof $.fn.sparkline === 'undefined') return;
+	$(selector).each(function() {
+		var $el   = $(this);
+		var csv   = $el.attr('data-vals');
+		if (!csv) return;
+		var vals  = csv.split(',').map(Number);
+		if (!vals.length) return;
+		var dates  = ($el.attr('data-dates') || '').split('|');
+		var unit   = $el.attr('data-unit')  || '';
+		var color  = $el.attr('data-color') || '#4472C4';
+		var width  = $el.attr('data-width') || '120px';
+		var fill   = color === '#5b9a3c' ? 'rgba(91,154,60,0.12)' : 'rgba(68,114,196,0.12)';
+		$el.sparkline(vals, {
+			type:          'line',
+			width:         width,
+			height:        '18px',
+			lineColor:     color,
+			fillColor:     fill,
+			lineWidth:     1.5,
+			spotColor:     false,
+			minSpotColor:  false,
+			maxSpotColor:  '#d9534f',
+			chartRangeMin: 0,
+			tooltipFormatter: function(sp, options, fields) {
+				var field = (fields && typeof fields === 'object' && !Array.isArray(fields))
+				              ? fields : (fields && fields[0]);
+				if (!field) return '';
+				var idx  = field.offset || 0;
+				var val  = (field.y !== undefined) ? field.y : (field.value || 0);
+				var date = dates[idx] || '';
+				var rawFmt = _qsFmtNum(Math.round(val)) || String(Math.round(val));
+				var disp;
+				if (unit === 'ms') {
+					disp = rawFmt + '\u00a0ms  (' + _qsFmtMsDur(val) + ')';
+				} else if (unit === 'pages') {
+					var mb = Math.round(val / 128);
+					disp = rawFmt + '  (' + (_qsFmtNum(mb) || String(mb)) + '\u00a0MB)';
+				} else {
+					disp = rawFmt + (unit ? '\u00a0' + unit : '');
+				}
+				return '<div style="min-width:140px;padding:3px 4px 14px 4px;">'
+				     + (date ? '<div style="color:#ffd700;font-weight:600;margin-bottom:7px;">' + date + '</div>' : '')
+				     + '<div style="font-size:1.1em;font-weight:700;">' + disp + '</div>'
+				     + '</div>';
+			}
+		});
+		$el.addClass('qs-sparkline-done');
+	});
 }
 
 /**
@@ -1224,17 +1375,20 @@ function _qsRenderChart(queries, rankBy)
 	// Pick the metric to chart
 	var metricKey, metricLabel;
 	switch (rankBy) {
-		case 'cpu':            metricKey = 'totalCpuUs';            metricLabel = 'Total CPU (ms)';        break;
-		case 'reads':          metricKey = 'totalLogicalReads';     metricLabel = 'Total Logical Reads';   break;
-		case 'physical_reads': metricKey = 'totalPhysicalReads';    metricLabel = 'Total Phys Reads';      break;
-		case 'writes':         metricKey = 'totalLogicalWrites';    metricLabel = 'Total Logical Writes';  break;
-		case 'executions':     metricKey = 'totalExecutions';       metricLabel = 'Total Executions';      break;
-		case 'rowcount':       metricKey = 'totalRowcount';         metricLabel = 'Total Rows';            break;
-		case 'memory':         metricKey = 'totalMemoryMb';         metricLabel = 'Total Memory (MB)';     break;
-		case 'tempdb':         metricKey = 'totalTempdbMb';         metricLabel = 'Total Tempdb (MB)';     break;
-		case 'log':            metricKey = 'totalLogMb';            metricLabel = 'Total Log (MB)';        break;
-		case 'compile':        metricKey = 'avgCompileDurationUs'; metricLabel = 'Avg Compile (ms)';    break;
-		default:               metricKey = 'totalDurationUs';       metricLabel = 'Total Elapsed (ms)';   break;
+		case 'cpu':            metricKey = 'totalCpuUs';            metricLabel = 'Total CPU (ms)';            break;
+		case 'reads':          metricKey = 'totalLogicalReads';     metricLabel = 'Total Logical Reads';       break;
+		case 'physical_reads': metricKey = 'totalPhysicalReads';    metricLabel = 'Total Phys Reads';          break;
+		case 'writes':         metricKey = 'totalLogicalWrites';    metricLabel = 'Total Logical Writes';      break;
+		case 'executions':     metricKey = 'totalExecutions';       metricLabel = 'Total Executions';          break;
+		case 'rowcount':       metricKey = 'totalRowcount';         metricLabel = 'Total Rows';                break;
+		case 'memory':         metricKey = 'totalMemoryMb';         metricLabel = 'Total Memory (MB)';         break;
+		case 'tempdb':         metricKey = 'totalTempdbMb';         metricLabel = 'Total Tempdb (MB)';         break;
+		case 'log':            metricKey = 'totalLogMb';            metricLabel = 'Total Log (MB)';            break;
+		case 'compile':        metricKey = 'avgCompileDurationUs';  metricLabel = 'Avg Compile (ms)';          break;
+		case 'waittime':       metricKey = 'totalWaitMs';           metricLabel = 'Total Wait Time (ms)';      break;
+		case 'plancount':      metricKey = 'planCount';             metricLabel = 'Plan Count';                break;
+		case 'aborted':        metricKey = 'totalAbortedException'; metricLabel = 'Aborted + Exceptions';      break;
+		default:               metricKey = 'totalDurationUs';       metricLabel = 'Total Elapsed (ms)';        break;
 	}
 
 	// Limit to top 20 bars for readability
@@ -1243,9 +1397,12 @@ function _qsRenderChart(queries, rankBy)
 		var sql = (q.querySqlTextPreview || '').replace(/\s+/g, ' ').substring(0, 38);
 		return 'Q' + q.queryId + (sql ? ': ' + sql : '');
 	});
+	// *Us keys are stored in microseconds — convert to ms for display
+	var isUsMetric = (metricKey === 'totalDurationUs' || metricKey === 'totalCpuUs' || metricKey === 'avgCompileDurationUs');
 	var barValues = chartData.map(function(q) {
 		var v = q[metricKey];
-		return (v != null && !isNaN(v)) ? Number(v) : 0;
+		var n = (v != null && !isNaN(v)) ? Number(v) : 0;
+		return isUsMetric ? n / 1000 : n;
 	});
 
 	container.innerHTML = '<canvas id="qs-tq-chart"></canvas>';
@@ -1274,7 +1431,17 @@ function _qsRenderChart(queries, rankBy)
 				fontColor: '#555'
 			},
 			scales: {
-				xAxes: [{ ticks: { beginAtZero: true, fontSize: 10 } }],
+				xAxes: [{ ticks: { beginAtZero: true, fontSize: 10,
+					callback: function(v) {
+						if (metricLabel.indexOf('(ms)') !== -1)
+							return (_qsFmtNum(v) || _qsFmt1Dec(v) || String(v)) + '\u00a0ms  (' + _qsFmtMsDur(v) + ')';
+						if (metricKey === 'totalLogicalReads' || metricKey === 'totalPhysicalReads' || metricKey === 'totalLogicalWrites') {
+							var mb = Math.round(v / 128);
+							return (_qsFmtNum(v) || _qsFmt1Dec(v) || String(v)) + '  (' + (_qsFmtNum(mb) || String(mb)) + '\u00a0MB)';
+						}
+						return _qsFmtNum(v) || _qsFmt1Dec(v) || String(v);
+					}
+				} }],
 				yAxes: [{ ticks: { fontSize: 10 } }]
 			},
 			onClick: function(evt, elements) {
@@ -1288,7 +1455,17 @@ function _qsRenderChart(queries, rankBy)
 				callbacks: {
 					label: function(item) {
 						var v = item.xLabel;
-						var fmt = _qsFmtNum(v) || _qsFmt1Dec(v) || String(v);
+						var fmt;
+						if (metricLabel.indexOf('(ms)') !== -1) {
+							fmt = (_qsFmtNum(v) || _qsFmt1Dec(v) || String(v)) + '\u00a0ms  (' + _qsFmtMsDur(v) + ')';
+						} else {
+							fmt = _qsFmtNum(v) || _qsFmt1Dec(v) || String(v);
+							// append MB for page-count metrics (8 KB pages → / 128)
+							if (metricKey === 'totalLogicalReads' || metricKey === 'totalPhysicalReads' || metricKey === 'totalLogicalWrites') {
+								var mb = Math.round(v / 128);
+								fmt += '  (' + (_qsFmtNum(mb) || String(mb)) + '\u00a0MB)';
+							}
+						}
 						return ' ' + metricLabel + ': ' + fmt;
 					}
 				}
@@ -1448,6 +1625,47 @@ function queryStoreRenderDetail(r)
 	}
 	html += '</div>';
 
+	// ── Per-interval sparklines for this query (reused from Top Queries cache) ─
+	var _tqRow = null;
+	if (_qsTqLastResult && _qsTqLastResult.queries) {
+		var _qid = String(r.queryId);
+		_qsTqLastResult.queries.forEach(function(q) {
+			if (String(q.queryId) === _qid && !_tqRow) _tqRow = q;
+		});
+	}
+	if (_tqRow && _tqRow.spark && _tqRow.sparkDates && _tqRow.sparkDates.length > 0) {
+		var _spark = _tqRow.spark;
+		var _dates = _tqRow.sparkDates;
+		var _detailSparkDefs = [
+			{ key: 'executions', label: 'Executions',      unit: ''   },
+			{ key: 'duration',   label: 'Avg Elapsed',     unit: 'ms' },
+			{ key: 'cpu',        label: 'Avg CPU',         unit: 'ms' },
+			{ key: 'waitMs',     label: 'Wait Time',       unit: 'ms' },
+			{ key: 'reads',      label: 'Avg Reads',       unit: 'pages' },
+			{ key: 'physReads',  label: 'Avg Phys Reads',  unit: 'pages' },
+			{ key: 'writes',     label: 'Avg Writes',      unit: 'pages' },
+			{ key: 'rowcount',   label: 'Avg Rows',        unit: ''   },
+			{ key: 'memory',     label: 'Avg Mem',         unit: 'MB' },
+			{ key: 'tempdb',     label: 'Avg Tempdb',      unit: 'MB' },
+			{ key: 'log',        label: 'Avg Log',         unit: 'MB' }
+		];
+		html += '<div style="display:flex;flex-wrap:wrap;gap:10px 20px;padding:5px 0 6px 0;border-bottom:1px solid #dee2e6;margin-bottom:8px;">';
+		_detailSparkDefs.forEach(function(def) {
+			var vals = _spark[def.key];
+			if (!vals || !vals.length) return;
+			html += '<div style="display:flex;flex-direction:column;align-items:center;">'
+			      + '<span style="font-size:0.75em;color:#555;margin-bottom:2px;">' + def.label + '</span>'
+			      + '<span class="qs-sparkline qs-detail-spark"'
+			      + ' data-vals="'  + escHtml(vals.join(',')) + '"'
+			      + ' data-dates="' + escHtml(_dates.join('|')) + '"'
+			      + ' data-unit="'  + escHtml(def.unit) + '"'
+			      + ' data-width="120px"'
+			      + '></span>'
+			      + '</div>';
+		});
+		html += '</div>';
+	}
+
 	// ── SQL Text ──────────────────────────────────────────────────────────────
 	if (r.queryText) {
 		html += '<div style="margin-bottom:8px;">'
@@ -1538,37 +1756,47 @@ function queryStoreRenderDetail(r)
 		      + _th('Forced',           'Whether this plan has been forced via sp_query_store_force_plan')
 		      + _th('Forcing type',     'How the plan was forced (MANUAL, AUTO, QUERY_STORE, …)')
 		      + _th('Executions',       'Total executions recorded for this plan')
+		      + _th('📈 Executions',    'Timeline: execution count per interval — shows when this plan was active')
 		      + _th('CPU Eff %',        _effTip)
-		      // Duration group
+		      // Duration group — sparkline LAST (section divider, mirrors Top Queries layout)
 		      + _th('Avg Elapsed (ms)', 'Average wall-clock elapsed time per execution, in milliseconds')
 		      + _th('Min Elapsed (ms)', 'Shortest single execution observed, in milliseconds')
 		      + _th('Max Elapsed (ms)', 'Longest single execution observed, in milliseconds')
 		      + _th('Tot Elapsed (ms)', 'Total elapsed time summed across ALL executions for this plan, in milliseconds')
+		      + _th('📈 Avg Elapsed',   'Timeline: avg elapsed (ms) per interval for this plan')
 		      // CPU group
 		      + _th('Avg CPU (ms)',     'Average CPU time per execution, in milliseconds')
 		      + _th('Max CPU (ms)',     'Peak CPU time for a single execution, in milliseconds')
 		      + _th('Tot CPU (ms)',     'Total CPU time summed across ALL executions for this plan, in milliseconds')
+		      + _th('📈 Avg CPU',       'Timeline: avg CPU (ms) per interval for this plan')
 		      // Logical reads group
 		      + _th('Avg Reads',        'Average logical (buffer pool) page reads per execution (1 page = 8 KB)')
 		      + _th('Max Reads',        'Peak logical reads in a single execution (1 page = 8 KB)')
 		      + _th('Tot Reads',        'Total logical page reads across ALL executions for this plan (1 page = 8 KB)')
+		      + _th('📈 Avg Reads',     'Timeline: avg logical reads per interval for this plan')
 		      // Physical reads group
 		      + _th('Avg Phys Reads',   'Average physical disk page reads per execution (1 page = 8 KB; high → cache misses)')
 		      + _th('Max Phys Reads',   'Peak physical disk page reads observed in a single execution (1 page = 8 KB)')
 		      + _th('Tot Phys Reads',   'Total physical disk page reads across ALL executions for this plan (1 page = 8 KB)')
+		      + _th('📈 Avg Phys Reads','Timeline: avg physical reads per interval for this plan')
 		      // Logical writes group
 		      + _th('Avg Writes',       'Average logical page writes per execution (1 page = 8 KB)')
 		      + _th('Max Writes',       'Peak logical page writes observed in a single execution (1 page = 8 KB)')
 		      + _th('Tot Writes',       'Total logical page writes across ALL executions for this plan (1 page = 8 KB)')
+		      + _th('📈 Avg Writes',    'Timeline: avg logical writes per interval for this plan')
 		      // Rows group
 		      + _th('Avg Rows',         'Average number of rows returned/affected per execution')
 		      + _th('Tot Rows',         'Total rows returned or affected across ALL executions for this plan')
-		      // Optional groups (avg+total together per metric)
-		      + (_hasMemory ? _th('Avg Mem',    'Average memory grant used per execution, in MB (8-KB pages ÷ 128)') : '')
-		      + (_hasMemory ? _th('Tot Mem',    'Total memory grant across ALL executions for this plan, in MB') : '')
-		      + (_hasDop    ? _th('Avg DOP',    'Average degree of parallelism used per execution (SQL Server 2016+)') : '')
-		      + (_has2017   ? _th('Avg Tempdb', 'Average tempdb space used per execution in MB (SQL Server 2017+)') : '')
-		      + (_has2017   ? _th('Avg Log',    'Average transaction log generated per execution in MB (SQL Server 2017+)') : '')
+		      + _th('📈 Avg Rows',      'Timeline: avg row count per interval for this plan')
+		      // Optional groups
+		      + (_hasMemory ? _th('Avg Mem',      'Average memory grant used per execution, in MB (8-KB pages ÷ 128)') : '')
+		      + (_hasMemory ? _th('Tot Mem',      'Total memory grant across ALL executions for this plan, in MB') : '')
+		      + (_hasMemory ? _th('📈 Avg Mem',   'Timeline: avg memory grant (MB) per interval for this plan') : '')
+		      + (_hasDop    ? _th('Avg DOP',      'Average degree of parallelism used per execution (SQL Server 2016+)') : '')
+		      + (_has2017   ? _th('Avg Tempdb',   'Average tempdb space used per execution in MB (SQL Server 2017+)') : '')
+		      + (_has2017   ? _th('📈 Avg Tempdb','Timeline: avg tempdb usage (MB) per interval for this plan') : '')
+		      + (_has2017   ? _th('Avg Log',      'Average transaction log generated per execution in MB (SQL Server 2017+)') : '')
+		      + (_has2017   ? _th('📈 Avg Log',   'Timeline: avg log usage (MB) per interval for this plan') : '')
 		      + _th('First seen', 'When this plan was first recorded in the Query Store')
 		      + _th('Last seen',  'When this plan was most recently recorded');
 		html += '</tr></thead><tbody>';
@@ -1606,43 +1834,66 @@ function queryStoreRenderDetail(r)
 							+ 'If its not enabled the plan is probably a Estimated Plan, look at the dialog Header...">Get Last Actual</button>';
 				planBtnCell += '</td>';
 			}
+			// Build plan sparkline cells
+			var _planSparkCell = function(key, unit) {
+				var vals  = (p.spark && p.spark[key]) || [];
+				var dates = (p.sparkDates) || [];
+				if (!vals.length) return '<td style="padding:2px 4px;"><span style="color:#ccc;">—</span></td>';
+				return '<td style="padding:2px 4px;vertical-align:middle;">'
+				     + '<span class="qs-sparkline qs-plan-spark"'
+				     + ' data-vals="'  + escHtml(vals.join(','))   + '"'
+				     + ' data-dates="' + escHtml(dates.join('|'))  + '"'
+				     + ' data-unit="'  + escHtml(unit)             + '"'
+				     + ' data-color="#5b9a3c"'
+				     + '></span></td>';
+			};
 			html += '<tr>'
 			      + planBtnCell
 			      + '<td style="color:#0066cc;font-weight:600;">' + (p.planId != null ? p.planId : '—') + '</td>'
 			      + '<td>' + (p.isForcedPlan ? '<span style="color:darkorange;">✓ forced</span>' : '—') + '</td>'
 			      + '<td>' + escHtml(p.planForcingType || '—') + '</td>'
 			      + '<td style="text-align:right;">' + _n(p.totalExecutions)     + '</td>'
+			      + _planSparkCell('executions', '')
 			      + _effCell(p.avgCpuUs, p.avgDop, p.avgDurationUs)
-			      // Duration group
+			      // Duration group — sparkline last
 			      + '<td style="text-align:right;">' + _nus(p.avgDurationUs)     + '</td>'
 			      + '<td style="text-align:right;">' + _nus(p.minDurationUs)     + '</td>'
 			      + '<td style="text-align:right;">' + _nus(p.maxDurationUs)     + '</td>'
 			      + '<td style="text-align:right;">' + _nus(p.totalDurationUs)   + '</td>'
+			      + _planSparkCell('duration',  'ms')
 			      // CPU group
 			      + '<td style="text-align:right;">' + _nus(p.avgCpuUs)          + '</td>'
 			      + '<td style="text-align:right;">' + _nus(p.maxCpuUs)          + '</td>'
 			      + '<td style="text-align:right;">' + _nus(p.totalCpuUs)        + '</td>'
+			      + _planSparkCell('cpu',       'ms')
 			      // Logical reads group
 			      + '<td style="text-align:right;">' + _nrd(p.avgLogicalReads)   + '</td>'
 			      + '<td style="text-align:right;">' + _nrd(p.maxLogicalReads)   + '</td>'
 			      + '<td style="text-align:right;">' + _nrd(p.totalLogicalReads) + '</td>'
+			      + _planSparkCell('reads',     'pages')
 			      // Physical reads group
 			      + '<td style="text-align:right;">' + _nrd(p.avgPhysicalReads)  + '</td>'
 			      + '<td style="text-align:right;">' + _nrd(p.maxPhysicalReads)  + '</td>'
 			      + '<td style="text-align:right;">' + _nrd(p.totalPhysicalReads)+ '</td>'
+			      + _planSparkCell('physReads', 'pages')
 			      // Logical writes group
 			      + '<td style="text-align:right;">' + _nrd(p.avgLogicalWrites)  + '</td>'
 			      + '<td style="text-align:right;">' + _nrd(p.maxLogicalWrites)  + '</td>'
 			      + '<td style="text-align:right;">' + _nrd(p.totalLogicalWrites)+ '</td>'
+			      + _planSparkCell('writes',    'pages')
 			      // Rows group
 			      + '<td style="text-align:right;">' + _n(p.avgRowcount)         + '</td>'
 			      + '<td style="text-align:right;">' + _n(p.totalRowcount)       + '</td>'
+			      + _planSparkCell('rowcount',  '')
 			      // Optional groups
 			      + (_hasMemory ? '<td style="text-align:right;">' + _nmb(p.avgMemoryMb)  + '</td>' : '')
 			      + (_hasMemory ? '<td style="text-align:right;">' + _nmb(p.totalMemoryMb)+ '</td>' : '')
+			      + (_hasMemory ? _planSparkCell('memory', 'MB') : '')
 			      + (_hasDop    ? '<td style="text-align:right;">' + _n(p.avgDop)         + '</td>' : '')
 			      + (_has2017   ? '<td style="text-align:right;">' + _nmb(p.avgTempdbMb)  + '</td>' : '')
+			      + (_has2017   ? _planSparkCell('tempdb', 'MB') : '')
 			      + (_has2017   ? '<td style="text-align:right;">' + _nmb(p.avgLogMb)     + '</td>' : '')
+			      + (_has2017   ? _planSparkCell('log',    'MB') : '')
 			      + '<td>' + escHtml(p.firstSeen || '—') + '</td>'
 			      + '<td>' + escHtml(p.lastSeen  || '—') + '</td>'
 			      + '</tr>';
@@ -1656,8 +1907,9 @@ function queryStoreRenderDetail(r)
 		html += '<div style="font-size:0.8em;font-weight:600;color:#555;margin-bottom:3px;">Top Wait Types</div>';
 		html += '<div style="overflow-x:auto;margin-bottom:8px;"><table class="table table-sm table-bordered" style="font-size:0.8em;white-space:nowrap;width:auto;">';
 		html += '<thead class="thead-light"><tr>'
-		      + _th('Wait category', 'SQL Server wait type category (e.g. CPU, Lock, I/O, Network)')
-		      + _th('Total wait (ms)', 'Sum of wait time in milliseconds across all executions in this period')
+		      + _th('Wait category',    'SQL Server wait type category (e.g. CPU, Lock, I/O, Network)')
+		      + _th('📈 Wait Time Chart', 'Timeline: total wait (ms) per Query Store interval — shows WHEN this wait type was occurring')
+		      + _th('Total wait (ms)',  'Sum of wait time in milliseconds across all executions in this period')
 		      + _th('Avg wait (ms)',   'Average wait time per execution in milliseconds')
 		      + _th('Max wait (ms)',   'Peak wait time observed in a single execution, in milliseconds')
 		      + '</tr></thead><tbody>';
@@ -1668,8 +1920,19 @@ function queryStoreRenderDetail(r)
 			var totPct   = maxTotalWait > 0 ? Math.round(100 * (Number(w.totalWaitMs) || 0) / maxTotalWait) : 0;
 			var avgBg    = 'background:linear-gradient(to right,rgba(70,130,180,0.22) ' + avgPct + '%,transparent ' + avgPct + '%)';
 			var totBg    = 'background:linear-gradient(to right,rgba(70,130,180,0.13) ' + totPct + '%,transparent ' + totPct + '%)';
+			var waitVals  = w.spark      || [];
+			var waitDates = w.sparkDates || [];
+			var waitSparkCell = waitVals.length
+				? '<td style="padding:2px 4px;vertical-align:middle;">'
+				  + '<span class="qs-sparkline"'
+				  + ' data-vals="'  + escHtml(waitVals .join(','))  + '"'
+				  + ' data-dates="' + escHtml(waitDates.join('|'))  + '"'
+				  + ' data-unit="ms" data-color="#c0392b" data-width="100px"'
+				  + '></span></td>'
+				: '<td style="padding:2px 4px;"><span style="color:#ccc;">—</span></td>';
 			html += '<tr>'
 			      + '<td>' + escHtml(w.waitCategory || '—') + '</td>'
+			      + waitSparkCell
 			      + '<td style="text-align:right;' + totBg + '">' + _nms(w.totalWaitMs)  + '</td>'
 			      + '<td style="text-align:right;' + avgBg + '">' + _nms(w.avgWaitMs, 2) + '</td>'
 			      + '<td style="text-align:right;">'              + _nms(w.maxWaitMs)     + '</td>'
@@ -1752,6 +2015,9 @@ function queryStoreRenderDetail(r)
 		html = '<div class="p-3 text-muted">No detail data available for this query.</div>';
 
 	$('#query-store-content').html(html);
+
+	// Render sparklines in detail view + plan table
+	_qsRenderSparklineSet('#query-store-content .qs-sparkline');
 
 	// Highlight SQL syntax with Prism if loaded
 	if (typeof Prism !== 'undefined')
@@ -1949,6 +2215,39 @@ function queryStorePollExtractStatusInline($btn, $status)
 		},
 		error: function() { $status.text('Status check failed.'); $btn.prop('disabled', false); }
 	});
+}
+
+/**
+ * Switch to the most-recent historical recording (yesterday or latest available day).
+ * Called from the "Look at Yesterday's data" button on the empty-databases view.
+ */
+function qsShowYesterdayData()
+{
+	if (!_qsAvailDates || !_qsAvailDates.length) {
+		// _qsAvailDates loads async — may not be ready yet, or date-rolling is off
+		var $status = $('#qs-inline-extract-status');
+		$status.text('No historical recordings found for this server.');
+		return;
+	}
+	var dateKey = _qsAvailDates[0];   // newest historical date (newest-first array)
+
+	// Sync the date-select dropdown if it exists
+	var $sel = $('#qs-date-select');
+	if ($sel.length && $sel.find('option[value="' + dateKey + '"]').length)
+		$sel.val(dateKey);
+
+	// Apply the same logic as queryStoreDateChanged()
+	_qsTimestamp      = dateKey + ' 23:59:59';
+	_qsMultiDbCancel  = true;
+	_qsMultiDbMode    = false;
+	_qsMultiDbAllRows = null;
+	_qsUpdateHistoricalBanner();
+	_qsDbname  = null;
+	_qsQueryId = null;
+	_qsMainTab = 'databases';
+	_qsResetTabs();
+	_qsActivateTab('databases');
+	queryStoreDatabasesLoad(_qsSrvName, _qsTimestamp);
 }
 
 function queryStorePollExtractStatus()

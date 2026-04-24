@@ -525,6 +525,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron4j-2.2.5.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron-utils-9.2.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/schemacrawler-16.2.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/sql-formatter-2.0.5.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/freemarker-2.3.34.jar
 
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/tomcat/*
 

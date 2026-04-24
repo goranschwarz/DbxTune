@@ -71,6 +71,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
@@ -363,6 +364,8 @@ import com.microsoft.sqlserver.jdbc.SQLServerInfoMessage;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -8481,6 +8484,17 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			// add exception text to OUTPUT TEXT
 //			out.setText(ex.toString());
 			out.setText(StringUtil.stackTraceToString(ex));
+			
+			if (ex instanceof PrintTemplateException)
+			{
+				String txt = ""
+						+ "###########################################################################\n"
+						+ "## DEBUG: Template output\n"
+						+ "###########################################################################\n"
+						+ ex.getMessage()
+						;
+				out.setText(txt);
+			}
 
 			// DO POPUP
 //			if ( ! (ex instanceof SQLException) )
@@ -8960,6 +8974,71 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		}
 	}
 
+	/**
+	 * Resolve a SQL Template into a new String (for now using FreeMarker)
+	 * Example:
+	 * <pre>
+	 * <#list ["2026-04-21", "2026-04-20", "2026-04-19"] as dbdate>
+	 * \rsql -Usa -P null -u jdbc:h2:tcp://dbxtune-vm.maxm.se/PROD_A2_ASE_${dbdate};IFEXISTS=TRUE
+	 * select CURRENT_CATALOG()
+	 * go
+	 * </#list>
+	 * </pre>
+	 * 
+	 * @param goSql
+	 * @return
+	 * @throws IOException
+	 * @throws TemplateException
+	 */
+	private static String resolveTemplateString(String goSql) 
+	throws IOException, TemplateException
+	{
+		goSql = goSql.trim();
+		boolean isTemplate = StringUtil.startsWithIgnoreBlankIgnoreCase(goSql, "<#");
+
+		// Nothing to resolve...
+		if ( ! isTemplate )
+		{
+			return goSql;
+		}
+		
+		// Configure FreeMarker
+		freemarker.template.Configuration cfg = new freemarker.template.Configuration(freemarker.template.Configuration.VERSION_2_3_32);
+		cfg.setDefaultEncoding("UTF-8");
+
+		// Create the template
+		Template template = new Template("SQL-Template", goSql, cfg);
+
+		// Set a model (I just pass in an empty model, in the future we might want to add stuff here
+		Map<String, Object> model = new HashMap<>();
+
+		// Process and put the result in out
+		StringWriter writer = new StringWriter();
+		template.process(model, writer);
+		
+		String out = writer.toString();
+		
+		if (goSql.endsWith("\nprint-template"))
+		{
+			out = StringUtil.removeLastStr(out, "\nprint-template");
+			throw new PrintTemplateException(out);
+		}
+
+		return out;
+	}
+	private static class PrintTemplateException
+	extends RuntimeException
+	{
+		private static final long serialVersionUID = 1L;
+
+		public PrintTemplateException(String outputStr)
+		{
+			super(outputStr);
+		}
+	}
+
+	
+	
 
 	/**
 	 * This method uses the supplied SQL query string, and the
@@ -9062,9 +9141,11 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			((SqlServerConnection)conn).setMessageHandler(newMsgHandler);
 		}
 
+		// If it's a "template" resolve template before continuing
+		goSql = resolveTemplateString(goSql);
+
 		// Vendor specific setting before we start to execute
 		enableOrDisableVendorSpecifics(conn);
-
 		
 		// Increment Usage Statistics
 		incExecMainCount();

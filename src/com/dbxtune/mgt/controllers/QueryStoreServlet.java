@@ -38,6 +38,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -133,6 +134,7 @@ extends HttpServlet
 	private static final int DEFAULT_TOP_N          = 25;
 	private static final int DEFAULT_MIN_EXECUTIONS = 2;
 	private static final int TIMELINE_INTERVALS     = 24;
+	private static final int SPARKLINE_INTERVALS    = 48;   // max intervals per query in sparkline data
 	private static final int SQL_PREVIEW_LEN        = 500;
 
 	@Override
@@ -643,31 +645,43 @@ extends HttpServlet
 		// Detect optional columns introduced in newer SQL Server versions.
 		boolean hasMemoryCols      = hasColumn(conn, dbname, "query_store_runtime_stats", "avg_query_max_used_memory");
 		boolean has2017Cols        = hasColumn(conn, dbname, "query_store_runtime_stats", "avg_tempdb_space_used");
-		boolean hasCompileDuration = hasColumn(conn, dbname, "query_store_query",          "avg_compile_duration");
+		boolean hasCompileDuration = hasColumn(conn, dbname, "query_store_query",         "avg_compile_duration");
+		boolean hasAbortedCols     = hasColumn(conn, dbname, "query_store_runtime_stats", "count_aborted_executions");
+		boolean hasWaitStats       = hasColumn(conn, dbname, "query_store_wait_stats",    "total_query_wait_time_ms");
 
 		// Map rankBy keyword to the computed column expression
 		String orderCol;
 		switch (rankBy)
 		{
-			case "cpu":            orderCol = "[total_cpu_us]";          break;
-			case "reads":          orderCol = "[total_logical_reads]";    break;
-			case "physical_reads": orderCol = "[total_physical_reads]";   break;
-			case "executions":     orderCol = "[total_executions]";       break;
-			case "rowcount":       orderCol = "[total_rowcount]";         break;
+			case "cpu":            orderCol = "[total_cpu_us]";               break;
+			case "reads":          orderCol = "[total_logical_reads]";         break;
+			case "physical_reads": orderCol = "[total_physical_reads]";        break;
+			case "executions":     orderCol = "[total_executions]";            break;
+			case "rowcount":       orderCol = "[total_rowcount]";              break;
 			case "memory":         orderCol = hasMemoryCols
 			                                  ? "[total_memory_mb]"
-			                                  : "[total_duration_us]";    break;
-			case "writes":         orderCol = "[total_logical_writes]";  break;
+			                                  : "[total_duration_us]";         break;
+			case "writes":         orderCol = "[total_logical_writes]";        break;
 			case "tempdb":         orderCol = has2017Cols
 			                                  ? "[total_tempdb_mb]"
-			                                  : "[total_duration_us]";    break;
+			                                  : "[total_duration_us]";         break;
 			case "log":            orderCol = has2017Cols
 			                                  ? "[total_log_mb]"
-			                                  : "[total_duration_us]";    break;
+			                                  : "[total_duration_us]";         break;
 			case "compile":        orderCol = hasCompileDuration
 			                                  ? "[avg_compile_duration_us]"
-			                                  : "[total_duration_us]";    break;
-			default:               orderCol = "[total_duration_us]";      break; // "duration" / default
+			                                  : "[total_duration_us]";         break;
+			case "waittime":       orderCol = hasWaitStats
+			                                  ? "(SELECT COALESCE(SUM(w2.[total_query_wait_time_ms]),0)"
+			                                  + " FROM " + t(dbname, "query_store_wait_stats") + " w2"
+			                                  + " INNER JOIN " + t(dbname, "query_store_plan") + " p2 ON w2.[plan_id]=p2.[plan_id]"
+			                                  + " WHERE p2.[query_id]=q.[query_id])"
+			                                  : "[total_duration_us]";         break;
+			case "plancount":      orderCol = "[plan_count]";                  break;
+			case "aborted":        orderCol = hasAbortedCols
+			                                  ? "[total_aborted_exception]"
+			                                  : "[total_executions]";          break;
+			default:               orderCol = "[total_duration_us]";           break; // "duration" / default
 		}
 
 		StringBuilder sql = new StringBuilder();
@@ -717,6 +731,11 @@ extends HttpServlet
 		{
 			sql.append("   ,MAX(q.[avg_compile_duration])  AS [avg_compile_duration_us] \n");
 			sql.append("   ,MAX(q.[count_compiles])        AS [count_compiles] \n");
+		}
+		// aborted + exception executions (SQL Server 2016+)
+		if (hasAbortedCols)
+		{
+			sql.append("   ,SUM(rs.[count_aborted_executions] + rs.[count_exception_executions]) AS [total_aborted_exception] \n");
 		}
 		// time range
 		sql.append("   ,MIN(i.[start_time]) AS [first_seen] \n");
@@ -788,6 +807,11 @@ extends HttpServlet
 					row.put("avgCompileDurationUs", safeGetLong(rs, "avg_compile_duration_us"));
 					row.put("countCompiles",        safeGetLong(rs, "count_compiles"));
 				}
+				row.put("totalAbortedException", hasAbortedCols ? safeGetLong(rs, "total_aborted_exception") : null);
+				// wait stats populated separately by enrichWithWaitSummary() to avoid expensive join
+				row.put("totalWaitMs", null);
+				row.put("avgWaitMs",   null);
+				row.put("maxWaitMs",   null);
 
 				Timestamp firstSeen = rs.getTimestamp("first_seen");
 				Timestamp lastSeen  = rs.getTimestamp("last_seen");
@@ -803,12 +827,264 @@ extends HttpServlet
 		}
 		finally { pstmt.close(); }
 
+		// Enrich each row with per-interval sparkline data (single batch query)
+		if (!rows.isEmpty())
+			enrichWithSparklineData(conn, dbname, rows, hasMemoryCols, has2017Cols, hasWaitStats);
+		// Enrich wait summary (avg/max/total) in a targeted second query — much faster than joining in main query
+		if (!rows.isEmpty() && hasWaitStats)
+			enrichWithWaitSummary(conn, dbname, rows);
+
 		Map<String, Object> result = new LinkedHashMap<>();
 		result.put("hasMemoryCols",      hasMemoryCols);
 		result.put("has2017Cols",        has2017Cols);
 		result.put("hasCompileDuration", hasCompileDuration);
+		result.put("hasAbortedCols",     hasAbortedCols);
+		result.put("hasWaitStats",       hasWaitStats);
 		result.put("queries",            rows);
 		return result;
+	}
+
+	/**
+	 * For each row in {@code rows}, fetch per-interval metric values in a single batch
+	 * SQL query and attach a {@code spark} map: metric-key → List&lt;Number&gt; (oldest first).
+	 * Values are pre-converted to ms (µs ÷ 1000) for direct sparkline rendering.
+	 */
+	private void enrichWithSparklineData(
+			DbxConnection conn, String dbname,
+			List<Map<String, Object>> rows,
+			boolean hasMemoryCols, boolean has2017Cols, boolean hasWaitStats)
+	{
+		// Build the IN list from query IDs — all are longs, safe to inline
+		StringBuilder inList = new StringBuilder();
+		Map<Long, Map<String, Object>> rowById = new LinkedHashMap<>();
+		for (Map<String, Object> row : rows)
+		{
+			Long qid = (Long) row.get("queryId");
+			if (qid == null) continue;
+			if (inList.length() > 0) inList.append(',');
+			inList.append(qid);
+			rowById.put(qid, row);
+		}
+		if (rowById.isEmpty()) return;
+
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT \n");
+		sql.append("    p.[query_id] \n");
+		sql.append("   ,i.[runtime_stats_interval_id] \n");
+		sql.append("   ,i.[start_time] \n");
+		sql.append("   ,i.[end_time] \n");
+		sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_duration])            / NULLIF(SUM(rs.[count_executions]),0) AS [avg_duration_us] \n");
+		sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_cpu_time])            / NULLIF(SUM(rs.[count_executions]),0) AS [avg_cpu_us] \n");
+		sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_logical_io_reads])    / NULLIF(SUM(rs.[count_executions]),0) AS [avg_logical_reads] \n");
+		sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_physical_io_reads])   / NULLIF(SUM(rs.[count_executions]),0) AS [avg_physical_reads] \n");
+		sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_logical_io_writes])   / NULLIF(SUM(rs.[count_executions]),0) AS [avg_logical_writes] \n");
+		sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_rowcount])            / NULLIF(SUM(rs.[count_executions]),0) AS [avg_rowcount] \n");
+		sql.append("   ,SUM(rs.[count_executions]) AS [total_executions] \n");
+		if (hasMemoryCols)
+			sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_query_max_used_memory]) / NULLIF(SUM(rs.[count_executions]),0) / 128.0 AS [avg_memory_mb] \n");
+		if (has2017Cols)
+		{
+			sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_tempdb_space_used]) / NULLIF(SUM(rs.[count_executions]),0) / 128.0    AS [avg_tempdb_mb] \n");
+			sql.append("   ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_log_bytes_used])    / NULLIF(SUM(rs.[count_executions]),0) / 1048576.0 AS [avg_log_mb] \n");
+		}
+		sql.append(" FROM ").append(t(dbname, "query_store_runtime_stats")).append(" rs \n");
+		sql.append(" INNER JOIN ").append(t(dbname, "query_store_runtime_stats_interval")).append(" i ON rs.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n");
+		sql.append(" INNER JOIN ").append(t(dbname, "query_store_plan")).append(" p ON rs.[plan_id] = p.[plan_id] \n");
+		sql.append(" WHERE p.[query_id] IN (").append(inList).append(") \n");
+		sql.append(" GROUP BY p.[query_id], i.[runtime_stats_interval_id], i.[start_time], i.[end_time] \n");
+		sql.append(" ORDER BY p.[query_id], i.[start_time] ASC \n");
+
+		String finalSql = conn.quotifySqlString(sql.toString());
+		_logger.debug("QueryStoreServlet.enrichWithSparklineData: sql={}", finalSql);
+
+		// ── Phase 1: collect all data keyed by intervalId so we can align later ──
+		// globalIntervals: intervalId (sorted) → "yyyy-MM-dd HH:mm - HH:mm" label
+		// perQueryData   : queryId → intervalId → metricKey → value
+		SimpleDateFormat dateFmt  = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		SimpleDateFormat timeFmt  = new SimpleDateFormat("HH:mm");
+		TreeMap<Long, String>                            globalIntervals = new TreeMap<>();
+		Map<Long, Map<Long, Map<String, Number>>>        perQueryData    = new LinkedHashMap<>();
+		for (Long qid : rowById.keySet())
+			perQueryData.put(qid, new LinkedHashMap<>());
+
+		try
+		{
+			PreparedStatement ps = conn.prepareStatement(finalSql);
+			try
+			{
+				ResultSet rs = ps.executeQuery();
+				while (rs.next())
+				{
+					long qid        = rs.getLong("query_id");
+					long intervalId = rs.getLong("runtime_stats_interval_id");
+
+					Map<Long, Map<String, Number>> qMap = perQueryData.get(qid);
+					if (qMap == null) continue;
+
+					// Register interval in global map (label from start_time + end_time)
+					if (!globalIntervals.containsKey(intervalId))
+					{
+						Timestamp tStart = rs.getTimestamp("start_time");
+						Timestamp tEnd   = rs.getTimestamp("end_time");
+						String label = tStart != null ? dateFmt.format(tStart) : "";
+						if (tEnd != null) label += " - " + timeFmt.format(tEnd);
+						globalIntervals.put(intervalId, label);
+					}
+
+					// Store metric values keyed by intervalId
+					Map<String, Number> vals = new LinkedHashMap<>();
+					vals.put("duration",   rs.getLong("avg_duration_us")   / 1000.0);
+					vals.put("cpu",        rs.getLong("avg_cpu_us")         / 1000.0);
+					vals.put("reads",      rs.getLong("avg_logical_reads"));
+					vals.put("physReads",  rs.getLong("avg_physical_reads"));
+					vals.put("writes",     rs.getLong("avg_logical_writes"));
+					vals.put("rowcount",   rs.getLong("avg_rowcount"));
+					vals.put("executions", rs.getLong("total_executions"));
+					if (hasMemoryCols) vals.put("memory", rs.getDouble("avg_memory_mb"));
+					if (has2017Cols)   vals.put("tempdb", rs.getDouble("avg_tempdb_mb"));
+					if (has2017Cols)   vals.put("log",    rs.getDouble("avg_log_mb"));
+					qMap.put(intervalId, vals);
+				}
+				rs.close();
+			}
+			finally { ps.close(); }
+
+			// ── Phase 1b: fetch total wait time per query per interval (optional) ──
+			if (hasWaitStats)
+			{
+				String waitSql = conn.quotifySqlString(
+					"SELECT p.[query_id], w.[runtime_stats_interval_id], SUM(w.[total_query_wait_time_ms]) AS [total_wait_ms] \n"
+					+ " FROM " + t(dbname, "query_store_wait_stats") + " w \n"
+					+ " INNER JOIN " + t(dbname, "query_store_plan") + " p ON w.[plan_id] = p.[plan_id] \n"
+					+ " WHERE p.[query_id] IN (" + inList + ") \n"
+					+ " GROUP BY p.[query_id], w.[runtime_stats_interval_id] \n");
+				PreparedStatement psw = conn.prepareStatement(waitSql);
+				try
+				{
+					ResultSet rsw = psw.executeQuery();
+					while (rsw.next())
+					{
+						long qid        = rsw.getLong("query_id");
+						long intervalId = rsw.getLong("runtime_stats_interval_id");
+						long waitMs     = rsw.getLong("total_wait_ms");
+						Map<Long, Map<String, Number>> qMap = perQueryData.get(qid);
+						if (qMap == null) continue;
+						Map<String, Number> vals = qMap.get(intervalId);
+						if (vals != null)
+							vals.put("waitMs", waitMs);
+					}
+					rsw.close();
+				}
+				finally { psw.close(); }
+			}
+
+			// ── Phase 2: trim to the most-recent SPARKLINE_INTERVALS slots ──
+			while (globalIntervals.size() > SPARKLINE_INTERVALS)
+				globalIntervals.pollFirstEntry();   // remove oldest
+
+			// Build shared dates list (same order for every row)
+			List<String> sharedDates = new ArrayList<>(globalIntervals.values());
+
+			// ── Phase 3: build aligned arrays for each query ──
+			// Missing intervals → zero so all sparklines share the same time axis
+			for (Map<String, Object> row : rows)
+			{
+				Long qid = (Long) row.get("queryId");
+				if (qid == null) continue;
+
+				Map<Long, Map<String, Number>> qMap = perQueryData.getOrDefault(qid, new LinkedHashMap<>());
+
+				// metric key → aligned List<Number>
+				Map<String, List<Number>> spark = new LinkedHashMap<>();
+				List<String> metricKeys = new ArrayList<>(Arrays.asList(
+						"duration","cpu","reads","physReads","writes","rowcount","executions"));
+				if (hasMemoryCols) metricKeys.add("memory");
+				if (has2017Cols)   { metricKeys.add("tempdb"); metricKeys.add("log"); }
+				if (hasWaitStats)  metricKeys.add("waitMs");
+
+				for (String key : metricKeys)
+					spark.put(key, new ArrayList<>());
+
+				for (Long iid : globalIntervals.keySet())
+				{
+					Map<String, Number> vals = qMap.get(iid);   // null → all zeros
+					for (String key : metricKeys)
+					{
+						Number v = (vals != null) ? vals.get(key) : null;
+						spark.get(key).add(v != null ? v : 0);
+					}
+				}
+
+				row.put("spark",      spark);
+				row.put("sparkDates", sharedDates);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.debug("QueryStoreServlet.enrichWithSparklineData failed: {}", ex.getMessage());
+			// Non-fatal — rows are still returned, just without sparkline data
+		}
+	}
+
+	/**
+	 * Fetches total/avg/max wait time for the given query rows in a single targeted
+	 * query filtered by query_id — much faster than joining in the main top-queries query.
+	 */
+	private void enrichWithWaitSummary(
+			DbxConnection conn, String dbname,
+			List<Map<String, Object>> rows)
+	{
+		StringBuilder inList = new StringBuilder();
+		Map<Long, Map<String, Object>> rowById = new LinkedHashMap<>();
+		for (Map<String, Object> row : rows)
+		{
+			Long qid = (Long) row.get("queryId");
+			if (qid == null) continue;
+			if (inList.length() > 0) inList.append(',');
+			inList.append(qid);
+			rowById.put(qid, row);
+		}
+		if (rowById.isEmpty()) return;
+
+		// Aggregate wait per (query_id, interval) first, then summarise — avoids
+		// row-multiplication from multiple wait categories per interval.
+		String sql = conn.quotifySqlString(
+			"SELECT [query_id] \n"
+			+ "      ,SUM([interval_wait_ms]) AS [total_wait_ms] \n"
+			+ "      ,AVG([interval_wait_ms]) AS [avg_wait_ms] \n"
+			+ "      ,MAX([interval_wait_ms]) AS [max_wait_ms] \n"
+			+ " FROM ( \n"
+			+ "   SELECT p.[query_id], w.[runtime_stats_interval_id] \n"
+			+ "         ,SUM(w.[total_query_wait_time_ms]) AS [interval_wait_ms] \n"
+			+ "   FROM " + t(dbname, "query_store_wait_stats") + " w \n"
+			+ "   INNER JOIN " + t(dbname, "query_store_plan") + " p ON w.[plan_id] = p.[plan_id] \n"
+			+ "   WHERE p.[query_id] IN (" + inList + ") \n"
+			+ "   GROUP BY p.[query_id], w.[runtime_stats_interval_id] \n"
+			+ " ) t \n"
+			+ " GROUP BY [query_id] \n");
+		try
+		{
+			PreparedStatement ps = conn.prepareStatement(sql);
+			try
+			{
+				ResultSet rs = ps.executeQuery();
+				while (rs.next())
+				{
+					long qid = rs.getLong("query_id");
+					Map<String, Object> row = rowById.get(qid);
+					if (row == null) continue;
+					row.put("totalWaitMs", safeGetLong(rs, "total_wait_ms"));
+					row.put("avgWaitMs",   safeGetLong(rs, "avg_wait_ms"));
+					row.put("maxWaitMs",   safeGetLong(rs, "max_wait_ms"));
+				}
+				rs.close();
+			}
+			finally { ps.close(); }
+		}
+		catch (Exception ex)
+		{
+			_logger.debug("QueryStoreServlet.enrichWithWaitSummary failed: {}", ex.getMessage());
+		}
 	}
 
 	// =========================================================================
@@ -992,6 +1268,10 @@ extends HttpServlet
 
 		result.put("plans", plans);
 
+		// ---- Enrich plans with per-interval sparkline data ----------------------
+		if (!plans.isEmpty())
+			enrichPlansWithSparklineData(conn, dbname, queryId, plans);
+
 		// ---- Top-level summary (aggregated across all plans) --------------------
 		{
 			long   totalExec = 0, sumDurW = 0, sumCpuW = 0, sumReadsW = 0, sumRowsW = 0;
@@ -1104,6 +1384,8 @@ extends HttpServlet
 		{
 			_logger.debug("QueryStoreServlet.queryDetail: wait stats not available for {}: {}", dbname, ex.getMessage());
 		}
+		if (!waits.isEmpty())
+			enrichWaitsWithSparklineData(conn, dbname, queryId, waits);
 		result.put("waitStats", waits);
 
 		// ---- Hourly timeline (last TIMELINE_INTERVALS intervals) ----------------
@@ -1229,6 +1511,296 @@ extends HttpServlet
 		result.put("recommendations", recs);
 
 		return result;
+	}
+
+	// =========================================================================
+	// Per-plan sparkline enrichment (for Query Detail tab)
+	// =========================================================================
+
+	/**
+	 * For each plan in {@code plans}, fetch per-interval execution counts and
+	 * avg elapsed (ms) so the Execution Plans table can show a sparkline per row.
+	 * All plans for this query share the same global time axis (zero-filled where
+	 * a plan had no activity in a given interval).
+	 */
+	private void enrichPlansWithSparklineData(
+			DbxConnection conn, String dbname, long queryId,
+			List<Map<String, Object>> plans)
+	{
+		if (plans.isEmpty()) return;
+
+		boolean hasMemoryCols = hasColumn(conn, dbname, "query_store_runtime_stats", "avg_query_max_used_memory");
+		boolean hasTempdbCol  = hasColumn(conn, dbname, "query_store_runtime_stats", "avg_tempdb_space_used");
+		boolean hasLogCol     = hasColumn(conn, dbname, "query_store_runtime_stats", "avg_log_bytes_used");
+
+		Map<Long, Map<String, Object>> planById = new LinkedHashMap<>();
+		StringBuilder inList = new StringBuilder();
+		for (Map<String, Object> p : plans)
+		{
+			Long pid = p.get("planId") instanceof Number ? ((Number) p.get("planId")).longValue() : null;
+			if (pid == null) continue;
+			if (inList.length() > 0) inList.append(',');
+			inList.append(pid);
+			planById.put(pid, p);
+		}
+		if (planById.isEmpty()) return;
+
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT rs.[plan_id] \n");
+		sql.append("      ,i.[runtime_stats_interval_id] \n");
+		sql.append("      ,i.[start_time] \n");
+		sql.append("      ,i.[end_time] \n");
+		sql.append("      ,SUM(rs.[count_executions]) AS [executions] \n");
+		sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_duration])           / NULLIF(SUM(rs.[count_executions]),0) AS [avg_duration_us] \n");
+		sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_cpu_time])           / NULLIF(SUM(rs.[count_executions]),0) AS [avg_cpu_us] \n");
+		sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_logical_io_reads])   / NULLIF(SUM(rs.[count_executions]),0) AS [avg_logical_reads] \n");
+		sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_physical_io_reads])  / NULLIF(SUM(rs.[count_executions]),0) AS [avg_physical_reads] \n");
+		sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_logical_io_writes])  / NULLIF(SUM(rs.[count_executions]),0) AS [avg_logical_writes] \n");
+		sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_rowcount])           / NULLIF(SUM(rs.[count_executions]),0) AS [avg_rowcount] \n");
+		if (hasMemoryCols)
+			sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_query_max_used_memory]) / NULLIF(SUM(rs.[count_executions]),0) / 128.0 AS [avg_memory_mb] \n");
+		if (hasTempdbCol)
+			sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_tempdb_space_used])     / NULLIF(SUM(rs.[count_executions]),0) / 128.0    AS [avg_tempdb_mb] \n");
+		if (hasLogCol)
+			sql.append("      ,SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_log_bytes_used])        / NULLIF(SUM(rs.[count_executions]),0) / 1048576.0 AS [avg_log_mb] \n");
+		sql.append(" FROM ").append(t(dbname, "query_store_runtime_stats")).append(" rs \n");
+		sql.append(" INNER JOIN ").append(t(dbname, "query_store_runtime_stats_interval")).append(" i ON rs.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n");
+		sql.append(" WHERE rs.[plan_id] IN (").append(inList).append(") \n");
+		sql.append(" GROUP BY rs.[plan_id], i.[runtime_stats_interval_id], i.[start_time], i.[end_time] \n");
+		sql.append(" ORDER BY rs.[plan_id], i.[start_time] ASC \n");
+
+		SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm");
+		TreeMap<Long, String>                            globalIntervals = new TreeMap<>();
+		// planId → intervalId → metricKey → value
+		Map<Long, Map<Long, Map<String, Number>>>        perPlanData     = new LinkedHashMap<>();
+		for (Long pid : planById.keySet())
+			perPlanData.put(pid, new LinkedHashMap<>());
+
+		try
+		{
+			// ── Step 1: build the full interval axis including gaps where the query
+			// was idle — query ALL intervals between the first and last execution
+			// so zero-filling spans the complete period, not just active slots
+			String intervalsSql = conn.quotifySqlString(
+				"SELECT i.[runtime_stats_interval_id], i.[start_time], i.[end_time] \n"
+				+ " FROM " + t(dbname, "query_store_runtime_stats_interval") + " i \n"
+				+ " WHERE i.[runtime_stats_interval_id] BETWEEN \n"
+				+ "   (SELECT MIN(rs.[runtime_stats_interval_id]) \n"
+				+ "    FROM " + t(dbname, "query_store_runtime_stats") + " rs \n"
+				+ "    INNER JOIN " + t(dbname, "query_store_plan") + " p ON rs.[plan_id] = p.[plan_id] \n"
+				+ "    WHERE p.[query_id] = ?) \n"
+				+ "   AND \n"
+				+ "   (SELECT MAX(rs.[runtime_stats_interval_id]) \n"
+				+ "    FROM " + t(dbname, "query_store_runtime_stats") + " rs \n"
+				+ "    INNER JOIN " + t(dbname, "query_store_plan") + " p ON rs.[plan_id] = p.[plan_id] \n"
+				+ "    WHERE p.[query_id] = ?) \n"
+				+ " ORDER BY i.[runtime_stats_interval_id] ASC \n");
+			PreparedStatement psi = conn.prepareStatement(intervalsSql);
+			try
+			{
+				psi.setLong(1, queryId);
+				psi.setLong(2, queryId);
+				ResultSet rsi = psi.executeQuery();
+				while (rsi.next())
+				{
+					long iid     = rsi.getLong("runtime_stats_interval_id");
+					Timestamp tS = rsi.getTimestamp("start_time");
+					Timestamp tE = rsi.getTimestamp("end_time");
+					String label = tS != null ? dateFmt.format(tS) : "";
+					if (tE != null) label += " - " + timeFmt.format(tE);
+					globalIntervals.put(iid, label);
+				}
+				rsi.close();
+			}
+			finally { psi.close(); }
+
+			// ── Step 2: collect per-plan values keyed by intervalId
+			PreparedStatement ps = conn.prepareStatement(conn.quotifySqlString(sql.toString()));
+			try
+			{
+				ResultSet rs = ps.executeQuery();
+				while (rs.next())
+				{
+					long pid        = rs.getLong("plan_id");
+					long intervalId = rs.getLong("runtime_stats_interval_id");
+					Map<Long, Map<String, Number>> pMap = perPlanData.get(pid);
+					if (pMap == null) continue;
+
+					Map<String, Number> vals = new LinkedHashMap<>();
+					vals.put("executions", rs.getLong("executions"));
+					vals.put("duration",   rs.getLong("avg_duration_us")   / 1000.0);
+					vals.put("cpu",        rs.getLong("avg_cpu_us")         / 1000.0);
+					vals.put("reads",      rs.getLong("avg_logical_reads"));
+					vals.put("physReads",  rs.getLong("avg_physical_reads"));
+					vals.put("writes",     rs.getLong("avg_logical_writes"));
+					vals.put("rowcount",   rs.getLong("avg_rowcount"));
+					if (hasMemoryCols) vals.put("memory", rs.getDouble("avg_memory_mb"));
+					if (hasTempdbCol)  vals.put("tempdb", rs.getDouble("avg_tempdb_mb"));
+					if (hasLogCol)     vals.put("log",    rs.getDouble("avg_log_mb"));
+					pMap.put(intervalId, vals);
+				}
+				rs.close();
+			}
+			finally { ps.close(); }
+
+			while (globalIntervals.size() > SPARKLINE_INTERVALS)
+				globalIntervals.pollFirstEntry();
+
+			List<String> sharedDates = new ArrayList<>(globalIntervals.values());
+			List<String> metricKeys  = new ArrayList<>(Arrays.asList(
+					"executions","duration","cpu","reads","physReads","writes","rowcount"));
+			if (hasMemoryCols) metricKeys.add("memory");
+			if (hasTempdbCol)  metricKeys.add("tempdb");
+			if (hasLogCol)     metricKeys.add("log");
+
+			for (Map<String, Object> planRow : plans)
+			{
+				Long pid = planRow.get("planId") instanceof Number ? ((Number) planRow.get("planId")).longValue() : null;
+				if (pid == null) continue;
+				Map<Long, Map<String, Number>> pMap = perPlanData.getOrDefault(pid, new LinkedHashMap<>());
+
+				Map<String, List<Number>> spark = new LinkedHashMap<>();
+				for (String key : metricKeys) spark.put(key, new ArrayList<>());
+
+				for (Long iid : globalIntervals.keySet())
+				{
+					Map<String, Number> vals = pMap.get(iid);
+					for (String key : metricKeys)
+					{
+						Number v = (vals != null) ? vals.get(key) : null;
+						spark.get(key).add(v != null ? v : 0);
+					}
+				}
+				planRow.put("spark",      spark);
+				planRow.put("sparkDates", sharedDates);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.debug("QueryStoreServlet.enrichPlansWithSparklineData failed: {}", ex.getMessage());
+		}
+	}
+
+	// =========================================================================
+	// Per-wait-type sparkline enrichment (for Query Detail → Top Wait Types)
+	// =========================================================================
+
+	/**
+	 * For each wait category in {@code waits}, attach a {@code spark} list of
+	 * total-wait-ms values per interval (oldest → newest) and a shared
+	 * {@code sparkDates} list. All wait categories share the same time axis.
+	 */
+	private void enrichWaitsWithSparklineData(
+			DbxConnection conn, String dbname, long queryId,
+			List<Map<String, Object>> waits)
+	{
+		if (waits.isEmpty()) return;
+
+		String sql = conn.quotifySqlString(
+			"SELECT w.[wait_category_desc] \n"
+			+ "      ,i.[runtime_stats_interval_id] \n"
+			+ "      ,i.[start_time] \n"
+			+ "      ,i.[end_time] \n"
+			+ "      ,SUM(w.[total_query_wait_time_ms]) AS [total_wait_ms] \n"
+			+ " FROM " + t(dbname, "query_store_wait_stats") + " w \n"
+			+ " INNER JOIN " + t(dbname, "query_store_plan") + " p  ON w.[plan_id] = p.[plan_id] \n"
+			+ " INNER JOIN " + t(dbname, "query_store_runtime_stats_interval") + " i ON w.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n"
+			+ " WHERE p.[query_id] = ? \n"
+			+ " GROUP BY w.[wait_category_desc], i.[runtime_stats_interval_id], i.[start_time], i.[end_time] \n"
+			+ " ORDER BY w.[wait_category_desc], i.[start_time] ASC \n");
+
+		SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm");
+		TreeMap<Long, String>              globalIntervals = new TreeMap<>();
+		// waitCategory → intervalId → total_wait_ms
+		Map<String, Map<Long, Long>>       perWaitData     = new LinkedHashMap<>();
+		for (Map<String, Object> w : waits)
+		{
+			String cat = (String) w.get("waitCategory");
+			if (cat != null) perWaitData.put(cat, new LinkedHashMap<>());
+		}
+
+		try
+		{
+			// ── Step 1: build the full interval axis including gaps where the query
+			// was idle — query ALL intervals between the first and last execution
+			// so zero-filling spans the complete period, not just active slots
+			String intervalsSql = conn.quotifySqlString(
+				"SELECT i.[runtime_stats_interval_id], i.[start_time], i.[end_time] \n"
+				+ " FROM " + t(dbname, "query_store_runtime_stats_interval") + " i \n"
+				+ " WHERE i.[runtime_stats_interval_id] BETWEEN \n"
+				+ "   (SELECT MIN(rs.[runtime_stats_interval_id]) \n"
+				+ "    FROM " + t(dbname, "query_store_runtime_stats") + " rs \n"
+				+ "    INNER JOIN " + t(dbname, "query_store_plan") + " p ON rs.[plan_id] = p.[plan_id] \n"
+				+ "    WHERE p.[query_id] = ?) \n"
+				+ "   AND \n"
+				+ "   (SELECT MAX(rs.[runtime_stats_interval_id]) \n"
+				+ "    FROM " + t(dbname, "query_store_runtime_stats") + " rs \n"
+				+ "    INNER JOIN " + t(dbname, "query_store_plan") + " p ON rs.[plan_id] = p.[plan_id] \n"
+				+ "    WHERE p.[query_id] = ?) \n"
+				+ " ORDER BY i.[runtime_stats_interval_id] ASC \n");
+			PreparedStatement psi = conn.prepareStatement(intervalsSql);
+			try
+			{
+				psi.setLong(1, queryId);
+				psi.setLong(2, queryId);
+				ResultSet rsi = psi.executeQuery();
+				while (rsi.next())
+				{
+					long iid     = rsi.getLong("runtime_stats_interval_id");
+					Timestamp tS = rsi.getTimestamp("start_time");
+					Timestamp tE = rsi.getTimestamp("end_time");
+					String label = tS != null ? dateFmt.format(tS) : "";
+					if (tE != null) label += " - " + timeFmt.format(tE);
+					globalIntervals.put(iid, label);
+				}
+				rsi.close();
+			}
+			finally { psi.close(); }
+
+			// ── Step 2: collect per-wait-category values keyed by intervalId
+			PreparedStatement ps = conn.prepareStatement(sql);
+			try
+			{
+				ps.setLong(1, queryId);
+				ResultSet rs = ps.executeQuery();
+				while (rs.next())
+				{
+					String cat      = rs.getString("wait_category_desc");
+					long intervalId = rs.getLong("runtime_stats_interval_id");
+					Map<Long, Long> cMap = perWaitData.get(cat);
+					if (cMap == null) continue;
+					cMap.put(intervalId, rs.getLong("total_wait_ms"));
+				}
+				rs.close();
+			}
+			finally { ps.close(); }
+
+			while (globalIntervals.size() > SPARKLINE_INTERVALS)
+				globalIntervals.pollFirstEntry();
+
+			List<String> sharedDates = new ArrayList<>(globalIntervals.values());
+
+			for (Map<String, Object> waitRow : waits)
+			{
+				String cat = (String) waitRow.get("waitCategory");
+				if (cat == null) continue;
+				Map<Long, Long> cMap = perWaitData.getOrDefault(cat, new LinkedHashMap<>());
+				List<Number> spark = new ArrayList<>();
+				for (Long iid : globalIntervals.keySet())
+				{
+					Long v = cMap.get(iid);
+					spark.add(v != null ? v : 0L);
+				}
+				waitRow.put("spark",      spark);
+				waitRow.put("sparkDates", sharedDates);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.debug("QueryStoreServlet.enrichWaitsWithSparklineData failed: {}", ex.getMessage());
+		}
 	}
 
 	// =========================================================================

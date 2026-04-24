@@ -377,6 +377,7 @@ var _colorSchema  = "dark"; // Color schema, can be: "white" or "dark"
 var _showSrvTimer = null;
 var _lastHistoryMomentsArray = null;
 var _hasActiveHistoryStatementArr = null;
+var _lastLiveSampleTs             = '';  // Last live sample timestamp (yyyy-MM-dd HH:mm:ss) — used for showplan table info context
 
 // Alarm badge refresh throttle for history mode
 var _lastAlarmRefreshMs = 0;
@@ -1900,6 +1901,11 @@ function dbxTuneGraphSubscribe()
 		}
 
 
+		// Track last live sample timestamp — used for showplan table info context
+		if (graphHead.sampleTime) {
+			_lastLiveSampleTs = graphHead.sampleTime.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
+		}
+
 		// Update fisrt/last timestamp in the navbar
 		updateNavbarInfo();
 
@@ -2011,13 +2017,15 @@ function dbxTuneGraphSubscribe()
 	
 		return div;
 	}
-	function createSqlServerQueryPlanToolTipDiv(data, rowData)
+	function createSqlServerQueryPlanToolTipDiv(data, rowData, srvName)
 	{
 		// FIXME: create a modal-div that can show a SQL Server Showplan (using https://github.com/JustinPealing/html-query-plan)
 		//return createActiveStatementToolTipDiv(data);
 
-		const dataVal = data;
+		const dataVal      = data;
 		const lastKnownSql = rowData.hasOwnProperty('lastKnownSql') ? rowData.lastKnownSql : "";
+		const srv          = srvName || (_serverList.length ? _serverList[0] : '');
+		const dbname       = rowData.hasOwnProperty('database_name') ? (rowData.database_name || '') : '';
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
@@ -2027,7 +2035,10 @@ function dbxTuneGraphSubscribe()
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 		div.setAttribute("data-sqltext"    , lastKnownSql);
-	
+		div.setAttribute("data-srv"        , srv);
+		div.setAttribute("data-dbname"     , dbname);
+		div.setAttribute("data-ts"         , _lastLiveSampleTs || '');
+
 		return div;
 	}
 	function createPostgresQueryPlanToolTipDiv(data)
@@ -2237,8 +2248,8 @@ function dbxTuneGraphSubscribe()
 				{
 					if (metaData.columnName === "HasBufferSqlText"    && rowData.hasOwnProperty('LastBufferSqlText') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(   rowData.LastBufferSqlText, 'tsql') ); }
 					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('lastKnownSql')      && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(   rowData.lastKnownSql     , 'tsql') ); }
-					if (metaData.columnName === "HasQueryplan"        && rowData.hasOwnProperty('query_plan')        && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan       , rowData ) ); }
-					if (metaData.columnName === "HasLiveQueryplan"    && rowData.hasOwnProperty('LiveQueryPlan')     && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan    , rowData ) ); }
+					if (metaData.columnName === "HasQueryplan"        && rowData.hasOwnProperty('query_plan')        && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.query_plan       , rowData, srvName) ); }
+					if (metaData.columnName === "HasLiveQueryplan"    && rowData.hasOwnProperty('LiveQueryPlan')     && cellContent === true) { td.appendChild( createSqlServerQueryPlanToolTipDiv(rowData.LiveQueryPlan    , rowData, srvName) ); }
 					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidLocks       ,'Lock Table'       ) ); }
 					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.BlockedSpidsInfo,'Blocked SPID Info') ); }
 					if (metaData.columnName === "HasSpidWaitInfo"     && rowData.hasOwnProperty('SpidWaitInfo')      && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidWaitInfo    ,'SPID Wait Info'   ) ); }
@@ -4390,6 +4401,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	const sampleValue    = getParameter("sampleValue",   "");
 	const colorSchema    = getParameter("cs",            "dark");
 	const openSpvParam   = getParameter("openShowplanViewer", "");
+	const openQsParam    = getParameter("openQueryStore",     "");
 
 	_debug = debug;
 	_colorSchema = colorSchema;
@@ -4823,6 +4835,14 @@ function dbxTuneLoadCharts(destinationDivId)
 		setTimeout(function() {
 			if (typeof window.openShowplanViewer === 'function') window.openShowplanViewer();
 		}, 800);
+	}
+
+	// If the Query Store panel was requested via URL param, auto-open it once
+	// the page has finished loading (600 ms delay).
+	if (openQsParam === '1') {
+		setTimeout(function() {
+			if (typeof queryStoreToggle === 'function') queryStoreToggle();
+		}, 600);
 	}
 
 	// Set the window/tab title name
