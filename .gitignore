@@ -10,3 +10,5 @@
 ## Claude subdir
 .claude
 
+## Eclipse settings
+.settings

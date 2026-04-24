@@ -188,11 +188,12 @@ public class PersistContainer
 //		_serverName       = serverName;
 //		_onHostname       = onHostname;
 //	}
+
 	private PersistContainer(Timestamp mainSampleTime, String serverName, String onHostname, String serverNameAlias, String serverDisplayName)
 	{
 		_sessionStartTime  = null;
 		_mainSampleTime    = mainSampleTime;
-		_serverName        = serverName;
+		_serverName        = DbxTune.stripSrvName(serverName);
 		_onHostname        = onHostname;
 		_serverNameAlias   = serverNameAlias;
 		_serverDisplayName = serverDisplayName;
@@ -212,7 +213,7 @@ public class PersistContainer
 	public void setSessionStartTime (Timestamp startTime)      { _sessionStartTime  = startTime; }
 	/** Set the "main" Timestamp, this is the time when a "loop" to collect all various ConterModdel's, which we get data for */ 
 	public void setMainSampleTime   (Timestamp mainSampleTime) { _mainSampleTime    = mainSampleTime; }
-	public void setServerName       (String serverName)        { _serverName        = serverName; }
+	public void setServerName       (String serverName)        { _serverName        = DbxTune.stripSrvName(serverName); }
 	public void setOnHostname       (String onHostname)        { _onHostname        = onHostname; }
 	public void setServerNameAlias  (String alias)             { _serverNameAlias   = alias; }
 	public void setServerDisplayName(String displayName)       { _serverDisplayName = displayName; }

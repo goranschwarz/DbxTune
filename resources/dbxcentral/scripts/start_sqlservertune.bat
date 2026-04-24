@@ -62,6 +62,7 @@ rem ##----------------------------------------------
 rem ## Override some parameters based on the %srvName%
 rem ##----------------------------------------------
 IF "%srvName%" == "xxx" set dbmsUser=someUserName
+IF "%srvName%" == "yyy" set cfgFile=%DBXTUNE_CENTRAL_CONF%\sqlserver.YYY.conf
 
 rem ##----------------------------------------------
 rem ## Start

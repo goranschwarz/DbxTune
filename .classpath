@@ -54,6 +54,7 @@
 	<classpathentry kind="lib" path="lib/h2-2.4.240.jar"/>
 	<classpathentry kind="lib" path="lib/commons-math3-3.6.1.jar" sourcepath="3pp/commons-math3-3.6.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-13.2.1.jre11.jar"/>
+	<classpathentry kind="lib" path="lib/freemarker-2.3.34.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/cron4j-2.2.5.jar" sourcepath="3pp/cron4j-2.2.5-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jchart2d-3.3.2.jar" sourcepath="3pp/jchart2d-3.3.2-sources.jar"/>

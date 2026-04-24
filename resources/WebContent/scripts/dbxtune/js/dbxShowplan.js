@@ -834,6 +834,27 @@
 			ssShowplanSetPlanType(data.tooltip);
 			ssShowplanGetParameters();
 			ssShowplanResetZoom();
+			// Set Table Information context from trigger element's data attributes (srv/dbname/ts)
+			var tiSect = document.getElementById('dbx-ssp-sect-tableinfo');
+			var tiBody = document.getElementById('dbx-ssp-tableinfo-body');
+			if (tiSect && tiBody) {
+				var tiSrv = data.srv    || '';
+				var tiDb  = data.dbname || '';
+				var tiTs  = data.ts     || '';
+				var tiSql = data.sqltext || '';
+				tiBody.setAttribute('data-srv',     tiSrv);
+				tiBody.setAttribute('data-dbname',  tiDb);
+				tiBody.setAttribute('data-ts',      tiTs);
+				tiBody.setAttribute('data-sqltext', tiSql);
+				tiBody.setAttribute('data-loaded',  'false');
+				tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+				if (tiSrv && tiDb) {
+					tiSect.style.display = '';
+				} else {
+					tiSect.style.display = 'none';
+				}
+				tiSect.removeAttribute('open');
+			}
 		});
 
 		// SQL Server: draw plan after modal is visible

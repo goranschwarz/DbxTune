@@ -1453,7 +1453,8 @@ List of stuff that can be done
 					collectorMenuOptions = ''
 						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-report"                                     , "Job Scheduler Report for Today")\'>SQL Agent/Scheduler <b>Report</b> for <b>Today</b></a>'
 						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-timeline&startTime=TODAY&onlyLevelZero=true", "Job Scheduler Activity View Today")\'>SQL Agent/Scheduler <b>Timeline</b> View for <b>Today</b></a>'
-						+ '    <a class="dropdown-item" href=\'/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default&openShowplanViewer=1\' onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "openShowplanViewer=1")\'>&#128269; <b>Showplan</b> Loader</a>'
+						+ '    <a class="dropdown-item" href=\'/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default&openQueryStore=1\'     onclick=\'window.open(this.href,"_blank");return false;\'>&#128202; <b>Query Store</b> Dialog</a>'
+						+ '    <a class="dropdown-item" href=\'/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default&openShowplanViewer=1\' onclick=\'window.open(this.href,"_blank");return false;\'>&#128269; <b>Showplan</b> Loader</a>'
 						+ '    <div class="dropdown-divider"></div>';
 				}
 
@@ -1659,9 +1660,11 @@ List of stuff that can be done
 			// Full page reload after 12 hours — picks up new releases and keeps dashboards fresh
 			setTimeout(function() { location.reload(true); }, 12 * 60 * 60 * 1000);
 
-			// URL: ?alarms  or  ?alarms&srv=MY_SERVER  — auto-open Historical Alarms dialog
+			// URL: ?alarms              — auto-open Historical Alarms dialog (all servers)
+			//      ?alarms=SRV_NAME      — auto-open filtered to specific server
+			//      ?alarms&srv=SRV_NAME  — legacy form, also supported
 			if (isParameter('alarms')) {
-				setTimeout(function() { histAlarmOpen(getParameter('srv', '') || null); }, 200);
+				setTimeout(function() { histAlarmOpen(getParameter('alarms', '') || getParameter('srv', '') || null); }, 200);
 			}
 		},
 		error: function(xhr, desc, err)

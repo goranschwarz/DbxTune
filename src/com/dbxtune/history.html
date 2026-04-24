@@ -46,6 +46,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmOsXxx        </b> -- All the OS Monitoring GUI Panels now also shows what user we connected as.</LI>
 		<LI><b>CmOsDiskSpace  </b> -- Skipping some more file-systems. And also if the size is below 500 MB it's skipped. can be changed with property <code>hostmon.MonitorDiskSpace.skip.sizeMb.lt = ###</code></LI>
 		<LI><b>CmOsPs(Windows)</b> -- Added columns '%Cpu' & '%CpuAdj' to calculate how much Percent of the host we are using '%Cpu' Can be above 100%. '%CpuAdj' is %Cpu/numOfCores</LI>
+		<LI>Fixed some small bugs in create AppDir, and changed what files to copy (especilyy for windows)</LI>
+		<LI>PCS: Stripped of unnecessary part of the servername (like domain name and port numbers, so we dont have to use -A flag in most cases</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -338,6 +340,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Better handling of datatype translation for '| bcp' and 'ResultSetInformation'. Postgres:varchar > 65535 is translated to TEXT, SqlServer: source nvarchar/varchar MAX is translated to CLOB. </LI>
 		<LI>ASE/SQLServer/Postgres: Added some static Code Completions</LI>
 		<LI>In the editors context menu: Added 'Show Indent Guidelines'</LI>
+		<LI>Added "template" pre processing using FreeMarker. Meaning we can do loops and other simple control, for example
+		<pre>
+&lt;#list ["2026-04-21", "2026-04-20", "2026-04-19", "2026-04-18", "2026-04-17", "2026-04-16", "2026-04-15", "2026-04-14", "2026-04-13", "2026-04-12"] as dbdate&gt;
+\rsql -Usa -P null -u jdbc:h2:tcp://dbxtune-vm.maxm.se/PROD_A2_ASE_${dbdate};IFEXISTS=TRUE
+SELECT CURRENT_CATALOG()
+go
+&lt;/#list&gt;
+print-template  -- NOte this is just to debug what the template has produced
+        </pre>
+		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

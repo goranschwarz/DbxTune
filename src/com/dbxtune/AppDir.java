@@ -219,14 +219,15 @@ public class AppDir
 			File dbxcBin     = null; 
 			File dbxcLog     = null; 
 			File dbxcConf    = null; 
+			File dbxcInfo    = null; 
 			File dbxcData    = null; 
 
 			// Create "${HOME}/.dbxtune/dbxc/": bin, log, conf, data
 			dbxcBin     = mkdir(dbxUserHome, "dbxc" + sep + "bin",      ps, logList, "- DbxCentral local start files.");
 			dbxcLog     = mkdir(dbxUserHome, "dbxc" + sep + "log",      ps, logList, "- DbxCentral log files.");
 			dbxcConf    = mkdir(dbxUserHome, "dbxc" + sep + "conf",     ps, logList, "- DbxCentral local configuration files.");
-			dbxcConf    = mkdir(dbxUserHome, "dbxc" + sep + "info",     ps, logList, "- DbxCentral local info files.");
-//			dbxcReports = mkdir(dir, "dbxc" + sep + "reports",  ps, logList, "- DbxCentral reports created by 'Daily Report', etc.");
+			dbxcInfo    = mkdir(dbxUserHome, "dbxc" + sep + "info",     ps, logList, "- DbxCentral local info files.");
+//			dbxcReports = mkdir(dbxUserHome, "dbxc" + sep + "reports",  ps, logList, "- DbxCentral reports created by 'Daily Report', etc."); // Already done earlier
 			dbxcData    = mkdir(dbxUserHome, "dbxc" + sep + "data",     ps, logList, "- DbxCentral database recording files. (NOTE: make a soft-link to location which has enough storage.)");
 
 			if (StringUtil.isNullOrBlank(dbxHome))
@@ -246,9 +247,9 @@ public class AppDir
 //						log(ps, logList, "DbxCentral for Windows does not have any starter files for the moment (not yet implemented for Windows).");
 						
 //FIXME: The Below files do not yet exist
-						createSymbolicLink(dbxcBinStr + "list_ALL.ps1",         dbxHomeBin + "dbxc_list_ALL.ps1",  ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
-						createSymbolicLink(dbxcBinStr + "start_ALL.ps1",        dbxHomeBin + "dbxc_start_ALL.ps1", ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
-						createSymbolicLink(dbxcBinStr + "stop_ALL.ps1",         dbxHomeBin + "dbxc_stop_ALL.ps1",  ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
+//						createSymbolicLink(dbxcBinStr + "list_ALL.ps1",         dbxHomeBin + "dbxc_list_ALL.ps1",  ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
+//						createSymbolicLink(dbxcBinStr + "start_ALL.ps1",        dbxHomeBin + "dbxc_start_ALL.ps1", ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
+//						createSymbolicLink(dbxcBinStr + "stop_ALL.ps1",         dbxHomeBin + "dbxc_stop_ALL.ps1",  ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
 						createSymbolicLink(dbxcBinStr + "dbxPassword.bat",      dbxHomeBin + "dbxPassword.bat",    ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
 //						createSymbolicLink(dbxcBinStr + "list_ALL.bat",         dbxHomeBin + "dbxc_list_ALL.bat",  ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
 //						createSymbolicLink(dbxcBinStr + "start_ALL.bat",        dbxHomeBin + "dbxc_start_ALL.bat", ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
@@ -264,7 +265,7 @@ public class AppDir
 						copyFileToDir(srcDir + "start_mysqltune.bat",        dbxcBin, ps, logList, "- Change this for customer specializations to MySqlTune Collectors.");
 
 						// OR: should we create a LINK here instead?
-						copyFileToDir(dbxHomeResourceBin + "nssm.exe",       dbxcBin, ps, logList, "- Non Sucking Service Manager, to create services.");
+//						copyFileToDir(dbxHomeResourceBin + "nssm.exe",       dbxcBin, ps, logList, "- Non Sucking Service Manager, to create services.");
 //						copyFileToDir(?????? + "create_dbxc_service.bat",    dbxcBin, ps, logList, "- Create services for DbxCentral/DbxTune.");
 					}
 					else
@@ -652,10 +653,10 @@ public class AppDir
 		// Check if file exists
 		if (Files.isRegularFile(userEnvFileNameV1) && Files.isRegularFile(userEnvFileName))
 		{
-System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: Skipping env file check/migration. The file '" + userEnvFileNameV1 + "' already exists.");
+//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: Skipping env file check/migration. The file '" + userEnvFileNameV1 + "' already exists.");
 			// No need to do upgrade checks on: DBXTUNE.env
 			// It has already been done.
-//			log(ps, logList, "Skipping env file check/migration. The file '" + userEnvFileNameV1 + "' already exists.");
+			log(ps, logList, "Skipping env file check/migration. The file '" + userEnvFileNameV1 + "' already exists.");
 		}
 		else
 		{
@@ -676,11 +677,11 @@ System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: Skipping env file check
 					log(ps, logList, "Installing a NEW Environent file '" + envFileName + "'. NO Changes from the original file was detected.");
 					copyFileToDir(userEnvFileName,      userEnvFileNameV1, dbxUserHomeFile, ps, logList, true, "- Copy Current/Old User Environment file '" + userEnvFileName + "' to '" + userEnvFileNameV1 + "'. Next step is to replace it with a new version.");
 					copyFileToDir(systEnvFileName.toString(),              dbxUserHomeFile, ps, logList, true, "- NEW Environment file '" + userEnvFileName + "' that will be sources by various start scripts.");
-System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO: [no-changes-to-env-file]... COPY " + envFileName + " to " + dbxUserHomeFile);
+//System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO: [no-changes-to-env-file]... COPY " + envFileName + " to " + dbxUserHomeFile);
 				}
 				else
 				{
-System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO: [CHANGES-TO-ENV-FILE] ---upgrade file--- " + envFileName);
+//System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO: [CHANGES-TO-ENV-FILE] ---upgrade file--- " + envFileName);
 					// What should we do here?
 					//  - Read the current/old ENV file and check for DBXTUNE variables...
 					//  - If any has "non" default values...
@@ -1099,7 +1100,7 @@ System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO: [CHANGES-TO-ENV-F
 		
 		File srcFile  = new File(srcFileStr);
 		
-System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>> copyFileToDir: srcFileStr=|" + srcFileStr + "|, destFileStr=|" + destFileStr + "|, destDir=|" + destDir + "|.");
+//System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>> copyFileToDir: srcFileStr=|" + srcFileStr + "|, destFileStr=|" + destFileStr + "|, destDir=|" + destDir + "|.");
 		try
 		{
 	        File destFile = new File(destDir, srcFile.getName());
