@@ -158,7 +158,18 @@ public abstract class DbxTune
 	{
 		return _mainClassName;
 	}
-	
+
+	/**
+	 * Set the main class name explicitly, bypassing the stack trace detection in main().
+	 * This is used by WindowsServiceWrapper when running as a Windows Service via Apache Procrun,
+	 * where the stack trace bottom is the service wrapper rather than the *Tune class.
+	 * @param name the simple class name (e.g., "asetune", "sqlservertune", "postgrestune")
+	 */
+	public static void setAppNameCmd(String name)
+	{
+		_mainClassName = name;
+	}
+
 	/**
 	 * Strip of some part of a servername<br>
 	 * For SqlServer (which has default port 1433), it will do the following<br>
@@ -2230,12 +2241,17 @@ if (_gui && startEvenIfGui_justToTestTheService)
 	{
 		// Get MainClass
 		// This will be used later to instantiate the correct product
-		StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-		StackTraceElement main = stack[stack.length - 1];
-		_mainClassName = main.getClassName().toLowerCase();
-		int lastDot = _mainClassName.lastIndexOf('.');
-		if (lastDot != -1)
-			_mainClassName = _mainClassName.substring(lastDot+1);
+		// If _mainClassName was already set (e.g., by WindowsServiceWrapper via setAppNameCmd()),
+		// skip the stack trace detection.
+		if ("unknown".equals(_mainClassName))
+		{
+			StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+			StackTraceElement main = stack[stack.length - 1];
+			_mainClassName = main.getClassName().toLowerCase();
+			int lastDot = _mainClassName.lastIndexOf('.');
+			if (lastDot != -1)
+				_mainClassName = _mainClassName.substring(lastDot+1);
+		}
 
 
 		// if we want to print input arguments
