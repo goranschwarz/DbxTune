@@ -123,11 +123,11 @@ public class AseCpuUsageOverview extends AseAbstract
 		_CmSummary_aaDiskGraph           .writeHtmlContent(w, null, "How many disk I/Os was done... To be used in conjunction with '@@cpu_xxx' to decide if CPU is comming from disk or <i>other</i> DBMS load.");
 		_CmProcessActivit_BatchCountGraph.writeHtmlContent(w, null, null);
 		_CmSummary_OldestTranInSecGraph  .writeHtmlContent(w, null, null);
-		_CmSummary_DeadlockCount         .writeHtmlContent(w, null, null);
-		_CmSummary_BlockingLocksGraph    .writeHtmlContent(w, null, null);
-		_CmSysWaits_sysWaitLockTime      .writeHtmlContent(w, "If you have Waits at Server Level, please see section: '<b>Top TABLE/INDEX Blocking Lock Wait Statistics</b>' for details (what tables that are affected).", null);
-		_CmSysWaits_sysWaitLockCount     .writeHtmlContent(w, null, null);
-		_CmSysWaits_sysWaitLockTpw       .writeHtmlContent(w, null, null);
+		_CmSummary_DeadlockCount         .writeHtmlContent(w, null, null, "No Deadlocks was detected");
+		_CmSummary_BlockingLocksGraph    .writeHtmlContent(w, null, null, "No Blocking Locks was detected");
+		_CmSysWaits_sysWaitLockTime      .writeHtmlContent(w, "If you have Waits at Server Level, please see section: '<b>Top TABLE/INDEX Blocking Lock Wait Statistics</b>' for details (what tables that are affected).", null, "No Lock Waits was detected");
+		_CmSysWaits_sysWaitLockCount     .writeHtmlContent(w, null, null, "No Lock Waits was detected");
+		_CmSysWaits_sysWaitLockTpw       .writeHtmlContent(w, null, null, "No Lock Waits was detected");
 		_CmSummary_IudmOperationsGraph   .writeHtmlContent(w, null, null);
 		if (isFullMessageType())
 		{

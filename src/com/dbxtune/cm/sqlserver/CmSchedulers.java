@@ -87,7 +87,13 @@ extends CountersModel
 		"last_timer_activity",
 		"total_cpu_usage_ms",
 		"total_cpu_idle_capped_ms",
-		"total_scheduler_delay_ms"
+		"total_scheduler_delay_ms",
+		"total_signal_time",
+		"total_waits_completed",
+		"total_enqueued_tasks",
+		"total_completed_tasks",
+		"spinlock_wait_time_ms",
+		"spinlock_wait_count"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true; // 2024-04-23: I see no reason why we should keep negative number

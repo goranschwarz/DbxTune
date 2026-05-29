@@ -658,6 +658,7 @@ public class DbxTuneSample
 		String    _reRaiseData                ;
 		String    _reRaiseDescription         ;
 		String    _reRaiseExtendedDescription ;
+		String    _alarmOptions               ;
 
 		public String    getAlarmClass()                  { return _alarmClass; }
 		public String    getAlarmClassAbriviated()        { return _alarmClassAbriviated; }
@@ -686,6 +687,7 @@ public class DbxTuneSample
 		public String    getReRaiseData()                 { return _reRaiseData; }
 		public String    getReRaiseDescription()          { return _reRaiseDescription; }
 		public String    getReRaiseExtendedDescription()  { return _reRaiseExtendedDescription; }
+		public String    getAlarmOptions()                { return _alarmOptions; }
 
 		public void setAlarmClass                 (String    alarmClass)                  { _alarmClass                  = alarmClass; }
 		public void setAlarmClassAbriviated       (String    alarmClassAbriviated)        { _alarmClassAbriviated        = alarmClassAbriviated; if (alarmClassAbriviated != null && alarmClassAbriviated.startsWith("AlarmEvent")) _alarmClassAbriviated = alarmClassAbriviated.substring("AlarmEvent".length()); }
@@ -714,6 +716,7 @@ public class DbxTuneSample
 		public void setReRaiseData                (String    reRaiseData)                 { _reRaiseData                 = reRaiseData; }
 		public void setReRaiseDescription         (String    reRaiseDescription)          { _reRaiseDescription          = reRaiseDescription; }
 		public void setReRaiseExtendedDescription (String    reRaiseExtendedDescription)  { _reRaiseExtendedDescription  = reRaiseExtendedDescription; }
+		public void setAlarmOptions               (String    alarmOptions)                { _alarmOptions                = alarmOptions; }
 
 		public boolean isActive()
 		{
@@ -754,7 +757,8 @@ public class DbxTuneSample
 			sb.append("extendedDescription        ".trim()).append("='").append(_extendedDescription        ).append("'").append(","); // String    _extendedDescription        ;
 			sb.append("reRaiseData                ".trim()).append("='").append(_reRaiseData                ).append("'").append(","); // String    _reRaiseData                ;
 			sb.append("reRaiseDescription         ".trim()).append("='").append(_reRaiseDescription         ).append("'").append(","); // String    _reRaiseDescription         ;
-			sb.append("reRaiseExtendedDescription ".trim()).append("='").append(_reRaiseExtendedDescription ).append("'").append("");  // String    _reRaiseExtendedDescription ;
+			sb.append("reRaiseExtendedDescription ".trim()).append("='").append(_reRaiseExtendedDescription ).append("'").append(","); // String    _reRaiseExtendedDescription ;
+			sb.append("alarmOptions               ".trim()).append("='").append(_alarmOptions               ).append("'").append("");  // String    _alarmOptions               ;
 
 			sb.append("]");
 			
@@ -1254,6 +1258,7 @@ public class DbxTuneSample
 		ae.setReRaiseData                ( getStringAny(null,    alarm, "reRaiseData",                "lastData"));                // First parameter is DEFAULT value if not found
 		ae.setReRaiseDescription         ( getStringAny(null,    alarm, "reRaiseDescription",         "lastDescription"));
 		ae.setReRaiseExtendedDescription ( getStringAny(null,    alarm, "reRaiseExtendedDescription", "lastExtendedDescription"));
+		ae.setAlarmOptions               ( getString            (alarm, "alarmOptions",                null));
 
 		return ae;
 	}
@@ -1380,6 +1385,7 @@ public class DbxTuneSample
 					ae.setReRaiseData                ( getString   (alarm, "reRaiseData"));
 					ae.setReRaiseDescription         ( getString   (alarm, "reRaiseDescription"));
 					ae.setReRaiseExtendedDescription ( getString   (alarm, "reRaiseExtendedDescription"));
+					ae.setAlarmOptions               ( getString   (alarm, "alarmOptions"));
 					
 					sample.addActiveAlarm(ae);
 				}
@@ -1423,6 +1429,7 @@ public class DbxTuneSample
 					ae.setReRaiseData                ( getString   (alarm, "reRaiseData"));
 					ae.setReRaiseDescription         ( getString   (alarm, "reRaiseDescription"));
 					ae.setReRaiseExtendedDescription ( getString   (alarm, "reRaiseExtendedDescription"));
+					ae.setAlarmOptions               ( getString   (alarm, "alarmOptions"));
 
 					aew.setEventTime(getTimestamp(alarm, "eventTime"));
 					aew.setAction   (getString   (alarm, "action"));
@@ -1777,6 +1784,7 @@ public class DbxTuneSample
 				gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
 				gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         )); /*HTML or Normal???*/
 				gen.writeStringField("reRaiseExtendedDescription" , toString( ae.getReRaiseExtendedDescription() )); /*HTML or Normal???*/
+				gen.writeStringField("alarmOptions"               , toString( ae.getAlarmOptions()               ));
 				
 				gen.writeEndObject();
 			}

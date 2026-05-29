@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
@@ -1330,5 +1331,291 @@ public class SqlServerUtils
 			_logger.warn("Problems looking up Procedure Name '" + procName + "' from any database. ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Text='" + ex.getMessage()+ "'. SQL=|" + sql + "|, Caught: " + ex);
 			return defaultIfNotFound;
 		}
+	}
+
+	/**
+	 * Removes square brackets from object names
+	 * <p>
+	 * NOTE: For the moment: This does NOT handle escaped brackets "dbo.[Table]]Name]"
+	 */
+	public static String stripSquareBrackets(String objectName)
+	{
+		return objectName.replace("[", "").replace("]", "");
+	}
+	
+	
+	// -------------------------------------------------------------------------
+	// JobHistoryFormatter
+	// -------------------------------------------------------------------------
+
+	// Regex patterns (compiled once, reused for every row)
+
+//	/**
+//	 * Strips the "Executed as user: DOMAIN\\user." prefix onto its own line.
+//	 * NOTE: Only single space follows the prefix period (not double space),
+//	 *       so we use \s+ (one or more) here.
+//	 */
+//	private static final Pattern EXECUTED_AS = Pattern.compile("^(Executed as user: [^.]+\\.)\\s+");
+// 
+//	/**
+//	 * Sentence boundary: period + 2+ spaces + uppercase letter, [ or <.
+//	 * We require 2+ spaces here to avoid splitting mid-sentence constructs
+//	 * like "(Error 208). The" which only have a single space.
+//	 */
+//	private static final Pattern SENTENCE_SEP = Pattern.compile("\\.\\s{2,}(?=[A-Z\\[<])");
+// 
+//	/**
+//	 * [SQLSTATE ...] blocks — can appear after single or double space,
+//	 * so use \s+ (one or more). Indented to visually tie to parent message.
+//	 */
+//	private static final Pattern SQLSTATE_SEP = Pattern.compile("\\s+(?=\\[SQLSTATE)");
+// 
+//	/**
+//	 * SSIS / dtexec internal tokens — split onto indented lines.
+//	 * Covers: Started:, Finished:, Elapsed:, Error:, Code:, Source:,
+//	 *         Description:, Warning:
+//	 */
+//	private static final Pattern SSIS_TOKEN = Pattern.compile("\\s{2,}(?=(?:Started|Finished|Elapsed|Error|Code|Source|Description|Warning):)");
+// 
+//
+//	/**
+//	 * Python traceback: "Traceback (most recent call last):" followed by
+//	 * 4-space-indented File entries and the final exception line.
+//	 * Splits on:
+//	 *   4+ spaces before "File"        -> newline + indent
+//	 *   4+ spaces before the code line -> newline + deeper indent  
+//	 *   2+ spaces before "ExcType:"    -> newline (exception class at col 0)
+//	 */
+//	private static final Pattern PYTHON_FILE = Pattern.compile("\\s{4,}(?=File )");
+//	private static final Pattern PYTHON_CODE = Pattern.compile("(?<=\\))\\s{4,}(?=\\S)");   // after closing ) of File line
+//	private static final Pattern PYTHON_EXC =  Pattern.compile("\\s{2,}(?=[A-Za-z]+(Error|Exception|Warning|Interrupt|Fault|Exit)[:\\s])");
+//
+//	/**
+//	 * Formats a raw sysjobhistory message into readable multi-line text.
+//	 *
+//	 * @param message   Raw message column value from sysjobhistory.
+//	 * @param subsystem Step subsystem from sysjobsteps (TSQL, CmdExec,
+//	 *                  PowerShell, SSIS, ...), or null for job-level rows
+//	 *                  (step_id = 0).
+//	 * @return          Formatted string with newlines, ready for display/logging.
+//	 */
+//	public static String jobMessageFormater(String message, String subsystem) 
+//	{
+//		if (StringUtil.isNullOrBlank(message)) 
+//			return message;
+//		
+//		message = message.trim();
+// 
+//		// Step 1: always peel off the "Executed as user" prefix
+//		String s = EXECUTED_AS.matcher(message).replaceFirst("$1\n");
+// 
+//		// Step 2: branch by subsystem
+//		String sub = (subsystem != null) ? subsystem.trim().toUpperCase() : "";
+// 
+//		switch (sub) 
+//		{
+//			case "TSQL":
+//				// [SQLSTATE] blocks get indented under their message
+//				s = SQLSTATE_SEP.matcher(s).replaceAll("\n  ");
+//				// Remaining sentence boundaries
+//				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+//				break;
+// 
+//			case "SSIS":
+//				// dtexec emits timestamped tokens — put each on its own indented line
+//				s = SSIS_TOKEN.matcher(s).replaceAll("\n  ");
+//				// Remaining sentence boundaries
+//				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+//				break;
+// 
+//			case "CMDEXEC":
+//			case "POWERSHELL":
+//				// Check if it contains a Python traceback
+//				if (s.contains("Traceback (most recent call last):")) 
+//				{
+//					// Split "File ..." entries onto their own indented lines
+//					s = PYTHON_FILE.matcher(s).replaceAll("\n    ");
+//
+//					// Split the code line (after the File "...line N, in func" part)
+//					s = PYTHON_CODE.matcher(s).replaceAll("\n      ");
+//
+//					// Split the final exception class onto its own line
+//					s = PYTHON_EXC.matcher(s).replaceAll("\n");
+//				}
+//
+//				// Raw subprocess output — just split sentence boundaries.
+//				// The actual stdout content in between is unpredictable so
+//				// we leave it alone and only split the known trailer sentences.
+//				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+//				break;
+// 
+//			default:
+//				// Job-level rows (step_id = 0) land here with subsystem = null.
+//				// Also a safe fallback for unknown subsystem types.
+//				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+//				break;
+//		}
+// 
+//		return s.trim();
+//	}
+	
+	/**
+	 * Strips the "Executed as user: DOMAIN\\user." prefix onto its own line.
+	 * NOTE: Only single space follows the prefix period (not double space),
+	 *       so we use \s+ (one or more) here.
+	 */
+	private static final Pattern EXECUTED_AS = Pattern.compile("^(Executed as user: [^.]+\\.)\\s+");
+
+	/**
+	 * Sentence boundary: period + 2+ spaces + uppercase letter, [ or <.
+	 * We require 2+ spaces here to avoid splitting mid-sentence constructs
+	 * like "(Error 208). The" which only have a single space.
+	 */
+	private static final Pattern SENTENCE_SEP = Pattern.compile("\\.\\s{2,}(?=[A-Z\\[<])");
+
+	/**
+	 * [SQLSTATE ...] blocks — can appear after single or double space,
+	 * so use \s+ (one or more). Indented to visually tie to parent message.
+	 */
+	private static final Pattern SQLSTATE_SEP = Pattern.compile("\\s+(?=\\[SQLSTATE)");
+
+	/**
+	 * SSIS / dtexec internal tokens — split onto indented lines.
+	 * Covers: Started:, Finished:, Elapsed:, Error:, Code:, Source:,
+	 *         Description:, Warning:
+	 */
+	private static final Pattern SSIS_TOKEN = Pattern.compile("\\s{2,}(?=(?:Started|Finished|Elapsed|Error|Code|Source|Description|Warning):)");
+
+	/**
+	 * Windows CMD shell: splits on cmd prompt echoes and interactive tool prompts.
+	 * Handles:
+	 *   C:\Windows\system32>command    (cmd.exe echo of executed command)
+	 *   psftp> command                 (psftp interactive prompt)
+	 *   ftp> command                   (generic ftp client prompt)
+	 *   any lowercase tool> command    (generic interactive CLI prompt)
+	 */
+	private static final Pattern CMD_PROMPT = Pattern.compile("\\s{2,}(?=(?:[A-Z]:\\\\[^>]*>|[a-z]+>\\s))");
+
+	/**
+	 * Python traceback patterns.
+	 *
+	 * PYTHON_FILE  — 4+ spaces before "File " -> each File entry on its own line.
+	 * PYTHON_CODE  — 2+ spaces before the actual code line that follows a File entry.
+	 *               We look for 2+ spaces followed by a non-space that is NOT "File"
+	 *               and NOT a known exception type, to isolate just the code lines.
+	 * PYTHON_EXC   — the final exception line: ModuleName.ExceptionType: ...
+	 *               Preceded by 2+ spaces or a closing paren+spaces.
+	 */
+	private static final Pattern PYTHON_FILE = Pattern.compile("\\s{4,}(?=File )");
+	private static final Pattern PYTHON_CODE = Pattern.compile("\\s{2,}(?!File )(?=[a-z_])");  // lowercase = code line, not a keyword
+	private static final Pattern PYTHON_EXC = Pattern.compile("[)']\\s{2,}(?=(?:[A-Za-z][A-Za-z0-9_.]*(?:Error|Exception|Warning|Interrupt|Fault|Exit)|Exception):)");
+
+	/**
+	 * Python logger line boundary — splits on " - LOGLEVEL - " or " - LOGLEVEL  "
+	 * regardless of what fields come before or after the level.
+	 * Covers any LOG_FORMAT field ordering.
+	 *
+	 * Matches 2+ spaces before a sequence that contains " - LOGLEVEL" so the
+	 * split happens at the START of the log line, not in the middle of it.
+	 *
+	 * The %-7s levelname padding means levels may have trailing spaces:
+	 *   "INFO   ", "WARNING", "ERROR  ", "DEBUG  ", "CRITICAL"
+	 */
+	private static final Pattern PYTHON_LOG =
+		Pattern.compile(
+			"\\s{2,}(?=\\S[^\\n]*?\\s+-\\s+(?:DEBUG|INFO|WARNING|ERROR|CRITICAL)\\s+-)" +
+			"|" +
+			"\\s{2,}(?=(?:DEBUG|INFO|WARNING|ERROR|CRITICAL)\\s+-)"
+		);
+
+//	/**
+//	 * Unescapes basic HTML entities that the SQL Agent web layer may inject
+//	 * into the message column (e.g. &quot; &lt; &gt; &amp; &#39;).
+//	 */
+//	private static String unescapeHtml(String s) 
+//	{
+//		return s
+//			.replace("&quot;", "\"")
+//			.replace("&lt;",   "<")
+//			.replace("&gt;",   ">")
+//			.replace("&amp;",  "&")
+//			.replace("&#39;",  "'");
+//	}
+
+	/**
+	 * Formats a raw sysjobhistory message into readable multi-line text.
+	 *
+	 * @param message   Raw message column value from sysjobhistory.
+	 * @param subsystem Step subsystem from sysjobsteps (TSQL, CmdExec,
+	 *                  PowerShell, SSIS, ...), or null for job-level rows
+	 *                  (step_id = 0).
+	 * @return          Formatted string with newlines, ready for display/logging.
+	 */
+	public static String jobMessageFormatter(String message, String subsystem)
+	{
+		if (StringUtil.isNullOrBlank(message))
+			return message;
+
+		// Step 0: unescape HTML entities injected by the web/UI layer
+//		String s = unescapeHtml(message.trim());
+		String s = StringEscapeUtils.unescapeHtml4(message.trim());
+
+		// Step 1: always peel off the "Executed as user" prefix onto its own line
+		s = EXECUTED_AS.matcher(s).replaceFirst("$1\n");
+
+		// Step 2: branch by subsystem
+		String sub = (subsystem != null) ? subsystem.trim().toUpperCase() : "";
+
+		switch (sub)
+		{
+			case "TSQL":
+				// [SQLSTATE] blocks get indented under their message
+				s = SQLSTATE_SEP.matcher(s).replaceAll("\n  ");
+
+				// Remaining sentence boundaries
+				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+				break;
+
+			case "SSIS":
+				// dtexec emits timestamped tokens — each on its own indented line
+				s = SSIS_TOKEN.matcher(s).replaceAll("\n  ");
+
+				// Remaining sentence boundaries
+				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+				break;
+
+			case "CMDEXEC":
+			case "POWERSHELL":
+				if (s.contains("Traceback (most recent call last):"))
+				{
+					// 1. Each "File ..." frame onto its own indented line
+					s = PYTHON_FILE.matcher(s).replaceAll("\n    ");
+
+					// 2. The code line that follows each File entry
+					s = PYTHON_CODE.matcher(s).replaceAll("\n      ");
+
+					// 3. The final exception class onto its own line at col 0
+					//    replaceAll keeps the char before the spaces ([)']) then adds newline
+					s = PYTHON_EXC.matcher(s).replaceAll(mr -> mr.group().charAt(0) + "\n");
+				}
+
+				// Split Python logger lines — anchors on " - LOGLEVEL - " in any field order
+				s = PYTHON_LOG.matcher(s).replaceAll("\n");
+				
+				// Split Windows CMD prompt echoes
+				s = CMD_PROMPT.matcher(s).replaceAll("\n");
+
+				// Split known trailer sentences (Process Exit Code N., The step failed., etc.)
+				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+				break;
+
+			default:
+				// Job-level rows (step_id = 0) land here with subsystem = null.
+				// Also a safe fallback for unknown subsystem types.
+				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+				break;
+		}
+
+		return s.trim();
 	}
 }

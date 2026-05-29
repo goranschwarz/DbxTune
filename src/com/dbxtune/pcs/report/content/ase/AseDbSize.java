@@ -314,6 +314,9 @@ extends AseAbstract
 
 								ae.setExtendedDescription(extraAscii, extraHtml);
 
+								// Information about how to disable this alarm
+								//ae.createAlarmOptionsMessage(cm, "???");
+
 								// And finally send the alarm
 								AlarmHandler.getInstance().addAlarm( ae );
 							}
@@ -436,6 +439,9 @@ extends AseAbstract
 										threshold);
 
 								ae.setExtendedDescription(extraAscii, extraHtml);
+
+								// Information about how to disable this alarm
+								//ae.createAlarmOptionsMessage(this, "???");
 
 								// And finally send the alarm
 								AlarmHandler.getInstance().addAlarm( ae );

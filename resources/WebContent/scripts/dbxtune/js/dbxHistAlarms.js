@@ -588,7 +588,8 @@ function histAlarmShowDetail(idx)
 		['Extended Description', row.extendedDescription,  true ],
 		['Last Ext. Description',row.lastExtendedDescription, true ],
 		['Data',                 row.data,                 true ],
-		['Last Data',            row.lastData,             true ]
+		['Last Data',            row.lastData,             true ],
+		['Alarm Options',        row.alarmOptions,         true ]
 	];
 
 	var html = '<table class="table table-sm table-bordered mb-0" style="font-size:0.85em;">';

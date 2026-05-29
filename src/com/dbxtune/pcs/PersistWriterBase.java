@@ -1168,6 +1168,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"alarmOptions"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+", "+lq+"severity"+rq+")\n");
 				sbSql.append(") \n");
@@ -1208,6 +1209,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"alarmOptions"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+", "+lq+"severity"+rq+")\n");
 				sbSql.append(") \n");
@@ -1699,11 +1701,12 @@ public abstract class PersistWriterBase
 			sbSql.append(lq).append("description"                ).append(rq).append(", "); // 21
 			sbSql.append(lq).append("lastDescription"            ).append(rq).append(", "); // 22
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 23
-			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append("");   // 24
+			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 24
+			sbSql.append(lq).append("alarmOptions"               ).append(rq).append("");   // 25
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
 		}
 		else if (type == ALARM_HISTORY)
 		{
@@ -1736,11 +1739,12 @@ public abstract class PersistWriterBase
 			sbSql.append(lq).append("description"                ).append(rq).append(", "); // 25
 			sbSql.append(lq).append("lastDescription"            ).append(rq).append(", "); // 26
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 27
-			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append("");   // 28
+			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 28
+			sbSql.append(lq).append("alarmOptions"               ).append(rq).append("");   // 29
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{

@@ -3025,6 +3025,9 @@ extends CountersModel
 					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay);
 					ae.setRaiseDelayInSec(raiseDelay);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "FreeListStalls");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -3054,6 +3057,9 @@ extends CountersModel
 					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LazyWrites_delay, DEFAULT_alarm_LazyWrites_delay);
 					ae.setRaiseDelayInSec(raiseDelay);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "LazyWrites");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}

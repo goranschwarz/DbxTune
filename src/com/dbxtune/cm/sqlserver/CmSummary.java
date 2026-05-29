@@ -1768,6 +1768,9 @@ extends CmSummaryAbstract
 					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "LockWaits");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -1890,6 +1893,9 @@ extends CmSummaryAbstract
 						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec, oldestOpenTranSpid.intValue(), oldestOpenTranDbname, oldestOpenTranName, oldestOpenTranCmd, oldestOpenTranWaitType, oldestOpenTranLoginName, oldestOpenTranTempdbUsageMbAll);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "oldestOpenTranInSec");
+
 						alarmHandler.addAlarm( ae );
 					}
 				} // end: above threshold
@@ -1941,6 +1947,9 @@ extends CmSummaryAbstract
 
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "suspectPageCount");
+
 					alarmHandler.addAlarm( ae );
 				} // end: above threshold
 			} // end: suspectPageCount above threshold
@@ -1978,6 +1987,9 @@ extends CmSummaryAbstract
 				AlarmEvent ae = new AlarmEventOutOfWorkerThreads(cm, threshold, requestsWaitingForWorkers);
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "requestsWaitingForWorkers");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}
@@ -2005,6 +2017,9 @@ extends CmSummaryAbstract
 				AlarmEvent ae = new AlarmEventLowOnWorkerThreads(cm, threshold, availableWorkers, maxWorkers, allocatedWorkers);
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "availableWorkers");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}
@@ -2047,6 +2062,9 @@ extends CmSummaryAbstract
 				AlarmEvent ae = new AlarmEventDeadlock(cm, threshold, movingAverageInMinutes, deadlockCount, movingAvgDeadlockCount);
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "DeadlockCount");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}
@@ -2076,6 +2094,9 @@ extends CmSummaryAbstract
 			{
 				AlarmEvent ae = new AlarmEventSqlAgentStatus(cm, sqlAgentStatus, statusExpectedRegEx);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "SqlAgentStatus");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}

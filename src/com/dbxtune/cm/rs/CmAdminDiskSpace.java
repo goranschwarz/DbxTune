@@ -348,6 +348,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "USED_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "SpaceUsedSegs");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
@@ -381,6 +384,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "FREE_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "SpaceFreeSegs");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
@@ -413,6 +419,9 @@ extends CountersModel
 
 					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "USED_PCT", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "SpaceUsedPct");
 
 					AlarmHandler.getInstance().addAlarm(ae);
 				}

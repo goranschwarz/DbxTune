@@ -34,6 +34,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.AppDir;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -49,6 +52,7 @@ public class AlarmMuteManager
 	public  static AlarmMuteManager getInstance() { return _instance; }
 
 	/** One mute record — also the JSON schema */
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class MuteRecord
 	{
 		public String alarmId;
@@ -60,9 +64,12 @@ public class AlarmMuteManager
 
 		public MuteRecord() {} // Jackson
 
+		@JsonIgnore
 		public boolean isExpired()
 		{
-			if (expiresAt == null) return false;
+			if (expiresAt == null) 
+				return false;
+
 			try   { return Instant.parse(expiresAt).isBefore(Instant.now()); }
 			catch (Exception e) { return false; }
 		}
@@ -74,7 +81,9 @@ public class AlarmMuteManager
 
 	private AlarmMuteManager()
 	{
-		_om   = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		_om   = new ObjectMapper()
+		             .enable(SerializationFeature.INDENT_OUTPUT)
+		             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 		_file = new File(AppDir.getAppConfDir() + File.separator + "alarm-mutes.json");
 		load();
 	}
@@ -82,11 +91,14 @@ public class AlarmMuteManager
 	/** Load persisted mutes from disk, skipping any already-expired records. */
 	private synchronized void load()
 	{
-		if (!_file.exists()) return;
+		if (!_file.exists())
+		{
+			_logger.info("AlarmMuteManager: no persisted mutes file found at " + _file);
+			return;
+		}
 		try
 		{
-			Map<String, MuteRecord> loaded = _om.readValue(_file,
-				_om.getTypeFactory().constructMapType(HashMap.class, String.class, MuteRecord.class));
+			Map<String, MuteRecord> loaded = _om.readValue(_file, _om.getTypeFactory().constructMapType(HashMap.class, String.class, MuteRecord.class));
 			if (loaded != null)
 			{
 				_mutes.clear();
@@ -96,7 +108,10 @@ public class AlarmMuteManager
 			}
 			_logger.info("AlarmMuteManager: loaded " + _mutes.size() + " mutes from " + _file);
 		}
-		catch (IOException e) { _logger.error("AlarmMuteManager: failed to load from " + _file, e); }
+		catch (IOException e) 
+		{ 
+			_logger.error("AlarmMuteManager: failed to load from " + _file, e); 
+		}
 	}
 
 	/** Persist current mutes to disk. */
@@ -107,7 +122,10 @@ public class AlarmMuteManager
 			_file.getParentFile().mkdirs();
 			_om.writeValue(_file, new HashMap<>(_mutes));
 		}
-		catch (IOException e) { _logger.error("AlarmMuteManager: failed to save to " + _file, e); }
+		catch (IOException e) 
+		{ 
+			_logger.error("AlarmMuteManager: failed to save to " + _file, e); 
+		}
 	}
 
 	/** Add or update a mute. expiresHours=null or <=0 means permanent. */

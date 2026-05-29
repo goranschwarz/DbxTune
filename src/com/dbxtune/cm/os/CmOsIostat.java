@@ -1721,6 +1721,9 @@ extends CounterModelHostMonitor
 						AlarmEvent ae = new AlarmEventOsDiskUtilPct(cm, threshold, hostname, device, utilPct, raiseDelay);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "utilPct");
+
 						AlarmHandler.getInstance().addAlarm( ae );
 					}
 				}

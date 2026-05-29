@@ -713,6 +713,9 @@ extends CounterModelHostMonitor
 					int raiseDelayMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageInfo_delay_minutes, DEFAULT_alarm_cpuUsageInfo_delay_minutes);
 					ae.setRaiseDelayInMinutes(raiseDelayMinutes);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "CpuUsageInfo");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
@@ -749,6 +752,9 @@ extends CounterModelHostMonitor
 					int raiseDelayMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageWarning_delay_minutes, DEFAULT_alarm_cpuUsageWarning_delay_minutes);
 					ae.setRaiseDelayInMinutes(raiseDelayMinutes);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "CpuUsageWarning");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
@@ -785,6 +791,9 @@ extends CounterModelHostMonitor
 					int raiseDelayMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageError_delay_minutes, DEFAULT_alarm_cpuUsageError_delay_minutes);
 					ae.setRaiseDelayInMinutes(raiseDelayMinutes);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "CpuUsageError");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}

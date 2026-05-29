@@ -255,9 +255,12 @@ implements Cloneable, ITableTooltip
 	/** if this CM has valid data for last sample */
 	private boolean            _hasValidSampleData = false;
 
-	/** If this CM is valid, the connected ASE Server might not support 
+	/** If this CM is valid, the connected ASE Server might not support
 	 * this CM due to to early version or not configured properly. */
 	private boolean            _isActive = true;
+
+//	/** Explicitly enabled/disabled by the user (persisted to config). Takes precedence over automatic isActive() checks. */
+//	private boolean            _isEnabledByUser = true;
 
 	/** A collection of Graphs connected to this CM */
 	private Map<String,TrendGraph> _trendGraphs = new LinkedHashMap<String,TrendGraph>();
@@ -1362,7 +1365,8 @@ implements Cloneable, ITableTooltip
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		String base = this.getName() + ".";
-		
+
+//		list.add(new CmSettingsHelper("Is Enabled"                                , base + PROPKEY_isEnabled                  , Boolean.class, isEnabledByUser()             , getDefaultIsEnabledByUser()              , "Enable or disable data collection for this counter module" ));
 		list.add(new CmSettingsHelper("Is Paused"                                 , base + PROPKEY_sampleDataIsPaused         , Boolean.class, isDataPollingPaused()         , getDefaultIsDataPollingPaused()          , "Used to temporarily pause collection of this counters" ));
 		list.add(new CmSettingsHelper("Postpone Time"                             , base + PROPKEY_postponeTime               , Integer.class, getPostponeTime()             , getDefaultPostponeTime()                 , "If you want to skip some intermidiate samples, Here you can specify minimum seconds between samples. tip: '10m' is 10 minutes, '24h' is 24 hours" ));
 		list.add(new CmSettingsHelper("Is Postpone Enabled"                       , base + PROPKEY_postponeIsEnabled          , Boolean.class, isPostponeEnabled()           , getDefaultPostponeIsEnabled()            , "Should we use postpone time or not. This mean that we can temporaraly disable the postpone, without changing the postpone time..." ));
@@ -1415,6 +1419,12 @@ implements Cloneable, ITableTooltip
 		//---------------------------
 		if (DbxTune.hasGui())
 		{
+//			if ( ! _isEnabledByUser )
+//			{
+//				setValidSampleData(false);
+//				return false;
+//			}
+
 			if ( ! isActive() )
 			{
 				setValidSampleData(false);
@@ -1514,6 +1524,9 @@ implements Cloneable, ITableTooltip
 		//---------------------------
 		else
 		{
+//			if ( ! _isEnabledByUser )
+//				return false;
+
 			if ( ! isActive() )
 				return false;
 
@@ -2149,9 +2162,14 @@ implements Cloneable, ITableTooltip
 			{
 				strVal = objVal.toString();
 
+				boolean cellIsHtmlContent = false;
+				String strValFirstTenAsUpper = strVal.trim().substring(0, Math.min(10, strVal.length())).toUpperCase();
+
 				// Remove any leading/ending HTML tags
 				if (StringUtils.startsWithIgnoreCase(strVal, "<html>"))
 				{
+					cellIsHtmlContent = true;
+
 					strVal = strVal.substring("<html>".length());
 					strVal = strVal.trim();
 					if (StringUtils.endsWithIgnoreCase(strVal, "</html>"))
@@ -2192,6 +2210,10 @@ implements Cloneable, ITableTooltip
 							_logger.error(strVal);
 						}
 					}
+					else if (strValFirstTenAsUpper.startsWith("<TABLE")) // Possibly: Add other "tags" that a cell content can start with
+					{
+						cellIsHtmlContent = true;
+					}
 					else
 					{
 						// make '\n' into '<br>'
@@ -2201,7 +2223,7 @@ implements Cloneable, ITableTooltip
 				
 				// If it's a LONG String, only display first 'maxStrLen' characters...
 				int strValLen = strVal.length(); 
-				if (strValLen > maxStrLen)
+				if (strValLen > maxStrLen && !cellIsHtmlContent)
 				{
 					strVal =  strVal.substring(0, maxStrLen);
 					strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+").</i></font>";
@@ -2211,10 +2233,13 @@ implements Cloneable, ITableTooltip
 				if (StringUtil.equalsAny(colName, "SpidLocks", "BlockedSpidsInfo", "SpidWaitInfo", "query_plan", "LiveQueryPlan")) // for: SqlServerTune
 					injectNewlines = false;
 				
+				if (cellIsHtmlContent)
+					injectNewlines = false;
+				
 				// inject breaks in LONG Lines
 				if (injectNewlines && strValLen > maxCellCharLen)
 				{
-					strVal =  WordUtils.wrap(strVal, maxCellCharLen, "<br>\n", false);
+					strVal = WordUtils.wrap(strVal, maxCellCharLen, "<br>\n", false);
 				}
 			}
 			
@@ -3729,6 +3754,15 @@ implements Cloneable, ITableTooltip
 			_oldestTimeoutExceptionTime = -1;
 		}
 	}
+//	public boolean isEnabledByUser()        { return _isEnabledByUser; }
+//	public boolean getDefaultIsEnabledByUser() { return true; }
+//	public void setEnabledByUser(boolean enabled, boolean saveProps)
+//	{
+//		_isEnabledByUser = enabled;
+//		if (saveProps)
+//			saveProps();
+//	}
+
 	/** */
 	public String getProblemDesc()
 	{
@@ -5485,8 +5519,12 @@ implements Cloneable, ITableTooltip
 			{
 				if (AlarmHandler.hasInstance())
 				{
-					AlarmEvent alrmEvent = new AlarmEventProcedureCacheOutOfMemory(this);
-					AlarmHandler.getInstance().addAlarm(alrmEvent);
+					AlarmEvent ae = new AlarmEventProcedureCacheOutOfMemory(this);
+
+					// Information about how to disable this alarm
+					//ae.createAlarmOptionsMessage(this, "DbmsVersionStringChanged");
+
+					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
 
@@ -5494,7 +5532,12 @@ implements Cloneable, ITableTooltip
 			// Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
 			if (errorCode == 1204 && AlarmHandler.hasInstance())
 			{
-				AlarmHandler.getInstance().addAlarm( new AlarmEventConfigResourceIsUsedUp(this, "number of locks", errorCode, errorMsg, null) );				
+				AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "number of locks", errorCode, errorMsg, null);
+
+				// Information about how to disable this alarm
+				//ae.createAlarmOptionsMessage(this, "numberOfLocks");
+
+				AlarmHandler.getInstance().addAlarm(ae);
 			}
 			
 			
@@ -9308,6 +9351,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 
 		if (tempProps != null)
 		{
+//			tempProps.setProperty(base + PROPKEY_isEnabled,                      isEnabledByUser());
 			tempProps.setProperty(base + PROPKEY_currentDataSource,              getDataSource());
 			tempProps.setProperty(base + PROPKEY_filterAllZeroDiffCounters,      isFilterAllZero());
 			tempProps.setProperty(base + PROPKEY_sampleDataIsPaused,             isDataPollingPaused());
@@ -9332,6 +9376,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	{
 		String base = this.getName() + ".";
 
+//		Configuration.registerDefaultValue(base + PROPKEY_isEnabled,                      getDefaultIsEnabledByUser());
 		Configuration.registerDefaultValue(base + PROPKEY_queryTimeout,                   getDefaultQueryTimeout());
 
 		Configuration.registerDefaultValue(base + PROPKEY_currentDataSource,              getDefaultDataSource());
@@ -9369,6 +9414,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		{
 			_inLoadProps = true;
 
+//			setEnabledByUser(                    tempProps.getBooleanProperty(base + PROPKEY_isEnabled,                      getDefaultIsEnabledByUser())                    ,false);
 			setQueryTimeout(                     tempProps.getIntProperty(    base + PROPKEY_queryTimeout,                   getDefaultQueryTimeout()) );
                                                  
 			setDataSource(                       tempProps.getIntProperty(    base + PROPKEY_currentDataSource,              getDefaultDataSource())                         ,false);
@@ -9390,6 +9436,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		}
 	}
 
+//	public static final String PROPKEY_isEnabled                      = "isEnabled";
 	public static final String PROPKEY_currentDataSource              = "currentDataSource";
 	public static final String PROPKEY_filterAllZeroDiffCounters      = "filterAllZeroDiffCounters";
 	public static final String PROPKEY_sampleDataIsPaused             = "sampleDataIsPaused";

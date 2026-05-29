@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLongRunningDetachedTransaction;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -251,8 +252,12 @@ extends CountersModel
 
 						if (ageInSec.intValue() > threshold)
 						{
-							AlarmHandler.getInstance().addAlarm( 
-								new AlarmEventLongRunningDetachedTransaction(cm, threshold, dbname, ageInSec, xactname) );
+							AlarmEvent ae = new AlarmEventLongRunningDetachedTransaction(cm, threshold, dbname, ageInSec, xactname);
+
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "state[Detached]");
+
+							AlarmHandler.getInstance().addAlarm(ae);
 						}
 					}
 				}

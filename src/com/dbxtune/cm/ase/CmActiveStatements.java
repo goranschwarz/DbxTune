@@ -1591,6 +1591,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(cm, "BlockingOthersMaxTimeInSec");
+
 							alarmHandler.addAlarm( ae );
 						}
 					}
@@ -1655,6 +1658,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, ExecTimeInInSec, StatementStartTime, currentDbname, currentUserName, currentCommand, currentTranName);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(cm, "StatementExecInSec");
+
 							alarmHandler.addAlarm( ae );
 						}
 					}

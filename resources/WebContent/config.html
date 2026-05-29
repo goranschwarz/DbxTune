@@ -724,7 +724,10 @@ function getParameter(key, defaultValue)
 	var _cmTable          = [];
 	var _alarmWriterTable = [];
 	var _ccSrvName;
-	const _passedSrvName = getParameter("srvName", "");
+	const _passedSrvName   = getParameter("srvName", "");
+	const _passedCmName    = getParameter("cm",      "");
+	const _passedAlarmName = getParameter("alarm",   "");
+	const _passedParamName = getParameter("param",   _passedAlarmName);
 //	const _mgtHostname   = getParameter("host", "localhost");
 //	const _mgtPort       = getParameter("port", 8900);
 //	const _mgtAuthorization = getParameter("authorization", "");
@@ -738,6 +741,11 @@ function getParameter(key, defaultValue)
 	var _lastClickedAlarmWriterRow         = undefined;
 	var _lastClickedAlarmWriterSettingsRow = undefined;
 	var _lastClickedAlarmWriterFiltersRow  = undefined;
+
+	// URL-param auto-selection: cleared when the user makes their own click
+	var _autoSelectCmName    = '';
+	var _autoSelectAlarmName = '';
+	var _autoSelectParamName = '';
 
 
 //	if (_mgtAuthorization !== "")
@@ -793,7 +801,7 @@ function getParameter(key, defaultValue)
 		$('#alarmWriterFiltersTable' ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
 	}
 
-	getConfig();
+	getConfig().then(dbxSelectByUrlParams);
 
 	// By default hide "pre check"
 	$('#pre-check-div').hide();
@@ -810,8 +818,10 @@ function getParameter(key, defaultValue)
 
 	//-----------------------------------------
 	// Click on table: cmTable
-	$('#cmTable').on('click-cell.bs.table', function (field, value, row, element) 
+	$('#cmTable').on('click-cell.bs.table', function (field, value, row, element)
 	{
+		_autoSelectCmName             = '';
+		_autoSelectAlarmName          = '';
 		_lastClickedCmRow             = element;
 		_lastClickedAlarmRow          = undefined;
 		_lastClickedAlarmParameterRow = undefined;
@@ -855,6 +865,12 @@ function getParameter(key, defaultValue)
 		$("#cm-info-sqlRefresh")    .text(toStringValue(cmObject.sqlRefresh));
 		Prism.highlightAll();
 
+		dbxLoadCmData(cmObject);
+
+	});
+
+	function dbxLoadCmData(cmObject)
+	{
 		//----------------------------------------------------
 		// Set OPTIONS tab
 		if (cmObject.hasOwnProperty('options'))
@@ -887,14 +903,128 @@ function getParameter(key, defaultValue)
 			$('#alarmPreChecks').bootstrapTable('load', []);
 		}
 
-		$('#alarmParams')   .bootstrapTable('load', []);
-		
+		$('#alarmParams').bootstrapTable('load', []);
+	}
+
+	// After a successful save: re-fetch config from server and reload the current CM's sub-tables
+	function dbxRefreshCurrentCm()
+	{
+		const cmName = _lastClickedCmRow ? _lastClickedCmRow.cmName : null;
+		getConfig().then(function() {
+			if (cmName) {
+				const updated = findObjInArray(_cmTable, "cmName", cmName);
+				if (updated) {
+					_lastClickedCmRow             = updated;
+					_lastClickedAlarmRow          = undefined;
+					_lastClickedAlarmParameterRow = undefined;
+					dbxLoadCmData(updated);
+				}
+			}
+		});
+	}
+
+	// Highlight a row in a bootstrap-table by field value and scroll it into view.
+	function dbxHighlightTableRow(tableSelector, fieldName, fieldValue)
+	{
+		var data = $(tableSelector).bootstrapTable('getData');
+		for (var i = 0; i < data.length; i++) {
+			if (data[i][fieldName] === fieldValue) {
+				var $row = $(tableSelector + ' tbody tr').eq(i);
+				$row.addClass('highlight').siblings().removeClass('highlight');
+				// Scroll into view within bootstrap-table's fixed-height container
+				var $container = $row.closest('.fixed-table-body');
+				if ($container.length) {
+					var rowTop = $row.offset().top - $container.offset().top + $container.scrollTop();
+					$container.scrollTop(rowTop - $container.height() / 2 + $row.outerHeight() / 2);
+				} else {
+					$row[0].scrollIntoView({ block: 'nearest' });
+				}
+				break;
+			}
+		}
+	}
+
+	function dbxSelectByUrlParams()
+	{
+		if (_passedCmName === '') return;
+
+		var cmObject = findObjInArray(_cmTable, "cmName", _passedCmName);
+		if (!cmObject) return;
+
+		_lastClickedCmRow             = cmObject;
+		_lastClickedAlarmRow          = undefined;
+		_lastClickedAlarmParameterRow = undefined;
+
+		// Populate Info fields (same as click handler)
+		$("#cm-info-cmName")        .val(toStringValue(cmObject.cmName));
+		$("#cm-info-displayName")   .val(toStringValue(cmObject.displayName));
+		$("#cm-info-pk")            .val(toStringValue(cmObject.pkCols));
+		$("#cm-info-diffCols")      .val(toStringValue(cmObject.diffCols));
+		$("#cm-info-pctCols")       .val(toStringValue(cmObject.pctCols));
+		$("#cm-info-needSrvConfig") .val(toStringValue(cmObject.needSrvConfig));
+		$("#cm-info-needSrvRoles")  .val(toStringValue(cmObject.needSrvRoles));
+		$("#cm-info-needSrvVersion").val(toStringValue(cmObject.needSrvVersion));
+		$("#cm-info-dependsOnCm")   .val(toStringValue(cmObject.dependsOnCm));
+		$("#cm-info-sqlInit")       .val(toStringValue(cmObject.sqlInit));
+		$("#cm-info-sqlClose")      .val(toStringValue(cmObject.sqlClose));
+		$("#cm-info-sqlRefresh")    .text(toStringValue(cmObject.sqlRefresh));
+		Prism.highlightAll();
+
+		dbxLoadCmData(cmObject);
+
+		// Arm the post-body handler: it will highlight + scroll after every re-render
+		// until the user makes their own click.
+		_autoSelectCmName = _passedCmName;
+
+		if (_passedAlarmName === '') return;
+
+		// Switch to Alarms sub-tab then load alarm parameters
+		setTimeout(function() {
+			var alarmData = $('#alarmTable').bootstrapTable('getData');
+			var alarmObj  = findObjInArray(alarmData, 'name', _passedAlarmName);
+			if (alarmObj) {
+				_lastClickedAlarmRow = alarmObj;
+				_autoSelectAlarmName = _passedAlarmName;
+				if (alarmObj.hasOwnProperty('parameters'))
+					$('#alarmParams').bootstrapTable('load', alarmObj.parameters);
+				else
+					$('#alarmParams').bootstrapTable('load', []);
+
+				// Highlight once the tab is fully visible (after CSS transition)
+				$('#cm-alarms-tab').one('shown.bs.tab', function() {
+					dbxHighlightTableRow('#alarmTable', 'name', _passedAlarmName);
+					if (_passedParamName !== '') {
+						_autoSelectParamName = _passedParamName;
+						dbxHighlightTableRow('#alarmParams', 'name', _passedParamName);
+					}
+				});
+			}
+			$('#cm-alarms-tab').trigger('click');
+		}, 0);
+	}
+
+	// Re-apply URL-param row selection after any bootstrap-table re-render (e.g. filter-control init)
+	$('#cmTable').on('post-body.bs.table', function() {
+		if (_autoSelectCmName !== '') {
+			dbxHighlightTableRow('#cmTable', 'cmName', _autoSelectCmName);
+		}
+	});
+	$('#alarmTable').on('post-body.bs.table', function() {
+		if (_autoSelectAlarmName !== '') {
+			dbxHighlightTableRow('#alarmTable', 'name', _autoSelectAlarmName);
+		}
+	});
+	$('#alarmParams').on('post-body.bs.table', function() {
+		if (_autoSelectParamName !== '') {
+			dbxHighlightTableRow('#alarmParams', 'name', _autoSelectParamName);
+		}
 	});
 
 	//-----------------------------------------
 	// Click on table: alarmTable
-	$('#alarmTable').on('click-cell.bs.table', function (field, value, row, element) 
+	$('#alarmTable').on('click-cell.bs.table', function (field, value, row, element)
 	{
+		_autoSelectAlarmName          = '';
 		_lastClickedAlarmRow          = element;
 		_lastClickedAlarmParameterRow = undefined;
 //		let cmName = element.cmName;
@@ -913,8 +1043,9 @@ function getParameter(key, defaultValue)
 
 	//-----------------------------------------
 	// Click on table: alarmParams
-	$('#alarmParams').on('click-cell.bs.table', function (field, value, row, element) 
+	$('#alarmParams').on('click-cell.bs.table', function (field, value, row, element)
 	{
+		_autoSelectParamName          = '';
 		_lastClickedAlarmParameterRow = element;
 		console.log(">>>>>>>>>> ALARM-PARAMETER-NAME='" + element.name + "', col='" + value + "' >>>>>>>>>>>>> ", element);
 
@@ -1322,9 +1453,7 @@ function getParameter(key, defaultValue)
 				const requestOptions = {
 					method: 'POST',
 //					method: 'PUT',
-					mode: 'no-cors',
 					headers: {
-						'Access-Control-Allow-Origin': '*',
 						'Content-Type': 'application/json'
 					},
 					body: JSON.stringify(sendObject)
@@ -1350,9 +1479,9 @@ console.log("response:", response);
 
 						dialogProblem.innerHTML = "Send OK";
 
-						// CLOSE the modal
-						console.log("#dbx-cfg-alarm-dialog-ok -- Do Actions...\n" + changes.join("\n"));
+						// CLOSE the modal and refresh tables
 						$('#dbx-cfg-alarm').modal('hide');
+						dbxRefreshCurrentCm();
 					})
 					.catch(error => {
 //						dialogProblem.innerHTML = `Error: ${error}`;
@@ -1406,9 +1535,7 @@ console.log("response:", response);
 		<div class="modal-content">
 			<div class="modal-header">
 			<h5 class="modal-title" id="dbx-cfg-prop-dialog-title">Alarm Options</h5>
-			<button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-				<span aria-hidden="true">&times;</span>
-			</button>
+			<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
 				<table>
@@ -1425,19 +1552,30 @@ console.log("response:", response);
 					<tr> <td nowrap><b>Datatype:          </b></td>  <td id="dbx-cfg-prop-f-datatype"     ></td> </tr>
 					<tr> <td nowrap><b>Validator:         </b></td>  <td id="dbx-cfg-prop-f-validator"    ></td> </tr>
 				</table>
-				<br>
-
-				<div class='card'>
+				<div class='card mt-2'>
 					<div class="card-header">Changable Value</div>
-					<div class='card-body'>
-				
-						<div class="row mt-2">
-							<label for="dbx-cfg-prop-f-value" class="col-sm-3 col-form-label col-form-label-sm">Value to Change</label>
-							<div class="col col-sm-2">
-								<input type="text" class="form-control form-control-sm" id="dbx-cfg-prop-f-value" placeholder="">
+					<div class='card-body py-2'>
+
+						<div id="dbx-cfg-prop-value-text-row">
+							<div class="d-flex align-items-center gap-2">
+								<label for="dbx-cfg-prop-f-value" class="col-form-label col-form-label-sm text-nowrap mb-0">Value to Change</label>
+								<input type="text" class="form-control form-control-sm flex-grow-1" id="dbx-cfg-prop-f-value" placeholder="">
+								<button type="button" class="btn btn-outline-secondary btn-sm text-nowrap" id="dbx-cfg-prop-dialog-set-default">Set to Default</button>
 							</div>
 						</div>
 
+						<div id="dbx-cfg-prop-value-bool-row" style="display:none;">
+							<div class="d-flex align-items-center gap-2">
+								<label class="col-form-label col-form-label-sm text-nowrap mb-0">Value to Change</label>
+								<div class="form-check mb-0">
+									<input type="checkbox" class="form-check-input" id="dbx-cfg-prop-f-value-bool">
+									<label class="form-check-label" id="dbx-cfg-prop-f-value-bool-label" for="dbx-cfg-prop-f-value-bool">false</label>
+								</div>
+								<button type="button" class="btn btn-outline-secondary btn-sm text-nowrap ms-auto" id="dbx-cfg-prop-dialog-set-default-bool">Set to Default</button>
+							</div>
+						</div>
+
+						<div class="text-warning small mt-1" id="dbx-cfg-prop-dialog-local-validation"></div>
 						<div class="text-danger" id="dbx-cfg-prop-dialog-info-msg"></div>
 						<div class="text-danger" id="dbx-cfg-prop-dialog-error-msg"></div>
 						
@@ -1456,20 +1594,21 @@ console.log("response:", response);
 					<li><a class="dropdown-item" id="dbx-cfg-prop-dialog-ok-3">Save for ALL Servers sharing the same config file</a></li>
 				</ul>
 			</div>			
-			<button type="button" class="btn btn-primary" id="dbx-cfg-prop-dialog-ok">Change Config</button>
-			<button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
 			</div>
 		</div>
 		</div>
 	</div>
 	<script>
 		var _modalOriginObject_cfgProp  = undefined;
+		var _modalTableName_cfgProp     = undefined;
 
 		$('#dbx-cfg-prop').on('show.bs.modal', function () {
 
-			$("#dbx-cfg-prop-dialog-problem")  .text("");
-			$("#dbx-cfg-prop-dialog-info-msg") .text("");
-			$("#dbx-cfg-prop-dialog-error-msg").text("");
+			$("#dbx-cfg-prop-dialog-problem")         .text("");
+			$("#dbx-cfg-prop-dialog-info-msg")        .text("");
+			$("#dbx-cfg-prop-dialog-error-msg")       .text("");
+			$("#dbx-cfg-prop-dialog-local-validation").text("");
 //			document.getElementById('dbx-cfg-prop-dialog-problem').innerHTML = "";
 
 //			$('.tooltips').tooltip({
@@ -1484,31 +1623,108 @@ console.log("response:", response);
 		});
 
 		// What should happen when we click OK in the dialog
-		$("#dbx-cfg-prop-dialog-ok")  .click( function() { dbxSaveConfigParametersDialog("UNKNOWN");         });
 		$("#dbx-cfg-prop-dialog-ok-1").click( function() { dbxSaveConfigParametersDialog("IN_MEMORY");       });
 		$("#dbx-cfg-prop-dialog-ok-2").click( function() { dbxSaveConfigParametersDialog("THIS_SERVER");     });
 		$("#dbx-cfg-prop-dialog-ok-3").click( function() { dbxSaveConfigParametersDialog("SERVER_TEMPLATE"); });
+
+		/**
+		 * Validate a config value client-side.
+		 * @param  val        - the string value to validate
+		 * @param  rejectEmpty - if true, empty string is also an error for numeric types
+		 * @returns error message, or "" if valid
+		 */
+		function dbxValidateCfgInput(val, rejectEmpty) {
+			if (!_modalOriginObject_cfgProp) return "";
+			const datatype      = _modalOriginObject_cfgProp.datatype      ?? "";
+			const validatorName = _modalOriginObject_cfgProp.validatorName ?? "";
+
+			// ---- Specific-validator checks (override datatype) ----
+			if (validatorName === "RegExpInputValidator") {
+				if (val === "") return "";
+				try { new RegExp(val); return ""; }
+				catch(e) { return "Invalid regular expression: " + e.message; }
+			}
+			if (validatorName === "UrlInputValidator") {
+				if (val === "") return "";
+				try { new URL(val); return ""; }
+				catch(e) { return "Not a valid URL: '" + val + "'"; }
+			}
+			if (validatorName === "JsonInputValidator") {
+				if (val === "") return "";
+				try { JSON.parse(val); return ""; }
+				catch(e) { return "Invalid JSON: " + e.message; }
+			}
+
+			// ---- Datatype checks (InputValidatorBasic) ----
+			if (datatype === "Integer") {
+				if (val === "" && rejectEmpty) return "An integer value is required.";
+				if (val !== "" && !Number.isInteger(Number(val))) return "Not a valid integer: '" + val + "'";
+			}
+
+			return "";
+		}
+
+		// Live validation as the user types
+		$("#dbx-cfg-prop-f-value").on("input", function() {
+			const msg = dbxValidateCfgInput($(this).val(), false);
+			$("#dbx-cfg-prop-dialog-local-validation").text(msg);
+		});
+
+		// Keep checkbox label in sync with checked state
+		$("#dbx-cfg-prop-f-value-bool").on("change", function() {
+			$("#dbx-cfg-prop-f-value-bool-label").text($(this).is(":checked") ? "true" : "false");
+		});
+
+		// Set to Default — shared handler for both text and bool rows
+		function dbxCfgPropSetDefault() {
+			if (!_modalOriginObject_cfgProp) return;
+			const defaultVal = _modalOriginObject_cfgProp.defaultValue ?? "";
+			const datatype   = _modalOriginObject_cfgProp.datatype   ?? "";
+			if (datatype === "Boolean") {
+				const checked = (defaultVal === "true" || defaultVal === true);
+				$("#dbx-cfg-prop-f-value-bool").prop("checked", checked);
+				$("#dbx-cfg-prop-f-value-bool-label").text(checked ? "true" : "false");
+			} else {
+				$("#dbx-cfg-prop-f-value").val(defaultVal);
+			}
+			$("#dbx-cfg-prop-dialog-local-validation").text("");
+		}
+		$("#dbx-cfg-prop-dialog-set-default"     ).on("click", dbxCfgPropSetDefault);
+		$("#dbx-cfg-prop-dialog-set-default-bool").on("click", dbxCfgPropSetDefault);
 
 		// And here is the ACTION function that does the save (calls a URL with a JSON Object)
 		function dbxSaveConfigParametersDialog(saveType)
 		{
 console.log("dbxSaveConfigParametersDialog(): saveType: " + saveType);
-			$("#dbx-cfg-prop-dialog-problem")  .text("");
-			$("#dbx-cfg-prop-dialog-info-msg") .text("");
-			$("#dbx-cfg-prop-dialog-error-msg").text("");
+			$("#dbx-cfg-prop-dialog-problem")         .text("");
+			$("#dbx-cfg-prop-dialog-info-msg")        .text("");
+			$("#dbx-cfg-prop-dialog-error-msg")       .text("");
+			$("#dbx-cfg-prop-dialog-local-validation").text("");
 
-			// Get dialog values
-			var dialog_newValue  = $("#dbx-cfg-prop-f-value").val();
-//console.log("xxxxxxxxxxxxxx: dialog_newValue=|"+dialog_newValue+"|, typeof=|"+(typeof dialog_newValue)+"|.", dialog_newValue);
+			const datatype = _modalOriginObject_cfgProp ? (_modalOriginObject_cfgProp.datatype ?? "") : "";
+
+			// Read value from the appropriate widget
+			var dialog_newValue;
+			if (datatype === "Boolean") {
+				dialog_newValue = String($("#dbx-cfg-prop-f-value-bool").is(":checked"));
+			} else {
+				dialog_newValue = $("#dbx-cfg-prop-f-value").val();
+			}
+
+			// Local validation (same rules as live, but empty is also rejected for mandatory types)
+			const validationMsg = dbxValidateCfgInput(dialog_newValue, true);
+			if (validationMsg) {
+				$("#dbx-cfg-prop-dialog-local-validation").text(validationMsg);
+				return;
+			}
 
 			var originValues = _modalOriginObject_cfgProp;
 console.log("xxxxxxxxxxxxxx: originValues=|" + originValues + "|.", originValues);
-//console.log("xxxxxxxxxxxxxx: originValues.isAlarmEnabled=|"+originValues.value+"|, typeof=|"+(typeof originValues.value)+"|.", originValues.value);
 
 			var changes = [];
 
 			// Check what was changed
-			if (dialog_newValue !== originValues.value) 
+			if (dialog_newValue !== originValues.value)
 				changes.push( { value: dialog_newValue } );
 
 			if (changes.length > 0)
@@ -1518,11 +1734,13 @@ console.log("xxxxxxxxxxxxxx: originValues=|" + originValues + "|.", originValues
 				const dialogInfoMsg  = document.getElementById('dbx-cfg-prop-dialog-info-msg');
 				const dialogErrorMsg = document.getElementById('dbx-cfg-prop-dialog-error-msg');
 
+				const typeMap = { 'optionsTable': 'options', 'settingsTable': 'settings', 'alarmParams': 'alarmParams' };
+				const changeType = typeMap[_modalTableName_cfgProp] || _modalTableName_cfgProp || 'unknown';
 				const sendObject = {
-					type: 'xxx',
+					type: changeType,
 					saveType: saveType,
 					cmName: _lastClickedCmRow.cmName,
-					optName: _lastClickedAlarmRow.name,
+					optName: _modalOriginObject_cfgProp.name,
 					change: {}
 				};
 				for (entry of changes) {
@@ -1536,9 +1754,7 @@ console.log("xxxxxxxxxxxxxx: originValues=|" + originValues + "|.", originValues
 				const requestOptions = {
 					method: 'POST',
 //					method: 'PUT',
-					mode: 'no-cors',
 					headers: {
-						'Access-Control-Allow-Origin': '*',
 						'Content-Type': 'application/json'
 					},
 					body: JSON.stringify(sendObject)
@@ -1605,9 +1821,9 @@ console.log("response:", response);
 
 						dialogProblem.innerHTML = "Send OK";
 
-						// CLOSE the modal
-						console.log("#dbx-cfg-prop-dialog-ok -- Do Actions...\n" + changes.join("\n"));
+						// CLOSE the modal and refresh tables
 						$('#dbx-cfg-prop').modal('hide');
+						dbxRefreshCurrentCm();
 					})
 					.catch(error => {
 //						dialogProblem.innerHTML = `Error: ${error}`;
@@ -1640,11 +1856,24 @@ console.log("response:", response);
 			$("#dbx-cfg-prop-f-datatype"     ).text(element.datatype);
 			$("#dbx-cfg-prop-f-validator"    ).text(element.validatorName);
 
-			$("#dbx-cfg-prop-f-value"        ).val(element.value);
+			// Show the right input widget based on datatype
+			const datatype = element.datatype ?? "";
+			if (datatype === "Boolean") {
+				$("#dbx-cfg-prop-value-text-row").hide();
+				$("#dbx-cfg-prop-value-bool-row").show();
+				const checked = (element.value === "true" || element.value === true);
+				$("#dbx-cfg-prop-f-value-bool").prop("checked", checked);
+				$("#dbx-cfg-prop-f-value-bool-label").text(checked ? "true" : "false");
+			} else {
+				$("#dbx-cfg-prop-value-bool-row").hide();
+				$("#dbx-cfg-prop-value-text-row").show();
+				$("#dbx-cfg-prop-f-value").val(element.value);
+			}
 
 			// I was NOT able to set/pass the "element" (json object) to the dialog "#dbx-cfg-prop"
 			// So instead remember it here...
 			_modalOriginObject_cfgProp = element;
+			_modalTableName_cfgProp    = tableName;
 			console.log( "_modalOriginObject_cfgProp: ", _modalOriginObject_cfgProp );
 
 			// Show the dialog

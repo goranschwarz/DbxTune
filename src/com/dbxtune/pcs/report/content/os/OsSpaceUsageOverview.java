@@ -436,6 +436,9 @@ public class OsSpaceUsageOverview extends OsAbstract
 
 							ae.setExtendedDescription(extraAscii, extraHtml);
 
+							// Information about how to disable this alarm
+							//ae.createAlarmOptionsMessage(this, "???");
+
 							// And finally send the alarm
 							AlarmHandler.getInstance().addAlarm( ae );
 						}
@@ -544,6 +547,9 @@ public class OsSpaceUsageOverview extends OsAbstract
 										threshold);
 
 								ae.setExtendedDescription(extraAscii, extraHtml);
+
+								// Information about how to disable this alarm
+								//ae.createAlarmOptionsMessage(this, "???");
 
 								// And finally send the alarm
 								AlarmHandler.getInstance().addAlarm( ae );

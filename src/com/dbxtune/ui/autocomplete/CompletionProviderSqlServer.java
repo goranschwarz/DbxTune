@@ -186,6 +186,14 @@ extends CompletionProviderAbstractSql
 				"DBCC OPENTRAN WITH TABLERESULTS, NO_INFOMSGS /* NOTE: You need to be in the desired database */ ",
 				"Identify active transactions that may be preventing log truncation."));
 		
+		list.add( new CompletionTemplate( "alter_database_single", "ALTER DATABASE dbname SET SINGLE_USER" + " WITH ROLLBACK IMMEDIATE", "Set database in SINGLE_USER mode."));
+		list.add( new CompletionTemplate( "alter_database_multi",  "ALTER DATABASE dbname SET MULTI_USER"  + " WITH ROLLBACK IMMEDIATE", "Set database in MULTI_USER mode."));
+		list.add( new CompletionTemplate( "alter_database_ro",     "ALTER DATABASE dbname SET READ_ONLY"   + " WITH ROLLBACK IMMEDIATE", "Set database in READ_ONLY mode."));
+		list.add( new CompletionTemplate( "alter_database_rw",     "ALTER DATABASE dbname SET READ_WRITE"  + " WITH ROLLBACK IMMEDIATE", "Set database in READ_WRITE mode."));
+		list.add( new CompletionTemplate( "alter_database_offline","ALTER DATABASE dbname SET OFFLINE"     + " WITH ROLLBACK IMMEDIATE", "Set database in OFFLINE mode."));
+		list.add( new CompletionTemplate( "alter_database_online" ,"ALTER DATABASE dbname SET ONLINE"      + " WITH ROLLBACK IMMEDIATE", "Set database in ONLINE mode."));
+		list.add( new CompletionTemplate( "alter_database_compat" ,"ALTER DATABASE dbname SET COMPATIBILITY_LEVEL ### /* 170=2025, 160=2022, 150=2019, 140=2017, 130=2016, 120=2014, 110=2012, 100=2008, 90=2005, 80=2000 */", "Set database compatibility level."));
+		
 		list.add( new CompletionTemplate( "sp_WhoIsActive",
 				"/*** The procedure can be installed from: 'SQL*' Button on the Toolbar --> Install some extra system stored procedures --> Adam Machanic ***/ \n" +
 					"exec sp_WhoIsActive \n" +

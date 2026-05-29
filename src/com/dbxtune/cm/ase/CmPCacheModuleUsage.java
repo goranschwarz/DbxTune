@@ -409,7 +409,7 @@ extends CountersModel
 					{
 						// Refresh the ASE Configuration (_statementCacheConfigSizeMb and _procedureCacheConfigSizeMb)
 						// Then check values again... so we don't send "faulty" alarms...
-						refreshAseConfigAndReCheckStatementCacheUsage(activeMb, threshold);
+						refreshAseConfigAndReCheckStatementCacheUsage(activeMb, threshold, "StatementCacheUsage");
 						
 						// Below send: has been moved into: refreshAseConfigAndRecheckStatementCacheUsage(...)
 //						String extendedDescText = "";
@@ -425,7 +425,7 @@ extends CountersModel
 		}
 	} // end: method
 
-	private void refreshAseConfigAndReCheckStatementCacheUsage(Double activeMb, int threshold)
+	private void refreshAseConfigAndReCheckStatementCacheUsage(Double activeMb, int threshold, String alarmSource)
 	{
 		CountersModel cm = this;
 		_logger.info("FORCE refresh ASE Configuration. Due to possible alarm");
@@ -445,6 +445,9 @@ extends CountersModel
 			AlarmEvent ae = new AlarmEventStatementCacheAboveConfig(cm, _statementCacheConfigSizeMb, activeMb.intValue(), stmntCachePctUsed, procCachePctUsed, threshold);
 			ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+			// Information about how to disable this alarm
+			ae.createAlarmOptionsMessage(this, alarmSource);
+			
 			AlarmHandler.getInstance().addAlarm(ae);
 		}
 	}

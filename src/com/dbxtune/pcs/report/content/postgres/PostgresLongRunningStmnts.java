@@ -111,9 +111,9 @@ extends PostgresAbstract
 			_CmSummary_oldestComboInSec.writeHtmlContent(sb, null, postText);
 			_CmSummary_oldestStateInSec.writeHtmlContent(sb, null, null);
 			
-			_CmSummary_blkLockCount    .writeHtmlContent(sb, null, null);
-			_CmSummary_blkMaxWaitTime  .writeHtmlContent(sb, null, null);
-			_CmPgDatabase_Deadlocks    .writeHtmlContent(sb, null, null);
+			_CmSummary_blkLockCount    .writeHtmlContent(sb, null, null, "No Blocking Locks was detected");
+			_CmSummary_blkMaxWaitTime  .writeHtmlContent(sb, null, null, "No Blocking Locks was detected");
+			_CmPgDatabase_Deadlocks    .writeHtmlContent(sb, null, null, "No Deadlocks was detected");
 		}
 
 

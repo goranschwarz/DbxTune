@@ -38,7 +38,7 @@ implements ITableTooltip
 	private static final long serialVersionUID = 1L;
 
 //	private static final String[] TAB_HEADER = {"AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "crTime", "reRaiseTime", "timeToLive", "data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
-	private static final String[] TAB_HEADER = {"alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "crTime", "reRaiseTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
+	private static final String[] TAB_HEADER = {"alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "crTime", "reRaiseTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription", "alarmOptions"};
 	public static final int TAB_POS_ALARM_CLASS               = 0;
 	public static final int TAB_POS_SERVICE_TYPE              = 1;
 	public static final int TAB_POS_SERVICE_NAME              = 2;
@@ -61,6 +61,7 @@ implements ITableTooltip
 	public static final int TAB_POS_LAST_DESCRIPTION          = 19;
 	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 20;
 	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 21;
+	public static final int TAB_POS_ALARM_OPTIONS             = 22;
 
 	@Override
 	public int getColumnCount()
@@ -136,6 +137,7 @@ implements ITableTooltip
 //			case TAB_POS_LAST_EXTENDED_DESCRIPTION : return ae.getReRaiseExtendedDescription();
 			case TAB_POS_EXTENDED_DESCRIPTION      : return addOuterHtmlTag(ae.getExtendedDescriptionHtml());
 			case TAB_POS_LAST_EXTENDED_DESCRIPTION : return addOuterHtmlTag(ae.getReRaiseExtendedDescriptionHtml());
+			case TAB_POS_ALARM_OPTIONS             : return addOuterHtmlTag(ae.getAlarmOptions());
 			}
 		}
 		return null;
@@ -194,6 +196,7 @@ implements ITableTooltip
 			 || modelCol == TAB_POS_LAST_DESCRIPTION
 			 || modelCol == TAB_POS_EXTENDED_DESCRIPTION
 			 || modelCol == TAB_POS_LAST_EXTENDED_DESCRIPTION
+			 || modelCol == TAB_POS_ALARM_OPTIONS
 		   )
 		{
 			return GTable.TOOLTIP_TYPE_FOCUSABLE + cellValue; 

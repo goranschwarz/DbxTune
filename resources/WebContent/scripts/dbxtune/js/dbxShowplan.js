@@ -820,6 +820,24 @@
 			if (pev2app) { pev2app.unmount(); pev2app = undefined; }
 		});
 
+		// SQL Server: destroy all objects on close to free memory
+		$('#dbx-view-ssShowplan-dialog').on('hidden.bs.modal', function () {
+			if (_ssShowplanZoom) {
+				try { _ssShowplanZoom.destroy(); } catch(e) {}
+				_ssShowplanZoom = undefined;
+			}
+			if (_sspWaitChart) {
+				try { _sspWaitChart.destroy(); } catch(e) {}
+				_sspWaitChart = null;
+			}
+			var planEl = document.getElementById('dbx-view-ssShowplan-content');
+			if (planEl) planEl.innerHTML = '';
+			var bodyEl = document.getElementById('dbx-view-ssShowplan-analysis-body');
+			if (bodyEl) bodyEl.innerHTML = '';
+			var analysisEl = document.getElementById('dbx-view-ssShowplan-analysis');
+			if (analysisEl) analysisEl.style.display = 'none';
+		});
+
 		// SQL Server: set fields before modal becomes visible
 		$('#dbx-view-ssShowplan-dialog').on('show.bs.modal', function (e) {
 			// When opened programmatically (showSqlServerShowplanDialog) relatedTarget
@@ -864,12 +882,15 @@
 			var $cont  = $modal.find('.modal-content');
 
 			// ── Restore or default size ───────────────────────────────────────
+			// Key prefix includes screen resolution so position/size is remembered
+			// independently per screen — avoids misplaced dialogs when switching workstations.
+			var _scrPfx = screen.width + 'x' + screen.height + '_';
 			var savedW = null, savedH = null, savedL = null, savedT = null;
 			try {
-				savedW = localStorage.getItem('ssShowplan-dlg-width');
-				savedH = localStorage.getItem('ssShowplan-dlg-height');
-				savedL = localStorage.getItem('ssShowplan-dlg-left');
-				savedT = localStorage.getItem('ssShowplan-dlg-top');
+				savedW = localStorage.getItem(_scrPfx + 'ssShowplan-dlg-width');
+				savedH = localStorage.getItem(_scrPfx + 'ssShowplan-dlg-height');
+				savedL = localStorage.getItem(_scrPfx + 'ssShowplan-dlg-left');
+				savedT = localStorage.getItem(_scrPfx + 'ssShowplan-dlg-top');
 			} catch(ex) {}
 			var w = savedW ? parseInt(savedW) : Math.round(window.innerWidth  * 0.90);
 			var h = savedH ? parseInt(savedH) : Math.round(window.innerHeight * 0.88);
@@ -893,8 +914,8 @@
 					handle: '.modal-header',
 					stop: function(ev, ui) {
 						try {
-							localStorage.setItem('ssShowplan-dlg-left', Math.round(ui.position.left));
-							localStorage.setItem('ssShowplan-dlg-top',  Math.round(ui.position.top));
+							localStorage.setItem(_scrPfx + 'ssShowplan-dlg-left', Math.round(ui.position.left));
+							localStorage.setItem(_scrPfx + 'ssShowplan-dlg-top',  Math.round(ui.position.top));
 						} catch(ex) {}
 					}
 				});
@@ -908,8 +929,8 @@
 					minHeight: 300,
 					stop: function(ev, ui) {
 						try {
-							localStorage.setItem('ssShowplan-dlg-width',  Math.round(ui.size.width));
-							localStorage.setItem('ssShowplan-dlg-height', Math.round(ui.size.height));
+							localStorage.setItem(_scrPfx + 'ssShowplan-dlg-width',  Math.round(ui.size.width));
+							localStorage.setItem(_scrPfx + 'ssShowplan-dlg-height', Math.round(ui.size.height));
 						} catch(ex) {}
 					}
 				});

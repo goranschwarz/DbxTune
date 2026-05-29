@@ -2387,13 +2387,13 @@ public class DbxTuneCentral
 				// Initialize the DEFAULT alarm handler
 				AlarmHandler ah = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
 				AlarmHandler.setInstance(AlarmHandler.DEFAULT_INSTANCE, ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
-				ah.init(conf, false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
+				ah.init(conf, false, "DBX_CENTRAL", false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
 				ah.start();
 				
 				// Initialize the alarm handler for 'NOT Receiving Information from Collectors'
 				AlarmHandler receiverAlarmHandler = new AlarmHandler(ReceiverAlarmCheck.ALARM_HANDLER_NAME);
 				AlarmHandler.setInstance(ReceiverAlarmCheck.ALARM_HANDLER_NAME, receiverAlarmHandler); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
-				receiverAlarmHandler.init(conf, false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
+				receiverAlarmHandler.init(conf, false, "DBX_CENTRAL", false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
 				receiverAlarmHandler.start();
 				
 //				String alarmWriters = conf.getProperty(AlarmHandler.PROPKEY_WriterClass);

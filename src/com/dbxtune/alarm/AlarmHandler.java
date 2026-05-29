@@ -21,6 +21,7 @@
 package com.dbxtune.alarm;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,9 +46,6 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEvent.Category;
 import com.dbxtune.alarm.events.AlarmEvent.ServiceState;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
-import com.dbxtune.alarm.events.AlarmEventOsLoadAverageAdjusted;
-import com.dbxtune.alarm.events.AlarmEventSrvDown;
-import com.dbxtune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
 import com.dbxtune.alarm.events.internal.AlarmEvent_EndOfScan;
 import com.dbxtune.alarm.events.internal.AlarmEvent_Stop;
 import com.dbxtune.alarm.writers.AlarmWriterAbstract;
@@ -84,11 +82,18 @@ implements Runnable
 //	public static final String  DEFAULT_WriterClass           = "com.dbxtune.alarm.writers.AlarmWriterToStdout, com.dbxtune.alarm.writers.AlarmWriterToFile";
 //	public static final String  DEFAULT_WriterClass           = "com.dbxtune.alarm_ToBeRemoved.writers.AlarmWriterDummy"; // no default
 
-	public static final String  PROPKEY_persistAlarmsEnabled  = "AlarmHandler.persist.alarms.enabled";
-	public static final boolean DEFAULT_persistAlarmsEnabled  = false; // no default
+	public static final String  PROPKEY_persistAlarmsEnabled_gui    = "AlarmHandler.persist.alarms.gui.enabled";
+	public static final boolean DEFAULT_persistAlarmsEnabled_gui    = false; // no default
 
-	public static final String  PROPKEY_persistAlarmsFilename = "AlarmHandler.persist.alarms.filename";
-	public static final String  DEFAULT_persistAlarmsFilename = AppDir.getDbxUserHomeDir() + File.separator + Version.getAppName() + ".AlarmHandler.jso";
+	public static final String  PROPKEY_persistAlarmsFilename_gui   = "AlarmHandler.persist.alarms.gui.filename";
+	public static final String  DEFAULT_persistAlarmsFilename_gui   = AppDir.getDbxUserHomeDir() + File.separator + Version.getAppName() + ".AlarmHandler.jso";
+
+
+	public static final String  PROPKEY_persistAlarmsEnabled_nogui  = "AlarmHandler.persist.alarms.nogui.enabled";
+	public static final boolean DEFAULT_persistAlarmsEnabled_nogui  = true; // This since we do not want NEW alarms on restart (and loosing the "muted" alarmId's)
+
+	public static final String  PROPKEY_persistAlarmsFilename_nogui = "AlarmHandler.persist.alarms.nogui.filename";
+	public static final String  DEFAULT_persistAlarmsFilename_nogui = AppDir.getAppConfDir() + File.separator + "servers" + File.separator + "<SRVNAME>.AlarmHandler.jso";
 
 	/*---------------------------------------------------
 	** Constants
@@ -151,11 +156,11 @@ implements Runnable
 	{
 	}
 
-	public AlarmHandler(String instanceName, Configuration props, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
-	throws Exception
-	{
-		init(props, createTableModelWriter, createPcsWriter, createToApplicationLog);
-	}
+//	public AlarmHandler(String instanceName, Configuration props, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
+//	throws Exception
+//	{
+//		init(props, createTableModelWriter, createPcsWriter, createToApplicationLog);
+//	}
 
 
 	/** Get name of this Alarm Handler Instance */
@@ -278,13 +283,16 @@ implements Runnable
 	 * This can be disabled by: AlarmHandler._reuseOnInit = false;
 	 * 
 	 * @param conf                    Configuration than can be used by the various writers
+	 * @param hasGui                  Did we start with a GUI or NOT (different Properties are used)
+	 * @param srvName                 Needed in NO-GUI mode to set the filename used for saved alarms
+	 * @param conf                    Configuration than can be used by the various writers
 	 * @param createTableModelWriter  Create A GUI model, which DbxTune can look at current/historical alarms
-	 * @param createPcsWriter         Create Writer which sends, current/historical alarms to the Percistent  Conter Storage
-	 * @param createToApplicationLog  Create Writer which sends, current/historical alarms the applications errorlog
+	 * @param createPcsWriter         Create Writer which sends, current/historical alarms to the Persistent  Counter Storage
+	 * @param createToApplicationLog  Create Writer which sends, current/historical alarms the applications error log
 	 * 
 	 * @throws Exception When there is a problem with the initialization...
 	 */
-	public void init(Configuration conf, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
+	public void init(Configuration conf, boolean hasGui, String srvName, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
 	throws Exception
 	{
 		_conf = conf; 
@@ -372,18 +380,48 @@ implements Runnable
 			}
 			_writerClasses.add( alarmClass );
 		}
-		
-		// property: PROPKEY_persistActiveAlarms
-		_persistActiveAlarms = _conf.getBooleanProperty(PROPKEY_persistAlarmsEnabled, DEFAULT_persistAlarmsEnabled);
 
-		// property: AlarmHandler.storage
+		// Is Persist Alarms Enabled (difference between GUI and NOGUI
+//		_persistActiveAlarms = _conf.getBooleanProperty(PROPKEY_persistAlarmsEnabled, DEFAULT_persistAlarmsEnabled);
+		if (hasGui)
+		{
+			_persistActiveAlarms = _conf.getBooleanProperty(PROPKEY_persistAlarmsEnabled_gui , DEFAULT_persistAlarmsEnabled_gui);
+			_serializedFileName  = _conf.getProperty       (PROPKEY_persistAlarmsFilename_gui, DEFAULT_persistAlarmsFilename_gui);
+
+			// Get name of Alarm File... 
+			if (_persistActiveAlarms)
+			{
+				if (StringUtil.isNullOrBlank(_serializedFileName))
+				{
+					throw new Exception("The property '" + PROPKEY_persistAlarmsFilename_gui + "' is mandatory for the AlarmHandler module. It should specify a filename where generated AlarmEvents are stored between sessions.");
+				}
+			}
+		}
+		else
+		{
+			_persistActiveAlarms = _conf.getBooleanProperty(PROPKEY_persistAlarmsEnabled_nogui , DEFAULT_persistAlarmsEnabled_nogui);
+			_serializedFileName  = _conf.getProperty       (PROPKEY_persistAlarmsFilename_nogui, DEFAULT_persistAlarmsFilename_nogui);
+
+			// Get name of Alarm File... 
+			if (_persistActiveAlarms)
+			{
+				if (StringUtil.isNullOrBlank(_serializedFileName))
+				{
+					throw new Exception("The property '" + PROPKEY_persistAlarmsFilename_nogui + "' is mandatory for the AlarmHandler module. It should specify a filename where generated AlarmEvents are stored between sessions.");
+				}
+			}
+
+			if (StringUtil.isNullOrBlank(srvName))
+			{
+				throw new Exception("In NO-GUI mode the 'srvName' parameter has to be passed during initialization.");
+			}
+
+			// And replace <SRVNAME> with a real value (or remove)
+			_serializedFileName = _serializedFileName.replace("<SRVNAME>", srvName);
+		}
+
 		if (_persistActiveAlarms)
 		{
-			_serializedFileName = _conf.getProperty(PROPKEY_persistAlarmsFilename, DEFAULT_persistAlarmsFilename);
-			if (_serializedFileName == null)
-			{
-				throw new Exception("The property '" + PROPKEY_persistAlarmsFilename + "' is mandatory for the AlarmHandler module. It should specify a filename where generated AlarmEvents are stored between sessions.");
-			}
 			_logger.info("The AlarmHandler module is using the file '" + _serializedFileName + "' for storing active alarms between application restart.");
 
 			// LOAD old alarms that was saved...
@@ -391,17 +429,41 @@ implements Runnable
 			{
 				_alarmContActive = AlarmContainer.load(_serializedFileName);
 			}
+			catch (FileNotFoundException e)
+			{
+				_logger.warn("Problems loading any saved alarms. The initialization continues anyway. FileNotFound... hopefully means the we have never recieved any alarms on this server. Caught: " + e);
+			}
 			catch (Exception e)
 			{
-				_logger.warn("Problems loading any saved alarms. The initialization continues anyway.  This means that cancel request cant be sent if the problem doesnt exist anymore, and alarms that has privioulsy been sent will be sent a second time if they still exists. Caught: " + e);			
+				_logger.warn("Problems loading any saved alarms. The initialization continues anyway.  This means that cancel request cant be sent if the problem does not exist anymore, and alarms that has privioulsy been sent will be sent a second time if they still exists. Caught: " + e);
 			}
 		}
 		else
-			_logger.info("The AlarmHandler module does NOT save active alarms. Alarm cancelation between application restarts wont be possible. This can be enabled with the property '" + PROPKEY_persistAlarmsEnabled + "=true' and set the filename with '" + PROPKEY_persistAlarmsFilename + "=/xxx/filename.jso'.");
+		{
+//			_logger.info("The AlarmHandler module does NOT save active alarms. Alarm cancelation between application restarts wont be possible. This can be enabled with the property '" + PROPKEY_persistAlarmsEnabled + "=true' and set the filename with '" + PROPKEY_persistAlarmsFilename + "=/xxx/filename.jso'.");
+			if (hasGui)
+				_logger.info("The AlarmHandler module does NOT save active alarms. Alarm cancelation between application restarts wont be possible. This can be enabled with the property '" + PROPKEY_persistAlarmsEnabled_gui + "=true' and set the filename with '" + PROPKEY_persistAlarmsFilename_gui + "=/xxx/filename.jso', defaultFilename='" + DEFAULT_persistAlarmsFilename_gui + "'.");
+			else
+				_logger.info("The AlarmHandler module does NOT save active alarms. Alarm cancelation between application restarts wont be possible. This can be enabled with the property '" + PROPKEY_persistAlarmsEnabled_nogui + "=true' and set the filename with '" + PROPKEY_persistAlarmsFilename_nogui + "=/xxx/filename.jso', defaultFilename='" + DEFAULT_persistAlarmsFilename_nogui + "'.");
+		}
 		
 		if (_alarmContActive == null)
 		{
 			_alarmContActive = new AlarmContainer();
+		}
+
+		// Protect restored alarms from premature cancellation in the first endOfScan().
+		// Many CMs collect a baseline on the first scan (prev/curr comparison) and don't
+		// raise alarms until the second scan. Without this seed, restored alarms would be
+		// cancelled on the first endOfScan() because they're not yet in _alarmContThisScan,
+		// causing a new alarm to be raised with a new UUID on the second scan — breaking
+		// any mutes that were keyed on the original UUID.
+		if ( ! _alarmContActive.getAlarmList().isEmpty() )
+		{
+			for (AlarmEvent ae : _alarmContActive.getAlarmList())
+				_alarmContThisScan.add(ae);
+
+			_logger.info("AlarmHandler: Seeded _alarmContThisScan with " + _alarmContActive.size() + " restored alarm(s) to preserve their UUID/mute state across the first scan.");
 		}
 
 		// NOTE: this could be a comma ',' separated list
@@ -1476,8 +1538,8 @@ implements Runnable
 				jso.delete();
 			}
 
-			config.setProperty(PROPKEY_persistAlarmsEnabled,  false);
-			config.setProperty(PROPKEY_persistAlarmsFilename, jsoFile);
+			config.setProperty(PROPKEY_persistAlarmsEnabled_nogui,  false);
+			config.setProperty(PROPKEY_persistAlarmsFilename_nogui, jsoFile);
 //			config.setProperty(PROPKEY_WriterClass, "com.dbxtune.alarm.writers.AlarmWriterToStdout");
 			config.setProperty(PROPKEY_WriterClass, "com.dbxtune.alarm.AlarmHandler$TestAlarmWriter");
 
@@ -1485,7 +1547,7 @@ implements Runnable
 			System.out.println("#### Test program: Initializing the alarm handler.");
 			System.out.println("#### Test program: useQueueImpl=" + useQueueImpl);
 			AlarmHandler alarmHandler = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
-			alarmHandler.init(config, false, false, true);
+			alarmHandler.init(config, false, null, false, false, true);
 
 			if (useQueueImpl) 
 				alarmHandler.start();

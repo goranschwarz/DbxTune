@@ -119,11 +119,11 @@ extends SqlServerAbstract
 		_CmOsIostat_IoBusyPct                   .writeHtmlContent(w, null, null);
 		_CmPerfCounters_SqlBatch                .writeHtmlContent(w, null, null);
 		_CmSummary_OldestTranInSecGraph         .writeHtmlContent(w, null, null);
-		_CmSummary_DeadlockCountSum             .writeHtmlContent(w, null, null);
-		_CmSummary_BlockingLocksGraph           .writeHtmlContent(w, null, null);
-		_CmWaitStats_LockCount                  .writeHtmlContent(w, "If you have Waits at Server Level, please see section: '<b>Top TABLE/INDEX Activity - BY_WAITS</b>' for details (what tables that are affected).", null);
-		_CmWaitStats_LockTime                   .writeHtmlContent(w, null, null);
-		_CmWaitStats_LockTpw                    .writeHtmlContent(w, null, null);
+		_CmSummary_DeadlockCountSum             .writeHtmlContent(w, null, null, "No Deadlocks was detected");
+		_CmSummary_BlockingLocksGraph           .writeHtmlContent(w, null, null, "No Blocking Locks was detected");
+		_CmWaitStats_LockCount                  .writeHtmlContent(w, "If you have Waits at Server Level, please see section: '<b>Top TABLE/INDEX Activity - BY_WAITS</b>' for details (what tables that are affected).", null, "No Lock Wait was detected");
+		_CmWaitStats_LockTime                   .writeHtmlContent(w, null, null, "No Lock Wait was detected");
+		_CmWaitStats_LockTpw                    .writeHtmlContent(w, null, null, "No Lock Wait was detected");
 		_CmIndexOpStatSum_OpIudInstance         .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpIudUserDbs          .writeHtmlContent(w, null, null);
 		_CmIndexOpStatSum_OpIudTempdb           .writeHtmlContent(w, null, null);

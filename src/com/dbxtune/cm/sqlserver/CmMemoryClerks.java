@@ -531,6 +531,9 @@ extends CountersModel
 
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "USERSTORE_TOKENPERM");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}

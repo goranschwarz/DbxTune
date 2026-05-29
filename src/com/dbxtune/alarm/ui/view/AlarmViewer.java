@@ -1042,7 +1042,7 @@ implements ActionListener
     	try
     	{
 			AlarmHandler ah = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
-    		ah.init(Configuration.getCombinedConfiguration(), true, false, true);
+    		ah.init(Configuration.getCombinedConfiguration(), true, null, true, false, true);
     		ah.start();
     		AlarmHandler.setInstance(AlarmHandler.DEFAULT_INSTANCE, ah);
 

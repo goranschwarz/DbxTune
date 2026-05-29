@@ -1109,6 +1109,9 @@ public abstract class SqlServerConfigText
 							long ttl = TimeUnit.HOURS.toMillis(25);     // 25 hours to milliseconds.
 							AlarmEvent ae = new AlarmEventCertificateExpiry(srvName, name, days_to_expiry, expiry_date, ttl, threshold);
 							
+							// Information about how to disable this alarm
+							//ae.createAlarmOptionsMessage(this, "???");
+
 							// Send the alarm
 							AlarmHandler.getInstance().addAlarm(ae);
 						}

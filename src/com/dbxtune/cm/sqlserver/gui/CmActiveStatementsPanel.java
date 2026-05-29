@@ -169,6 +169,27 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
+
+		// Mark the CELL as GREEN if "exec_status" is "running" or "runnable"
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.dop");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String colName = adapter.getColumnName(adapter.column);
+				
+				// ONLY check for cell named "exec_status"
+				if ( "exec_status".equals(colName))
+				{
+					String exec_status = adapter.getString();
+					if ("running" .equals(exec_status)) return true;
+					if ("runnable".equals(exec_status)) return true;
+				}
+
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 	}
 
 	private JCheckBox l_sampleSystemSpids_chk;
@@ -182,6 +203,7 @@ extends TabularCntrPanel
 	private JCheckBox l_sampleLocksForSpid_chk;
 	private JCheckBox l_sampleSpidWaits_chk;
 	private JCheckBox l_sampleSpidInputBuffer_chk;
+	private JCheckBox l_sampleStmntRunTimeOpInfo_chk;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
@@ -200,14 +222,15 @@ extends TabularCntrPanel
 //				list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks , DEFAULT_sample_holdingLocks ), DEFAULT_sample_holdingLocks , "Include SPID's that holds locks even if that are not active in the server." ));
 //				list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks    , DEFAULT_sample_spidLocks    ), DEFAULT_sample_spidLocks    , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
 
-				l_sampleSystemSpids_chk    .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_systemSpids    , CmActiveStatements.DEFAULT_sample_systemSpids));
-				l_sampleShowplan_chk       .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_showplan       , CmActiveStatements.DEFAULT_sample_showplan));
-				l_sampleMonSqltext_chk     .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText     , CmActiveStatements.DEFAULT_sample_monSqlText));
-				l_sampleLiveQueryPlan_chk  .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan  , CmActiveStatements.DEFAULT_sample_liveQueryPlan));
-				l_sampleHoldingLocks_chk   .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks   , CmActiveStatements.DEFAULT_sample_holdingLocks));
-				l_sampleLocksForSpid_chk   .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks      , CmActiveStatements.DEFAULT_sample_spidLocks));
-				l_sampleSpidWaits_chk      .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidWaits      , CmActiveStatements.DEFAULT_sample_spidWaits));
-				l_sampleSpidInputBuffer_chk.setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidInputBuffer, CmActiveStatements.DEFAULT_sample_spidInputBuffer));
+				l_sampleSystemSpids_chk       .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_systemSpids       , CmActiveStatements.DEFAULT_sample_systemSpids));
+				l_sampleShowplan_chk          .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_showplan          , CmActiveStatements.DEFAULT_sample_showplan));
+				l_sampleMonSqltext_chk        .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText        , CmActiveStatements.DEFAULT_sample_monSqlText));
+				l_sampleLiveQueryPlan_chk     .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan     , CmActiveStatements.DEFAULT_sample_liveQueryPlan));
+				l_sampleHoldingLocks_chk      .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks      , CmActiveStatements.DEFAULT_sample_holdingLocks));
+				l_sampleLocksForSpid_chk      .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks         , CmActiveStatements.DEFAULT_sample_spidLocks));
+				l_sampleSpidWaits_chk         .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidWaits         , CmActiveStatements.DEFAULT_sample_spidWaits));
+				l_sampleSpidInputBuffer_chk   .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidInputBuffer   , CmActiveStatements.DEFAULT_sample_spidInputBuffer));
+				l_sampleStmntRunTimeOpInfo_chk.setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_stmntRunTimeOpInfo, CmActiveStatements.DEFAULT_sample_stmntRunTimeOpInfo));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -228,43 +251,46 @@ extends TabularCntrPanel
 
 //		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
-		l_sampleSystemSpids_chk     = new JCheckBox("Sample System SPID's",      conf == null ? CmActiveStatements.DEFAULT_sample_systemSpids     : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_systemSpids    , CmActiveStatements.DEFAULT_sample_systemSpids));
-//		l_sampleMonSqltext_chk      = new JCheckBox("Get Monitored SQL Text",    conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
-		l_sampleMonSqltext_chk      = new JCheckBox("Get SQL Text",              conf == null ? CmActiveStatements.DEFAULT_sample_monSqlText      : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText     , CmActiveStatements.DEFAULT_sample_monSqlText));
-//		l_sampleDbccSqltext_chk     = new JCheckBox("Get DBCC SQL Text",         conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
-//		l_sampleProcCallStack_chk   = new JCheckBox("Get Procedure Call Stack",  conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
-//		l_sampleShowplan_chk        = new JCheckBox("Get Showplan",              conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
-		l_sampleShowplan_chk        = new JCheckBox("Get Query Plan",            conf == null ? CmActiveStatements.DEFAULT_sample_showplan        : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_showplan       , CmActiveStatements.DEFAULT_sample_showplan));
-//		l_sampleDbccStacktrace_chk  = new JCheckBox("Get ASE Stacktrace",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
-		l_sampleLiveQueryPlan_chk   = new JCheckBox("Get Live Query Plan",       conf == null ? CmActiveStatements.DEFAULT_sample_liveQueryPlan   : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan  , CmActiveStatements.DEFAULT_sample_liveQueryPlan));
-		l_sampleHoldingLocks_chk    = new JCheckBox("Show SPID's holding locks", conf == null ? CmActiveStatements.DEFAULT_sample_holdingLocks    : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks   , CmActiveStatements.DEFAULT_sample_holdingLocks));
-		l_sampleLocksForSpid_chk    = new JCheckBox("Get Locks for SPID",        conf == null ? CmActiveStatements.DEFAULT_sample_spidLocks       : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks      , CmActiveStatements.DEFAULT_sample_spidLocks));
-		l_sampleSpidWaits_chk       = new JCheckBox("Get WaitInfo for SPID",     conf == null ? CmActiveStatements.DEFAULT_sample_spidWaits       : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidWaits      , CmActiveStatements.DEFAULT_sample_spidWaits));
-		l_sampleSpidInputBuffer_chk = new JCheckBox("Get Input Buffer for SPID", conf == null ? CmActiveStatements.DEFAULT_sample_spidInputBuffer : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidInputBuffer, CmActiveStatements.DEFAULT_sample_spidInputBuffer));
+		l_sampleSystemSpids_chk        = new JCheckBox("Sample System SPID's",      conf == null ? CmActiveStatements.DEFAULT_sample_systemSpids     : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_systemSpids    , CmActiveStatements.DEFAULT_sample_systemSpids));
+//		l_sampleMonSqltext_chk         = new JCheckBox("Get Monitored SQL Text",    conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
+		l_sampleMonSqltext_chk         = new JCheckBox("Get SQL Text",              conf == null ? CmActiveStatements.DEFAULT_sample_monSqlText      : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_monSqlText     , CmActiveStatements.DEFAULT_sample_monSqlText));
+//		l_sampleDbccSqltext_chk        = new JCheckBox("Get DBCC SQL Text",         conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
+//		l_sampleProcCallStack_chk      = new JCheckBox("Get Procedure Call Stack",  conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
+//		l_sampleShowplan_chk           = new JCheckBox("Get Showplan",              conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
+		l_sampleShowplan_chk           = new JCheckBox("Get Query Plan",            conf == null ? CmActiveStatements.DEFAULT_sample_showplan        : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_showplan       , CmActiveStatements.DEFAULT_sample_showplan));
+//		l_sampleDbccStacktrace_chk     = new JCheckBox("Get ASE Stacktrace",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
+		l_sampleLiveQueryPlan_chk      = new JCheckBox("Get Live Query Plan",       conf == null ? CmActiveStatements.DEFAULT_sample_liveQueryPlan   : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_liveQueryPlan  , CmActiveStatements.DEFAULT_sample_liveQueryPlan));
+		l_sampleHoldingLocks_chk       = new JCheckBox("Show SPID's holding locks", conf == null ? CmActiveStatements.DEFAULT_sample_holdingLocks    : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks   , CmActiveStatements.DEFAULT_sample_holdingLocks));
+		l_sampleLocksForSpid_chk       = new JCheckBox("Get Locks for SPID",        conf == null ? CmActiveStatements.DEFAULT_sample_spidLocks       : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks      , CmActiveStatements.DEFAULT_sample_spidLocks));
+		l_sampleSpidWaits_chk          = new JCheckBox("Get WaitInfo for SPID",     conf == null ? CmActiveStatements.DEFAULT_sample_spidWaits       : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidWaits      , CmActiveStatements.DEFAULT_sample_spidWaits));
+		l_sampleSpidInputBuffer_chk    = new JCheckBox("Get Input Buffer for SPID", conf == null ? CmActiveStatements.DEFAULT_sample_spidInputBuffer : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidInputBuffer, CmActiveStatements.DEFAULT_sample_spidInputBuffer));
+		l_sampleStmntRunTimeOpInfo_chk = new JCheckBox("Get RunTime Operator Info", conf == null ? CmActiveStatements.DEFAULT_sample_stmntRunTimeOpInfo : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_stmntRunTimeOpInfo, CmActiveStatements.DEFAULT_sample_stmntRunTimeOpInfo));
 
-		l_sampleSystemSpids_chk    .setName(CmActiveStatements.PROPKEY_sample_systemSpids);
-		l_sampleMonSqltext_chk     .setName(CmActiveStatements.PROPKEY_sample_monSqlText);
-//		l_sampleDbccSqltext_chk    .setName(getName()+".sample.dbccSqltext");
-//		l_sampleProcCallStack_chk  .setName(getName()+".sample.procCallStack");
-		l_sampleShowplan_chk       .setName(CmActiveStatements.PROPKEY_sample_showplan);
-//		l_sampleDbccStacktrace_chk .setName(getName()+".sample.dbccStacktrace");
-		l_sampleLiveQueryPlan_chk  .setName(CmActiveStatements.PROPKEY_sample_liveQueryPlan);
-		l_sampleHoldingLocks_chk   .setName(CmActiveStatements.PROPKEY_sample_holdingLocks);
-		l_sampleLocksForSpid_chk   .setName(CmActiveStatements.PROPKEY_sample_spidLocks);
-		l_sampleSpidWaits_chk      .setName(CmActiveStatements.PROPKEY_sample_spidWaits);
-		l_sampleSpidInputBuffer_chk.setName(CmActiveStatements.PROPKEY_sample_spidInputBuffer);
+		l_sampleSystemSpids_chk       .setName(CmActiveStatements.PROPKEY_sample_systemSpids);
+		l_sampleMonSqltext_chk        .setName(CmActiveStatements.PROPKEY_sample_monSqlText);
+//		l_sampleDbccSqltext_chk       .setName(getName()+".sample.dbccSqltext");
+//		l_sampleProcCallStack_chk     .setName(getName()+".sample.procCallStack");
+		l_sampleShowplan_chk          .setName(CmActiveStatements.PROPKEY_sample_showplan);
+//		l_sampleDbccStacktrace_chk    .setName(getName()+".sample.dbccStacktrace");
+		l_sampleLiveQueryPlan_chk     .setName(CmActiveStatements.PROPKEY_sample_liveQueryPlan);
+		l_sampleHoldingLocks_chk      .setName(CmActiveStatements.PROPKEY_sample_holdingLocks);
+		l_sampleLocksForSpid_chk      .setName(CmActiveStatements.PROPKEY_sample_spidLocks);
+		l_sampleSpidWaits_chk         .setName(CmActiveStatements.PROPKEY_sample_spidWaits);
+		l_sampleSpidInputBuffer_chk   .setName(CmActiveStatements.PROPKEY_sample_spidInputBuffer);
+		l_sampleStmntRunTimeOpInfo_chk.setName(CmActiveStatements.PROPKEY_sample_stmntRunTimeOpInfo);
 		
-		l_sampleSystemSpids_chk    .setToolTipText("<html>Do 'Incluse System SPID's in the list.</html>");
-		l_sampleMonSqltext_chk     .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
-//		l_sampleDbccSqltext_chk    .setToolTipText("<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
-//		l_sampleProcCallStack_chk  .setToolTipText("<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>");
-		l_sampleShowplan_chk       .setToolTipText("<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>");
-//		l_sampleDbccStacktrace_chk .setToolTipText("<html>do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
-		l_sampleLiveQueryPlan_chk  .setToolTipText("<html>Do 'select query_plan from sys.dm_exec_query_statistics_xml(spid)' on every row in the table.<br>       This will give us the LIVE Query Plan of each active session.</html>");
-		l_sampleHoldingLocks_chk   .setToolTipText("<html>Include SPID's that are holding <i>any</i> locks in dm_tran_locks.<br>This will help you trace Statements that havn't released it's locks and are <b>not</b> active. (meaning that the control is at the client side)</html>");
-		l_sampleLocksForSpid_chk   .setToolTipText("<html>Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking.</html>");
-		l_sampleSpidWaits_chk      .setToolTipText("<html>Get info from CmSpidWait/dm_exec_session_wait_stats. <br>This will help us to diagnose in detail what we have been waiting on since the last sample. <br><b>NOTE:</b> CmSpidWait needs to be enabled</html>");
-		l_sampleSpidInputBuffer_chk.setToolTipText("<html>Get info from sys.dm_exec_input_buffer. This will help us to diagnose what SQL Text the client sent to SQL Server</html>");
+		l_sampleSystemSpids_chk       .setToolTipText("<html>Do 'Incluse System SPID's in the list.</html>");
+		l_sampleMonSqltext_chk        .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
+//		l_sampleDbccSqltext_chk       .setToolTipText("<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
+//		l_sampleProcCallStack_chk     .setToolTipText("<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>");
+		l_sampleShowplan_chk          .setToolTipText("<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>");
+//		l_sampleDbccStacktrace_chk    .setToolTipText("<html>do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
+		l_sampleLiveQueryPlan_chk     .setToolTipText("<html>Do 'select query_plan from sys.dm_exec_query_statistics_xml(spid)' on every row in the table.<br>       This will give us the LIVE Query Plan of each active session.</html>");
+		l_sampleHoldingLocks_chk      .setToolTipText("<html>Include SPID's that are holding <i>any</i> locks in dm_tran_locks.<br>This will help you trace Statements that havn't released it's locks and are <b>not</b> active. (meaning that the control is at the client side)</html>");
+		l_sampleLocksForSpid_chk      .setToolTipText("<html>Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking.</html>");
+		l_sampleSpidWaits_chk         .setToolTipText("<html>Get info from CmSpidWait/dm_exec_session_wait_stats. <br>This will help us to diagnose in detail what we have been waiting on since the last sample. <br><b>NOTE:</b> CmSpidWait needs to be enabled</html>");
+		l_sampleSpidInputBuffer_chk   .setToolTipText("<html>Get info from sys.dm_exec_input_buffer. This will help us to diagnose what SQL Text the client sent to SQL Server</html>");
+		l_sampleStmntRunTimeOpInfo_chk.setToolTipText("<html>Get info from sys.dm_exec_query_profiles. This will help see how many Percent a Statement has been executed.</html>");
 
 		resetMoveToTab_but.setToolTipText(
 				"<html>" +
@@ -288,15 +314,16 @@ extends TabularCntrPanel
 //		panel.add(l_sampleShowplan_chk,       "wrap");
 //		panel.add(l_sampleDbccStacktrace_chk, "wrap");
 
-		panel.add(l_sampleSystemSpids_chk,     "");      // x  -
-		panel.add(l_sampleHoldingLocks_chk,    "wrap");  // -  x
-		panel.add(l_sampleMonSqltext_chk,      "");      // x  -
-		panel.add(l_sampleLocksForSpid_chk,    "wrap");  // -  x
-		panel.add(l_sampleShowplan_chk,        "");      // x  -
-		panel.add(l_sampleSpidWaits_chk,       "wrap");  // -  x
-		panel.add(l_sampleLiveQueryPlan_chk,   "");      // x  -
-		panel.add(l_sampleSpidInputBuffer_chk, "wrap");  // -  x
-		panel.add(resetMoveToTab_but,          "wrap");  // x  -
+		panel.add(l_sampleSystemSpids_chk,        "");      // x  -
+		panel.add(l_sampleHoldingLocks_chk,       "wrap");  // -  x
+		panel.add(l_sampleMonSqltext_chk,         "");      // x  -
+		panel.add(l_sampleLocksForSpid_chk,       "wrap");  // -  x
+		panel.add(l_sampleShowplan_chk,           "");      // x  -
+		panel.add(l_sampleSpidWaits_chk,          "wrap");  // -  x
+		panel.add(l_sampleLiveQueryPlan_chk,      "");      // x  -
+		panel.add(l_sampleSpidInputBuffer_chk,    "wrap");  // -  x
+		panel.add(resetMoveToTab_but,             "");      // x  -
+		panel.add(l_sampleStmntRunTimeOpInfo_chk, "wrap");  // -  x
 
 		l_sampleSystemSpids_chk.addActionListener(new ActionListener()
 		{
@@ -442,6 +469,22 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				conf.setProperty(CmActiveStatements.PROPKEY_sample_spidInputBuffer, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		
+		l_sampleStmntRunTimeOpInfo_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_stmntRunTimeOpInfo, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 
 				// ReInitialize the SQL

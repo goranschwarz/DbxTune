@@ -105,6 +105,8 @@ extends ProxyHelper
 		String minExecutions = Helper.getParameter(req, "minExecutions", "");
 		String includePlan   = Helper.getParameter(req, "includePlan",   "");
 		String ts            = Helper.getParameter(req, "ts",            "");
+		String startTime     = Helper.getParameter(req, "startTime",     "");
+		String endTime       = Helper.getParameter(req, "endTime",       "");
 		String type          = Helper.getParameter(req, "type",          "");
 		String tables        = Helper.getParameter(req, "tables",        "");
 
@@ -118,6 +120,8 @@ extends ProxyHelper
 		qs.addIfNotEmpty("minExecutions", minExecutions);
 		qs.addIfNotEmpty("includePlan",   includePlan);
 		qs.addIfNotEmpty("ts",            ts);
+		qs.addIfNotEmpty("startTime",     startTime);
+		qs.addIfNotEmpty("endTime",       endTime);
 		qs.addIfNotEmpty("type",          type);
 		qs.addIfNotEmpty("tables",        tables);
 

@@ -30,6 +30,9 @@ import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -303,6 +306,12 @@ public abstract class DbxTune
 		return _logFileName;
 	}
 
+	private String _noGuiServerName;
+	public String getNoGuiServerName()
+	{
+		return _noGuiServerName;
+	}
+	
 	
 	public abstract String getConfigFileName();
 	public abstract String getUserConfigFileName();
@@ -471,6 +480,7 @@ public abstract class DbxTune
 		else
 		{
 			Configuration.setSearchOrder(
+					Configuration.NOGUI_SAVE,   // note: Configuration.setInstance(Configuration.NOGUI_SAVE, noGuiSaveCfg); is done in method: setNoGuiServerConfig()
 					Configuration.USER_TEMP,    // First   (this must be first, otherwise "overrides" like 'timeout'->changeSqlBehaviour wont work)
 					Configuration.PCS,          // Second
 					Configuration.USER_CONF,    // Third
@@ -612,7 +622,7 @@ public abstract class DbxTune
 			logFilename = opt;
 		}
 
-		// If NO-GUI mode, try tof figgure out:
+		// If NO-GUI mode, try to figgure out:
 		//  - dbms server name or alias to use (for info and log file)
 		//  - if 'logFilename' is only a directory... then add server/alias name as the logFilename
 		if ( ! _gui )
@@ -641,8 +651,14 @@ public abstract class DbxTune
 			}
 
 			// Strip off "bad" characters from the server name (since it will be used in filenames etc)
+			// NOTE: Should we move this up a bit... before hasOption('S') or hasOption('A')
 			tmpSrvName = stripSrvName(tmpSrvName);
 
+			// For The NOGUI "Save" Configuration... Set the filename used.
+			_noGuiServerName = tmpSrvName;
+			setNoGuiServerConfig(_noGuiServerName);
+			
+			
 			// If we don't have a log file or log file directory...
 			// Can we grab the "log directory" from ENVironment variable: DBXTUNE_CENTRAL_BASE, which normally is: ${HOME}/.dbxtune/dbxc
 			if ( StringUtil.isNullOrBlank(logFilename) )
@@ -1578,7 +1594,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 					// Initialize the alarm handler
 					AlarmHandler ah = new AlarmHandler(AlarmHandler.DEFAULT_INSTANCE);
 					AlarmHandler.setInstance(AlarmHandler.DEFAULT_INSTANCE, ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
-					ah.init(conf, _gui, true, true);
+					ah.init(conf, _gui, getNoGuiServerName(), _gui, true, true);
 					ah.start();
 					
 					
@@ -1939,6 +1955,50 @@ if (_gui && startEvenIfGui_justToTestTheService)
 //		return _gui;
 //	}
 
+
+	private void setNoGuiServerConfig(String srvName)
+	{
+		String noGuiSaveCfgDir  = AppDir.getAppConfDir() + File.separatorChar + "servers";
+		String noGuiSaveCfgFile = noGuiSaveCfgDir + File.separatorChar + srvName + ".save.conf";
+		
+		// Create the directory (and file) if they do not exists
+		Path path = Paths.get(noGuiSaveCfgDir);
+		if ( ! Files.exists(path) )
+		{
+			try {
+				_logger.info("Creating NO-GUI Save Config Directory '" + path + "'.");
+				Files.createDirectories(path);
+			}
+			catch (IOException ex) {
+				_logger.warn("Problems creating NO-GUI Save Config Directory '" + path + "'. Caught: " + ex);
+			}
+		}
+
+		// Create the file if they do not exists
+		path = Paths.get(noGuiSaveCfgFile);
+		if ( ! Files.exists(path) )
+		{
+			try {
+				_logger.info("Creating NO-GUI Save Config File '" + path + "'.");
+				Files.createFile(path);
+			}
+			catch (IOException ex) {
+				_logger.warn("Problems creating NO-GUI Save Config File '" + path + "'. Caught: " + ex);
+			}
+		}
+
+		// Create the config object
+		Configuration noGuiSaveCfg = new Configuration(noGuiSaveCfgFile);
+		noGuiSaveCfg.setSaveEnable(true);
+		noGuiSaveCfg.setSaveOnExit(true);
+		
+		// And assign it
+		Configuration.setInstance(Configuration.NOGUI_SAVE, noGuiSaveCfg);
+		
+		// Adjust the "search order"
+		// This is already done "at the top"... lets see/hope that works
+
+	}
 
 	/**
 	 * Print command line options.

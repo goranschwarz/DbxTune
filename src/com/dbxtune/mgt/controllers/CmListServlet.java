@@ -228,10 +228,12 @@ extends HttpServlet
 				cmMap.put("iconFile",    iconFile);
 				cmMap.put("isActive",    cm.isActive());
 				cmMap.put("isAppend",    cm instanceof CountersModelAppend);
-				cmMap.put("hasData",     hasData);
-				cmMap.put("absRows",     absRows);
-				cmMap.put("diffRows",    diffRows);
-				cmMap.put("rateRows",    rateRows);
+				cmMap.put("hasData",       hasData);
+				cmMap.put("absRows",       absRows);
+				cmMap.put("diffRows",      diffRows);
+				cmMap.put("rateRows",      rateRows);
+				cmMap.put("postponeTime",    cm.getPostponeTime());
+				cmMap.put("postponeEnabled", cm.isPostponeEnabled());
 				if (description            != null) cmMap.put("description",            description);
 				if (highlighterDescriptors != null) cmMap.put("highlighterDescriptors", highlighterDescriptors);
 				if (exceptionMsg      != null) cmMap.put("exceptionMsg",      exceptionMsg);

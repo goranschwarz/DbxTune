@@ -383,7 +383,7 @@ public class SqlServerQueryStoreExtractor
 		// Start with -- Extract TOP ## SQL Text by "avg_duration" for today!
 		// Then extract Table names from those SQL
 		// Lookup those tables and store them in the DDL Storage
-//		extractTopTablesForDdlStorage();
+//		extractTopTablesForDdlStorage_atSourceDb();
 		
 		// Should we do everything in a transaction??? (to get less transaction log entries)
 		
@@ -417,6 +417,12 @@ public class SqlServerQueryStoreExtractor
 			transferTable(QsTables.query_store_query_variant);
 			transferTable(QsTables.query_store_replicas);
 			
+			// From the transferred tables... 
+			//   * Get "top" SQL Statements
+			//   * Get tables names used in the SQL
+			//   * Send the above tables to DDL Storage...
+//			extractTopTablesForDdlStorage_atPcsDb();
+			
 		}
 		finally
 		{
@@ -449,50 +455,87 @@ public class SqlServerQueryStoreExtractor
 		}
 	}
 
-//	private void extractTopTablesForDdlStorage()
+	// NOTE: This is done via: SqlServerQueryStoreDdlExtractor
+//	private void extractTopTablesForDdlStorage_atSourceDb()
 //	{
 //		if ( ! PersistentCounterHandler.hasInstance() )
 //		{
-//			_logger.info("No Persistent Counter Handler was found. exiting early in extractTopTablesForDdlStorage()");
+//			_logger.info("No Persistent Counter Handler was found. exiting early in extractTopTablesForDdlStorage_atSourceDb()");
 //			return;
 //		}
 //
-//		String sql = ""
-//			    + "SELECT top 20 \n"
-//			    + "     DB_NAME() AS dbname \n"
-//			    + "    ,q.query_id \n"
-//			    + "    ,p.plan_id \n"
-//			    + "    ,qt.query_text_id \n"
-//			    + "    ,qt.query_sql_text \n"
-//			    + "FROM sys.query_store_query_text qt \n"
-//			    + "INNER JOIN sys.query_store_query q ON qt.query_text_id = q.query_text_id \n"
-//			    + "INNER JOIN sys.query_store_plan  p ON q.query_id       = p.query_id \n"
-//			    + "WHERE p.plan_id IN ( \n"
-//			    + "    SELECT top 200 rs.plan_id \n"   // note: top 200 since plan_id can exists in many intervals (and we cant do distinct and order on avg_duration)
-//			    + "    FROM sys.query_store_runtime_stats rs \n"
-////			    + "    WHERE rs.runtime_stats_interval_id = (SELECT max(runtime_stats_interval_id) FROM sys.query_store_runtime_stats_interval) \n"
-//			    + "    ORDER BY rs.avg_duration DESC \n"
-//			    + ") \n"
-//			    + "AND qt.query_sql_text NOT LIKE '%/* SqlServerTune:%' \n"
-//			    + "";
-//		
-//		Set<String> tableSet = new HashSet<>();
-//
-//		try (Statement stmnt = _pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//		List<String> orderByCols = new ArrayList<>();
+//		String dummySql = "SELECT * FROM [sys].[query_store_runtime_stats] WHERE 1=2";
+//		ResultSetTableModel dummyRstm = null;
+//		try
 //		{
-//			while (rs.next())
-//			{
-//				String sqlText = rs.getString(5);
-//				
-//				// Get list of tables in the SQL Text and add them to a SET
-//				tableSet.addAll( SqlParserUtils.getTables(sqlText) );
-//			}
+//			dummyRstm = ResultSetTableModel.executeQuery(_pcsConn, dummySql, "metadata");
 //		}
 //		catch (SQLException ex)
 //		{
-//			_logger.warn("[" + _monDbName + "] Problems extracting SQL Text for top 'avg_duration' in QueryStore. Simply skipping this.", ex);
+//			_logger.error("[" + _monDbName + "] SKIPPING extractTopTablesForDdlStorage_atSourceDb. Problems getting column info from 'query_store_runtime_stats' using sql '" + dummySql + "'.", ex);
+//			return;
 //		}
 //
+//		// What columns do we want to do ORDER BY on
+//		if (dummyRstm.hasColumn("count_executions"         )) orderByCols.add("count_executions"         );
+//		if (dummyRstm.hasColumn("avg_duration"             )) orderByCols.add("avg_duration"             );
+//		if (dummyRstm.hasColumn("avg_cpu_time"             )) orderByCols.add("avg_cpu_time"             );
+//		if (dummyRstm.hasColumn("avg_logical_io_reads"     )) orderByCols.add("avg_logical_io_reads"     );
+//		if (dummyRstm.hasColumn("avg_logical_io_writes"    )) orderByCols.add("avg_logical_io_writes"    );
+//		if (dummyRstm.hasColumn("avg_physical_io_reads"    )) orderByCols.add("avg_physical_io_reads"    );
+//		if (dummyRstm.hasColumn("avg_query_max_used_memory")) orderByCols.add("avg_query_max_used_memory");
+//		if (dummyRstm.hasColumn("avg_rowcount"             )) orderByCols.add("avg_rowcount"             );
+//		if (dummyRstm.hasColumn("avg_num_physical_io_reads")) orderByCols.add("avg_num_physical_io_reads");
+//		if (dummyRstm.hasColumn("avg_log_bytes_used"       )) orderByCols.add("avg_log_bytes_used"       );
+//		if (dummyRstm.hasColumn("avg_tempdb_space_used"    )) orderByCols.add("avg_tempdb_space_used"    );
+//
+//		if (orderByCols.isEmpty())
+//		{
+//			_logger.error("[" + _monDbName + "] SKIPPING extractTopTablesForDdlStorage_atSourceDb. Problems: NO columns for ORDER BY was found. orderByCols is EMPTY.");
+//			return;
+//		}
+//		
+//		// Somewhere to store the parsed table names
+//		Set<String> tableSet = new HashSet<>();
+//
+//		for (String orderByCol : orderByCols)
+//		{
+//			String sql = ""
+//				    + "SELECT top 20 \n"
+//				    + "     DB_NAME() AS dbname \n"
+//				    + "    ,q.query_id \n"
+//				    + "    ,p.plan_id \n"
+//				    + "    ,qt.query_text_id \n"
+//				    + "    ,qt.query_sql_text \n"
+//				    + "FROM sys.query_store_query_text qt \n"
+//				    + "INNER JOIN sys.query_store_query q ON qt.query_text_id = q.query_text_id \n"
+//				    + "INNER JOIN sys.query_store_plan  p ON q.query_id       = p.query_id \n"
+//				    + "WHERE p.plan_id IN ( \n"
+//				    + "    SELECT top 200 rs.plan_id \n"   // note: top 200 since plan_id can exists in many intervals (and we cant do distinct and order on avg_duration)
+//				    + "    FROM sys.query_store_runtime_stats rs \n"
+//				    + "    ORDER BY rs." + orderByCol + " DESC \n"
+//				    + ") \n"
+//				    + "AND qt.query_sql_text NOT LIKE '%/* SqlServerTune:%' \n"
+//				    + "";
+//			
+//			try (Statement stmnt = _pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//			{
+//				while (rs.next())
+//				{
+//					String sqlText = rs.getString(5);
+//					
+//					// Get list of tables in the SQL Text and add them to a SET
+//					tableSet.addAll( SqlParserUtils.getTables(sqlText) );
+//				}
+//			}
+//			catch (SQLException ex)
+//			{
+//				_logger.warn("[" + _monDbName + "] Problems extracting SQL Text for top '" + orderByCol + "' in QueryStore. Simply skipping this.", ex);
+//			}
+//
+//		}
+//		
 ////		if ( ! tableSet.isEmpty() )
 ////		{
 ////			IObjectLookupInspector objectLookupInspector = new ObjectLookupInspectorSqlServer();
@@ -514,6 +557,7 @@ public class SqlServerQueryStoreExtractor
 ////			}
 ////		}
 //
+//		_logger.info("[" + _monDbName + "] Posting " + tableSet.size() + " entries to DDL Storage. " + tableSet);
 //		if ( ! tableSet.isEmpty() )
 //		{
 //			// Send all the tables for DDL Store (it will probably end up in the NEW database since a YYYY-MM-DD roll-over has occurred, but then we will hopefully be able to se them "next day") 
@@ -524,6 +568,117 @@ public class SqlServerQueryStoreExtractor
 //		}
 //	}
 
+	
+//	private void extractTopTablesForDdlStorage_atPcsDb()
+//	{
+//		if ( ! PersistentCounterHandler.hasInstance() )
+//		{
+//			_logger.info("No Persistent Counter Handler was found. exiting early in extractTopTablesForDdlStorage()");
+//			return;
+//		}
+//
+//		List<String> orderByCols = new ArrayList<>();
+//		String dummySql = "SELECT * FROM [qs:" + _monDbName + "].[query_store_runtime_stats] WHERE 1=2";
+//		ResultSetTableModel dummyRstm = null;
+//		try
+//		{
+//			dummyRstm = ResultSetTableModel.executeQuery(_pcsConn, dummySql, "metadata");
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.error("[" + _monDbName + "] SKIPPING extractTopTablesForDdlStorage. Problems getting column info from 'query_store_runtime_stats' using sql '" + dummySql + "'.", ex);
+//			return;
+//		}
+//
+//		// What columns do we want to do ORDER BY on
+//		if (dummyRstm.hasColumn("count_executions"         )) orderByCols.add("count_executions"         );
+//		if (dummyRstm.hasColumn("avg_duration"             )) orderByCols.add("avg_duration"             );
+//		if (dummyRstm.hasColumn("avg_cpu_time"             )) orderByCols.add("avg_cpu_time"             );
+//		if (dummyRstm.hasColumn("avg_logical_io_reads"     )) orderByCols.add("avg_logical_io_reads"     );
+//		if (dummyRstm.hasColumn("avg_logical_io_writes"    )) orderByCols.add("avg_logical_io_writes"    );
+//		if (dummyRstm.hasColumn("avg_physical_io_reads"    )) orderByCols.add("avg_physical_io_reads"    );
+//		if (dummyRstm.hasColumn("avg_query_max_used_memory")) orderByCols.add("avg_query_max_used_memory");
+//		if (dummyRstm.hasColumn("avg_rowcount"             )) orderByCols.add("avg_rowcount"             );
+//		if (dummyRstm.hasColumn("avg_num_physical_io_reads")) orderByCols.add("avg_num_physical_io_reads");
+//		if (dummyRstm.hasColumn("avg_log_bytes_used"       )) orderByCols.add("avg_log_bytes_used"       );
+//		if (dummyRstm.hasColumn("avg_tempdb_space_used"    )) orderByCols.add("avg_tempdb_space_used"    );
+//
+//		if (orderByCols.isEmpty())
+//		{
+//			_logger.error("[" + _monDbName + "] SKIPPING extractTopTablesForDdlStorage. Problems: NO columns for ORDER BY was found. orderByCols is EMPTY.");
+//			return;
+//		}
+//		
+//		// Somewhere to store the parsed table names
+//		Set<String> tableSet = new HashSet<>();
+//
+//		for (String orderByCol : orderByCols)
+//		{
+//			String sql = ""
+//				    + "SELECT top 30 \n"
+//				    + "     q.[query_id] \n"
+//				    + "    ,p.[plan_id] \n"
+//				    + "    ,qt.[query_text_id] \n"
+//				    + "    ,qt.[query_sql_text] \n"
+//				    + "FROM       [qs:" + _monDbName + "].[query_store_query_text] qt \n"
+//				    + "INNER JOIN [qs:" + _monDbName + "].[query_store_query] q ON qt.[query_text_id] = q.[query_text_id] \n"
+//				    + "INNER JOIN [qs:" + _monDbName + "].[query_store_plan]  p ON q.[query_id]       = p.[query_id] \n"
+//				    + "WHERE p.[plan_id] IN ( \n"
+//				    + "    SELECT top 200 rs.[plan_id] \n"
+//				    + "    FROM [qs:" + _monDbName + "].[query_store_runtime_stats] rs \n"
+//				    + "    ORDER BY rs.[" + orderByCol + "] DESC \n"
+//				    + ") \n"
+//				    + "AND qt.[query_sql_text] NOT LIKE '%/* SqlServerTune:%' \n"
+//				    + "";
+//			
+//			try (Statement stmnt = _pcsConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//			{
+//				while (rs.next())
+//				{
+//					String sqlText = rs.getString(4);
+//					
+//					// Get list of tables in the SQL Text and add them to a SET
+//					tableSet.addAll( SqlParserUtils.getTables(sqlText) );
+//				}
+//			}
+//			catch (SQLException ex)
+//			{
+//				_logger.warn("[" + _monDbName + "] Problems extracting SQL Text for top '" + orderByCol + "' in QueryStore. Simply skipping this.", ex);
+//			}
+//		}
+//		
+////		if ( ! tableSet.isEmpty() )
+////		{
+////			IObjectLookupInspector objectLookupInspector = new ObjectLookupInspectorSqlServer();
+////
+////			for (String tableName : tableSet)
+////			{
+////				ObjectLookupQueueEntry qe = new ObjectLookupQueueEntry(_monDbName, tableName, "QueryStoreExtractor.parsedTables", "", 0);
+////
+////				// NOTE: This must be executed BEFORE YYYY-MM-DD roll-over ... So by a scheduled job executed 20 minutes before "roll-over"
+////				List<DdlDetails> ddlStoreList = objectLookupInspector.doObjectInfoLookup(_monConn, qe, null); // NOTE: we can't send NULL for PCH
+////				if (ddlStoreList != null)
+////				{
+////					for (DdlDetails ddlDetail : ddlStoreList)
+////					{
+////						
+////					}
+////				}
+////			}
+////		}
+//
+//		// Send all the tables for DDL Store  
+//		_logger.info("[" + _monDbName + "] Posting " + tableSet.size() + " entries to DDL Storage. " + tableSet);
+//		if ( ! tableSet.isEmpty() )
+//		{
+//			// NOTE: This must be executed BEFORE YYYY-MM-DD roll-over ... So by a scheduled job executed 20 minutes before "roll-over"
+//			for (String tableName : tableSet)
+//			{
+//				PersistentCounterHandler.getInstance().addDdl(_monDbName, tableName, "QueryStoreExtractor.parsedTables");
+//			}
+//		}
+//	}
+	
 	private void createTempTables()
 	{
 		// Not implemented, temp tables are not used

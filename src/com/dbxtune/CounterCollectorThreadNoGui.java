@@ -114,7 +114,8 @@ implements Memory.MemoryListener
 	public static final boolean   DEFAULT_noGuiDoJavaGcAfterRefresh         = true;
 
 	public static final String    PROPKEY_noGui_hostmon_windows_onConnect_executeCommand = "no.gui.hostmon.windows.onConnect.executeCommand";	
-	public static final String    DEFAULT_noGui_hostmon_windows_onConnect_executeCommand = "taskkill /f /t /im typeperf.exe";
+//	public static final String    DEFAULT_noGui_hostmon_windows_onConnect_executeCommand = "taskkill /f /t /im typeperf.exe";
+	public static final String    DEFAULT_noGui_hostmon_windows_onConnect_executeCommand = "taskkill /f /fi \"USERNAME eq %USERNAME%\" /im typeperf.exe";
 
 
 	public CounterCollectorThreadNoGui(CounterControllerAbstract counterController)
@@ -1476,6 +1477,10 @@ implements Memory.MemoryListener
 						if (AlarmHandler.hasInstance())
 						{
 							AlarmEvent alarmEvent = new AlarmEventAseLicensExpiration(conn.getDbmsServerNameNoThrow(), gracePeriodWarning);
+
+							// Information about how to disable this alarm
+							//alarmEvent.createAlarmOptionsMessage(this, "???");
+
 							AlarmHandler.getInstance().addAlarm(alarmEvent);
 						}
 					}

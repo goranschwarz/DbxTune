@@ -408,6 +408,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventPgWalSizeHigh(cm, pg_waldir_total_size_mb, threshold);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "pg_waldir_total_size_mb");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}

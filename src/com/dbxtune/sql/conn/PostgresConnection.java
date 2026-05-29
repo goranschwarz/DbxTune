@@ -84,6 +84,12 @@ public class PostgresConnection extends DbxConnection
 	}
 
 	@Override
+	public boolean isDatabaseAware()
+	{
+		return true;
+	}
+
+	@Override
 	public boolean isInTransaction() throws SQLException
 	{
 		// Before Version 13, check if we have Exclusive locks

@@ -1004,6 +1004,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventConfigResourceIsLow(cm, "max_connections", numFree, sumNumbackends, pctUsed, threshold);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "free_connections");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}
@@ -1036,6 +1039,9 @@ extends CountersModel
 					int    checksum_failures_tot = cm.getAbsValueAsInteger(r, "checksum_failures", -1);
 
 					AlarmEvent ae = new AlarmEventPgChecksumFailure(cm, dbname, checksum_failures_diff, checksum_last_failure, checksum_failures_tot, threshold);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "checksum_failures");
 
 					AlarmHandler.getInstance().addAlarm(ae);
 				}

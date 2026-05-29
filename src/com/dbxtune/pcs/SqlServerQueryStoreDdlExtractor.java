@@ -35,10 +35,12 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
+import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.TimeUtils;
 
 import it.sauronsoftware.cron4j.Task;
@@ -183,42 +185,85 @@ extends Task
 	{
 		int top      = getTopCount();
 		int topInner = top * 10;
-		
-		String sql = ""
-			    + "SELECT distinct top " + top + " \n"
-			    + "     '" + dbname + "' AS dbname \n"
-//			    + "    ,q.query_id \n"        // if you uncomment any of this you need to change: rs.getString(2); 
-//			    + "    ,p.plan_id \n"
-//			    + "    ,qt.query_text_id \n"
-			    + "    ,qt.query_sql_text \n"
-			    + "FROM [" + dbname + "].sys.query_store_query_text qt \n"
-			    + "INNER JOIN [" + dbname + "].sys.query_store_query q ON qt.query_text_id = q.query_text_id \n"
-			    + "INNER JOIN [" + dbname + "].sys.query_store_plan  p ON q.query_id       = p.query_id \n"
-			    + "WHERE p.plan_id IN ( \n"
-			    + "    SELECT top " + topInner + " rs.plan_id \n"   // note: top 200 since plan_id can exists in many intervals (and we can't do distinct and order on avg_duration)
-			    + "    FROM [" + dbname + "].sys.query_store_runtime_stats rs \n"
-//			    + "    WHERE rs.runtime_stats_interval_id = (SELECT max(runtime_stats_interval_id) FROM [" + dbname + "].sys.query_store_runtime_stats_interval) \n"
-			    + "    ORDER BY rs.avg_duration DESC \n"
-			    + ") \n"
-			    + "AND qt.query_sql_text NOT LIKE '%/* SqlServerTune:%' \n"
-			    + "";
 
-		Set<String> tableSet = new HashSet<>();
-
-		long startTime = System.currentTimeMillis();
-		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		// Get known columns from SQL Server Query Store
+		List<String> orderByCols = new ArrayList<>();
+		String dummySql = "SELECT * FROM [sys].[query_store_runtime_stats] WHERE 1=2";
+		ResultSetTableModel dummyRstm = null;
+		try
 		{
-			while (rs.next())
-			{
-				String sqlText = rs.getString(2);
-				
-				// Get list of tables in the SQL Text and add them to a SET
-				tableSet.addAll( SqlParserUtils.getTables(sqlText) );
-			}
+			dummyRstm = ResultSetTableModel.executeQuery(conn, dummySql, "metadata");
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("[" + dbname + "] Problems extracting SQL Text for top 'avg_duration' in QueryStore. Simply skipping this. SQL=|" + sql + "|.", ex);
+			_logger.error("Query Store DDL Extractor: [" + dbname + "] SKIPPING extractTopTablesForDdlStorage. Problems getting column info from 'query_store_runtime_stats' using sql '" + dummySql + "'.", ex);
+			return;
+		}
+
+		// What columns do we want to do ORDER BY on
+		if (dummyRstm.hasColumn("count_executions"         )) orderByCols.add("count_executions"         );
+		if (dummyRstm.hasColumn("avg_duration"             )) orderByCols.add("avg_duration"             );
+		if (dummyRstm.hasColumn("avg_cpu_time"             )) orderByCols.add("avg_cpu_time"             );
+		if (dummyRstm.hasColumn("avg_logical_io_reads"     )) orderByCols.add("avg_logical_io_reads"     );
+		if (dummyRstm.hasColumn("avg_logical_io_writes"    )) orderByCols.add("avg_logical_io_writes"    );
+		if (dummyRstm.hasColumn("avg_physical_io_reads"    )) orderByCols.add("avg_physical_io_reads"    );
+		if (dummyRstm.hasColumn("avg_query_max_used_memory")) orderByCols.add("avg_query_max_used_memory");
+		if (dummyRstm.hasColumn("avg_rowcount"             )) orderByCols.add("avg_rowcount"             );
+		if (dummyRstm.hasColumn("avg_num_physical_io_reads")) orderByCols.add("avg_num_physical_io_reads");
+		if (dummyRstm.hasColumn("avg_log_bytes_used"       )) orderByCols.add("avg_log_bytes_used"       );
+		if (dummyRstm.hasColumn("avg_tempdb_space_used"    )) orderByCols.add("avg_tempdb_space_used"    );
+
+		if (orderByCols.isEmpty())
+		{
+			_logger.error("Query Store DDL Extractor: [" + dbname + "] SKIPPING extractTopTablesForDdlStorage. Problems: NO columns for ORDER BY was found. orderByCols is EMPTY.");
+			return;
+		}
+		
+		// Somewhere to store the parsed table names
+		Set<String> tableSet = new HashSet<>();
+
+		long startTime = System.currentTimeMillis();
+
+		// Get SQL Statements by: orderByCols
+		for (String orderByCol : orderByCols)
+		{
+			String sql = ""
+				    + "SELECT top " + top + " \n"
+				    + "     '" + dbname + "' AS dbname \n"
+				    + "    ,qt.query_sql_text \n"
+//				    + "    ,q.query_id \n" 
+//				    + "    ,p.plan_id \n"
+//				    + "    ,qt.query_text_id \n"
+				    + "FROM       [" + dbname + "].sys.query_store_query_text qt \n"
+				    + "INNER JOIN [" + dbname + "].sys.query_store_query q ON qt.query_text_id = q.query_text_id \n"
+				    + "INNER JOIN [" + dbname + "].sys.query_store_plan  p ON q.query_id       = p.query_id \n"
+				    + "WHERE p.plan_id IN ( \n"
+				    + "    SELECT top " + topInner + " rs.plan_id \n" // note: top ### since plan_id can exists in many intervals (and we can't do distinct and order on avg_duration)
+				    + "    FROM [" + dbname + "].sys.query_store_runtime_stats rs \n"
+				    + "    ORDER BY rs." + orderByCol + " DESC \n"
+				    + ") \n"
+				    + "AND qt.query_sql_text NOT LIKE '%/* SqlServerTune:%' \n"
+				    + "";
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					String sqlText = rs.getString(2);
+					
+					// Get list of tables in the SQL Text and add them to a SET
+					Set<String> tmpSet = SqlParserUtils.getTables(sqlText);
+					for (String sqlObjName : tmpSet)
+					{
+						sqlObjName = SqlServerUtils.stripSquareBrackets(sqlObjName);
+						tableSet.add(sqlObjName);
+					}
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Query Store DDL Extractor: [" + dbname + "] Problems extracting SQL Text for top '" + orderByCol + "' in QueryStore. Simply skipping this. SQL=|" + sql + "|.", ex);
+			}
 		}
 
 		// Send them off for DDL Extraction!

@@ -65,9 +65,10 @@ implements ICentralPersistWriter
 	 *   <li> 11 - Change column 'data', 'lastData' from varchar(160) -> 512    in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
 	 *   <li> 12 - Change column 'duration' from 10 to 80                        in table 'DbxAlarmActive', 'DbxAlarmHistory' </li>
 	 *   <li> 13 - Add column 'graphCollectedCount', 'absCollectedRows', 'diffCollectedRows', 'rateCollectedRows'   in tables *schema*.'DbxSessionSampleDetailes'</li>
+	 *   <li> 15 - Add column 'alarmOptions'                                     in tables *schema*.'ALARM_ACTIVE,ALARM_HISTORY'</li>
 	 * </ul>
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 15;
+	public static int DBX_CENTRAL_DB_VERSION = 16;
 	
 	
 	public enum Table
@@ -627,6 +628,7 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"alarmOptions"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+", "+lq+"severity"+rq+")\n");
 				sbSql.append(") \n");
@@ -663,6 +665,7 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"alarmOptions"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+", "+lq+"severity"+rq+")\n");
 				sbSql.append(") \n");
@@ -1019,11 +1022,12 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("description"                ).append(rq).append(", "); // 21
 			sbSql.append(lq).append("lastDescription"            ).append(rq).append(", "); // 22
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 23
-			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append("");   // 24
+			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 24
+			sbSql.append(lq).append("alarmOptions"               ).append(rq).append("");   // 25
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
 		}
 		else if (type.equals(Table.ALARM_HISTORY))
 		{
@@ -1055,11 +1059,12 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("description"                ).append(rq).append(", "); // 25
 			sbSql.append(lq).append("lastDescription"            ).append(rq).append(", "); // 26
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 27
-			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append("");   // 28
+			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 28
+			sbSql.append(lq).append("alarmOptions"               ).append(rq).append("");   // 29
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28, 29
 		}
 //		else if (type.equals(Table.CHART_LABELS))
 //		{

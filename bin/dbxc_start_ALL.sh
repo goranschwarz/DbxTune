@@ -231,10 +231,12 @@ then
 	echo " **** Sorry I couldn't find the 'list_ALL.sh' command."
 	echo " **** So I can NOT list started servers."
 	echo ""
+	exit 1
 else
 	echo ""
 	echo " * Started all servers, Now LIST them"
 
 	${listAll}
+	exit 0
 fi
 

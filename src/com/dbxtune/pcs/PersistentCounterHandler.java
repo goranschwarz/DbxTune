@@ -734,7 +734,8 @@ implements Runnable
 		if (StringUtil.isNullOrBlank(dbname) || StringUtil.isNullOrBlank(objectName))
 			return;
 		
-		boolean doPrintInfo = false;
+//		boolean doPrintInfo = false;
+		boolean doPrintInfo = Configuration.getCombinedConfiguration().getBooleanProperty("PersistentCounterHandler.addDdl.doPrintInfo", false);
 		if ("PcsAddDdlObjectDialog".equals(source))
 			doPrintInfo = true;
 

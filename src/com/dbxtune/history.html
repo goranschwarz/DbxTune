@@ -48,6 +48,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmOsPs(Windows)</b> -- Added columns '%Cpu' & '%CpuAdj' to calculate how much Percent of the host we are using '%Cpu' Can be above 100%. '%CpuAdj' is %Cpu/numOfCores</LI>
 		<LI>Fixed some small bugs in create AppDir, and changed what files to copy (especilyy for windows)</LI>
 		<LI>PCS: Stripped of unnecessary part of the servername (like domain name and port numbers, so we dont have to use -A flag in most cases</LI>
+		<LI>For "all" alarms, there is now a new section "Alarm Options": With information about how to change the alarm properties</LI>
+		<LI>Alarm Handler now saves all the Alarms between restarts in NO-GUI (no new Alarms just due to a collector restart) file: $(HOME)/.dbxtune/dbxc/conf/servers/${servername}.AlarmHandler.jso</LI>
+		<LI>Configuration for NO-GUI new Writable Config file (enables change and persist config changes at server level from Web UI) file: $(HOME)/.dbxtune/dbxc/conf/servers/${servername}.save.conf<br>
+            (Search order is: NOGUI_SAVE (server level cfg file), PCS (shared NO-GUI cfg file), USER_CONF, SYSTEM_CONF)
+        </LI>
+		<LI>Alarms: Added ability to change the Severity of Alarms using property: AlarmClassName.severity = {INFO|WARNING|ERROR}<br>
+            This can help if you still want an alarm to be produced. But the Alarm Writer (to mail) can be configued to not send INFO messages.
+        </LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -149,6 +157,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>for SQL Server: Added "Query Store" button at the top right</LI>
 		<LI>for SQL Server: Showplan View, got some brushup, like: Plan Analyze section, the various seconds are now foldable</LI>
 		<LI>Implemented MCP for LLM integration. See file README_MCP.md for how to enable and use it</LI>
+		<LI>Configure Alarms for Collectors from the Web UI: This can now be done... Still some issues.</LI>
+		<LI>Landing page: if we only have Muted alarms: The colour of the button will be "muted red" or raspberry red</LI>
+		<LI>Counter Details: If postpone is enabled: Then show latest available data, AND: Show a yellow label that the next sample will happen in MM:SS</LI>
+		<LI>Muted Alarms: bugfix, now restored properly after a restart.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -259,11 +271,20 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Backup History (from table: msdb.dbo.backupset) is captured in no-gui config on Database rollover<BR>
 		    It can be configured with: <code>SqlServerTune.onPcsDatabaseRollover.captureBackupHistory={true|false}</code>, and <code>SqlServerTune.onPcsDatabaseRollover.captureBackupHistory.daysToCopy=##</code>, where default is 14 days
 		</LI>
+		<LI>Removed the "lock timeout" at the connection level, Still keeping it at "places" where we want lock timeout... instead of Statement Timeout)</LI>
+		<LI>Query Store Dialog, in Web UI: A bunch of improvements</LI>
+		<LI>Added default values for new sp_configure defaults for SQL Server 2025</LI>
+		<LI>Windows HostMonitoring via 'typeperf': added -sc ####. Which makes it to die after 36 hours. (this to save guard that we dont have to many 'typeperf' processes running after a collector restart)</LI>
+		<LI>New collector: CmJobScheduler -- What SQL Agent Job Scheduler are running now and what has been running. Alarms: RUNNING_LONG, MISSED, FAILED_LAST_RUN</LI>
 
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmActiveStatements  </b> -- Cleaned up SQL Statements for 'lastKnownSql' that starts with ')' and simply removed that.</LI>
 		<LI><b>CmActiveStatements  </b> -- Added columns: exec_row_count, sess_row_count -- To view rows delivered to client.</LI>
+		<LI><b>CmActiveStatements  </b> -- Added new columns: rt_at_root_node, rt_node_id, rt_node_operator, rt_est_pct, rt_est_row_count, rt_row_count_abs, rt_row_count, HasRtOperators, RtOperators<br>
+		                                   The columns are fetched from table 'sys.dm_exec_query_profiles' if option 'CmActiveStatements.sample.stmntRunTimeOpInfo' is enabled.<br>
+		                                   This will make and "estimated" guess how far this Statement has processed. Note: This may be way off...
+		</LI>
 
 		<LI><b>CmDatabases         </b> -- Cleaned up SQL Statements for 'most_recent_sql_text' that starts with ')' and simply removed that.</LI>
 		<LI><b>CmDatabases         </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>
@@ -272,6 +293,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmIndexOpStatSum    </b> -- Added graph: Insert/Update/Delete Rows Per Second for User Databases</LI>
 
 		<LI><b>CmMemoryClerks      </b> -- In graph "All Memory Clerks vs Target & Total Memory, in MB" -- added one line "All Other Memory Clerks" -- So we can see "memory steals" easier</LI>
+
+		<LI><b>CmSchedulers        </b> -- Added diff calculations for some columns: "total_signal_time", "total_waits_completed", "total_enqueued_tasks", "total_completed_tasks", "spinlock_wait_time_ms", "spinlock_wait_count"</LI>
 
 		<LI><b>CmSummary           </b> -- In alarm 'LockWaits' -- Added "Server LCK_M_* Wait -- Lock Information", so we easier can see what type of blocks we had</LI>
 
@@ -303,6 +326,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>PostgresTune - PostgreSQL</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
+
+		<!-- ~~~ CM Changes ~~~ -->
+		<LI><b>CmTableBloat  </b> -- New CM to estimate table bloats from statistics</LI>
+
+		<LI><b>CmPgTables    </b> -- Added column 'est_bloat_pct' -- algo: n_dead_tup / n_live_tup * 100  (Skipping tables with 'n_dead_tup' less than 100)</LI>
+		<LI><b>CmPgTables    </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
+
+		<LI><b>CmPgTableSize </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
+
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
 		<b>Daily Summary Report</b><br>

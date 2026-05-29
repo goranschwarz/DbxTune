@@ -47,12 +47,12 @@ public interface IReportChart
 	String getHtmlContent(String preText, String postText);
 
 	void writeHtmlContent(Writer writer, String preText, String postText) throws IOException;
+	void writeHtmlContent(Writer writer, String preText, String postText, String allDataValuesNearZeroTest) throws IOException;
 
 	int getDefaultQueryTimeout();
 
 	String getPreComment();
 
 	String getPostComment();
-
 
 }

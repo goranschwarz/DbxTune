@@ -2549,6 +2549,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventAgRoleChange(cm, ag_name, server_name, dbname, prevSampleRole, role_desc);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "RoleChange");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -2628,6 +2631,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventAgUnexpectedState(cm, ag_name, server_name, dbname, stateStr);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "UnExpectedState");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -2661,6 +2667,9 @@ extends CountersModel
 
 							AlarmEvent ae = new AlarmEventAgLogSendQueueSize(cm, ag_name, server_name, dbname, LogSendQueueSizeMb, threshold);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "LogSendQueueSizeInMb");
 
 							alarmHandler.addAlarm( ae );
 						}
@@ -2705,6 +2714,9 @@ extends CountersModel
 
 									AlarmEvent ae = new AlarmEventAgSecondaryCommitTimeLag(cm, ag_name, server_name, dbname, SecondaryCommitTimeLag, threshold);
 									ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Information about how to disable this alarm
+									ae.createAlarmOptionsMessage(this, "SecondaryCommitTimeLag");
 
 									alarmHandler.addAlarm( ae );
 								}
@@ -2757,8 +2769,12 @@ extends CountersModel
 					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 					
 					AlarmEvent ae = new AlarmEventAgSplitBrain(cm, ag_name, server_name, dbname, remoteLiveDataServername);
+
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "SplitBrain");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -2787,6 +2803,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventBagRolePercentSkewed(cm, locality, agNamePrefix, bagPct, BagPercentDetails);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "BagRolePercentSkewed");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}

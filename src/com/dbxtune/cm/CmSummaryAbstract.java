@@ -209,6 +209,10 @@ extends CountersModel
 				if (doAlarm)
 				{
 					AlarmEvent ae = new AlarmEventDbmsVersionString(this, tmpLastVersionString, currentVersionString);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "DbmsVersionStringChanged");
+
 					AlarmHandler.getInstance().addAlarm( ae );
 				}
 			}

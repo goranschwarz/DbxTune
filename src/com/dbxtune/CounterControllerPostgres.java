@@ -73,6 +73,7 @@ import com.dbxtune.cm.postgres.CmPgSlru;
 import com.dbxtune.cm.postgres.CmPgSrvWait;
 import com.dbxtune.cm.postgres.CmPgStatements;
 import com.dbxtune.cm.postgres.CmPgStatementsSumDb;
+import com.dbxtune.cm.postgres.CmPgTableBloat;
 import com.dbxtune.cm.postgres.CmPgTableSize;
 import com.dbxtune.cm.postgres.CmPgTables;
 import com.dbxtune.cm.postgres.CmPgTablesIo;
@@ -147,6 +148,7 @@ extends CounterControllerAbstract
 //		CmPgBlockingLocks   .create(counterController, guiController); // nearly the same as CmActiveStatements -->> possibly do: sel * pg_locks instead???
 		CmPgTables          .create(counterController, guiController);
 		CmPgTablesIo        .create(counterController, guiController);
+		CmPgTableBloat      .create(counterController, guiController);
 		CmPgIndexes         .create(counterController, guiController);
 		CmPgIndexesIo       .create(counterController, guiController);
 		CmPgFunctions       .create(counterController, guiController);

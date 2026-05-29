@@ -90,7 +90,7 @@ extends PostgresAbstract
 		sb.append("<br>\n");
 		sb.append("<b>Below is serverwide Auto Vaccuum Parameters.</b><br>\n");
 		sb.append("<i>The normal default is to do autovacuum when there is 20% 'dead_rows'... Formula: <code>n_dead_tup > (n_live_tup * autovacuum_vacuum_scale_factor + autovacuum_vacuum_threshold)</code> </i><br>\n");
-		sb.append("Autovacuum Tuning Basics <a href='https://www.2ndquadrant.com/en/blog/autovacuum-tuning-basics/' target='_blank'>https://www.2ndquadrant.com/en/blog/autovacuum-tuning-basics/</a><br>\n");
+		sb.append("Autovacuum Tuning Basics <a href='https://www.enterprisedb.com/blog/autovacuum-tuning-basics' target='_blank'>https://www.enterprisedb.com/blog/autovacuum-tuning-basics</a><br>\n");
 		sb.append(toHtmlTable(_autovacuumConfigRstm));
 
 		// Write JavaScript code for CPU SparkLine

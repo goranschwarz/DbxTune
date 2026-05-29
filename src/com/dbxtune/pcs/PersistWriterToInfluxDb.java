@@ -210,6 +210,9 @@ extends PersistWriterBase
 			alarmEvent.setTimeToLive(timeToLive);
 			// NOTE: This will probably just decrease number of "FALSE" Alarms, so wee probably need to think of a better solution here...
 
+			// Information about how to disable this alarm
+			//alarmEvent.createAlarmOptionsMessage(this, "???");
+
 			// Finally add the Alarm
 			alarmHandler.addAlarm(alarmEvent);
 		}

@@ -166,7 +166,7 @@ if (auth != null)
 			gen.writeObjectField("sqlInit"       , cm.getSqlInit());
 			gen.writeObjectField("sqlClose"      , cm.getSqlClose());
 			gen.writeObjectField("sqlRefresh"    , cm.getSql());
-System.out.println("----------: CM name()               = |" + cm.getName() + ", displayName=|" + cm.getDisplayName() + "|.");
+//System.out.println("----------: CM name()               = |" + cm.getName() + ", displayName=|" + cm.getDisplayName() + "|.");
 
 //			// OBJECT: options
 //			gen.writeFieldName("options");
@@ -205,12 +205,13 @@ System.out.println("----------: CM name()               = |" + cm.getName() + ",
 					gen.writeStringField ("defaultValue"  , settings.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
+					gen.writeStringField ("validatorName" , settings.getInputValidatorClassName());
 					gen.writeEndObject();
 				}
 				gen.writeEndArray();
 			}
 
-			
+
 			// OBJECT: settings (localSettings)
 			settingsList = cm.getLocalSettings();
 			if (settingsList != null && !settingsList.isEmpty())
@@ -233,6 +234,7 @@ System.out.println("----------: CM name()               = |" + cm.getName() + ",
 					gen.writeStringField ("defaultValue"  , settings.getDefaultValue());
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
+					gen.writeStringField ("validatorName" , settings.getInputValidatorClassName());
 					gen.writeEndObject();
 				}
 				gen.writeEndArray();
@@ -245,8 +247,8 @@ System.out.println("----------: CM name()               = |" + cm.getName() + ",
 				List<CmSettingsHelper> onlyPreChecks     = settingsList.stream().filter(e -> e.isPreCheck()   ).collect(Collectors.toList());
 				List<CmSettingsHelper> onlyAlarmSwitches = settingsList.stream().filter(e -> e.isAlarmSwitch()).collect(Collectors.toList());
 
-System.out.println(" - ALARM: onlyPreChecks.size()    =" + onlyPreChecks.size());
-System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.size());
+//System.out.println(" - ALARM: onlyPreChecks.size()    =" + onlyPreChecks.size());
+//System.out.println(" - ALARM: onlyAlarmSwitches.size()=" + onlyAlarmSwitches.size());
 
 				gen.writeFieldName("alarmSettings");
 				gen.writeStartObject();

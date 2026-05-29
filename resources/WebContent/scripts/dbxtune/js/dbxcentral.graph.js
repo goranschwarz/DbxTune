@@ -2144,7 +2144,7 @@ function dbxTuneGraphSubscribe()
 		var tdCallback = function(td, metaData, cellContent, rowData)
 		{
 			// Truncate long string cells up-front — full content accessible via row-click modal
-			var AS_TRUNC = 60;
+			var AS_TRUNC = 120;
 			if (typeof cellContent === 'string' && cellContent.length > AS_TRUNC)
 			{
 				var plain = cellContent.replace(/<[^>]+>/g, '').trim();
@@ -2156,6 +2156,19 @@ function dbxTuneGraphSubscribe()
 			{
 				// Set to ABS
 				td.className = "active-statement-cell-abs";
+				
+				// Highlight some columns (for some DbxTune collectors)
+				if (metaData !== undefined && metaData.hasOwnProperty('columnName'))
+				{
+					if ("SqlServerTune" === appName)
+					{
+						if (metaData.columnName === "exec_status")
+						{
+							if (cellContent.startsWith("runn")) // "running" or "runnable"
+								td.style.backgroundColor = "green";
+						}
+					}
+				}
 			}
 			else if (typeof(cellContent) === typeof(true)) // BOOLEAN ... isNaN(true) is FALSE
 			{
@@ -2253,6 +2266,7 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidLocks       ,'Lock Table'       ) ); }
 					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.BlockedSpidsInfo,'Blocked SPID Info') ); }
 					if (metaData.columnName === "HasSpidWaitInfo"     && rowData.hasOwnProperty('SpidWaitInfo')      && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.SpidWaitInfo    ,'SPID Wait Info'   ) ); }
+					if (metaData.columnName === "HasRtOperators"      && rowData.hasOwnProperty('RtOperators')       && cellContent === true) { td.appendChild( createLockTableToolTipDiv(         rowData.RtOperators     ,'Runtime Operator Info') ); }
 				}
 				else if ("PostgresTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
@@ -2565,6 +2579,15 @@ function dbxTuneGraphSubscribe()
 			totalActiveStatementsCount += activeStatementsDivArr[i].statementsRowCount;
 		}
 
+
+		// Auto-size the panel to fit its content, but never extend past the screen bottom
+		(function() {
+			var $as = $('#active-statements');
+			if (!$as.is(':visible')) return;
+			var top  = $as[0].getBoundingClientRect().top;
+			var maxH = Math.max(80, Math.floor(window.innerHeight - top - 8));
+			$as.css({ 'max-height': maxH + 'px', 'overflow-y': 'auto' });
+		})();
 
 		// Re-apply dark mode after every render — check checkbox state OR saved preference
 		var _asDarkChk = document.getElementById('active-statements-dark-chk');

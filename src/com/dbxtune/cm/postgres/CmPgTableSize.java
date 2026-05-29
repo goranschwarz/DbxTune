@@ -186,6 +186,7 @@ extends CountersModel
 //			"    , pg_size_pretty(table_bytes) AS DATA_pretty \n" +
 //			"    , pg_size_pretty(index_bytes) AS INDEX_pretty \n" +
 //			"    , pg_size_pretty(toast_bytes) AS TOAST_pretty \n" +
+			"    , reloptions \n" +
 			"  FROM ( \n" +
 			"    SELECT *, total_bytes-index_bytes-COALESCE(toast_bytes,0) AS table_bytes  \n" +
 			"    FROM ( \n" +
@@ -196,6 +197,7 @@ extends CountersModel
 			"          , pg_total_relation_size(c.oid)         AS total_bytes \n" +
 			"          , pg_indexes_size(c.oid)                AS index_bytes \n" +
 			"          , pg_total_relation_size(reltoastrelid) AS toast_bytes \n" +
+			"          , cast(array_to_string(reloptions, ', ') as varchar(1024)) AS reloptions \n" +
 			"      FROM pg_class c \n" +
 			"      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace \n" +
 			"      WHERE relkind = 'r' \n" +

@@ -860,6 +860,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "StatementExecInSec");
+
 							alarmHandler.addAlarm( ae );
 						}
 					} // end: above threshold
@@ -897,6 +900,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventDacInUse(cm, spid, fromIp, fromHost, asLogin, loginTime, inDBName);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 					
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "DacInUse");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -1671,6 +1677,10 @@ extends CountersModel
 				if (getMaxCount() > alarmOnMaxCountGt)
 				{
 					AlarmEvent alarm = new AlarmEventDebugWaitInfo(_cm, infoStr);
+
+					// Information about how to disable this alarm
+//					alarm.createAlarmOptionsMessage(this, "alarm_WaitInfo");
+
 					AlarmHandler.getInstance().addAlarm(alarm);
 				}
 			}

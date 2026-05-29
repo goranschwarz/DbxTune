@@ -8,8 +8,11 @@ var _cmType         = 'rate';
 var _cmHideZero     = false;  // hide rows where all diff/rate values are 0
 var _cmShowAll      = false;  // Append CMs: show all records from session start
 var _cmListData     = null;
-var _cmCurrentData  = null;   // last fetched data result (for re-filtering without re-fetching)
-var _cmFilter       = '';     // current filter string
+var _cmCurrentData      = null;   // last fetched data result (for re-filtering without re-fetching)
+var _cmFilter           = '';     // current filter string
+var _cmPostponeInterval = null;   // setInterval handle for live postpone countdown
+var _cmPostponeFallback = false;  // true during the one-shot retry with lastSampleMs
+var _scrPfx = screen.width + 'x' + screen.height + '_'; // screen-size prefix for size/position localStorage keys
 var _cmTrendCache   = null;  // cached /api/graphs response (all graphs for this server)
 var _cmSplitInstance = null; // current Split.js instance (destroyed + recreated on layout change)
 var _cmSort         = { col: -1, stage: 0 }; // sort state for current CM: stage 0=original 1=desc 2=asc
@@ -379,6 +382,9 @@ function cmDetailFindCmInfo(cmName)
 function cmDetailLoadData(srvName, cmName, timestamp, type)
 {
 	if (!srvName || !cmName || !timestamp) return;
+	var _isPostponeFallback = _cmPostponeFallback;
+	_cmPostponeFallback = false;
+	if (_cmPostponeInterval) { clearInterval(_cmPostponeInterval); _cmPostponeInterval = null; }
 
 	// Clear previous charts immediately — prevents stale charts from a previous CM
 	// lingering while the new CM's data is loading (or if it has no charts/data).
@@ -409,9 +415,11 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 		$('#cm-detail-table').html(html);
 		return;
 	}
-	if (cmInfo && !cmInfo.hasData && !cmInfo.isAppend) {
+	var _hasPostpone = cmInfo && cmInfo.postponeEnabled && cmInfo.postponeTime > 0;
+	if (cmInfo && !cmInfo.hasData && !cmInfo.isAppend && !_hasPostpone) {
 		// CM exists but saved no rows this sample (postponed, or nothing matched filter).
 		// Append CMs are exempt: "no rows at this sample" is normal — showAll may still find data.
+		// Postponed CMs fall through to the API call to get fresh lastSampleMs for the countdown.
 		$('#cm-detail-loading').hide();
 		$('#cm-detail-table').html('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
 			+ 'No data collected for <strong>' + $('<span>').text(cmName).html() + '</strong>'
@@ -461,6 +469,14 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 						cmDetailLoadData(srvName, cmName, timestamp, 'abs');
 						return;
 					}
+				}
+				// Postponed CM: no data at this timestamp — re-fetch the latest known sample
+				// so we can display it with the postpone watermark (same path as normal data).
+				if (r.error === 'no-data-in-window' && r.postponeEnabled && r.postponeTime > 0
+						&& r.lastSampleMs && r.lastSampleMs > 0 && !_isPostponeFallback) {
+					_cmPostponeFallback = true;
+					cmDetailLoadData(srvName, cmName, new Date(r.lastSampleMs).toISOString(), type);
+					return;
 				}
 				if (r.error) { cmDetailShowMsg(r.message || r.error); return; }
 
@@ -717,7 +733,7 @@ function cmDetailRenderFiltered(r, filter)
 	} else {
 		// Distribute available width equally across columns
 		var availableW = containerW * 1.1 - colCount * CELL_PAD;
-		truncLimit = Math.max(40, Math.floor(availableW / colCount / CHR_W));
+		truncLimit = Math.max(120, Math.floor(availableW / colCount / CHR_W));
 	}
 	// ---------------------------------------------------------------------------
 
@@ -828,7 +844,16 @@ function cmDetailRenderFiltered(r, filter)
 						cell = escHtml(s);
 					}
 				}
-				return '<td ' + style + '>' + cell + '</td>';
+				var titleAttr = '';
+				var colName = r.columns ? r.columns[i] : null;
+				if (colName && isNumeric[i] && /bytes/i.test(colName)) {
+					var numV = parseFloat(v);
+					if (!isNaN(numV) && numV > 0) {
+						var humanBytes = _cmBytesToHuman(numV);
+						if (humanBytes) titleAttr = ' title="' + escHtml(humanBytes) + '"';
+					}
+				}
+				return '<td ' + style + titleAttr + '>' + cell + '</td>';
 			}).join('') + '</tr>';
 		});
 	}
@@ -849,6 +874,13 @@ function cmDetailRenderFiltered(r, filter)
 					var style = 'style="background-color:rgb(222,246,250);';
 					if (isNumeric[i]) style += 'text-align:right;';
 					style += '"';
+					if (colName && /bytes/i.test(colName)) {
+						var _numV = parseFloat(v);
+						if (!isNaN(_numV) && _numV > 0) {
+							var _humanBytes = _cmBytesToHuman(_numV);
+							if (_humanBytes) aggTt = (aggTt ? aggTt + '  |  ' : '') + _humanBytes;
+						}
+					}
 					var titleAttr = aggTt ? ' title="' + aggTt + '"' : '';
 					var sym = _cmAggSymbol(r.aggregateColumns, colName);
 					var cellContent;
@@ -875,7 +907,7 @@ function cmDetailRenderFiltered(r, filter)
 	// Restore scroll position from localStorage (persists across tab switches and panel close/reopen)
 	// The scrollable element is #cm-detail-table-wrap (inside the Split.js pane)
 	var $scrollPane = $('#cm-detail-table-wrap');
-	var scrollKey   = 'cmDetail-scroll-' + (r.cmName || 'default');
+	var scrollKey   = _scrPfx + 'cmDetail-scroll-' + (r.cmName || 'default');
 	var savedTop    = 0, savedLeft = 0;
 	try {
 		var saved = JSON.parse(localStorage.getItem(scrollKey) || 'null');
@@ -885,6 +917,22 @@ function cmDetailRenderFiltered(r, filter)
 	// Destroy existing tooltip instances before replacing the DOM (prevents orphaned tooltip divs)
 	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip('dispose');
 	$('#cm-detail-table').html(h);
+
+	// Postpone watermark: prepend a subtle countdown banner when postpone is active
+	if (r.postponeEnabled && r.postponeTime > 0 && r.cmSampleTime) {
+		var _sampleMs = new Date(r.cmSampleTime).getTime();
+		var _nextAt   = _sampleMs + r.postponeTime * 1000;
+		var _durStr   = _cmFmtDuration(r.postponeTime);
+		var _wm = '<div id="cm-postpone-watermark" class="py-1 px-2 mb-1"'
+			+ ' style="font-size:0.85em;background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;color:#856404;">'
+			+ '&#9201; <strong>Postpone enabled</strong> (interval: ' + escHtml(_durStr) + ') &mdash; next sample in approx '
+			+ '<strong id="cm-postpone-countdown"></strong></div>';
+		$('#cm-detail-table').prepend(_wm);
+		var _updWm = function() { $('#cm-postpone-countdown').text(_cmFmtCountdown(_nextAt - Date.now())); };
+		_updWm();
+		if (!_cmPostponeInterval)
+			_cmPostponeInterval = setInterval(_updWm, 1000);
+	}
 
 	// Activate Bootstrap tooltips on the freshly rendered column headers
 	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip({ container: '#cm-detail-panel', boundary: 'window' });
@@ -1088,6 +1136,44 @@ function cmDetailNumFmtInit()
 	if (el) el.checked = true;
 }
 
+/** Format seconds into a compact duration string: "1h", "30m", "1h 30m", "45s". */
+function _cmFmtDuration(secs)
+{
+	var h = Math.floor(secs / 3600);
+	var m = Math.floor((secs % 3600) / 60);
+	var s = secs % 60;
+	var parts = [];
+	if (h) parts.push(h + 'h');
+	if (m) parts.push(m + 'm');
+	if (s || parts.length === 0) parts.push(s + 's');
+	return parts.join(' ');
+}
+
+/** Format remaining milliseconds as a countdown string: "mm:ss" or "Xh mm:ss". */
+function _cmFmtCountdown(ms)
+{
+	if (ms <= 0) return 'any moment now';
+	var secs = Math.ceil(ms / 1000);
+	var h = Math.floor(secs / 3600);
+	var m = Math.floor((secs % 3600) / 60);
+	var s = secs % 60;
+	var mm = String(m).padStart(2, '0');
+	var ss = String(s).padStart(2, '0');
+	return h > 0 ? h + 'h ' + mm + ':' + ss : mm + ':' + ss;
+}
+
+/**
+ * Convert a byte count to a human-readable string (KB / MB / GB).
+ * Returns null when the value is below 1 KB (no conversion useful).
+ */
+function _cmBytesToHuman(bytes)
+{
+	if (bytes < 1024)                return null;
+	if (bytes < 1024 * 1024)         return (bytes / 1024).toFixed(1) + ' KB';
+	if (bytes < 1024 * 1024 * 1024)  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+	return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+}
+
 /**
  * Format a numeric value with thousands separators for readability.
  * Returns the formatted string, or null if the value is not numeric
@@ -1104,13 +1190,20 @@ function _cmFmtNum(v)
 	var n = (typeof v === 'number') ? v : parseFloat(v);
 	if (isNaN(n)) return null;
 
-	// Only format when the integer part is >= 1000
-	if (Math.abs(n) < 1000) return null;
-
-	// Count decimal places in original string (preserve them exactly)
+	// Count decimal places in original string
 	var srcStr  = String(v);
 	var dotPos  = srcStr.indexOf('.');
 	var decDigs = (dotPos >= 0) ? srcStr.length - dotPos - 1 : 0;
+
+	if (decDigs > 0) {
+		// Fractional-only values (0 < |n| < 1, e.g. 0.0000365) are left untouched.
+		if (Math.abs(n) < 1) return null;
+		// Cap to 1 decimal for all values with an integer part >= 1.
+		decDigs = 1;
+		// Fall through to format even when |n| < 1000.
+	} else if (Math.abs(n) < 1000) {
+		return null; // small integer – no formatting needed
+	}
 
 	try {
 		if (_cmNumFmtMode === 'locale') {
@@ -1275,7 +1368,7 @@ function cmDetailToggle()
 			_cmScrollTimer = setTimeout(function() {
 				if (_cmName) {
 					try {
-						localStorage.setItem('cmDetail-scroll-' + _cmName,
+						localStorage.setItem(_scrPfx + 'cmDetail-scroll-' + _cmName,
 							JSON.stringify({ top: $tw.scrollTop(), left: $tw.scrollLeft() }));
 					} catch(e) {}
 				}
@@ -1673,7 +1766,7 @@ function cmChartRender(r, filteredRows) {
 	var defaultChartPct = 100 - defaultTablePct;
 
 	// Restore saved divider position (per splitDir) from localStorage
-	var storageKey = 'cmDetail-split-' + splitDir;
+	var storageKey = _scrPfx + 'cmDetail-split-' + splitDir;
 	var savedSizes = null;
 	try {
 		var s = JSON.parse(localStorage.getItem(storageKey));

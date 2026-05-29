@@ -502,6 +502,9 @@ extends CountersModel
 
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "SumWaiterCount");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}

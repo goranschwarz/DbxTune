@@ -67,7 +67,7 @@ extends ProxyHelper
 				.uri(URI.create(getCollectorBaseUrl() + "/api/mgt/config/set"))
 				.header("Content-Type", "application/json")
 				.header("Accept", "application/json")
-				.header("Authentication", getMgtAuthentication())
+				.header("Authorization", getMgtAuthentication())
 				.POST(HttpRequest.BodyPublishers.ofByteArray(requestBodyBytes))
 				.build();
 

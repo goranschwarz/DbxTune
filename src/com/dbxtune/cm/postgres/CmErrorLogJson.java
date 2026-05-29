@@ -574,6 +574,9 @@ extends CountersModelAppend
 					AlarmEvent ae = new AlarmEventPgInternalError(this, state_code, stateCodeDesc, message, timestamp);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "InternalErrors");
+
 					alarmHandler.addAlarm( ae );
 				}
 			} // end: InternalErrors
@@ -596,6 +599,9 @@ extends CountersModelAppend
 
 					AlarmEvent ae = new AlarmEventPgSystemError(this, state_code, stateCodeDesc, message, timestamp);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "SystemErrors");
 
 					alarmHandler.addAlarm( ae );
 				}
@@ -621,6 +627,9 @@ extends CountersModelAppend
 					AlarmEvent ae = new AlarmEventPgInsufficientResources(this, state_code, stateCodeDesc, message, timestamp);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "InsufficientResources");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -645,6 +654,9 @@ extends CountersModelAppend
 
 					AlarmEvent ae = new AlarmEventPgDeadlock(this, state_code, stateCodeDesc, detail, timestamp);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "Deadlocks");
 
 					alarmHandler.addAlarm( ae );
 				}
@@ -726,6 +738,10 @@ extends CountersModelAppend
 
 					// Create and send alarm
 					AlarmEvent ae = new AlarmEventConfigChanges(this, cfgParam, message, timestamp);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "AlterSystem");
+
 					alarmHandler.addAlarm( ae );
 
 				} // end: ALTER SYSTEM

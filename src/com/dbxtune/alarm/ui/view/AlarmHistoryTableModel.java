@@ -109,7 +109,7 @@ implements ITableTooltip
 		}
 	}
 //	private static final String[] TAB_HEADER = {"Event Time", "Action", "isActive", "AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
-	private static final String[] TAB_HEADER = {"Event Time", "action", "isActive", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
+	private static final String[] TAB_HEADER = {"Event Time", "action", "isActive", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "alarmDuration", "fullDuration", "fullDurAdjSec", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription", "alarmOptions"};
 	public static final int TAB_POS_EVENT_TIME                = 0;
 	public static final int TAB_POS_ACTION                    = 1;
 	public static final int TAB_POS_IS_ACTIVE                 = 2;
@@ -136,6 +136,7 @@ implements ITableTooltip
 	public static final int TAB_POS_LAST_DESCRIPTION          = 23;
 	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 24;
 	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 25;
+	public static final int TAB_POS_ALARM_OPTIONS             = 26;
 
 	private ArrayList<AlarmEventWrapper> _rows = new ArrayList<>();
 	private boolean _hasChanged = false;
@@ -251,6 +252,7 @@ implements ITableTooltip
 //		case TAB_POS_LAST_EXTENDED_DESCRIPTION : return entry._alarmEvent.getReRaiseExtendedDescription();
 		case TAB_POS_EXTENDED_DESCRIPTION      : return addOuterHtmlTag(entry._alarmEvent.getExtendedDescriptionHtml());
 		case TAB_POS_LAST_EXTENDED_DESCRIPTION : return addOuterHtmlTag(entry._alarmEvent.getReRaiseExtendedDescriptionHtml());
+		case TAB_POS_ALARM_OPTIONS             : return addOuterHtmlTag(entry._alarmEvent.getAlarmOptions());
 		}
 		return null;
 	}
@@ -313,6 +315,7 @@ implements ITableTooltip
 			 || modelCol == TAB_POS_LAST_DESCRIPTION
 			 || modelCol == TAB_POS_EXTENDED_DESCRIPTION
 			 || modelCol == TAB_POS_LAST_EXTENDED_DESCRIPTION
+			 || modelCol == TAB_POS_ALARM_OPTIONS
 		   )
 		{
 			return GTable.TOOLTIP_TYPE_FOCUSABLE + cellValue; 

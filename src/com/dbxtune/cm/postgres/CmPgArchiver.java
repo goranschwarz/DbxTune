@@ -280,6 +280,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventPgArchiveError(cm, threshold, failed_count_diff, failed_count_abs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "failed_count");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -310,6 +313,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventPgArchiveError(cm, threshold, last_archived_in_seconds, last_archived_time);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "last_archived_in_seconds");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -385,6 +391,9 @@ extends CountersModel
 				AlarmEvent ae = new AlarmEventPgArchiveRate(cm, thresholdMb, archivedMbInLastHour, archivedCountInLastHour);
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "archived_mb_last_hour");
+
 				alarmHandler.addAlarm( ae );
 			}
 		} // end: archived_mb_last_hour

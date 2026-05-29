@@ -413,6 +413,9 @@ extends CountersModelAppend
 						AlarmEvent ae = new AlarmEventConfigChanges(this, configName, errorTxt, errorlogTs);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "ConfigChanges");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -432,7 +435,10 @@ extends CountersModelAppend
 //						AlarmEvent ae = new AlarmEventErrorLogEntry(this, AlarmEvent.Severity.WARNING, searchFor, errorTxt);
 						AlarmEvent ae = new AlarmEventErrorLogEntry(this, AlarmEvent.Severity.INFO, searchFor, errorTxt);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-							
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LongIoRequests");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -471,6 +477,9 @@ extends CountersModelAppend
 					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, dbname, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "TransactionLogFull");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -492,6 +501,9 @@ extends CountersModelAppend
 					AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNum, severity, errorTxt, errorlogTs, -1);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "PageErrorReadRetry");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -512,6 +524,9 @@ extends CountersModelAppend
 
 					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "user connections", errorNum, errorTxt, errorlogTs);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "UserConnections");
 
 					alarmHandler.addAlarm( ae );
 				}
@@ -587,6 +602,9 @@ extends CountersModelAppend
 						AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNum, severity, errorTxt, errorlogTs, threshold);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "Severity");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -635,7 +653,10 @@ extends CountersModelAppend
 //					AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage);
 					AlarmEvent ae = new AlarmEventStackDump(this, fullErrorMessage);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "StackDump");
+
 					alarmHandler.addAlarm( ae );
 				}
 			}
@@ -688,7 +709,7 @@ extends CountersModelAppend
 		list.add(new CmSettingsHelper("StackDump"              , isAlarmSwitch, PROPKEY_alarm_StackDump          , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_StackDump          , DEFAULT_alarm_StackDump          ), DEFAULT_alarm_StackDump          , "On error log message '**Dump thread - ', collect the dump text and send 'AlarmEventStackDump'." ));
 
 		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
-		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)",                PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
+		list.add(new CmSettingsHelper("Severity SkipList ErrorNumber(s)",       PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
 
 		return list;
 	}
