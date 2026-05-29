@@ -294,7 +294,7 @@ var alarmTdCallback = function(td, metaData, cellContent, rowData)
 	}
 
 	// Truncate long strings (not timestamp columns)
-	var ALARM_TRUNC = 80;
+	var ALARM_TRUNC = 120;
 	if (typeof cellContent === 'string' && cellContent.length > ALARM_TRUNC
 			&& !(metaData.columnName || '').endsWith('Time'))
 	{

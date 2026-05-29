@@ -592,6 +592,7 @@ public class PersistContainer
 					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
 					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
 					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
+					gen.writeStringField("alarmOptions"               , toString( ae.getAlarmOptions()               ));
 				gen.writeEndObject();
 			}
 			gen.writeEndArray();
@@ -643,6 +644,7 @@ public class PersistContainer
 					gen.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
 					gen.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
 					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
+					gen.writeStringField("alarmOptions"               , toString( ae.getAlarmOptions()               ));
 				gen.writeEndObject();
 			}
 			gen.writeEndArray();

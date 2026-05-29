@@ -484,6 +484,9 @@ extends CounterModelHostMonitor
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "Available-MB");
+
 						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
@@ -513,6 +516,9 @@ extends CounterModelHostMonitor
 
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "UsedPct");
 
 						AlarmHandler.getInstance().addAlarm(ae);
 					}

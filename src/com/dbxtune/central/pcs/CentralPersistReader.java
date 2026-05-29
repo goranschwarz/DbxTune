@@ -522,6 +522,7 @@ public class CentralPersistReader
 					+ " ," + lq + "lastDescription"             + rq
 					+ " ," + lq + "extendedDescription"         + rq
 					+ " ," + lq + "lastExtendedDescription"     + rq
+					+ " ," + lq + "alarmOptions"                + rq
 				+" from " + tabName
 				+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
 
@@ -559,12 +560,13 @@ public class CentralPersistReader
 						rs.getTimestamp(17), // "cancelTime"             
 						rs.getInt      (18), // "timeToLive"             
 						rs.getString   (19), // "threshold"              
-						rs.getString   (10), // "data"                   
+						rs.getString   (20), // "data"
 						rs.getString   (21), // "lastData"               
 						rs.getString   (22), // "description"            
 						rs.getString   (23), // "lastDescription"        
 						rs.getString   (24), // "extendedDescription"    
-						rs.getString   (25)  // "lastExtendedDescription"
+						rs.getString   (25), // "lastExtendedDescription"
+						rs.getString   (26)  // "alarmOptions"
 						);
 					list.add(a);
 				}
@@ -762,6 +764,7 @@ public class CentralPersistReader
 					+ " ," + lq + "lastDescription"             + rq
 					+ " ," + lq + "extendedDescription"         + rq
 					+ " ," + lq + "lastExtendedDescription"     + rq
+					+ " ," + lq + "alarmOptions"                + rq
 				+" from " + tabName
 				+whereStr
 			//	+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
@@ -809,7 +812,8 @@ public class CentralPersistReader
 						rs.getString   (26), // description                         
 						rs.getString   (27), // lastDescription                     
 						rs.getString   (28), // extendedDescription                 
-						rs.getString   (29)  // lastExtendedDescription             
+						rs.getString   (29), // lastExtendedDescription             
+						rs.getString   (30)  // "alarmOptions"
 						);
 					list.add(a);
 				}

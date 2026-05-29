@@ -665,6 +665,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventPgReplicationLag(cm, client_addr, total_lag_kb.intValue(), threshold); 
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "total_lag_kb");
+
 						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
@@ -695,6 +698,9 @@ extends CountersModel
 
 						AlarmEvent ae = new AlarmEventPgReplicationAge(cm, client_addr, reply_time_seconds.intValue(), threshold); 
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "reply_time_seconds");
 
 						AlarmHandler.getInstance().addAlarm(ae);
 					}

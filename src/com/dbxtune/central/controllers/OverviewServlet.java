@@ -42,10 +42,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -439,14 +441,45 @@ public class OverviewServlet extends HttpServlet
 	}
 
 	/**
+	 * Sort a list of filenames to match a given server order.
+	 * The server name is derived by stripping {@code fileExt} from the end of each filename.
+	 * {@code firstEntry} (if non-null) is pinned to position 0, regardless of whether it
+	 * appears in {@code serverOrder}.
+	 * Files with no match in {@code serverOrder} sort after all known servers.
+	 *
+	 * @param files        filenames to sort (not modified — a new list is returned)
+	 * @param serverOrder  ordered server names (e.g. from the SERVER_LIST layout file)
+	 * @param fileExt      extension to strip when deriving the server name, e.g. ".console"
+	 * @param firstEntry   server name to always place first, or null for no pinning
+	 * @return new sorted list
+	 */
+	private static List<String> sortFilesByServerOrder(List<String> files, List<String> serverOrder, String fileExt, String firstEntry)
+	{
+		Map<String, Integer> order = new HashMap<>();
+		for (int i = 0; i < serverOrder.size(); i++)
+			order.put(serverOrder.get(i), i);
+
+		List<String> sorted = new ArrayList<>(files);
+		sorted.sort(Comparator.comparingInt(fname -> {
+			String srvName = (fileExt != null && fname.endsWith(fileExt))
+				? fname.substring(0, fname.length() - fileExt.length())
+				: fname;
+			if (firstEntry != null && firstEntry.equals(srvName))
+				return Integer.MIN_VALUE;
+			return order.getOrDefault(srvName, Integer.MAX_VALUE);
+		}));
+		return sorted;
+	}
+
+	/**
 	 * Print "Collector Refresh Time" *BUTTONS* <br>
-	 * Note: This is called recursively... 
-	 * 
+	 * Note: This is called recursively...
+	 *
 	 * @param out
 	 * @param root
 	 * @throws IOException
 	 */
-	private void printServerLayout_CmRefreshButtons(ServletOutputStream out, List<DbxCentralServerLayout> root) 
+	private void printServerLayout_CmRefreshButtons(ServletOutputStream out, List<DbxCentralServerLayout> root)
 	throws IOException
 	{
 		for (DbxCentralServerLayout layoutEntry : root)
@@ -1667,8 +1700,11 @@ public class OverviewServlet extends HttpServlet
 					if (shortcutEntry.startsWith("*."))
 						shortcutEntry = shortcutEntry.substring(1);
 
+					// Unique JS function name per shortcut — prevents last-definition-wins when multiple shortcuts are configured
+					String openFuncName = "openTailFiles_" + shortcutEntry.replaceAll("[^A-Za-z0-9]", "_");
+
 //					out.println("<b>Shortcuts for files ending with '" + shortcutEntry + "'</b>");
-					out.println("<b>Shortcuts for files ending with '" + shortcutEntry + "'</b>. Or click <a href='javascript:openTailOnAllConsoleFiles()'>here</a> to open ALL below '" + shortcutEntry + "' files in tail mode. (a new tab for each file)");
+					out.println("<b>Shortcuts for files ending with '" + shortcutEntry + "'</b>. Or click <a href='javascript:" + openFuncName + "()'>here</a> to open ALL below '" + shortcutEntry + "' files in tail mode. (a new tab for each file)");
 
 					List<String> listOfFiles = new ArrayList<>();
 
@@ -1723,6 +1759,17 @@ public class OverviewServlet extends HttpServlet
 					out.println("</table>");
 					out.println("<br>");
 
+					// Sort by server layout order; DBX_CENTRAL always first
+					List<String> serverNames = new ArrayList<>();
+					if (orderedSessionList != null)
+					{
+						for (DbxCentralSessions s : orderedSessionList)
+						{
+							serverNames.add(s.getServerName());
+						}
+					}
+					listOfFiles = sortFilesByServerOrder(listOfFiles, serverNames, shortcutEntry, "DBX_CENTRAL");
+
 					// Build function that will open all files in tail mode
 					out.println("");
 					out.println("<script type='text/javascript'>");
@@ -1731,21 +1778,23 @@ public class OverviewServlet extends HttpServlet
 //					for (String fname : listOfFiles)
 //						out.println("        window.open('/log?name=" + fname + "&tail=5000'); ");
 //					out.println("    } ");
-					out.println("    function openTailOnAllConsoleFiles() ");
+					out.println("    function " + openFuncName + "() ");
 					out.println("    { ");
-					out.println("        let tmpArray = [];");
-
-					for (String fname : listOfFiles)
-						out.println("        tmpArray.push('" + fname + "'); ");
-
-					out.println("");
-					out.println("        for (let i = 0; i < tmpArray.length; i++) ");
-					out.println("        { ");
-					out.println("            setTimeout(function() ");
-					out.println("            { ");
-					out.println("                window.open('/log?name=' + tmpArray[i] + '&tail=5000'); ");
-					out.println("            }, i * 1000); ");
-					out.println("        } ");
+					out.println("        var _files = [");
+					for (int fi = 0; fi < listOfFiles.size(); fi++)
+						out.println("            '" + listOfFiles.get(fi) + "'" + (fi < listOfFiles.size()-1 ? "," : ""));
+					out.println("        ];");
+					out.println("        console.log('" + openFuncName + ": opening ' + _files.length + ' file(s):', _files);");
+					out.println("        if (_files.length === 0) return;");
+					out.println("        // Open first file synchronously — detects popup block immediately");
+					out.println("        var w = window.open('/log?name=' + _files[0] + '&tail=5000');");
+					out.println("        if (!w) {");
+					out.println("            alert('Pop-up blocked by browser.\\n\\nPlease allow pop-ups for this site and try again.\\n(Look for the pop-up blocked icon in the browser address bar)');");
+					out.println("            return;");
+					out.println("        }");
+					out.println("        // Open remaining files with staggered delay to avoid server overload");
+					out.println("        for (let i = 1; i < _files.length; i++)");
+					out.println("            setTimeout(function() { window.open('/log?name=' + _files[i] + '&tail=5000'); }, i * 2000);");
 					out.println("    } ");
 					out.println("</script>");
 					out.println("");

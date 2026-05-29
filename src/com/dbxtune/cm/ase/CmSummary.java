@@ -1447,6 +1447,9 @@ extends CmSummaryAbstract
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "TotalCPUTime");
+						
 						alarmHandler.addAlarm(ae);
 					}
 				}
@@ -1466,6 +1469,9 @@ extends CmSummaryAbstract
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "UserCPUTime");
+						
 						alarmHandler.addAlarm(ae);
 					}
 				}
@@ -1485,6 +1491,9 @@ extends CmSummaryAbstract
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "IoCPUTime");
+						
 						alarmHandler.addAlarm(ae);
 					}
 				}
@@ -1587,6 +1596,9 @@ extends CmSummaryAbstract
 					
 					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "LockWaits");
 					
 					alarmHandler.addAlarm( ae );
 				}
@@ -1698,6 +1710,9 @@ extends CmSummaryAbstract
 						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranDbName, oldestOpenTranInSec, oldestOpenTranName);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "oldestOpenTranInSec");
+						
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -1719,7 +1734,14 @@ extends CmSummaryAbstract
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", fullTranslogCount='"+fullTranslogCount+"'.");
 
 				if (fullTranslogCount.intValue() > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
+				{
+					AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, fullTranslogCount);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "fullTranslogCount");
+					
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
 			}
 		}
 	}

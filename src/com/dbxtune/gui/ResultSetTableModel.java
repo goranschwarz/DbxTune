@@ -3287,6 +3287,8 @@ public class ResultSetTableModel
 			if (strVal == null)
 			{
 				strVal = objVal.toString();
+//				strVal = escapeHtml(strVal);
+//				strVal = StringEscapeUtils.escapeHtml4(strVal);
 			}
 		}
 
@@ -3381,14 +3383,16 @@ public class ResultSetTableModel
 	{
 		return toHtmlTablesVerticalString(className, true, true, colNameValueTagMap, null);
 	}
-//	/**
-//	 * Return a html string with one table for each row. The Table will only have 2 columns. 1=Column Name, 2=Column Value
-//	 * @return
-//	 */
-//	public String toHtmlTablesVerticalString(String className, TableStringRenderer tsRenderer)
-//	{
-//		return toHtmlTablesVerticalString(className, true, true, null, tsRenderer);
-//	}
+	/**
+	 * Return a html string with one table for each row. The Table will only have 2 columns. 1=Column Name, 2=Column Value
+	 * <p>
+	 * NOTE: all methods of the tsRenderer is NOT used/implemented (for now only: cellValue(...))
+	 * @return
+	 */
+	public String toHtmlTablesVerticalString(String className, TableStringRenderer tsRenderer)
+	{
+		return toHtmlTablesVerticalString(className, true, true, null, tsRenderer);
+	}
 	
 	public String toHtmlTablesVerticalString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap, TableStringRenderer tsRenderer)
 	{
@@ -3531,6 +3535,12 @@ public class ResultSetTableModel
 					}
 					else
 					{
+						if (tsRenderer != null)
+						{
+							strVal  = tsRenderer.cellValue  (this, r, c, colName, objVal, strVal);
+						//	toolTip = tsRenderer.cellToolTip(this, r, c, colName, objVal, strVal);
+						}
+
 						// make '\n' into '<br>'
 						strVal = strVal.replace("\n", "<br>");
 					}

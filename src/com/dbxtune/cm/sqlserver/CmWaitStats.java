@@ -1244,6 +1244,9 @@ extends CountersModel
 
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 				
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "WaitTime_RESOURCE_SEMAPHORE");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}
@@ -1291,7 +1294,10 @@ extends CountersModel
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.AFFECTED, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
 				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-				
+
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "WaitTime_THREADPOOL");
+
 				alarmHandler.addAlarm( ae );
 			}
 		}

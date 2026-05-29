@@ -627,6 +627,16 @@ extends AlarmWriterAbstract
 			+ "${reRaiseExtendedDescription}\n"
 			+ "#end\n"
 			
+			// Only if we have Alarm Options
+			+ "#if ( ${alarmOptions} != '' )\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<b>Alarm Options: To Change Alarm(s) Settings</b>\n"
+			+ "<hr>\n"
+			+ "${alarmOptions}\n"
+			+ "#end\n"
+			
 			+ "</html>\n"
 			;
 		}

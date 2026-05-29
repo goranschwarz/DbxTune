@@ -78,6 +78,7 @@ import com.dbxtune.cm.sqlserver.CmIndexOpStatSum;
 import com.dbxtune.cm.sqlserver.CmIndexPhysical;
 import com.dbxtune.cm.sqlserver.CmIndexUnused;
 import com.dbxtune.cm.sqlserver.CmIndexUsage;
+import com.dbxtune.cm.sqlserver.CmJobScheduler;
 import com.dbxtune.cm.sqlserver.CmMemoryClerks;
 import com.dbxtune.cm.sqlserver.CmMemoryGrants;
 import com.dbxtune.cm.sqlserver.CmMemoryGrantsSum;
@@ -109,8 +110,8 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.swing.GTable.ITableTooltip;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
-import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.SqlServerBackupHistoryExtractor;
 import com.dbxtune.pcs.SqlServerJobSchedulerExtractor;
 import com.dbxtune.pcs.SqlServerQueryStoreDdlExtractor;
@@ -142,7 +143,11 @@ extends CounterControllerAbstract
 	public static final boolean DEFAULT_onRefresh_setDirtyReads = true;
 	
 	public static final String  PROPKEY_onRefresh_setLockTimeout = "SqlServerTune.onRefresh.setLockTimeout";
-	public static final boolean DEFAULT_onRefresh_setLockTimeout = true;
+//	public static final boolean DEFAULT_onRefresh_setLockTimeout = true;
+	public static final boolean DEFAULT_onRefresh_setLockTimeout = false; // Testing without this for a while 
+	// If we still need it on any CM; We have to come up with a better solution 
+	// possibly a new CM method get|setDbmsServerSideTimeout if we can't trust the Statement.setTimeout (if it's at CM Level we can possibly get away with Vendor Specific syntax)
+	// and if we use it: we also need to "reset" it after each DBMS call...
 	
 	public static final String  PROPKEY_onRefresh_setLockTimeout_ms = "SqlServerTune.onRefresh.setLockTimeout.ms";
 	public static final int     DEFAULT_onRefresh_setLockTimeout_ms = 3000;
@@ -245,6 +250,7 @@ extends CounterControllerAbstract
 		CmMemoryClerks       .create(counterController, guiController);
 		CmMemoryGrantsSum    .create(counterController, guiController);
 		CmMemoryGrants       .create(counterController, guiController);
+		CmJobScheduler       .create(counterController, guiController);
 		CmErrorLog           .create(counterController, guiController);
 		CmOsLatchStats       .create(counterController, guiController);
 		CmPerfCounters       .create(counterController, guiController);

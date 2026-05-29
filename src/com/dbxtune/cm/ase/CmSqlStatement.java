@@ -1740,6 +1740,9 @@ extends CountersModel
 						// Set the Error Info
 						alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
 
+						// Information about how to disable this alarm
+						alarm.createAlarmOptionsMessage(this, "errorCount");
+						
 						// Add the Alarm
 						AlarmHandler.getInstance().addAlarm(alarm);
 					}
@@ -1875,6 +1878,9 @@ extends CountersModel
 
 									alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
 									
+									// Information about how to disable this alarm
+									alarm.createAlarmOptionsMessage(this, "ErrorNumbers");
+									
 									// Add the Alarm
 									AlarmHandler.getInstance().addAlarm(alarm);
 								}
@@ -1915,6 +1921,10 @@ extends CountersModel
 				if (ageInSec > thresholdInSec)
 				{
 					AlarmEvent alarm = new AlarmEventSqlCaptureOldData(cm, ageInSec, thresholdInSec);
+
+					// Information about how to disable this alarm
+					alarm.createAlarmOptionsMessage(this, "SqlCaptureAge");
+					
 					AlarmHandler.getInstance().addAlarm(alarm);
 				}
 			}

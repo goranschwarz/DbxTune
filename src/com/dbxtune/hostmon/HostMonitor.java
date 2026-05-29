@@ -63,7 +63,20 @@ implements Runnable
 	public static final String  PROPKEY_windows_typeperf_cmd_path = "HostMonitor.windows.typeperf.cmd.path";
 	public static final String  DEFAULT_windows_typeperf_cmd_path = "";
 	
-	
+	public static final String  PROPKEY_windows_typeperf_stopAfterXHours = "HostMonitor.windows.typeperf.stop.after.x.hours";
+	public static final int     DEFAULT_windows_typeperf_stopAfterXHours = 36;
+
+	/** returns '-cs ####' or '' depending on configuration of PROPKEY_windows_typeperf_stopAfterXHours and DEFAULT_windows_typeperf_stopAfterXHours */
+	public static String getWindowsTypeperfStopAfterXHours(int sleepTime)
+	{
+		String stopAfterXSamples = "";
+
+		int stopAfterXHours = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_windows_typeperf_stopAfterXHours, DEFAULT_windows_typeperf_stopAfterXHours);
+		if (stopAfterXHours > 0)
+			stopAfterXSamples = " -sc " + (stopAfterXHours * 3600 / sleepTime);
+
+		return stopAfterXSamples;
+	}
 
 	/**The Operating System command that will be used to get valid information*/
 //	private String _command = null;

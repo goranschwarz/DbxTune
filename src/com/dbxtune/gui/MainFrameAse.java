@@ -264,8 +264,12 @@ extends MainFrame
 			
 			if (AlarmHandler.hasInstance())
 			{
-				AlarmEvent alarmEvent = new AlarmEventAseLicensExpiration(conn.getDbmsServerNameNoThrow(), gracePeriodWarning);
-				AlarmHandler.getInstance().addAlarm(alarmEvent);
+				AlarmEvent ae = new AlarmEventAseLicensExpiration(conn.getDbmsServerNameNoThrow(), gracePeriodWarning);
+
+				// Information about how to disable this alarm
+				//ae.createAlarmOptionsMessage(this, "???");
+
+				AlarmHandler.getInstance().addAlarm(ae);
 			}
 		}
 

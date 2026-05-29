@@ -2113,13 +2113,44 @@ extends CentralPersistWriterBase
 			}
 		}
 
-//		if (fromDbVersion <= 15)
+		if (fromDbVersion <= 15)
+		{
+			// Add column 'alarmOptions' to Table.CENTRAL_SESSIONS
+			step = 18;
+
+			// Get schemas
+			Set<String> schemaSet = DbUtils.getSchemaNames(conn);
+			
+			// get table name WITHOUT schema specification and NOT quoted
+			String alarmActiveTabName  = getTableName(conn, null, Table.ALARM_ACTIVE , null, false);
+			String alarmHistoryTabName = getTableName(conn, null, Table.ALARM_HISTORY, null, false);
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmActiveTabName))
+				{
+					// Add column 'alarmId',
+					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmActiveTabName+rq + " "
+							+ " add ( " + lq+"alarmOptions"+rq + " CLOB null ) ";
+
+					internalDbUpgradeDdlExec(conn, step, sql);
+				}
+
+				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmHistoryTabName))
+				{
+					// Add column 'alarmId',
+					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmHistoryTabName+rq + " "
+							+ " add ( " + lq+"alarmOptions"+rq + " CLOB null ) ";
+
+					internalDbUpgradeDdlExec(conn, step, sql);
+				}
+			}
+		}
+
+//		if (fromDbVersion <= 16)
 //		{
-//			// In next upgrade step: check Table.GRAPH_PROPERTIES and column 'GraphName' which I changed from 30 -> 60
-//			// It would be "nice" to have an upgrade/check on that... But I was to lazy right now...
-//			// For now I just throw a ERROR/WARNING when adding any graph name above 30 chars -- Then that warning can be removed: CounterModel.addTrendGraph() -- Graph Names can only be 30 characters (for the moment)...
-// 			//     in CentralPeristWriterBase.getTableDdlString(...) approx row: 590
-//			//     sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  60),20)+" "+getNullable(false)+"\n"); // changed from 30 to 60 -- But I did NOT write any upgrade steps for it... possibly in the future...
 //		}
 
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
@@ -2940,6 +2971,7 @@ extends CentralPersistWriterBase
 					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 )); // "lastDescription"             // 22
 					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        )); // "extendedDescription"         // 23 /*HTML or Normal???*/
 					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 24 /*HTML or Normal???*/
+					sbSql.append(", ").append(safeStr( ae.getAlarmOptions()               )); // "alarmOptions"                // 25
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3061,6 +3093,7 @@ extends CentralPersistWriterBase
 						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));  // "lastDescription"             // 26 
 						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));  // "extendedDescription"         // 27 /*HTML or Normal???*/
 						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 28 /*HTML or Normal???*/
+						sbSql.append(", ").append(safeStr( ae.getAlarmOptions()               ));  // "alarmOptions"                // 29
 						sbSql.append(")");
 
 						sql = sbSql.toString();

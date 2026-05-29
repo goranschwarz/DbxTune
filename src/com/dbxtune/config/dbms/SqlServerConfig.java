@@ -877,8 +877,8 @@ extends DbmsConfigAbstract
 		// SQL-Server 2019 (probably earlier as well)
 		map.put("column encryption enclave type",       0);
 		map.put("tempdb metadata memory-optimized",     0);
-		map.put("ADR cleaner retry timeout (min)",      0);
-		map.put("ADR Preallocation Factor",             0);
+		map.put("ADR cleaner retry timeout (min)",      15); // 2019=120, 2022=15, 2025=15
+		map.put("ADR Preallocation Factor",             4);
 		map.put("version high part of SQL Server",      0);
 		map.put("version low part of SQL Server",       0);
 		map.put("allow filesystem enumeration",         1);
@@ -900,7 +900,7 @@ extends DbmsConfigAbstract
 		map.put("SLOG memory quota percentage.",        75);
 		map.put("TempDB log records threshold",         10_000);
 		map.put("TempDB log size threshold",            10);
-		map.put("external rest endpoint enabled",       1);
+		map.put("external rest endpoint enabled",       0);
 		map.put("external xtp dll gen util enabled",    0);
 
 		// SQL-Server 2022
@@ -909,96 +909,17 @@ extends DbmsConfigAbstract
 		map.put("hardware offload mode",                0);
 		map.put("backup compression algorithm",         0);
 		
+		// SQL-Server 2025
+		map.put("ADR cleaner lock timeout (s)",         5);
+		map.put("SLOG memory quota (%)",                75);
+		map.put("external AI runtimes enabled",         0);
+		map.put("allow server scoped db credentials",   0);
+
+		// SQL-Server 2025 CU5
+		map.put("max lock manager cache memory (%)",    20);
+
 		return map;
 	}
-//	-- Server Configuration (find any non-standard settings)
-//	--        for SQL Server 2008.
-//	DECLARE @config_defaults TABLE (
-//	    name nvarchar(35),
-//	    default_value sql_variant
-//	)
-//	 
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('access check cache bucket count',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('access check cache quota',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('Ad Hoc Distributed Queries',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('affinity I/O mask',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('affinity mask',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('affinity64 I/O mask',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('affinity64 mask',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('Agent XPs',1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('allow updates',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('awe enabled',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('backup compression default',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('blocked process threshold (s)',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('c2 audit mode',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('clr enabled',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('common criteria compliance enabled',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('cost threshold for parallelism',5)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('cross db ownership chaining',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('cursor threshold',-1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('Database Mail XPs',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('default full-text language',1033)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('default language',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('default trace enabled',1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('disallow results from triggers',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('EKM provider enabled',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('filestream access level',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('fill factor (%)',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('ft crawl bandwidth (max)',100)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('ft crawl bandwidth (min)',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('ft notify bandwidth (max)',100)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('ft notify bandwidth (min)',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('index create memory (KB)',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('in-doubt xact resolution',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('lightweight pooling',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('locks',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('max degree of parallelism',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('max full-text crawl range',4)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('max server memory (MB)',2147483647)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('max text repl size (B)',65536)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('max worker threads',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('media retention',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('min memory per query (KB)',1024)
-//	-- NOTE: SQL Server may change the min server
-//	--   memory value 'in flight' in some environments
-//	--    so it may commonly show up as being 'non default'
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('min server memory (MB)',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('nested triggers',1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('network packet size (B)',4096)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('Ole Automation Procedures',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('open objects',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('optimize for ad hoc workloads',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('PH timeout (s)',60)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('precompute rank',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('priority boost',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('query governor cost limit',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('query wait (s)',-1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('recovery interval (min)',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('remote access',1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('remote admin connections',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('remote login timeout (s)',20)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('remote proc trans',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('remote query timeout (s)',600)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('Replication XPs',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('scan for startup procs',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('server trigger recursion',1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('set working set size',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('show advanced options',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('SMO and DMO XPs',1)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('SQL Mail XPs',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('transform noise words',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('two digit year cutoff',2049)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('user connections',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('user options',0)
-//	INSERT INTO @config_defaults (name, default_value) VALUES ('xp_cmdshell',0)
-//	 
-//	SELECT c.name, value, value_in_use, d.default_value
-//	from sys.configurations c
-//	INNER JOIN @config_defaults d ON c.name = d.name
-//	where
-//	    c.value != c.value_in_use
-//	    OR c.value_in_use != d.default_value
-//	go
 
 	private String getSectionName(String configName)
 	{
@@ -1140,7 +1061,16 @@ extends DbmsConfigAbstract
 		map.put("hardware offload config",            SECTION_UNSPECIFIED);
 		map.put("hardware offload mode",              SECTION_UNSPECIFIED);
 		map.put("backup compression algorithm",       SECTION_UNSPECIFIED);
+
+		// SQL-Server 2025
+		map.put("ADR cleaner lock timeout (s)",       SECTION_UNSPECIFIED);
+		map.put("SLOG memory quota (%)",              SECTION_UNSPECIFIED);
+		map.put("external AI runtimes enabled",       SECTION_UNSPECIFIED);
+		map.put("allow server scoped db credentials", SECTION_UNSPECIFIED);
 		
+		// SQL-Server 2025 CU5
+		map.put("max lock manager cache memory (%)",  SECTION_UNSPECIFIED);
+
 		return map;
 	}
 	public static final String  SECTION_UNSPECIFIED          = "Unspecified";
@@ -1290,7 +1220,16 @@ extends DbmsConfigAbstract
 		map.put("hardware offload config",            NO_COMMENT);
 		map.put("hardware offload mode",              NO_COMMENT);
 		map.put("backup compression algorithm",       NO_COMMENT);
+
+		// SQL-Server 2025
+		map.put("ADR cleaner lock timeout (s)",       NO_COMMENT);
+		map.put("SLOG memory quota (%)",              NO_COMMENT);
+		map.put("external AI runtimes enabled",       NO_COMMENT);
+		map.put("allow server scoped db credentials", NO_COMMENT);
 		
+		// SQL-Server 2025 CU5
+		map.put("max lock manager cache memory (%)",  NO_COMMENT);
+
 		return map;
 	}
 	public static final String  NO_COMMENT = "";

@@ -132,6 +132,10 @@ public class AlarmHelper
 				if (doAlarm)
 				{
 					AlarmEvent ae = new AlarmEventMissingMandatoryContent(cm, colName, name);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(cm, colName);
+
 					alarmHandler.addAlarm( ae );
 				}
 			}

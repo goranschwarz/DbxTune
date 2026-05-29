@@ -358,6 +358,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventPgReplicationLag(cm, slot_name, lag_kb.intValue(), threshold); 
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "total_lag_kb");
+
 						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}

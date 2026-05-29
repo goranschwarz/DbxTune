@@ -24,12 +24,16 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.alarm.writers.AlarmWriterAbstract;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.utils.Configuration;
@@ -141,21 +145,24 @@ extends Throwable
 
 //	private static SimpleDateFormat _dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 	
-	protected String       _serviceType         = ""; // Typically the JDBC Connection.metadata.getProductName
-	protected String       _serviceName         = ""; // Typically the servername
-	protected String       _serviceInfo         = ""; 
-//	protected Object       _extraInfo           = ""; // Why should this be Object...
-	protected String       _extraInfo           = "";
-	protected Category     _category            = Category.OTHER;
-//	protected Category     _categoryDefault     = Category.OTHER;
-	protected Severity     _severity            = Severity.INFO;
-	protected ServiceState _state               = ServiceState.UP;
+	protected String       _serviceType            = ""; // Typically the JDBC Connection.metadata.getProductName
+	protected String       _serviceName            = ""; // Typically the servername
+	protected String       _serviceInfo            = ""; 
+//	protected Object       _extraInfo              = ""; // Why should this be Object...
+	protected String       _extraInfo              = "";
+	protected Category     _category               = Category.OTHER;
+//	protected Category     _categoryDefault        = Category.OTHER;
+	protected Severity     _severity               = Severity.INFO;
+	protected ServiceState _state                  = ServiceState.UP;
 
 	//think more about how to implement this... and how it should be configurable (property AlarmEventName.raiseDelay=### or parameter to the AlarmEvent - then configurable for every creator of the AlarmEvent)
-//	protected int          _raiseDelayInSec     = 0; // Delay or Postpone a initial raise with X seconds... meaning that a cancel can within the timeframe = That the Alarm will be irrelevant/canceled/not-raised
-	protected int          _raiseDelayInSec     = DEFAULT_raiseDelay; // wait with the raise event until X number of seconds has passed (usabe for CPU events or other "peak" things that happends, which we might want to filter out)  
+//	protected int          _raiseDelayInSec        = 0; // Delay or Postpone a initial raise with X seconds... meaning that a cancel can within the timeframe = That the Alarm will be irrelevant/canceled/not-raised
+	protected int          _raiseDelayInSec        = DEFAULT_raiseDelay; // wait with the raise event until X number of seconds has passed (usabe for CPU events or other "peak" things that happends, which we might want to filter out)  
 //	protected int          _raiseDelayInSecDefault = 0;
 
+	protected Severity     _originSeverity         = _severity;
+	protected int          _originRaiseDelayInSec  = _raiseDelayInSec;
+	
 	protected String       _description             = "";
 	protected String       _reRaiseDesc             = "";
 	protected String       _extendedDesc            = "";
@@ -359,7 +366,7 @@ extends Throwable
 	public Severity     getSeverity()                       { return _severity; }
 	public ServiceState getState()                          { return _state; }
                                                             
-	public String       getDescription()                    { return !hasRaiseDelay() ? _description : _description + " [raiseDelay="+getRaiseDelayInSec()+"]"; }
+	public String       getDescription()                    { return !hasRaiseDelay() ? _description : _description + " [raiseDelay=" + getRaiseDelayInSec() + "]"; }
 	public String       getReRaiseDescription()             { return _reRaiseDesc; }
 	public String       getExtendedDescription()            { return _extendedDesc; }
 //	public String       getExtendedDescriptionHtml()        { return StringUtil.hasValue(_extendedDescHtml) ? _extendedDescHtml : StringUtil.toHtmlString(_extendedDesc); }
@@ -553,6 +560,10 @@ extends Throwable
 //		_categoryDefault         = category; // Set default values so we can check for changes/overrides later on
 //		_raiseDelayInSecDefault  = 0;        // Set default values so we can check for changes/overrides later on
 		
+		// Get UserDefined: 'severity' properties
+		_originSeverity = _severity;
+		_severity = getDefaultProperty_severity();
+
 		// Get UserDefined: 'category' properties
 		_category = getDefaultProperty_category();
 
@@ -563,22 +574,43 @@ extends Throwable
 		_alarmUuid = UUID.randomUUID();
 	}
 
+	/** get default property for 'severity', override this to set any new default that is class specific, or use property 'className.severity=SeverityEnumStr' */
+	protected Severity getDefaultProperty_severity()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		String udSeverityProp = this.getClass().getSimpleName() + ".severity";
+		String udSeverity     = conf.getProperty(udSeverityProp, null);
+		if (StringUtil.hasValue(udSeverity))
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '" + _severity + "' for 'Severity' using property '" + udSeverityProp + "' with value '" + udSeverity + "'. for: " + this.getMessage());
+
+			try {
+				return Severity.valueOf(udSeverity);
+			} catch (IllegalArgumentException e) {
+				_logger.error("Problems parsing Severity Value '" + udSeverity + "' for the property '" + udSeverityProp + "'. known values: " + StringUtil.toCommaStr(Severity.values()) + ". Caught: " + e);
+			}
+		}
+		return _severity;
+	}
+
 	/** get default property for 'category', override this to set any new default that is class specific, or use property 'className.category=CategoryEnumStr' */
 	protected Category getDefaultProperty_category()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
-		String udCategoryProp = this.getClass().getSimpleName()+".category";
+		String udCategoryProp = this.getClass().getSimpleName() + ".category";
 		String udCategory     = conf.getProperty(udCategoryProp, null);
 		if (StringUtil.hasValue(udCategory))
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '"+_category+"' for 'category' using property '"+udCategoryProp+"' with value '"+udCategory+"'. for: "+this.getMessage());
+				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '" + _category + "' for 'category' using property '" + udCategoryProp + "' with value '" + udCategory + "'. for: " + this.getMessage());
 
 			try {
 				return Category.valueOf(udCategory);
 			} catch (IllegalArgumentException e) {
-				_logger.error("Problems parsing Category Value '"+udCategory+"' for the property '"+udCategoryProp+"'. known values: "+StringUtil.toCommaStr(Category.values())+". Caught: "+e);
+				_logger.error("Problems parsing Category Value '" + udCategory + "' for the property '" + udCategoryProp + "'. known values: " + StringUtil.toCommaStr(Category.values()) + ". Caught: " + e);
 			}
 		}
 		return _category;
@@ -589,12 +621,12 @@ extends Throwable
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		String udRaiseDelayInSecProp = this.getClass().getSimpleName()+".raise.delay";
+		String udRaiseDelayInSecProp = this.getClass().getSimpleName() + ".raise.delay";
 		int    udRaiseDelayInSec     = conf.getIntProperty(udRaiseDelayInSecProp, -1);
 		if (udRaiseDelayInSec != -1)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '"+_raiseDelayInSec+"' for 'raiseDelayInSec' using property '"+udRaiseDelayInSecProp+"' with value '"+udRaiseDelayInSec+"'. for: "+this.getMessage());
+				_logger.debug(getAlarmClassAbriviated() + ": Overriding/Reading default value of '" + _raiseDelayInSec + "' for 'raiseDelayInSec' using property '" + udRaiseDelayInSecProp + "' with value '" + udRaiseDelayInSec + "'. for: " + this.getMessage());
 
 			return udRaiseDelayInSec;
 		}
@@ -683,7 +715,7 @@ extends Throwable
 //		case SEVERITY_WARNING:   return "WARNING";
 //		case SEVERITY_ERROR:     return "ERROR";
 //		}
-//		return "UNKNOWN-severity-id-"+severity;
+//		return "UNKNOWN-severity-id-" + severity;
 //	}
 //	
 //	public static String stateToString(int state)
@@ -695,7 +727,7 @@ extends Throwable
 //		case STATE_SERVICE_IS_DOWN:     return "SERVICE_IS_DOWN";
 //		case STATE_SERVICE_IS_AFFECTED: return "SERVICE_IS_AFFECTED";
 //		}
-//		return "UNKNOWN-state-id-"+state;
+//		return "UNKNOWN-state-id-" + state;
 //	}
 	
 //	public void setRaiseRepeatValues(AlarmEvent existing)
@@ -710,6 +742,189 @@ extends Throwable
 //		_initialCrTime = (existing._initialCrTime > 0 ? existing._initialCrTime : existing._crTime);
 //	}
 
+//	private String getDisableAlarmMessage(String status, String job_name, String dbmsSrvName)
+//	{
+//		String msg = ""
+//				+ "Totaly disable alarms for CM '" + CM_NAME + "': "             + replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsEnabled             , status) + "=false" + "\n"
+//				+ "Totaly disable alarms for '" + status + "' on all servers: "  + replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnEnabled    , status) + "=false" + "\n"
+//				+ "Alarm should only be enabled on specific time: "              + replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, status) + "=_crontab_str_" + "\n"
+//				+ "Disable ALL '" + status + "' for this servers: "              + PROPKEY_alarm_RUNNING_LONG_SkipSrv     + "=(" + dbmsSrvName + "|someOtherSrv)" + "\n"
+//				+ "Disable job_name='" + job_name + "' on ALL servers: "         + DEFAULT_alarm_RUNNING_LONG_SkipJobName + "=(" + job_name    + "|some other job name)" + "\n"
+//				+ "Allow ALL '" + status + "' but only on this servers: "        + PROPKEY_alarm_RUNNING_LONG_ForSrv      + "=(" + dbmsSrvName + "|someOtherSrv)" + "\n"
+//				+ "Allow job_name='" + job_name + "' but only on this servers: " + PROPKEY_alarm_RUNNING_LONG_ForJobName  + "=(" + job_name    + "|some other job name)" + "\n"
+//				;
+//
+//		return msg;
+//	}
+	public String getAlarmOptions()
+	{
+		return _alarmOptions;
+	}
+	public void setAlarmOptions(String alarmOptions)
+	{
+		_alarmOptions = alarmOptions;
+	}
+	private String _alarmOptions = "";
+	public String createAlarmOptionsMessage(CountersModel cm, String firedAlarmName)
+	{
+		if (StringUtil.isNullOrBlank(firedAlarmName))
+			return "";
+
+		if (cm == null)
+			return "";
+
+		// Place all alarms that starts with the name in this list: so "SomeName", "SomeName Option1", "SomeName Option2" will be in this list.
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		if ("ALL".equals(firedAlarmName))
+		{
+			list.addAll(cm.getLocalAlarmSettings());
+		}
+		else
+		{
+			List<CmSettingsHelper> allAlarms = cm.getLocalAlarmSettings();
+			for (CmSettingsHelper sh : allAlarms)
+			{
+				String name = sh.getName();
+				
+				if (name.equals(firedAlarmName) || name.startsWith(firedAlarmName + " "))
+					list.add(sh);
+			}
+		}
+
+		if (list.isEmpty())
+			return "";
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+//		String propKeyCmEnabled       = cm.replaceCmName      (CountersModel.PROPKEY_ALARM_isSystemAlarmsEnabled                             );
+		String propKeyAlarmEnabled    = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled    , firedAlarmName);
+		String propKeyAlarmTimeRange  = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, firedAlarmName);
+		String propKeySeverity        = this.getClass().getSimpleName() + ".severity";
+		String propKeyRaiseDelayInSec = this.getClass().getSimpleName() + ".raise.delay";
+
+//		String propDefCmEnabled       = "" + CountersModel.DEFAULT_ALARM_isAlarmsEnabled;
+		String propDefAlarmEnabled    = "" + CountersModel.DEFAULT_ALARM_isSystemAlarmsEnabled;
+		String propDefAlarmTimeRange  = "" + CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange;
+		
+//		String propValCmEnabled       = conf.getProperty(propKeyCmEnabled);
+		String propValAlarmEnabled    = conf.getProperty(propKeyAlarmEnabled);
+		String propValAlarmTimeRange  = conf.getProperty(propKeyAlarmTimeRange);
+
+		StringBuilder sb = new StringBuilder();
+
+		// Table with extra styling to be used by both Mail Clients (Outlook and ios Mail) and Bootstrap for the Web Browser
+		sb.append("<table border='1' cellpadding='3' class='table table-sm table-bordered table-hover alarm-disable-message'> \n");
+		sb.append("<thead class='thead-light'> \n");
+		sb.append("  <tr bgcolor='#e9ecef' style='background-color:#e9ecef;'> \n");
+		sb.append("    <th style='background-color:#e9ecef;'>Name</th> \n");
+		sb.append("    <th style='background-color:#e9ecef;'>Value</th> \n");
+		sb.append("    <th style='background-color:#e9ecef;'>Default</th> \n");
+		sb.append("    <th style='background-color:#e9ecef;'>Property</th> \n");
+		sb.append("    <th style='background-color:#e9ecef;'>Description</th> \n");
+		sb.append("  </tr> \n");
+		sb.append("</thead> \n");
+
+		sb.append("<tbody> \n");
+		// Add Static members
+		//                         Name                  Value                  Default Value                Property                Description
+		//                         -------------------   ---------------------  ---------------------        ---------------------   ---------------------------------------------------------
+//		addAlarmOptionTableRow(sb, "isAlarmEnabledAtCm", propValCmEnabled     , propDefCmEnabled           , propKeyCmEnabled      , "Enable/Disable ALL alarm(s) for this CM");
+		addAlarmOptionTableRow(sb, "isAlarmEnabled"    , propValAlarmEnabled  , propDefAlarmEnabled        , propKeyAlarmEnabled   , "Enable/Disable This Alarm.");
+		addAlarmOptionTableRow(sb, "timeRangeCron"     , propValAlarmTimeRange, propDefAlarmTimeRange      , propKeyAlarmTimeRange , "At what time the alarm can fire.");
+		addAlarmOptionTableRow(sb, "Severity"          , _severity        + "", _originSeverity        + "", propKeySeverity       , "Change the Severity {INFO|WARNING|ERROR} of this alarm.  INFO msg can be filtetered out by the writer");
+		addAlarmOptionTableRow(sb, "RaiseDelay"        , _raiseDelayInSec + "", _originRaiseDelayInSec + "", propKeyRaiseDelayInSec, "Change the Raise Delay of this alarm. Can be used to delay the Raise for a while");
+
+		// Add a "separator"
+		sb.append("<tr> <td nowrap colspan='5'>").append("<b>&emsp;&emsp;&emsp;&lt;&lt;&lt; Below: Alarm Specific Settings &gt;&gt;&gt;</b>").append("</td> </tr> \n");
+
+		// Add Alarm specifics
+		for (CmSettingsHelper entry : list)
+		{
+			addAlarmOptionTableRow(sb, entry.getName(), entry.getStringValue(), entry.getDefaultValue(), entry.getPropName(), entry.getDescription());
+		}
+		
+		// What Configuration file are we using (ReadOnly/Shared and SAVE)
+		if (Configuration.hasInstance(Configuration.PCS) || Configuration.hasInstance(Configuration.NOGUI_SAVE))
+		{
+			sb.append("<tr> <td nowrap colspan='5'>").append("<b>&emsp;&emsp;&emsp;&lt;&lt;&lt; Below: Known Configuration Files &gt;&gt;&gt;</b>").append("</td> </tr> \n");
+			
+			if (Configuration.hasInstance(Configuration.PCS))
+			{
+				String filename = Configuration.getInstance(Configuration.PCS).getFilename();
+				if (StringUtil.hasValue(filename))
+					sb.append("<tr> <td>NO-GUI <b>Read</b> Config</td> <td nowrap colspan='4'>").append("<code>").append(filename).append("</code>").append("</td> </tr> \n");
+			}
+
+			if (Configuration.hasInstance(Configuration.NOGUI_SAVE))
+			{
+				String filename = Configuration.getInstance(Configuration.NOGUI_SAVE).getFilename();
+				if (StringUtil.hasValue(filename))
+					sb.append("<tr> <td>NO-GUI <b>Save</b> Config</td> <td nowrap colspan='4'>").append("<code>").append(filename).append("</code>").append("</td> </tr> \n");
+			}
+		}
+
+		sb.append("</tbody> \n");
+		sb.append("</table> \n");
+
+//		// What Configuration file are we using (ReadOnly/Shared and SAVE)
+//		if (Configuration.hasInstance(Configuration.PCS) || Configuration.hasInstance(Configuration.NOGUI_SAVE))
+//		{
+//			sb.append("<br> \n");
+//			sb.append("<b>Known Configuration Files:</b><br> \n");
+//			
+//			if (Configuration.hasInstance(Configuration.PCS))
+//			{
+//				String filename = Configuration.getInstance(Configuration.PCS).getFilename();
+//				sb.append("&emsp;&bull; Using NO-GUI <b>Read</b> Config file: <code>").append(filename).append("</code> <br> \n");
+//			}
+//			if (Configuration.hasInstance(Configuration.NOGUI_SAVE))
+//			{
+//				String filename = Configuration.getInstance(Configuration.NOGUI_SAVE).getFilename();
+//				sb.append("&emsp;&bull; Using NO-GUI <b>Save</b> Config file: <code>").append(filename).append("</code> <br> \n");
+//			}
+//		}
+
+		// Add a Link to the Web UI
+		String dbxCentralBaseUrl = AlarmWriterAbstract.static_getDbxCentralUrl();
+		sb.append("<br>\n");
+		sb.append("<a href='").append(dbxCentralBaseUrl).append("/config.html")
+			.append("?srvName=").append(_serviceName)
+			.append("&cm=")     .append(cm.getName())
+			.append("&alarm=")  .append(firedAlarmName)
+			.append("&param=")  .append(firedAlarmName)
+			.append("' target='_blank'>Open Web UI to Change Alarms</a>\n");
+		
+		String htmlTable = sb.toString();
+		
+		setAlarmOptions(htmlTable);
+
+		return getAlarmOptions();
+	}
+	private void addAlarmOptionTableRow(StringBuilder sb, String name, String value, String defaultVal, String propName, String desc)
+	{
+		// Escape some chars... Note: Some browsers will still print: |it&apos;s| instead of |it's| 
+		if (desc != null)
+		{
+//			desc = desc.replace("'" , "&#39;");
+			desc = desc.replace("'" , "&apos;");
+			desc = desc.replace("\"", "&quot;");
+			desc = desc.replace("&" , "&amp;");
+			desc = desc.replace("<" , "&lt;");
+			desc = desc.replace(">" , "&gt;");
+		}
+
+		sb.append("<tr>");
+		sb.append("<td nowrap title='" + desc + "'>").append(name      ).append("</td>");
+		sb.append("<td nowrap>")                     .append(value     ).append("</td>");
+		sb.append("<td nowrap>")                     .append(defaultVal).append("</td>");
+		sb.append("<td nowrap><code>")               .append(propName  ).append("</code></td>");
+		sb.append("<td nowrap>")                     .append(desc      ).append("</td>");
+		sb.append("</tr> \n");
+	}
+	
+
+	
 	public void incrementReRaiseCount()
 	{
 		// increment counter

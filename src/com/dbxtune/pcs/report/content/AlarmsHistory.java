@@ -221,7 +221,8 @@ extends ReportEntryAbstract
 		      "     [description],            \n" +
 		      "     [lastDescription],        \n" +
 		      "     [extendedDescription],    \n" +
-		      "     [lastExtendedDescription] \n" +
+		      "     [lastExtendedDescription],\n" +
+		      "     [alarmOptions]            \n" +
 		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
 		      getReportPeriodSqlWhere("eventTime") +

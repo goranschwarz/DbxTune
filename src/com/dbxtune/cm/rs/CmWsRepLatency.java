@@ -437,6 +437,10 @@ if (debugPrint || _logger.isDebugEnabled())
 				if ( ! thisSampleLogicalConnections.contains(mandatoryLogicalName) )
 				{
 					AlarmEvent alarm = new AlarmEventRsMissingLogicalConnection(cm, mandatoryLogicalName, thisSampleLogicalConnections, mandatoryLogicalConnections, configMandatoryLogicalConnections);
+
+					// Information about how to disable this alarm
+					alarm.createAlarmOptionsMessage(this, "MandatoryLogicalConnections");
+
 					AlarmHandler.getInstance().addAlarm(alarm);
 				}
 			}
@@ -465,7 +469,14 @@ if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ActiveState -- regexp='"+regexp+"', state='"+state+"'.");
 
 					if ( ! state.matches(regexp) ) // default is 'Active/'
-						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "ActiveState", state, "", regexp) );
+					{
+						AlarmEvent ae = new AlarmEventRsWsState(cm, lName, "ActiveState", state, "", regexp);
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "ActiveState");
+
+						AlarmHandler.getInstance().addAlarm(ae);
+					}
 				}
 			}
 
@@ -482,7 +493,14 @@ if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): StandbyState -- regexp='"+regexp+"', state='"+state+"'.");
 
 					if ( (! state.matches(regexp)) || StringUtil.hasValue(standbyMsg)) // default is 'Active/'
-						AlarmHandler.getInstance().addAlarm( new AlarmEventRsWsState(cm, lName, "StandbyState", state, standbyMsg, regexp) );
+					{
+						AlarmEvent ae = new AlarmEventRsWsState(cm, lName, "StandbyState", state, standbyMsg, regexp);
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "StandbyState");
+
+						AlarmHandler.getInstance().addAlarm(ae);
+					}
 				}
 			}
 
@@ -524,6 +542,9 @@ if (debugPrint || _logger.isDebugEnabled())
 							AlarmEvent ae = new AlarmEventRsReplicationAge(cm, threshold, lName, "ApplyAgeInMinutes", ApplyAgeInMinutes.intValue());
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "ApplyAgeInMinutes");
+
 							AlarmHandler.getInstance().addAlarm( ae );
 						}
 					}
@@ -567,6 +588,9 @@ if (debugPrint || _logger.isDebugEnabled())
 							AlarmEvent ae = new AlarmEventRsReplicationAge(cm, threshold, lName, "DataAgeInMinutes", DataAgeInMinutes.intValue());
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "DataAgeInMinutes");
+
 							AlarmHandler.getInstance().addAlarm( ae );
 						}
 					}

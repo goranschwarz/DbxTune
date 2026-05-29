@@ -50,7 +50,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 //RS> 20   extendedDescription     java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
 //RS> 21   lastExtendedDescription java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmActive
 
-@JsonPropertyOrder(value = {"srvName", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"}, alphabetic = true)
+@JsonPropertyOrder(value = {"srvName", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription", "alarmOptions"}, alphabetic = true)
 public class DbxAlarmActive
 {
 	private String    _srvName                ;
@@ -78,6 +78,7 @@ public class DbxAlarmActive
 	private String    _lastDescription        ;
 	private String    _extendedDescription    ;
 	private String    _lastExtendedDescription;
+	private String    _alarmOptions           ;
 
 	// Mute state — populated by AlarmActiveController from AlarmMuteManager, not stored in DB
 	private boolean _isMuted       = false;
@@ -111,6 +112,7 @@ public class DbxAlarmActive
 	public String    getLastDescription            () { return StringUtil.hasValue(_lastDescription) ? _lastDescription : getDescription(); }
 	public String    getExtendedDescription        () { return _extendedDescription        ; }
 	public String    getLastExtendedDescription    () { return StringUtil.hasValue(_lastExtendedDescription) ? _lastExtendedDescription : getExtendedDescription(); }
+	public String    getAlarmOptions               () { return _alarmOptions; }
 	
 	public void setSrvName                    (String    srvName                    ) { _srvName                     = srvName                    ; }
 	public void setAlarmClass                 (String    alarmClass                 ) { _alarmClass                  = alarmClass                 ; }
@@ -137,6 +139,7 @@ public class DbxAlarmActive
 	public void setLastDescription            (String    lastDescription            ) { _lastDescription             = lastDescription            ; }
 	public void setExtendedDescription        (String    extendedDescription        ) { _extendedDescription         = extendedDescription        ; }
 	public void setLastExtendedDescription    (String    lastExtendedDescription    ) { _lastExtendedDescription     = lastExtendedDescription    ; }
+	public void setAlarmOptions               (String    alarmOptions               ) { _alarmOptions                = alarmOptions               ; }
 
 	public boolean getIsMuted      () { return _isMuted;       }
 	public String  getMuteReason   () { return _muteReason;    }
@@ -150,7 +153,7 @@ public class DbxAlarmActive
 	public void setMutedTime    (String  mutedTime)     { _mutedTime     = mutedTime;     }
 	public void setMuteExpiresAt(String  muteExpiresAt) { _muteExpiresAt = muteExpiresAt; }
 
-	public DbxAlarmActive(String srvName, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, String alarmId, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription)
+	public DbxAlarmActive(String srvName, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, String alarmId, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription, String alarmOptions)
 	{
 		_srvName                     = srvName;
 		_alarmClass                  = alarmClass;
@@ -177,5 +180,6 @@ public class DbxAlarmActive
 		_lastDescription             = lastDescription;
 		_extendedDescription         = extendedDescription;
 		_lastExtendedDescription     = lastExtendedDescription;
+		_alarmOptions                = alarmOptions;
 	}
 }

@@ -98,12 +98,7 @@ implements IAlarmWriter
 	public static final String  PROPKEY_dbxCentralUrl = DailySummaryReportAbstract.PROPKEY_DbxCentralPublicBaseUrl;
 	public static final String  DEFAULT_dbxCentralUrl = DailySummaryReportAbstract.DEFAULT_DbxCentralPublicBaseUrl;
 
-	@Override
-	/**
-	 * Get the configuration for 'AlarmWriter.dbxCentralUrl'<br>
-	 * If it's not configured, we try to do <i>best effort</i> to find the name in <i>other</i> configurations
-	 */
-	public String getDbxCentralUrl()
+	public static String static_getDbxCentralUrl()
 	{
 		// Properties OVERRIDES any of the below logics
 		String baseUrl = Configuration.getCombinedConfiguration().getProperty(DailySummaryReportAbstract.PROPKEY_DbxCentralPublicBaseUrl, DailySummaryReportAbstract.DEFAULT_DbxCentralPublicBaseUrl);
@@ -113,6 +108,16 @@ implements IAlarmWriter
 		}
 
 		return DailySummaryReportAbstract.getDbxCentralPublicBaseUrl();
+	}
+
+	@Override
+	/**
+	 * Get the configuration for 'AlarmWriter.dbxCentralUrl'<br>
+	 * If it's not configured, we try to do <i>best effort</i> to find the name in <i>other</i> configurations
+	 */
+	public String getDbxCentralUrl()
+	{
+		return static_getDbxCentralUrl();
 		
 //		String dbxCentralUrl = getConfiguration().getProperty(PROPKEY_dbxCentralUrl, DEFAULT_dbxCentralUrl);
 //		

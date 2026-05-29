@@ -235,6 +235,10 @@ implements Runnable
 					if (alarmHandler != null)
 					{
 						AlarmEvent ae = new AlarmEventDbxCollectorNoData(srvName, secSinceLastRecv, threshold);
+
+						// Information about how to disable this alarm
+						//ae.createAlarmOptionsMessage(???, ???);
+
 						alarmHandler.addAlarm(ae);
 					}
 					else
@@ -274,6 +278,9 @@ implements Runnable
 			AlarmEventDummy ae = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc, thresholdInSec);
 		//	AlarmEvent ae = new AlarmEventDbxCollectorNoData(testFile.getName(), 99_999, 999);
 			
+			// Information about how to disable this alarm
+			//ae.createAlarmOptionsMessage(???, ???);
+
 			alarmHandler.addAlarm(ae);
 
 			_logger.info("SENDING DUMMY ALARM. File='" + testFile + "' existed, which now will be deleted.");

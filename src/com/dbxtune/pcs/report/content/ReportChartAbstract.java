@@ -424,6 +424,13 @@ public abstract class ReportChartAbstract implements IReportChart
 	public void writeHtmlContent(Writer sb, String preText, String postText)
 	throws IOException
 	{
+		writeHtmlContent(sb, preText, postText, null);
+	}
+
+	@Override
+	public void writeHtmlContent(Writer sb, String preText, String postText, String allDataValuesNearZeroTest)
+	throws IOException
+	{
 //		StringBuilder sb = new StringBuilder();
 
 		// Any PROBLEMS... return at the end of this block
@@ -443,6 +450,13 @@ public abstract class ReportChartAbstract implements IReportChart
 			return;
 		}
 
+		// If everything in the graph is NEAR ZERO... Print this instead
+		if (isAllDataValuesNearZero() && StringUtil.hasValue(allDataValuesNearZeroTest))
+		{
+			sb.append("<p style='color:green;'>").append(allDataValuesNearZeroTest).append("</p>\n");
+			sb.append("<br>\n");
+			return;
+		}
 
 		// Pre Text
 		if (StringUtil.hasValue(preText))

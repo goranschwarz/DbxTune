@@ -9,6 +9,7 @@
  */
 
 // ── State ─────────────────────────────────────────────────────────────────────
+var _scrPfx = screen.width + 'x' + screen.height + '_'; // screen-size prefix for size/position localStorage keys
 var _qsSrvName        = null;   // server currently displayed
 var _qsTimestamp      = null;   // timestamp (history mode); null = live/latest
 var _qsMainTab        = 'databases'; // 'databases' | 'topqueries' | 'detail'
@@ -18,12 +19,23 @@ var _qsAutoOpenChecked = false;
 var _qsTqFilter       = '';     // current top-queries filter string
 var _qsTqLastResult   = null;   // last fetched top-queries result (re-filter without re-fetch)
 var _qsTqChart        = null;   // active Chart.js instance for Top Queries bar chart
+var _qsTqBrushChart   = null;   // active Chart.js instance for Top Queries time-range brush
+var _qsTimeRange      = { startTime: null, endTime: null }; // active brush selection (null = full range)
+var _qsTqVSplit        = null;   // Split.js vertical instance (brush + chart + table)
+var _qsBrushHSplit     = null;   // Split.js horizontal instance (brush line vs wait bar)
 var _qsXmlPlans         = [];     // XML plan strings indexed by slot; avoids inline onclick quoting
 var _qsAvailDates       = [];     // date keys from recording-databases API (newest first, 'YYYY-MM-DD')
 var _qsMultiDbMode      = false;  // true when cross-db result is currently displayed
-var _qsMultiDbAllRows   = null;   // raw un-sliced merged rows; kept for re-ranking without re-fetch
+var _qsMultiDbAllRows   = null;   // raw un-sliced merged rows for CURRENT view (may be time-filtered)
+var _qsMultiDbOrigRows  = null;   // original UNFILTERED rows — restored when brush filter is cleared
+var _qsMultiDbOrigTimelines = null; // original UNFILTERED timelines — restored when brush filter is cleared
 var _qsMultiDbSchemaFlags = null; // schema flags (hasMemoryCols etc.) from first DB response
+var _qsMultiDbTimelines   = null; // merged timelines for brush/wait charts in multi-db mode
+var _qsMultiDbCtx         = null; // original fetch context; kept so a time-filter re-fetch can reuse it
 var _qsMultiDbCancel    = false;  // set to true by Cancel button during serial fetch
+var _qsBrushRefreshUi   = null;   // ref to refreshUi() closure so Split pane drag can re-position handles
+var _qsBrushResizeObs   = null;   // ResizeObserver watching the brush canvas box (for smooth resize)
+var _qsDetailDay        = null;   // _day value from the last multi-db row click ('N days' or specific date)
 
 // ── SQL Server detection ──────────────────────────────────────────────────────
 
@@ -73,6 +85,21 @@ GraphBus.on('server-list-ready', function (d) {
 // ── Time formatting ───────────────────────────────────────────────────────────
 
 /**
+ * Format milliseconds as "Xh Ym Zs Wms" — same style as _qsUsToHms but takes ms.
+ * Leading components are omitted when zero; seconds and ms are always shown.
+ */
+function _qsMsToHms(msVal)
+{
+	if (!msVal) return '0s 0ms';
+	var total = Math.round(Number(msVal));
+	var h  = Math.floor(total / 3600000);
+	var m  = Math.floor((total % 3600000) / 60000);
+	var s  = Math.floor((total % 60000) / 1000);
+	var ms = total % 1000;
+	return (h ? h + 'h ' : '') + (m ? m + 'm ' : '') + s + 's ' + ms + 'ms';
+}
+
+/**
  * Format microseconds as "Xh Ym Zs Wms" — used as tooltip on timing cells.
  * Returns empty string for null/0.
  */
@@ -107,25 +134,27 @@ function _qsFmtUsAsMs(us)
 }
 
 /**
- * Format a number with 1 decimal place + thousands separator.
- * Used for row-count and MB values that can be fractional.
+ * Format a number with `dec` decimal places + thousands separator.
  * Returns null when val is null/NaN.
+ * _qsFmt1Dec(v) is a convenience wrapper for dec=1 (row-counts, MB values).
  */
-function _qsFmt1Dec(v)
+function _qsFmtDec(v, dec)
 {
 	if (v == null || v === undefined) return null;
 	var n = (typeof v === 'number') ? v : parseFloat(v);
 	if (isNaN(n)) return null;
-	var parts = n.toFixed(1).split('.');
+	var parts = n.toFixed(dec).split('.');
 	parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,
 		typeof _qsNumFmtMode !== 'undefined' && _qsNumFmtMode === 'locale' ? ',' : '\u00a0');
 	return parts.join('.');
 }
 
+function _qsFmt1Dec(v) { return _qsFmtDec(v, 1); }
+
 /**
  * Format a millisecond duration as a human-readable string.
  *   < 1 000 ms  →  "800 ms"
- *   < 60 000 ms →  "12.3 s"
+ *   < 60 000 ms →  "12.35 s"  (2 decimal places)
  *   < 3 600 000 →  "4m 32s"
  *   ≥ 3 600 000 →  "2h 15m"
  */
@@ -134,7 +163,7 @@ function _qsFmtMsDur(ms)
 	if (ms == null || isNaN(ms)) return String(ms);
 	var v = Number(ms);
 	if (v < 1000)       return (_qsFmtNum(Math.round(v)) || String(Math.round(v))) + '\u00a0ms';
-	if (v < 60000)      return _qsFmt1Dec(v / 1000) + '\u00a0s';
+	if (v < 60000)      return _qsFmtDec(v / 1000, 2) + '\u00a0s';
 	if (v < 3600000) {
 		var m = Math.floor(v / 60000);
 		var s = Math.round((v % 60000) / 1000);
@@ -270,8 +299,15 @@ function queryStoreClose()
 	_qsMultiDbCancel  = true;   // abort any in-flight serial fetch
 	_qsMultiDbMode    = false;
 	_qsMultiDbAllRows = null;
+	_qsMultiDbOrigRows  = null;
+	_qsMultiDbOrigTimelines = null;
+	_qsMultiDbTimelines = null;
+	_qsMultiDbCtx     = null;
+	_qsBrushRefreshUi = null;
+	if (_qsBrushResizeObs) { try { _qsBrushResizeObs.disconnect(); } catch(e) {} _qsBrushResizeObs = null; }
 	_qsMainTab = 'databases';
 	_qsResetTabs();
+	_qsDestroyTqSplits();
 	$('#query-store-content').html('');
 	$('#qs-date-select').hide().empty();
 	$('#query-store-ts').hide();
@@ -285,6 +321,19 @@ function queryStoreDarkToggle(on)
 		if (typeof getStorage === 'function')
 			getStorage('dbxtune_checkboxes_').set('query-store-dark-chk', on ? 'checked' : 'not');
 	} catch(e) {}
+	// Re-render the brush + wait charts so Chart.js canvas colors update immediately
+	if (_qsMultiDbTimelines || _qsTqLastResult) {
+		var tl = _qsMultiDbTimelines || (_qsTqLastResult && _qsTqLastResult.timeline) || [];
+		if (tl.length >= 2) {
+			var rankBy = $('#qs-rank-by').val() || 'duration';
+			_qsRenderTimeBrush(tl, rankBy);
+		}
+	}
+}
+
+/** Returns true when the Query Store panel is currently in dark mode. */
+function _qsIsDark() {
+	return $('#query-store-panel').hasClass('qs-dark');
 }
 
 /** Called when "Include XML plan" checkbox changes — persists the state then reloads detail. */
@@ -360,6 +409,12 @@ function queryStoreDateChanged()
 	_qsMultiDbCancel  = true;   // abort any in-flight serial fetch
 	_qsMultiDbMode    = false;
 	_qsMultiDbAllRows = null;
+	_qsMultiDbOrigRows  = null;
+	_qsMultiDbOrigTimelines = null;
+	_qsMultiDbTimelines = null;
+	_qsMultiDbCtx     = null;
+	_qsBrushRefreshUi = null;
+	if (_qsBrushResizeObs) { try { _qsBrushResizeObs.disconnect(); } catch(e) {} _qsBrushResizeObs = null; }
 	_qsUpdateHistoricalBanner();
 	// Reset to databases tab so the user sees what's in the selected day's data
 	_qsDbname  = null;
@@ -487,11 +542,190 @@ function queryStoreDatabasesLoad(srv, ts)
 
 function queryStoreRenderDatabases(r)
 {
-	var dbs = (r && r.databases) ? r.databases : [];
+	var dbs            = (r && r.databases)      ? r.databases      : [];
+	var totalUserDbs   = (r && r.totalUserDbs   != null && r.totalUserDbs   >= 0) ? r.totalUserDbs   : -1;
+	var qsEnabledCount = (r && r.qsEnabledCount != null && r.qsEnabledCount >= 0) ? r.qsEnabledCount : -1;
 	if (dbs.length === 0) {
+		var enableSql =
+			  '-- ============================================================\n'
+			+ '-- Enable Query Store for ONE database\n'
+			+ '-- ============================================================\n'
+			+ 'USE master\n'
+			+ 'GO\n'
+			+ 'ALTER DATABASE [dbname] SET QUERY_STORE = ON\n'
+			+ 'GO\n'
+			+ 'ALTER DATABASE [dbname] SET QUERY_STORE\n'
+			+ '(\n'
+			+ '    OPERATION_MODE          = READ_WRITE,\n'
+			+ '    MAX_STORAGE_SIZE_MB     = 2048,\n'
+			+ '    INTERVAL_LENGTH_MINUTES = 60\n'
+			+ ')\n'
+			+ 'GO\n'
+			+ '--\n'
+			+ '-- ============================================================\n'
+			+ '-- Full option reference (all settings shown with descriptions)\n'
+			+ '-- ============================================================\n'
+			+ '--ALTER DATABASE [dbname]\n'
+			+ '--SET QUERY_STORE\n'
+			+ '--(\n'
+			+ '--\n'
+			+ '--    -- OPERATION_MODE: READ_WRITE (default) | READ_ONLY\n'
+			+ '--    --   READ_WRITE  - Query Store actively collects runtime stats and plan data.\n'
+			+ '--    --   READ_ONLY   - Existing data is queryable but no new data is captured.\n'
+			+ '--    --   Note: switches to READ_ONLY automatically when MAX_STORAGE_SIZE_MB is reached.\n'
+			+ '--    OPERATION_MODE              = READ_WRITE,\n'
+			+ '--\n'
+			+ '--    -- MAX_STORAGE_SIZE_MB: integer (default: 100 MB on SQL 2016/2017; 1000 MB on SQL 2019+)\n'
+			+ '--    --   Maximum disk space allocated to Query Store per database.\n'
+			+ '--    --   When this limit is hit the store flips to READ_ONLY until cleaned up.\n'
+			+ '--    MAX_STORAGE_SIZE_MB         = 2048,\n'
+			+ '--\n'
+			+ '--    -- CLEANUP_POLICY / STALE_QUERY_THRESHOLD_DAYS: integer in days (default: 30)\n'
+			+ '--    --   Queries that have not been executed for this many days are eligible for\n'
+			+ '--    --   automatic removal when SIZE_BASED_CLEANUP_MODE = AUTO triggers a cleanup.\n'
+			+ '--    CLEANUP_POLICY              = (STALE_QUERY_THRESHOLD_DAYS = 30),\n'
+			+ '--\n'
+			+ '--    -- DATA_FLUSH_INTERVAL_SECONDS: integer in seconds (default: 900 = 15 min)\n'
+			+ '--    --   How often in-memory runtime stats are written asynchronously to disk.\n'
+			+ '--    --   Lower values reduce data loss on crash but increase I/O; range: 60-900.\n'
+			+ '--    DATA_FLUSH_INTERVAL_SECONDS = 900,\n'
+			+ '--\n'
+			+ '--    -- INTERVAL_LENGTH_MINUTES: integer in minutes (default: 60)\n'
+			+ '--    --   Aggregation window for runtime execution statistics.\n'
+			+ '--    --   Smaller = finer time granularity, more rows; larger = coarser, fewer rows.\n'
+			+ '--    --   Typical values: 15, 30, 60 (recommended), 1440 (daily aggregates).\n'
+			+ '--    INTERVAL_LENGTH_MINUTES     = 60,\n'
+			+ '--\n'
+			+ '--    -- SIZE_BASED_CLEANUP_MODE: AUTO (default) | OFF\n'
+			+ '--    --   AUTO - automatically purges oldest/cheapest queries when storage reaches ~90%.\n'
+			+ '--    --   OFF  - no automatic cleanup; store goes READ_ONLY at MAX_STORAGE_SIZE_MB.\n'
+			+ '--    SIZE_BASED_CLEANUP_MODE     = AUTO,\n'
+			+ '--\n'
+			+ '--    -- MAX_PLANS_PER_QUERY: integer (default: 200)\n'
+			+ '--    --   Maximum number of execution plans retained per query_id.\n'
+			+ '--    --   Prevents runaway plan bloat for queries with highly variable plans.\n'
+			+ '--    MAX_PLANS_PER_QUERY         = 200,\n'
+			+ '--\n'
+			+ '--    -- WAIT_STATS_CAPTURE_MODE: ON (default) | OFF   [SQL Server 2017+]\n'
+			+ '--    --   ON  - capture per-query wait statistics (locks, I/O, memory, etc.) per interval.\n'
+			+ '--    --   OFF - skip wait capture; reduces overhead on high-throughput OLTP workloads.\n'
+			+ '--    WAIT_STATS_CAPTURE_MODE     = ON,\n'
+			+ '--\n'
+			+ '--    -- QUERY_CAPTURE_MODE: ALL | AUTO (default on 2019+) | CUSTOM (2019+ only) | NONE\n'
+			+ '--    --   ALL    - capture every distinct query (default on SQL 2016/2017).\n'
+			+ '--    --   AUTO   - capture only queries deemed significant by cost/frequency heuristics.\n'
+			+ '--    --   CUSTOM - apply fine-grained thresholds defined in QUERY_CAPTURE_POLICY below.\n'
+			+ '--    --   NONE   - stop capturing new queries; existing data is still readable.\n'
+			+ '--    QUERY_CAPTURE_MODE          = AUTO,\n'
+			+ '--\n'
+			+ '--    -- QUERY_CAPTURE_POLICY: only effective when QUERY_CAPTURE_MODE = CUSTOM  [SQL 2019+]\n'
+			+ '--    --   A query is captured only when ALL numeric thresholds below are exceeded\n'
+			+ '--    --   within the STALE_CAPTURE_POLICY_THRESHOLD evaluation window.\n'
+			+ '--    QUERY_CAPTURE_POLICY        =\n'
+			+ '--    (\n'
+			+ '--        -- STALE_CAPTURE_POLICY_THRESHOLD: evaluation window; range: 1 HOURS - 7 DAYS (default: 1 DAYS)\n'
+			+ '--        --   The time period over which EXECUTION_COUNT and CPU thresholds are measured.\n'
+			+ '--        STALE_CAPTURE_POLICY_THRESHOLD = 1 HOURS,\n'
+			+ '--\n'
+			+ '--        -- EXECUTION_COUNT: integer (default: 30)\n'
+			+ '--        --   Query must execute at least this many times within the evaluation window\n'
+			+ '--        --   to be considered for capture.\n'
+			+ '--        EXECUTION_COUNT                = 30,\n'
+			+ '--\n'
+			+ '--        -- TOTAL_COMPILE_CPU_TIME_MS: integer in ms (default: 1000)\n'
+			+ '--        --   Total compilation CPU time the query must consume within the window.\n'
+			+ '--        --   High compile cost indicates a query worth tracking.\n'
+			+ '--        TOTAL_COMPILE_CPU_TIME_MS      = 1000,\n'
+			+ '--\n'
+			+ '--        -- TOTAL_EXECUTION_CPU_TIME_MS: integer in ms (default: 100)\n'
+			+ '--        --   Total execution CPU time (sum across all executions) within the window.\n'
+			+ '--        --   Filters out trivial queries that run often but cost almost nothing.\n'
+			+ '--        TOTAL_EXECUTION_CPU_TIME_MS    = 100\n'
+			+ '--    )\n'
+			+ '--)\n'
+			+ '--GO\n'
+			+ '--\n'
+			+ '-- Reference:\n'
+			+ '-- https://learn.microsoft.com/en-us/sql/relational-databases/performance/monitoring-performance-by-using-the-query-store\n'
+			+ '-- https://learn.microsoft.com/en-us/sql/t-sql/statements/alter-database-transact-sql-set-options\n'
+			+ '\n'
+			+ '-- Enable Query Store for ALL user databases on the instance\n'
+			+ 'DECLARE @sql NVARCHAR(MAX) = N\'\';\n'
+			+ 'SELECT @sql += N\'ALTER DATABASE \' + QUOTENAME(name)\n'
+			+ '            +  N\' SET QUERY_STORE = ON (OPERATION_MODE = READ_WRITE, MAX_STORAGE_SIZE_MB = 2048);\' + CHAR(13)\n'
+			+ 'FROM sys.databases\n'
+			+ 'WHERE database_id > 4                       -- skip system DBs\n'
+			+ '  AND state_desc = \'ONLINE\'\n'
+			+ '  AND is_query_store_on = 0;\n'
+			+ 'EXEC sp_executesql @sql;\n'
+			+ '\n'
+			+ '-- Verify which databases currently have Query Store enabled\n'
+			+ 'SELECT d.name,\n'
+			+ '       d.is_query_store_on,\n'
+			+ '       o.desired_state_desc,\n'
+			+ '       o.actual_state_desc,\n'
+			+ '       o.max_storage_size_mb,\n'
+			+ '       o.current_storage_size_mb,\n'
+			+ '       o.query_capture_mode_desc\n'
+			+ 'FROM sys.databases d\n'
+			+ 'LEFT JOIN sys.database_query_store_options o ON o.database_id = d.database_id\n'
+			+ 'ORDER BY d.is_query_store_on DESC, d.name;\n';
+
+		// ── Determine state from CmDatabases counts ──────────────────────────
+		console.log('QueryStore empty-state: totalUserDbs=' + totalUserDbs + ', qsEnabledCount=' + qsEnabledCount + ', raw r.totalUserDbs=' + (r && r.totalUserDbs) + ', r.qsEnabledCount=' + (r && r.qsEnabledCount));
+		var qsDisabledCount = (totalUserDbs >= 0 && qsEnabledCount >= 0) ? (totalUserDbs - qsEnabledCount) : -1;
+		var mainMsg, detailsSummary, showDetails;
+		if (qsEnabledCount === 0 && totalUserDbs > 0) {
+			// QS disabled on every user database
+			mainMsg       = 'Query Store is <b>not enabled</b> on any of the ' + totalUserDbs + ' user database' + (totalUserDbs > 1 ? 's' : '') + ' on this server.';
+			detailsSummary = '&#9881;&nbsp; Not enabled for any database &mdash; click for SQL to enable it';
+			showDetails   = true;
+		} else if (qsEnabledCount > 0 && qsDisabledCount > 0) {
+			// QS enabled on some, missing on others
+			mainMsg       = 'Query Store is enabled on <b>' + qsEnabledCount + '</b> of ' + totalUserDbs + ' user databases, but no data has been extracted yet.';
+			detailsSummary = '&#9881;&nbsp; Missing on ' + qsDisabledCount + ' database' + (qsDisabledCount > 1 ? 's' : '') + ' &mdash; click for SQL to enable it';
+			showDetails   = true;
+		} else if (qsEnabledCount > 0 && qsDisabledCount === 0) {
+			// QS enabled everywhere — just needs extraction
+			mainMsg       = 'Query Store is enabled on all <b>' + qsEnabledCount + '</b> user database' + (qsEnabledCount > 1 ? 's' : '') + ', but no data has been extracted yet.';
+			detailsSummary = '';
+			showDetails   = false;
+		} else {
+			// Unknown (CmDatabases not yet available or server not yet monitored)
+			mainMsg       = 'No databases with Query Store data found on this server.';
+			detailsSummary = '&#9881;&nbsp; Query Store not enabled on the SQL Server? &mdash; click for SQL to enable it';
+			showDetails   = true;
+		}
+
+		var detailsHtml = '';
+		if (showDetails) {
+			detailsHtml =
+				  '<details style="margin-top:18px;border:1px solid #d0d0d0;border-radius:4px;background:#fafafa;">'
+				+ '<summary style="padding:6px 10px;cursor:pointer;font-weight:600;color:#333;">'
+				+ detailsSummary
+				+ '</summary>'
+				+ '<div style="padding:8px 12px;">'
+				+ '<p style="font-size:0.85em;color:#555;margin-bottom:6px;">'
+				+ 'Run the snippet below in SSMS or <code>sqlcmd</code> against the target instance to enable Query Store:'
+				+ '</p>'
+				+ '<div style="position:relative;">'
+				+ '<button class="btn btn-sm btn-outline-secondary" style="position:absolute;top:6px;right:6px;font-size:0.75em;padding:2px 8px;" '
+				+ 'onclick="(function(b){var t=b.parentNode.querySelector(\'pre\').innerText;'
+				+ 'navigator.clipboard.writeText(t).then(function(){b.innerText=\'Copied!\';setTimeout(function(){b.innerText=\'Copy\';},1500);});})(this)">Copy</button>'
+				+ '<pre style="margin:0;background:#1e1e1e;color:#dcdcdc;padding:10px 12px;border-radius:4px;font-size:0.78em;line-height:1.35;overflow:auto;max-height:420px;">'
+				+ escHtml(enableSql)
+				+ '</pre>'
+				+ '</div>'
+				+ '<p style="font-size:0.78em;color:#777;margin-top:8px;margin-bottom:0;">'
+				+ 'After enabling, wait at least one <code>INTERVAL_LENGTH_MINUTES</code> for runtime stats to accumulate, then click <b>Extract now</b> above.'
+				+ '</p>'
+				+ '</div>'
+				+ '</details>';
+		}
+
 		$('#query-store-content').html(
 			'<div style="padding:18px 12px;">'
-			+ '<p style="margin-bottom:10px;">No databases with Query Store data found on this server.</p>'
+			+ '<p style="margin-bottom:10px;">' + mainMsg + '</p>'
 			+ '<p style="color:#6c757d;font-size:0.88em;margin-bottom:14px;">'
 			+ 'Data is collected during the nightly database rollover. '
 			+ 'Click <b>Extract now</b> to pull Query Store data from the live SQL Server immediately.<br>'
@@ -503,6 +737,7 @@ function queryStoreRenderDatabases(r)
 			+ '&#128197;&nbsp; Look at Yesterday\'s data</button>'
 			+ '</div>'
 			+ '<span id="qs-inline-extract-status" style="display:block;font-size:0.85em;margin-top:8px;"></span>'
+			+ detailsHtml
 			+ '</div>');
 		return;
 	}
@@ -527,7 +762,7 @@ function queryStoreRenderDatabases(r)
 	};
 
 	// ── Multi-DB toolbar ──────────────────────────────────────────────────────────
-	var periodOptions = [1,3,7,14,30].map(function(n) {
+	var periodOptions = [1,2,3,4,5,6,7,10,14,21,31].map(function(n) {
 		return '<option value="' + n + '"' + (n === 7 ? ' selected' : '') + '>'
 		     + n + (n === 1 ? ' day' : ' days') + '</option>';
 	}).join('');
@@ -646,23 +881,28 @@ function qsQuerySelectedDbs()
 	var dates    = allDates.slice(0, Math.min(period, allDates.length));
 
 	var ctx = {
-		dbs:       dbs,
-		dates:     dates,
-		dbIdx:     0,
-		dateIdx:   0,
-		allRows:   [],
+		dbs:         dbs,
+		dates:       dates,
+		dbIdx:       0,
+		dateIdx:     0,
+		allRows:     [],
+		allTimelines: [],   // collect timeline arrays from each DB/day response
 		schemaFlags: null,
-		topN:      topN,
-		rankBy:    rankBy,
-		aggregate: aggregate,
-		minExec:   minExec,
-		total:     dbs.length * dates.length,
-		done:      0
+		topN:        topN,
+		rankBy:      rankBy,
+		aggregate:   aggregate,
+		minExec:     minExec,
+		total:       dbs.length * dates.length,
+		done:        0
 	};
 
 	_qsMultiDbCancel  = false;
 	_qsMultiDbMode    = false;
 	_qsMultiDbAllRows = null;
+	_qsMultiDbOrigRows  = null;
+	_qsMultiDbOrigTimelines = null;
+	_qsMultiDbTimelines = null;
+	_qsMultiDbCtx     = ctx;   // store for time-filter re-fetch
 
 	// Switch to Top Queries tab and show progress indicator
 	_qsMainTab = 'topqueries';
@@ -687,7 +927,7 @@ function _qsAdvanceFetch(ctx)
 
 	if (ctx.dbIdx >= ctx.dbs.length) {
 		// All cells fetched
-		_qsMergeAndRender(ctx.allRows, ctx.schemaFlags || {}, ctx.rankBy, ctx.topN, ctx.aggregate);
+		_qsMergeAndRender(ctx.allRows, ctx.allTimelines, ctx.schemaFlags || {}, ctx.rankBy, ctx.topN, ctx.aggregate);
 		return;
 	}
 
@@ -703,7 +943,12 @@ function _qsAdvanceFetch(ctx)
 
 	var params = { srv: _qsSrvName, action: 'topQueries', dbname: dbname,
 	               rankBy: ctx.rankBy, topN: overFetch, minExecutions: ctx.minExec };
-	if (ts) params.ts = ts;
+	if (ts)              params.ts        = ts;
+	if (ctx.startTime)   params.startTime = ctx.startTime;
+	if (ctx.endTime)     params.endTime   = ctx.endTime;
+
+	console.log('[QS] _qsAdvanceFetch —', dbname, '@', dayLabel,
+	    'filter:', ctx.startTime ? (ctx.startTime + ' → ' + ctx.endTime) : '(none)');
 
 	$.ajax({
 		url:      '/api/cc/mgt/query-store',
@@ -713,6 +958,10 @@ function _qsAdvanceFetch(ctx)
 			if (_qsMultiDbCancel) return;
 			try {
 				var r = JSON.parse(data);
+				console.log('[QS] response —', dbname, '@', dayLabel,
+				    'queries:', r.queries ? r.queries.length : 0,
+				    'filterStart:', r.filterStartTime || '(none)',
+				    'filterEnd:',   r.filterEndTime   || '(none)');
 				if (!r.error && r.queries && r.queries.length > 0) {
 					r.queries.forEach(function(row) {
 						row._dbname = dbname;
@@ -728,6 +977,10 @@ function _qsAdvanceFetch(ctx)
 							schemaHasDopCol:    r.schemaHasDopCol
 						};
 					}
+				}
+				// Collect timeline for brush/wait charts (even if queries array was empty)
+				if (!r.error && r.timeline && r.timeline.length > 0) {
+					ctx.allTimelines = ctx.allTimelines.concat(r.timeline);
 				}
 			} catch(ex) { /* skip unparseable responses */ }
 			_qsNextFetchCell(ctx);
@@ -756,7 +1009,7 @@ function _qsNextFetchCell(ctx)
  * aggregate=true  → group by (dbname, queryId), weighted-average metrics across days
  * aggregate=false → keep each (dbname, day) row separately with a Day column
  */
-function _qsMergeAndRender(allRows, schemaFlags, rankBy, topN, aggregate)
+function _qsMergeAndRender(allRows, allTimelines, schemaFlags, rankBy, topN, aggregate)
 {
 	if (allRows.length === 0) {
 		queryStoreShowMsg('<i>No query data found for the selected databases / period.</i>');
@@ -772,8 +1025,15 @@ function _qsMergeAndRender(allRows, schemaFlags, rankBy, topN, aggregate)
 		return bv - av;
 	});
 
-	// Cache for re-ranking without re-fetch
+	// Cache for re-ranking without re-fetch.
+	// Only overwrite "orig" when this is a fresh unfiltered fetch (no time filter active).
 	_qsMultiDbAllRows             = allRows;
+	_qsMultiDbTimelines           = allTimelines;
+	if (!(_qsTimeRange && _qsTimeRange.startTime)) {
+		// Unfiltered fetch — save as the baseline originals
+		_qsMultiDbOrigRows      = allRows;
+		_qsMultiDbOrigTimelines = allTimelines;
+	}
 	_qsMultiDbSchemaFlags         = schemaFlags;
 	_qsMultiDbSchemaFlags._aggregate = aggregate;
 	_qsMultiDbMode                = true;
@@ -786,10 +1046,45 @@ function _qsMergeAndRender(allRows, schemaFlags, rankBy, topN, aggregate)
 		hasCompileDuration: schemaFlags.hasCompileDuration,
 		schemaHasDopCol:    schemaFlags.schemaHasDopCol,
 		_multiDb:           true,
-		_aggregate:         aggregate
+		_aggregate:         aggregate,
+		timeline:           _qsMergeTimelines(allTimelines)
 	};
 
 	queryStoreRenderTopQueries(fakeR);
+}
+
+/**
+ * Merge timeline arrays collected from multiple DB/day responses.
+ * Intervals are grouped by startTime and all numeric metrics summed.
+ * waitByCategory is also summed per category across intervals with the same startTime.
+ * Returns the merged timeline sorted by startTime ascending.
+ */
+function _qsMergeTimelines(timelines)
+{
+	if (!timelines || timelines.length === 0) return [];
+	var numericKeys = ['duration','cpu','reads','physReads','writes','executions','rowcount','memory','tempdb','log','waitMs'];
+	var byStart = {};   // startTime → merged interval
+	timelines.forEach(function(t) {
+		var key = t.startTime || t.label || '';
+		if (!byStart[key]) {
+			byStart[key] = { startTime: t.startTime, endTime: t.endTime, label: t.label };
+			numericKeys.forEach(function(k) { byStart[key][k] = 0; });
+		}
+		var m = byStart[key];
+		numericKeys.forEach(function(k) {
+			var v = t[k];
+			if (v != null && !isNaN(v)) m[k] = (m[k] || 0) + Number(v);
+		});
+		// Merge waitByCategory
+		if (t.waitByCategory) {
+			if (!m.waitByCategory) m.waitByCategory = {};
+			Object.keys(t.waitByCategory).forEach(function(cat) {
+				var v = t.waitByCategory[cat];
+				if (v != null && !isNaN(v)) m.waitByCategory[cat] = (m.waitByCategory[cat] || 0) + Number(v);
+			});
+		}
+	});
+	return Object.keys(byStart).sort().map(function(k) { return byStart[k]; });
 }
 
 /**
@@ -898,8 +1193,13 @@ function _qsRankMetricKey(rankBy)
 /** Called when a row is clicked in multi-db mode — navigates to detail for that DB/query. */
 function queryStoreSelectMultiDbQuery(dbname, queryId, day)
 {
-	_qsMultiDbMode    = false;
-	_qsMultiDbAllRows = null;
+	// Keep multi-db state intact so:
+	//   (a) Detail can fetch from all N day-databases when the user clicked an aggregated row
+	//   (b) Going back to Top Queries re-renders from the cached N-day results, not a fresh 1-day fetch
+	// Only clean up chart/observer artefacts that belong to the canvas DOM being replaced.
+	_qsBrushRefreshUi = null;
+	if (_qsBrushResizeObs) { try { _qsBrushResizeObs.disconnect(); } catch(e) {} _qsBrushResizeObs = null; }
+	_qsDetailDay      = day || null;   // remembered so queryStoreDetailLoad knows whether to multi-day fetch
 	_qsDbname         = dbname;
 	// If the day is a specific date (not 'today' or 'N days'), restore the timestamp
 	if (day && day !== 'today' && !/\d+ days?$/.test(day)) {
@@ -918,6 +1218,13 @@ function queryStoreSelectDb(dbname)
 	_qsQueryId        = null;
 	_qsMultiDbMode    = false;   // leaving multi-db view → single DB
 	_qsMultiDbAllRows = null;
+	_qsMultiDbOrigRows  = null;
+	_qsMultiDbOrigTimelines = null;
+	_qsMultiDbTimelines = null;
+	_qsMultiDbCtx     = null;
+	_qsBrushRefreshUi = null;
+	if (_qsBrushResizeObs) { try { _qsBrushResizeObs.disconnect(); } catch(e) {} _qsBrushResizeObs = null; }
+	_qsTimeRange      = { startTime: null, endTime: null };  // reset brush selection
 	$('#query-store-tq-dbname').text(dbname);
 	$('#query-store-detail-dbname').text(dbname);
 	_qsMainTab = 'topqueries';
@@ -931,12 +1238,57 @@ function queryStoreSelectDb(dbname)
 
 function queryStoreTopQueriesLoad()
 {
-	// In multi-db mode, re-rank from cached rows without re-fetching
+	_qsDestroyTqSplits();
+	// Dispose any lingering Bootstrap tooltips from previous render — otherwise they
+	// stay "hanging" and orphaned because their trigger elements are about to be removed.
+	try {
+		$('#query-store-content [data-toggle="tooltip"]').tooltip('dispose');
+		$('.tooltip.show, .tooltip.fade').remove();
+	} catch (ex) {}
+
+	// In multi-db mode: re-rank from cache when no time filter, re-fetch when filter active
 	if (_qsMultiDbMode && _qsMultiDbAllRows) {
 		var rankBy    = $('#query-store-rankby').val()          || 'cpu';
 		var topN      = parseInt($('#query-store-topn').val())  || 25;
 		var aggregate = _qsMultiDbSchemaFlags && _qsMultiDbSchemaFlags._aggregate !== false;
-		_qsMergeAndRender(_qsMultiDbAllRows, _qsMultiDbSchemaFlags || {}, rankBy, topN, aggregate);
+		var hasFilter = _qsTimeRange && (_qsTimeRange.startTime || _qsTimeRange.endTime);
+		if (hasFilter && _qsMultiDbCtx) {
+			// Re-fetch all DBs/days with the time filter applied
+			var refetchCtx = {
+				dbs:         _qsMultiDbCtx.dbs,
+				dates:       _qsMultiDbCtx.dates,
+				dbIdx:       0,
+				dateIdx:     0,
+				allRows:     [],
+				allTimelines: [],
+				schemaFlags: null,
+				topN:        topN,
+				rankBy:      rankBy,
+				aggregate:   aggregate,
+				minExec:     _qsMultiDbCtx.minExec,
+				total:       _qsMultiDbCtx.dbs.length * _qsMultiDbCtx.dates.length,
+				done:        0,
+				startTime:   _qsTimeRange.startTime,
+				endTime:     _qsTimeRange.endTime
+			};
+			_qsMultiDbCancel = false;
+			_qsMultiDbMode   = false;
+			_qsMultiDbCtx    = refetchCtx;
+			queryStoreShowMsg(
+				'<div id="qs-multidb-progress" style="padding:8px 0;">'
+				+ '<b>Re-fetching with time filter…</b>&nbsp;'
+				+ '<span id="qs-multidb-prog-txt">0 / ' + refetchCtx.total + '</span>'
+				+ '&nbsp;&nbsp;<button class="btn btn-sm btn-outline-danger" style="font-size:0.8em;"'
+				+ ' onclick="_qsMultiDbCancel=true;$(\'#qs-multidb-progress\').html(\'<i>Cancelled.</i>\');">Cancel</button>'
+				+ '</div>');
+			_qsAdvanceFetch(refetchCtx);
+		} else {
+			// No active filter — restore from unfiltered originals so resetting the brush
+			// shows the full dataset rather than whatever time-filtered slice was last fetched.
+			var baseRows  = (_qsMultiDbOrigRows      || _qsMultiDbAllRows);
+			var baseTimes = (_qsMultiDbOrigTimelines  || _qsMultiDbTimelines || []);
+			_qsMergeAndRender(baseRows, baseTimes, _qsMultiDbSchemaFlags || {}, rankBy, topN, aggregate);
+		}
 		return;
 	}
 
@@ -952,6 +1304,12 @@ function queryStoreTopQueriesLoad()
 	var params = { srv: srv, action: 'topQueries', dbname: dbname,
 	               rankBy: rankBy, topN: topN, minExecutions: minExec };
 	if (ts) params.ts = ts;
+	if (_qsTimeRange && _qsTimeRange.startTime && _qsTimeRange.endTime) {
+		params.startTime = _qsTimeRange.startTime;
+		params.endTime   = _qsTimeRange.endTime;
+	}
+	console.log('[QS] topQueries fetch — db:', dbname,
+	    'filter:', params.startTime ? (params.startTime + ' → ' + params.endTime) : '(none)');
 
 	_qsTqLastResult = null;   // clear cache on fresh load
 	$('#query-store-loading').show();
@@ -965,6 +1323,9 @@ function queryStoreTopQueriesLoad()
 			$('#query-store-loading').hide();
 			try {
 				var r = JSON.parse(data);
+				console.log('[QS] single-db response — queries:', r.queries ? r.queries.length : 0,
+				    'filterStart:', r.filterStartTime || '(none)',
+				    'filterEnd:',   r.filterEndTime   || '(none)');
 				if (r.error) { queryStoreShowMsg(r.message || r.error); return; }
 				queryStoreRenderTopQueries(r);
 			} catch(ex) { queryStoreShowMsg('Parse error: ' + ex); }
@@ -1226,7 +1587,7 @@ function queryStoreRenderTopQueries(r)
 			} else if (col === 'queryId') {
 				html += '<td style="color:#0066cc;font-weight:600;">' + escHtml(qid) + '</td>';
 			} else if (col === 'querySqlTextPreview') {
-				var preview = (val || '').substring(0, 90) + ((val || '').length > 90 ? '…' : '');
+				var preview = (val || '').substring(0, 120) + ((val || '').length > 120 ? '…' : '');
 				html += '<td style="font-family:monospace;font-size:0.88em;max-width:300px;overflow:hidden;text-overflow:ellipsis;"'
 				      + ' title="' + escHtml(val || '') + '">' + escHtml(preview) + '</td>';
 			} else if (col.indexOf('_spark_') === 0) {
@@ -1282,12 +1643,580 @@ function queryStoreRenderTopQueries(r)
 		      + ' Ranked by <b>' + escHtml(rankBy) + '</b>. Click a row to view full detail.</p>';
 	}
 
-	// Chart container goes above the table — inject placeholder then populate after DOM insertion
-	var chartHtml = '<div id="qs-tq-chart-container" style="height:230px;margin-bottom:10px;"></div>';
-	$('#query-store-content').html(chartHtml + html);
+	// Active time-filter banner — shown above the table when a brush selection is in effect.
+	// Uses the start/end times echoed back by the server (filterStartTime/filterEndTime),
+	// falling back to _qsTimeRange when rendering from the multi-db merged path.
+	var filterStart = (r.filterStartTime) || (_qsTimeRange && _qsTimeRange.startTime) || '';
+	var filterEnd   = (r.filterEndTime)   || (_qsTimeRange && _qsTimeRange.endTime)   || '';
+	var filterBanner = '';
+	if (filterStart && filterEnd) {
+		var fS = filterStart.substring(5, 16);   // "MM-DD HH:mm"
+		var fE = filterEnd.substring(5, 16);
+		filterBanner = '<div id="qs-tq-filter-banner" style="'
+		    + 'background:#fff3cd;border:1px solid #ffc107;border-radius:4px;'
+		    + 'padding:4px 10px;margin-bottom:4px;font-size:0.82em;display:flex;align-items:center;gap:8px;">'
+		    + '<span>&#9200; <b>Time filter active:</b> '
+		    + escHtml(fS) + ' &nbsp;&#8594;&nbsp; ' + escHtml(fE)
+		    + ' &nbsp;<span style="color:#6c757d;font-size:0.9em;">(drag brush handles to change &bull; '
+		    + '<a href="#" style="color:#856404;" onclick="_qsBrushReset();return false;">Reset to full range</a>)'
+		    + '</span></span></div>';
+	}
 
+	// Chart container goes above the table — inject placeholder then populate after DOM insertion
+	// The brush widget sits ABOVE the bar chart, lets the user drag two handles to filter the time range.
+	var brushHtml = '<div id="qs-tq-brush-wrap" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;"></div>';
+	var chartHtml = '<div id="qs-tq-chart-container" style="min-height:0;overflow:hidden;"></div>';
+	var tableHtml = '<div id="qs-tq-table-wrap" style="overflow:auto;min-height:0;padding:2px 0;">' + filterBanner + html + '</div>';
+	$('#query-store-content').html(brushHtml + chartHtml + tableHtml);
+	// Set up flex column layout for vertical Split.js
+	$('#query-store-body').css('overflow', 'hidden');
+	$('#query-store-content').css({ display: 'flex', flexDirection: 'column', height: '100%' });
+
+	_qsRenderTimeBrush(r && r.timeline ? r.timeline : [], rankBy);
 	_qsInitSparklines();
 	_qsRenderChart(queries, rankBy);
+
+	// Vertical Split.js: brush wrap | main chart | table
+	var _qsVSizes = null;
+	try { _qsVSizes = JSON.parse(localStorage.getItem(_scrPfx + 'qs-split-tq-v-sizes')); } catch(e) {}
+	if (!Array.isArray(_qsVSizes) || _qsVSizes.length !== 3) _qsVSizes = [20, 37, 43];
+	// RAF token for throttling chart resize calls during split drag
+	var _vSplitRafId = null;
+	function _qsVSplitOnDrag() {
+		if (_qsBrushRefreshUi) _qsBrushRefreshUi();
+		// Chart.js 2.x uses internal polling — it won't see the new container size
+		// until its next poll cycle, causing a "snap". Force an immediate resize here,
+		// throttled with rAF so we don't call it every pixel.
+		if (!_vSplitRafId) {
+			_vSplitRafId = requestAnimationFrame(function() {
+				_vSplitRafId = null;
+				if (_qsTqBrushChart) try { _qsTqBrushChart.resize(); } catch(e) {}
+				if (_qsTqWaitChart)  try { _qsTqWaitChart.resize();  } catch(e) {}
+				if (_qsTqChart)      try { _qsTqChart.resize();      } catch(e) {}
+			});
+		}
+	}
+	_qsTqVSplit = Split(['#qs-tq-brush-wrap', '#qs-tq-chart-container', '#qs-tq-table-wrap'], {
+		sizes:       _qsVSizes,
+		minSize:     [60, 80, 80],
+		gutterSize:  5,
+		direction:   'vertical',
+		gutterAlign: 'center',
+		snapOffset:  0,
+		gutter: function(i, dir) { var g = document.createElement('div'); g.className = 'cm-gutter cm-gutter-' + dir; return g; },
+		onDrag:    function()    { _qsVSplitOnDrag(); },
+		onDragEnd: function(s)   { _qsVSplitOnDrag(); try { localStorage.setItem(_scrPfx + 'qs-split-tq-v-sizes', JSON.stringify(s)); } catch(e) {} }
+	});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Time-range brush widget — Chart.js line plot of the rank metric per interval
+// with two draggable "handles" overlaying the chart for selecting a sub-range.
+// On drag-end, sets _qsTimeRange and reloads the top-queries result.
+// ─────────────────────────────────────────────────────────────────────────────
+function _qsRenderTimeBrush(timeline, rankBy)
+{
+	var wrap = document.getElementById('qs-tq-brush-wrap');
+	if (!wrap) return;
+
+	if (!timeline || timeline.length < 2) {
+		wrap.innerHTML = '';
+		return;
+	}
+
+	// Map rankBy → timeline metric key (timeline metrics are already in display units: ms, pages, MB)
+	var brushKey, brushLabel, brushUnit;
+	switch (rankBy) {
+		case 'cpu':            brushKey = 'cpu';        brushLabel = 'CPU (ms)';            brushUnit = 'ms';    break;
+		case 'reads':          brushKey = 'reads';      brushLabel = 'Logical Reads';       brushUnit = 'pages'; break;
+		case 'physical_reads': brushKey = 'physReads';  brushLabel = 'Physical Reads';      brushUnit = 'pages'; break;
+		case 'writes':         brushKey = 'writes';     brushLabel = 'Logical Writes';      brushUnit = 'pages'; break;
+		case 'executions':     brushKey = 'executions'; brushLabel = 'Executions';          brushUnit = '';      break;
+		case 'rowcount':       brushKey = 'rowcount';   brushLabel = 'Rows';                brushUnit = '';      break;
+		case 'memory':         brushKey = 'memory';     brushLabel = 'Memory (MB)';         brushUnit = 'MB';    break;
+		case 'tempdb':         brushKey = 'tempdb';     brushLabel = 'Tempdb (MB)';         brushUnit = 'MB';    break;
+		case 'log':            brushKey = 'log';        brushLabel = 'Log (MB)';            brushUnit = 'MB';    break;
+		case 'waittime':       brushKey = 'waitMs';     brushLabel = 'Wait Time (ms)';      brushUnit = 'ms';    break;
+		case 'aborted':        brushKey = 'executions'; brushLabel = 'Executions';          brushUnit = '';      break;
+		case 'plancount':      brushKey = 'executions'; brushLabel = 'Executions';          brushUnit = '';      break;
+		case 'compile':        brushKey = 'duration';   brushLabel = 'Elapsed (ms)';        brushUnit = 'ms';    break;
+		default:               brushKey = 'duration';   brushLabel = 'Elapsed (ms)';        brushUnit = 'ms';    break;
+	}
+
+	var labels = timeline.map(function(t) { return t.label || ''; });
+	var values = timeline.map(function(t) { var v = t[brushKey]; return (v != null && !isNaN(v)) ? Number(v) : 0; });
+	var startTimes = timeline.map(function(t) { return t.startTime; });
+	var endTimes   = timeline.map(function(t) { return t.endTime;   });
+
+	// Build the brush HTML (chart + 2 handles + reset button + secondary stacked-wait sparkline).
+	// 'qs-brush-canvas-box' is the *exact* plot area for the main brush; both handles are positioned relative to it.
+	var hasFilter = !!(_qsTimeRange.startTime && _qsTimeRange.endTime);
+	var hasWaitData = timeline.some(function(t) { return t.waitByCategory; });
+	wrap.innerHTML =
+		  '<div id="qs-brush-charts-row" style="display:flex;gap:0;align-items:stretch;flex:1;min-height:0;">'
+		// Main brush — left side, takes most of the width
+		+ '<div id="qs-brush-canvas-box" style="position:relative;flex:1 1 auto;border:1px solid #e0e0e0;border-radius:3px;background:#fafafa;overflow:hidden;">'
+		+   '<div style="position:absolute;top:2px;left:4px;right:36px;z-index:4;display:flex;align-items:center;gap:4px;font-size:0.72em;pointer-events:none;">'
+		+     '<span style="font-weight:600;color:#444;text-shadow:1px 0 2px #fafafa,-1px 0 2px #fafafa,0 1px 2px #fafafa,0 -1px 2px #fafafa;">' + escHtml(brushLabel) + '</span>'
+		+     '<span id="qs-brush-range-label" style="color:#1a6fc4;font-weight:600;text-shadow:1px 0 2px #fafafa,-1px 0 2px #fafafa,0 1px 2px #fafafa,0 -1px 2px #fafafa;"></span>'
+		+   '</div>'
+		+   '<div style="position:absolute;top:1px;right:2px;z-index:4;">'
+		+     '<button class="btn btn-sm btn-outline-secondary" id="qs-brush-reset-btn" style="font-size:0.68em;padding:0 5px;line-height:1.4;'
+		+       (hasFilter ? '' : 'visibility:hidden;') + '" onclick="_qsBrushReset()">Reset</button>'
+		+   '</div>'
+		+   '<canvas id="qs-tq-brush-chart" style="width:100%;height:100%;"></canvas>'
+		+   '<div id="qs-brush-handle-left"  class="qs-brush-handle" data-side="left"'
+		+   ' style="position:absolute;top:0;bottom:0;width:8px;background:rgba(54,116,188,0.85);cursor:ew-resize;border-radius:2px;z-index:3;"></div>'
+		+   '<div id="qs-brush-handle-right" class="qs-brush-handle" data-side="right"'
+		+   ' style="position:absolute;top:0;bottom:0;width:8px;background:rgba(54,116,188,0.85);cursor:ew-resize;border-radius:2px;z-index:3;"></div>'
+		+   '<div id="qs-brush-mask-left"  style="position:absolute;top:0;bottom:0;left:0;background:rgba(160,160,160,0.25);pointer-events:none;z-index:2;"></div>'
+		+   '<div id="qs-brush-mask-right" style="position:absolute;top:0;bottom:0;right:0;background:rgba(160,160,160,0.25);pointer-events:none;z-index:2;"></div>'
+		+ '</div>'
+		// Secondary stacked wait-time bar — right side, fixed width
+		+ (hasWaitData
+			? '<div id="qs-tq-wait-box" style="position:relative;border:1px solid #e0e0e0;border-radius:3px;background:#fafafa;overflow:hidden;">'
+			+   '<div style="position:absolute;top:2px;left:4px;z-index:4;font-size:0.7em;font-weight:600;color:#444;pointer-events:none;white-space:nowrap;text-shadow:1px 0 2px #fafafa,-1px 0 2px #fafafa,0 1px 2px #fafafa,0 -1px 2px #fafafa;">Wait time by category</div>'
+			+   '<canvas id="qs-tq-wait-chart" style="width:100%;height:100%;"></canvas>'
+			+ '</div>'
+			: '')
+		+ '</div>';
+
+	// Render Chart.js line \u2014 colours adapt to dark mode
+	var dark = _qsIsDark();
+	var brushLineColor = dark ? 'rgba(100,170,255,0.95)' : 'rgba(54,116,188,0.95)';
+	var brushFillColor = dark ? 'rgba(100,170,255,0.15)' : 'rgba(54,116,188,0.18)';
+	var ttBg    = dark ? 'rgba(30,30,30,0.95)'  : 'rgba(255,255,255,0.95)';
+	var ttBdr   = dark ? '#555'                  : '#ccc';
+	var ttTitle = dark ? '#e0e0e0'               : '#333';
+	var ttBody  = dark ? '#cccccc'               : '#444';
+
+	if (_qsTqBrushChart) { try { _qsTqBrushChart.destroy(); } catch(e){} _qsTqBrushChart = null; }
+	var ctx = document.getElementById('qs-tq-brush-chart').getContext('2d');
+	_qsTqBrushChart = new Chart(ctx, {
+		type: 'line',
+		data: {
+			labels: labels,
+			datasets: [{
+				data: values,
+				borderColor:     brushLineColor,
+				backgroundColor: brushFillColor,
+				borderWidth: 1.2,
+				pointRadius: 0,
+				fill: true,
+				lineTension: 0.15
+			}]
+		},
+		options: {
+			responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+			legend: { display: false }, title: { display: false },
+			tooltips: {
+				mode: 'index', intersect: false, displayColors: false,
+				backgroundColor: ttBg, borderColor: ttBdr, borderWidth: 1,
+				titleFontColor: ttTitle, bodyFontColor: ttBody,
+				callbacks: {
+					title: function(items) { return items[0] && labels[items[0].index] ? labels[items[0].index] : ''; },
+					label: function(item) {
+						var v = (item.yLabel != null && !isNaN(item.yLabel)) ? Number(item.yLabel) : null;
+						if (v == null) return null;
+						var n = Math.round(v);
+						var s = _qsFmtNum(n) || String(n);
+						if (brushUnit === 'ms')    return s + '\u00a0ms  (' + _qsFmtMsDur(v) + ')';
+						if (brushUnit === 'pages') return s + '  (' + _qsPagesToMb(n) + ')';
+						if (brushUnit === 'MB')    return s + '\u00a0MB';
+						return s + (brushUnit ? '\u00a0' + brushUnit : '');
+					}
+				}
+			},
+			scales: {
+				xAxes: [{ display: false, gridLines: { display: false } }],
+				yAxes: [{ display: false, gridLines: { display: false }, ticks: { beginAtZero: true } }]
+			},
+			layout: { padding: 0 }
+		}
+	});
+
+	// Render the secondary stacked-wait sparkline — sliced to the active brush selection
+	// so it always reflects the same intervals shown in the top-queries table.
+	if (hasWaitData) {
+		var n = timeline.length;
+		var wiL = 0, wiR = n - 1;
+		if (_qsTimeRange && _qsTimeRange.startTime && _qsTimeRange.endTime) {
+			for (var wi = 0; wi < n; wi++) {
+				if (startTimes[wi] && startTimes[wi] >= _qsTimeRange.startTime) { wiL = wi; break; }
+			}
+			for (var wj = n - 1; wj >= 0; wj--) {
+				if (endTimes[wj] && endTimes[wj] <= _qsTimeRange.endTime) { wiR = wj; break; }
+			}
+			if (wiR < wiL) wiR = wiL;
+		}
+		_qsRenderWaitStackedBar(wiL === 0 && wiR === n - 1 ? timeline : timeline.slice(wiL, wiR + 1));
+	}
+
+	// Set up draggable handles
+	_qsWireBrushHandles(timeline, startTimes, endTimes);
+
+	// Horizontal Split.js between brush line chart and wait stacked bar
+	if (hasWaitData && document.getElementById('qs-tq-wait-box')) {
+		if (_qsBrushHSplit) { try { _qsBrushHSplit.destroy(); } catch(e) {} _qsBrushHSplit = null; }
+		var _qsHSizes = null;
+		try { _qsHSizes = JSON.parse(localStorage.getItem(_scrPfx + 'qs-split-brush-h-sizes')); } catch(e) {}
+		if (!Array.isArray(_qsHSizes) || _qsHSizes.length !== 2) _qsHSizes = [68, 32];
+		_qsBrushHSplit = Split(['#qs-brush-canvas-box', '#qs-tq-wait-box'], {
+			sizes:       _qsHSizes,
+			minSize:     [120, 80],
+			gutterSize:  5,
+			direction:   'horizontal',
+			gutterAlign: 'center',
+			snapOffset:  0,
+			gutter: function(i, dir) { var g = document.createElement('div'); g.className = 'cm-gutter cm-gutter-' + dir; return g; },
+			onDragEnd: function(s) { try { localStorage.setItem(_scrPfx + 'qs-split-brush-h-sizes', JSON.stringify(s)); } catch(e) {} }
+		});
+	}
+
+}
+
+/**
+ * Render a stacked-bar Chart.js sparkline of wait time per interval, broken down by wait category.
+ * One bar per interval, segments coloured by category. Uses a fixed palette cycled by category index.
+ */
+// Custom tooltip positioner: tooltip appears at the top of the chart area, at the cursor X.
+// Registered once; referenced by name in any chart's tooltips.position option.
+if (typeof Chart !== 'undefined' && Chart.Tooltip && !Chart.Tooltip.positioners.top) {
+	Chart.Tooltip.positioners.top = function(elements, eventPosition) {
+		var chartArea = this._chart && this._chart.chartArea;
+		return {
+			x: eventPosition.x,
+			y: chartArea ? chartArea.top : 0
+		};
+	};
+}
+
+var _qsTqWaitChart = null;
+function _qsRenderWaitStackedBar(timeline)
+{
+	if (typeof Chart === 'undefined') return;
+	var canvas = document.getElementById('qs-tq-wait-chart');
+	if (!canvas) return;
+
+	if (_qsTqWaitChart) { try { _qsTqWaitChart.destroy(); } catch(e){} _qsTqWaitChart = null; }
+
+	// Discover the global category order from the first row that has any
+	var categories = [];
+	for (var i = 0; i < timeline.length; i++) {
+		if (timeline[i].waitByCategory) { categories = Object.keys(timeline[i].waitByCategory); break; }
+	}
+	if (!categories.length) return;
+
+	// SQL Server "wait_category_desc" → fixed colours (matches Microsoft's QS GUI palette where reasonable)
+	var palette = {
+		'CPU':              '#5b9bd5',
+		'Worker Thread':    '#9bc2e6',
+		'Lock':             '#c00000',
+		'Latch':            '#ed7d31',
+		'Buffer Latch':     '#f4b183',
+		'Buffer IO':        '#ffc000',
+		'Compilation':      '#a5a5a5',
+		'SQL CLR':          '#7030a0',
+		'Mirroring':        '#264478',
+		'Transaction':      '#9e480e',
+		'Idle':             '#bfbfbf',
+		'Preemptive':       '#70ad47',
+		'Service Broker':   '#a9d18e',
+		'Tran Log IO':      '#c00000',
+		'Network IO':       '#ffd966',
+		'Parallelism':      '#5b9bd5',
+		'Memory':           '#7030a0',
+		'User Wait':        '#bf9000',
+		'Tracing':          '#a5a5a5',
+		'Full Text Search': '#cc99ff',
+		'Other Disk IO':    '#ffc000',
+		'Replication':      '#264478',
+		'Log Rate Governor':'#990000',
+		'Unknown':          '#7f7f7f'
+	};
+	var fallback = ['#4472c4','#ed7d31','#a5a5a5','#ffc000','#5b9bd5','#70ad47','#9e480e','#7030a0','#264478','#c00000'];
+
+	var labels = timeline.map(function(t) { return t.label || ''; });
+	var datasets = categories.map(function(cat, idx) {
+		var color = palette[cat] || fallback[idx % fallback.length];
+		return {
+			label: cat,
+			data:  timeline.map(function(t) {
+				return (t.waitByCategory && t.waitByCategory[cat] != null) ? Number(t.waitByCategory[cat]) : 0;
+			}),
+			backgroundColor: color,
+			borderColor:     color,
+			borderWidth: 0,
+			barPercentage: 1.0,
+			categoryPercentage: 1.0
+		};
+	});
+
+	var dark    = _qsIsDark();
+	var ttBg    = dark ? 'rgba(30,30,30,0.95)'  : 'rgba(255,255,255,0.95)';
+	var ttBdr   = dark ? '#555'                  : '#ccc';
+	var ttTitle = dark ? '#e0e0e0'               : '#333';
+	var ttBody  = dark ? '#cccccc'               : '#444';
+	var ttFoot  = dark ? '#aaaaaa'               : '#666';
+
+	var ctx = canvas.getContext('2d');
+	_qsTqWaitChart = new Chart(ctx, {
+		type: 'bar',
+		data: { labels: labels, datasets: datasets },
+		options: {
+			responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+			legend: { display: false },
+			title:  { display: false },
+			tooltips: {
+				enabled: false,
+				mode: 'index', intersect: false,
+				custom: function(tooltipModel) {
+					if (tooltipModel.opacity === 0) { _qsHideWaitPopup(); return; }
+					if (!tooltipModel.dataPoints || !tooltipModel.dataPoints.length) return;
+					var chart  = this._chart;
+					var data   = chart.data;
+					var idx    = tooltipModel.dataPoints[0].index;
+					var rows   = [];
+					data.datasets.forEach(function(ds) {
+						var v = Number(ds.data[idx]) || 0;
+						if (v > 0) rows.push({ label: ds.label, color: ds.backgroundColor, value: v });
+					});
+					rows.sort(function(a, b) { return b.value - a.value; });
+					var total = rows.reduce(function(s, r) { return s + r.value; }, 0);
+					// Synthesise an event position from the caret coords + canvas rect
+					var rect = chart.canvas.getBoundingClientRect();
+					var fakeEvent = { clientX: rect.left + tooltipModel.caretX, clientY: rect.top + tooltipModel.caretY };
+					_qsShowWaitPopup(fakeEvent, data.labels[idx], rows, total);
+				}
+			},
+			scales: {
+				xAxes: [{ stacked: true, display: false, gridLines: { display: false } }],
+				yAxes: [{ stacked: true, display: false, gridLines: { display: false }, ticks: { beginAtZero: true } }]
+			},
+			layout: { padding: 0 }
+		}
+	});
+}
+
+/** Show a floating wait-breakdown popup near the click event. */
+function _qsShowWaitPopup(event, intervalLabel, rows, total)
+{
+	var dark = _qsIsDark();
+	var pop  = document.getElementById('qs-wait-popup');
+	if (!pop) {
+		pop = document.createElement('div');
+		pop.id = 'qs-wait-popup';
+		pop.style.cssText = 'position:fixed;z-index:9999;min-width:320px;max-width:520px;'
+			+ 'border-radius:5px;box-shadow:0 4px 16px rgba(0,0,0,0.35);padding:0;'
+			+ 'font-size:0.8em;cursor:default;display:none;pointer-events:none;';
+		document.body.appendChild(pop);
+		// Escape hides it; mouse leaves the chart via the custom tooltip callback (opacity=0)
+		document.addEventListener('keydown', function(e) {
+			if ((e.key === 'Escape' || e.keyCode === 27))
+				_qsHideWaitPopup();
+		});
+	}
+	// Colours
+	var bg  = dark ? '#1e1e1e' : '#fff';
+	var bdr = dark ? '#555'    : '#ccc';
+	var hdr = dark ? '#2d2d2d' : '#f0f0f0';
+	var clr = dark ? '#e0e0e0' : '#222';
+	var sub = dark ? '#aaa'    : '#666';
+
+	var rowsHtml = rows.map(function(r) {
+		var pct = total > 0 ? (r.value / total * 100).toFixed(1) : '0.0';
+		var ms  = Math.round(r.value);
+		return '<tr>'
+			+ '<td style="padding:2px 5px 2px 8px;white-space:nowrap;">'
+			+   '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + r.color + ';vertical-align:middle;margin-right:5px;"></span>'
+			+   '<span style="color:' + clr + ';">' + escHtml(r.label) + '</span>'
+			+ '</td>'
+			+ '<td style="padding:2px 6px 2px 5px;text-align:right;white-space:nowrap;color:' + clr + ';">'
+			+   (_qsFmtNum(ms) || String(ms)) + '&nbsp;ms'
+			+ '</td>'
+			+ '<td style="padding:2px 6px 2px 2px;text-align:right;white-space:nowrap;color:' + sub + ';font-size:0.88em;">'
+			+   _qsMsToHms(r.value)
+			+ '</td>'
+			+ '<td style="padding:2px 8px 2px 2px;text-align:right;white-space:nowrap;color:' + sub + ';">'
+			+   pct + '%'
+			+ '</td>'
+			+ '</tr>';
+	}).join('');
+
+	var totalMs = Math.round(total);
+	pop.style.background   = bg;
+	pop.style.border       = '1px solid ' + bdr;
+	pop.style.color        = clr;
+	pop.innerHTML =
+		  '<div style="padding:5px 10px;background:' + hdr + ';border-bottom:1px solid ' + bdr + ';border-radius:5px 5px 0 0;">'
+		+   '<span style="font-weight:600;color:' + clr + ';">' + escHtml(intervalLabel) + '</span>'
+		+ '</div>'
+		+ '<div>'
+		+   '<table style="width:100%;border-collapse:collapse;">' + rowsHtml + '</table>'
+		+ '</div>'
+		+ '<div style="padding:4px 8px;border-top:1px solid ' + bdr + ';text-align:right;color:' + sub + ';">'
+		+   'Total: <span style="color:' + clr + ';font-weight:600;">' + (_qsFmtNum(totalMs) || String(totalMs)) + '&nbsp;ms</span>'
+		+   '&nbsp;&nbsp;<span style="font-size:0.9em;">' + _qsMsToHms(total) + '</span>'
+		+ '</div>';
+
+	// Position near the click, keeping within viewport
+	var vw = window.innerWidth, vh = window.innerHeight;
+	var ex = event.clientX, ey = event.clientY;
+	pop.style.display = 'block';
+	var pw = pop.offsetWidth, ph = pop.offsetHeight;
+	var left = ex + 12;
+	var top  = ey - ph / 2;
+	if (left + pw > vw - 8) left = ex - pw - 8;
+	if (top < 8)            top  = 8;
+	if (top + ph > vh - 8)  top  = vh - ph - 8;
+	pop.style.left = left + 'px';
+	pop.style.top  = top  + 'px';
+}
+
+function _qsHideWaitPopup()
+{
+	var pop = document.getElementById('qs-wait-popup');
+	if (pop) pop.style.display = 'none';
+}
+
+// Reset the brush selection to "all"
+// Destroy Split.js instances and restore body layout.
+function _qsDestroyTqSplits()
+{
+	if (_qsBrushHSplit)  { try { _qsBrushHSplit.destroy(); }  catch(e) {} _qsBrushHSplit  = null; }
+	if (_qsTqVSplit)     { try { _qsTqVSplit.destroy();    }  catch(e) {} _qsTqVSplit     = null; }
+	$('#query-store-body').css('overflow', 'auto');
+	$('#query-store-content').css({ display: '', flexDirection: '', height: '' });
+}
+
+function _qsBrushReset()
+{
+	_qsTimeRange = { startTime: null, endTime: null };
+	queryStoreTopQueriesLoad();
+}
+
+/**
+ * Wire mouse drag on the two brush handles.
+ * Stores selection in _qsTimeRange (yyyy-MM-dd HH:mm:ss) and triggers a reload on drag-end.
+ */
+function _qsWireBrushHandles(timeline, startTimes, endTimes)
+{
+	var box = document.getElementById('qs-brush-canvas-box');
+	var hL  = document.getElementById('qs-brush-handle-left');
+	var hR  = document.getElementById('qs-brush-handle-right');
+	var mL  = document.getElementById('qs-brush-mask-left');
+	var mR  = document.getElementById('qs-brush-mask-right');
+	var lbl = document.getElementById('qs-brush-range-label');
+	if (!box || !hL || !hR) return;
+
+	var n  = timeline.length;
+	var iL = 0;        // selected left interval index
+	var iR = n - 1;    // selected right interval index
+
+	// If a previous selection is in effect, snap handles to it
+	if (_qsTimeRange && _qsTimeRange.startTime && _qsTimeRange.endTime) {
+		for (var i = 0; i < n; i++) {
+			if (startTimes[i] && startTimes[i] >= _qsTimeRange.startTime) { iL = i; break; }
+		}
+		for (var j = n - 1; j >= 0; j--) {
+			if (endTimes[j] && endTimes[j] <= _qsTimeRange.endTime) { iR = j; break; }
+		}
+		if (iR < iL) iR = iL;
+	}
+
+	function pxFor(i) {
+		var w = box.clientWidth;
+		if (n <= 1) return 0;
+		return Math.round(i / (n - 1) * (w - 8));   // 8 = handle width
+	}
+	function indexFor(px) {
+		var w = box.clientWidth - 8;
+		if (w <= 0) return 0;
+		var i = Math.round(px / w * (n - 1));
+		return Math.max(0, Math.min(n - 1, i));
+	}
+	function refreshUi() {
+		var xL = pxFor(iL);
+		var xR = pxFor(iR) + 8;   // right edge of right handle
+		hL.style.left  = xL + 'px';
+		hR.style.left  = (pxFor(iR)) + 'px';
+		mL.style.width = xL + 'px';
+		mR.style.width = (box.clientWidth - xR) + 'px';
+		var s = (startTimes[iL] || '').substring(5, 16);   // "MM-DD HH:mm"
+		var e = (endTimes[iR]   || '').substring(5, 16);
+		if (lbl) lbl.textContent = s + '  →  ' + e + '   (' + (iR - iL + 1) + ' intervals)';
+	}
+	refreshUi();
+	// Re-position after Split.js applies its sizes (clientWidth is 0 on first paint)
+	_qsBrushRefreshUi = refreshUi;
+	setTimeout(refreshUi, 80);
+
+	// Use ResizeObserver on the canvas box so handles track the box width exactly,
+	// including panel splits. Debounce with rAF to avoid jitter on rapid resizes.
+	// Tear down any previous observer first so listeners never accumulate.
+	if (_qsBrushResizeObs) { try { _qsBrushResizeObs.disconnect(); } catch(e) {} _qsBrushResizeObs = null; }
+	if (typeof ResizeObserver !== 'undefined') {
+		var _rafId = null;
+		_qsBrushResizeObs = new ResizeObserver(function() {
+			if (_rafId) return;                         // coalesce rapid fires
+			_rafId = requestAnimationFrame(function() {
+				_rafId = null;
+				refreshUi();
+			});
+		});
+		_qsBrushResizeObs.observe(box);
+	} else {
+		// Fallback for old browsers — window resize is good enough
+		window.addEventListener('resize', refreshUi);
+	}
+
+	function startDrag(side, downEvent) {
+		downEvent.preventDefault();
+		var moved = false;
+		function onMove(ev) {
+			moved = true;
+			var rect = box.getBoundingClientRect();
+			var x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+			var i = indexFor(x);
+			if (side === 'left') {
+				iL = Math.min(i, iR);
+			} else {
+				iR = Math.max(i, iL);
+			}
+			refreshUi();
+		}
+		function onUp() {
+			document.removeEventListener('mousemove', onMove);
+			document.removeEventListener('mouseup',   onUp);
+			document.removeEventListener('touchmove', onMove);
+			document.removeEventListener('touchend',  onUp);
+			if (moved) {
+				// Apply the selection — set _qsTimeRange and reload
+				if (iL === 0 && iR === n - 1) {
+					_qsTimeRange = { startTime: null, endTime: null };
+				} else {
+					_qsTimeRange = { startTime: startTimes[iL], endTime: endTimes[iR] };
+				}
+				console.log('[QS] brush drag-end → iL=' + iL + ' iR=' + iR + '/' + (n-1)
+				    + '  startTime=' + _qsTimeRange.startTime
+				    + '  endTime='   + _qsTimeRange.endTime);
+				// Immediately slice the wait chart to the selected intervals so it
+				// updates in sync with the top-queries reload.
+				_qsHideWaitPopup();
+				_qsRenderWaitStackedBar(timeline.slice(iL, iR + 1));
+				queryStoreTopQueriesLoad();
+			}
+		}
+		document.addEventListener('mousemove', onMove);
+		document.addEventListener('mouseup',   onUp);
+		document.addEventListener('touchmove', onMove);
+		document.addEventListener('touchend',  onUp);
+	}
+
+	hL.addEventListener('mousedown',  function(e) { startDrag('left',  e); });
+	hR.addEventListener('mousedown',  function(e) { startDrag('right', e); });
+	hL.addEventListener('touchstart', function(e) { startDrag('left',  e); });
+	hR.addEventListener('touchstart', function(e) { startDrag('right', e); });
 }
 
 /**
@@ -1314,13 +2243,16 @@ function _qsRenderSparklineSet(selector)
 		var $el   = $(this);
 		var csv   = $el.attr('data-vals');
 		if (!csv) return;
-		var vals  = csv.split(',').map(Number);
+		// Replace NaN/null with 0 so the full time axis is always drawn — gaps in a
+		// sparkline compress the x-axis and make it impossible to see WHEN things happened.
+		var vals  = csv.split(',').map(function(s) { var n = Number(s); return isNaN(n) ? 0 : n; });
 		if (!vals.length) return;
-		var dates  = ($el.attr('data-dates') || '').split('|');
-		var unit   = $el.attr('data-unit')  || '';
-		var color  = $el.attr('data-color') || '#4472C4';
-		var width  = $el.attr('data-width') || '120px';
-		var fill   = color === '#5b9a3c' ? 'rgba(91,154,60,0.12)' : 'rgba(68,114,196,0.12)';
+		var dates    = ($el.attr('data-dates') || '').split('|');
+		var unit     = $el.attr('data-unit')      || '';
+		var color    = $el.attr('data-color')     || '#4472C4';
+		var width    = $el.attr('data-width')     || '120px';
+		var rangeMax = parseFloat($el.attr('data-range-max'));
+		var fill     = color === '#5b9a3c' ? 'rgba(91,154,60,0.12)' : 'rgba(68,114,196,0.12)';
 		$el.sparkline(vals, {
 			type:          'line',
 			width:         width,
@@ -1332,6 +2264,8 @@ function _qsRenderSparklineSet(selector)
 			minSpotColor:  false,
 			maxSpotColor:  '#d9534f',
 			chartRangeMin: 0,
+			chartRangeMax: isNaN(rangeMax) ? undefined : rangeMax,
+			nullValue:     0,   // render null/gap as zero \u2014 never compress the x-axis
 			tooltipFormatter: function(sp, options, fields) {
 				var field = (fields && typeof fields === 'object' && !Array.isArray(fields))
 				              ? fields : (fields && fields[0]);
@@ -1339,14 +2273,21 @@ function _qsRenderSparklineSet(selector)
 				var idx  = field.offset || 0;
 				var val  = (field.y !== undefined) ? field.y : (field.value || 0);
 				var date = dates[idx] || '';
-				var rawFmt = _qsFmtNum(Math.round(val)) || String(Math.round(val));
 				var disp;
 				if (unit === 'ms') {
-					disp = rawFmt + '\u00a0ms  (' + _qsFmtMsDur(val) + ')';
+					// Show raw ms rounded to integer + human duration
+					var rawMs = _qsFmtNum(Math.round(val)) || String(Math.round(val));
+					disp = rawMs + '\u00a0ms  (' + _qsFmtMsDur(val) + ')';
 				} else if (unit === 'pages') {
-					var mb = Math.round(val / 128);
-					disp = rawFmt + '  (' + (_qsFmtNum(mb) || String(mb)) + '\u00a0MB)';
+					// Keep 1 decimal for averaged page counts; show MB conversion
+					var frac = (val % 1 !== 0) ? parseFloat(val.toFixed(1)) : Math.round(val);
+					var rawPg = _qsFmtNum(frac) || String(frac);
+					var mb = (val / 128);
+					var mbStr = mb >= 1 ? (_qsFmt1Dec(mb) || mb.toFixed(1)) + '\u00a0MB'
+					                    : Math.round(val * 8) + '\u00a0KB';
+					disp = rawPg + '\u00a0pages  (' + mbStr + ')';
 				} else {
+					var rawFmt = _qsFmtNum(Math.round(val)) || String(Math.round(val));
 					disp = rawFmt + (unit ? '\u00a0' + unit : '');
 				}
 				return '<div style="min-width:140px;padding:3px 4px 14px 4px;">'
@@ -1523,13 +2464,33 @@ function queryStoreDetailLoad()
 	if (!srv || !dbname || !queryId) return;
 
 	var includePlan = $('#query-store-include-plan').is(':checked') ? 'true' : 'false';
-	var ts = _qsTimestamp || '';
 
-	var params = { srv: srv, action: 'queryDetail', dbname: dbname, queryId: queryId, includePlan: includePlan };
-	if (ts) params.ts = ts;
-
+	_qsDestroyTqSplits();
 	$('#query-store-loading').show();
 	$('#query-store-content').html('');
+
+	// If a brush time range is active, it may span multiple day-databases.
+	// Fetch from every overlapping day and merge the results.
+	if (_qsTimeRange && _qsTimeRange.startTime) {
+		var dates = _qsDetailDatesForRange(_qsTimeRange.startTime, _qsTimeRange.endTime);
+		_qsDetailMultiDayFetch(srv, dbname, queryId, includePlan, dates,
+		                       _qsTimeRange.startTime, _qsTimeRange.endTime);
+		return;
+	}
+
+	// Multi-db N-day aggregate mode: the user clicked an "N days" row (e.g. "7 days").
+	// Fetch detail from every day-database that was originally queried and merge the results.
+	if (_qsMultiDbMode && _qsMultiDbCtx && _qsMultiDbCtx.dates && _qsMultiDbCtx.dates.length > 1
+	        && _qsDetailDay && /^\d+ days?$/.test(_qsDetailDay)) {
+		var mdDates = _qsMultiDbCtx.dates.slice().reverse();   // oldest first → chronological timeline
+		_qsDetailMultiDayFetch(srv, dbname, queryId, includePlan, mdDates, null, null);
+		return;
+	}
+
+	// No time filter — single-day fetch (current timestamp or live)
+	var params = { srv: srv, action: 'queryDetail', dbname: dbname, queryId: queryId, includePlan: includePlan };
+	var ts = _qsTimestamp || '';
+	if (ts) params.ts = ts;
 
 	$.ajax({
 		url:      '/api/cc/mgt/query-store',
@@ -1540,6 +2501,7 @@ function queryStoreDetailLoad()
 			try {
 				var r = JSON.parse(data);
 				if (r.error) { queryStoreShowMsg(r.message || r.error); return; }
+				_qsAlignPlanSparklines(r.plans);
 				queryStoreRenderDetail(r);
 			} catch(ex) { queryStoreShowMsg('Parse error: ' + ex); }
 		},
@@ -1548,6 +2510,253 @@ function queryStoreDetailLoad()
 			queryStoreShowHttpError(xhr, 'queryDetail');
 		}
 	});
+}
+
+/**
+ * Returns the subset of available day-database keys that overlap with the
+ * given time range.  null = today's live database, 'YYYY-MM-DD' = historical.
+ * Result is ordered oldest-first so the timeline ends up in chronological order.
+ */
+function _qsDetailDatesForRange(startTime, endTime)
+{
+	var startDate = startTime.substring(0, 10);   // 'YYYY-MM-DD'
+	var endDate   = endTime.substring(0, 10);
+	var today     = new Date().toISOString().substring(0, 10);
+
+	// allDates: null (today) first, then historical newest→oldest
+	var allDates  = [null].concat(_qsAvailDates || []);
+	var matching  = allDates.filter(function(d) {
+		var dateStr = d || today;
+		return dateStr >= startDate && dateStr <= endDate;
+	});
+	// Reverse so we fetch oldest first → timeline is chronological after concat
+	matching.reverse();
+	return matching;
+}
+
+/**
+ * Fetch queryDetail from each day-database in `dates` (serially), then merge
+ * and render.  Each day is filtered to [startTime, endTime] on the Java side.
+ */
+function _qsDetailMultiDayFetch(srv, dbname, queryId, includePlan, dates, startTime, endTime)
+{
+	var accumulated = [];
+	var idx = 0;
+
+	function fetchNext() {
+		if (idx >= dates.length) {
+			$('#query-store-loading').hide();
+			var merged = _qsDetailMergeResults(accumulated);
+			if (!merged) { queryStoreShowMsg('No data found for this query in the selected time range.'); return; }
+			_qsAlignPlanSparklines(merged.plans);
+			queryStoreRenderDetail(merged);
+			return;
+		}
+
+		var dateKey = dates[idx++];
+		var ts      = dateKey ? (dateKey + ' 23:59:59') : '';
+		var params  = { srv: srv, action: 'queryDetail', dbname: dbname,
+		                queryId: queryId, includePlan: includePlan };
+		if (startTime) params.startTime = startTime;
+		if (endTime)   params.endTime   = endTime;
+		if (ts)        params.ts        = ts;
+
+		$.ajax({
+			url:      '/api/cc/mgt/query-store',
+			data:     params,
+			dataType: 'text',
+			success: function(data) {
+				try {
+					var r = JSON.parse(data);
+					if (!r.error && r.plans && r.plans.length > 0) accumulated.push(r);
+				} catch(e) {}
+				fetchNext();
+			},
+			error: function() { fetchNext(); }
+		});
+	}
+
+	fetchNext();
+}
+
+/**
+ * Align all plan sparklines to a shared time axis so that plans active in
+ * different parts of the period can be visually compared.
+ *
+ * Java already zero-fills a shared axis within a single-day response; this
+ * function extends that to the multi-day (merged) case where a plan that only
+ * appeared in some days would otherwise have a shorter sparkDates array than a
+ * plan that spanned all days.
+ *
+ * After this call every plan has the same sparkDates array and the same-length
+ * spark value arrays — missing slots are filled with 0.
+ */
+function _qsAlignPlanSparklines(plans)
+{
+	if (!plans || plans.length < 2) return;
+
+	// Build the union of all sparkDates in order of first appearance.
+	// Plans are stored oldest-first, so the natural insertion order is chronological.
+	var seen = {}, unionDates = [];
+	plans.forEach(function(p) {
+		if (!p.sparkDates) return;
+		p.sparkDates.forEach(function(d) {
+			if (!seen[d]) { seen[d] = true; unionDates.push(d); }
+		});
+	});
+	if (unionDates.length === 0) return;
+
+	plans.forEach(function(p) {
+		if (!p.sparkDates || !p.spark) return;
+		if (p.sparkDates.length === unionDates.length) return;   // already aligned
+
+		// Build lookup: date label → index in this plan's current arrays
+		var idx = {};
+		p.sparkDates.forEach(function(d, i) { idx[d] = i; });
+
+		// Remap every metric array onto the union axis, inserting 0 for missing slots
+		Object.keys(p.spark).forEach(function(k) {
+			p.spark[k] = unionDates.map(function(d) {
+				var i = idx[d];
+				return i !== undefined ? (Number(p.spark[k][i]) || 0) : 0;
+			});
+		});
+		p.sparkDates = unionDates;
+	});
+}
+
+/**
+ * Merge queryDetail responses from multiple day-databases into a single result
+ * suitable for queryStoreRenderDetail().
+ *
+ * - Plans:     matched by plan_id; execution counts summed, averages weighted,
+ *              maxima maximized, first/last-seen expanded.
+ * - Wait stats: matched by waitCategory; totals summed, max maximized.
+ * - Timeline:   concatenated and sorted chronologically.
+ * - Top-level summary: recomputed from the merged plans.
+ */
+function _qsDetailMergeResults(results)
+{
+	if (!results || !results.length) return null;
+	if (results.length === 1) return results[0];
+
+	// Deep-clone the first result as the base (carries schemaFlags, queryText etc.)
+	var base = JSON.parse(JSON.stringify(results[0]));
+
+	// ── Plans ─────────────────────────────────────────────────────────────────
+	var planMap = {};
+	results.forEach(function(r) {
+		if (!r.plans) return;
+		r.plans.forEach(function(p) {
+			var pid = String(p.planId);
+			if (!planMap[pid]) { planMap[pid] = JSON.parse(JSON.stringify(p)); return; }
+			var ex = planMap[pid];
+			var eExec = Number(ex.totalExecutions) || 0;
+			var nExec = Number(p.totalExecutions)  || 0;
+			var tot   = eExec + nExec;
+			if (tot > 0) {
+				// Weighted averages
+				// Page-count avg columns — round to integer after weighted average
+				// (SQL Server stores reads/writes as integer pages; fractional averages are misleading)
+				var intAvgCols = { avgLogicalReads:1, avgPhysicalReads:1, avgLogicalWrites:1 };
+				['avgDurationUs','avgCpuUs','avgLogicalReads','avgPhysicalReads',
+				 'avgLogicalWrites','avgRowcount','avgDop','avgMemoryMb','avgTempdbMb','avgLogMb'
+				].forEach(function(k) {
+					if (p[k] != null && ex[k] != null) {
+						var avg = (ex[k] * eExec + p[k] * nExec) / tot;
+						ex[k] = intAvgCols[k] ? Math.round(avg) : avg;
+					} else if (p[k] != null) {
+						ex[k] = p[k];
+					}
+				});
+				// Maxima
+				['maxDurationUs','maxCpuUs','maxLogicalReads','maxPhysicalReads','maxLogicalWrites'
+				].forEach(function(k) {
+					if (p[k] != null) ex[k] = Math.max(Number(ex[k]) || 0, Number(p[k]));
+				});
+				// Totals
+				['totalDurationUs','totalCpuUs','totalLogicalReads','totalPhysicalReads',
+				 'totalLogicalWrites','totalRowcount','totalMemoryMb'
+				].forEach(function(k) {
+					if (p[k] != null) ex[k] = (Number(ex[k]) || 0) + Number(p[k]);
+				});
+				ex.totalExecutions = tot;
+				// Expand firstSeen / lastSeen
+				if (p.firstSeen && (!ex.firstSeen || p.firstSeen < ex.firstSeen)) ex.firstSeen = p.firstSeen;
+				if (p.lastSeen  && (!ex.lastSeen  || p.lastSeen  > ex.lastSeen))  ex.lastSeen  = p.lastSeen;
+				// Concatenate sparkline data chronologically (fetch is oldest-first)
+				if (p.sparkDates && p.sparkDates.length > 0) {
+					ex.sparkDates = (ex.sparkDates || []).concat(p.sparkDates);
+					if (p.spark) {
+						if (!ex.spark) ex.spark = {};
+						Object.keys(p.spark).forEach(function(k) {
+							ex.spark[k] = (ex.spark[k] || []).concat(p.spark[k] || []);
+						});
+					}
+				}
+			}
+		});
+	});
+	// Convert map back to array, sorted by avg duration desc
+	base.plans = [];
+	for (var pid in planMap) { if (planMap.hasOwnProperty(pid)) base.plans.push(planMap[pid]); }
+	base.plans.sort(function(a, b) { return (Number(b.avgDurationUs) || 0) - (Number(a.avgDurationUs) || 0); });
+
+	// ── Wait stats ────────────────────────────────────────────────────────────
+	var waitMap = {};
+	results.forEach(function(r) {
+		if (!r.waitStats) return;
+		r.waitStats.forEach(function(w) {
+			var cat = w.waitCategory;
+			if (!waitMap[cat]) { waitMap[cat] = JSON.parse(JSON.stringify(w)); return; }
+			var ex = waitMap[cat];
+			ex.totalWaitMs = (Number(ex.totalWaitMs) || 0) + (Number(w.totalWaitMs) || 0);
+			ex.maxWaitMs   = Math.max(Number(ex.maxWaitMs) || 0, Number(w.maxWaitMs) || 0);
+			ex.avgWaitMs   = ex.totalWaitMs / results.length;   // approximate
+			// Concatenate sparkline data chronologically (fetch is oldest-first)
+			if (w.sparkDates && w.sparkDates.length > 0) {
+				ex.sparkDates = (ex.sparkDates || []).concat(w.sparkDates);
+				ex.spark      = (ex.spark      || []).concat(w.spark || []);
+			}
+		});
+	});
+	base.waitStats = [];
+	for (var cat in waitMap) { if (waitMap.hasOwnProperty(cat)) base.waitStats.push(waitMap[cat]); }
+	base.waitStats.sort(function(a, b) { return (Number(b.totalWaitMs) || 0) - (Number(a.totalWaitMs) || 0); });
+
+	// ── Timeline ──────────────────────────────────────────────────────────────
+	var allTl = [];
+	results.forEach(function(r) { if (r.timeline) allTl = allTl.concat(r.timeline); });
+	allTl.sort(function(a, b) { return (a.intervalStart || '').localeCompare(b.intervalStart || ''); });
+	base.timeline = allTl;
+
+	// ── Recompute top-level summary from merged plans ────────────────────────
+	var totalExec = 0, sumDurW = 0, sumCpuW = 0, sumReadsW = 0, sumRowsW = 0, maxDurUs = 0;
+	var firstSeen = null, lastSeen = null;
+	base.plans.forEach(function(p) {
+		var exec = Number(p.totalExecutions) || 0;
+		totalExec += exec;
+		sumDurW   += exec * (Number(p.avgDurationUs)   || 0);
+		sumCpuW   += exec * (Number(p.avgCpuUs)        || 0);
+		sumReadsW += exec * (Number(p.avgLogicalReads)  || 0);
+		sumRowsW  += exec * (Number(p.avgRowcount)      || 0);
+		maxDurUs  = Math.max(maxDurUs, Number(p.maxDurationUs) || 0);
+		if (p.firstSeen && (!firstSeen || p.firstSeen < firstSeen)) firstSeen = p.firstSeen;
+		if (p.lastSeen  && (!lastSeen  || p.lastSeen  > lastSeen))  lastSeen  = p.lastSeen;
+	});
+	base.planCount       = base.plans.length;
+	base.totalExecutions = totalExec;
+	if (totalExec > 0) {
+		base.avgDurationUs   = Math.round(sumDurW   / totalExec);
+		base.avgCpuUs        = Math.round(sumCpuW   / totalExec);
+		base.avgLogicalReads = Math.round(sumReadsW / totalExec);
+		base.avgRowcount     = Math.round(sumRowsW  / totalExec);
+	}
+	base.maxDurationUs = maxDurUs;
+	base.firstSeen     = firstSeen;
+	base.lastSeen      = lastSeen;
+
+	return base;
 }
 
 function queryStoreRenderDetail(r)
@@ -1625,34 +2834,114 @@ function queryStoreRenderDetail(r)
 	}
 	html += '</div>';
 
-	// ── Per-interval sparklines for this query (reused from Top Queries cache) ─
-	var _tqRow = null;
-	if (_qsTqLastResult && _qsTqLastResult.queries) {
-		var _qid = String(r.queryId);
-		_qsTqLastResult.queries.forEach(function(q) {
-			if (String(q.queryId) === _qid && !_tqRow) _tqRow = q;
+	// ── Per-interval sparklines at the top of Query Details ──────────────────────
+	// Aggregated from the plan sparkline arrays so they use the SAME time axis and
+	// resolution as the Execution Plans table (SPARKLINE_INTERVALS=48, not the
+	// TIMELINE_INTERVALS=24 used by the detail timeline).
+	// executions: summed across plans.
+	// avg metrics: weighted average by per-interval execution count.
+	var _topPlans = r.plans || [];
+	// Find the plan with the most sparkDates (after multi-day concatenation all plans for
+	// the same set of days should have the same length, but guard just in case).
+	var _refPlan = null;
+	_topPlans.forEach(function(p) {
+		if (p.sparkDates && p.sparkDates.length > 0)
+			if (!_refPlan || p.sparkDates.length > _refPlan.sparkDates.length) _refPlan = p;
+	});
+	var _topSparkBuilt = false;
+	var _spark = {}, _dates = [];
+	if (_refPlan) {
+		var _n = _refPlan.sparkDates.length;
+		_dates = _refPlan.sparkDates;
+		// metric keys present across all plans — union of keys found in any plan
+		var _metricKeys = ['executions','duration','cpu','reads','physReads','writes','rowcount','memory','tempdb','log'];
+		_metricKeys.forEach(function(k) { _spark[k] = new Array(_n).fill(0); });
+		var _execTotals = new Array(_n).fill(0);   // per-interval total executions (for weighting)
+		_topPlans.forEach(function(p) {
+			if (!p.spark || !p.sparkDates) return;
+			var pLen = p.sparkDates.length;
+			// Offset into the shared axis: plans shorter than _refPlan are right-aligned
+			// (they appeared in fewer days — their data covers the tail of the period).
+			var offset = _n - pLen;
+			var execArr = p.spark.executions || [];
+			for (var i = 0; i < pLen; i++) {
+				var e = Number(execArr[i]) || 0;
+				_execTotals[offset + i] += e;
+				_spark.executions[offset + i] += e;
+				['duration','cpu','reads','physReads','writes','rowcount','memory','tempdb','log'].forEach(function(k) {
+					if (!p.spark[k]) return;
+					_spark[k][offset + i] += (Number(p.spark[k][i]) || 0) * e;
+				});
+			}
 		});
+		// Divide weighted sums by total executions to get weighted averages
+		['duration','cpu','reads','physReads','writes','rowcount','memory','tempdb','log'].forEach(function(k) {
+			_spark[k] = _spark[k].map(function(s, i) {
+				return _execTotals[i] > 0 ? s / _execTotals[i] : 0;
+			});
+			// Remove key only when NO plan has this metric array at all (server doesn't support the column).
+			// Keep all-zero keys — a flat-zero sparkline is shown in the plan table too.
+			var hasKey = _topPlans.some(function(p) { return p.spark && Array.isArray(p.spark[k]); });
+			if (!hasKey) delete _spark[k];
+		});
+		_topSparkBuilt = true;
 	}
-	if (_tqRow && _tqRow.spark && _tqRow.sparkDates && _tqRow.sparkDates.length > 0) {
-		var _spark = _tqRow.spark;
-		var _dates = _tqRow.sparkDates;
+	if (_topSparkBuilt) {
+		// waitMs: sum wait-category sparklines per interval — Java already built these,
+		// and _qsDetailMergeResults concatenated them across days. They have their own
+		// time axis (sparkDates) which may differ from the timeline, so we track it separately.
+		var _waitMsVals = null, _waitMsDates = null;
+		var _ws = r.waitStats;
+		if (_ws && _ws.length > 0 && _ws[0].sparkDates && _ws[0].sparkDates.length > 0) {
+			var _wn = _ws[0].sparkDates.length;
+			var _wtotals = [];
+			for (var _wi = 0; _wi < _wn; _wi++) _wtotals.push(0);
+			_ws.forEach(function(w) {
+				if (w.spark) {
+					for (var _wi2 = 0; _wi2 < Math.min(w.spark.length, _wn); _wi2++)
+						_wtotals[_wi2] += Number(w.spark[_wi2]) || 0;
+				}
+			});
+			if (_wtotals.some(function(v) { return v > 0; })) {
+				_waitMsVals  = _wtotals;
+				_waitMsDates = _ws[0].sparkDates;
+			}
+		}
+
 		var _detailSparkDefs = [
-			{ key: 'executions', label: 'Executions',      unit: ''   },
-			{ key: 'duration',   label: 'Avg Elapsed',     unit: 'ms' },
-			{ key: 'cpu',        label: 'Avg CPU',         unit: 'ms' },
-			{ key: 'waitMs',     label: 'Wait Time',       unit: 'ms' },
+			{ key: 'executions', label: 'Executions',      unit: ''      },
+			{ key: 'duration',   label: 'Avg Elapsed',     unit: 'ms'    },
+			{ key: 'cpu',        label: 'Avg CPU',         unit: 'ms'    },
+			// waitMs inserted below via _waitMsVals if available
 			{ key: 'reads',      label: 'Avg Reads',       unit: 'pages' },
 			{ key: 'physReads',  label: 'Avg Phys Reads',  unit: 'pages' },
 			{ key: 'writes',     label: 'Avg Writes',      unit: 'pages' },
-			{ key: 'rowcount',   label: 'Avg Rows',        unit: ''   },
-			{ key: 'memory',     label: 'Avg Mem',         unit: 'MB' },
-			{ key: 'tempdb',     label: 'Avg Tempdb',      unit: 'MB' },
-			{ key: 'log',        label: 'Avg Log',         unit: 'MB' }
+			{ key: 'rowcount',   label: 'Avg Rows',        unit: ''      },
+			{ key: 'memory',     label: 'Avg Mem',         unit: 'MB'    },
+			{ key: 'tempdb',     label: 'Avg Tempdb',      unit: 'MB'    },
+			{ key: 'log',        label: 'Avg Log',         unit: 'MB'    }
 		];
+		var _waitMsInserted = false;
+		var _emitWaitMs = function() {
+			if (!_waitMsVals || _waitMsInserted) return;
+			_waitMsInserted = true;
+			html += '<div style="display:flex;flex-direction:column;align-items:center;">'
+			      + '<span style="font-size:0.75em;color:#555;margin-bottom:2px;">Wait Time</span>'
+			      + '<span class="qs-sparkline qs-detail-spark"'
+			      + ' data-vals="'  + escHtml(_waitMsVals.join(','))  + '"'
+			      + ' data-dates="' + escHtml(_waitMsDates.join('|')) + '"'
+			      + ' data-unit="ms" data-width="120px"'
+			      + '></span>'
+			      + '</div>';
+		};
 		html += '<div style="display:flex;flex-wrap:wrap;gap:10px 20px;padding:5px 0 6px 0;border-bottom:1px solid #dee2e6;margin-bottom:8px;">';
 		_detailSparkDefs.forEach(function(def) {
 			var vals = _spark[def.key];
+			// Skip only when the key was never populated (null/undefined), not when all-zero —
+			// a flat-zero sparkline is still informative (e.g. physReads=0 confirms cache-only reads).
 			if (!vals || !vals.length) return;
+			// Insert waitMs right after cpu (before reads)
+			if (def.key === 'reads') _emitWaitMs();
 			html += '<div style="display:flex;flex-direction:column;align-items:center;">'
 			      + '<span style="font-size:0.75em;color:#555;margin-bottom:2px;">' + def.label + '</span>'
 			      + '<span class="qs-sparkline qs-detail-spark"'
@@ -1663,6 +2952,7 @@ function queryStoreRenderDetail(r)
 			      + '></span>'
 			      + '</div>';
 		});
+		_emitWaitMs();   // fallback: append at end if 'reads' column was empty/absent
 		html += '</div>';
 	}
 
@@ -1800,6 +3090,20 @@ function queryStoreRenderDetail(r)
 		      + _th('First seen', 'When this plan was first recorded in the Query Store')
 		      + _th('Last seen',  'When this plan was most recently recorded');
 		html += '</tr></thead><tbody>';
+
+		// Pre-compute the per-metric max across ALL plans so every sparkline column shares
+		// the same Y-axis range — makes plan switchovers and overlaps visually obvious.
+		var _planSparkMax = {};
+		plans.forEach(function(p) {
+			if (!p.spark) return;
+			Object.keys(p.spark).forEach(function(k) {
+				p.spark[k].forEach(function(v) {
+					var n = Number(v) || 0;
+					if (n > (_planSparkMax[k] || 0)) _planSparkMax[k] = n;
+				});
+			});
+		});
+
 		_qsXmlPlans = [];   // reset plan slot array for this render
 		plans.forEach(function(p) {
 			// Build plan buttons cell first (leftmost), then stats columns
@@ -1834,17 +3138,19 @@ function queryStoreRenderDetail(r)
 							+ 'If its not enabled the plan is probably a Estimated Plan, look at the dialog Header...">Get Last Actual</button>';
 				planBtnCell += '</td>';
 			}
-			// Build plan sparkline cells
+			// Build plan sparkline cells (shared Y-axis via data-range-max)
 			var _planSparkCell = function(key, unit) {
 				var vals  = (p.spark && p.spark[key]) || [];
 				var dates = (p.sparkDates) || [];
 				if (!vals.length) return '<td style="padding:2px 4px;"><span style="color:#ccc;">—</span></td>';
+				var rmax  = _planSparkMax[key];
 				return '<td style="padding:2px 4px;vertical-align:middle;">'
 				     + '<span class="qs-sparkline qs-plan-spark"'
 				     + ' data-vals="'  + escHtml(vals.join(','))   + '"'
 				     + ' data-dates="' + escHtml(dates.join('|'))  + '"'
 				     + ' data-unit="'  + escHtml(unit)             + '"'
 				     + ' data-color="#5b9a3c"'
+				     + (rmax > 0 ? ' data-range-max="' + rmax + '"' : '')
 				     + '></span></td>';
 			};
 			html += '<tr>'
@@ -2241,6 +3547,12 @@ function qsShowYesterdayData()
 	_qsMultiDbCancel  = true;
 	_qsMultiDbMode    = false;
 	_qsMultiDbAllRows = null;
+	_qsMultiDbOrigRows  = null;
+	_qsMultiDbOrigTimelines = null;
+	_qsMultiDbTimelines = null;
+	_qsMultiDbCtx     = null;
+	_qsBrushRefreshUi = null;
+	if (_qsBrushResizeObs) { try { _qsBrushResizeObs.disconnect(); } catch(e) {} _qsBrushResizeObs = null; }
 	_qsUpdateHistoricalBanner();
 	_qsDbname  = null;
 	_qsQueryId = null;

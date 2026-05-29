@@ -583,6 +583,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventConfigResourceIsLow(cm, "statement cache size", TotalSizeMB, msg, threshold, 300); 
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "CacheHitPct");
+					
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}

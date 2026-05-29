@@ -499,7 +499,8 @@ implements AutoCloseable
 			_logger.info("Waiting for H2 Migration Server (JVM) to STOP.");
 			try 
 			{ 
-				p.wait(); 
+//				p.wait(); 
+				p.waitFor();
 				_logger.info("Stopped for H2 Migration Server.");
 			}
 			catch (Exception ex) 
@@ -940,8 +941,8 @@ implements AutoCloseable
 
 		// Get TARGET DbxCentral DB Version
 		_targetDbxCentralDbVersion = -1;
-		sql = _sourceConn.quotifySqlString("select [DbVersion] from [PUBLIC].[DbxCentralVersionInfo] where [ProductString] = 'DbxTuneCentral'");
-		try (Statement stmnt = _sourceConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		sql = _targetConn.quotifySqlString("select [DbVersion] from [PUBLIC].[DbxCentralVersionInfo] where [ProductString] = 'DbxTuneCentral'");
+		try (Statement stmnt = _targetConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
 				_targetDbxCentralDbVersion = rs.getInt(1);
@@ -1035,10 +1036,10 @@ implements AutoCloseable
 		if (StringUtil.isNullOrBlank(sql))
 			return true;
 
-		try
+		try (Statement stmnt  = conn.createStatement())
 		{
 			SQLWarning sqlw  = null;
-			Statement stmnt  = conn.createStatement();
+//			Statement stmnt  = conn.createStatement();
 			ResultSet  rs    = null;
 			int rowsAffected = 0;
 

@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.naming.NameNotFoundException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -43,10 +45,13 @@ import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CounterTableModel;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.postgres.gui.CmPgTablesPanel;
+import com.dbxtune.config.dict.MonTablesDictionary;
+import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
+import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
@@ -77,7 +82,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] { "table_scan_pct", "index_usage_pct" };
+	public static final String[] PCT_COLUMNS      = new String[] { "table_scan_pct", "index_usage_pct", "est_bloat_pct" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			"seq_scan",
 			"seq_tup_read",
@@ -311,6 +316,9 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("reloptions", 12)); // after "relname"
+		
+		
 		String tabName = "pg_catalog.pg_stat_user_tables";
 
 		// Sample System Tables
@@ -321,21 +329,64 @@ extends CountersModel
 
 		return 
 			"select \n" +
-			"    current_database() AS dbname, \n" +
-			"    cast(100.0 * coalesce(seq_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS table_scan_pct, \n" + 
-			"    cast(100.0 * coalesce(idx_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS index_usage_pct, \n" +
-			"    pg_total_relation_size(relid)/1024 AS total_kb, \n" +
-			"    pg_table_size         (relid)/1024 AS data_kb, \n" +
-			"    pg_indexes_size       (relid)/1024 AS index_kb, \n" +
-			"    cast(CASE WHEN seq_scan > 0 THEN (seq_tup_read  * 1.0) / seq_scan ELSE 0 END as numeric(15,1)) AS seq_tup_read_per_scan, \n" +
-			"    cast(CASE WHEN idx_scan > 0 THEN (idx_tup_fetch * 1.0) / idx_scan ELSE 0 END as numeric(15,1)) AS idx_tup_fetch_per_scan, \n" +
-			"    * \n" +
+			"     current_database() AS dbname \n" +
+			"    ,cast(100.0 * coalesce(seq_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS table_scan_pct \n" + 
+			"    ,cast(100.0 * coalesce(idx_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS index_usage_pct \n" +
+			"    ,(SELECT cast(c.reltuples as int8) FROM pg_class c WHERE c.oid = ut.relid) AS row_estimate \n" +
+			"    ,pg_total_relation_size(relid)/1024 AS total_kb \n" +
+			"    ,pg_table_size         (relid)/1024 AS data_kb \n" +
+			"    ,pg_indexes_size       (relid)/1024 AS index_kb \n" +
+			"    ,cast(CASE WHEN seq_scan > 0 THEN (seq_tup_read  * 1.0) / seq_scan ELSE 0 END as numeric(15,1)) AS seq_tup_read_per_scan \n" +
+			"    ,cast(CASE WHEN idx_scan > 0 THEN (idx_tup_fetch * 1.0) / idx_scan ELSE 0 END as numeric(15,1)) AS idx_tup_fetch_per_scan \n" +
+			"    ,(SELECT cast(array_to_string(reloptions, ', ') as varchar(1024)) FROM pg_class c WHERE c.oid = ut.relid) AS reloptions \n" +
+			"    ,CAST( \n" +
+			"        CASE \n" +
+			"            WHEN n_dead_tup > 100 AND n_live_tup > 0 THEN (n_dead_tup::float / n_live_tup::float) * 100.0 \n" +
+			"            ELSE 0 \n" +
+			"        END \n" +
+			"     as numeric(10,1)) AS est_bloat_pct \n" +
+			"    ,* \n" +
 //			"    ,pg_relation_filepath(relid) as table_file_path \n" +
-			"from " + tabName + "\n" +
+			"from " + tabName + " ut \n" +
 			"where (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) > 0"
 			;
 	}
+	
 
+	@Override
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+	{
+		String name = "pg_stat_all_tables";
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			mtd.addTable(name, "pg_stat_all_tables");
+			
+			mtd.addColumn(name, "dbname",                 "<html>Name of the database</html>");
+			mtd.addColumn(name, "table_scan_pct",         "<html>How much do we TABLE scan the table. <br><b>Formula</b>: 100.0 * seq_scan / (seq_scan + idx_scan)</html>");
+			mtd.addColumn(name, "index_usage_pct",        "<html>How much do we INDEX scan the table. <br><b>Formula</b>: 100.0 * idx_scan / (seq_scan + idx_scan)</html>");
+			mtd.addColumn(name, "row_estimate",           "<html>Estimated number of rows in the table. <br><b>Formula</b>: reltuples FROM pg_class</html>");
+			mtd.addColumn(name, "total_kb",               "<html>Total Size of the table. <br><b>Formula</b>: pg_total_relation_size(relid)/1024</html>");
+			mtd.addColumn(name, "data_kb",                "<html>Data Size of the table.  <br><b>Formula</b>: pg_table_size(relid)/1024</html>");
+			mtd.addColumn(name, "index_kb",               "<html>Index Size of the table  <br><b>Formula</b>: pg_indexes_size(relid)/1024</html>");
+			mtd.addColumn(name, "seq_tup_read_per_scan",  "<html>Rows read per table scan <br><b>Formula</b>: seq_tup_read  / seq_scan</html>");
+			mtd.addColumn(name, "idx_tup_fetch_per_scan", "<html>Rows read per Index scan <br><b>Formula</b>: idx_tup_fetch / idx_scan</html>");
+			mtd.addColumn(name, "reloptions",             "<html>Table level options... for example: ALTER TABLE my_table SET (autovacuum_vacuum_scale_factor = 0.01) -- Set to 1% changes</html>");
+			mtd.addColumn(name, "est_bloat_pct",          "<html><b>Simple</b> Estimation of BLOAT Percent. <br><b>Formula</b>: n_dead_tup / n_live_tup * 100"
+					+ "<br><b>Note</b>: Skipping tables with 'n_dead_tup' less than 100."
+					+ "<br><b>Note</b>: Real BLOAT calculation (when it's time to do VACUUM FULL or pg_repack) must also include space usage on page level, possibly using pgstattuple('tabname')"
+					+ "</html>");
+		}
+		catch (NameNotFoundException e) 
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		//	System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+		}
+	}
+
+
+	
+	
 //	/**
 //	 * Special method called from DbmsObjectIdCache, when Objects can't be found in the cache
 //	 * <p>

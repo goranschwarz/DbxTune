@@ -2,7 +2,7 @@
 ## RHEL -- DbxTune Central -- systemd service 
 ############################################################################
 ## install: 
-##   sudo cp /home/dbxtune/dbxtune/0/resources/dbxcentral/scripts/dbxtune.service /etc/systemd/system/dbxtune.service
+##   sudo cp /home/dbxtune/dbxtune/0/resources/dbxcentral/scripts/dbxtune_oneshot.service /etc/systemd/system/dbxtune.service
 ##   sudo systemctl daemon-reload
 ##   sudo systemctl enable dbxtune.service
 ##
@@ -29,12 +29,12 @@ Description=DbxTune Central Service
 After=network.target
 
 [Service]
-Type=forking
+Type=oneshot
+RemainAfterExit=yes
 User=dbxtune
 Group=dbxtune
 ExecStart=/bin/bash /home/dbxtune/.dbxtune/dbxc/bin/start_ALL.sh
 ExecStop=/bin/bash /home/dbxtune/.dbxtune/dbxc/bin/stop_ALL.sh
-Restart=no
 
 [Install]
 WantedBy=multi-user.target

@@ -92,6 +92,8 @@ extends Properties
 	public static final String USER_TEMP   = "USER_TEMP"; 
 	public static final String PCS         = "PCS"; 
 
+	public static final String NOGUI_SAVE  = "NOGUI_SAVE"; // Used by the NOGUI to save/store changed configs
+
 	public static final String TAIL_TEMP   = "TAIL_TEMP"; 
 	
 	/** Log4j logging. */

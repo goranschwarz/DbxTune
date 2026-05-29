@@ -214,6 +214,10 @@ extends ReportEntryAbstract
 				if (AlarmHandler.hasInstance())
 				{
 					AlarmEvent ae = new AlarmEventDbmsVersionString(_dbmsServerName, "DSR:" + this.getClass().getSimpleName(), _dbmsVersionStringMin, _dbmsVersionStringMax);
+
+					// Information about how to disable this alarm
+					//ae.createAlarmOptionsMessage(this, "???");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}

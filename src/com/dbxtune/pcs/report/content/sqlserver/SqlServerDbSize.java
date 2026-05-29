@@ -429,6 +429,9 @@ extends SqlServerAbstract
 
 								ae.setExtendedDescription(extraAscii, extraHtml);
 
+								// Information about how to disable this alarm
+								//ae.createAlarmOptionsMessage(this, "???");
+
 								// And finally send the alarm
 								AlarmHandler.getInstance().addAlarm( ae );
 							}
@@ -552,6 +555,9 @@ extends SqlServerAbstract
 										threshold);
 
 								ae.setExtendedDescription(extraAscii, extraHtml);
+
+								// Information about how to disable this alarm
+								//ae.createAlarmOptionsMessage(this, "???");
 
 								// And finally send the alarm
 								AlarmHandler.getInstance().addAlarm( ae );

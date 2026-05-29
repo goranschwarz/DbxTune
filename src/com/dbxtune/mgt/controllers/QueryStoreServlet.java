@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -156,6 +157,8 @@ extends HttpServlet
 		String minExecParam   = Helper.getParameter(req, "minExecutions",  String.valueOf(DEFAULT_MIN_EXECUTIONS));
 		String includePlanPrm = Helper.getParameter(req, "includePlan",    "false");
 		String tsParam        = Helper.getParameter(req, "ts",             null);
+		String startTimeParam = Helper.getParameter(req, "startTime",      "");
+		String endTimeParam   = Helper.getParameter(req, "endTime",        "");
 
 		if (action.isBlank())
 		{
@@ -207,9 +210,12 @@ extends HttpServlet
 				case "listdatabases":
 				{
 					List<Map<String, Object>> dbs = actionListDatabases(conn, dbnameParam.trim());
+					int[] dbCounts = getCmDatabaseQsCounts(conn);
 					Map<String, Object> root = new LinkedHashMap<>();
-					root.put("count",     dbs.size());
-					root.put("databases", dbs);
+					root.put("count",          dbs.size());
+					root.put("databases",      dbs);
+					root.put("totalUserDbs",   dbCounts[0]);  // -1 if CmDatabases_abs not available
+					root.put("qsEnabledCount", dbCounts[1]);  // -1 if CmDatabases_abs not available
 					om.writeValue(out, root);
 					break;
 				}
@@ -222,7 +228,8 @@ extends HttpServlet
 						om.writeValue(out, errMap("bad-param", "Parameter 'dbname' is required for action=topQueries"));
 						break;
 					}
-					Map<String, Object> tqResult = actionTopQueries(conn, dbnameParam.trim(), rankByParam.trim().toLowerCase(), topN, minExec);
+					Map<String, Object> tqResult = actionTopQueries(conn, dbnameParam.trim(), rankByParam.trim().toLowerCase(),
+							topN, minExec, startTimeParam.trim(), endTimeParam.trim());
 					@SuppressWarnings("unchecked")
 					List<Map<String, Object>> queries = (List<Map<String, Object>>) tqResult.get("queries");
 					Map<String, Object> root = new LinkedHashMap<>();
@@ -232,6 +239,11 @@ extends HttpServlet
 					root.put("has2017Cols",        tqResult.get("has2017Cols"));
 					root.put("hasMemoryCols",      tqResult.get("hasMemoryCols"));
 					root.put("hasCompileDuration", tqResult.get("hasCompileDuration"));
+					root.put("hasWaitStats",       tqResult.get("hasWaitStats"));
+					root.put("hasAbortedCols",     tqResult.get("hasAbortedCols"));
+					root.put("timeline",           tqResult.get("timeline"));
+					root.put("filterStartTime",    startTimeParam.trim());
+					root.put("filterEndTime",      endTimeParam.trim());
 					root.put("queries",            queries);
 					om.writeValue(out, root);
 					break;
@@ -259,7 +271,9 @@ extends HttpServlet
 						om.writeValue(out, errMap("bad-param", "queryId must be a number: " + queryIdParam));
 						break;
 					}
-					Map<String, Object> detail = actionQueryDetail(conn, dbnameParam.trim(), queryId, includePlan);
+					Timestamp detailStartTs = parseOptionalTs(startTimeParam.trim());
+					Timestamp detailEndTs   = parseOptionalTs(endTimeParam.trim());
+					Map<String, Object> detail = actionQueryDetail(conn, dbnameParam.trim(), queryId, includePlan, detailStartTs, detailEndTs);
 					om.writeValue(out, detail);
 					break;
 				}
@@ -516,6 +530,43 @@ extends HttpServlet
 	// Action: listDatabases
 	// =========================================================================
 
+	/**
+	 * Reads {@code CmDatabases_abs} (last collected snapshot) and returns
+	 * {@code [totalUserDbCount, qsEnabledCount]} for database_id &gt; 4 (user databases only).
+	 * Returns {@code [-1, -1]} if the table is unavailable (e.g. first startup, no collection yet).
+	 */
+	private int[] getCmDatabaseQsCounts(DbxConnection conn)
+	{
+		try
+		{
+			String sql = conn.quotifySqlString(
+				  "SELECT COUNT(*) AS [total], "
+				+ "SUM(CASE WHEN [QsIsEnabled] = TRUE THEN 1 ELSE 0 END) AS [enabled] "
+				+ "FROM [CmDatabases_abs] "
+				+ "WHERE [database_id] > 4 "
+				+ "  AND [SessionSampleTime] = (SELECT MAX([SessionSampleTime]) FROM [CmDatabases_abs])");
+			PreparedStatement ps = conn.prepareStatement(sql);
+			try
+			{
+				ResultSet rs = ps.executeQuery();
+				if (rs.next())
+				{
+					int total   = rs.getInt("total");
+					int enabled = rs.getInt("enabled");
+					rs.close();
+					return new int[]{ total, enabled };
+				}
+				rs.close();
+			}
+			finally { ps.close(); }
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("QueryStoreServlet.getCmDatabaseQsCounts: cannot read CmDatabases_abs: {}", ex.getMessage());
+		}
+		return new int[]{ -1, -1 };
+	}
+
 	private List<Map<String, Object>> actionListDatabases(DbxConnection conn, String dbnameFilter)
 	throws Exception
 	{
@@ -537,6 +588,10 @@ extends HttpServlet
 
 			// Apply optional filter
 			if (!dbnameFilter.isEmpty() && !dbname.toLowerCase().contains(dbnameFilter.toLowerCase()))
+				continue;
+
+			// Skip the 'model' system database — QS data there is never useful to users
+			if (dbname.equalsIgnoreCase("model"))
 				continue;
 
 			Map<String, Object> row = new LinkedHashMap<>();
@@ -639,9 +694,15 @@ extends HttpServlet
 	 * </ul>
 	 */
 	private Map<String, Object> actionTopQueries(
-			DbxConnection conn, String dbname, String rankBy, int topN, int minExecutions)
+			DbxConnection conn, String dbname, String rankBy, int topN, int minExecutions,
+			String startTime, String endTime)
 	throws Exception
 	{
+		// Optional time-range filter — applied to i.[start_time]
+		Timestamp startTs = parseOptionalTs(startTime);
+		Timestamp endTs   = parseOptionalTs(endTime);
+		boolean   hasTimeFilter = (startTs != null && endTs != null);
+
 		// Detect optional columns introduced in newer SQL Server versions.
 		boolean hasMemoryCols      = hasColumn(conn, dbname, "query_store_runtime_stats", "avg_query_max_used_memory");
 		boolean has2017Cols        = hasColumn(conn, dbname, "query_store_runtime_stats", "avg_tempdb_space_used");
@@ -744,6 +805,10 @@ extends HttpServlet
 		sql.append(" INNER JOIN ").append(t(dbname, "query_store_plan")).append(" p ON q.[query_id] = p.[query_id] \n");
 		sql.append(" INNER JOIN ").append(t(dbname, "query_store_runtime_stats")).append(" rs ON p.[plan_id] = rs.[plan_id] \n");
 		sql.append(" INNER JOIN ").append(t(dbname, "query_store_runtime_stats_interval")).append(" i ON rs.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n");
+		if (hasTimeFilter)
+		{
+			sql.append(" WHERE i.[start_time] >= ? AND i.[start_time] <= ? \n");
+		}
 		sql.append(" GROUP BY q.[query_id], q.[query_text_id], q.[object_name], q.[schema_name] \n");
 		sql.append(" HAVING SUM(rs.[count_executions]) >= ? \n");
 		sql.append(" ORDER BY ").append(orderCol).append(" DESC ").append(getNullsLastSql(conn)).append(" \n");
@@ -759,7 +824,13 @@ extends HttpServlet
 		PreparedStatement pstmt = conn.prepareStatement(finalSql);
 		try
 		{
-			pstmt.setInt(1, minExecutions);
+			int pIdx = 1;
+			if (hasTimeFilter)
+			{
+				pstmt.setTimestamp(pIdx++, startTs);
+				pstmt.setTimestamp(pIdx++, endTs);
+			}
+			pstmt.setInt(pIdx, minExecutions);
 			ResultSet rs = pstmt.executeQuery();
 			while (rs.next())
 			{
@@ -834,14 +905,162 @@ extends HttpServlet
 		if (!rows.isEmpty() && hasWaitStats)
 			enrichWithWaitSummary(conn, dbname, rows);
 
+		// Compute the FULL-range aggregate timeline (independent of time filter) — drives the brush widget
+		List<Map<String, Object>> timeline = computeFullTimeline(conn, dbname, hasMemoryCols, has2017Cols, hasWaitStats);
+
 		Map<String, Object> result = new LinkedHashMap<>();
 		result.put("hasMemoryCols",      hasMemoryCols);
 		result.put("has2017Cols",        has2017Cols);
 		result.put("hasCompileDuration", hasCompileDuration);
 		result.put("hasAbortedCols",     hasAbortedCols);
 		result.put("hasWaitStats",       hasWaitStats);
+		result.put("timeline",           timeline);
 		result.put("queries",            rows);
 		return result;
+	}
+
+	/**
+	 * Parses an optional "yyyy-MM-dd HH:mm:ss" timestamp string. Returns {@code null} for blank/invalid input.
+	 */
+	private static Timestamp parseOptionalTs(String s)
+	{
+		if (!StringUtil.hasValue(s)) return null;
+		try
+		{
+			Date d = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(s.trim().replace('+', ' '));
+			return new Timestamp(d.getTime());
+		}
+		catch (ParseException ex)
+		{
+			return null;
+		}
+	}
+
+	/**
+	 * Aggregates Query Store metrics per runtime-stats-interval across ALL queries on the database.
+	 * <p>
+	 * Returned list (oldest → newest) is what the front-end brush widget plots so the user can
+	 * visually pick a sub-range to drill into. Always uses the full available range, regardless
+	 * of any active time filter on the bar chart.
+	 *
+	 * @return List of {intervalId, startTime, endTime, label, duration_ms, cpu_ms, reads, physReads,
+	 *         writes, executions, rowcount, [memory_mb], [tempdb_mb], [log_mb], [waitMs]}
+	 */
+	private List<Map<String, Object>> computeFullTimeline(
+			DbxConnection conn, String dbname,
+			boolean hasMemoryCols, boolean has2017Cols, boolean hasWaitStats)
+	{
+		List<Map<String, Object>> out = new ArrayList<>();
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT \n");
+		sql.append("    i.[runtime_stats_interval_id]                                                              AS [interval_id] \n");
+		sql.append("   ,i.[start_time]                                                                              AS [start_time] \n");
+		sql.append("   ,i.[end_time]                                                                                AS [end_time] \n");
+		sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_duration]),     0) / 1000.0 AS [duration_ms] \n");
+		sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_cpu_time]),     0) / 1000.0 AS [cpu_ms] \n");
+		sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_logical_io_reads]),  0)     AS [reads] \n");
+		sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_physical_io_reads]), 0)     AS [phys_reads] \n");
+		sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_logical_io_writes]), 0)     AS [writes] \n");
+		sql.append("   ,COALESCE(SUM(rs.[count_executions]),                              0) AS [executions] \n");
+		sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_rowcount]),     0) AS [rowcount] \n");
+		if (hasMemoryCols)
+			sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_query_max_used_memory]),0) / 128.0    AS [memory_mb] \n");
+		if (has2017Cols)
+		{
+			sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_tempdb_space_used]),0) / 128.0    AS [tempdb_mb] \n");
+			sql.append("   ,COALESCE(SUM(CAST(rs.[count_executions] AS BIGINT) * rs.[avg_log_bytes_used]),   0) / 1048576.0 AS [log_mb] \n");
+		}
+		sql.append(" FROM ").append(t(dbname, "query_store_runtime_stats_interval")).append(" i \n");
+		sql.append(" LEFT JOIN ").append(t(dbname, "query_store_runtime_stats")).append(" rs ON i.[runtime_stats_interval_id] = rs.[runtime_stats_interval_id] \n");
+		sql.append(" GROUP BY i.[runtime_stats_interval_id], i.[start_time], i.[end_time] \n");
+		sql.append(" ORDER BY i.[start_time] ASC \n");
+
+		String finalSql = conn.quotifySqlString(sql.toString());
+		_logger.debug("QueryStoreServlet.computeFullTimeline: dbname={} sql={}", dbname, finalSql);
+
+		// Wait stats per interval — fetched separately (not all rows have wait_stats rows)
+		// Two views are built:
+		//   waitByInterval        : intervalId → total ms (used as fallback)
+		//   waitByIntervalCategory: intervalId → (category → ms) — drives the stacked bar widget
+		Map<Long, Long>                 waitByInterval         = new HashMap<>();
+		Map<Long, Map<String, Long>>    waitByIntervalCategory = new HashMap<>();
+		LinkedHashSet<String>           waitCategories         = new LinkedHashSet<>();
+		if (hasWaitStats)
+		{
+			String waitSql = conn.quotifySqlString(""
+					+ "SELECT [runtime_stats_interval_id]                  AS [iid] \n"
+					+ "      ,[wait_category_desc]                         AS [cat] \n"
+					+ "      ,COALESCE(SUM([total_query_wait_time_ms]), 0) AS [wait_ms] \n"
+					+ "  FROM " + t(dbname, "query_store_wait_stats") + " \n"
+					+ " GROUP BY [runtime_stats_interval_id], [wait_category_desc]");
+			try (PreparedStatement wp = conn.prepareStatement(waitSql);
+			     ResultSet wrs = wp.executeQuery())
+			{
+				while (wrs.next())
+				{
+					long iid    = wrs.getLong("iid");
+					String cat  = wrs.getString("cat");
+					long waitMs = wrs.getLong("wait_ms");
+					if (cat == null || cat.isEmpty()) cat = "Unknown";
+					waitCategories.add(cat);
+					waitByInterval.merge(iid, waitMs, Long::sum);
+					waitByIntervalCategory
+						.computeIfAbsent(iid, k -> new LinkedHashMap<>())
+						.merge(cat, waitMs, Long::sum);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.debug("QueryStoreServlet.computeFullTimeline: wait stats query failed: {}", ex.getMessage());
+			}
+		}
+
+		SimpleDateFormat tsFmt    = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		SimpleDateFormat lblFmt   = new SimpleDateFormat("MM/dd HH:mm");
+		try (PreparedStatement ps = conn.prepareStatement(finalSql);
+		     ResultSet         rs = ps.executeQuery())
+		{
+			while (rs.next())
+			{
+				Map<String, Object> row = new LinkedHashMap<>();
+				long iid = rs.getLong("interval_id");
+				Timestamp start = rs.getTimestamp("start_time");
+				Timestamp end   = rs.getTimestamp("end_time");
+				row.put("intervalId", iid);
+				row.put("startTime",  start != null ? tsFmt.format(start) : null);
+				row.put("endTime",    end   != null ? tsFmt.format(end)   : null);
+				row.put("label",      start != null ? lblFmt.format(start) : "");
+				row.put("duration",   safeGetDouble(rs, "duration_ms"));
+				row.put("cpu",        safeGetDouble(rs, "cpu_ms"));
+				row.put("reads",      safeGetLong  (rs, "reads"));
+				row.put("physReads",  safeGetLong  (rs, "phys_reads"));
+				row.put("writes",     safeGetLong  (rs, "writes"));
+				row.put("executions", safeGetLong  (rs, "executions"));
+				row.put("rowcount",   safeGetDouble(rs, "rowcount"));
+				if (hasMemoryCols) row.put("memory", safeGetDouble(rs, "memory_mb"));
+				if (has2017Cols)
+				{
+					row.put("tempdb", safeGetDouble(rs, "tempdb_mb"));
+					row.put("log",    safeGetDouble(rs, "log_mb"));
+				}
+				if (hasWaitStats)
+				{
+					row.put("waitMs", waitByInterval.getOrDefault(iid, 0L));
+					// per-category breakdown for the stacked-bar sparkline
+					Map<String, Long> catMap = waitByIntervalCategory.get(iid);
+					Map<String, Long> waitByCat = new LinkedHashMap<>();
+					for (String cat : waitCategories)
+						waitByCat.put(cat, catMap != null && catMap.containsKey(cat) ? catMap.get(cat) : 0L);
+					row.put("waitByCategory", waitByCat);
+				}
+				out.add(row);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.debug("QueryStoreServlet.computeFullTimeline failed: {}", ex.getMessage());
+		}
+		return out;
 	}
 
 	/**
@@ -1092,9 +1311,11 @@ extends HttpServlet
 	// =========================================================================
 
 	private Map<String, Object> actionQueryDetail(
-			DbxConnection conn, String dbname, long queryId, boolean includePlan)
+			DbxConnection conn, String dbname, long queryId, boolean includePlan,
+			Timestamp startTs, Timestamp endTs)
 	throws Exception
 	{
+		boolean hasTimeFilter = (startTs != null && endTs != null);
 		SimpleDateFormat tsFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Map<String, Object> result = new LinkedHashMap<>();
 		result.put("dbname",  dbname);
@@ -1198,6 +1419,8 @@ extends HttpServlet
 		planSql.append(" INNER JOIN ").append(t(dbname, "query_store_runtime_stats")).append(" rs ON p.[plan_id] = rs.[plan_id] \n");
 		planSql.append(" INNER JOIN ").append(t(dbname, "query_store_runtime_stats_interval")).append(" i ON rs.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n");
 		planSql.append(" WHERE p.[query_id] = ? \n");
+		if (hasTimeFilter)
+			planSql.append(" AND i.[start_time] >= ? AND i.[end_time] <= ? \n");
 		planSql.append(" GROUP BY p.[plan_id], p.[is_forced_plan] \n");
 		planSql.append(" ORDER BY [avg_duration_us] DESC ").append(getNullsLastSql(conn)).append(" \n");
 
@@ -1206,6 +1429,7 @@ extends HttpServlet
 		try
 		{
 			ps.setLong(1, queryId);
+			if (hasTimeFilter) { ps.setTimestamp(2, startTs); ps.setTimestamp(3, endTs); }
 			ResultSet rs = ps.executeQuery();
 			while (rs.next())
 			{
@@ -1358,7 +1582,9 @@ extends HttpServlet
 					+ "    ,MAX(w.[max_query_wait_time_ms])    AS [max_wait_ms] \n"
 					+ "FROM " + t(dbname, "query_store_wait_stats") + " w \n"
 					+ "INNER JOIN " + t(dbname, "query_store_plan") + " p ON w.[plan_id] = p.[plan_id] \n"
+					+ "INNER JOIN " + t(dbname, "query_store_runtime_stats_interval") + " i ON w.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n"
 					+ "WHERE p.[query_id] = ? \n"
+					+ (hasTimeFilter ? "AND i.[start_time] >= ? AND i.[end_time] <= ? \n" : "")
 					+ "GROUP BY w.[wait_category_desc] \n"
 					+ "ORDER BY [total_wait_ms] DESC " + getNullsLastSql(conn) + " \n");
 
@@ -1366,6 +1592,7 @@ extends HttpServlet
 			try
 			{
 				ps.setLong(1, queryId);
+				if (hasTimeFilter) { ps.setTimestamp(2, startTs); ps.setTimestamp(3, endTs); }
 				ResultSet rs = ps.executeQuery();
 				while (rs.next())
 				{
@@ -1423,6 +1650,8 @@ extends HttpServlet
 			tlSql.append("INNER JOIN ").append(t(dbname, "query_store_runtime_stats_interval")).append(" i ON rs.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n");
 			tlSql.append("INNER JOIN ").append(t(dbname, "query_store_plan")).append(" p ON rs.[plan_id] = p.[plan_id] \n");
 			tlSql.append("WHERE p.[query_id] = ? \n");
+			if (hasTimeFilter)
+				tlSql.append("AND i.[start_time] >= ? AND i.[end_time] <= ? \n");
 			tlSql.append("GROUP BY i.[runtime_stats_interval_id], i.[start_time], i.[end_time] \n");
 			tlSql.append("ORDER BY i.[start_time] DESC ").append(getNullsLastSql(conn)).append(" \n");
 			tlSql.append(getLimitSql(conn, TIMELINE_INTERVALS));
@@ -1432,6 +1661,7 @@ extends HttpServlet
 			try
 			{
 				ps.setLong(1, queryId);
+				if (hasTimeFilter) { ps.setTimestamp(2, startTs); ps.setTimestamp(3, endTs); }
 				ResultSet rs = ps.executeQuery();
 				while (rs.next())
 				{

@@ -513,6 +513,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventRsDbQueueSize(cm, threshold, name, type, size.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "size");
+
 						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}

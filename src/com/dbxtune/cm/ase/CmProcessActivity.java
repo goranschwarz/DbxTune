@@ -1492,6 +1492,9 @@ extends CountersModel
 								AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
 								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+								// Information about how to disable this alarm
+								ae.createAlarmOptionsMessage(this, "StatementExecInSec");
+								
 								alarmHandler.addAlarm( ae );
 							}
 						} // end: WaitEventID != 250

@@ -70,6 +70,9 @@
 
     .jumbotron{ margin-top:-30px; }
 
+    .btn-muted-alarm { background-color: #c0657a; border-color: #a8546a; color: #fff; }
+    .btn-muted-alarm:hover { background-color: #a8546a; border-color: #8f435a; color: #fff; }
+
     #active-alarms-top {
       position: fixed;
       color: rgba(255, 148, 20, 1.0);
@@ -145,6 +148,12 @@
 
   <!-- CSS for Bootstrap "sub menu"-->
   <style>
+	/* Keep server button dropdowns within the viewport so they don't flip upward behind the sticky navbar */
+	.btn-group .dropdown-menu {
+		max-height: calc(100vh - 70px);
+		overflow-y: auto;
+	}
+
 	.dropdown-submenu {
 		position: relative;
 	}
@@ -1463,7 +1472,7 @@ List of stuff that can be done
 
 				html += ''
 						+ '<div class="btn-group">'
-						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
+						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" data-flip="false" aria-haspopup="true" aria-expanded="false">'
 						+ '    ' + serverDisplayName
 						+ '    <span id="btn-qa-normal-alarms-'+serverName+'" class="badge badge-pill badge-warning" style="margin-left:3px;"></span>'
 						+ '    <span id="btn-qa-normal-muted-'+serverName+'" class="badge badge-pill" style="background:#6c757d;color:#fff;display:none;margin-left:2px;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event)">&#128276;</span>'
@@ -1842,7 +1851,7 @@ List of stuff that can be done
 
 				// Reset all server button states to green
 				document.querySelectorAll('*[id^="btn-qa-normal-alarms-"]').forEach(function(el) { el.textContent = ''; });
-				document.querySelectorAll('*[id^="btn-qa-normal-"]').forEach(function(el) { el.classList.remove('btn-danger'); el.classList.add('btn-success'); });
+				document.querySelectorAll('*[id^="btn-qa-normal-"]').forEach(function(el) { el.classList.remove('btn-danger', 'btn-muted-alarm'); el.classList.add('btn-success'); });
 
 				// Group alarms by server (skip disabled servers)
 				var srvAlarmMap = {};
@@ -1871,8 +1880,9 @@ List of stuff that can be done
 							if (mutedCount > 0) { mutedEl.textContent = mutedCount; mutedEl.style.display = ''; }
 							else                { mutedEl.style.display = 'none'; }
 						}
-						document.getElementById('btn-qa-normal-' + graphServerName).classList.remove('btn-success');
-						document.getElementById('btn-qa-normal-' + graphServerName).classList.add('btn-danger');
+						var btn = document.getElementById('btn-qa-normal-' + graphServerName);
+						btn.classList.remove('btn-success', 'btn-danger', 'btn-muted-alarm');
+						btn.classList.add(activeCnt > 0 ? 'btn-danger' : 'btn-muted-alarm');
 					}
 				}
 

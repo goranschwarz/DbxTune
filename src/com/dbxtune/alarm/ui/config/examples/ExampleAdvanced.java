@@ -137,7 +137,12 @@ implements IUserDefinedAlarmInterrogator
 				{
 					if (LogSizeFreeInMb.intValue() > logSizeThreshold)
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLogSpaceUsage(cm, logSizeThreshold, dbname, LogSizeFreeInMb, LogSizeUsedPct) );
+						AlarmEvent ae = new AlarmEventLogSpaceUsage(cm, logSizeThreshold, dbname, LogSizeFreeInMb, LogSizeUsedPct);
+
+						// Information about how to disable this alarm
+						//alarmEvent.createAlarmOptionsMessage(this, "???");
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 
@@ -150,7 +155,12 @@ implements IUserDefinedAlarmInterrogator
 				{
 					if (DataSizeFreeInMb.intValue() > dbSizeThreshold)
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventDataSpaceUsage(cm, dbSizeThreshold, dbname, DataSizeFreeInMb, DataSizeUsedPct) );
+						AlarmEvent ae = new AlarmEventDataSpaceUsage(cm, dbSizeThreshold, dbname, DataSizeFreeInMb, DataSizeUsedPct);
+
+						// Information about how to disable this alarm
+						//alarmEvent.createAlarmOptionsMessage(this, "???");
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			} // end: if desiredDBName

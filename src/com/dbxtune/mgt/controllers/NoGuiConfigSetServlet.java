@@ -23,8 +23,8 @@ package com.dbxtune.mgt.controllers;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
-import java.security.Principal;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -39,12 +39,13 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.central.controllers.Helper;
-import com.dbxtune.central.pcs.DbxCentralRealm;
 import com.dbxtune.central.pcs.DbxTuneSample;
 import com.dbxtune.central.pcs.DbxTuneSample.MissingFieldException;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.ValidationException;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.mgt.NoGuiManagementServer;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -202,22 +203,12 @@ System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: val      = |"
 		final String auth = req.getHeader( "Authorization" );
 System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.HEADER: Authorization = |" + auth + "|.");
 
-		boolean hasAdminRole = false;
-		String currentUsername = "-no-principal-";
+		String expectedBasic  = System.getProperty(NoGuiManagementServer.PROPKEY_NOGUI_MANAGEMENT_http_auth_Basic);
+		String expectedBearer = System.getProperty(NoGuiManagementServer.PROPKEY_NOGUI_MANAGEMENT_http_auth_Bearer);
 
-		Principal principal = req.getUserPrincipal();
-		if (principal != null)
-			currentUsername = principal.getName();
+		boolean hasAdminRole = (auth != null) && (auth.equals(expectedBasic) || auth.equals(expectedBearer));
 
-		System.out.println(">>>>>>>>>>>> currentUsername = |" + currentUsername + "|.");
-		String from = "from getRemoteHost='" + req.getRemoteHost() + "', currentUsername='" + currentUsername + "', by user '" + req.getRemoteUser() + "', req.getUserPrincipal()=" + req.getUserPrincipal() + ".";
-		Principal userPrincipal = req.getUserPrincipal();
-		if (userPrincipal != null)
-		{
-			hasAdminRole = req.isUserInRole(DbxCentralRealm.ROLE_ADMIN);
-			System.out.println(">>>>>>>>>>>> userPrincipal.getName() = |" + userPrincipal.getName() + "|.");
-			System.out.println(">>>>>>>>>>>> req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) = |" + req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) + "|."); 
-		}
+		String from = "from getRemoteHost='" + req.getRemoteHost() + "', by user '" + req.getRemoteUser() + "'.";
 
 		if (!hasAdminRole)
 		{
@@ -234,6 +225,7 @@ System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.HEADER: Authorization
 //		}
 
 		String sendType = null;
+		String saveType = null;
 		Map<String, String> changeMap = Collections.emptyMap();
 		
 		try
@@ -247,11 +239,13 @@ System.out.println("---- requestBody: " + requestBody);
 			JsonNode rootNode = reqMapper.readTree(requestBody);
 
 			sendType  = DbxTuneSample.getString(rootNode, "type");
+			saveType  = DbxTuneSample.getString(rootNode, "saveType");
 			cmName    = DbxTuneSample.getString(rootNode, "cmName");
 			optName   = DbxTuneSample.getString(rootNode, "optName");
 			changeMap = DbxTuneSample.getStringMap(rootNode, "change");
 
 System.out.println("---- json.sendType  = '" + sendType  + "'.");
+System.out.println("---- json.saveType  = '" + saveType  + "'.");
 System.out.println("---- json.cmName    = '" + cmName    + "'.");
 System.out.println("---- json.optName   = '" + optName + "'.");
 System.out.println("---- json.changeMap = '" + changeMap + "'.");
@@ -268,129 +262,328 @@ System.out.println("---- json.changeMap = '" + changeMap + "'.");
 		}
 
 
-		int     respStatus = HttpServletResponse.SC_OK;
+		int     respStatus    = HttpServletResponse.SC_OK;
 		String  statusMessage = "success";
-		boolean isBootNeeded = false;
-		String  infoMessage = null;
-		String  errorMessage = null;
+		boolean isBootNeeded  = false;
+		String  infoMessage   = null;
+		String  errorMessage  = null;
 
+//		boolean saveToFile = "THIS_SERVER".equals(saveType) || "SERVER_TEMPLATE".equals(saveType);
+		boolean saveToFile = "THIS_SERVER".equals(saveType);
 
 		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
-System.out.println("---- found-Cm: " + cm);
-		CmSettingsHelper cfgEntry = null;
-		if (cm == null)
+		_logger.debug("doPost(): found cm={}", cm);
+
+		// Right now the "Save for ALL Server sharing the same config file" IS NOT SUPPORTED
+		// For that to work: we need to implement "editable" Properties file.
+		if ("SERVER_TEMPLATE".equals(saveType))
+		{
+			String sharedGfgFile = "";
+			if (Configuration.hasInstance(Configuration.PCS)) 
+				sharedGfgFile = Configuration.getInstance(Configuration.PCS).getFilename();
+
+			respStatus    = HttpServletResponse.SC_OK;
+			statusMessage = "FAILED";
+			infoMessage   = "Save for ALL Server sharing the same config file -- IS NOT YET Implemented";
+
+			if (StringUtil.hasValue(sharedGfgFile))
+				infoMessage += "<br>Instead change the property in the file: " + sharedGfgFile;
+		}
+		else if (cm == null)
 		{
 			respStatus    = HttpServletResponse.SC_NOT_FOUND;
 			statusMessage = "FAILED";
 			infoMessage   = "cmName '" + cmName + "' not found.";
 		}
-		else
+		else if ("alarmSettings".equals(sendType))
 		{
-			if ("alarmSettings".equals(sendType))
+			// isAlarmEnabled and timeRangeCron are stored as Configuration properties
+			if (changeMap.containsKey("isAlarmEnabled"))
 			{
-				if (changeMap.containsKey("timeRangeCron"))
+				boolean isAlarmEnabled = "true".equalsIgnoreCase(changeMap.get("isAlarmEnabled"));
+				String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, optName);
+
+				Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+				if (noguiConf != null)
 				{
-					String timeRangeCron = changeMap.get("timeRangeCron");
-					
-					try
+					saveConfigProperty(noguiConf, propKey, String.valueOf(isAlarmEnabled),
+					                   String.valueOf(CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnEnabled), saveToFile);
+					infoMessage = "Alarm '" + optName + "' enabled=" + isAlarmEnabled;
+				}
+				else
+				{
+					respStatus    = HttpServletResponse.SC_OK;
+					statusMessage = "FAILED";
+					infoMessage   = "No NOGUI_SAVE config instance available.";
+				}
+			}
+
+			if (changeMap.containsKey("timeRangeCron") && "success".equals(statusMessage))
+			{
+				String timeRangeCron = changeMap.get("timeRangeCron");
+				try
+				{
+					CmSettingsHelper.CronTimeRangeInputValidator validator = new CmSettingsHelper.CronTimeRangeInputValidator();
+					validator.isValid(null, timeRangeCron);
+
+					String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, optName);
+					Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+					if (noguiConf != null)
 					{
-						CmSettingsHelper.CronTimeRangeInputValidator validator = new CmSettingsHelper.CronTimeRangeInputValidator();
-						validator.isValid(null, timeRangeCron);
-						
-						System.out.println("-----------DATA IS VALID------------ |" + timeRangeCron + "|.");
-						System.out.println("CHANGE IS NOT IMPLEMENTED");
+						saveConfigProperty(noguiConf, propKey, timeRangeCron,
+						                   CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange, saveToFile);
+						infoMessage = (infoMessage != null ? infoMessage + "; " : "") + "timeRangeCron='" + timeRangeCron + "'";
 					}
-					catch (ValidationException ex)
+					else
 					{
-//						respStatus    = HttpServletResponse.SC_NOT_MODIFIED; // JSON body/payload wont be available by the caller 
-//						respStatus    = HttpServletResponse.SC_BAD_REQUEST;
 						respStatus    = HttpServletResponse.SC_OK;
-//						respStatus    = 422; // ???
 						statusMessage = "FAILED";
-						infoMessage   = "Validation failed";
-						errorMessage  = ex.getMessage();
-
-						ex.printStackTrace();
+						infoMessage   = "No NOGUI_SAVE config instance available.";
 					}
 				}
-
-				if (changeMap.containsKey("isAlarmEnabled"))
+				catch (ValidationException ex)
 				{
-					boolean isAlarmEnabled = "true".equalsIgnoreCase(changeMap.get("isAlarmEnabled"));
+					respStatus    = HttpServletResponse.SC_OK;
+					statusMessage = "FAILED";
+					infoMessage   = "Validation failed for timeRangeCron";
+					errorMessage  = ex.getMessage();
+					_logger.warn("Validation failed for timeRangeCron='{}': {}", timeRangeCron, ex.getMessage());
 				}
+			}
+		}
+		else if ("options".equals(sendType))
+		{
+			String newValue  = changeMap.get("value");
+			CmSettingsHelper cfgEntry = CmSettingsHelper.getByName(optName, cm.getCollectorOptions());
+
+			if (cfgEntry == null)
+			{
+				respStatus    = HttpServletResponse.SC_OK;
+				statusMessage = "FAILED";
+				infoMessage   = "optName '" + optName + "' not found in collector options for cmName '" + cmName + "'.";
 			}
 			else
 			{
-				String newValue = changeMap.get("value");
-				
-				// FIRST: Alarms
-				cfgEntry = CmSettingsHelper.getByName(optName, cm.getLocalAlarmSettings());
-
-				// SECOND: LocalSettings
-				if (cfgEntry == null)
-					cfgEntry = CmSettingsHelper.getByName(optName, cm.getLocalSettings());
-
-				// Validate data
-				if (cfgEntry != null)
+				try
 				{
-System.out.println("---- found-cfgEntry: " + cfgEntry);
-					try
-					{
-						cfgEntry.isValidInput(newValue);
-System.out.println("---- isValid-cfgEntry: " + cfgEntry);
-					}
-					catch (ValidationException ex) 
-					{
-//						respStatus    = HttpServletResponse.SC_NOT_MODIFIED;
-						respStatus    = HttpServletResponse.SC_OK;
-						statusMessage = "FAILED";
-						infoMessage   = "Validation failed";
-						errorMessage  = ex.getMessage();
+					cfgEntry.isValidInput(newValue);
+					applyCollectorOption(cm, cfgEntry, newValue);
 
-						ex.printStackTrace();
+					// CM setters call saveProps() → USER_TEMP, which may be null in NoGui mode.
+					// Persist explicitly to NOGUI_SAVE so the value survives restart.
+					Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+					if (noguiConf != null)
+						saveConfigProperty(noguiConf, cfgEntry.getPropName(), newValue, cfgEntry.getDefaultValue(), saveToFile);
+
+					infoMessage = "Option '" + optName + "' set to '" + newValue + "'.";
+				}
+				catch (ValidationException ex)
+				{
+					respStatus    = HttpServletResponse.SC_OK;
+					statusMessage = "FAILED";
+					infoMessage   = "Validation failed";
+					errorMessage  = ex.getMessage();
+					_logger.warn("Validation failed for option '{}' value='{}': {}", optName, newValue, ex.getMessage());
+				}
+				catch (SaveConfigException ex)
+				{
+					respStatus    = HttpServletResponse.SC_OK;
+					statusMessage = "FAILED";
+					infoMessage   = "Apply option failed";
+					errorMessage  = ex.getMessage();
+					_logger.warn("Failed to apply option '{}' value='{}': {}", optName, newValue, ex.getMessage());
+				}
+			}
+		}
+		else // "settings", "alarmParams", or default — look up in LocalSettings / LocalAlarmSettings
+		{
+			String newValue = changeMap.get("value");
+
+			List<CmSettingsHelper> localSettings      = cm.getLocalSettings()      != null ? cm.getLocalSettings()      : Collections.emptyList();
+			List<CmSettingsHelper> localAlarmSettings = cm.getLocalAlarmSettings() != null ? cm.getLocalAlarmSettings() : Collections.emptyList();
+
+			List<CmSettingsHelper> searchList = "settings".equals(sendType) ? localSettings : localAlarmSettings;
+
+			CmSettingsHelper cfgEntry = CmSettingsHelper.getByName(optName, searchList);
+
+			// Fallback to LocalSettings when searching alarm params
+			if (cfgEntry == null && !"settings".equals(sendType))
+				cfgEntry = CmSettingsHelper.getByName(optName, localSettings);
+
+			if (cfgEntry == null)
+			{
+				// Special case: "X isAlarmEnabled" and "X timeRangeCron" are injected into the
+				// alarmParams table by the GET servlet (insertExtraAlarmSettings) but are NOT
+				// stored in getLocalAlarmSettings() — they live as config properties, handled
+				// exactly like the alarmSettings branch.
+				final String IS_ALARM_ENABLED_SUFFIX = " isAlarmEnabled";
+				final String TIME_RANGE_CRON_SUFFIX  = " timeRangeCron";
+
+				if (optName != null && optName.endsWith(IS_ALARM_ENABLED_SUFFIX))
+				{
+					String colname = optName.substring(0, optName.length() - IS_ALARM_ENABLED_SUFFIX.length());
+					boolean isAlarmEnabled = "true".equalsIgnoreCase(newValue);
+					String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname);
+					Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+					if (noguiConf != null)
+					{
+						saveConfigProperty(noguiConf, propKey, String.valueOf(isAlarmEnabled),
+						                   String.valueOf(CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnEnabled), saveToFile);
+						infoMessage = "Alarm '" + colname + "' isAlarmEnabled=" + isAlarmEnabled;
+					}
+					else
+					{
+						statusMessage = "FAILED";
+						infoMessage   = "No NOGUI_SAVE config instance available.";
 					}
 				}
-				else // NOT FOUND
+				else if (optName != null && optName.endsWith(TIME_RANGE_CRON_SUFFIX))
 				{
-//					respStatus    = HttpServletResponse.SC_NOT_FOUND;
+					String colname = optName.substring(0, optName.length() - TIME_RANGE_CRON_SUFFIX.length());
+					try
+					{
+						new CmSettingsHelper.CronTimeRangeInputValidator().isValid(null, newValue);
+						String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname);
+						Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+						if (noguiConf != null)
+						{
+							saveConfigProperty(noguiConf, propKey, newValue,
+							                   CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange, saveToFile);
+							infoMessage = "Alarm '" + colname + "' timeRangeCron='" + newValue + "'";
+						}
+						else
+						{
+							statusMessage = "FAILED";
+							infoMessage   = "No NOGUI_SAVE config instance available.";
+						}
+					}
+					catch (ValidationException ex)
+					{
+						respStatus    = HttpServletResponse.SC_OK;
+						statusMessage = "FAILED";
+						infoMessage   = "Validation failed for timeRangeCron";
+						errorMessage  = ex.getMessage();
+						_logger.warn("Validation failed for timeRangeCron='{}': {}", newValue, ex.getMessage());
+					}
+				}
+				else
+				{
 					respStatus    = HttpServletResponse.SC_OK;
 					statusMessage = "FAILED";
 					infoMessage   = "optName '" + optName + "' for cmName '" + cmName + "' not found.";
 				}
 			}
-		}
-		
-//		String  statusMessage = "success";
-//		boolean isBootNeeded = false;
-//		String  infoMessage = null;
-//		String  errorMessage = null;
+			else
+			{
+				try
+				{
+					cfgEntry.isValidInput(newValue);
+//					cfgEntry.setStringValue(newValue); // We should never SET values in the helper (we will get the values from the properties)
 
-		// Send response status
-System.out.println("SET Response status: " + respStatus);
+					Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+					if (noguiConf != null)
+						saveConfigProperty(noguiConf, cfgEntry.getPropName(), newValue, cfgEntry.getDefaultValue(), saveToFile);
+					infoMessage = "Setting '" + optName + "' set to '" + newValue + "'.";
+				}
+				catch (ValidationException ex)
+				{
+					respStatus    = HttpServletResponse.SC_OK;
+					statusMessage = "FAILED";
+					infoMessage   = "Validation failed";
+					errorMessage  = ex.getMessage();
+					_logger.warn("Validation failed for setting '{}' value='{}': {}", optName, newValue, ex.getMessage());
+				}
+			}
+		}
+
+		// Send response
+		_logger.debug("doPost(): respStatus={}, statusMessage='{}', info='{}', error='{}'", respStatus, statusMessage, infoMessage, errorMessage);
 		resp.setStatus(respStatus);
 
-		// Setup a JSON "writer"
 		StringWriter sw = new StringWriter();
 		JsonFactory jfactory = new JsonFactory();
 		JsonGenerator gen = jfactory.createGenerator(sw);
 		gen.setPrettyPrinter(new DefaultPrettyPrinter());
 		gen.setCodec(new ObjectMapper(jfactory));
 
-		
 		gen.writeStartObject();
 		gen.writeStringField ("status"      , statusMessage);
-		if (StringUtil.hasValue(infoMessage))  gen.writeStringField ("info" , infoMessage);
-		if (StringUtil.hasValue(errorMessage)) gen.writeStringField ("error", errorMessage);
+		if (StringUtil.hasValue(infoMessage))  gen.writeStringField("info" , infoMessage);
+		if (StringUtil.hasValue(errorMessage)) gen.writeStringField("error", errorMessage);
 		gen.writeBooleanField("isBootNeeded", isBootNeeded);
 		gen.writeEndObject();
 		gen.close();
-		
-		// Generate PAYLOAD
+
 		String payload = sw.toString();
 		out.println(payload);
-System.out.println("SEND Payload: " + payload);
-		
+		_logger.debug("doPost(): payload={}", payload);
+
 		out.flush();
 		out.close();
+	}
+
+	private static class SaveConfigException 
+	extends Exception
+	{
+		private static final long serialVersionUID = 1L;
+
+		public SaveConfigException(String msg)
+		{
+			super(msg);
+		}
+	}
+
+	/**
+	 * Write a value to the NOGUI_SAVE in-memory config.
+	 * If the value equals the default, the stored key is <em>removed</em> so the application
+	 * default takes effect cleanly (no stale overrides in the file).
+	 * For non-default values, {@code Configuration.setProperty()} is used — it automatically
+	 * prefixes registered defaults with {@code USE_DEFAULT:} as a versioning safeguard.
+	 */
+	private void saveConfigProperty(Configuration noguiConf, String propKey, String newValue, String defaultValue, boolean saveToFile)
+	{
+		String saveLocation = !saveToFile ? "-in-memory-only-" : "using file '" + noguiConf.getFilename() + "'.";
+
+		if (defaultValue != null && defaultValue.equals(newValue))
+		{
+			_logger.info("Removing property '" + propKey + "' from cfg=" + (noguiConf.getConfName() + ", " + saveLocation) );
+			noguiConf.remove(propKey);
+		}
+		else
+		{
+			_logger.info("Changing property '" + propKey + "' to '" + newValue + "', at cfg=" + (noguiConf.getConfName() + ", " + saveLocation) );
+			noguiConf.setProperty(propKey, newValue);
+		}
+
+		if (saveToFile)
+			noguiConf.save();
+	}
+
+	private void applyCollectorOption(CountersModel cm, CmSettingsHelper cfgEntry, String newValue)
+	throws SaveConfigException
+	{
+		String propName = cfgEntry.getPropName();
+		String cmBase   = cm.getName() + ".";
+		String keyPart  = propName.startsWith(cmBase) ? propName.substring(cmBase.length()) : propName;
+
+		try
+		{
+			if      (CountersModel.PROPKEY_sampleDataIsPaused        .equals(keyPart)) cm.setPauseDataPolling          (Boolean.parseBoolean(newValue), false);
+			else if (CountersModel.PROPKEY_postponeTime              .equals(keyPart)) cm.setPostponeTime              (Integer.parseInt    (newValue), false);
+			else if (CountersModel.PROPKEY_postponeIsEnabled         .equals(keyPart)) cm.setPostponeIsEnabled         (Boolean.parseBoolean(newValue), false);
+			else if (CountersModel.PROPKEY_queryTimeout              .equals(keyPart)) cm.setQueryTimeout              (Integer.parseInt    (newValue), false);
+			else if (CountersModel.PROPKEY_negativeDiffCountersToZero.equals(keyPart)) cm.setNegativeDiffCountersToZero(Boolean.parseBoolean(newValue), false);
+			else if (CountersModel.PROPKEY_persistCounters           .equals(keyPart)) cm.setPersistCounters           (Boolean.parseBoolean(newValue), false);
+			else if (CountersModel.PROPKEY_persistCounters_abs       .equals(keyPart)) cm.setPersistCountersAbs        (Boolean.parseBoolean(newValue), false);
+			else if (CountersModel.PROPKEY_persistCounters_diff      .equals(keyPart)) cm.setPersistCountersDiff       (Boolean.parseBoolean(newValue), false);
+			else if (CountersModel.PROPKEY_persistCounters_rate      .equals(keyPart)) cm.setPersistCountersRate       (Boolean.parseBoolean(newValue), false);
+//			else if (CountersModel.PROPKEY_isEnabled                 .equals(keyPart)) cm.setEnabledByUser             (Boolean.parseBoolean(newValue), false);
+			else
+				throw new SaveConfigException("Unknown collector option propName '" + propName + "' (keyPart='" + keyPart + "').");
+		}
+		catch (NumberFormatException ex)
+		{
+			throw new SaveConfigException("Invalid number for option '" + propName + "' value='" + newValue + "': " + ex.getMessage());
+		}
 	}
 }

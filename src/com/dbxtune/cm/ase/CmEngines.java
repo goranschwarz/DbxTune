@@ -748,6 +748,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(cm, "CPUTime");
+
 					AlarmHandler.getInstance().addAlarm(ae);
 				}
 			}

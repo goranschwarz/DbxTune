@@ -64,7 +64,9 @@ extends MonitorMpstat
 	{
 		String cmdPath = Configuration.getCombinedConfiguration().getProperty(PROPKEY_windows_typeperf_cmd_path, DEFAULT_windows_typeperf_cmd_path);
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\Processor(*)\\*\" ";
+		String stopAfterXSamples = HostMonitor.getWindowsTypeperfStopAfterXHours(getSleepTime());
+
+		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + stopAfterXSamples + " \"\\Processor(*)\\*\" ";
 	}
 
 	@Override

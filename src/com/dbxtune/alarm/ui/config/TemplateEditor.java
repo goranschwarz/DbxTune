@@ -74,6 +74,9 @@ import com.dbxtune.alarm.writers.AlarmWriterAbstract;
 import com.dbxtune.alarm.writers.IAlarmWriter;
 import com.dbxtune.alarm.writers.WriterUtils;
 import com.dbxtune.central.DbxTuneCentral;
+import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.gui.swing.GLabel;
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.dbxtune.utils.Configuration;
@@ -118,6 +121,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	private JButton          _ok          = new JButton("OK");
 	private JButton          _cancel      = new JButton("Cancel");
 	
+	private CountersModel    _dummyCm;
 	private AlarmEvent       _exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
 	private List<AlarmEvent> _exampleAlarmEventList = new ArrayList<>();
 
@@ -136,8 +140,13 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		_currentPropKey         = currentPropKey;
 		_currentConfig          = configuration;
 
+		_dummyCm = new DummyCm();
+
 		// Add some examples, which will be used...
 		_exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
+//		_exampleAlarmEvent.createAlarmOptionsMessage(_dummyCm, "Dummy1");
+		_exampleAlarmEvent.createAlarmOptionsMessage(_dummyCm, "Dummy2");
+
 		_exampleAlarmEventList = new ArrayList<>();
 		for (int i=0; i<10; i++)
 		{
@@ -786,5 +795,45 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		{
 			return null;
 		}
+	}
+	
+	public static final String  PROPKEY_alarm_dummy_1         = "DummyCm.alarm.system.on.Dummy1";
+	public static final boolean DEFAULT_alarm_dummy_1         = true;
+
+	public static final String  PROPKEY_alarm_dummy_2         = "DummyCm.alarm.system.on.Dummy2";
+	public static final boolean DEFAULT_alarm_dummy_2         = true;
+	public static final String  PROPKEY_alarm_dummy_2_KeepMsg = "DummyCm.alarm.system.on.Dummy2.keep.regex";
+	public static final String  DEFAULT_alarm_dummy_2_KeepMsg = "";
+	public static final String  PROPKEY_alarm_dummy_2_SkipMsg = "DummyCm.alarm.system.on.Dummy2.skip.regex";
+	public static final String  DEFAULT_alarm_dummy_2_SkipMsg = "(xxx|yyy)";
+
+	private static class DummyCm
+	extends CountersModel
+	{
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public String getName()
+		{
+			return "DummyCm";
+		}
+
+		@Override
+		public List<CmSettingsHelper> getLocalAlarmSettings()
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			List<CmSettingsHelper> list = new ArrayList<>();
+
+			CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+			
+			list.add(new CmSettingsHelper("Dummy1"        , isAlarmSwitch, PROPKEY_alarm_dummy_1        , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_dummy_1        , DEFAULT_alarm_dummy_1        ), DEFAULT_alarm_dummy_1          , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
+
+			list.add(new CmSettingsHelper("Dummy2"        , isAlarmSwitch, PROPKEY_alarm_dummy_2        , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_dummy_2        , DEFAULT_alarm_dummy_2        ), DEFAULT_alarm_dummy_2        , "On messages starting with 'background task message:', send 'AlarmEventBackgroundMessage'." ));
+			list.add(new CmSettingsHelper("Dummy2 Keep Msg"              , PROPKEY_alarm_dummy_2_KeepMsg, String.class,  conf.getProperty       (PROPKEY_alarm_dummy_2_KeepMsg, DEFAULT_alarm_dummy_2_KeepMsg), DEFAULT_alarm_dummy_2_KeepMsg, "Keep messages in 'Background Message', That contains this RegEx. After this rule the 'skip' rule is evaluated. (blank=disables this rule). " , new RegExpInputValidator() ));
+			list.add(new CmSettingsHelper("Dummy2 Skip Msg"              , PROPKEY_alarm_dummy_2_SkipMsg, String.class,  conf.getProperty       (PROPKEY_alarm_dummy_2_SkipMsg, DEFAULT_alarm_dummy_2_SkipMsg), DEFAULT_alarm_dummy_2_SkipMsg, "Skip messages in 'Background Message', That contains this RegEx. Before this rule the 'keep' rule is evaluated. (blank=disables this rule). ", new RegExpInputValidator() ));
+
+			return list;
+		}
+		
 	}
 }

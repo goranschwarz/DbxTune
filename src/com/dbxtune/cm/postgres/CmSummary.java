@@ -34,6 +34,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -629,7 +630,14 @@ extends CmSummaryAbstract
 
 				
 				if (blocking_lock_count > threshold && tmpBlockingLockWaitInSec > waitThreshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, waitThreshold, blocking_lock_count, blocking_lock_wait_in_sec) );
+				{
+					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, waitThreshold, blocking_lock_count, blocking_lock_wait_in_sec);
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "BlockingLockCount");
+
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
 			}
 		}
 
@@ -647,7 +655,14 @@ extends CmSummaryAbstract
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldest_xact_start_in_sec='"+oldest_xact_start_in_sec+"'.");
 
 				if (oldest_xact_start_in_sec > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_xact_start_in_sec, "-unknown-") );
+				{
+					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_xact_start_in_sec, "-unknown-");
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "oldestOpenTranInSec");
+
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
 			}
 		}
 
@@ -665,7 +680,14 @@ extends CmSummaryAbstract
 					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldest_xact_start_in_sec='"+oldest_stmnt_start_in_sec+"'.");
 
 				if (oldest_stmnt_start_in_sec > threshold)
-					AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_stmnt_start_in_sec, "-unknown-") );
+				{
+					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_stmnt_start_in_sec, "-unknown-");
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "oldestStatementInSec");
+
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
 			}
 		}
 	}

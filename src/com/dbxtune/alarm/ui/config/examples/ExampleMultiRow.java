@@ -78,8 +78,12 @@ implements IUserDefinedAlarmInterrogator
 					// If it's a DUMP DATABASE or DUMP TRANSACTION, do not alarm...
 					if (OldestTranName != null && !OldestTranName.startsWith("DUMP "))
 					{
-						AlarmEvent alarm = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
-						AlarmHandler.getInstance().addAlarm(alarm);
+						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
+
+						// Information about how to disable this alarm
+						//alarmEvent.createAlarmOptionsMessage(cm, "???");
+
+						AlarmHandler.getInstance().addAlarm(ae);
 					}
 				}
 			}
@@ -95,7 +99,14 @@ implements IUserDefinedAlarmInterrogator
 				{
 					int threshold = 0;
 					if (TransactionLogFull.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, dbname, null) );
+					{
+						AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, dbname, null);
+
+						// Information about how to disable this alarm
+						//alarmEvent.createAlarmOptionsMessage(cm, "???");
+
+						AlarmHandler.getInstance().addAlarm(ae);
+					}
 				}
 			}
 		}

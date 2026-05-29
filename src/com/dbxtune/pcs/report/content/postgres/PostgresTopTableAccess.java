@@ -347,7 +347,7 @@ extends PostgresAbstract
 			// Describe the table
 			rstm.setDescription("<h4>Table/Index Access Activity (ordered by: /*-table-scan-rows-read- and -index-rows-read-*/ seq_tup_read + idx_tup_fetch)</h4>"
 					+ "Autovacuum Tuning Basics (for TOAST cleanup/reduction)<br>"
-					+ "https://www.2ndquadrant.com/en/blog/autovacuum-tuning-basics/"
+					+ "https://www.enterprisedb.com/blog/autovacuum-tuning-basics"
 					+ "<br>");
 
 			// Columns description

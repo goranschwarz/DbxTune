@@ -206,7 +206,8 @@ extends ReportEntryAbstract
 		      "     [description],            \n" +
 		      "     [lastDescription],        \n" +
 		      "     [extendedDescription],    \n" +
-		      "     [lastExtendedDescription] \n" +
+		      "     [lastExtendedDescription],\n" +
+		      "     [alarmOptions]            \n" +
 		      "FROM " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_ACTIVE, null, true) + " \n" +
 		      "WHERE 1 = 1 \n" +
 		      getReportPeriodSqlWhere("createTime") +

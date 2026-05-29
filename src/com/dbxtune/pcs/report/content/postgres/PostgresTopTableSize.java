@@ -138,6 +138,7 @@ extends PostgresAbstract
 		rstm.setColumnDescription("index_mb"                   , "Index size in MB");
 		rstm.setColumnDescription("toast_mb"                   , "TOAST () size in MB (TOAST = The Oversized Attribute Storage Technique), or in short 'large rows that spans pages'.");
 		rstm.setColumnDescription("oid"                        , "ID number, which can be found at the OS, in the 'data' directory. for the database #### (datid).");
+		rstm.setColumnDescription("reloptions"                 , "Table options specified by for example: ALTER TABLE my_table SET (autovacuum_vacuum_scale_factor = 0.01) -- Set to 1% changes");
 	}
 
 	@Override
@@ -163,6 +164,7 @@ extends PostgresAbstract
 			    + "    ,[index_mb] \n"
 			    + "    ,[toast_mb] \n"
 			    + "    ,[oid] \n"
+			    + "    ,[reloptions] \n"
 			    + "from [CmPgTableSize_abs] \n"
 			    + "where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmPgTableSize_abs]) \n"
 			    + "order by [total_mb] desc \n"

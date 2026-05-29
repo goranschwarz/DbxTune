@@ -252,9 +252,12 @@ at pc:
 			position: fixed;
 			top: 265px;
 			left: 25px;
-			max-height: 75%;
+			height: auto;            /* auto-fit to inner content */
+			max-height: 90vh;        /* but never exceed viewport */
 			width: 97%;
-			overflow: auto;
+			overflow: hidden;        /* outer must not scroll — inner #active-statements-win handles it */
+			display: flex;
+			flex-direction: column;
 		/*	background-color: rgba(255, 195, 83, 1); */
 			background-color: rgba(229, 228, 226, 1);
 			border: 2px solid dark-gray;
@@ -265,6 +268,11 @@ at pc:
 			padding-bottom: 10px;
 			padding-right: 10px;
 			padding-left: 10px;
+		}
+		#active-statements-win {
+			overflow: auto;          /* scrollbar lives here, only when needed */
+			flex: 1 1 auto;
+			min-height: 0;
 		}
 
 		#active-statements-ctl {
@@ -533,6 +541,12 @@ at pc:
 		#query-store-panel.qs-dark #qs-date-select             { background:#333 !important; color:#e0e0e0 !important; border-color:#555 !important; }
 		.qs-rank-hl                                            { background:#d0e8ff !important; }
 		#query-store-panel.qs-dark th.qs-rank-hl               { background:#1a3a5c !important; color:#a8d4ff !important; }
+		/* Brush + wait chart containers — override inline background set by JS */
+		#query-store-panel.qs-dark #qs-brush-canvas-box,
+		#query-store-panel.qs-dark #qs-tq-wait-box             { background:#252525 !important; border-color:#444 !important; }
+		#query-store-panel.qs-dark .cm-gutter                  { background:#3a3a3a !important; }
+		#query-store-panel.qs-dark #qs-tq-filter-banner        { background:#3a2e00 !important; border-color:#7a6000 !important; color:#ffd980 !important; }
+		#query-store-panel.qs-dark #qs-tq-filter-banner a      { color:#ffc107 !important; }
 
 		/* ── Showplan Loader input dialog — dark mode ── */
 		#dbx-showplan-viewer-input-dialog.spv-dark .modal-content            { background:#1e1e1e; color:#e0e0e0; border-color:#555; }
@@ -1619,6 +1633,7 @@ at pc:
 
 	<div id="active-statements" class="active-statements-class" style="display: none;">
 		<div id="active-statements-ctl" class="active-statements-ctl-class">
+			<button type="button" class="close" aria-label="Close" onclick="$('#active-statements').hide();" title="Close" style="position:absolute;top:4px;right:8px;font-size:1.4rem;line-height:1;background:transparent;border:none;cursor:pointer;z-index:5;">&times;</button>
 			<span id="active-statements-count" style="color:black; font-weight: bold;">##</span> Active Statements...
 
 			<span id="active-statements-win-size">

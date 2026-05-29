@@ -1169,6 +1169,9 @@ extends CountersModel
 
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "ImBlockingOthersMaxTimeInSec");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -1203,6 +1206,9 @@ extends CountersModel
 						
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "HoldingXLocksWhileWaitForClientInputInSec");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -1236,6 +1242,9 @@ extends CountersModel
 						
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "HoldingAdvisoryLocksWhileWaitForClientInputInSec");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -1314,6 +1323,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, backend_type);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "StatementExecInSec");
+
 							alarmHandler.addAlarm( ae );
 						}
 					} // end: above threshold
@@ -1382,6 +1394,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, DBName, xactTimeInSec, backend_type);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "OpenXactInSec");
+
 							alarmHandler.addAlarm( ae );
 						}
 					} // end: above threshold

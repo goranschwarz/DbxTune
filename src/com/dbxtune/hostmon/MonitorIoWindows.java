@@ -43,9 +43,13 @@ extends MonitorIo
 	@Override
 	public String getCommand()
 	{
+		// TODO: use "-sc ###" so that typeperf dies after X hours -- -sc = SampleCount ... so we need to calculate "getSleepTime()" into a 24 hours windows
+		// TEST: that the typeperf simply simply restarts again... and that counters are not starting at an "ODD" number so we get "spikes" in data...
 		String cmdPath = Configuration.getCombinedConfiguration().getProperty(PROPKEY_windows_typeperf_cmd_path, DEFAULT_windows_typeperf_cmd_path);
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\PhysicalDisk(*)\\*\" ";
+		String stopAfterXSamples = HostMonitor.getWindowsTypeperfStopAfterXHours(getSleepTime());
+
+		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + stopAfterXSamples + " \"\\PhysicalDisk(*)\\*\" ";
 //		return cmd != null ? cmd : cmdPath + "typeperf -si " + getSleepTime() + " \"\\LogicalDisk(*)\\*\""; // or should we use this??? It also have: Free% & FreeMB
 	}
 

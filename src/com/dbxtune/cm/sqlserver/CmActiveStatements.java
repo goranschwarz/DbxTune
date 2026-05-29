@@ -22,9 +22,13 @@ package com.dbxtune.cm.sqlserver;
 
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -111,7 +115,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {"VIEW SERVER STATE"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] { "used_memory_pct", "percent_complete" };
+	public static final String[] PCT_COLUMNS      = new String[] { "used_memory_pct", "percent_complete", "rt_est_pct" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"exec_cpu_time",
 		"exec_reads",
@@ -125,7 +129,8 @@ extends CountersModel
 		"sess_reads",
 		"sess_logical_reads",
 		"sess_writes",
-		"sess_row_count"
+		"sess_row_count",
+		"rt_row_count"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -202,6 +207,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_spidInputBuffer    = PROP_PREFIX + ".sample.spidInputBuffer";
 	public static final boolean DEFAULT_sample_spidInputBuffer    = true;
 
+	public static final String  PROPKEY_sample_stmntRunTimeOpInfo = PROP_PREFIX + ".sample.stmntRunTimeOpInfo";
+	public static final boolean DEFAULT_sample_stmntRunTimeOpInfo = true;
+
 	
 	private void addTrendGraphs()
 	{
@@ -277,6 +285,16 @@ extends CountersModel
 
 		setLocalToolTipTextOnTableColumnHeader("exec_row_count",              "Number of rows that have been returned to the client by this request");
 		setLocalToolTipTextOnTableColumnHeader("sess_row_count",              "Number of rows returned on the session up to this point");
+
+		setLocalToolTipTextOnTableColumnHeader("rt_at_root_node",             "<html>Indicator that we are currently executiong top level operator. If NOT we are still executing something in the plan downstream.</html>");
+		setLocalToolTipTextOnTableColumnHeader("rt_node_id",                  "<html>If this is 1 this would be the top level. If it's higher than 1: the top operator has not yet recevied any data to process<br><b>Note</b>: The goal is to see that 'node_id' 1 is finaly processing data...");
+		setLocalToolTipTextOnTableColumnHeader("rt_node_operator",            "<html>The operator at 'node_id'.<br><b>Note</b>: if 'rt_at_root_node' is false: Then this operator is NOT the FINAL Operator, but instead: we are still executing something in the plan downstream.</html>");
+		setLocalToolTipTextOnTableColumnHeader("rt_est_pct",                  "<html>An estimate how far we have processed data...<br><b>Algo</b>: row_count / estimate_row_count<br><b>Note</b>: if 'estimate_row_count' is NOT correct the PCT will also be incorrect</html>");
+		setLocalToolTipTextOnTableColumnHeader("rt_est_row_count",            "<html>The optimizer has estimated this amount of rows to process in this operator...<br><b>Note</b>: This could be wrong...</html>");
+		setLocalToolTipTextOnTableColumnHeader("rt_row_count_abs",            "<html>How many rows the operator has actually processed, which could be compared to 'rt_est_row_count'.</html>");
+		setLocalToolTipTextOnTableColumnHeader("rt_row_count",                "<html>How many rows the operator has actually processed.<br><b>Note</b>: If diff/rate calculated: it will be diff or rowsPerSecond</html>");
+		setLocalToolTipTextOnTableColumnHeader("HasRtOperators",              "<html>True if 'RtOperators' columns has values.<br>Hover to show ALL Operators and there statistics</html>");
+		setLocalToolTipTextOnTableColumnHeader("RtOperators",                 "<html>Table of Runtime values for executing Operators<br>Hover to show ALL Operators and there statistics</html>");
 	}
 
 	@Override
@@ -482,8 +500,18 @@ extends CountersModel
 			"    ,ImBlockedBySessionId = der.blocking_session_id \n" +
 			"    ,ImBlockingOtherSessionIds    = convert(varchar(512), '') \n" +
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) \n" +
-			"    ,des.status \n" +
+			"    ,des.status AS sess_status \n" + // DES = Only Indicates that it's running... 
+			"    ,der.status AS exec_status \n" + // DER = Says if its 'suspended', 'running', 'runnable' 
+			"    ,der.wait_type AS exec_wait_type \n" +
 			"    ,der.command \n" +
+			"    ,HasRtOperators            = CAST(0    as bit) \n" +
+			"    ,rt_at_root_node           = CAST(0    as bit) \n" +
+			"    ,rt_node_id                = CAST(-1   as int) \n" +
+			"    ,rt_node_operator          = CAST(NULL as varchar(256)) \n" +
+			"    ,rt_est_pct                = CAST(-1   as numeric(18,1)) \n" +
+			"    ,rt_row_count              = CAST(-1   as bigint) \n" +
+			"    ,rt_row_count_abs          = CAST(-1   as bigint) \n" +
+			"    ,rt_est_row_count          = CAST(-1   as bigint) \n" +
 //			"    ,tran_id                   = der.transaction_id \n" +
 //			"    ,tran_begin_time           = (SELECT TOP 1 tat.transaction_begin_time FROM sys.dm_tran_active_transactions tat WHERE tat.transaction_id = der.transaction_id) \n" +
 //			"    ,tran_name                 = (SELECT TOP 1 tat.name \n" +
@@ -590,6 +618,7 @@ extends CountersModel
 			"    ,SpidWaitInfo     = convert(varchar(max),null) \n" +    // filled in with 'localCalculation(...)' with values from CmSpidWait
 			"    ,deqp.query_plan \n" +
 			LiveQueryPlanActive +
+			"    ,RtOperators               = CAST(NULL as varchar(max)) \n" +
 			"FROM sys." + dm_exec_sessions + " des \n" +
 //			"JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
 // Lets try with 'LEFT OUTER JOIN sys.dm_exec_requests' instead of 'JOIN sys.dm_exec_requests'
@@ -619,8 +648,18 @@ extends CountersModel
 			"    ,ImBlockedBySessionId = p1.blocked            --der.blocking_session_id \n" +
 			"    ,ImBlockingOtherSessionIds    = convert(varchar(512), '')  \n" +
 			"    ,ImBlockingOthersMaxTimeInSec = convert(int, 0) " +
-			"    ,p1.status                                    --des.status \n" +
+			"    ,p1.status                                    --sess_status \n" +
+			"    ,p1.status                                    --exec_status \n" +
+			"    ,p1.lastwaittype                              --exec_wait_type \n" +
 			"    ,p1.cmd                                       --der.command \n" +
+			"    ,HasRtOperators            = CAST(0    as bit) \n" +
+			"    ,rt_at_root_node           = CAST(0    as bit) \n" +
+			"    ,rt_node_id                = CAST(-1   as int) \n" +
+			"    ,rt_node_operator          = CAST(NULL as varchar(256)) \n" +
+			"    ,rt_est_pct                = CAST(-1   as numeric(18,1)) \n" +
+			"    ,rt_row_count              = CAST(-1   as bigint) \n" +
+			"    ,rt_row_count_abs          = CAST(-1   as bigint) \n" +
+			"    ,rt_est_row_count          = CAST(-1   as bigint) \n" +
 //			"    ,tran_id         = (SELECT TOP 1 tst.transaction_id \n" +
 //			"                        FROM sys.dm_tran_session_transactions tst \n" +
 //			"                        WHERE tst.session_id = p1.spid) \n" +
@@ -714,6 +753,7 @@ extends CountersModel
 			"    ,SpidWaitInfo     = convert(varchar(max),null) \n" +    // filled in with 'localCalculation(...)' with values from CmSpidWait
 			"    ,''                                           --deqp.query_plan  \n" +
 			LiveQueryPlanBlocked +
+			"    ,RtOperators               = CAST(NULL as varchar(max)) \n" +
 			"";
 
 //		String sql2_tabs = 
@@ -807,9 +847,7 @@ extends CountersModel
 			;
 	}
 
-
-
-
+	
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
 	{
@@ -937,6 +975,24 @@ extends CountersModel
 			return cellValue == null ? null : "<html>" + cellValue + "</html>";
 		}
 
+		if ("HasRtOperators".equals(colName))
+		{
+			// Find 'SpidLocks' column, is so get it and set it as the tool tip
+			int pos = findColumn("RtOperators");
+			if (pos > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos);
+				if (cellVal instanceof String)
+				{
+					return "<html>" + cellVal + "</html>";
+				}
+			}
+		}
+		if ("RtOperators".equals(colName))
+		{
+			return cellValue == null ? null : "<html>" + cellValue + "</html>";
+		}
+
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 	/** add HTML around the string, and translate line breaks into <br> */
@@ -964,14 +1020,15 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Sample System SPIDs"      , PROPKEY_sample_systemSpids    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids    , DEFAULT_sample_systemSpids    ), DEFAULT_sample_systemSpids    , "Sample System SPID's" ));
-		list.add(new CmSettingsHelper("Get Query Plan"           , PROPKEY_sample_showplan       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan       , DEFAULT_sample_showplan       ), DEFAULT_sample_showplan       , "Also get queryplan" ));
-		list.add(new CmSettingsHelper("Get SQL Text"             , PROPKEY_sample_monSqlText     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText     , DEFAULT_sample_monSqlText     ), DEFAULT_sample_monSqlText     , "Also get SQL Text"  ));
-		list.add(new CmSettingsHelper("Get Live Query Plan"      , PROPKEY_sample_liveQueryPlan  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan  , DEFAULT_sample_liveQueryPlan  ), DEFAULT_sample_liveQueryPlan  , "Also get LIVE queryplan" ));
-		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks   , DEFAULT_sample_holdingLocks   ), DEFAULT_sample_holdingLocks   , "Include SPID's that holds locks even if that are not active in the server." ));
-		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks      , DEFAULT_sample_spidLocks      ), DEFAULT_sample_spidLocks      , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
-		list.add(new CmSettingsHelper("Get SPID Waits"           , PROPKEY_sample_spidWaits      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidWaits      , DEFAULT_sample_spidWaits      ), DEFAULT_sample_spidWaits      , "Get info from CmSpidWait/dm_exec_session_wait_stats. This will help us to diagnose in detail what we have been waiting on since the last sample. NOTE: CmSpidWait needs to be enabled"));
-		list.add(new CmSettingsHelper("Get SPID Input Buffer"    , PROPKEY_sample_spidInputBuffer, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidInputBuffer, DEFAULT_sample_spidInputBuffer), DEFAULT_sample_spidInputBuffer, "Get info from sys.dm_exec_input_buffer. This will help us to diagnose what SQL Text the client sent to SQL Server"));
+		list.add(new CmSettingsHelper("Sample System SPIDs"      , PROPKEY_sample_systemSpids       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids       , DEFAULT_sample_systemSpids       ), DEFAULT_sample_systemSpids       , "Sample System SPID's" ));
+		list.add(new CmSettingsHelper("Get Query Plan"           , PROPKEY_sample_showplan          , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan          , DEFAULT_sample_showplan          ), DEFAULT_sample_showplan          , "Also get queryplan" ));
+		list.add(new CmSettingsHelper("Get SQL Text"             , PROPKEY_sample_monSqlText        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText        , DEFAULT_sample_monSqlText        ), DEFAULT_sample_monSqlText        , "Also get SQL Text"  ));
+		list.add(new CmSettingsHelper("Get Live Query Plan"      , PROPKEY_sample_liveQueryPlan     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveQueryPlan     , DEFAULT_sample_liveQueryPlan     ), DEFAULT_sample_liveQueryPlan     , "Also get LIVE queryplan" ));
+		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks      , DEFAULT_sample_holdingLocks      ), DEFAULT_sample_holdingLocks      , "Include SPID's that holds locks even if that are not active in the server." ));
+		list.add(new CmSettingsHelper("Get SPID Locks"           , PROPKEY_sample_spidLocks         , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidLocks         , DEFAULT_sample_spidLocks         ), DEFAULT_sample_spidLocks         , "Do 'select <i>someCols</i> from syslockinfo where spid = ?' on every row in the table. This will help us to diagnose what the current SQL statement is locking."));
+		list.add(new CmSettingsHelper("Get SPID Waits"           , PROPKEY_sample_spidWaits         , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidWaits         , DEFAULT_sample_spidWaits         ), DEFAULT_sample_spidWaits         , "Get info from CmSpidWait/dm_exec_session_wait_stats. This will help us to diagnose in detail what we have been waiting on since the last sample. NOTE: CmSpidWait needs to be enabled"));
+		list.add(new CmSettingsHelper("Get SPID Input Buffer"    , PROPKEY_sample_spidInputBuffer   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spidInputBuffer   , DEFAULT_sample_spidInputBuffer   ), DEFAULT_sample_spidInputBuffer   , "Get info from sys.dm_exec_input_buffer. This will help us to diagnose what SQL Text the client sent to SQL Server"));
+		list.add(new CmSettingsHelper("Get Runtime Operator Info", PROPKEY_sample_stmntRunTimeOpInfo, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_stmntRunTimeOpInfo, DEFAULT_sample_stmntRunTimeOpInfo), DEFAULT_sample_stmntRunTimeOpInfo, "Get info from sys.dm_exec_query_profiles. This will help see how many Percent a Statement has been executed."));
 
 		return list;
 	}
@@ -993,6 +1050,188 @@ extends CountersModel
 		else return super.getColumnClass(columnIndex);
 	}
 
+	
+	
+	
+	//---------------------------------------------------------------------------
+	// BEGIN: refreshRunningStatementStats
+	//---------------------------------------------------------------------------
+	private static class SpidRunningStatementStats
+	{
+		int _session_id;
+		List<RunningStatementStats> _entries = new ArrayList<>();
+		
+		public void add(RunningStatementStats entry)
+		{
+			_entries.add(entry);
+		}
+
+		public RunningStatementStats getFirstUsed()
+		{
+			if (_entries.isEmpty())
+				return null;
+
+			for (RunningStatementStats entry : _entries)
+			{
+				if (entry._est_pct > 0d)
+				{
+					return entry;
+				}
+			}
+			return null;
+		}
+
+		public String toHtmlTable()
+		{
+			if (_entries.isEmpty())
+				return null;
+
+			StringBuilder sb = new StringBuilder();
+			sb.append("<table class='dbx-table-basic' BORDER=1>");
+			sb.append(  "<thead>");
+			sb.append(    "<tr>");
+			sb.append(      "<th>session_id</th>");
+			sb.append(      "<th>request_id</th>");
+			sb.append(      "<th>node_id</th>");
+			sb.append(      "<th>thread_id</th>");
+			sb.append(      "<th>physical_operator_name</th>");
+			sb.append(      "<th>est_pct</th>");
+			sb.append(      "<th>row_count</th>");
+			sb.append(      "<th>estimate_row_count</th>");
+			sb.append(    "</tr>");
+			sb.append(  "</thead>");
+
+//TODO;// toJson
+//TODO;// possibly a static method so we can call it from a servlet... first step to get ShowplanDialog more dynamic
+
+			boolean foundFirstActiveOp = false;
+			sb.append(  "<tbody>");
+			for (RunningStatementStats entry : _entries)
+			{
+				String trStyle = "";
+				if (entry._est_pct > 0d && !foundFirstActiveOp)
+				{
+					foundFirstActiveOp = true;
+					trStyle = " style='font-weight:bold'";
+				}
+				sb.append(    "<tr").append(trStyle).append(">");
+				sb.append(      "<td align='right'>").append(entry._session_id            ).append("</td>");
+				sb.append(      "<td align='right'>").append(entry._request_id            ).append("</td>");
+				sb.append(      "<td align='right'>").append(entry._node_id               ).append("</td>");
+				sb.append(      "<td align='right'>").append(entry._thread_id             ).append("</td>");
+				sb.append(      "<td align='left'>" ).append(entry._physical_operator_name).append("</td>");
+				sb.append(      "<td align='right'>").append(NumberFormat.getInstance().format(entry._est_pct           )).append("</td>");
+				sb.append(      "<td align='right'>").append(NumberFormat.getInstance().format(entry._row_count         )).append("</td>"); // Possibly use format(Locale.US, val)
+				sb.append(      "<td align='right'>").append(NumberFormat.getInstance().format(entry._estimate_row_count)).append("</td>"); // Possibly use format(Locale.US, val)
+				sb.append(    "</tr>");				
+			}
+			sb.append(  "</tbody>");
+			sb.append("</table>");
+			
+			return sb.toString();
+		}
+	}
+	private static class RunningStatementStats
+	{
+		int    _session_id;
+		int    _request_id;
+		int    _node_id;
+		int    _thread_id;
+
+		String _physical_operator_name;
+		double _est_pct;
+		long   _row_count;
+		long   _estimate_row_count;
+	}
+	
+	// key=SPID, Val=ListOfRecords (ordered by: 'node_id', 'thread_id')
+//	private Map<Integer, List<RunningStatementStats>> _runningStatementStatsMap = new HashMap<>();
+
+//	private Map<Integer, List<RunningStatementStats>> refreshRunningStatementStats(DbxConnection conn)
+	private Map<Integer, SpidRunningStatementStats> refreshSpidRunningStatementStats(DbxConnection conn)
+	{
+		long srvVersion = conn.getDbmsVersionNumber();
+		if (srvVersion < Ver.ver(2014))
+		{
+			return Collections.emptyMap();
+		}
+
+		String sql = ""
+			    + "SELECT \n"
+			    + "     session_id \n"
+			    + "    ,request_id \n"
+			    + "    ,node_id \n"
+			    + "    ,thread_id \n"
+			    + "    ,physical_operator_name \n"
+			    + "    ,est_pct = cast((row_count*1.0) / (nullif(estimate_row_count,0)*1.0) * 100.0 as numeric(18,1)) \n"
+			    + "    ,row_count \n"
+			    + "    ,estimate_row_count \n"
+			    + "FROM sys.dm_exec_query_profiles \n"
+			    + "WHERE 1=1 \n"
+			    + "  AND session_id != @@spid \n"
+			    + "ORDER BY session_id, node_id, thread_id \n"
+			    + "";
+
+//		Map<Integer, List<SpidRunningStatementStats>> runningStatementStatsMap = new HashMap<>();
+		Map<Integer, SpidRunningStatementStats> spidRunningStatementStatsMap = new HashMap<>();
+		
+		try (Statement stmnt = conn.createStatement())
+		{
+			// Set Timeout: x seconds
+			stmnt.setQueryTimeout(5);
+			
+			try (ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					RunningStatementStats newEntry = new RunningStatementStats();
+					
+					newEntry._session_id             = rs.getInt   (1);
+					newEntry._request_id             = rs.getInt   (2);
+					newEntry._node_id                = rs.getInt   (3);
+					newEntry._thread_id              = rs.getInt   (4);
+					newEntry._physical_operator_name = rs.getString(5);
+					newEntry._est_pct                = rs.getDouble(6);
+					newEntry._row_count              = rs.getLong  (7);
+					newEntry._estimate_row_count     = rs.getLong  (8);
+
+					// Add it to the _runningStatementStatsMap
+//					List<RunningStatementStats> list = runningStatementStatsMap.computeIfAbsent(newEntry._session_id, k -> new ArrayList<>());
+					SpidRunningStatementStats spidRunningStatementStats = spidRunningStatementStatsMap.computeIfAbsent(newEntry._session_id, k -> new SpidRunningStatementStats());
+					spidRunningStatementStats.add(newEntry);
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.error("Problems refreshing RunningStatementStats. sql=|" + sql + "|. Error=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Msg=|" + ex.getMessage() + "|.", ex);
+		}
+		
+		return spidRunningStatementStatsMap;
+/*
+		-- In ActiveStatements add columns
+		--  * rt_at_root_node    -- true|false if we are at the "top level" node_id
+		--  * rt_node_id         -- if this is 1 this would be the top level. If it's higher than 1: the top operator has not yet recevied any data to process
+		--                          Note: The goal is to see that 'node_id' 1 is finaly processing data...
+		--  * rt_node_operator   -- The operator at 'node_id'
+		--  * rt_est_pct         -- An estimate how far we have processed data... 
+		--                          Algo: row_count / estimate_row_count
+		--                          Note: if 'estimate_row_count' is NOT correct the PCT will also be incorrect
+
+		--  * rt_est_row_count
+		--  * rt_row_count_abs
+		--  * rt_row_count
+		--  * RtOperators    -- Store the Runtime Operators as a HTML Table
+		--  * HasRtOperators -- Open htmlTable ...
+*/
+		
+	}
+	//---------------------------------------------------------------------------
+	// END: refreshRunningStatementStats
+	//---------------------------------------------------------------------------
+	
+	
+	
 	/** 
 	 * Fill in TempdbUsage*
 	 */
@@ -1016,6 +1255,26 @@ extends CountersModel
 		int pos_UsefullExecTimeHms = newSample.findColumn("UsefullExecTimeHms");
 		
 		int pos_lastKnownSql       = newSample.findColumn("lastKnownSql");
+
+		// Runtime columns
+		int pos_rt_at_root_node    = newSample.findColumn("rt_at_root_node");
+		int pos_rt_node_id         = newSample.findColumn("rt_node_id");
+		int pos_rt_node_operator   = newSample.findColumn("rt_node_operator");
+		int pos_rt_est_pct         = newSample.findColumn("rt_est_pct");
+		int pos_rt_est_row_count   = newSample.findColumn("rt_est_row_count");
+		int pos_rt_row_count_abs   = newSample.findColumn("rt_row_count_abs");
+		int pos_rt_row_count       = newSample.findColumn("rt_row_count");
+		int pos_RtOperators        = newSample.findColumn("RtOperators");
+		int pos_HasRtOperators     = newSample.findColumn("HasRtOperators");
+
+		boolean sampleStmntRunTimeOpInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_stmntRunTimeOpInfo, DEFAULT_sample_stmntRunTimeOpInfo);
+
+		// get Runtime Stats for ALL RUNNING SPIDS (we might not find anything)
+		Map<Integer, SpidRunningStatementStats> spidRunningStatementStatsMap = Collections.emptyMap();
+		if (sampleStmntRunTimeOpInfo)
+		{
+			spidRunningStatementStatsMap = refreshSpidRunningStatementStats(getCounterController().getMonConnection());
+		}
 		
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
@@ -1042,6 +1301,32 @@ extends CountersModel
 						newSample.setValueAt(spaceInfo.getTotalSpaceUsedInMb()               , rowId, "TempdbUsageMb");
 						newSample.setValueAt(spaceInfo.getUserObjectSpaceUsedInMb()          , rowId, "TempdbUsageMbUser");
 						newSample.setValueAt(spaceInfo.getInternalObjectSpaceUsedInMb()      , rowId, "TempdbUsageMbInternal");
+					}
+				}
+
+				// set Runtime values
+				if (sampleStmntRunTimeOpInfo && pos_rt_at_root_node != -1 && !spidRunningStatementStatsMap.isEmpty())
+				{
+					SpidRunningStatementStats spidRunningStatementStats = spidRunningStatementStatsMap.get(spid);
+					if (spidRunningStatementStats != null)
+					{
+						RunningStatementStats firstUsed = spidRunningStatementStats.getFirstUsed();
+						if (firstUsed != null)
+						{
+							boolean atRootNode      = firstUsed._node_id <= 1;
+							String  rtOperatorsHtml = spidRunningStatementStats.toHtmlTable();
+							boolean hasRtOperators  = StringUtil.hasValue(rtOperatorsHtml);
+							
+							newSample.setValueAt(atRootNode                       , rowId, pos_rt_at_root_node );
+							newSample.setValueAt(firstUsed._node_id               , rowId, pos_rt_node_id      );      
+							newSample.setValueAt(firstUsed._physical_operator_name, rowId, pos_rt_node_operator);
+							newSample.setValueAt(firstUsed._est_pct               , rowId, pos_rt_est_pct      );
+							newSample.setValueAt(firstUsed._estimate_row_count    , rowId, pos_rt_est_row_count);
+							newSample.setValueAt(firstUsed._row_count             , rowId, pos_rt_row_count_abs);
+							newSample.setValueAt(firstUsed._row_count             , rowId, pos_rt_row_count    );
+							newSample.setValueAt(rtOperatorsHtml                  , rowId, pos_RtOperators     );
+							newSample.setValueAt(hasRtOperators                   , rowId, pos_HasRtOperators  );
+						}
 					}
 				}
 			}
@@ -2162,6 +2447,9 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 
 								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 								
+								// Information about how to disable this alarm
+								ae.createAlarmOptionsMessage(this, "ImBlockingOthersMaxTimeInSec");
+
 								alarmHandler.addAlarm( ae );
 							}
 						}
@@ -2234,6 +2522,9 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 								
 								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 								
+								// Information about how to disable this alarm
+								ae.createAlarmOptionsMessage(this, "HoldingLocksWhileWaitForClientInputInSec");
+
 								alarmHandler.addAlarm( ae );
 							}
 						}
@@ -2265,6 +2556,9 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "TempdbUsageMb");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -2386,6 +2680,14 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 			.gt("dop", 1)
 			.scopeCell()
 			.highlightColumns("dop")
+			.bgColor("#90EE90"));
+
+		// GREEN cell — exec_status is 'running' || 'runnable'
+		list.add(new CmHighlighterDescriptor()
+			.name("Is Running")
+			.startsWith("exec_status", "runn") // 'running' || 'runnable'
+			.scopeCell()
+			.highlightColumns("exec_status")
 			.bgColor("#90EE90"));
 
 		return list;

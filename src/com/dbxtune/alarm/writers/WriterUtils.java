@@ -162,7 +162,17 @@ public class WriterUtils
 			throw new RuntimeException("Unhandled object '" + alarmObject.getClass().getName() + "'. You can only pass 'com.dbxtune.alarm.events.AlarmEvent' and 'com.dbxtune.central.pcs.DbxTuneSample.AlarmEntry' objects to this method.");
 		}
 		
-
+		String dbxCentralBaseUrl = AlarmWriterAbstract.static_getDbxCentralUrl(); //"http://" + StringUtil.getHostnameWithDomain();
+//		try
+//		{
+//			URI uri = URI.create(dbxCentralUrl.replace(" ", "%20")); // Translate spaces to "%20"
+//			dbxCentralBaseUrl = uri.getScheme() + "://" + uri.getRawAuthority();
+//		}
+//		catch (Exception ex) 
+//		{
+//			_logger.warn("Problems parsing URL into a BaseUrl. Passed URL=|" + dbxCentralUrl + "|. Caught: " + ex);
+//		}
+		
 		Properties config = new Properties();
 //		config.setProperty("eventhandler.invalidreference.exception", "true");
 
@@ -285,7 +295,9 @@ public class WriterUtils
 			context.put("isActive"                   , StringUtil.toStr( alarmEvent.isActive()                      ,trMap ));
 			context.put("activeAlarmCount"           , StringUtil.toStr( alarmEvent.getActiveAlarmCount()           ,trMap ));
 			context.put("dbxCentralUrl"              , StringUtil.toStr( alarmEvent.getDbxCentralUrl()              ,trMap ));
+			context.put("dbxCentralBaseUrl"          , StringUtil.toStr( dbxCentralBaseUrl                          ,trMap ));
 			context.put("alarmId"                    , StringUtil.toStr( alarmEvent.getAlarmId()                    ,trMap ));
+			context.put("alarmOptions"               , StringUtil.toStr( alarmEvent.getAlarmOptions()               ,trMap ));
 		}
 		
 		if (pcsAlarmEntry != null)
@@ -322,7 +334,9 @@ public class WriterUtils
 			context.put("activeAlarmCount"           , StringUtil.toStr( -1                                            ,trMap ));
 //			context.put("dbxCentralUrl"              , StringUtil.toStr( pcsAlarmEntry.getDbxCentralUrl()              ,trMap ));
 			context.put("dbxCentralUrl"              , StringUtil.toStr( "-unknown-"                                   ,trMap ));
+			context.put("dbxCentralBaseUrl"          , StringUtil.toStr( dbxCentralBaseUrl                             ,trMap ));
 			context.put("alarmId"                    , StringUtil.toStr( pcsAlarmEntry.getAlarmId()                    ,trMap ));
+			context.put("alarmOptions"               , StringUtil.toStr( pcsAlarmEntry.getAlarmOptions()               ,trMap ));
 		}
 
 		if (activeAlarmList != null)
@@ -484,7 +498,9 @@ public class WriterUtils
 		desc.put("isActive"                   , "<html> <h2>isActive                   </h2> Boolean status flag if the Alarm is still Active, which would be true when <code>type</code> is RAISE and RE-RAISE.                                  <br><br>Example: <code>true</code> or <code>false</code>      </html>");
 		desc.put("activeAlarmCount"           , "<html> <h2>activeAlarmCount           </h2> Get number of <b>active</b> alarms in the AlarmHandler. This can be used to simply print out how many active alarms we have for the moment. </html>");
 		desc.put("dbxCentralUrl"              , "<html> <h2>dbxCentralUrl              </h2> Get URL to view the Alarm Period in DbxCentral. </html>");
+		desc.put("dbxCentralBaseUrl"          , "<html> <h2>dbxCentralBaseUrl          </h2> Get BASE URL where DbxCentral is located. </html>");
 		desc.put("alarmId"                    , "<html> <h2>alarmId                    </h2> Get UUID of the Alarm. </html>");
+		desc.put("alarmOptions"               , "<html> <h2>alarmOptions               </h2> Information about how to Disable or Change the Alarm Settings/Options. </html>");
 		
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "_[generalDescription]"      , ""                              ,  null, desc.get("generalDescription"        )));
@@ -518,9 +534,11 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmCount"           , "${activeAlarmCount}"           ,  null, desc.get("activeAlarmCount"          )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, desc.get("dbxCentralUrl"             )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "alarmId"                    , "${alarmId}"                    ,  null, desc.get("alarmId"                   )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "alarmOptions"               , "${alarmOptions}"               ,  null, desc.get("alarmOptions"              )));
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "serverDisplayName"          , "${serverDisplayName}"          ,  null, "<html>The command line switch <i>--displayName</i> or the ServerName. This can for example be used in the <b>mail subject</b> if the servernames are cryptical.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralBaseUrl"          , "${dbxCentralBaseUrl}"          ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmList"            , "#foreach( $alarm in $activeAlarmList )\n${alarm.serviceName} - ${alarm.state} - ${alarm.description}\n#end" ,  null, "<html>Some writers want to have access to the 'activeAlarmList', where you can loop around the active alarms...</html>"));
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtil"                 , "${StringUtil.format(\"%-20s\", ${type})}" ,  null, "<html>Access DbxTune StringUtil, which for example has format(...) see: <a href='https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html'>https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html</a></html>"));

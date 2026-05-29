@@ -184,6 +184,10 @@ extends Thread
 				_logger.info("Sending AlarmEventSrvDown(serverName='"+serverName+"', jdbcUrl='"+jdbcUrl+"') to the AlarmHandler.");
 
 				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
+
+				// Information about how to disable this alarm
+				//alarmEvent.createAlarmOptionsMessage(this, "???");
+
 				AlarmHandler.getInstance().addAlarm(alarmEventSrvDown);
 
 				// Make the AlarmHandler act NOW
@@ -200,6 +204,10 @@ extends Thread
 				jdbcUrl    = "unknown-url";
 
 				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
+
+				// Information about how to disable this alarm
+				//alarmEvent.createAlarmOptionsMessage(this, "???");
+
 				AlarmHandler.getInstance().addAlarm(alarmEventSrvDown);
 
 				// Make the AlarmHandler act NOW

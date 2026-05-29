@@ -498,6 +498,9 @@ extends CounterModelHostMonitor
 
 				alarm.setExtendedDescription(null, htmlChartImage);
 
+				// Information about how to disable this alarm
+				alarm.createAlarmOptionsMessage(this, "Swapping");
+
 				alarmHandler.addAlarm( alarm );
 			}
 		}
@@ -562,6 +565,9 @@ extends CounterModelHostMonitor
 						swapOut_xmAvg, swapOut_peakTs, swapOut_peakNumber);
 
 				alarm.setExtendedDescription(null, htmlChartImage);
+
+				// Information about how to disable this alarm
+				alarm.createAlarmOptionsMessage(this, "SwapThrashing");
 
 				alarmHandler.addAlarm( alarm );
 			}

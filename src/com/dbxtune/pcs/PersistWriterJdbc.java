@@ -1029,6 +1029,9 @@ public class PersistWriterJdbc
 					
 					AlarmEventMissingH2DbFile alarmEvent = new AlarmEventMissingH2DbFile(srvName, subSystemName, currentUrl, message);
 
+					// Information about how to disable this alarm
+					//ae.createAlarmOptionsMessage(this, "???");
+
 					AlarmHandler.getInstance().addAlarm(alarmEvent);
 				}
 			}
@@ -2807,6 +2810,12 @@ public class PersistWriterJdbc
 						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmId] varchar(40) null"); // NOTE: 'not null' is not supported at upgrades
 						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
+
+					if ( ! colNames.contains("alarmOptions"))
+					{
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmOptions] CLOB null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
+					}
 				}
 				else if (tabId == ALARM_HISTORY)
 				{
@@ -2847,6 +2856,12 @@ public class PersistWriterJdbc
 					if ( ! colNames.contains("alarmId"))
 					{
 						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmId] varchar(40) null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
+					}
+
+					if ( ! colNames.contains("alarmOptions"))
+					{
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmOptions] CLOB null"); // NOTE: 'not null' is not supported at upgrades
 						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 				}
@@ -3852,6 +3867,7 @@ public class PersistWriterJdbc
 					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"             varchar(512)  null false   - 22
 					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getExtendedDescriptionHtml()        : ae.getExtendedDescription()        /*HTML or Normal???*/ )); // "extendedDescription"         text          null true    - 23
 					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() /*HTML or Normal???*/ )); // "lastExtendedDescription"     text          null true    - 24
+					sbSql.append(", ").append(safeStr( ae.getAlarmOptions()                                                      )); // "alarmOptions"                text          null false   - 23
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3961,9 +3977,10 @@ public class PersistWriterJdbc
 				pst.setString   (i++, strMaxLen(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512,"lastData"           )); // lastData                    - varchar(512), Nullable = true 
 				pst.setString   (i++, strMaxLen(ae.getDescription()                                                  ,512,"description"        )); // description                 - varchar(512), Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getReRaiseDescription()                                           ,512,"lastDescription"    )); // lastDescription             - varchar(512), Nullable = false
-				pst.setString   (i++, saveExtendedDescriptionAsHtml ? ae.getExtendedDescriptionHtml()        : ae.getExtendedDescription()       ); // extendedDescription         - text        , Nullable = true 
-				pst.setString   (i++, saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription()); // lastExtendedDescription     - text        , Nullable = true 
-		
+				pst.setString   (i++, saveExtendedDescriptionAsHtml ? ae.getExtendedDescriptionHtml()        : ae.getExtendedDescription()       ); // extendedDescription        - text        , Nullable = true 
+				pst.setString   (i++, saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription()); // lastExtendedDescription    - text        , Nullable = true 
+				pst.setString   (i++, ae.getAlarmOptions()                                                                                       ); // alarmOptions               - text        , Nullable = true
+
 				// EXECUTE
 				pst.executeUpdate();
 				pst.close();

@@ -2944,6 +2944,13 @@ implements
 	}
 
 	/**
+	 * Make specializations for any CmXxxPanel
+	 */
+	protected void configureTableColumns(GTable dataTable)
+	{
+	}
+
+	/**
 	 * 
 	 * @return
 	 */
@@ -2964,6 +2971,9 @@ implements
 		_dataTable.addHighlighter(new HighlighterDiffData(_highligtIfDelta)); 
 		_dataTable.addHighlighter(new HighlighterPctData(_highligtIfPct));
 		_dataTable.addHighlighter(new HighlighterNewDeltaOrRateData(_highligtIfNewDeltaOrRateRow));
+
+		// Specialized Render(s), needs to be implemented by any CmXxxPanel
+		configureTableColumns(_dataTable);
 
 		if (_cm.getAggregateColumns() != null)
 		{

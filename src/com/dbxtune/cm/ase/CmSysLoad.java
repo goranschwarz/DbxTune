@@ -575,6 +575,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "RunQueueLengthAvg1min");
+
 							AlarmHandler.getInstance().addAlarm(ae);
 						}
 					}
@@ -597,6 +600,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "RunQueueLengthAvg5min");
+
 							AlarmHandler.getInstance().addAlarm(ae);
 						}
 					}
@@ -618,6 +624,9 @@ extends CountersModel
 
 							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "RunQueueLengthAvg15min");
 
 							AlarmHandler.getInstance().addAlarm(ae);
 						}

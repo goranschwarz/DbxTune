@@ -2031,6 +2031,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "OldestTranInSeconds");
+
 							alarmHandler.addAlarm( ae );
 						}
 					}
@@ -2061,6 +2064,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, dbname, null);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "TransactionLogFull");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventFullTranLog(cm, threshold, dbname) );
 					}
@@ -2140,6 +2146,9 @@ extends CountersModel
 							ae = new AlarmEventLastBackupFailed(cm, dbname, backupType, threshold);
 						}
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LastBackupFailed");
 
 						alarmHandler.addAlarm( ae );
 					}
@@ -2228,6 +2237,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LastDbBackupAgeInHours");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -2338,6 +2350,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventOldTranLogBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LastLogBackupAgeInHours");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -2398,6 +2413,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowDbFreeSpaceInMb");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
 					}
@@ -2428,6 +2446,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowLogFreeSpaceInMb");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
 					}
@@ -2458,6 +2479,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowDbFreeSpaceInPct");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
 					}
@@ -2488,6 +2512,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowLogFreeSpaceInPct");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
 					}
@@ -2550,6 +2577,9 @@ extends CountersModel
 								AlarmEvent ae = new AlarmEventDatabaseOption(cm, dbname, addedOptions, removedOptions, currDbOptionsList);
 								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 								
+								// Information about how to disable this alarm
+								ae.createAlarmOptionsMessage(this, "DBOptions");
+
 								alarmHandler.addAlarm( ae );
 							}
 						}

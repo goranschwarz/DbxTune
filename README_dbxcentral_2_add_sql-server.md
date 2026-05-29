@@ -31,9 +31,13 @@ Create a specific user in SQL Server, which is used to monitor the system with
 ```
 -- as any SQL Server login with 'sysadmin' create the login 'dbxtune'
 CREATE LOGIN dbxtune WITH PASSWORD         = 'the_long_and_arbitrary_password', 
-                          DEFAULT_DATABASE = 'master', 
+                          DEFAULT_DATABASE = master, 
                           CHECK_POLICY     = OFF, 
                           CHECK_EXPIRATION = OFF;
+
+-- Or if you are using a AD Account for this (this if you want to use integrated security for the 'dbxtune' user)
+--CREATE LOGIN [DOMAIN\dbxtune] FROM WINDOWS
+
 
 -- Then grant authorization
 GRANT VIEW SERVER STATE    TO dbxtune;   -- To view Server level statistics (like most DMV's)
@@ -59,8 +63,8 @@ ALTER ROLE db_datareader ADD MEMBER dbxtune;
 ```
 
 #### And sp_Blitz* procedures   
-(if you havn't got them installed, now would be a good time: https://www.brentozar.com/blitz/)    
-- `sp_Blitz` Can be used to verify that we do not have any **major** conserns on the SQL Server.
+(if you have not got them installed, now would be a good time: https://www.brentozar.com/blitz/)    
+- `sp_Blitz` Can be used to verify that we do not have any **major** concerns on the SQL Server.
 - `sp_BlitzLock` Is used to extract Deadlock Details.
 
 **Tip**: In the GUI Version of SqlServerTune, you can install the procedures from `Menu -> Tools -> Install some extra system stored procedures`
@@ -100,25 +104,56 @@ The SSH Service may not be part of a normal Windows installation, so you may hav
 ## Add Local (or Active Directory Account if the SSH Server supports it)
 net user /add dbxtune long_and_arbitrary_password
 
+## In newer Windows the Open SSH comes preinstalled, you just have to enable it (Server Manager -> Local Server -> Remote SSH Access)
+## And if you are using a AD Account for login, then we need to allow the dbxtune user on this machine
+net localgroup "OpenSSH Users" "DOMAIN\dbxtune" /add
+
 ## Allow user to get perf counters by issuing 'typeperf ...'
 net localgroup "Performance Log Users" dbxtune /add
 
-## I have *Switched* from 'gwmi win32_logicaldisk' to 'Get-CimInstance Win32_LogicalDisk', so the BELOW 'admin' stuff is hopefully not needed anymore... 
-## Allow user to get "disk space used" on local drives, by issuing 'powershell gwmi win32_logicaldisk' over the SSH Connection
-#net localgroup administrators dbxtune /add
+## Allow HostMonitor "OS Top Process(ps)" to see all processes 
+#net localgroup "Performance Monitor Users" dbxtune /add    #### unfortunately this do not reveal CPU%
+## Instead we need to execute a PowerShell script (se below) or run 'secpol.msc' as Administrator
 
-## NOTE ## Instead of the 'administrator' thing above, you can do the following:
-## - WMI Needs "Remote Enable" for the user to allow 'gwmi win32_logicaldisk', and SSH is considered to be a "Remote Operation"
-##   Look at https://github.com/microsoft/vscode-remote-release/issues/2648#issuecomment-1646047396
-##   That worked for me... Then the command didn't need 'administrator' role...
-##   NOTE: There might be other solutions as well, let me know your best solution for this 
-##         (Hopefully "someone" can provide a command line instructions instead of GUI clicking)
+secpol.msc
+ - Navigate to Local Policies -> User Rights Assignment
+ - Double-click Debug programs
+ - Click Add User or Group    
+   Type maxm\dbxtune -> OK -> OK
+
+# Powershell script which can be copied from: resources/dbxcentral/scripts/fix_SeDebugPrivilede.ps1
+# Or just copy paste the blow into 'fix_SeDebugPrivilede.ps1' and run it!
+#------------------------------------------------------------------
+param( [Parameter(Mandatory)][string]$Username ) # e.g. DOMAIN\dbxtune
+
+$sid = (New-Object System.Security.Principal.NTAccount($Username)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+$cfg = "$env:TEMP\secpol_edit.cfg"
+$sdb = "$env:TEMP\secpol_edit.sdb" 
+
+secedit /export /cfg $cfg /quiet
+
+$content = Get-Content $cfg
+if ($content -match 'SeDebugPrivilege') {
+    $content = $content -replace '(SeDebugPrivilege\s*=\s*)(.*)', "`$1`$2,*$sid"
+} else {
+    $content = $content -replace '\[Privilege Rights\]', "[Privilege Rights]`nSeDebugPrivilege = *$sid"
+}
+$content | Set-Content $cfg
+
+secedit /import /cfg $cfg /db $sdb /overwrite /quiet
+secedit /configure /db $sdb /areas USER_RIGHTS /quiet
+gpupdate /force
+
+Write-Host "SeDebugPrivilege granted to $Username ($sid). Re-login SSH to apply."
+#------------------------------------------------------------------
+
 ```
-
+<!--
 #### Some extra stuff you may need to add (if not admin)
 Open `secpol.msc`    
 Go to `Security Settings -> Local Policies -> User Rights Assignment`    
 and add `Debug programs` which gives the user the policy `SeDebugPrivilege`, then the user will see all processes in the "CPU by Processes". Without `Debug programs` the user will only see it's own processes, which is kind of _useless_
+-->
 
 #### What will be monitored by the above OS User
 The user will extract various information from the OS, like:    
@@ -179,6 +214,15 @@ dbxtune@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Usa -Psecret2 -Sgo
 
 	## Copy the key to the monitored host
 	ssh-copy-id dbxtune@hostname_to_monitor.com
+
+  ## or (ssh-copy-id) do not work
+  ssh dbxtune@hostname "powershell -Command \"New-Item -Force -ItemType Directory \$HOME\.ssh; Add-Content \$HOME\.ssh\authorized_keys '$(cat ~/.ssh/id_rsa.pub)'\""
+
+  ## Then on the Windows side, fix ACLs (required or SSH ignores the file):
+  $file = "$HOME\.ssh\authorized_keys"
+  icacls $file /inheritance:r
+  icacls $file /grant "${env:USERNAME}:(F)"
+  icacls $file /grant "SYSTEM:(F)"
 	```
 * For SQL Server Connections
   * Possibly use `integratedSecurity=true` in the JDBC URL   

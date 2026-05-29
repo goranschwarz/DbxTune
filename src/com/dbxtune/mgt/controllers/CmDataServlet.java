@@ -39,11 +39,11 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -59,18 +59,17 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
+import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmHighlighterDescriptor;
-import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
-import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
 import com.dbxtune.pcs.PersistWriterJdbc;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.TimeUtils;
-
-import com.dbxtune.central.controllers.Helper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -443,6 +442,16 @@ extends HttpServlet
 				noData.put("cmName",        cmName);
 				noData.put("type",          typeParam);
 				noData.put("requestedTime", timeParam);
+				if (CounterController.hasInstance()) 
+				{
+					CountersModel noDataMeta = CounterController.getInstance().getCmByName(cmName);
+					if (noDataMeta != null) 
+					{
+						noData.put("postponeTime",    noDataMeta.getPostponeTime());
+						noData.put("postponeEnabled", noDataMeta.isPostponeEnabled());
+						noData.put("lastSampleMs",    noDataMeta.getLastLocalRefreshTime());
+					}
+				}
 				om.writeValue(out, noData);
 				out.flush(); out.close();
 				return;
@@ -457,6 +466,7 @@ extends HttpServlet
 			// ------------------------------------------------------------------
 			String sqlData;
 			if (showAll)
+			{
 				// Mirror PersistReader.loadSessionCm(): scope to the session that owns 'closest'
 				// (SessionStartTime subquery is safe here because 'closest' is an exact value
 				// returned by the MAX query above — guaranteed to find rows).
@@ -465,11 +475,14 @@ extends HttpServlet
 						+ " WHERE [SessionStartTime] = (SELECT MIN([SessionStartTime]) FROM " + tableName + " WHERE [SessionSampleTime] = ?)"
 						+ "   AND [SessionSampleTime] <= ?"
 						+ " ORDER BY [SessionSampleTime]");
+			}
 			else
+			{
 				sqlData = conn.quotifySqlString(
 						  "SELECT * FROM " + tableName
 						+ " WHERE [SessionSampleTime] = ?"
 						+ " ORDER BY [SessionSampleTime]");
+			}
 
 			List<List<Object>> rows      = new ArrayList<>();
 			Map<String, List<String>> rowStates = new LinkedHashMap<>();
@@ -738,6 +751,12 @@ extends HttpServlet
 			if (description            != null) root.put("description",            description);
 			if (chartDescriptors       != null) root.put("chartDescriptors",       chartDescriptors);
 			if (highlighterDescriptors != null) root.put("highlighterDescriptors", highlighterDescriptors);
+			if (cmMeta != null) 
+			{
+				root.put("postponeTime",    cmMeta.getPostponeTime());
+				root.put("postponeEnabled", cmMeta.isPostponeEnabled());
+				root.put("lastSampleMs",    cmMeta.getLastLocalRefreshTime());
+			}
 
 			// Preferred column order (declared by the CM for a better visual layout)
 			if (cmMeta != null)

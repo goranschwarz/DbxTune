@@ -694,6 +694,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventTempdbSpidUsage(cm, threshold, session_id, TotalUsageMb_abs, last_request_start_time, last_request_in_sec, login_name, program_name);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "TotalUsageMb_abs");
+
 							alarmHandler.addAlarm( ae );
 						}
 					} // end: above threshold

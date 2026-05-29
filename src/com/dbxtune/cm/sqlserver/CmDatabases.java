@@ -3277,6 +3277,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "OldestTranInSeconds");
+
 							alarmHandler.addAlarm( ae );
 						}
 					}
@@ -3391,6 +3394,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LastDbBackupAgeInHours");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -3443,6 +3449,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventOldIncrementalBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LastIncDbBackupAgeInHours");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -3494,6 +3503,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventOldTranLogBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LastLogBackupAgeInHours");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -3524,6 +3536,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowDbFreeSpaceInMb");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
 					}
@@ -3555,6 +3570,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowLogFreeSpaceInMb");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
 					}
@@ -3585,7 +3603,10 @@ extends CountersModel
 						
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowDbFreeSpaceInPct");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
 					}
@@ -3616,7 +3637,10 @@ extends CountersModel
 						
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowLogFreeSpaceInPct");
+
 						alarmHandler.addAlarm( ae );
 						//alarmHandler.addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
 					}
@@ -3702,7 +3726,10 @@ extends CountersModel
 						
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.intValue()); // NOTE: threshold is Integer = MB
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowOsDiskFreeSpaceInMb");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -3783,6 +3810,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue()); // NOTE: threshold is Double = PCT
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "LowOsDiskFreeSpaceInPct");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -3830,6 +3860,9 @@ extends CountersModel
 							ae.setTimeToLive(ttlMs);
 						}
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "DbState");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -3862,6 +3895,9 @@ extends CountersModel
 						AlarmEvent ae = new AlarmEventQueryStoreUnexpectedState(cm, dbname, qsDesiredState, qsActualState, qsReadOnlyReason, expectedStr);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 						
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "QsIsOk");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -3895,6 +3931,9 @@ extends CountersModel
 						
 						AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.PCT, threshold);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "QsUsedSpaceInPct");
 
 						alarmHandler.addAlarm( ae );
 					}
@@ -3933,6 +3972,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventQueryStoreLowFreeSpace(cm, dbname, QsUsedSpaceInPct, QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, AlarmEventQueryStoreLowFreeSpace.Type.MB, threshold);
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "QsFreeSpaceInMb");
+
 							alarmHandler.addAlarm( ae );
 						}
 					}
@@ -3968,6 +4010,9 @@ extends CountersModel
 							AlarmEvent ae = new AlarmEventDbccCheckdbAge(cm, dbname, LastGoodCheckDbDays.intValue(), LastGoodCheckDbTime, threshold.intValue());
 							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "LastGoodCheckDbDays");
+
 							alarmHandler.addAlarm( ae );
 						}
 					}
@@ -3986,6 +4031,9 @@ extends CountersModel
 					{
 						String info = "part-of-mandatory-list=" + agMandaroryDbnamesList;
 						AlarmEvent ae = new AlarmEventDbNotInHadr(cm, dbname, info);
+
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "AgMandatoryDbnames");
 
 						alarmHandler.addAlarm( ae );
 					}
@@ -4011,6 +4059,9 @@ extends CountersModel
 						{
 							String info = "not-part-of-skip-list=" + agMandaroryDbnamesSkipList;
 							AlarmEvent ae = new AlarmEventDbNotInHadr(cm, dbname, info);
+
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "AgMandatoryDbnamesSkip");
 
 							alarmHandler.addAlarm( ae );
 						}
@@ -4097,6 +4148,9 @@ extends CountersModel
 								DbSizeInMbAbs , DataSizeInMbAbs , LogSizeInMbAbs);
 						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
+						// Information about how to disable this alarm
+						ae.createAlarmOptionsMessage(this, "DbSizeInMbDiff");
+
 						alarmHandler.addAlarm( ae );
 					}
 				}
@@ -4125,6 +4179,9 @@ extends CountersModel
 					AlarmEvent ae = new AlarmEventHighVirtualLogFileCount(cm, dbname, vlf_count, threshold);
 					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 					
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "vlf_count");
+
 					alarmHandler.addAlarm( ae );
 				}
 			} // end: vlf_count
@@ -4185,6 +4242,9 @@ extends CountersModel
 								AlarmEvent ae = new AlarmEventDatabaseOption(cm, dbname, addedOptions, removedOptions, currDbScopedOptionsList);
 								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 								
+								// Information about how to disable this alarm
+								ae.createAlarmOptionsMessage(this, "DbScopedOptions");
+
 								alarmHandler.addAlarm( ae );
 							}
 						}
