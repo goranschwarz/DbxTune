@@ -98,9 +98,9 @@ extends DbmsConfigAbstract
 		{NON_DEFAULT,          false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "True if the value is not configured to the default value. (same as for sp_configure 'nondefault')"},
 		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 60,          -1,       /* "varchar(60)",   */ "Configuration Group"},
 		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 60,          -1,       /* "varchar(60)",   */ "Name of the configuration, same as the name in sp_configure."},
-		{CONFIG_VALUE,         true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "Value of the configuration."},
-		{PENDING,              false,    Boolean.class, Types.BOOLEAN  -1,          -1,       /* "bit",           */ "The Configuration has not yet taken effect, probably needs restart to take effect."},
-		{PENDING_VALUE,        true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "The value which will be configured on next restart, if PENDING is true."},
+		{CONFIG_VALUE,         true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "Value of the configuration."},
+		{PENDING,              false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "The Configuration has not yet taken effect, probably needs restart to take effect."},
+		{PENDING_VALUE,        true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "The value which will be configured on next restart, if PENDING is true."},
 		{DEFAULT_VALUE,        true,     Integer.class, Types.VARCHAR, 300,         -1,       /* "varchar(100)",  */ "The default configuration value."},            // it's a String but, RIGHT align it with Integer
 		{MEMORY_USED,          true,     Integer.class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "Memory Used by this configuration parameter"}, // it's a String but, RIGHT align it with Integer
 		{CONFIG_UNIT,          true,     String .class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "In what unit is this configuration"},
@@ -109,8 +109,8 @@ extends DbmsConfigAbstract
 		{CFG_VAL_STR_PENDNING, true,     String .class, Types.VARCHAR, 100,         -1,       /* "varchar(100)",  */ "The pending char configuration."},
 		{READ_ONLY,            false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "This config is a read only value"},
 		{TYPE,                 true,     String .class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "dynamic or static"},
-		{MIN_VALUE,            true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "integer minimum value of the configuration"},
-		{MAX_VALUE,            true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "integer maximum value of the configuration"},
+		{MIN_VALUE,            true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "integer minimum value of the configuration"},
+		{MAX_VALUE,            true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "integer maximum value of the configuration"},
 		{DESCRIPTION,          true,     String .class, Types.VARCHAR, 1024,        -1,       /* "varchar(1024)", */ "Description of the configuration."},
 		{CONFIG_ID,            true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ "Internal ID number for this configuration."},
 		{SECTION_ID,           true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ "Configuration Group ID"},

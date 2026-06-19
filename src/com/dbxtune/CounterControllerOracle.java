@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,6 +34,7 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.oracle.CmExecutionTime;
 import com.dbxtune.cm.oracle.CmIoStatFile;
 import com.dbxtune.cm.oracle.CmIoStatFunction;
+import com.dbxtune.cm.oracle.CmActiveStatements;
 import com.dbxtune.cm.oracle.CmSessions;
 import com.dbxtune.cm.oracle.CmSqlStats;
 import com.dbxtune.cm.oracle.CmSummary;
@@ -51,6 +53,7 @@ import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.AseConnectionUtils;
+import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
 
 
@@ -95,12 +98,25 @@ extends CounterControllerAbstract
 
 		CmSummary           .create(counterController, guiController);
 
+		// Server
 		CmSessions          .create(counterController, guiController);
 		CmSystemEvent       .create(counterController, guiController);
 		CmSysStat           .create(counterController, guiController);
 		CmExecutionTime     .create(counterController, guiController);
-		CmSqlStats          .create(counterController, guiController);
 		
+		// Object/Access
+		boolean initUnSupportedCms = "gorans3".equals(StringUtil.getHostname());
+		if (hasGui && initUnSupportedCms)
+		{
+			(new Exception("ONLY FOR HOSTNAME 'gorans2'... CmActiveStatements is NOT YET READY")).printStackTrace();
+			
+			CmActiveStatements  .create(counterController, guiController); // NOTE: THIS IS NO WAY NEAR PRODUCTIONS Friendly -- it needs MORE STUFF
+		}
+		CmSqlStats          .create(counterController, guiController);
+
+		// Cache
+
+		// Disk
 		CmIoStatFunction    .create(counterController, guiController);
 		CmIoStatFile        .create(counterController, guiController);
 
@@ -179,6 +195,10 @@ extends CounterControllerAbstract
 			
 		if (! isCountersCreated())
 			createCounters(hasGui);
+
+		// Get active SQL Server Roles/Permissions
+		List<String> activeServerPermissionList = conn.getActiveServerRolesOrPermissions();
+
 		
 		_logger.info("Initializing all CM objects, using Oracle version number "+srvVersion+". ("+Ver.versionNumToStr(srvVersion)+")");
 
@@ -193,6 +213,8 @@ extends CounterControllerAbstract
 
 			// set the active roles, so it can be used in initSql()
 //			cm.setActiveRoles(_activeRoleList);
+			// set the active roles, so it can be used in initSql()
+			cm.setActiveServerRolesOrPermissions(activeServerPermissionList);
 
 			// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
 //			cm.setMonitorConfigs(monitorConfigMap);

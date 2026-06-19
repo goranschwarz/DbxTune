@@ -40,6 +40,8 @@ import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.ui.config.AlarmWritersPanel;
+import com.dbxtune.alarm.writers.AlarmWriterToFile;
+import com.dbxtune.alarm.writers.AlarmWriterToMail;
 import com.dbxtune.gui.swing.MultiLineLabel;
 
 import net.miginfocom.swing.MigLayout;
@@ -106,6 +108,12 @@ implements ActionListener, PropertyChangeListener
 
 	private void initData()
 	{
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			_enableAlarmHandling_chk.setSelected(true);
+			_alarmWritersPanel.setAlarmWriterSelected(AlarmWriterToFile.class.getSimpleName(), true);
+			_alarmWritersPanel.setAlarmWriterSelected(AlarmWriterToMail.class.getSimpleName(), true);
+		}
 	}
 
 	@Override
@@ -166,11 +174,11 @@ implements ActionListener, PropertyChangeListener
 	@SuppressWarnings("rawtypes")
 	@Override
 	public WizardPanelNavResult allowBack(String stepName, Map settings, Wizard wizard)
-    {
+	{
 //System.out.println("Page-8------: allowBack()");
 		saveWizardData();
 		return WizardPanelNavResult.PROCEED;
-    }
+	}
 
 	@SuppressWarnings("rawtypes")
 	@Override

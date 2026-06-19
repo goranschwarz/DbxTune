@@ -55,7 +55,7 @@ function dbmsConfigToggle()
 		$panel.css({ top: '100px', left: left + 'px' });
 	}
 
-	$panel.css('display', 'flex');
+	$panel.css({ display: 'flex', 'z-index': ++window._dbxTopZ });
 	try { localStorage.setItem('dbmsConfig-panelOpen', '1'); } catch(e) {}
 
 	// Restore dark mode

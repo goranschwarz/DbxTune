@@ -81,6 +81,7 @@ implements SybMessageHandler, AutoCloseable
 	private String             _currentSqlStatement        = null;
 	private boolean            _rsAsAsciiTable             = false;
 	private boolean            _rsAsJson                   = false;
+	private ResultsTransformer _resultTransformer          = new ResultsTransformer() {};
 
 	public boolean       getRsAsAsciiTable()          { return _rsAsAsciiTable; }
 	public AseSqlScript  setRsAsAsciiTable(boolean b) { _rsAsAsciiTable = b; return this; }
@@ -90,7 +91,39 @@ implements SybMessageHandler, AutoCloseable
 
 	public AseSqlScript  setDiscardDbmsErrorNumbers(List<Integer> list) { _discardDbmsErrorNumList  = list; return this; }
 	public AseSqlScript  setDiscardDbmsErrorText   (List<String> list)  { _discardDbmsErrorTextList = list; return this; }
+
+	/** Set your own style of transformation */
+	public AseSqlScript setResultsTransformer(ResultsTransformer transformer) { _resultTransformer = transformer; return this; }
+
+	/** Produce a String from a ResultSet, SQLWarning or SQLException */
+	public interface ResultsTransformer
+	{
+		/** Render how a ResultSet would look like */
+		default String resultSetToString(ResultSet rs, String sql, AseSqlScript sqlScript) throws SQLException, IOException
+		{
+			ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
+
+			// Write ResultSet Content as a "string table"
+			if      (sqlScript._rsAsAsciiTable) return tm.toAsciiTableString();
+			else if (sqlScript._rsAsJson)       return tm.toJson();
+			else                                return tm.toTableString();
+			
+		}
+
+		/** Render how a SQLWarning would look like, note: parameter 'txt' is how SqlScript would render it. */
+		default String sqlWarningToString(String txt)
+		{
+			return txt;
+		}
+
+//		/** Render how a SQLException would look like, note: parameter 'txt' is how SqlScript would render it. */
+//		default String sqlExceptionToString(String txt)
+//		{
+//			return txt;
+//		}
+	}
 	
+
 	/** 
 	 * On open current database and message handler are saved, which is restored by close()
 	 * @param conn The Connection 
@@ -596,18 +629,29 @@ implements SybMessageHandler, AutoCloseable
 							rs = stmnt.getResultSet();
 
 							// Append, messages and Warnings to output, if any
-							sb.append(getSqlWarningMsgs(stmnt, true));
+//							sb.append(getSqlWarningMsgs(stmnt, true));
+							sb.append(_resultTransformer.sqlWarningToString(getSqlWarningMsgs(stmnt, true)));
 
-							// Convert the ResultSet into a TableModel, which fits on a JTable
-							ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
-
-							// Write ResultSet Content as a "string table"
-							if      (_rsAsAsciiTable) sb.append(tm.toAsciiTableString());
-							else if (_rsAsJson)       sb.append(tm.toJson());
-							else                      sb.append(tm.toTableString());
+							// Let the transformer do the work
+							sb.append(_resultTransformer.resultSetToString(rs, sqlChunc, this));
+//							if (_rsToString != null)
+//							{
+//								sb.append(_rsToString.toString(rs));
+//							}
+//							else
+//							{
+//								// Convert the ResultSet into a TableModel, which fits on a JTable
+//								ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
+//
+//								// Write ResultSet Content as a "string table"
+//								if      (_rsAsAsciiTable) sb.append(tm.toAsciiTableString());
+//								else if (_rsAsJson)       sb.append(tm.toJson());
+//								else                      sb.append(tm.toTableString());
+//							}
 
 							// Append, messages and Warnings to output, if any
-							sb.append(getSqlWarningMsgs(stmnt, true));
+//							sb.append(getSqlWarningMsgs(stmnt, true));
+							sb.append(_resultTransformer.sqlWarningToString(getSqlWarningMsgs(stmnt, true)));
 
 							// Close it
 							rs.close();
@@ -630,7 +674,8 @@ implements SybMessageHandler, AutoCloseable
 					while (hasRs || rowsAffected != -1);
 
 					// Append, messages and Warnings to output, if any
-					sb.append(getSqlWarningMsgs(stmnt, true));
+//					sb.append(getSqlWarningMsgs(stmnt, true));
+					sb.append(_resultTransformer.sqlWarningToString(getSqlWarningMsgs(stmnt, true)));
 
 					// Close the statement
 					stmnt.close();
@@ -639,7 +684,8 @@ implements SybMessageHandler, AutoCloseable
 				{
 					if (aseExceptionsToWarnings)
 					{
-						String msg = getSqlWarningMsgs(ex);
+//						String msg = getSqlWarningMsgs(ex);
+						String msg = _resultTransformer.sqlWarningToString(getSqlWarningMsgs(ex));
 						if (StringUtil.hasValue(msg))
 						{
 							sb.append("\n");

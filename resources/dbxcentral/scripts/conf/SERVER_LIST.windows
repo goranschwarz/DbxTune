@@ -34,13 +34,13 @@
 ##===========================================================================
 
 #FORMAT; GROUP; Production Servers
-prod-1a-mssql     ; 1 ; Primary Production              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME>
-prod-1b-mssql     ; 1 ; Standby Production              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME>
-GS-1-WIN\SS_2025  ; 1 ; SQL-Server on dynamic port      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A GS-1-WIN__SS_2025
+#prod-1a-mssql     ; 1 ; Primary Production              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME>
+#prod-1b-mssql     ; 1 ; Standby Production              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME>
+#GS-1-WIN\SS_2025  ; 1 ; SQL-Server on dynamic port      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A GS-1-WIN__SS_2025
 
 #FORMAT; GROUP; Development/Test Servers
-dev-1a-mssql:1444 ; 1 ; Test Server on port 1444        ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A DEV_1A_MSSQL
-dev-2a-mssql      ; 1 ; Test Server, with a dummy name; ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A SOME_NAME
+#dev-1a-mssql:1444 ; 1 ; Test Server on port 1444        ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A DEV_1A_MSSQL
+#dev-2a-mssql      ; 1 ; Test Server, with a dummy name; ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.bat <SRVNAME> -A SOME_NAME
 
 
 #PROD_A1_ASE      ; 1 ; PROD Active Side                      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.bat <SRVNAME>

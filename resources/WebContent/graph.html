@@ -258,30 +258,37 @@ at pc:
 			overflow: hidden;        /* outer must not scroll — inner #active-statements-win handles it */
 			display: flex;
 			flex-direction: column;
-		/*	background-color: rgba(255, 195, 83, 1); */
 			background-color: rgba(229, 228, 226, 1);
-			border: 2px solid dark-gray;
+			border: 2px solid darkgray;
 			border-radius: 5px;
 			z-index: 910;
-
-			padding-top: 10px;
-			padding-bottom: 10px;
-			padding-right: 10px;
-			padding-left: 10px;
+			padding: 0;              /* header and body handle their own padding */
 		}
 		#active-statements-win {
 			overflow: auto;          /* scrollbar lives here, only when needed */
 			flex: 1 1 auto;
 			min-height: 0;
+			padding: 6px 10px;
 		}
 
 		#active-statements-ctl {
-			position: -webkit-sticky; /* Safari */
-			position: sticky;
-			top: 0;
-			left: 0;
+			flex-shrink: 0;
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 6px;
+			background: #f8f9fa;
+			padding: 4px 10px;
+			border-bottom: 1px solid #dee2e6;
 			cursor: move;
 			font-size: 0.85em;
+		}
+
+		/* Dark mode header */
+		#active-statements.as-dark #active-statements-ctl {
+			background: #2d2d2d;
+			border-bottom-color: #444;
+			color: #e0e0e0;
 		}
 
 		#active-alarms-top {
@@ -396,6 +403,7 @@ at pc:
 			display: none;
 		}
 		#dbms-config-panel .nav-link { padding: 3px 8px !important; font-size: 0.85em; }
+		#dbms-config-panel .nav-tabs .nav-link.active { box-shadow: inset 0 -3px 0 #0066cc; }
 		#dbms-config-filter-bar {
 			flex-shrink: 0;
 			display: none;
@@ -422,7 +430,7 @@ at pc:
 		#dbms-config-panel.dc-dark #dbms-config-header button { background:#3d3d3d; color:#ddd; border-color:#555; }
 		#dbms-config-panel.dc-dark ul.nav-tabs                { background:#252525 !important; border-bottom-color:#444; }
 		#dbms-config-panel.dc-dark .nav-link                  { color:#999 !important; }
-		#dbms-config-panel.dc-dark .nav-link.active           { background:#3a3a3a !important; border-color:#555 #555 #3a3a3a !important; color:#ddd !important; }
+		#dbms-config-panel.dc-dark .nav-link.active           { background:#3a3a3a !important; border-color:#555 #555 #3a3a3a !important; color:#ddd !important; box-shadow: inset 0 -3px 0 #5bc8ff !important; }
 		#dbms-config-panel.dc-dark #dbms-config-filter-bar    { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
 		#dbms-config-panel.dc-dark #dbms-config-filter-input  { background:#333; color:#e0e0e0; border-color:#555; }
 		#dbms-config-panel.dc-dark #dbms-config-body          { background:#1e1e1e; color:#e0e0e0; }
@@ -704,11 +712,13 @@ at pc:
 	#cm-detail-table .table-sm td,
 	#cm-detail-table .table-sm th             { padding: 1px 4px !important; }
 	.cm-tab-has-data > a.nav-link              { color: #0066cc !important; }
-	.cm-tab-has-data > a.nav-link.active       { color: #0066cc !important; font-weight: 600; }
+	.cm-tab-has-data > a.nav-link.active       { color: #0066cc !important; font-weight: 600; box-shadow: inset 0 -3px 0 #0066cc; }
 	.cm-tab-no-data  > a.nav-link              { color: #6c757d !important; text-decoration: line-through; }
-	.cm-tab-no-data  > a.nav-link.active       { color: #6c757d !important; text-decoration: line-through; font-weight: 600; }
+	.cm-tab-no-data  > a.nav-link.active       { color: #6c757d !important; text-decoration: line-through; font-weight: 600; box-shadow: inset 0 -3px 0 #6c757d; }
 	.cm-tab-disabled > a.nav-link              { color: #b0b0b0 !important; text-decoration: line-through double !important; opacity: 0.7; }
-	.cm-tab-disabled > a.nav-link.active       { color: #b0b0b0 !important; text-decoration: line-through double !important; opacity: 0.7; font-weight: 600; }
+	.cm-tab-disabled > a.nav-link.active       { color: #b0b0b0 !important; text-decoration: line-through double !important; opacity: 0.7; font-weight: 600; box-shadow: inset 0 -3px 0 #b0b0b0; }
+	/* Fallback ribbon for tabs not in a has/no-data li (e.g. group tabs) */
+	#cm-detail-panel .nav-tabs .nav-link.active { box-shadow: inset 0 -3px 0 #0066cc; }
 	/* Wide tooltip for CM tab descriptions + color legend */
 	.cm-tab-tooltip .tooltip-inner             { max-width: 560px !important; text-align: left; }
 
@@ -743,7 +753,8 @@ at pc:
 	#cm-detail-panel.cm-dark .nav-link                   { color:#999 !important; }
 	#cm-detail-panel.cm-dark .nav-link.active            { background:#3a3a3a !important; border-color:#555 #555 #3a3a3a !important; color:#ddd !important; }
 	#cm-detail-panel.cm-dark .cm-tab-has-data > a.nav-link        { color:#5bc8ff !important; }
-	#cm-detail-panel.cm-dark .cm-tab-has-data > a.nav-link.active { color:#5bc8ff !important; }
+	#cm-detail-panel.cm-dark .cm-tab-has-data > a.nav-link.active { color:#5bc8ff !important; box-shadow: inset 0 -3px 0 #5bc8ff !important; }
+	#cm-detail-panel.cm-dark .nav-tabs .nav-link.active           { box-shadow: inset 0 -3px 0 #5bc8ff !important; }
 	#cm-detail-panel.cm-dark #cm-detail-type-bar          { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
 	#cm-detail-panel.cm-dark #cm-detail-filter-bar       { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
 	#cm-detail-panel.cm-dark #cm-detail-filter-input     { background:#333; color:#e0e0e0; border-color:#555; }
@@ -1386,11 +1397,11 @@ at pc:
 				<button id="cm-nav-prev" class="btn btn-sm btn-outline-secondary"
 					style="font-size:0.78em;padding:1px 5px;line-height:1.4;"
 					onclick="cmDetailNavPrev();"
-					title="Go to previous sample that has data for this CM (moves timeline slider) &#10;Keyboard: Alt + &#8592;">&laquo;</button>
+					title="Go to previous sample that has data for this CM (moves timeline slider) &#10;Keyboard: Alt + &#8592;">&laquo; <span id="cm-nav-prev-ts" style="font-size:0.9em;"></span></button>
 				<button id="cm-nav-next" class="btn btn-sm btn-outline-secondary"
 					style="font-size:0.78em;padding:1px 5px;line-height:1.4;"
 					onclick="cmDetailNavNext();"
-					title="Go to next sample that has data for this CM (moves timeline slider) &#10;Keyboard: Alt + &#8594;">&raquo;</button>
+					title="Go to next sample that has data for this CM (moves timeline slider) &#10;Keyboard: Alt + &#8594;"><span id="cm-nav-next-ts" style="font-size:0.9em;"></span> &raquo;</button>
 			</span>
 			<span style="flex:1;"></span>
 			<span id="cm-detail-row-count" style="color:#6c757d;white-space:nowrap;"></span>
@@ -1633,8 +1644,9 @@ at pc:
 
 	<div id="active-statements" class="active-statements-class" style="display: none;">
 		<div id="active-statements-ctl" class="active-statements-ctl-class">
+			<strong><i class="fa fa-bolt"></i> Active Statements</strong>
+			&nbsp;<span id="active-statements-count" style="color:#555;font-size:0.85em;font-weight:normal;"></span>
 			<button type="button" class="close" aria-label="Close" onclick="$('#active-statements').hide();" title="Close" style="position:absolute;top:4px;right:8px;font-size:1.4rem;line-height:1;background:transparent;border:none;cursor:pointer;z-index:5;">&times;</button>
-			<span id="active-statements-count" style="color:black; font-weight: bold;">##</span> Active Statements...
 
 			<span id="active-statements-win-size">
 				Window Max Size:

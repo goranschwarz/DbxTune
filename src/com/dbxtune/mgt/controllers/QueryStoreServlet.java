@@ -211,11 +211,13 @@ extends HttpServlet
 				{
 					List<Map<String, Object>> dbs = actionListDatabases(conn, dbnameParam.trim());
 					int[] dbCounts = getCmDatabaseQsCounts(conn);
+					List<Map<String, Object>> qsAllDbs = getCmDatabasesQsStatus(conn);
 					Map<String, Object> root = new LinkedHashMap<>();
 					root.put("count",          dbs.size());
 					root.put("databases",      dbs);
 					root.put("totalUserDbs",   dbCounts[0]);  // -1 if CmDatabases_abs not available
 					root.put("qsEnabledCount", dbCounts[1]);  // -1 if CmDatabases_abs not available
+					root.put("qsAllDbs",       qsAllDbs);     // all user databases with Qs* status columns
 					om.writeValue(out, root);
 					break;
 				}
@@ -537,34 +539,64 @@ extends HttpServlet
 	 */
 	private int[] getCmDatabaseQsCounts(DbxConnection conn)
 	{
-		try
+		String sql = conn.quotifySqlString(
+			  "SELECT COUNT(*) AS [total], \n"
+			+ "SUM(CASE WHEN [QsIsEnabled] = TRUE THEN 1 ELSE 0 END) AS [enabled] \n"
+			+ "FROM [CmDatabases_abs] \n"
+			+ "WHERE [database_id] > 4 \n"
+			+ "  AND [SessionSampleTime] = (SELECT MAX([SessionSampleTime]) FROM [CmDatabases_abs]) \n");
+		try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery())
 		{
-			String sql = conn.quotifySqlString(
-				  "SELECT COUNT(*) AS [total], "
-				+ "SUM(CASE WHEN [QsIsEnabled] = TRUE THEN 1 ELSE 0 END) AS [enabled] "
-				+ "FROM [CmDatabases_abs] "
-				+ "WHERE [database_id] > 4 "
-				+ "  AND [SessionSampleTime] = (SELECT MAX([SessionSampleTime]) FROM [CmDatabases_abs])");
-			PreparedStatement ps = conn.prepareStatement(sql);
-			try
-			{
-				ResultSet rs = ps.executeQuery();
-				if (rs.next())
-				{
-					int total   = rs.getInt("total");
-					int enabled = rs.getInt("enabled");
-					rs.close();
-					return new int[]{ total, enabled };
-				}
-				rs.close();
-			}
-			finally { ps.close(); }
+			if (rs.next())
+				return new int[]{ rs.getInt("total"), rs.getInt("enabled") };
 		}
 		catch (Exception ex)
 		{
-			_logger.warn("QueryStoreServlet.getCmDatabaseQsCounts: cannot read CmDatabases_abs: {}", ex.getMessage());
+			_logger.warn("QueryStoreServlet.getCmDatabaseQsCounts: Failed to read QS counts from CmDatabases_abs. SQL: {}", sql, ex);
 		}
 		return new int[]{ -1, -1 };
+	}
+
+	/** Returns all user databases (database_id > 4) with their Qs* columns from the latest CmDatabases snapshot. */
+	private List<Map<String, Object>> getCmDatabasesQsStatus(DbxConnection conn)
+	{
+		List<Map<String, Object>> rows = new ArrayList<>();
+		String sql = conn.quotifySqlString(
+			  "SELECT * FROM [CmDatabases_abs] \n"
+			+ "WHERE [database_id] > 4 \n"
+			+ "  AND [SessionSampleTime] = (SELECT MAX([SessionSampleTime]) FROM [CmDatabases_abs]) \n"
+			+ "ORDER BY [DBName] \n");
+		try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery())
+		{
+			java.sql.ResultSetMetaData meta = rs.getMetaData();
+			int colCount = meta.getColumnCount();
+
+			// Collect column indexes for "DBName" and all "Qs*" columns
+			List<Integer> colIdxs = new ArrayList<>();
+			List<String>  colNames = new ArrayList<>();
+			for (int i = 1; i <= colCount; i++)
+			{
+				String col = meta.getColumnName(i);
+				if ("DBName".equalsIgnoreCase(col) || (col.length() > 2 && col.substring(0, 2).equalsIgnoreCase("Qs")))
+				{
+					colIdxs.add(i);
+					colNames.add(col);
+				}
+			}
+
+			while (rs.next())
+			{
+				Map<String, Object> row = new LinkedHashMap<>();
+				for (int i = 0; i < colIdxs.size(); i++)
+					row.put(colNames.get(i), rs.getObject(colIdxs.get(i)));
+				rows.add(row);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("QueryStoreServlet.getCmDatabasesQsStatus: Failed to read QS status from CmDatabases_abs. SQL: {}", sql, ex);
+		}
+		return rows;
 	}
 
 	private List<Map<String, Object>> actionListDatabases(DbxConnection conn, String dbnameFilter)

@@ -497,6 +497,8 @@ implements PropertyChangeListener, ActionListener
 			{
 				try
 				{
+					_logger.info("Sending CONNECTION Level CANCEL request. (for " + _conn.getClass().getSimpleName() + "). Connection=" + _conn);
+
 					if (_conn instanceof SybConnection) ((SybConnection)_conn).cancel();
 					if (_conn instanceof TdsConnection) ((TdsConnection)_conn).cancel();
 				}
@@ -518,6 +520,7 @@ implements PropertyChangeListener, ActionListener
 				{
 					try
 					{
+						_logger.info("Sending STATEMENT Level CANCEL request. (NOTE: Not all JDBC Drivers Support this). Statement=" + _stmnt + ", Connection=" + _conn);
 						_stmnt.cancel();
 					}
 					catch(SQLException ex)

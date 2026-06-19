@@ -45,7 +45,8 @@ public class WizardOffllinePageSummary implements WizardResultProducer {
 	 * @see org.netbeans.spi.wizard.WizardPage.WizardResultProducer#cancel(java.util.Map)
 	 */
 	@SuppressWarnings("rawtypes")
-	public boolean cancel(Map arg0) {
+	public boolean cancel(Map arg0) 
+	{
 		return true;
 	}
 
@@ -53,14 +54,17 @@ public class WizardOffllinePageSummary implements WizardResultProducer {
 	 * @see org.netbeans.spi.wizard.WizardPage.WizardResultProducer#finish(java.util.Map)
 	 */
 	@SuppressWarnings("rawtypes")
-	public Object finish(Map wizardData) throws WizardException {
+	public Object finish(Map wizardData) 
+	throws WizardException 
+	{
 		// We will just return the wizard data here. In real life we would
 		// a compute a result here
 		Summary  summary;
 		String   fn       = (String)wizardData.get("storeFile");
 		String   fnDir    = null;
 		
-		try{ 
+		try
+		{ 
 			File f = new File(fn);
 			if( f.exists() )
 			{
@@ -68,11 +72,13 @@ public class WizardOffllinePageSummary implements WizardResultProducer {
 			}
 		} catch (Exception ignore){}
 
+		String filename = fnDir != null ? fnDir : fn;
+		
 		String msg = 
-		         "The file '" + (fnDir!=null?fnDir:fn) + "' is now produced.\n"
+		         "The file '" + filename + "' is now produced.\n"
 		       + "\n"
 		       + "To start collect counter data without the GUI, as a background process, execute:\n"
-		       + Version.getAppName().toLowerCase() + " --noGui "+ (fnDir!=null?fnDir:fn) +  "\n"
+		       + Version.getAppName().toLowerCase() + " --noGui " + filename +  "\n"
 		       + "\n"
 		       + "This config file, along with the runtime jars, can now be shipped to a remote \n"
 		       + "site where the DBMS is located, which you want to collect counter data from.\n"
@@ -80,13 +86,26 @@ public class WizardOffllinePageSummary implements WizardResultProducer {
 		       + "The h2 database files can later be zipped and sent back for analysis.\n"
 		       + "\n"
 		       + "To view the data in the database:\n"
-		       + "- Start "+Version.getAppName().toLowerCase()+" in normal mode\n"
+		       + "- Start " + Version.getAppName().toLowerCase() + " in normal mode\n"
 		       + "- Press the connect buttom\n"
 		       + "- Choose tab 'Offline Connect'\n"
 		       + "- Specify the file in 'JDBC Url' or use buttom '...' to locate the file\n" 
 		       + "- Press OK\n" 
 		       + "- Now a Tree Table is displayed, start to view/analyze the data\n" 
 		       + "";
+		
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			msg = ""
+			       + "The Wizard was started with the switch --cfgWizard \n"
+			       + "The file '" + filename + "' is now produced.\n"
+			       + "\n"
+			       + "Next step is to use the above file in start_" + Version.getAppName().toLowerCase() + " \n"
+			       + "";
+			
+			System.out.println("WIZARD_CONFIG_FILE: " + filename);
+		}
+		
 		
 		summary = Summary.create (msg, wizardData);
 

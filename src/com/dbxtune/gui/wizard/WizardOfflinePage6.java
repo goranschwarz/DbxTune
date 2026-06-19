@@ -42,6 +42,7 @@ import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
+import com.dbxtune.AseTune;
 import com.dbxtune.Version;
 import com.dbxtune.gui.swing.MultiLineLabel;
 import com.dbxtune.pcs.PersistentCounterHandler;
@@ -269,7 +270,10 @@ implements ActionListener
 //		add(new JLabel("<html>Just press <b>Next</b> to continue.</html>"), "growx, wrap 10");
 
 		add(createPcsDdlLookupAndStorePanel(),  "growx, pushx, wrap");
-		add(createPcsSqlCaptureAndStorePanel(), "growx, pushx, wrap");
+		if (Version.getAppName().equals(AseTune.APP_NAME))
+		{
+			add(createPcsSqlCaptureAndStorePanel(), "growx, pushx, wrap");
+		}
 
 		initData();
 	}

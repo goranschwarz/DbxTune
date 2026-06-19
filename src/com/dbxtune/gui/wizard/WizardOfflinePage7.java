@@ -111,6 +111,10 @@ implements ActionListener
 
 	private void initData()
 	{
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			_sampleTime.setText("30");
+		}
 	}
 
 	@Override

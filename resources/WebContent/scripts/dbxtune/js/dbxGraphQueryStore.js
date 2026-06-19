@@ -263,7 +263,7 @@ function queryStoreToggle()
 		$panel.css({ top: '100px', left: left + 'px' });
 	}
 
-	$panel.css('display', 'flex');
+	$panel.css({ display: 'flex', 'z-index': ++window._dbxTopZ });
 	try { localStorage.setItem('queryStore-panelOpen', '1'); } catch(e) {}
 
 	// Restore dark mode preference
@@ -545,6 +545,7 @@ function queryStoreRenderDatabases(r)
 	var dbs            = (r && r.databases)      ? r.databases      : [];
 	var totalUserDbs   = (r && r.totalUserDbs   != null && r.totalUserDbs   >= 0) ? r.totalUserDbs   : -1;
 	var qsEnabledCount = (r && r.qsEnabledCount != null && r.qsEnabledCount >= 0) ? r.qsEnabledCount : -1;
+	var qsAllDbs       = (r && Array.isArray(r.qsAllDbs)) ? r.qsAllDbs : [];
 	if (dbs.length === 0) {
 		var enableSql =
 			  '-- ============================================================\n'
@@ -672,7 +673,6 @@ function queryStoreRenderDatabases(r)
 			+ 'ORDER BY d.is_query_store_on DESC, d.name;\n';
 
 		// ── Determine state from CmDatabases counts ──────────────────────────
-		console.log('QueryStore empty-state: totalUserDbs=' + totalUserDbs + ', qsEnabledCount=' + qsEnabledCount + ', raw r.totalUserDbs=' + (r && r.totalUserDbs) + ', r.qsEnabledCount=' + (r && r.qsEnabledCount));
 		var qsDisabledCount = (totalUserDbs >= 0 && qsEnabledCount >= 0) ? (totalUserDbs - qsEnabledCount) : -1;
 		var mainMsg, detailsSummary, showDetails;
 		if (qsEnabledCount === 0 && totalUserDbs > 0) {
@@ -696,6 +696,8 @@ function queryStoreRenderDatabases(r)
 			detailsSummary = '&#9881;&nbsp; Query Store not enabled on the SQL Server? &mdash; click for SQL to enable it';
 			showDetails   = true;
 		}
+
+		var dbListHtml = _qsBuildStatusSection(qsAllDbs, []);
 
 		var detailsHtml = '';
 		if (showDetails) {
@@ -737,6 +739,7 @@ function queryStoreRenderDatabases(r)
 			+ '&#128197;&nbsp; Look at Yesterday\'s data</button>'
 			+ '</div>'
 			+ '<span id="qs-inline-extract-status" style="display:block;font-size:0.85em;margin-top:8px;"></span>'
+			+ dbListHtml
 			+ detailsHtml
 			+ '</div>');
 		return;
@@ -841,7 +844,203 @@ function queryStoreRenderDatabases(r)
 	html += '<p style="font-size:0.78em;color:#6c757d;margin-top:4px;">'
 	      + 'Click a row to view top queries for the <b>selected</b> day for that database. '
 	      + 'Or tick checkboxes and click <b>Query Selected</b> to aggregate queries across multiple databases.</p>';
+	html += _qsBuildStatusSection(qsAllDbs, dbs.map(function(d) { return d.dbname; }));
 	$('#query-store-content').html(html);
+}
+
+/**
+ * Build the collapsible "Query Store Status — All Databases" section.
+ * qsAllDbs  : array of {name, QsIsEnabled, QsIsOk, QsDesiredState, QsActualState,
+ *                        QsMaxSizeInMb, QsUsedSpaceInMb, QsFreeSpaceInMb, QsUsedPct, QsReadOnlyReason}
+ * extractedDbNames : array of dbname strings that already have extracted QS data
+ */
+function _qsBuildStatusSection(qsAllDbs, extractedDbNames)
+{
+	if (!qsAllDbs || qsAllDbs.length === 0) return '';
+
+	var extractedSet = {};
+	(extractedDbNames || []).forEach(function(n) { extractedSet[n.toLowerCase()] = true; });
+
+	var enabledCount  = qsAllDbs.filter(function(d) { return d.QsIsEnabled; }).length;
+	var disabledCount = qsAllDbs.length - enabledCount;
+	var summary = qsAllDbs.length + ' databases &mdash; '
+		+ '<span style="color:#155724;">' + enabledCount + ' enabled</span>'
+		+ (disabledCount > 0 ? ', <span style="color:#721c24;">' + disabledCount + ' disabled</span>' : '');
+
+	var th = function(label, title) {
+		return '<th style="white-space:nowrap;font-size:0.8em;padding:3px 6px;background:#f0f0f0;border:1px solid #ccc;cursor:default;"'
+			+ (title ? ' title="' + escHtml(title) + '"' : '') + '>' + label + '</th>';
+	};
+	var td = function(val, style) {
+		return '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;white-space:nowrap;' + (style || '') + '">'
+			+ (val !== null && val !== undefined && val !== '' ? escHtml(String(val)) : '<span style="color:#aaa;">—</span>') + '</td>';
+	};
+
+	var _enableSqlForDb = function(dbName) {
+		var n = '[' + dbName + ']';
+		return '-- ============================================================\n'
+			+ '-- Enable Query Store for: ' + dbName + '\n'
+			+ '-- ============================================================\n'
+			+ 'USE master\n'
+			+ 'GO\n'
+			+ 'ALTER DATABASE ' + n + ' SET QUERY_STORE = ON\n'
+			+ 'GO\n'
+			+ 'ALTER DATABASE ' + n + ' SET QUERY_STORE\n'
+			+ '(\n'
+			+ '    OPERATION_MODE          = READ_WRITE,\n'
+			+ '    MAX_STORAGE_SIZE_MB     = 2048,\n'
+			+ '    INTERVAL_LENGTH_MINUTES = 60\n'
+			+ ')\n'
+			+ 'GO\n'
+			+ '--\n'
+			+ '-- ============================================================\n'
+			+ '-- Full option reference (all settings shown with descriptions)\n'
+			+ '-- ============================================================\n'
+			+ '--ALTER DATABASE ' + n + '\n'
+			+ '--SET QUERY_STORE\n'
+			+ '--(\n'
+			+ '--\n'
+			+ '--    -- OPERATION_MODE: READ_WRITE (default) | READ_ONLY\n'
+			+ '--    --   READ_WRITE  - Query Store actively collects runtime stats and plan data.\n'
+			+ '--    --   READ_ONLY   - Existing data is queryable but no new data is captured.\n'
+			+ '--    --   Note: switches to READ_ONLY automatically when MAX_STORAGE_SIZE_MB is reached.\n'
+			+ '--    OPERATION_MODE              = READ_WRITE,\n'
+			+ '--\n'
+			+ '--    -- MAX_STORAGE_SIZE_MB: integer (default: 100 MB on SQL 2016/2017; 1000 MB on SQL 2019+)\n'
+			+ '--    --   Maximum disk space allocated to Query Store per database.\n'
+			+ '--    --   When this limit is hit the store flips to READ_ONLY until cleaned up.\n'
+			+ '--    MAX_STORAGE_SIZE_MB         = 2048,\n'
+			+ '--\n'
+			+ '--    -- CLEANUP_POLICY / STALE_QUERY_THRESHOLD_DAYS: integer in days (default: 30)\n'
+			+ '--    --   Queries that have not been executed for this many days are eligible for\n'
+			+ '--    --   automatic removal when SIZE_BASED_CLEANUP_MODE = AUTO triggers a cleanup.\n'
+			+ '--    CLEANUP_POLICY              = (STALE_QUERY_THRESHOLD_DAYS = 30),\n'
+			+ '--\n'
+			+ '--    -- DATA_FLUSH_INTERVAL_SECONDS: integer in seconds (default: 900 = 15 min)\n'
+			+ '--    --   How often in-memory runtime stats are written asynchronously to disk.\n'
+			+ '--    --   Lower values reduce data loss on crash but increase I/O; range: 60-900.\n'
+			+ '--    DATA_FLUSH_INTERVAL_SECONDS = 900,\n'
+			+ '--\n'
+			+ '--    -- INTERVAL_LENGTH_MINUTES: integer in minutes (default: 60)\n'
+			+ '--    --   Aggregation window for runtime execution statistics.\n'
+			+ '--    --   Smaller = finer time granularity, more rows; larger = coarser, fewer rows.\n'
+			+ '--    --   Typical values: 15, 30, 60 (recommended), 1440 (daily aggregates).\n'
+			+ '--    INTERVAL_LENGTH_MINUTES     = 60,\n'
+			+ '--\n'
+			+ '--    -- SIZE_BASED_CLEANUP_MODE: AUTO (default) | OFF\n'
+			+ '--    --   AUTO - automatically purges oldest/cheapest queries when storage reaches ~90%.\n'
+			+ '--    --   OFF  - no automatic cleanup; store goes READ_ONLY at MAX_STORAGE_SIZE_MB.\n'
+			+ '--    SIZE_BASED_CLEANUP_MODE     = AUTO,\n'
+			+ '--\n'
+			+ '--    -- MAX_PLANS_PER_QUERY: integer (default: 200)\n'
+			+ '--    --   Maximum number of execution plans retained per query_id.\n'
+			+ '--    --   Prevents runaway plan bloat for queries with highly variable plans.\n'
+			+ '--    MAX_PLANS_PER_QUERY         = 200,\n'
+			+ '--\n'
+			+ '--    -- WAIT_STATS_CAPTURE_MODE: ON (default) | OFF   [SQL Server 2017+]\n'
+			+ '--    --   ON  - capture per-query wait statistics (locks, I/O, memory, etc.) per interval.\n'
+			+ '--    --   OFF - skip wait capture; reduces overhead on high-throughput OLTP workloads.\n'
+			+ '--    WAIT_STATS_CAPTURE_MODE     = ON,\n'
+			+ '--\n'
+			+ '--    -- QUERY_CAPTURE_MODE: ALL | AUTO (default on 2019+) | CUSTOM (2019+ only) | NONE\n'
+			+ '--    --   ALL    - capture every distinct query (default on SQL 2016/2017).\n'
+			+ '--    --   AUTO   - capture only queries deemed significant by cost/frequency heuristics.\n'
+			+ '--    --   CUSTOM - apply fine-grained thresholds defined in QUERY_CAPTURE_POLICY below.\n'
+			+ '--    --   NONE   - stop capturing new queries; existing data is still readable.\n'
+			+ '--    QUERY_CAPTURE_MODE          = AUTO,\n'
+			+ '--\n'
+			+ '--    -- QUERY_CAPTURE_POLICY: only effective when QUERY_CAPTURE_MODE = CUSTOM  [SQL 2019+]\n'
+			+ '--    QUERY_CAPTURE_POLICY        =\n'
+			+ '--    (\n'
+			+ '--        STALE_CAPTURE_POLICY_THRESHOLD = 1 HOURS,\n'
+			+ '--        EXECUTION_COUNT                = 30,\n'
+			+ '--        TOTAL_COMPILE_CPU_TIME_MS      = 1000,\n'
+			+ '--        TOTAL_EXECUTION_CPU_TIME_MS    = 100\n'
+			+ '--    )\n'
+			+ '--)\n'
+			+ '--GO\n'
+			+ '--\n'
+			+ '-- Reference:\n'
+			+ '-- https://learn.microsoft.com/en-us/sql/relational-databases/performance/monitoring-performance-by-using-the-query-store\n'
+			+ '-- https://learn.microsoft.com/en-us/sql/t-sql/statements/alter-database-transact-sql-set-options\n';
+	};
+
+	var tableHtml = '<table style="border-collapse:collapse;margin-top:6px;">'
+		+ '<thead><tr>'
+		+ th('Database')
+		+ th('Copy SQL', 'Copy SQL to enable Query Store for this database')
+		+ th('Enabled')
+		+ th('Is OK', 'Desired state matches actual state')
+		+ th('Desired State')
+		+ th('Actual State')
+		+ th('Max MB', 'QsMaxSizeInMb')
+		+ th('Used MB', 'QsUsedSpaceInMb')
+		+ th('Free MB', 'QsFreeSpaceInMb')
+		+ th('Used %', 'QsUsedPct')
+		+ th('ReadOnly Reason', 'QsReadOnlyReason — non-zero when QS flipped to read-only')
+		+ th('Data Extracted', 'Whether QS data has been extracted into DbxTune storage')
+		+ '</tr></thead><tbody>';
+
+	qsAllDbs.forEach(function(db) {
+		var dbName   = db.DBName || db.name || '';
+		var enabled  = db.QsIsEnabled;
+		var isOk     = db.QsIsOk;
+		var hasData  = !!extractedSet[dbName.toLowerCase()];
+
+		var rowBg    = enabled ? '#f0fff0' : '#fff0f0';
+		var enLabel  = enabled
+			? '<span style="color:#155724;font-weight:600;">&#10003; Yes</span>'
+			: '<span style="color:#721c24;font-weight:600;">&#10007; No</span>';
+		var okLabel  = isOk === null || isOk === undefined ? '<span style="color:#aaa;">—</span>'
+			: (String(isOk).toUpperCase() === 'TRUE' || isOk === true)
+				? '<span style="color:#155724;">&#10003;</span>'
+				: '<span style="color:#721c24;">&#10007;</span>';
+		var dataLabel = hasData
+			? '<span style="color:#155724;">&#10003;</span>'
+			: '<span style="color:#aaa;">—</span>';
+
+		var copyCell = '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">';
+		if (!enabled) {
+			var sqlText = _enableSqlForDb(dbName);
+			copyCell += '<button class="btn btn-sm btn-outline-secondary" '
+				+ 'style="font-size:0.75em;padding:1px 6px;white-space:nowrap;" '
+				+ 'title="' + escHtml(sqlText) + '" '
+				+ 'onclick="(function(b,s){'
+				+ 'if(navigator.clipboard&&navigator.clipboard.writeText){'
+				+ 'navigator.clipboard.writeText(s).then(function(){b.textContent=\'Copied!\';setTimeout(function(){b.textContent=\'Copy SQL to Enable\';},1500);});'
+				+ '}else{'
+				+ 'var t=document.createElement(\'textarea\');t.value=s;t.style.position=\'fixed\';t.style.opacity=\'0\';document.body.appendChild(t);t.focus();t.select();'
+				+ 'try{document.execCommand(\'copy\');b.textContent=\'Copied!\';setTimeout(function(){b.textContent=\'Copy SQL to Enable\';},1500);}catch(e){alert(\'Copy failed: \'+e);}'
+				+ 'document.body.removeChild(t);}'
+				+ '})(this,' + escHtml(JSON.stringify(sqlText)) + ')">Copy SQL to Enable</button>';
+		}
+		copyCell += '</td>';
+
+		tableHtml += '<tr style="background:' + rowBg + ';">'
+			+ td(dbName, 'font-weight:600;')
+			+ copyCell
+			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">' + enLabel + '</td>'
+			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">' + okLabel + '</td>'
+			+ td(db.QsDesiredState)
+			+ td(db.QsActualState)
+			+ td(db.QsMaxSizeInMb)
+			+ td(db.QsUsedSpaceInMb)
+			+ td(db.QsFreeSpaceInMb)
+			+ td(db.QsUsedPct !== null && db.QsUsedPct !== undefined ? db.QsUsedPct + '%' : null)
+			+ td(db.QsReadOnlyReason)
+			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">' + dataLabel + '</td>'
+			+ '</tr>';
+	});
+	tableHtml += '</tbody></table>';
+
+	return '<details style="margin-top:14px;border:1px solid #d0d0d0;border-radius:4px;background:#fafafa;">'
+		+ '<summary style="padding:6px 10px;cursor:pointer;font-weight:600;color:#333;font-size:0.9em;">'
+		+ '&#128200; Query Store Status &mdash; All Databases (' + summary + ')'
+		+ '</summary>'
+		+ '<div style="padding:6px 10px 10px 10px;overflow-x:auto;">'
+		+ tableHtml
+		+ '</div>'
+		+ '</details>';
 }
 
 // ── Multi-DB cross-database fetch ─────────────────────────────────────────────

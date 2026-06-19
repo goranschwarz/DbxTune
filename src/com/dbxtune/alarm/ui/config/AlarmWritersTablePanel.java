@@ -23,6 +23,7 @@ package com.dbxtune.alarm.ui.config;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -237,5 +238,18 @@ implements TableModelListener
 		}
 		
 		return conf;
+	}
+
+	public void setAlarmWriterSelected(String alarmWriterName, boolean selected)
+	{
+		for (int r=0; r<_alarmWritersTable.getRowCount(); r++)
+		{
+			String name = Objects.toString(_alarmWritersTable.getValueAt(r, AlarmWritersTableModel.TAB_POS_NAME), "-unknown-");
+			if (name.equals(alarmWriterName))
+			{
+				_alarmWritersTable.setValueAt(selected, r, AlarmWritersTableModel.TAB_POS_USE);
+				_alarmWritersTable.setRowSelectionInterval(r, r);
+			}
+		}
 	}
 }

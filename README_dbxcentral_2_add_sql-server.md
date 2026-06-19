@@ -37,6 +37,7 @@ CREATE LOGIN dbxtune WITH PASSWORD         = 'the_long_and_arbitrary_password',
 
 -- Or if you are using a AD Account for this (this if you want to use integrated security for the 'dbxtune' user)
 --CREATE LOGIN [DOMAIN\dbxtune] FROM WINDOWS
+-- NOTE: if you are using an AD Account, replace all below [dbxtune] with [DOMAIN\dbxtune]
 
 
 -- Then grant authorization
@@ -81,6 +82,23 @@ GRANT EXEC ON sp_BlitzLock  TO dbxtune;  -- Used to list deadlocks (for Daily Su
 GRANT EXEC ON sp_BlitzIndex TO dbxtune;  -- [not used by dbxtune yet] -- To get some Index Information
 GRANT EXEC ON sp_BlitzCache TO dbxtune;  -- [not used by dbxtune yet] -- To get info from the Plan Cache
 GRANT EXEC ON sp_BlitzFirst TO dbxtune;  -- [not used by dbxtune yet] -- To ...
+```
+
+#### For Query Store -- If the dbxtune user is not 'sysadmin' or 'db_owner', which is probably **not** the case.
+If you want to **flush** Query Store during for _Daily Summary Reports_, you need a special stored procedure
+```
+CREATE PROCEDURE dbo.dbxtune_flush_query_store
+WITH EXECUTE AS OWNER
+AS
+BEGIN
+    EXEC sp_query_store_flush_db;
+END;
+GO
+
+GRANT EXECUTE ON dbo.dbxtune_flush_query_store TO [dbxtune];
+GO
+
+-- Optionally: Sign the procedure dbo.dbxtune_flush_query_store with a certificate for a higher security
 ```
 
 #### Test that we can login to SQL Server with the `dbxtune` user

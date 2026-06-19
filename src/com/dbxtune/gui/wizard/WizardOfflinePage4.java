@@ -101,6 +101,10 @@ implements ActionListener, TableModelListener
 
 				TableModel tm = getModel();
 
+				// For "Option" show the description
+				if (col == TAB_POS_OPTION)
+					col = TAB_POS_OPTION_DESC;
+
 				tip = tm.getValueAt(row, col) + "";
 			}
 			return tip;

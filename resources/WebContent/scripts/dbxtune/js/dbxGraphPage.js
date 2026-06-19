@@ -299,16 +299,22 @@
 			var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 			if ( ! (isSafari && iOS) )
 			{
-				// ── Dialog geometry persistence (localStorage) ────────────────────
+				// ── Dialog geometry persistence (localStorage, percent-based) ────────────────────
+				// Stored as % of viewport so geometry scales correctly across window/monitor sizes.
+				// Key prefix 'dbx.geom.pct.' intentionally differs from old 'dbx.geom.' so stale
+				// pixel-valued entries are silently ignored rather than mis-applied.
 				function _saveDialogGeom(id) {
-					var s = document.getElementById(id).style;
-					localStorage.setItem('dbx.geom.' + id, JSON.stringify(
-						{ top: s.top, left: s.left, width: s.width, height: s.height }
-					));
+					var el = document.getElementById(id);
+					localStorage.setItem('dbx.geom.pct.' + id, JSON.stringify({
+						top:    (el.offsetTop    / window.innerHeight * 100).toFixed(2) + '%',
+						left:   (el.offsetLeft   / window.innerWidth  * 100).toFixed(2) + '%',
+						width:  (el.offsetWidth  / window.innerWidth  * 100).toFixed(2) + '%',
+						height: (el.offsetHeight / window.innerHeight * 100).toFixed(2) + '%'
+					}));
 				}
 				function _restoreDialogGeom(id) {
 					try {
-						var g = JSON.parse(localStorage.getItem('dbx.geom.' + id) || 'null');
+						var g = JSON.parse(localStorage.getItem('dbx.geom.pct.' + id) || 'null');
 						if (!g) return;
 						var s = document.getElementById(id).style;
 						if (g.top)    s.top    = g.top;
@@ -323,10 +329,10 @@
 				$('.modal-dialog').draggable({ handle: ".modal-header" });
 
 				// Statements
-				$('.active-statements-class').resizable({ handles: 'n, w, nw, s, sw', stop: function() { _saveDialogGeom('active-statements'); } });
-//				$('.active-statements-class').resizable({ handles: 'all' });
+				$('.active-statements-class').resizable({ handles: 'n, e, s, w, ne, nw, se, sw', stop: function() { _saveDialogGeom('active-statements'); } });
 				$('.active-statements-class').draggable({ handle: ".active-statements-ctl-class", stop: function() { _saveDialogGeom('active-statements'); } });
 				_restoreDialogGeom('active-statements');
+				document.getElementById('active-statements').style.height = ''; // preserve CSS height:auto
 
 				// Active Alarms
 				$('.active-alarms-class').resizable({ handles: 'n', stop: function() { _saveDialogGeom('active-alarms'); } });
@@ -405,7 +411,13 @@
 
 			/* Start to subscribe to data, sent by the backend-server */
 			dbxTuneGraphSubscribe();
-			
+
+			// Restore floating panels that were open in the previous session.
+			// Open them immediately (before WS data arrives) so the user doesn't have to wait.
+			try { if (localStorage.getItem('cmDetail-panelOpen')    === '1') { cmDetailToggle();    _cmAutoOpenChecked    = true; } } catch(e) {}
+			try { if (localStorage.getItem('dbmsConfig-panelOpen')  === '1') { dbmsConfigToggle();  _dcAutoOpenChecked    = true; } } catch(e) {}
+			try { if (localStorage.getItem('queryStore-panelOpen')  === '1') { queryStoreToggle();  _qsAutoOpenChecked    = true; } } catch(e) {}
+
 //			/* If we have 'markTime' then enable historical mode, and set the position in the timeline */
 //			var markTime = getParameter("markTime");
 //			if (markTime !== undefined)

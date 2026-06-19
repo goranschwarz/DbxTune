@@ -131,6 +131,9 @@ implements ActionListener
 		add(_jdbcUrl_cbx,     "growx, split");
 		add(_jdbcUrl_but, "wrap");
 
+		JLabel noteOnUser = new JLabel("<html><b>Note</b>: The below Username/Password is <b>NOT</b> the monitored DBMS, it's where we STORE Monitored Data.");
+		add(noteOnUser, "skip, growx, wrap");
+
 		add(new JLabel("Username"));
 		add(_jdbcUsername, "growx, wrap");
 
@@ -218,6 +221,12 @@ implements ActionListener
 		
 		// Set the default value
 		_jdbcUrl_cbx.setSelectedItem(defaultUrl);
+
+		
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			_pcsH2Option_startH2NetworkServer_chk.setSelected(true);
+		}
 	}
 
 	@Override

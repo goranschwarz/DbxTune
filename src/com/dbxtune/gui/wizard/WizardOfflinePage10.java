@@ -229,6 +229,10 @@ implements ActionListener
 
 	private void initData()
 	{
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			_dbxCentral_chk.setSelected(true);
+		}
 	}
 
 	@Override
@@ -244,9 +248,9 @@ implements ActionListener
 
 	private int removeKeyPrefixed(Map<?, ?> map, String keyPrefix)
 	{
-        int cnt = 0;
+		int cnt = 0;
 
-        final Iterator<?> iter = map.keySet().iterator();
+		final Iterator<?> iter = map.keySet().iterator();
 		while (iter.hasNext()) 
 		{
 			if (iter.next().toString().startsWith(keyPrefix)) 

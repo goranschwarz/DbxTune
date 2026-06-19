@@ -436,7 +436,41 @@ public class SqlServerQueryStoreExtractor
 	
 	private void doQueryStoreFlush()
 	{
-		String sql = "exec " + _monDbName + ".dbo.sp_query_store_flush_db";
+		String sql;
+		
+		// FIRST: Try - dbxtune_flush_query_store
+		sql = "exec [" + _monDbName + "].dbo.dbxtune_flush_query_store";
+		try (Statement stmnt = _monConn.createStatement())
+		{
+			_logger.info("[" + _monDbName + "] Flushing in-memory counters to persistent storage before we start the transfer. SQL='" + sql + "'.");
+			stmnt.executeUpdate(sql);
+
+			// SUCCESS
+			return;
+		}
+		catch (SQLException ex)
+		{
+			// Msg 2812, Could not find stored procedure 'dbo.dbxtune_flush_query_store'.
+			if (ex.getErrorCode() == 2812)
+			{
+				_logger.warn("[" + _monDbName + "] Stored Proc 'dbxtune_flush_query_store' did not exists. Skipping this and continuing with fallback of executing 'sp_query_store_flush_db'.");
+				_logger.info("[" + _monDbName + "] Stored Proc 'dbxtune_flush_query_store' can be created as: CREATE PROCEDURE " + _monDbName + ".dbo.dbxtune_flush_query_store WITH EXECUTE AS OWNER AS BEGIN EXEC sp_query_store_flush_db END");
+			}
+			else
+			{
+				_logger.error("[" + _monDbName + "] Problems flushing in-memory counters to persistent storage before we start the transfer. Skipping this and continuing. SQL=|" + sql + "|. MsgNum=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', MsgText='" + ex.getMessage() + "'.");
+				
+				// Msg 12421: User does not have necessary permissions to execute Query Store stored procedure.
+				if (ex.getErrorCode() == 12421)
+				{
+					String monitorUser = _monConn.getConnProp() == null ? "" : _monConn.getConnProp().getUsername();
+					_logger.info("If you want the monitor user '" + monitorUser + "' to be able to flush the Query Store do: 'GRANT ALTER ANY DATABASE TO [" + monitorUser + "]'. Or grant EXEC to procedure 'dbxtune_flush_query_store' in EACH of the databases.");
+				}
+			}
+		}
+
+		// SECOND: Try - sp_query_store_flush_db
+		sql = "exec [" + _monDbName + "].dbo.sp_query_store_flush_db";
 		try (Statement stmnt = _monConn.createStatement())
 		{
 			_logger.info("[" + _monDbName + "] Flushing in-memory counters to persistent storage before we start the transfer. SQL='" + sql + "'.");
@@ -453,7 +487,7 @@ public class SqlServerQueryStoreExtractor
 				_logger.info("If you want the monitor user '" + monitorUser + "' to be able to flush the Query Store do: 'GRANT ALTER ANY DATABASE TO [" + monitorUser + "]'. Or grant EXEC to procedure 'sp_query_store_flush_db' in EACH of the databases.");
 			}
 		}
-	}
+	} // end: method
 
 	// NOTE: This is done via: SqlServerQueryStoreDdlExtractor
 //	private void extractTopTablesForDdlStorage_atSourceDb()

@@ -20,9 +20,12 @@
  ******************************************************************************/
 package com.dbxtune.alarm;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.lang.invoke.MethodHandles;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -424,10 +427,24 @@ implements Runnable
 		{
 			_logger.info("The AlarmHandler module is using the file '" + _serializedFileName + "' for storing active alarms between application restart.");
 
+			// Check if the directory exists... otherwise create it
+			Path dir = Path.of(_serializedFileName).getParent();
+			if (dir != null && !Files.exists(dir)) 
+			{
+				_logger.info("The directory '" + dir + "' did not exist. Creating it and adding an empty file '" + _serializedFileName + "'.");
+
+				Files.createDirectories(dir);
+			    Files.createFile(Path.of(_serializedFileName));
+			}
+
 			// LOAD old alarms that was saved...
 			try
 			{
 				_alarmContActive = AlarmContainer.load(_serializedFileName);
+			}
+			catch (EOFException e)
+			{
+				_logger.info("Problems loading any saved alarms. The initialization continues anyway. EOFException... So the alarm file was probably empty... This will sort itself out on next save...");
 			}
 			catch (FileNotFoundException e)
 			{

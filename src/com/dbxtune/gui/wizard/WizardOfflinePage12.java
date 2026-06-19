@@ -29,6 +29,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.nio.file.Paths;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -39,6 +40,8 @@ import javax.swing.JTextField;
 
 import org.netbeans.spi.wizard.WizardPage;
 
+import com.dbxtune.Version;
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.gui.swing.MultiLineLabel;
 import com.dbxtune.utils.StringUtil;
 
@@ -89,6 +92,19 @@ implements ActionListener
 
 	private void initData()
 	{
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			String prefix   = Version.getAppName().replace("Tune", "").toLowerCase(); // AseTune, SqlServerTune, PostgresTune, MySqlTune, OracleTune... -> ase, sqlserver, postgres...
+
+			String cfgDir   = DbxTuneCentral.getAppConfDir();
+			String cfgFile  = prefix + ".GENERIC.conf";
+
+			String fullPath = Paths.get(cfgDir, cfgFile).toString();
+			
+			_storeFile.setText(fullPath);
+
+			_previewFile.setSelected(false);
+		}
 	}
 
 	@Override

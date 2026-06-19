@@ -141,7 +141,7 @@ extends CountersModel
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
-	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
+	@Override public Type    getTemplateLevel()                       { return Type.SMALL; }
 
 	/**
 	 * FACTORY  method to create the object
@@ -2549,17 +2549,27 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 
 					if (TempdbUsageMb > threshold)
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						int thresholdUser     = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TempdbUsageMbUser    , DEFAULT_alarm_TempdbUsageMbUser);
+						int thresholdInternal = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TempdbUsageMbInternal, DEFAULT_alarm_TempdbUsageMbInternal);
 
-						AlarmEvent ae = new AlarmEventExtensiveUsage(cm, threshold, AlarmEventExtensiveUsage.Resource.TEMPDB, "TempdbUsageMb", TempdbUsageMb);
-
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						int tempdbUsageMbUser     = cm.getRateValueAsInteger(r, "TempdbUsageMbUser"    , true, Integer.MAX_VALUE);
+						int tempdbUsageMbInternal = cm.getRateValueAsInteger(r, "TempdbUsageMbInternal", true, Integer.MAX_VALUE);
 						
-						// Information about how to disable this alarm
-						ae.createAlarmOptionsMessage(this, "TempdbUsageMb");
+						// Only send alarm if we also exceeds the User or Internal Thresholds
+						if (tempdbUsageMbUser > thresholdUser || tempdbUsageMbInternal > thresholdInternal)
+						{
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
-						alarmHandler.addAlarm( ae );
+							AlarmEvent ae = new AlarmEventExtensiveUsage(cm, threshold, AlarmEventExtensiveUsage.Resource.TEMPDB, "TempdbUsageMb", TempdbUsageMb);
+
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "TempdbUsageMb");
+
+							alarmHandler.addAlarm( ae );
+						}
 					}
 				}
 			}
@@ -2609,7 +2619,13 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 	
 	public static final String  PROPKEY_alarm_TempdbUsageMb                                         = CM_NAME + ".alarm.system.if.TempdbUsageMb.gt";
 	public static final int     DEFAULT_alarm_TempdbUsageMb                                         = 16384; // 16 GB ... which is pretty much
+
+	public static final String  PROPKEY_alarm_TempdbUsageMbUser                                     = CM_NAME + ".alarm.system.if.TempdbUsageMb.user.gt";
+	public static final int     DEFAULT_alarm_TempdbUsageMbUser                                     = 16384; // 16 GB ... which is pretty much
 	
+	public static final String  PROPKEY_alarm_TempdbUsageMbInternal                                 = CM_NAME + ".alarm.system.if.TempdbUsageMb.internal.gt";
+	public static final int     DEFAULT_alarm_TempdbUsageMbInternal                                 = 16384; // 16 GB ... which is pretty much
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -2634,6 +2650,8 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 		list.add(new CmSettingsHelper("HoldingLocksWhileWaitForClientInputInSec SkipProcname",       PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , String .class, conf.getProperty       (PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname ), DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSecSkipProcname , "If 'HoldingLocksWhileWaitForClientInputInSec' is true; then we can filter out procedure names using a Regular expression... if (name.matches('regexp'))... This to remove alarms of '(proc1|proc2)'  or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 
 		list.add(new CmSettingsHelper("TempdbUsageMb"                               , isAlarmSwitch, PROPKEY_alarm_TempdbUsageMb                                        , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TempdbUsageMb                                        , DEFAULT_alarm_TempdbUsageMb                                        ), DEFAULT_alarm_TempdbUsageMb                                        , "If 'TempdbUsageMb' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
+		list.add(new CmSettingsHelper("TempdbUsageMb User"                                         , PROPKEY_alarm_TempdbUsageMbUser                                    , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TempdbUsageMbUser                                    , DEFAULT_alarm_TempdbUsageMbUser                                    ), DEFAULT_alarm_TempdbUsageMbUser                                    , "If 'TempdbUsageMb' and 'TempdbUsageMbUser' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
+		list.add(new CmSettingsHelper("TempdbUsageMb Internal"                                     , PROPKEY_alarm_TempdbUsageMbInternal                                , Integer.class, conf.getIntProperty    (PROPKEY_alarm_TempdbUsageMbInternal                                , DEFAULT_alarm_TempdbUsageMbInternal                                ), DEFAULT_alarm_TempdbUsageMbInternal                                , "If 'TempdbUsageMb' and 'TempdbUsageMbInternal ' is greater than ## then send 'AlarmEventExtensiveUsage'." ));
 
 		return list;
 	}

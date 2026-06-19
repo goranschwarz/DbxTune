@@ -83,10 +83,8 @@ public class UserRecoverPasswordServlet extends HttpServlet
 			MailConfig mailConfig = MailUtil.autoDiscoverConfig();
 			if (mailConfig == null)
 			{
-				_logger.warn("UserRecoverPasswordServlet: No SMTP configuration found (tried prefixes: {}). Cannot send recovery email.",
-						MailUtil.AUTO_DISCOVER_PREFIXES);
-				om.writeValue(resp.getWriter(), new ApiResult(false,
-						"Email service is not configured on this server. Please contact your administrator."));
+				_logger.warn("UserRecoverPasswordServlet: No SMTP configuration found (tried prefixes: {}). Cannot send recovery email.", MailUtil.AUTO_DISCOVER_PREFIXES);
+				om.writeValue(resp.getWriter(), new ApiResult(false, "Email service is not configured on this server. Please contact your administrator."));
 				return;
 			}
 
@@ -128,8 +126,7 @@ public class UserRecoverPasswordServlet extends HttpServlet
 			catch (MailException e)
 			{
 				_logger.error("UserRecoverPasswordServlet: Failed to send recovery email to '{}'.", email, e);
-				om.writeValue(resp.getWriter(), new ApiResult(false,
-						"Failed to send recovery email. Please check the email configuration on this server."));
+				om.writeValue(resp.getWriter(), new ApiResult(false, "Failed to send recovery email. Please check the email configuration on this server."));
 				return;
 			}
 
@@ -149,6 +146,11 @@ public class UserRecoverPasswordServlet extends HttpServlet
 	{
 		public boolean success;
 		public String  message;
-		ApiResult(boolean success, String message) { this.success = success; this.message = message; }
+
+		ApiResult(boolean success, String message)
+		{
+			this.success = success; 
+			this.message = message; 
+		}
 	}
 }

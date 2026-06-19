@@ -121,7 +121,7 @@ extends CountersModel
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
-	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
+	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
 
 	/** A list of known databases, populated/refreshed in localCalculation(...), and used for example in updateGraphData() */
 	private List<String> _dbnames = new ArrayList<>();

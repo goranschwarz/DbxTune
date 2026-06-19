@@ -21,7 +21,11 @@ DbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2025 Goran Schwarz
  ******************************************************************************/
 package com.dbxtune.sql.ddl;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Types;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.sql.ResultSetMetaDataCached.Entry;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -29,6 +33,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 public class DbmsDdlResolverOracle 
 extends DbmsDdlResolverAbstract
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	public DbmsDdlResolverOracle(DbxConnection conn)
 	{
@@ -48,6 +53,9 @@ extends DbmsDdlResolverAbstract
 	@Override
 	public void dbmsVendorDataTypeResolverForSource(Entry entry)
 	{
+		//---------------------------------------------------
+		// If you define a column with data type 'INT' -- It will be a NUMERIC(38) -- Precision=0, scale=-127
+		// So we probably want to map those values to a INT or BIGINT (that works well for Oracle Internal Data Values, which will hold a 32/64 bit integer
 		if (entry.getColumnType() == Types.NUMERIC)
 		{
 			int length = entry.getPrecision();
@@ -60,11 +68,34 @@ extends DbmsDdlResolverAbstract
 //			else if ( length == 38 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); System.out.println("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
 
 			// changed 0:-127 & 0:0 to BIGINT instead of INT (since Oracle internal $V tables are overflowing...)
-			if      ( length ==  0 && scale == -127 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); System.out.println("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
-			else if ( length ==  0 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); System.out.println("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
-			else if ( length == 10 && scale ==    0 ) { entry.setColumnType(Types.INTEGER); entry.setColumnTypeName("int"   ); System.out.println("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> INTEGER");}
-			else if ( length == 19 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); System.out.println("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
-			else if ( length == 38 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); System.out.println("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
+			if      ( length ==  0 && scale == -127 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
+			else if ( length ==  0 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
+			else if ( length == 10 && scale ==    0 ) { entry.setColumnType(Types.INTEGER); entry.setColumnTypeName("int"   ); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> INTEGER");}
+			else if ( length == 19 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
+			else if ( length == 38 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
+		}
+
+		//---------------------------------------------------
+		// Oracle DataType "RAW" does not specify Precision... so lets use 'ColumnDisplaySize' or hard coded value of length 32 
+		else if (entry.getColumnType() == Types.BINARY || entry.getColumnType() == Types.VARBINARY)
+		{
+			int length = entry.getPrecision();
+			if (length == 0)
+			{
+				// Try to use "ColumnDisplaySize"
+				length = entry.getColumnDisplaySize();
+				
+				if (length == 0)
+				{
+					// Just use "something to fallback to"
+					length = 32;
+				}
+				
+				// CHANGE Precision
+				entry.setPrecision(length);
+				
+				_logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.BINARY|VARBINARY, _precision=0, _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BINARY|VARBINARY length=" + length);
+			}
 		}
 	}
 

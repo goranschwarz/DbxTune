@@ -56,6 +56,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Alarms: Added ability to change the Severity of Alarms using property: AlarmClassName.severity = {INFO|WARNING|ERROR}<br>
             This can help if you still want an alarm to be produced. But the Alarm Writer (to mail) can be configued to not send INFO messages.
         </LI>
+        <LI>Added command line parameter -w|cfgWizard. To open GUI in Create NO-GUI Configuration Wizard</LI>
+        <LI>NO-GUI: Added config option 'CounterSet.template.default=SMALL|MEDIUM|LARGE|ALL' to Config file. Used if a new CM is intruduced/added and we DO NOT have it in the SERVER/GENERIC Config file, we should trust this level</LI>
+        <LI>Changed TemplateLevel() for a bunch of the Counter Models to work with the above 'CounterSet.template.default'</LI>
+        <LI>Configuration: can now read content from a file. (key = file: /path/toFile/theFileName)</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -161,6 +165,22 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Landing page: if we only have Muted alarms: The colour of the button will be "muted red" or raspberry red</LI>
 		<LI>Counter Details: If postpone is enabled: Then show latest available data, AND: Show a yellow label that the next sample will happen in MM:SS</LI>
 		<LI>Muted Alarms: bugfix, now restored properly after a restart.</LI>
+        <LI>Dialog size: Active Statements, Counter Details, DBMS Configuration, Query Store
+            <BR>Instead of using absolute size in pixels... Calculate what percentage of the screen it's using
+            <BR>On page reload: If the dialog was active previously open it again (do not wait for new data to arrive)
+            </LI>
+        <LI>Dialog: Active Statements
+            <BR>Rezisable at any of the edges, added icon, tooltip from CmActiveStatements
+            </LI>
+        <LI>Dialog: Counter Details, DBMS Configuration
+            <BR>Mark the current selected tab with a blue "ribbon" at the bottom of the tab (easier to spot what is currently selected)
+            </LI>
+        <LI>Dialog: Counter Details
+            If Postpone is enabled, and we are in history mode: Show prev/next buttons with the prev/next time that has data<BR>
+            </LI>
+        <LI>Dialog: Query Store
+            List what databases are enabled/disabled (in a collapsable panel), Also a "Copy SQL" so we can eisier enable Query Store for that database.<BR>
+            </LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -184,6 +204,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmOpenDatabases    </b> -- Alarm: LastBackupFailed was made to raise 'LastDbBackupFailed' or 'LastWalBackupFailed'.</LI>
 		<LI><b>CmOpenDatabases    </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>
+		<LI><b>CmOpenDatabases    </b> -- changed default for 'alarm.system.if.LastDbBackupAgeInHours.skip.dbs=(model|tempdb)' and 'alarm.system.if.LastLogBackupAgeInHours.skip.dbs=(master|model|tempdb)'</LI>
 
 		<LI><b>CmPCacheModuleUsage</b> -- Alarm: StatementCacheAboveConfig -- Refresh Statement Cache size before sending alarm.</LI>
 
@@ -257,7 +278,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>OracleTune - Oracle Database</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to evolve</LI>
+		<LI>Added 'CmActiveStatements' -- NOT READY to release to public yet... A lot more is needed here (for now it's only added if the host name is 'gorans3')</LI>
+		<LI>DBMS Configuration -- Has a small bug, which meant it couldn't be saved to the PCS</LI>
+		<LI>Get active Roles using: SELECT * FROM SESSION_ROLES</LI>
+		<LI>When storing values in PCS, Data Type "raw" (JDBC: Types.BINARY or Types.VARBINARY) the precision was at 0. Now using getColumnDisplaySize() or hard-code to 32 if DisplaySize was not available</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -276,6 +300,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added default values for new sp_configure defaults for SQL Server 2025</LI>
 		<LI>Windows HostMonitoring via 'typeperf': added -sc ####. Which makes it to die after 36 hours. (this to save guard that we dont have to many 'typeperf' processes running after a collector restart)</LI>
 		<LI>New collector: CmJobScheduler -- What SQL Agent Job Scheduler are running now and what has been running. Alarms: RUNNING_LONG, MISSED, FAILED_LAST_RUN</LI>
+		<LI>Query Store Extractor: first try execute '${dbname}.dbo.dbxtune_flush_query_store', if it do not exists fallback on '${dbname}.dbo.sp_query_store_flush_db'</LI>
 
 
 		<!-- ~~~ CM Changes ~~~ -->
@@ -285,10 +310,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		                                   The columns are fetched from table 'sys.dm_exec_query_profiles' if option 'CmActiveStatements.sample.stmntRunTimeOpInfo' is enabled.<br>
 		                                   This will make and "estimated" guess how far this Statement has processed. Note: This may be way off...
 		</LI>
+		<LI><b>CmActiveStatements  </b> -- Added option to distinguish between 'User' and 'Internal' TempdbUsageMb</LI>
 
 		<LI><b>CmDatabases         </b> -- Cleaned up SQL Statements for 'most_recent_sql_text' that starts with ')' and simply removed that.</LI>
 		<LI><b>CmDatabases         </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>
 		<LI><b>CmDatabases         </b> -- Only get "Database Scoped Configuration (Only Non Defaults)" for databases with higher compatibility_level than 130 (or higher) </LI>
+		<LI><b>CmDatabases         </b> -- changed default for 'alarm.system.if.LastDbBackupAgeInHours.skip.dbs=(model|tempdb)' and 'alarm.system.if.LastIncDbBackupAgeInHours.skip.dbs=(model|tempdb)' and 'alarm.system.if.LastLogBackupAgeInHours.skip.dbs=(master|msdb|model|tempdb)' </LI>
 
 		<LI><b>CmIndexOpStatSum    </b> -- Added graph: Insert/Update/Delete Rows Per Second for User Databases</LI>
 
@@ -316,6 +343,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li><b>SqlServerTopCmExecQueryStatPerDb</b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
 			<li><b>SqlServerTopCmExecQueryStat     </b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
 			<li><b>SqlServerTopCmExecQueryStatDb   </b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
+			<li><b>Query Store                     </b> -- Fixed some calculation bug (previously it calculated to high values from Elapsed and CPU Time etc...)</b>
 		</ul>
 		</LI>
 	</UL>
@@ -382,6 +410,7 @@ go
 print-template  -- NOte this is just to debug what the template has produced
         </pre>
 		</LI>
+		<LI>On JDBC-cancel, now also print a INFO message that we are dong cancel() on the Statement or Connection</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
