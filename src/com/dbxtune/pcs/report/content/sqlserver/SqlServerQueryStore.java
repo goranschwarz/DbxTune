@@ -831,7 +831,7 @@ extends SqlServerAbstract
 			//-----------------------------------------------------------
 			if (hasTable_query_store_query_hints)
 			{
-				sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[query_store_query_hints ] \n";
+				sql = "select '" + _dbname + "' as [dbname], * from [" + _schemaName + "].[query_store_query_hints] \n";
 				_qsHintsRstm = executeQuery(conn, sql, false, _dbname + "_hints");
 			}
 
@@ -845,24 +845,24 @@ extends SqlServerAbstract
 
 			// Create Column selects, but only if the column exists in the PCS Table
 		//	boolean is2017 = dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") && dummyRstm.hasColumnNoCase("avg_log_bytes_used") && dummyRstm.hasColumnNoCase("avg_tempdb_space_used"); 
-			String avg_num_physical_io_reads       = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,sum([avg_num_physical_io_reads])                           as [avg_num_physical_io_reads__sum] \n";   // in 2017
-			String avg_num_physical_io_reads_chart = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,''                                                         as [avg_num_physical_io_reads__chart] \n"; // in 2017
-			String avg_log_bytes_used              = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum([avg_log_bytes_used])                                  as [avg_log_bytes_used__sum] \n";          // in 2017
-			String avg_log_bytes_used_kb           = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum([avg_log_bytes_used]/1024.0)                           as [avg_log_bytes_used_kb__sum] \n";       // in 2017
-			String avg_log_bytes_used_mb           = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum([avg_log_bytes_used]/1024.0/1024.0)                    as [avg_log_bytes_used_mb__sum] \n";       // in 2017
-			String avg_log_bytes_used_chart        = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,''                                                         as [avg_log_bytes_used__chart] \n";        // in 2017
-			String avg_tempdb_space_used           = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum([avg_tempdb_space_used])                               as [avg_tempdb_space_used__sum] \n";       // in 2017
-			String avg_tempdb_space_used_kb        = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum([avg_tempdb_space_used]*8.0)                           as [avg_tempdb_space_used_kb__sum] \n";    // in 2017
-			String avg_tempdb_space_used_mb        = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum([avg_tempdb_space_used]/128.0)                         as [avg_tempdb_space_used_mb__sum] \n";    // in 2017
-			String avg_tempdb_space_used_chart     = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,''                                                         as [avg_tempdb_space_used__chart] \n";     // in 2017
+			String avg_num_physical_io_reads       = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,sum(cast([count_executions] as bigint) * [avg_num_physical_io_reads]) / nullif(sum([count_executions]), 0)            as [avg_num_physical_io_reads__sum] \n";   // in 2017
+			String avg_num_physical_io_reads_chart = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,''                                                                                                                    as [avg_num_physical_io_reads__chart] \n"; // in 2017
+			String avg_log_bytes_used              = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum(cast([count_executions] as bigint) * [avg_log_bytes_used]) / nullif(sum([count_executions]), 0)                   as [avg_log_bytes_used__sum] \n";          // in 2017
+			String avg_log_bytes_used_kb           = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum(cast([count_executions] as bigint) * [avg_log_bytes_used]) / nullif(sum([count_executions]), 0) / 1024.0          as [avg_log_bytes_used_kb__sum] \n";       // in 2017
+			String avg_log_bytes_used_mb           = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,sum(cast([count_executions] as bigint) * [avg_log_bytes_used]) / nullif(sum([count_executions]), 0) / 1024.0 / 1024.0 as [avg_log_bytes_used_mb__sum] \n";       // in 2017
+			String avg_log_bytes_used_chart        = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,''                                                                                                                    as [avg_log_bytes_used__chart] \n";        // in 2017
+			String avg_tempdb_space_used           = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum(cast([count_executions] as bigint) * [avg_tempdb_space_used]) / nullif(sum([count_executions]), 0)                as [avg_tempdb_space_used__sum] \n";       // in 2017
+			String avg_tempdb_space_used_kb        = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum(cast([count_executions] as bigint) * [avg_tempdb_space_used]) / nullif(sum([count_executions]), 0) * 8.0          as [avg_tempdb_space_used_kb__sum] \n";    // in 2017
+			String avg_tempdb_space_used_mb        = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,sum(cast([count_executions] as bigint) * [avg_tempdb_space_used]) / nullif(sum([count_executions]), 0) / 128.0        as [avg_tempdb_space_used_mb__sum] \n";    // in 2017
+			String avg_tempdb_space_used_chart     = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,''                                                                                                                    as [avg_tempdb_space_used__chart] \n";     // in 2017
 
-			String total_num_physical_io_reads     = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,cast(sum([count_executions]) * sum([avg_num_physical_io_reads])          as bigint) as [total_num_physical_io_reads__sum] \n"; // in 2017
-			String total_log_bytes_used            = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast(sum([count_executions]) * sum([avg_log_bytes_used])                 as bigint) as [total_log_bytes_used__sum] \n"       ; // in 2017
-			String total_log_bytes_used_kb         = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_log_bytes_used]))/1024.0        as bigint) as [total_log_bytes_used_kb__sum] \n"    ; // in 2017
-			String total_log_bytes_used_mb         = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_log_bytes_used]))/1024.0/1024.0 as bigint) as [total_log_bytes_used_mb__sum] \n"    ; // in 2017
-			String total_tempdb_space_used         = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast(sum([count_executions]) * sum([avg_tempdb_space_used])              as bigint) as [total_tempdb_space_used__sum] \n"    ; // in 2017
-			String total_tempdb_space_used_kb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_tempdb_space_used]))*8.0        as bigint) as [total_tempdb_space_used_kb__sum] \n" ; // in 2017
-			String total_tempdb_space_used_mb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast((sum([count_executions]) * sum([avg_tempdb_space_used]))/128.0      as bigint) as [total_tempdb_space_used_mb__sum] \n" ; // in 2017
+			String total_num_physical_io_reads     = !dummyRstm.hasColumnNoCase("avg_num_physical_io_reads") ? "" : "    ,cast(sum(cast([count_executions] as bigint) * [avg_num_physical_io_reads])            as bigint)                      as [total_num_physical_io_reads__sum] \n"; // in 2017
+			String total_log_bytes_used            = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast(sum(cast([count_executions] as bigint) * [avg_log_bytes_used])                   as bigint)                      as [total_log_bytes_used__sum] \n"       ; // in 2017
+			String total_log_bytes_used_kb         = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast(sum(cast([count_executions] as bigint) * [avg_log_bytes_used]) / 1024.0          as bigint)                      as [total_log_bytes_used_kb__sum] \n"    ; // in 2017
+			String total_log_bytes_used_mb         = !dummyRstm.hasColumnNoCase("avg_log_bytes_used"       ) ? "" : "    ,cast(sum(cast([count_executions] as bigint) * [avg_log_bytes_used]) / 1024.0 / 1024.0 as bigint)                      as [total_log_bytes_used_mb__sum] \n"    ; // in 2017
+			String total_tempdb_space_used         = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast(sum(cast([count_executions] as bigint) * [avg_tempdb_space_used])                as bigint)                      as [total_tempdb_space_used__sum] \n"    ; // in 2017
+			String total_tempdb_space_used_kb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast(sum(cast([count_executions] as bigint) * [avg_tempdb_space_used]) * 8.0          as bigint)                      as [total_tempdb_space_used_kb__sum] \n" ; // in 2017
+			String total_tempdb_space_used_mb      = !dummyRstm.hasColumnNoCase("avg_tempdb_space_used"    ) ? "" : "    ,cast(sum(cast([count_executions] as bigint) * [avg_tempdb_space_used]) / 128.0        as bigint)                      as [total_tempdb_space_used_mb__sum] \n" ; // in 2017
 
 			String   avg_query_wait_time_ms_chart    = "";
 			String total_query_wait_time_ms          = "";
@@ -881,16 +881,16 @@ extends SqlServerAbstract
 			
 			if (hasTable_query_store_wait_stats)
 			{
-				  avg_query_wait_time_ms_chart          = "    ,''                                                         as [avg_query_wait_time_ms__chart] \n";
+				  avg_query_wait_time_ms_chart          = "    ,''                                                                                                                                                                          as [avg_query_wait_time_ms__chart] \n";
 				total_query_wait_time_ms                = "    ,(select sum([total_query_wait_time_ms])                                             from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id]) as [total_query_wait_time_ms__sum] \n";
-//				  avg_query_wait_time_ms                = "    ,cast(-1, bigint)                                           as [avg_query_wait_time_other_ms__sum] \n";
+//				  avg_query_wait_time_ms                = "    ,cast(-1, bigint)                                                                                                                                                            as [avg_query_wait_time_other_ms__sum] \n";
 				  avg_query_wait_time_ms                = "    ,(select sum([avg_query_wait_time_ms])/count(distinct w.[runtime_stats_interval_id]) from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id]) as [avg_query_wait_time_ms__sum] \n";  
 
-				  avg_query_wait_time_other_ms_chart    = "    ,''                                                         as [avg_query_wait_time_other_ms__chart] \n";
+				  avg_query_wait_time_other_ms_chart    = "    ,''                                                                                                                                                                                                      as [avg_query_wait_time_other_ms__chart] \n";
 				total_query_wait_time_other_ms          = "    ,(select sum([total_query_wait_time_ms])                                             from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] != 16) as [total_query_wait_time_other_ms__sum] \n"; // wait_category:16 = 'Parallelism'
 				  avg_query_wait_time_other_ms          = "    ,(select sum([avg_query_wait_time_ms])/count(distinct w.[runtime_stats_interval_id]) from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] != 16) as [avg_query_wait_time_other_ms__sum] \n";  
 
-				  avg_query_wait_time_paralell_ms_chart = "    ,''                                                         as [avg_query_wait_time_paralell_ms__chart] \n";
+				  avg_query_wait_time_paralell_ms_chart = "    ,''                                                                                                                                                                                                     as [avg_query_wait_time_paralell_ms__chart] \n";
 				total_query_wait_time_paralell_ms       = "    ,(select sum([total_query_wait_time_ms])                                             from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] = 16) as [total_query_wait_time_paralell_ms__sum] \n"; // wait_category:16 = 'Parallelism'
 				  avg_query_wait_time_paralell_ms       = "    ,(select sum([avg_query_wait_time_ms])/count(distinct w.[runtime_stats_interval_id]) from [" + _schemaName + "].[query_store_wait_stats] w where w.[plan_id] = rs.[plan_id] and w.[wait_category] = 16) as [avg_query_wait_time_paralell_ms__sum] \n";
 			}
@@ -908,17 +908,17 @@ extends SqlServerAbstract
 				    + "    ,min([first_execution_time])                                                as [first_execution_time] \n"
 				    + "    ,max([last_execution_time])                                                 as [last_execution_time] \n"
 
-				    + "    ,cast( (sum([avg_cpu_time])*1.0) / (avg([avg_dop])*1.0) / (sum([avg_duration])*1.0) * 100.0 as numeric(9,1)) as [efficiency_pct] \n"
+				    + "    ,cast( (sum(cast([count_executions] as bigint) * [avg_cpu_time])*1.0) / nullif((sum(cast([count_executions] as bigint) * [avg_dop])*1.0), 0) / nullif((sum(cast([count_executions] as bigint) * [avg_duration])*1.0), 0) * 100.0 as numeric(9,1)) as [efficiency_pct] \n"
 				    + "    ,''                                                                         as [count_executions__chart] \n"
 				    + "    ,sum([count_executions])                                                    as [count_executions__sum] \n"
 
-				    + "    ,''                                                                         as [avg_duration__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_duration]/1000.0) as bigint)       as [total_duration_ms__sum] \n"
-				    + "    ,sum([avg_duration]/1000.0)                                                 as [avg_duration_ms__sum] \n"
+				    + "    ,''                                                                                                   as [avg_duration__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_duration]/1000.0) as bigint)                      as [total_duration_ms__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_duration]/1000.0) / nullif(sum([count_executions]), 0) as [avg_duration_ms__sum] \n"
 
-				    + "    ,''                                                                         as [avg_cpu_time__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_cpu_time]/1000.0) as bigint)       as [total_cpu_time_ms__sum] \n"
-				    + "    ,sum([avg_cpu_time]/1000.0)                                                 as [avg_cpu_time_ms__sum] \n"
+				    + "    ,''                                                                                                   as [avg_cpu_time__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_cpu_time]/1000.0) as bigint)                      as [total_cpu_time_ms__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_cpu_time]/1000.0) / nullif(sum([count_executions]), 0) as [avg_cpu_time_ms__sum] \n"
 
 // Wait time like this do NOT work if we are running in parallel (since 'duration' is shorter than 'cpu_time')
 //				    + "    ,''                                                                         as [avg_wait_time__chart] \n"
@@ -937,48 +937,48 @@ extends SqlServerAbstract
 				    + total_query_wait_time_paralell_ms
 				    +   avg_query_wait_time_paralell_ms
 				    
-				    + "    ,''                                                                         as [avg_logical_io_reads__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_logical_io_reads]) as bigint)      as [total_logical_io_reads__sum] \n"
-				    + "    ,sum([avg_logical_io_reads])                                                as [avg_logical_io_reads__sum] \n"
-				    
-				    + "    ,''                                                                         as [avg_logical_io_reads_mb__chart] \n"
-				    + "    ,sum([count_executions]) * sum([avg_logical_io_reads]) / 128                as [total_logical_io_reads_mb__sum] \n"
-				    + "    ,sum([avg_logical_io_reads]) / 128.0                                        as [avg_logical_io_reads_mb__sum] \n"
-				    
-				    + "    ,''                                                                         as [avg_logical_io_writes__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_logical_io_writes]) as bigint)     as [total_logical_io_writes__sum] \n"
-				    + "    ,sum([avg_logical_io_writes])                                               as [avg_logical_io_writes__sum] \n"
-				    
-				    + "    ,''                                                                         as [avg_logical_io_writes_mb__chart] \n"
-				    + "    ,sum([count_executions]) * sum([avg_logical_io_writes]) / 128               as [total_logical_io_writes_mb__sum] \n"
-				    + "    ,sum([avg_logical_io_writes]) / 128.0                                       as [avg_logical_io_writes_mb__sum] \n"
-				    
+				    + "    ,''                                                                                                                 as [avg_logical_io_reads__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_logical_io_reads]) as bigint)                                   as [total_logical_io_reads__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_logical_io_reads]) / nullif(sum([count_executions]), 0)              as [avg_logical_io_reads__sum] \n"
+
+				    + "    ,''                                                                                                                 as [avg_logical_io_reads_mb__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_logical_io_reads]) / 128.0 as bigint)                           as [total_logical_io_reads_mb__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_logical_io_reads]) / nullif(sum([count_executions]), 0) / 128.0      as [avg_logical_io_reads_mb__sum] \n"
+
+				    + "    ,''                                                                                                                 as [avg_logical_io_writes__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_logical_io_writes]) as bigint)                                  as [total_logical_io_writes__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_logical_io_writes]) / nullif(sum([count_executions]), 0)             as [avg_logical_io_writes__sum] \n"
+
+				    + "    ,''                                                                                                                 as [avg_logical_io_writes_mb__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_logical_io_writes]) / 128.0 as bigint)                          as [total_logical_io_writes_mb__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_logical_io_writes]) / nullif(sum([count_executions]), 0) / 128.0     as [avg_logical_io_writes_mb__sum] \n"
+
 				    + "    ,''                                                                         as [avg_physical_io_reads__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_physical_io_reads]) as bigint)     as [total_physical_io_reads__sum] \n"
-				    + "    ,sum([avg_physical_io_reads])                                               as [avg_physical_io_reads__sum] \n"
-				    
-				    + "    ,''                                                                         as [avg_physical_io_reads_mb__chart] \n"
-				    + "    ,sum([count_executions]) * sum([avg_physical_io_reads]) / 128               as [total_physical_io_reads_mb__sum] \n"
-				    + "    ,sum([avg_physical_io_reads]) / 128.0                                       as [avg_physical_io_reads_mb__sum] \n"
-				    
-				    + "    ,''                                                                         as [avg_clr_time__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_clr_time]/1000.0) as bigint)       as [total_clr_time_ms__sum] \n"
-				    + "    ,sum([avg_clr_time]/1000.0)                                                 as [avg_clr_time_ms__sum] \n"
-				    
-				    + "    ,''                                                                         as [avg_dop__chart] \n"
-//				    + "    ,cast(sum([count_executions]) * sum([avg_dop]) as bigint)                   as [total_dop__sum] \n"
-//				    + "    ,sum([avg_dop])                                                             as [avg_dop__sum] \n"
-				    + "    ,avg([avg_dop])                                                             as [avg_dop__avg] \n"
-				    
-				    + "    ,''                                                                                 as [avg_query_max_used_memory__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_query_max_used_memory]) as bigint)         as [total_query_max_used_memory__sum] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_query_max_used_memory]) / 128.0 as bigint) as [total_query_max_used_memory_mb__sum] \n"
-				    + "    ,sum([avg_query_max_used_memory])                                                   as [avg_query_max_used_memory__sum] \n"
-				    + "    ,sum([avg_query_max_used_memory]/128.0)                                             as [avg_query_max_used_memory_mb__sum] \n"
-				    
-				    + "    ,''                                                                         as [avg_rowcount__chart] \n"
-				    + "    ,cast(sum([count_executions]) * sum([avg_rowcount]) as bigint)              as [total_rowcount__sum] \n"
-				    + "    ,sum([avg_rowcount])                                                        as [avg_rowcount__sum] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_physical_io_reads]) as bigint)                                  as [total_physical_io_reads__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_physical_io_reads]) / nullif(sum([count_executions]), 0)             as [avg_physical_io_reads__sum] \n"
+
+				    + "    ,''                                                                                                                 as [avg_physical_io_reads_mb__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_physical_io_reads]) / 128.0 as bigint)                          as [total_physical_io_reads_mb__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_physical_io_reads]) / nullif(sum([count_executions]), 0) / 128.0     as [avg_physical_io_reads_mb__sum] \n"
+
+				    + "    ,''                                                                                                                 as [avg_clr_time__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_clr_time]/1000.0) as bigint)                                    as [total_clr_time_ms__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_clr_time]/1000.0) / nullif(sum([count_executions]), 0)               as [avg_clr_time_ms__sum] \n"
+
+				    + "    ,''                                                                                                                 as [avg_dop__chart] \n"
+//				    + "    ,cast(sum([count_executions]) * sum([avg_dop]) as bigint)                                                           as [total_dop__sum] \n"
+//				    + "    ,sum([avg_dop])                                                                                                     as [avg_dop__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_dop]) / nullif(sum([count_executions]), 0)                           as [avg_dop__avg] \n"
+
+				    + "    ,''                                                                                                                 as [avg_query_max_used_memory__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_query_max_used_memory]) as bigint)                              as [total_query_max_used_memory__sum] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_query_max_used_memory]) / 128.0 as bigint)                      as [total_query_max_used_memory_mb__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_query_max_used_memory]) / nullif(sum([count_executions]), 0)         as [avg_query_max_used_memory__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_query_max_used_memory]) / nullif(sum([count_executions]), 0) / 128.0 as [avg_query_max_used_memory_mb__sum] \n"
+
+				    + "    ,''                                                                                                                 as [avg_rowcount__chart] \n"
+				    + "    ,cast(sum(cast([count_executions] as bigint) * [avg_rowcount]) as bigint)                                           as [total_rowcount__sum] \n"
+				    + "    ,sum(cast([count_executions] as bigint) * [avg_rowcount]) / nullif(sum([count_executions]), 0)                      as [avg_rowcount__sum] \n"
 
 				    + avg_num_physical_io_reads_chart 
 				    + total_num_physical_io_reads
@@ -1079,18 +1079,19 @@ extends SqlServerAbstract
 						+ "    ,''                               as [plan_text] \n"
 					    + "    ,''                               as [txt] \n"
 					    + "    ,''                               as [wait] \n"
-					    + "    ,max([execution_type_desc])      as [execution_type_desc] \n"
+					    + "    ,max([execution_type_desc])       as [execution_type_desc] \n"
 
-					    + "    ,''                              as [total_query_wait_time_ms__chart] \n"
-					    + "    ,sum([total_query_wait_time_ms]) as [total_query_wait_time_ms__sum] \n"
+					    + "    ,''                               as [total_query_wait_time_ms__chart] \n"
+					    + "    ,sum([total_query_wait_time_ms])  as [total_query_wait_time_ms__sum] \n"
 
-					    + "    ,''                              as [avg_query_wait_time_ms__chart] \n"
-					    + "    ,sum([avg_query_wait_time_ms])   as [avg_query_wait_time_ms__sum] \n"
+					    + "    ,''                               as [avg_query_wait_time_ms__chart] \n"
+//					    + "    ,sum([avg_query_wait_time_ms])    as [avg_query_wait_time_ms__sum] \n"
+					    + "    ,sum([avg_query_wait_time_ms]) / nullif(count(distinct [runtime_stats_interval_id]), 0) as [avg_query_wait_time_ms__sum] \n"
 					    
-//					    + "--  ,max([last_query_wait_time_ms])  as [last_query_wait_time_ms] \n"
-					    + "    ,min([min_query_wait_time_ms])   as [min_query_wait_time_ms] \n"
-					    + "    ,max([max_query_wait_time_ms])   as [max_query_wait_time_ms] \n"
-//					    + "--  ,max([stdev_query_wait_time_ms]) as [stdev_query_wait_time_ms] \n"
+//					    + "--  ,max([last_query_wait_time_ms])   as [last_query_wait_time_ms] \n"
+					    + "    ,min([min_query_wait_time_ms])    as [min_query_wait_time_ms] \n"
+					    + "    ,max([max_query_wait_time_ms])    as [max_query_wait_time_ms] \n"
+//					    + "--  ,max([stdev_query_wait_time_ms])  as [stdev_query_wait_time_ms] \n"
 					    + "from [" + _schemaName + "].[query_store_wait_stats] \n"
 //						+ getReportPeriodSqlWhere()
 					    + "group by [plan_id] \n"
@@ -1402,7 +1403,7 @@ extends SqlServerAbstract
 					.setDbmsSchemaName           (_schemaName)
 					.setDbmsTableName            ("query_store_runtime_stats")
 					.setDbmsDataValueColumnName  ("avg_log_bytes_used")   
-					.setDbmsDataValueColumnName  ("sum([avg_log_bytes_used]/1024.0/1024)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(3)   // MB
+//					.setDbmsDataValueColumnName  ("sum([avg_log_bytes_used]/1024.0/1024)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(3)   // MB
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 					.validate()));
 			
@@ -1887,7 +1888,7 @@ extends SqlServerAbstract
 			rstm.setColumnDescription("avg_log_bytes_used_kb__sum"            , "Average number of KB    in the database log used by the query plan, within the aggregation interval.");
 			rstm.setColumnDescription("avg_log_bytes_used_mb__sum"            , "Average number of MB    in the database log used by the query plan, within the aggregation interval.");
 			
-			rstm.setColumnDescription("avg_tempdb_space_used__char"           , "Chart showing 'avg_tempdb_space_used' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
+			rstm.setColumnDescription("avg_tempdb_space_used__chart"          , "Chart showing 'avg_tempdb_space_used' in a time period (normally 10 minutes)\nSo you can see when in the period (probably last 24 hours) the statement was executed.");
 			rstm.setColumnDescription("total_tempdb_space_used__sum"          , "Total   number of pages used in tempdb for the query plan within the aggregation interval (expressed as a number of 8-KB pages).");
 			rstm.setColumnDescription("total_tempdb_space_used_kb__sum"       , "Total   number of KB    used in tempdb for the query plan within the aggregation interval (expressed as KB).");
 			rstm.setColumnDescription("total_tempdb_space_used_mb__sum"       , "Total   number of MB    used in tempdb for the query plan within the aggregation interval (expressed as MB).");
@@ -2241,7 +2242,8 @@ extends SqlServerAbstract
 					    + "inner join [" + _schemaName + "].[query_store_runtime_stats_interval] i ON w.[runtime_stats_interval_id] = i.[runtime_stats_interval_id] \n"
 					    + "where 1 = 1 \n"
 					    + whereColValStr
-					    + "group by w.[wait_category_desc] \n"
+//					    + "group by w.[wait_category_desc] \n"
+					    + "group by w.[plan_id], w.[wait_category_desc] \n"
 					    + "order by [total_query_wait_time_ms__sum] desc \n"
 					    + "";
 

@@ -33,7 +33,34 @@ import com.dbxtune.utils.PropPropEntry;
 
 public class CounterSetTemplates
 {
-	public static enum Type { SMALL, MEDIUM, LARGE, ALL, OFF };
+	public static final String PROPKEY_templateDefaultName = "CounterSet.template.default";
+	public static final String DEFAULT_templateDefaultName = "NOT_SET";
+
+	public static enum Type 
+	{ 
+		SMALL, 
+		MEDIUM, 
+		LARGE, 
+		ALL, 
+		OFF;
+
+		/** parse the value */
+		public static Type fromString(String text, Type defaultValue)
+		{
+			if (text == null || text.isEmpty() || text.equals(DEFAULT_templateDefaultName))
+				return defaultValue;
+
+			for (Type type : Type.values()) 
+			{
+				// check for upper/lower: 'SMALL', 'small'
+				if (type.name().equalsIgnoreCase(text))
+					return type;
+			}
+			return defaultValue;
+//			throw new IllegalArgumentException("No CounterSetTemplates.Type with text " + text + " found");
+		}
+		
+	};
 	
 	private static LinkedHashMap<String, String>        _nameShortToLongMap = new LinkedHashMap<String, String>();;
 	private static LinkedHashMap<String, String>        _nameLongToShortMap = new LinkedHashMap<String, String>();;

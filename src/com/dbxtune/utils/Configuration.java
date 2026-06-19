@@ -39,6 +39,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.lang.invoke.MethodHandles;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -1938,6 +1939,26 @@ extends Properties
 			}
 		}
 
+		// Execute a Operating system command to get the value...
+		if (val != null)
+		{
+			if (val.startsWith("file:"))
+			{
+				String filename = val.substring("file:".length()).trim();
+				try
+				{
+					_logger.info("When reading property key '" + propName + "', we will read the file '" + filename + "' to set value. Configuration='" + getConfName() + "', confFile='" + getFilename() + "'.");
+
+					String content = Files.readString(Path.of(filename), StandardCharsets.UTF_8);
+					val = content;
+				}
+				catch (Exception ex)
+				{
+					_logger.error("When reading property key '" + propName + "', we had Exceptions when reading the file '" + filename + "'. The value returned is the Exception.toString(). Configuration='" + getConfName() + "', confFile='" + getFilename() + "'.", ex);
+					val = "ERROR: propKey '" + propName + "', ReadingFile=" + filename + ", CaughtException=" + ex;
+				}
+			}
+		}
 		return val;
 	}
 

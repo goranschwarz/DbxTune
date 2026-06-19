@@ -47,8 +47,8 @@ extends AlarmEvent
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				job_name + " @last_run='" + last_run_datetime + "'", // extraInfo
-				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.Category.OTHER, 
+				AlarmEvent.Severity.INFO, // AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
 				"At server '" + cm.getServerName() + "', The Job '" + job_name + "' has errors on last execution.",
 				null

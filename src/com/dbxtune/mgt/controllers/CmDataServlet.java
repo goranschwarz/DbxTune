@@ -442,14 +442,37 @@ extends HttpServlet
 				noData.put("cmName",        cmName);
 				noData.put("type",          typeParam);
 				noData.put("requestedTime", timeParam);
-				if (CounterController.hasInstance()) 
+				if (CounterController.hasInstance())
 				{
 					CountersModel noDataMeta = CounterController.getInstance().getCmByName(cmName);
-					if (noDataMeta != null) 
+					if (noDataMeta != null)
 					{
+						// getLastLocalRefreshTime() is 0 when the CM hasn't collected in this
+						// server session (e.g. server just restarted, or postpone > server uptime).
+						// Fall back to the last SessionSampleTime from the DB so the JS retry
+						// can still locate the last available data.
+						long lastMs = noDataMeta.getLastLocalRefreshTime();
+						if (lastMs <= 0)
+						{
+							String sqlLast = conn.quotifySqlString("SELECT MAX([SessionSampleTime]) FROM [" + cmName + "_abs]");
+							try (PreparedStatement psLast = conn.prepareStatement(sqlLast);
+							     ResultSet rsLast = psLast.executeQuery())
+							{
+								if (rsLast.next())
+								{
+									Timestamp lastTs = rsLast.getTimestamp(1);
+									if (lastTs != null) lastMs = lastTs.getTime();
+								}
+							}
+							catch (Exception ex) 
+							{
+								_logger.warn("Problems getting Last 'SessionSampleTime'. " + ex + ". SQL=" + sqlLast); 
+							}
+						}
+
 						noData.put("postponeTime",    noDataMeta.getPostponeTime());
 						noData.put("postponeEnabled", noDataMeta.isPostponeEnabled());
-						noData.put("lastSampleMs",    noDataMeta.getLastLocalRefreshTime());
+						noData.put("lastSampleMs",    lastMs);
 					}
 				}
 				om.writeValue(out, noData);

@@ -80,7 +80,7 @@ extends CounterModelHostMonitor
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 //	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
-	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
+	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
 
 	/**
 	 * FACTORY  method to create the object
@@ -114,13 +114,13 @@ extends CounterModelHostMonitor
 		CounterSetTemplates.register(this);
 	}
 
-	public static final String  PROPKEY_top = "MonitorPs.top";
+	public static final String  PROPKEY_top = CM_NAME + ".top";
 	public static final int     DEFAULT_top = -1; // ALL
 	
-	public static final String  PROPKEY_minCpuPctUsage = "MonitorPs.min.cpu.pct.usage";
+	public static final String  PROPKEY_minCpuPctUsage = CM_NAME + ".min.cpu.pct.usage";
 	public static final double  DEFAULT_minCpuPctUsage = 0.1;
 	
-	public static final String  PROPKEY_linux_useSudo = "MonitorPs.linux.use.sudo";
+	public static final String  PROPKEY_linux_useSudo = CM_NAME + ".linux.use.sudo";
 	public static final boolean DEFAULT_linux_useSudo = false;
 	
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -130,7 +130,9 @@ extends CounterModelHostMonitor
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Top Rows", PROPKEY_top, Integer.class, conf.getIntProperty(PROPKEY_top, DEFAULT_top), DEFAULT_top, "Number of top rows."));
+		list.add(new CmSettingsHelper("Top Rows", PROPKEY_top           , Integer.class, conf.getIntProperty    (PROPKEY_top           , DEFAULT_top           ), DEFAULT_top           , "Number of top rows."));
+//		list.add(new CmSettingsHelper("Top Rows", PROPKEY_minCpuPctUsage, Double .class, conf.getDoubleProperty (PROPKEY_minCpuPctUsage, DEFAULT_minCpuPctUsage), DEFAULT_minCpuPctUsage, "Only store CPU Usage above this percent. (only used by: MonitorPsProcFsLinux)"));
+//		list.add(new CmSettingsHelper("Top Rows", PROPKEY_linux_useSudo , Integer.class, conf.getBooleanProperty(PROPKEY_linux_useSudo , DEFAULT_linux_useSudo ), DEFAULT_linux_useSudo , "On Linux: Use 'sudo' when getting Process info. (only used by: MonitorPsProcFsLinux)"));
 
 		return list;
 	}

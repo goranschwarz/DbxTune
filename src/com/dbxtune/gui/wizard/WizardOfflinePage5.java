@@ -161,6 +161,11 @@ implements ActionListener
 
 	private void initData()
 	{
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			_cmdLine_chk.setSelected(true);
+		}
+
 		// Set initial text for jdbc driver && kick of the action...
 //		_sshHostname.setText(  );
 	}

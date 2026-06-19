@@ -76,7 +76,7 @@ extends CountersModel
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
-	@Override public Type    getTemplateLevel()                       { return Type.MEDIUM; }
+	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
 
 	/**
 	 * FACTORY  method to create the object

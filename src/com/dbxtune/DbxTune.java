@@ -73,6 +73,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.SplashWindow;
 import com.dbxtune.gui.swing.EventQueueProxy;
 import com.dbxtune.gui.swing.debug.EventDispatchThreadHangMonitor;
+import com.dbxtune.gui.wizard.WizardOffline;
 import com.dbxtune.mgt.NoGuiManagementServer;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.PersistWriterJdbc;
@@ -1891,9 +1892,22 @@ if (_gui && startEvenIfGui_justToTestTheService)
 					String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - DbxTune.getStartTime());
 					_logger.info("Application startup time "+appStartupTime+" (MM:SS.ms)");
 
-					// FINALLY SHOW THE WINDOW
-					SplashWindow.drawProgress("Loading Main Window...");
-					frame.setVisible(true);
+					//-------------------------------
+					// -w|--cfgWizard: Open The Configuration Wizard... and then exit 
+					//-------------------------------
+					if (cmd.hasOption('w'))
+					{
+						SplashWindow.drawProgress("Opening Configuration Wizard...");
+
+						// Show JUST the Wizard (used by DbxInstaller.exe)
+						new WizardOffline(true);
+					}
+					else
+					{
+						// FINALLY SHOW THE WINDOW
+						SplashWindow.drawProgress("Loading Main Window...");
+						frame.setVisible(true);						
+					}
 				}
 			};
 			
@@ -2031,6 +2045,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		pw.println("  -x,--debug <dbg1,dbg2>       Debug options: a comma separated string");
 		pw.println("                               To get available option, do -x list");
 		pw.println("  -a,--createAppDir            Create application dir (~/.dbxtune) and exit.");
+		pw.println("  -w,--cfgWizard               Open The Create PCS Configuration Wizard and exit.");
 		pw.println("  ");                          
 		pw.println("  -U,--user <user>             Username when connecting to server.");
 		pw.println("  -P,--passwd <passwd>         Password when connecting to server. null=noPasswd");
@@ -2146,6 +2161,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		options.addOption( Option.builder("x").longOpt("debug"         ).hasArg(true ).build() );
 
 		options.addOption( Option.builder("a").longOpt("createAppDir"  ).hasArg(false).build() );
+		options.addOption( Option.builder("w").longOpt("cfgWizard"     ).hasArg(false).build() );
 
 		options.addOption( Option.builder("U").longOpt("user"          ).hasArg(true ).build() );
 		options.addOption( Option.builder("P").longOpt("passwd"        ).hasArg(true ).build() );

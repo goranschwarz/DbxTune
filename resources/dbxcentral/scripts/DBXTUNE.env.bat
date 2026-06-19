@@ -7,8 +7,8 @@ rem ## Where is the DBXTUNE software installed
 rem ## If this is NOT set here it will be set later to the directory where the dbxtune.bat is located...
 rem set "DBXTUNE_HOME=x:\some\hard\coded\path"
 IF NOT DEFINED DBXTUNE_HOME (
-	IF EXIST "%USERPROFILE%\dbxtune\0" (
-		set "DBXTUNE_HOME=%USERPROFILE%\dbxtune\0"
+	IF EXIST "%USERPROFILE%\dbxtune_sw\0" (
+		set "DBXTUNE_HOME=%USERPROFILE%\dbxtune_sw\0"
 	)
 )
 

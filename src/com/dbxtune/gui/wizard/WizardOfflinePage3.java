@@ -34,7 +34,9 @@ import java.util.Vector;
 
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.event.TableModelEvent;
@@ -50,6 +52,8 @@ import org.netbeans.spi.wizard.WizardPage;
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
 import com.dbxtune.cm.CounterModelHostMonitor;
+import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.swing.GTableFilter;
@@ -94,6 +98,8 @@ implements ActionListener, TableModelListener
 	private static final int TAB_POS_CM_NAME    = 10;
 
 	private static final Color TAB_PCS_COL_BG = new Color(240, 240, 240);
+
+	private JComboBox<String> _templates_cbx;
 
 	private JXTable _sessionTable = new JXTable()
 	{
@@ -156,7 +162,7 @@ implements ActionListener, TableModelListener
 
 		DefaultTableModel defaultTabModel = new DefaultTableModel(tabData, tabHead)
 		{
-            private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public Class<?> getColumnClass(int column) 
@@ -233,6 +239,20 @@ implements ActionListener, TableModelListener
 		
 		add(filter,      "span, growx, wrap");
 
+		String[] templatesArr = { 
+				CounterSetTemplates.Type.SMALL.toString(), 
+				CounterSetTemplates.Type.MEDIUM.toString(),
+				CounterSetTemplates.Type.LARGE.toString(),
+				CounterSetTemplates.Type.ALL.toString()
+		};
+//		JComboBox<String> templates_cbx = new JComboBox<>(templatesArr);
+		_templates_cbx = new JComboBox<>(templatesArr);
+		_templates_cbx.addActionListener(this);
+		_templates_cbx.putClientProperty("NAME", "USE_TEMPLATE");
+		_templates_cbx.setSelectedItem(CounterSetTemplates.Type.ALL.toString());
+		add(new JLabel("Use Template"), "");
+		add(_templates_cbx,              "wrap");
+		
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_sessionTable);
 //		jScrollPane.setMaximumSize(new Dimension(10000, 10000));
@@ -375,6 +395,11 @@ implements ActionListener, TableModelListener
 
 		putWizardData("to-be-discarded.HostMonitorIsSelected", "false");
 
+		// Write the selected template default (used at DbxTune startup... if a CmName is not found (added after config file was created), we can use the template to add it anyway)
+		String selectedTemplate = _templates_cbx.getSelectedItem() + "";
+		putWizardData(CounterSetTemplates.PROPKEY_templateDefaultName, selectedTemplate);
+
+		
 		int rows = 0;
 		TableModel tm = _sessionTable.getModel();
 		for (int r=0; r<tm.getRowCount(); r++)
@@ -441,6 +466,32 @@ implements ActionListener, TableModelListener
 
 //		System.out.println("Source("+name+"): " + src);
 
+		if (name.equals("USE_TEMPLATE"))
+		{
+			String selectedStr = ((JComboBox) src).getSelectedItem() + "";
+			Type selectedTemplate = Type.valueOf(selectedStr);
+			
+			TableModel tm = _sessionTable.getModel();
+			for (int r=0; r<tm.getRowCount(); r++)
+			{
+				String cmName = _sessionTable.getStringAt(r, TAB_POS_CM_NAME);
+				CountersModel cm = CounterController.getInstance().getCmByName(cmName);
+				if (cm != null)
+				{
+					Type cmTemplateLevel = cm.getTemplateLevel();
+
+//					boolean setValue = false;
+//					if (cmTemplateLevel.equals(selectedTemplate))
+//						setValue = true;
+					
+					boolean setValue = cmTemplateLevel.ordinal() <= selectedTemplate.ordinal();
+
+					if (_sessionTable.isCellEditable(r, TAB_POS_STORE_PCS))
+						tm.setValueAt(setValue, r, TAB_POS_STORE_PCS);
+				}
+			}
+		}
+		
 		if (name.equals("BUTTON_SELECT_ALL"))
 		{
 			TableModel tm = _sessionTable.getModel();

@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +49,16 @@ extends DbxConnection
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
+	// Cached values
+	private List<String> _getActiveServerRolesOrPermissions = null;
+
+	@Override
+	public void clearCachedValues()
+	{
+		_getActiveServerRolesOrPermissions = null;
+		super.clearCachedValues();
+	}
+	
 	public OracleConnection(Connection conn)
 	{
 		super(conn);
@@ -215,4 +226,62 @@ extends DbxConnection
 		
 		return spid;
 	}
+
+	@Override
+	public List<String> getActiveServerRolesOrPermissions()
+	{
+		if (_getActiveServerRolesOrPermissions != null)
+			return _getActiveServerRolesOrPermissions;
+
+        //  +--------------------------+
+        //  |ROLE                      |
+        //  +--------------------------+
+        //  |DBA                       |
+        //  |SELECT_CATALOG_ROLE       |
+        //  |HS_ADMIN_SELECT_ROLE      |
+        //  |EXECUTE_CATALOG_ROLE      |
+        //  |HS_ADMIN_EXECUTE_ROLE     |
+        //  |DELETE_CATALOG_ROLE       |
+        //  |EXP_FULL_DATABASE         |
+        //  |IMP_FULL_DATABASE         |
+        //  |DATAPUMP_EXP_FULL_DATABASE|
+        //  |DATAPUMP_IMP_FULL_DATABASE|
+        //  |GATHER_SYSTEM_STATISTICS  |
+        //  |SCHEDULER_ADMIN           |
+        //  |PLUSTRACE                 |
+        //  |XDBADMIN                  |
+        //  |XDB_SET_INVOKER           |
+        //  |AQ_ADMINISTRATOR_ROLE     |
+        //  +--------------------------+
+        //  Rows 16
+		
+		String sql = "SELECT * FROM SESSION_ROLES";  // or possibly: SESSION_PRIVS
+		try
+		{
+			List<String> permissionList = new LinkedList<String>();
+			
+			try (Statement stmt = this.createStatement(); ResultSet rs = stmt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					String role = rs.getString(1);
+					if ( ! permissionList.contains(role) )
+						permissionList.add(role);
+				}
+			}
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("getActiveServerRolesOrPermissions() returns, permissionList='" + permissionList + "'.");
+
+			// Cache the value for next execution
+			_getActiveServerRolesOrPermissions = permissionList;
+			return permissionList;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems when executing sql: "+sql, ex);
+			return null;
+		}
+	}
+	
 }

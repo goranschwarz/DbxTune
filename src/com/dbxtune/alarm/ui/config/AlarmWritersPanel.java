@@ -122,4 +122,9 @@ implements PropertyChangeListener
 		
 		return false;
 	}
+
+	public void setAlarmWriterSelected(String alarmWriterName, boolean selected)
+	{
+		_alarmWritersTablePanel.setAlarmWriterSelected(alarmWriterName, selected);
+	}
 }

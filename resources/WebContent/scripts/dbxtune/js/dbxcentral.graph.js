@@ -433,11 +433,60 @@ function isHistoryViewActive()
 //-----------------------------------------------------------
 // ACTIVE STATEMENTS
 //-----------------------------------------------------------
+
+// Column-header tooltip cache: { srvName → { colName → plainTextTooltip } }
+// Fetched once per server via navSample + /api/cc/mgt/cm/data.
+var _asTooltipCache    = {}; // srvName → map (populated on success)
+var _asTooltipFetching = {}; // srvName → true (in-flight guard)
+
+function _asCleanTooltip(t) {
+	return t.replace(/<\/?html>/gi, '')
+	         .replace(/<ul>/gi, '\n').replace(/<\/ul>/gi, '')
+	         .replace(/<li>/gi, '• ').replace(/<\/li>/gi, '\n')
+	         .replace(/<b>/gi, '').replace(/<\/b>/gi, '')
+	         .replace(/<[^>]+>/g, '')
+	         .trim();
+}
+
+function _asFetchTooltips(srvName) {
+	if (!srvName || _asTooltipCache[srvName] || _asTooltipFetching[srvName]) return;
+	_asTooltipFetching[srvName] = true;
+	// Step 1: find a real sample timestamp via navSample
+	$.ajax({
+		url: '/api/cc/mgt/cm/navSample',
+		data: { srv: srvName, cm: 'CmActiveStatements', time: moment().format('YYYY-MM-DD HH:mm:ss'), dir: 'prev' },
+		dataType: 'json',
+		success: function(nav) {
+			if (!nav || !nav.found) { delete _asTooltipFetching[srvName]; return; }
+			// Step 2: fetch CM data at that timestamp to get column tooltips
+			$.ajax({
+				url: '/api/cc/mgt/cm/data',
+				data: { srv: srvName, cm: 'CmActiveStatements', time: nav.sampleTime, type: 'abs' },
+				dataType: 'json',
+				success: function(r) {
+					var map = {};
+					var cols = r.columns  || [];
+					var tips = r.tooltips || [];
+					for (var i = 0; i < cols.length; i++) {
+						if (tips[i]) map[cols[i]] = _asCleanTooltip(tips[i]);
+					}
+					_asTooltipCache[srvName] = map;
+					delete _asTooltipFetching[srvName];
+				},
+				error: function() { delete _asTooltipFetching[srvName]; }
+			});
+		},
+		error: function() { delete _asTooltipFetching[srvName]; }
+	});
+}
+
 function openActiveStatementsWindow()
 {
 	console.log('openActiveStatementsWindow()');
 
-	$("#active-statements").toggle();
+	var $as = $("#active-statements");
+	$as.toggle();
+	if ($as.is(':visible')) $as.css('z-index', ++window._dbxTopZ);
 }
 function activeStatementsExecTimeClick(textField)
 {
@@ -468,8 +517,8 @@ function activeStatementsRadioClick(radioBut)
 	}
 	else
 	{
-		// Set The OUTER max-size
-		$("#active-statements").css("max-height", rVal);
+		// Set The OUTER max-size; clear any explicit height so CSS height:auto takes effect
+		$("#active-statements").css({ "max-height": rVal, "height": "" });
 
 		// SHOW all Statements
 		$("#active-statements-win").css("display", "block");
@@ -2275,6 +2324,11 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "has_pid_lock_info"     && rowData.hasOwnProperty('pid_lock_info')            && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info, 'PID Lock Info') ); }
 					if (metaData.columnName === "has_blocked_pids_info"                                                       && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.pid_lock_info, 'PID Lock Info') ); }
 				}
+				else if ("OracleTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
+				{
+					if (metaData.columnName === "SqlText"   && rowData.hasOwnProperty('SqlText')  && rowData.SqlText)  { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'text') ); }
+					if (metaData.columnName === "ExecPlan"  && rowData.hasOwnProperty('ExecPlan') && rowData.ExecPlan) { td.appendChild( createActiveStatementToolTipDiv(rowData.ExecPlan, 'text') ); }
+				}
 			} // end: metaData && columnName
 		};
 
@@ -2383,6 +2437,24 @@ function dbxTuneGraphSubscribe()
 			        + " * RED:    BLOCKING other session(s) from working.\n"
 					+ "";
 		}
+		else if ("OracleTune" === appName)
+		{
+			trCallback = function(tr, row)
+			{
+				// Holding open transaction while idle (STATUS != ACTIVE)
+				if (row.hasOwnProperty('HasOpenTxn') && row.HasOpenTxn === 'Y' &&
+				    row.hasOwnProperty('STATUS') && row.STATUS !== 'ACTIVE')
+					tr.className = "active-statement-row-holding-locks-while-idle";
+
+				// Background/system session
+				if (row.hasOwnProperty('USERNAME') && (row.USERNAME === null || row.USERNAME === ''))
+					tr.className = "active-statement-row-sys-process";
+			};
+			tooltip = "Background colors: \n"
+			        + " * YELLOW: Holds an open transaction while STATUS is not ACTIVE (idle in transaction).\n"
+			        + " * ORANGE: System/background session (no USERNAME).\n"
+					+ "";
+		}
 		else
 		{
 			console.log("WARNING: buildActiveStatementDiv(): Unknown appName='" + appName + "', no trCallback function will be used.");
@@ -2468,10 +2540,20 @@ function dbxTuneGraphSubscribe()
 		newSrvInfoDiv.setAttribute("class", "active-statements-srv-info-class");
 
 		
+		// Kick off a one-time tooltip fetch for this server (no-op if already cached or in-flight)
+		_asFetchTooltips(srvName);
+
 		// Create a table and add it to 'newSrvDiv'
 		let tab = jsonToTable(filteredCounterData, false, trCallback, tdCallback, metaDataArr);
 		tab.style.fontSize = '0.78em';
 		tab.style.whiteSpace = 'nowrap';
+
+		// Apply cached column-header tooltips (map may be populated already or on next render)
+		var _tipMap = _asTooltipCache[srvName] || {};
+		tab.querySelectorAll('thead th').forEach(function(th) {
+			var tt = _tipMap[th.textContent];
+			if (tt) th.title = tt;
+		});
 
 		var newSrvTabDiv = document.createElement("div");
 		newSrvTabDiv.id               = "active-statements-srv-tab-" + srvName;

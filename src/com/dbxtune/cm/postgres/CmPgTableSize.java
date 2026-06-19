@@ -94,7 +94,7 @@ extends CountersModel
 //	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; } // 10 seconds is the default
 	@Override public int     getDefaultQueryTimeout()                 { return 30; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
-	@Override public Type    getTemplateLevel()                       { return Type.MEDIUM; }
+	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
 
 	/**
 	 * FACTORY  method to create the object

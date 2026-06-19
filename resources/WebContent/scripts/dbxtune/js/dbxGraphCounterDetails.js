@@ -64,6 +64,8 @@ function cmDetailLoadList(srvName, timestamp)
 				// Pre-fetch trend graph cache (async, non-blocking)
 				_cmTrendEnsureCache(function() { cmTrendGraphsUpdateButton(); });
 				cmDetailRenderGroups(r.groups);
+				// Update << / >> button titles with actual prev/next sample timestamps
+				_cmNavUpdateButtonTitles();
 			} catch(ex) { cmDetailShowMsg('Parse error: ' + ex); }
 		},
 		error: function(xhr) {
@@ -475,7 +477,9 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				if (r.error === 'no-data-in-window' && r.postponeEnabled && r.postponeTime > 0
 						&& r.lastSampleMs && r.lastSampleMs > 0 && !_isPostponeFallback) {
 					_cmPostponeFallback = true;
-					cmDetailLoadData(srvName, cmName, new Date(r.lastSampleMs).toISOString(), type);
+					// Use moment() for local-time string — avoids UTC/local timezone mismatch
+					// that new Date().toISOString() would introduce (server stores local time).
+					cmDetailLoadData(srvName, cmName, moment(r.lastSampleMs).format('YYYY-MM-DD HH:mm:ss'), type);
 					return;
 				}
 				if (r.error) { cmDetailShowMsg(r.message || r.error); return; }
@@ -918,20 +922,76 @@ function cmDetailRenderFiltered(r, filter)
 	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip('dispose');
 	$('#cm-detail-table').html(h);
 
-	// Postpone watermark: prepend a subtle countdown banner when postpone is active
+	// Postpone watermark: prepend a subtle banner when postpone is active.
+	// In history mode: show prev/next sample navigation instead of a live countdown.
 	if (r.postponeEnabled && r.postponeTime > 0 && r.cmSampleTime) {
 		var _sampleMs = new Date(r.cmSampleTime).getTime();
-		var _nextAt   = _sampleMs + r.postponeTime * 1000;
 		var _durStr   = _cmFmtDuration(r.postponeTime);
-		var _wm = '<div id="cm-postpone-watermark" class="py-1 px-2 mb-1"'
-			+ ' style="font-size:0.85em;background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;color:#856404;">'
-			+ '&#9201; <strong>Postpone enabled</strong> (interval: ' + escHtml(_durStr) + ') &mdash; next sample in approx '
-			+ '<strong id="cm-postpone-countdown"></strong></div>';
-		$('#cm-detail-table').prepend(_wm);
-		var _updWm = function() { $('#cm-postpone-countdown').text(_cmFmtCountdown(_nextAt - Date.now())); };
-		_updWm();
-		if (!_cmPostponeInterval)
-			_cmPostponeInterval = setInterval(_updWm, 1000);
+		var _wm;
+		if (isHistoryViewActive()) {
+			// History mode — navigate to the actual adjacent DB samples (same as << / >>)
+			// Buttons rendered with placeholder text; async navSample calls fill in real timestamps.
+			var _curLabel = moment(r.cmSampleTime).format('HH:mm');
+			var _prevBtn = '<button id="cm-postpone-prev-lnk" type="button"'
+				+ ' class="btn btn-sm btn-outline-secondary py-0 px-2"'
+				+ ' onclick="_cmDetailNav(\'prev\')" title="Previous postpone sample">'
+				+ '&laquo; &hellip;</button>';
+			var _nextBtn = '<button id="cm-postpone-next-lnk" type="button"'
+				+ ' class="btn btn-sm btn-outline-secondary py-0 px-2"'
+				+ ' onclick="_cmDetailNav(\'next\')" title="Next postpone sample">'
+				+ '&hellip; &raquo;</button>';
+			_wm = '<div id="cm-postpone-watermark" class="py-1 px-2 mb-1"'
+				+ ' style="font-size:0.85em;background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;color:#856404;display:flex;align-items:center;gap:6px;">'
+				+ '&#9201; <strong>Postpone</strong> (interval: ' + escHtml(_durStr) + ') &mdash; '
+				+ _prevBtn
+				+ ' <span id="cm-postpone-cur-ts" style="font-weight:600;">@' + escHtml(_curLabel) + '</span> '
+				+ _nextBtn + '</div>';
+			$('#cm-detail-table').prepend(_wm);
+
+			// Async-fetch real prev/next timestamps and update the button labels
+			var _navTs  = _cmTimestampMs || r.cmSampleTime;
+			var _navSrv = _cmSrvName;
+			var _navCm  = _cmName;
+			var _today  = moment().format('YYYY-MM-DD');
+			var _fmtNavTs = function(ts) {
+				var m = moment(ts);
+				return m.format('YYYY-MM-DD') === _today ? m.format('HH:mm') : m.format('YYYY-MM-DD HH:mm');
+			};
+			if (_navTs && _navSrv && _navCm) {
+				$.ajax({ url: '/api/cc/mgt/cm/navSample', data: { srv: _navSrv, time: _navTs, cm: _navCm, dir: 'prev' }, dataType: 'json',
+					success: function(nr) {
+						if (nr && nr.found) {
+							var _ts = moment(nr.sampleTime).format('HH:mm:ss');
+							$('#cm-postpone-prev-lnk').html('&laquo; ' + escHtml(_fmtNavTs(nr.sampleTime))).attr('title', 'Previous postpone sample @ ' + _ts);
+						} else {
+							$('#cm-postpone-prev-lnk').html('&laquo; (none)').prop('disabled', true).attr('title', 'No previous postpone sample');
+						}
+					}
+				});
+				$.ajax({ url: '/api/cc/mgt/cm/navSample', data: { srv: _navSrv, time: _navTs, cm: _navCm, dir: 'next' }, dataType: 'json',
+					success: function(nr) {
+						if (nr && nr.found) {
+							var _ts = moment(nr.sampleTime).format('HH:mm:ss');
+							$('#cm-postpone-next-lnk').html(escHtml(_fmtNavTs(nr.sampleTime)) + ' &raquo;').attr('title', 'Next postpone sample @ ' + _ts);
+						} else {
+							$('#cm-postpone-next-lnk').html('(none) &raquo;').prop('disabled', true).attr('title', 'No next postpone sample');
+						}
+					}
+				});
+			}
+		} else {
+			// Live mode — countdown to next expected sample
+			var _nextAt = _sampleMs + r.postponeTime * 1000;
+			_wm = '<div id="cm-postpone-watermark" class="py-1 px-2 mb-1"'
+				+ ' style="font-size:0.85em;background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;color:#856404;">'
+				+ '&#9201; <strong>Postpone enabled</strong> (interval: ' + escHtml(_durStr) + ') &mdash; next sample in approx '
+				+ '<strong id="cm-postpone-countdown"></strong></div>';
+			$('#cm-detail-table').prepend(_wm);
+			var _updWm = function() { $('#cm-postpone-countdown').text(_cmFmtCountdown(_nextAt - Date.now())); };
+			_updWm();
+			if (!_cmPostponeInterval)
+				_cmPostponeInterval = setInterval(_updWm, 1000);
+		}
 	}
 
 	// Activate Bootstrap tooltips on the freshly rendered column headers
@@ -1134,6 +1194,32 @@ function cmDetailNumFmtInit()
 {
 	var el = document.getElementById('cm-detail-numfmt-' + _cmNumFmtMode);
 	if (el) el.checked = true;
+}
+
+/**
+ * Move the history timeline slider to the nearest sample at or after targetTsStr,
+ * then fire its change event (which triggers cmDetailSliderRefresh automatically).
+ * Falls back to cmDetailLoadList if the slider or moments array isn't available.
+ */
+function cmPostponeSliderGoTo(targetTsStr)
+{
+	var slider = document.getElementById('dbx-history-timeline-slider');
+	var arr    = (typeof _lastHistoryMomentsArray !== 'undefined') ? _lastHistoryMomentsArray : null;
+	if (!slider || !arr || !arr.length) {
+		// Fallback: direct load (no slider to move)
+		if (_cmSrvName) cmDetailLoadList(_cmSrvName, targetTsStr);
+		return;
+	}
+	var targetMs = moment(targetTsStr).valueOf();
+	// Find nearest index (same logic as getHistoryArrayPosForTs in dbxGraphPage.js)
+	var idx = arr.length - 1;
+	for (var i = 0; i < arr.length; i++) {
+		var start = arr[i].valueOf();
+		var end   = (i + 1 < arr.length) ? arr[i + 1].valueOf() : start + 60000;
+		if (targetMs >= start && targetMs < end) { idx = i; break; }
+	}
+	slider.value = idx + 1; // slider is 1-indexed
+	slider.dispatchEvent(new Event('change'));
 }
 
 /** Format seconds into a compact duration string: "1h", "30m", "1h 30m", "45s". */
@@ -1376,7 +1462,7 @@ function cmDetailToggle()
 		});
 	}
 
-	$panel.css('display', 'flex');
+	$panel.css({ display: 'flex', 'z-index': ++window._dbxTopZ });
 	try { localStorage.setItem('cmDetail-panelOpen', '1'); } catch(e) {}
 	// Auto-load on first open (both live and history mode)
 	if (!_cmSrvName && _serverList && _serverList.length > 0) {
@@ -1618,11 +1704,49 @@ function _cmDetailNav(dir)
 			if (typeof dbxHistoryAction === 'function') {
 				dbxHistoryAction(r.sampleTime);
 			}
+
+			// Refresh << / >> button titles with the new prev/next timestamps
+			_cmNavUpdateButtonTitles();
 		},
 		error: function(xhr) {
 			_cmNavBusy = false;
 			console.warn('cmNav HTTP error: ' + xhr.status);
 			_cmNavShowToast('Navigation failed (HTTP ' + xhr.status + ')');
+		}
+	});
+}
+
+/**
+ * Fetch prev/next sample timestamps from the server and update the << / >> button titles.
+ * Called after CM data loads and after each navigation.
+ */
+function _cmNavUpdateButtonTitles()
+{
+	var srv    = _cmSrvName;
+	var navTime = _cmTimestampMs || _cmTimestamp;
+	var cm     = _cmName;
+	if (!srv || !navTime || !cm) return;
+
+	var _today = moment().format('YYYY-MM-DD');
+	var _fmtTs = function(ts) {
+		var m = moment(ts);
+		return m.format('YYYY-MM-DD') === _today ? m.format('HH:mm:ss') : m.format('YYYY-MM-DD HH:mm:ss');
+	};
+
+	$.ajax({ url: '/api/cc/mgt/cm/navSample', data: { srv: srv, time: navTime, cm: cm, dir: 'prev' }, dataType: 'json',
+		success: function(r) {
+			var base = 'Go to previous sample that has data for this CM (moves timeline slider)\nKeyboard: Alt + ←';
+			var ts   = r.found ? _fmtTs(r.sampleTime) : '';
+			$('#cm-nav-prev').attr('title', r.found ? base + '\n← ' + ts : base);
+			$('#cm-nav-prev-ts').text(ts);
+		}
+	});
+	$.ajax({ url: '/api/cc/mgt/cm/navSample', data: { srv: srv, time: navTime, cm: cm, dir: 'next' }, dataType: 'json',
+		success: function(r) {
+			var base = 'Go to next sample that has data for this CM (moves timeline slider)\nKeyboard: Alt + →';
+			var ts   = r.found ? _fmtTs(r.sampleTime) : '';
+			$('#cm-nav-next').attr('title', r.found ? base + '\n' + ts + ' →' : base);
+			$('#cm-nav-next-ts').text(ts);
 		}
 	});
 }

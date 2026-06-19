@@ -227,8 +227,48 @@ implements ActionListener
 //openssl: https://stackoverflow.com/questions/32508961/java-equivalent-of-an-openssl-aes-cbc-encryption
 
 
+	@Override
+	protected void renderingPage()
+	{
+//		for (Object key : getWizardDataKeys())
+//		{
+//			System.out.println("Key=|" + key + "|, Val=" + getWizardData(key));
+//		}
+
+		Object o_alarmWritersPanelConfig = getWizardData("to-be-discarded.alarmWritersPanelConfig");
+		if (o_alarmWritersPanelConfig != null && o_alarmWritersPanelConfig instanceof Map)
+		{
+			@SuppressWarnings("unchecked")
+			Map<String, String> alarmWritersPanelConfigMap = (Map<String, String>) o_alarmWritersPanelConfig;
+			
+			for (CmSettingsHelper cmsh : _toMailSettingslist)
+			{
+				String propKey_AlarmWriterToMail = cmsh.getPropName().replace("ReportSenderToMail", "AlarmWriterToMail");
+				String wizVal = alarmWritersPanelConfigMap.get(propKey_AlarmWriterToMail);
+				if ( wizVal == null )
+					continue;
+
+				JComponent comp = _toMailComponents.get(cmsh.getPropName());
+				if ( comp instanceof JTextField )
+				{
+					((JTextField) comp).setText(wizVal);
+				}
+				else if ( comp instanceof JCheckBox )
+				{
+					((JCheckBox) comp).setSelected(wizVal.equalsIgnoreCase("true"));
+				}
+			}
+		}
+	}
+
 	private void initData()
 	{
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			_enableDailyReport_chk.setSelected(true);
+			
+//			TODO; // Set Save Report to DIR: use env Var
+		}
 	}
 
 	@Override

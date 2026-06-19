@@ -349,8 +349,8 @@ function dbxInitGraphPickerModal() {
 			'            <span id="dbxGraphPickerSelectedCount">0</span> selected',
 			'          </span>',
 			'          <span class="ml-3">',
-			'            <label class="text-muted small mb-0" for="dbxGraphPickerGcol">Columns:</label>',
-			'            <input type="number" id="dbxGraphPickerGcol" class="form-control form-control-sm d-inline-block ml-1"',
+			'            <label class="text-muted small mb-0" for="dbxGraphPickerGcols">Columns:</label>',
+			'            <input type="number" id="dbxGraphPickerGcols" class="form-control form-control-sm d-inline-block ml-1"',
 			'              min="1" max="10" placeholder="default" style="width:80px;">',
 			'          </span>',
 			'        </div>',
@@ -573,15 +573,15 @@ function dbxInitGraphPickerModal() {
 		const graphList = Object.keys(dbxGraphPickerOrder)
 			.sort(function(a, b) { return dbxGraphPickerOrder[a] - dbxGraphPickerOrder[b]; })
 			.join(',');
-		const gcol = $('#dbxGraphPickerGcol').val().trim();
+		const gcols = $('#dbxGraphPickerGcols').val().trim();
 
 		let url = '/graph.html?subscribe=true'
 			+ '&startTime='   + encodeURIComponent(dbxGraphPickerStartTime)
 			+ '&sessionName=' + encodeURIComponent(dbxGraphPickerServer)
 			+ '&graphList='   + graphList;
 
-		if (gcol !== '') {
-			url += '&gcol=' + gcol;
+		if (gcols !== '') {
+			url += '&gcols=' + gcols;
 		}
 		if (_dbxGpOptions.endTime) {
 			url += '&endTime=' + encodeURIComponent(_dbxGpOptions.endTime);
@@ -598,10 +598,10 @@ function dbxInitGraphPickerModal() {
 		}
 	});
 
-	// Clear search, gcol and popups when modal closes
+	// Clear search, gcols and popups when modal closes
 	$(document).on('hidden.bs.modal', '#dbxGraphPickerModal', function() {
 		$('#dbxGraphPickerSearch').val('');
-		$('#dbxGraphPickerGcol').val('');
+		$('#dbxGraphPickerGcols').val('');
 		dbxGpCloseAllPopups();
 	});
 }

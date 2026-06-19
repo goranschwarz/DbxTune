@@ -61,6 +61,7 @@ import com.dbxtune.check.CheckForUpdates;
 import com.dbxtune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.LostConnectionException;
 import com.dbxtune.config.dbms.DbmsConfigManager;
@@ -541,7 +542,6 @@ implements Memory.MemoryListener
 		_logger.info("Creating ALL CM Objects took " + TimeUtils.msToTimeStr("%MM:%SS.%ms", time) + " time format(MM:SS.ms)");
 		
 
-
 		// SPECIAL things for some offline CMD LINE parameters
 		String cmOptions = _storeProps.getProperty("cmdLine.cmOptions");
 		if (cmOptions != null)
@@ -613,10 +613,16 @@ implements Memory.MemoryListener
 				throw new Exception("Can't find any CM's to sample. Check the command line option '-n cmNames'.");
 		}
 		//-------------------------------------------------------
-		// We have a property file
+		// We have a property file (NO-GUI mode)
 		//-------------------------------------------------------
 		else
 		{
+			// Get a "template level" that will be used from the Config File
+			CounterSetTemplates.Type cfgTemplateLevel = CounterSetTemplates.Type.LARGE;
+			String cfgTemplateLevelStr = _storeProps.getProperty(CounterSetTemplates.PROPKEY_templateDefaultName, null);
+			if (cfgTemplateLevelStr != null)
+				cfgTemplateLevel = CounterSetTemplates.Type.fromString(cfgTemplateLevelStr, cfgTemplateLevel);
+
 			//-----------------
 			// LOOP all CounterModels, and remove if config indicates it should not be sampled, 
 			//-----------------
@@ -625,13 +631,32 @@ implements Memory.MemoryListener
 			{
 				String persistCountersKey = cm.getName() + "." + CountersModel.PROPKEY_persistCounters;
 
+				String extraDescription = "";
 				if (cm != null)
 				{
-					if ( _storeProps.getBooleanProperty(persistCountersKey, false) == false )
+					boolean persistCm = _storeProps.getBooleanProperty(persistCountersKey, false);
+					
+					// if the CM does NOT exists in the NO-GUI PCS File (it might be a NEW CM that was introduced AFTER the NO-GUI file was created)
+					//  - Then use any "template level"... and if the CM is above the "template level", add it anyway!
+					boolean cmHasPersistKey = _storeProps.hasProperty(persistCountersKey);
+					if ( ! cmHasPersistKey )
+					{
+						Type cmTemplate = cm.getTemplateLevel();
+						if (cmTemplate.ordinal() <= cfgTemplateLevel.ordinal())
+						{
+							persistCm = true;
+							if (cfgTemplateLevelStr != null)
+								extraDescription = " >>>> NOTE: This CM was NOT part of the CFG file, but it was enabled due to cfgTemplateLevel=" + cfgTemplateLevel + " and cmTemplateLevel()=" + cmTemplate + " (cfgTemplateLevelStr='" + cfgTemplateLevelStr + "'), Default template level can be set with: " + CounterSetTemplates.PROPKEY_templateDefaultName + " = SMALL|MEDIUM|LARGE|ALL";
+							else
+								extraDescription = " >>>> NOTE: This CM was NOT part of the CFG file, but it was enabled due to cfgTemplateLevel=" + cfgTemplateLevel + " and cmTemplateLevel()=" + cmTemplate + " Default template level can be set with: " + CounterSetTemplates.PROPKEY_templateDefaultName + " = SMALL|MEDIUM|LARGE|ALL";
+						}
+					}
+
+					if ( ! persistCm )
 					{
 						cm.setActive(false, "Inactivated by offline config");
 
-						_logger.info(" DISABLED CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'.");
+						_logger.info(" DISABLED CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'. " + extraDescription);
 					}
 					else
 					{
@@ -639,7 +664,7 @@ implements Memory.MemoryListener
 						//The offline props file indicates this CM should be sampled, persist it.
 						cm.setPersistCounters(true, false);
 
-						_logger.info(">Enabled  CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'.");
+						_logger.info(">Enabled  CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'. " + extraDescription);
 					}
 				}
 			}

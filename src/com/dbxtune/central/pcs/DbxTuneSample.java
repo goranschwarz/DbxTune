@@ -197,17 +197,17 @@ public class DbxTuneSample
 
 		public MetaDataEntry(String columnName, boolean hasJdbcInfo, String jdbcTypeName, String javaClassName, String guessedDbmsType, boolean hasCmInfo, boolean isDiffColumn, boolean isPctColumn)
 		{
-			_columnName      = columnName; 
+			_columnName      = columnName;
 			_hasJdbcInfo     = hasJdbcInfo;
 			_jdbcTypeName    = jdbcTypeName;
 			_jdbcType        = ResultSetTableModel.getColumnJavaSqlTypeNameToInt(jdbcTypeName);
 			_javaClassName   = javaClassName;
-			_guessedDbmsType = guessedDbmsType; 
+			_guessedDbmsType = guessedDbmsType;
 			_hasCmInfo       = hasCmInfo;
-			_isDiffColumn    = isDiffColumn; 
-			_isPctColumn     = isPctColumn; 
+			_isDiffColumn    = isDiffColumn;
+			_isPctColumn     = isPctColumn;
 		}
-		
+
 		public String  getColumnName()      { return _columnName; }
 
 		public boolean hasJdbcInfo()        { return _hasJdbcInfo; }

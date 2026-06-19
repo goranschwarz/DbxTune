@@ -169,6 +169,11 @@ implements ActionListener
 
 	private void initData()
 	{
+		if (WizardOffline.isExternalNoGuiConfigWizard())
+		{
+			_cmdLine_chk.setSelected(true);
+		}
+
 		if (_isInterfacesAware)
 		{
 			try 
