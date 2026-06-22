@@ -67,4 +67,25 @@ public interface OAuthProvider
 	 * @return The authenticated user's e-mail address, or {@code null} on failure
 	 */
 	String exchangeCodeForEmail(String code, String redirectUri);
+
+	/** Holds email + display name returned from the token exchange. */
+	class OAuthUserInfo
+	{
+		public final String email;
+		public final String fullName;
+		public OAuthUserInfo(String email, String fullName) { this.email = email; this.fullName = fullName; }
+	}
+
+	/**
+	 * Like {@link #exchangeCodeForEmail} but also returns the user's full name
+	 * from the {@code name} claim (or {@code given_name + family_name}) when present.
+	 * <p>
+	 * The default implementation delegates to {@link #exchangeCodeForEmail} and
+	 * returns {@code null} for fullName.  Override in the abstract base class.
+	 */
+	default OAuthUserInfo exchangeCodeForUserInfo(String code, String redirectUri)
+	{
+		String email = exchangeCodeForEmail(code, redirectUri);
+		return email == null ? null : new OAuthUserInfo(email, null);
+	}
 }

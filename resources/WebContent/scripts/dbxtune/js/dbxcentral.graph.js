@@ -4293,15 +4293,46 @@ function dbxChartPrintApiHelp()
 {
 	// alert("Specify 'sessionName=NAME' as a parameter in the URL.");
 	// return;
+	var _isDark = (getParameter("cs", "dark") === "dark");
+	var _css = _isDark ? (
+		'  .param-help-wrap { color: #ccc; font-size: 0.95em; margin-top: 6px; }' +
+		'  .param-help-table th { background: #1e1e1e; color: #eee; border-bottom: 2px solid #555; }' +
+		'  .param-help-table td { border-bottom: 1px solid #3a3a3a; color: #ccc; }' +
+		'  .param-help-table tr:nth-child(even) td { background: #252525; }' +
+		'  .param-help-table tr:nth-child(odd)  td { background: #1e1e1e; }' +
+		'  .param-help-table tr:hover td { background: #2e2e2e; }' +
+		'  .param-help-table td:first-child { color: #7ec8e3; }' +
+		'  .param-help-table code { background: #333; color: #f0a050; }' +
+		'  .param-help-table a { color: #7ec8e3; }'
+	) : (
+		'  .param-help-wrap { color: #333; font-size: 0.95em; margin-top: 6px; }' +
+		'  .param-help-table th { background: #2c5f8a; color: #fff; border-bottom: 2px solid #1a4a70; }' +
+		'  .param-help-table td { border-bottom: 1px solid #d0d7de; color: #24292f; }' +
+		'  .param-help-table tr:nth-child(even) td { background: #f6f8fa; }' +
+		'  .param-help-table tr:nth-child(odd)  td { background: #ffffff; }' +
+		'  .param-help-table tr:hover td { background: #eaf0f7; }' +
+		'  .param-help-table td:first-child { color: #0550ae; }' +
+		'  .param-help-table code { background: #eef1f5; color: #c7380a; }' +
+		'  .param-help-table a { color: #0550ae; }'
+	);
+	var _introColor = _isDark ? '#aaa' : '#666';
 	$("#api-feedback").css("color", "red");
 	$("#api-feedback").html(
 		'<h2>Error: Missing mandatory parameter <code>sessionName</code> and/or <code>graphList</code>.</h2>' +
-		'There should be a Dialog, where you can choose what you want to "graph"...<br>' +
-		'But that has not yet been implemented<br>' +
-		'<br>' +
-		'Until then, please use the below paraemeters (note the below is priliminary, and can be changed "any" time)' +
-		'<table border="1">' +
-		'<tr> <th>ParameterName</th> <th>Description</th> </tr>' +
+		'<div style="color:' + _introColor + '; margin-bottom:10px;">Please use the URL parameters described below.</div>' +
+		'<style>' +
+		'  .param-help-table { border-collapse: collapse; width: 100%; }' +
+		'  .param-help-table th { padding: 8px 14px; text-align: left; font-size: 0.95em; letter-spacing: 0.03em; }' +
+		'  .param-help-table td { padding: 10px 14px; vertical-align: top; }' +
+		'  .param-help-table td:first-child { font-family: monospace; font-size: 1em; font-weight: bold; white-space: nowrap; width: 1%; padding-right: 24px; }' +
+		'  .param-help-table code { padding: 1px 4px; border-radius: 3px; font-size: 0.92em; }' +
+		'  .param-help-table ul { margin: 4px 0; padding-left: 20px; }' +
+		'  .param-help-table li { margin-bottom: 2px; }' +
+		_css +
+		'</style>' +
+		'<div class="param-help-wrap">' +
+		'<table class="param-help-table">' +
+		'<tr> <th>Parameter Name</th> <th>Description</th> </tr>' +
 		'<tr>' + 
 			'<td>sessionName</td>' + 
 			'<td>Server Name you want to choose graphs for, Note: This can be a comma (,) separated list of server names (all is a shorthand, for all servers)<br>' +
@@ -4477,9 +4508,36 @@ function dbxChartPrintApiHelp()
 			'<b>default:</b> ""<br>' + 
 			'</td>' + 
 		'</tr>' +
+		'<tr>' +
+			'<td>openShowplanViewer</td>' +
+			'<td>Auto-open the Showplan Viewer dialog when the page loads.<br>' +
+			'Value: <code>1</code><br>' +
+			'Example: <code>openShowplanViewer=1</code><br>' +
+			'<b>default:</b> not set<br>' +
+			'</td>' +
+		'</tr>' +
+		'<tr>' +
+			'<td>openQueryStore</td>' +
+			'<td>Auto-open the Query Store panel when the page loads (SQL Server only).<br>' +
+			'Value: <code>1</code><br>' +
+			'Example: <code>openQueryStore=1</code><br>' +
+			'<b>default:</b> not set<br>' +
+			'</td>' +
+		'</tr>' +
+		'<tr>' +
+			'<td>openCounterDetails<br><i>(alias: cd)</i></td>' +
+			'<td>Auto-open the Counter Details panel when the page loads.<br>' +
+			'<ul>' +
+			'  <li><code>openCounterDetails=1</code> — just open the panel</li>' +
+			'  <li><code>openCounterDetails=CmName</code> — open the panel <b>and</b> navigate to the tab for that CM (e.g. <code>CmOpenDatabases</code>)</li>' +
+			'</ul>' +
+			'The short alias <code>cd</code> is equivalent: <code>cd=1</code> or <code>cd=CmOpenDatabases</code><br>' +
+			'<b>default:</b> not set<br>' +
+			'</td>' +
+		'</tr>' +
 		'</table>' +
-		'Below is a full example<br>' +
-		'<code>http://dbxtune.company.com:8080/graph.html?sessionName=PROD_A_ASE&startTime=2h&subscribe=true</code>'
+		'<div style="margin-top:12px; color:#aaa;">Example: &nbsp;<code>http://dbxtune.company.com:8080/graph.html?sessionName=PROD_A_ASE&amp;startTime=2h&amp;subscribe=true</code></div>' +
+		'</div>'
 	);
 }
 
@@ -4507,21 +4565,25 @@ function dbxTuneLoadCharts(destinationDivId)
 	const colorSchema    = getParameter("cs",            "dark");
 	const openSpvParam   = getParameter("openShowplanViewer", "");
 	const openQsParam    = getParameter("openQueryStore",     "");
+	const openCdParam    = getParameter("openCounterDetails", "") || getParameter("cd", "");
 
 	_debug = debug;
 	_colorSchema = colorSchema;
 
-	console.log("Passed sessionName="   + sessionName);
-	console.log("Passed graphList="     + graphList);
-	console.log("Passed startTime="     + startTime);
-	console.log("Passed endTime="       + endTime);
-	console.log("Passed markTime="      + markTime);
-	console.log("Passed markStartTime=" + markStartTime);
-	console.log("Passed markEndTime="   + markEndTime);
-	console.log("Passed mdc="           + multiDayChart); // Multi Day Chart
-	console.log("Passed mdcp="          + mdcPivot);      // Multi Day Chart - Pivot
-	console.log("Passed mdcwd="         + mdcWeekDays);   // Multi Day Chart - WeekDays
-	console.log("Passed colorSchema="   + colorSchema);
+	console.log("Passed sessionName="          + sessionName);
+	console.log("Passed graphList="            + graphList);
+	console.log("Passed startTime="            + startTime);
+	console.log("Passed endTime="              + endTime);
+	console.log("Passed markTime="             + markTime);
+	console.log("Passed markStartTime="        + markStartTime);
+	console.log("Passed markEndTime="          + markEndTime);
+	console.log("Passed mdc="                  + multiDayChart); // Multi Day Chart
+	console.log("Passed mdcp="                 + mdcPivot);      // Multi Day Chart - Pivot
+	console.log("Passed mdcwd="                + mdcWeekDays);   // Multi Day Chart - WeekDays
+	console.log("Passed colorSchema="          + colorSchema);
+	console.log("Passed openShowplanViewer="     + openSpvParam);
+	console.log("Passed openQueryStore="         + openQsParam);
+	console.log("Passed openCounterDetails/cd="  + openCdParam);
 
 	if (subscribe === "false")
 		subscribe = false;
@@ -4941,6 +5003,10 @@ function dbxTuneLoadCharts(destinationDivId)
 			if (typeof window.openShowplanViewer === 'function') window.openShowplanViewer();
 		}, 800);
 	}
+
+	// If Counter Details was requested via URL param, open the panel immediately.
+	if (openCdParam && typeof cmDetailOpenWithCm === 'function')
+		cmDetailOpenWithCm(openCdParam);
 
 	// If the Query Store panel was requested via URL param, auto-open it once
 	// the page has finished loading (600 ms delay).

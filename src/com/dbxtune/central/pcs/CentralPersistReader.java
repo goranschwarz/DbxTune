@@ -2996,59 +2996,81 @@ public class CentralPersistReader
 
 
 
+	/** SQL SELECT list for all columns of DbxCentralUsers. Used by all user-read methods. */
+	private static String dbxCentralUsersSelectCols(String lq, String rq)
+	{
+		return ""
+			+        lq + "UserName"     + rq
+			+ ", " + lq + "Password"     + rq
+			+ ", " + lq + "Email"        + rq
+			+ ", " + lq + "Roles"        + rq
+			+ ", " + lq + "Status"       + rq
+			+ ", " + lq + "AddDate"      + rq
+			+ ", " + lq + "UpdateDate"   + rq
+			+ ", " + lq + "LastLoginDate"+ rq
+			+ ", " + lq + "Source"       + rq
+			+ ", " + lq + "FullName"     + rq
+			+ ", " + lq + "RequestReason"+ rq
+			+ ", " + lq + "ApprovedBy"    + rq
+			+ ", " + lq + "ApproveDate"   + rq
+			+ ", " + lq + "LoginFailCount"+ rq
+			;
+	}
+
+	private static DbxCentralUser mapDbxCentralUserRow(ResultSet rs)
+	throws SQLException
+	{
+		String user_username = rs.getString("UserName");
+		String user_password = rs.getString("Password");
+		String user_email    = rs.getString("Email");
+		String user_roles    = rs.getString("Roles");
+
+		if (user_password != null && user_password.startsWith(Configuration.ENCRYPTED_PREFIX))
+			user_password = Configuration.decryptPropertyValue(user_username, user_password);
+
+		DbxCentralUser user = new DbxCentralUser(user_username, user_password, user_email, user_roles);
+
+		// Extended columns — may be absent on pre-v17 schema; use getObject to avoid NPE
+		try { user.setStatus       (rs.getInt       ("Status"       ));                    } catch (SQLException ignore) { user.setStatus(DbxCentralUser.UserStatus.ACTIVE.getBit()); }
+		try { user.setAddDate      (rs.getTimestamp ("AddDate"      ));                    } catch (SQLException ignore) {}
+		try { user.setUpdateDate   (rs.getTimestamp ("UpdateDate"   ));                    } catch (SQLException ignore) {}
+		try { user.setLastLoginDate(rs.getTimestamp ("LastLoginDate"));                    } catch (SQLException ignore) {}
+		try { user.setSource       (rs.getString    ("Source"       ));                    } catch (SQLException ignore) {}
+		try { user.setFullName     (rs.getString    ("FullName"     ));                    } catch (SQLException ignore) {}
+		try { user.setRequestReason(rs.getString    ("RequestReason"));                    } catch (SQLException ignore) {}
+		try { user.setApprovedBy    (rs.getString   ("ApprovedBy"    ));                   } catch (SQLException ignore) {}
+		try { user.setApproveDate   (rs.getTimestamp("ApproveDate"   ));                   } catch (SQLException ignore) {}
+		try { user.setLoginFailCount(rs.getInt      ("LoginFailCount"));                   } catch (SQLException ignore) {}
+
+		return user;
+	}
+
 	public DbxCentralUser getDbxCentralUser(String username)
 	throws SQLException
 	{
-		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
-		try // block with: finally at end to return the connection to the ConnectionPool
+		DbxConnection conn = getConnection();
+		try
 		{
-//			DbxCentralUser xxx = new DbxCentralUser(username, username, "", "admin");
-//			return xxx;
-			
-			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
-			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
-
+			String lq      = conn.getLeftQuote();
+			String rq      = conn.getRightQuote();
 			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_USERS, null, true);
 
-			// Build SQL
-			String sql = "select "
-						+ "  " + lq + "UserName" + rq
-						+ " ," + lq + "Password" + rq
-						+ " ," + lq + "Email"    + rq
-						+ " ," + lq + "Roles"    + rq
-					+" from " + tabName
-					+" where " + lq + "UserName" + rq + " = '" + username + "'"
-					;
+			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
+					+ " FROM "  + tabName
+					+ " WHERE " + lq+"UserName"+rq + " = ?";
 
-			DbxCentralUser user = null;
-			
-			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement())
+			try (PreparedStatement pstmt = conn.prepareStatement(sql))
 			{
-				// set TIMEOUT
-				stmnt.setQueryTimeout(_defaultQueryTimeout);
+				pstmt.setString(1, username);
+				pstmt.setQueryTimeout(_defaultQueryTimeout);
 
-				// Execute and read result
-				try (ResultSet rs = stmnt.executeQuery(sql))
+				try (ResultSet rs = pstmt.executeQuery())
 				{
-					while (rs.next())
-					{
-						String user_username = rs.getString(1); // UserName
-						String user_password = rs.getString(2); // Password
-						String user_email    = rs.getString(3); // Email
-						String user_roles    = rs.getString(4); // Roles
-
-						if (user_password.startsWith(Configuration.ENCRYPTED_PREFIX))
-						{
-							user_password = Configuration.decryptPropertyValue(user_username, user_password);
-						}
-						
-						user = new DbxCentralUser(user_username, user_password, user_email, user_roles);
-					}
+					if (rs.next())
+						return mapDbxCentralUserRow(rs);
 				}
 			}
-			
-			return user;
+			return null;
 		}
 		finally
 		{
@@ -3068,7 +3090,7 @@ public class CentralPersistReader
 			String rq      = conn.getRightQuote();
 			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_USERS, null, true);
 
-			String sql = "SELECT " + lq+"UserName"+rq + ", " + lq+"Password"+rq + ", " + lq+"Email"+rq + ", " + lq+"Roles"+rq
+			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
 					+ " FROM "     + tabName
 					+ " ORDER BY " + lq+"UserName"+rq;
 
@@ -3076,13 +3098,7 @@ public class CentralPersistReader
 			     ResultSet rs = pstmt.executeQuery())
 			{
 				while (rs.next())
-				{
-					list.add(new DbxCentralUser(
-							rs.getString("UserName"),
-							rs.getString("Password"),
-							rs.getString("Email"),
-							rs.getString("Roles")));
-				}
+					list.add(mapDbxCentralUserRow(rs));
 			}
 		}
 		finally
@@ -3106,7 +3122,7 @@ public class CentralPersistReader
 			String rq      = conn.getRightQuote();
 			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_USERS, null, true);
 
-			String sql = "SELECT " + lq+"UserName"+rq + ", " + lq+"Password"+rq + ", " + lq+"Email"+rq + ", " + lq+"Roles"+rq
+			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
 					+ " FROM "  + tabName
 					+ " WHERE " + lq+"Email"+rq + " = ?";
 
@@ -3116,13 +3132,7 @@ public class CentralPersistReader
 				try (ResultSet rs = pstmt.executeQuery())
 				{
 					if (rs.next())
-					{
-						return new DbxCentralUser(
-								rs.getString("UserName"),
-								rs.getString("Password"),
-								rs.getString("Email"),
-								rs.getString("Roles"));
-					}
+						return mapDbxCentralUserRow(rs);
 				}
 			}
 		}
@@ -3132,6 +3142,40 @@ public class CentralPersistReader
 		}
 
 		return null;
+	}
+
+	/** Returns all users whose Roles contain 'admin' and who have a non-empty Email. */
+	public List<DbxCentralUser> getDbxCentralAdminUsersWithEmail()
+	throws SQLException
+	{
+		List<DbxCentralUser> list = new ArrayList<>();
+
+		DbxConnection conn = getConnection();
+		try
+		{
+			String lq      = conn.getLeftQuote();
+			String rq      = conn.getRightQuote();
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+
+			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
+					+ " FROM "  + tabName
+					+ " WHERE " + lq+"Email"+rq + " IS NOT NULL AND " + lq+"Email"+rq + " <> ''"
+					+ "   AND " + lq+"Roles"+rq + " LIKE '%admin%'"
+					+ " ORDER BY " + lq+"UserName"+rq;
+
+			try (PreparedStatement pstmt = conn.prepareStatement(sql);
+			     ResultSet rs = pstmt.executeQuery())
+			{
+				while (rs.next())
+					list.add(mapDbxCentralUserRow(rs));
+			}
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+
+		return list;
 	}
 
 

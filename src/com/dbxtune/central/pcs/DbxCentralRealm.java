@@ -179,6 +179,24 @@ extends AbstractLoginService
 			}
 
 			// Roles were already loaded into _userRoleMap by prepareOAuthUserRoles()
+			// Check Status — don't allow locked/pending/rejected accounts even via OAuth
+			if (CentralPersistReader.hasInstance())
+			{
+				try
+				{
+					DbxCentralUser dbUser = CentralPersistReader.getInstance().getDbxCentralUser(username);
+					if (dbUser != null && !dbUser.isLoginAllowed())
+					{
+						_logger.warn("loadUserInfo({}): OAuth login denied — account status is '{}' (status={})",
+								username, DbxCentralUser.UserStatus.toLabel(dbUser.getStatus()), dbUser.getStatus());
+						return null;
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.warn("loadUserInfo({}): could not check account status — allowing OAuth login", username, ex);
+				}
+			}
 			_logger.debug("loadUserInfo({}): OAuth one-time token accepted", username);
 			return new UserPrincipal(username, Credential.getCredential(oauthEntry.token));
 		}
@@ -247,6 +265,14 @@ extends AbstractLoginService
 				return null;
 			}
 
+			// Block login for locked / pending / rejected accounts
+			if (dbxcUser != null && !dbxcUser.isLoginAllowed())
+			{
+				_logger.warn("loadUserInfo({}): login denied — account status is '{}' (status={})",
+						username, DbxCentralUser.UserStatus.toLabel(dbxcUser.getStatus()), dbxcUser.getStatus());
+				return null;
+			}
+
 			// If use was found: Put the information in the (super MappedLoginService) user table...
 			UserPrincipal uid = null;
 			if (passwd != null)
@@ -279,10 +305,23 @@ extends AbstractLoginService
 
 		_logger.info("Authenticating username '" + username + "' " +( uid == null ? "FAILED" : "SUCCEEDED") );
 
-		// if FAILED for ADMIN... then do some extra: print into in loadUser() 
-		if (uid == null && "admin".equals(username))
+		if (CentralPcsWriterHandler.hasInstance())
 		{
-			// do extra stuff...
+			try
+			{
+				CentralPersistWriterJdbc writer = CentralPcsWriterHandler.getInstance().getJdbcWriter();
+				if (writer != null)
+				{
+					if (uid != null)
+						writer.updateDbxCentralUserLastLogin(username);  // also resets LoginFailCount
+					else
+						writer.incrementLoginFailCount(username);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("login({}): failed to update login stats: {}", username, ex.getMessage());
+			}
 		}
 
 		return uid;

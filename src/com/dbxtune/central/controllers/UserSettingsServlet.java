@@ -76,7 +76,8 @@ public class UserSettingsServlet extends HttpServlet
 
 			ProfileResult pr = new ProfileResult();
 			pr.username = username;
-			pr.email    = (user != null) ? StringUtil.nullToValue(user.getEmail(), "") : "";
+			pr.email    = (user != null) ? StringUtil.nullToValue(user.getEmail(),    "") : "";
+			pr.fullName = (user != null) ? StringUtil.nullToValue(user.getFullName(), "") : "";
 			Helper.createObjectMapper().writeValue(resp.getWriter(), pr);
 		}
 		catch (SQLException e)
@@ -129,6 +130,7 @@ public class UserSettingsServlet extends HttpServlet
 			{
 				case "changePassword": handleChangePassword(req, resp, om, user, writer); break;
 				case "changeEmail":    handleChangeEmail   (req, resp, om, user, writer); break;
+				case "changeFullName": handleChangeFullName(req, resp, om, user, writer); break;
 				default:
 					resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 					om.writeValue(resp.getWriter(), buildError("Unknown op: " + op));
@@ -166,9 +168,9 @@ public class UserSettingsServlet extends HttpServlet
 			om.writeValue(resp.getWriter(), buildError("Current password is incorrect."));
 			return;
 		}
-		if (newPassword.length() < 6)
+		if (newPassword.length() < 8)
 		{
-			om.writeValue(resp.getWriter(), buildError("New password must be at least 6 characters."));
+			om.writeValue(resp.getWriter(), buildError("New password must be at least 8 characters."));
 			return;
 		}
 		if (!newPassword.equals(confirmPassword))
@@ -180,6 +182,18 @@ public class UserSettingsServlet extends HttpServlet
 		writer.updateDbxCentralUserPassword(user.getUsername(), PasswordHashUtil.hashPassword(newPassword));
 		_logger.info("UserSettingsServlet: Password changed for user '{}'.", user.getUsername());
 		om.writeValue(resp.getWriter(), buildOk("Password updated successfully."));
+	}
+
+	private void handleChangeFullName(HttpServletRequest req, HttpServletResponse resp,
+	                                   ObjectMapper om, DbxCentralUser user,
+	                                   CentralPersistWriterJdbc writer)
+	throws IOException, SQLException
+	{
+		String fullName = StringUtil.nullToValue(req.getParameter("fullName"), "").trim();
+
+		writer.updateDbxCentralUserFullName(user.getUsername(), fullName);
+		_logger.info("UserSettingsServlet: FullName updated for user '{}'.", user.getUsername());
+		om.writeValue(resp.getWriter(), buildOk("Full name updated successfully."));
 	}
 
 	private void handleChangeEmail(HttpServletRequest req, HttpServletResponse resp,
@@ -221,11 +235,12 @@ public class UserSettingsServlet extends HttpServlet
 		ApiResult(boolean success, String message) { this.success = success; this.message = message; }
 	}
 
-	@JsonPropertyOrder({"username", "email"})
+	@JsonPropertyOrder({"username", "email", "fullName"})
 	private static class ProfileResult
 	{
 		public String username;
 		public String email;
+		public String fullName;
 	}
 
 	private static ApiResult buildOk   (String message) { return new ApiResult(true,  message); }

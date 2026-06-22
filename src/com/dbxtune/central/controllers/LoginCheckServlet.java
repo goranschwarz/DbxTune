@@ -28,7 +28,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.DbxCentralRealm;
+import com.dbxtune.central.pcs.objects.DbxCentralUser;
 import com.dbxtune.utils.StringUtil;
 
 // https://www.javatpoint.com/servlet-http-session-login-and-logout-example
@@ -37,19 +39,44 @@ public class LoginCheckServlet extends HttpServlet
 {
 	private static final long	serialVersionUID = 1L;
 
+	private static String resolveDisplayName(String userName)
+	{
+		// Try FullName from DB first
+		if (CentralPersistReader.hasInstance())
+		{
+			try
+			{
+				DbxCentralUser user = CentralPersistReader.getInstance().getDbxCentralUser(userName);
+				if (user != null && StringUtil.hasValue(user.getFullName())
+						&& user.getFullName().length() < userName.length())
+					return user.getFullName();
+			}
+			catch (Exception ignore) {}
+		}
+		// Fall back to local-part before '@'
+		int at = userName.indexOf('@');
+		return at > 0 ? userName.substring(0, at) : userName;
+	}
+
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		response.setContentType("text/html;charset=UTF-8");
 		PrintWriter out = response.getWriter();
 
-		String userName = request.getRemoteUser();
-		boolean isAdmin = request.isUserInRole(DbxCentralRealm.ROLE_ADMIN);
+		String  userName = request.getRemoteUser();
+		boolean isAdmin  = request.isUserInRole(DbxCentralRealm.ROLE_ADMIN);
 
 		if (StringUtil.hasValue(userName))
-			out.print("{\"isLoggedIn\":true,\"asUserName\":\"" + userName + "\",\"isAdmin\":" + isAdmin + "}");  
+		{
+			// Resolve a short display name:
+			//   1. FullName from DB if present and shorter than the username
+			//   2. Otherwise: local-part before '@' (or full username if no '@')
+			String displayName = resolveDisplayName(userName);
+			out.print("{\"isLoggedIn\":true,\"asUserName\":\"" + userName + "\",\"displayName\":\"" + displayName + "\",\"isAdmin\":" + isAdmin + "}");
+		}
 		else
-			out.print("{\"isLoggedIn\":false,\"asUserName\":\"\"}");
+			out.print("{\"isLoggedIn\":false,\"asUserName\":\"\",\"displayName\":\"\"}");
 		out.close();  
 	}
 }

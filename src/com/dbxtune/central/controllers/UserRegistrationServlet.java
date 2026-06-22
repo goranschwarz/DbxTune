@@ -32,10 +32,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
 import com.dbxtune.central.pcs.DbxCentralRealm;
+import com.dbxtune.central.pcs.objects.DbxCentralUser;
 import com.dbxtune.central.utils.PasswordHashUtil;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -60,16 +62,20 @@ public class UserRegistrationServlet extends HttpServlet
 
 		ObjectMapper om = Helper.createObjectMapper();
 
-		String username        = StringUtil.nullToValue(req.getParameter("username"       ), "").trim();
+		// Email is used as the username (login key); no separate username field.
 		String email           = StringUtil.nullToValue(req.getParameter("email"          ), "").trim();
 		String password        = StringUtil.nullToValue(req.getParameter("password"       ), "");
 		String confirmPassword = StringUtil.nullToValue(req.getParameter("confirmPassword"), "");
+		String fullName        = StringUtil.nullToValue(req.getParameter("fullName"       ), "").trim();
+		String reason          = StringUtil.nullToValue(req.getParameter("reason"         ), "").trim();
 
-		if (username.isEmpty())                          { om.writeValue(resp.getWriter(), buildError("Username is required."));                        return; }
-		if (username.length() > 128)                     { om.writeValue(resp.getWriter(), buildError("Username must be 128 characters or less."));      return; }
-		if (!email.contains("@"))                        { om.writeValue(resp.getWriter(), buildError("A valid email address is required."));            return; }
-		if (password.length() < 6)                       { om.writeValue(resp.getWriter(), buildError("Password must be at least 6 characters."));      return; }
-		if (!password.equals(confirmPassword))           { om.writeValue(resp.getWriter(), buildError("Passwords do not match."));                      return; }
+		if (!email.contains("@"))              { om.writeValue(resp.getWriter(), buildError("A valid email address is required."));       return; }
+		if (email.length() > 128)              { om.writeValue(resp.getWriter(), buildError("Email must be 128 characters or less."));    return; }
+		if (password.length() < 8)             { om.writeValue(resp.getWriter(), buildError("Password must be at least 8 characters.")); return; }
+		if (!password.equals(confirmPassword)) { om.writeValue(resp.getWriter(), buildError("Passwords do not match."));                 return; }
+
+		// username == email (the PK stored in UserName column)
+		String username = email;
 
 		try
 		{
@@ -82,13 +88,7 @@ public class UserRegistrationServlet extends HttpServlet
 
 			if (CentralPersistReader.getInstance().getDbxCentralUser(username) != null)
 			{
-				om.writeValue(resp.getWriter(), buildError("Username '" + username + "' is already taken."));
-				return;
-			}
-
-			if (CentralPersistReader.getInstance().getDbxCentralUserByEmail(email) != null)
-			{
-				om.writeValue(resp.getWriter(), buildError("Email address '" + email + "' is already registered."));
+				om.writeValue(resp.getWriter(), buildError("An account with this email is already registered."));
 				return;
 			}
 
@@ -100,9 +100,25 @@ public class UserRegistrationServlet extends HttpServlet
 				return;
 			}
 
-			writer.addDbxCentralUser(username, PasswordHashUtil.hashPassword(password), email, DbxCentralRealm.ROLE_USER);
-			_logger.info("UserRegistrationServlet: New user registered: '" + username + "'.");
-			om.writeValue(resp.getWriter(), buildOk("Account created. You can now log in."));
+			boolean requireApproval = DbxTuneCentral.isNewAccountRequireApproval();
+			int status = requireApproval
+					? DbxCentralUser.UserStatus.PENDING_APPROVAL.getBit()
+					: DbxCentralUser.UserStatus.ACTIVE.getBit();
+
+			writer.addDbxCentralUser(username, PasswordHashUtil.hashPassword(password), email, DbxCentralRealm.ROLE_USER,
+					status, "local",
+					StringUtil.hasValue(fullName) ? fullName : null,
+					StringUtil.hasValue(reason)   ? reason   : null);
+
+			_logger.info("UserRegistrationServlet: New user registered: '{}', requireApproval={}", username, requireApproval);
+
+			if (requireApproval)
+				NewAccountNotifier.sendAdminNotification(username, fullName, email, "local", reason);
+
+			String msg = requireApproval
+					? "Request submitted. An admin will review your request."
+					: "Account created. You can now log in.";
+			om.writeValue(resp.getWriter(), buildOk(msg));
 		}
 		catch (SQLException e)
 		{

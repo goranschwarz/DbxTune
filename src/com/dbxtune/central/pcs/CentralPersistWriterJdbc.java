@@ -57,6 +57,7 @@ import com.dbxtune.central.cleanup.CentralH2Defrag;
 import com.dbxtune.central.cleanup.DataDirectoryCleaner;
 import com.dbxtune.central.lmetrics.LocalMetricsPersistWriterJdbc;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler.NotificationType;
+import com.dbxtune.central.pcs.objects.DbxCentralUser;
 import com.dbxtune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.dbxtune.central.pcs.DbxTuneSample.AlarmEntryWrapper;
 import com.dbxtune.central.pcs.DbxTuneSample.CmEntry;
@@ -2149,9 +2150,61 @@ extends CentralPersistWriterBase
 			}
 		}
 
-//		if (fromDbVersion <= 16)
-//		{
-//		}
+		if (fromDbVersion <= 16)
+		{
+			// Add extended columns to DbxCentralUsers (DB version 17)
+			step = 19;
+			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
+
+			// H2 duplicate-column SQLState is "42121"; other DBs use "42701" — allow both
+			String[] ignoreDupCol = new String[]{ "42121", "42701", "S0021" };
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"Status"       +rq + " integer    not null default " + DbxCentralUser.UserStatus.ACTIVE.getBit();
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"AddDate"      +rq + " timestamp  null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"UpdateDate"   +rq + " timestamp  null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LastLoginDate"+rq + " timestamp  null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"Source"       +rq + " varchar(32)  null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"FullName"     +rq + " varchar(256) null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"RequestReason"+rq + " varchar(512) null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"ApprovedBy"  +rq + " varchar(128) null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"ApproveDate" +rq + " timestamp  null";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+
+			// Default existing rows to ACTIVE (Status=1)
+			sql = "update " + lq+usersTabName+rq + " set " + lq+"Status"+rq + " = " + DbxCentralUser.UserStatus.ACTIVE.getBit() + " where " + lq+"Status"+rq + " is null or " + lq+"Status"+rq + " = 0";
+			internalDbUpgradeDdlExec(conn, step, sql);
+
+			// Stamp AddDate for existing rows where it is null
+			sql = "update " + lq+usersTabName+rq + " set " + lq+"AddDate"+rq + " = current_timestamp where " + lq+"AddDate"+rq + " is null";
+			internalDbUpgradeDdlExec(conn, step, sql);
+		}
+
+		if (fromDbVersion <= 17)
+		{
+			// Add LoginFailCount to DbxCentralUsers (DB version 18)
+			step = 20;
+			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
+			String[] ignoreDupCol = new String[]{ "42121", "42701", "S0021" };
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LoginFailCount"+rq + " integer not null default 0";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+		}
 
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;
@@ -4475,6 +4528,14 @@ return -1;
 	public void addDbxCentralUser(String username, String passwordHash, String email, String roles)
 	throws SQLException
 	{
+		addDbxCentralUser(username, passwordHash, email, roles,
+				DbxCentralUser.UserStatus.ACTIVE.getBit(), null, null, null);
+	}
+
+	public void addDbxCentralUser(String username, String passwordHash, String email, String roles,
+			int status, String source, String fullName, String requestReason)
+	throws SQLException
+	{
 		DbxConnection conn = _mainConn;
 
 		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
@@ -4482,8 +4543,19 @@ return -1;
 		String rq = conn.getRightQuote();
 
 		String sql = "INSERT INTO " + tabName
-				+ " (" + lq+"UserName"+rq + ", " + lq+"Password"+rq + ", " + lq+"Email"+rq + ", " + lq+"Roles"+rq + ")"
-				+ " VALUES (?, ?, ?, ?)";
+				+ " (" 
+				+        lq + "UserName"     +rq
+				+ ", " + lq + "Password"     +rq
+				+ ", " + lq + "Email"        +rq
+				+ ", " + lq + "Roles"        +rq
+				+ ", " + lq + "Status"       +rq
+				+ ", " + lq + "AddDate"      +rq
+				+ ", " + lq + "Source"       +rq
+				+ ", " + lq + "FullName"     +rq
+				+ ", " + lq + "RequestReason"+rq
+				+ ")"
+				+ " VALUES (?, ?, ?, ?, ?, current_timestamp, ?, ?, ?)";
+				//          1  2  3  4  5                     6  7  8
 
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
@@ -4491,6 +4563,11 @@ return -1;
 			pstmt.setString(2, passwordHash);
 			pstmt.setString(3, email);
 			pstmt.setString(4, roles);
+			pstmt.setInt   (5, status);
+			pstmt.setString(6, source);
+			pstmt.setString(7, fullName);
+			pstmt.setString(8, requestReason);
+
 			pstmt.executeUpdate();
 		}
 	}
@@ -4554,6 +4631,102 @@ return -1;
 		{
 			pstmt.setString(1, email);
 			pstmt.setString(2, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void updateDbxCentralUserFullName(String username, String fullName)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+
+		String sql = "UPDATE " + tabName
+				+ " SET "   + lq+"FullName"+rq  + " = ?"
+				+ " WHERE " + lq+"UserName"+rq  + " = ?";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, fullName.isEmpty() ? null : fullName);
+			pstmt.setString(2, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void updateDbxCentralUserStatus(String username, int newStatus)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+		String sql = "UPDATE " + tabName
+				+ " SET " + lq+"Status"+rq + " = ?, " + lq+"UpdateDate"+rq + " = current_timestamp"
+				+ " WHERE " + lq+"UserName"+rq + " = ?";
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setInt   (1, newStatus);
+			pstmt.setString(2, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void approveDbxCentralUser(String username, String approvedBy)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+		String sql = "UPDATE " + tabName
+				+ " SET " + lq+"Status"+rq     + " = ?"
+				+ ", "    + lq+"ApprovedBy"+rq + " = ?"
+				+ ", "    + lq+"ApproveDate"+rq+ " = current_timestamp"
+				+ ", "    + lq+"UpdateDate"+rq + " = current_timestamp"
+				+ " WHERE " + lq+"UserName"+rq + " = ?";
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setInt   (1, DbxCentralUser.UserStatus.ACTIVE.getBit());
+			pstmt.setString(2, approvedBy);
+			pstmt.setString(3, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void updateDbxCentralUserLastLogin(String username)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+		String sql = "UPDATE " + tabName
+				+ " SET " + lq+"LastLoginDate"+rq  + " = current_timestamp"
+				+   ", " + lq+"LoginFailCount"+rq  + " = 0"
+				+ " WHERE " + lq+"UserName"+rq + " = ?";
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, username);
+			pstmt.executeUpdate();
+		}
+	}
+
+	public void incrementLoginFailCount(String username)
+	throws SQLException
+	{
+		DbxConnection conn = _mainConn;
+		String tabName = getTableName(conn, null, Table.CENTRAL_USERS, null, true);
+		String lq = conn.getLeftQuote();
+		String rq = conn.getRightQuote();
+		String sql = "UPDATE " + tabName
+				+ " SET " + lq+"LoginFailCount"+rq + " = " + lq+"LoginFailCount"+rq + " + 1"
+				+ " WHERE " + lq+"UserName"+rq + " = ?";
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setString(1, username);
 			pstmt.executeUpdate();
 		}
 	}

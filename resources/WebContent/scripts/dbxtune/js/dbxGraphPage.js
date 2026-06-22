@@ -414,9 +414,9 @@
 
 			// Restore floating panels that were open in the previous session.
 			// Open them immediately (before WS data arrives) so the user doesn't have to wait.
-			try { if (localStorage.getItem('cmDetail-panelOpen')    === '1') { cmDetailToggle();    _cmAutoOpenChecked    = true; } } catch(e) {}
-			try { if (localStorage.getItem('dbmsConfig-panelOpen')  === '1') { dbmsConfigToggle();  _dcAutoOpenChecked    = true; } } catch(e) {}
-			try { if (localStorage.getItem('queryStore-panelOpen')  === '1') { queryStoreToggle();  _qsAutoOpenChecked    = true; } } catch(e) {}
+			try { if (localStorage.getItem('cmDetail-panelOpen')    === '1' && !$('#cm-detail-panel')   .is(':visible')) { cmDetailToggle();    _cmAutoOpenChecked    = true; } } catch(e) {}
+			try { if (localStorage.getItem('dbmsConfig-panelOpen')  === '1' && !$('#dbms-config-panel') .is(':visible')) { dbmsConfigToggle();  _dcAutoOpenChecked    = true; } } catch(e) {}
+			try { if (localStorage.getItem('queryStore-panelOpen')  === '1' && !$('#query-store-panel') .is(':visible')) { queryStoreToggle();  _qsAutoOpenChecked    = true; } } catch(e) {}
 
 //			/* If we have 'markTime' then enable historical mode, and set the position in the timeline */
 //			var markTime = getParameter("markTime");
