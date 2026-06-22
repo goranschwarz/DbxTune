@@ -290,7 +290,7 @@
   <main role="main" class="container">
     <div class="jumbotron">
       <h1>DbxTune - Central</h1>
-      <p class="lead">View Trends Graphs for all your Database Systems in one place!</p>
+      <p class="lead">View Metrics for all your Database Systems in one place!</p>
       <!-- <p class="lead">View all your DBMS trends graphs in a centralized console.</p> -->
       <!-- <p class="lead">DbxTune Central is the component where all DbxTune collectors can send summary data so it can be easely viewed...</p> -->
       <div id="dbx-image">
@@ -315,11 +315,12 @@
 		 Using <input type="text" name="dbx-gcols-txt" id="dbx-gcols-txt" style="height:20px;width:30px" size="3" value="#" title='default "x" means: Depends on the screen size: small[15"]=1, medium[24"]=2 or large[27"]=3'> Graph Columns<br>
 	  </p>
 
+      <div id="dbx-login-gated-section">
 <!--      &#10148; Quick access list (show system selected graphs)-->
-      &#10148; Choose Action on the Dropdown for each Server
-      <div id="dbx-quick-access-server-list">
-        <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
-      </div>
+        &#10148; Choose Action on the Dropdown for each Server
+        <div id="dbx-quick-access-server-list">
+          <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
+        </div>
 
 <!--
       &#10148; Quick access list (show <b>all</b> available graphs)
@@ -327,21 +328,21 @@
         <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE&graphList=all" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
       </div>
 -->
-
-      <br>
-      &#10148; Profiles
-      <div id="dbx-quick-access-profile-list">
+        <br>
+        &#10148; Profiles
+        <div id="dbx-quick-access-profile-list">
 <!--        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>-->
-        <button type="button" class="btn btn-sm btn-primary mb-2 btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">New Profile...</button>
-      </div>
+          <button type="button" class="btn btn-sm btn-primary mb-2 btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">New Profile...</button>
+        </div>
 
-      <br>
-      <div>
-        <b>Alarm Info:</b> <span id="dbx-alarm-cnt">0</span> Active / <span id="dbx-alarm-muted-cnt">0</span> Muted<span id="dbx-alarm-srv-cnt">, in 0 Server(s)</span>
-        &nbsp;&rarr;&nbsp;Next Check in <span id="dbx-alarm-next-poll">...</span>s
-        &nbsp;&nbsp;<a href="#" onclick="histAlarmOpen(null); return false;" style="white-space:nowrap;"
-           data-toggle="tooltip" data-placement="bottom" data-html="true"
-           title="Click this link to view alarms for &lt;b&gt;all servers&lt;/b&gt;&lt;br&gt;— or —&lt;br&gt;Click a &lt;b&gt;Server button&lt;/b&gt; above and choose &lt;i&gt;View Historical Alarms&lt;/i&gt;"><i class="fa fa-history"></i> View Historical Alarms&hellip;</a>
+        <br>
+        <div>
+          <b>Alarm Info:</b> <span id="dbx-alarm-cnt">0</span> Active / <span id="dbx-alarm-muted-cnt">0</span> Muted<span id="dbx-alarm-srv-cnt">, in 0 Server(s)</span>
+          &nbsp;&rarr;&nbsp;Next Check in <span id="dbx-alarm-next-poll">...</span>s
+          &nbsp;&nbsp;<a href="#" onclick="histAlarmOpen(null); return false;" style="white-space:nowrap;"
+             data-toggle="tooltip" data-placement="bottom" data-html="true"
+             title="Click this link to view alarms for &lt;b&gt;all servers&lt;/b&gt;&lt;br&gt;— or —&lt;br&gt;Click a &lt;b&gt;Server button&lt;/b&gt; above and choose &lt;i&gt;View Historical Alarms&lt;/i&gt;"><i class="fa fa-history"></i> View Historical Alarms&hellip;</a>
+        </div>
       </div>
       <!-- Error message: browser support -->
       <div id="browser-not-supported"></div>
@@ -1481,6 +1482,7 @@ List of stuff that can be done
 						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default" onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
 						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=all"     onclick=\'return openGraphPage("server-all", "'+serverName+'", "")\'>Show <b>ALL</b> Available Graphs</a>'
 						+ '    <a class="dropdown-item" href="#" onclick=\'dbxOpenGraphPickerModal("' + serverName + '", "' + startTime + '"); return false;\'>Select <b>Graphs</b> to View...</a>'
+						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&openCounterDetails=1" onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "&openCounterDetails=1")\'>Show <b>Counter Details</b></a>'
 //						+ '    <div class="dropdown-submenu">'
 //						+ '      <a class="dropdown-item dropdown-toggle" href="#">Browse <b>Graphs</b> by Collector Name</a>'
 //						+ '      <div class="dropdown-menu">'
@@ -1979,72 +1981,6 @@ List of stuff that can be done
 
 
 
-	//-----------------------------------------------------------
-	// Settings dialog
-	//-----------------------------------------------------------
-	function dbxOpenSettings()
-	{
-		$('#dbx-settings-email-msg').html('');
-		$('#dbx-settings-pw-msg').html('');
-		$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
-		$.ajax({
-			url: '/api/user/settings?op=profile',
-			method: 'GET',
-			dataType: 'json',
-			success: function(r) {
-				$('#dbx-settings-username').val(r.username || '');
-				$('#dbx-settings-email').val(r.email || '');
-			}
-		});
-		$('#dbx-settings-dialog').modal('show');
-	}
-
-	function dbxSaveEmail()
-	{
-		var email = $('#dbx-settings-email').val().trim();
-		if (!email || !email.includes('@'))
-		{
-			$('#dbx-settings-email-msg').html('<span class="text-danger">Please enter a valid email address.</span>');
-			return;
-		}
-		$('#dbx-settings-email-msg').html('<span class="text-muted">Saving...</span>');
-		$.ajax({
-			url: '/api/user/settings',
-			method: 'POST',
-			data: { op: 'changeEmail', email: email },
-			dataType: 'json',
-			success: function(r) {
-				var cls = r.success ? 'text-success' : 'text-danger';
-				$('#dbx-settings-email-msg').html('<span class="' + cls + '">' + r.message + '</span>');
-			},
-			error: function() { $('#dbx-settings-email-msg').html('<span class="text-danger">Request failed.</span>'); }
-		});
-	}
-
-	function dbxSavePassword()
-	{
-		var cur = $('#dbx-settings-current-pw').val();
-		var np  = $('#dbx-settings-new-pw').val();
-		var cp  = $('#dbx-settings-confirm-pw').val();
-		if (!cur)        { $('#dbx-settings-pw-msg').html('<span class="text-danger">Enter your current password.</span>'); return; }
-		if (np.length < 6) { $('#dbx-settings-pw-msg').html('<span class="text-danger">New password must be at least 6 characters.</span>'); return; }
-		if (np !== cp)   { $('#dbx-settings-pw-msg').html('<span class="text-danger">Passwords do not match.</span>'); return; }
-		$('#dbx-settings-pw-msg').html('<span class="text-muted">Saving...</span>');
-		$.ajax({
-			url: '/api/user/settings',
-			method: 'POST',
-			data: { op: 'changePassword', currentPassword: cur, newPassword: np, confirmPassword: cp },
-			dataType: 'json',
-			success: function(r) {
-				var cls = r.success ? 'text-success' : 'text-danger';
-				$('#dbx-settings-pw-msg').html('<span class="' + cls + '">' + r.message + '</span>');
-				if (r.success)
-					$('#dbx-settings-current-pw, #dbx-settings-new-pw, #dbx-settings-confirm-pw').val('');
-			},
-			error: function() { $('#dbx-settings-pw-msg').html('<span class="text-danger">Request failed.</span>'); }
-		});
-	}
-
 	// alarmTrCallback, alarmTdCallback, alarmShowMuteDialog, alarmMuteSubmit,
 	// alarmPanelToggle, alarmPanelLoadActive, alarmPanelUpdateBtn, alarmPanelRenderActive,
 	// alarmPanelApplyFilter, alarmPanelFilterInput, alarmPanelShowMutedToggle,
@@ -2052,50 +1988,30 @@ List of stuff that can be done
 
 </script>
 
-<!-- ============================================================ -->
-<!-- Settings Modal (Bootstrap 4)                                 -->
-<!-- ============================================================ -->
-<div class="modal fade" id="dbx-settings-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-settings-title">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="dbx-settings-title"><i class="fa fa-cog"></i> Account Settings</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="small font-weight-bold">Username</label>
-                    <input type="text" class="form-control form-control-sm" id="dbx-settings-username" readonly>
-                </div>
+<!-- Mandatory-login gate: hide Profiles + Alarm Info when not authenticated -->
+<script>
+$(document).ready(function()
+{
+    $.ajax({ url: '/api/login/config', method: 'GET', dataType: 'json' })
+     .done(function(cfg)
+     {
+         if (!cfg || !cfg.mandatory) return; // not mandatory — nothing to hide
 
-                <hr>
-                <h6>Change Email</h6>
-                <div class="form-group mt-2">
-                    <input type="email" class="form-control form-control-sm" id="dbx-settings-email" placeholder="Email address">
-                </div>
-                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSaveEmail()">Update Email</button>
-                <div id="dbx-settings-email-msg" class="mt-1 small"></div>
+         isLoggedIn(function(loggedIn)
+         {
+             if (loggedIn) return; // authenticated — show everything
 
-                <hr>
-                <h6>Change Password</h6>
-                <div class="form-group mt-2">
-                    <input type="password" class="form-control form-control-sm" id="dbx-settings-current-pw" placeholder="Current password" autocomplete="current-password">
-                </div>
-                <div class="form-group">
-                    <input type="password" class="form-control form-control-sm" id="dbx-settings-new-pw" placeholder="New password (min 6 characters)" autocomplete="new-password">
-                </div>
-                <div class="form-group">
-                    <input type="password" class="form-control form-control-sm" id="dbx-settings-confirm-pw" placeholder="Confirm new password" autocomplete="new-password">
-                </div>
-                <button class="btn btn-sm btn-primary" type="button" onclick="dbxSavePassword()">Change Password</button>
-                <div id="dbx-settings-pw-msg" class="mt-1 small"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+             $('#dbx-login-gated-section').html(
+                 '<div class="alert alert-warning mt-3" role="alert">' +
+                 '  <i class="fa fa-lock"></i>&nbsp;' +
+                 '  <strong>Login required</strong> — Please log in to view Metrics, Profiles and Alarm Info.' +
+                 '  <a href="#" class="alert-link ml-2" onclick="dbxOpenLogin(); return false;">Login&hellip;</a>' +
+                 '</div>'
+             );
+         });
+     });
+});
+</script>
 
 <!-- Server Info Modal -->
 <div class="modal fade" id="dbx-server-info-modal" tabindex="-1" role="dialog" aria-labelledby="dbx-server-info-modal-title" aria-hidden="true">

@@ -21,6 +21,8 @@ var _cmFilterMap    = {};                    // per-CM filter text (session only
 var _cmDetailClickRows = null;               // {columns, tooltips, rows} — row store for click-to-detail modal
 // Auto-open restore: fire once on the first live/slider tick after page load
 var _cmAutoOpenChecked = false;
+// Pending CM to select after the panel opens (set by cmDetailOpenWithCm)
+var _cmPendingOpenCm = null;
 // Sticky "last viewed" — persisted to localStorage so re-opening after reload returns to the same tab
 var _cmLastGroup    = (function(){ try { return localStorage.getItem('cmDetail-lastGroup') || null; } catch(e) { return null; } }());
 var _cmLastCm       = (function(){ try { return localStorage.getItem('cmDetail-lastCm')    || null; } catch(e) { return null; } }());
@@ -114,9 +116,25 @@ function cmDetailRenderGroups(groups)
 		$gt.append(li);
 	});
 
+	// If a specific CM was requested (via openCounterDetails URL param), find its group and override selection
+	if (_cmPendingOpenCm && _cmPendingOpenCm !== '1') {
+		for (var i = 0; i < groups.length; i++) {
+			var found = groups[i].cms.some(function(c) { return c.cmName === _cmPendingOpenCm; });
+			if (found) {
+				selGroup = groups[i].groupName;
+				_cmLastCm = _cmPendingOpenCm;
+				break;
+			}
+		}
+		_cmPendingOpenCm = null;
+	}
+
 	_cmGroup = selGroup;
 	_cmLastGroup = selGroup;
 	try { localStorage.setItem('cmDetail-lastGroup', selGroup); } catch(e) {}
+	// Update active tab highlight to match the (possibly overridden) group
+	$('#cm-group-tabs .nav-link').removeClass('active');
+	$('#cm-group-tabs li[data-group-name="' + selGroup + '"] .nav-link').addClass('active');
 	var selGroupData = null;
 	for (var i = 0; i < groups.length; i++) {
 		if (groups[i].groupName === selGroup) { selGroupData = groups[i]; break; }
@@ -2857,3 +2875,17 @@ function _cmPropsAlarmsHtml(alarmSettings) {
 	return html;
 }
 
+
+/**
+ * Open the Counter Details panel, optionally navigating to a specific CM.
+ * Called from graph.html when the openCounterDetails URL parameter is present.
+ *   cmName = '1'      → just open the panel
+ *   cmName = 'CmFoo'  → open the panel and navigate to that CM (and its parent group)
+ */
+function cmDetailOpenWithCm(cmName)
+{
+	if (cmName && cmName !== '1')
+		_cmPendingOpenCm = cmName;
+	if (!$('#cm-detail-panel').is(':visible'))
+		cmDetailToggle();
+}

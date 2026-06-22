@@ -35,6 +35,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.security.SecurityHandler;
 
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.oauth.OAuthProvider;
 import com.dbxtune.central.oauth.OAuthProviderRegistry;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
@@ -42,7 +43,6 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
 import com.dbxtune.central.pcs.DbxCentralRealm;
 import com.dbxtune.central.pcs.objects.DbxCentralUser;
-import com.dbxtune.central.utils.PasswordHashUtil;
 import com.dbxtune.utils.StringUtil;
 
 /**
@@ -138,19 +138,21 @@ extends HttpServlet
 		}
 
 		// ----------------------------------------------------------------
-		// 4. Exchange code -> email
+		// 4. Exchange code -> email + full name
 		// ----------------------------------------------------------------
 		if (redirectUri == null || redirectUri.isEmpty())
 			redirectUri = OAuthStartServlet.buildRedirectUri(req);
 
-		String email = provider.exchangeCodeForEmail(code, redirectUri);
-		if (StringUtil.isNullOrBlank(email))
+		OAuthProvider.OAuthUserInfo userInfo = provider.exchangeCodeForUserInfo(code, redirectUri);
+		if (userInfo == null || StringUtil.isNullOrBlank(userInfo.email))
 		{
 			_logger.warn("OAuthCallbackServlet: could not obtain email from provider '{}'", providerId);
 			resp.sendRedirect(req.getContextPath() + "/index.html?login=failed");
 			return;
 		}
-		_logger.info("OAuthCallbackServlet: provider='{}', email='{}'", providerId, email);
+		String email    = userInfo.email;
+		String fullName = userInfo.fullName;
+		_logger.info("OAuthCallbackServlet: provider='{}', email='{}', fullName='{}'", providerId, email, fullName);
 
 		// ----------------------------------------------------------------
 		// 5. Look up or auto-provision the user
@@ -159,7 +161,7 @@ extends HttpServlet
 		String[] roles;
 		try
 		{
-			username = resolveOrCreateUser(email, providerId);
+			username = resolveOrCreateUser(email, fullName, providerId);
 			if (username == null)
 			{
 				_logger.warn("OAuthCallbackServlet: could not resolve/create user for email '{}'", email);
@@ -218,7 +220,7 @@ extends HttpServlet
 	 * Finds an existing user by email or creates a new one.
 	 * Returns the username, or {@code null} on error.
 	 */
-	private String resolveOrCreateUser(String email, String providerId)
+	private String resolveOrCreateUser(String email, String fullName, String providerId)
 	throws SQLException
 	{
 		if (!CentralPersistReader.hasInstance() || !CentralPcsWriterHandler.hasInstance())
@@ -246,14 +248,12 @@ extends HttpServlet
 			username = username + "_" + Math.abs(email.hashCode() % 10000);
 		}
 
-		// Placeholder password: non-guessable, BCrypt-hashed - user cannot log in
-		// with it directly; they must always use the OAuth flow.
-		// NOTE: Do we really need to use PasswordHashUtil.hashPassword(...) here?
-		//       It would be nice to see directly in the database that it's a "password" coming from "external authentication", meaning it has "oauth:" as a prefix
-		//       which indicates that it can be used as a "password", and also as an admin... would know that the user was created by "external authentication"
-		// And in the DbxCentralRealm.loadUserInfo(final String username): if passwd starts with "oauth:", the form-based login for OAuth-provisioned account is BLOCKED
-//		String placeholderPwd = PasswordHashUtil.hashPassword("oauth:" + providerId + ":" + UUID.randomUUID());
+		// Placeholder password with "oauth:" prefix — form-based login is blocked in DbxCentralRealm
 		String placeholderPwd = "oauth:" + providerId + ":" + UUID.randomUUID();
+
+		int status = DbxTuneCentral.isNewAccountRequireApproval()
+				? DbxCentralUser.UserStatus.PENDING_APPROVAL.getBit()
+				: DbxCentralUser.UserStatus.ACTIVE.getBit();
 
 		CentralPersistWriterJdbc writer = CentralPcsWriterHandler.getInstance().getJdbcWriter();
 		if (writer == null)
@@ -262,8 +262,12 @@ extends HttpServlet
 			return null;
 		}
 
-		writer.addDbxCentralUser(username, placeholderPwd, email, DbxCentralRealm.ROLE_USER);
-		_logger.info("resolveOrCreateUser: auto-provisioned new user '{}' (email='{}', provider='{}')", username, email, providerId);
+		writer.addDbxCentralUser(username, placeholderPwd, email, DbxCentralRealm.ROLE_USER, status, providerId, fullName, null);
+		_logger.info("resolveOrCreateUser: auto-provisioned new user '{}' (email='{}', fullName='{}', provider='{}', status={})",
+				username, email, fullName, providerId, DbxCentralUser.UserStatus.toLabel(status));
+
+		NewAccountNotifier.sendAdminNotification(username, fullName, email, providerId, null);
+
 		return username;
 	}
 

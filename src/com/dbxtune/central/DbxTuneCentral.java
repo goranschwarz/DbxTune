@@ -41,11 +41,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
+import java.util.EnumSet;
+
+import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+
+import com.dbxtune.central.controllers.MandatoryLoginFilter;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -158,8 +163,30 @@ public class DbxTuneCentral
 	public static final String  PROPKEY_NOGUI_MANAGEMENT_http_auth_Bearer = "DbxCentral.management.http.auth.bearer";
 	public static final String  DEFAULT_NOGUI_MANAGEMENT_http_auth_Bearer = "";
 	
+	public static final String  PROPKEY_login_mandatory              = "DbxTuneCentral.login.mandatory";
+	public static final boolean DEFAULT_login_mandatory              = false;
 
-	
+	public static final String  PROPKEY_login_whitelist_extra        = "DbxTuneCentral.login.whitelist.extra";
+	public static final String  DEFAULT_login_whitelist_extra        = "";
+
+	public static final String  PROPKEY_login_newAccount_notifyEmail   = "DbxTuneCentral.login.newAccount.notifyEmail";
+	public static final String  DEFAULT_login_newAccount_notifyEmail   = "";
+
+	public static final String  PROPKEY_login_newAccount_requireApproval = "DbxTuneCentral.login.newAccount.requireApproval";
+	// -1 = inherit from login.mandatory; true = always require approval; false = auto-approve
+	public static final String  DEFAULT_login_newAccount_requireApproval = "-1";
+
+	/** Returns true if new accounts must be approved by an admin before they can log in. */
+	public static boolean isNewAccountRequireApproval()
+	{
+		Configuration cfg = Configuration.getCombinedConfiguration();
+		String raw = cfg.getProperty(PROPKEY_login_newAccount_requireApproval, DEFAULT_login_newAccount_requireApproval).trim();
+		if ("-1".equals(raw))
+			return cfg.getBooleanProperty(PROPKEY_login_mandatory, DEFAULT_login_mandatory);
+		return Boolean.parseBoolean(raw);
+	}
+
+
 //	public static String getAppName()           { return "DbxTuneCentral"; }
 	public static String getAppHomeEnvName()    { return "DBXTUNE_HOME"; }
 	public static String getAppSaveDirEnvName() { return "DBXTUNE_SAVE_DIR"; }
@@ -2041,6 +2068,8 @@ public class DbxTuneCentral
 
 
 			webapp1.setParentLoaderPriority(true);
+
+			webapp1.addFilter(MandatoryLoginFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
 
 //			InterceptExceptionsFilter interceptFilter = new InterceptExceptionsFilter();
 //			webapp1.addFilter(InterceptExceptionsFilter.class, "/*", EnumSet.of(DispatcherType.INCLUDE, DispatcherType.REQUEST));

@@ -38,6 +38,7 @@ import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
 import com.dbxtune.central.pcs.DbxCentralRealm;
 import com.dbxtune.central.pcs.objects.DbxCentralUser;
+import com.dbxtune.central.pcs.objects.DbxCentralUser.UserStatus;
 import com.dbxtune.central.utils.PasswordHashUtil;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -52,11 +53,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * <p>Operations via query parameter {@code op}:
  * <ul>
  *   <li>{@code roles}         — list available roles from {@link DbxCentralRealm.Role} enum</li>
- *   <li>{@code list}          — list all users (password omitted)</li>
+ *   <li>{@code list}          — list all users (password omitted, includes status/source/fullName)</li>
  *   <li>{@code add}           — add a user: username, email, password, roles</li>
  *   <li>{@code updateRoles}   — update roles: username, roles</li>
  *   <li>{@code resetPassword} — reset password: username, password</li>
  *   <li>{@code delete}        — delete user: username (cannot delete 'admin')</li>
+ *   <li>{@code approve}       — approve a pending user: username</li>
+ *   <li>{@code reject}        — reject a pending user (sets Status=LOCKED): username</li>
+ *   <li>{@code lock}          — lock an active user: username</li>
+ *   <li>{@code unlock}        — unlock a locked user: username</li>
  * </ul>
  */
 public class UsersAdminServlet extends HttpServlet
@@ -100,6 +105,10 @@ public class UsersAdminServlet extends HttpServlet
 				case "updateRoles":   handleUpdateRoles  (req, resp, om, writer); break;
 				case "resetPassword": handleResetPassword(req, resp, om, writer); break;
 				case "delete":        handleDelete       (req, resp, om, writer); break;
+				case "approve":       handleApprove      (req, resp, om, writer); break;
+				case "reject":        handleReject       (req, resp, om, writer); break;
+				case "lock":          handleLock         (req, resp, om, writer); break;
+				case "unlock":        handleUnlock       (req, resp, om, writer); break;
 				default:
 					resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 					om.writeValue(resp.getWriter(), buildError("Unknown operation: '" + op + "'."));
@@ -143,9 +152,19 @@ public class UsersAdminServlet extends HttpServlet
 		for (DbxCentralUser u : users)
 		{
 			ObjectNode node = om.createObjectNode();
-			node.put("username", u.getUsername());
-			node.put("email",    u.getEmail());
-			node.put("roles",    String.join(",", u.getRoles()));
+			node.put("username",       u.getUsername());
+			node.put("email",          u.getEmail());
+			node.put("roles",          String.join(",", u.getRoles()));
+			node.put("status",         u.getStatus());
+			node.put("statusLabel",    UserStatus.toLabel(u.getStatus()));
+			node.put("fullName",       u.getFullName()      != null ? u.getFullName()                : "");
+			node.put("source",         u.getSource()        != null ? u.getSource()                  : "local");
+			node.put("requestReason",  u.getRequestReason() != null ? u.getRequestReason()           : "");
+			node.put("approvedBy",     u.getApprovedBy()    != null ? u.getApprovedBy()              : "");
+			node.put("addDate",        u.getAddDate()       != null ? u.getAddDate().toString()      : "");
+			node.put("approveDate",    u.getApproveDate()   != null ? u.getApproveDate().toString()  : "");
+			node.put("lastLoginDate",  u.getLastLoginDate() != null ? u.getLastLoginDate().toString(): "");
+			node.put("loginFailCount", u.getLoginFailCount());
 			arr.add(node);
 		}
 		om.writeValue(resp.getWriter(), arr);
@@ -154,24 +173,24 @@ public class UsersAdminServlet extends HttpServlet
 	private void handleAdd(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om, CentralPersistWriterJdbc writer)
 	throws IOException, SQLException
 	{
-		String username = StringUtil.nullToValue(req.getParameter("username"), "").trim();
 		String email    = StringUtil.nullToValue(req.getParameter("email"   ), "").trim();
+		String fullName = StringUtil.nullToValue(req.getParameter("fullName"), "").trim();
 		String password = StringUtil.nullToValue(req.getParameter("password"), "");
 		String roles    = StringUtil.nullToValue(req.getParameter("roles"   ), "").trim();
 
-		if (username.isEmpty() || email.isEmpty() || password.isEmpty())
+		if (email.isEmpty() || password.isEmpty())
 		{
 			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			om.writeValue(resp.getWriter(), buildError("Parameters 'username', 'email', and 'password' are required."));
+			om.writeValue(resp.getWriter(), buildError("Parameters 'email' and 'password' are required."));
 			return;
 		}
 		if (roles.isEmpty())
 			roles = DbxCentralRealm.ROLE_USER;
 
-		if (CentralPersistReader.getInstance().getDbxCentralUser(username) != null)
+		if (CentralPersistReader.getInstance().getDbxCentralUser(email) != null)
 		{
 			resp.setStatus(HttpServletResponse.SC_CONFLICT);
-			om.writeValue(resp.getWriter(), buildError("Username '" + username + "' already exists."));
+			om.writeValue(resp.getWriter(), buildError("User '" + email + "' already exists."));
 			return;
 		}
 		if (writer == null)
@@ -181,9 +200,10 @@ public class UsersAdminServlet extends HttpServlet
 			return;
 		}
 
-		writer.addDbxCentralUser(username, PasswordHashUtil.hashPassword(password), email, roles);
-		_logger.info("UsersAdminServlet.handleAdd: Admin added user '" + username + "' with roles '" + roles + "'.");
-		om.writeValue(resp.getWriter(), buildOk("User '" + username + "' added successfully."));
+		writer.addDbxCentralUser(email, PasswordHashUtil.hashPassword(password), email, roles,
+				DbxCentralUser.UserStatus.ACTIVE.getBit(), "admin", fullName.isEmpty() ? null : fullName, null);
+		_logger.info("UsersAdminServlet.handleAdd: Admin added user '{}' (fullName='{}') with roles '{}'.", email, fullName, roles);
+		om.writeValue(resp.getWriter(), buildOk("User '" + email + "' added successfully."));
 	}
 
 	private void handleUpdateRoles(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om, CentralPersistWriterJdbc writer)
@@ -265,6 +285,134 @@ public class UsersAdminServlet extends HttpServlet
 		om.writeValue(resp.getWriter(), buildOk("User '" + username + "' has been deleted."));
 	}
 
+	private void handleApprove(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om, CentralPersistWriterJdbc writer)
+	throws IOException, SQLException
+	{
+		String username   = StringUtil.nullToValue(req.getParameter("username"), "").trim();
+		String approvedBy = req.getRemoteUser();
+
+		if (username.isEmpty())
+		{
+			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			om.writeValue(resp.getWriter(), buildError("Parameter 'username' is required."));
+			return;
+		}
+		if (writer == null)
+		{
+			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+			om.writeValue(resp.getWriter(), buildError("Database writer not available."));
+			return;
+		}
+
+		// Fetch email before updating status (for the notification)
+		String userEmail = null;
+		if (CentralPersistReader.hasInstance())
+		{
+			try { DbxCentralUser u = CentralPersistReader.getInstance().getDbxCentralUser(username); if (u != null) userEmail = u.getEmail(); }
+			catch (Exception ex) { _logger.warn("handleApprove: could not fetch email for '{}'", username, ex); }
+		}
+
+		writer.approveDbxCentralUser(username, approvedBy);
+		_logger.info("UsersAdminServlet.handleApprove: '{}' approved by '{}'.", username, approvedBy);
+
+		NewAccountNotifier.sendUserDecisionNotification(username, userEmail, true, approvedBy);
+
+		om.writeValue(resp.getWriter(), buildOk("User '" + username + "' has been approved."));
+	}
+
+	private void handleReject(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om, CentralPersistWriterJdbc writer)
+	throws IOException, SQLException
+	{
+		String username = StringUtil.nullToValue(req.getParameter("username"), "").trim();
+
+		if (username.isEmpty())
+		{
+			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			om.writeValue(resp.getWriter(), buildError("Parameter 'username' is required."));
+			return;
+		}
+		if (writer == null)
+		{
+			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+			om.writeValue(resp.getWriter(), buildError("Database writer not available."));
+			return;
+		}
+
+		// Fetch email before updating status (for the notification)
+		String userEmail = null;
+		if (CentralPersistReader.hasInstance())
+		{
+			try { DbxCentralUser u = CentralPersistReader.getInstance().getDbxCentralUser(username); if (u != null) userEmail = u.getEmail(); }
+			catch (Exception ex) { _logger.warn("handleReject: could not fetch email for '{}'", username, ex); }
+		}
+
+		writer.updateDbxCentralUserStatus(username, UserStatus.LOCKED.getBit());
+		_logger.info("UsersAdminServlet.handleReject: '{}' rejected (Status=LOCKED) by '{}'.", username, req.getRemoteUser());
+
+		NewAccountNotifier.sendUserDecisionNotification(username, userEmail, false, req.getRemoteUser());
+
+		om.writeValue(resp.getWriter(), buildOk("User '" + username + "' has been rejected (account locked)."));
+	}
+
+	private void handleLock(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om, CentralPersistWriterJdbc writer)
+	throws IOException, SQLException
+	{
+		String username = StringUtil.nullToValue(req.getParameter("username"), "").trim();
+
+		if (username.isEmpty())
+		{
+			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			om.writeValue(resp.getWriter(), buildError("Parameter 'username' is required."));
+			return;
+		}
+		if ("admin".equalsIgnoreCase(username))
+		{
+			resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			om.writeValue(resp.getWriter(), buildError("The built-in 'admin' account cannot be locked."));
+			return;
+		}
+		if (writer == null)
+		{
+			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+			om.writeValue(resp.getWriter(), buildError("Database writer not available."));
+			return;
+		}
+
+		DbxCentralUser user = CentralPersistReader.getInstance().getDbxCentralUser(username);
+		int newStatus = (user != null) ? UserStatus.set(user.getStatus(), UserStatus.LOCKED) : UserStatus.LOCKED.getBit();
+		writer.updateDbxCentralUserStatus(username, newStatus);
+		_logger.info("UsersAdminServlet.handleLock: '{}' locked by '{}'.", username, req.getRemoteUser());
+		om.writeValue(resp.getWriter(), buildOk("User '" + username + "' has been locked."));
+	}
+
+	private void handleUnlock(HttpServletRequest req, HttpServletResponse resp, ObjectMapper om, CentralPersistWriterJdbc writer)
+	throws IOException, SQLException
+	{
+		String username = StringUtil.nullToValue(req.getParameter("username"), "").trim();
+
+		if (username.isEmpty())
+		{
+			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			om.writeValue(resp.getWriter(), buildError("Parameter 'username' is required."));
+			return;
+		}
+		if (writer == null)
+		{
+			resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+			om.writeValue(resp.getWriter(), buildError("Database writer not available."));
+			return;
+		}
+
+		DbxCentralUser user = CentralPersistReader.getInstance().getDbxCentralUser(username);
+		int newStatus = (user != null) ? UserStatus.clear(user.getStatus(), UserStatus.LOCKED) : UserStatus.ACTIVE.getBit();
+		// If unlocking a previously-rejected account, also clear REJECTED and set ACTIVE
+		newStatus = UserStatus.clear(newStatus, UserStatus.REJECTED);
+		newStatus = UserStatus.set  (newStatus, UserStatus.ACTIVE);
+		writer.updateDbxCentralUserStatus(username, newStatus);
+		_logger.info("UsersAdminServlet.handleUnlock: '{}' unlocked by '{}'.", username, req.getRemoteUser());
+		om.writeValue(resp.getWriter(), buildOk("User '" + username + "' has been unlocked."));
+	}
+
 	// -------------------------------------------------------------------------
 	// Response helpers
 	// -------------------------------------------------------------------------
@@ -274,7 +422,12 @@ public class UsersAdminServlet extends HttpServlet
 	{
 		public boolean success;
 		public String  message;
-		ApiResult(boolean success, String message) { this.success = success; this.message = message; }
+
+		ApiResult(boolean success, String message)
+		{
+			this.success = success; 
+			this.message = message; 
+		}
 	}
 
 	private ApiResult buildOk(String message)    { return new ApiResult(true,  message); }

@@ -328,6 +328,15 @@
 		<url-pattern>/api/user/settings</url-pattern>
 	</servlet-mapping>
 
+	<servlet>
+		<servlet-name>RequestAccessServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.RequestAccessServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>RequestAccessServlet</servlet-name>
+		<url-pattern>/api/user/request-access</url-pattern>
+	</servlet-mapping>
+
 
 	<!-- ============================================================ -->
 	<servlet>
@@ -769,6 +778,15 @@
 	<servlet-mapping>
 		<servlet-name>LoginProvidersServlet</servlet-name>
 		<url-pattern>/api/login/providers</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>LoginConfigServlet</servlet-name>
+		<servlet-class>com.dbxtune.central.controllers.LoginConfigServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LoginConfigServlet</servlet-name>
+		<url-pattern>/api/login/config</url-pattern>
 	</servlet-mapping>
 
 	<servlet>

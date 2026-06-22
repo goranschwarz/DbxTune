@@ -181,6 +181,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>Dialog: Query Store
             List what databases are enabled/disabled (in a collapsable panel), Also a "Copy SQL" so we can eisier enable Query Store for that database.<BR>
             </LI>
+        <LI>Added option for higher security (or who can see data):
+            <BR> - Option <code>DbxTuneCentral.login.mandatory=true|false</code> Default=false
+            <BR> &emsp; <code>false</code>: Anyone can see Server status, Alarms and Metrics on any server (just like it is "today)
+            <BR> &emsp; <code>true </code>: Only logged in users can see: "anything"
+            </LI>
+        <LI>Account management
+            <BR> - Users can create accounts or request access; admins approve/reject from the User Administration page
+            <BR> - Account Settings (name, email, password with strength indicator) available from the navbar on all pages
+            <BR> - Tracks last login date and failed login count per user
+            </LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

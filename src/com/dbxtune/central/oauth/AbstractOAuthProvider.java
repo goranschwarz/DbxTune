@@ -171,6 +171,56 @@ implements OAuthProvider
 	}
 
 	// -----------------------------------------------------------------------
+	// OAuthUserInfo (email + full name) exchange — overrides default interface impl
+	// -----------------------------------------------------------------------
+
+	@Override
+	public OAuthUserInfo exchangeCodeForUserInfo(String code, String redirectUri)
+	{
+		String clientId     = cfg(getPropClientId());
+		String clientSecret = cfg(getPropClientSecret());
+
+		Map<String, String> params = new LinkedHashMap<>();
+		params.put("grant_type",    "authorization_code");
+		params.put("code",          code);
+		params.put("redirect_uri",  redirectUri);
+		params.put("client_id",     clientId);
+		params.put("client_secret", clientSecret);
+		params.put("scope",         getScope());
+
+		String body = params.entrySet().stream()
+		    .map(e -> urlEnc(e.getKey()) + "=" + urlEnc(e.getValue()))
+		    .collect(Collectors.joining("&"));
+
+		try
+		{
+			HttpRequest request = HttpRequest.newBuilder()
+			    .uri(URI.create(getTokenEndpoint()))
+			    .header("Content-Type", "application/x-www-form-urlencoded")
+			    .header("Accept", "application/json")
+			    .POST(HttpRequest.BodyPublishers.ofString(body))
+			    .build();
+
+			HttpResponse<String> response = _httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			String json = response.body();
+			_logger.debug("exchangeCodeForUserInfo({}): status={}, body={}", getProviderId(), response.statusCode(), json);
+
+			if (response.statusCode() != 200)
+			{
+				_logger.warn("exchangeCodeForUserInfo({}): token endpoint returned HTTP {}: {}", getProviderId(), response.statusCode(), json);
+				return null;
+			}
+
+			return extractUserInfoFromTokenResponse(json);
+		}
+		catch (Exception ex)
+		{
+			_logger.error("exchangeCodeForUserInfo({}): HTTP call failed", getProviderId(), ex);
+			return null;
+		}
+	}
+
+	// -----------------------------------------------------------------------
 	// JWT / ID-token parsing
 	// -----------------------------------------------------------------------
 
@@ -181,6 +231,16 @@ implements OAuthProvider
 	 */
 	protected String extractEmailFromTokenResponse(String tokenResponseJson)
 	{
+		OAuthUserInfo info = extractUserInfoFromTokenResponse(tokenResponseJson);
+		return info != null ? info.email : null;
+	}
+
+	/**
+	 * Extracts email and full name from the OIDC token response JSON.
+	 * Parses the ID-token JWT once to get both claims.
+	 */
+	protected OAuthUserInfo extractUserInfoFromTokenResponse(String tokenResponseJson)
+	{
 		try
 		{
 			ObjectMapper om = new ObjectMapper();
@@ -190,32 +250,37 @@ implements OAuthProvider
 			JsonNode idTokenNode = root.get("id_token");
 			if (idTokenNode != null && !idTokenNode.isNull())
 			{
-				String email = extractEmailFromJwt(idTokenNode.asText());
-				if (email != null)
-					return email;
+				OAuthUserInfo info = extractUserInfoFromJwt(idTokenNode.asText());
+				if (info != null)
+					return info;
 			}
 
 			// ---- fallback: email field directly in token response ----
 			JsonNode emailNode = root.get("email");
 			if (emailNode != null && !emailNode.isNull())
-				return emailNode.asText().trim().toLowerCase();
+			{
+				String email = emailNode.asText().trim().toLowerCase();
+				JsonNode nameNode = root.get("name");
+				String fullName = (nameNode != null && !nameNode.isNull()) ? nameNode.asText().trim() : null;
+				return new OAuthUserInfo(email, fullName);
+			}
 
-			_logger.warn("extractEmailFromTokenResponse({}): no email found in token response", getProviderId());
+			_logger.warn("extractUserInfoFromTokenResponse({}): no email found in token response", getProviderId());
 			return null;
 		}
 		catch (Exception ex)
 		{
-			_logger.error("extractEmailFromTokenResponse({}): failed to parse token response", getProviderId(), ex);
+			_logger.error("extractUserInfoFromTokenResponse({}): failed to parse token response", getProviderId(), ex);
 			return null;
 		}
 	}
 
 	/**
-	 * Decodes the payload section of a JWT (header.payload.sig) and returns
-	 * the {@code email} claim.  We trust the HTTPS token-endpoint response so
-	 * signature verification is not required here.
+	 * Decodes the payload section of a JWT and extracts email + full name.
+	 * We trust the HTTPS token-endpoint response so signature verification
+	 * is not required here.
 	 */
-	protected String extractEmailFromJwt(String jwt)
+	protected OAuthUserInfo extractUserInfoFromJwt(String jwt)
 	{
 		if (jwt == null || jwt.isEmpty())
 			return null;
@@ -224,44 +289,81 @@ implements OAuthProvider
 			String[] parts = jwt.split("\\.");
 			if (parts.length < 2)
 			{
-				_logger.warn("extractEmailFromJwt({}): JWT has fewer than 2 parts", getProviderId());
+				_logger.warn("extractUserInfoFromJwt({}): JWT has fewer than 2 parts", getProviderId());
 				return null;
 			}
-			// Java 11 Base64.getUrlDecoder() handles Base64URL without padding
 			byte[] payloadBytes = Base64.getUrlDecoder().decode(padBase64Url(parts[1]));
 			String payloadJson  = new String(payloadBytes, StandardCharsets.UTF_8);
-			_logger.debug("extractEmailFromJwt({}): payload={}", getProviderId(), payloadJson);
+			_logger.debug("extractUserInfoFromJwt({}): payload={}", getProviderId(), payloadJson);
 
 			ObjectMapper om = new ObjectMapper();
 			JsonNode payload = om.readTree(payloadJson);
 
-			// email claim (standard OIDC)
+			// --- email ---
+			String email = null;
+
 			JsonNode emailNode = payload.get("email");
 			if (emailNode != null && !emailNode.isNull())
-				return emailNode.asText().trim().toLowerCase();
+				email = emailNode.asText().trim().toLowerCase();
 
-			// upn - User Principal Name used by Entra ID
-			JsonNode upnNode = payload.get("upn");
-			if (upnNode != null && !upnNode.isNull())
-				return upnNode.asText().trim().toLowerCase();
-
-			// preferred_username - another Entra ID claim
-			JsonNode prefNode = payload.get("preferred_username");
-			if (prefNode != null && !prefNode.isNull())
+			if (email == null)
 			{
-				String pref = prefNode.asText().trim().toLowerCase();
-				if (pref.contains("@"))
-					return pref;
+				// upn - User Principal Name used by Entra ID
+				JsonNode upnNode = payload.get("upn");
+				if (upnNode != null && !upnNode.isNull())
+					email = upnNode.asText().trim().toLowerCase();
 			}
 
-			_logger.warn("extractEmailFromJwt({}): no email/upn/preferred_username in JWT payload", getProviderId());
-			return null;
+			if (email == null)
+			{
+				// preferred_username - another Entra ID claim
+				JsonNode prefNode = payload.get("preferred_username");
+				if (prefNode != null && !prefNode.isNull())
+				{
+					String pref = prefNode.asText().trim().toLowerCase();
+					if (pref.contains("@"))
+						email = pref;
+				}
+			}
+
+			if (email == null)
+			{
+				_logger.warn("extractUserInfoFromJwt({}): no email/upn/preferred_username in JWT payload", getProviderId());
+				return null;
+			}
+
+			// --- full name: prefer "name", fall back to "given_name family_name" ---
+			String fullName = null;
+			JsonNode nameNode = payload.get("name");
+			if (nameNode != null && !nameNode.isNull())
+			{
+				fullName = nameNode.asText().trim();
+			}
+			else
+			{
+				JsonNode givenNode  = payload.get("given_name");
+				JsonNode familyNode = payload.get("family_name");
+				String given  = (givenNode  != null && !givenNode.isNull())  ? givenNode.asText().trim()  : "";
+				String family = (familyNode != null && !familyNode.isNull()) ? familyNode.asText().trim() : "";
+				if (!given.isEmpty() || !family.isEmpty())
+					fullName = (given + " " + family).trim();
+			}
+
+			return new OAuthUserInfo(email, fullName);
 		}
 		catch (Exception ex)
 		{
-			_logger.error("extractEmailFromJwt({}): JWT decode failed", getProviderId(), ex);
+			_logger.error("extractUserInfoFromJwt({}): JWT decode failed", getProviderId(), ex);
 			return null;
 		}
+	}
+
+	/** @deprecated Use {@link #extractUserInfoFromJwt(String)} instead. */
+	@Deprecated
+	protected String extractEmailFromJwt(String jwt)
+	{
+		OAuthUserInfo info = extractUserInfoFromJwt(jwt);
+		return info != null ? info.email : null;
 	}
 
 	// -----------------------------------------------------------------------

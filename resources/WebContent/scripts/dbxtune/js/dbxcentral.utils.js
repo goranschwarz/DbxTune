@@ -100,10 +100,11 @@ function isLoggedIn(callback)
 			var jsonResp = JSON.parse(data);
 			console.log("isLoggedIn(): jsonResp", jsonResp);
 			
-			var asUserName = jsonResp.asUserName;
-			var isLoggedIn = jsonResp.isLoggedIn;
-			var isAdmin    = false;
-			
+			var asUserName   = jsonResp.asUserName;
+			var displayName  = jsonResp.displayName || asUserName;
+			var isLoggedIn   = jsonResp.isLoggedIn;
+			var isAdmin      = false;
+
 			if (jsonResp.hasOwnProperty("isAdmin"))
 				isAdmin    = jsonResp.isAdmin;
 
@@ -115,7 +116,7 @@ function isLoggedIn(callback)
 			{
 				if (elIn)   elIn  .style.display = "block";
 				if (elOut)  elOut .style.display = "none";
-				if (elUser) elUser.textContent   = asUserName;
+				if (elUser) { elUser.textContent = displayName; elUser.title = asUserName; }
 			}
 			else
 			{
