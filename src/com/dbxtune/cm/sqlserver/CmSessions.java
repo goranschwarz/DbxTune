@@ -544,6 +544,31 @@ extends CountersModel
 //			    + "WHERE ec.net_transport != 'Session' -- do not include MARS sessions, see: https://sqljudo.wordpress.com/2014/03/07/cardinality-of-dm_exec_sessions-and-dm_exec_connections/ \n"
 			    + "";
 
+//		--##########################################################################################################################
+//		-- The above MIGHT/WILL case: duplicate session_id with transaction_names 'UpdateQPStats' and 'user_transaction'
+//		-- POSSIBLE "collapse" transaction_names into a CSV for the same session_id (but STRING_AGG function needs SQL Server 2017... So it wont work on older version)
+//		-- OR: Just live with it... (and accept that the below message appears every now and then)
+//		--##########################################################################################################################
+//		--Below is the message from the CmSessions when we hit a duplicate value
+//		--   2026-06-23 06:30:55.260 - WARN  - GetCountersNoGui               - CounterSample                  - Internal Counter Duplicate key in ResultSet for CM 'CmSessions', 
+//		--   pk='[session_id]', a row with the key values '77|' already exists. 
+//		--   CurrentRow='[77, 8, 4, 8, 0, 0, , MAXM\svc_fenix, 2026-06-23 06:30:36.2, 19, MM-GCP-SQL, 41044, Python, , 5, Fenix, master, 1, 168111052, Read/write transaction - 1, user_transaction, 2026-06-23 06:30:37.3  , 17953, running, suspended, UPDATE STATISTICS, sp_citi_ibor_delinsert_holdings, 12642, 2026-06-23 06:30:37.3, 17953, , 0, 4, 1, CXSYNC_PORT, 1396, CXSYNC_PORT, , 0, 0, 10, 601, 2026-06-23 06:30:37.3, 2026-06-23 06:30:37.3, 0, 18, 0x030005009b4fb66eec0db9003bb4000001000000000000000000000000000000000000000000000000000000, 12642, 12728, 0x050005009b4fb66e205eba298702000001000000000000000000000000000000000000000000000000000000, 1, 1, 168116769, 0.0, 0, null, null, 17766, 17957, 00:00:17, 3, 620787, 2163, 1614313, 601, 41441, 27, 26, 2026-06-23 06:30:37.3, 18, 2026-06-23 06:30:37.3, 18, 4154, TSQL Default TCP (TCP) - 4, TCP, TSQL, TRUE, NTLM, 0, 10.102.0.19, 62229, 10.102.0.19, 1433, 0x02000000467ae33afe1175b4a7b9eaa9c366c29b7d1e5dd30000000000000000000000000000000000000000, 7, ODBC, MAXM, svc_fenix, ReadCommitted - 2, -1, 0, 0, null, 0, 0, 0, false, null, null, null, null, null, null, null, null, null, null, null, null]'. 
+//		--       NewRow='[77, 8, 4, 8, 0, 0, , MAXM\svc_fenix, 2026-06-23 06:30:36.2, 19, MM-GCP-SQL, 41044, Python, , 5, Fenix, master, 1, 168116769, Read/write transaction - 1, UpdateQPStats   , 2026-06-23 06:30:53.857, 1397 , running, suspended, UPDATE STATISTICS, sp_citi_ibor_delinsert_holdings, 12642, 2026-06-23 06:30:37.3, 17953, , 0, 4, 1, CXSYNC_PORT, 1398, CXSYNC_PORT, , 0, 0, 10, 601, 2026-06-23 06:30:37.3, 2026-06-23 06:30:37.3, 0, 18, 0x030005009b4fb66eec0db9003bb4000001000000000000000000000000000000000000000000000000000000, 12642, 12728, 0x050005009b4fb66e205eba298702000001000000000000000000000000000000000000000000000000000000, 1, 1, 168116769, 0.0, 0, null, null, 17769, 17959, 00:00:17, 3, 620787, 2163, 1614313, 601, 41441, 27, 26, 2026-06-23 06:30:37.3, 18, 2026-06-23 06:30:37.3, 18, 4154, TSQL Default TCP (TCP) - 4, TCP, TSQL, TRUE, NTLM, 0, 10.102.0.19, 62229, 10.102.0.19, 1433, 0x02000000467ae33afe1175b4a7b9eaa9c366c29b7d1e5dd30000000000000000000000000000000000000000, 7, ODBC, MAXM, svc_fenix, ReadCommitted - 2, -1, 0, 0, null, 0, 0, 0, false, null, null, null, null, null, null, null, null, null, null, null, null]'.
+//		--##########################################################################################################################
+//		-- But we also need to change everything in above SQL that references "tat" (dm_tran_active_transactions)
+//		--##########################################################################################################################
+//		LEFT JOIN (
+//		    SELECT
+//		        tst.session_id,
+//		        MAX(tat.transaction_id) AS transaction_id,
+//		        STRING_AGG(tat.name, ', ') AS transaction_names
+//		    FROM sys.dm_tran_session_transactions tst
+//		    JOIN sys.dm_tran_active_transactions tat
+//		        ON tst.transaction_id = tat.transaction_id
+//		    GROUP BY tst.session_id
+//		) t
+//		ON es.session_id = t.session_id
+
 		return sql;
 	}
 

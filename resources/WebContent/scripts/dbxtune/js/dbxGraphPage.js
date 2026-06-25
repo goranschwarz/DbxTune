@@ -625,105 +625,91 @@
 
 					// Fetch alarm events for the full timeline range and render orange markers
 					renderAlarmTimelineMarkers(oldestTsStr, newestTsStr, momentsArray);
-//console.log(">>>>> activeHistoryStatementsArr=" + activeHistoryStatementsArr, activeHistoryStatementsArr);
-//console.log(">>>>> activeHistoryStatementsArr.lenth=" + activeHistoryStatementsArr.length);
-//console.log(">>>>> momentsArray.lenth=" + momentsArray.length);
 
-					// Create an array with Booleans, that indicates if it HAS an Statement for the time in the 'momentsArray'
-					const hasActiveHistoryStatementArr = [];
-					for (var m=0; m<momentsArray.length; m++)
+					// Renders green/gray timeline dots from an active-statements array.
+					// Extracted so the timing-race retry below can call it a second time.
+					function renderActiveStatementMarkers(stmtsArr)
 					{
-//console.log("--m="+m+"---------------------------------");
-
-						let startTime = momentsArray[m].valueOf();
-						let endTime   = momentsArray[momentsArray.length-1].clone().add(1, 'minute').valueOf(); // set one minute past the "last" array time... clone() so that we don't change the original object
-						if (m + 1 < momentsArray.length)
-							endTime = momentsArray[m + 1].valueOf();
-
-						var hasActiveHistoryStatement = -1;
-						for (var h=0; h<activeHistoryStatementsArr.length; h++)
+						// Build lookup: index into stmtsArr (-1 = no statement) for each moment slot
+						var hasArr = [];
+						for (var m=0; m<momentsArray.length; m++)
 						{
-							let tmpSampleTime = activeHistoryStatementsArr[h].sampleTime;
-							if (tmpSampleTime >= startTime && tmpSampleTime < endTime)
+							let slotStart = momentsArray[m].valueOf();
+							let slotEnd   = momentsArray[momentsArray.length-1].clone().add(1, 'minute').valueOf();
+							if (m + 1 < momentsArray.length)
+								slotEnd = momentsArray[m + 1].valueOf();
+
+							var hit = -1;
+							for (var h=0; h<stmtsArr.length; h++)
 							{
-//console.log("######################## TRUE ################ --m=" + m + " --h=" + h);
-								hasActiveHistoryStatement = h;
-								break;
+								let t = stmtsArr[h].sampleTime;
+								if (t >= slotStart && t < slotEnd) { hit = h; break; }
 							}
-//console.log("moment["+m+"](" + momentsArray[m].format('YYYY-MM-DD HH:mm:ss') + ")===activeHistoryStatementsArr["+h+"](" + moment(activeHistoryStatementsArr[h].sampleTime).format('YYYY-MM-DD HH:mm:ss') + ") ===> " + hasActiveHistoryStatement);
+							hasArr.push(hit);
 						}
+						_hasActiveHistoryStatementArr = hasArr;
 
-						hasActiveHistoryStatementArr.push(hasActiveHistoryStatement);
+						var slider = document.getElementById('dbx-history-timeline-slider');
+						slider.title = "Navigation: \n"
+							+ "The gray/green bar under the slider, indicates where there are Active Statements \n"
+							+ " - Use 'Ctrl+left' for Previous Active Statement \n"
+							+ " - Use 'Ctrl+right' for Next Active Statement \n"
+							+ " - or simply left/right arrows to move in the slider. \n"
+							+ " - or click on any 'line' on any Graph. \n"
+							+ "Note: Clicking a Graph, but not on a 'line', causes you to leave 'History View Mode' \n";
+
+						// Clear and rebuild data marks
+						var existingDots = document.getElementsByClassName('dbx-history-timeline-slider-marker');
+						while (existingDots[0]) existingDots[0].parentNode.removeChild(existingDots[0]);
+						var existingAlarmDots = document.getElementsByClassName('dbx-history-alarm-marker');
+						while (existingAlarmDots[0]) existingAlarmDots[0].parentNode.removeChild(existingAlarmDots[0]);
+
+						slider.max = momentsArray.length;
+						for (var m=0; m<momentsArray.length; m++)
+						{
+							var color = hasArr[m] >= 0 ? "green" : "gray";
+							var markElement = document.createElement('div');
+							markElement.className = 'dbx-history-timeline-slider-marker';
+							markElement.style.backgroundColor = color;
+							markElement.style.left = (m / slider.max) * 100 + '%';
+							slider.parentNode.appendChild(markElement);
+
+							if (hasArr[m] >= 0)
+							{
+								var obj = stmtsArr[ hasArr[m] ];
+								markElement.title = "sampleTime: " + obj.sampleTimeIso8601 + "\n"
+									+ "SrvName: " + obj.srvNames[0].srvName  + "\n"
+									+ "AppName: " + obj.srvNames[0].appName  + "\n"
+									+ "CmNames: " + obj.srvNames[0].cmNames  + "\n"
+									+ "atPos:   " + m + "\n";
+							}
+							else
+							{
+								markElement.title = momentsArray[m].format('YYYY-MM-DD HH:mm:ss') + "  atPos: " + m;
+							}
+							let sliderPos = m + 1;
+							markElement.onclick = function() {
+								slider.value = sliderPos;
+								slider.dispatchEvent(new Event('change'));
+							};
+						}
 					}
-//console.log(">>>>> hasActiveHistoryStatementArr.lenth=" + hasActiveHistoryStatementArr.length, hasActiveHistoryStatementArr);
-					// Save the array to a global value -- used to find NEXT/PREV active History Statement
-					_hasActiveHistoryStatementArr = hasActiveHistoryStatementArr;
 
-					// lets see what a Plain Slider gets us
-					var dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
+					renderActiveStatementMarkers(activeHistoryStatementsArr);
 
-					// Set tooltip
-					dbxHistoryTimelineSlider.title = ""
-						+ "Navigation: \n"
-						+ "The gray/green bar under the slider, indicates where there are Active Statements \n"
-						+ " - Use 'Ctrl+left' for Previous Active Statement \n"
-						+ " - Use 'Ctrl+right' for Next Active Statement \n"
-						+ " - or simply left/right arrows to move in the slider. \n"
-						+ " - or click on any 'line' on any Graph. \n"
-						+ "Note: Clicking a Graph, but not on a 'line', causes you to leave 'History View Mode' \n"
-						+ "";
-
-					// Clear existing data marks and alarm marks
-					var existingDots = document.getElementsByClassName('dbx-history-timeline-slider-marker');
-					while (existingDots[0])
-						existingDots[0].parentNode.removeChild(existingDots[0]);
-					var existingAlarmDots = document.getElementsByClassName('dbx-history-alarm-marker');
-					while (existingAlarmDots[0])
-						existingAlarmDots[0].parentNode.removeChild(existingAlarmDots[0]);
-
-					// Create data marks
-					dbxHistoryTimelineSlider.max = momentsArray.length;
-					for (var m=0; m<momentsArray.length; m++)
+					// Timing-race guard: if DbxCentral's write queue hadn't flushed yet, we may have
+					// received an empty list. Retry once after 600ms if no active statements found.
+					if (!activeHistoryStatementsArr || activeHistoryStatementsArr.length === 0)
 					{
-						// TODO: Possibly change witdh of "marker" depending on "momentsArray.length" ????  (but it needs to be tested on various sizes)
-
-						var color = hasActiveHistoryStatementArr[m] >= 0 ? "green" : "gray";
-						var markElement = document.createElement('div');
-						markElement.className = 'dbx-history-timeline-slider-marker';
-						markElement.style.backgroundColor = color;
-						var position = (m / dbxHistoryTimelineSlider.max) * 100;
-						markElement.style.left = position + '%';
-						dbxHistoryTimelineSlider.parentNode.appendChild(markElement);
-
-						if (hasActiveHistoryStatementArr[m] >= 0)
-						{
-							var obj = activeHistoryStatementsArr[ hasActiveHistoryStatementArr[m] ];
-							markElement.title = ""
-								+ "sampleTime: " + obj.sampleTimeIso8601 + "\n"
-								+ "SrvName: " + obj.srvNames[0].srvName  + "\n"
-								+ "AppName: " + obj.srvNames[0].appName  + "\n"
-								+ "CmNames: " + obj.srvNames[0].cmNames  + "\n"
-								+ "atPos:   " + m + "\n"
-								;
-							let sliderPos = m + 1;
-							markElement.onclick = function()
+						setTimeout(function() {
+							var retryArr = dbxTuneGetActiveHistoryStatements(oldestTsStr, newestTsStr);
+							if (retryArr && retryArr.length > 0)
 							{
-								dbxHistoryTimelineSlider.value = sliderPos;
-								dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
-							};
-						}
-						else
-						{
-//							markElement.title = momentsArray[m].format('YYYY-MM-DD HH:mm:ss');
-							markElement.title = momentsArray[m].format('YYYY-MM-DD HH:mm:ss') + "  atPos: " + m;
-
-							let sliderPos = m + 1;
-							markElement.onclick = function()
-							{
-								dbxHistoryTimelineSlider.value = sliderPos;
-								dbxHistoryTimelineSlider.dispatchEvent( new Event('change') );
-							};
-						}
+								renderActiveStatementMarkers(retryArr);
+								// Re-render alarm markers too since renderActiveStatementMarkers clears them
+								renderAlarmTimelineMarkers(oldestTsStr, newestTsStr, momentsArray);
+							}
+						}, 600);
 					}
 
 					// ADD 'input' listener -- when we are moving the slider (without stopping)

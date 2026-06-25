@@ -2206,6 +2206,17 @@ extends CentralPersistWriterBase
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 		}
 
+		if (fromDbVersion <= 18)
+		{
+			// Add LoginCount to DbxCentralUsers (DB version 19)
+			step = 21;
+			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
+			String[] ignoreDupCol = new String[]{ "42121", "42701", "S0021" };
+
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LoginCount"+rq + " integer not null default 0";
+			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+		}
+
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;
 	}
@@ -4706,6 +4717,7 @@ return -1;
 		String sql = "UPDATE " + tabName
 				+ " SET " + lq+"LastLoginDate"+rq  + " = current_timestamp"
 				+   ", " + lq+"LoginFailCount"+rq  + " = 0"
+				+   ", " + lq+"LoginCount"+rq      + " = " + lq+"LoginCount"+rq + " + 1"
 				+ " WHERE " + lq+"UserName"+rq + " = ?";
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{

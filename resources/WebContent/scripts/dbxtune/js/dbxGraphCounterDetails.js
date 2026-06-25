@@ -8,6 +8,7 @@ var _cmType         = 'rate';
 var _cmHideZero     = false;  // hide rows where all diff/rate values are 0
 var _cmShowAll      = false;  // Append CMs: show all records from session start
 var _cmListData     = null;
+var _cmNoDataRetryDone = false;  // true after one auto-retry for the timing-race case
 var _cmCurrentData      = null;   // last fetched data result (for re-filtering without re-fetching)
 var _cmFilter           = '';     // current filter string
 var _cmPostponeInterval = null;   // setInterval handle for live postpone countdown
@@ -399,6 +400,30 @@ function cmDetailFindCmInfo(cmName)
 	return null;
 }
 
+// Re-fetch the CM list then call cmDetailLoadData — used by the timing-race retry path.
+function cmDetailReloadListThenData(srvName, cmName, timestamp, type)
+{
+	_cmNoDataRetryDone = false;
+	$.ajax({
+		url: '/api/cc/mgt/cm/list',
+		data: { srv: srvName, time: timestamp },
+		dataType: 'text',
+		success: function(data) {
+			try {
+				var r = JSON.parse(data);
+				if (!r.error) {
+					_cmListData = r;
+					cmDetailUpdateTabColors(r.groups);
+				}
+			} catch(ex) {}
+			cmDetailLoadData(srvName, cmName, timestamp, type);
+		},
+		error: function() {
+			cmDetailLoadData(srvName, cmName, timestamp, type);
+		}
+	});
+}
+
 function cmDetailLoadData(srvName, cmName, timestamp, type)
 {
 	if (!srvName || !cmName || !timestamp) return;
@@ -441,12 +466,42 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 		// Append CMs are exempt: "no rows at this sample" is normal — showAll may still find data.
 		// Postponed CMs fall through to the API call to get fresh lastSampleMs for the countdown.
 		$('#cm-detail-loading').hide();
+
+		// Check if the collector's PCS write queue might still be draining (async timing race).
+		// If pcsQueueSize > 0 or lastPersistedTime is behind the requested timestamp, the
+		// data may not have been written to H2 yet — auto-retry once, then show a Retry button.
+		var queueSize      = _cmListData ? (_cmListData.pcsQueueSize || 0) : 0;
+		var lastPersisted  = _cmListData ? (_cmListData.pcsLastPersistedTime || '') : '';
+		var mightBeRace    = (queueSize > 0) || (lastPersisted && lastPersisted < timestamp);
+
+		if (mightBeRace && !_cmNoDataRetryDone) {
+			_cmNoDataRetryDone = true;
+			$('#cm-detail-table').html('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
+				+ '&#8987; Data is still syncing for <strong>' + $('<span>').text(cmName).html() + '</strong>'
+				+ ' &mdash; retrying&hellip;'
+				+ '</div>');
+			setTimeout(function() {
+				cmDetailReloadListThenData(srvName, cmName, timestamp, type);
+			}, 500);
+			return;
+		}
+
+		var retryBtn = '<button type="button" class="btn btn-sm btn-outline-secondary ml-2"'
+			+ ' onclick="cmDetailReloadListThenData('
+			+ "'" + srvName.replace(/'/g,'') + "','"
+			+ cmName.replace(/'/g,'') + "','"
+			+ timestamp.replace(/'/g,'') + "','"
+			+ type + "')"
+			+ '>&#8635; Retry</button>';
+		var note = mightBeRace ? ' Data may still be syncing.' : '';
 		$('#cm-detail-table').html('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
 			+ 'No data collected for <strong>' + $('<span>').text(cmName).html() + '</strong>'
 			+ ' at sample time <strong>' + $('<span>').text(timestamp).html() + '</strong>.'
+			+ note + retryBtn
 			+ '</div>');
 		return;
 	}
+	_cmNoDataRetryDone = false;
 
 	$('#cm-detail-loading').show();
 	$('#cm-detail-table').html('');
@@ -1639,6 +1694,7 @@ function cmDetailClose()
 	try { localStorage.setItem('cmDetail-panelOpen', '0'); } catch(e) {}
 	$('#cm-detail-panel').hide();
 	_cmSrvName = _cmTimestamp = _cmTimestampMs = _cmGroup = _cmName = _cmListData = _cmCurrentData = null;
+	_cmNoDataRetryDone = false;
 	_cmFilter = '';
 	_cmSort    = { col: -1, stage: 0 };
 	_cmSortMap = {};

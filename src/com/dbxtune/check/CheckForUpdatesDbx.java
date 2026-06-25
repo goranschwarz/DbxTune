@@ -62,7 +62,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override protected String getHomeUrl()            { return DBXTUNE_HOME_URL; };
-	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
+	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/#pricing"; }
 	@Override protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
 	protected static final String DBXTUNE_HOME_URL               = "http://www.dbxtune.com";

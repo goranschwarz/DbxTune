@@ -269,6 +269,9 @@ implements Runnable
 	/** Time when the current consume() method started */
 	private long _currentConsumeStartTime = 0;
 
+	/** Epoch-ms of the most recently persisted sample's mainSampleTime (0 = nothing persisted yet) */
+	private volatile long _lastPersistedSampleTimeMs = 0;
+
 	/** */
 	private BlockingQueue<PersistContainer> _containerQueue = new LinkedBlockingQueue<PersistContainer>();
 	private int _warnQueueSizeThresh = DEFAULT_warnQueueSizeThresh;
@@ -1237,6 +1240,18 @@ implements Runnable
 				long execTime = TimeUtils.msDiffNow(startTime);
 				setConsumeTime(execTime);
 
+//				int beforeFireDebugSleepMs = Configuration.getCombinedConfiguration().getIntProperty("PersistentCounterHandler.consume.before.fire.debugSleepMs", 0);
+//				if (beforeFireDebugSleepMs > 0)
+//				{
+//					try 
+//					{
+//						System.out.println(">>>>>>>> DEBUG >>>>>>>>: Sleeping " + beforeFireDebugSleepMs + " before consuming any PersistContainer. NOTE: THIS IS JUST FOR EMULATING SLOW PERSIST TIME AND SHOULD NOT BE USED IN PRODUCTION.");
+//						Thread.sleep(beforeFireDebugSleepMs); 
+//					}
+//					catch (InterruptedException ignore) {}
+//				}
+				
+				// Fire changes
 				firePcsConsumeInfo(pw.getName(), cont.getServerNameOrAlias(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getStatistics());
 
 				// Reset the statistics
@@ -2011,10 +2026,19 @@ implements Runnable
 			l.pcsStorageQueueChange(pcsQueueSize, ddlLookupQueueSize, ddlStoreQueueSize, sqlCapStoreQueueSize, sqlCapStoreEntries);
 	}
 
-	/** Kicked off when consume is done 
+	/** Current number of PersistContainer entries waiting to be consumed. */
+	public int getPcsContainerQueueSize() { return _containerQueue.size(); }
+
+	/** Epoch-ms of the most recently successfully persisted sample (0 if nothing persisted yet). */
+	public long getLastPersistedSampleTimeMs() { return _lastPersistedSampleTimeMs; }
+
+	/** Kicked off when consume is done
 	 * @param ddlSaveCount */
 	public void firePcsConsumeInfo(String persistWriterName, String serverName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics)
 	{
+		if (mainSampleTime != null)
+			_lastPersistedSampleTimeMs = Math.max(_lastPersistedSampleTimeMs, mainSampleTime.getTime());
+
 		int    pcsQueueSize = _containerQueue.size();
 		String h2WriterStat = "";
 		if ("PersistWriterJdbc".equals(persistWriterName))

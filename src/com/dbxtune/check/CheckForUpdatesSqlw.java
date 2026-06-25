@@ -44,7 +44,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override protected String getHomeUrl()            { return SQLWIN_HOME_URL; };
-	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
+	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/#pricing"; }
 	@Override protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
 	private static final String SQLWIN_HOME_URL                = "http://www.dbxtune.com";

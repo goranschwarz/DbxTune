@@ -694,7 +694,7 @@ public abstract class PersistWriterBase
 		if (addQuotedIdentifierChar)
 		{
 			lq = getLeftQuoteReplace();
-			rq = getLeftQuoteReplace();
+			rq = getRightQuoteReplace();
 			if (conn != null)
 			{
 				lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -745,7 +745,7 @@ public abstract class PersistWriterBase
 		if (addQuotedIdentifierChar)
 		{
 			lq = getLeftQuoteReplace();
-			rq = getLeftQuoteReplace();
+			rq = getRightQuoteReplace();
 			if (conn != null)
 			{
 				lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -862,7 +862,7 @@ public abstract class PersistWriterBase
 		String tabName = getTableName(conn, schemaName, type, cm, true);
 		
 		String lq = getLeftQuoteReplace();
-		String rq = getLeftQuoteReplace();
+		String rq = getRightQuoteReplace();
 		if (conn != null)
 		{
 			lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
@@ -1809,7 +1809,7 @@ public abstract class PersistWriterBase
 	public static String getIndexDdlString(DbxConnection conn, String schemaName, int type, CountersModel cm)
 	{
 		String lq = getLeftQuoteReplace();
-		String rq = getLeftQuoteReplace();
+		String rq = getRightQuoteReplace();
 		if (conn != null)
 		{
 			lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection

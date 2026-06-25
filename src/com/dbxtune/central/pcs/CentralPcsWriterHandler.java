@@ -192,6 +192,9 @@ implements Runnable
 	private BlockingQueue<DbxTuneSample> _containerQueue = new LinkedBlockingQueue<DbxTuneSample>();
 	private int _warnQueueSizeThresh = DEFAULT_warnQueueSizeThresh;
 
+	/** Epoch-ms of the most recently persisted sample's sessionSampleTime (0 = nothing persisted yet) */
+	private volatile long _lastPersistedSampleTimeMs = 0;
+
 	/** Flag to state that we are waiting for input on the queue. Meaning it's OK to send "interrupt" to the thread */
 	private boolean _waitingOnQueueInput = false;
 
@@ -230,6 +233,9 @@ implements Runnable
 	{
 		return _containerQueue.size();
 	}
+
+	/** Epoch-ms of the most recently successfully persisted sample (0 if nothing persisted yet). */
+	public long getLastPersistedSampleTimeMs() { return _lastPersistedSampleTimeMs; }
 	
 	/**
 	 * Get a "public" string of how all writer are configured, no not reveal
@@ -1120,6 +1126,9 @@ implements Runnable
 //	}
 	public void firePcsConsumeInfo(String persistWriterName, String serverName, Timestamp sessionStartTime, Timestamp sessionSampleTime, int persistTimeInMs, CentralPcsWriterStatistics writerStatistics)
 	{
+		if (sessionSampleTime != null)
+			_lastPersistedSampleTimeMs = Math.max(_lastPersistedSampleTimeMs, sessionSampleTime.getTime());
+
 		String h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString();
 		int    pcsQueueSize = _containerQueue.size();
 

@@ -108,11 +108,12 @@ public abstract class CheckForUpdates
 //	protected static final String SQLWIN_CONNECT_INFO_URL        = "http://www.dbxtune.com/sqlw_connect_info.php";
 //	protected static final String SQLWIN_COUNTER_USAGE_INFO_URL  = "http://www.dbxtune.com/sqlw_counter_usage_info.php";
 
-//	protected static final String DEFAULT_DOWNLOAD_URL =  "http://www.dbxtune.com/download.html";
+//	protected static final String DEFAULT_DOWNLOAD_URL =  "http://www.dbxtune.com/#pricing";
 //	protected static final String DEFAULT_WHATSNEW_URL =  "http://www.dbxtune.com/history.html";
 	
 	protected String getHomeUrl()            { return "http://www.dbxtune.com"; };
-	protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
+//	protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
+	protected String getDefaultDownloadUrl() { return getHomeUrl() + "/#pricing"; }
 	protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
 	private static CheckForUpdates _instance = null;

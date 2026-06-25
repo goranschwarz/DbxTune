@@ -171,10 +171,23 @@ extends HttpServlet
 		// Build JSON response via Jackson
 		SimpleDateFormat tsFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
+		// PCS queue status — lets the caller detect the async write-queue timing race
+		int  pcsQueueSize              = -1;
+		long lastPersistedSampleTimeMs = 0;
+		if (PersistentCounterHandler.hasInstance())
+		{
+			PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+			pcsQueueSize              = pch.getPcsContainerQueueSize();
+			lastPersistedSampleTimeMs = pch.getLastPersistedSampleTimeMs();
+		}
+
 		Map<String, Object> root = new LinkedHashMap<>();
 		root.put("requestedTime", timeParam);
 		if (sampleDetails != null && sampleDetails.resolvedTime != null)
 			root.put("resolvedTime", tsFmt.format(sampleDetails.resolvedTime));
+		root.put("pcsQueueSize", pcsQueueSize);
+		if (lastPersistedSampleTimeMs > 0)
+			root.put("pcsLastPersistedTime", tsFmt.format(new Date(lastPersistedSampleTimeMs)));
 
 		List<Map<String, Object>> groupList = new ArrayList<>();
 		for (Map.Entry<String, List<CountersModel>> entry : groups.entrySet())

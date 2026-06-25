@@ -778,7 +778,7 @@ public class CheckDialog
 //		JFrame frame = new JFrame();
 //
 //		check._newAppVersion = "1.0.0";
-//		check._downloadUrl   = "http://www.dbxtune.com/download.html";
+//		check._downloadUrl   = "http://www.dbxtune.com//#pricing";
 //		check._checkSucceed  = true;
 //		check._hasUpgrade    = true;
 //		CheckDialog.showDialog(frame, check);

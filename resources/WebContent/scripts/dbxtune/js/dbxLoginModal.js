@@ -148,24 +148,41 @@
     }
 
     /**
-     * Injects the second modal tab based on server config:
-     *   oauthEnabled=true  → "Request Access" tab (email + fullName + reason; no password)
-     *   oauthEnabled=false → "Create Account" tab (email + password; email is the login)
+     * Injects the second modal tab based on server config.
+     *
+     * Tab/button label follows requireApproval (the user-facing question is
+     * "will I get in immediately or wait for an admin?"):
+     *   requireApproval=true  → "Request Access" / "Submit Request"
+     *   requireApproval=false → "Create Account"
+     *
+     * Form fields follow oauthEnabled (no password when OAuth handles auth):
+     *   oauthEnabled=true  → email + fullName + reason (no password)
+     *   oauthEnabled=false → email + password + confirm (+ fullName/reason when requireApproval)
      */
     function applyLoginConfig(cfg)
     {
+        var needsApproval = cfg.requireApproval;
+        var tabLabel      = needsApproval ? 'Request Access' : 'Create Account';
+        var btnLabel      = needsApproval ? 'Submit Request'  : 'Create Account';
+        var approvalBanner = needsApproval
+            ? '  <div class="alert alert-warning py-2 px-3 small mb-2" role="alert">' +
+              '    <i class="fa fa-info-circle"></i>&nbsp;' +
+              '    Admin approval required before you can log in.' +
+              '  </div>\n'
+            : '';
+
         var tabHtml, paneHtml;
 
         if (cfg.oauthEnabled)
         {
-            // Request Access — account needs admin approval before login is possible
+            // OAuth path — no password field; login is via the OAuth button
             tabHtml = '<li class="nav-item">' +
-                      '  <a class="nav-link" id="dbx-tab-request" data-toggle="tab" href="#dbx-pane-request" role="tab">Request Access</a>' +
+                      '  <a class="nav-link" id="dbx-tab-request" data-toggle="tab" href="#dbx-pane-request" role="tab">' + tabLabel + '</a>' +
                       '</li>';
 
             paneHtml =
                 '<div class="tab-pane fade" id="dbx-pane-request" role="tabpanel">\n' +
-                '  <div class="alert alert-info py-2 px-3 small mb-2" role="alert"><i class="fa fa-info-circle"></i>&nbsp;<b>Don\'t have an account?</b><br>Submit a request and an admin will review it.</div>\n' +
+                approvalBanner +
                 '  <div class="form-group">\n' +
                 '    <label for="dbx-req-email-txt">Email <span class="text-danger">*</span></label>\n' +
                 '    <input type="email" class="form-control" id="dbx-req-email-txt" placeholder="your@email.com">\n' +
@@ -174,36 +191,29 @@
                 '    <label for="dbx-req-name-txt">Full Name</label>\n' +
                 '    <input type="text" class="form-control" id="dbx-req-name-txt" placeholder="Your name (optional)">\n' +
                 '  </div>\n' +
-                '  <div class="form-group">\n' +
-                '    <label for="dbx-req-reason-txt">Reason for Access</label>\n' +
-                '    <textarea class="form-control" id="dbx-req-reason-txt" rows="2" placeholder="Why do you need access? (optional)"></textarea>\n' +
-                '  </div>\n' +
+                (needsApproval
+                    ? '  <div class="form-group">\n' +
+                      '    <label for="dbx-req-reason-txt">Reason for Access</label>\n' +
+                      '    <textarea class="form-control" id="dbx-req-reason-txt" rows="2" placeholder="Why do you need access? (optional)"></textarea>\n' +
+                      '  </div>\n'
+                    : '') +
                 '  <div id="dbx-req-msg" class="mb-2"></div>\n' +
                 '  <div class="modal-footer px-0">\n' +
                 '    <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>\n' +
-                '    <button type="button" class="btn btn-primary float-right" onclick="dbxRequestAccess()">Submit Request</button>\n' +
+                '    <button type="button" class="btn btn-primary float-right" onclick="dbxRequestAccess()">' + btnLabel + '</button>\n' +
                 '  </div>\n' +
                 '</div>\n';
         }
         else
         {
-            // Create Account (or Submit Request when requireApproval=true)
-            var needsApproval = cfg.requireApproval;
-            var tabLabel      = needsApproval ? 'Request Access' : 'Create Account';
-            var btnLabel      = needsApproval ? 'Submit Request'  : 'Create Account';
-
+            // Password-based path
             tabHtml = '<li class="nav-item">' +
                       '  <a class="nav-link" id="dbx-tab-register" data-toggle="tab" href="#dbx-pane-register" role="tab">' + tabLabel + '</a>' +
                       '</li>';
 
             paneHtml =
                 '<div class="tab-pane fade" id="dbx-pane-register" role="tabpanel">\n' +
-                (needsApproval
-                    ? '  <div class="alert alert-warning py-2 px-3 small mb-2" role="alert">' +
-                      '    <i class="fa fa-info-circle"></i>&nbsp;' +
-                      '    Admin approval required before you can log in.' +
-                      '  </div>\n'
-                    : '') +
+                approvalBanner +
                 '  <div class="form-group mb-2">\n' +
                 '    <label class="mb-1" for="dbx-reg-email-txt">Email <span class="text-muted small">(used as your login)</span></label>\n' +
                 '    <input type="email" class="form-control form-control-sm" id="dbx-reg-email-txt" placeholder="your@email.com">\n' +
@@ -541,8 +551,8 @@
     window.dbxRequestAccess = function ()
     {
         var email    = $('#dbx-req-email-txt').val().trim();
-        var fullName = $('#dbx-req-name-txt').val().trim();
-        var reason   = $('#dbx-req-reason-txt').val().trim();
+        var fullName = $('#dbx-req-name-txt').length    ? $('#dbx-req-name-txt').val().trim()   : '';
+        var reason   = $('#dbx-req-reason-txt').length  ? $('#dbx-req-reason-txt').val().trim() : '';
         $('#dbx-req-msg').html('');
         if (!email || !email.includes('@'))
         {

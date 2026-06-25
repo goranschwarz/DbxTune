@@ -106,6 +106,8 @@ public class OsCpuUsageOverview extends OsAbstract
 		_CmOsMpstat_MpSum         .writeHtmlContent(sb, null, null);
 		_CmOsMpstat_MpCpu         .writeHtmlContent(sb, null, null);
 		_CmOsUptime_AdjLoadAverage.writeHtmlContent(sb, null, null);
+
+		if (_CmOsUptime_WinPql     != null) _CmOsUptime_WinPql    .writeHtmlContent(sb, null, null);
 		
 		if (_CmOsVmstat_SwapInOut  != null) _CmOsVmstat_SwapInOut .writeHtmlContent(sb, null, null);
 		if (_CmOsMeminfo_WinPaging != null) _CmOsMeminfo_WinPaging.writeHtmlContent(sb, null, null);
@@ -244,6 +246,9 @@ public class OsCpuUsageOverview extends OsAbstract
 		_CmOsMpstat_MpCpu          = createTsLineChart(conn, schema, CmOsMpstat .CM_NAME, CmOsMpstat .GRAPH_NAME_MpCpu,            maxValue, false, null,    "mpstat: CPU usage per core (usr+sys+iowait) (Host Monitor->OS CPU(mpstat))");
 		_CmOsUptime_AdjLoadAverage = createTsLineChart(conn, schema, CmOsUptime .CM_NAME, CmOsUptime .GRAPH_NAME_ADJ_LOAD_AVERAGE, -1,       false, null,    "uptime: Adjusted Load Average (Host Monitor->OS Load Average(uptime))");
 
+		if ( _isWindows )
+			_CmOsUptime_WinPql     = createTsLineChart(conn, schema, CmOsUptime .CM_NAME, CmOsUptime .GRAPH_NAME_WIN_LOAD_AVERAGE, -1,       false, null,    "uptime: Windows Processor Queue Length (Host Monitor->OS Load Average(uptime))");
+
 		if ( ! _isWindows)
 			_CmOsVmstat_SwapInOut  = createTsLineChart(conn, schema, CmOsVmstat .CM_NAME, CmOsVmstat .GRAPH_NAME_SWAP_IN_OUT,      -1,       false, null,    "vmstat: Swap In/Out per sec (Host Monitor->OS CPU(vmstat))");
 		else
@@ -271,6 +276,7 @@ public class OsCpuUsageOverview extends OsAbstract
 
 	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmOsMpstat_MpCpu;
+	private IReportChart _CmOsUptime_WinPql; // Processor Queue Length (same as Load Average)
 	private IReportChart _CmOsUptime_AdjLoadAverage;
 	private IReportChart _CmOsVmstat_SwapInOut;
 	private IReportChart _CmOsMeminfo_WinPaging;

@@ -54,16 +54,20 @@ extends AbstractLoginService
 	 */
 	public enum Role
 	{
-		ADMIN    ("admin"),
-		UD_ACTION("ud_action"),
-		USER     ("user");
+		ADMIN    ("admin",     "Full Administrative access: Manage users, roles, configuration, and all application settings."),
+		UD_ACTION("ud_action", "User-Defined actions: Allowed to trigger on-demand actions and scripts from the UI (e.g. kill session, run job)."),
+		USER     ("user",      "Standard Read Access: Can view monitoring data, graphs, and reports, but cannot change configuration or trigger actions.");
 
 		private final String _roleName;
+		private final String _description;
 
-		Role(String roleName) { this._roleName = roleName; }
+		Role(String roleName, String description) { this._roleName = roleName; this._description = description; }
 
 		/** Returns the role name string stored in the database, e.g. {@code "admin"}. */
-		public String getRoleName() { return _roleName; }
+		public String getRoleName()    { return _roleName; }
+
+		/** Returns a human-readable description of what this role grants. */
+		public String getDescription() { return _description; }
 
 		/** Returns all role names as a String array (preserves declaration order). */
 		public static String[] getAllRoleNames()

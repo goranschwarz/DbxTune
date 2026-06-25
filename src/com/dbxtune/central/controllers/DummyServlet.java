@@ -53,7 +53,7 @@ public class DummyServlet extends HttpServlet
 		resp.setCharacterEncoding("UTF-8");
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
-		out.println("Hello Dummy Servlet: currentUsername='"+currentUsername+"', getRemoteUser()='"+req.getRemoteUser()+"'.");
+		out.println("Hello Dummy Servlet: currentUsername='" + currentUsername + "', getRemoteUser()='" + req.getRemoteUser() + "'.");
 		out.flush();
 		out.close();
 	}

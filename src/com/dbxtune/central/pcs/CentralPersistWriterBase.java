@@ -69,9 +69,10 @@ implements ICentralPersistWriter
 	 *   <li> 15 - Add column 'alarmOptions'                                     in tables *schema*.'ALARM_ACTIVE,ALARM_HISTORY'</li>
 	 *   <li> 17 - Add columns 'Status','AddDate','UpdateDate','LastLoginDate','Source','FullName','RequestReason','ApprovedBy','ApproveDate' to table 'DbxCentralUsers'</li>
 	 *   <li> 18 - Add column 'LoginFailCount' to table 'DbxCentralUsers'</li>
+	 *   <li> 19 - Add column 'LoginCount' to table 'DbxCentralUsers'</li>
 	 * </ul>
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 18;
+	public static int DBX_CENTRAL_DB_VERSION = 19;
 	
 	
 	public enum Table
@@ -513,6 +514,7 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(lq+"UpdateDate"         +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"LastLoginDate"      +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"LoginFailCount"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+" DEFAULT 0 \n");
+				sbSql.append("   ,"+fill(lq+"LoginCount"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+" DEFAULT 0 \n");
 				sbSql.append("   ,"+fill(lq+"Source"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   32),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"FullName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  256),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(lq+"RequestReason"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");

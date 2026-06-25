@@ -299,21 +299,26 @@
             <i class="fa fa-user-plus"></i> Add User
           </button>
           <div id="dbx-user-msg" class="mb-2"></div>
-          <table class="table table-sm table-bordered table-hover" id="dbx-user-table" style="display:none;">
+          <div style="width:100%; overflow-x:auto;">
+          <table class="table table-sm table-bordered table-hover" id="dbx-user-table" style="display:none; width:100%; white-space:nowrap;">
             <thead class="thead-light">
               <tr>
                 <th>Username</th>
+                <th>Status</th>
+                <th>Roles</th>
+                <th>Actions</th>
                 <th>Full Name</th>
                 <th>Email</th>
-                <th>Roles</th>
-                <th>Status</th>
                 <th>Source</th>
                 <th>Added</th>
-                <th>Actions</th>
+                <th>Last Login</th>
+                <th>Login Count</th>
+                <th>Login Fail Count</th>
               </tr>
             </thead>
             <tbody id="dbx-user-tbody"></tbody>
           </table>
+          </div>
 
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
@@ -1290,56 +1295,79 @@
 
 
   /**
-   * refreshCc
+   * refreshCc — sends a refresh request to the named collector
    */
   function refreshCc(serverName)
   {
-    console.log("refreshCm() serverName: "+serverName);
-    $.ajax(
-    {
-      url: "/admin?op=refreshCc&name="+serverName,
-      type: 'get',
-      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+    var feedbackId = 'dbx-cc-refresh-result-' + serverName.replace(/[^a-zA-Z0-9]/g, '_');
+    var $btn = $('button[onclick*="refreshCc(\'' + serverName + '\')"]');
+    $btn.prop('disabled', true).text('Refreshing…');
 
-      success: function(data, status)
+    $.ajax({
+      url: '/api/collector-refresh?srv=' + encodeURIComponent(serverName),
+      type: 'GET',
+      dataType: 'json',
+      success: function(data)
       {
-        var jsonResp = JSON.parse(data);
-        var actions = jsonResp.actions;
-        console.log("actions: "+actions, actions);
+        var result = data[serverName] || 'OK';
+        var ok = result.indexOf('ERROR') === -1;
+        console.log('refreshCc(' + serverName + '): ' + result);
+        $btn.prop('disabled', false).text(serverName);
+        showCcFeedback('#dbx-cc-refresh-server-list', serverName, result, ok);
       },
-      error: function(xhr, desc, err)
+      error: function(xhr)
       {
-        console.log(xhr);
-        console.log("Details: " + desc + "\nError: " + err);
+        var msg = 'Request failed (' + xhr.status + ')';
+        console.log('refreshCc(' + serverName + '): ' + msg);
+        $btn.prop('disabled', false).text(serverName);
+        showCcFeedback('#dbx-cc-refresh-server-list', serverName, msg, false);
       }
-    }); // end: ajax call
+    });
   }
 
-
   /**
-   * restartCc
+   * restartCc — sends a restart request to the named collector
    */
   function restartCc(serverName)
   {
-    console.log("restartCm() serverName: "+serverName);
-    $.ajax(
-    {
-      url: "/admin?op=restartCc&name="+serverName,
-      type: 'get',
-      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+    if (!confirm('Restart collector "' + serverName + '"?'))
+      return;
 
-      success: function(data, status)
+    var $btn = $('button[onclick*="restartCc(\'' + serverName + '\')"]');
+    $btn.prop('disabled', true).text('Restarting…');
+
+    $.ajax({
+      url: '/api/collector-restart?srv=' + encodeURIComponent(serverName),
+      type: 'GET',
+      dataType: 'json',
+      success: function(data)
       {
-        var jsonResp = JSON.parse(data);
-        var actions = jsonResp.actions;
-        console.log("actions: "+actions, actions);
+        var result = data[serverName] || 'OK';
+        var ok = result.indexOf('ERROR') === -1;
+        console.log('restartCc(' + serverName + '): ' + result);
+        $btn.prop('disabled', false).text(serverName);
+        showCcFeedback('#dbx-cc-restart-server-list', serverName, result, ok);
       },
-      error: function(xhr, desc, err)
+      error: function(xhr)
       {
-        console.log(xhr);
-        console.log("Details: " + desc + "\nError: " + err);
+        var msg = 'Request failed (' + xhr.status + ')';
+        console.log('restartCc(' + serverName + '): ' + msg);
+        $btn.prop('disabled', false).text(serverName);
+        showCcFeedback('#dbx-cc-restart-server-list', serverName, msg, false);
       }
-    }); // end: ajax call
+    });
+  }
+
+  function showCcFeedback(containerSelector, serverName, message, success)
+  {
+    var id = 'dbx-cc-fb-' + serverName.replace(/[^a-zA-Z0-9]/g, '_');
+    $(containerSelector).find('#' + id).remove();
+    var cls = success ? 'text-success' : 'text-danger';
+    $(containerSelector).append(
+      '<div id="' + id + '" class="small ' + cls + ' mt-1">' +
+      '<b>' + serverName + ':</b> ' + message + '</div>'
+    );
+    setTimeout(function() { $('#' + id).fadeOut(500, function() { $(this).remove(); }); }, 6000);
   }
 
 
@@ -1471,8 +1499,8 @@
 			$('#dbx-disable-server-list').html(htmlDisable);
 			$('#dbx-enable-server-list').html(htmlEnable);
 
-			$('#dbx-refresh-server-list').html(htmlRefreshCc);
-			$('#dbx-restart-server-list').html(htmlRestartCc);
+			$('#dbx-cc-refresh-server-list').html(htmlRefreshCc);
+			$('#dbx-cc-restart-server-list').html(htmlRestartCc);
 
 			$('#dbx-alarm-clear-server-list').html(htmlClearAlarm);
 
@@ -1844,7 +1872,7 @@
 	// User Administration
 	//-----------------------------------------------------------
 
-	var _dbxRoles = [];   // cached role names from op=roles
+	var _dbxRoles = [];   // cached role objects [{name, description}] from op=roles
 
 	function dbxLoadRoles(callback)
 	{
@@ -1854,23 +1882,37 @@
 			method: 'GET',
 			dataType: 'json',
 			success: function(r) { _dbxRoles = r; if (callback) callback(_dbxRoles); },
-			error:   function()  { _dbxRoles = ['user','admin']; if (callback) callback(_dbxRoles); }
+			error:   function()  {
+				_dbxRoles = [
+					{ name: 'admin',     description: '' },
+					{ name: 'ud_action', description: '' },
+					{ name: 'user',      description: '' }
+				];
+				if (callback) callback(_dbxRoles);
+			}
 		});
 	}
 
 	function dbxBuildRoleCheckboxes(containerId, currentRolesCsv)
 	{
 		var current = currentRolesCsv ? currentRolesCsv.split(',').map(function(s){ return s.trim(); }) : [];
-		var html = '';
+		var html = '<table class="table table-sm table-bordered mb-0">'
+		         + '<thead class="thead-light"><tr><th style="width:1%">Grant</th><th>Role</th><th>Description</th></tr></thead>'
+		         + '<tbody>';
 		for (var i = 0; i < _dbxRoles.length; i++)
 		{
-			var r = _dbxRoles[i];
-			var checked = current.indexOf(r) >= 0 ? 'checked' : '';
-			html += '<div class="form-check form-check-inline">'
-				  + '<input class="form-check-input dbx-role-chk" type="checkbox" id="dbx-role-' + containerId + '-' + r + '" value="' + r + '" ' + checked + '>'
-				  + '<label class="form-check-label" for="dbx-role-' + containerId + '-' + r + '">' + r + '</label>'
-				  + '</div>';
+			var r       = _dbxRoles[i];
+			var name    = r.name || r;   // fallback if plain string
+			var desc    = r.description || '';
+			var checked = current.indexOf(name) >= 0 ? 'checked' : '';
+			var id      = 'dbx-role-' + containerId + '-' + name;
+			html += '<tr>'
+			      + '<td class="text-center align-middle"><input class="dbx-role-chk" type="checkbox" id="' + id + '" value="' + name + '" ' + checked + '></td>'
+			      + '<td class="align-middle"><label class="mb-0 font-weight-bold" for="' + id + '">' + $('<span>').text(name).html() + '</label></td>'
+			      + '<td class="align-middle small text-muted">' + $('<span>').text(desc).html() + '</td>'
+			      + '</tr>';
 		}
+		html += '</tbody></table>';
 		$('#' + containerId).html(html);
 	}
 
@@ -1898,6 +1940,14 @@
 		var cls = { 'Active': 'success', 'Pending': 'warning', 'Locked': 'danger', 'Rejected': 'secondary' };
 		var c = cls[statusLabel] || 'secondary';
 		return '<span class="badge badge-' + c + '">' + statusLabel + '</span>';
+	}
+
+	function dbxRolesBadges(rolesCsv)
+	{
+		if (!rolesCsv) return '';
+		return rolesCsv.split(',').map(function(r) {
+			return '<span class="badge badge-info mr-1">' + $('<span>').text(r.trim()).html() + '</span>';
+		}).join('');
 	}
 
 	function dbxLoadUsers()
@@ -1947,17 +1997,25 @@
 					if (u.username.toLowerCase() !== 'admin')
 						btns += '<button class="btn btn-xs btn-outline-danger" onclick=\'dbxDeleteUser("' + un + '")\'>Delete</button>';
 
-					var addDateShort = u.addDate ? u.addDate.substring(0, 10) : '';
+					var addDateShort       = u.addDate       ? u.addDate.substring(0, 10)       : '';
+					var lastLoginShort     = u.lastLoginDate ? u.lastLoginDate.substring(0, 16)  : '';
+					var loginFailCount     = u.loginFailCount || 0;
+					var loginFailBadge     = loginFailCount > 0
+					                          ? '<span class="badge badge-danger">' + loginFailCount + '</span>'
+					                          : '0';
 
 					html += '<tr' + rowStyle + '>'
 					      + '<td>' + un + '</td>'
+					      + '<td>' + dbxStatusBadge(u.statusLabel || 'Active') + '</td>'
+					      + '<td>' + dbxRolesBadges(u.roles) + '</td>'
+					      + '<td>' + btns + '</td>'
 					      + '<td>' + $('<span>').text(u.fullName || '').html() + '</td>'
 					      + '<td>' + $('<span>').text(u.email).html() + '</td>'
-					      + '<td>' + $('<span>').text(u.roles).html() + '</td>'
-					      + '<td>' + dbxStatusBadge(u.statusLabel || 'Active') + '</td>'
 					      + '<td>' + $('<span>').text(u.source || 'local').html() + '</td>'
 					      + '<td' + reasonTip + '>' + addDateShort + '</td>'
-					      + '<td>' + btns + '</td>'
+					      + '<td>' + lastLoginShort + '</td>'
+					      + '<td>' + (u.loginCount || 0) + '</td>'
+					      + '<td>' + loginFailBadge + '</td>'
 					      + '</tr>';
 				}
 				$('#dbx-user-tbody').html(html);
