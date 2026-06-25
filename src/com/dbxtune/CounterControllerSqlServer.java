@@ -1398,7 +1398,15 @@ extends CounterControllerAbstract
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while (rs.next())
-				enabledDatabases.add(rs.getString(1));
+			{
+				String dbname = rs.getString(1);
+				if ("model".equals(dbname))
+				{
+					_logger.info("On PCS Database Rollover: Database '" + dbname + "' has 'Query Store' enabled on '" + srvName + "'. SKIPPING 'Capture Query Store' for this database.");
+					continue;
+				}
+				enabledDatabases.add(dbname);
+			}
 		}
 		catch (SQLException ex)
 		{

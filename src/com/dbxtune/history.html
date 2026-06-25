@@ -60,6 +60,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>NO-GUI: Added config option 'CounterSet.template.default=SMALL|MEDIUM|LARGE|ALL' to Config file. Used if a new CM is intruduced/added and we DO NOT have it in the SERVER/GENERIC Config file, we should trust this level</LI>
         <LI>Changed TemplateLevel() for a bunch of the Counter Models to work with the above 'CounterSet.template.default'</LI>
         <LI>Configuration: can now read content from a file. (key = file: /path/toFile/theFileName)</LI>
+        <LI>Finding Changes to Config files WatchService (read changed config files and fire on changed key/value): Fixed/Improved</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -191,6 +192,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
             <BR> - Account Settings (name, email, password with strength indicator) available from the navbar on all pages
             <BR> - Tracks last login date and failed login count per user
             </LI>
+        <LI>Landing page: Server Groups can now be collapsed (when collapsed: Badges are showing the underlying server states: # Servers, # OK, # Alarm, # Muted)</LI>
+        <li>Admin Page: Add Collector: Refresh/Restart buttons</li>
+        <li>Admin Page: Improve user table in admin UI (Last Login, Login Count, Login Fail Count columns)</li>
+        <li>Tried to fix "missing Counder Data"... If the PCS is slow at storing data... we might "not see it" at DbxCentral -- So Basically retry fetch data (BUT I could NOT test this, so it might still be broken)</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -311,6 +316,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Windows HostMonitoring via 'typeperf': added -sc ####. Which makes it to die after 36 hours. (this to save guard that we dont have to many 'typeperf' processes running after a collector restart)</LI>
 		<LI>New collector: CmJobScheduler -- What SQL Agent Job Scheduler are running now and what has been running. Alarms: RUNNING_LONG, MISSED, FAILED_LAST_RUN</LI>
 		<LI>Query Store Extractor: first try execute '${dbname}.dbo.dbxtune_flush_query_store', if it do not exists fallback on '${dbname}.dbo.sp_query_store_flush_db'</LI>
+		<LI>DbmsConfigIssue -- Fix SQL Server on Linux memory detection (SQLPAL only reports 80% of physical memory)</LI>
+		<LI>Job Scheduler Extractor -- Add user-defined job message formatter profiles via properties file</LI>
 
 
 		<!-- ~~~ CM Changes ~~~ -->

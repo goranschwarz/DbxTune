@@ -46,7 +46,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 //	@Override protected String getHomeUrl()            { return ASETUNE_HOME_URL; };
-//	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
+//	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/#pricing"; }
 //	@Override protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
 //	private static final String ASETUNE_HOME_URL               = "http://www.dbxtune.com";

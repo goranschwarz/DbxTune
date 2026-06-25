@@ -1781,34 +1781,34 @@ public class DbxTuneCentral
 		}
 	}
 
-	private static void convertPemToPkcs12(File certFile, File keyFile, File chainFile, File outputFile, String password) 
-	throws Exception
-	{
-		ProcessBuilder pb = new ProcessBuilder(
-				"openssl", "pkcs12", "-export",
-				"-in", certFile.getAbsolutePath(),
-				"-inkey", keyFile.getAbsolutePath(),
-				"-out", outputFile.getAbsolutePath(),
-				"-name", "jetty",
-				"-passout", "pass:" + password
-		);
-
-		if (chainFile.exists())
-		{
-			pb.command().add("-certfile");
-			pb.command().add(chainFile.getAbsolutePath());
-		}
-
-		Process process = pb.start();
-		int exitCode = process.waitFor();
-
-		if (exitCode != 0)
-		{
-			throw new RuntimeException("Failed to convert PEM to PKCS12. Exit code: " + exitCode);
-		}
-
-		_logger.info("Successfully converted PEM files to PKCS12 keystore: " + outputFile);
-	}
+//	private static void convertPemToPkcs12(File certFile, File keyFile, File chainFile, File outputFile, String password) 
+//	throws Exception
+//	{
+//		ProcessBuilder pb = new ProcessBuilder(
+//				"openssl", "pkcs12", "-export",
+//				"-in", certFile.getAbsolutePath(),
+//				"-inkey", keyFile.getAbsolutePath(),
+//				"-out", outputFile.getAbsolutePath(),
+//				"-name", "jetty",
+//				"-passout", "pass:" + password
+//		);
+//
+//		if (chainFile.exists())
+//		{
+//			pb.command().add("-certfile");
+//			pb.command().add(chainFile.getAbsolutePath());
+//		}
+//
+//		Process process = pb.start();
+//		int exitCode = process.waitFor();
+//
+//		if (exitCode != 0)
+//		{
+//			throw new RuntimeException("Failed to convert PEM to PKCS12. Exit code: " + exitCode);
+//		}
+//
+//		_logger.info("Successfully converted PEM files to PKCS12 keystore: " + outputFile);
+//	}
 
 	public static int getWebHttpPort()
 	{
@@ -1827,350 +1827,314 @@ public class DbxTuneCentral
 		return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT, DEFAULT_WEB_SSL_PORT);
 	}
 
+	/**
+	 * Configure and start the Jetty WebServer Engine
+	 * @throws Exception
+	 */
 	private static void startWebServerJetty()
 	throws Exception
 	{
-//		System.out.println("jetty.home    = '" + System.getProperty("jetty.home")     + "'.");
-//		System.out.println("jetty.VERSION = '" + org.eclipse.jetty.util.Jetty.VERSION + "'.");
-		_logger.info("jetty.home = '"    + System.getProperty("jetty.home")     + "'.");
-		_logger.info("jetty.VERSION = '" + org.eclipse.jetty.util.Jetty.VERSION + "'.");
+		// Create and Configure -- Add: Handlers like: Static and Servlets
+		_server = WebServerInitializerJetty.createServer();
 		
-		// Start the webserver
+		// Starting the Server
+		_server.start();
+		_logger.info("Started 'Jetty' as Web server.");
+
+		// Print it's configuration (can possibly removed, but keeping for debug purposes)
+		_logger.info("Web server 'Jetty' configuration. \n" + _server.dump());
+	}
+
+//	private static void startWebServerJetty__OLD()
+//	throws Exception
+//	{
+////		System.out.println("jetty.home    = '" + System.getProperty("jetty.home")     + "'.");
+////		System.out.println("jetty.VERSION = '" + org.eclipse.jetty.util.Jetty.VERSION + "'.");
+//		_logger.info("jetty.home = '"    + System.getProperty("jetty.home")     + "'.");
+//		_logger.info("jetty.VERSION = '" + org.eclipse.jetty.util.Jetty.VERSION + "'.");
+//		
+//		// Start the webserver
+//
+//		// https://examples.javacodegeeks.com/enterprise-java/jetty/jetty-web-xml-configuration-example/
 //		if (true)
 //		{
-//			int port = 8080;
-//			Server server = new Server();
+////			Server server = new Server(8080);
+////			int port    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT    , DEFAULT_WEB_PORT);
+////			int sslPort = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT, DEFAULT_WEB_SSL_PORT);
+//			int port    = getWebHttpPort();
+//			int sslPort = getWebHttpsPort();
+//			_server = new Server(port);
 //
-//			ServerConnector http = new ServerConnector(server);
-////			http.setHost("localhost");
-//			http.setPort(port);
-//			http.setIdleTimeout(30000);
-//
-//			// Set the connector
-//			server.addConnector(http);
+//			HttpConfiguration httpConfig = new HttpConfiguration();
+//			httpConfig.setSendServerVersion(false); // disables 'Server' header
+//			httpConfig.setSendXPoweredBy(false);    // disables 'X-Powered-By' header
 //			
-//			ContextHandler context = null;
-//			HandlerCollection handlers = new HandlerCollection();
+//			// Configure SSL with PEM files
+//			String sslFilePath = getAppConfDir() + "/ssl"; // must contain: 'cert.pem', 'key.pem', (optional) 'chain.pem'
+//			File   sslFileFile = new File(sslFilePath);
+//			if (sslFileFile.exists())
+//			{
+//				File sslFileCertFile  = new File(sslFilePath + "/cert.pem");
+//				File sslFileKeyFile   = new File(sslFilePath + "/key.pem");
+//				File sslFileChainFile = new File(sslFilePath + "/chain.pem");
 //
-//			// Add a single handler on context "/connect-offline"
-//			context = new ContextHandler("/xxx");
-//			context.setHandler( new DbxTuneGuiHttpConnectOfflineHandler() );
-//			handlers.addHandler(context);
+//				boolean doSslConfig = true;
+//				if (sslFileCertFile.exists())
+//				{
+//					_logger.info("Found SSL 'Certificate' file 'cert.pem' at '" + sslFileCertFile + "'.");
+//				}
+//				else
+//				{
+//					_logger.info("SSL will NOT be configured. Missing 'Certificate' file '" + sslFileCertFile + "'.");
+//					doSslConfig = false;
+//				}
 //
-////			context = new ContextHandler("/api/pcs/receive");
-////			context.setHandler( new CentralPcsReceiverController() );
-////			handlers.addHandler(context);
+//				if (sslFileKeyFile.exists())
+//				{
+//					_logger.info("Found SSL 'Private Key' file 'key.pem' at '" + sslFileKeyFile + "'.");
+//				}
+//				else
+//				{
+//					_logger.info("SSL will NOT be configured. Missing 'Private Key' file '" + sslFileKeyFile + "'.");
+//					doSslConfig = false;
+//				}
 //
-//			ServletContextHandler sch = new ServletContextHandler(ServletContextHandler.SESSIONS);
-//			sch.addServlet(CentralPcsReceiverController.class, "/api/pcs/receive");
-//			sch.addServlet(DefaultServlet.class, "/*");
-//			handlers.addHandler(sch);
+//				if (sslFileChainFile.exists())
+//				{
+//					_logger.info("Found optional SSL 'CA Chain' file '" + sslFileChainFile + "', which also will be used for CA Chain.");
+//				}
 //
-//			ResourceHandler rh = new ResourceHandler();
-////			rh.setDirectoriesListed(true);
-//			rh.setWelcomeFiles(new String[]{ "index.html" });
-//			rh.setResourceBase("www");
-//			handlers.addHandler(rh);
+//				if (doSslConfig)
+//				{
+//					_logger.info("SSL will be configured at port " + sslPort + ", using files ('cert.pem', 'key.pem', optional:'chain.pem') in directory '" + sslFileFile + "'.");
 //
-//			rh = new ResourceHandler();
-//			rh.setDirectoriesListed(true);
-////			rh.setWelcomeFiles(new String[]{ "index.html" });
-//			rh.setResourceBase("log");
-//			handlers.addHandler(rh);
+//					File keystoreFile        = new File(sslFilePath + "/keystore.p12");
+//					File keystoreRefreshFile = new File(sslFilePath + "/keystore.p12.refresh");
+//					String keystorePassword  = "SmslTVkv21GS5NJdQXxP"; // Consider making this configurable
 //
-//			handlers.addHandler(new DefaultHandler());
+//					try
+//					{
+//						boolean createNewKeyStoreFile = false;
 //
-//			server.setHandler( handlers );
+//						// If we do NOT have a KeyStore file
+//						if ( ! keystoreFile.exists() )
+//						{
+//							createNewKeyStoreFile = true;
+//						}
+//						
+//						// Or if the PEM file has changed...
+//						// FIXME: We need to save the last date of 'cert.pem' and check if we got any new file (save it in a properties file)
+//						//  DONE: I did a simpler solution, if the file 'keystore.p12.refresh' exists... Then do refresh... Not as good as saving the time... But it's at least something...
+//						if (keystoreRefreshFile.exists())
+//						{
+//							_logger.info("Found signal file '" + keystoreRefreshFile + "' to recreate SSL Certificate File '" + sslFileCertFile + ". So lets convert the new PEM files to PKCS12 keystore...");
 //
-//			_logger.info("Starting local Web server at port " + port + ".");
-//			server.start();
-//		}
-
-		// https://examples.javacodegeeks.com/enterprise-java/jetty/jetty-web-xml-configuration-example/
-		if (true)
-		{
-//			Server server = new Server(8080);
-//			int port    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_PORT    , DEFAULT_WEB_PORT);
-//			int sslPort = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_WEB_SSL_PORT, DEFAULT_WEB_SSL_PORT);
-			int port    = getWebHttpPort();
-			int sslPort = getWebHttpsPort();
-			_server = new Server(port);
-
-			HttpConfiguration httpConfig = new HttpConfiguration();
-			httpConfig.setSendServerVersion(false); // disables 'Server' header
-			httpConfig.setSendXPoweredBy(false);    // disables 'X-Powered-By' header
-			
-			// Configure SSL with PEM files
-			String sslFilePath = getAppConfDir() + "/ssl"; // must contain: 'cert.pem', 'key.pem', (optional) 'chain.pem'
-			File   sslFileFile = new File(sslFilePath);
-			if (sslFileFile.exists())
-			{
-				File sslFileCertFile  = new File(sslFilePath + "/cert.pem");
-				File sslFileKeyFile   = new File(sslFilePath + "/key.pem");
-				File sslFileChainFile = new File(sslFilePath + "/chain.pem");
-
-				boolean doSslConfig = true;
-				if (sslFileCertFile.exists())
-				{
-					_logger.info("Found SSL 'Certificate' file 'cert.pem' at '" + sslFileCertFile + "'.");
-				}
-				else
-				{
-					_logger.info("SSL will NOT be configured. Missing 'Certificate' file '" + sslFileCertFile + "'.");
-					doSslConfig = false;
-				}
-
-				if (sslFileKeyFile.exists())
-				{
-					_logger.info("Found SSL 'Private Key' file 'key.pem' at '" + sslFileKeyFile + "'.");
-				}
-				else
-				{
-					_logger.info("SSL will NOT be configured. Missing 'Private Key' file '" + sslFileKeyFile + "'.");
-					doSslConfig = false;
-				}
-
-				if (sslFileChainFile.exists())
-				{
-					_logger.info("Found optional SSL 'CA Chain' file '" + sslFileChainFile + "', which also will be used for CA Chain.");
-				}
-
-				if (doSslConfig)
-				{
-					_logger.info("SSL will be configured at port " + sslPort + ", using files ('cert.pem', 'key.pem', optional:'chain.pem') in directory '" + sslFileFile + "'.");
-
-					File keystoreFile        = new File(sslFilePath + "/keystore.p12");
-					File keystoreRefreshFile = new File(sslFilePath + "/keystore.p12.refresh");
-					String keystorePassword  = "SmslTVkv21GS5NJdQXxP"; // Consider making this configurable
-
-					try
-					{
-						boolean createNewKeyStoreFile = false;
-
-						// If we do NOT have a KeyStore file
-						if ( ! keystoreFile.exists() )
-						{
-							createNewKeyStoreFile = true;
-						}
-						
-						// Or if the PEM file has changed...
-						// FIXME: We need to save the last date of 'cert.pem' and check if we got any new file (save it in a properties file)
-						//  DONE: I did a simpler solution, if the file 'keystore.p12.refresh' exists... Then do refresh... Not as good as saving the time... But it's at least something...
-						if (keystoreRefreshFile.exists())
-						{
-							_logger.info("Found signal file '" + keystoreRefreshFile + "' to recreate SSL Certificate File '" + sslFileCertFile + ". So lets convert the new PEM files to PKCS12 keystore...");
-
-							// Delete the 'signal/refresh' and 'keystoreFile' file: 
-							keystoreRefreshFile.delete();
-							keystoreFile.delete();
-
-//							_logger.info("The SSL Certificate File '" + sslFileCertFile + "' has changed (lastKnownDate='', newDate=''). So lets convert the new PEM files to PKCS12 keystore...");
-							createNewKeyStoreFile = true;
-						}
-
-						// Convert PEM to PKCS12 if not already done
-						if ( createNewKeyStoreFile )
-						{
-							_logger.info("Converting PEM files to PKCS12 keystore...");
-							convertPemToPkcs12(sslFileCertFile, sslFileKeyFile, sslFileChainFile, keystoreFile, keystorePassword);
-						}
-
-						SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
-						sslContextFactory.setKeyStorePath(keystoreFile.getAbsolutePath());
-						sslContextFactory.setKeyStorePassword(keystorePassword);
-						sslContextFactory.setKeyStoreType("PKCS12");
-						sslContextFactory.setKeyManagerPassword(keystorePassword);
-
-						httpConfig.addCustomizer(new SecureRequestCustomizer());
-
-						ServerConnector sslConnector = new ServerConnector(
-								_server,
-								new SslConnectionFactory(sslContextFactory, "http/1.1"),
-								new HttpConnectionFactory(httpConfig)
-						);
-						sslConnector.setPort(sslPort);
-						_server.addConnector(sslConnector);
-						
-					}
-					catch (Exception ex)
-					{
-						_logger.error("Failed to configure SSL", ex);
-					}
-
-					boolean useOldCode = false;
-					if (useOldCode)
-					{
-						SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
-				        sslContextFactory.setKeyStoreType("PEM");
-				        sslContextFactory.setKeyStorePath(sslFilePath);  // must contain cert.pem, key.pem, (optional) chain.pem
-//				        sslContextFactory.setCertChainPath(sslFileCertFile);      // your public cert or full chain "cert.pem"
-//				        sslContextFactory.setKeyPath(sslFileKeyFile);             // your private key "key.pem"
-//				        if (sslFileChainFile.exists())
-//				        {
-//					        sslContextFactory.setTrustStoreType("PEM");               // optional for client auth
-//					        sslContextFactory.setTrustStorePath(sslFileChainFile);    // CA chain, optional "chain.pem"
-//				        }
-						
-						httpConfig.addCustomizer(new SecureRequestCustomizer());
-
-						ServerConnector sslConnector = new ServerConnector(
-								_server,
-								new SslConnectionFactory(sslContextFactory, "http/1.1"),
-								new HttpConnectionFactory(httpConfig)
-			            );
-						sslConnector.setPort(sslPort);
-						_server.addConnector(sslConnector);
-					}
-				}
-			}
-			else
-			{
-				_logger.info("SSL will NOT be configured. The directory '" + sslFileFile + "' does NOT EXISTS. Which should hold 'Certificate' file 'cert.pem' and 'Private Key' file 'key.pem' (possibly 'CA Chain' file 'chain.pem').");
-			}
-			
-			
-			// Handler for multiple web apps
-//			HandlerCollection handlers = new HandlerCollection();
-	 
-//			// Creating the first web application context
-//			WebAppContext webapp1 = new WebAppContext();
-//			webapp1.setResourceBase("C:\\projects\\DbxTune\\resources\\WebContent");
-//			webapp1.setContextPath("/");
-////			webapp1.setDefaultsDescriptor("src/main/webdefault/webdefault.xml");
-//			handlers.addHandler(webapp1);
-			
-			// Enable Debugging
-//			org.eclipse.jetty.util.log.Log.setLog(new org.eclipse.jetty.util.log.StdErrLog());
-//			org.eclipse.jetty.util.log.Log.getLog().setDebugEnabled(true);
-
-			
-			String webDir = getAppWebDir();
-
-			// Check if "webDir" contains any symbolic links
-			Path webDirOriginPath   = Paths.get(webDir);
-			Path webDirResolvedPath = Paths.get(webDir).toRealPath();
-			if ( ! webDirOriginPath.equals(webDirResolvedPath) )
-			{
-				webDir = webDirResolvedPath.toString();
-				_logger.info("Found that 'WebAppDir' contains symlinks, which was resolved to '" + webDir + "'. Origin value was '" + webDirOriginPath + "'.");
-			}
-
-			WebAppContext webapp1 = new WebAppContext();
-			webapp1.setDescriptor(webDir + "/WEB-INF/web.xml");
-			webapp1.setResourceBase(webDir);
-			webapp1.setContextPath("/");
-			webapp1.setWelcomeFiles(new String[]{"index.html"});
-//			webapp1.setInitParameter("aliases", "true");  // Enables symlink following
-			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
-			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-//			webapp1.getServletContext().getContextHandler().setMaxFormContentSize(10000000);
-			webapp1.getServletContext().getContextHandler().setMaxFormContentSize(-1);
-
-
-			webapp1.setParentLoaderPriority(true);
-
-			webapp1.addFilter(MandatoryLoginFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
-
-//			InterceptExceptionsFilter interceptFilter = new InterceptExceptionsFilter();
-//			webapp1.addFilter(InterceptExceptionsFilter.class, "/*", EnumSet.of(DispatcherType.INCLUDE, DispatcherType.REQUEST));
-
-//	        // The below 4 lines is to get JSP going????
-//	        webapp1.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern",".*/[^/]*jstl.*\\.jar$");
-//	        org.eclipse.jetty.webapp.Configuration.ClassList classlist = org.eclipse.jetty.webapp.Configuration.ClassList.setServerDefault(_server);
-//	        classlist.addAfter("org.eclipse.jetty.webapp.FragmentConfiguration", "org.eclipse.jetty.plus.webapp.EnvConfiguration", "org.eclipse.jetty.plus.webapp.PlusConfiguration");
-//	        classlist.addBefore("org.eclipse.jetty.webapp.JettyWebXmlConfiguration", "org.eclipse.jetty.annotations.AnnotationConfiguration");
-
-//			handlers.addHandler(webapp1);
-
-//			// Creating the second web application context
-//			WebAppContext webapp2 = new WebAppContext();
-//			webapp2.setResourceBase("src/main/webapp2");
-//			webapp2.setContextPath("/webapp2");
-//			webapp2.setDefaultsDescriptor("src/main/webdefault/webdefault.xml");
-//			handlers.addHandler(webapp2);
-
-//-----------------------------------------------------
-// Possibly we can learn something from this:
-//https://github.com/jetty-project/embedded-jetty-cookbook/tree/master/src/main/java/org/eclipse/jetty/cookbook
-//-----------------------------------------------------
-	
-			// Creating the LoginService for the realm
-			DbxCentralRealm loginService = new DbxCentralRealm("DbxTuneCentralRealm");
-
+//							// Delete the 'signal/refresh' and 'keystoreFile' file: 
+//							keystoreRefreshFile.delete();
+//							keystoreFile.delete();
+//
+////							_logger.info("The SSL Certificate File '" + sslFileCertFile + "' has changed (lastKnownDate='', newDate=''). So lets convert the new PEM files to PKCS12 keystore...");
+//							createNewKeyStoreFile = true;
+//						}
+//
+//						// Convert PEM to PKCS12 if not already done
+//						if ( createNewKeyStoreFile )
+//						{
+//							_logger.info("Converting PEM files to PKCS12 keystore...");
+//							convertPemToPkcs12(sslFileCertFile, sslFileKeyFile, sslFileChainFile, keystoreFile, keystorePassword);
+//						}
+//
+//						SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
+//						sslContextFactory.setKeyStorePath(keystoreFile.getAbsolutePath());
+//						sslContextFactory.setKeyStorePassword(keystorePassword);
+//						sslContextFactory.setKeyStoreType("PKCS12");
+//						sslContextFactory.setKeyManagerPassword(keystorePassword);
+//
+//						httpConfig.addCustomizer(new SecureRequestCustomizer());
+//
+//						ServerConnector sslConnector = new ServerConnector(
+//								_server,
+//								new SslConnectionFactory(sslContextFactory, "http/1.1"),
+//								new HttpConnectionFactory(httpConfig)
+//						);
+//						sslConnector.setPort(sslPort);
+//						_server.addConnector(sslConnector);
+//						
+//					}
+//					catch (Exception ex)
+//					{
+//						_logger.error("Failed to configure SSL", ex);
+//					}
+//
+//					boolean useOldCode = false;
+//					if (useOldCode)
+//					{
+//						SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
+//				        sslContextFactory.setKeyStoreType("PEM");
+//				        sslContextFactory.setKeyStorePath(sslFilePath);  // must contain cert.pem, key.pem, (optional) chain.pem
+////				        sslContextFactory.setCertChainPath(sslFileCertFile);      // your public cert or full chain "cert.pem"
+////				        sslContextFactory.setKeyPath(sslFileKeyFile);             // your private key "key.pem"
+////				        if (sslFileChainFile.exists())
+////				        {
+////					        sslContextFactory.setTrustStoreType("PEM");               // optional for client auth
+////					        sslContextFactory.setTrustStorePath(sslFileChainFile);    // CA chain, optional "chain.pem"
+////				        }
+//						
+//						httpConfig.addCustomizer(new SecureRequestCustomizer());
+//
+//						ServerConnector sslConnector = new ServerConnector(
+//								_server,
+//								new SslConnectionFactory(sslContextFactory, "http/1.1"),
+//								new HttpConnectionFactory(httpConfig)
+//			            );
+//						sslConnector.setPort(sslPort);
+//						_server.addConnector(sslConnector);
+//					}
+//				}
+//			}
+//			else
+//			{
+//				_logger.info("SSL will NOT be configured. The directory '" + sslFileFile + "' does NOT EXISTS. Which should hold 'Certificate' file 'cert.pem' and 'Private Key' file 'key.pem' (possibly 'CA Chain' file 'chain.pem').");
+//			}
+//			
+//			
+//			// Handler for multiple web apps
+////			HandlerCollection handlers = new HandlerCollection();
+//	 
+////			// Creating the first web application context
+////			WebAppContext webapp1 = new WebAppContext();
+////			webapp1.setResourceBase("C:\\projects\\DbxTune\\resources\\WebContent");
+////			webapp1.setContextPath("/");
+//////			webapp1.setDefaultsDescriptor("src/main/webdefault/webdefault.xml");
+////			handlers.addHandler(webapp1);
+//			
+//			// Enable Debugging
+////			org.eclipse.jetty.util.log.Log.setLog(new org.eclipse.jetty.util.log.StdErrLog());
+////			org.eclipse.jetty.util.log.Log.getLog().setDebugEnabled(true);
+//
+//			
+//			String webDir = getAppWebDir();
+//
+//			// Check if "webDir" contains any symbolic links
+//			Path webDirOriginPath   = Paths.get(webDir);
+//			Path webDirResolvedPath = Paths.get(webDir).toRealPath();
+//			if ( ! webDirOriginPath.equals(webDirResolvedPath) )
+//			{
+//				webDir = webDirResolvedPath.toString();
+//				_logger.info("Found that 'WebAppDir' contains symlinks, which was resolved to '" + webDir + "'. Origin value was '" + webDirOriginPath + "'.");
+//			}
+//
+//			WebAppContext webapp1 = WebServerInitializerJetty.createWebApp(webDir);
+//
+////--------- BEGIN: Keeping old code for a while -- The below now lives in: WebServerInitializerJetty.createWebApp(webDir);
+//// BUT WE NEEED TO CLEANUP ALOT OF STUFF IN HERE...
+////			WebAppContext webapp1 = new WebAppContext();
+////			webapp1.setDescriptor(webDir + "/WEB-INF/web.xml");
+////			webapp1.setResourceBase(webDir);
+////			webapp1.setContextPath("/");
+////			webapp1.setWelcomeFiles(new String[]{"index.html"});
+//////			webapp1.setInitParameter("aliases", "true");  // Enables symlink following
+////			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
+////			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+//////			webapp1.getServletContext().getContextHandler().setMaxFormContentSize(10000000);
+////			webapp1.getServletContext().getContextHandler().setMaxFormContentSize(-1);
+////
+////
+////			webapp1.setParentLoaderPriority(true);
+////
+////			webapp1.addFilter(MandatoryLoginFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
+////--------- BEGIN: Keeping old code for a while
+//			
+//
+////			InterceptExceptionsFilter interceptFilter = new InterceptExceptionsFilter();
+////			webapp1.addFilter(InterceptExceptionsFilter.class, "/*", EnumSet.of(DispatcherType.INCLUDE, DispatcherType.REQUEST));
+//
+////	        // The below 4 lines is to get JSP going????
+////	        webapp1.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern",".*/[^/]*jstl.*\\.jar$");
+////	        org.eclipse.jetty.webapp.Configuration.ClassList classlist = org.eclipse.jetty.webapp.Configuration.ClassList.setServerDefault(_server);
+////	        classlist.addAfter("org.eclipse.jetty.webapp.FragmentConfiguration", "org.eclipse.jetty.plus.webapp.EnvConfiguration", "org.eclipse.jetty.plus.webapp.PlusConfiguration");
+////	        classlist.addBefore("org.eclipse.jetty.webapp.JettyWebXmlConfiguration", "org.eclipse.jetty.annotations.AnnotationConfiguration");
+//
+////			handlers.addHandler(webapp1);
+//
+////			// Creating the second web application context
+////			WebAppContext webapp2 = new WebAppContext();
+////			webapp2.setResourceBase("src/main/webapp2");
+////			webapp2.setContextPath("/webapp2");
+////			webapp2.setDefaultsDescriptor("src/main/webdefault/webdefault.xml");
+////			handlers.addHandler(webapp2);
+//
+////-----------------------------------------------------
+//// Possibly we can learn something from this:
+////https://github.com/jetty-project/embedded-jetty-cookbook/tree/master/src/main/java/org/eclipse/jetty/cookbook
+////-----------------------------------------------------
+//	
 //			// Creating the LoginService for the realm
-//			HashLoginService loginService = new HashLoginService("DbxTuneCentralRealm");
+//			DbxCentralRealm loginService = new DbxCentralRealm("DbxTuneCentralRealm");
 //
-//			// Setting the realm configuration there the users, passwords and roles reside
-//			String userFile = Configuration.getCombinedConfiguration().getProperty("realm.users.file", webDir + "/dbxtune_central_users.txt");
-			// The above file should look like:
-			// admin: admin,admin,user
-			//user1: user1pass,user
-
-//			loginService.setConfig(userFile);
-//			_logger.info("Web Autentication. Using property 'realm.users.file', which is set to '" + userFile + "'.");
-////			loginService.setConfig("/projects/DbxTune/resources/WebContent/dbxtune_central_users.txt");
-////			Map<String, UserIdentity> userMap = new HashMap<>();
-////			userMap.put("xxx", new UserIdentity()
-////			loginService.setUsers();
-
-			// Appending the loginService to the Server
-			_server.addBean(loginService);
-
-			// Adding the handlers to the server
-//			_server.setHandler(handlers);
-			_server.setHandler(webapp1);
-
-
-			// Configuring Jetty Request Logs
-			// If we only want to log ERRORS look at: https://stackoverflow.com/questions/68737248/how-to-override-request-logging-mechanism-in-jetty-11-0-6
-			boolean createRequestLog = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_web_createRequestLog, DEFAULT_web_createRequestLog);
-			if (createRequestLog)
-			{
-				String requestLogFormat = "%{client}a - %u %{yyyy-MM-dd HH:mm:ss.SSS XXX}t '%r' %s %O '%{Referer}i' '%{User-Agent}i' '%C'";
-//				String requestLogFormat = CustomRequestLog.EXTENDED_NCSA_FORMAT;
-				CustomRequestLog customRequestLog = new CustomRequestLog(getAppLogDir() + File.separatorChar + "DbxCentral.web.request.yyyy_mm_dd.log", requestLogFormat);
-				_server.setRequestLog(customRequestLog);
-				
-				Writer tmpWriter = customRequestLog.getWriter();
-				if (tmpWriter instanceof RequestLogWriter)
-				{
-					RequestLogWriter writer = (RequestLogWriter) tmpWriter;
-					
-					int retainDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_web_createRequestLog_retainDays, DEFAULT_web_createRequestLog_retainDays);
-					writer.setRetainDays(retainDays);
-
-					_logger.info("Web Access/Request log file: name='"      + writer.getFileName() + "'.");
-					_logger.info("Web Access/Request log file: retainDays=" + writer.getRetainDays());
-					_logger.info("Web Access/Request log file: can be disabled using: " + PROPKEY_web_createRequestLog + " = false");
-				}
-			}
-
-			_server.setStopAtShutdown(true);
-
-			// Starting the Server
-			_server.start();
-			_logger.info("Started 'Jetty' as Web server.");
-
-			_logger.info("Web server 'Jetty' configuration. \n" + _server.dump());
-//			_server.dumpStdErr();
-			
-			//server.join();
-		}
-		
-		// https://wiki.eclipse.org/Jetty/Tutorial/Embedding_Jetty
-		//TEST THE ABOVE
-		
-//		if (false)
-//		{
-//			Server server = new Server(8080);
-//			HandlerList handlers = new HandlerList();
-//			ResourceHandler resourceHandler = new ResourceHandler();
-//			resourceHandler.setBaseResource(Resource.newResource("."));
-//			handlers.setHandlers(new Handler[] { resourceHandler, new DefaultHandler() });
-//			server.setHandler(handlers);
-//			server.start();
+////			// Creating the LoginService for the realm
+////			HashLoginService loginService = new HashLoginService("DbxTuneCentralRealm");
+////
+////			// Setting the realm configuration there the users, passwords and roles reside
+////			String userFile = Configuration.getCombinedConfiguration().getProperty("realm.users.file", webDir + "/dbxtune_central_users.txt");
+//			// The above file should look like:
+//			// admin: admin,admin,user
+//			//user1: user1pass,user
+//
+////			loginService.setConfig(userFile);
+////			_logger.info("Web Autentication. Using property 'realm.users.file', which is set to '" + userFile + "'.");
+//////			loginService.setConfig("/projects/DbxTune/resources/WebContent/dbxtune_central_users.txt");
+//////			Map<String, UserIdentity> userMap = new HashMap<>();
+//////			userMap.put("xxx", new UserIdentity()
+//////			loginService.setUsers();
+//
+//			// Appending the loginService to the Server
+//			_server.addBean(loginService);
+//
+//			// Adding the handlers to the server
+////			_server.setHandler(handlers);
+//			_server.setHandler(webapp1);
+//
+//
+//			// Configuring Jetty Request Logs
+//			// If we only want to log ERRORS look at: https://stackoverflow.com/questions/68737248/how-to-override-request-logging-mechanism-in-jetty-11-0-6
+//			boolean createRequestLog = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_web_createRequestLog, DEFAULT_web_createRequestLog);
+//			if (createRequestLog)
+//			{
+//				String requestLogFormat = "%{client}a - %u %{yyyy-MM-dd HH:mm:ss.SSS XXX}t '%r' %s %O '%{Referer}i' '%{User-Agent}i' '%C'";
+////				String requestLogFormat = CustomRequestLog.EXTENDED_NCSA_FORMAT;
+//				CustomRequestLog customRequestLog = new CustomRequestLog(getAppLogDir() + File.separatorChar + "DbxCentral.web.request.yyyy_mm_dd.log", requestLogFormat);
+//				_server.setRequestLog(customRequestLog);
+//				
+//				Writer tmpWriter = customRequestLog.getWriter();
+//				if (tmpWriter instanceof RequestLogWriter)
+//				{
+//					RequestLogWriter writer = (RequestLogWriter) tmpWriter;
+//					
+//					int retainDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_web_createRequestLog_retainDays, DEFAULT_web_createRequestLog_retainDays);
+//					writer.setRetainDays(retainDays);
+//
+//					_logger.info("Web Access/Request log file: name='"      + writer.getFileName() + "'.");
+//					_logger.info("Web Access/Request log file: retainDays=" + writer.getRetainDays());
+//					_logger.info("Web Access/Request log file: can be disabled using: " + PROPKEY_web_createRequestLog + " = false");
+//				}
+//			}
+//
+//			_server.setStopAtShutdown(true);
+//
+//			// Starting the Server
+//			_server.start();
+//			_logger.info("Started 'Jetty' as Web server.");
+//
+//			_logger.info("Web server 'Jetty' configuration. \n" + _server.dump());
+////			_server.dumpStdErr();
+//			
+//			//server.join();
 //		}
-	}
+//		
+//		// https://wiki.eclipse.org/Jetty/Tutorial/Embedding_Jetty
+//		//TEST THE ABOVE
+//	}
 	
 	public static class InterceptExceptionsFilter implements javax.servlet.Filter
 	{

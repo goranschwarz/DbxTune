@@ -73,6 +73,14 @@
     .btn-muted-alarm { background-color: #c0657a; border-color: #a8546a; color: #fff; }
     .btn-muted-alarm:hover { background-color: #a8546a; border-color: #8f435a; color: #fff; }
 
+    details.dbx-srv-group { margin: 0 0 2px 0; padding: 0; }
+    details.dbx-srv-group > summary { cursor: pointer; user-select: none; list-style: none; padding: 1px 0; margin: 0; }
+    details.dbx-srv-group > summary::-webkit-details-marker { display: none; }
+    details.dbx-srv-group > summary::before { content: '▶ '; font-size: 0.75em; }
+    details.dbx-srv-group[open] > summary::before { content: '▼ '; }
+    .dbx-grp-stats { font-weight: normal; font-size: 0.85em; }
+    details[open] .dbx-grp-stats { display: none; }
+
     #active-alarms-top {
       position: fixed;
       color: rgba(255, 148, 20, 1.0);
@@ -610,6 +618,7 @@ List of stuff that can be done
 	var _global_disabledServers = [];
 	var _serverInfoContent      = {};  // serverName → HTML table string for the Server Info dialog
 	var _staleServers           = new Set(); // server names currently yellow (stale last-sample)
+	var _serverAlarmState       = {};        // {srvName: {active:N, muted:N}} — populated by alarm refresh
 
 //	function resizeExampleImage() {
 //		// Origin size is: 378
@@ -1292,6 +1301,26 @@ List of stuff that can be done
 //	}); // end: ajax call
 
 	var global_layoutNeedNewLine = 0;
+
+	function groupIdFromText(text) {
+		return 'dbx-grp-' + text.replace(/[^a-zA-Z0-9_-]/g, '_');
+	}
+
+	function collectGroupServerNames(entries) {
+		var names = [];
+		if (!entries) return names;
+		for (var i = 0; i < entries.length; i++) {
+			var e = entries[i];
+			if (e.type === "server" && e.hasOwnProperty('srvSession')) {
+				if (!((parseInt(e.srvSession.status) & 1) === 1))
+					names.push(e.srvSession.serverName);
+			} else if (e.type === "group" && e.hasOwnProperty('entries')) {
+				names = names.concat(collectGroupServerNames(e.entries));
+			}
+		}
+		return names;
+	}
+
 	function readServerLayoutEntry(entry)
 	{
 //		console.log("---------- global_layoutNeedNewLine = '"+global_layoutNeedNewLine);
@@ -1303,23 +1332,25 @@ List of stuff that can be done
 		{
 			console.log("INFO: GROUP entry: text='" + entry.text + "'", entry);
 
-			if (global_layoutNeedNewLine)
-			{
-				html += "<br>";
-				global_layoutNeedNewLine = 0;
-			}
+			// <details> is block-level — skip the inter-group <br> (just reset the flag)
+			global_layoutNeedNewLine = 0;
+
+			var grpId      = groupIdFromText(entry.text);
+			var grpServers = entry.hasOwnProperty('entries') ? collectGroupServerNames(entry.entries) : [];
+			var grpDataAttr = " data-servers='" + JSON.stringify(grpServers) + "'";
+			var grpStatsHtml = "<span class='dbx-grp-stats' id='" + grpId + "-stats'>&ensp;<span class='badge badge-secondary' style='font-weight:normal;'>" + grpServers.length + " server" + (grpServers.length !== 1 ? "s" : "") + "</span></span>";
 
 			if (entry.hasOwnProperty('options') && entry.options.hasOwnProperty('border') && entry.options.border === "true")
 			{
-				html += "<div class='card border-dark'>";
-				html += "  <div class='card-header' style='padding: .25rem .75rem; background-color: #e2e2e2;'><b>" + entry.text + "</b></div>";
-				html += "  <div class='card-body' style='padding: .75rem .75rem .25rem .75rem; background-color: #e9ecef;'>";
+				html += "<details id='" + grpId + "' class='dbx-srv-group' open" + grpDataAttr + ">";
+				html += "  <summary class='dbx-srv-group-summary'><b style='display:inline-block;min-width:14em;'>" + entry.text + "</b>" + grpStatsHtml + "</summary>";
+				html += "  <div class='card border-dark'>";
+				html += "    <div class='card-header' style='padding: .25rem .75rem; background-color: #e2e2e2;'><b>" + entry.text + "</b></div>";
+				html += "    <div class='card-body' style='padding: .75rem .75rem .25rem .75rem; background-color: #e9ecef;'>";
 
 				// CONTENT GOES HERE
 				if (entry.hasOwnProperty('entries'))
 				{
-					// read: entries
-					// read: entries
 					for (var i=0; i<entry.entries.length; i++)
 					{
 						var localEntry = entry.entries[i];
@@ -1327,33 +1358,26 @@ List of stuff that can be done
 					}
 				}
 
+				html += "    </div>";
 				html += "  </div>";
-				html += "</div>";
+				html += "</details>";
 			}
 			else
 			{
-//				html += "<hr>";
-//				html += "---group--- " + entry.text + "<br>";
-
-				// Add Some chars at the start (that is if the string doesnt start with any "special chars"...
-				var prefix = "";
-//				var regEx = new RegExp("[a-zA-Z]");
-//				if ( regEx.test(entry.text.charAt(0)) )
-//					prefix = "&#8213;&#10148; ";
-
-				html += prefix + "<b>" + entry.text + "</b><br>";
-
+				html += "<details id='" + grpId + "' class='dbx-srv-group' open" + grpDataAttr + ">";
+				html += "  <summary class='dbx-srv-group-summary'><b style='display:inline-block;min-width:14em;'>" + entry.text + "</b>" + grpStatsHtml + "</summary>";
 
 				// CONTENT GOES HERE
 				if (entry.hasOwnProperty('entries'))
 				{
-					// read: entries
 					for (var i=0; i<entry.entries.length; i++)
 					{
 						var localEntry = entry.entries[i];
 						html += readServerLayoutEntry(localEntry);
 					}
 				}
+
+				html += "</details>";
 			}
 		}
 		else if (entry.type === "label")
@@ -1625,6 +1649,17 @@ List of stuff that can be done
 			// Set HTML in DOM
 			$('#dbx-quick-access-server-list').html(html);
 
+			// Restore collapsed state and attach toggle persistence for group <details>
+			document.querySelectorAll('details.dbx-srv-group').forEach(function(el) {
+				try {
+					var stored = localStorage.getItem(el.id + '-open');
+					if (stored === '0') el.removeAttribute('open');
+				} catch(e) {}
+				el.addEventListener('toggle', function() {
+					try { localStorage.setItem(el.id + '-open', el.open ? '1' : '0'); } catch(e) {}
+				});
+			});
+
 			// Enable bootstrap tooltip...
 			$('[data-toggle="tooltip"]').tooltip();
 
@@ -1666,8 +1701,9 @@ List of stuff that can be done
 			// Poll using _refresh interval (default 15s, overridable via ?refresh=N)
 			setInterval(dbxTuneCheckActiveAlarms, _refresh * 1000);
 
-			// Start adaptive server-staleness refresh loop
-			dbxScheduleStalenessCheck();
+			// Start adaptive server-staleness refresh loop — first check fires quickly so
+			// group Warning badges are populated before the slow 15-min idle schedule kicks in
+			setTimeout(dbxCheckServerStaleness, 500);
 			// Full page reload after 12 hours — picks up new releases and keeps dashboards fresh
 			setTimeout(function() { location.reload(true); }, 12 * 60 * 60 * 1000);
 
@@ -1684,6 +1720,36 @@ List of stuff that can be done
 			console.log("Details: " + desc + "\nError: " + err);
 		}
 	}); // end: ajax call
+
+	// ── Group summary stats ───────────────────────────────────────────────────
+
+	function dbxUpdateGroupStats()
+	{
+		document.querySelectorAll('details.dbx-srv-group').forEach(function(grp) {
+			var statsEl = document.getElementById(grp.id + '-stats');
+			if (!statsEl) return;
+			var serverNames = [];
+			try { serverNames = JSON.parse(grp.getAttribute('data-servers') || '[]'); } catch(e) {}
+			var total = serverNames.length, alarms = 0, muted = 0, warn = 0, ok = 0;
+			serverNames.forEach(function(srvName) {
+				var btn = document.getElementById('btn-qa-normal-' + srvName);
+				var isStale = btn && btn.classList.contains('btn-warning');
+				var _as = _serverAlarmState[srvName] || { active: 0, muted: 0 };
+				var a = _as.active, m = _as.muted;
+				var w = (isStale && a === 0 && m === 0) ? 1 : 0;
+				alarms += a; muted += m; warn += w;
+				if (a === 0 && m === 0 && w === 0) ok++;
+			});
+			var b = '&ensp;';
+			b += "<span class='badge badge-secondary' style='font-weight:normal;'>" + total + " Server" + (total !== 1 ? "s" : "") + "</span>";
+			if (ok > 0)     b += " <span class='badge badge-success'  style='font-weight:normal;'>" + ok     + " OK</span>";
+			if (warn > 0)   b += " <span class='badge badge-warning'  style='font-weight:normal;'>" + warn   + " Warning" + (warn !== 1 ? "s" : "") + "</span>";
+			if (alarms > 0) b += " <span class='badge badge-danger'   style='font-weight:normal;'>" + alarms + " Alarm" + (alarms !== 1 ? "s" : "") + "</span>";
+			if (muted > 0)  b += " <span class='badge' style='background:#c0657a;color:#fff;font-weight:normal;'>" + muted + " Muted</span>";
+			statsEl.innerHTML = b;
+			statsEl.style.color = '';
+		});
+	}
 
 	// ── Server staleness refresh ─────────────────────────────────────────────
 	// Re-checks lastSampleTime for each server and updates button colour.
@@ -1711,6 +1777,7 @@ List of stuff that can be done
 						}
 						if (stale) _staleServers.add(srv.serverName);
 					});
+					dbxUpdateGroupStats();
 				} catch(e) { console.warn('dbxCheckServerStaleness error', e); }
 				dbxScheduleStalenessCheck();
 			},
@@ -1865,11 +1932,14 @@ List of stuff that can be done
 				}
 
 				// Update per-server button pills
+				_serverAlarmState = {};
 				for (var key in srvAlarmMap) {
 					var graphServerName = key;
 					var entry      = reWriteAlarmEntry(srvAlarmMap[key]);
 					var mutedCount = entry.filter(function(a) { return  a.isMuted; }).length;
 					var activeCnt  = entry.filter(function(a) { return !a.isMuted; }).length;
+
+					_serverAlarmState[graphServerName] = { active: activeCnt, muted: mutedCount };
 
 					alarmSrvCount++;
 					alarmSumCount += activeCnt;
@@ -1887,6 +1957,9 @@ List of stuff that can be done
 						btn.classList.add(activeCnt > 0 ? 'btn-danger' : 'btn-muted-alarm');
 					}
 				}
+
+				// Update group summary stats (server count, OK, Warnings, Alarms, Muted)
+				dbxUpdateGroupStats();
 
 				// Update page title notification
 				if (alarmSumCount > 0) pageTitleNotification.on("---ALARM---", 1000);

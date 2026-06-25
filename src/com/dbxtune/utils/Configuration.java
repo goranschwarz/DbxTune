@@ -350,6 +350,12 @@ extends Properties
 			{
 				if (key.startsWith(skipKeyPrefix))
 				{
+					if (key.toLowerCase().contains("passw"))
+					{
+						if (StringUtil.hasValue(newVal)) newVal = "***passw-key-val-is-masked***";
+						if (StringUtil.hasValue(oldVal)) oldVal = "***passw-key-val-is-masked***";
+					}
+
 					_logger.info("Skipping changes COMBINED CONFIG[" + conf.getConfName() + "], due to keepFilter='" + skipKeyPrefix + "' for: propName='" + key + "', type=" + changeTypeToStr(type) + ", newValue='" + newVal + "', oldValue='" + oldVal + "'.");
 					return false;
 				}
@@ -401,9 +407,10 @@ extends Properties
 				for (Path path : dirs)
 				{
 					_logger.info("Starts to listen for Configuration file modifications in directory '" + path + "'. All Filenames: " + fileNames);
-					path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
-					path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE);
-					path.register(watchService, StandardWatchEventKinds.ENTRY_DELETE);
+					path.register(watchService,
+							StandardWatchEventKinds.ENTRY_MODIFY,
+							StandardWatchEventKinds.ENTRY_CREATE,
+							StandardWatchEventKinds.ENTRY_DELETE);
 
 					try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) 
 					{
@@ -456,6 +463,21 @@ extends Properties
 						Path filename = ev.context();
 						Path fullPath = dir.resolve(filename);
 
+						// SKIP some files
+						String fullPathStr = fullPath.toString();
+						if (    fullPathStr.endsWith(".AlarmHandler.jso") // AlarmHandler JSO=JavaSerializedObject
+						     || fullPathStr.endsWith(".swx")
+						     || fullPathStr.endsWith(".swp")              // Swap files from "vi"
+						     || fullPathStr.endsWith("~")                 // Backup files from vi
+						   )
+						{
+//System.out.println("############################ SKIPPING file '" + fullPathStr + "'");
+							if (_logger.isDebugEnabled())
+								_logger.debug("WatchService: Found kind=" + kind + " for file '" + fullPathStr + "', SKIPPING THIS FILE.");
+							continue;
+						}
+//System.out.println("############################ PAST FILTER, processing file '" + fullPathStr + "'");
+
 						if (kind == StandardWatchEventKinds.OVERFLOW) 
 						{
 							Thread.yield();
@@ -463,8 +485,9 @@ extends Properties
 						} 
 						else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY)
 						{
+//System.out.println("############################ WatchService: Found CHANGES for file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
 							if (_logger.isDebugEnabled())
-								_logger.debug("WatchService: Found changes for file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
+								_logger.debug("WatchService: Found CHANGES for file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
 
 							if (targetFileToSymbolicLinkMap.containsKey(fullPath))
 							{
@@ -499,10 +522,26 @@ extends Properties
 						}
 						else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_CREATE)
 						{
+//System.out.println("############################ WatchService: Found NEW file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
 							if (_logger.isDebugEnabled())
 								_logger.debug("WatchService: Found NEW file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
 
+							// Apply symlink translation: if the created file is a symlink target, treat it as a change to the symlink
+							if (targetFileToSymbolicLinkMap.containsKey(fullPath))
+							{
+								Path symbolicLink = targetFileToSymbolicLinkMap.get(fullPath);
+								_logger.info("WatchService: Found new file '" + fullPath + "' which HAS a symbolic link pointing towards it. The symbolic link is '" + symbolicLink + "', which will be used to propagate file change.");
+								fullPath = symbolicLink;
+							}
+
 							String longFilename = fullPath.toString();
+
+							// Many editors (vim, nano, etc.) save atomically: write temp file then rename into place.
+							// This fires ENTRY_CREATE instead of ENTRY_MODIFY, so we must treat it the same way.
+							if (fileNames.contains(longFilename))
+							{
+								onChange(fullPath);
+							}
 
 							// User Defined Charts
 							boolean isUserDefinedContent = longFilename.endsWith(UserDefinedChartManager.USER_DEFINED_FILE_POST);
@@ -522,6 +561,7 @@ extends Properties
 						}
 						else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_DELETE)
 						{
+//System.out.println("############################ WatchService: Found DELETE file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
 							if (_logger.isDebugEnabled())
 								_logger.debug("WatchService: Found DELETE file '" + fullPath + "'. targetFileToSymbolicLinkMap.containsKey(fullPath) = " + targetFileToSymbolicLinkMap.containsKey(fullPath));
 
@@ -543,12 +583,12 @@ extends Properties
 								udActionManager.onConfigFileRemove(fullPath);
 							}
 						}
+					}
 
-						boolean valid = watchKey.reset();
-						if ( ! valid ) 
-						{ 
-							break; 
-						}
+					boolean valid = watchKey.reset();
+					if ( ! valid )
+					{
+						break;
 					}
 				} // end: isRunning
 			} 
@@ -563,6 +603,8 @@ extends Properties
 		{
 			// Get Configuration instance for this file
 			Configuration curConfig = _combinedConfig.getInstanceForFilename(filename.toString());
+//System.out.println("############################ onChange('" + filename + "'): curConfig=" + (curConfig == null ? "-null-" : curConfig.getConfName()));
+
 			if (curConfig != null)
 			{
 				String curConfInstanceName = curConfig.getConfName();
@@ -607,6 +649,7 @@ extends Properties
 								// CHANGED CONFIG VALUE
 								curConfig.setProperty(newKey, newVal);
 								
+//System.out.println("######## onChange #####: Combened Config, CHANGED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', oldVal='" + oldVal + "', newVal='" + newVal + "'.");
 								if (_logger.isDebugEnabled())
 									_logger.debug("Combened Config, CHANGED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', oldVal='" + oldVal + "', newVal='" + newVal + "'.");
 
@@ -621,6 +664,7 @@ extends Properties
 							// NEW CONFIG VALUE
 							curConfig.setProperty(newKey, newVal);
 
+//System.out.println("######## onChange #####: Combened Config,     NEW-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', newVal='" + newVal + "'.");
 							if (_logger.isDebugEnabled())
 								_logger.debug("Combened Config,     NEW-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', newVal='" + newVal + "'.");
 

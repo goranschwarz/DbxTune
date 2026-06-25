@@ -3000,20 +3000,21 @@ public class CentralPersistReader
 	private static String dbxCentralUsersSelectCols(String lq, String rq)
 	{
 		return ""
-			+        lq + "UserName"     + rq
-			+ ", " + lq + "Password"     + rq
-			+ ", " + lq + "Email"        + rq
-			+ ", " + lq + "Roles"        + rq
-			+ ", " + lq + "Status"       + rq
-			+ ", " + lq + "AddDate"      + rq
-			+ ", " + lq + "UpdateDate"   + rq
-			+ ", " + lq + "LastLoginDate"+ rq
-			+ ", " + lq + "Source"       + rq
-			+ ", " + lq + "FullName"     + rq
-			+ ", " + lq + "RequestReason"+ rq
+			+        lq + "UserName"      + rq
+			+ ", " + lq + "Password"      + rq
+			+ ", " + lq + "Email"         + rq
+			+ ", " + lq + "Roles"         + rq
+			+ ", " + lq + "Status"        + rq
+			+ ", " + lq + "AddDate"       + rq
+			+ ", " + lq + "UpdateDate"    + rq
+			+ ", " + lq + "LastLoginDate" + rq
+			+ ", " + lq + "Source"        + rq
+			+ ", " + lq + "FullName"      + rq
+			+ ", " + lq + "RequestReason" + rq
 			+ ", " + lq + "ApprovedBy"    + rq
 			+ ", " + lq + "ApproveDate"   + rq
 			+ ", " + lq + "LoginFailCount"+ rq
+			+ ", " + lq + "LoginCount"    + rq
 			;
 	}
 
@@ -3031,16 +3032,17 @@ public class CentralPersistReader
 		DbxCentralUser user = new DbxCentralUser(user_username, user_password, user_email, user_roles);
 
 		// Extended columns — may be absent on pre-v17 schema; use getObject to avoid NPE
-		try { user.setStatus       (rs.getInt       ("Status"       ));                    } catch (SQLException ignore) { user.setStatus(DbxCentralUser.UserStatus.ACTIVE.getBit()); }
-		try { user.setAddDate      (rs.getTimestamp ("AddDate"      ));                    } catch (SQLException ignore) {}
-		try { user.setUpdateDate   (rs.getTimestamp ("UpdateDate"   ));                    } catch (SQLException ignore) {}
-		try { user.setLastLoginDate(rs.getTimestamp ("LastLoginDate"));                    } catch (SQLException ignore) {}
-		try { user.setSource       (rs.getString    ("Source"       ));                    } catch (SQLException ignore) {}
-		try { user.setFullName     (rs.getString    ("FullName"     ));                    } catch (SQLException ignore) {}
-		try { user.setRequestReason(rs.getString    ("RequestReason"));                    } catch (SQLException ignore) {}
-		try { user.setApprovedBy    (rs.getString   ("ApprovedBy"    ));                   } catch (SQLException ignore) {}
-		try { user.setApproveDate   (rs.getTimestamp("ApproveDate"   ));                   } catch (SQLException ignore) {}
-		try { user.setLoginFailCount(rs.getInt      ("LoginFailCount"));                   } catch (SQLException ignore) {}
+		try { user.setStatus        (rs.getInt       ("Status"       ));  } catch (SQLException ignore) { user.setStatus(DbxCentralUser.UserStatus.ACTIVE.getBit()); }
+		try { user.setAddDate       (rs.getTimestamp ("AddDate"      ));  } catch (SQLException ignore) {}
+		try { user.setUpdateDate    (rs.getTimestamp ("UpdateDate"   ));  } catch (SQLException ignore) {}
+		try { user.setLastLoginDate (rs.getTimestamp ("LastLoginDate"));  } catch (SQLException ignore) {}
+		try { user.setSource        (rs.getString    ("Source"       ));  } catch (SQLException ignore) {}
+		try { user.setFullName      (rs.getString    ("FullName"     ));  } catch (SQLException ignore) {}
+		try { user.setRequestReason (rs.getString    ("RequestReason"));  } catch (SQLException ignore) {}
+		try { user.setApprovedBy    (rs.getString    ("ApprovedBy"    )); } catch (SQLException ignore) {}
+		try { user.setApproveDate   (rs.getTimestamp ("ApproveDate"   )); } catch (SQLException ignore) {}
+		try { user.setLoginFailCount(rs.getInt       ("LoginFailCount")); } catch (SQLException ignore) {}
+		try { user.setLoginCount    (rs.getInt       ("LoginCount"    )); } catch (SQLException ignore) {}
 
 		return user;
 	}

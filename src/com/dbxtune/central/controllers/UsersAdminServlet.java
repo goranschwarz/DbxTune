@@ -139,8 +139,13 @@ public class UsersAdminServlet extends HttpServlet
 	throws IOException
 	{
 		ArrayNode arr = om.createArrayNode();
-		for (String role : DbxCentralRealm.Role.getAllRoleNames())
-			arr.add(role);
+		for (DbxCentralRealm.Role role : DbxCentralRealm.Role.values())
+		{
+			ObjectNode node = om.createObjectNode();
+			node.put("name",        role.getRoleName());
+			node.put("description", role.getDescription());
+			arr.add(node);
+		}
 		om.writeValue(resp.getWriter(), arr);
 	}
 
@@ -165,6 +170,7 @@ public class UsersAdminServlet extends HttpServlet
 			node.put("approveDate",    u.getApproveDate()   != null ? u.getApproveDate().toString()  : "");
 			node.put("lastLoginDate",  u.getLastLoginDate() != null ? u.getLastLoginDate().toString(): "");
 			node.put("loginFailCount", u.getLoginFailCount());
+			node.put("loginCount",     u.getLoginCount());
 			arr.add(node);
 		}
 		om.writeValue(resp.getWriter(), arr);

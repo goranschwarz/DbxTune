@@ -555,7 +555,7 @@ extends DbmsConfigAbstract
 
 				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
 						"The Server Level Configuration '" + cfgName + "' is set to DEFAULT. This will/may eventually cause memeory issues like swapping etc.", 
-						"Fix this using: exec sp_configure '" + cfgName + "', /*80-90% of srv memory*/");
+						"Fix this using: exec sp_configure '" + cfgName + "', /*~80% of srv memory*/");
 
 				DbmsConfigManager.getInstance().addConfigIssue(issue);
 
@@ -570,7 +570,30 @@ extends DbmsConfigAbstract
 					int total_physical_memory_kb = rstm.getValueAsInteger(0, "total_physical_memory_kb", true, -1);
 					if (total_physical_memory_kb != -1)
 					{
-						int    totalPhysicalMemoryMb = total_physical_memory_kb / 1024;
+						int totalPhysicalMemoryMb = total_physical_memory_kb / 1024;
+
+						boolean isLinux = StringUtil.hasValue(versionStr) && versionStr.contains("Linux");
+						if (isLinux)
+						{
+							// NOTE: 'total_physical_memory_kb' from 'sys.dm_os_sys_memory' seems to be WRONG, it's LESS than the INSTALLED Memory
+							//	- for instance in Linux: /proc/meminfo, MemTotal: 65,772,456 kB
+							//	  and in dm_os_sys_memory.total_physical_memory_kb = 52,617,216
+							// 
+							// The differences you are seeing occur because SQL Server on Linux runs inside a platform abstraction layer (PAL) called SQLPAL. 
+							// SQLPAL emulates Windows API calls for the SQL Server engine, which directly changes how sys.dm_os_sys_memory reports metrics.
+							// Possibly: Check: SELECT host_platform/*==Linux*/, host_distribution FROM sys.dm_os_host_info 
+
+							// SQL Server on Linux (SQLPAL) often reports ~80% of installed RAM. ==>> Adjust back to an estimate of host memory.
+							// NOTE: THIS MIGHT CHANGE IN THE FUTURE (versions of SQL Server above 2025)
+						    totalPhysicalMemoryMb = (int)Math.round(totalPhysicalMemoryMb / 0.8); 
+
+						    _logger.info("SQL Server on Linux detected. Adjusted physical memory from "
+						        + (total_physical_memory_kb / 1024)
+						        + " MB to estimated host memory "
+						        + totalPhysicalMemoryMb
+						        + " MB. (Note: SQLPAL only shows 80% of the physical memory on Linux)");
+						}
+						
 						int    cfgMaxMemoryMb        = entry.runValue;
 						double pctOfPhysicalMemory   = MathUtils.round( (cfgMaxMemoryMb*1.0) / (totalPhysicalMemoryMb*1.0) * 100.0, 1);
 
@@ -579,19 +602,13 @@ extends DbmsConfigAbstract
 
 						_logger.info("Checking SQL Server Configuration '" + cfgName + "'. Found that '" + pctOfPhysicalMemory + "%' of the Physical Memory was configured. SqlServerConfigMb=" + cfgMaxMemoryMb + ", totalPhysicalMemoryMb=" + totalPhysicalMemoryMb + ". Thresholds for warnings: low=" + pctLtThreshold + "%, high=" + pctGtThreshold + "%");
 
-// NOTE: 'total_physical_memory_kb' from 'sys.dm_os_sys_memory' seems to be WRONG, it's LESS than the INSTALLED Memory
-//       - for instance in Linux: /proc/meminfo, MemTotal: 65,772,456 kB
-//         and in dm_os_sys_memory.total_physical_memory_kb = 52,617,216
-//       IF this is the same on Windows, then we need to DISABLE this check
-//       AND how should we do with Linux... Allow or "adjust" in some way!
-
 						if (pctOfPhysicalMemory < pctLtThreshold)
 						{
 							String key = "DbmsConfigIssue." + srvName + ".sp_configure." + cfgToPropName(cfgName) + ".may_be_to_low";
 
 							DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
 									"The Server Level Configuration '" + cfgName + "' is probably a bit LOW. SQL-Server-Percent-of-Physical-Memory '" + pctOfPhysicalMemory + "%', SqlServerConfig=" + cfgMaxMemoryMb + ", TotalPhysicalMemoryMb=" + totalPhysicalMemoryMb + ".", 
-									"Fix this using: exec sp_configure '" + cfgName + "', /*80-90% of srv memory*/");
+									"Fix this using: exec sp_configure '" + cfgName + "', /*~80% of srv memory*/");
 
 							DbmsConfigManager.getInstance().addConfigIssue(issue);
 						}
@@ -602,7 +619,7 @@ extends DbmsConfigAbstract
 
 							DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.ERROR, 
 									"The Server Level Configuration '" + cfgName + "' is probably a bit HIGH. SQL-Server-Percent-of-Physical-Memory '" + pctOfPhysicalMemory + "%', SqlServerConfig=" + cfgMaxMemoryMb + ", TotalPhysicalMemoryMb=" + totalPhysicalMemoryMb + ".", 
-									"Fix this using: exec sp_configure '" + cfgName + "', /*80-90% of srv memory*/");
+									"Fix this using: exec sp_configure '" + cfgName + "', /*~80% of srv memory*/");
 
 							DbmsConfigManager.getInstance().addConfigIssue(issue);
 						}

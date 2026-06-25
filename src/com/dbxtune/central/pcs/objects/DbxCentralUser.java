@@ -102,6 +102,9 @@ public class DbxCentralUser
 	// ---- extended fields (DB version 18+) ----
 	private int       _loginFailCount = 0;
 
+	// ---- extended fields (DB version 19+) ----
+	private int       _loginCount     = 0;
+
 	public DbxCentralUser()
 	{
 	}
@@ -131,6 +134,7 @@ public class DbxCentralUser
 	public String    getApprovedBy()    { return _approvedBy; }
 	public Timestamp getApproveDate()    { return _approveDate; }
 	public int       getLoginFailCount() { return _loginFailCount; }
+	public int       getLoginCount()     { return _loginCount; }
 
 	public void setStatus        (int status)           { _status         = status; }
 	public void setAddDate       (Timestamp ts)         { _addDate        = ts; }
@@ -142,6 +146,7 @@ public class DbxCentralUser
 	public void setApprovedBy    (String approvedBy)    { _approvedBy     = approvedBy; }
 	public void setApproveDate   (Timestamp approveDate){ _approveDate    = approveDate; }
 	public void setLoginFailCount(int count)            { _loginFailCount = count; }
+	public void setLoginCount    (int count)            { _loginCount     = count; }
 
 	public boolean isLoginAllowed() { return UserStatus.isLoginAllowed(_status); }
 }

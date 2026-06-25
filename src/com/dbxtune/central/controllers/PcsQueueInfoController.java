@@ -51,27 +51,28 @@ public class PcsQueueInfoController extends HttpServlet
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
 		
-		int     pcsQueueSize           = -1;
-//		boolean pcsIsBussy             = false;
-//		String  pcsCurrentServerName   = null;
-//		int     pcsCurrentExecTimeInMs = -1;
-//		String  pcsLastServerName      = null;
-//		int     pcsLastExecTimeInMs    = -1;
+		int    pcsQueueSize              = -1;
+		String lastPersistedSampleTime   = null;
 		if (CentralPcsWriterHandler.hasInstance())
 		{
-			pcsQueueSize = CentralPcsWriterHandler.getInstance().getQueueSize();
+			CentralPcsWriterHandler pch = CentralPcsWriterHandler.getInstance();
+			pcsQueueSize = pch.getQueueSize();
+			long lastMs  = pch.getLastPersistedSampleTimeMs();
+			if (lastMs > 0)
+				lastPersistedSampleTime = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new java.util.Date(lastMs));
 		}
-		
+
 		// Create JSON writer
 		StringWriter sw = new StringWriter();
 		JsonFactory jfactory = new JsonFactory();
 		JsonGenerator gen = jfactory.createGenerator(sw);
-		//w.setPrettyPrinter(new DefaultPrettyPrinter());
 
 		// to JSON
 		gen.writeStartObject();
 
-		gen.writeNumberField ("queueSize",           pcsQueueSize);
+		gen.writeNumberField("queueSize", pcsQueueSize);
+		if (lastPersistedSampleTime != null)
+			gen.writeStringField("lastPersistedSampleTime", lastPersistedSampleTime);
 //		w.writeBooleanField("bussy",               pcsIsBussy);
 //		w.writeStringField ("currentServerName",   pcsCurrentServerName);
 //		w.writeNumberField ("currentExecTimeInMs", pcsCurrentExecTimeInMs);

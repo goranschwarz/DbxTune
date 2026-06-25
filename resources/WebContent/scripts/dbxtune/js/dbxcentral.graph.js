@@ -633,11 +633,12 @@ function collectorRequestRefresh()
 	{
 		url: "/api/collector-refresh?srv="+srvName,
 		type: 'get',
+		dataType: 'json',
 		//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-			
-		success: function(data, status) 
+
+		success: function(data, status)
 		{
-			var jsonResp = JSON.parse(data);
+			var jsonResp = data;
 			console.log("RECEIVED DATA[collectorRequestRefresh]: ", jsonResp);
 		},
 		error: function(xhr, desc, err) 

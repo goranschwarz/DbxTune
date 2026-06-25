@@ -33,8 +33,11 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
@@ -1528,6 +1531,16 @@ public class SqlServerUtils
 			"\\s{2,}(?=(?:DEBUG|INFO|WARNING|ERROR|CRITICAL)\\s+-)"
 		);
 
+	/**
+	 * FDSLoader (FactSet) log line boundary.
+	 * Each line starts with a timestamp: YYYY/MM/DD HH:MM:SS  LEVEL>:
+	 * e.g. "2026/06/22 20:00:46  INFO>: Emptying directory ..."
+	 * Split point is immediately before the timestamp, consuming any preceding whitespace.
+	 */
+	private static final Pattern FDSLOADER_TIMESTAMP = Pattern.compile(
+		"\\s*(?=\\d{4}/\\d{2}/\\d{2}\\s+\\d{2}:\\d{2}:\\d{2}\\s+\\w+>:)"
+	);
+
 //	/**
 //	 * Unescapes basic HTML entities that the SQL Agent web layer may inject
 //	 * into the message column (e.g. &quot; &lt; &gt; &amp; &#39;).
@@ -1542,8 +1555,255 @@ public class SqlServerUtils
 //			.replace("&#39;",  "'");
 //	}
 
+	// -----------------------------------------------------------------------
+	// User-defined formatting profiles for jobMessageFormatter
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Property key prefix for user-defined job message formatter profiles.
+	 *
+	 * <h3>Properties-file escaping rules</h3>
+	 * Java's properties loader processes backslash escapes BEFORE this code sees the value.
+	 * Two consequences you must keep in mind when writing rules:
+	 * <ul>
+	 *   <li><b>Regex metacharacters</b> ({@code \s}, {@code \d}, {@code \w}, etc.) must be
+	 *       doubled: write {@code \\s}, {@code \\d}, {@code \\w} in the file so the loader
+	 *       passes a single backslash to the regex engine.</li>
+	 *   <li><b>Newline in replacement</b>: write {@code \n} in the file — the loader converts
+	 *       it to a real newline character, which is exactly what the replacement needs.
+	 *       Do NOT write {@code \\n}; that would produce a literal two-char sequence.</li>
+	 * </ul>
+	 *
+	 * Example properties file entries:
+	 * <pre>
+	 *   # Declare all profiles (comma-separated)
+	 *   SqlServer.jobMessageFormatter.profiles=myapp,salesreport
+	 *
+	 *   # --- Profile: myapp ---
+	 *   # Auto-activate when the message matches this regex (omit to always activate)
+	 *   # Note: \\s and \\d — doubled because the properties loader consumes one backslash
+	 *   SqlServer.jobMessageFormatter.profile.myapp.trigger=MyApp\\s+v\\d
+	 *
+	 *   # Restrict to these subsystems (omit to apply to all subsystems)
+	 *   SqlServer.jobMessageFormatter.profile.myapp.subsystems=CMDEXEC,POWERSHELL
+	 *
+	 *   # Set true to skip the built-in subsystem switch entirely for matched messages
+	 *   SqlServer.jobMessageFormatter.profile.myapp.skipBuiltIn=false
+	 *
+	 *   # Ordered list of rule names to apply
+	 *   SqlServer.jobMessageFormatter.profile.myapp.rules=stepHeader,resultLine
+	 *
+	 *   # Rule format: regex=replacement  (split on first '='; $0/$1 for back-references)
+	 *   # \n in replacement = real newline (properties loader converts it)
+	 *   # \\s in regex      = regex \s     (properties loader converts \\ to \)
+	 *   SqlServer.jobMessageFormatter.profile.myapp.rule.stepHeader=STEP\\s+\\d+=\n$0
+	 *   SqlServer.jobMessageFormatter.profile.myapp.rule.resultLine=\\s{2,}(?=RESULT:)=\n
+	 *
+	 *   # --- Profile: salesreport ---
+	 *   # Activates only for TSQL steps whose message mentions "SalesReport"
+	 *   SqlServer.jobMessageFormatter.profile.salesreport.trigger=SalesReport\\s+started
+	 *   SqlServer.jobMessageFormatter.profile.salesreport.subsystems=TSQL
+	 *
+	 *   # Replace the built-in TSQL handling entirely with our own rules
+	 *   SqlServer.jobMessageFormatter.profile.salesreport.skipBuiltIn=true
+	 *   SqlServer.jobMessageFormatter.profile.salesreport.rules=timestamp,section
+	 *
+	 *   # Put each timestamp on its own line (keep the timestamp itself via $0)
+	 *   SqlServer.jobMessageFormatter.profile.salesreport.rule.timestamp=\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}=\n$0
+	 *
+	 *   # Put each === section divider on its own line
+	 *   SqlServer.jobMessageFormatter.profile.salesreport.rule.section=={3,}=\n$0
+	 * </pre>
+	 *
+	 * Rule format is <code>regex=replacement</code> — split on the FIRST '=' only,
+	 * so replacements may themselves contain '='. Java replaceAll back-references
+	 * ($0, $1, etc.) are supported in the replacement.
+	 *
+	 * If <code>skipBuiltIn=true</code> the built-in subsystem switch is bypassed
+	 * entirely for messages matched by this profile's trigger.
+	 */
+	static final String PROPKEY_JMF_PROFILES = "SqlServer.jobMessageFormatter.profiles";
+	static final String PROPKEY_JMF_PROFILE  = "SqlServer.jobMessageFormatter.profile.";
+
+	static final String  PROPKEY_JMF_DEBUG_ALWAYS_RELOAD = "SqlServer.jobMessageFormatter.debug.always.reload";
+	static final boolean DEFAULT_JMF_DEBUG_ALWAYS_RELOAD = false;
+	
+	/** Holds compiled profiles; null means not yet loaded. Package-private to allow test injection. */
+	static volatile List<JobMessageProfile> _jobMessageProfiles = null;
+
+	/** Package-private: resets the profile cache so the next call to getJobMessageProfiles() reloads from config. For unit tests only. */
+	static void resetJobMessageProfilesCache() { _jobMessageProfiles = null; }
+
+	/** One user-defined formatting profile. Package-private to allow unit test inspection. */
+	static class JobMessageProfile
+	{
+		final String         name;
+		final Pattern        trigger;      // null = always active
+		final Set<String>    subsystems; // empty = all subsystems
+		final boolean        skipBuiltIn;
+		final List<Pattern>  rulePatterns;
+		final List<String>   ruleReplacements;
+
+		JobMessageProfile(String name, Pattern trigger, Set<String> subsystems,
+		                  boolean skipBuiltIn,
+		                  List<Pattern> rulePatterns, List<String> ruleReplacements)
+		{
+			this.name             = name;
+			this.trigger          = trigger;
+			this.subsystems       = subsystems;
+			this.skipBuiltIn      = skipBuiltIn;
+			this.rulePatterns     = rulePatterns;
+			this.ruleReplacements = ruleReplacements;
+		}
+
+		/** Returns true if this profile should be applied to the given subsystem + message. */
+		boolean matches(String subsystemUpper, String message)
+		{
+			if (!subsystems.isEmpty() && !subsystems.contains(subsystemUpper))
+				return false;
+			if (trigger != null && !trigger.matcher(message).find())
+				return false;
+			return true;
+		}
+
+		/** Applies all rules in order and returns the transformed string. */
+		String apply(String s)
+		{
+			for (int i = 0; i < rulePatterns.size(); i++)
+				s = rulePatterns.get(i).matcher(s).replaceAll(ruleReplacements.get(i));
+			return s;
+		}
+	}
+
+	/** Returns the (lazily loaded) list of user-defined profiles. Never null. */
+	private static List<JobMessageProfile> getJobMessageProfiles()
+	{
+		// Used for debugging
+		// NOTE: This will ADD OVERHEAD and should NOT BE USED in production
+		boolean debugAlwaysReload = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_JMF_DEBUG_ALWAYS_RELOAD, DEFAULT_JMF_DEBUG_ALWAYS_RELOAD);
+		if (debugAlwaysReload)
+			_jobMessageProfiles = null;
+
+		if (_jobMessageProfiles == null)
+			_jobMessageProfiles = loadJobMessageProfiles();
+
+		return _jobMessageProfiles;
+	}
+
+	/** Reads all profiles from the combined configuration. */
+	private static List<JobMessageProfile> loadJobMessageProfiles()
+	{
+		return loadJobMessageProfiles(Configuration.getCombinedConfiguration());
+	}
+
+	/** Package-private: loads profiles from the supplied configuration (enables unit testing without a global singleton). */
+	static List<JobMessageProfile> loadJobMessageProfiles(Configuration conf)
+	{
+		List<JobMessageProfile> result = new ArrayList<>();
+
+		if (conf == null)
+			return result;
+
+		String profileListStr = conf.getProperty(PROPKEY_JMF_PROFILES, "").trim();
+		if (profileListStr.isEmpty())
+			return result;
+
+		for (String profileName : profileListStr.split(","))
+		{
+			profileName = profileName.trim();
+			if (profileName.isEmpty())
+				continue;
+
+			String prefix = PROPKEY_JMF_PROFILE + profileName + ".";
+
+			// --- trigger ---
+			Pattern trigger = null;
+			String triggerStr = conf.getProperty(prefix + "trigger", "").trim();
+			if (!triggerStr.isEmpty())
+			{
+				try { trigger = Pattern.compile(triggerStr); }
+				catch (PatternSyntaxException e)
+				{
+					_logger.warn("jobMessageFormatter: profile '{}' has invalid trigger regex '{}' — profile skipped. Error: {}", profileName, triggerStr, e.getMessage());
+					continue;
+				}
+			}
+
+			// --- subsystems ---
+			Set<String> subsystems = new HashSet<>();
+			String subsystemsStr = conf.getProperty(prefix + "subsystems", "").trim();
+			if (!subsystemsStr.isEmpty())
+			{
+				for (String sub : subsystemsStr.split(","))
+				{
+					String s = sub.trim().toUpperCase();
+					if (!s.isEmpty())
+						subsystems.add(s);
+				}
+			}
+
+			// --- skipBuiltIn ---
+			boolean skipBuiltIn = conf.getBooleanProperty(prefix + "skipBuiltIn", false);
+
+			// --- rules ---
+			List<Pattern> rulePatterns     = new ArrayList<>();
+			List<String>  ruleReplacements = new ArrayList<>();
+
+			String rulesStr = conf.getProperty(prefix + "rules", "").trim();
+			if (!rulesStr.isEmpty())
+			{
+				for (String ruleName : rulesStr.split(","))
+				{
+					ruleName = ruleName.trim();
+					if (ruleName.isEmpty())
+						continue;
+
+					String ruleVal = conf.getProperty(prefix + "rule." + ruleName, "").trim();
+					if (ruleVal.isEmpty())
+					{
+						_logger.warn("jobMessageFormatter: profile '{}' rule '{}' has no value — rule skipped.", profileName, ruleName);
+						continue;
+					}
+
+					// Split on first '=' only so replacements may contain '='
+					int eqIdx = ruleVal.indexOf('=');
+					if (eqIdx < 0)
+					{
+						_logger.warn("jobMessageFormatter: profile '{}' rule '{}' value '{}' has no '=' separator — rule skipped.", profileName, ruleName, ruleVal);
+						continue;
+					}
+
+					String regex       = ruleVal.substring(0, eqIdx);
+					String replacement = ruleVal.substring(eqIdx + 1); // \n already a real newline — the properties loader converted it
+
+					try
+					{
+						rulePatterns    .add(Pattern.compile(regex));
+						ruleReplacements.add(replacement);
+					}
+					catch (PatternSyntaxException e)
+					{
+						_logger.warn("jobMessageFormatter: profile '{}' rule '{}' has invalid regex '{}' — rule skipped. Error: {}", profileName, ruleName, regex, e.getMessage());
+					}
+				}
+			}
+
+			result.add(new JobMessageProfile(profileName, trigger, subsystems, skipBuiltIn, rulePatterns, ruleReplacements));
+			_logger.debug("jobMessageFormatter: loaded profile '{}' with {} rule(s), trigger={}, subsystems={}, skipBuiltIn={}", profileName, rulePatterns.size(), triggerStr.isEmpty() ? "(always)" : triggerStr, subsystems.isEmpty() ? "(all)" : subsystems, skipBuiltIn);
+		}
+
+		_logger.info("jobMessageFormatter: loaded {} user-defined profile(s) from '{}'", result.size(), PROPKEY_JMF_PROFILES);
+		return result;
+	}
+
+	// -----------------------------------------------------------------------
+
 	/**
 	 * Formats a raw sysjobhistory message into readable multi-line text.
+	 * <p>
+	 * <b>NOTE</b>: The "user defined rules" has not yet been fully tested... so be aware...<br>
+	 * there is a test case: <code>SqlServerUtilsJobMessageFormatterTest</code><br>
+	 * But no real life experiance so far...
 	 *
 	 * @param message   Raw message column value from sysjobhistory.
 	 * @param subsystem Step subsystem from sysjobsteps (TSQL, CmdExec,
@@ -1566,54 +1826,80 @@ public class SqlServerUtils
 		// Step 2: branch by subsystem
 		String sub = (subsystem != null) ? subsystem.trim().toUpperCase() : "";
 
-		switch (sub)
+		// Check whether any user-defined profile with skipBuiltIn=true matches,
+		// so we can bypass the built-in switch for those messages.
+		boolean builtInSkipped = false;
+		for (JobMessageProfile profile : getJobMessageProfiles())
 		{
-			case "TSQL":
-				// [SQLSTATE] blocks get indented under their message
-				s = SQLSTATE_SEP.matcher(s).replaceAll("\n  ");
+			if (profile.skipBuiltIn && profile.matches(sub, s))
+			{
+				s = profile.apply(s);
+				builtInSkipped = true;
+				// other non-skipBuiltIn profiles still run in Step 3 below
+			}
+		}
 
-				// Remaining sentence boundaries
-				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
-				break;
+		if (!builtInSkipped)
+		{
+			switch (sub)
+			{
+				case "TSQL":
+					// [SQLSTATE] blocks get indented under their message
+					s = SQLSTATE_SEP.matcher(s).replaceAll("\n  ");
 
-			case "SSIS":
-				// dtexec emits timestamped tokens — each on its own indented line
-				s = SSIS_TOKEN.matcher(s).replaceAll("\n  ");
+					// Remaining sentence boundaries
+					s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+					break;
 
-				// Remaining sentence boundaries
-				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
-				break;
+				case "SSIS":
+					// dtexec emits timestamped tokens — each on its own indented line
+					s = SSIS_TOKEN.matcher(s).replaceAll("\n  ");
 
-			case "CMDEXEC":
-			case "POWERSHELL":
-				if (s.contains("Traceback (most recent call last):"))
-				{
-					// 1. Each "File ..." frame onto its own indented line
-					s = PYTHON_FILE.matcher(s).replaceAll("\n    ");
+					// Remaining sentence boundaries
+					s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+					break;
 
-					// 2. The code line that follows each File entry
-					s = PYTHON_CODE.matcher(s).replaceAll("\n      ");
+				case "CMDEXEC":
+				case "POWERSHELL":
+					if (s.contains("Traceback (most recent call last):"))
+					{
+						// 1. Each "File ..." frame onto its own indented line
+						s = PYTHON_FILE.matcher(s).replaceAll("\n    ");
 
-					// 3. The final exception class onto its own line at col 0
-					//    replaceAll keeps the char before the spaces ([)']) then adds newline
-					s = PYTHON_EXC.matcher(s).replaceAll(mr -> mr.group().charAt(0) + "\n");
-				}
+						// 2. The code line that follows each File entry
+						s = PYTHON_CODE.matcher(s).replaceAll("\n      ");
 
-				// Split Python logger lines — anchors on " - LOGLEVEL - " in any field order
-				s = PYTHON_LOG.matcher(s).replaceAll("\n");
-				
-				// Split Windows CMD prompt echoes
-				s = CMD_PROMPT.matcher(s).replaceAll("\n");
+						// 3. The final exception class onto its own line at col 0
+						//    replaceAll keeps the char before the spaces ([)']) then adds newline
+						s = PYTHON_EXC.matcher(s).replaceAll(mr -> mr.group().charAt(0) + "\n");
+					}
 
-				// Split known trailer sentences (Process Exit Code N., The step failed., etc.)
-				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
-				break;
+					// Split Python logger lines — anchors on " - LOGLEVEL - " in any field order
+					s = PYTHON_LOG.matcher(s).replaceAll("\n");
 
-			default:
-				// Job-level rows (step_id = 0) land here with subsystem = null.
-				// Also a safe fallback for unknown subsystem types.
-				s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
-				break;
+					// Split FDSLoader (FactSet) timestamped log lines: YYYY/MM/DD HH:MM:SS  LEVEL>:
+					s = FDSLOADER_TIMESTAMP.matcher(s).replaceAll("\n");
+
+					// Split Windows CMD prompt echoes
+					s = CMD_PROMPT.matcher(s).replaceAll("\n");
+
+					// Split known trailer sentences (Process Exit Code N., The step failed., etc.)
+					s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+					break;
+
+				default:
+					// Job-level rows (step_id = 0) land here with subsystem = null.
+					// Also a safe fallback for unknown subsystem types.
+					s = SENTENCE_SEP.matcher(s).replaceAll(".\n");
+					break;
+			}
+		}
+
+		// Step 3: apply user-defined profiles that augment (not replace) the built-in handling
+		for (JobMessageProfile profile : getJobMessageProfiles())
+		{
+			if (!profile.skipBuiltIn && profile.matches(sub, s))
+				s = profile.apply(s);
 		}
 
 		return s.trim();
