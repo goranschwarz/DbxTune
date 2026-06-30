@@ -220,5 +220,13 @@ public interface IPersistWriter
 //	public int getSqlCaptureBatchCount();
 
 	public PersistWriterStatistics getStatistics();
+
+	/** 
+	 * Get a info String about the Target storage for this writer
+	 * <p>
+	 * This will be used when printing: Persisting Counters using 'PersistWriterXxx'... h2WriterStat... writerStatistics... targetInfo...
+	 */
+	public String getTargetInfo(); 
+
 	public void resetCounters();
 }

@@ -1152,6 +1152,17 @@ public class PersistWriterJdbc
 	}
 
 	@Override
+	public String getTargetInfo()
+	{
+		String info = "";
+
+		info = "JdbcUrl='" + _lastUsedUrl + "'";
+		
+		return info;
+	}
+
+
+	@Override
 	public void init(Configuration props) throws Exception
 	{
 		_config = props;

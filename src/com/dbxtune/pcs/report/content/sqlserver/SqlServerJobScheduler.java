@@ -71,6 +71,9 @@ extends SqlServerAbstract
 	public static final String PROPKEY_errors_skip_below_severity = "DailySummaryReport.SqlServerJobScheduler.skip.severity.below";
 	public static final int    DEFAULT_errors_skip_below_severity = 10; // 
 	
+	public static final String PROPKEY_JobSchedulerTimelineBucketSizeInMinutes = "DailySummaryReport.SqlServerJobScheduler.timeline.gantt.bucket.size.in.minutes";
+	public static final int    DEFAULT_JobSchedulerTimelineBucketSizeInMinutes = 5; // 
+	
 	private List<String>        _miniChartJsList = new ArrayList<>();
 	
 	private boolean _pcsSchemaOrTableWasNotFound = false;
@@ -570,6 +573,7 @@ extends SqlServerAbstract
 			    + "    ,'' AS [stepCmds] \n"
 			    + "    ,[runStatusDesc] \n"
 			    + "    ,[execCount] \n"
+			    + "    ,'' AS [scheduledLast24hChart] \n" // Fill this one with a chart of "histAllExecTimes" for the the full day (just the last full day)
 			    + "    ,[sumTimeInSec] \n"
 			    + "    ,[sumTime_HMS] \n"
 			    + "    ,[avgTimeInSec] \n"
@@ -626,6 +630,7 @@ extends SqlServerAbstract
 //			String histAllExecTimes = _job_history_overview.getValueAsString(r, "histAllExecTimes");
 			String histAllExecTimes = getTooltipFor_allExecTimes(job_id, step_id);
 			createSparklineForHistoryExecutions(histAllExecTimes, _job_history_overview, r, "histAllExecTimesChart");
+			createSparklineForLast24hScheduled (histAllExecTimes, _job_history_overview, r, "scheduledLast24hChart");
 			
 			// calculate the 'avgHistTimeDiff' column
 			int avgTimeInSec     = _job_history_overview.getValueAsInteger(r, "avgTimeInSec");
@@ -641,37 +646,38 @@ extends SqlServerAbstract
 			_job_history_overview.setValueAtWithOverride(avgHistTimeDiffStr, r, pos_avgHistTimeDiff);
 		}
 		
-		_job_history_overview.setColumnDescription("JobName"           ,"Name of the JOB shat started this step");
-		_job_history_overview.setColumnDescription("timeline"          ,"Click on the below for a TimeLine on 'today' or 'all executions'");
-		_job_history_overview.setColumnDescription("histGraph"         ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
-		_job_history_overview.setColumnDescription("execView"          ,"Open DbxTune/DbxCentral in historical mode and position to the start time of the job/step");
-		_job_history_overview.setColumnDescription("stepCount"         ,"How many steps does this job name have");
-		_job_history_overview.setColumnDescription("stepCmds"          ,"A list of all commands in the job");
-		_job_history_overview.setColumnDescription("runStatusDesc"     ,"The outcome of the job. Can be: FAILED, SUCCESS, RETRY, CANCELED or IN PROGRESS");
-		_job_history_overview.setColumnDescription("execCount"         ,"How many times has this JOB been executed in the reporting period");
-		_job_history_overview.setColumnDescription("sumTimeInSec"      ,"Summary Execution time in Seconds for all Executions in reporting period");
-		_job_history_overview.setColumnDescription("sumTime_HMS"       ,"Summary Execution time in Hour:Minute:Seconds for all Executions in reporting period");
-		_job_history_overview.setColumnDescription("avgTimeInSec"      ,"Average Execution time in Seconds for all Executions in reporting period");
-		_job_history_overview.setColumnDescription("avgTime_HMS"       ,"Average Execution time in Hour:Minute:Seconds for all Executions in reporting period");
-		_job_history_overview.setColumnDescription("avgHistTimeDiff"   ,"The difference of 'avgTime_HMS' and 'histAvgTime_HMS' this could be a positive (Slower) or negative (faster) than the average history.");
-		_job_history_overview.setColumnDescription("minTime_HMS"       ,"Minimum Execution time in Hour:Minute:Seconds for all Executions in reporting period");
-		_job_history_overview.setColumnDescription("maxTime_HMS"       ,"Maximum Execution time in Hour:Minute:Seconds for all Executions in reporting period");
-		_job_history_overview.setColumnDescription("stdevp"            ,"Standard Deviation Number of the Execution Time. Note: A higher number means more 'outliers', A lower number means more 'equal' execution times.");
-		_job_history_overview.setColumnDescription("firstExecTime"     ,"Time when this job was FIRST executed in in reporting period");
-		_job_history_overview.setColumnDescription("lastExecTime"      ,"Time when this job was LAST executed in in reporting period");
+		_job_history_overview.setColumnDescription("JobName"               ,"Name of the JOB shat started this step");
+		_job_history_overview.setColumnDescription("timeline"              ,"Click on the below for a TimeLine on 'today' or 'all executions'");
+		_job_history_overview.setColumnDescription("histGraph"             ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
+		_job_history_overview.setColumnDescription("execView"              ,"Open DbxTune/DbxCentral in historical mode and position to the start time of the job/step");
+		_job_history_overview.setColumnDescription("stepCount"             ,"How many steps does this job name have");
+		_job_history_overview.setColumnDescription("stepCmds"              ,"A list of all commands in the job");
+		_job_history_overview.setColumnDescription("runStatusDesc"         ,"The outcome of the job. Can be: FAILED, SUCCESS, RETRY, CANCELED or IN PROGRESS");
+		_job_history_overview.setColumnDescription("execCount"             ,"How many times has this JOB been executed in the reporting period");
+		_job_history_overview.setColumnDescription("scheduledLast24hChart" ,"When was this job scheduled in the last day. \nThis will be presented as a \"mini Gantt chart\" Visualizing when a job was executed during the day. \n\nNumber if minutes for each 'bucket' is by default " + DEFAULT_JobSchedulerTimelineBucketSizeInMinutes + " minutes. \nThis can be changed with property '" + PROPKEY_JobSchedulerTimelineBucketSizeInMinutes + " = ##'. \nNote: A shorter timespan will make the chart *wider*, for example 1 would be optimal... but then the chart will occupy a lot of space.\n\n\nIf you want to view a Chart with Execution Times: Click on Cell 'Show' at column 'histGraph' where the avilable history will be visible.");
+		_job_history_overview.setColumnDescription("sumTimeInSec"          ,"Summary Execution time in Seconds for all Executions in reporting period");
+		_job_history_overview.setColumnDescription("sumTime_HMS"           ,"Summary Execution time in Hour:Minute:Seconds for all Executions in reporting period");
+		_job_history_overview.setColumnDescription("avgTimeInSec"          ,"Average Execution time in Seconds for all Executions in reporting period");
+		_job_history_overview.setColumnDescription("avgTime_HMS"           ,"Average Execution time in Hour:Minute:Seconds for all Executions in reporting period");
+		_job_history_overview.setColumnDescription("avgHistTimeDiff"       ,"The difference of 'avgTime_HMS' and 'histAvgTime_HMS' this could be a positive (Slower) or negative (faster) than the average history.");
+		_job_history_overview.setColumnDescription("minTime_HMS"           ,"Minimum Execution time in Hour:Minute:Seconds for all Executions in reporting period");
+		_job_history_overview.setColumnDescription("maxTime_HMS"           ,"Maximum Execution time in Hour:Minute:Seconds for all Executions in reporting period");
+		_job_history_overview.setColumnDescription("stdevp"                ,"Standard Deviation Number of the Execution Time. Note: A higher number means more 'outliers', A lower number means more 'equal' execution times.");
+		_job_history_overview.setColumnDescription("firstExecTime"         ,"Time when this job was FIRST executed in in reporting period");
+		_job_history_overview.setColumnDescription("lastExecTime"          ,"Time when this job was LAST executed in in reporting period");
 
-		_job_history_overview.setColumnDescription("histExecCount"     ,"How many times was the job executed in the last ## days");
-		_job_history_overview.setColumnDescription("histDaysCount"     ,"How many days is included in the history");
-		_job_history_overview.setColumnDescription("histFirstExecTime" ,"First execution time  in the last ## days");
-		_job_history_overview.setColumnDescription("histAvgTimeInSec"  ,"Average number of seconds this job took for the last ## days");
-		_job_history_overview.setColumnDescription("histAvgTime_HMS"   ,"Average Hour:Minute:Seconds this job took for the last ## days");
-		_job_history_overview.setColumnDescription("histMinTime_HMS"   ,"Minimum Hour:Minute:Seconds this job took for the last ## days");
-		_job_history_overview.setColumnDescription("histMaxTime_HMS"   ,"Max Hour:Minute:Seconds this job took for the last ## days");
-		_job_history_overview.setColumnDescription("histStdevp"        ,"Standard Deviation Number of the Execution Time for the last ## days. Note: A higher number means more 'outliers', A lower number means more 'equal' execution times.");
-		_job_history_overview.setColumnDescription("histAllExecTimes"  ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
-		_job_history_overview.setColumnDescription("histAllExecTimesChart"  ,"A Chart with the timings of ALL jobs in the last ## days");
+		_job_history_overview.setColumnDescription("histExecCount"         ,"How many times was the job executed in the last ## days");
+		_job_history_overview.setColumnDescription("histDaysCount"         ,"How many days is included in the history");
+		_job_history_overview.setColumnDescription("histFirstExecTime"     ,"First execution time  in the last ## days");
+		_job_history_overview.setColumnDescription("histAvgTimeInSec"      ,"Average number of seconds this job took for the last ## days");
+		_job_history_overview.setColumnDescription("histAvgTime_HMS"       ,"Average Hour:Minute:Seconds this job took for the last ## days");
+		_job_history_overview.setColumnDescription("histMinTime_HMS"       ,"Minimum Hour:Minute:Seconds this job took for the last ## days");
+		_job_history_overview.setColumnDescription("histMaxTime_HMS"       ,"Max Hour:Minute:Seconds this job took for the last ## days");
+		_job_history_overview.setColumnDescription("histStdevp"            ,"Standard Deviation Number of the Execution Time for the last ## days. Note: A higher number means more 'outliers', A lower number means more 'equal' execution times.");
+		_job_history_overview.setColumnDescription("histAllExecTimes"      ,"A tooltip/popup with timings of ALL jobs in the last ## days, click to see Graph on the exec times");
+		_job_history_overview.setColumnDescription("histAllExecTimesChart" ,"A Chart with the timings of ALL jobs in the last ## days");
 
-		_job_history_overview.setColumnDescription("job_id"            ,"The ID of the JOB");
+		_job_history_overview.setColumnDescription("job_id"                ,"The ID of the JOB");
 
 		// Get All JobStep Commands for a 'job_id', and put it in a Map, used later to compose a ToolTip
 		getJobStepCommandsTooltipForJobId(conn, _job_history_overview, "job_id");
@@ -1217,6 +1223,249 @@ extends SqlServerAbstract
 	 * </code>
 	 * 
 	 */
+	/**
+	 * Build a 24h "schedule activity" chart for the LAST calendar day found in {@code textToParse}.
+	 * <p>
+	 * The chart has two layers (same pattern as {@link #createSparklineForHistoryExecutions}):
+	 * <ol>
+	 *   <li><b>JFreeChart PNG</b> — fixed 00:00–23:59 x-axis with filled bars (start→end of each execution).
+	 *       Shown in email clients and anywhere JavaScript is unavailable.</li>
+	 *   <li><b>jQuery sparkline</b> (<code>type:'bar'</code>) — replaces the PNG in a browser.
+	 *       The 24h period is divided into {@value #SCHEDULED_24H_BUCKET_MINUTES}-minute buckets (
+	 *       {@value #SCHEDULED_24H_NUM_BUCKETS} values total).
+	 *       Each bucket value = number of executions that were <i>active</i> during that bucket,
+	 *       so overlapping or back-to-back jobs produce taller bars.</li>
+	 * </ol>
+	 */
+//	private static final int SCHEDULED_24H_BUCKET_MINUTES = 5;
+	private static final int SCHEDULED_24H_BUCKET_MINUTES = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_JobSchedulerTimelineBucketSizeInMinutes, DEFAULT_JobSchedulerTimelineBucketSizeInMinutes);
+	private static final int SCHEDULED_24H_NUM_BUCKETS    = (24 * 60) / SCHEDULED_24H_BUCKET_MINUTES; // 288 for a 5 minute bucket size
+
+	private void createSparklineForLast24hScheduled(String textToParse, ResultSetTableModel rstm, int row, String colName)
+	{
+		List<String> allLines = Arrays.asList(StringUtils.split(textToParse, "\n"));
+
+		if (allLines.isEmpty())
+			return;
+
+		// Find the latest calendar date in the data (e.g. "2024-11-15")
+		String lastDate = null;
+		for (String line : allLines)
+		{
+			if ( ! line.startsWith("ts=") )
+				continue;
+			String tsStr = StringUtil.substringBetweenTwoChars(line, "ts=", ",").trim();
+			if (tsStr.length() >= 10)
+			{
+				String dateOnly = tsStr.substring(0, 10);
+				if (lastDate == null || dateOnly.compareTo(lastDate) > 0)
+					lastDate = dateOnly;
+			}
+		}
+
+		if (lastDate == null)
+			return;
+
+		// Filter to only lines from that last date
+		final String filterDate = lastDate;
+		List<String> lines = new ArrayList<>();
+		for (String line : allLines)
+		{
+			if ( ! line.startsWith("ts=") )
+				continue;
+			String tsStr = StringUtil.substringBetweenTwoChars(line, "ts=", ",").trim();
+			if (tsStr.startsWith(filterDate))
+				lines.add(line);
+		}
+
+		int pos_chartColumnName = rstm.findColumnMandatory(colName);
+		if (pos_chartColumnName == -1)
+			return;
+
+		//--------------------------------------------------------------------
+		// Build SparklineResult — used by JFreeChart PNG and getIndicatorValueLabel()
+		//--------------------------------------------------------------------
+		SparklineResult result = new SparklineResult(SparklineResultType.MAX);
+		for (String line : lines)
+		{
+			String tsStr     = StringUtil.substringBetweenTwoChars(line, "ts=",     ",").trim();
+			String wdStr     = StringUtil.substringBetweenTwoChars(line, "wd=",     ",").trim();
+			String hmsStr    = StringUtil.substringBetweenTwoChars(line, "HMS=",    ",").trim();
+			String secStr    = StringUtil.substringBetweenTwoChars(line, "sec=",    ",").trim();
+			String statusStr = StringUtil.substringBetweenTwoChars(line, "status=", ";").trim();
+			try
+			{
+				Timestamp ts  = TimeUtils.parseToTimestamp(tsStr, "yyyy-MM-dd HH:mm:ss");
+				int       sec = StringUtil.parseInt(secStr, -1);
+				String tooltip = "<br>" + tsStr + " (" + wdStr + ")<br>" + hmsStr + " (" + secStr + " Seconds)<br><br>Status: " + statusStr + "<br>";
+				result.beginTs .add(ts);
+				result.values  .add(sec);
+				result.tooltips.add(tooltip);
+			}
+			catch (Exception e)
+			{
+				_logger.warn("Skipping entry in createSparklineForLast24hScheduled(rstm.name='" + rstm.getName() + "', row=" + row + "') ... Caught: " + e);
+			}
+		}
+
+		if (result.values.isEmpty())
+			return;
+
+		//--------------------------------------------------------------------
+		// Compute fixed x-axis range: midnight → midnight of the last day
+		//--------------------------------------------------------------------
+		Timestamp dayStart;
+		try
+		{
+			dayStart = TimeUtils.parseToTimestamp(filterDate + " 00:00:00", "yyyy-MM-dd HH:mm:ss");
+		}
+		catch (Exception e)
+		{
+			_logger.warn("createSparklineForLast24hScheduled(): Could not parse day start for filterDate='" + filterDate + "'. Skipping. Caught: " + e);
+			return;
+		}
+		Timestamp dayEnd = new Timestamp(dayStart.getTime() + 24L * 60 * 60 * 1000);
+
+		//--------------------------------------------------------------------
+		// Build 5-minute bucket array for jQuery sparkline.
+		// Iterate over BUCKETS (not minutes) so each execution contributes exactly
+		// 1 to each bucket it overlaps — not 1 per minute within that bucket.
+		//--------------------------------------------------------------------
+		int[]              buckets          = new int    [SCHEDULED_24H_NUM_BUCKETS];
+		boolean[]          bucketHasFailure = new boolean[SCHEDULED_24H_NUM_BUCKETS];
+		List<List<String>> bucketExecLines  = new ArrayList<>(SCHEDULED_24H_NUM_BUCKETS);
+		for (int b = 0; b < SCHEDULED_24H_NUM_BUCKETS; b++)
+			bucketExecLines.add(new ArrayList<>());
+
+		for (String line : lines)
+		{
+			String tsStr     = StringUtil.substringBetweenTwoChars(line, "ts=",     ",").trim();
+			String secStr    = StringUtil.substringBetweenTwoChars(line, "sec=",    ",").trim();
+			String hmsStr    = StringUtil.substringBetweenTwoChars(line, "HMS=",    ",").trim();
+			String statusStr = StringUtil.substringBetweenTwoChars(line, "status=", ";").trim();
+			try
+			{
+				Timestamp ts           = TimeUtils.parseToTimestamp(tsStr, "yyyy-MM-dd HH:mm:ss");
+				int       sec          = StringUtil.parseInt(secStr, 0);
+				boolean   isFailure    = ! "SUCCESS".equals(statusStr);
+				int       startMin     = ts.toLocalDateTime().getHour() * 60 + ts.toLocalDateTime().getMinute();
+				int       durationMins = Math.max(1, (int) Math.ceil(sec / 60.0));
+
+				// Compute display start/end times
+				int    endMin      = Math.min(startMin + durationMins, 24 * 60 - 1);
+				String startHHMM   = String.format("%02d:%02d", startMin / 60, startMin % 60);
+				String endHHMM     = String.format("%02d:%02d", endMin   / 60, endMin   % 60);
+				String colorStyle  = isFailure ? " style=\\'color:red;\\'" : "";
+				String execLine    = "<span" + colorStyle + ">&#8226; " + startHHMM + " &#8594; " + endHHMM + " (" + hmsStr + ") " + statusStr + "</span>";
+
+				// Fill each bucket this execution overlaps — exactly once per bucket
+				int startBucket = startMin / SCHEDULED_24H_BUCKET_MINUTES;
+				int endBucket   = Math.min((startMin + durationMins - 1) / SCHEDULED_24H_BUCKET_MINUTES, SCHEDULED_24H_NUM_BUCKETS - 1);
+				for (int b = startBucket; b <= endBucket; b++)
+				{
+					buckets[b]++;
+					if (isFailure)
+						bucketHasFailure[b] = true;
+					bucketExecLines.get(b).add(execLine);
+				}
+			}
+			catch (Exception e)
+			{
+				_logger.warn("Skipping bucket-fill entry in createSparklineForLast24hScheduled() ... Caught: " + e);
+			}
+		}
+
+		//--------------------------------------------------------------------
+		// JFreeChart PNG — email/no-JS fallback (fixed 24h bar blocks)
+		//--------------------------------------------------------------------
+		String jfreeChartInlinePng = SparklineJfreeChart.create24hGanttChart(result, dayStart, dayEnd, SCHEDULED_24H_BUCKET_MINUTES, SCHEDULED_24H_NUM_BUCKETS);
+
+		//--------------------------------------------------------------------
+		// Build sparkline div WITH values= so jQuery sparkline activates in browser
+		//--------------------------------------------------------------------
+		StringBuilder sbVals = new StringBuilder();
+		for (int i = 0; i < SCHEDULED_24H_NUM_BUCKETS; i++)
+		{
+			if (i > 0) sbVals.append(",");
+			sbVals.append(buckets[i]);
+		}
+
+		String sparklineClassName = "sparklines_" + rstm.getName() + "__24h_chart_row_" + row;
+
+		String sparklineDiv = "<div class='sparkline-wrapper'>"
+				+ "<div class='" + sparklineClassName + "' values='" + sbVals + "'>" + jfreeChartInlinePng + "</div>"
+				+ "</div>";
+
+		rstm.setValueAtWithOverride(sparklineDiv, row, pos_chartColumnName);
+
+		//--------------------------------------------------------------------
+		// jQuery sparkline init code — type:'bar', per-bucket tooltips
+		// First ensure the shared infrastructure block is written (once per report)
+		//--------------------------------------------------------------------
+		_miniChartJsList.add(SparklineHelper.getJavaScriptInitCode(this, null, "", ""));
+
+		// colorMap: red for failure buckets, SteelBlue otherwise
+		StringBuilder sbColorMap = new StringBuilder("[");
+		for (int b = 0; b < SCHEDULED_24H_NUM_BUCKETS; b++)
+		{
+			if (b > 0) sbColorMap.append(",");
+			sbColorMap.append(bucketHasFailure[b] ? "'#FF4444'" : "'#4682B4'");
+		}
+		sbColorMap.append("]");
+
+		// Per-bucket tooltip array — empty string for 0-execution buckets (tooltipFormatter suppresses those)
+		String jsVarName = sparklineClassName.replaceAll("[^a-zA-Z0-9]", "_") + "_tips";
+		StringBuilder sbTips = new StringBuilder("var " + jsVarName + " = [\n");
+		for (int b = 0; b < SCHEDULED_24H_NUM_BUCKETS; b++)
+		{
+			if (b > 0) sbTips.append(",\n");
+			List<String> execLines = bucketExecLines.get(b);
+			if (execLines.isEmpty())
+			{
+				sbTips.append("    ''");
+			}
+			else
+			{
+				int    bStart    = b * SCHEDULED_24H_BUCKET_MINUTES;
+				int    bEnd      = bStart + SCHEDULED_24H_BUCKET_MINUTES;
+				String timeRange = String.format("<b>%02d:%02d&#8211;%02d:%02d</b>", bStart / 60, bStart % 60, bEnd / 60, bEnd % 60);
+				StringBuilder tip = new StringBuilder(timeRange);
+				for (String execLine : execLines)
+					tip.append("<br>").append(execLine);
+				sbTips.append("    '").append(tip).append("'");
+			}
+		}
+		sbTips.append("\n];");
+
+		StringBuilder jsSb = new StringBuilder();
+		jsSb.append("<script type='text/javascript'>\n");
+		jsSb.append("\n");
+		jsSb.append(sbTips).append("\n");
+		jsSb.append("\n");
+		jsSb.append("    sparklineListToLoad.push('" + sparklineClassName + "');\n");
+		jsSb.append("\n");
+		jsSb.append("    sparklineConfMap.set('" + sparklineClassName + "', {\n");
+		jsSb.append("        type: 'bar',\n");
+		jsSb.append("        barColor: '#4682B4',\n");
+		jsSb.append("        colorMap: " + sbColorMap + ",\n");
+		jsSb.append("        zeroColor: 'transparent',\n");
+		jsSb.append("        nullColor: 'transparent',\n");
+		jsSb.append("        chartRangeMin: 0,\n");
+		jsSb.append("        barWidth: 1,\n");
+		jsSb.append("        barSpacing: 0,\n");
+		jsSb.append("        tooltipFormatter: function(sp, opts, fields) {\n");
+		jsSb.append("            var f = Array.isArray(fields) ? fields[0] : fields;\n");
+		jsSb.append("            if (!f) return '';\n");
+		jsSb.append("            var t = " + jsVarName + "[f.offset];\n");
+		jsSb.append("            return (t && t.length > 0) ? '<span style=\"font-size:12px;\">' + t + '</span>' : '';\n");
+		jsSb.append("        }\n");
+		jsSb.append("    });\n");
+		jsSb.append("\n");
+		jsSb.append("</script>\n");
+		_miniChartJsList.add(jsSb.toString());
+	}
+
+
 	private void createSparklineForHistoryExecutions(String textToParse, ResultSetTableModel rstm, int row, String colName)
 	{
 		List<String> lines = Arrays.asList(StringUtils.split(textToParse, "\n"));

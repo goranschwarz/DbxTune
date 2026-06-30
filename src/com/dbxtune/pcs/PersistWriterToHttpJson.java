@@ -80,6 +80,7 @@ extends PersistWriterBase
 
 		return _writerStatistics;
 	}
+	
 
 	@Override
 	public void resetCounters()
@@ -419,6 +420,26 @@ extends PersistWriterBase
 			printConfig(slot);
 		}
 	}
+
+	
+	@Override
+	public String getTargetInfo()
+	{
+		String info = "";
+
+		info = _confSlot0._cfgName + "[ToUrl='" + _confSlot0._url + "']";
+		
+		for (HttpConfigSlot slot : _confSlots)
+		{
+			if (StringUtil.hasValue(info))
+				info += ", ";
+
+			info = slot._cfgName + "[ToUrl='" + slot._url + "']";
+		}
+
+		return info;
+	}
+
 
 	private void checkOrCreateRecoveryDir(HttpConfigSlot httpConfigSlot)
 	{

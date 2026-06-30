@@ -712,6 +712,10 @@
 						}, 600);
 					}
 
+					// Re-acquire the slider element here — the original var was declared in the
+					// early-return branch above and is undefined in this (first-time setup) path.
+					var dbxHistoryTimelineSlider = document.getElementById('dbx-history-timeline-slider');
+
 					// ADD 'input' listener -- when we are moving the slider (without stopping)
 					dbxHistoryTimelineSlider.addEventListener('input', function(event)
 					{

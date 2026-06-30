@@ -145,6 +145,12 @@ public interface ICounterController
 	 * @return a list of all CM's
 	 */
 	public List<CountersModel> getCmList();
+
+	/** 
+	 * Get a List of all CM's as a List of Strings
+	 * @return a list of all CM's as Strings
+	 */
+	public List<String> getCmListAsStrings();
 	
 	/** 
 	 * Get <code>CountersModel</code> object for a CM that has the "long" name for example 'Procedure Call Stack' for CMprocCallStack

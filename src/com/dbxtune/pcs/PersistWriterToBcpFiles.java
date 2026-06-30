@@ -131,6 +131,12 @@ public class PersistWriterToBcpFiles
 	}
 
 	@Override
+	public String getTargetInfo()
+	{
+		return "toDir='" + _saveToDir + "'";
+	}
+
+	@Override
 	public void init(Configuration props) throws Exception
 	{
 		_config = props;

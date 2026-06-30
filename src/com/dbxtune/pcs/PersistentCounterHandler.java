@@ -1252,7 +1252,7 @@ implements Runnable
 //				}
 				
 				// Fire changes
-				firePcsConsumeInfo(pw.getName(), cont.getServerNameOrAlias(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getStatistics());
+				firePcsConsumeInfo(pw.getName(), cont.getServerNameOrAlias(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getStatistics(), pw.getTargetInfo());
 
 				// Reset the statistics
 				pw.resetCounters();
@@ -1995,7 +1995,7 @@ implements Runnable
 		 * @param persistTimeInMs     Number of milliseconds it took for the Performance Writer to store the data
 		 * @param writerStatistics    The actual statistical counters object
 		 */
-		public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics);
+		public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics, String targetInfo);
 	}
 
 	/** listeners */
@@ -2034,7 +2034,7 @@ implements Runnable
 
 	/** Kicked off when consume is done
 	 * @param ddlSaveCount */
-	public void firePcsConsumeInfo(String persistWriterName, String serverName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics)
+	public void firePcsConsumeInfo(String persistWriterName, String serverName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics, String targetInfo)
 	{
 		if (mainSampleTime != null)
 			_lastPersistedSampleTimeMs = Math.max(_lastPersistedSampleTimeMs, mainSampleTime.getTime());
@@ -2047,6 +2047,8 @@ implements Runnable
 		_maxLenPersistWriterName = Math.max(_maxLenPersistWriterName, persistWriterName.length());
 		_maxLenServerName        = Math.max(_maxLenServerName,        serverName       .length());
 
+		targetInfo = (targetInfo == null) ? "" : ". TargetInfo: " + targetInfo;
+		
 		_logger.info("Persisting Counters using " + StringUtil.left("'" + persistWriterName + "', ", _maxLenPersistWriterName+4)
 				+ "for serverName="               + StringUtil.left("'" + serverName        + "', ", _maxLenServerName+4)
 				+ "sessionStartTime='"            + StringUtil.left(sessionStartTime + "",23)     + "', "
@@ -2055,10 +2057,11 @@ implements Runnable
 				+ "qs="                           + StringUtil.left(pcsQueueSize + ".", 4) // ###.
 				+ "jvmMemoryLeftInMB="            + Memory.getMemoryLeftInMB() + ". " 
 				+ h2WriterStat 
-				+ writerStatistics.getStatisticsString() );
+				+ writerStatistics.getStatisticsString()
+				+ targetInfo );
 
 		for (PcsQueueChange l : _queueChangeListeners)
-			l.pcsConsumeInfo(persistWriterName, sessionStartTime, mainSampleTime, persistTimeInMs, writerStatistics);
+			l.pcsConsumeInfo(persistWriterName, sessionStartTime, mainSampleTime, persistTimeInMs, writerStatistics, targetInfo);
 	}
 	// Below are just used for formating the above string (for readability)
 	private int _maxLenPersistWriterName = 0;

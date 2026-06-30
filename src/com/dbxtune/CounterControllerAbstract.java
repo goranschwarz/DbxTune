@@ -325,6 +325,17 @@ implements ICounterController
 		return _CmList; 
 	}
 
+	@Override
+	public List<String> getCmListAsStrings()
+	{
+		List<String> list = new ArrayList<>(_CmList.size());
+		for (CountersModel cm : _CmList)
+		{
+			list.add(cm.getName());
+		}
+		return list; 
+	}
+
 	/** */
 	@Override
 	public void setDefaultSleepTimeInSec(int sleepTime)

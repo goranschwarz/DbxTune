@@ -5373,7 +5373,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 	}
 	@Override
-	public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStats)
+	public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStats, String targetInfo)
 	{
 		_pcsConsumeInfoLastReceived = System.currentTimeMillis();
 		

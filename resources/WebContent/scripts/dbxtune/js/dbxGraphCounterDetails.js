@@ -27,6 +27,7 @@ var _cmPendingOpenCm = null;
 // Sticky "last viewed" — persisted to localStorage so re-opening after reload returns to the same tab
 var _cmLastGroup    = (function(){ try { return localStorage.getItem('cmDetail-lastGroup') || null; } catch(e) { return null; } }());
 var _cmLastCm       = (function(){ try { return localStorage.getItem('cmDetail-lastCm')    || null; } catch(e) { return null; } }());
+var _cmLastCmPerGroup = (function(){ try { return JSON.parse(localStorage.getItem('cmDetail-lastCmPerGroup') || '{}'); } catch(e) { return {}; } }());
 
 //-----------------------------------------------------------
 // CM DETAIL PANEL
@@ -279,11 +280,14 @@ function cmDetailRenderCms(cms)
 	var $ct = $('#cm-name-tabs').empty();
 	if (!cms || !cms.length) { cmDetailShowMsg('No CMs in this group'); return; }
 
-	// Auto-select: prefer last viewed CM (if present in this group), otherwise first CM with data
+	// Auto-select: prefer per-group last CM, then global last CM, then first CM with data
 	var cmNames = cms.map(function(c) { return c.cmName; });
-	var selCm = (_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)
-		? _cmLastCm
-		: cms[0].cmName;
+	var perGroupCm = _cmGroup && _cmLastCmPerGroup[_cmGroup];
+	var selCm = (perGroupCm && cmNames.indexOf(perGroupCm) >= 0)
+		? perGroupCm
+		: (_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)
+			? _cmLastCm
+			: cms[0].cmName;
 	if (selCm === cms[0].cmName && !(_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)) {
 		// No last-CM match — fall back to first CM with data
 		for (var i = 0; i < cms.length; i++) {
@@ -322,6 +326,10 @@ function cmDetailRenderCms(cms)
 	_cmName  = selCm;
 	_cmLastCm = selCm;
 	try { localStorage.setItem('cmDetail-lastCm', selCm); } catch(e) {}
+	if (_cmGroup) {
+		_cmLastCmPerGroup[_cmGroup] = selCm;
+		try { localStorage.setItem('cmDetail-lastCmPerGroup', JSON.stringify(_cmLastCmPerGroup)); } catch(e) {}
+	}
 	cmTrendGraphsUpdateButton();
 	cmDetailLoadData(_cmSrvName, selCm, _cmTimestamp, _cmType);
 }
@@ -353,6 +361,10 @@ function cmDetailSelectCm(cmName)
 	_cmName = cmName;
 	_cmLastCm = cmName;
 	try { localStorage.setItem('cmDetail-lastCm', cmName); } catch(e) {}
+	if (_cmGroup) {
+		_cmLastCmPerGroup[_cmGroup] = cmName;
+		try { localStorage.setItem('cmDetail-lastCmPerGroup', JSON.stringify(_cmLastCmPerGroup)); } catch(e) {}
+	}
 	// Toggle active class only — no need to re-render the whole tab list
 	$('#cm-name-tabs .nav-link').removeClass('active');
 	$('#cm-name-tabs li[data-cm-name="' + cmName + '"] .nav-link').addClass('active');
@@ -545,14 +557,28 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 						return;
 					}
 				}
-				// Postponed CM: no data at this timestamp — re-fetch the latest known sample
-				// so we can display it with the postpone watermark (same path as normal data).
+				// Postponed CM: no data at this timestamp — ask navSample for the exact last
+				// DB timestamp (same source the << prev button uses), then re-fetch with it.
+				// Using navSample avoids two failure modes of r.lastSampleMs: it being 0
+				// (server just restarted) or off by milliseconds (±1s window miss on re-fetch).
 				if (r.error === 'no-data-in-window' && r.postponeEnabled && r.postponeTime > 0
-						&& r.lastSampleMs && r.lastSampleMs > 0 && !_isPostponeFallback) {
+						&& !_isPostponeFallback) {
 					_cmPostponeFallback = true;
-					// Use moment() for local-time string — avoids UTC/local timezone mismatch
-					// that new Date().toISOString() would introduce (server stores local time).
-					cmDetailLoadData(srvName, cmName, moment(r.lastSampleMs).format('YYYY-MM-DD HH:mm:ss'), type);
+					$.ajax({
+						url: '/api/cc/mgt/cm/navSample',
+						data: { srv: srvName, time: timestamp, cm: cmName, dir: 'prev' },
+						dataType: 'json',
+						success: function(nav) {
+							if (nav.found && nav.sampleTime) {
+								cmDetailLoadData(srvName, cmName, nav.sampleTime, type);
+							} else {
+								cmDetailShowMsg(r.message || r.error);
+							}
+						},
+						error: function() {
+							cmDetailShowMsg(r.message || r.error);
+						}
+					});
 					return;
 				}
 				if (r.error) { cmDetailShowMsg(r.message || r.error); return; }

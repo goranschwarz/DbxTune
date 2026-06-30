@@ -58,6 +58,7 @@ implements ActionListener
 	private static final String WIZ_HELP = "A filename where this information should be stored to.";
 
 	private JTextField _storeFile = new JTextField("");
+	private JCheckBox  _saveSorted  = new JCheckBox("Save Counter Models as Sorted by the CM Name", false);
 	private JCheckBox  _previewFile = new JCheckBox("Preview the output file when closing the wizard", true);
 
 	public static String getDescription() { return WIZ_DESC; }
@@ -74,6 +75,11 @@ implements ActionListener
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
 
 		_storeFile.setName("storeFile");
+		
+		_saveSorted.setToolTipText("<html>"
+				+ "TRUE  = Sort by dictionary CmName (from A-Z). <br>"
+				+ "FALSE = Sort by How the CM's was added by " + Version.getAppName() + " (in the GUI Tab Order). <br>"
+				+ "</html>");
 
 		add(new JLabel("Filename"));
 		add(_storeFile, "growx");
@@ -82,6 +88,7 @@ implements ActionListener
 		button.putClientProperty("NAME", "BUTTON_STORE_FILE");
 		add(button, "wrap");
 
+		add(_saveSorted,  "span, wrap");
 		add(_previewFile, "span, wrap");
 
 //		add(new JLabel("Filename 23"));
@@ -119,7 +126,8 @@ implements ActionListener
 		String problem = "";
 		if ( _storeFile.getText().trim().length() <= 0) problem += "Filename, ";
 
-		putWizardData("to-be-discarded.previewFile", _previewFile.isSelected()+"");
+		putWizardData("to-be-discarded.saveSorted" , _saveSorted .isSelected() + "");
+		putWizardData("to-be-discarded.previewFile", _previewFile.isSelected() + "");
 
 		if (problem.length() > 0)
 		{

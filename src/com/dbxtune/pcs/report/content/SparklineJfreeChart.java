@@ -47,11 +47,16 @@ import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.event.AnnotationChangeListener;
 import org.jfree.chart.plot.PlotRenderingInfo;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.StandardXYBarPainter;
 import org.jfree.chart.renderer.xy.StandardXYItemRenderer;
+import org.jfree.chart.renderer.xy.XYBarRenderer;
 import org.jfree.chart.ui.ApplicationFrame;
 import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.data.Range;
 import org.jfree.data.time.Minute;
+import org.jfree.data.time.SimpleTimePeriod;
+import org.jfree.data.time.TimePeriodValues;
+import org.jfree.data.time.TimePeriodValuesCollection;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.ui.RefineryUtilities;
@@ -97,6 +102,89 @@ public class SparklineJfreeChart
 	 * @param indicatorDecimalPoints      Number of decimal points for the Indicator value (-1 = Do not show the Indicator Text) 
 	 * @return
 	 */
+	private SparklineJfreeChart() {}
+
+	/**
+	 * Create a 24h bar/block chart spanning a fixed time range (typically midnight→midnight).<br>
+	 * Each execution is rendered as a filled horizontal block: x-start = ts, x-end = ts + duration.
+	 * <p>
+	 * Unlike the regular sparkline, the x-axis is <b>fixed</b> so that bar positions reflect
+	 * actual time-of-day regardless of how many executions are present.
+	 *
+	 * @param data          Sparkline data (beginTs = start of execution, values = duration in seconds)
+	 * @param dayStart      Start of the fixed x-axis range (typically 00:00:00 of the day)
+	 * @param dayEnd        End   of the fixed x-axis range (typically 00:00:00 of the next day)
+	 * @param bucketMinutes Bucket size in minutes — used as minimum bar width so even instant jobs are visible
+	 * @param numBuckets    Total number of buckets — used as the PNG image width (1 px per bucket)
+	 * @return Inline HTML {@code <img>} tag with a base64-encoded PNG
+	 */
+	public static String create24hGanttChart(SparklineResult data, Timestamp dayStart, Timestamp dayEnd, int bucketMinutes, int numBuckets)
+	{
+		long minBarWidthMs = bucketMinutes * 60_000L;
+
+		TimePeriodValues series = new TimePeriodValues("Executions");
+		for (int i = 0; i < data.beginTs.size(); i++)
+		{
+			Timestamp begin = data.beginTs.get(i);
+			Number    sec   = data.values.get(i);
+
+			long beginMs    = begin.getTime();
+			long durationMs = (sec == null ? 0 : sec.longValue() * 1000L);
+			long endMs      = beginMs + Math.max(durationMs, minBarWidthMs);
+
+			// Clamp to day boundary
+			endMs = Math.min(endMs, dayEnd.getTime());
+
+			series.add(new SimpleTimePeriod(beginMs, endMs), 1.0);
+		}
+
+		TimePeriodValuesCollection dataset = new TimePeriodValuesCollection(series);
+
+		Color transparent = new Color(0, 0, 0, 0);
+		Color barColor    = new Color(70, 130, 180); // SteelBlue
+
+		DateAxis x = new DateAxis();
+		x.setRange(new java.util.Date(dayStart.getTime()), new java.util.Date(dayEnd.getTime()));
+		x.setTickLabelsVisible(false);
+		x.setTickMarksVisible(false);
+		x.setAxisLineVisible(false);
+		x.setNegativeArrowVisible(false);
+		x.setPositiveArrowVisible(false);
+		x.setVisible(false);
+
+		NumberAxis y = new NumberAxis();
+		y.setRange(new Range(0, 1.2));
+		y.setTickLabelsVisible(false);
+		y.setTickMarksVisible(false);
+		y.setAxisLineVisible(false);
+		y.setNegativeArrowVisible(false);
+		y.setPositiveArrowVisible(false);
+		y.setVisible(false);
+
+		XYBarRenderer renderer = new XYBarRenderer(0.1);
+		renderer.setBarPainter(new StandardXYBarPainter()); // solid fill, no gradient
+		renderer.setShadowVisible(false);
+		renderer.setDrawBarOutline(false);
+		renderer.setSeriesPaint(0, barColor);
+
+		XYPlot plot = new XYPlot(dataset, x, y, renderer);
+		plot.setInsets(new RectangleInsets(-1, -1, 1, 0));
+		plot.setDomainGridlinesVisible(false);
+		plot.setDomainCrosshairVisible(false);
+		plot.setRangeGridlinesVisible(false);
+		plot.setRangeCrosshairVisible(false);
+		plot.setBackgroundPaint(transparent);
+
+		JFreeChart chart = new JFreeChart(null, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
+		chart.setBorderVisible(false);
+		chart.setBackgroundPaint(transparent);
+
+		SparklineJfreeChart wrapper = new SparklineJfreeChart();
+		wrapper._chart = chart;
+		return wrapper.toHtmlInlineImage(numBuckets, 19);
+	}
+
+
 	public SparklineJfreeChart(SparklineResult data, SparklineResultType type, int indicatorDecimalPoints)
 	{
 		_indicatorDecimalPoints = indicatorDecimalPoints;

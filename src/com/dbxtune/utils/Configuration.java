@@ -67,6 +67,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -1072,6 +1073,52 @@ extends Properties
 	}
 
 	/**
+	 * Returns the unique key prefixes matching the specified prefix.
+	 * <p>
+	 * For each property key that starts with {@code prefix}, the portion of the
+	 * key up to the first {@code '.'} separator is returned. The resulting names
+	 * are unique and sorted in ascending order.
+	 * <p>
+	 * For example, given the following properties:
+	 *
+	 * <pre>
+	 * CmName1.prop1 = value
+	 * CmName1.prop2 = value
+	 * CmName2.prop1 = value
+	 * CmName2.prop2 = value
+	 * CmName3.prop1 = value
+	 * </pre>
+	 *
+	 * Calling:
+	 *
+	 * <pre>
+	 * getUniqueKeys("Cm")
+	 * </pre>
+	 *
+	 * returns:
+	 *
+	 * <pre>
+	 * [CmName1, CmName2, CmName3]
+	 * </pre>
+	 *
+	 * @param prefix the key prefix to match
+	 * @return a sorted list of unique key prefixes
+	 */
+	public List<String> getUniqueKeys(String prefix) 
+	{
+		return this.stringPropertyNames().stream()
+			.filter(key -> key.startsWith(prefix))
+//			.map(key -> key.substring(prefix.length()))
+			.map(key -> {
+				int idx = key.indexOf('.');
+				return idx >= 0 ? key.substring(0, idx) : key;
+			})
+			.distinct()
+			.sorted()
+			.collect(Collectors.toList());   // Java 11
+	}
+
+	/**
 	 * Get the list of unique sub-keys contained in the configuration repository that
 	 * match the specified prefix.
 	 * <p>
@@ -1247,6 +1294,17 @@ extends Properties
 		String newKey = key + ".[" + monitorProp + "]";
 		
 		return setProperty(newKey, val);
+	}
+	
+	/**
+	 * Calls super.getProperty(propName)
+	 * 
+	 * @param propName
+	 * @return
+	 */
+	public String getPropertySuper(String propName)
+	{
+		return super.getProperty(propName);
 	}
 
 	/** Get a int value for property */
@@ -2061,9 +2119,10 @@ extends Properties
 		writeln(bw, "#=======================================================");
 		if (s != null)
 		{
-		writeln(bw, "# " + s);
+			writeln(bw, "# " + s);
 		}
-		writeln(bw, "# Last save time: "+new Date().toString());
+//		writeln(bw, "# Last save time: "+new Date().toString());
+		writeln(bw, "# Last save time: " + TimeUtils.toStringYmdHms(System.currentTimeMillis()));
 		writeln(bw, "#-------------------------------------------------------");
 		writeln(bw, "");
 
@@ -2202,7 +2261,7 @@ extends Properties
 				outBuffer.append('f');
 				break;
 			case '=': // Fall through
-			case ':': // Fall through
+			case ':': // Fall through  -- POSSIBLY: do we need this ???  possibly just comment it out... BUT: We need to test load() so we don't break that
 			case '#': // Fall through
 			case '!':
 				outBuffer.append('\\');
@@ -2539,6 +2598,7 @@ extends Properties
 			Collections.sort(matchingKeys);
 			return matchingKeys;
 		}
+
 		@Override
 		public List<String> getKeys()
 		{
