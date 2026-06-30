@@ -61,6 +61,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>Changed TemplateLevel() for a bunch of the Counter Models to work with the above 'CounterSet.template.default'</LI>
         <LI>Configuration: can now read content from a file. (key = file: /path/toFile/theFileName)</LI>
         <LI>Finding Changes to Config files WatchService (read changed config files and fire on changed key/value): Fixed/Improved</LI>
+        <LI>Menu -- Tools -- 'Create Record Session - Template file' Wizard...' now writes a template file with comments (and all default values are commented out). You can choose to sort the CM Entries by name or have it in creation order!</LI>
+        <LI>PCS Writers now also Writes "Target Info: <where did we store the data>" in the log file (for tracability)</LI>
+        <LI>AppDir got some improvements for the upcomming Windows: DbxInstaller</LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -196,6 +199,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <li>Admin Page: Add Collector: Refresh/Restart buttons</li>
         <li>Admin Page: Improve user table in admin UI (Last Login, Login Count, Login Fail Count columns)</li>
         <li>Tried to fix "missing Counder Data"... If the PCS is slow at storing data... we might "not see it" at DbxCentral -- So Basically retry fetch data (BUT I could NOT test this, so it might still be broken)</li>
+        <li>Counter Details -- Remember current tab name within a "tab group" (move more fluently between tabs, and remember the last visited CM)</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -360,7 +364,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li><b>SqlServerTopCmExecQueryStatPerDb</b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
 			<li><b>SqlServerTopCmExecQueryStat     </b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
 			<li><b>SqlServerTopCmExecQueryStatDb   </b> -- added column 'total_waisted_grant_kb__sum' & 'AvgWaistedGrantKb'</li>
-			<li><b>Query Store                     </b> -- Fixed some calculation bug (previously it calculated to high values from Elapsed and CPU Time etc...)</b>
+			<li><b>Query Store                     </b> -- Fixed some calculation bug (previously it calculated to high values from Elapsed and CPU Time etc...)</li>
+			<li><b>SqlServerJobScheduler           </b> -- Added column 'scheduledLast24hChart', which is a "gantt" that tries to visualize when a job was executed during the day.</li>
+			
 		</ul>
 		</LI>
 	</UL>

@@ -34,6 +34,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -41,9 +42,12 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.swing.AbstractAction;
 import javax.swing.JFileChooser;
@@ -56,6 +60,7 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -64,7 +69,14 @@ import org.netbeans.api.wizard.WizardDisplayer;
 import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardException;
 import org.netbeans.spi.wizard.WizardPage;
+import org.reflections.Reflections;
 
+import com.dbxtune.AseTune;
+import com.dbxtune.CounterController;
+import com.dbxtune.Version;
+import com.dbxtune.cm.CounterSetTemplates;
+import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.os.CmOsUtils;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.PersistentCounterHandler;
@@ -73,6 +85,7 @@ import com.dbxtune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
+import com.dbxtune.utils.TimeUtils;
 
 
 public class WizardOffline
@@ -291,6 +304,7 @@ public class WizardOffline
 //		settings.put("CM.sysMon.test", "testtest");
 
 		boolean previewFile = false;
+		boolean saveAsSorted = false;
 		for (Iterator<String> iterator = settings.keySet().iterator(); iterator.hasNext();)
 		{
 			String key = iterator.next();
@@ -320,6 +334,10 @@ public class WizardOffline
 
 			if(key.startsWith("to-be-discarded.")) // these entries will be discarded
 			{
+				// set preview file
+				if (key.equals("to-be-discarded.saveSorted"))
+					saveAsSorted = val.equalsIgnoreCase("true");
+
 				// set preview file
 				if (key.equals("to-be-discarded.previewFile"))
 					previewFile = val.equalsIgnoreCase("true");
@@ -379,7 +397,8 @@ public class WizardOffline
 				offlineProps.put(key, val);
 			}
 		}
-		offlineProps.save(true);
+//		offlineProps.save(true);
+		String savedFilename = saveFile(offlineProps, saveAsSorted);
 
 		if (_logger.isDebugEnabled())
 			offlineProps.print(System.out, "WizardOffline (after save) offlineProps:");
@@ -391,7 +410,7 @@ public class WizardOffline
 				@Override
 				public void run() 
 				{
-					SimpleFileEditor sfe = new SimpleFileEditor(offlineProps.getFilename());
+					SimpleFileEditor sfe = new SimpleFileEditor(savedFilename);
 					sfe.setVisible(true);
 				}
 			});
@@ -402,7 +421,547 @@ public class WizardOffline
 		return settings;
 	}
 
+	/**
+	 * Save the file somewhere
+	 */
+	private String saveFile(Configuration conf, boolean sortCmByName)
+	{
+//		String savetoFile = conf.getFilename();
+//
+//		// Simply save the file using the default save method in Configuration
+//		conf.save(true);
+//		
+//		return savetoFile;
 
+		return saveFileWithComments(conf, sortCmByName);
+	}
+
+	/**
+	 * Save the file somewhere
+	 */
+	private String saveFileWithComments(Configuration originConf, boolean sortCmByName)
+	{
+		String savetoFile = originConf.getFilename();
+
+		// Take a copy of the input configuration... This will be used to: 
+		//  - copy from
+		//  - print
+		//  - delete the just printed entries
+		// At the end, we just print all the ones that we have not yet handled above
+		
+		Configuration cc = new Configuration();
+//		cc.add(originConf);
+		cc.putAll(originConf);
+		
+		// Get All CmNames from the Configuration (or from CounterCollector)
+		// Get All CmOsNames from the package (scans "com.dbxtune.cm.os" and returns all that starts with CmOs)
+		// The remove all CmOs from the CmList
+		List<String> cmNames   = Collections.emptyList();
+		if (sortCmByName)
+		{
+			cmNames = cc.getUniqueKeys("Cm");
+		}
+		else
+		{
+			cmNames = CounterController.hasInstance() ? CounterController.getInstance().getCmListAsStrings() : cc.getUniqueKeys("Cm");
+		}
+		List<String> cmOsNames = getCmOsNames();
+		cmNames.removeAll(cmOsNames);
+		
+		
+		File f = new File(savetoFile);
+		try (FileOutputStream os = new FileOutputStream(f); BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os, "8859_1")))
+		{
+			// Write Header
+			String s = originConf.getEmbeddedMessage();
+			writeln(bw, "#======================================================="); 
+			if (s != null)
+			{
+				writeln(bw, "# " + s);
+			}
+			writeln(bw, "# Last save time: " + TimeUtils.toStringYmdHms(System.currentTimeMillis()));
+			writeln(bw, "#-------------------------------------------------------");
+			writeln(bw, "");
+
+			//-----------------------------------------------
+			// Write the different sections
+			//-----------------------------------------------
+
+			// offline.sampleTime
+			
+			// CounterSet.template.default
+
+			// Normal CM's
+			// - First the CM
+			// - Then Settings
+			// - Then alarms
+			
+			// OS Monitor
+			// - First the CM
+			// - Then Settings
+			// - Then alarms
+			
+			// AlarmHandler
+			// AlarmHandler.WriterClass
+			// AlarmWriter*
+			
+			// DailySummaryReport
+			// DailySummaryReport.sender.classname
+			// ReportSender*
+			
+			// PersistentCounterHandler.WriterClass
+			// PersistWriter*
+
+			// OTHER STUFF NOT COVERED IN ABOVE SECTIONS
+			
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "## How many second to sleep between sampling data");
+			writeln(bw, "##---------------------------------------------------------");
+			writeKey(bw, cc, "offline.sampleTime");
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "## What is the default Counter template to use.");
+			writeln(bw, "## This will be used for future CounterModels that are not yet created.");
+			writeln(bw, "## So if a new CM is part of template 'SMALL|MEDIUM|LARGE|ALL', it will still be created, even if not part of this config file.");
+			writeln(bw, "##---------------------------------------------------------");
+			writeKey(bw, cc, CounterSetTemplates.PROPKEY_templateDefaultName);
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: DBMS -- Connection Information");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "## Specified with cmd line parameters: -U|--user <user> -P|--passwd <passwd> -S|--server <srvname[:port]>");
+			if (cc.containsKey("conn.dbmsHost"    )) { writeKey(bw, cc, "conn.dbmsHost");     } else { writeln(bw, "#conn.dbmsHost     = xxx"); }
+			if (cc.containsKey("conn.dbmsPort"    )) { writeKey(bw, cc, "conn.dbmsPort");     } else { writeln(bw, "#conn.dbmsPort     = xxx"); }
+			if (cc.containsKey("conn.dbmsUsername")) { writeKey(bw, cc, "conn.dbmsUsername"); } else { writeln(bw, "#conn.dbmsUsername = xxx"); }
+			if (cc.containsKey("conn.dbmsPassword")) { writeKey(bw, cc, "conn.dbmsPassword"); } else { writeln(bw, "#conn.dbmsPassword = xxx"); }
+			writeln(bw, "## NOTE: If no 'conn.dbmsPassword' is specified, the password will be fetched from ${HOME}/.passwd.enc");
+			writeln(bw, "##       which can be maintained using: dbxPasswd.sh or dbxPassword.bat");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: DBMS information");
+			writeln(bw, "##---------------------------------------------------------");
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: OS Monitoring -- Connection Information");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "## Specified with cmd line parameters: -u|--sshUser <user> -p|--sshPasswd <passwd> -s|--sshServer <srvname[:port]> -k|sshKeyFile <keyfile>");
+			if (cc.containsKey("conn.sshHostname")) { writeKey(bw, cc, "conn.sshHostname"); } else { writeln(bw, "#conn.sshHostname = xxx"); }
+			if (cc.containsKey("conn.sshPort"    )) { writeKey(bw, cc, "conn.sshPort");     } else { writeln(bw, "#conn.sshPort     = xxx"); }
+			if (cc.containsKey("conn.sshUsername")) { writeKey(bw, cc, "conn.sshUsername"); } else { writeln(bw, "#conn.sshUsername = xxx"); }
+			if (cc.containsKey("conn.sshPassword")) { writeKey(bw, cc, "conn.sshPassword"); } else { writeln(bw, "#conn.sshPassword = xxx"); }
+			if (cc.containsKey("conn.sskKeyFile" )) { writeKey(bw, cc, "conn.sskKeyFile");  } else { writeln(bw, "#conn.sskKeyFile  = xxx"); }
+			writeln(bw, "## NOTE: If no 'conn.sshPassword' is specified, the password will be fetched from ${HOME}/.passwd.enc");
+			writeln(bw, "##       which can be maintained using: dbxPasswd.sh or dbxPassword.bat");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: OS Monitoring information");
+			writeln(bw, "##---------------------------------------------------------");
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "## Below are all DBMS Counter Models and it's parameters");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "");
+			for (String cmName : cmNames)
+			{
+				writeCmSection(bw, cc, cmName);
+			}
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "## Below are all OS Counter Models and it's parameters");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "");
+			for (String cmOsName : cmOsNames)
+			{
+				writeCmSection(bw, cc, cmOsName);
+			}
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: User Defined Counters");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "## User Defined Counters can be created with the GUI: Menu -> Tools -> Create 'User Defined Counter' Wizard... ");
+			// Possibly: implement below to show/write User Defined Counter Models
+			//            - Get All CM's from CounterController
+			//            - Remove any System Provided CM's ( cm.isSystemCm() or starting with "Cm" ) 
+			//            - What's left would be User Defined Counters :)
+			//           But since "no one" (or few) are using them, we can implement this at a later stage
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: User Defined Counters");
+			writeln(bw, "##---------------------------------------------------------");
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: PCS - Persistent Counter Store");
+			writeln(bw, "##---------------------------------------------------------");
+
+			// Remove all 'PersistentCounterHandler.sqlCapture.*' for Collectors that DOES NOT Support that
+			List<String> DbxSuportsSqlCapture = Arrays.asList(new String[] {AseTune.APP_NAME} );
+			if ( ! DbxSuportsSqlCapture.contains(Version.getAppName()) )
+			{
+				List<String> sqlCaptureKeys = cc.getKeys("PersistentCounterHandler.sqlCapture");
+				for (String key : sqlCaptureKeys)
+				{
+					cc.remove(key);
+				}
+			}
+
+			// Get keys and Writers
+			List<String> pcsKeys    = cc.getKeys("PersistentCounterHandler");
+			List<String> pcsWriters = StringUtil.parseCommaStrToList(cc.getProperty("PersistentCounterHandler.WriterClass", ""), true);
+
+			// Write all keys 'PersistentCounterHandler.*'
+			for (String key : pcsKeys)
+			{
+				writeKey(bw, cc, key);
+			}
+			writeln(bw, "");
+
+			// Writers
+			for (String writerKey : pcsWriters)
+			{
+				writerKey = StringUtils.substringAfterLast(writerKey, ".");
+				writeln(bw, "## Writer: " + writerKey + " -------------------------");
+				List<String> writerKeys = cc.getKeys(writerKey);
+				for (String key : writerKeys)
+				{
+					writeKey(bw, cc, key);
+				}
+				writeln(bw, "");
+			}
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: PCS - Persistent Counter Store");
+			writeln(bw, "##---------------------------------------------------------");
+
+
+			
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: Fallback mail Properties");
+			writeln(bw, "##---------------------------------------------------------");
+			String[] prefixArr = new String[] {"AlarmWriterToMail", "ReportSenderToMail"};
+			writeMailTemplate(bw, cc, "to"                  , "mail", "someone@acme.com", prefixArr);
+			writeMailTemplate(bw, cc, "from"                , "mail", "dbxtune"         , prefixArr);
+			writeMailTemplate(bw, cc, "smtp.hostname"       , "mail", "smtp.acme.com"   , prefixArr);
+			writeMailTemplate(bw, cc, "smtp.port"           , "mail", "###"             , prefixArr);
+			writeMailTemplate(bw, cc, "smtp.username"       , "mail", "someUser"        , prefixArr);
+			writeMailTemplate(bw, cc, "smtp.password"       , "mail", "**secret**"      , prefixArr);
+			writeMailTemplate(bw, cc, "ssl.port"            , "mail", "###"             , prefixArr);
+			writeMailTemplate(bw, cc, "ssl.use"             , "mail", "{true|false}"    , prefixArr);
+			writeMailTemplate(bw, cc, "start.tls"           , "mail", "{true|false}"    , prefixArr);
+			writeMailTemplate(bw, cc, "start.tls.required"  , "mail", "{true|false}"    , prefixArr);
+			writeMailTemplate(bw, cc, "smtp.connect.timeout", "mail", "###"             , prefixArr);
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: Fallback mail Properties");
+			writeln(bw, "##---------------------------------------------------------");
+
+
+
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: Alarm Handler");
+			writeln(bw, "##---------------------------------------------------------");
+			List<String> alarmKeys    = cc.getKeys("AlarmHandler");
+			List<String> alarmWriters = StringUtil.parseCommaStrToList(cc.getProperty("AlarmHandler.WriterClass", ""), true);
+
+			// Write all keys 'AlarmHandler.*'
+			for (String key : alarmKeys)
+			{
+				writeKey(bw, cc, key);
+			}
+			writeln(bw, "");
+
+			// Writers
+			for (String alarmKey : alarmWriters)
+			{
+				alarmKey = StringUtils.substringAfterLast(alarmKey, ".");
+				writeln(bw, "## Writer: " + alarmKey + " -------------------------");
+				List<String> writerKeys = cc.getKeys(alarmKey);
+				for (String key : writerKeys)
+				{
+					writeKey(bw, cc, key);
+				}
+				writeln(bw, "");
+			}
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: Alarm Handler");
+			writeln(bw, "##---------------------------------------------------------");
+			
+			
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: DSR - Daily Summary Report");
+			writeln(bw, "##---------------------------------------------------------");
+			List<String> dsrKeys    = cc.getKeys("DailySummaryReport");
+			List<String> dsrWriters = StringUtil.parseCommaStrToList(cc.getProperty("DailySummaryReport.sender.classname", ""), true);
+
+			// Write all keys 'DailySummaryReport.*'
+			for (String key : dsrKeys)
+			{
+				writeKey(bw, cc, key);
+			}
+			writeln(bw, "");
+
+			// Writers
+			for (String senderKey : dsrWriters)
+			{
+				senderKey = StringUtils.substringAfterLast(senderKey, ".");
+				writeln(bw, "## Sender: " + senderKey + " -------------------------");
+				List<String> senderKeys = cc.getKeys(senderKey);
+				for (String key : senderKeys)
+				{
+					writeKey(bw, cc, key);
+				}
+				writeln(bw, "");
+			}
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: DSR - Daily Summary Report");
+			writeln(bw, "##---------------------------------------------------------");
+			
+			
+			//---------------------------------------------------------------------------------
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "");
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- BEGIN: Other stuff not covered in above sections");
+			writeln(bw, "##---------------------------------------------------------");
+			for (String unhandledKey : cc.getKeys())
+			{
+				writeKey(bw, cc, unhandledKey);
+			}
+			writeln(bw, "##---------------------------------------------------------");
+			writeln(bw, "##---- END: Other stuff not covered in above sections");
+			writeln(bw, "##---------------------------------------------------------");
+
+
+			// Finally flush the file
+			os.flush();
+		}
+		catch (IOException ex)
+		{
+			_logger.error("Problems writing to file '" + savetoFile + "'.", ex);
+		}
+		
+		return savetoFile;
+	}
+
+	private void writeMailTemplate(BufferedWriter bw, Configuration conf, String findKey, String mailBase, String keyNotFoundVal, String[] searchPrefixes)
+	throws IOException
+	{
+		// Search all Prefixes
+		String  foundVal = null;
+		for (String searchPrefix : searchPrefixes)
+		{
+			String searchKey = searchPrefix + "." + findKey;
+			if (conf.hasProperty(searchKey))
+			{
+				foundVal = conf.getPropertySuper(searchKey);
+				break;
+			}
+		}
+
+		// Write Found value, or default value if not found
+		String writeKey = mailBase + "." + findKey;
+		if (foundVal != null)
+		{
+			boolean escUnicode = true;
+
+			writeKey = Configuration.saveConvert(writeKey, true, escUnicode);
+
+			/* No need to escape embedded and trailing spaces for value, hence pass false to flag. */
+			foundVal = Configuration.saveConvert(foundVal, false, escUnicode);
+
+			bw.write(StringUtil.left(writeKey, 30, true) + " = " + foundVal);
+			bw.newLine();
+		}
+		else
+		{
+			bw.write(StringUtil.left("#" + writeKey, 30, true) + " = " + keyNotFoundVal);
+			bw.newLine();
+		}
+	}
+
+	private static void writeCmSection(BufferedWriter bw, Configuration conf, String cmName)
+	throws IOException
+	{
+		// Construct a List of all "major" settings for a CM
+		String[] cmOptionsArr = {
+				cmName + ".persistCounters",
+				cmName + ".persistCounters.abs",
+				cmName + ".persistCounters.diff",
+				cmName + ".persistCounters.rate",
+				cmName + ".postponeTime",
+				cmName + ".queryTimeout"
+		};
+		List<String> cmOptions = new ArrayList<>(Arrays.asList(cmOptionsArr));
+		
+		// All Alarms
+		List<String> allAlarmKeysForThisCm = conf.getKeys(cmName + ".alarm.");
+
+		// NOT Common and Alarms
+		List<String> allOtherKeysForThisCm = conf.getKeys(cmName + ".");
+		allOtherKeysForThisCm.removeAll(cmOptions);
+		allOtherKeysForThisCm.removeAll(allAlarmKeysForThisCm);
+
+		String tabGroup = "";
+		String tabName  = "";
+		if (CounterController.hasInstance())
+		{
+			CountersModel cm = CounterController.getInstance().getCmByName(cmName);
+			tabGroup = cm.getGroupName();
+			tabName  = cm.getDisplayName();
+		}
+
+		String printName = cmName;
+		if (StringUtil.hasValue(tabName)) printName += " -- DisplayName='" + tabName + "'";
+		if (StringUtil.hasValue(tabName)) printName += " -- TabGroup='" + tabGroup + "'";
+		writeln(bw, "##-----------------------------------------------------------------------------------------------------------");
+		writeln(bw, "##---- BEGIN: " + printName);
+		writeln(bw, "##-----------------------------------------------------------------------------------------------------------");
+		writeln(bw, "##---- Options ----");
+		for (String key : cmOptions)
+		{
+			writeKey(bw, conf, key);
+		}
+
+		writeln(bw, "##---- Settings ----");
+		for (String key : allOtherKeysForThisCm)
+		{
+			writeKey(bw, conf, key);
+		}
+
+		writeln(bw, "##---- Alarms ----");
+		for (String key : allAlarmKeysForThisCm)
+		{
+			writeKey(bw, conf, key);
+		}
+
+		writeln(bw, "##-----------------------------------------------------------------------------------------------------------");
+		writeln(bw, "##---- END: " + printName);
+		writeln(bw, "##-----------------------------------------------------------------------------------------------------------");
+		writeln(bw, "");
+		writeln(bw, "");
+	}
+	
+	private static void writeln(BufferedWriter bufferedwriter, String s)
+	throws IOException
+	{
+		bufferedwriter.write(s);
+		bufferedwriter.newLine();
+	}
+	private static void writeKey(BufferedWriter bw, Configuration conf, String key)
+	throws IOException
+	{
+		// Get the *REAL* raw values from the prop (as stored in Properties)
+		String val = conf.getPropertySuper(key);
+		if (val == null)
+			val = "";
+
+		// If it looks like a DEFAULT value... Comment it out ;)
+		if (val.startsWith(Configuration.USE_DEFAULT_PREFIX))
+			bw.write("#");
+
+		writeKeyVal(bw, key, val);
+		
+		boolean removeKey = true;
+		if (removeKey)
+		{
+			conf.remove(key);
+		}
+	}
+	private static void writeKeyVal(BufferedWriter bw, String key, String val)
+	throws IOException
+	{
+		boolean escUnicode = true;
+
+		key = Configuration.saveConvert(key, true, escUnicode);
+
+		/* No need to escape embedded and trailing spaces for value, hence pass false to flag. */
+		val = Configuration.saveConvert(val, false, escUnicode);
+
+		bw.write(key + " = " + val);
+		bw.newLine();
+	}
+
+	public static List<String> getCmOsNames() 
+	{
+		Reflections reflections = new Reflections("com.dbxtune.cm.os");
+
+//Set<Class<? extends Object>> allClasses = reflections.getSubTypesOf(Object.class);
+//System.out.println("allClasses: " + allClasses);
+//for (Class<? extends Object> e : allClasses)
+//{
+//	System.out.println("e=" + e.getSimpleName());
+//}
+		// This do NOT seem to work
+		List<String> names = reflections.getSubTypesOf(Object.class).stream()
+			.map(Class::getSimpleName)
+			.filter(name -> name.startsWith("CmOs"))
+			.collect(Collectors.toList());
+
+		// Fallback 
+		if (names.isEmpty())
+		{
+			names.addAll(CmOsUtils.getCmOsNames());
+		}
+		return names;
+	}
+	
+
+	
 	private String getUdcConfigName(String name)
 	{
 		String        udcConfigName  = null;
@@ -445,6 +1004,7 @@ public class WizardOffline
 
 	public static void main(String[] args)
 	{
+//		System.out.println("getCmOsNames(): " + getCmOsNames());
 		try 
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

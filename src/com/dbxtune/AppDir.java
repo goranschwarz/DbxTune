@@ -184,9 +184,6 @@ public class AppDir
 				{
 					// First CHECK if we can do symbolic links
 					// if NOT: we need to follow the installation requirements -- https://github.com/goranschwarz/DbxTune/blob/master/README_dbxcentral_0_install_windows.md
-					if (startedWith_createAppDir)
-					{
-					}
 					if ( ! testCreateSymbolicLink(dbxUserHome, ps) )
 					{
 						System.out.println();
@@ -198,6 +195,9 @@ public class AppDir
 						throw new RuntimeException("Can't create a 'dummy' Symbolic Link. When installing DbxCentral we NEED to create symbolic links. Follow the Installation Requirements at: https://github.com/goranschwarz/DbxTune/blob/master/README_dbxcentral_0_install_windows.md");
 					}
 
+					if (startedWith_createAppDir)
+					{
+					}
 					dbxcCreated = mkdir(dbxUserHome, "dbxc",                    ps, logList, "- where user/localized DbxCentral files are located...");
 					
 					// Do this up here (if it's version 2019-06-xx since the 'dbxc' dir already exists... and wont be created in below logic
@@ -212,6 +212,9 @@ public class AppDir
 			// Do this up here (if it's version 2019-06-xx since the 'dbxc' dir already exists... and wont be created in below logic
 			dbxcReports = mkdir(dbxUserHome, "dbxc" + sep + "reports",  ps, logList, "- DbxCentral reports created by 'Daily Report', etc.");
 		}
+
+		// Log if we created the DbxCentral directory or not
+		log(ps, logList, "INFO: Created DbxCentral Directory = " + (dbxcCreated != null) +". dbxCentralCreatedDir '" + dbxcCreated + "'.");
 
 		// If the 'dbxc' directory was created
 		if (dbxcCreated != null)
@@ -244,6 +247,7 @@ public class AppDir
 
 					if (isWindows)
 					{
+						log(ps, logList, "DbxCentral for Windows: populating files in the 'bin' directory '" + dbxcBin + "'.");
 //						log(ps, logList, "DbxCentral for Windows does not have any starter files for the moment (not yet implemented for Windows).");
 						
 //FIXME: The Below files do not yet exist
@@ -270,6 +274,8 @@ public class AppDir
 					}
 					else
 					{
+						log(ps, logList, "DbxCentral for Linux/Others: populating files in the 'bin' directory '" + dbxcBin + "'.");
+
 						// It's probably better to make symbilic links from: ${HOME}./dbxtune/dbxc/bin/xxx.sh to ${DBXTUNE_HOME}/bin/xxx.sh 
 						createSymbolicLink(dbxcBinStr + "list_ALL.sh",         dbxHomeBin + "dbxc_list_ALL.sh",  ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
 						createSymbolicLink(dbxcBinStr + "start_ALL.sh",        dbxHomeBin + "dbxc_start_ALL.sh", ps, logList, "- Soft link to the DBXTUNE_HOME software install, instead of copy. Easier for new SW releases.");
@@ -290,6 +296,8 @@ public class AppDir
 				{
 					String srcDir = dbxHomeResourceDbxcentralScripts + "conf" + sep;
 
+					log(ps, logList, "DbxCentral: populating files in the 'conf' directory '" + dbxcConf + "'.");
+
 					if (isWindows)
 					{
 						copyFileToDir(srcDir + "SERVER_LIST.windows", "SERVER_LIST", dbxcConf, ps, logList, false, "- What Servers should be started/listed/stopped by 'dbxc_{start|list|stop}_ALL.bat'");
@@ -307,6 +315,7 @@ public class AppDir
 					copyFileToDir(srcDir + "mysql.GENERIC.conf",             dbxcConf, ps, logList, "- Example/template Config file for MySQL");
 					copyFileToDir(srcDir + "postgres.GENERIC.conf",          dbxcConf, ps, logList, "- Example/template Config file for Postgres");
 					copyFileToDir(srcDir + "sqlserver.GENERIC.conf",         dbxcConf, ps, logList, "- Example/template Config file for Microsoft SQL-Server");
+					copyFileToDir(srcDir + "oracle.GENERIC.conf",            dbxcConf, ps, logList, "- Example/template Config file for Oracle");
 				}
 
 				// Copy some files to ${DBXTUNE_HOME} if it has a '0' soft-link / pointer

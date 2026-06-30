@@ -161,14 +161,20 @@ public class MailUtil
 			if (StringUtil.hasValue(config.from))
 				applyFromAddress(email, config.from);
 
-			_logger.info("MailUtil.createHtmlEmail(): configPrefix='{}', host='{}', port={}, sslPort={}, useSsl={}, startTls={}, startTlsRequired={}, connTimeoutSec={}, from='{}', hasAuth={}",
+			_logger.info("MailUtil.createHtmlEmail(): configPrefix='{}', host='{}', port={}, sslPort={}, useSsl={}, startTls={}, startTlsRequired={}, connTimeoutSec={}, from='{}', to='{}', hasAuth={}",
 					config.resolvedPrefix,
-					config.smtpHostname, config.smtpPort, config.sslPort,
-					config.useSsl, config.startTls, config.startTlsRequired,
-					config.connectionTimeout, config.from,
+					config.smtpHostname, 
+					config.smtpPort, 
+					config.sslPort,
+					config.useSsl, 
+					config.startTls, 
+					config.startTlsRequired,
+					config.connectionTimeout, 
+					config.from,
+					config.to,
 					StringUtil.hasValue(config.username));
 
-			return new MailBuilder(email);
+			return new MailBuilder(config, email);
 		}
 		catch (EmailException e)
 		{
@@ -259,22 +265,34 @@ public class MailUtil
 	{
 		/** {@code .smtp.hostname} — SMTP server hostname */
 		public static final String SUFFIX_SMTP_HOST         = ".smtp.hostname";
+
 		/** {@code .smtp.port} — SMTP port (-1 = use default) */
 		public static final String SUFFIX_SMTP_PORT         = ".smtp.port";
+
 		/** {@code .ssl.port} — SSL port (-1 = use default) */
 		public static final String SUFFIX_SSL_PORT          = ".ssl.port";
+
 		/** {@code .smtp.username} — SMTP authentication username */
 		public static final String SUFFIX_USERNAME          = ".smtp.username";
+
 		/** {@code .smtp.password} — SMTP authentication password */
 		public static final String SUFFIX_PASSWORD          = ".smtp.password";
+
+		/** {@code .to} — to address */
+		public static final String SUFFIX_TO                = ".to";
+
 		/** {@code .from} — sender address, may include display name: {@code "Name <email>"} */
 		public static final String SUFFIX_FROM              = ".from";
+
 		/** {@code .ssl.use} — enable SSL-on-connect */
 		public static final String SUFFIX_USE_SSL           = ".ssl.use";
+
 		/** {@code .start.tls} — enable STARTTLS (opportunistic) */
 		public static final String SUFFIX_START_TLS         = ".start.tls";
+
 		/** {@code .start.tls.required} — require STARTTLS (fail if not available; useful for O365) */
 		public static final String SUFFIX_START_TLS_REQ     = ".start.tls.required";
+
 		/** {@code .smtp.connect.timeout} — socket connection timeout in <b>seconds</b> (-1 = default) */
 		public static final String SUFFIX_CONN_TIMEOUT      = ".smtp.connect.timeout";
 
@@ -286,6 +304,7 @@ public class MailUtil
 		public int     sslPort           = -1;
 		public String  username          = "";
 		public String  password          = "";
+		public String  to                = "";
 		public String  from              = "";
 		public boolean useSsl            = false;
 		public boolean startTls          = false;
@@ -315,16 +334,18 @@ public class MailUtil
 			MailConfig c          = new MailConfig();
 			c.resolvedPrefix      = prefix;
 
-			c.smtpHostname = str (conf, prefix, SUFFIX_SMTP_HOST,     "",    useFallback);
-			c.smtpPort     = iget(conf, prefix, SUFFIX_SMTP_PORT,     -1,    useFallback);
-			c.sslPort      = iget(conf, prefix, SUFFIX_SSL_PORT,      -1,    useFallback);
-			c.username     = str (conf, prefix, SUFFIX_USERNAME,      "",    useFallback);
-			c.password     = str (conf, prefix, SUFFIX_PASSWORD,      "",    useFallback);
-			c.from         = str (conf, prefix, SUFFIX_FROM,          "",    useFallback);
-			c.useSsl       = bget(conf, prefix, SUFFIX_USE_SSL,       false, useFallback);
-			c.startTls     = bget(conf, prefix, SUFFIX_START_TLS,     false, useFallback);
-			c.startTlsRequired = bget(conf, prefix, SUFFIX_START_TLS_REQ, false, useFallback);
-			c.connectionTimeout = iget(conf, prefix, SUFFIX_CONN_TIMEOUT, -1, useFallback);
+			c.smtpHostname      = str (conf, prefix, SUFFIX_SMTP_HOST,     "",    useFallback);
+			c.smtpPort          = iget(conf, prefix, SUFFIX_SMTP_PORT,     -1,    useFallback);
+			c.sslPort           = iget(conf, prefix, SUFFIX_SSL_PORT,      -1,    useFallback);
+			c.username          = str (conf, prefix, SUFFIX_USERNAME,      "",    useFallback);
+			c.password          = str (conf, prefix, SUFFIX_PASSWORD,      "",    useFallback);
+			c.to                = str (conf, prefix, SUFFIX_TO,            "",    useFallback);
+			c.from              = str (conf, prefix, SUFFIX_FROM,          "",    useFallback);
+			c.useSsl            = bget(conf, prefix, SUFFIX_USE_SSL,       false, useFallback);
+			c.startTls          = bget(conf, prefix, SUFFIX_START_TLS,     false, useFallback);
+			c.startTlsRequired  = bget(conf, prefix, SUFFIX_START_TLS_REQ, false, useFallback);
+			c.connectionTimeout = iget(conf, prefix, SUFFIX_CONN_TIMEOUT,  -1,    useFallback);
+
 			return c;
 		}
 
@@ -377,10 +398,18 @@ public class MailUtil
 	public static class MailBuilder
 	{
 		private final HtmlEmail _email;
+		private final MailConfig _mailConfig;
 
-		MailBuilder(HtmlEmail email)
+		MailBuilder(MailConfig mailConfig, HtmlEmail email)
 		{
-			_email = email;
+			_mailConfig = mailConfig;
+			_email      = email;
+		}
+
+		/** Return the underlying {@link MailConfig} for advanced/low-level use. */
+		public MailConfig getMailConfig()
+		{
+			return _mailConfig;
 		}
 
 		/** Return the underlying {@link HtmlEmail} for advanced/low-level use. */
@@ -515,6 +544,17 @@ public class MailUtil
 		{
 			try
 			{
+				// If no TO address has been given, set the "to" from the MailConfig
+				if (_email.getToAddresses() == null || _email.getToAddresses().isEmpty()) 
+				{
+					if (getMailConfig() != null)
+					{
+						String toAddress = getMailConfig().to;
+						if (StringUtil.hasValue(toAddress))
+							_email.addTo(_mailConfig.to);
+					}
+				}
+
 				return _email.send();
 			}
 			catch (EmailException e)

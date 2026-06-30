@@ -3085,9 +3085,9 @@ extends CountersModel
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
 		list.add(new CmSettingsHelper("FreeListStalls",            isAlarmSwitch, PROPKEY_alarm_FreeListStalls      , Double .class, conf.getDoubleProperty(PROPKEY_alarm_FreeListStalls      , DEFAULT_alarm_FreeListStalls      ), DEFAULT_alarm_FreeListStalls      , "If 'Free list stalls/sec' is greater than 0.5 then send 'AlarmEventPerfCounterWarning'." ));
-		list.add(new CmSettingsHelper("FreeListStalls RaiseDelay",                PROPKEY_alarm_FreeListStalls_delay, Integer.class, conf.getDoubleProperty(PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay), DEFAULT_alarm_FreeListStalls_delay, "If 'Free list stalls/sec' is true and has been so for 2 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("FreeListStalls RaiseDelay",                PROPKEY_alarm_FreeListStalls_delay, Integer.class, conf.getIntProperty   (PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay), DEFAULT_alarm_FreeListStalls_delay, "If 'Free list stalls/sec' is true and has been so for 2 minutes then proceed with the Alarm Raise." ));
 		list.add(new CmSettingsHelper("LazyWrites",                isAlarmSwitch, PROPKEY_alarm_LazyWrites          , Double.class , conf.getDoubleProperty(PROPKEY_alarm_LazyWrites          , DEFAULT_alarm_LazyWrites          ), DEFAULT_alarm_LazyWrites          , "If 'Lazy writes/sec' is greater than 20 then send 'AlarmEventPerfCounterWarning'." ));
-		list.add(new CmSettingsHelper("LazyWrites RaiseDelay",                    PROPKEY_alarm_LazyWrites_delay    , Integer.class, conf.getDoubleProperty(PROPKEY_alarm_LazyWrites_delay    , DEFAULT_alarm_LazyWrites_delay    ), DEFAULT_alarm_LazyWrites_delay    , "If 'Lazy writes/sec' is true and has been so for 3 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("LazyWrites RaiseDelay",                    PROPKEY_alarm_LazyWrites_delay    , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LazyWrites_delay    , DEFAULT_alarm_LazyWrites_delay    ), DEFAULT_alarm_LazyWrites_delay    , "If 'Lazy writes/sec' is true and has been so for 3 minutes then proceed with the Alarm Raise." ));
 
 		return list;
 	}

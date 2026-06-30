@@ -179,6 +179,27 @@ extends PersistWriterToHttpJson
 	}
 
 	@Override
+	public String getTargetInfo()
+	{
+		String info = "";
+
+		if (_httpConfSlot != null)
+		{
+			info = "ToUrl='" + _httpConfSlot._url + "'";
+		}
+
+		if (_fileConfSlot != null)
+		{
+			if (StringUtil.hasValue(info))
+				info += ", ";
+
+			info += "ToDir='" + _fileConfSlot._dirName + "'";
+		}
+		
+		return info;
+	}
+
+	@Override
 	public void init(Configuration conf) throws Exception
 	{
 //System.out.println(getName() + ": INIT.....................................");

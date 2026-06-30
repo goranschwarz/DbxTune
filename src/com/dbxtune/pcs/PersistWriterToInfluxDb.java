@@ -802,6 +802,25 @@ extends PersistWriterBase
 	}
 
 	@Override
+	public String getTargetInfo()
+	{
+		String info = "";
+
+		info = _confSlot0._cfgName + "[ToUrl='" + _confSlot0._url + "']";
+		
+		for (ConfigSlot slot : _confSlots)
+		{
+			if (StringUtil.hasValue(info))
+				info += ", ";
+
+			info = slot._cfgName + "[ToUrl='" + slot._url + "']";
+		}
+
+		return info;
+	}
+
+
+	@Override
 	public void init(Configuration conf) throws Exception
 	{
 		System.out.println(getName()+": INIT.....................................");
