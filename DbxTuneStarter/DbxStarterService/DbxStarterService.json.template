@@ -1,0 +1,6 @@
+{
+  "DbxStarter": {
+    "WebPort": 8055,
+    "WebBind": "localhost"
+  }
+}

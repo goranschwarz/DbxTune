@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Needed only for WindowsFormsHost, to embed DbxStarterClient's existing
+         Scintilla-based editor (line numbers, Notepad++-style word highlight) in the
+         DBMS Configuration wizard page instead of a plain WPF TextBox. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RootNamespace>DbxInstaller</RootNamespace>
+    <AssemblyName>DbxInstaller</AssemblyName>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <ApplicationIcon>dbxtune_installer.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="DbmsSetup\*.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Scintilla5.NET" Version="6.1.2" />
+  </ItemGroup>
+</Project>

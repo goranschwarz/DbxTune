@@ -549,7 +549,7 @@ public class WizardOffline
 			if (cc.containsKey("conn.dbmsUsername")) { writeKey(bw, cc, "conn.dbmsUsername"); } else { writeln(bw, "#conn.dbmsUsername = xxx"); }
 			if (cc.containsKey("conn.dbmsPassword")) { writeKey(bw, cc, "conn.dbmsPassword"); } else { writeln(bw, "#conn.dbmsPassword = xxx"); }
 			writeln(bw, "## NOTE: If no 'conn.dbmsPassword' is specified, the password will be fetched from ${HOME}/.passwd.enc");
-			writeln(bw, "##       which can be maintained using: dbxPasswd.sh or dbxPassword.bat");
+			writeln(bw, "##       which can be maintained using: dbxPassword.sh or dbxPassword.bat");
 			writeln(bw, "##---------------------------------------------------------");
 			writeln(bw, "##---- END: DBMS information");
 			writeln(bw, "##---------------------------------------------------------");
@@ -570,7 +570,7 @@ public class WizardOffline
 			if (cc.containsKey("conn.sshPassword")) { writeKey(bw, cc, "conn.sshPassword"); } else { writeln(bw, "#conn.sshPassword = xxx"); }
 			if (cc.containsKey("conn.sskKeyFile" )) { writeKey(bw, cc, "conn.sskKeyFile");  } else { writeln(bw, "#conn.sskKeyFile  = xxx"); }
 			writeln(bw, "## NOTE: If no 'conn.sshPassword' is specified, the password will be fetched from ${HOME}/.passwd.enc");
-			writeln(bw, "##       which can be maintained using: dbxPasswd.sh or dbxPassword.bat");
+			writeln(bw, "##       which can be maintained using: dbxPassword.sh or dbxPassword.bat");
 			writeln(bw, "##---------------------------------------------------------");
 			writeln(bw, "##---- END: OS Monitoring information");
 			writeln(bw, "##---------------------------------------------------------");

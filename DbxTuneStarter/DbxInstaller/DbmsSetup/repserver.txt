@@ -1,0 +1,6 @@
+/*
+** TODO: implement instructions how to setup a monitoring user
+*/
+Simply use the 'sa' account
+
+

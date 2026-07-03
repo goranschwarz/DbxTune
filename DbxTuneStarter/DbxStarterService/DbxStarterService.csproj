@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DbxStarterService</RootNamespace>
+    <AssemblyName>DbxStarterService</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot/index.html" />
+    <EmbeddedResource Include="wwwroot/highlight.min.js" />
+    <EmbeddedResource Include="wwwroot/highlight-dark.min.css" />
+    <EmbeddedResource Include="wwwroot/hljs-dos.min.js" />
+    <EmbeddedResource Include="wwwroot/hljs-powershell.min.js" />
+  </ItemGroup>
+
+  <!-- Template for DbxStarterService.json — embedded so it survives single-file publish.
+       The live config lives in DBXTUNE_CENTRAL_CONF_DIR (written by the installer).
+       Developers running the exe locally can place a DbxStarterService.json next to the exe
+       as a dev override; it is never shipped to production targets. -->
+  <ItemGroup>
+    <EmbeddedResource Include="DbxStarterService.json.template" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <PackageReference Include="System.Management" Version="10.0.0" />
+  </ItemGroup>
+
+
+</Project>

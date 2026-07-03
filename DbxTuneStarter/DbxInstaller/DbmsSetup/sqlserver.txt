@@ -1,0 +1,95 @@
+/*--------------------------------------------------------------------------------------------
+** The below information (and more) can also be found at:
+** https://github.com/goranschwarz/DbxTune/blob/master/README_dbxcentral_2_add_sql-server.md
+*/
+
+
+/*--------------------------------------------------------------------------------------------
+** Create a SQL Server login. (either a local SQL Server account or use an Windows AD Account)
+**--------------------------------------------------------------------------------------------
+*/
+-- as any SQL Server login with 'sysadmin' create the login 'dbxtune'
+CREATE LOGIN [dbxtune] WITH PASSWORD         = 'the_long_and_arbitrary_password', 
+                            DEFAULT_DATABASE = master, 
+                            CHECK_POLICY     = OFF, 
+                            CHECK_EXPIRATION = OFF;
+
+-- Or if you are using a AD Account for this (this if you want to use integrated security for the 'dbxtune' user)
+--CREATE LOGIN [DOMAIN\dbxtune] FROM WINDOWS
+-- NOTE: if you are using an AD Account, replace all below [dbxtune] with [DOMAIN\dbxtune]
+
+
+-- Then grant authorization
+GRANT VIEW SERVER STATE    TO [dbxtune];   -- To view Server level statistics (like most DMV's)
+GRANT VIEW ANY DEFINITION  TO [dbxtune];   -- To be able to view Availability Groups, etc
+GRANT CONNECT ANY DATABASE TO [dbxtune];   -- To access DMV's in each DB, to get DB space used and index statistics
+
+-- On Linux: if you want to read the file '/var/opt/mssql/mssql.conf' when saving DBMS Configuration in PCS
+--GRANT ADMINISTER BULK OPERATIONS TO [dbxtune];
+
+
+/*--------------------------------------------------------------------------------------------
+** To let the user read the errorlog (via SQL)
+**--------------------------------------------------------------------------------------------
+*/
+use master;
+CREATE USER [dbxtune] FOR LOGIN [dbxtune];
+GRANT EXEC ON xp_readerrorlog TO [dbxtune];
+
+
+/*--------------------------------------------------------------------------------------------
+** If you want to inspect 'Job Scheduler', and 'Backup History' dbxtune needs access to database 'msdb'
+**--------------------------------------------------------------------------------------------
+*/
+USE msdb;
+CREATE USER [dbxtune] FOR LOGIN [dbxtune];
+ALTER ROLE db_datareader ADD MEMBER [dbxtune];
+
+
+/*--------------------------------------------------------------------------------------------
+** And sp_Blitz* procedures
+** (if you have not got them installed, now would be a good time: https://www.brentozar.com/blitz/)
+**   - sp_Blitz Can be used to verify that we do not have any major concerns on the SQL Server.
+**   - sp_BlitzLock Is used to extract Deadlock Details.
+** Tip: In the GUI Version of SqlServerTune, you can install the procedures from Menu -> Tools -> Install some extra system stored procedures
+**--------------------------------------------------------------------------------------------
+*/
+-- Note: If you want to execute 'sp_blitz' and are using a non 'sysadmin' account (like we do above with the login 'dbxtune')
+-- you need to follow 'https://www.brentozar.com/askbrent/', look for 'How to Grant Permissions to Non-DBAs'
+-- The 'sp_blitz' may be used to do all sorts of 'healthchecks' every time you connect to the monitored server.
+use master;
+GRANT EXEC ON sp_Blitz      TO [dbxtune];  -- Used for quick health check (at SqlServerTune startup)
+GRANT EXEC ON sp_BlitzLock  TO [dbxtune];  -- Used to list deadlocks (for Daily Summary Reports, if we have had deadlocks during that day)
+
+-- The blow are not used by SqlServerTune... But they are nice to have
+--GRANT EXEC ON sp_BlitzIndex TO [dbxtune];  -- [not used by dbxtune yet] -- To get some Index Information
+--GRANT EXEC ON sp_BlitzCache TO [dbxtune];  -- [not used by dbxtune yet] -- To get info from the Plan Cache
+--GRANT EXEC ON sp_BlitzFirst TO [dbxtune];  -- [not used by dbxtune yet] -- To ...
+
+
+/*--------------------------------------------------------------------------------------------
+** If you want to "flush" the Query Store, the dbxtune user does NOT have 'sysadmin' or 'db_owner' role
+** A call to 'sp_query_store_flush_db' will fail... And the below is a workaround for that:
+**--------------------------------------------------------------------------------------------
+*/
+CREATE PROCEDURE dbo.dbxtune_flush_query_store
+WITH EXECUTE AS OWNER
+AS
+BEGIN
+    EXEC sp_query_store_flush_db;
+END;
+GO
+
+GRANT EXECUTE ON dbo.dbxtune_flush_query_store TO [dbxtune];
+GO
+
+-- Optionally: Sign the procedure dbo.dbxtune_flush_query_store with a certificate for a higher security
+
+
+
+/*--------------------------------------------------------------------------------------------
+** NOTE: If you want OS Monitoring as well (highly recommended)
+** Then please look at: https://github.com/goranschwarz/DbxTune/blob/master/README_dbxcentral_2_add_sql-server.md
+** and the section: For SQL Server on WINDOWS: Preparations to monitor OS, Step 1 -- RECOMENDED
+**--------------------------------------------------------------------------------------------
+*/

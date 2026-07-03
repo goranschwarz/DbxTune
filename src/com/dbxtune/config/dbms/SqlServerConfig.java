@@ -753,13 +753,15 @@ extends DbmsConfigAbstract
 	// BEGIN: Emulate default and ConfigSection
 	//--------------------------------------------------------------------------------
 	private static final Map<String, Integer> DEFAULT_VALUES_MAP;
+	private static final Map<String, String>  UNTRUSTED_DEFAULTS_MAP;
 	private static final Map<String, String>  CONFIG_SECTION_MAP;
 	private static final Map<String, String>  CONFIG_COMMENT_MAP;
 	static
 	{
-		DEFAULT_VALUES_MAP = createDefaultConfigValuesMap();
-		CONFIG_SECTION_MAP = createConfigSectionMap();
-		CONFIG_COMMENT_MAP = createConfigCommentMap();
+		DEFAULT_VALUES_MAP     = createDefaultConfigValuesMap();
+		UNTRUSTED_DEFAULTS_MAP = createConfigUntrustedDefaultMap();
+		CONFIG_SECTION_MAP     = createConfigSectionMap();
+		CONFIG_COMMENT_MAP     = createConfigCommentMap();
 	}
 	
 	private boolean isDefaultConfigValue(String configName, int runValue)
@@ -780,8 +782,16 @@ extends DbmsConfigAbstract
 		}
 		else
 		{
-			int defaultValue = getDefaultConfigValue(configName);
-			return defaultValue == runValue;
+			if (UNTRUSTED_DEFAULTS_MAP.containsKey(configName))
+			{
+				// Just mark them as YES This is a DEFAULT value
+				return true;
+			}
+			else
+			{
+				int defaultValue = getDefaultConfigValue(configName);
+				return defaultValue == runValue;
+			}
 		}
 	}
 
@@ -931,6 +941,10 @@ extends DbmsConfigAbstract
 		map.put("SLOG memory quota (%)",                75);
 		map.put("external AI runtimes enabled",         0);
 		map.put("allow server scoped db credentials",   0);
+		map.put("max UCS send boxcars",                 256);
+		map.put("availability group commit time (ms)",  0);
+		map.put("tiered memory enabled",                0);
+		map.put("max server tiered memory (MB)",        2_147_483_647);
 
 		// SQL-Server 2025 CU5
 		map.put("max lock manager cache memory (%)",    20);
@@ -1084,6 +1098,10 @@ extends DbmsConfigAbstract
 		map.put("SLOG memory quota (%)",              SECTION_UNSPECIFIED);
 		map.put("external AI runtimes enabled",       SECTION_UNSPECIFIED);
 		map.put("allow server scoped db credentials", SECTION_UNSPECIFIED);
+		map.put("max UCS send boxcars",               SECTION_UNSPECIFIED);
+		map.put("availability group commit time (ms)",SECTION_UNSPECIFIED);
+		map.put("tiered memory enabled",              SECTION_UNSPECIFIED);
+		map.put("max server tiered memory (MB)",      SECTION_UNSPECIFIED);
 		
 		// SQL-Server 2025 CU5
 		map.put("max lock manager cache memory (%)",  SECTION_UNSPECIFIED);
@@ -1208,8 +1226,8 @@ extends DbmsConfigAbstract
 		map.put("tempdb metadata memory-optimized",   NO_COMMENT);
 		map.put("ADR cleaner retry timeout (min)",    NO_COMMENT);
 		map.put("ADR Preallocation Factor",           NO_COMMENT);
-		map.put("version high part of SQL Server",    NO_COMMENT);
-		map.put("version low part of SQL Server",     NO_COMMENT);
+		map.put("version high part of SQL Server",    "Internal: This can safly be ignored, since there are no 'real' default value for this. This will always be flaged as: DefaultConfig=true");
+		map.put("version low part of SQL Server",     "Internal: This can safly be ignored, since there are no 'real' default value for this. This will always be flaged as: DefaultConfig=true");
 		map.put("allow filesystem enumeration",       NO_COMMENT);
 		map.put("polybase enabled",                   NO_COMMENT);
 		map.put("CTR cleaner lock timeout (secs)",    NO_COMMENT);
@@ -1243,6 +1261,10 @@ extends DbmsConfigAbstract
 		map.put("SLOG memory quota (%)",              NO_COMMENT);
 		map.put("external AI runtimes enabled",       NO_COMMENT);
 		map.put("allow server scoped db credentials", NO_COMMENT);
+		map.put("max UCS send boxcars",               NO_COMMENT);
+		map.put("availability group commit time (ms)",NO_COMMENT);
+		map.put("tiered memory enabled",              NO_COMMENT);
+		map.put("max server tiered memory (MB)",      NO_COMMENT);
 		
 		// SQL-Server 2025 CU5
 		map.put("max lock manager cache memory (%)",  NO_COMMENT);
@@ -1251,6 +1273,16 @@ extends DbmsConfigAbstract
 	}
 	public static final String  NO_COMMENT = "";
 	
+
+	private static Map<String, String> createConfigUntrustedDefaultMap()
+	{
+		HashMap<String, String> map = new HashMap<String, String>();
+		
+		map.put("version high part of SQL Server",    "Internal: This can safly be ignored, since there are no 'real' default value for this");
+		map.put("version low part of SQL Server",     "Internal: This can safly be ignored, since there are no 'real' default value for this");
+
+		return map;
+	}
 	//--------------------------------------------------------------------------------
 	// END: Emulate default and ConfigSection
 	//--------------------------------------------------------------------------------
