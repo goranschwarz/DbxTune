@@ -1,0 +1,6 @@
+/*
+** TODO: implement instructions how to setup a monitoring user
+*/
+for details see: https://github.com/goranschwarz/DbxTune/blob/master/README_dbxcentral_1_add_sybase.md
+
+

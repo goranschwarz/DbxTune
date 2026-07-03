@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DbxTuneStarter</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Segoe UI, Arial, sans-serif; font-size: 13px; background: #1e1e1e; color: #ccc; }
+
+  /* Header */
+  #header {
+    display: flex; align-items: center; gap: 10px;
+    background: #2d2d2d; padding: 8px 12px; border-bottom: 1px solid #444;
+    flex-wrap: wrap;
+  }
+  #header h1 { font-size: 16px; color: #fff; margin-right: 6px; }
+  #serverlist-path { font-size: 11px; color: #88b4e8; cursor: pointer; text-decoration: underline; }
+  #serverlist-path:hover { color: #acd }
+
+  button {
+    background: #3a3a3a; color: #ccc; border: 1px solid #555;
+    padding: 4px 10px; cursor: pointer; border-radius: 3px; font-size: 12px;
+  }
+  button:hover { background: #4a4a4a; }
+  button.action-btn  { padding: 2px 7px; font-size: 11px; }
+  button.start-btn   { color: #8fbc8f; }
+  button.stop-btn    { color: #e08080; }
+  button.restart-btn { color: #d4b870; }
+  button.view-btn    { color: #88b4e8; }
+  button.cmdline-btn { color: #c09ae8; }
+
+  select { background: #3a3a3a; color: #ccc; border: 1px solid #555; padding: 3px 6px; border-radius: 3px; font-size: 12px; }
+
+  /* Main table area */
+  #main { padding: 8px; overflow-x: auto; }
+
+  table { border-collapse: collapse; width: 100%; min-width: 900px; }
+  th {
+    background: #2d2d2d; color: #aaa; text-align: left;
+    padding: 5px 7px; border-bottom: 1px solid #444; white-space: nowrap; font-weight: normal;
+  }
+  td { padding: 4px 7px; border-bottom: 1px solid #333; vertical-align: middle; }
+  tr:hover td { background: #272727; }
+  .status-running { color: #4CAF50; font-weight: bold; }
+  .status-stopped { color: #f44336; font-weight: bold; }
+  .actions { white-space: nowrap; display: flex; gap: 4px; flex-wrap: wrap; }
+
+  /* Status bar */
+  #statusbar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #2d2d2d; border-top: 1px solid #444;
+    padding: 4px 12px; font-size: 11px; color: #888;
+    display: flex; align-items: center; gap: 12px;
+  }
+  #statusbar #feedback { color: #aaa; margin-left: auto; }
+
+  /* Bottom panels */
+  .panel {
+    position: fixed; left: 0; right: 0; bottom: 30px;
+    height: 40%; background: #252525; border-top: 1px solid #444;
+    display: flex; flex-direction: column; transform: translateY(calc(100% + 35px));
+    transition: transform 0.2s ease; z-index: 100;
+  }
+  .panel.open { transform: translateY(0); }
+  .panel.resizing { transition: none; }
+
+  /* Resize handle — horizontal bar at the top edge of the panel */
+  #resizer {
+    position: fixed; left: 0; right: 0; height: 5px;
+    cursor: row-resize; background: #3a3a3a; z-index: 102;
+    display: none; user-select: none;
+  }
+  #resizer:hover, #resizer.active { background: #666; }
+  .panel-header {
+    display: flex; align-items: center; gap: 8px;
+    background: #2d2d2d; padding: 7px 10px; border-bottom: 1px solid #444; flex-shrink: 0;
+  }
+  .panel-header span { flex: 1; font-size: 12px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .panel-body { flex: 1; overflow: auto; padding: 0; }
+
+  /* Log viewer */
+  pre#log-content {
+    font-family: Consolas, monospace; font-size: 12px; color: #bbb;
+    padding: 8px; white-space: pre; line-height: 1.4; min-height: 100%;
+  }
+  /* Line-number prefix and log sub-token colours */
+  pre#log-content .line-num   { color: #555; }
+  pre#log-content .log-ts     { color: #555; }              /* timestamps — always dim */
+  pre#log-content .log-lvl    { font-weight: bold; }        /* level badge — colour from parent */
+  pre#log-content .log-stack  { color: #606060; font-style: italic; }  /* Java stack trace lines */
+  /* Whole-line level colours */
+  pre#log-content .log-error  { color: #e07070; }
+  pre#log-content .log-fatal  { color: #ff5555; font-weight: bold; }
+  pre#log-content .log-warn   { color: #d4b870; }
+  pre#log-content .log-info   { color: #8fbccc; }
+  pre#log-content .log-debug  { color: #999;    }
+  pre#log-content .log-verbose{ color: #666;    }
+
+  /* File editor */
+  textarea#editor-content {
+    width: 100%; height: 100%; background: #1e1e1e; color: #ccc;
+    border: none; font-family: Consolas, monospace; font-size: 12px;
+    padding: 8px; resize: none; outline: none;
+    tab-size: 4;
+  }
+
+  .panel-footer { padding: 6px 10px; border-top: 1px solid #444; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .panel-footer label { font-size: 12px; color: #aaa; cursor: pointer; }
+  input[type=checkbox] { cursor: pointer; }
+
+  /* Editor dirty indicator */
+  #editor-dirty { color: #d4b870; font-size: 11px; display: none; }
+</style>
+<link rel="stylesheet" href="highlight-dark.min.css">
+<script src="highlight.min.js"></script>
+<script src="hljs-dos.min.js"></script>
+<script src="hljs-powershell.min.js"></script>
+</head>
+<body>
+
+<div id="header">
+  <h1>DbxTuneStarter</h1>
+  <button onclick="refreshStatus()" title="Reload server status from the service">Refresh</button>
+  <label style="font-size:12px;color:#aaa;">Log level:</label>
+  <select id="log-level-select" onchange="setLogLevel(this.value)" title="Change the live log verbosity of DbxStarterService">
+    <option value="Verbose">Trace</option>
+    <option value="Debug">Debug</option>
+    <option value="Information">Info</option>
+    <option value="Warning">Warning</option>
+    <option value="Error">Error</option>
+    <option value="Fatal">Fatal</option>
+  </select>
+  <button onclick="openServiceLog()" title="View the DbxStarterService log file">View Service Log</button>
+  <span style="font-size:12px;color:#777;">SERVER_LIST:</span>
+  <span id="serverlist-path" onclick="openFileEditor()">(loading...)</span>
+</div>
+
+<div id="main">
+  <table id="servers-table">
+    <thead>
+      <tr>
+        <th>Server Name</th>
+        <th>Alias</th>
+        <th>Type</th>
+        <th>PID</th>
+        <th>Parent PID</th>
+        <th>Status</th>
+        <th>Info</th>
+        <th>Start Time</th>
+        <th>DBMS User</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="servers-tbody">
+      <tr><td colspan="10" style="color:#666;padding:20px;">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Log Viewer Panel -->
+<div id="log-panel" class="panel">
+  <div class="panel-header">
+    <span id="log-panel-title">Log</span>
+    <button onclick="closeLogPanel()" title="Close this panel">Close</button>
+  </div>
+  <div class="panel-body">
+    <pre id="log-content"></pre>
+  </div>
+  <div class="panel-footer">
+    <label title="Automatically reload the file every second"><input type="checkbox" id="log-autorefresh" onchange="toggleLogAutoRefresh()"> Auto-refresh (1s)</label>
+    <label title="Load the entire file instead of the last 500 lines"><input type="checkbox" id="log-showall" onchange="toggleShowAll()"> Show all lines</label>
+    <button onclick="loadLogContent(true)" title="Reload the file from disk now">Reload</button>
+    <button onclick="gotoEnd()" title="Scroll to the bottom of the file">Go to End</button>
+    <span id="log-line-count" style="margin-left:auto;font-size:11px;color:#666;"></span>
+  </div>
+</div>
+
+<!-- File Editor Panel -->
+<div id="editor-panel" class="panel">
+  <div class="panel-header">
+    <span id="editor-panel-title">Edit SERVER_LIST</span>
+    <span id="editor-dirty">● unsaved</span>
+  </div>
+  <div class="panel-body">
+    <textarea id="editor-content"></textarea>
+  </div>
+  <div class="panel-footer">
+    <button onclick="saveFile()" title="Save the file and reload the server list (Ctrl+S)">Save</button>
+    <button onclick="closeEditorPanel()" title="Discard changes and close">Cancel</button>
+  </div>
+</div>
+
+<!-- Command Line Panel -->
+<div id="cmdline-panel" class="panel">
+  <div class="panel-header">
+    <span id="cmdline-panel-title">Command Line</span>
+    <button onclick="closeCmdLinePanel()" title="Close this panel">Close</button>
+  </div>
+  <div class="panel-body" style="padding: 10px 12px; overflow: auto; display: flex; flex-direction: column; gap: 14px;">
+    <div>
+      <div style="font-size:11px;color:#777;margin-bottom:4px;">Full command line</div>
+      <pre id="cmdline-full" style="font-family:Consolas,monospace;font-size:12px;color:#bbb;white-space:pre;overflow-x:auto;background:#1a1a1a;padding:6px 8px;border-radius:3px;"></pre>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#777;margin-bottom:4px;">Arguments (one per line)</div>
+      <pre id="cmdline-split" style="font-family:Consolas,monospace;font-size:12px;color:#bbb;white-space:pre;background:#1a1a1a;padding:6px 8px;border-radius:3px;"></pre>
+    </div>
+  </div>
+</div>
+
+<div id="resizer"></div>
+
+<div id="statusbar">
+  <span id="last-refresh">Not refreshed yet</span>
+  <span id="feedback"></span>
+</div>
+
+<script>
+  let autoRefreshTimer    = null;
+  let logAutoRefreshTimer = null;
+  let currentLogPath      = null;
+  let lastLogWriteTime    = null;
+  let currentEditorPath   = null;
+  let viewerIsLog         = false;   // true = log file (colorise), false = plain/highlighted
+  let viewerLang          = '';      // hljs language id when syntax-highlighting; '' = plain
+  let editorDirty         = false;
+  let showAllLines        = false;   // false = tail 500, true = full file
+  let panelHeight = parseInt(localStorage.getItem('panelHeight') || '80', 10);
+
+  // ── Split-pane resize ────────────────────────────────────────────────────────
+
+  const STATUS_H = 30;   // px — height of the fixed status bar
+
+  function updatePanelLayout() {
+    const openPanel = document.querySelector('.panel.open');
+    const resizer   = document.getElementById('resizer');
+    const main      = document.getElementById('main');
+    if (openPanel) {
+      const vh      = window.innerHeight;
+      const panelPx = Math.round(vh * panelHeight / 100);
+      openPanel.style.height   = panelHeight + '%';
+      resizer.style.display    = 'block';
+      resizer.style.bottom     = (STATUS_H + panelPx) + 'px';
+      main.style.paddingBottom = (STATUS_H + panelPx + 5) + 'px';
+    } else {
+      resizer.style.display    = 'none';
+      main.style.paddingBottom = STATUS_H + 'px';
+    }
+  }
+
+  (function initResizer() {
+    const resizer = document.getElementById('resizer');
+    let dragging  = false;
+
+    resizer.addEventListener('mousedown', e => {
+      dragging = true;
+      resizer.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p => p.classList.add('resizing'));
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const vh = window.innerHeight;
+      panelHeight = Math.max(15, Math.min(85,
+        Math.round((vh - e.clientY - STATUS_H) / vh * 100)));
+      localStorage.setItem('panelHeight', panelHeight);
+      updatePanelLayout();
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      resizer.classList.remove('active');
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('resizing'));
+    });
+  })();
+
+  // ── Status refresh ──────────────────────────────────────────────────────────
+
+  async function refreshStatus() {
+    try {
+      const res = await fetch('/api/status');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      renderTable(data.runningProcesses || []);
+      document.getElementById('last-refresh').textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
+    } catch (e) {
+      setFeedback('Error fetching status: ' + e.message, true);
+    }
+  }
+
+  function renderTable(processes) {
+    const tbody = document.getElementById('servers-tbody');
+    if (!processes.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="color:#666;padding:20px;">No servers found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = processes.map(p => {
+      const status = p.running
+        ? '<span class="status-running">Running</span>'
+        : '<span class="status-stopped">Stopped</span>';
+      const name     = escHtml(p.serverName      || '');
+      const alias    = escHtml(p.serverAliasName || '');
+      const type     = escHtml(p.serverType      || '');
+      const pid      = escHtml(p.processId       || '');
+      const ppid     = escHtml(p.parentProcessId || '');
+      const info     = escHtml(p.info            || '');
+      const startTime= escHtml(p.startTime       || '');
+      const dbmsUser = escHtml(p.dbmsUsername    || '');
+
+      const nameAttr = encodeURIComponent(p.serverName || '');
+
+      const startBtn   = `<button class="action-btn start-btn"   onclick="serverAction('${nameAttr}','start')"   title="Start ${escAttr(p.serverName||'')}">Start</button>`;
+      const stopBtn    = `<button class="action-btn stop-btn"    onclick="serverAction('${nameAttr}','stop')"    title="Stop ${escAttr(p.serverName||'')}">Stop</button>`;
+      const restartBtn = `<button class="action-btn restart-btn" onclick="serverAction('${nameAttr}','restart')" title="Stop then start ${escAttr(p.serverName||'')}">Restart</button>`;
+
+      // isLog=true → colorize output; autoRefresh=true → enable auto-refresh by default
+      const pathBtn = (label, path, isLog, tip, autoRefresh = isLog) =>
+        `<button class="action-btn view-btn" onclick="openLogViewer(decodeURIComponent('${encodeURIComponent(path)}'),${isLog},${autoRefresh})" title="${escAttr(tip)}">` +
+        `${label}</button>`;
+
+      let viewBtns = '';
+      if (p.consoleFile) viewBtns += pathBtn('Console', p.consoleFile, false, 'View console output: '  + p.consoleFile, true);
+      if (p.logFile)     viewBtns += pathBtn('Log',     p.logFile,     true,  'View log file: '        + p.logFile,     true);
+      if (p.configFile)  viewBtns += pathBtn('Config',  p.configFile,  false, 'View config file: '     + p.configFile);
+      if (p.startScript) viewBtns += pathBtn('Script',  p.startScript, false, 'View start script: '    + p.startScript);
+      if (p.commandLine) viewBtns += `<button class="action-btn cmdline-btn" onclick="openCmdLinePanel(decodeURIComponent('${encodeURIComponent(p.commandLine||'')}'))" title="Show the full Java command line from ps">CmdLine</button>`;
+
+      return `<tr>
+        <td>${name}</td>
+        <td>${alias}</td>
+        <td>${type}</td>
+        <td>${pid}</td>
+        <td>${ppid}</td>
+        <td>${status}</td>
+        <td title="${escAttr(p.info||'')}">${info.length > 30 ? info.substring(0,30)+'…' : info}</td>
+        <td>${startTime}</td>
+        <td>${dbmsUser}</td>
+        <td><div class="actions">${startBtn}${stopBtn}${restartBtn}${viewBtns}</div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function serverAction(nameEncoded, action) {
+    const name = decodeURIComponent(nameEncoded);
+    setFeedback(action + ' ' + name + '...');
+    try {
+      const res = await fetch('/api/servers/' + nameEncoded + '/' + action, { method: 'POST' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      setFeedback(action + ' ' + name + ': OK');
+      setTimeout(refreshStatus, 2000);
+    } catch (e) {
+      setFeedback('Error: ' + e.message, true);
+    }
+  }
+
+  // ── Log level ───────────────────────────────────────────────────────────────
+
+  async function loadCurrentLogLevel() {
+    try {
+      const res = await fetch('/api/service/loglevel');
+      if (!res.ok) return;
+      const level = (await res.text()).trim();
+      const sel = document.getElementById('log-level-select');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === level) { sel.selectedIndex = i; break; }
+      }
+    } catch {}
+  }
+
+  async function setLogLevel(level) {
+    try {
+      await fetch('/api/service/loglevel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level })
+      });
+      setFeedback('Log level set to ' + level);
+    } catch (e) {
+      setFeedback('Error setting log level: ' + e.message, true);
+    }
+  }
+
+  // ── ServerList path ─────────────────────────────────────────────────────────
+
+  async function loadServerListPath() {
+    try {
+      const res = await fetch('/api/service/serverlist-path');
+      if (!res.ok) return;
+      const path = (await res.text()).trim();
+      document.getElementById('serverlist-path').textContent = path;
+    } catch {}
+  }
+
+  // ── Log viewer panel ────────────────────────────────────────────────────────
+
+  async function openServiceLog() {
+    const res = await fetch('/api/service/logname');
+    if (!res.ok) { setFeedback('Could not get log path', true); return; }
+    const path = (await res.text()).trim();
+    openLogViewer(path, true);
+  }
+
+  function openLogViewer(path, isLog, autoRefresh = isLog) {
+    currentLogPath   = path;
+    lastLogWriteTime = null;
+    viewerIsLog      = isLog;
+    viewerLang       = isLog ? '' : detectHljsLang(path);
+    showAllLines     = false;
+
+    document.getElementById('log-panel-title').textContent = path;
+    document.getElementById('log-content').textContent = '';
+    document.getElementById('log-autorefresh').checked = autoRefresh;
+    document.getElementById('log-showall').checked = false;
+    document.getElementById('log-line-count').textContent = '';
+    document.getElementById('log-panel').classList.add('open');
+    document.getElementById('editor-panel').classList.remove('open');
+    document.getElementById('cmdline-panel').classList.remove('open');
+    updatePanelLayout();
+
+    loadLogContent(true);
+    if (autoRefresh) startLogAutoRefresh(); else stopLogAutoRefresh();
+  }
+
+  function toggleShowAll() {
+    showAllLines     = document.getElementById('log-showall').checked;
+    lastLogWriteTime = null;   // force a reload regardless of file timestamp
+    loadLogContent(true);
+  }
+
+  function closeLogPanel() {
+    document.getElementById('log-panel').classList.remove('open');
+    stopLogAutoRefresh();
+    updatePanelLayout();
+  }
+
+  function toggleLogAutoRefresh() {
+    if (document.getElementById('log-autorefresh').checked) startLogAutoRefresh();
+    else stopLogAutoRefresh();
+  }
+
+  function startLogAutoRefresh() {
+    stopLogAutoRefresh();
+    logAutoRefreshTimer = setInterval(() => loadLogContent(false), 1000);
+  }
+
+  function stopLogAutoRefresh() {
+    if (logAutoRefreshTimer) { clearInterval(logAutoRefreshTimer); logAutoRefreshTimer = null; }
+  }
+
+  async function loadLogContent(force) {
+    if (!currentLogPath) return;
+    try {
+      if (!force) {
+        const metaRes = await fetch('/api/files/meta?path=' + encodeURIComponent(currentLogPath));
+        if (metaRes.ok) {
+          const meta = await metaRes.json();
+          if (meta.lastWriteTime === lastLogWriteTime) return;
+          lastLogWriteTime = meta.lastWriteTime;
+        }
+      } else {
+        lastLogWriteTime = null;
+      }
+
+      // Fetch all lines or last 500 depending on the toggle
+      const tailParam = showAllLines ? '' : '&tail=500';
+      const res = await fetch('/api/files/read?path=' + encodeURIComponent(currentLogPath) + tailParam);
+      if (!res.ok) { document.getElementById('log-content').textContent = 'Error: HTTP ' + res.status; return; }
+      const text = await res.text();
+      const pre  = document.getElementById('log-content');
+      const wasAtEnd = pre.parentElement.scrollTop + pre.parentElement.clientHeight >= pre.parentElement.scrollHeight - 20;
+      pre.innerHTML = viewerIsLog ? colorizeLog(text)
+                   : viewerLang  ? renderHighlighted(text, viewerLang)
+                   :               renderPlain(text);
+      // Show line count in footer
+      const lineCount = text.split('\n').filter(l => l.trim()).length;
+      document.getElementById('log-line-count').textContent =
+        showAllLines ? `${lineCount} lines (all)` : `${lineCount} lines (last 500)`;
+      if (wasAtEnd) gotoEnd();
+    } catch (e) {
+      document.getElementById('log-content').textContent = 'Error loading: ' + e.message;
+    }
+  }
+
+  function gotoEnd() {
+    const body = document.getElementById('log-content').parentElement;
+    body.scrollTop = body.scrollHeight;
+  }
+
+  // ── File editor panel ───────────────────────────────────────────────────────
+
+  async function openFileEditor() {
+    try {
+      const pathRes = await fetch('/api/service/serverlist-path');
+      if (!pathRes.ok) { setFeedback('Could not get SERVER_LIST path', true); return; }
+      currentEditorPath = (await pathRes.text()).trim();
+
+      // Use ?raw=true so we get the file content with no "    N: " prefix
+      const contentRes = await fetch('/api/files/read?path=' + encodeURIComponent(currentEditorPath) + '&raw=true');
+      if (!contentRes.ok) { setFeedback('Could not read SERVER_LIST', true); return; }
+      const plain = await contentRes.text();
+
+      document.getElementById('editor-panel-title').textContent = currentEditorPath;
+      document.getElementById('editor-content').value = plain;
+      document.getElementById('editor-panel').classList.add('open');
+      document.getElementById('log-panel').classList.remove('open');
+      document.getElementById('cmdline-panel').classList.remove('open');
+      stopLogAutoRefresh();
+      updatePanelLayout();
+
+      setEditorDirty(false);
+    } catch (e) {
+      setFeedback('Error: ' + e.message, true);
+    }
+  }
+
+  function setEditorDirty(dirty) {
+    editorDirty = dirty;
+    document.getElementById('editor-dirty').style.display = dirty ? 'inline' : 'none';
+  }
+
+  function closeEditorPanel() {
+    if (editorDirty && !confirm('You have unsaved changes. Discard them?')) return;
+    document.getElementById('editor-panel').classList.remove('open');
+    setEditorDirty(false);
+    updatePanelLayout();
+  }
+
+  async function saveFile() {
+    if (!currentEditorPath) return;
+    const content = document.getElementById('editor-content').value;
+    try {
+      const res = await fetch('/api/files/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentEditorPath, content })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      setFeedback('Saved. Reloading server list...');
+      setEditorDirty(false);
+      await fetch('/api/servers/reload', { method: 'POST' });
+      closeEditorPanel();
+      setTimeout(refreshStatus, 500);
+    } catch (e) {
+      setFeedback('Error saving: ' + e.message, true);
+    }
+  }
+
+  // Tab key inserts spaces instead of moving focus
+  document.getElementById('editor-content').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = this.selectionStart;
+      const end   = this.selectionEnd;
+      this.value  = this.value.substring(0, start) + '    ' + this.value.substring(end);
+      this.selectionStart = this.selectionEnd = start + 4;
+    }
+  });
+
+  // Track unsaved changes
+  document.getElementById('editor-content').addEventListener('input', () => setEditorDirty(true));
+
+  // ── Rendering helpers ───────────────────────────────────────────────────────
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escAttr(s) {
+    return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  }
+
+  // Render plain (non-log) file: style the "    N: " prefix in muted colour,
+  // leave the rest unstyled.
+  function renderPlain(text) {
+    return text.split('\n').map(line => {
+      const m = line.match(/^(\s{0,6}\d+: )(.*)/s);
+      if (m) return `<span class="line-num">${escHtml(m[1])}</span>${escHtml(m[2])}`;
+      return escHtml(line);
+    }).join('\n');
+  }
+
+  // Map file extension → hljs language id. Returns '' if not recognised.
+  function detectHljsLang(path) {
+    const ext = (path.split('.').pop() || '').toLowerCase();
+    return {
+      bat: 'bat', cmd: 'bat',
+      ps1: 'powershell', psm1: 'powershell', psd1: 'powershell',
+      sh: 'bash', bash: 'bash',
+      ini: 'ini', conf: 'ini', cfg: 'ini', properties: 'ini',
+      xml: 'xml',
+      json: 'json',
+      yaml: 'yaml', yml: 'yaml',
+      sql: 'sql',
+      py: 'python',
+    }[ext] || '';
+  }
+
+  // Syntax-highlight a file fetched with line-number prefix ("    N: ").
+  // Strips the prefix before highlighting so hljs sees clean source,
+  // then re-wraps each line with a muted line-number span.
+  function renderHighlighted(text, lang) {
+    const lines = text.split('\n');
+
+    // Strip server-added "    N: " prefix from every line
+    const code = lines
+      .map(l => l.replace(/^\s{0,6}\d+: /, ''))
+      .join('\n')
+      .replace(/\n$/, '');
+
+    let highlighted;
+    try {
+      highlighted = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+    } catch (e) {
+      return renderPlain(text);   // fallback if language not loaded
+    }
+
+    // Split the highlighted HTML at newlines and re-attach line numbers.
+    // Spans almost never cross line boundaries in bat/ps1/sh, so this is safe in practice.
+    const hlLines = highlighted.split('\n');
+    return hlLines.map((hl, i) => {
+      const num = String(i + 1).padStart(4, ' ');
+      return `<span class="line-num">${escHtml(num + ': ')}</span>${hl}`;
+    }).join('\n');
+  }
+
+  // Colour-code log lines by level keyword with sub-token highlights.
+  // Timestamps are always dimmed; the level badge is bolded; Java stack-trace
+  // lines get a separate dim-italic style so they don't inherit the ERROR red.
+  const _LOG_TS_RE    = /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:\d{2})?)/g;
+  const _LOG_BADGE_RE = /(\[(?:FATAL|ERROR|WARNI(?:NG)?|INFO(?:RMATION)?|DEBUG|VERBO(?:SE)?|TRACE)\]|- (?:FATAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|VERBOSE|TRACE) -)/gi;
+
+  function colorizeLog(text) {
+    return text.split('\n').map(line => {
+      const numMatch = line.match(/^(\s{0,6}\d+: )(.*)/s);
+      let prefix = '', content = line;
+      if (numMatch) {
+        prefix  = `<span class="line-num">${escHtml(numMatch[1])}</span>`;
+        content = numMatch[2];
+      }
+
+      // Stack-trace lines: dim + italic, no further token processing
+      if (/^\s+at /.test(content) || /^Caused by:/.test(content)) {
+        return prefix + `<span class="log-stack">${escHtml(content)}</span>`;
+      }
+
+      const u = content.toUpperCase();
+      let cls = '';
+      if      (u.includes('[FATAL]')   || u.includes('- FATAL -'))   cls = 'log-fatal';
+      else if (u.includes('[ERROR]')   || u.includes('- ERROR -'))   cls = 'log-error';
+      else if (u.includes('[WARNI]')   || u.includes('[WARN]')    ||
+               u.includes('[WARNING]') || u.includes('- WARN -')  ||
+               u.includes('- WARNING -'))                             cls = 'log-warn';
+      else if (u.includes('[INFOR]')   || u.includes('[INFO]')    ||
+               u.includes('[INFORMATION]') || u.includes('- INFO -')) cls = 'log-info';
+      else if (u.includes('[DEBUG]')   || u.includes('- DEBUG -'))   cls = 'log-debug';
+      else if (u.includes('[VERBO]')   || u.includes('[VERBOSE]') ||
+               u.includes('[TRACE]')   || u.includes('- VERBOSE -') ||
+               u.includes('- TRACE -'))                               cls = 'log-verbose';
+
+      // Apply sub-token highlights to the HTML-escaped content.
+      // TS_RE / BADGE_RE only match ASCII digits/letters/brackets — safe on escaped HTML.
+      let html = escHtml(content);
+      _LOG_TS_RE.lastIndex    = 0;
+      _LOG_BADGE_RE.lastIndex = 0;
+      html = html.replace(_LOG_TS_RE,    '<span class="log-ts">$1</span>');
+      html = html.replace(_LOG_BADGE_RE, '<span class="log-lvl">$1</span>');
+
+      return prefix + (cls ? `<span class="${cls}">${html}</span>` : html);
+    }).join('\n');
+  }
+
+  let feedbackTimer = null;
+  function setFeedback(msg, isError) {
+    const el = document.getElementById('feedback');
+    el.textContent = msg;
+    el.style.color = isError ? '#f44336' : '#aaa';
+    if (feedbackTimer) clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(() => { el.textContent = ''; }, 5000);
+  }
+
+  // ── Command line panel ──────────────────────────────────────────────────────
+
+  function openCmdLinePanel(cmdLine) {
+    document.getElementById('cmdline-panel-title').textContent = 'Command Line';
+    document.getElementById('cmdline-full').textContent  = cmdLine;
+    document.getElementById('cmdline-split').innerHTML   = formatCmdLineMulti(cmdLine);
+    document.getElementById('cmdline-panel').classList.add('open');
+    document.getElementById('log-panel').classList.remove('open');
+    document.getElementById('editor-panel').classList.remove('open');
+    stopLogAutoRefresh();
+    updatePanelLayout();
+  }
+
+  function closeCmdLinePanel() {
+    document.getElementById('cmdline-panel').classList.remove('open');
+    updatePanelLayout();
+  }
+
+  // Tokenise a command line respecting double-quoted strings.
+  function tokenizeCmdLine(cmdLine) {
+    const tokens = [];
+    let cur = '', inQ = false;
+    for (const c of cmdLine) {
+      if (c === '"') { inQ = !inQ; cur += c; }
+      else if (c === ' ' && !inQ) { if (cur) { tokens.push(cur); cur = ''; } }
+      else cur += c;
+    }
+    if (cur) tokens.push(cur);
+    return tokens;
+  }
+
+  // Return HTML for the multi-line view.
+  // Rules:
+  //   token[0]              → executable (amber)
+  //   token starts with -   → flag (blue); if it contains no '=' AND next token
+  //                           doesn't start with '-', consume next as its value on same line
+  //   anything else         → standalone (class name, unrecognised arg — warm grey)
+  function formatCmdLineMulti(cmdLine) {
+    if (!cmdLine) return '';
+    const tokens = tokenizeCmdLine(cmdLine);
+    const lines  = [];
+    let i = 0;
+    while (i < tokens.length) {
+      const t    = tokens[i];
+      const safe = escHtml(t);
+      if (i === 0) {
+        lines.push(`<span style="color:#e8c87a">${safe}</span>`);   // executable — amber
+        i++;
+      } else if (t.startsWith('-')) {
+        const color    = t.startsWith('--') ? '#88b4e8' : '#88c8e8';
+        const hasValue = !t.includes('=')                           // self-contained -Dkey=val → no pair
+                      && i + 1 < tokens.length
+                      && !tokens[i + 1].startsWith('-');
+        if (hasValue) {
+          const valSafe = escHtml(tokens[i + 1]);
+          lines.push(`  <span style="color:${color}">${safe}</span> <span style="color:#bbb">${valSafe}</span>`);
+          i += 2;
+        } else {
+          lines.push(`  <span style="color:${color}">${safe}</span>`);
+          i++;
+        }
+      } else {
+        lines.push(`  <span style="color:#c8b88a">${safe}</span>`); // class name / other — warm grey
+        i++;
+      }
+    }
+    return lines.join('\n');
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+
+  function init() {
+    refreshStatus();
+    loadCurrentLogLevel();
+    loadServerListPath();
+    autoRefreshTimer = setInterval(refreshStatus, 60000);
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+[Unit]
+Description=DbxTuneStarter - DbxTune collector process manager
+After=network.target
+
+[Service]
+Type=notify
+WorkingDirectory=/home/reine/projects/DbxTuneStarter/publish/linux
+ExecStart=/home/reine/projects/DbxTuneStarter/publish/linux/DbxTuneStarter
+Restart=on-failure
+RestartSec=10
+
+User=reine
+Group=reine
+
+# Load DBXTUNE_* environment variables
+# Create with: sudo -u dbxtune tee /home/dbxtune/.dbxtune/dbxtune.env
+EnvironmentFile=/home/reine/.dbxtune/DBXTUNE.env
+Environment=DBXTUNE_CENTRAL_BASE=/home/reine/.dbxtune/dbxc
+
+# Hardening
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

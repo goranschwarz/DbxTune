@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <!-- Needed only for WindowsFormsHost, to embed the Scintilla-based editors
+         (FileEditor, LogViewer) which have no first-class WPF equivalent,
+         and for the NotifyIcon system-tray icon, which WPF has no API for. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Deliberately no ImplicitUsings: with both UseWPF and UseWindowsForms set, the SDK's
+         implicit usings pull in both System.Windows.* and System.Windows.Forms, which collide
+         on Button/TextBox/DataGrid/etc. (matches DbxInstaller, which has the same constraint). -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <ApplicationIcon>Resources\dbxtune_central_starter.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Scintilla5.NET" Version="6.1.2" />
+  </ItemGroup>
+
+  <!-- Toolbar/tray icons loaded at runtime via pack:// URIs (see LoadImage/LoadIcon helpers) -->
+  <ItemGroup>
+    <Resource Include="Resources\*.png" />
+    <Resource Include="Resources\*.ico" />
+  </ItemGroup>
+
+</Project>
