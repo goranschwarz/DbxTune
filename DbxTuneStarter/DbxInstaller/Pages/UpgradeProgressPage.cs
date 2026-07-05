@@ -20,7 +20,7 @@ namespace DbxInstaller.Pages
         {
             "Stop service if running", "Locate package", "Create directory structure",
             "Extract package", "Set DbxTune directories", "Initialize DbxTune home",
-            "Verify DbxTune directories",
+            "Verify DbxTune directories", "Copy DbxStarter executables",
         };
 
         private readonly StackPanel _railPanel = new();

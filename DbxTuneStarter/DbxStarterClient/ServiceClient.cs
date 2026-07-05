@@ -12,6 +12,9 @@ namespace DbxStarterClient
     public class ServiceStatus
     {
         [DataMember]
+        public string? Version { get; set; }
+
+        [DataMember]
         public List<ProcessStatus> RunningProcesses { get; set; } = new List<ProcessStatus>();
     }
 

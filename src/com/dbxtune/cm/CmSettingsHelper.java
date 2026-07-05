@@ -272,6 +272,19 @@ public class CmSettingsHelper
 		return false;
 	}
 
+	/**
+	 * Check if a passed value is equal to the default value...
+	 * @param value The value to be checked
+	 * @return
+	 */
+	public boolean isDefaultValue(Object value)
+	{
+		String valueStr    = value             == null ? "" : value.toString();
+		String defValueStr = getDefaultValue() == null ? "" : getDefaultValue().toString();
+
+		return valueStr.equals(defValueStr);
+	}
+	
 	public boolean isValidInput(String newValueStr)
 	throws ValidationException
 	{

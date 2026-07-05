@@ -23,4 +23,8 @@
   <ItemGroup>
     <PackageReference Include="Scintilla5.NET" Version="6.1.2" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DbxStarterCommon\DbxStarterCommon.csproj" />
+  </ItemGroup>
 </Project>

@@ -26,5 +26,8 @@
     <Resource Include="Resources\*.png" />
     <Resource Include="Resources\*.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DbxStarterCommon\DbxStarterCommon.csproj" />
+  </ItemGroup>
 
 </Project>

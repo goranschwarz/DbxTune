@@ -38,6 +38,7 @@
 		<echo>    ant                                  --- just build a ZIP file</echo>
 		<echo>    ant clean                            --- Remove various files</echo>
 		<echo>    ant [-DscpPrivateFile=filename] push --- build and pushes a build to host in file 'ant_push_private.properties'</echo>
+		<echo>    ant starter                          --- build only the DbxTuneStarter (.NET) package</echo>
 	</target>
 
 
@@ -250,6 +251,22 @@
 
 	</target>
 
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: starter           -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="starter" depends="init" description="build the DbxTuneStarter (.NET) package">
+		<exec executable="powershell" dir="${basedir}" failonerror="true">
+			<arg value="-NoProfile"/>
+			<arg value="-ExecutionPolicy"/>
+			<arg value="Bypass"/>
+			<arg value="-File"/>
+			<arg value="DbxTuneStarter/build.ps1"/>
+			<arg value="-Version"/>
+			<arg value="${DSTAMP}"/>
+		</exec>
+	</target>
+
+
 	<!-- - - - - - - - - - - - - - - - - - -->
 	<!--  target: check-scp-private-props  -->
 	<!-- - - - - - - - - - - - - - - - - - -->
@@ -270,15 +287,47 @@
 		<scp file="dbxtune_${DSTAMP}.zip" todir="${scp.user}@${scp.host}:${scp.path}" port="${scp.port}" trust="true"
 		     keyfile="${scp.keyfile}" passphrase="${scp.passphrase}" password="${scp.password}" />
 
-		<!-- Delete the ${build} and ${dist} directory trees -->
-		<delete dir="${build}"/>
-		<delete dir="${dist}"/>
-		
+		<!-- If a DbxTuneStarter package was built TODAY (via 'ant starter'), push it too -->
+		<available file="DbxTuneStarter/DbxTuneStarter_${DSTAMP}.zip" property="starter.zip.exists"/>
+		<antcall target="push-starter"/>
+		<antcall target="push-starter-skip-msg"/>
+
+		<antcall target="push-cleanup"/>
+
 		<!-- echo datetime -->
 		<tstamp>
 		  <format property="BUILD_DATE" pattern="yyyy-MM-dd HH:mm:ss.sss zzz" locale="en,UK"/>
 		</tstamp>
 		<echo>PUSH END TIME: ${BUILD_DATE}</echo>
+	</target>
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: push-cleanup      -->
+	<!-- - - - - - - - - - - - - - -->
+	<!-- Not meant to be run directly - deletes the ${build}/${dist} trees after push -->
+	<target name="push-cleanup">
+		<echo>Cleaning up build/dist directories...</echo>
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
+	</target>
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: push-starter      -->
+	<!-- - - - - - - - - - - - - - -->
+	<!-- Not meant to be run directly - called from 'push' only if a same-day -->
+	<!-- DbxTuneStarter_${DSTAMP}.zip exists (see 'starter.zip.exists' above)  -->
+	<target name="push-starter" if="starter.zip.exists">
+		<echo>Found DbxTuneStarter_${DSTAMP}.zip - pushing it along with dbxtune_${DSTAMP}.zip</echo>
+		<scp file="DbxTuneStarter/DbxTuneStarter_${DSTAMP}.zip" todir="${scp.user}@${scp.host}:${scp.path}" port="${scp.port}" trust="true"
+		     keyfile="${scp.keyfile}" passphrase="${scp.passphrase}" password="${scp.password}" />
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - -->
+	<!--  target: push-starter-skip-msg     -->
+	<!-- - - - - - - - - - - - - - - - - - -->
+	<!-- Not meant to be run directly - the "else" branch of push-starter -->
+	<target name="push-starter-skip-msg" unless="starter.zip.exists">
+		<echo>No DbxTuneStarter_${DSTAMP}.zip file was found - skipping push of the starter</echo>
 	</target>
 
 

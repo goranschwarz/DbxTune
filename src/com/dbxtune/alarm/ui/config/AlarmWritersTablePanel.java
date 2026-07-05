@@ -169,6 +169,9 @@ implements TableModelListener
 		// Set config for WRITERS
 		conf.setProperty(AlarmHandler.PROPKEY_WriterClass, StringUtil.toCommaStr(alarmWriterClasses));
 
+		// Should we also write "non-checked" entries
+//		boolean writeUnSelected = true;
+		boolean writeUnSelected = false;
 		
 		// Set config for WRITERS SETTINGS
 		for (int r=0; r<_alarmWritersTableModel.getRowCount(); r++)
@@ -193,7 +196,8 @@ implements TableModelListener
 //				}
 				for (CmSettingsHelper awse : awe._settings)
 				{
-					if (awse.isSelected())
+					// Only selected items
+					if (awse.isSelected() || writeUnSelected)
 					{
 						String  key       = awse.getPropName();
 						String  value     = awse.getStringValue();
@@ -219,7 +223,7 @@ implements TableModelListener
 			{
 				for (CmSettingsHelper awse : awe._filters)
 				{
-					if (awse.isSelected())
+					if (awse.isSelected() || writeUnSelected)
 					{
 						String  key       = awse.getPropName();
 						String  value     = awse.getStringValue();
