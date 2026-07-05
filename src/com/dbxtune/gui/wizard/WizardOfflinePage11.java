@@ -185,15 +185,25 @@ implements ActionListener
 		
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		
+		// Get what we specified in "Alarm Writers" (step 8)
+		Object alarmWritersPanelConfig_o = getWizardData("to-be-discarded.alarmWritersPanelConfig");
+		if (alarmWritersPanelConfig_o != null && alarmWritersPanelConfig_o instanceof Configuration)
+		{
+			conf = (Configuration) alarmWritersPanelConfig_o;
+System.out.println("WizardOfflinePage.11.createSendToMailPanel(): " + conf);
+		}
+
 		for (CmSettingsHelper cmsh : _toMailSettingslist)
 		{
 			String datatype = cmsh.getDataTypeString();
 
 			if ("String".equals(datatype) || "Integer".equals(datatype))
 			{
-				JLabel     lbl = new JLabel(cmsh.getName());
-				JTextField txt = new JTextField(conf.getProperty(cmsh.getPropName(), cmsh.getDefaultValue()));
+				String   label = cmsh.getName();
+				String   value = conf.getProperty(cmsh.getPropName(), cmsh.getDefaultValue());
+
+				JLabel     lbl = new JLabel(label);
+				JTextField txt = new JTextField(value);
 				
 				txt.setName(cmsh.getPropName());
 				
@@ -207,7 +217,11 @@ implements ActionListener
 			}
 			else if ("Boolean".equals(datatype))
 			{
-				JCheckBox chk = new JCheckBox(cmsh.getName(), cmsh.getDefaultValue().equalsIgnoreCase("true"));
+				String  label = cmsh.getName();
+//				boolean value = cmsh.getDefaultValue().equalsIgnoreCase("true");
+				boolean value = conf.getBooleanProperty(cmsh.getPropName(), cmsh.getDefaultValue().equalsIgnoreCase("true"));
+
+				JCheckBox chk = new JCheckBox(label, value);
 
 				chk.setName(cmsh.getPropName());
 				
@@ -401,6 +415,26 @@ implements ActionListener
 					{
 						return "Field '"+cmsh.getName()+"': "+ex.getMessage();
 					}
+					
+					// Check for defaults and write "DEFAULT: " to wizard data if its a default value
+					boolean isDefault = cmsh.isDefaultValue(val);
+
+					String wizKey = cmsh.getPropName();
+					String wizVal = isDefault ? Configuration.USE_DEFAULT_PREFIX + val : val;
+
+					putWizardData(wizKey, wizVal);
+				}
+				if (comp != null && comp instanceof JCheckBox)
+				{
+					boolean val = ((JCheckBox)comp).isSelected();
+
+					// Check for defaults and write "DEFAULT: " to wizard data if its a default value
+					boolean isDefault = cmsh.isDefaultValue(val);
+
+					String wizKey = cmsh.getPropName();
+					String wizVal = isDefault ? Configuration.USE_DEFAULT_PREFIX + val : val + "";
+
+					putWizardData(wizKey, wizVal);
 				}
 			}
 		}

@@ -32,7 +32,7 @@ namespace DbxInstaller.Wizard
         {
             Context = new WizardContext(config);
 
-            Title = "DbxTune Setup";
+            Title = $"DbxTune Setup v{DbxStarterCommon.Version.VersionString}";
             // Larger by default, but capped to the current screen's work area (minus a small
             // margin) so it still fits on smaller/lower-resolution displays.
             Width = Math.Min(1300, SystemParameters.WorkArea.Width - 40);

@@ -318,6 +318,10 @@ namespace DbxStarterService
                     bool success = await _service.StartServer(serverName);
                     return success ? "OK" : "ERROR";
                 }
+                else if (command.Equals("GetVersion", StringComparison.OrdinalIgnoreCase))
+                {
+                    return DbxStarterCommon.Version.VersionAndBuildString;
+                }
                 else if (command.Equals("GetServiceLogName", StringComparison.OrdinalIgnoreCase))
                 {
                     return _service.GetServiceLogName();
@@ -353,6 +357,7 @@ namespace DbxStarterService
 
         public class ServiceStatus
         {
+            public string Version { get; set; } = DbxStarterCommon.Version.VersionAndBuildString;
             public List<ProcessStatus> RunningProcesses { get; set; } = new List<ProcessStatus>();
         }
 

@@ -1294,9 +1294,21 @@ public class SpaceForecast
 			{
 				if (current < dipStats.maxTmpFilesDropMb)
 				{
-					// Already insufficient headroom NOW
-					hoursUntilTmpFilesOverflow = 0.0;
-					predictedTmpFilesOverflow  = Instant.now();
+					if (dipStats.maxTmpFilesDropMbTs != null)
+					{
+						// Age out the alarm: ETA = how long it's been since the worst dip occurred.
+						// Right after the spike this is ~0 (still CRITICAL, correct - we're still in the
+						// danger zone). It then grows over time with no repeat, crossing the existing
+						// warning/critical thresholds so severity naturally steps down - instead of staying
+						// pinned at CRITICAL for the spike's entire lifetime in the sample window.
+						double hoursSincePeak = Duration.between(dipStats.maxTmpFilesDropMbTs, Instant.now()).toMillis() / 3600000.0;
+						hoursUntilTmpFilesOverflow = Math.max(0.0, hoursSincePeak);
+					}
+					else
+					{
+						hoursUntilTmpFilesOverflow = 0.0;
+					}
+					predictedTmpFilesOverflow = Instant.now();
 				}
 				else
 				{
@@ -1883,7 +1895,7 @@ public class SpaceForecast
 				html.append(   thSpacer);
 				html.append("  <th nowrap colspan='3' title='Tip: Hover over |Free First| or |Free Last| to see a timestamp'>Free Space in Period (last " + days + "d)</th> \n");
 				html.append(   thSpacer);
-				html.append("  <th nowrap colspan='5' title='Tip: Hover over |Min Tmp| or |Max Tmp| to see a timestamp'>Temporary Usage " + tpmUsagedDbxtuneGraphLinks + "</th> \n");
+				html.append("  <th nowrap colspan='6' title='Tip: Hover over |Min Tmp| or |Max Tmp| to see a timestamp'>Temporary Usage " + tpmUsagedDbxtuneGraphLinks + "</th> \n");
 				html.append(   thSpacer);
 				html.append("  <th nowrap colspan='7' title='Tip: Hover over |SizeDiff| to se if when the disk/db was expanded or shrinked'>Total Allocated Disk/DB Size " + totSizeDbxtuneGraphLinks + "</th> \n");
 				html.append(   thSpacer);
@@ -1922,6 +1934,7 @@ public class SpaceForecast
 //			addHeader(html, "Min Tmp"       , "Minimum MB consumed during Backup or TmpFiles");
 			addHeader(html, "Avg Tmp"       , "Average MB consumed during Backup or TmpFiles (GB)");
 			addHeader(html, "Max Tmp"       , "Largest MB consumed during a single Backup or TmpFiles run (GB)");
+			addHeader(html, "Max Age"       , "When did |Max Tmp| happened. displyed as '# days (# hours)'");
 			addHeader(html, "Tmp ETA"       , "Days until baseline shrinks enough that max Backups or TmpFiles overflows disk");
 
 			html.append(thSpacer);
@@ -1981,6 +1994,7 @@ public class SpaceForecast
 				html.append("  <td " + r.getTdaTmpMin(tmpMinDangerThreshold)                     + ">" + r.getFmtTmpMin()       + "</td> \n");
 				html.append("  <td " + r.getTdaTmpAvg()                                          + ">" + r.getFmtTmpAvg()       + "</td> \n");
 				html.append("  <td " + r.getTdaTmpMax()                                          + ">" + r.getFmtTmpMax()       + "</td> \n");
+				html.append("  <td " + r.getTdaTmpAge()                                          + ">" + r.getFmtTmpAge()       + "</td> \n");
 				html.append("  <td " + r.getTdaTmpEta(tmpCriticalThreshold, tmpWarningThreshold) + ">" + r.getFmtTmpEta()       + "</td> \n");
 				
 				
@@ -3015,6 +3029,7 @@ public class SpaceForecast
 		                                                                         ; }
 		private String getTdaTmpAvg()           { return "nowrap align='right'"; }
 		private String getTdaTmpMax()           { return "nowrap align='right' title='Timestamp: " + TimeUtils.toStringYmdHms(dipStats.maxTmpFilesDropMbTs, "-") + "'"; }
+		private String getTdaTmpAge()           { return "nowrap align='right' title='Timestamp: " + TimeUtils.toStringYmdHms(dipStats.maxTmpFilesDropMbTs, "-") + "'"; }
 		private String getTdaTmpEta(int dangerHours, int warningHours)
 		{
 			String style = "";
@@ -3061,6 +3076,7 @@ public class SpaceForecast
 		private String getFmtTmpMin()           { return dipStats.dipCount <= 0 ? "n/a" : String.format(Locale.US, "%,.0f MB", dipStats.minDuringTmpFilesMb); }
 		private String getFmtTmpAvg()           { return dipStats.dipCount <= 0 ? "n/a" : String.format(Locale.US, "%,.1f GB", dipStats.avgTmpFilesDropMb / 1024); }
 		private String getFmtTmpMax()           { return dipStats.dipCount <= 0 ? "n/a" : String.format(Locale.US, "%,.1f GB", dipStats.maxTmpFilesDropMb / 1024); }
+		private String getFmtTmpAge()           { return dipStats.dipCount <= 0 ? "n/a" : String.format("%d d (%d h)", Duration.between(dipStats.maxTmpFilesDropMbTs, Instant.now()).toDays(), Duration.between(dipStats.maxTmpFilesDropMbTs, Instant.now()).toHours()); }
 		private String getFmtTmpEta()           { return dipStats.dipCount <= 0 ? "n/a" : hoursUntilTmpFilesOverflow == null ? "&infin;" : String.format(Locale.US, "%,.0f d", hoursUntilTmpFilesOverflow / 24.0); }
 
 		private String getFmtSizeFirst()        { return diskInfoEntry.firstTotalSizeMb    == null ? "-" : String.format(Locale.US, "%,.0f MB", diskInfoEntry.firstTotalSizeMb ); }

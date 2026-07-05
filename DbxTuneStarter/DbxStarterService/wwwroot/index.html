@@ -10,11 +10,13 @@
 
   /* Header */
   #header {
+    position: relative;
     display: flex; align-items: center; gap: 10px;
     background: #2d2d2d; padding: 8px 12px; border-bottom: 1px solid #444;
     flex-wrap: wrap;
   }
   #header h1 { font-size: 16px; color: #fff; margin-right: 6px; }
+  #app-version { position: absolute; top: 8px; right: 12px; font-size: 11px; color: #888; }
   #serverlist-path { font-size: 11px; color: #88b4e8; cursor: pointer; text-decoration: underline; }
   #serverlist-path:hover { color: #acd }
 
@@ -134,6 +136,7 @@
   <button onclick="openServiceLog()" title="View the DbxStarterService log file">View Service Log</button>
   <span style="font-size:12px;color:#777;">SERVER_LIST:</span>
   <span id="serverlist-path" onclick="openFileEditor()">(loading...)</span>
+  <span id="app-version"></span>
 </div>
 
 <div id="main">
@@ -284,6 +287,7 @@
       const res = await fetch('/api/status');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
+      document.getElementById('app-version').textContent = data.version ? ('v' + data.version) : '';
       renderTable(data.runningProcesses || []);
       document.getElementById('last-refresh').textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
     } catch (e) {

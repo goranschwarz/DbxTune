@@ -765,6 +765,18 @@ public class WizardOffline
 				}
 				writeln(bw, "");
 			}
+			// If we still got "ReportSenderToMail" entries (print them as comments)
+			if (true)
+			{
+				String senderKey = "ReportSenderToMail";
+				writeln(bw, "## Sender: " + senderKey + " -------------------------");
+				List<String> senderKeys = cc.getKeys(senderKey);
+				for (String key : senderKeys)
+				{
+					writeKey(bw, cc, key, true); // AS COMMENT
+				}
+				writeln(bw, "");
+			}
 			writeln(bw, "##---------------------------------------------------------");
 			writeln(bw, "##---- END: DSR - Daily Summary Report");
 			writeln(bw, "##---------------------------------------------------------");
@@ -905,13 +917,18 @@ public class WizardOffline
 	private static void writeKey(BufferedWriter bw, Configuration conf, String key)
 	throws IOException
 	{
+		writeKey(bw, conf, key, false);
+	}
+	private static void writeKey(BufferedWriter bw, Configuration conf, String key, boolean asComment)
+	throws IOException
+	{
 		// Get the *REAL* raw values from the prop (as stored in Properties)
 		String val = conf.getPropertySuper(key);
 		if (val == null)
 			val = "";
 
 		// If it looks like a DEFAULT value... Comment it out ;)
-		if (val.startsWith(Configuration.USE_DEFAULT_PREFIX))
+		if (asComment || val.startsWith(Configuration.USE_DEFAULT_PREFIX))
 			bw.write("#");
 
 		writeKeyVal(bw, key, val);

@@ -29,6 +29,8 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.invoke.MethodHandles;
+import java.util.Map;
 import java.util.UUID;
 import java.util.Vector;
 
@@ -45,6 +47,8 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 import org.netbeans.spi.wizard.WizardPage;
@@ -59,6 +63,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.swing.GTableFilter;
 import com.dbxtune.gui.swing.MultiLineLabel;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -73,6 +78,9 @@ implements ActionListener, TableModelListener
 	private static final String WIZ_DESC = "What should be offline sampled";
 	private static final String WIZ_HELP = "What panels/tabs do we want to be offline sampled.";
 
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+	
+	
 //	private static final int TAB_POS_POSTPONE   = 0;
 //	private static final int TAB_POS_STORE_PCS  = 1;
 //	private static final int TAB_POS_STORE_ABS  = 2;
@@ -387,17 +395,18 @@ implements ActionListener, TableModelListener
 	@Override
 	protected String validateContents(Component comp, Object event)
 	{
-//		String name = null;
-//		if (comp != null)
-//			name = comp.getName();
+		// Word of warning:
+		//               putWizardData("key", "value") -- Caused MANY CALLS to this method
+		// By using: wizDataMap.put("key", "value") -- It just called it one for every row in the table
+		// So some recursive calls seemed to happen
 
-//		System.out.println("validateContents: name='"+name+"',\n\ttoString='"+comp+"'\n\tcomp='"+comp+"',\n\tevent='"+event+"'.");
+		Map<String, Object> wizDataMap = getWizardDataMap();
 
-		putWizardData("to-be-discarded.HostMonitorIsSelected", "false");
+		wizDataMap.put("to-be-discarded.HostMonitorIsSelected", "false");
 
 		// Write the selected template default (used at DbxTune startup... if a CmName is not found (added after config file was created), we can use the template to add it anyway)
 		String selectedTemplate = _templates_cbx.getSelectedItem() + "";
-		putWizardData(CounterSetTemplates.PROPKEY_templateDefaultName, selectedTemplate);
+		wizDataMap.put(CounterSetTemplates.PROPKEY_templateDefaultName, selectedTemplate);
 
 		
 		int rows = 0;
@@ -415,6 +424,13 @@ implements ActionListener, TableModelListener
 			{
 				rows++;
 			}
+
+			// CmSummary should ALWAYS be Stored
+			String cmSummary = CounterController.getSummaryCmName();
+			if (StringUtil.isNullOrBlank(cmSummary))
+				cmSummary = "CmSummary"; 
+			if (cmSummary.equals(cmName))
+				storePcs = true;
 			
 			CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 
@@ -424,32 +440,36 @@ implements ActionListener, TableModelListener
 			String p_storeAbs  = (cm.getDefaultIsPersistCountersAbsEnabled()  == storeAbs ) ? Configuration.USE_DEFAULT_PREFIX + storeAbs  : "" + storeAbs;
 			String p_storeDiff = (cm.getDefaultIsPersistCountersDiffEnabled() == storeDiff) ? Configuration.USE_DEFAULT_PREFIX + storeDiff : "" + storeDiff;
 			String p_storeRate = (cm.getDefaultIsPersistCountersRateEnabled() == storeRate) ? Configuration.USE_DEFAULT_PREFIX + storeRate : "" + storeRate;
+
+//System.out.println("validateContents(): cmName="+StringUtil.left(cmName, 30) + ": persistCounters: storePcs="+storePcs+", p_storePcs="+p_storePcs+", cm.getDefaultIsPersistCountersEnabled()="+cm.getDefaultIsPersistCountersEnabled());
 			
-			
+			// ALWAYS STORE: "cm.persistCounters=true|false" -- do NOT use "USE_DEFAULT:" for that
+			p_storePcs  = storePcs + "";
+
 			// This line is picked up by WizardOffline.finish(), which produces the out file.
 			// and will be used for User Defined Counter checking...
-			putWizardData( "to-be-discarded" + ".udc." + cmName, cmName);
+			wizDataMap.put( "to-be-discarded" + ".udc." + cmName, cmName);
 
-//			putWizardData( cmName+"."+CountersModel.PROPKEY_queryTimeout,         timeout.toString());
-//			putWizardData( cmName+"."+CountersModel.PROPKEY_postponeTime,         postpone.toString());
+//			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_queryTimeout,         timeout.toString());
+//			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_postponeTime,         postpone.toString());
 //
-//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters,      storePcs  +"");
-//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  storeAbs  +"");
-//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, storeDiff +"");
-//			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, storeRate +"");
+//			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters,      storePcs  +"");
+//			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  storeAbs  +"");
+//			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, storeDiff +"");
+//			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, storeRate +"");
 
-			putWizardData( cmName+"."+CountersModel.PROPKEY_queryTimeout,         p_timeout);
-			putWizardData( cmName+"."+CountersModel.PROPKEY_postponeTime,         p_postpone);
+			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_queryTimeout,         p_timeout);
+			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_postponeTime,         p_postpone);
 
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters,      p_storePcs );
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  p_storeAbs );
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, p_storeDiff);
-			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, p_storeRate);
+			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters,      p_storePcs );
+			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  p_storeAbs );
+			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, p_storeDiff);
+			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, p_storeRate);
 			
 			if (cm != null)
 			{
 				if (cm instanceof CounterModelHostMonitor && storePcs)
-					putWizardData("to-be-discarded.HostMonitorIsSelected", "true");
+					wizDataMap.put("to-be-discarded.HostMonitorIsSelected", "true");
 			}
 		}
 
@@ -476,7 +496,11 @@ implements ActionListener, TableModelListener
 			{
 				String cmName = _sessionTable.getStringAt(r, TAB_POS_CM_NAME);
 				CountersModel cm = CounterController.getInstance().getCmByName(cmName);
-				if (cm != null)
+				if (cm == null)
+				{
+					_logger.warn("WizardOfflinePage3.actionPerformed(USE_TEMPLATE): cmName='" + cmName + "' was not found in the: CounterController.getInstance().getCmByName(cmName)");
+				}
+				else
 				{
 					Type cmTemplateLevel = cm.getTemplateLevel();
 
@@ -544,7 +568,10 @@ implements ActionListener, TableModelListener
 //			CountersModel cm     = GetCounters.getInstance().getCmByName(cmName);
 			CountersModel cm     = CounterController.getInstance().getCmByName(cmName);
 			if (cm == null)
+			{
+				_logger.warn("WizardOfflinePage3.setToTemplate(): cmName='" + cmName + "' was not found in the: CounterController.getInstance().getCmByName(cmName)");
 				continue;
+			}
 
 			tm.setValueAt(Integer.valueOf(cm.getQueryTimeout()),              r, TAB_POS_TIMEOUT);
 			tm.setValueAt(Integer.valueOf(cm.getPostponeTime()),              r, TAB_POS_POSTPONE);

@@ -36,6 +36,16 @@ namespace DbxStarterClient
 
         private readonly ObservableCollection<ServerRow> _rows = new();
 
+        // Running/Stopped transition tracking, used to pop a tray balloon when a server stops
+        // unexpectedly (crashed / killed externally) — never seeded until the first refresh, so
+        // servers already stopped at startup don't trigger a false "just stopped" notification.
+        private readonly Dictionary<string, bool> _lastKnownRunning = new(StringComparer.OrdinalIgnoreCase);
+        // Suppresses the notification for servers the user just told to Stop/Restart themselves —
+        // otherwise every intentional stop (or the transient down-phase of a restart) would also
+        // pop a redundant balloon on top of the button feedback already shown in the status bar.
+        private readonly Dictionary<string, DateTime> _suppressStopNotifyUntil = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly TimeSpan StopNotifySuppressWindow = TimeSpan.FromSeconds(60);
+
         private DataGrid    _grid          = null!;
         private ContextMenu _gridContextMenu = null!;
         private TextBlock   _statusLabel   = null!;
@@ -45,7 +55,7 @@ namespace DbxStarterClient
 
         public MainWindow()
         {
-            Title     = "DbxStarter Client";
+            Title     = $"DbxStarter Client v{DbxStarterCommon.Version.VersionString}";
             var workArea = SystemParameters.WorkArea;
             double defaultWidth  = Math.Max(1150, Math.Min(workArea.Width - 100, 2200));
             double defaultHeight = Math.Max(550, Math.Min(workArea.Height - 100, 900));
@@ -352,7 +362,7 @@ namespace DbxStarterClient
         private void SetupTrayIcon()
         {
             _trayIcon.Icon = LoadWinFormsIcon("dbxtune_central_starter.ico", 16);
-            _trayIcon.Text = "DbxStarter Client";
+            _trayIcon.Text = $"DbxStarter Client v{DbxStarterCommon.Version.VersionString}";
             _trayIcon.Visible = true;
             _trayIcon.DoubleClick += (s, e) => RestoreFromTray();
 
@@ -540,12 +550,21 @@ namespace DbxStarterClient
             _statusLabel.ToolTip = ex?.ToString();
         }
 
-        private void UpdateConnectionTitle(bool connected)
+        private void UpdateConnectionTitle(bool connected, string? serviceVersion = null)
         {
             _isConnected = connected;
-            Title = connected
-                ? "DbxStarter Client — connected"
-                : "DbxStarter Client — NOT CONNECTED";
+            string clientVer = DbxStarterCommon.Version.VersionString;
+            if (connected && !string.IsNullOrEmpty(serviceVersion))
+            {
+                // serviceVersion arrives as "1.0.0 (2026-07-05)" (VersionAndBuildString) —
+                // reformat "(BUILD)" to "- BUILD" for a flatter title-bar display.
+                string formattedServiceVersion = serviceVersion.Replace(" (", " - ").TrimEnd(')');
+                Title = $"DbxStarter Client v{clientVer} (server v{formattedServiceVersion}) — connected";
+            }
+            else if (connected)
+                Title = $"DbxStarter Client v{clientVer} — connected";
+            else
+                Title = $"DbxStarter Client v{clientVer} — NOT CONNECTED";
         }
 
         private void UpdateServerSummary()
@@ -601,7 +620,7 @@ namespace DbxStarterClient
                 var serviceStatus = await Task.Run(() => DeserializeFromJson<ServiceStatus>(statusJson));
 
                 UpdateServerList(serviceStatus);
-                UpdateConnectionTitle(true);
+                UpdateConnectionTitle(true, serviceStatus.Version);
                 sw.Stop();
                 StatusLabelInfo($"Last Refreshed: {DateTime.Now:HH:mm:ss}   ({sw.ElapsedMilliseconds} ms)");
             }
@@ -624,9 +643,27 @@ namespace DbxStarterClient
         {
             string? selectedServer = (_grid.SelectedItem as ServerRow)?.ServerName;
 
+            var newlyStopped = new List<string>();
+            var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            DateTime now = DateTime.UtcNow;
+
             _rows.Clear();
             foreach (var e in status.RunningProcesses)
             {
+                // Key by alias-or-server-name — the same identifier Start/Stop/RestartServer
+                // commands use (see GetAliasOrServerName/ServerNamesByStatus) — so suppression
+                // set by those handlers actually matches the transition detected here.
+                string trackingKey = string.IsNullOrEmpty(e.ServerAliasName) ? e.ServerName : e.ServerAliasName;
+                seenNames.Add(trackingKey);
+
+                if (_lastKnownRunning.TryGetValue(trackingKey, out bool wasRunning) && wasRunning && !e.Running)
+                {
+                    bool suppressed = _suppressStopNotifyUntil.TryGetValue(trackingKey, out DateTime until) && now < until;
+                    if (!suppressed)
+                        newlyStopped.Add(trackingKey);
+                }
+                _lastKnownRunning[trackingKey] = e.Running;
+
                 _rows.Add(new ServerRow
                 {
                     ServerName      = e.ServerName,
@@ -646,12 +683,31 @@ namespace DbxStarterClient
                 });
             }
 
+            // Server list was reloaded and a server removed — stop tracking it so a re-added
+            // server with the same name doesn't get misread as a "was running" transition.
+            foreach (string stale in _lastKnownRunning.Keys.Except(seenNames).ToList())
+                _lastKnownRunning.Remove(stale);
+
+            if (newlyStopped.Count > 0)
+                NotifyServersStopped(newlyStopped);
+
             _grid.SelectedItem = string.IsNullOrEmpty(selectedServer)
                 ? null
                 : _rows.FirstOrDefault(r => r.ServerName == selectedServer);
 
             UpdateServerSummary();
         }
+
+        private void NotifyServersStopped(List<string> names)
+        {
+            string message = names.Count == 1
+                ? $"{names[0]} stopped unexpectedly."
+                : $"{names.Count} servers stopped unexpectedly:\n{string.Join(", ", names)}";
+            _trayIcon.ShowBalloonTip(5000, "DbxStarter", message, System.Windows.Forms.ToolTipIcon.Warning);
+        }
+
+        private void SuppressStopNotification(string serverName)
+            => _suppressStopNotifyUntil[serverName] = DateTime.UtcNow + StopNotifySuppressWindow;
 
         // ── toolbar button handlers ───────────────────────────────────────────
 
@@ -713,7 +769,10 @@ namespace DbxStarterClient
             {
                 StatusLabelInfo($"Stopping {targets.Count} server(s)…");
                 foreach (var name in targets)
+                {
+                    SuppressStopNotification(name);
                     await Task.Run(() => SendCommand($"StopServer:{name}"));
+                }
                 TriggerImmediateRefresh(2000);
             }
             catch (Exception ex) { StatusLabelError($"Error: {ex.Message}", ex); }
@@ -757,6 +816,7 @@ namespace DbxStarterClient
             try
             {
                 StatusLabelInfo($"Restarting {name}…");
+                SuppressStopNotification(name);
                 var result = await Task.Run(() => SendCommand($"RestartServer:{name}"));
                 if (result == "OK") { await RefreshServerStatusAsync(false); TriggerImmediateRefresh(5000); }
                 else StatusLabelError($"Failed to restart {name}");
@@ -774,6 +834,7 @@ namespace DbxStarterClient
             try
             {
                 StatusLabelInfo($"Stopping {name}…");
+                SuppressStopNotification(name);
                 var result = await Task.Run(() => SendCommand($"StopServer:{name}"));
                 if (result == "OK") { await RefreshServerStatusAsync(false); TriggerImmediateRefresh(1000); }
                 else StatusLabelError($"Failed to stop {name}");

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using DbxInstaller.Wizard;
 
 namespace DbxInstaller.Pages
@@ -20,25 +21,49 @@ namespace DbxInstaller.Pages
             FontFamily = new System.Windows.Media.FontFamily("Consolas"),
         };
         private readonly PasswordBox _txtPassword = new() { Margin = new Thickness(0, 4, 0, 4) };
+        private readonly Button _btnCheck = new() { Content = "Check" };
         private readonly TextBlock _lblPasswordStatus = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
 
         private bool _isGmsa;
+        private string _account = "dbxtune";
 
         public ReadyToUpgradePage()
         {
+            _btnCheck.Click += async (_, _) =>
+            {
+                _lblPasswordStatus.Text = "Checking…";
+                _lblPasswordStatus.SetResourceReference(TextBlock.ForegroundProperty, "FgDimBrush");
+                _btnCheck.IsEnabled = false;
+                // LogonUser against a domain controller can take a noticeable moment — let the
+                // "Checking…" text actually paint before the blocking call runs.
+                await Dispatcher.Yield(DispatcherPriority.Background);
+
+                var (outcome, message) = InstallActions.TryVerifyPassword(_account, _txtPassword.Password);
+                _lblPasswordStatus.Text = message;
+                string brush = outcome switch
+                {
+                    InstallActions.VerifyOutcome.Verified => "GreenBrush",
+                    InstallActions.VerifyOutcome.Info     => "OrangeBrush",
+                    _                                      => "RedBrush",
+                };
+                _lblPasswordStatus.SetResourceReference(TextBlock.ForegroundProperty, brush);
+                _btnCheck.IsEnabled = true;
+            };
+
             Content = PageHelpers.Stack(
                 PageHelpers.Title("Ready to Upgrade"),
                 PageHelpers.Subtitle("This will fetch a new package and update the existing DbxTune installation below. " +
                                       "Service account, install location, and DBMS selection are unchanged."),
                 _summary,
                 PageHelpers.SectionHeader("Service Account Password"),
-                PageHelpers.Row("Password", _txtPassword),
+                PageHelpers.Row("Password", _txtPassword, _btnCheck),
                 _lblPasswordStatus);
         }
 
         public override void OnEnter(WizardContext ctx)
         {
             string account = ctx.DetectedServiceAccount ?? "dbxtune";
+            _account = account;
             ctx.Config.ServiceAccount = account;
             ctx.Config.InstallDir     = ctx.DetectedInstallDir ?? Path.Combine(InstallActions.AccountHome(account), "dbxtune_sw");
             ctx.Config.InitCommand    = $"\"{Path.Combine(ctx.Config.InstallDir, "0", "bin", "dbxcentral.bat")}\" --createAppDir";
@@ -68,6 +93,7 @@ namespace DbxInstaller.Pages
             {
                 _lblPasswordStatus.Text = "gMSA account — Active Directory manages the password automatically; no password needed.";
                 _txtPassword.IsEnabled = false;
+                _btnCheck.IsEnabled = false;
                 SetNextEnabled(true);
                 return;
             }
