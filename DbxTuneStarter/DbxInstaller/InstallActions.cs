@@ -1675,7 +1675,7 @@ namespace DbxInstaller
 
         // Runs (optionally) starts the service and/or launches the GUI client — the decisions are
         // made by the caller (a wizard page checkbox) rather than via a MessageBox prompt here.
-        internal static Task<bool> StartServiceCore(InstallConfig c, InstallLog log, bool startService, bool launchClient)
+        internal static Task<bool> StartServiceCore(InstallConfig c, InstallLog log, bool startService, bool launchClient, bool launchWebUi = false, bool launchCentralUi = false)
         {
             const string svcName = "DbxStarterService";
             int          webPort = c.WebPort;
@@ -1723,12 +1723,62 @@ namespace DbxInstaller
                 bool anyNet  = c.WebBind.Equals("*",   StringComparison.OrdinalIgnoreCase)
                             || c.WebBind.Equals("any", StringComparison.OrdinalIgnoreCase);
                 string host  = anyNet ? Environment.MachineName : "localhost";
+                string url   = $"http://{host}:{webPort}";
                 log($"  DbxStarter web UI is available at:");
-                log($"  ➜  http://{host}:{webPort}");
+                log($"  ➜  {url}");
                 if (anyNet)
                     log("  (Also reachable from other machines on the network.)");
                 log("");
                 log("  (The web UI shows live log output and lets you open log files.)");
+
+                if (launchWebUi)
+                {
+                    if (startService)
+                    {
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                            log("  Opened in default browser.");
+                        }
+                        catch (Exception ex) { log($"  Could not open browser: {ex.Message}"); }
+                    }
+                    else
+                    {
+                        log("  Browser launch skipped — service was not started.");
+                    }
+                }
+            }
+
+            log("");
+            if (!c.ManageDbxCentral)
+            {
+                log("  DbxTune Central is not managed on this node (collector-only) — no landing page to open.");
+            }
+            else
+            {
+                // Same file/key/default ConfigureFirewall reads to open the matching firewall rule.
+                string centralConfFile = Path.Combine(c.DbxConfDir, "DBX_CENTRAL.conf");
+                int    centralPort     = ReadJavaPropInt(centralConfFile, "DbxTuneCentral.web.http.port.windows", 80);
+                string centralUrl      = $"http://localhost:{centralPort}/";
+                log($"  DbxTune Central landing page:");
+                log($"  ➜  {centralUrl}");
+
+                if (launchCentralUi)
+                {
+                    if (startService)
+                    {
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo(centralUrl) { UseShellExecute = true });
+                            log("  Opened in default browser.");
+                        }
+                        catch (Exception ex) { log($"  Could not open browser: {ex.Message}"); }
+                    }
+                    else
+                    {
+                        log("  Browser launch skipped — service was not started.");
+                    }
+                }
             }
 
             return Task.FromResult(true);

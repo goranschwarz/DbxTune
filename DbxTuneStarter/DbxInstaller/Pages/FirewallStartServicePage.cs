@@ -17,8 +17,10 @@ namespace DbxInstaller.Pages
             Margin = new Thickness(0, 0, 0, 16),
             FontFamily = new System.Windows.Media.FontFamily("Consolas"),
         };
-        private readonly CheckBox _chkStart  = new() { Content = "Start DbxStarterService now", IsChecked = true };
-        private readonly CheckBox _chkLaunch = new() { Content = "Launch DbxStarterClient now", IsChecked = true };
+        private readonly CheckBox _chkStart     = new() { Content = "Start DbxStarterService now", IsChecked = true };
+        private readonly CheckBox _chkLaunch    = new() { Content = "Launch DbxStarterClient now", IsChecked = true };
+        private readonly CheckBox _chkLaunchWeb = new() { Content = "Open the DbxStarter Web UI in a browser", IsChecked = true };
+        private readonly CheckBox _chkLaunchCentral = new() { Content = "Open the DbxTune Central landing page in a browser", IsChecked = true };
         private readonly TextBox _resultLog = new()
         {
             Style = (Style)Application.Current.Resources["SelectableText"],
@@ -35,12 +37,30 @@ namespace DbxInstaller.Pages
                 PageHelpers.Subtitle("Windows Firewall rules are added automatically. Choose whether to start the service now."),
                 _firewallStatus,
                 _firewallLog,
-                _chkStart, _chkLaunch,
+                _chkStart, _chkLaunch, _chkLaunchWeb, _chkLaunchCentral,
                 _resultLog);
         }
 
         public override void OnEnter(WizardContext ctx)
         {
+            bool webUiEnabled = ctx.Config.WebPort >= 0;
+            if (webUiEnabled)
+            {
+                bool anyNet = ctx.Config.WebBind.Equals("*", System.StringComparison.OrdinalIgnoreCase);
+                string host = anyNet ? System.Environment.MachineName : "localhost";
+                _chkLaunchWeb.Content = $"Open the DbxStarter Web UI in a browser (http://{host}:{ctx.Config.WebPort})";
+            }
+            _chkLaunchWeb.Visibility = webUiEnabled ? Visibility.Visible : Visibility.Collapsed;
+            _chkLaunchWeb.IsChecked  = webUiEnabled;
+
+            // ConfigureFirewall opens the Central HTTP firewall rule regardless of ManageDbxCentral
+            // (DBX_CENTRAL.conf exists on every node) — mirror that here: always show the checkbox,
+            // just default it unchecked on a collector-only node since Central likely isn't running.
+            string centralConfFile = System.IO.Path.Combine(ctx.Config.DbxConfDir, "DBX_CENTRAL.conf");
+            int centralPort = InstallActions.ReadJavaPropInt(centralConfFile, "DbxTuneCentral.web.http.port.windows", 80);
+            _chkLaunchCentral.Content   = $"Open the DbxTune Central landing page in a browser (http://localhost:{centralPort})";
+            _chkLaunchCentral.IsChecked = ctx.Config.ManageDbxCentral;
+
             if (_firewallDone) return;
             _firewallDone = true;
             _firewallStatus.Text = "Configuring firewall rules…";
@@ -62,7 +82,8 @@ namespace DbxInstaller.Pages
         {
             var lines = new System.Text.StringBuilder();
             await InstallActions.StartServiceCore(ctx.Config, msg => lines.AppendLine(msg),
-                _chkStart.IsChecked == true, _chkLaunch.IsChecked == true);
+                _chkStart.IsChecked == true, _chkLaunch.IsChecked == true,
+                _chkLaunchWeb.IsChecked == true, _chkLaunchCentral.IsChecked == true);
             _resultLog.Text = lines.ToString();
             return WizardValidationResult.Ok();
         }

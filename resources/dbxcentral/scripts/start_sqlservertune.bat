@@ -47,6 +47,7 @@ set saveDir=%DBXTUNE_CENTRAL_DATA%
 
 rem ##----------------------------------------------
 rem ## For Windows integratedSecurity: set dbmsUser=integratedSecurity
+rem ## If it's a SQL Server login: you need to add password using: dbxPassword.bat set -UdbmsUser -SsrvName -PtheSecretPassword
 rem set dbmsUser=dbxtune
 rem set dbmsUser=integratedSecurity
 rem ##----------------------------------------------

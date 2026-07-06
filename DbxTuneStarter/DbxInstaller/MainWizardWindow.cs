@@ -27,12 +27,20 @@ namespace DbxInstaller
         protected override void OnLeavingPage(WizardPage page)
         {
             if (page is WelcomePage)
+            {
+                // Going Back to Welcome and picking a different mode re-fires this — discard
+                // whatever group was appended on a previous pass through here first, otherwise
+                // the new group piles up after the old one instead of replacing it (the old
+                // pages stay reachable via Next and the new ones become permanently stranded
+                // at the tail of the list).
+                if (Pages.Count > 1) Pages.RemoveRange(1, Pages.Count - 1);
                 Pages.AddRange(Context.Config.Mode switch
                 {
                     InstallMode.Upgrade => UpgradePages(),
                     InstallMode.Remove  => RemovePages(),
                     _                   => InstallPages(),
                 });
+            }
         }
 
         private static IEnumerable<WizardPage> InstallPages() => new WizardPage[]
