@@ -43,6 +43,7 @@
     <EmbeddedResource Include="wwwroot/highlight-dark.min.css" />
     <EmbeddedResource Include="wwwroot/hljs-dos.min.js" />
     <EmbeddedResource Include="wwwroot/hljs-powershell.min.js" />
+    <EmbeddedResource Include="wwwroot/favicon.ico" />
   </ItemGroup>
 
   <!-- Template for DbxStarterService.json — embedded so it survives single-file publish.

@@ -204,9 +204,13 @@ namespace DbxStarterService
                 var assembly = typeof(WebInterface).Assembly;
                 using var stream = assembly.GetManifestResourceStream(
                     "DbxStarterService.wwwroot." + file);
-                return stream is null
-                    ? Results.NotFound()
-                    : Results.Text(new StreamReader(stream).ReadToEnd(), contentType);
+                if (stream is null) return Results.NotFound();
+
+                // Read as raw bytes rather than text — .ico (and any future binary asset) would
+                // otherwise get corrupted by StreamReader's text decoding.
+                using var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                return Results.Bytes(ms.ToArray(), contentType);
             });
         }
 

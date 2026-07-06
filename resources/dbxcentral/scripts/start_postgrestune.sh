@@ -33,6 +33,7 @@ dbxSwHome=${DBXTUNE_HOME:-${HOME}/dbxtune/0}
 
 ##----------------------------------------------
 ## set LOCAL environment
+## For the dbmsUser/osUser you need to add password using: dbxPassword.sh set -UdbmsUser -SsrvName -PtheSecretPassword
 ##----------------------------------------------
 dbmsUser=postgres
 #dbmsUser=dbxtune

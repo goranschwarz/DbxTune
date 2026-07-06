@@ -33,6 +33,8 @@ dbxSwHome=${DBXTUNE_HOME:-${HOME}/dbxtune/0}
 
 ##----------------------------------------------
 ## set LOCAL environment
+## For Windows integratedSecurity: dbmsUser=integratedSecurity
+## If the users is a SQL Server login: you need to add password using: dbxPassword.sh set -UdbmsUser -SsrvName -PtheSecretPassword
 ##----------------------------------------------
 #dbmsUser=sa
 dbmsUser=dbxtune

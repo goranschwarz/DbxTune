@@ -63,13 +63,13 @@ function Write-Check([string] $Label, [bool] $Ok, [string] $Detail, [bool] $Bloc
 }
 
 # ── .NET Desktop Runtime — required just to launch DbxInstaller.exe ────────────
-$desktopMajors = Get-DotNetRuntimeMajors "Microsoft.WindowsDesktop.App"
+$desktopMajors = @(Get-DotNetRuntimeMajors "Microsoft.WindowsDesktop.App")
 $desktopOk     = $desktopMajors -contains $RequiredDotNetMajor
 $desktopDetail = if ($desktopMajors.Count -gt 0) { "Found: $($desktopMajors -join ', ')" } else { "Not found" }
 Write-Check ".NET $RequiredDotNetMajor Desktop Runtime" $desktopOk $desktopDetail $true
 
 # ── ASP.NET Core Runtime — needed later, for DbxStarterService's web UI ────────
-$aspMajors = Get-DotNetRuntimeMajors "Microsoft.AspNetCore.App"
+$aspMajors = @(Get-DotNetRuntimeMajors "Microsoft.AspNetCore.App")
 $aspOk     = $aspMajors -contains $RequiredDotNetMajor
 $aspDetail = if ($aspMajors.Count -gt 0) { "Found: $($aspMajors -join ', ')" } else { "Not found" }
 Write-Check "ASP.NET Core $RequiredDotNetMajor Runtime" $aspOk $aspDetail $false
