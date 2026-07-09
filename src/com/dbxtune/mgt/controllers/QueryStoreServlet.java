@@ -319,7 +319,8 @@ extends HttpServlet
 				case "tableinfo":
 				{
 					String tablesParam = Helper.getParameter(req, "tables", "").trim();
-					Map<String, Object> tiResult = actionTableInfo(conn, dbnameParam.trim(), tablesParam);
+					String formatParam = Helper.getParameter(req, "format", "html").trim().toLowerCase();
+					Map<String, Object> tiResult = actionTableInfo(conn, dbnameParam.trim(), tablesParam, formatParam);
 					om.writeValue(out, tiResult);
 					break;
 				}
@@ -451,14 +452,18 @@ extends HttpServlet
 
 	// -------------------------------------------------------------------------
 	// action=tableInfo — parse SQL, look up table / index info from DDL Storage
+	// format=html (default) returns HTML for display; format=text returns a plain-text
+	// bundle instead (used as LLM prompt context - see com.dbxtune.central.llm).
 	// -------------------------------------------------------------------------
-	private Map<String, Object> actionTableInfo(DbxConnection conn, String dbname, String tablesParam)
+	private Map<String, Object> actionTableInfo(DbxConnection conn, String dbname, String tablesParam, String format)
 	{
 		Map<String, Object> result = new LinkedHashMap<>();
+		boolean asText = "text".equals(format);
+		String  resultKey = asText ? "text" : "html";
 
 		if (tablesParam == null || tablesParam.isBlank())
 		{
-			result.put("html", "<em>No tables provided.</em>");
+			result.put(resultKey, asText ? "" : "<em>No tables provided.</em>");
 			return result;
 		}
 
@@ -473,26 +478,33 @@ extends HttpServlet
 
 		if (tableList.isEmpty())
 		{
-			result.put("html", "<em>No tables provided.</em>");
+			result.put(resultKey, asText ? "" : "<em>No tables provided.</em>");
 			return result;
 		}
 
 		try
 		{
-			String html = SqlServerAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo");
-			if (StringUtil.isNullOrBlank(html))
+			if (asText)
 			{
-				StringBuilder sb = new StringBuilder();
-				for (String t : tableList)
-					sb.append("&emsp;&bull; Table <code>").append(t).append("</code> was not found in the DDL Storage.<br>\n");
-				html = sb.toString();
+				result.put("text", SqlServerAbstract.getTableInfoPlainText(conn, dbname, tableList));
 			}
-			result.put("html", html);
+			else
+			{
+				String html = SqlServerAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo");
+				if (StringUtil.isNullOrBlank(html))
+				{
+					StringBuilder sb = new StringBuilder();
+					for (String t : tableList)
+						sb.append("&emsp;&bull; Table <code>").append(t).append("</code> was not found in the DDL Storage.<br>\n");
+					html = sb.toString();
+				}
+				result.put("html", html);
+			}
 		}
 		catch (Exception ex)
 		{
 			_logger.warn("actionTableInfo: error fetching table info for dbname={} tables={}: {}", dbname, tableList, ex.getMessage(), ex);
-			result.put("html", "<span class='text-danger'>Error fetching table info: " + ex.getMessage() + "</span>");
+			result.put(resultKey, asText ? "" : "<span class='text-danger'>Error fetching table info: " + ex.getMessage() + "</span>");
 		}
 
 		return result;

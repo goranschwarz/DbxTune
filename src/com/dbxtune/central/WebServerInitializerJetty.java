@@ -249,7 +249,11 @@ public class WebServerInitializerJetty
 		webapp.addServlet(HistorySampleForCmController.class,         "/api/history-sample");
 		webapp.addServlet(HistoryActiveSamplesForCmController.class,  "/api/history-active-samples");
 		webapp.addServlet(DailySummartReportServlet.class,            "/api/dsr");                          // Create a Daily Summary Report 
-		webapp.addServlet(DsrSkipEntriesController.class,             "/api/dsr/skip");                     // Add "skip sql-id" entries to Daily Summary Report 
+		webapp.addServlet(DsrSkipEntriesController.class,             "/api/dsr/skip");                     // Add "skip sql-id" entries to Daily Summary Report
+		webapp.addServlet(LlmConfigServlet.class,                     "/api/llm/config");                   // {"enabled": bool} - client-side check before rendering any LLM trigger UI
+		webapp.addServlet(LlmSqlOptimizeServlet.class,                "/api/llm/optimize-sql");             // Get LLM (Claude/ChatGPT/Gemini/Ollama) SQL optimization advice
+		webapp.addServlet(LlmContextServlet.class,                    "/api/llm/context");                  // Build DDL/index/stats context (from DDL Storage) for a SQL statement
+		webapp.addServlet(LlmAdviceServlet.class,                     "/llm-advice");                       // Standalone LLM advice page (with normal navbar/login), used by the DSR's mail-safe link
 		webapp.addServlet(CentralPcsReceiverController.class,         "/api/pcs/receiver");                 // endpoint used by Collectors to SEND data to DbxCentral
 		webapp.addServlet(PcsQueueInfoController.class,               "/api/pcs/queueInfo");                // if the PCS "bussy" at DbxCental -- {"queueSize":#,"lastPersistedSampleTime":"YYYY-MM-DD hh:mm:ss.ms"}
 		webapp.addServlet(ServerLayoutController.class,               "/api/server-layout");                // How the Server "layout" should be presented at the Landing Page

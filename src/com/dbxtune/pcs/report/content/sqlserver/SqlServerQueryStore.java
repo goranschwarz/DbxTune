@@ -42,6 +42,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.cm.SortOptions;
 import com.dbxtune.cm.SortOptions.ColumnNameSensitivity;
 import com.dbxtune.cm.SortOptions.DataSortSensitivity;
@@ -1559,6 +1560,10 @@ extends SqlServerAbstract
 					// Parse the 'sqlText' and extract Table Names, then get various table and index information
 					String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
 
+					// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
+					String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
+					String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_MSSQL);
+
 //					// Parse the 'sqlText' and extract Table Names..
 //					// - then get table information (like we do in 'AseTopCmObjectActivity')
 //					String tableInfo = "";
@@ -1601,7 +1606,7 @@ extends SqlServerAbstract
 					// get the "spark lines"
 					String sparklines = htp.getHtmlTextForRow(r);
 
-					sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
+					sqlText = "<xmp>" + sqlText + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
 
 					// add record to SimpleResultSet
 					srs.addRow(dbname, plan_id, sparklines, sqlText);

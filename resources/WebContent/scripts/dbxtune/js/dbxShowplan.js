@@ -414,6 +414,20 @@
 			"					</div>",
 			"				</details>",
 
+			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
+			"				<details id='dbx-ssp-sect-llm' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice</summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			// This button lives OUTSIDE #dbx-ssp-llm-body on purpose: dbxLlmAdvice.js's target-mode
+			// rendering replaces the whole innerHTML of its target element, so anything inside
+			// dbx-ssp-llm-body itself would be wiped out on every (re)load.
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
+			"						<div id='dbx-ssp-llm-body'>",
+			"							<span style='color:#888;font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
+			"						</div>",
+			"					</div>",
+			"				</details>",
+
 			"				<!-- ▶ XML Plan (collapsed by default) -->",
 			"				<details id='dbx-ssp-sect-xml' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; XML Plan</summary>",
@@ -873,6 +887,17 @@
 				}
 				tiSect.removeAttribute('open');
 			}
+
+			// Reset LLM Optimization Advice section — lazy-loaded on next expand, same as Table Information.
+			// (This data-toggle="modal" path is separate from showSqlServerShowplanDialog() below, which
+			// has its own identical reset - both need it since either can be how this dialog gets shown.)
+			var llmSect = document.getElementById('dbx-ssp-sect-llm');
+			var llmBody = document.getElementById('dbx-ssp-llm-body');
+			if (llmSect && llmBody) {
+				llmBody.setAttribute('data-loaded', 'false');
+				llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+				llmSect.removeAttribute('open');
+			}
 		});
 
 		// SQL Server: draw plan after modal is visible
@@ -1007,7 +1032,91 @@
 				});
 			});
 		});
+
+		// LLM Optimization Advice: lazy-load on first expand, rendered inline (not a nested popup)
+		document.getElementById('dbx-ssp-sect-llm').addEventListener('toggle', function() {
+			if (!this.open) return;                           // closing — do nothing
+			var body = document.getElementById('dbx-ssp-llm-body');
+			if (!body || body.getAttribute('data-loaded') === 'true') return;  // already loaded
+			_ssShowplanLoadLlmAdvice(body);
+		});
+
+		// Feature-toggle gated (DbxCentral.llm.enabled) - the section is baked into the injected HTML
+		// once, so rather than not injecting it at all, just hide it entirely when disabled (idempotent,
+		// safe to run every time _initHandlers() runs).
+		if (typeof dbxLlmAdvice !== 'undefined') {
+			dbxLlmAdvice.isEnabled().then(function(enabled) {
+				var llmSect = document.getElementById('dbx-ssp-sect-llm');
+				if (llmSect) llmSect.style.display = enabled ? '' : 'none';
+			});
+		}
 	}
+
+	/**
+	 * (Re)loads the LLM Optimization Advice section for whatever plan/SQL is currently shown in the
+	 * dialog. Called from: the "LLM Optimization Advice" details' toggle handler (first expand only,
+	 * guarded by data-loaded), window.ssShowplanRefreshLlmAdvice() (manual re-run, ignores the guard),
+	 * and showSqlServerShowplanDialog() (auto re-run when a new statement is selected while the
+	 * section is already open - since <details> only fires 'toggle' on an actual open/close
+	 * transition, simply resetting state wouldn't refresh an already-open section on its own).
+	 */
+	function _ssShowplanLoadLlmAdvice(body)
+	{
+		body.setAttribute('data-loaded', 'true');
+
+		if (typeof dbxLlmAdvice === 'undefined') {
+			body.innerHTML = '<em style="color:#888;">dbxLlmAdvice.js is not loaded on this page.</em>';
+			return;
+		}
+
+		// Reuse the same srv/dbname/ts/sqltext context stored on the Table Information section
+		var tiBody  = document.getElementById('dbx-ssp-tableinfo-body');
+		var srv     = tiBody ? (tiBody.getAttribute('data-srv')     || '') : '';
+		var dbname  = tiBody ? (tiBody.getAttribute('data-dbname')  || '') : '';
+		var ts      = tiBody ? (tiBody.getAttribute('data-ts')      || '') : '';
+		var sqlText = tiBody ? (tiBody.getAttribute('data-sqltext') || '') : '';
+		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
+
+		if (!sqlText) {
+			body.innerHTML = '<em style="color:#888;">No SQL text is available for this plan.</em>';
+			return;
+		}
+
+		// No server context — still worth asking, just without DDL/index/stats enrichment
+		if (!srv || !dbname) {
+			dbxLlmAdvice.open({ sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', target: body });
+			return;
+		}
+
+		body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+		_extractTablesAsync(sqlText, function(tables) {
+			if (!tables.length) {
+				dbxLlmAdvice.open({ sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', target: body });
+				return;
+			}
+
+			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Looking up table DDL/index/stats…</span>';
+			$.ajax({
+				url:      '/api/cc/mgt/query-store',
+				data:     { srv: srv, action: 'tableInfo', format: 'text', dbname: dbname, tables: tables.join(','), ts: ts },
+				dataType: 'json',
+				success:  function(r) {
+					dbxLlmAdvice.open({ sql: sqlText, plan: xmlText, ddlContext: (r && r.text) || '', dbVendor: 'Microsoft SQL Server', target: body });
+				},
+				error:    function() {
+					// DDL lookup failed - still show advice using SQL + plan alone
+					dbxLlmAdvice.open({ sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', target: body });
+				}
+			});
+		});
+	}
+
+	// Manual re-run, e.g. after the user notices the advice looks stale, or just wants to try again.
+	// Ignores the data-loaded guard (unlike the toggle handler) since this is an explicit user action.
+	window.ssShowplanRefreshLlmAdvice = function() {
+		var body = document.getElementById('dbx-ssp-llm-body');
+		if (body) _ssShowplanLoadLlmAdvice(body);
+	};
 
 	// -------------------------------------------------------------------------
 	// Programmatic entry point — called from Query Store "Show Plan" button
@@ -1078,6 +1187,15 @@
 			}
 			// Collapse it so the user opens it on demand
 			tiSect.removeAttribute('open');
+		}
+
+		// Reset LLM Optimization Advice section — lazy-loaded on next expand, same as Table Information
+		var llmSect = document.getElementById('dbx-ssp-sect-llm');
+		var llmBody = document.getElementById('dbx-ssp-llm-body');
+		if (llmSect && llmBody) {
+			llmBody.setAttribute('data-loaded', 'false');
+			llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+			llmSect.removeAttribute('open');
 		}
 
 		// Draw the plan + run analysis once the modal is fully visible.

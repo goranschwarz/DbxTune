@@ -33,6 +33,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.utils.HtmlUtils;
 import com.dbxtune.utils.StringUtil;
 
@@ -61,7 +62,9 @@ extends HttpServlet
 		int    remotePort = request.getRemotePort();
 		String remoteUser = request.getRemoteUser();
 		
-		String plan = request.getParameter("plan");
+		String plan     = request.getParameter("plan");
+		String sql      = request.getParameter("sql");
+		String dbVendor = request.getParameter("dbVendor");
 
 //System.out.println("PLAN=|" + plan + "|");
 
@@ -87,7 +90,7 @@ extends HttpServlet
 
 		// Parse the JSON String and return a formatted message
 		String formattedOutput = "";
-		formattedOutput = createShowplanOutput( payload );
+		formattedOutput = createShowplanOutput( payload, sql, dbVendor );
 
 
 		response.setContentType("text/html; charset=UTF-8");
@@ -105,6 +108,19 @@ extends HttpServlet
 	
 	public static String createShowplanOutput(String payload)
 	{
+		return createShowplanOutput(payload, null, null);
+	}
+
+	/**
+	 * @param payload  the XML execution plan
+	 * @param sql      the SQL statement this plan belongs to, or null if unknown - when present,
+	 *                 a "Get LLM Optimization Advice" button is shown
+	 * @param dbVendor DBMS product name for {@code sql}, or null
+	 */
+	public static String createShowplanOutput(String payload, String sql, String dbVendor)
+	{
+		boolean hasSql = StringUtil.hasValue(sql) && LlmClientRegistry.isFeatureEnabled();
+
 		String str = "" +
 				"<!DOCTYPE html> \n" +
 				"<html lang='en'> \n" +
@@ -130,14 +146,28 @@ extends HttpServlet
 //				"    <link rel='stylesheet' type='text/css' href='/scripts/showplan/sqlserver/css/qp.css'> \n" +
 				HtmlUtils.createCssLinkTag("/scripts/showplan/sqlserver/css/qp.css", "https://www.dbxtune.com/sqlserver_showplan/css/qp.css") +
 
+				(hasSql
+					? "    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n"
+					+ "    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n"
+					+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
+					: "") +
+
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
+				(hasSql
+					? "    <button type='button' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor});'>Get LLM Optimization Advice</button> \n"
+					: "") +
 				"    <div id='ss-showplan'>                             \n" +
 				"    </div>                                             \n" +
 				"                                                       \n" +
 				"    <script>                                           \n" +
 				"        const plan = '" + StringEscapeUtils.escapeEcmaScript(payload) + "'; \n" +
+				(hasSql
+					? "        const dbxLlmSql = '"      + StringEscapeUtils.escapeEcmaScript(sql) + "'; \n"
+					+ "        const dbxLlmPlan = '"     + StringEscapeUtils.escapeEcmaScript(payload) + "'; \n"
+					+ "        const dbxLlmDbVendor = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbVendor, "")) + "'; \n"
+					: "") +
 				"                                                       \n" +
 				"        QP.showPlan(document.getElementById('ss-showplan'), '" + StringEscapeUtils.escapeEcmaScript(payload) + "'); \n" +
 				"    </script>		                                    \n" +

@@ -39,6 +39,7 @@ import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
 import com.dbxtune.cache.XmlPlanAseUtils;
+import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
@@ -975,6 +976,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
 						String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, query, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 
+						// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
+						String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, dbname, query, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), query, llmDdlContext, xmlPlan, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table and index information 
 //						String tableInfo = "";
@@ -1003,7 +1008,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						String objName_hashKey = objectName + "<br>\n<br>\n<b>Hashkey=</b>" + hashKey;
 
 						// SQL Text (and Compile Execution parameters)
-						String sqlTextValue = "<xmp>" + query + "</xmp>" + tableInfo;
+						String sqlTextValue = "<xmp>" + query + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
 
 //						// ADD Table and Index information (SHOW details, by default)
 //						if (StringUtil.hasValue(tableInfo))
