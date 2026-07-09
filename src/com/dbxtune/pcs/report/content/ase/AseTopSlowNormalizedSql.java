@@ -38,6 +38,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.DictCompression;
@@ -849,6 +850,10 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
 						String tableInfo = getDbmsTableInformationFromSqlText(conn, null, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 
+						// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
+						String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, null, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table information (like we do in 'AseTopCmObjectActivity')
 //						String tableInfo = "";
@@ -891,7 +896,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
 
-						sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
+						sqlText = "<xmp>" + sqlText + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
 						
 						//-------------------------------------
 						// add record to SimpleResultSet

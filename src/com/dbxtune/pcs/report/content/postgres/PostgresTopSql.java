@@ -35,6 +35,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.DictCompression;
@@ -779,8 +780,12 @@ extends PostgresAbstract
 					// Parse the 'sqlText' and extract Table Names, then get various table and index information
 					String tableInfo = getDbmsTableInformationFromSqlText(conn, datname, sqlText, DbUtils.DB_PROD_NAME_POSTGRES);
 
+					// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
+					String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, datname, sqlText, DbUtils.DB_PROD_NAME_POSTGRES);
+					String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_POSTGRES);
+
 					// SQL Text
-					sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
+					sqlText = "<xmp>" + sqlText + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
 //					sqlText = "<script type='text/plain' readonly>" + sqlText + "</script>" + tableInfo;
 //					sqlText = "<div class='sqltext'>" + StringEscapeUtils.escapeHtml4(sqlText) + "</div>" + tableInfo;
 

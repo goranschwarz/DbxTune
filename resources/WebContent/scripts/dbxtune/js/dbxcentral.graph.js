@@ -2116,7 +2116,37 @@ function dbxTuneGraphSubscribe()
 	 * Renders all non-empty fields as a 2-column table, client-side — no API call needed.
 	 * Reuses #dbx-view-alarmView-dialog (same modal, different content).
 	 */
-	function activeStmtDetailShowModal(row, metaDataArr, stripHtml)
+	// Candidate row-key names holding SQL text / execution plan, per DbxTune collector appName,
+	// in priority order (first present-and-non-empty key wins). Column names differ per collector.
+	var ACTIVE_STMT_SQL_KEYS = {
+		AseTune:      ['MonSqlText', 'DbccSqlText', 'LastKnownSqlText'],
+		SqlServerTune:['lastKnownSql', 'LastBufferSqlText'],
+		PostgresTune: ['last_known_sql_statement'],
+		OracleTune:   ['SqlText']
+	};
+	var ACTIVE_STMT_PLAN_KEYS = {
+		AseTune:      ['ShowPlanText', 'CachedPlanInXml'],
+		SqlServerTune:[],
+		PostgresTune: ['query_plan'],
+		OracleTune:   ['ExecPlan']
+	};
+	var ACTIVE_STMT_DB_VENDOR = {
+		AseTune:       'Adaptive Server Enterprise',
+		SqlServerTune: 'Microsoft SQL Server',
+		PostgresTune:  'PostgreSQL'
+		// OracleTune intentionally omitted - not a supported dbVendor for DDL-context lookups
+	};
+
+	function _activeStmtFirstNonEmpty(row, keys)
+	{
+		for (var i = 0; i < (keys || []).length; i++)
+		{
+			if (row.hasOwnProperty(keys[i]) && row[keys[i]]) return row[keys[i]];
+		}
+		return null;
+	}
+
+	function activeStmtDetailShowModal(row, metaDataArr, stripHtml, appName)
 	{
 		var $modal = $('#dbx-view-alarmView-dialog');
 		if ($modal.length === 0) return;
@@ -2167,7 +2197,36 @@ function dbxTuneGraphSubscribe()
 		});
 
 		html += '</tbody></table>';
+
+		// "Get LLM Optimization Advice" - only when this row actually has SQL text for this appName.
+		// No DDL/index/stats context is looked up here (this dialog doesn't have a server connection
+		// or DDL Storage proxy in scope) - the LLM still gets useful value from SQL + plan alone.
+		var llmSql  = _activeStmtFirstNonEmpty(row, ACTIVE_STMT_SQL_KEYS[appName]);
+		var llmPlan = _activeStmtFirstNonEmpty(row, ACTIVE_STMT_PLAN_KEYS[appName]);
+
 		$('#dbx-view-alarmView-content').html(html);
+
+		// Feature-toggle gated (DbxCentral.llm.enabled) - appended after the fact so a disabled
+		// feature never shows the button at all, rather than one that would error out on click.
+		if (llmSql && typeof dbxLlmAdvice !== 'undefined')
+		{
+			dbxLlmAdvice.isEnabled().then(function(enabled) {
+				if (!enabled) return;
+
+				$('#dbx-view-alarmView-content').append(
+					'<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-primary" id="dbx-view-alarmView-llm-advice-btn">'
+					+ 'Get LLM Optimization Advice</button></div>');
+
+				var adviceBtn = document.getElementById('dbx-view-alarmView-llm-advice-btn');
+				if (adviceBtn)
+				{
+					adviceBtn.onclick = function() {
+						dbxLlmAdvice.open({ sql: llmSql, plan: llmPlan, dbVendor: ACTIVE_STMT_DB_VENDOR[appName] });
+					};
+				}
+			});
+		}
+
 		$modal.modal('show');
 	}
 
@@ -2473,7 +2532,7 @@ function dbxTuneGraphSubscribe()
 			var rowSnap = row;
 			tr.addEventListener('click', function(e) {
 				if ($(e.target).closest('[data-toggle="modal"]').length > 0) return;
-				activeStmtDetailShowModal(rowSnap, _metaDataArrRef, false);
+				activeStmtDetailShowModal(rowSnap, _metaDataArrRef, false, appName);
 			});
 		};
 

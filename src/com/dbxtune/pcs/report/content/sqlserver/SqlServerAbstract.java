@@ -332,7 +332,69 @@ extends ReportEntryAbstract
 	}
 
 	/**
-	 * 
+	 * Static convenience method — same as {@link #getTableInfoHtml}, but returns a
+	 * plain-text (not HTML) rendering, suitable for use as LLM prompt context.
+	 */
+	public static String getTableInfoPlainText(DbxConnection conn, String dbname, Set<String> tableList)
+	{
+		SqlServerAbstract inst = new SqlServerAbstract(null)
+		{
+			@Override public boolean hasIssueToReport()       { return false; }
+			@Override public String  getSubject()             { return ""; }
+			@Override public boolean hasMinimalMessageText()  { return false; }
+			@Override public boolean hasShortMessageText()    { return false; }
+			@Override public void    writeMessageText(Writer w, IReportEntry.MessageType t) {}
+			@Override public void    create(DbxConnection c, String s, Configuration p, Configuration l) {}
+		};
+		Set<SqlServerTableInfo> tableInfoSet = inst.getTableInformationFromMonDdlStorage(conn, tableList);
+		return inst.getTableInfoAsPlainText(tableInfoSet);
+	}
+
+	/**
+	 * Plain-text (not HTML) rendering of {@code tableInfoSet}, one table/view per block,
+	 * with DDL, index list and stats - suitable for use as LLM prompt context.
+	 */
+	public String getTableInfoAsPlainText(Set<SqlServerTableInfo> tableInfoSet)
+	{
+		if (tableInfoSet == null || tableInfoSet.isEmpty())
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		for (SqlServerTableInfo entry : tableInfoSet)
+		{
+			if (entry.isView())
+			{
+				sb.append("View: ").append(entry.getFullTableName()).append("\n");
+				sb.append("DDL:\n").append(StringUtil.nullToValue(entry._objectText, "-not-found-")).append("\n");
+				if (entry.getViewReferences() != null && !entry.getViewReferences().isEmpty())
+					sb.append("References: ").append(String.join(", ", entry.getViewReferences())).append("\n");
+			}
+			else
+			{
+				sb.append("Table: ").append(entry.getFullTableName())
+				  .append(" (rows=").append(entry.getRowTotal())
+				  .append(", size=").append(entry.getTotalMb()).append(" MB")
+				  .append(", indexCount=").append(entry.getIndexList().size())
+				  .append(")\n");
+				sb.append("DDL:\n").append(StringUtil.nullToValue(entry._objectText, "-not-found-")).append("\n");
+
+				for (SqlServerIndexInfo idx : entry.getIndexList())
+				{
+					sb.append("Index: ").append(idx.getIndexName())
+					  .append(", keys=(").append(idx.getKeysStr()).append(")")
+					  .append(", size=").append(idx.getIndexSizeMb()).append(" MB\n");
+				}
+
+				if (StringUtil.hasValue(entry._triggersText))
+					sb.append("Triggers:\n").append(entry._triggersText).append("\n");
+			}
+			sb.append("---\n");
+		}
+		return sb.toString();
+	}
+
+	/**
+	 *
 	 * @param currentDbname
 	 * @param tableInfoList
 	 * @param tableList

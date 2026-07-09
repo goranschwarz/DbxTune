@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content.postgres;
 
+import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,6 +44,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -191,11 +193,76 @@ extends ReportEntryAbstract
 		if (tableInfoSet.isEmpty())
 			return "";
 
-		// And make it into a HTML table with various information about the table and indexes 
+		// And make it into a HTML table with various information about the table and indexes
 		return getTableInfoAsHtmlTable(currentDbname, tableInfoSet, tableList, includeIndexInfo, classname);
 	}
 
-	
+	/**
+	 * Static convenience method — look up table/index info from DDL Storage without needing
+	 * a full report-entry instance (e.g. from a servlet context), and render it as plain text
+	 * (not HTML), suitable for use as LLM prompt context.
+	 */
+	public static String getTableInfoPlainText(DbxConnection conn, String dbname, Set<String> tableList)
+	{
+		// Create a minimal throwaway instance — the DDL-Storage lookup methods do not use
+		// _reportingInstance, so null is safe.  The abstract interface methods are stubs.
+		PostgresAbstract inst = new PostgresAbstract(null)
+		{
+			@Override public boolean hasIssueToReport()       { return false; }
+			@Override public String  getSubject()             { return ""; }
+			@Override public boolean hasMinimalMessageText()  { return false; }
+			@Override public boolean hasShortMessageText()    { return false; }
+			@Override public void    writeMessageText(Writer w, IReportEntry.MessageType t) {}
+			@Override public void    create(DbxConnection c, String s, Configuration p, Configuration l) {}
+		};
+		Set<PgTableInfo> tableInfoSet = inst.getTableInformationFromMonDdlStorage(conn, tableList);
+		return inst.getTableInfoAsPlainText(tableInfoSet);
+	}
+
+	/**
+	 * Plain-text (not HTML) rendering of {@code tableInfoSet}, one table/view per block,
+	 * with DDL, index list and stats - suitable for use as LLM prompt context.
+	 */
+	public String getTableInfoAsPlainText(Set<PgTableInfo> tableInfoSet)
+	{
+		if (tableInfoSet == null || tableInfoSet.isEmpty())
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		for (PgTableInfo entry : tableInfoSet)
+		{
+			if (entry.isView())
+			{
+				sb.append("View: ").append(entry.getFullTableName()).append("\n");
+				sb.append("DDL:\n").append(StringUtil.nullToValue(entry._objectText, "-not-found-")).append("\n");
+				if (entry.getViewReferences() != null && !entry.getViewReferences().isEmpty())
+					sb.append("References: ").append(String.join(", ", entry.getViewReferences())).append("\n");
+			}
+			else
+			{
+				sb.append("Table: ").append(entry.getFullTableName())
+				  .append(" (rows=").append(entry.getRowTotal())
+				  .append(", size=").append(entry.getTotalMb()).append(" MB")
+				  .append(", indexCount=").append(entry.getIndexCount())
+				  .append(")\n");
+				sb.append("DDL:\n").append(StringUtil.nullToValue(entry._objectText, "-not-found-")).append("\n");
+
+				for (PgIndexInfo idx : entry.getIndexList())
+				{
+					sb.append("Index: ").append(idx.getIndexName())
+					  .append(", keys=(").append(idx.getKeysStr()).append(")")
+					  .append(", size=").append(idx.getSizeMb()).append(" MB\n");
+				}
+
+				if (StringUtil.hasValue(entry._triggersText))
+					sb.append("Triggers:\n").append(entry._triggersText).append("\n");
+			}
+			sb.append("---\n");
+		}
+		return sb.toString();
+	}
+
+
 //	/**
 //	 * 
 //	 * @param dbname1 

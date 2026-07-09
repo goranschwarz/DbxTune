@@ -1492,7 +1492,40 @@ function cmDetailRowShowModal(columns, row, tooltips)
 	});
 
 	html += '</tbody></table>';
+
+	// If this row has a SQL-text-like column (e.g. Active Statements' MonSqlText/DbccSqlText),
+	// offer a "Get LLM Optimization Advice" action. Uses whatever showplan-like column is present
+	// (e.g. ShowPlanText) as extra context, if any. DDL/index/stats context isn't looked up here
+	// (no DBMS vendor/connection info available in this generic, vendor-agnostic dialog) - the LLM
+	// still gets useful context from the SQL text and plan alone.
+	var sqlColIdx  = columns.findIndex(function(c) { return /sqltext/i.test(c); });
+	var planColIdx = columns.findIndex(function(c) { return /showplan/i.test(c); });
+
 	$('#dbx-view-alarmView-content').html(html);
+
+	// Feature-toggle gated (DbxCentral.llm.enabled) - appended after the fact so a disabled feature
+	// never shows the button at all, rather than showing one that would error out on click.
+	if (sqlColIdx >= 0 && row[sqlColIdx] && typeof dbxLlmAdvice !== 'undefined') {
+		dbxLlmAdvice.isEnabled().then(function(enabled) {
+			if (!enabled) return;
+
+			$('#dbx-view-alarmView-content').append(
+				'<div class="mt-2">'
+				+ '<button type="button" class="btn btn-sm btn-outline-primary" id="dbx-view-alarmView-llm-advice-btn">'
+				+ 'Get LLM Optimization Advice</button></div>');
+
+			var adviceBtn = document.getElementById('dbx-view-alarmView-llm-advice-btn');
+			if (adviceBtn) {
+				adviceBtn.onclick = function() {
+					dbxLlmAdvice.open({
+						sql:  row[sqlColIdx],
+						plan: planColIdx >= 0 ? row[planColIdx] : null
+					});
+				};
+			}
+		});
+	}
+
 	$modal.modal('show');
 }
 
