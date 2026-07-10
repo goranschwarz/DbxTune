@@ -27,6 +27,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -127,7 +128,12 @@ implements LlmClient
 			sb.append("Table/index DDL and statistics referenced by the statement:\n").append(request.getDdlContext()).append("\n\n");
 
 		if (StringUtil.hasValue(request.getPlan()))
-			sb.append("Execution plan for the statement:\n").append(request.getPlan()).append("\n\n");
+		{
+			String plan = request.getPlan();
+			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MSSQL))
+				plan = SqlServerPlanXmlShrinker.shrink(plan);
+			sb.append("Execution plan for the statement:\n").append(plan).append("\n\n");
+		}
 
 		sb.append("Task: Suggest how to optimize this SQL statement (rewritten SQL, and/or missing indexes, and/or other changes).\n");
 		sb.append("Respond with ONLY a single JSON object of the form: ");

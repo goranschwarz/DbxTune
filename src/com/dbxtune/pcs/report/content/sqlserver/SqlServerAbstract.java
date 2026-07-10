@@ -376,7 +376,8 @@ extends ReportEntryAbstract
 				  .append(", size=").append(entry.getTotalMb()).append(" MB")
 				  .append(", indexCount=").append(entry.getIndexList().size())
 				  .append(")\n");
-				sb.append("DDL:\n").append(StringUtil.nullToValue(entry._objectText, "-not-found-")).append("\n");
+				String ddlText = formatObjectTextAsDdl(entry.getFullTableName(), entry._objectText);
+				sb.append("DDL:\n").append(StringUtil.nullToValue(ddlText, StringUtil.nullToValue(entry._objectText, "-not-found-"))).append("\n");
 
 				for (SqlServerIndexInfo idx : entry.getIndexList())
 				{
@@ -391,6 +392,105 @@ extends ReportEntryAbstract
 			sb.append("---\n");
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * Build a compact "CREATE TABLE ... (...)"-like column list out of the {@code sp_help}-derived
+	 * {@code objectText} blob, for use as LLM prompt input instead of the full ASCII-table dump
+	 * (which is mostly box-drawing/padding overhead plus several sections - index list, row/owner
+	 * info, "no constraints defined" boilerplate - that are either redundant with what
+	 * {@link #getTableInfoAsPlainText(Set)} already prints separately (indexes, via
+	 * {@code SqlServerTableInfo.getIndexList()}), or not useful for query-tuning advice).
+	 * <p>
+	 * Reuses the same {@link ResultSetTableModel#parseTextTables(String)} parser that
+	 * {@link #getTableAndIndexInfo(SqlServerTableInfo)} already uses in production to pull the
+	 * index-key sub-table back out of this same field - only the "columns" and "identity"
+	 * result-sets are needed here.
+	 * <p>
+	 * This is only ever used to build the LLM prompt context; {@code objectText}/{@code MonDdlStorage}
+	 * themselves and every other consumer of {@code _objectText} (the Daily Summary Report's HTML
+	 * "Table Info" section, the Swing DdlViewer, the REST DDL Storage API, ...) are unaffected.
+	 *
+	 * @return a "CREATE TABLE ... (...)" -like column list, or {@code null} if {@code objectText}
+	 *         didn't parse into the expected shape (caller falls back to the raw text in that case)
+	 */
+	private String formatObjectTextAsDdl(String fullTableName, String objectText)
+	{
+		if (StringUtil.isNullOrBlank(objectText))
+			return null;
+
+		List<ResultSetTableModel> tables = ResultSetTableModel.parseTextTables(objectText);
+
+		ResultSetTableModel colsTbl = ResultSetTableModel.getTableWithColumnNames(tables, false, "Column_name", "Type", "Nullable");
+		if (colsTbl == null || colsTbl.isEmpty())
+			return null;
+
+		colsTbl.setHandleColumnNotFoundAsNullValueInGetValues(true);
+
+		// Identity column info (if any) - fold into the owning column's definition instead of its own section
+		ResultSetTableModel identityTbl = ResultSetTableModel.getTableWithColumnNames(tables, false, "Identity", "Seed", "Increment");
+		String identityCol      = null;
+		String identityClause   = null;
+		if (identityTbl != null && !identityTbl.isEmpty())
+		{
+			identityTbl.setHandleColumnNotFoundAsNullValueInGetValues(true);
+			String name = identityTbl.getValueAsString(0, "Identity");
+			if (StringUtil.hasValue(name) && ! name.startsWith("No identity column"))
+			{
+				identityCol    = name;
+				identityClause = "IDENTITY(" + identityTbl.getValueAsString(0, "Seed", true, "1") + "," + identityTbl.getValueAsString(0, "Increment", true, "1") + ")";
+			}
+		}
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("CREATE TABLE ").append(fullTableName).append(" (\n");
+		for (int r=0; r<colsTbl.getRowCount(); r++)
+		{
+			String colName  = colsTbl.getValueAsString(r, "Column_name");
+			if (StringUtil.isNullOrBlank(colName))
+				continue;
+
+			String type     = colsTbl.getValueAsString(r, "Type");
+			String length   = colsTbl.getValueAsString(r, "Length");
+			String prec     = colsTbl.getValueAsString(r, "Prec");
+			String scale    = colsTbl.getValueAsString(r, "Scale");
+			String nullable = colsTbl.getValueAsString(r, "Nullable");
+
+			sb.append("  ").append(colName).append(" ").append(formatSqlType(type, length, prec, scale));
+			sb.append(" ").append("no".equalsIgnoreCase(nullable) ? "NOT NULL" : "NULL");
+
+			if (colName.equals(identityCol))
+				sb.append(" ").append(identityClause);
+
+			sb.append(r < colsTbl.getRowCount() - 1 ? ",\n" : "\n");
+		}
+		sb.append(")");
+
+		return sb.toString();
+	}
+
+	/**
+	 * Render a SQL Server type name + length/precision/scale (as strings straight out of the
+	 * {@code sp_help} "Column_name/Type/Length/Prec/Scale" result set) as a compact SQL type,
+	 * e.g. {@code varchar(50)}, {@code varchar(max)}, {@code numeric(15,7)}, {@code int}.
+	 */
+	private String formatSqlType(String type, String length, String prec, String scale)
+	{
+		if (type == null)
+			return "?";
+
+		switch (type.toLowerCase())
+		{
+			case "varchar": case "nvarchar": case "char": case "nchar": case "binary": case "varbinary":
+			{
+				int len = StringUtil.parseInt(length, -1);
+				return type + "(" + (len < 0 ? "max" : String.valueOf(len)) + ")";
+			}
+			case "decimal": case "numeric":
+				return type + "(" + StringUtil.nullToValue(prec, "?") + "," + StringUtil.nullToValue(scale, "?") + ")";
+			default:
+				return type;
+		}
 	}
 
 	/**

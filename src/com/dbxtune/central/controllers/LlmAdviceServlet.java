@@ -108,7 +108,10 @@ extends HttpServlet
 		out.println("<script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script>");
 		out.println("<script>");
 		out.println("(function () {");
-		out.println("    var qs      = new URLSearchParams(window.location.search);");
+		out.println("    // Params are read from the URL FRAGMENT (#...), not the query string (?...) -");
+		out.println("    // the fragment is never sent to the server, so a large SQL statement/DDL context");
+		out.println("    // here never risks a 'URI Too Long' error the way a query string would.");
+		out.println("    var qs      = new URLSearchParams(window.location.hash.replace(/^#/, ''));");
 		out.println("    var sql     = qs.get('sql');");
 		out.println("    var content = document.getElementById('llm-advice-content');");
 		out.println();
