@@ -81,7 +81,14 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-sent-details { margin-top:18px; font-family:Arial, Helvetica, sans-serif; font-size:0.9rem; }' +
 			'.dbx-llm-sent-details summary { cursor:pointer; color:#495057; }' +
 			'.dbx-llm-sent-field { margin-top:8px; }' +
-			'.dbx-llm-sent-field-label { font-weight:bold; font-size:0.85rem; color:#495057; }';
+			'.dbx-llm-sent-field-label { font-weight:bold; font-size:0.85rem; color:#495057; }' +
+			'.dbx-llm-sql-changed { color:#664d03; background:#fff3cd; border:1px solid #ffecb5; border-radius:4px;' +
+			'  padding:6px 10px; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; }' +
+			'.dbx-llm-sql-unchanged { color:#0f5132; background:#d1e7dd; border:1px solid #badbcc; border-radius:4px;' +
+			'  padding:6px 10px; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; }' +
+			'.dbx-llm-copy-btn { margin-left:8px; font-size:0.78rem; padding:1px 8px; cursor:pointer;' +
+			'  border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
+			'.dbx-llm-copy-btn:hover { background:#e9ecef; }';
 		document.head.appendChild(style);
 	}
 
@@ -278,10 +285,73 @@ var dbxLlmAdvice = (function () {
 		return renderMarkdownFallback(text);
 	}
 
-	function renderSentField(label, value)
+	/**
+	 * Raw text for pending "Copy" buttons, keyed by a per-render id - looked up by the single,
+	 * page-lifetime-scoped click handler registered in ensureCopyButtonHandler() below. Kept out of
+	 * the DOM (rather than e.g. a data-* attribute) since prompt/SQL text can be arbitrarily large
+	 * and contain quotes/newlines that would need careful escaping to round-trip through an attribute.
+	 */
+	var _copyRegistry = {};
+	var _copyBtnHandlerInstalled = false;
+
+	/** Copy raw text to the clipboard using the same execCommand('copy') approach as dbxSqlText.js's copy button, for consistency and since it works without a secure (https/localhost) context. */
+	function copyTextToClipboard(text, btnEl)
+	{
+		var textArea = document.createElement('textarea');
+		textArea.value = text;
+		document.body.appendChild(textArea);
+		textArea.select();
+		try
+		{
+			document.execCommand('copy');
+			if (btnEl)
+			{
+				var orig = btnEl.textContent;
+				btnEl.textContent = 'Copied!';
+				setTimeout(function () { btnEl.textContent = orig; }, 1500);
+			}
+		}
+		catch (err)
+		{
+			alert('Unable to copy to clipboard\n\n' + err);
+		}
+		document.body.removeChild(textArea);
+	}
+
+	/**
+	 * Installed once (not per-render, since the modal body / inline target element is reused across
+	 * repeated dbxLlmAdvice.open() calls) - a single delegated click listener on document handles
+	 * every "Copy" button this module ever renders, looking up its raw text in _copyRegistry.
+	 */
+	function ensureCopyButtonHandler()
+	{
+		if (_copyBtnHandlerInstalled) return;
+		_copyBtnHandlerInstalled = true;
+
+		document.addEventListener('click', function (e)
+		{
+			var btn = e.target.closest && e.target.closest('.dbx-llm-copy-btn');
+			if (!btn) return;
+
+			var text = _copyRegistry[btn.getAttribute('data-copy-id')];
+			if (text) copyTextToClipboard(text, btn);
+		});
+	}
+
+	function renderSentField(label, value, copyable)
 	{
 		if (!value) return '';
-		return '<div class="dbx-llm-sent-field"><div class="dbx-llm-sent-field-label">' + escapeHtml(label) + ':</div>'
+
+		var copyBtnHtml = '';
+		if (copyable)
+		{
+			ensureCopyButtonHandler();
+			var copyId = 'dbx-llm-copy-' + Math.random().toString(36).slice(2);
+			_copyRegistry[copyId] = value;
+			copyBtnHtml = ' <button type="button" class="dbx-llm-copy-btn" data-copy-id="' + copyId + '">Copy</button>';
+		}
+
+		return '<div class="dbx-llm-sent-field"><div class="dbx-llm-sent-field-label">' + escapeHtml(label) + ':' + copyBtnHtml + '</div>'
 			+ '<pre class="dbx-llm-pre">' + escapeHtml(value) + '</pre></div>';
 	}
 
@@ -294,13 +364,18 @@ var dbxLlmAdvice = (function () {
 	 */
 	function renderSentDetails(opts, ddlContext, promptSent, providerId, model)
 	{
+		// Each render replaces the previous one's DOM, so its "Copy" button(s) - at most one today -
+		// can never be clicked again; reset here rather than growing _copyRegistry across repeated
+		// dbxLlmAdvice.open() calls in a long-lived page session.
+		_copyRegistry = {};
+
 		var providerLabel = escapeHtml(providerId || opts.provider || '(default)');
 		if (model) providerLabel += ' / ' + escapeHtml(model);
 
 		var html = '<details class="dbx-llm-sent-details">'
 			+ '<summary>Show what was sent to the LLM (provider: ' + providerLabel + ')</summary>';
 		if (promptSent)
-			html += renderSentField('Full prompt sent', promptSent);
+			html += renderSentField('Full prompt sent (' + promptSent.length.toLocaleString() + ' chars)', promptSent, /*copyable*/ true);
 		else
 		{
 			html += renderSentField('SQL', opts.sql);
@@ -312,14 +387,30 @@ var dbxLlmAdvice = (function () {
 		return html;
 	}
 
+	/**
+	 * Collapse whitespace and lower-case, so pretty-printing/keyword-casing differences introduced
+	 * by renderSqlBlock()'s sql-formatter pass (or by the LLM itself, e.g. trailing whitespace)
+	 * don't register as a "changed" SQL statement - only an actual rewrite should.
+	 */
+	function normalizeSqlForCompare(sql)
+	{
+		if (!sql) return '';
+		return String(sql).replace(/\s+/g, ' ').trim().toLowerCase();
+	}
+
 	function renderResult(container, result, opts, ddlContext)
 	{
 		var html = '';
 
 		if (result.optimizedSql)
 		{
-			var sqlBlock = renderSqlBlock(result.optimizedSql, opts.dbVendor);
-			html += '<div class="dbx-llm-section-title">Suggested SQL:</div>' + sqlBlock.html;
+			var sqlChanged = normalizeSqlForCompare(result.optimizedSql) !== normalizeSqlForCompare(opts.sql);
+			var sqlBlock   = renderSqlBlock(result.optimizedSql, opts.dbVendor);
+			html += '<div class="dbx-llm-section-title">Suggested SQL:</div>';
+			html += sqlChanged
+				? '<div class="dbx-llm-sql-changed">SQL was changed by the LLM.</div>'
+				: '<div class="dbx-llm-sql-unchanged">SQL was <b>not</b> changed - the LLM returned the same statement.</div>';
+			html += sqlBlock.html;
 		}
 		if (result.explanation)
 		{

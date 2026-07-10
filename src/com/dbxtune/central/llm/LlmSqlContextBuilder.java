@@ -101,12 +101,20 @@ public class LlmSqlContextBuilder
 
 	/**
 	 * Build a plain {@code <a href='...'>} link to the standalone {@code /llm-advice} page,
-	 * with {@code sql}/{@code ddlContext}/{@code dbVendor} pre-filled as URL parameters.
+	 * with {@code sql}/{@code ddlContext}/{@code dbVendor} pre-filled - as a URL <b>fragment</b>
+	 * ({@code #...}), not a query string ({@code ?...}).
 	 * <p>
 	 * Used from the Daily Summary Report, where the generated HTML can end up being sent as an
 	 * e-mail - so, unlike the Active Statements dialog and the Showplan viewer (which call
 	 * {@code dbxLlmAdvice.open(...)} directly via inline JavaScript), this needs to be a plain
 	 * hyperlink that opens a real page rather than JavaScript embedded in the report.
+	 * <p>
+	 * The fragment is never sent to the server (browsers strip everything after {@code #} before
+	 * issuing the HTTP request), so it isn't subject to Jetty's/any reverse proxy's URI-length
+	 * limit the way a query string would be - real DDL context + a large SQL statement can easily
+	 * exceed a typical ~8KB server limit and trigger "413/414 URI Too Long". {@code /llm-advice}
+	 * already reads all of this purely client-side (see {@code LlmAdviceServlet}), so moving it
+	 * from {@code location.search} to {@code location.hash} is the only change needed there.
 	 *
 	 * @param dbxCentralBaseUrl base URL of this DbxCentral instance, e.g. from {@code getReportingInstance().getDbxCentralPublicBaseUrl()}
 	 * @param sql               the SQL statement
@@ -133,7 +141,9 @@ public class LlmSqlContextBuilder
 		if (StringUtil.isNullOrBlank(sql))
 			return "";
 
-		HtmlQueryString qs = new HtmlQueryString(StringUtil.nullToValue(dbxCentralBaseUrl, "") + "/llm-advice");
+		// No base URL set on the HtmlQueryString itself - getQuery() below gives just the encoded
+		// "key=val&key=val" part, which we then attach as a fragment (#), not a query string (?).
+		HtmlQueryString qs = new HtmlQueryString();
 		qs.add("sql", sql);
 		qs.add("dbVendor", dbVendor);
 		if (StringUtil.hasValue(ddlContext))
@@ -141,6 +151,7 @@ public class LlmSqlContextBuilder
 		if (StringUtil.hasValue(plan))
 			qs.add("plan", plan);
 
-		return "<a href='" + qs + "' target='_blank'>Get LLM Optimization Advice</a>";
+		String href = StringUtil.nullToValue(dbxCentralBaseUrl, "") + "/llm-advice#" + qs.getQuery();
+		return "<a href='" + href + "' target='_blank'>Get LLM Optimization Advice</a>";
 	}
 }
