@@ -51,6 +51,13 @@ import com.dbxtune.utils.StringUtil;
  * Daily Summary Report, at generation time) should call each vendor's
  * {@code getTableInfoAsPlainText(...)} instance method directly instead of
  * this class, to avoid a second DDL Storage lookup.
+ * <p>
+ * Both methods here gate on {@link LlmClientRegistry#isFeatureEnabledViaDbxCentral()}, not the
+ * plain {@link LlmClientRegistry#isFeatureEnabled()} - Daily Summary Report generation (the other
+ * caller of {@link #buildDdlContext}/{@link #buildAdviceLinkHtml}, besides {@code LlmContextServlet})
+ * can run inside a Collector process during rollover, which has its own separate config file and
+ * would otherwise never see {@code DbxCentral.llm.enabled} unless that property were duplicated into
+ * every Collector's config - see {@link LlmClientRegistry#isFeatureEnabledViaDbxCentral()}'s javadoc.
  */
 public class LlmSqlContextBuilder
 {
@@ -68,7 +75,7 @@ public class LlmSqlContextBuilder
 	 */
 	public static String buildDdlContext(DbxConnection conn, String dbname, String sqlText, String dbVendor)
 	{
-		if ( ! LlmClientRegistry.isFeatureEnabled() )
+		if ( ! LlmClientRegistry.isFeatureEnabledViaDbxCentral() )
 			return "";
 
 		if (conn == null || StringUtil.isNullOrBlank(sqlText) || StringUtil.isNullOrBlank(dbVendor))
@@ -135,7 +142,7 @@ public class LlmSqlContextBuilder
 	 */
 	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor)
 	{
-		if ( ! LlmClientRegistry.isFeatureEnabled() )
+		if ( ! LlmClientRegistry.isFeatureEnabledViaDbxCentral() )
 			return "";
 
 		if (StringUtil.isNullOrBlank(sql))

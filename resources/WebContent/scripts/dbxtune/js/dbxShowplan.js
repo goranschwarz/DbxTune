@@ -1,5 +1,5 @@
 /**
- * dbxShowplan.js — injectable Postgres + SQL Server showplan dialogs
+ * dbxShowplan.js — injectable Postgres + SQL Server + ASE showplan dialogs
  *
  * Self-contained: injects its own modal HTML into document.body on DOM ready.
  * No changes to graph.html required beyond adding the <script> tag.
@@ -15,6 +15,8 @@
  *   ssShowplanCopySql(), ssShowplanCopyXml(), ssShowplanSaveXmlToFile(),
  *   ssShowplanOpenExternal(), ssShowplanGetParameters(),
  *   ssShowplanSetParametersInSql()
+ *   showAseShowplanDialog(), aseShowplanFormatSql(), aseShowplanCopySql(),
+ *   aseShowplanCopyPlan(), aseShowplanRefreshLlmAdvice()
  *   submit_post_via_hidden_form()
  */
 (function () {
@@ -177,17 +179,21 @@
 	function _injectHtml() {
 		if (document.getElementById('dbx-view-pgShowplan-dialog')) return;
 
-		// Scoped CSS for the Table Information section inside the showplan dialog.
-		// Uses #dbx-ssp-tableinfo-body as scope so the DSR stylesheet is not affected.
+		// Scoped CSS for the Table Information section inside the showplan dialog(s).
+		// Scoped to both #dbx-ssp-tableinfo-body (SQL Server dialog) and #dbx-asp-tableinfo-body
+		// (ASE dialog) so the DSR stylesheet elsewhere on the page is not affected. Both dialogs'
+		// Table Information HTML comes from the same server-side table.qs-tableinfo/
+		// table.dsr-sub-table-other-info markup (AseAbstract/SqlServerAbstract.getTableInfoAsHtmlTable),
+		// so one shared stylesheet covers both.
 		var style = document.createElement('style');
 		style.textContent = [
 			/* ── outer wrapper table ── */
-			'#dbx-ssp-tableinfo-body table.qs-tableinfo {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.qs-tableinfo {',
 			'  border-collapse: collapse;',
 			'  width: 100%;',
 			'  font-size: 0.8em;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.qs-tableinfo > thead > tr > th {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.qs-tableinfo > thead > tr > th {',
 			'  background: #4a6fa5;',
 			'  color: #fff;',
 			'  font-weight: 600;',
@@ -195,53 +201,53 @@
 			'  border: 1px solid #3a5f95;',
 			'  white-space: nowrap;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.qs-tableinfo > tbody > tr > td {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.qs-tableinfo > tbody > tr > td {',
 			'  border: 1px solid #c8c8c8;',
 			'  padding: 4px 6px;',
 			'  vertical-align: top;',
 			'  white-space: nowrap;',
 			'}',
 			/* ── key/value table inside "Table Info" cell ── */
-			'#dbx-ssp-tableinfo-body table.dsr-sub-table-other-info {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.dsr-sub-table-other-info {',
 			'  border-collapse: collapse;',
 			'  width: 100%;',
 			'  font-size: 1em;',  /* already inside 0.8em context */
 			'}',
-			'#dbx-ssp-tableinfo-body table.dsr-sub-table-other-info td {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.dsr-sub-table-other-info td {',
 			'  border: 1px solid #d0d0d0;',
 			'  padding: 2px 6px;',
 			'  vertical-align: top;',
 			'  white-space: nowrap;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.dsr-sub-table-other-info td:first-child {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.dsr-sub-table-other-info td:first-child {',
 			'  white-space: nowrap;',
 			'  min-width: 90px;',
 			'}',
 			/* ── nested index table inside "Index Info" cell ── */
-			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.qs-tableinfo table.qs-tableinfo {',
 			'  width: 100%;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo > thead > tr > th {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.qs-tableinfo table.qs-tableinfo > thead > tr > th {',
 			'  background: #5a7fa8;',
 			'  font-size: 0.9em;',
 			'  padding: 2px 5px;',
 			'  white-space: nowrap;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo > tbody > tr > td {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.qs-tableinfo table.qs-tableinfo > tbody > tr > td {',
 			'  border: 1px solid #d0d0d0;',
 			'  padding: 2px 5px;',
 			'  white-space: nowrap;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.qs-tableinfo table.qs-tableinfo > tbody > tr:nth-child(even) > td {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.qs-tableinfo table.qs-tableinfo > tbody > tr:nth-child(even) > td {',
 			'  background: #f4f7fb;',
 			'}',
 			/* ── missing index table ── */
-			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.dsr-missing-index-table {',
 			'  border-collapse: collapse;',
 			'  width: 100%;',
 			'  font-size: 0.8em;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table > thead > tr > th {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.dsr-missing-index-table > thead > tr > th {',
 			'  background: #a05a00;',
 			'  color: #fff;',
 			'  font-weight: 600;',
@@ -249,17 +255,17 @@
 			'  border: 1px solid #804800;',
 			'  white-space: nowrap;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table > tbody > tr > td {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.dsr-missing-index-table > tbody > tr > td {',
 			'  border: 1px solid #c8c8c8;',
 			'  padding: 4px 6px;',
 			'  vertical-align: top;',
 			'  white-space: nowrap;',
 			'}',
-			'#dbx-ssp-tableinfo-body table.dsr-missing-index-table > tbody > tr:nth-child(even) > td {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) table.dsr-missing-index-table > tbody > tr:nth-child(even) > td {',
 			'  background: #fdf5ec;',
 			'}',
 			/* ── tooltip-div trigger links (data-toggle="modal" data-target="#dbx-view-sqltext-dialog") ── */
-			'#dbx-ssp-tableinfo-body [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"] {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"] {',
 			'  cursor: pointer;',
 			'  color: #1a56a0;',
 			'  text-decoration: underline;',
@@ -268,15 +274,15 @@
 			'  border-radius: 3px;',
 			'  padding: 0 2px;',
 			'}',
-			'#dbx-ssp-tableinfo-body [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"]:hover {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"]:hover {',
 			'  background: #e8f0fb;',
 			'  color: #0a3a7a;',
 			'}',
 			/* ── DSR-style hover tooltip (shows full text on hover, same as Daily Summary Report) ── */
-			'#dbx-ssp-tableinfo-body [data-tooltip] {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) [data-tooltip] {',
 			'  position: relative;',
 			'}',
-			'#dbx-ssp-tableinfo-body [data-tooltip]:hover::before {',
+			':is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) [data-tooltip]:hover::before {',
 			'  content: attr(data-tooltip);',
 			'  position: absolute;',
 			'  z-index: 1200;',
@@ -446,6 +452,87 @@
 			"				<button type='button' class='btn btn-outline-secondary' onclick='ssShowplanCopyXml();'>Copy XML</button>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='ssShowplanSaveXmlToFile();'>Save XML File</button>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='ssShowplanOpenExternal();'>Open in External Window</button>",
+			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
+			"				<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
+			"			</div>",
+			"		</div>",
+			"	</div>",
+			"</div>",
+
+			// ---- ASE (Sybase/SAP Adaptive Server Enterprise) Showplan dialog ----
+			"<div class='modal fade' id='dbx-view-aseShowplan-dialog' role='dialog' aria-labelledby='dbx-view-aseShowplan-dialog' aria-hidden='true'>",
+			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
+			"		<div class='modal-content'>",
+			"			<div class='modal-header'>",
+			"				<h5 class='modal-title'><b>ASE Showplan</b>: <span id='dbx-view-aseShowplan-objectName'></span></h5>",
+			"				<button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>",
+			"			</div>",
+			"			<div class='modal-body' style='overflow-x:auto;padding:8px 12px;'>",
+			"				<div class='scroll-tree' style='width:3000px;'>",
+
+			"				<!-- ▶ Graphical Plan -->",
+			"				<details open id='dbx-asp-sect-graph' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"					<summary id='dbx-view-aseShowplan-plan-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan</summary>",
+			"					<div style='padding:4px 8px 10px 8px;'>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanRedraw();'>&#8635; Redraw</button>",
+			"						<button type='button' id='dbx-view-aseShowplan-orientationBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleOrientation();'>&#8646; Left-to-Right</button>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanEnableZoom();'>&#128269; Enable Zoom</button>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanResetZoom();'>&#8634; Reset Zoom</button>",
+			"						<div id='dbx-view-aseShowplan-graphFallback' class='ase-plan-fallback' style='display:none;'>Could not parse this plan into a diagram &mdash; see \"Raw Plan Text\" below.</div>",
+			"						<div id='dbx-view-aseShowplan-graphContent' class='dbx-view-aseShowplan-graphContent' style='margin-top:6px;'></div>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ Raw Plan Text -->",
+			"				<details id='dbx-asp-sect-plan' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; Raw Plan Text</summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			"						<div style='position:relative;'>",
+			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-aseShowplan-planContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:#f0f0f0;border:1px solid #bbb;border-radius:3px;opacity:0.85;'>Copy</button>",
+			"							<pre><code id='dbx-view-aseShowplan-planContent' class='line-numbers dbx-view-sqltext-content'></code></pre>",
+			"						</div>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ SQL Text -->",
+			"				<details open id='dbx-asp-sect-sql' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; SQL Text</summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanFormatSql();'>Format SQL</button>",
+			"						<div style='position:relative;'>",
+			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-aseShowplan-sqlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:#f0f0f0;border:1px solid #bbb;border-radius:3px;opacity:0.85;'>Copy</button>",
+			"							<pre><code id='dbx-view-aseShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
+			"						</div>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
+			"				<details id='dbx-asp-sect-tableinfo' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
+			"					<div id='dbx-asp-tableinfo-body' style='padding:4px 8px 8px 8px;'>",
+			"						<span style='color:#888;font-size:0.85em;'>&#9203; Loading table information…</span>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
+			"				<details id='dbx-asp-sect-llm' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice</summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			// This button lives OUTSIDE #dbx-asp-llm-body on purpose: dbxLlmAdvice.js's target-mode
+			// rendering replaces the whole innerHTML of its target element, so anything inside
+			// dbx-asp-llm-body itself would be wiped out on every (re)load.
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
+			"						<div id='dbx-asp-llm-body'>",
+			"							<span style='color:#888;font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
+			"						</div>",
+			"					</div>",
+			"				</details>",
+
+			"				</div>",
+			"			</div>",
+			"			<div class='modal-footer'>",
+			"				<button type='button' class='btn btn-outline-secondary' onclick='aseShowplanCopySql();'>Copy SQL</button>",
+			"				<button type='button' class='btn btn-outline-secondary' onclick='aseShowplanCopyPlan();'>Copy Plan</button>",
 			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
 			"				<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
 			"			</div>",
@@ -743,6 +830,237 @@
 		document.body.removeChild(ta);
 	};
 
+	// -------------------------------------------------------------------------
+	// ASE (Sybase/SAP Adaptive Server Enterprise) Showplan dialog
+	// -------------------------------------------------------------------------
+	var _aseShowplanZoom = undefined;
+	var _aseShowplanLastPlanText = undefined;
+	var _aseShowplanLastIsXml = undefined;
+	var _aseShowplanHorizontal = false;
+	try { _aseShowplanHorizontal = localStorage.getItem('dbxtune_aseShowplan_horizontal') === 'true'; } catch (ex) {}
+
+	window.aseShowplanEnableZoom = function () {
+		if (_aseShowplanZoom !== undefined) return;
+		var elem = document.getElementById('dbx-view-aseShowplan-graphContent');
+		if (!elem) return;
+		_aseShowplanZoom = Panzoom(elem, { maxScale: 1, minScale: 0.01 });
+		elem.addEventListener('wheel', _aseShowplanZoom.zoomWithWheel);
+	};
+
+	window.aseShowplanResetZoom = function () {
+		if (_aseShowplanZoom !== undefined) _aseShowplanZoom.reset();
+	};
+
+	window.aseShowplanRedraw = function () {
+		_aseShowplanRenderGraphicalPlan(_aseShowplanLastPlanText, _aseShowplanLastIsXml);
+	};
+
+	window.aseShowplanToggleOrientation = function () {
+		_aseShowplanHorizontal = !_aseShowplanHorizontal;
+		try { localStorage.setItem('dbxtune_aseShowplan_horizontal', _aseShowplanHorizontal ? 'true' : 'false'); } catch (ex) {}
+		var btn = document.getElementById('dbx-view-aseShowplan-orientationBtn');
+		if (btn) btn.innerHTML = _aseShowplanHorizontal ? '&#8646; Top-to-Bottom' : '&#8646; Left-to-Right';
+		_aseShowplanRenderGraphicalPlan(_aseShowplanLastPlanText, _aseShowplanLastIsXml);
+	};
+
+	/**
+	 * Parses planText (via AseShowplan.parseXml/parseText, see dbxShowplanAse.js) and renders the
+	 * graphical tree into #dbx-view-aseShowplan-graphContent. Fails soft: on parse failure/exception
+	 * the graphical section is hidden and a fallback notice points at the Raw Plan Text section,
+	 * which is always populated independently of this function.
+	 */
+	function _aseShowplanRenderGraphicalPlan(planText, isXml) {
+		_aseShowplanLastPlanText = planText;
+		_aseShowplanLastIsXml    = isXml;
+
+		var graphEl     = document.getElementById('dbx-view-aseShowplan-graphContent');
+		var fallbackEl  = document.getElementById('dbx-view-aseShowplan-graphFallback');
+		var orientBtn   = document.getElementById('dbx-view-aseShowplan-orientationBtn');
+		if (!graphEl) return;
+		if (orientBtn) orientBtn.innerHTML = _aseShowplanHorizontal ? '&#8646; Top-to-Bottom' : '&#8646; Left-to-Right';
+
+		// Reset any Panzoom transform from a previous plan before re-rendering.
+		if (_aseShowplanZoom !== undefined) { try { _aseShowplanZoom.reset(); } catch (ex) {} }
+
+		var parsed = null;
+		try {
+			if (typeof AseShowplan === 'undefined') {
+				parsed = null;
+			} else if (isXml) {
+				parsed = AseShowplan.parseXml(planText);
+			} else {
+				parsed = AseShowplan.parseText(planText);
+			}
+		} catch (ex) {
+			parsed = null;
+		}
+
+		if (parsed) {
+			try {
+				AseShowplan.render(graphEl, parsed, { horizontal: _aseShowplanHorizontal });
+				graphEl.style.display = '';
+				if (fallbackEl) fallbackEl.style.display = 'none';
+				return;
+			} catch (ex) {
+				parsed = null;
+			}
+		}
+
+		// Parse (or render) failed - hide the graphical section, point at the raw text instead.
+		$(graphEl).empty();
+		graphEl.style.display = 'none';
+		if (fallbackEl) fallbackEl.style.display = '';
+	}
+
+	window.aseShowplanFormatSql = function () {
+		var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true };
+		var sqlText = $('#dbx-view-aseShowplan-sqlContent').text();
+		try {
+			$('#dbx-view-aseShowplan-sqlContent').text(sqlFormatter.format(sqlText, formatOptions));
+			Prism.highlightAll();
+		} catch (err) { alert(err); }
+	};
+
+	window.aseShowplanCopySql = function () {
+		var txt = $('#dbx-view-aseShowplan-sqlContent').text();
+		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
+		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
+		document.body.removeChild(ta);
+	};
+
+	window.aseShowplanCopyPlan = function () {
+		var txt = $('#dbx-view-aseShowplan-planContent').text();
+		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
+		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
+		document.body.removeChild(ta);
+	};
+
+	/**
+	 * (Re)loads the LLM Optimization Advice section for whatever plan/SQL is currently shown in the
+	 * ASE dialog. Mirrors _ssShowplanLoadLlmAdvice - see that function's javadoc-style comment for
+	 * why this is called from three places (first-expand toggle, manual refresh, dialog (re)open).
+	 */
+	function _aseShowplanLoadLlmAdvice(body) {
+		body.setAttribute('data-loaded', 'true');
+
+		if (typeof dbxLlmAdvice === 'undefined') {
+			body.innerHTML = '<em style="color:#888;">dbxLlmAdvice.js is not loaded on this page.</em>';
+			return;
+		}
+
+		// Reuse the same srv/dbname/sqltext/plan context stored on the Table Information section
+		var tiBody  = document.getElementById('dbx-asp-tableinfo-body');
+		var srv     = tiBody ? (tiBody.getAttribute('data-srv')     || '') : '';
+		var dbname  = tiBody ? (tiBody.getAttribute('data-dbname')  || '') : '';
+		var sqlText = tiBody ? (tiBody.getAttribute('data-sqltext') || '') : '';
+		var planText = $('#dbx-view-aseShowplan-planContent').text();
+
+		if (!sqlText) {
+			body.innerHTML = '<em style="color:#888;">No SQL text is available for this plan.</em>';
+			return;
+		}
+
+		// No server context — still worth asking, just without DDL/index/stats enrichment
+		if (!srv || !dbname) {
+			dbxLlmAdvice.open({ sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', target: body });
+			return;
+		}
+
+		body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+		_extractTablesAsync(sqlText, function(tables) {
+			if (!tables.length) {
+				dbxLlmAdvice.open({ sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', target: body });
+				return;
+			}
+
+			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Looking up table DDL/index/stats…</span>';
+			$.ajax({
+				url:      '/api/cc/mgt/table-info',
+				data:     { srv: srv, dbVendor: 'Adaptive Server Enterprise', format: 'text', dbname: dbname, tables: tables.join(',') },
+				dataType: 'json',
+				success:  function(r) {
+					dbxLlmAdvice.open({ sql: sqlText, plan: planText, ddlContext: (r && r.text) || '', dbVendor: 'Adaptive Server Enterprise', target: body });
+				},
+				error:    function() {
+					// DDL lookup failed - still show advice using SQL + plan alone
+					dbxLlmAdvice.open({ sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', target: body });
+				}
+			});
+		});
+	}
+
+	// Manual re-run - ignores the data-loaded guard (unlike the toggle handler) since this is an
+	// explicit user action.
+	window.aseShowplanRefreshLlmAdvice = function() {
+		var body = document.getElementById('dbx-asp-llm-body');
+		if (body) _aseShowplanLoadLlmAdvice(body);
+	};
+
+	/**
+	 * Open the ASE Showplan dialog programmatically. Mirrors showSqlServerShowplanDialog - see that
+	 * function's comment for the relatedTarget vs. programmatic-call distinction.
+	 *
+	 * @param {string} planText     — plan text (sp_showplan) or XML (show_cached_plan_in_xml)
+	 * @param {string} [sqlText]    — SQL text to display on the SQL Text section
+	 * @param {boolean} [isXml]     — true if planText is XML (CachedPlanInXml), false for plain ShowPlanText
+	 * @param {string} [objectName] — optional label shown in the header
+	 * @param {Object} [meta]       — optional metadata: { srv, dbname } - used for lazy-loading Table Information / LLM Advice
+	 */
+	window.showAseShowplanDialog = function(planText, sqlText, isXml, objectName, meta) {
+		var $dlg = $('#dbx-view-aseShowplan-dialog');
+		if (!$dlg.length) {
+			_injectHtml();
+			_initHandlers();
+			setTimeout(function() { window.showAseShowplanDialog(planText, sqlText, isXml, objectName, meta); }, 50);
+			return;
+		}
+		if (!planText) return;
+
+		$('#dbx-view-aseShowplan-objectName', $dlg).text(objectName || '');
+		$('#dbx-view-aseShowplan-plan-summary', $dlg).html(isXml ? '&#128202; Graphical Plan (Cached Plan XML)' : '&#128202; Graphical Plan (sp_showplan)');
+
+		var $planEl = $('#dbx-view-aseShowplan-planContent', $dlg);
+		$planEl.text(isXml ? formatXml(planText) : planText);
+		$planEl.attr('class', isXml ? 'language-xml line-numbers dbx-view-sqltext-content' : 'line-numbers dbx-view-sqltext-content');
+		$('#dbx-view-aseShowplan-sqlContent', $dlg).text(sqlText || '');
+		_aseShowplanRenderGraphicalPlan(planText, isXml);
+
+		// Reset Table Information section — store context for lazy loading on first expand
+		var tiSect = document.getElementById('dbx-asp-sect-tableinfo');
+		var tiBody = document.getElementById('dbx-asp-tableinfo-body');
+		if (tiSect && tiBody) {
+			var tiSrv = (meta && meta.srv)    ? meta.srv    : '';
+			var tiDb  = (meta && meta.dbname) ? meta.dbname : '';
+			tiBody.setAttribute('data-srv',     tiSrv);
+			tiBody.setAttribute('data-dbname',  tiDb);
+			tiBody.setAttribute('data-sqltext', sqlText || '');
+			tiBody.setAttribute('data-loaded',  'false');
+			tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+			tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
+			tiSect.removeAttribute('open');
+		}
+
+		// Reset LLM Optimization Advice section — lazy-loaded on next expand, same as Table Information
+		var llmSect = document.getElementById('dbx-asp-sect-llm');
+		var llmBody = document.getElementById('dbx-asp-llm-body');
+		if (llmSect && llmBody) {
+			llmBody.setAttribute('data-loaded', 'false');
+			llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+			llmSect.removeAttribute('open');
+		}
+
+		function _drawAndHighlight() {
+			if (typeof Prism !== 'undefined') Prism.highlightAll();
+		}
+
+		if ($dlg.hasClass('show')) {
+			_drawAndHighlight();
+		} else {
+			$dlg.one('shown.bs.modal', _drawAndHighlight);
+			$dlg.modal('show');
+		}
+	};
+
 	window.ssShowplanGetParameters = function () {
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
 		var xmlDoc  = $.parseXML(xmlText);
@@ -968,6 +1286,181 @@
 			if (typeof Prism !== 'undefined') Prism.highlightAll();
 			ssShowplanRunAnalysis(data.tooltip);
 		});
+
+		// ASE: destroy nothing special on close - just clear content so a stale plan never flashes
+		// before the next open populates it.
+		$('#dbx-view-aseShowplan-dialog').on('hidden.bs.modal', function () {
+			var planEl = document.getElementById('dbx-view-aseShowplan-planContent');
+			if (planEl) planEl.textContent = '';
+			var graphEl = document.getElementById('dbx-view-aseShowplan-graphContent');
+			if (graphEl) $(graphEl).empty();
+		});
+
+		// ASE: set fields before modal becomes visible (data-toggle="modal" path)
+		$('#dbx-view-aseShowplan-dialog').on('show.bs.modal', function (e) {
+			// When opened programmatically (showAseShowplanDialog) relatedTarget is undefined —
+			// fields are already populated there, so skip (mirrors the SQL Server dialog above).
+			if (!e.relatedTarget) return;
+			var data = $(e.relatedTarget).data();
+			var isXml = data.planisxml === true || data.planisxml === 'true';
+
+			$('#dbx-view-aseShowplan-objectName', this).text(data.objectname || '');
+			$('#dbx-view-aseShowplan-plan-summary', this).html(isXml ? '&#128202; Graphical Plan (Cached Plan XML)' : '&#128202; Graphical Plan (sp_showplan)');
+
+			var $planEl = $('#dbx-view-aseShowplan-planContent', this);
+			$planEl.text(isXml ? formatXml(data.plan) : data.plan);
+			$planEl.attr('class', isXml ? 'language-xml line-numbers dbx-view-sqltext-content' : 'line-numbers dbx-view-sqltext-content');
+			$('#dbx-view-aseShowplan-sqlContent', this).text(data.sqltext || '');
+			_aseShowplanRenderGraphicalPlan(data.plan, isXml);
+
+			var tiSect = document.getElementById('dbx-asp-sect-tableinfo');
+			var tiBody = document.getElementById('dbx-asp-tableinfo-body');
+			if (tiSect && tiBody) {
+				var tiSrv = data.srv    || '';
+				var tiDb  = data.dbname || '';
+				tiBody.setAttribute('data-srv',     tiSrv);
+				tiBody.setAttribute('data-dbname',  tiDb);
+				tiBody.setAttribute('data-sqltext', data.sqltext || '');
+				tiBody.setAttribute('data-loaded',  'false');
+				tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+				tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
+				tiSect.removeAttribute('open');
+			}
+
+			var llmSect = document.getElementById('dbx-asp-sect-llm');
+			var llmBody = document.getElementById('dbx-asp-llm-body');
+			if (llmSect && llmBody) {
+				llmBody.setAttribute('data-loaded', 'false');
+				llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+				llmSect.removeAttribute('open');
+			}
+		});
+
+		// ASE: draggable/resizable, position/size persisted per-screen-resolution - same pattern as
+		// the SQL Server dialog above, separate localStorage key prefix so the two don't collide.
+		$('#dbx-view-aseShowplan-dialog').on('shown.bs.modal', function (e) {
+			var $modal = $(this);
+			var $dlg   = $modal.find('.modal-dialog');
+			var $cont  = $modal.find('.modal-content');
+
+			var _scrPfx = screen.width + 'x' + screen.height + '_';
+			var savedW = null, savedH = null, savedL = null, savedT = null;
+			try {
+				savedW = localStorage.getItem(_scrPfx + 'aseShowplan-dlg-width');
+				savedH = localStorage.getItem(_scrPfx + 'aseShowplan-dlg-height');
+				savedL = localStorage.getItem(_scrPfx + 'aseShowplan-dlg-left');
+				savedT = localStorage.getItem(_scrPfx + 'aseShowplan-dlg-top');
+			} catch(ex) {}
+			var w = savedW ? parseInt(savedW) : Math.round(window.innerWidth  * 0.80);
+			var h = savedH ? parseInt(savedH) : Math.round(window.innerHeight * 0.80);
+			$cont.css({ width: w + 'px', height: h + 'px' });
+
+			$dlg.removeClass('modal-dialog-centered');
+			$dlg.css({ margin: '0', 'max-width': 'none', position: 'absolute' });
+			$modal.css({ overflow: 'hidden' });
+
+			var l = savedL ? parseInt(savedL) : Math.round((window.innerWidth  - w) / 2);
+			var t = savedT ? parseInt(savedT) : Math.round((window.innerHeight - h) / 2);
+			l = Math.max(0, Math.min(l, window.innerWidth  - 120));
+			t = Math.max(0, Math.min(t, window.innerHeight -  60));
+			$dlg.css({ left: l + 'px', top: t + 'px' });
+
+			if ($.fn.draggable && !$dlg.hasClass('ui-draggable')) {
+				$dlg.draggable({
+					handle: '.modal-header',
+					stop: function(ev, ui) {
+						try {
+							localStorage.setItem(_scrPfx + 'aseShowplan-dlg-left', Math.round(ui.position.left));
+							localStorage.setItem(_scrPfx + 'aseShowplan-dlg-top',  Math.round(ui.position.top));
+						} catch(ex) {}
+					}
+				});
+			}
+
+			if ($.fn.resizable && !$cont.hasClass('ui-resizable')) {
+				$cont.resizable({
+					handles:   'all',
+					minWidth:  500,
+					minHeight: 300,
+					stop: function(ev, ui) {
+						try {
+							localStorage.setItem(_scrPfx + 'aseShowplan-dlg-width',  Math.round(ui.size.width));
+							localStorage.setItem(_scrPfx + 'aseShowplan-dlg-height', Math.round(ui.size.height));
+						} catch(ex) {}
+					}
+				});
+			}
+
+			if (typeof Prism !== 'undefined') Prism.highlightAll();
+		});
+
+		// ASE Table Information: lazy-load on first expand
+		document.getElementById('dbx-asp-sect-tableinfo').addEventListener('toggle', function() {
+			if (!this.open) return;                          // closing — do nothing
+			var body = document.getElementById('dbx-asp-tableinfo-body');
+			if (!body || body.getAttribute('data-loaded') === 'true') return;  // already loaded
+
+			var srv     = body.getAttribute('data-srv')     || '';
+			var dbname  = body.getAttribute('data-dbname')  || '';
+			var sqlText = body.getAttribute('data-sqltext') || '';
+
+			if (!srv || !dbname) {
+				body.innerHTML = '<em style="color:#888;">Table information is not available — no server context.</em>';
+				body.setAttribute('data-loaded', 'true');
+				return;
+			}
+
+			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+
+			_extractTablesAsync(sqlText, function(tables) {
+				if (!tables.length) {
+					body.setAttribute('data-loaded', 'true');
+					body.innerHTML = '<em style="color:#888;">No tables could be parsed from the SQL text.</em>';
+					return;
+				}
+
+				body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+
+				$.ajax({
+					url:      '/api/cc/mgt/table-info',
+					data:     { srv: srv, dbVendor: 'Adaptive Server Enterprise', dbname: dbname, tables: tables.join(',') },
+					dataType: 'json',
+					success:  function(r) {
+						body.setAttribute('data-loaded', 'true');
+						if (r && r.html) {
+							var parsedMsg = '<div style="font-size:0.8em;color:#555;margin-bottom:6px;">Tables: '
+								+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
+								+ '</div>';
+							body.innerHTML = parsedMsg + r.html;
+						} else {
+							body.innerHTML = '<em style="color:#888;">No table information found in DDL Storage.</em>';
+						}
+					},
+					error:    function(xhr) {
+						body.setAttribute('data-loaded', 'true');
+						var msg = 'HTTP ' + xhr.status;
+						try { var j = JSON.parse(xhr.responseText); msg += ': ' + (j.message || j.error || ''); } catch(e) {}
+						body.innerHTML = '<span class="text-danger">Failed to load table info: ' + msg + '</span>';
+					}
+				});
+			});
+		});
+
+		// ASE LLM Optimization Advice: lazy-load on first expand, rendered inline
+		document.getElementById('dbx-asp-sect-llm').addEventListener('toggle', function() {
+			if (!this.open) return;                           // closing — do nothing
+			var body = document.getElementById('dbx-asp-llm-body');
+			if (!body || body.getAttribute('data-loaded') === 'true') return;  // already loaded
+			_aseShowplanLoadLlmAdvice(body);
+		});
+
+		// Feature-toggle gated (DbxCentral.llm.enabled) - same rationale as the SQL Server section below.
+		if (typeof dbxLlmAdvice !== 'undefined') {
+			dbxLlmAdvice.isEnabled().then(function(enabled) {
+				var llmSect = document.getElementById('dbx-asp-sect-llm');
+				if (llmSect) llmSect.style.display = enabled ? '' : 'none';
+			});
+		}
 
 		// Text viewer dialog — populate from the clicked trigger's data-tooltip attribute
 		// (DSR generates: data-toggle="modal" data-target="#dbx-view-sqltext-dialog" data-tooltip="...")

@@ -199,6 +199,26 @@ extends ReportEntryAbstract
 
 	/**
 	 * Static convenience method — look up table/index info from DDL Storage without needing
+	 * a full report-entry instance (e.g. from a servlet context), and render it as HTML - the
+	 * same rendering the Daily Summary Report's "Table Info" section already uses. Mirrors
+	 * {@code SqlServerAbstract.getTableInfoHtml(...)} / {@code AseAbstract.getTableInfoHtml(...)}.
+	 */
+	public static String getTableInfoHtml(DbxConnection conn, String dbname, Set<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		PostgresAbstract inst = new PostgresAbstract(null)
+		{
+			@Override public boolean hasIssueToReport()       { return false; }
+			@Override public String  getSubject()             { return ""; }
+			@Override public boolean hasMinimalMessageText()  { return false; }
+			@Override public boolean hasShortMessageText()    { return false; }
+			@Override public void    writeMessageText(Writer w, IReportEntry.MessageType t) {}
+			@Override public void    create(DbxConnection c, String s, Configuration p, Configuration l) {}
+		};
+		return inst.getDbmsTableInfoAsHtmlTable(conn, dbname, tableList, includeIndexInfo, classname);
+	}
+
+	/**
+	 * Static convenience method — look up table/index info from DDL Storage without needing
 	 * a full report-entry instance (e.g. from a servlet context), and render it as plain text
 	 * (not HTML), suitable for use as LLM prompt context.
 	 */

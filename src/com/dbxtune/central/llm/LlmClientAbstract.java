@@ -117,7 +117,14 @@ implements LlmClient
 	@Override
 	public String buildPrompt(LlmOptimizeRequest request)
 	{
-		String dbVendor = StringUtil.hasValue(request.getDbVendor()) ? request.getDbVendor() : "the target database";
+		// Captured before the ASE display-name rewrite below, so buildDbmsSpecificDirections() (and
+		// any other DbUtils.isProductName(...) check added later) keeps matching against the real
+		// product name rather than the human-friendly label built from it.
+		String rawDbVendor = request.getDbVendor();
+		String dbVendor = StringUtil.hasValue(rawDbVendor) ? rawDbVendor : "the target database";
+
+		if (dbVendor.startsWith("Adaptive Server Enterprise"))
+			dbVendor = "SAP Sybase ASE (Adaptive Server Enterprise)";
 
 		StringBuilder sb = new StringBuilder();
 		sb.append("You are an expert database performance tuner for ").append(dbVendor).append(".\n\n");
@@ -130,20 +137,45 @@ implements LlmClient
 		if (StringUtil.hasValue(request.getPlan()))
 		{
 			String plan = request.getPlan();
-			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MSSQL))
+			if (DbUtils.isProductName(rawDbVendor, DbUtils.DB_PROD_NAME_MSSQL))
 				plan = SqlServerPlanXmlShrinker.shrink(plan);
+
 			sb.append("Execution plan for the statement:\n").append(plan).append("\n\n");
 		}
 
+		String dbmsDirections = buildDbmsSpecificDirections(rawDbVendor);
+		if (StringUtil.hasValue(dbmsDirections))
+			sb.append("Important ").append(dbVendor).append(" specifics to keep in mind - do not suggest anything incompatible with these:\n").append(dbmsDirections).append("\n");
+
 		sb.append("Task: Suggest how to optimize this SQL statement (rewritten SQL, and/or missing indexes, and/or other changes).\n");
 		sb.append("Respond with ONLY a single JSON object of the form: ");
-		sb.append("{\"optimized_sql\": \"<rewritten SQL, or the original SQL if no rewrite is needed>\", \"explanation\": \"<your reasoning and any index/other recommendations>\"}\n");
+		sb.append("{\"origin_sql\": \"<original SQL>\", \"optimized_sql\": \"<rewritten SQL, empty if not optimized>\", \"explanation\": \"<your reasoning and any index/other recommendations>\"}\n");
+		sb.append("Leave 'optimized_sql' empty if the statement is already fine as-is - do not echo the original SQL back into it.\n");
 		sb.append("Format the 'explanation' field's text using simple Markdown for readability: bullet lists ('- item') or numbered ");
 		sb.append("lists for multiple recommendations, **bold** for emphasis, and `backticks` around identifiers/SQL fragments. ");
 		sb.append("Keep it to plain Markdown text (no headings, tables or nested lists).\n");
 		sb.append("The overall reply must be ONLY the JSON object itself - no markdown code fences and no text outside the JSON.");
 
 		return sb.toString();
+	}
+
+	/**
+	 * Vendor-specific dialect/feature notes to steer the model away from suggesting syntax the
+	 * target DBMS doesn't actually support - an LLM's default "T-SQL" knowledge is usually shaped by
+	 * SQL Server specifically, which doesn't automatically carry over to Sybase/SAP ASE despite the
+	 * shared T-SQL lineage.
+	 *
+	 * @return bullet-point lines (each ending in \n), or {@code null} if there's nothing specific to
+	 *         add for this vendor.
+	 */
+	private String buildDbmsSpecificDirections(String dbVendor)
+	{
+		if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_SYBASE_ASE))
+		{
+			return "- This DBMS does not support CTEs (Common Table Expressions / \"WITH ... AS (...)\" syntax) - do not suggest rewrites that rely on them.\n"
+			     + "- Indexes in this DBMS cannot have INCLUDE columns - do not suggest CREATE INDEX ... INCLUDE (...).\n";
+		}
+		return null;
 	}
 
 	// -----------------------------------------------------------------------
@@ -160,6 +192,7 @@ implements LlmClient
 	{
 		String json = stripMarkdownCodeFence(answerText);
 
+		String originSql;
 		String optimizedSql;
 		String explanation;
 
@@ -167,8 +200,15 @@ implements LlmClient
 		try
 		{
 			JsonNode root = om.readTree(json);
+			originSql    = firstText(root, "origin_sql", "originSql", "original_sql");
 			optimizedSql = firstText(root, "optimized_sql", "optimizedSql");
 			explanation  = firstText(root, "explanation");
+
+			// The prompt asks the model to leave 'optimized_sql' empty (not echo the original back)
+			// when it has no rewrite to suggest - normalize blank to null so callers only ever need
+			// a single "is there a suggestion" check.
+			if (StringUtil.isNullOrBlank(optimizedSql))
+				optimizedSql = null;
 
 			if (optimizedSql == null && explanation == null)
 			{
@@ -182,11 +222,13 @@ implements LlmClient
 			// token limit mid-JSON) - degrade to showing the raw (partial) text instead of failing the
 			// whole request with an opaque JSON-parse error.
 			_logger.warn("{}: model answer was not valid JSON (likely truncated - consider raising the output token limit for this provider). answer={}", getProviderId(), answerText, ex);
+			originSql    = null;
 			optimizedSql = null;
 			explanation  = "(The model's response appears to have been cut off before finishing - try again, or increase this provider's configured output token limit.)\n\n" + answerText;
 		}
 
 		LlmOptimizeResponse response = new LlmOptimizeResponse(optimizedSql, explanation, rawResponse, getProviderId());
+		response.setOriginSql(originSql);
 		response.setPromptSent(promptSent);
 		response.setModel(getModel());
 		return response;

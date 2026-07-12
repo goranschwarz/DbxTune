@@ -563,8 +563,12 @@ extends ReportEntryAbstract
 		sb.append("<tbody> \n");
 		for (SqlServerTableInfo entry : tableInfoSet)
 		{
-			// "list-objects-only-in-current-database"
-			if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase)
+			// "list-objects-only-in-current-database" - skip this filter when currentDbname is
+			// 'tempdb': that's SQL Server's system scratch database, never where a statement's real
+			// tables live, so treating it as "current" would filter out everything actually relevant
+			// (e.g. a statement captured while the session's default database was tempdb, or one
+			// that only touches #temp tables plus real tables elsewhere).
+			if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase && ! "tempdb".equalsIgnoreCase(currentDbname))
 			{
 				if (StringUtil.hasValue(entry.getDbName()) && ! currentDbname.equalsIgnoreCase(entry.getDbName()))
 				{

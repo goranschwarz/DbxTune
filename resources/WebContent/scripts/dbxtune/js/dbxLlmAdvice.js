@@ -88,7 +88,8 @@ var dbxLlmAdvice = (function () {
 			'  padding:6px 10px; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; }' +
 			'.dbx-llm-copy-btn { margin-left:8px; font-size:0.78rem; padding:1px 8px; cursor:pointer;' +
 			'  border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
-			'.dbx-llm-copy-btn:hover { background:#e9ecef; }';
+			'.dbx-llm-copy-btn:hover { background:#e9ecef; }' +
+			'.dbx-llm-pre-compact { font-size:0.78rem; max-height:220px; overflow:auto; }';
 		document.head.appendChild(style);
 	}
 
@@ -183,10 +184,12 @@ var dbxLlmAdvice = (function () {
 	 */
 	function renderError(container, msg, opts, ddlContext, serverData)
 	{
-		var html = '<div class="dbx-llm-error">' + escapeHtml(msg) + '</div>';
+		var html = opts ? renderInputContext(opts) : '';
+		html += '<div class="dbx-llm-error">' + escapeHtml(msg) + '</div>';
 		if (opts)
 			html += renderSentDetails(opts, ddlContext, serverData && serverData.promptSent, serverData && serverData.providerId);
 		container.innerHTML = html;
+		highlightAllSqlBlocks(container);
 	}
 
 	/** Guess a reasonable sql-formatter "language" dialect from a DBMS product name. */
@@ -199,8 +202,13 @@ var dbxLlmAdvice = (function () {
 		return 'sql';
 	}
 
-	/** Render a block of SQL, pretty-printed + syntax highlighted when sql-formatter/Prism are available. */
-	function renderSqlBlock(sql, dbVendor)
+	/**
+	 * Render a block of SQL, pretty-printed + syntax highlighted when sql-formatter/Prism are available.
+	 * @param compact  when true, renders smaller and height-capped (scrollable) - for reference/input
+	 *                 material (the original SQL Text, alongside the Execution Plan) as opposed to the
+	 *                 LLM's actual answer (Suggested SQL), which stays full-size since it's the point.
+	 */
+	function renderSqlBlock(sql, dbVendor, compact)
 	{
 		var formatted = sql;
 		if (typeof window.sqlFormatter !== 'undefined' && typeof window.sqlFormatter.format === 'function')
@@ -209,14 +217,16 @@ var dbxLlmAdvice = (function () {
 			catch (e) { console.warn('dbxLlmAdvice: sqlFormatter.format() failed, showing SQL as-is: ' + e.message); }
 		}
 
+		var preClass = compact ? 'dbx-llm-pre dbx-llm-pre-compact' : 'dbx-llm-pre';
+
 		if (typeof window.Prism !== 'undefined')
 		{
 			var id = 'dbx-llm-sql-' + Math.random().toString(36).slice(2);
-			// Highlight after insertion (see renderResult) since Prism needs the element in the DOM.
-			return { html: '<pre class="dbx-llm-pre"><code id="' + id + '" class="language-sql">' + escapeHtml(formatted) + '</code></pre>', highlightId: id };
+			// Highlight after insertion (see highlightAllSqlBlocks()) since Prism needs the element in the DOM.
+			return { html: '<pre class="' + preClass + '"><code id="' + id + '" class="language-sql">' + escapeHtml(formatted) + '</code></pre>', highlightId: id };
 		}
 
-		return { html: '<pre class="dbx-llm-pre">' + escapeHtml(formatted) + '</pre>', highlightId: null };
+		return { html: '<pre class="' + preClass + '">' + escapeHtml(formatted) + '</pre>', highlightId: null };
 	}
 
 	/** Apply inline Markdown (**bold**, `code`) to already-HTML-escaped text. */
@@ -398,20 +408,68 @@ var dbxLlmAdvice = (function () {
 		return String(sql).replace(/\s+/g, ' ').trim().toLowerCase();
 	}
 
-	function renderResult(container, result, opts, ddlContext)
+	/**
+	 * The original SQL Text (and, if supplied, the Execution Plan) that was analyzed - shown
+	 * up-front, compact, on both success and error, so the reader has that context without having
+	 * to open "Show what was sent to the LLM" and pick it out of the full prompt text. Kept
+	 * noticeably smaller than the "Suggested SQL" block below it (see renderSqlBlock's compact
+	 * flag / .dbx-llm-pre-compact) since this is reference material, not the answer.
+	 */
+	function renderInputContext(opts)
 	{
 		var html = '';
 
+		if (opts.sql)
+		{
+			var sqlTextBlock = renderSqlBlock(opts.sql, opts.dbVendor, /*compact*/ true);
+			html += '<div class="dbx-llm-section-title">SQL Text:</div>' + sqlTextBlock.html;
+		}
+		if (opts.plan)
+		{
+			html += '<div class="dbx-llm-section-title">Execution Plan:</div>';
+			html += '<pre class="dbx-llm-pre dbx-llm-pre-compact">' + escapeHtml(opts.plan) + '</pre>';
+		}
+
+		return html;
+	}
+
+	/** Prism-highlight every SQL code block in container - there can now be more than one (SQL Text + Suggested SQL). */
+	function highlightAllSqlBlocks(container)
+	{
+		if (typeof window.Prism === 'undefined') return;
+		var codeEls = container.querySelectorAll('code.language-sql');
+		for (var i = 0; i < codeEls.length; i++)
+			window.Prism.highlightElement(codeEls[i]);
+	}
+
+	function renderResult(container, result, opts, ddlContext)
+	{
+		var html = renderInputContext(opts);
+
 		if (result.optimizedSql)
 		{
-			var sqlChanged = normalizeSqlForCompare(result.optimizedSql) !== normalizeSqlForCompare(opts.sql);
-			var sqlBlock   = renderSqlBlock(result.optimizedSql, opts.dbVendor);
+			// Compare against the model's own echo of the SQL it analyzed (origin_sql) when
+			// available - more accurate than opts.sql if the model reformatted it in its echo -
+			// falling back to opts.sql (what we actually sent) otherwise. Kept as a secondary check:
+			// the prompt already asks the model to leave optimized_sql empty when unchanged, this
+			// just catches the case where it returns identical SQL anyway.
+			var baselineSql = result.originSql || opts.sql;
+			var sqlChanged  = normalizeSqlForCompare(result.optimizedSql) !== normalizeSqlForCompare(baselineSql);
+			var sqlBlock    = renderSqlBlock(result.optimizedSql, opts.dbVendor);
 			html += '<div class="dbx-llm-section-title">Suggested SQL:</div>';
 			html += sqlChanged
 				? '<div class="dbx-llm-sql-changed">SQL was changed by the LLM.</div>'
 				: '<div class="dbx-llm-sql-unchanged">SQL was <b>not</b> changed - the LLM returned the same statement.</div>';
 			html += sqlBlock.html;
 		}
+		else if (result.explanation)
+		{
+			// The model is asked to leave 'optimized_sql' empty (not echo the original back) when
+			// it has no rewrite to suggest - a real, expected outcome, not a missing answer.
+			html += '<div class="dbx-llm-section-title">Suggested SQL:</div>';
+			html += '<div class="dbx-llm-sql-unchanged">No SQL changes suggested - the LLM found the statement fine as-is.</div>';
+		}
+
 		if (result.explanation)
 		{
 			// Rendered as (a small subset of) Markdown - the prompt asks the model for
@@ -426,12 +484,7 @@ var dbxLlmAdvice = (function () {
 		html += renderSentDetails(opts, ddlContext, result.promptSent, result.providerId, result.model);
 
 		container.innerHTML = html;
-
-		if (result.optimizedSql && typeof window.Prism !== 'undefined')
-		{
-			var codeEl = container.querySelector('code.language-sql');
-			if (codeEl) window.Prism.highlightElement(codeEl);
-		}
+		highlightAllSqlBlocks(container);
 	}
 
 	//--------------------------------------------------------------------------
