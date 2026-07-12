@@ -2091,6 +2091,31 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
+	function createAseQueryPlanToolTipDiv(data, rowData, srvName, isXml)
+	{
+		// creates a div that will open the rich ASE Showplan dialog (dbxShowplan.js, #dbx-view-aseShowplan-dialog) -
+		// same trigger pattern as createSqlServerQueryPlanToolTipDiv() above (data-toggle="modal", read by
+		// dbxShowplan.js's show.bs.modal handler via $(e.relatedTarget).data()).
+
+		const dataVal = data;
+		const sqlText = _activeStmtFirstNonEmpty(rowData, ACTIVE_STMT_SQL_KEYS.AseTune) || '';
+		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
+		const dbname  = rowData.hasOwnProperty('dbname') ? (rowData.dbname || '') : '';
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-toggle"     , 'modal');
+		div.setAttribute("data-target"     , '#dbx-view-aseShowplan-dialog');
+		div.setAttribute("data-objectname" , '');
+		div.setAttribute("data-plan"       , dataVal);
+		div.setAttribute("data-planisxml"  , isXml ? 'true' : 'false');
+		div.setAttribute("data-sqltext"    , sqlText);
+		div.setAttribute("data-srv"        , srv);
+		div.setAttribute("data-dbname"     , dbname);
+
+		return div;
+	}
 	function createPostgresQueryPlanToolTipDiv(data)
 	{
 		// creates a div that will open a modal-div where we can VIEW a Postgres Execution Plan (using https://github.com/dalibo/pev2?tab=readme-ov-file)
@@ -2359,9 +2384,9 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "HasMonSqlText"       && rowData.hasOwnProperty('MonSqlText')       && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.MonSqlText,      'tsql') ); }
 					if (metaData.columnName === "HasDbccSqlText"      && rowData.hasOwnProperty('DbccSqlText')      && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.DbccSqlText,     'tsql') ); }
 					if (metaData.columnName === "HasProcCallStack"    && rowData.hasOwnProperty('ProcCallStack')    && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ProcCallStack,   'text') ); }
-					if (metaData.columnName === "HasShowPlan"         && rowData.hasOwnProperty('ShowPlanText')     && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ShowPlanText,    'text') ); }
+					if (metaData.columnName === "HasShowPlan"         && rowData.hasOwnProperty('ShowPlanText')     && cellContent === true) { td.appendChild( createAseQueryPlanToolTipDiv(rowData.ShowPlanText,    rowData, srvName, false) ); }
 					if (metaData.columnName === "HasStackTrace"       && rowData.hasOwnProperty('DbccStacktrace')   && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.DbccStacktrace,  'text') ); }
-					if (metaData.columnName === "HasCachedPlanInXml"  && rowData.hasOwnProperty('CachedPlanInXml')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.CachedPlanInXml, 'xml' ) ); }
+					if (metaData.columnName === "HasCachedPlanInXml"  && rowData.hasOwnProperty('CachedPlanInXml')  && cellContent === true) { td.appendChild( createAseQueryPlanToolTipDiv(rowData.CachedPlanInXml, rowData, srvName, true ) ); }
 					if (metaData.columnName === "HasSpidLocks"        && rowData.hasOwnProperty('SpidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SpidLocks,       'Lock Table'       ) ); }
 					if (metaData.columnName === "HasBlockedSpidsInfo" && rowData.hasOwnProperty('BlockedSpidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSpidsInfo,'Blocked SPID Info') ); }
 					if (metaData.columnName === "HasLastKnownSqlText" && rowData.hasOwnProperty('LastKnownSqlText') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.LastKnownSqlText,'tsql'             ) ); }

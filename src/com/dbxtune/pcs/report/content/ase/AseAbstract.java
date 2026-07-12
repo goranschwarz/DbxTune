@@ -272,8 +272,12 @@ extends ReportEntryAbstract
 		sb.append("<tbody> \n");
 		for (AseTableInfo entry : tableInfoList)
 		{
-			// "list-objects-only-in-current-database"
-			if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase)
+			// "list-objects-only-in-current-database" - skip this filter when currentDbname is
+			// 'tempdb': that's ASE's system scratch database, never where a statement's real tables
+			// live, so treating it as "current" would filter out everything actually relevant (e.g.
+			// a statement captured while the session's default database was tempdb, or one that only
+			// touches #temp tables plus real tables elsewhere).
+			if (StringUtil.hasValue(currentDbname) && onlyShowObjectInCurrentDatabase && ! "tempdb".equalsIgnoreCase(currentDbname))
 			{
 				if (StringUtil.hasValue(entry.getDbName()) && ! currentDbname.equalsIgnoreCase(entry.getDbName()))
 				{
@@ -382,6 +386,27 @@ extends ReportEntryAbstract
 		}
 		
 		return sb.toString();
+	}
+
+	/**
+	 * Static convenience method — look up table/index info from DDL Storage without needing
+	 * a full report-entry instance (e.g. from a servlet context), and render it as HTML - the
+	 * same rendering the Daily Summary Report's "Table Info" section already uses, exposed here
+	 * for other HTML-consuming callers (e.g. the ASE Showplan dialog's "Table Information" section).
+	 * Mirrors {@code SqlServerAbstract.getTableInfoHtml(...)}.
+	 */
+	public static String getTableInfoHtml(DbxConnection conn, String dbname, Set<String> tableList, boolean includeIndexInfo, String classname)
+	{
+		AseAbstract inst = new AseAbstract(null)
+		{
+			@Override public boolean hasIssueToReport()       { return false; }
+			@Override public String  getSubject()             { return ""; }
+			@Override public boolean hasMinimalMessageText()  { return false; }
+			@Override public boolean hasShortMessageText()    { return false; }
+			@Override public void    writeMessageText(Writer w, IReportEntry.MessageType t) {}
+			@Override public void    create(DbxConnection c, String s, Configuration p, Configuration l) {}
+		};
+		return inst.getDbmsTableInfoAsHtmlTable(conn, dbname, tableList, includeIndexInfo, classname);
 	}
 
 	/**

@@ -285,6 +285,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(ProxyDdlStorageServlet.class,               "/api/cc/mgt/ddl-storage");           // Get DDL Information from the Collector instance
 		webapp.addServlet(ProxyRecordingDatabasesServlet.class,       "/api/cc/mgt/recording-databases");   // Get what PCS Databases that the Collector holds
 		webapp.addServlet(ProxyQueryStoreServlet.class,               "/api/cc/mgt/query-store");           // SQL Server: Extract/Get Query Store  Information from the Collector instance
+		webapp.addServlet(ProxyTableInfoServlet.class,                "/api/cc/mgt/table-info");            // Vendor-generic: Get Table/Index Info from DDL Storage from the Collector instance
 		webapp.addServlet(ProxyDeadlockServlet.class,                 "/api/cc/mgt/deadlock");              // SQL Server: Extract/Get Deadlock     Information from the Collector instance
 		webapp.addServlet(ProxyJobSchedulerServlet.class,             "/api/cc/mgt/job-scheduler");         // SQL Server: Extract/Get JobScheduler Information from the Collector instance
 

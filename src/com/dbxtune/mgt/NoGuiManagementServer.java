@@ -43,6 +43,7 @@ import com.dbxtune.mgt.controllers.CmNavSampleServlet;
 import com.dbxtune.mgt.controllers.DbmsConfigServlet;
 import com.dbxtune.mgt.controllers.DdlStorageServlet;
 import com.dbxtune.mgt.controllers.QueryStoreServlet;
+import com.dbxtune.mgt.controllers.TableInfoServlet;
 import com.dbxtune.mgt.controllers.RecordingDatabasesServlet;
 import com.dbxtune.mgt.controllers.DeadlockServlet;
 import com.dbxtune.mgt.controllers.JobSchedulerServlet;
@@ -258,6 +259,7 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new DbmsConfigServlet())        , "/mgt/dbms-config");
 				context.addServlet(new ServletHolder(new DdlStorageServlet())        , "/mgt/ddl-storage");
 				context.addServlet(new ServletHolder(new QueryStoreServlet())        , "/mgt/query-store");
+				context.addServlet(new ServletHolder(new TableInfoServlet())         , "/mgt/table-info");
 				context.addServlet(new ServletHolder(new RecordingDatabasesServlet()), "/mgt/recording-databases");
 				context.addServlet(new ServletHolder(new DeadlockServlet())          , "/mgt/deadlock");
 				context.addServlet(new ServletHolder(new JobSchedulerServlet())      , "/mgt/job-scheduler");

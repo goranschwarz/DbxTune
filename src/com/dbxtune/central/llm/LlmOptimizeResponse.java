@@ -23,6 +23,7 @@ package com.dbxtune.central.llm;
 /** Output of {@link LlmClient#optimize(LlmOptimizeRequest)}, serialized as the servlet's JSON response. */
 public class LlmOptimizeResponse
 {
+	private String originSql;
 	private String optimizedSql;
 	private String explanation;
 	private String rawResponse;
@@ -42,6 +43,9 @@ public class LlmOptimizeResponse
 		this.providerId   = providerId;
 	}
 
+	/** The model's own echo of the SQL it was asked to optimize - see {@code LlmClientAbstract#buildPrompt}'s JSON contract ({@code origin_sql}). Not necessarily identical to the request's SQL if the model reformatted it. */
+	public String getOriginSql()    { return originSql; }
+	/** The model's suggested rewrite, or {@code null} if it found no rewrite worth suggesting (the model is asked to leave this empty in that case, rather than echo the original back). */
 	public String getOptimizedSql() { return optimizedSql; }
 	public String getExplanation()  { return explanation; }
 	public String getRawResponse()  { return rawResponse; }
@@ -51,6 +55,7 @@ public class LlmOptimizeResponse
 	/** The specific model name used (e.g. "claude-sonnet-4-5") - shown alongside providerId. */
 	public String getModel()        { return model; }
 
+	public void setOriginSql   (String originSql)    { this.originSql    = originSql; }
 	public void setOptimizedSql(String optimizedSql) { this.optimizedSql = optimizedSql; }
 	public void setExplanation (String explanation)  { this.explanation  = explanation; }
 	public void setRawResponse (String rawResponse)  { this.rawResponse  = rawResponse; }

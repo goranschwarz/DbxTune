@@ -21,6 +21,10 @@
 package com.dbxtune.central.llm;
 
 import java.lang.invoke.MethodHandles;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -30,8 +34,11 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Singleton registry of all known {@link LlmClient} implementations.
@@ -57,6 +64,80 @@ public class LlmClientRegistry
 	public static boolean isFeatureEnabled()
 	{
 		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ENABLED, DEFAULT_ENABLED);
+	}
+
+	private static volatile boolean _remoteEnabledCache   = false;
+	private static volatile long    _remoteEnabledCacheAt = 0L;
+	private static final    long    REMOTE_ENABLED_CACHE_MS = 60_000L;
+
+	/**
+	 * Same as {@link #isFeatureEnabled()}, but for callers that might be running inside a Collector
+	 * process rather than DbxCentral itself - Daily Summary Report generation is the case in point:
+	 * it can happen either on-demand from within DbxCentral ({@code DailySummartReportServlet}) or on
+	 * schedule from within a Collector during rollover ({@code PersistWriterJdbc.createDailySummaryReport()}).
+	 * <p>
+	 * {@code DbxCentral.llm.*} properties are meant to be configured centrally, on DbxCentral - not
+	 * duplicated into every Collector's own config file. So if the LOCAL config doesn't have the
+	 * feature enabled, this asks DbxCentral itself, via the same unauthenticated {@code /api/llm/config}
+	 * endpoint the browser-side {@code dbxLlmAdvice.js} already polls (see {@code LlmConfigServlet}),
+	 * rather than requiring the property to be set again per-Collector.
+	 * <p>
+	 * Local {@code true} always wins immediately, with no remote call - this is both the fast path and
+	 * the correct one when already running inside DbxCentral itself (its own {@code /api/llm/config}
+	 * handler, and the other LLM servlets, all gate on the plain {@link #isFeatureEnabled()} before ever
+	 * reaching code that calls this method, so there's no self-call risk there). A remote check is only
+	 * attempted when local reads {@code false}, and its result is cached briefly ({@link #REMOTE_ENABLED_CACHE_MS})
+	 * since Daily Summary Report generation can call this once per top-N row - without caching, that
+	 * would mean one HTTP round-trip to DbxCentral per row. Fails closed (disabled) if DbxCentral can't
+	 * be reached, consistent with this feature defaulting to disabled until explicitly opted into.
+	 */
+	public static boolean isFeatureEnabledViaDbxCentral()
+	{
+		if (isFeatureEnabled())
+			return true;
+
+		long now = System.currentTimeMillis();
+		if (now - _remoteEnabledCacheAt < REMOTE_ENABLED_CACHE_MS)
+			return _remoteEnabledCache;
+
+		boolean remoteEnabled = fetchRemoteEnabled();
+		_remoteEnabledCache   = remoteEnabled;
+		_remoteEnabledCacheAt = now;
+		return remoteEnabled;
+	}
+
+	private static boolean fetchRemoteEnabled()
+	{
+		String baseUrl = DailySummaryReportAbstract.getDbxCentralInternalBaseUrl();
+		if (StringUtil.isNullOrBlank(baseUrl))
+			return false;
+
+		String url = baseUrl + "/api/llm/config";
+		try
+		{
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(url))
+					.timeout(Duration.ofSeconds(5))
+					.GET()
+					.build();
+
+			// Reuses the shared HttpClient LlmClientAbstract already uses to call out to LLM
+			// providers - same package, protected access, no reason for a second client instance.
+			HttpResponse<String> response = LlmClientAbstract._httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			if (response.statusCode() != 200)
+			{
+				_logger.warn("isFeatureEnabledViaDbxCentral(): {} returned HTTP {}, treating the feature as disabled.", url, response.statusCode());
+				return false;
+			}
+
+			JsonNode node = new ObjectMapper().readTree(response.body());
+			return node.path("enabled").asBoolean(false);
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("isFeatureEnabledViaDbxCentral(): could not reach {} ({}), treating the feature as disabled.", url, ex.toString());
+			return false;
+		}
 	}
 
 	public static final String  PROPKEY_DEFAULT_PROVIDER = "DbxCentral.llm.provider";
