@@ -644,6 +644,8 @@ extends HttpServlet
 			SimpleDateFormat outFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 			List<String> diffCols = new ArrayList<>();
 			List<String> pctCols  = new ArrayList<>();
+			List<String> pkCols   = new ArrayList<>();
+			Map<String, String> pkRewrite = new LinkedHashMap<>();
 			List<String> tooltips = new ArrayList<>(columns.size());
 			CountersModel cmMeta  = null;
 			if (CounterController.hasInstance())
@@ -689,6 +691,25 @@ extends HttpServlet
 					{
 						if (diffSet.contains(col)) diffCols.add(col);
 						if (pctSet.contains(col))  pctCols.add(col);
+					}
+
+					// --- Primary Key columns (used by the UI to show PK values in the row tooltip) ---
+					Set<String> pkSet = new HashSet<>();
+					if (cmMeta.getPk() != null)
+						for (String p : cmMeta.getPk()) pkSet.add(p);
+					for (String col : columns)
+						if (pkSet.contains(col)) pkCols.add(col);
+
+					// --- PK rewrite: raw PK column -> friendlier column already present in the
+					// row (e.g. DBID -> DBName), so the UI can show readable names in the tooltip.
+					Map<String, String> rewriteCols = null;
+					try { rewriteCols = cmMeta.getPkRewriteColumns(); } catch (Exception ignored) {}
+					if (rewriteCols != null)
+					{
+						Set<String> colSet = new HashSet<>(columns);
+						for (Map.Entry<String, String> e : rewriteCols.entrySet())
+							if (pkSet.contains(e.getKey()) && colSet.contains(e.getValue()))
+								pkRewrite.put(e.getKey(), e.getValue());
 					}
 
 					// --- Tooltips ---
@@ -765,6 +786,8 @@ extends HttpServlet
 			root.put("rowCount",      rows.size());
 			root.put("diffColumns",   diffCols);
 			root.put("pctColumns",    pctCols);
+			root.put("pkColumns",     pkCols);
+			root.put("pkRewrite",     pkRewrite);
 			root.put("isNumeric",     colTypes);
 			root.put("tooltips",      tooltips);
 			root.put("columns",       columns);

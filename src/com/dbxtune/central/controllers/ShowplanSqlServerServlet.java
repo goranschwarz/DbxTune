@@ -33,6 +33,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.controllers.HtmlStatic.PageSection;
 import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.utils.HtmlUtils;
 import com.dbxtune.utils.StringUtil;
@@ -47,7 +48,55 @@ extends HttpServlet
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
-		resp.sendRedirect(req.getContextPath() + "/showplan/sqlserver.html");
+		resp.setContentType("text/html; charset=UTF-8");
+		resp.setCharacterEncoding("UTF-8");
+		PrintWriter out = resp.getWriter();
+		out.print(createPasteFormOutput());
+		out.flush();
+		out.close();
+	}
+
+	/**
+	 * The paste-and-submit form shown for a plain {@code GET /showplan/sqlserver} - shares the same
+	 * navbar/head chrome as {@link #createShowplanOutput(String, String, String)} so landing on this
+	 * page and viewing a submitted plan look like the same section, not two different pages.
+	 */
+	public static String createPasteFormOutput()
+	{
+		String str = "" +
+				"<!DOCTYPE html> \n" +
+				"<html lang='en'> \n" +
+				" \n" +
+				"<head> \n" +
+				"    <meta charset='UTF-8'> \n" +
+				"    <meta name='viewport' content='width=device-width, initial-scale=1'> \n" +
+				"    <title>DbxTune - SQL Server Showplan</title> \n" +
+				"    <meta name='robots' content='max-image-preview:large' /> \n" +
+				" \n" +
+				HtmlStatic.getUserDefinedContentHead() +
+				"</head> \n" +
+				" \n" +
+				"<body> \n" +
+				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				"    <div class='container-fluid px-4 py-3' style='max-width: 900px;'> \n" +
+				"      <h2>SQL Server Showplan Viewer</h2> \n" +
+				"      <p class='text-muted'>Paste an XML execution plan below and press Submit.</p> \n" +
+				"      <div class='card shadow-sm'> \n" +
+				"        <div class='card-body'> \n" +
+				"          <form id='showplan-form' action='/showplan/sqlserver' method='post'> \n" +
+				"            <textarea class='form-control mb-3' id='plan' name='plan' rows='20' placeholder='Paste the XML Showplan here...'></textarea> \n" +
+				"            <button type='submit' class='btn btn-primary'>Submit</button> \n" +
+				"          </form> \n" +
+				"        </div> \n" +
+				"      </div> \n" +
+				"    </div> \n" +
+				" \n" +
+				HtmlStatic.getJavaScriptAtEnd(true) +
+				"</body> \n" +
+				" \n" +
+				"</html> \n" +
+				"";
+		return str;
 	}
 
 	/**
@@ -127,12 +176,19 @@ extends HttpServlet
 				" \n" +
 				"<head> \n" +
 				"    <meta charset='UTF-8'> \n" +
+				"    <meta name='viewport' content='width=device-width, initial-scale=1'> \n" +
 				"    <title>SQL Server Execution Plan Viewer</title> \n" +
                 "     \n" +
 				"    <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' /> \n" +
 				"    <meta http-equiv='Pragma' content='no-cache' /> \n" +
 				"    <meta http-equiv='Expires' content='0' /> \n" +
 				"     \n" +
+
+				// Pulls in jQuery, Bootstrap 4.6.2 (CSS+JS), Font Awesome, dbxcentral.css,
+				// dbxcentral.utils.js and dbxLoginModal.js - the same shared head/navbar/login-wiring
+				// every other DbxCentral page uses (see LlmAdviceServlet for the identical pattern),
+				// rather than this page rolling its own Bootstrap include and a one-off <nav>.
+				HtmlStatic.getUserDefinedContentHead() +
 
 				// Possibly use local install:
 //				"    <script src='https://cdn.jsdelivr.net/npm/html-query-plan@2.6.1/dist/qp.min.js'></script> \n" +
@@ -152,14 +208,24 @@ extends HttpServlet
 					+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
 					: "") +
 
+				"    <style> #ss-showplan { overflow: auto; } </style> \n" +
+
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
+				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				"    <div class='container-fluid px-4 py-3'> \n" +
+				"      <h2>&#128202; SQL Server Execution Plan Viewer</h2> \n" +
+				"      <div class='card shadow-sm'> \n" +
+				"        <div class='card-body'> \n" +
 				(hasSql
-					? "    <button type='button' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor});'>Get LLM Optimization Advice</button> \n"
+					? "          <button type='button' class='btn btn-primary mb-3' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor});'>&#129302; Get LLM Optimization Advice</button> \n"
 					: "") +
-				"    <div id='ss-showplan'>                             \n" +
-				"    </div>                                             \n" +
+				"          <div id='ss-showplan'>                       \n" +
+				"          </div>                                       \n" +
+				"        </div> \n" +
+				"      </div> \n" +
+				"    </div> \n" +
 				"                                                       \n" +
 				"    <script>                                           \n" +
 				"        const plan = '" + StringEscapeUtils.escapeEcmaScript(payload) + "'; \n" +
@@ -171,6 +237,7 @@ extends HttpServlet
 				"                                                       \n" +
 				"        QP.showPlan(document.getElementById('ss-showplan'), '" + StringEscapeUtils.escapeEcmaScript(payload) + "'); \n" +
 				"    </script>		                                    \n" +
+				HtmlStatic.getJavaScriptAtEnd(true) +
 				"</body>                                                \n" +
 				"";
 		return str;

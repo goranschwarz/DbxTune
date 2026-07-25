@@ -883,7 +883,7 @@ extends CountersModel
 
 	// Present Database NAME instead of ID for PK tool-tip
 	@Override
-	public Map<String, String> getPkRewriteMap(int modelRow)
+	public Map<String, String> getPkRewriteColumns()
 	{
 		List<String> pkList = getPk();
 		if (pkList == null)
@@ -892,12 +892,22 @@ extends CountersModel
 		Map<String, String> map = new LinkedHashMap<>();
 		for (String pkCol : pkList)
 		{
-			if ("database_id".equals(pkCol)) { map.put("DBName", getAbsString(modelRow, "DBName"));     }
-			else
-			{ 
-				map.put(pkCol, getAbsString(modelRow, pkCol));        
-			}
+			if ("database_id".equals(pkCol)) map.put(pkCol, "DBName");
+			else                             map.put(pkCol, pkCol);
 		}
+		return map;
+	}
+
+	@Override
+	public Map<String, String> getPkRewriteMap(int modelRow)
+	{
+		Map<String, String> rewriteCols = getPkRewriteColumns();
+		if (rewriteCols == null)
+			return null;
+
+		Map<String, String> map = new LinkedHashMap<>();
+		for (String displayCol : rewriteCols.values())
+			map.put(displayCol, getAbsString(modelRow, displayCol));
 		return map;
 	}
 
