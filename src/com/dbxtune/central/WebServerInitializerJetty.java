@@ -235,8 +235,13 @@ public class WebServerInitializerJetty
 
 		// Others
 		webapp.addServlet(DummyServlet.class,                         "/dummy");                            // "Hello" -- can be used to check connectivity...
-		webapp.addServlet(ShowplanPostgresServlet.class,              "/showplan/postgres");                // Local PEV2 Implementation 
+		// Same servlet class mapped at two paths - explicit distinct ServletHolder names so Jetty
+		// doesn't collide on an auto-generated name for the second registration.
+		webapp.addServlet(new ServletHolder("ShowplanIndex",      ShowplanIndexServlet.class), "/showplan");  // Showplan Viewer landing page
+		webapp.addServlet(new ServletHolder("ShowplanIndexSlash", ShowplanIndexServlet.class), "/showplan/"); // .. same, with trailing slash
+		webapp.addServlet(ShowplanPostgresServlet.class,              "/showplan/postgres");                // Local PEV2 Implementation
 		webapp.addServlet(ShowplanSqlServerServlet.class,             "/showplan/sqlserver");               // Local html-query-plan Implementation
+		webapp.addServlet(ShowplanAseServlet.class,                   "/showplan/ase");                     // Local ASE graphical Showplan Implementation
 		webapp.addServlet(LoadPageProgress.class,                     "/lpp/*");                            // Load Page Progress
 		webapp.addServlet(LetsEncryptAcmeChallengeServlet.class,      "/.well-known/acme-challenge/*");
 

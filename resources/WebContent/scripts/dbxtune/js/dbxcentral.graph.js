@@ -5491,6 +5491,16 @@ function graphLoadIsComplete()
 		dbxHistoryAction();
 		dbxHistoryAction(markTime);
 	}
+	else
+	{
+		// A fixed 'endTime' (no markTime) also means we're looking at a historical
+		// range — subscribe is already forced off for this case (see dbxTuneLoadCharts).
+		// Enter history mode so the timeline slider is available; leaving momentTs
+		// undefined lands the slider at the end of the range (existing default behavior).
+		var endTime = getParameter("endTime", "");
+		if (endTime !== "")
+			dbxHistoryAction();
+	}
 
 //	var markStartTime = getParameter("markStartTime");
 //	var markEndTime   = getParameter("markEndTime");

@@ -417,16 +417,6 @@
 			try { if (localStorage.getItem('cmDetail-panelOpen')    === '1' && !$('#cm-detail-panel')   .is(':visible')) { cmDetailToggle();    _cmAutoOpenChecked    = true; } } catch(e) {}
 			try { if (localStorage.getItem('dbmsConfig-panelOpen')  === '1' && !$('#dbms-config-panel') .is(':visible')) { dbmsConfigToggle();  _dcAutoOpenChecked    = true; } } catch(e) {}
 			try { if (localStorage.getItem('queryStore-panelOpen')  === '1' && !$('#query-store-panel') .is(':visible')) { queryStoreToggle();  _qsAutoOpenChecked    = true; } } catch(e) {}
-
-//			/* If we have 'markTime' then enable historical mode, and set the position in the timeline */
-//			var markTime = getParameter("markTime");
-//			if (markTime !== undefined)
-//			{
-//				// THE BELOW IS UGGLY... Sleep for a while before kicking off the history load
-//				// TODO: Change this to be executed when we *know* we have data in the proper structures
-//				setTimeout(function(){ console.log('ENABLE HISTORY MODE'); dbxHistoryAction(); }, 1000);
-//				setTimeout(function(){ console.log('SET TIME IN HISTORY MODE: markTime=|' + markTime + '|'); dbxHistoryAction(markTime); }, 2000);
-//			}
 		}
 		function scrollToFormatter(value, row, index)
 		{

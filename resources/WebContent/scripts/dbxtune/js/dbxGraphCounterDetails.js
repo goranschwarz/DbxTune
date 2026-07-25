@@ -16,6 +16,60 @@ var _cmPostponeFallback = false;  // true during the one-shot retry with lastSam
 var _scrPfx = screen.width + 'x' + screen.height + '_'; // screen-size prefix for size/position localStorage keys
 var _cmTrendCache   = null;  // cached /api/graphs response (all graphs for this server)
 var _cmSplitInstance = null; // current Split.js instance (destroyed + recreated on layout change)
+var _cmSplitDir      = null; // 'horizontal' | 'vertical' | null (no split) — the layout _cmSplitInstance was built for
+var _cmSplitLoadedCm = null; // cmName the current split layout/table-wrap sizing was last reset for
+// True while cmDetailRenderFiltered() is programmatically restoring scroll position — the scroll-save
+// listener ignores 'scroll' events while this is set, see cmDetailRenderFiltered()/cmDetailToggle().
+var _cmRestoringScroll = false;
+// Monotonically increasing token — lets a cmDetailLoadData() async callback detect that a
+// newer call has since superseded it (see cmDetailLoadData()) so a slow/stale response
+// (e.g. the postpone-fallback double round-trip) can never clobber a newer render.
+var _cmDataLoadSeq = 0;
+// Same idea, one layer up: guards cmDetailLoadList()'s '/api/cc/mgt/cm/list' response (the
+// history-slider path calls this on every move) so an old, slow list response can't rebuild
+// the tabs and kick off a stale cmDetailLoadData() call after a newer slider move already has.
+var _cmListLoadSeq = 0;
+// Guards the scroll-save debounce/retry in cmDetailToggle() — see its comment for why a plain
+// clearTimeout() isn't enough once the debounced save can reschedule itself (retry-on-restore).
+var _cmScrollEventSeq = 0;
+
+// --- Scroll save/restore debug logging -------------------------------------------------
+// Off by default. Enable from the browser console (persists across reloads):
+//   localStorage.setItem('cmScrollDebug', '1')
+// then reload the page and reproduce. Every line is prefixed "[cmScroll]" — filter the
+// DevTools console on that string. Disable with: localStorage.removeItem('cmScrollDebug')
+var _cmScrollDebug = (function() { try { return localStorage.getItem('cmScrollDebug') === '1'; } catch(e) { return false; } }());
+function _cmDbg() {
+	if (!_cmScrollDebug) return;
+	var args = Array.prototype.slice.call(arguments);
+	args.unshift('[cmScroll ' + performance.now().toFixed(1) + 'ms]');
+	console.log.apply(console, args);
+}
+
+// Both cmDetailLoadList() and cmDetailLoadData() empty #cm-detail-table to show a blank/loading
+// state before their fetch even starts. That shrinks the scrollable content inside
+// #cm-detail-table-wrap down to ~nothing, so the browser immediately snaps its scrollLeft/scrollTop
+// back to 0 — a REAL scroll change, so it fires a genuine native 'scroll' event, same as if the user
+// had scrolled there themselves. Without a guard, the scroll-save listener has no way to tell this
+// apart from an actual user scroll: it debounces and persists "0" to localStorage ~200ms later,
+// silently overwriting whatever real position was saved — invisible on this render (since the very
+// next one restores from now-corrupted "0"), which is exactly the "snaps back to the first column"
+// symptom. This reuses the same _cmRestoringScroll flag the real data-restore already guards itself
+// with, just for this earlier "clear to loading" moment instead of the later "restore real data" one.
+function _cmClearTableForLoading() {
+	_cmSetTableHtmlGuarded('');
+}
+
+// Same hazard, general form: replacing #cm-detail-table's content with *anything* (a status
+// message, a retry button, an error) can shrink/grow the scrollable area enough to make the
+// browser snap scrollLeft/scrollTop, firing a real 'scroll' event the save listener can't tell
+// apart from a genuine user scroll. Guard every such replacement, not just the "loading" case.
+function _cmSetTableHtmlGuarded(html) {
+	_cmRestoringScroll = true;
+	$('#cm-detail-table').html(html);
+	_cmDbg('_cmSetTableHtmlGuarded: set table html, guarding scroll for 60ms');
+	setTimeout(function() { _cmRestoringScroll = false; }, 60);
+}
 var _cmSort         = { col: -1, stage: 0 }; // sort state for current CM: stage 0=original 1=desc 2=asc
 var _cmSortMap      = {};                    // per-CM sort state, keyed by cmName — survives tab switching
 var _cmFilterMap    = {};                    // per-CM filter text (session only, not persisted to localStorage)
@@ -37,6 +91,14 @@ function cmDetailLoadList(srvName, timestamp)
 {
 	if (!srvName || !timestamp) return;
 
+	// Claim this as the newest in-flight list load — see _cmListLoadSeq above. A history-slider
+	// drag that lands on several distinct timestamps in quick succession fires one of these per
+	// move; without this guard, whichever response happens to arrive last wins regardless of
+	// which move it belongs to, and can rebuild the tabs / re-fetch CM data for a stale timestamp
+	// after a newer move's own (correct) render already completed — including its scroll restore.
+	var myListSeq = ++_cmListLoadSeq;
+	_cmDbg('cmDetailLoadList ENTER', 'srv=' + srvName, 'ts=' + timestamp, 'myListSeq=' + myListSeq);
+
 	// Normalize timestamp to "yyyy-MM-dd HH:mm:ss" — handles ISO strings, JS Date strings, moment objects
 	timestamp = moment(timestamp).format("YYYY-MM-DD HH:mm:ss");
 
@@ -47,13 +109,18 @@ function cmDetailLoadList(srvName, timestamp)
 	$('#cm-detail-srv').text('[' + srvName + ']');
 	$('#cm-detail-ts').text('@ ' + timestamp);
 	$('#cm-detail-loading').show();
-	$('#cm-detail-table').html('');
+	_cmClearTableForLoading();
 
 	$.ajax({
 		url: '/api/cc/mgt/cm/list',
 		data: { srv: srvName, time: timestamp },
 		dataType: 'text',
 		success: function(data) {
+			if (myListSeq !== _cmListLoadSeq) {
+				_cmDbg('cmDetailLoadList SUCCESS but STALE, dropping', 'myListSeq=' + myListSeq, 'current=' + _cmListLoadSeq, 'ts=' + timestamp);
+				return; // superseded by a newer list load
+			}
+			_cmDbg('cmDetailLoadList SUCCESS, proceeding', 'myListSeq=' + myListSeq, 'ts=' + timestamp);
 			$('#cm-detail-loading').hide();
 			try {
 				var r = JSON.parse(data);
@@ -65,6 +132,7 @@ function cmDetailLoadList(srvName, timestamp)
 					_cmTimestamp   = r.resolvedTime.substring(0, 19);       // truncated for display / other APIs
 					$('#cm-detail-ts').text('@ ' + _cmTimestamp);
 				}
+				_cmDbg('cmDetailLoadList resolved', 'resolvedTime=' + r.resolvedTime, '-> calling cmDetailRenderGroups');
 				// Pre-fetch trend graph cache (async, non-blocking)
 				_cmTrendEnsureCache(function() { cmTrendGraphsUpdateButton(); });
 				cmDetailRenderGroups(r.groups);
@@ -73,6 +141,10 @@ function cmDetailLoadList(srvName, timestamp)
 			} catch(ex) { cmDetailShowMsg('Parse error: ' + ex); }
 		},
 		error: function(xhr) {
+			if (myListSeq !== _cmListLoadSeq) {
+				_cmDbg('cmDetailLoadList ERROR but STALE, dropping', 'myListSeq=' + myListSeq);
+				return;
+			}
 			$('#cm-detail-loading').hide();
 			cmDetailShowMsg('HTTP ' + xhr.status + ': ' + xhr.responseText);
 		}
@@ -439,6 +511,17 @@ function cmDetailReloadListThenData(srvName, cmName, timestamp, type)
 function cmDetailLoadData(srvName, cmName, timestamp, type)
 {
 	if (!srvName || !cmName || !timestamp) return;
+	// Claim this as the newest in-flight load. Postponed CMs (see the navSample fallback below)
+	// take an extra async round-trip to resolve the exact sample time — on the top history slider,
+	// whose ticks are driven by the *graphs'* sample interval, the requested timestamp almost never
+	// lines up with a postponed CM's own (coarser) interval, so that fallback fires on every single
+	// move. That extra hop gives a second, faster-resolving load (e.g. the next slider move, or the
+	// </>/<< prev/next buttons which jump straight to an exact known-good sample and never need the
+	// fallback) a real chance to finish and render first — after which this slower, now-stale call's
+	// own eventual success callback must not overwrite it. mySeq captured below is compared against
+	// _cmDataLoadSeq in every async callback this call schedules; a mismatch means bail out quietly.
+	var mySeq = ++_cmDataLoadSeq;
+	_cmDbg('cmDetailLoadData ENTER', 'cm=' + cmName, 'ts=' + timestamp, 'type=' + type, 'mySeq=' + mySeq, 'isPostponeFallback=' + _cmPostponeFallback, 'splitLoadedCm=' + _cmSplitLoadedCm);
 	var _isPostponeFallback = _cmPostponeFallback;
 	_cmPostponeFallback = false;
 	if (_cmPostponeInterval) { clearInterval(_cmPostponeInterval); _cmPostponeInterval = null; }
@@ -448,10 +531,23 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 	_cmChartInstances.forEach(function(c) { try { c.destroy(); } catch(e) {} });
 	_cmChartInstances = [];
 	$('#cm-detail-charts').empty().hide();
-	// Destroy previous split pane and reset to table-only layout
-	if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
-	$('#cm-detail-content').css({ flexDirection: 'row' });
-	$('#cm-detail-table-wrap').css({ width: '100%', height: '100%' });
+	// Destroy previous split pane and reset to table-only layout — but only when actually
+	// switching to a different CM. This used to run unconditionally on every call, including
+	// every live-refresh tick and every history-slider move that stayed on the SAME CM — which
+	// physically re-parents #cm-detail-table-wrap (via cmChartRender()'s rebuild) on every single
+	// refresh and resets its scrollTop/scrollLeft to 0 (moving an element in the DOM does that
+	// even when it ends up in the same place), fighting the scroll-position restore in
+	// cmDetailRenderFiltered(). Skipping this when the CM hasn't changed lets cmChartRender()'s
+	// own "layout unchanged" check actually take effect for repeated refreshes of the same CM;
+	// a genuine CM switch still resets immediately here so there's no stale split-layout flash
+	// while the new CM's data loads.
+	if (_cmSplitLoadedCm !== cmName) {
+		if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
+		_cmSplitDir = null;
+		$('#cm-detail-content').css({ flexDirection: 'row' });
+		$('#cm-detail-table-wrap').css({ width: '100%', height: '100%' });
+	}
+	_cmSplitLoadedCm = cmName;
 
 	// Check collector status for this CM at this sample time
 	var cmInfo = cmDetailFindCmInfo(cmName);
@@ -469,7 +565,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				+ '</pre></details>';
 		}
 		html += '</div>';
-		$('#cm-detail-table').html(html);
+		_cmSetTableHtmlGuarded(html);
 		return;
 	}
 	var _hasPostpone = cmInfo && cmInfo.postponeEnabled && cmInfo.postponeTime > 0;
@@ -488,7 +584,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 
 		if (mightBeRace && !_cmNoDataRetryDone) {
 			_cmNoDataRetryDone = true;
-			$('#cm-detail-table').html('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
+			_cmSetTableHtmlGuarded('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
 				+ '&#8987; Data is still syncing for <strong>' + $('<span>').text(cmName).html() + '</strong>'
 				+ ' &mdash; retrying&hellip;'
 				+ '</div>');
@@ -506,7 +602,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 			+ type + "')"
 			+ '>&#8635; Retry</button>';
 		var note = mightBeRace ? ' Data may still be syncing.' : '';
-		$('#cm-detail-table').html('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
+		_cmSetTableHtmlGuarded('<div class="alert alert-secondary mt-2" style="font-size:0.85em;">'
 			+ 'No data collected for <strong>' + $('<span>').text(cmName).html() + '</strong>'
 			+ ' at sample time <strong>' + $('<span>').text(timestamp).html() + '</strong>.'
 			+ note + retryBtn
@@ -516,7 +612,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 	_cmNoDataRetryDone = false;
 
 	$('#cm-detail-loading').show();
-	$('#cm-detail-table').html('');
+	_cmClearTableForLoading();
 	// Show spinner after 100ms (avoids flicker on fast responses)
 	var busyTimer = setTimeout(function() {
 		document.getElementById('dbx-history-get-data-bussy').style.visibility = 'visible';
@@ -526,6 +622,13 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 		data: { srv: srvName, cm: cmName, time: timestamp, type: type, showAll: _cmShowAll ? 'true' : 'false' },
 		dataType: 'text',
 		success: function(data) {
+			// A newer cmDetailLoadData() call has since started (e.g. another slider move) —
+			// this response is stale, drop it so it can't clobber the newer call's render.
+			if (mySeq !== _cmDataLoadSeq) {
+				_cmDbg('cmDetailLoadData SUCCESS but STALE, dropping', 'mySeq=' + mySeq, 'current=' + _cmDataLoadSeq, 'cm=' + cmName, 'ts=' + timestamp, 'type=' + type);
+				return;
+			}
+			_cmDbg('cmDetailLoadData SUCCESS, proceeding', 'mySeq=' + mySeq, 'cm=' + cmName, 'ts=' + timestamp, 'type=' + type);
 			clearTimeout(busyTimer);
 			document.getElementById('dbx-history-get-data-bussy').style.visibility = 'hidden';
 			$('#cm-detail-loading').hide();
@@ -553,6 +656,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 								.attr('title', 'No Diff/Rate data for this CM');
 							$('#cm-detail-label-diff, #cm-detail-label-rate').css('text-decoration', 'line-through');
 						}
+						_cmDbg('cmDetailLoadData: auto-switch to abs, recursing', 'cm=' + cmName, 'ts=' + timestamp, 'reason=' + r.error);
 						cmDetailLoadData(srvName, cmName, timestamp, 'abs');
 						return;
 					}
@@ -564,18 +668,25 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				if (r.error === 'no-data-in-window' && r.postponeEnabled && r.postponeTime > 0
 						&& !_isPostponeFallback) {
 					_cmPostponeFallback = true;
+					_cmDbg('cmDetailLoadData: postpone-fallback triggered, calling navSample', 'cm=' + cmName, 'requestedTs=' + timestamp);
 					$.ajax({
 						url: '/api/cc/mgt/cm/navSample',
 						data: { srv: srvName, time: timestamp, cm: cmName, dir: 'prev' },
 						dataType: 'json',
 						success: function(nav) {
+							if (mySeq !== _cmDataLoadSeq) {
+								_cmDbg('cmDetailLoadData: navSample SUCCESS but STALE, dropping', 'mySeq=' + mySeq, 'current=' + _cmDataLoadSeq);
+								return; // superseded — see top of cmDetailLoadData()
+							}
 							if (nav.found && nav.sampleTime) {
+								_cmDbg('cmDetailLoadData: navSample resolved, recursing', 'resolvedTs=' + nav.sampleTime);
 								cmDetailLoadData(srvName, cmName, nav.sampleTime, type);
 							} else {
 								cmDetailShowMsg(r.message || r.error);
 							}
 						},
 						error: function() {
+							if (mySeq !== _cmDataLoadSeq) return;
 							cmDetailShowMsg(r.message || r.error);
 						}
 					});
@@ -599,6 +710,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 					if (hasNoDiffCols)
 						try { localStorage.setItem('cmDetail-type-' + cmName, 'abs'); } catch(e) {}
 					$('#cm-detail-type-abs').prop('checked', true);
+					_cmDbg('cmDetailLoadData: no diff data, recursing to abs', 'cm=' + cmName, 'ts=' + timestamp);
 					cmDetailLoadData(srvName, cmName, timestamp, 'abs');
 					return;
 				}
@@ -606,10 +718,12 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				$('#cm-detail-type-' + type).prop('checked', true);
 				// Update the CM tab tooltip with the confirmed description + legend from data response
 				_cmSetTabTooltip(cmName, r.description, r.highlighterDescriptors);
+				_cmDbg('cmDetailLoadData: calling cmDetailRenderTable', 'cm=' + cmName, 'r.cmName=' + r.cmName, 'ts=' + timestamp, 'rowCount=' + r.rowCount);
 				cmDetailRenderTable(r);
 			} catch(ex) { cmDetailShowMsg('Parse error: ' + ex); }
 		},
 		error: function(xhr) {
+			if (mySeq !== _cmDataLoadSeq) return;
 			clearTimeout(busyTimer);
 			document.getElementById('dbx-history-get-data-bussy').style.visibility = 'hidden';
 			$('#cm-detail-loading').hide();
@@ -784,6 +898,19 @@ function cmDetailRenderFiltered(r, filter)
 	if (r.diffColumns) r.diffColumns.forEach(function(dc) { diffSet[dc.toLowerCase()] = true; });
 	var pctSet = {};
 	if (r.pctColumns) r.pctColumns.forEach(function(pc) { pctSet[pc.toLowerCase()] = true; });
+	var pkSet = {};
+	if (r.pkColumns) r.pkColumns.forEach(function(pk) { pkSet[pk.toLowerCase()] = true; });
+	// pkRewrite: raw PK column -> friendlier column already present in the row (e.g. DBID -> DBName)
+	var pkRewrite = {};
+	if (r.pkRewrite) Object.keys(r.pkRewrite).forEach(function(k) { pkRewrite[k.toLowerCase()] = r.pkRewrite[k]; });
+	// For each PK column, resolve {label, idx} — idx points at the rewritten (friendlier) column when one exists
+	var pkDisplayCols = r.columns ? r.columns.reduce(function(acc, c, i) {
+		if (!pkSet[c.toLowerCase()]) return acc;
+		var friendly = pkRewrite[c.toLowerCase()];
+		var friendlyIdx = friendly ? r.columns.findIndex(function(c2) { return c2.toLowerCase() === friendly.toLowerCase(); }) : -1;
+		acc.push(friendlyIdx >= 0 ? { label: friendly, idx: friendlyIdx } : { label: c, idx: i });
+		return acc;
+	}, []) : [];
 
 	// Per-column flags
 	var isNumeric     = r.isNumeric || [];
@@ -898,7 +1025,14 @@ function cmDetailRenderFiltered(r, filter)
 			// We push the color down to each <td> instead of <tr> because
 			// Bootstrap's td backgrounds (striping, hover) would otherwise
 			// override a <tr> background-color.
-			h += '<tr data-ri="' + ri + '" style="cursor:pointer;" title="Click to view full row details">'
+			var rowTitle = 'Click to view full row details';
+			if (pkDisplayCols.length > 0) {
+				rowTitle += '\nPK: ' + pkDisplayCols.map(function(pc) {
+					var v = row[pc.idx];
+					return pc.label + '=' + (v === null || v === undefined ? 'null' : v);
+				}).join(', ');
+			}
+			h += '<tr data-ri="' + ri + '" style="cursor:pointer;" title="' + escHtml(rowTitle) + '">'
 				+ row.map(function(v, i) {
 				var style = 'style="';
 				if (isNumeric[i]) style += 'text-align:right;';
@@ -1016,6 +1150,7 @@ function cmDetailRenderFiltered(r, filter)
 		var saved = JSON.parse(localStorage.getItem(scrollKey) || 'null');
 		if (saved) { savedTop = saved.top || 0; savedLeft = saved.left || 0; }
 	} catch(e) {}
+	_cmDbg('cmDetailRenderFiltered: read saved scroll', 'r.cmName=' + r.cmName, 'scrollKey=' + scrollKey, 'savedTop=' + savedTop, 'savedLeft=' + savedLeft);
 
 	// Destroy existing tooltip instances before replacing the DOM (prevents orphaned tooltip divs)
 	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip('dispose');
@@ -1103,13 +1238,39 @@ function cmDetailRenderFiltered(r, filter)
 		cmDetailRowShowModal(_cmDetailClickRows.columns, _cmDetailClickRows.rows[ri], _cmDetailClickRows.tooltips);
 	});
 
+	// Restore scroll position. Setting scrollTop/scrollLeft programmatically fires a native
+	// 'scroll' event just like a real user scroll — and if THIS sample's table happens to be
+	// narrower/shorter than when the position was saved (different row/column content at a
+	// different history timestamp), the browser silently clamps the value we set. Left alone,
+	// that clamped value would flow straight into the scroll-save listener below and overwrite
+	// the good saved position with the wrong (clamped) one — invisible on this render, but then
+	// wrongly "restored" as position 0-ish on the *next* render. _cmRestoringScroll tells the
+	// save listener to ignore 'scroll' events for the duration of this restore (including any
+	// reflow cmChartRender() below triggers) so a clamp here can never corrupt the saved value.
+	_cmRestoringScroll = true;
 	// Restore immediately (works when content height is already known)
 	$scrollPane.scrollTop(savedTop).scrollLeft(savedLeft);
+	_cmDbg('cmDetailRenderFiltered: restore #1 (immediate)', 'wanted=' + savedTop + '/' + savedLeft,
+		'got=' + $scrollPane.scrollTop() + '/' + $scrollPane.scrollLeft(),
+		'scrollWidth=' + $scrollPane[0].scrollWidth, 'clientWidth=' + $scrollPane[0].clientWidth);
 	// Also restore after a tick in case the browser resets scroll after DOM update
-	setTimeout(function() { $scrollPane.scrollTop(savedTop).scrollLeft(savedLeft); }, 1);
+	setTimeout(function() {
+		$scrollPane.scrollTop(savedTop).scrollLeft(savedLeft);
+		_cmDbg('cmDetailRenderFiltered: restore #2 (setTimeout 1ms)', 'wanted=' + savedTop + '/' + savedLeft,
+			'got=' + $scrollPane.scrollTop() + '/' + $scrollPane.scrollLeft());
+	}, 1);
 
 	// Render chart(s) if the CM declares any chart descriptors
 	cmChartRender(r, filteredRows);
+	_cmDbg('cmDetailRenderFiltered: after cmChartRender', 'scrollLeft-now=' + $scrollPane.scrollLeft());
+
+	// Re-enable scroll-position saving once this render's restore (and any Split.js/chart
+	// reflow above) has settled — well before the save listener's own 200ms debounce could
+	// fire from a stray scroll event caused by the above, but after all of it has happened.
+	setTimeout(function() {
+		_cmRestoringScroll = false;
+		_cmDbg('cmDetailRenderFiltered: _cmRestoringScroll cleared', 'finalScrollLeft=' + $scrollPane.scrollLeft());
+	}, 60);
 }
 
 //-----------------------------------------------------------
@@ -1555,7 +1716,7 @@ function cmDetailFilterKeydown(e)
 
 function cmDetailShowMsg(msg)
 {
-	$('#cm-detail-table').html('<div style="padding:15px;text-align:center;color:#6c757d;">' + escHtml(String(msg)) + '</div>');
+	_cmSetTableHtmlGuarded('<div style="padding:15px;text-align:center;color:#6c757d;">' + escHtml(String(msg)) + '</div>');
 }
 
 function cmDetailToggle()
@@ -1582,15 +1743,57 @@ function cmDetailToggle()
 		$tw.data('cmScrollListenerAttached', true);
 		var _cmScrollTimer = null;
 		$tw.on('scroll', function() {
+			if (_cmRestoringScroll) {
+				_cmDbg('scroll listener: IGNORED (restoring)', 'scrollLeft-now=' + $tw.scrollLeft());
+				return; // ignore scrolls caused by our own programmatic restore
+			}
+			// Capture the position NOW, at the moment of the actual scroll event, rather than
+			// re-reading $tw.scrollTop()/scrollLeft() live inside the debounced callback below.
+			// A same-CM re-render (e.g. the next slider move landing before this debounce fires)
+			// can restore-then-reset the pane in between — if the callback read the DOM fresh at
+			// that point it would persist that reverted position instead of what the user actually
+			// scrolled to. Capturing here means the save is always for this exact scroll, no matter
+			// what else happens to the pane before the debounce timer runs.
+			var _cmScrollTopAtEvent  = $tw.scrollTop();
+			var _cmScrollLeftAtEvent = $tw.scrollLeft();
+			var _cmScrollTargetCm    = _cmName; // which CM this scroll belongs to, captured now
+			// A plain clearTimeout(_cmScrollTimer) below only cancels whichever ONE pending timer
+			// _cmScrollTimer currently points at. _cmDoSave() can reschedule itself (the retry
+			// branch), and each such reschedule overwrites the shared _cmScrollTimer with a new id
+			// — so if an earlier scroll's retry chain is still alive when a later scroll event
+			// clears the variable, that earlier chain doesn't actually stop: it already holds its
+			// own still-pending id from before being overwritten, and clearTimeout can't reach it
+			// anymore. Left alone, that orphaned chain keeps retrying forever on its own captured
+			// (stale) values and can eventually save over whatever this newer scroll just wrote.
+			// mySeq/_cmScrollEventSeq makes every retry check "is a newer scroll event's chain now
+			// the active one" and self-terminate immediately if so, instead of relying on
+			// clearTimeout alone to reach every possible orphan.
+			var mySeq = ++_cmScrollEventSeq;
+			_cmDbg('scroll listener: EVENT captured', 'mySeq=' + mySeq, 'top=' + _cmScrollTopAtEvent, 'left=' + _cmScrollLeftAtEvent, 'targetCm=' + _cmScrollTargetCm);
 			clearTimeout(_cmScrollTimer);
-			_cmScrollTimer = setTimeout(function() {
-				if (_cmName) {
+			var _cmDoSave = function() {
+				if (mySeq !== _cmScrollEventSeq) {
+					_cmDbg('scroll save: ABANDONED (superseded by newer scroll)', 'mySeq=' + mySeq, 'current=' + _cmScrollEventSeq);
+					return; // a newer scroll has superseded this chain
+				}
+				// A render's restore can coincide with exactly this moment — rather than silently
+				// dropping the user's scroll (which left the *previous* value sitting in storage,
+				// looking like this scroll never got saved at all), retry shortly after instead.
+				// _cmRestoringScroll always clears again within ~60ms of any single render.
+				if (_cmRestoringScroll) {
+					_cmDbg('scroll save: RETRYING in 75ms (restore in progress)', 'mySeq=' + mySeq);
+					_cmScrollTimer = setTimeout(_cmDoSave, 75);
+					return;
+				}
+				if (_cmScrollTargetCm) {
+					_cmDbg('scroll save: COMMITTED', 'mySeq=' + mySeq, 'cm=' + _cmScrollTargetCm, 'top=' + _cmScrollTopAtEvent, 'left=' + _cmScrollLeftAtEvent);
 					try {
-						localStorage.setItem(_scrPfx + 'cmDetail-scroll-' + _cmName,
-							JSON.stringify({ top: $tw.scrollTop(), left: $tw.scrollLeft() }));
+						localStorage.setItem(_scrPfx + 'cmDetail-scroll-' + _cmScrollTargetCm,
+							JSON.stringify({ top: _cmScrollTopAtEvent, left: _cmScrollLeftAtEvent }));
 					} catch(e) {}
 				}
-			}, 200);
+			};
+			_cmScrollTimer = setTimeout(_cmDoSave, 200);
 		});
 	}
 
@@ -1702,6 +1905,7 @@ function cmDetailUpdateTabColors(groups)
 // Called when the history slider moves — refresh CM data for the selected time
 function cmDetailSliderRefresh(startTime)
 {
+	_cmDbg('cmDetailSliderRefresh ENTER (top slider moved)', 'startTime=' + startTime, 'cmName=' + _cmName);
 	if (!_cmAutoOpenChecked) {
 		_cmAutoOpenChecked = true;
 		if (!$('#cm-detail-panel').is(':visible')) {
@@ -2004,9 +2208,11 @@ function cmChartRender(r, filteredRows) {
 
 	var descriptors = r.chartDescriptors;
 	if (!descriptors || descriptors.length === 0) {
+		_cmDbg('cmChartRender: no chartDescriptors, no reparent needed', 'r.cmName=' + r.cmName);
 		$container.hide();
 		// Destroy split pane, table takes full space
 		if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
+		_cmSplitDir = null;
 		$('#cm-detail-content').css({ flexDirection: 'row' });
 		$('#cm-detail-table-wrap').css({ width: '100%', height: '100%' });
 		return;
@@ -2031,61 +2237,75 @@ function cmChartRender(r, filteredRows) {
 			savedSizes = s;
 	} catch(e) {}
 
-	// Destroy previous Split instance before creating a new one
-	if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
-
-	// Reset inline styles that Split.js or previous layout may have set
-	$('#cm-detail-table-wrap').attr('style', 'overflow:auto;');
-	$container.attr('style', 'padding:4px 6px;overflow:auto;');
-
-	// Save handler — persist sizes to localStorage on drag end
-	function onDragEnd(sizes) {
-		try { localStorage.setItem(storageKey, JSON.stringify(sizes)); } catch(e) {}
-	}
-
-	function makeGutter(index, direction) {
-		var g = document.createElement('div');
-		g.className = 'cm-gutter cm-gutter-' + direction;
-		return g;
-	}
-
-	// Split.js inserts gutters based on DOM order, so we must physically
-	// reorder the elements to match the desired visual layout.
-	var $content = $('#cm-detail-content');
-
-	if (splitDir === 'horizontal') {
-		var sizes = savedSizes || [defaultTablePct, defaultChartPct];
-		$content.css({ flexDirection: 'row' });
-		$container.css({ display: 'block' });
-		// DOM order: table first, charts second → left | right
-		$content.append($('#cm-detail-table-wrap'));
-		$content.append($container);
-		_cmSplitInstance = Split(['#cm-detail-table-wrap', '#cm-detail-charts'], {
-			sizes:      sizes,
-			minSize:    [200, 150],
-			gutterSize: 5,
-			direction:  'horizontal',
-			gutterAlign: 'center',
-			gutter:     makeGutter,
-			onDragEnd:  onDragEnd
-		});
+	// Only (re)build the Split.js layout when it's actually changing (first time for this
+	// CM, or the splitDir switched). Rebuilding on every render — including every live-refresh
+	// tick — physically re-parents #cm-detail-table-wrap via $content.append() below, and moving
+	// an element in the DOM resets its scrollTop/scrollLeft to 0 even when it's already in the
+	// right place. That fought the scroll-position restore in cmDetailRenderFiltered() on every
+	// single refresh, not just on real layout changes.
+	if (_cmSplitInstance && _cmSplitDir === splitDir) {
+		// Layout unchanged — leave the existing Split instance, DOM order and user-dragged
+		// sizes alone. Chart canvases were already cleared/rebuilt above via $container.empty().
+		_cmDbg('cmChartRender: layout unchanged, SKIPPING reparent', 'splitDir=' + splitDir);
 	} else {
-		// Vertical: charts ABOVE table
-		var sizes = savedSizes || [defaultChartPct, defaultTablePct];
-		$content.css({ flexDirection: 'column' });
-		$container.css({ display: 'flex', flexWrap: 'wrap' });
-		// DOM order: charts first, table second → top | bottom
-		$content.append($container);
-		$content.append($('#cm-detail-table-wrap'));
-		_cmSplitInstance = Split(['#cm-detail-charts', '#cm-detail-table-wrap'], {
-			sizes:      sizes,
-			minSize:    [80, 100],
-			gutterSize: 5,
-			direction:  'vertical',
-			gutterAlign: 'center',
-			gutter:     makeGutter,
-			onDragEnd:  onDragEnd
-		});
+		_cmDbg('cmChartRender: REBUILDING split layout (reparents table-wrap)', 'splitDir=' + splitDir, 'prevSplitDir=' + _cmSplitDir, 'hadInstance=' + !!_cmSplitInstance);
+		// Destroy previous Split instance before creating a new one
+		if (_cmSplitInstance) { try { _cmSplitInstance.destroy(); } catch(e) {} _cmSplitInstance = null; }
+
+		// Reset inline styles that Split.js or previous layout may have set
+		$('#cm-detail-table-wrap').attr('style', 'overflow:auto;');
+		$container.attr('style', 'padding:4px 6px;overflow:auto;');
+
+		// Save handler — persist sizes to localStorage on drag end
+		var onDragEnd = function(sizes) {
+			try { localStorage.setItem(storageKey, JSON.stringify(sizes)); } catch(e) {}
+		};
+
+		var makeGutter = function(index, direction) {
+			var g = document.createElement('div');
+			g.className = 'cm-gutter cm-gutter-' + direction;
+			return g;
+		};
+
+		// Split.js inserts gutters based on DOM order, so we must physically
+		// reorder the elements to match the desired visual layout.
+		var $content = $('#cm-detail-content');
+
+		if (splitDir === 'horizontal') {
+			var sizes = savedSizes || [defaultTablePct, defaultChartPct];
+			$content.css({ flexDirection: 'row' });
+			$container.css({ display: 'block' });
+			// DOM order: table first, charts second → left | right
+			$content.append($('#cm-detail-table-wrap'));
+			$content.append($container);
+			_cmSplitInstance = Split(['#cm-detail-table-wrap', '#cm-detail-charts'], {
+				sizes:      sizes,
+				minSize:    [200, 150],
+				gutterSize: 5,
+				direction:  'horizontal',
+				gutterAlign: 'center',
+				gutter:     makeGutter,
+				onDragEnd:  onDragEnd
+			});
+		} else {
+			// Vertical: charts ABOVE table
+			var sizes = savedSizes || [defaultChartPct, defaultTablePct];
+			$content.css({ flexDirection: 'column' });
+			$container.css({ display: 'flex', flexWrap: 'wrap' });
+			// DOM order: charts first, table second → top | bottom
+			$content.append($container);
+			$content.append($('#cm-detail-table-wrap'));
+			_cmSplitInstance = Split(['#cm-detail-charts', '#cm-detail-table-wrap'], {
+				sizes:      sizes,
+				minSize:    [80, 100],
+				gutterSize: 5,
+				direction:  'vertical',
+				gutterAlign: 'center',
+				gutter:     makeGutter,
+				onDragEnd:  onDragEnd
+			});
+		}
+		_cmSplitDir = splitDir;
 	}
 
 	// Build column-name → index map

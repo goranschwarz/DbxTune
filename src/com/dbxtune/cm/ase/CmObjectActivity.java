@@ -1214,7 +1214,7 @@ extends CountersModel
 	}
 	
 	@Override
-	public Map<String, String> getPkRewriteMap(int modelRow)
+	public Map<String, String> getPkRewriteColumns()
 	{
 		List<String> pkList = getPk();
 		if (pkList == null)
@@ -1223,10 +1223,23 @@ extends CountersModel
 		Map<String, String> map = new LinkedHashMap<>();
 		for (String pkCol : pkList)
 		{
-			if      ("DBID"    .equals(pkCol)) { map.put("DBName",     getAbsString(modelRow, "DBName"));     }
-			else if ("ObjectID".equals(pkCol)) { map.put("ObjectName", getAbsString(modelRow, "ObjectName")); }
-			else                               { map.put(pkCol,        getAbsString(modelRow, pkCol));        }
+			if      ("DBID"    .equals(pkCol)) map.put(pkCol, "DBName");
+			else if ("ObjectID".equals(pkCol)) map.put(pkCol, "ObjectName");
+			else                               map.put(pkCol, pkCol);
 		}
+		return map;
+	}
+
+	@Override
+	public Map<String, String> getPkRewriteMap(int modelRow)
+	{
+		Map<String, String> rewriteCols = getPkRewriteColumns();
+		if (rewriteCols == null)
+			return null;
+
+		Map<String, String> map = new LinkedHashMap<>();
+		for (String displayCol : rewriteCols.values())
+			map.put(displayCol, getAbsString(modelRow, displayCol));
 		return map;
 	}
 

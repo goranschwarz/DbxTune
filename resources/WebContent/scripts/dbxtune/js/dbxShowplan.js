@@ -11,7 +11,7 @@
  * Global functions exposed:
  *   pgShowplanGetSql(), pgShowplanFormatSql(), pgShowplanCopySql(),
  *   pgShowplanCopyPlan(), pgShowplanSaveToFile(), pgShowplanOpenExternal()
- *   ssShowplanEnableZoom(), ssShowplanResetZoom(), ssShowplanFormatSql(),
+ *   ssShowplanToggleZoom(), ssShowplanFormatSql(),
  *   ssShowplanCopySql(), ssShowplanCopyXml(), ssShowplanSaveXmlToFile(),
  *   ssShowplanOpenExternal(), ssShowplanGetParameters(),
  *   ssShowplanSetParametersInSql()
@@ -364,8 +364,7 @@
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Execution Plan</summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='QP.drawLines(document.getElementById(\"dbx-view-ssShowplan-content\"));'>&#8635; Redraw Lines</button>",
-			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='ssShowplanEnableZoom();'>&#128269; Enable Zoom</button>",
-			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='ssShowplanResetZoom();'>&#8634; Reset Zoom</button>",
+			"						<button type='button' id='dbx-view-ssShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='ssShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
 			"						<div id='dbx-view-ssShowplan-content' class='dbx-view-ssShowplan-content' style='margin-top:6px;'></div>",
 			"					</div>",
 			"				</details>",
@@ -475,9 +474,9 @@
 			"					<summary id='dbx-view-aseShowplan-plan-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan</summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanRedraw();'>&#8635; Redraw</button>",
-			"						<button type='button' id='dbx-view-aseShowplan-orientationBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleOrientation();'>&#8646; Left-to-Right</button>",
-			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanEnableZoom();'>&#128269; Enable Zoom</button>",
-			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanResetZoom();'>&#8634; Reset Zoom</button>",
+			"						<button type='button' id='dbx-view-aseShowplan-orientationBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleOrientation();'>&#8646; Top-to-Bottom</button>",
+			"						<button type='button' id='dbx-view-aseShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
+			"						<span style='font-size:0.8em;color:#888;margin-left:6px;'>Execution order is by VA# (starting at 0)</span>",
 			"						<div id='dbx-view-aseShowplan-graphFallback' class='ase-plan-fallback' style='display:none;'>Could not parse this plan into a diagram &mdash; see \"Raw Plan Text\" below.</div>",
 			"						<div id='dbx-view-aseShowplan-graphContent' class='dbx-view-aseShowplan-graphContent' style='margin-top:6px;'></div>",
 			"					</div>",
@@ -533,6 +532,7 @@
 			"			<div class='modal-footer'>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='aseShowplanCopySql();'>Copy SQL</button>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='aseShowplanCopyPlan();'>Copy Plan</button>",
+			"				<button type='button' class='btn btn-outline-secondary' onclick='aseShowplanOpenExternal();'>Open in External Window</button>",
 			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
 			"				<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
 			"			</div>",
@@ -704,7 +704,10 @@
 	};
 
 	window.pgShowplanFormatSql = function () {
-		var formatOptions = { language: 'postgresql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true };
+		// paramTypes.positional tells sql-formatter that a bare "?" is a valid positional parameter
+		// placeholder (JDBC-style) rather than a syntax error - without it, any captured SQL text
+		// containing "?" throws a parse error here instead of formatting.
+		var formatOptions = { language: 'postgresql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true, paramTypes: { positional: true } };
 		var sqlText = $('#dbx-view-pgShowplan-sqlContent').text();
 		try {
 			$('#dbx-view-pgShowplan-sqlContent').text(sqlFormatter.format(sqlText, formatOptions));
@@ -746,19 +749,42 @@
 	// -------------------------------------------------------------------------
 	// SQL Server showplan functions
 	// -------------------------------------------------------------------------
-	window.ssShowplanEnableZoom = function () {
-		if (_ssShowplanZoom !== undefined) return;
+	// Turns zoom off if it's currently on: resets pan/scale first (snaps back to normal before it's
+	// gone), removes the wheel listener (the actual point of this - see the matching, more detailed
+	// comment on aseShowplanToggleZoom() in the ASE section below for why Panzoom's own disableZoom
+	// option can't be used for this instead), then destroy()s the instance to also stop drag-to-pan.
+	// A no-op if zoom isn't currently enabled. Shared by the toggle button itself and by the two
+	// "about to show a different plan" call sites below, which want a guaranteed-off starting state
+	// for the new plan - previously via ssShowplanResetZoom(), which only reset position/scale and
+	// left zoom (and its wheel hijack) running if it happened to already be on.
+	function _ssShowplanDisableZoom() {
+		if (_ssShowplanZoom === undefined) return;
 		var elem = document.getElementById('dbx-view-ssShowplan-content');
-		_ssShowplanZoom = Panzoom(elem, { maxScale: 1, minScale: 0.01 });
-		elem.addEventListener('wheel', _ssShowplanZoom.zoomWithWheel);
-	};
+		var btn  = document.getElementById('dbx-view-ssShowplan-zoomBtn');
+		try { _ssShowplanZoom.reset(); } catch (ex) {}
+		if (elem) elem.removeEventListener('wheel', _ssShowplanZoom.zoomWithWheel);
+		try { _ssShowplanZoom.destroy(); } catch (ex) {}
+		_ssShowplanZoom = undefined;
+		if (btn) btn.innerHTML = '&#128269; Enable Zoom';
+	}
 
-	window.ssShowplanResetZoom = function () {
-		if (_ssShowplanZoom !== undefined) _ssShowplanZoom.reset();
+	window.ssShowplanToggleZoom = function () {
+		if (_ssShowplanZoom !== undefined) { _ssShowplanDisableZoom(); return; }
+		var elem = document.getElementById('dbx-view-ssShowplan-content');
+		var btn  = document.getElementById('dbx-view-ssShowplan-zoomBtn');
+		if (!elem) return;
+		// step is a fixed zoom factor applied per wheel *event*, not scaled by scroll delta - a
+		// trackpad fires far more events per gesture than a mouse wheel "click", so Panzoom's
+		// default (0.3) feels much more aggressive there. Lower value = gentler zoom per event.
+		_ssShowplanZoom = Panzoom(elem, { maxScale: 1, minScale: 0.01, step: 0.05 });
+		elem.addEventListener('wheel', _ssShowplanZoom.zoomWithWheel);
+		if (btn) btn.innerHTML = '&#128269; Disable Zoom';
 	};
 
 	window.ssShowplanFormatSql = function () {
-		var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true };
+		// See the matching comment on pgShowplanFormatSql() - without paramTypes.positional, a bare
+		// "?" in the captured SQL throws a parse error here instead of formatting.
+		var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true, paramTypes: { positional: true } };
 		var sqlText = $('#dbx-view-ssShowplan-sqlContent').text();
 		try {
 			$('#dbx-view-ssShowplan-sqlContent').text(sqlFormatter.format(sqlText, formatOptions));
@@ -833,22 +859,74 @@
 	// -------------------------------------------------------------------------
 	// ASE (Sybase/SAP Adaptive Server Enterprise) Showplan dialog
 	// -------------------------------------------------------------------------
+
+	// AseConnectionUtils.getShowplan() is called with addHtmlTags=true (CmActiveStatements.java),
+	// which wraps its captured text in "<html>Showplan:<pre>...</pre></html>" - normally that's only
+	// ever handed to the plan-text parser (which already strips it, see parseText() in
+	// dbxShowplanAse.js), but the same raw capture can end up feeding the SQL Text field too, which
+	// has no parser of its own to strip it first. Same defensive strip, applied here instead.
+	function _aseStripHtmlWrapper(text) {
+		if (!text) return text;
+		return text.replace(/^[\s\S]*?<pre>/i, '').replace(/<\/pre>[\s\S]*$/i, '');
+	}
+
+	// ASE captures a dynamic SQL cursor's statement wrapped as
+	// "DYNAMIC_SQL <name>: create proc <name> (...) as <actual query>" - dbxSqlText.js already strips
+	// the shorter "DYNAMIC_SQL dyn198: " prefix from its own captured SQL text, but this goes further
+	// and also drops the "create proc ... as" wrapper ASE generates around the dynamic statement,
+	// leaving just the query itself, which is what "Format SQL" should actually be formatting rather
+	// than a CREATE PROC wrapper around it.
+	// The (?:\((?:[^()]|\([^()]*\))*\))? part allows one level of nesting inside the parameter list -
+	// needed because ASE parameter types routinely nest their own parens, e.g. varchar(30) or
+	// numeric(15,7) inside the proc's own (@P1 int, @P2 varchar(30)) parameter list. A naive \([^)]*\)
+	// stops at the first ")" it finds - which closes the INNER type's paren, not the parameter list's
+	// own - leaving the real closing paren unconsumed and the whole match failing (caught by testing
+	// against a real parameterized example, not just a no-params one).
+	var DYNAMIC_SQL_WRAPPER_RE = /^\s*DYNAMIC_SQL\s+\S+\s*:\s*create\s+proc(?:edure)?\s+\S+\s*(?:\((?:[^()]|\([^()]*\))*\))?\s*as\s*/i;
+	function _aseStripDynamicSqlWrapper(text) {
+		if (!text) return text;
+		return text.replace(DYNAMIC_SQL_WRAPPER_RE, '');
+	}
+
 	var _aseShowplanZoom = undefined;
 	var _aseShowplanLastPlanText = undefined;
 	var _aseShowplanLastIsXml = undefined;
-	var _aseShowplanHorizontal = false;
-	try { _aseShowplanHorizontal = localStorage.getItem('dbxtune_aseShowplan_horizontal') === 'true'; } catch (ex) {}
+	// Left-to-right, compact-layout, SVG-line-connectors are now the defaults (all three started as
+	// opt-in experiments, all three were confirmed as improvements over the originals - see
+	// dbxShowplanAse.js's render()/reorderCompactByVa()/tuckLeavesNearParent() comments for the
+	// compact-layout history, and drawConnectorLines() for why arrow connectors won over the CSS
+	// pseudo-element ones once compact layout needed a connector style that doesn't depend on <li>
+	// nesting depth).
+	var _aseShowplanHorizontal = true;
+	try {
+		var _storedHorizontal = localStorage.getItem('dbxtune_aseShowplan_horizontal');
+		if (_storedHorizontal !== null) _aseShowplanHorizontal = _storedHorizontal === 'true';
+	} catch (ex) {}
 
-	window.aseShowplanEnableZoom = function () {
-		if (_aseShowplanZoom !== undefined) return;
+	// A separate "Reset Zoom" button used to sit next to this one, but with zoom left enabled a
+	// mouse-wheel scroll over the plan always zooms instead of scrolling the page - reported as
+	// unwanted when the user actually wanted to scroll. Merged into a single Enable/Disable toggle
+	// instead: disabling doesn't just reset the pan/scale, it removes the wheel listener entirely so
+	// the wheel goes back to normal scrolling until zoom is explicitly re-enabled. Panzoom's own
+	// disableZoom option isn't enough on its own for this - zoomWithWheel() calls
+	// event.preventDefault() unconditionally before it even checks that option, so the scroll would
+	// still be eaten with nothing happening in its place.
+	window.aseShowplanToggleZoom = function () {
 		var elem = document.getElementById('dbx-view-aseShowplan-graphContent');
-		if (!elem) return;
-		_aseShowplanZoom = Panzoom(elem, { maxScale: 1, minScale: 0.01 });
-		elem.addEventListener('wheel', _aseShowplanZoom.zoomWithWheel);
-	};
-
-	window.aseShowplanResetZoom = function () {
-		if (_aseShowplanZoom !== undefined) _aseShowplanZoom.reset();
+		var btn  = document.getElementById('dbx-view-aseShowplan-zoomBtn');
+		if (_aseShowplanZoom === undefined) {
+			if (!elem) return;
+			// See the matching comment in ssShowplanToggleZoom() - lower step = gentler trackpad zoom.
+			_aseShowplanZoom = Panzoom(elem, { maxScale: 1, minScale: 0.01, step: 0.05 });
+			elem.addEventListener('wheel', _aseShowplanZoom.zoomWithWheel);
+			if (btn) btn.innerHTML = '&#128269; Disable Zoom';
+		} else {
+			try { _aseShowplanZoom.reset(); } catch (ex) {} // snap back to normal before it's gone
+			if (elem) elem.removeEventListener('wheel', _aseShowplanZoom.zoomWithWheel);
+			try { _aseShowplanZoom.destroy(); } catch (ex) {} // also stop drag-to-pan
+			_aseShowplanZoom = undefined;
+			if (btn) btn.innerHTML = '&#128269; Enable Zoom';
+		}
 	};
 
 	window.aseShowplanRedraw = function () {
@@ -876,8 +954,13 @@
 		var graphEl     = document.getElementById('dbx-view-aseShowplan-graphContent');
 		var fallbackEl  = document.getElementById('dbx-view-aseShowplan-graphFallback');
 		var orientBtn   = document.getElementById('dbx-view-aseShowplan-orientationBtn');
+		var zoomBtn     = document.getElementById('dbx-view-aseShowplan-zoomBtn');
 		if (!graphEl) return;
 		if (orientBtn) orientBtn.innerHTML = _aseShowplanHorizontal ? '&#8646; Top-to-Bottom' : '&#8646; Left-to-Right';
+		// The zoom instance (if any) stays bound to this same persistent container across redraws -
+		// see the hidden.bs.modal handler's comment - so its enabled/disabled state, and therefore
+		// this label, doesn't reset on redraw/reopen; just keep it in sync with the real state.
+		if (zoomBtn) zoomBtn.innerHTML = _aseShowplanZoom !== undefined ? '&#128269; Disable Zoom' : '&#128269; Enable Zoom';
 
 		// Reset any Panzoom transform from a previous plan before re-rendering.
 		if (_aseShowplanZoom !== undefined) { try { _aseShowplanZoom.reset(); } catch (ex) {} }
@@ -897,7 +980,11 @@
 
 		if (parsed) {
 			try {
-				AseShowplan.render(graphEl, parsed, { horizontal: _aseShowplanHorizontal });
+				AseShowplan.render(graphEl, parsed, {
+					horizontal: _aseShowplanHorizontal,
+					connectorStyle: 'lines', // SVG-drawn arrow connectors - was opt-in, now always on
+					layout: 'compact' // was opt-in ("Default Layout" toggle), now always on
+				});
 				graphEl.style.display = '';
 				if (fallbackEl) fallbackEl.style.display = 'none';
 				return;
@@ -913,8 +1000,10 @@
 	}
 
 	window.aseShowplanFormatSql = function () {
-		var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true };
-		var sqlText = $('#dbx-view-aseShowplan-sqlContent').text();
+		// See the matching comment on pgShowplanFormatSql() - without paramTypes.positional, a bare
+		// "?" in the captured SQL throws a parse error here instead of formatting.
+		var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true, paramTypes: { positional: true } };
+		var sqlText = _aseStripDynamicSqlWrapper($('#dbx-view-aseShowplan-sqlContent').text());
 		try {
 			$('#dbx-view-aseShowplan-sqlContent').text(sqlFormatter.format(sqlText, formatOptions));
 			Prism.highlightAll();
@@ -933,6 +1022,12 @@
 		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
 		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
 		document.body.removeChild(ta);
+	};
+
+	window.aseShowplanOpenExternal = function () {
+		var toUrl = '/showplan/ase';
+		if (!window.location.toString().toLowerCase().startsWith('http')) toUrl = 'http://dbxtune.gorans.org' + toUrl;
+		submit_post_via_hidden_form(toUrl, { plan: _aseShowplanLastPlanText || '', isXml: _aseShowplanLastIsXml ? 'true' : 'false' });
 	};
 
 	/**
@@ -1022,8 +1117,12 @@
 		var $planEl = $('#dbx-view-aseShowplan-planContent', $dlg);
 		$planEl.text(isXml ? formatXml(planText) : planText);
 		$planEl.attr('class', isXml ? 'language-xml line-numbers dbx-view-sqltext-content' : 'line-numbers dbx-view-sqltext-content');
-		$('#dbx-view-aseShowplan-sqlContent', $dlg).text(sqlText || '');
-		_aseShowplanRenderGraphicalPlan(planText, isXml);
+		$('#dbx-view-aseShowplan-sqlContent', $dlg).text(_aseStripHtmlWrapper(sqlText) || '');
+		// NOT rendered here if the dialog isn't already open - see the matching, more detailed
+		// comment on the show.bs.modal handler above: measuring box positions/sizes against a still-
+		// hidden container produces overlapping boxes and invisible (zero-length) connector lines.
+		// Deferred into _drawAndHighlight() below, called either immediately (dialog's already open
+		// and visible, so measuring now is fine) or once shown.bs.modal confirms it actually is.
 
 		// Reset Table Information section — store context for lazy loading on first expand
 		var tiSect = document.getElementById('dbx-asp-sect-tableinfo');
@@ -1050,6 +1149,7 @@
 		}
 
 		function _drawAndHighlight() {
+			_aseShowplanRenderGraphicalPlan(planText, isXml);
 			if (typeof Prism !== 'undefined') Prism.highlightAll();
 		}
 
@@ -1154,10 +1254,13 @@
 
 		// SQL Server: destroy all objects on close to free memory
 		$('#dbx-view-ssShowplan-dialog').on('hidden.bs.modal', function () {
-			if (_ssShowplanZoom) {
-				try { _ssShowplanZoom.destroy(); } catch(e) {}
-				_ssShowplanZoom = undefined;
-			}
+			// Was a bare destroy() here, which - same as the ASE dialog's now-fixed equivalent -
+			// doesn't remove the wheel listener (that's attached by this file, not by Panzoom itself),
+			// only the drag-to-pan handlers. #dbx-view-ssShowplan-content is the persistent Panzoom
+			// target and isn't removed/recreated on close (only its innerHTML gets cleared below), so
+			// the leaked listener would silently keep responding to wheel events after close and a
+			// second one would stack on top of it the next time zoom was enabled.
+			_ssShowplanDisableZoom();
 			if (_sspWaitChart) {
 				try { _sspWaitChart.destroy(); } catch(e) {}
 				_sspWaitChart = null;
@@ -1183,7 +1286,7 @@
 			$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql(data.sqltext));
 			ssShowplanSetPlanType(data.tooltip);
 			ssShowplanGetParameters();
-			ssShowplanResetZoom();
+			_ssShowplanDisableZoom();
 			// Set Table Information context from trigger element's data attributes (srv/dbname/ts)
 			var tiSect = document.getElementById('dbx-ssp-sect-tableinfo');
 			var tiBody = document.getElementById('dbx-ssp-tableinfo-body');
@@ -1310,8 +1413,18 @@
 			var $planEl = $('#dbx-view-aseShowplan-planContent', this);
 			$planEl.text(isXml ? formatXml(data.plan) : data.plan);
 			$planEl.attr('class', isXml ? 'language-xml line-numbers dbx-view-sqltext-content' : 'line-numbers dbx-view-sqltext-content');
-			$('#dbx-view-aseShowplan-sqlContent', this).text(data.sqltext || '');
-			_aseShowplanRenderGraphicalPlan(data.plan, isXml);
+			$('#dbx-view-aseShowplan-sqlContent', this).text(_aseStripHtmlWrapper(data.sqltext) || '');
+			// NOT rendered here - show.bs.modal fires before the modal is actually visible (still
+			// display:none / mid-transition), so #dbx-view-aseShowplan-graphContent measures as
+			// zero-size at this point: tucking positions everything from bogus offsets (overlapping
+			// boxes) and every connector line degenerates to a zero-length path (no visible arrows).
+			// Confirmed by the user seeing exactly that from the Active Statements trigger, self-
+			// correcting the moment Redraw/an orientation toggle re-measures against the now-fully-
+			// shown container. Stash for the shown.bs.modal handler below to actually render once the
+			// container has real dimensions - same two vars _aseShowplanRenderGraphicalPlan() itself
+			// sets as its first step, so Redraw/toggle-orientation keep working unchanged either way.
+			_aseShowplanLastPlanText = data.plan;
+			_aseShowplanLastIsXml    = isXml;
 
 			var tiSect = document.getElementById('dbx-asp-sect-tableinfo');
 			var tiBody = document.getElementById('dbx-asp-tableinfo-body');
@@ -1339,6 +1452,12 @@
 		// ASE: draggable/resizable, position/size persisted per-screen-resolution - same pattern as
 		// the SQL Server dialog above, separate localStorage key prefix so the two don't collide.
 		$('#dbx-view-aseShowplan-dialog').on('shown.bs.modal', function (e) {
+			// Actual render happens here, not in show.bs.modal - see the matching comment there.
+			// showAseShowplanDialog() (the programmatic entry point, relatedTarget undefined here same
+			// as in show.bs.modal) renders itself via its own one-time shown.bs.modal handler instead,
+			// so skip here to avoid rendering twice.
+			if (e.relatedTarget) _aseShowplanRenderGraphicalPlan(_aseShowplanLastPlanText, _aseShowplanLastIsXml);
+
 			var $modal = $(this);
 			var $dlg   = $modal.find('.modal-dialog');
 			var $cont  = $modal.find('.modal-content');
@@ -1656,7 +1775,7 @@
 		$('#dbx-view-ssShowplan-sqlContent', $dlg).text(ssShowplanGetSql(sqlText || ''));
 		ssShowplanSetPlanType(xmlText);
 		ssShowplanGetParameters();
-		ssShowplanResetZoom();
+		_ssShowplanDisableZoom();
 
 		// Reset Table Information section — store context for lazy loading on first expand
 		var tiSect = document.getElementById('dbx-ssp-sect-tableinfo');

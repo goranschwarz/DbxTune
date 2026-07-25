@@ -69,8 +69,16 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-section-title { font-family:Arial, Helvetica, sans-serif; font-weight:bold; font-size:1rem; margin-top:16px; margin-bottom:4px; }' +
 			'.dbx-llm-pre { background:#f8f9fa; border-left:4px solid #007bff; padding:10px; margin:0;' +
 			'  font-family:"Courier New", monospace; font-size:0.85rem; white-space:pre-wrap; word-break:break-word; overflow-x:auto; }' +
+			// max-width caps the reading column at a sane width - without it, this section inherits
+			// whatever width its ancestor happens to impose. In target mode (dbxLlmAdvice.open({target})
+			// e.g. the ASE/SQL Server showplan dialogs' inline "LLM Optimization Advice" section), that
+			// ancestor is the showplan dialog's `.scroll-tree` wrapper, which is a fixed 3000px wide to
+			// make room for the graphical plan diagram - text here would otherwise wrap at 3000px
+			// instead of the dialog's own visible width, forcing an unrelated horizontal scroll just to
+			// read prose. 90vw keeps it responsive down to narrow viewports too.
 			'.dbx-llm-prose { background:#f8f9fa; border-left:4px solid #6c757d; padding:12px 14px;' +
-			'  font-family:Arial, Helvetica, sans-serif; font-size:0.95rem; line-height:1.5; word-break:break-word; }' +
+			'  font-family:Arial, Helvetica, sans-serif; font-size:0.95rem; line-height:1.5; word-break:break-word;' +
+			'  max-width:min(900px, 90vw); box-sizing:border-box; }' +
 			'.dbx-llm-prose p { margin:0 0 10px 0; }' +
 			'.dbx-llm-prose p:last-child, .dbx-llm-prose ul:last-child, .dbx-llm-prose ol:last-child { margin-bottom:0; }' +
 			'.dbx-llm-prose ul, .dbx-llm-prose ol { margin:0 0 10px 0; padding-left:22px; }' +

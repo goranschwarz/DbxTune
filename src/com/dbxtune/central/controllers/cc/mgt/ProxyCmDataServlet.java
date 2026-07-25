@@ -195,6 +195,8 @@ extends ProxyHelper
 		// ---- Enrich with CounterController metadata (same strategy as real CmDataServlet) ----
 		List<String>  diffColumns            = new ArrayList<>();
 		List<String>  pctColumns             = new ArrayList<>();
+		List<String>  pkColumns              = new ArrayList<>();
+		Map<String, String> pkRewrite        = new LinkedHashMap<>();
 		List<String>  tooltips               = new ArrayList<>(result.columns.size());
 		String        description            = null;
 		List<CmChartDescriptor>       chartDescriptors       = null;
@@ -241,6 +243,25 @@ extends ProxyHelper
 				{
 					if (diffSet.contains(col)) diffColumns.add(col);
 					if (pctSet.contains(col))  pctColumns.add(col);
+				}
+
+				// --- Primary Key columns (used by the UI to show PK values in the row tooltip) ---
+				Set<String> pkSet = new HashSet<>();
+				if (cmMeta.getPk() != null)
+					for (String p : cmMeta.getPk()) pkSet.add(p);
+				for (String col : result.columns)
+					if (pkSet.contains(col)) pkColumns.add(col);
+
+				// --- PK rewrite: raw PK column -> friendlier column already present in the
+				// row (e.g. DBID -> DBName), so the UI can show readable names in the tooltip.
+				Map<String, String> rewriteCols = null;
+				try { rewriteCols = cmMeta.getPkRewriteColumns(); } catch (Exception ignored) {}
+				if (rewriteCols != null)
+				{
+					Set<String> colSet = new HashSet<>(result.columns);
+					for (Map.Entry<String, String> e : rewriteCols.entrySet())
+						if (pkSet.contains(e.getKey()) && colSet.contains(e.getValue()))
+							pkRewrite.put(e.getKey(), e.getValue());
 				}
 
 				// --- Tooltips ---
@@ -290,6 +311,8 @@ extends ProxyHelper
 		response.put("rows",         result.rows);
 		response.put("diffColumns",  diffColumns);
 		response.put("pctColumns",   pctColumns);
+		response.put("pkColumns",    pkColumns);
+		response.put("pkRewrite",    pkRewrite);
 		response.put("isNumeric",    result.isNumeric);
 		response.put("tooltips",     tooltips);
 		if (description            != null) response.put("description",            description);

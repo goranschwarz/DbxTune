@@ -2106,13 +2106,40 @@ implements Cloneable, ITableTooltip
 	/**
 	 * Get a readable PK value Map<br>
 	 * This can/will be used by tooltip to show "readable" values instead if ID fields.<br>
-	 * Example: DBID -> DBName 
+	 * Example: DBID -> DBName
 	 * @param modelRow
 	 * @return a LinkedHashMap with the values to be displayed in a tooltip. If null, then no rewrite is available; Show: PK=val
 	 */
 	public Map<String, String> getPkRewriteMap(int modelRow)
 	{
 		return null;
+	}
+
+	/**
+	 * Row-independent variant of {@link #getPkRewriteMap(int)}.<br>
+	 * For every PK column (in the same order as {@link #getPk()}), gives the name of the
+	 * column whose value should be displayed instead of the raw PK value.<br>
+	 * Example: PK column "DBID" -> display column "DBName" (which already holds a readable
+	 * name in the same row).
+	 * <p>
+	 * Unlike {@link #getPkRewriteMap(int)}, this does <b>not</b> read any row data (no call to
+	 * {@code getAbsString()}/{@code getValue()}), so it's safe to call even when no live sample
+	 * is loaded (e.g. from a stateless REST endpoint that has its own copy of the row data).
+	 * <p>
+	 * Default implementation: identity map (every PK column maps to itself, i.e. no rewrite).
+	 * Override alongside {@link #getPkRewriteMap(int)} when a CM wants to expose readable names.
+	 * @return LinkedHashMap&lt;pkColName, displayColName&gt;, or null if {@link #getPk()} is empty
+	 */
+	public Map<String, String> getPkRewriteColumns()
+	{
+		List<String> pkList = getPk();
+		if (pkList == null || pkList.isEmpty())
+			return null;
+
+		Map<String, String> map = new LinkedHashMap<>();
+		for (String pkCol : pkList)
+			map.put(pkCol, pkCol);
+		return map;
 	}
 
 	/**
