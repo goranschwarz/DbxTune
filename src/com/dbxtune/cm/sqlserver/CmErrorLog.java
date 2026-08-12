@@ -27,7 +27,9 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -40,6 +42,9 @@ import com.dbxtune.alarm.events.AlarmEventConfigChanges;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.dbxtune.alarm.events.AlarmEventErrorLogEntry;
 import com.dbxtune.alarm.events.AlarmEventFullTranLog;
+import com.dbxtune.alarm.events.AlarmEventLastBackupFailed;
+import com.dbxtune.alarm.events.AlarmEventLastDbBackupFailed;
+import com.dbxtune.alarm.events.AlarmEventLastWalBackupFailed;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventStackDump;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -277,6 +282,9 @@ extends CountersModelAppend
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 		
+		CountersModel cm = this;
+//		String dbmsSrvName = cm.getServerName();
+
 		// ABS Data from LAST refresh only
 		List<List<Object>> lastRefreshRows = getDataCollectionForLastRefresh();
 
@@ -301,7 +309,7 @@ extends CountersModelAppend
 			return;
 
 		int col_LogDate_pos     = findColumn("LogDate");
-//		int col_ProcessInfo_pos = findColumn("ProcessInfo");
+		int col_ProcessInfo_pos = findColumn("ProcessInfo");
 		int col_Text_pos        = findColumn("Text");
 
 //		if (col_LogDate_pos < 0 || col_ProcessInfo_pos < 0 || col_Text_pos < 0)
@@ -312,6 +320,11 @@ extends CountersModelAppend
 		if (col_LogDate_pos < 0)
 		{
 			_logger.error("When checking for alarms, could not find all columns. skipping this. [LogDate_pos="+col_LogDate_pos+"]");
+			return;
+		}
+		if (col_ProcessInfo_pos < 0)
+		{
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [ProcessInfo_pos="+col_ProcessInfo_pos+"]");
 			return;
 		}
 		if (col_Text_pos < 0)
@@ -342,10 +355,18 @@ extends CountersModelAppend
 				continue;
 			}
 
-			Timestamp errorlogTs = (Timestamp) o_LogDate;
-			String    errorTxt   = (String)    o_Text;
-			int       errorNum   = -1;
-			int       severity   = -1;
+			Object o_ProcessInfo = row.get(col_ProcessInfo_pos);
+			if (o_ProcessInfo == null || !(o_ProcessInfo instanceof String) )
+			{
+				_logger.error("When checking for alarms, the column 'ProcessInfo' is NOT an String, skipping this row.");
+				continue;
+			}
+
+			Timestamp errorlogTs  = (Timestamp) o_LogDate;
+			String    errorTxt    = (String)    o_Text;
+			String    processInfo = (String)    o_ProcessInfo;
+			int       errorNum    = -1;
+			int       severity    = -1;
 
 			// Error: 911, Severity: 16, State: 1.
 			if (errorTxt.startsWith("Error: "))
@@ -661,37 +682,125 @@ extends CountersModelAppend
 				}
 			}
 
+			//-------------------------------------------------------
+			// DB/WAL -- DATABASE Backup FAILED -- Error 3041
+			//-------------------------------------------------------
+			if ("Backup".equals(processInfo))
+			{
+				// Error: 3041, Severity: 16, State: 1.
+				// BACKUP failed to complete the command BACKUP DATABASE ${dbname}. Check the backup application log for detailed messages.
+				// BACKUP failed to complete the command BACKUP DATABASE ${dbname} WITH DIFFERENTIAL. Check the backup application log for detailed messages.
+				// BACKUP failed to complete the command BACKUP LOG ${dbname}. Check the backup application log for detailed messages.
+				if (errorNum == 3041 && isSystemAlarmsForColumnEnabledAndInTimeRange("LastBackupFailed"))
+				{
+					String dbname     = "-unknown-";
+					String backupType = "-unknown-";
+					int threshold = 1;
+
+					if (errorTxt.startsWith("BACKUP failed to complete the command BACKUP "))
+					{
+						if (errorTxt.contains(" BACKUP DATABASE "))
+						{
+							backupType = "DB";
+							dbname     = StringUtils.trim( StringUtils.substringBetween(errorTxt, " BACKUP DATABASE ", ". Check the") );
+
+							// Remove/replace some specific "known" words from the parsed database name 
+							if (dbname != null && dbname.contains("WITH DIFFERENTIAL"))
+							{
+								dbname = dbname.replace("WITH DIFFERENTIAL", "").trim();
+							}
+						}
+
+						if (errorTxt.contains(" BACKUP LOG "))
+						{
+							backupType = "WAL";
+							dbname     = StringUtils.trim( StringUtils.substringBetween(errorTxt, " BACKUP LOG ", ". Check the") );;
+						}
+					}
+
+					AlarmEvent ae = null;
+					
+					//--------------------------------------------------------
+					// DATABASE Backup FAILED
+					//--------------------------------------------------------
+					if ("DB".equals(backupType))
+					{
+						ae = new AlarmEventLastDbBackupFailed(cm, dbname, threshold);
+					}
+					//--------------------------------------------------------
+					// TRANSACTION Backup FAILED
+					//--------------------------------------------------------
+					else if ("WAL".equals(backupType))
+					{
+						ae = new AlarmEventLastWalBackupFailed(cm, dbname, threshold);
+					}
+					//--------------------------------------------------------
+					// ??? Backup FAILED
+					//--------------------------------------------------------
+					else
+					{
+						ae = new AlarmEventLastBackupFailed(cm, dbname, backupType, threshold);
+					}
+
+					// Set Alarm Options
+					String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					
+					// Since this is the ERROR LOG, we wont get at CANCEL, so let the ALARM be active for XX Minutes
+					int ttlInMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastBackupFailed_ttl_minutes, DEFAULT_alarm_LastBackupFailed_ttl_minutes);
+					if (ttlInMinutes > 0)
+					{
+						ae.setTimeToLive(TimeUnit.MINUTES.toMillis(ttlInMinutes));
+					}
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(cm, "LastBackupFailed");
+
+					alarmHandler.addAlarm( ae );
+
+				} // end: errorNum == 3041
+
+			} // end: Backup
+
 		} // end: rows loop
 	}
 
-	public static final String  PROPKEY_alarm_PageErrorReadRetry    = CM_NAME + ".alarm.system.on.PageErrorReadRetry";
-	public static final boolean DEFAULT_alarm_PageErrorReadRetry    = true;
+	public static final String  PROPKEY_alarm_PageErrorReadRetry           = CM_NAME + ".alarm.system.on.PageErrorReadRetry";
+	public static final boolean DEFAULT_alarm_PageErrorReadRetry           = true;
 
-	public static final String  PROPKEY_alarm_UserConnections       = CM_NAME + ".alarm.system.on.UserConnections";
-	public static final boolean DEFAULT_alarm_UserConnections       = true;
+	public static final String  PROPKEY_alarm_UserConnections              = CM_NAME + ".alarm.system.on.UserConnections";
+	public static final boolean DEFAULT_alarm_UserConnections              = true;
 
-	public static final String  PROPKEY_alarm_TransactionLogFull    = CM_NAME + ".alarm.system.on.TransactionLogFull";
-	public static final boolean DEFAULT_alarm_TransactionLogFull    = true;
+	public static final String  PROPKEY_alarm_TransactionLogFull           = CM_NAME + ".alarm.system.on.TransactionLogFull";
+	public static final boolean DEFAULT_alarm_TransactionLogFull           = true;
 
-	public static final String  PROPKEY_alarm_Severity              = CM_NAME + ".alarm.system.if.Severity.gt";
-	public static final int     DEFAULT_alarm_Severity              = 16;
+	public static final String  PROPKEY_alarm_Severity                     = CM_NAME + ".alarm.system.if.Severity.gt";
+	public static final int     DEFAULT_alarm_Severity                     = 16;
 
-	public static final String  PROPKEY_alarm_ErrorNumberSkipList   = CM_NAME + ".alarm.system.errorNumber.skip.list";
-//	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
-	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "17810, 17832, 17836";
+	public static final String  PROPKEY_alarm_ErrorNumberSkipList          = CM_NAME + ".alarm.system.errorNumber.skip.list";
+//	public static final String  DEFAULT_alarm_ErrorNumberSkipList          = "";
+	public static final String  DEFAULT_alarm_ErrorNumberSkipList          = "17810, 17832, 17836";
 	// Below number are usually found when a "penetration test tool" is checking the environment
 	// Num=17810, Severity=20, Text=Could not connect because the maximum number of '1' dedicated administrator connections already exists. Before a new connection can be made, the existing dedicated administrator connection must be dropped, either by logging off or ending the process. [CLIENT: 172.25.0.49] 
 	// Num=17832, Severity=20, Text=The login packet used to open the connection is structurally invalid; the connection has been closed. Please contact the vendor of the client library. [CLIENT: 172.25.0.49] 
 	// Num=17836, Severity=20, Text=Length specified in network packet payload did not match number of bytes read; the connection has been closed. Please contact the vendor of the client library. [CLIENT: 172.25.0.49] 
 
-	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
-	public static final boolean DEFAULT_alarm_ConfigChanges         = true;
+	public static final String  PROPKEY_alarm_ConfigChanges                = CM_NAME + ".alarm.system.on.ConfigChanges";
+	public static final boolean DEFAULT_alarm_ConfigChanges                = true;
 
-	public static final String  PROPKEY_alarm_LongIoRequests        = CM_NAME + ".alarm.system.on.LongIoRequests";
-	public static final boolean DEFAULT_alarm_LongIoRequests        = true;
+	public static final String  PROPKEY_alarm_LongIoRequests               = CM_NAME + ".alarm.system.on.LongIoRequests";
+	public static final boolean DEFAULT_alarm_LongIoRequests               = true;
 
-	public static final String  PROPKEY_alarm_StackDump             = CM_NAME + ".alarm.system.on.StackDump";
-	public static final boolean DEFAULT_alarm_StackDump             = true;
+	public static final String  PROPKEY_alarm_StackDump                    = CM_NAME + ".alarm.system.on.StackDump";
+	public static final boolean DEFAULT_alarm_StackDump                    = true;
+
+	public static final String  PROPKEY_alarm_LastBackupFailed             = CM_NAME + ".alarm.system.on.LastBackupFailed";
+	public static final boolean DEFAULT_alarm_LastBackupFailed             = true;
+
+	public static final String  PROPKEY_alarm_LastBackupFailed_ttl_minutes = CM_NAME + ".alarm.system.on.LastBackupFailed.ttl.minutes";
+	public static final int     DEFAULT_alarm_LastBackupFailed_ttl_minutes = 30;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -701,15 +810,18 @@ extends CountersModelAppend
 
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
-		list.add(new CmSettingsHelper("PageErrorReadRetry"     , isAlarmSwitch, PROPKEY_alarm_PageErrorReadRetry , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_PageErrorReadRetry , DEFAULT_alarm_PageErrorReadRetry ), DEFAULT_alarm_PageErrorReadRetry , "On Error 825, send 'AlarmEventErrorLogEntry'. Note that this is 'only' severity 10... Hence: We are *UPPGRADING* it to a more severe error" ));
-		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 17300 or 17809, send 'AlarmEventConfigResourceIsUsedUp'." ));
-		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 9002, send 'AlarmEventFullTranLog'." ));
-		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
-		list.add(new CmSettingsHelper("LongIoRequests"         , isAlarmSwitch, PROPKEY_alarm_LongIoRequests     , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_LongIoRequests     , DEFAULT_alarm_LongIoRequests     ), DEFAULT_alarm_LongIoRequests     , "On error log message 'I/O requests taking longer than 15 seconds to complete', send 'AlarmEventErrorLogEntry'." ));
-		list.add(new CmSettingsHelper("StackDump"              , isAlarmSwitch, PROPKEY_alarm_StackDump          , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_StackDump          , DEFAULT_alarm_StackDump          ), DEFAULT_alarm_StackDump          , "On error log message '**Dump thread - ', collect the dump text and send 'AlarmEventStackDump'." ));
+		list.add(new CmSettingsHelper("PageErrorReadRetry"     , isAlarmSwitch, PROPKEY_alarm_PageErrorReadRetry          , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_PageErrorReadRetry          , DEFAULT_alarm_PageErrorReadRetry          ), DEFAULT_alarm_PageErrorReadRetry          , "On Error 825, send 'AlarmEventErrorLogEntry'. Note that this is 'only' severity 10... Hence: We are *UPPGRADING* it to a more severe error" ));
+		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections             , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections             , DEFAULT_alarm_UserConnections             ), DEFAULT_alarm_UserConnections             , "On Error 17300 or 17809, send 'AlarmEventConfigResourceIsUsedUp'." ));
+		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull          , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull          , DEFAULT_alarm_TransactionLogFull          ), DEFAULT_alarm_TransactionLogFull          , "On Error 9002, send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges               , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges               , DEFAULT_alarm_ConfigChanges               ), DEFAULT_alarm_ConfigChanges               , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
+		list.add(new CmSettingsHelper("LongIoRequests"         , isAlarmSwitch, PROPKEY_alarm_LongIoRequests              , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_LongIoRequests              , DEFAULT_alarm_LongIoRequests              ), DEFAULT_alarm_LongIoRequests              , "On error log message 'I/O requests taking longer than 15 seconds to complete', send 'AlarmEventErrorLogEntry'." ));
+		list.add(new CmSettingsHelper("StackDump"              , isAlarmSwitch, PROPKEY_alarm_StackDump                   , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_StackDump                   , DEFAULT_alarm_StackDump                   ), DEFAULT_alarm_StackDump                   , "On error log message '**Dump thread - ', collect the dump text and send 'AlarmEventStackDump'." ));
 
-		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
-		list.add(new CmSettingsHelper("Severity SkipList ErrorNumber(s)",       PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
+		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity                    , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity                    , DEFAULT_alarm_Severity                    ), DEFAULT_alarm_Severity                    , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
+		list.add(new CmSettingsHelper("Severity SkipList ErrorNumber(s)",       PROPKEY_alarm_ErrorNumberSkipList         , String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList         , DEFAULT_alarm_ErrorNumberSkipList         ), DEFAULT_alarm_ErrorNumberSkipList         , "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
+
+		list.add(new CmSettingsHelper("LastBackupFailed"       , isAlarmSwitch, PROPKEY_alarm_LastBackupFailed            , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_LastBackupFailed            , DEFAULT_alarm_LastBackupFailed            ), DEFAULT_alarm_LastBackupFailed            , "On error log message 'Msg=3041. BACKUP failed to complete the command ...', send 'AlarmEventLastDbBackupFailed' or 'AlarmEventLastWalBackupFailed' or 'AlarmEventLastBackupFailed'." ));
+		list.add(new CmSettingsHelper("LastBackupFailed TTL Minutes"          , PROPKEY_alarm_LastBackupFailed_ttl_minutes, Integer.class, conf.getIntProperty    (PROPKEY_alarm_LastBackupFailed_ttl_minutes, DEFAULT_alarm_LastBackupFailed_ttl_minutes), DEFAULT_alarm_LastBackupFailed_ttl_minutes, "On 'LastBackupFailed', how many minutes should the alarm be active for" ));
 
 		return list;
 	}
