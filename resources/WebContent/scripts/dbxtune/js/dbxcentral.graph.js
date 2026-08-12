@@ -697,6 +697,135 @@ setTimeout(function()
 }, 10);
 
 
+//-----------------------------------------------------------
+// ACTIVE STATEMENTS: Collector-problem indicator
+//-----------------------------------------------------------
+// DbxCmLastSampleJson/DbxCmHistorySampleJson only get a row written for
+// 'CmActiveStatements' when the collector actually produced rows that cycle
+// (see CentralPersistWriterJdbc.saveCmJsonCounters()). When the collector fails
+// (e.g. a SQLTimeoutException against the monitored DBMS), no row is written at
+// all, so the panel would otherwise just silently show stale/no data.
+//
+// "Counter Details" already solves this for other CMs by live-proxying to the
+// collector itself via /api/cc/mgt/cm/list (see dbxGraphCounterDetails.js) --
+// that response already includes exceptionMsg/exceptionFullText for CmActiveStatements
+// whenever it had a problem. We reuse that same endpoint here.
+
+// srvName -> { exceptionMsg, exceptionFullText } | { offline:true, message } | (absent = OK)
+var _asCollectorProblems = {};
+// Last successfully parsed /api/last-sample or /api/history-sample payload, so a
+// collector-problem state change alone can trigger a re-render without waiting
+// for new counter data.
+var _asLastAllEntries = null;
+
+/** Parse a /api/cc/mgt/cm/list response body into a collector-problem descriptor, or undefined if none. */
+function _asParseCollectorProblemFromCmList(bodyText)
+{
+	try
+	{
+		var r = JSON.parse(bodyText);
+		if (r.error)
+		{
+			// e.g. "collector-offline", "srv-not-found" -- the proxy couldn't reach/resolve the collector
+			return { offline: true, message: r.message || r.error };
+		}
+		if (r.groups)
+		{
+			for (var g=0; g<r.groups.length; g++)
+			{
+				var cms = (r.groups[g] && r.groups[g].cms) || [];
+				for (var c=0; c<cms.length; c++)
+				{
+					if (cms[c].cmName === "CmActiveStatements" && cms[c].exceptionMsg)
+						return { exceptionMsg: cms[c].exceptionMsg, exceptionFullText: cms[c].exceptionFullText };
+				}
+			}
+		}
+	}
+	catch (ex)
+	{
+		console.log("_asParseCollectorProblemFromCmList(): failed to parse response: " + ex, bodyText);
+	}
+	return undefined; // no problem found
+}
+
+/**
+ * Live-check every server in '_serverList' for a CmActiveStatements collector problem,
+ * via the same '/api/cc/mgt/cm/list' proxy endpoint "Counter Details" uses. Updates
+ * '_asCollectorProblems' and calls 'doneCallback(changed)' once all servers responded.
+ */
+function _asRefreshCollectorProblems(timeStr, doneCallback)
+{
+	if ( ! _serverList || _serverList.length === 0)
+	{
+		if (typeof doneCallback === "function") doneCallback(false);
+		return;
+	}
+
+	var pending = _serverList.length;
+	var changed = false;
+
+	_serverList.forEach(function(srvName)
+	{
+		$.ajax({
+			url: "/api/cc/mgt/cm/list",
+			data: { srv: srvName, time: timeStr },
+			dataType: "text",
+			complete: function(xhr)
+			{
+				var newVal = (xhr.status === 0)
+					? { offline: true, message: "Network error contacting DbxCentral" }
+					: _asParseCollectorProblemFromCmList(xhr.responseText);
+
+				if (JSON.stringify(_asCollectorProblems[srvName]) !== JSON.stringify(newVal))
+					changed = true;
+
+				if (newVal === undefined) delete _asCollectorProblems[srvName];
+				else                       _asCollectorProblems[srvName] = newVal;
+
+				pending--;
+				if (pending <= 0 && typeof doneCallback === "function")
+					doneCallback(changed);
+			}
+		});
+	});
+}
+
+/** Build the same "Collector problem at sample time" warning banner Counter Details uses (dbxGraphCounterDetails.js). */
+function _asBuildCollectorProblemBanner(srvName, problem)
+{
+	var div = document.createElement("div");
+	// Override Bootstrap's '.alert' default margin-bottom:1rem (which otherwise stacks with
+	// the per-server '<br>' spacer and shows up as an oversized gap above whatever follows --
+	// the table, or the next server's "Active Statements on server:" label).
+	div.style.margin = "4px 0";
+
+	if (problem.offline)
+	{
+		div.className = "alert alert-secondary";
+		div.style.fontSize = "0.85em";
+		div.innerHTML = "<strong>&#9888; Collector unreachable</strong><br>"
+			+ "Could not reach the collector for server '" + $("<span>").text(srvName).html() + "' to check for problems."
+			+ (problem.message ? ("<br><span style='opacity:0.8'>" + $("<span>").text(problem.message).html() + "</span>") : "");
+		return div;
+	}
+
+	div.className = "alert alert-warning";
+	div.style.fontSize = "0.85em";
+	var html = "<strong>&#9888; Collector problem at sample time</strong><br>"
+		+ $("<span>").text(problem.exceptionMsg).html();
+
+	if (problem.exceptionFullText)
+	{
+		html += "<br><details style='margin-top:4px'><summary style='cursor:pointer;'>Full stack trace</summary>"
+			+ "<pre style='font-size:0.8em;white-space:pre-wrap;margin-top:4px;'>" + $("<span>").text(problem.exceptionFullText).html() + "</pre></details>";
+	}
+
+	div.innerHTML = html;
+	return div;
+}
+
+
 /**
  * Get Active Statements saved in the Central PCS (last known/received values)
  */
@@ -720,13 +849,22 @@ function dbxTuneCheckActiveStatements()
 		console.log("dbxTuneCheckActiveStatements(): Found " + _serverList.length + " entries in the serverlist. ONLY FIRST WILL BE CHECKED. _serverList=" + _serverList);
 	}
 
+	// Live-check each collector for a CmActiveStatements problem (see _asRefreshCollectorProblems()
+	// above) -- catches the case where the collector failed and no new sample was ever written,
+	// which otherwise looks identical to "no active statements" or "nothing changed".
+	_asRefreshCollectorProblems(moment().format('YYYY-MM-DD HH:mm:ss'), function(changed)
+	{
+		if (changed && _asLastAllEntries)
+			setActiveStatement(_asLastAllEntries);
+	});
+
 	$.ajax(
 	{
 		url: "/api/last-sample?srv="+srvName+"&cm=CmActiveStatements",
 		type: 'get',
 		//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-			
-		success: function(data, status) 
+
+		success: function(data, status)
 		{
 			console.log("DEBUG: dbxTuneCheckActiveStatements(): CALL SUCCESS...");
 		//	console.log("DEBUG: dbxTuneCheckActiveStatements(): CALL SUCCESS... data & _lastActiveStatementData", data, _lastActiveStatementData);
@@ -740,11 +878,12 @@ function dbxTuneCheckActiveStatements()
 				return;
 			}
 			_lastActiveStatementData = data;
-			
+
 			var jsonResp = JSON.parse(data);
 			console.log("RECEIVED DATA[dbxTuneCheckActiveStatements]: ", jsonResp);
 
-			setActiveStatement(jsonResp); 
+			_asLastAllEntries = jsonResp;
+			setActiveStatement(jsonResp);
 		},
 		error: function(xhr, desc, err) 
 		{
@@ -781,11 +920,19 @@ function dbxTuneGetHistoryStatements(startTime, endTime)
 	             + "&endTime="    + endTime
 	             + "";
 	console.log("dbxTuneGetHistoryStatements(): Calling url '" + urlStr + "'.");
-	
+
 	// Show info that we are getting data (this might be slow), only disaply after x ms
 	// And in the below SUCCESS/FAIL -- CLOSE the info field/popup
 //	document.getElementById("dbx-history-get-data-bussy").style.visibility = 'visible';
 	var dbxHistoryGetDataBussyTime = setTimeout(function() { document.getElementById("dbx-history-get-data-bussy").style.visibility = 'visible'; }, 20);
+
+	// Live-check each collector for a CmActiveStatements problem at this point in history (same
+	// idea as dbxTuneCheckActiveStatements() -- see _asRefreshCollectorProblems() above).
+	_asRefreshCollectorProblems(startTime, function(changed)
+	{
+		if (changed && _asLastAllEntries)
+			setActiveStatement(_asLastAllEntries);
+	});
 
 	// GET Data
 	$.ajax(
@@ -810,11 +957,12 @@ function dbxTuneGetHistoryStatements(startTime, endTime)
 //				return;
 //			}
 			_lastActiveStatementData = data;
-			
+
 			var jsonResp = JSON.parse(data);
 			console.log("RECEIVED DATA[dbxTuneGetHistoryStatements]: ", jsonResp);
 
-			setHistoryStatement(jsonResp); 
+			_asLastAllEntries = jsonResp;
+			setHistoryStatement(jsonResp);
 
 			// CLOSE the info field (that we are getting data from the DB)
 			clearTimeout(dbxHistoryGetDataBussyTime);
@@ -2258,8 +2406,30 @@ function dbxTuneGraphSubscribe()
 	/**
 	 * INTERNAL: buildActiveStatementDiv
 	 */
-	function buildActiveStatementDiv(appName, srvName, counters)
+	function buildActiveStatementDiv(appName, srvName, counters, collectorProblem)
 	{
+		// No sample data at all for this server (either the collector has never produced a
+		// valid CmActiveStatements row, or this is a synthetic problem-only entry) -- if we
+		// also know *why* (collectorProblem), just show that instead of an empty/broken table.
+		var hasCounterData = counters && Array.isArray(counters.rateCounters);
+		if (collectorProblem && ! hasCounterData)
+		{
+			var problemOnlyDiv = document.createElement("div");
+			problemOnlyDiv.setAttribute("id",    "active-statements-srv-" + srvName);
+			problemOnlyDiv.setAttribute("class", "active-statements-srv-class");
+			problemOnlyDiv.style.marginTop = "8px"; // spacer between server blocks, instead of a full <br> line
+			problemOnlyDiv.statementsRowCount = 0;
+
+			var infoDivPO = document.createElement("div");
+			infoDivPO.innerHTML = "Active Statements on server: <b>" + srvName + "</b>";
+			infoDivPO.setAttribute("class", "active-statements-srv-info-class");
+
+			problemOnlyDiv.appendChild(infoDivPO);
+			problemOnlyDiv.appendChild(_asBuildCollectorProblemBanner(srvName, collectorProblem));
+
+			return problemOnlyDiv;
+		}
+
 		// Get what Type we want to view: ABS, DIFF or RATE
 		var counterData = counters.rateCounters;
 		var selectedCounterType = document.querySelector('input[name="active-statements-counter-type"]:checked').value;
@@ -2615,6 +2785,7 @@ function dbxTuneGraphSubscribe()
 		newSrvDiv.setAttribute("id",    "active-statements-srv-" + srvName);
 		newSrvDiv.setAttribute("class", "active-statements-srv-class");
 		newSrvDiv.setAttribute("title", tooltip);
+		newSrvDiv.style.marginTop = "8px"; // spacer between server blocks, instead of a full <br> line
 
 		
 		// "add" a property 'statementsRowCount' to a div the we read later.
@@ -2666,8 +2837,9 @@ function dbxTuneGraphSubscribe()
 
 
 		// Add stuff to the 'newSrvDiv'
-		newSrvDiv.appendChild(document.createElement("br"));
 		newSrvDiv.appendChild(newSrvInfoDiv);
+		if (collectorProblem)
+			newSrvDiv.appendChild(_asBuildCollectorProblemBanner(srvName, collectorProblem));
 		newSrvDiv.appendChild(newSrvTabDiv);
 //		newSrvDiv.appendChild(tab);
 //		newSrvDiv.appendChild(document.createElement("br"));
@@ -2702,6 +2874,10 @@ function dbxTuneGraphSubscribe()
 		// Keep count on TOTAL active statements (in all servers)
 		var totalActiveStatementsCount = 0;
 
+		// Track which servers we've built a div for, so a collector-problem-only server (one
+		// that never made it into 'allEntries' because it never produced a valid sample) still
+		// gets a div below with just the warning banner.
+		var srvNamesSeen = {};
 
 		// Loop all entries
 		// Build a "div" foreach of the servers that has active statements
@@ -2714,20 +2890,30 @@ function dbxTuneGraphSubscribe()
 
 			var appName = entry.appName;
 			var srvName = entry.srvName;
-			
+			srvNamesSeen[srvName] = true;
+
 			var counters = {};
 			for(let c=0; c<entry.cmNames.length; c++)
 			{
 				var cmNamesEntry = entry.cmNames[c];
-					
+
 				if (cmNamesEntry.cmName === "CmActiveStatements")
 					counters = cmNamesEntry.lastSample.counters;
 			}
-			
-			var newSrvDiv = buildActiveStatementDiv(appName, srvName, counters);
-			
+
+			var newSrvDiv = buildActiveStatementDiv(appName, srvName, counters, _asCollectorProblems[srvName]);
+
 			// Push the new div on the array, which will be read later
 			activeStatementsDivArr.push(newSrvDiv);
+		}
+
+		// Servers with a currently-known collector problem that never showed up above (the
+		// collector has never produced a valid CmActiveStatements sample at all).
+		for (var problemSrvName in _asCollectorProblems)
+		{
+			if (srvNamesSeen[problemSrvName]) continue;
+			var problemSrvDiv = buildActiveStatementDiv("Unknown", problemSrvName, {}, _asCollectorProblems[problemSrvName]);
+			activeStatementsDivArr.push(problemSrvDiv);
 		}
 
 		// Emty the Statements Window
@@ -2765,10 +2951,15 @@ function dbxTuneGraphSubscribe()
 		// Set count at the top of the poupup window
 		$("#active-statements-count").html(totalActiveStatementsCount);
 
+		// A collector problem should draw the same attention as active statements do, even
+		// when the current row count is 0 -- which is exactly the case a collector problem
+		// (no valid sample this cycle) very often causes.
+		var hasAnyCollectorProblem = Object.keys(_asCollectorProblems).length > 0;
+
 		// Floating button: update badge count and blink when active
-		if ( totalActiveStatementsCount > 0 )
+		if ( totalActiveStatementsCount > 0 || hasAnyCollectorProblem )
 		{
-			$("#active-stmt-count").text(totalActiveStatementsCount).show();
+			$("#active-stmt-count").text( totalActiveStatementsCount > 0 ? totalActiveStatementsCount : "!" ).show();
 			$("#active-statements-btn").css("animation", "blink 1.5s infinite");
 			$("#active-statements-btn").css("background", "rgba(229, 228, 226, 0.5)");
 		}
@@ -2783,7 +2974,7 @@ function dbxTuneGraphSubscribe()
 		// SHOW all Statements div
 		if ( document.getElementById("active-statements-auto-open-chk").checked )
 		{
-			if ( totalActiveStatementsCount > 0 )
+			if ( totalActiveStatementsCount > 0 || hasAnyCollectorProblem )
 				$("#active-statements").css("display", "block"); // show
 			else
 				$("#active-statements").css("display", "none"); // hide

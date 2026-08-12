@@ -2109,13 +2109,40 @@ extends CountersModel
 
 					if (val.intValue() > threshold)
 					{
-						// Guess what TYPE of dump that went wrong
-						String backupType = "-UNKNOWN-TYPE-"; // 'DB' or 'TRAN'
-						if (cm.hasColumns("BackupStartTime", "LastTranLogDumpTime"))
+						// Guess what TYPE of dump that went wrong: 'DB', 'TRAN', 'BOTH' or unknown
+						String backupType = "-UNKNOWN-TYPE-";
+						if (cm.hasColumns("BackupEndTime", "LastTranLogEndDumpTime"))
 						{
+							// 'BackupEndTime' is ONLY moved forward on a *successful* db dump, so it stays
+							// frozen at the last success if the most recent db dump attempt failed.
+							// 'LastTranLogEndDumpTime' on the other hand always advances (success or failure),
+							// so a failed tran dump can only be inferred by elimination.
+							Timestamp backupStartTime     = cm.getAbsValueAsTimestamp(r, "BackupStartTime");
+							Timestamp backupEndTime       = cm.getAbsValueAsTimestamp(r, "BackupEndTime");
+							Timestamp lastTranLogDumpTime = cm.getAbsValueAsTimestamp(r, "LastTranLogDumpTime");
+
+							Double  backupInProgressVal = cm.getAbsValueAsDouble(r, "BackupInProgress");
+							boolean backupInProgress    = backupInProgressVal != null && backupInProgressVal.intValue() > 0;
+
+							boolean dbDumpUnfinished = backupStartTime != null
+									&& (backupEndTime == null || backupStartTime.after(backupEndTime))
+									&& !backupInProgress;
+
+							boolean mostRecentIsTran = lastTranLogDumpTime != null
+									&& (backupStartTime == null || lastTranLogDumpTime.after(backupStartTime));
+
+							if      (dbDumpUnfinished && mostRecentIsTran) backupType = "BOTH";
+							else if (dbDumpUnfinished)                     backupType = "DB";
+							else if (lastTranLogDumpTime != null)          backupType = "TRAN";
+						}
+						else if (cm.hasColumns("BackupStartTime", "LastTranLogDumpTime"))
+						{
+							// Legacy heuristic for ASE versions older than 16.0 SP4 PL1, where
+							// 'BackupEndTime'/'LastTranLogEndDumpTime' aren't available: whichever
+							// dump was started more recently is assumed to be the one that failed.
 							Timestamp backupStartTime     = cm.getAbsValueAsTimestamp(r, "BackupStartTime");
 							Timestamp lastTranLogDumpTime = cm.getAbsValueAsTimestamp(r, "LastTranLogDumpTime");
-							
+
 							if (backupStartTime != null && lastTranLogDumpTime != null)
 							{
 								if (backupStartTime.getTime() >= lastTranLogDumpTime.getTime())
@@ -2130,29 +2157,38 @@ extends CountersModel
 							}
 						}
 
-						// Create the Alarm
+						// Create the Alarm(s)
 						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
-						AlarmEvent ae;
-						if ("DB".equals(backupType))
+						List<AlarmEvent> alarmEvents = new ArrayList<>();
+						if ("BOTH".equals(backupType))
 						{
-							ae = new AlarmEventLastDbBackupFailed(cm, dbname, threshold);
+							alarmEvents.add(new AlarmEventLastDbBackupFailed(cm, dbname, threshold));
+							alarmEvents.add(new AlarmEventLastWalBackupFailed(cm, dbname, threshold));
 						}
-						else if ("TRAN".equals(backupType)) 
+						else if ("DB".equals(backupType))
 						{
-							ae = new AlarmEventLastWalBackupFailed(cm, dbname, threshold);
+							alarmEvents.add(new AlarmEventLastDbBackupFailed(cm, dbname, threshold));
+						}
+						else if ("TRAN".equals(backupType))
+						{
+							alarmEvents.add(new AlarmEventLastWalBackupFailed(cm, dbname, threshold));
 						}
 						else
 						{
-							ae = new AlarmEventLastBackupFailed(cm, dbname, backupType, threshold);
+							alarmEvents.add(new AlarmEventLastBackupFailed(cm, dbname, backupType, threshold));
 						}
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
-						// Information about how to disable this alarm
-						ae.createAlarmOptionsMessage(this, "LastBackupFailed");
+						for (AlarmEvent ae : alarmEvents)
+						{
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
-						alarmHandler.addAlarm( ae );
+							// Information about how to disable this alarm
+							ae.createAlarmOptionsMessage(this, "LastBackupFailed");
+
+							alarmHandler.addAlarm( ae );
+						}
 					}
 				}
 			}
