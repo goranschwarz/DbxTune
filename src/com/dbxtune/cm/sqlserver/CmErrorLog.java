@@ -781,8 +781,9 @@ extends CountersModelAppend
 
 	public static final String  PROPKEY_alarm_ErrorNumberSkipList          = CM_NAME + ".alarm.system.errorNumber.skip.list";
 //	public static final String  DEFAULT_alarm_ErrorNumberSkipList          = "";
-	public static final String  DEFAULT_alarm_ErrorNumberSkipList          = "17810, 17832, 17836";
+	public static final String  DEFAULT_alarm_ErrorNumberSkipList          = "4014, 17810, 17832, 17836";
 	// Below number are usually found when a "penetration test tool" is checking the environment
+	// Num=4014,  Severity=20, Text=A fatal error occurred while reading the input stream from the network. The session will be terminated (input error: 10054, output error: 0). 
 	// Num=17810, Severity=20, Text=Could not connect because the maximum number of '1' dedicated administrator connections already exists. Before a new connection can be made, the existing dedicated administrator connection must be dropped, either by logging off or ending the process. [CLIENT: 172.25.0.49] 
 	// Num=17832, Severity=20, Text=The login packet used to open the connection is structurally invalid; the connection has been closed. Please contact the vendor of the client library. [CLIENT: 172.25.0.49] 
 	// Num=17836, Severity=20, Text=Length specified in network packet payload did not match number of bytes read; the connection has been closed. Please contact the vendor of the client library. [CLIENT: 172.25.0.49] 

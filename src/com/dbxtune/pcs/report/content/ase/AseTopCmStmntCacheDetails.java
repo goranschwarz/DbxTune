@@ -29,7 +29,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +43,7 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -68,7 +68,6 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
 	private Map<Map<String, Object>, SqlCapExecutedSqlEntries> _keyToExecutedSql;
-	private Map<String, String> _planMap = new HashMap<>();
 
 	private ReportType _reportType = ReportType.CPU_TIME;
 	
@@ -183,65 +182,12 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 
 			if (isFullMessageType())
 			{
-				sb.append("<script type='text/javascript'> \n");
-				sb.append("    function showplanForId(id) \n");
-				sb.append("    { \n");
-				sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
-//				sb.append("        QP.showPlan(document.getElementById('showplan-container'), showplanText); \n");
-//				sb.append("        document.getElementById('showplan-head').innerHTML = 'Below is Execution plan for <code>plan_handle: ' + id + \"</code> <br>Note: You can also view your plan at <a href='http://www.supratimas.com' target='_blank'>http://www.supratimas.com</a>, or any other <i>plan-view</i> application by pasting (Ctrl-V) the clipboard content. <br>SentryOne Plan Explorer can be downloaded here: <a href='https://www.sentryone.com/plan-explorer' target='_blank'>https://www.sentryone.com/plan-explorer</a>\"; \n");
-				sb.append("        copyStringToClipboard(showplanText); \n");
-				sb.append("    } \n");
-				sb.append("\n");
-				sb.append("    function copyStringToClipboard (string)                                   \n");
-				sb.append("    {                                                                         \n");
-				sb.append("        function handler (event)                                              \n");
-				sb.append("        {                                                                     \n");
-				sb.append("            event.clipboardData.setData('text/plain', string);                \n");
-				sb.append("            event.preventDefault();                                           \n");
-				sb.append("            document.removeEventListener('copy', handler, true);              \n");
-				sb.append("        }                                                                     \n");
-				sb.append("                                                                              \n");
-				sb.append("        document.addEventListener('copy', handler, true);                     \n");
-				sb.append("        document.execCommand('copy');                                         \n");
-				sb.append("                                                                              \n");
-				sb.append("        // Open a popup... and close it 3 seconds later...                    \n");
-				sb.append("        $('#copyPastePopup').modal('show');                                   \n");
-				sb.append("            setTimeout(function() {                                           \n");
-				sb.append("            $('#copyPastePopup').modal('hide');                               \n");
-				sb.append("        }, 3000);		                                                     \n");
-				sb.append("    }                                                                         \n");
-				sb.append("</script> \n");
+				// dsrOpenLink()/showplanForId()/copyStringToClipboard() + the #copyPastePopup modal (written once per report)
+				writeXmlPlanSupportJs(sb);
 
-
-				// HTML Code for the bootstrap popup...
-				sb.append("    <div class='modal fade' id='copyPastePopup'>                              \n");
-				sb.append("        <div class='modal-dialog'>                                            \n");
-				sb.append("            <div class='modal-content'>                                       \n");
-				sb.append("                <div class='modal-header'>                                    \n");
-//				sb.append("                    <button type='button' class='close' data-dismiss='modal' aria-hidden='true'>&times;</button> \n");
-				sb.append("                    <h4 class='modal-title'>Auto Close in 3 seconds</h4>      \n");
-				sb.append("                </div>                                                        \n");
-				sb.append("                <div class='modal-body'>                                      \n");
-				sb.append("                    <p>The XML Plan was copied to Clipboard</p>               \n");
-				sb.append("                    <p>To see the GUI Plan, for example: Past it into SQL Window (sqlw)<br> \n");
-				sb.append("                       SQL Window is included in the DbxTune package.         \n");
-				sb.append("                    </p>                                                      \n");
-				sb.append("                </div>                                                        \n");
-				sb.append("            </div>                                                            \n");
-				sb.append("        </div>                                                                \n");
-				sb.append("    </div>                                                                    \n");
-
-				for (String planHandle : _planMap.keySet())
-				{
-					String xmlPlan = _planMap.get(planHandle);
-
-					// replace '*' with '_'
-					planHandle = planHandle.replace('*', '_');
-
-					sb.append("\n<script id='plan_").append(planHandle).append("' type='text/xmldata'>\n");
-					sb.append(xmlPlan);
-					sb.append("\n</script>\n");
-				}
+				// The XML Plans, as hidden <script id='plan_...' type='text/xmldata'> blocks.
+				// NOTE: This writes ALL plans registered by ANY ASE report section (each plan written only once)
+				writePendingXmlPlans(sb);
 			}
 		}
 
@@ -948,15 +894,17 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						String xmlPlanParamsTable = "";
 						String query              = "--not-found--";;
 						String xmlPlanCellContent = "--not-found--";
+						String showplanLink       = "Execution Plan <b>NOT Available</b>";
+						String planElementId      = null;
 
 						// Get XML plan from DDL Storage
 						try {
 							xmlPlan = getXmlShowplanFromMonDdlStorage(conn, objectName);
-						} catch(SQLException ex) { 
-							setProblemException(ex); 
+						} catch(SQLException ex) {
+							setProblemException(ex);
 						}
 
-						// Extract SQL from XML, also add XML to: _planMap<objectName, xmlPlan>
+						// Extract SQL from XML, also register the XML Plan (written ONCE to the HTML, see writePendingXmlPlans())
 						if (StringUtil.hasValue(xmlPlan))
 						{
 							query = XmlPlanAseUtils.getSqlStatement(xmlPlan);
@@ -968,17 +916,26 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 							String planHandle = objectName.replace('*', '_');
 							xmlPlanCellContent = "<a href='#showplan-list' title='Copy plan to clipboard... then you can copy it into SqlW to view the GUI Plan!' onclick='showplanForId(\"" + planHandle + "\"); return true;'>Copy XML</a>";
 
-							// Add the Plan the a Map so we later can write the information to the output/HTML file
+							// id of the hidden <script type='text/xmldata'> block written by writePendingXmlPlans() -
+							// reused (not re-embedded) by both "View Execution Plan" and "Get LLM Optimization Advice"
+							planElementId = getXmlPlanElementId(objectName);
+
+							// "View Execution Plan" link - JS-driven (reads the plan out of 'planElementId' at click
+							// time, see dsrOpenLink() above), so a large plan never gets duplicated into the page
+							showplanLink = ShowplanLinkBuilder.buildViewPlanLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), planElementId, query, DbUtils.DB_PROD_NAME_SYBASE_ASE, getReportingInstance().getServerName(), dbname);
+
+							// Register the Plan in the report-scoped registry, so it later can be written (ONCE) to the output/HTML file
 							if (objectName != null && (objectName.trim().startsWith("*ss") || objectName.trim().startsWith("*sq")) )
-								_planMap.put(objectName, xmlPlan);
+								registerXmlPlan(objectName, xmlPlan);
 						}
 						
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
 						String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, query, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 
-						// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
-						String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, dbname, query, DbUtils.DB_PROD_NAME_SYBASE_ASE);
-						String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), query, llmDdlContext, xmlPlan, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						// "Get LLM Optimization Advice" link - JS-driven (reads the plan out of 'planElementId' at
+						// click time, see dsrOpenLink() above); ddlContext is no longer precomputed here at all -
+						// dbxLlmAdvice.js resolves it LIVE from srv+dbname at click time (see buildAdviceLinkHtmlJs)
+						String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(getReportingInstance().getDbxCentralPublicBaseUrl(), query, planElementId, DbUtils.DB_PROD_NAME_SYBASE_ASE, getReportingInstance().getServerName(), dbname);
 
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table and index information 
@@ -1008,7 +965,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						String objName_hashKey = objectName + "<br>\n<br>\n<b>Hashkey=</b>" + hashKey;
 
 						// SQL Text (and Compile Execution parameters)
-						String sqlTextValue = "<xmp>" + query + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
+						String sqlTextValue = "<xmp>" + query + "</xmp>" 
+								+ (StringUtil.hasValue(showplanLink) ? "<br>\n" + showplanLink : "")
+								+ "<br>\n" + llmAdviceLink 
+								+ tableInfo;
 
 //						// ADD Table and Index information (SHOW details, by default)
 //						if (StringUtil.hasValue(tableInfo))

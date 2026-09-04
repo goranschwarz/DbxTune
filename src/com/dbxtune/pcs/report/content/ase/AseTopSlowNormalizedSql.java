@@ -30,8 +30,10 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
@@ -43,6 +45,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -61,6 +64,19 @@ import com.dbxtune.utils.TimeUtils;
 public class AseTopSlowNormalizedSql extends AseAbstract
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/**
+	 * A <i>normalized</i> SQL Statement has no Execution Plan of it's own, but it typically maps to one
+	 * or several Statement Cache entries ('*ss...ss*' / '*sq...ss*'), which DO have a XML Plan stored in
+	 * [MonDdlStorage]. This is the max number of such plans we present per statement.
+	 * <p>
+	 * It governs BOTH per-plan link lists -- "View Execution Plan" and "Get LLM Optimization Advice" --
+	 * since they are built from the same set of plans (and therefore always list the same entries).
+	 * <p>
+	 * Note: this also bounds how much XML Plan text we embed in the report (a plan can be ~128KB).
+	 */
+	public static final String PROPKEY_showplan_maxLinks = "AseTopSlowNormalizedSql.showplan.maxLinks";
+	public static final int    DEFAULT_showplan_maxLinks = 10;
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _sqlRstm;
@@ -264,6 +280,17 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			}
 		}
 		
+		if (isFullMessageType())
+		{
+			// dsrOpenLink()/showplanForId()/copyStringToClipboard() + the #copyPastePopup modal (written once per report)
+			writeXmlPlanSupportJs(sb);
+
+			// The XML Plans (that the "View Execution Plan" links reads at click time), as hidden
+			// <script id='plan_...' type='text/xmldata'> blocks.
+			// NOTE: This writes ALL plans registered by ANY ASE report section (each plan written only once)
+			writePendingXmlPlans(sb);
+		}
+
 		// Write JavaScript code for CPU SparkLine
 		if (isFullMessageType())
 		{
@@ -271,7 +298,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				sb.append(str);
 		}
 	}
-	
+
 	@Override
 	public String getSubject()
 	{
@@ -804,6 +831,9 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				htp.add("note"        , new ColumnCopyRow().add( new ColumnCopyDef("Note", NoteRenderer                 ) ).addEmptyCol()                                                 .addEmptyCol()                                                                      .addEmptyCol());
 				htp.validate();
 
+				// Max number of "View Execution Plan" links we present per normalized SQL Statement
+				int showplanMaxLinks = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_showplan_maxLinks, DEFAULT_showplan_maxLinks);
+
 				// add rows to Simple ResultSet
 				if (pos_NormJavaSqlHashCode >= 0)
 				{
@@ -850,9 +880,35 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
 						String tableInfo = getDbmsTableInformationFromSqlText(conn, null, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 
-						// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
-						String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, null, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
-						String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						// The SQL Text is *normalized*, so it has no Execution Plan of it's own... but the Statement
+						// Cache entries it maps to has. So present one link per entry that we have a XML Plan for.
+						// Both the "View Execution Plan" and the "Get LLM Optimization Advice" lists are built from
+						// that same set of plans, in ONE pass (they share the queries and the plan lookups).
+						PlanLinkLists planLinks = buildPlanLinkListsHtml(conn, NormJavaSqlHashCode, showplanMaxLinks);
+
+						String showplanLinks = planLinks.showplanLineHtml;
+
+						// "Get LLM Optimization Advice" for the normalized SQL Text alone (no plan).
+						// NOTE: plain hyperlink (not inline JS) since this report can be e-mailed
+						String llmDdlContext  = LlmSqlContextBuilder.buildDdlContext(conn, null, sqlText, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						String llmAdviceLink;
+
+						if ( ! planLinks.hasLlmLinks() )
+						{
+							// No plans for this statement: exactly as it has always looked -- icon + full link text
+							llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+						}
+						else
+						{
+							// We have plans: write the icon and the label ONCE, then "SQL only" followed by one
+							// entry per plan (advice *with* the plan is a lot better than advice from SQL text alone)
+							String llmSqlOnlyLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, null, DbUtils.DB_PROD_NAME_SYBASE_ASE, "SQL only", false);
+
+							llmAdviceLink = "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;Get LLM Optimization Advice: "
+									+ (StringUtil.hasValue(llmSqlOnlyLink) ? llmSqlOnlyLink + ", " : "")
+									+ planLinks.llmLinksHtml
+									+ "<br>\n";
+						}
 
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table information (like we do in 'AseTopCmObjectActivity')
@@ -896,7 +952,10 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
 
-						sqlText = "<xmp>" + sqlText + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
+						sqlText = "<xmp>" + sqlText + "</xmp><br>" 
+								+ showplanLinks 
+								+ llmAdviceLink 
+								+ tableInfo;
 						
 						//-------------------------------------
 						// add record to SimpleResultSet
@@ -998,6 +1057,210 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		} // end: _shortRstm has data
 		
 	} // end: method
+
+	/**
+	 * Get all Statement Cache entries that the passed <i>normalized</i> SQL Statement maps to.
+	 * <p>
+	 * This is the same population as the [StatementCacheNames] column in the "top" query (ProcName like '*s%',
+	 * which catches both '*ss' Language Statements and '*sq' Prepared Statements), but here we also grab the
+	 * [DBName], so each plan link can pass the correct database to DbxCentral (used for the "live" table/index
+	 * lookups in the Showplan viewer).
+	 *
+	 * @return Map of: Statement Cache name -> DBName (insert ordered by name). Never null.
+	 */
+	private Map<String, String> getStatementCacheNamesForHashCode(DbxConnection conn, String normJavaSqlHashCode)
+	{
+		Map<String, String> map = new LinkedHashMap<>();
+
+		String sql = ""
+			    + "select distinct [ProcName], [DBName] \n"
+			    + "from [MonSqlCapStatements] \n"
+			    + "where [NormJavaSqlHashCode] = " + normJavaSqlHashCode + " \n"
+			    + "  and [ProcName] like '*s%' \n"
+			    + "  and [ErrorStatus] = 0 \n"
+			    + getReportPeriodSqlWhere("StartTime")
+			    + "order by [ProcName] \n"
+			    + "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+					map.put(rs.getString(1), rs.getString(2));
+			}
+		}
+		catch(SQLException ex)
+		{
+			// NOTE: do NOT setProblemException() here -- the Execution Plan links are "extra info",
+			//       we do not want to fail/degrade the whole report section just because of this
+			_logger.warn("Problems getting Statement Cache names by NormJavaSqlHashCode = " + normJavaSqlHashCode + ": " + ex + ". SQL=|" + sql + "|.");
+		}
+
+		return map;
+	}
+
+	/**
+	 * Make a Statement Cache name a bit easier on the eye when used as a link text.
+	 * <p>
+	 * '*ss0087948680_1345721111ss*' -&gt; 'ss0087948680_1345721111'
+	 */
+	private static String toShortStatementCacheName(String objectName)
+	{
+		String name = objectName.trim();
+
+		if (name.startsWith("*") && name.endsWith("ss*") && name.length() > 4)
+			return name.substring(1, name.length() - 3);
+
+		return name;
+	}
+
+	/**
+	 * The two link lists that a <i>normalized</i> SQL Statement's Execution Plans gives us.
+	 * <p>
+	 * Both are built from the very same set of plans, in one pass, so they always list the same
+	 * Statement Cache entries in the same order.
+	 */
+	private static class PlanLinkLists
+	{
+		/** Complete line: "&lt;icon&gt; View Execution Plan: name1, name2&lt;br&gt;", or "" if we have no plans */
+		String showplanLineHtml = "";
+
+		/** The per-plan "Get LLM Optimization Advice" anchors ONLY (comma separated) - no icon, no label */
+		String llmLinksHtml     = "";
+
+		boolean hasLlmLinks() { return StringUtil.hasValue(llmLinksHtml); }
+	}
+
+	/**
+	 * Build the "View Execution Plan: name1, name2, ..." line, and the matching per-plan
+	 * "Get LLM Optimization Advice" anchors, for a <i>normalized</i> SQL Statement.
+	 * <p>
+	 * A normalized statement has no plan of it's own, but the Statement Cache entries it maps to has.
+	 * Only entries that we actually have a XML Plan for (in [MonDdlStorage]) gets a link, so we never
+	 * produce "dead" links.
+	 * <p>
+	 * As a side effect the XML Plans are registered (see {@link AseAbstract#registerXmlPlan(String, String)})
+	 * so they are written -- ONCE -- into the HTML report by {@link AseAbstract#writePendingXmlPlans(java.io.Writer)}.
+	 * Both link kinds then read the plan back out of that one block at click time, so no plan text is
+	 * ever duplicated, no matter how many links point at it.
+	 */
+	private PlanLinkLists buildPlanLinkListsHtml(DbxConnection conn, String normJavaSqlHashCode, int maxLinks)
+	{
+		PlanLinkLists result = new PlanLinkLists();
+
+		if (maxLinks <= 0)
+			return result;
+
+		String dbxCentralBaseUrl = getReportingInstance().getDbxCentralPublicBaseUrl();
+		if (StringUtil.isNullOrBlank(dbxCentralBaseUrl))
+			return result;
+
+		// What Statement Cache entries does this normalized statement map to?
+		Map<String, String> nameToDbname = getStatementCacheNamesForHashCode(conn, normJavaSqlHashCode);
+		if (nameToDbname.isEmpty())
+			return result;
+
+		// Which of them do we actually have a XML Plan for? (one single query, not one per name)
+		Set<String> namesWithPlan = new LinkedHashSet<>();
+		try
+		{
+			namesWithPlan = getXmlShowplanNamesFromMonDdlStorage(conn, nameToDbname.keySet());
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems checking what Statement Cache names has a XML Plan, for NormJavaSqlHashCode = " + normJavaSqlHashCode + ": " + ex);
+			return result;
+		}
+
+		if (namesWithPlan.isEmpty())
+			return result;
+
+		StringBuilder showplanSb = new StringBuilder();
+		StringBuilder llmSb      = new StringBuilder();
+		int linkCount = 0;
+
+		for (String objectName : namesWithPlan)
+		{
+			if (linkCount >= maxLinks)
+				break;
+
+			String xmlPlan = "";
+			try
+			{
+				xmlPlan = getXmlShowplanFromMonDdlStorage(conn, objectName);
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting XML Plan for Statement Cache name '" + objectName + "': " + ex);
+				continue;
+			}
+
+			if (StringUtil.isNullOrBlank(xmlPlan))
+				continue;
+
+			// The "real" SQL Statement (with constants) that this plan was compiled for.
+			// NOTE: that's a *better* input to the Showplan viewer (and to the LLM) than the normalized SQL Text.
+			String planSql       = extractSqlStatementsFromXmlShowplan(xmlPlan);
+			String planElementId = getXmlPlanElementId(objectName);
+			String linkText      = toShortStatementCacheName(objectName);
+			String dbname        = nameToDbname.get(objectName);
+			String srvName       = getReportingInstance().getServerName();
+
+			// icon is written once, before each list (see below), hence 'includeIcon = false'
+			String showplanLink = ShowplanLinkBuilder.buildViewPlanLinkHtml(
+					dbxCentralBaseUrl, planElementId, planSql,
+					DbUtils.DB_PROD_NAME_SYBASE_ASE, srvName, dbname, linkText, false);
+
+			// "Get LLM Optimization Advice" *with this plan*.
+			// NOTE: The JS variant, so the plan is read from the page at click time instead of being
+			//       stuffed into the URL, and the DDL context is resolved LIVE from srv+dbname.
+			String llmLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(
+					dbxCentralBaseUrl, planSql, planElementId,
+					DbUtils.DB_PROD_NAME_SYBASE_ASE, srvName, dbname, linkText, false);
+
+			if (StringUtil.isNullOrBlank(showplanLink) && StringUtil.isNullOrBlank(llmLink))
+				continue;
+
+			// Write the plan text ONCE into the report (shared with any other ASE report section)
+			registerXmlPlan(objectName, xmlPlan);
+
+			if (StringUtil.hasValue(showplanLink))
+			{
+				if (showplanSb.length() > 0)
+					showplanSb.append(", ");
+				showplanSb.append(showplanLink);
+			}
+
+			if (StringUtil.hasValue(llmLink))
+			{
+				if (llmSb.length() > 0)
+					llmSb.append(", ");
+				llmSb.append(llmLink);
+			}
+
+			linkCount++;
+		}
+
+		if (linkCount == 0)
+			return result;
+
+		// NOTE: only on the "View Execution Plan" line -- the LLM line right below it lists the very
+		//       same plans, so repeating this note there would just be noise
+		String more = "";
+		if (namesWithPlan.size() > linkCount)
+			more = " &emsp;<i>(showing " + linkCount + " of " + namesWithPlan.size() + ", change with property <code>" + PROPKEY_showplan_maxLinks + "=##</code>)</i>";
+
+		if (showplanSb.length() > 0)
+			result.showplanLineHtml = "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;View Execution Plan: " + showplanSb + more + "<br>\n";
+
+		result.llmLinksHtml = llmSb.toString();
+
+		return result;
+	}
 
 	private void setNoteColumn(ResultSetTableModel rstm)
 	{

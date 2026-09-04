@@ -34,7 +34,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
-import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.utils.HtmlUtils;
 import com.dbxtune.utils.StringUtil;
 
@@ -51,14 +50,97 @@ extends HttpServlet
 		resp.setContentType("text/html; charset=UTF-8");
 		resp.setCharacterEncoding("UTF-8");
 		PrintWriter out = resp.getWriter();
-		out.print(createPasteFormOutput());
+		out.print(createHashDrivenOutput());
 		out.flush();
 		out.close();
 	}
 
 	/**
+	 * Same page as {@link #createPasteFormOutput()} (paste form, in case there's nothing to show),
+	 * but also loads the full Showplan dialog assets and a small script that reads the plan straight
+	 * from the URL FRAGMENT ({@code #plan=...&sql=...&isXml=...&srv=...&dbname=...}) - never sent to
+	 * the server, so a large XML plan never risks a "414 URI Too Long" error the way a query string
+	 * would - and opens it via {@code showAseShowplanDialog(...)} client-side. Used by the mail-safe
+	 * "View Execution Plan" link the Daily Summary Report links here to (see {@code LlmAdviceServlet}
+	 * for the identical pattern, and {@code ShowplanLinkBuilder} for the link itself).
+	 * <p>
+	 * If the fragment has no {@code plan} param (e.g. a bare {@code GET /showplan/ase}), the script
+	 * simply no-ops and this looks exactly like {@link #createPasteFormOutput()}.
+	 */
+	public static String createHashDrivenOutput()
+	{
+		String str = "" +
+				"<!DOCTYPE html> \n" +
+				"<html lang='en'> \n" +
+				" \n" +
+				"<head> \n" +
+				"    <meta charset='UTF-8'> \n" +
+				"    <meta name='viewport' content='width=device-width, initial-scale=1'> \n" +
+				"    <title>DbxTune - ASE Showplan</title> \n" +
+				"    <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' /> \n" +
+				"    <meta http-equiv='Pragma' content='no-cache' /> \n" +
+				"    <meta http-equiv='Expires' content='0' /> \n" +
+				" \n" +
+				HtmlStatic.getUserDefinedContentHead() +
+				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery-ui.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAse.js") +
+				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
+				// srv/dbname (if any) only live in the URL fragment, never known server-side here - so
+				// unlike createShowplanOutput()'s conditional include, always load these.
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxSqlTableNames.js") +
+				HtmlUtils.createCssLinkTag("/scripts/dbxtune/css/dbxTableInfo.css") +
+				"    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n" +
+				"    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n" +
+				"    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n" +
+				HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css") +
+				HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js") +
+				HtmlUtils.createJsScriptTag("/scripts/sql-formatter/12.1.3/sql-formatter.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplan.js") +
+				"</head> \n" +
+				" \n" +
+				"<body> \n" +
+				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				createPasteFormBodyHtml() +
+				"    <script> \n" +
+				"        (function () { \n" +
+				"            // Params read from the URL FRAGMENT (#...), not the query string (?...) - the \n" +
+				"            // fragment is never sent to the server, so a large XML plan/SQL text here never \n" +
+				"            // risks a 'URI Too Long' error the way a query string would. Used by the mail-safe \n" +
+				"            // 'View Execution Plan' link the Daily Summary Report links here to. \n" +
+				"            var qs = new URLSearchParams(window.location.hash.replace(/^#/, '')); \n" +
+				"            var plan = qs.get('plan'); \n" +
+				"            if (!plan) return; \n" +
+				"            var isXml = qs.get('isXml') === 'true'; \n" +
+				"            var sql = qs.get('sql') || ''; \n" +
+				"            var srv = qs.get('srv') || ''; \n" +
+				"            var dbname = qs.get('dbname') || ''; \n" +
+				// Execution statistics from the Daily Summary Report - this dialog has its own "Get LLM
+				// Optimization Advice" section, which would otherwise lose the workload profile.
+				"            var workloadData = qs.get('workloadData') || ''; \n" +
+				"            // Also fill in the paste form behind the dialog - it has no 'reopen' mechanism of its \n" +
+				"            // own (closing the dialog just clears its own containers), so without this, closing it \n" +
+				"            // would leave the user staring at a form that looks like it never received their plan. \n" +
+				"            document.getElementById('plan').value = plan; \n" +
+				"            document.getElementById('sql').value = sql; \n" +
+				"            document.getElementById('srv').value = srv; \n" +
+				"            document.getElementById('dbname').value = dbname; \n" +
+				"            aseShowplanPasteCheckSqlText(); \n" +
+				"            showAseShowplanDialog(plan, sql, isXml, '', { srv: srv, dbname: dbname, workloadData: workloadData }); \n" +
+				"        })(); \n" +
+				"    </script> \n" +
+				HtmlStatic.getJavaScriptAtEnd(true) +
+				"</body> \n" +
+				" \n" +
+				"</html> \n" +
+				"";
+		return str;
+	}
+
+	/**
 	 * The paste-and-submit form shown for a plain {@code GET /showplan/ase} - shares the same
-	 * navbar/head chrome as {@link #createShowplanOutput(String, String, String, String)} so landing
+	 * navbar/head chrome as {@link #createShowplanOutput(String, String, String, String, String, String)} so landing
 	 * on this page and viewing a submitted plan look like the same section, not two different pages.
 	 */
 	public static String createPasteFormOutput()
@@ -78,25 +160,122 @@ extends HttpServlet
 				" \n" +
 				"<body> \n" +
 				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
-				"    <div class='container-fluid px-4 py-3' style='max-width: 900px;'> \n" +
-				"      <h2>ASE Showplan Viewer</h2> \n" +
-				"      <p class='text-muted'>Paste either a <code>show_cached_plan_in_xml</code> XML plan or a classic <code>sp_showplan</code> text plan below and press Submit (the format is auto-detected).</p> \n" +
-				"      <div class='card shadow-sm'> \n" +
-				"        <div class='card-body'> \n" +
-				"          <form id='showplan-form' action='/showplan/ase' method='post'> \n" +
-				"            <textarea class='form-control mb-3' id='plan' name='plan' rows='20' placeholder='Paste the ASE Showplan (XML or text) here...'></textarea> \n" +
-				"            <button type='submit' class='btn btn-primary'>Submit</button> \n" +
-				"          </form> \n" +
-				"        </div> \n" +
-				"      </div> \n" +
-				"    </div> \n" +
-				" \n" +
+				createPasteFormBodyHtml() +
 				HtmlStatic.getJavaScriptAtEnd(true) +
 				"</body> \n" +
 				" \n" +
 				"</html> \n" +
 				"";
 		return str;
+	}
+
+	/**
+	 * The paste-form markup + its file-load/drag-drop/server-autocomplete script, factored out so
+	 * {@link #createShowplanOutput(String, String, String, String, String, String)} can put the
+	 * same real, working form behind the Showplan dialog it opens - the dialog itself has no
+	 * "reopen"/navigate-away mechanism (closing it just clears its own containers), so without this
+	 * closing the dialog would otherwise strand the user on a blank page.
+	 */
+	private static String createPasteFormBodyHtml()
+	{
+		return "" +
+				"    <div class='container-fluid px-4 py-3' style='max-width: 900px;'> \n" +
+				"      <h2>ASE Showplan Viewer</h2> \n" +
+				"      <p class='text-muted'>Paste either a <code>show_cached_plan_in_xml</code> XML plan or a classic <code>sp_showplan</code> text plan below and press Submit (the format is auto-detected).</p> \n" +
+				"      <div class='card shadow-sm'> \n" +
+				"        <div class='card-body'> \n" +
+				"          <form id='showplan-form' action='/showplan/ase' method='post'> \n" +
+				// Both optional - filling them in (with an actively-monitored DbxTune server name)
+				// unlocks the same live table size/rowcount tooltips, Table Information section and
+				// DDL-enriched LLM advice the modal Showplan dialog gets; left blank, this page behaves
+				// exactly as it always has - showAseShowplanDialog() itself no-ops the srv/dbname-gated
+				// sections when meta.srv/meta.dbname are empty.
+				"            <div class='form-row'> \n" +
+				"              <div class='col-md-4 mb-2'> \n" +
+				"                <label for='srv' class='mb-1' style='font-size:0.85em;color:#555;'>At Server Name (optional)</label> \n" +
+				"                <input type='text' class='form-control form-control-sm' id='srv' name='srv' list='ase-showplan-srv-datalist' placeholder='e.g. PROD_ASE_01' autocomplete='off'> \n" +
+				"                <datalist id='ase-showplan-srv-datalist'></datalist> \n" +
+				"              </div> \n" +
+				"              <div class='col-md-4 mb-2'> \n" +
+				"                <label for='dbname' class='mb-1' style='font-size:0.85em;color:#555;'>Database Name (optional)</label> \n" +
+				"                <input type='text' class='form-control form-control-sm' id='dbname' name='dbname' placeholder='e.g. mydb'> \n" +
+				"              </div> \n" +
+				"            </div> \n" +
+				"            <p class='text-muted' style='font-size:0.8em;margin-top:-4px;'>Fill these in (with an actively-monitored DbxTune server) to also get live table size/row-count, an index breakdown, and DDL-enriched LLM advice for the tables this plan touches - leave blank to just view the diagram.</p> \n" +
+				"            <div class='mb-2'> \n" +
+				"              <button type='button' class='btn btn-outline-secondary btn-sm' onclick=\"document.getElementById('ase-showplan-file-input').click();\">&#128194; Load from File</button> \n" +
+				"              <input type='file' id='ase-showplan-file-input' accept='.txt,.xml' style='display:none' onchange='aseShowplanPasteLoadFile(event)'> \n" +
+				"              <span style='font-size:0.8em;color:#888;margin-left:6px;'>or drag &amp; drop a file onto the text area below</span> \n" +
+				"            </div> \n" +
+				"            <textarea class='form-control mb-3' id='plan' name='plan' rows='20' placeholder='Paste the ASE Showplan (XML or text) here...' oninput='aseShowplanPasteCheckSqlText()' ondragover='aseShowplanPasteDragOver(event)' ondragleave='aseShowplanPasteDragLeave(event)' ondrop='aseShowplanPasteDrop(event)'></textarea> \n" +
+				// Optional - a plan captured by DbxTune itself already carries the SQL between
+				// '---- BEGIN/END: SQL Statement Executed' markers (see extractEmbeddedSqlText()
+				// server-side), in which case this stays collapsed. A plan pasted straight from
+				// isql/sp_showplan output has no such markers, so aseShowplanPasteCheckSqlText() below
+				// auto-opens it and flips the summary text to prompt for it.
+				"            <details id='ase-showplan-sqltext-details' class='mb-3'> \n" +
+				"              <summary id='ase-showplan-sqltext-summary' style='cursor:pointer;font-size:0.85em;color:#555;'>SQL Text (optional)</summary> \n" +
+				"              <p class='text-muted' style='font-size:0.8em;margin-top:6px;'>Paste the SQL statement here if the plan above doesn't already include it - enables Table Information and LLM Optimization Advice for it.</p> \n" +
+				"              <textarea class='form-control' id='sql' name='sql' rows='6' placeholder='Paste the SQL statement here (optional)...'></textarea> \n" +
+				"            </details> \n" +
+				"            <button type='submit' class='btn btn-primary'>Submit</button> \n" +
+				"          </form> \n" +
+				"        </div> \n" +
+				"      </div> \n" +
+				"    </div> \n" +
+				" \n" +
+				"    <script> \n" +
+				"        function aseShowplanPasteCheckSqlText() { \n" +
+				"            var planText = document.getElementById('plan').value; \n" +
+				"            var sqlText  = document.getElementById('sql').value; \n" +
+				"            var details  = document.getElementById('ase-showplan-sqltext-details'); \n" +
+				"            var summary  = document.getElementById('ase-showplan-sqltext-summary'); \n" +
+				"            var hasSql   = planText.indexOf('---- BEGIN: SQL Statement Executed') >= 0; \n" +
+				"            if (hasSql) { \n" +
+				"                summary.innerHTML = 'SQL Text (optional) &mdash; <span style=\"color:#0f5132;\">already found in the plan</span>'; \n" +
+				"            } else if (planText.trim() === '') { \n" +
+				"                summary.innerHTML = 'SQL Text (optional)'; \n" +
+				"            } else { \n" +
+				"                summary.innerHTML = 'SQL Text (optional) &mdash; <span style=\"color:#b45309;\">no SQL text found in the plan, consider pasting it below</span>'; \n" +
+				"                if (!sqlText) details.open = true; \n" + // don't yank open/shut on top of something the user's already editing
+				"            } \n" +
+				"        } \n" +
+				"        function aseShowplanPasteReadFile(file) { \n" +
+				"            if (!file) return; \n" +
+				"            var reader = new FileReader(); \n" +
+				"            reader.onload = function(e) { document.getElementById('plan').value = e.target.result; aseShowplanPasteCheckSqlText(); }; \n" +
+				"            reader.readAsText(file); \n" +
+				"        } \n" +
+				"        function aseShowplanPasteLoadFile(event) { \n" +
+				"            aseShowplanPasteReadFile(event.target.files[0]); \n" +
+				"            event.target.value = ''; \n" + // reset so re-selecting the same filename re-fires onchange
+				"        } \n" +
+				"        function aseShowplanPasteDragOver(event) { \n" +
+				"            event.preventDefault(); \n" +
+				"            event.currentTarget.style.borderColor = '#4a90d9'; \n" +
+				"        } \n" +
+				"        function aseShowplanPasteDragLeave(event) { \n" +
+				"            event.currentTarget.style.borderColor = ''; \n" +
+				"        } \n" +
+				"        function aseShowplanPasteDrop(event) { \n" +
+				"            event.preventDefault(); \n" +
+				"            event.currentTarget.style.borderColor = ''; \n" +
+				"            aseShowplanPasteReadFile(event.dataTransfer.files && event.dataTransfer.files[0]); \n" +
+				"        } \n" +
+				// Best-effort autocomplete - a typo'd/offline server name just surfaces the same
+				// srv-not-found/collector-offline error the modal dialog's Table Information already
+				// handles gracefully, so this list doesn't need to be authoritative.
+				"        fetch('/api/sessions').then(function(r) { return r.json(); }).then(function(list) { \n" +
+				"            var dl = document.getElementById('ase-showplan-srv-datalist'); \n" +
+				"            (list || []).forEach(function(entry) { \n" +
+				"                if (!entry || !entry.serverName) return; \n" +
+				"                var opt = document.createElement('option'); \n" +
+				"                opt.value = entry.serverName; \n" +
+				"                dl.appendChild(opt); \n" +
+				"            }); \n" +
+				"        }).catch(function() {}); \n" +
+				"    </script> \n" +
+				"";
 	}
 
 	/**
@@ -114,6 +293,11 @@ extends HttpServlet
 		String sql      = request.getParameter("sql");
 		String dbVendor = request.getParameter("dbVendor");
 		String isXml    = request.getParameter("isXml"); // "true"/"false", or unset -> auto-detect client-side
+		String srv      = request.getParameter("srv");    // optional - enables live table-info lookups
+		String dbname   = request.getParameter("dbname"); // optional - required alongside srv above
+		// Execution statistics harvested from the Daily Summary Report - the plan viewer has its own
+		// "Get LLM Optimization Advice" section, which would otherwise lose the workload profile.
+		String workloadData = request.getParameter("workloadData");
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("/showplan/ase: received request from: remoteHost='" + remoteHost + "', remoteAddr='" + remoteAddr + "', remotePort='" + remotePort + "', remoteUser='" + remoteUser + "'.");
@@ -125,7 +309,7 @@ extends HttpServlet
 			return;
 		}
 
-		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, isXml);
+		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, workloadData);
 
 		response.setContentType("text/html; charset=UTF-8");
 		response.setCharacterEncoding("UTF-8");
@@ -138,36 +322,55 @@ extends HttpServlet
 
 	public static String createShowplanOutput(String payload)
 	{
-		return createShowplanOutput(payload, null, null, null);
+		return createShowplanOutput(payload, null, null, null, null, null);
 	}
 
 	/**
 	 * @param payload  the ASE plan - either XML (show_cached_plan_in_xml) or classic sp_showplan text
-	 * @param sql      the SQL statement this plan belongs to, or null if unknown - when present,
-	 *                 a "Get LLM Optimization Advice" button is shown
-	 * @param dbVendor DBMS product name for {@code sql}, or null
+	 * @param sql      the SQL statement this plan belongs to, or null if unknown
+	 * @param dbVendor DBMS product name for {@code sql}, or null (unused - the dialog always treats
+	 *                 this page's plans as ASE, same as {@code showAseShowplanDialog()}'s own callers do)
 	 * @param isXml    "true"/"false" if the caller already knows the payload's format, or null to
 	 *                 have the client sniff for an XML/{@code <query>} prefix
+	 * @param srv      name of an actively-monitored DbxTune server this plan came from, or null -
+	 *                 when present together with {@code dbname}, unlocks the same live table-info
+	 *                 tooltips/warnings, Table Information section, and DDL-enriched LLM advice the
+	 *                 modal Showplan dialog gets - passed straight through as its {@code meta} param
+	 * @param dbname   database name on {@code srv} the tables in {@code sql} live in, or null
 	 */
-	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml)
+	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname)
 	{
+		return createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, null);
+	}
+
+	/** @param workloadData raw execution statistics JSON, forwarded to the dialog's LLM advice section (may be null) */
+	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname, String workloadData)
+	{
+		// A leading blank line/whitespace before "<?xml ...?>" (common in pasted/captured plans) is
+		// otherwise a fatal error to any XML parser - the spec only allows the declaration as the
+		// very first thing in the document - so strip it here, once, for every caller/format instead
+		// of relying on each downstream consumer (e.g. AseShowplan.parseXml() in dbxShowplanAse.js)
+		// to defend against it individually.
+		if (payload != null)
+			payload = payload.trim();
+
 		// A caller may not pass a separate 'sql' param at all - a classic sp_showplan text capture
 		// often already carries the statement itself, wrapped in "---- BEGIN: SQL Statement
 		// Executed ----" / "---- END: SQL Statement Executed ----" markers right before the
 		// "QUERY PLAN FOR STATEMENT" tree (same markers dbxSqlText.js's format-on-demand logic
-		// already knows about, in a different context). Pull it out here instead, once, so both the
-		// LLM Advice button and a plain "SQL Text" display section (added below) can use it exactly
-		// like an explicitly-passed 'sql' param would - the two are the same concept, just from
-		// different call sites.
+		// already knows about, in a different context). Pull it out here instead, once, so the
+		// dialog's SQL Text section can use it exactly like an explicitly-passed 'sql' param would.
 		if (StringUtil.isNullOrBlank(sql))
 			sql = extractEmbeddedSqlText(payload);
 		sql = stripHtmlWrapper(sql);
 
-		// Independent of the LLM feature flag - a plain SQL Text display has nothing to do with
-		// whether LLM advice is enabled, unlike 'hasSql' below (kept as-is; only gates the LLM
-		// button + its JS constants, both genuinely LLM-specific).
-		boolean hasSqlText = StringUtil.hasValue(sql);
-		boolean hasSql = hasSqlText && LlmClientRegistry.isFeatureEnabled();
+		// Both required together - a table-info lookup needs to know both which server and which
+		// database to ask. Gates dbxSqlTableNames.js/dbxTableInfo.css (only needed once the dialog's
+		// Table Information section can actually do anything) and is passed into the dialog's own
+		// meta={srv,dbname} param below, which is what actually turns on every srv/dbname-gated
+		// feature (per-operator table-info tooltips, Table Information section, DDL-enriched LLM
+		// Advice) - all of that now lives entirely inside dbxShowplan.js/dbxShowplanAse.js.
+		boolean hasSrvDbname = StringUtil.hasValue(srv) && StringUtil.hasValue(dbname);
 
 		String str = "" +
 				"<!DOCTYPE html> \n" +
@@ -189,176 +392,80 @@ extends HttpServlet
 				// rather than this page rolling its own Bootstrap include and a one-off <nav>.
 				HtmlStatic.getUserDefinedContentHead() +
 
+				// jQuery UI (draggable/resizable + touch-punch) - same includes graph.html uses for
+				// the dialog's drag/resize chrome. Optional per dbxShowplan.js's own
+				// $.fn.draggable/$.fn.resizable guards (the dialog still opens/functions without it,
+				// just isn't draggable/resizable), included here for full parity with graph.html.
+				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery-ui.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
+
 				// dbxShowplanAse.js is a first-party file (no CDN mirror) and injects its own <style>
 				// at runtime, so no separate CSS link is needed here.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAse.js") +
-				// Same vendored Panzoom the modal dialog (dbxShowplan.js) uses - graph.html:1109.
 				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
 
-				(hasSql
-					? "    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n"
-					+ "    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n"
-					+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
+				// dbxSqlTableNames.js is needed for two independent things: the Table Information
+				// section (only useful once hasSrvDbname) AND the Graphical Plan's Reformatting finding
+				// index suggestion, which only needs SQL text - no server context at all. Gating this
+				// whole script on hasSrvDbname was wrong: pasting a plan with SQL text but no
+				// srv/dbname (the paste form has no separate SQL Text field either way) silently
+				// disabled the suggestion, which had nothing to do with Table Information. Always load
+				// the JS module; only the Table Information section's own CSS still needs hasSrvDbname.
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxSqlTableNames.js") +
+				(hasSrvDbname
+					? HtmlUtils.createCssLinkTag("/scripts/dbxtune/css/dbxTableInfo.css")
 					: "") +
 
-				// Only needed for the "SQL Text" section below, which (unlike the LLM Advice button)
-				// doesn't depend on the LLM feature flag - just on whether we actually have any SQL
-				// text to show.
-				(hasSqlText
-					? HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css")
-					+ HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js")
-					+ HtmlUtils.createJsScriptTag("/scripts/sql-formatter/12.1.3/sql-formatter.min.js")
-					: "") +
+				// Whether the dialog's LLM Advice section actually calls a provider (vs. falling back
+				// to the "no exec" Prompt Preview section) is decided live, client-side, by the dialog
+				// itself (dbxLlmAdvice.isEnabled()) - so these are always loaded once we're rendering an
+				// actual plan, same as dbxShowplan.js's own unconditional use on graph.html; this page no
+				// longer needs to know or care about the LlmClientRegistry feature flag server-side.
+				// Gating this on hasSqlText was wrong: the paste form has no SQL Text field, and even
+				// extractEmbeddedSqlText()'s best-effort scrape of the pasted plan text can come back
+				// empty for plans with no embedded SQL - dbxLlmAdvice.js should still be present so the
+				// dialog can show its "No SQL text is available for this plan." message instead of
+				// looking like the feature itself failed to load.
+				"    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n"
+				+ "    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n"
+				+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
+				+ HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css")
+				+ HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js")
+				+ HtmlUtils.createJsScriptTag("/scripts/sql-formatter/12.1.3/sql-formatter.min.js") +
 
-				// #ase-showplan-viewport (not #ase-showplan itself) is the scrollable element - see
-				// the matching comment by the button markup below for why the split matters.
-				"    <style> #ase-showplan-viewport { overflow: auto; } </style> \n" +
+				// The real dialog - everything this page used to hand-build (toolbar, zoom/pan, Table
+				// Information, LLM Advice/Preview, and the tooltip-clipping fight) lives here now; see
+				// the <script> block below, which just calls showAseShowplanDialog() once loaded.
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplan.js") +
 
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
 				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
-				"    <div class='container-fluid px-4 py-3'> \n" +
-				"      <h2>&#128202; ASE Execution Plan Viewer</h2> \n" +
-				"      <div class='card shadow-sm'> \n" +
-				"        <div class='card-body'> \n" +
-				"          <div class='mb-3'> \n" +
-				(hasSql
-					? "            <button type='button' class='btn btn-primary mr-2' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor});'>&#129302; Get LLM Optimization Advice</button> \n"
-					: "") +
-				"            <button type='button' id='aseShowplanStandaloneOrientationBtn' class='btn btn-outline-secondary btn-sm mr-2' onclick='aseShowplanStandaloneToggleOrientation();'>&#8646; Top-to-Bottom</button> \n" +
-				"            <button type='button' id='aseShowplanStandaloneZoomBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanStandaloneToggleZoom();'>&#128269; Enable Zoom</button> \n" +
-				"            <span style='font-size:0.8em;color:#888;margin-left:6px;'>Execution order is by VA# (starting at 0)</span> \n" +
-				"          </div> \n" +
-				// #ase-showplan (the Panzoom target) must NOT be the scrollable element itself - once
-				// Panzoom is enabled it hijacks wheel events (to zoom instead of scroll) and moves
-				// content via a CSS transform, which is a completely separate coordinate system from
-				// a native scrollLeft/scrollTop. Putting overflow:auto directly on the Panzoom target
-				// (the original bug here) made the two systems fight: the wheel-driven native scroll
-				// got hijacked for zoom, so drag-panning was the only way left to reach content past
-				// the edge, but the plain (non-drag) scrollbar was still visually there too - reported
-				// as "some parts are cut off" when zoomed. The modal dialog (dbxShowplan.js) already
-				// gets this right by keeping them separate (.modal-body scrolls, #dbx-view-
-				// aseShowplan-graphContent is the Panzoom target with no overflow of its own) - this
-				// mirrors that: #ase-showplan-viewport is the plain scrollable ancestor (used before
-				// zoom is enabled, or for the small vertical scrollbar zoom doesn't need), #ase-
-				// showplan is the actual Panzoom target and has no scroll behavior of its own. \n" +
-				"          <div id='ase-showplan-viewport'> \n" +
-				"            <div id='ase-showplan'>                          \n" +
-				"            </div>                                           \n" +
-				"          </div> \n" +
-				(hasSqlText
-					? "          <details open id='ase-showplan-sect-sql' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-top:8px;'> \n"
-					+ "            <summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; SQL Text</summary> \n"
-					+ "            <div style='padding:4px 8px 8px 8px;'> \n"
-					+ "              <button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanStandaloneFormatSql();'>Format SQL</button> \n"
-					+ "              <button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanStandaloneCopySql();'>Copy SQL</button> \n"
-					+ "              <pre class='mb-0'><code id='ase-showplan-sqlContent' class='language-sql line-numbers'></code></pre> \n"
-					+ "            </div> \n"
-					+ "          </details> \n"
-					: "") +
-				"        </div> \n" +
-				"      </div> \n" +
-				"    </div> \n" +
-				"                                                       \n" +
-				"    <script>                                           \n" +
+				// Same paste form as a plain GET sits behind the dialog opened below - the dialog has
+				// no "reopen"/navigate-away mechanism of its own (closing it just clears its own
+				// containers), so without this, closing it would strand the user on a blank page.
+				createPasteFormBodyHtml() +
+				"    <script> \n" +
 				"        const plan = '" + StringEscapeUtils.escapeEcmaScript(payload) + "'; \n" +
 				"        const explicitIsXml = " + (StringUtil.hasValue(isXml) ? ("'" + StringEscapeUtils.escapeEcmaScript(isXml) + "'") : "null") + "; \n" +
-				(hasSqlText
-					? "        const aseShowplanStandaloneSql = '" + StringEscapeUtils.escapeEcmaScript(sql) + "'; \n"
-					: "") +
-				(hasSql
-					// Same string as aseShowplanStandaloneSql above (hasSql implies hasSqlText) - reused
-					// rather than escaping/embedding the SQL text into the page a second time.
-					? "        const dbxLlmSql = aseShowplanStandaloneSql; \n"
-					+ "        const dbxLlmPlan = '"     + StringEscapeUtils.escapeEcmaScript(payload) + "'; \n"
-					+ "        const dbxLlmDbVendor = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbVendor, "")) + "'; \n"
-					: "") +
-				"                                                       \n" +
-				"        var aseShowplanStandaloneHorizontal = true; \n" +
-				"        var aseShowplanStandaloneZoom = undefined; \n" +
-				"        function aseShowplanStandaloneRender() { \n" +
-				// Reset any Panzoom transform from a previous plan/layout before re-rendering - see
-				// the matching comment in dbxShowplan.js's _aseShowplanRenderGraphicalPlan().
-				"            if (aseShowplanStandaloneZoom !== undefined) { try { aseShowplanStandaloneZoom.reset(); } catch (ex) {} } \n" +
-				"            var isXml; \n" +
-				"            if (explicitIsXml === 'true') isXml = true; \n" +
-				"            else if (explicitIsXml === 'false') isXml = false; \n" +
-				"            else isXml = /^\\s*<\\?xml|^\\s*<query>/i.test(plan.replace(/^[\\s\\S]*?<pre>/i, '')); \n" +
-				"            var parsed = null; \n" +
-				"            try { parsed = isXml ? AseShowplan.parseXml(plan) : AseShowplan.parseText(plan); } catch (ex) { parsed = null; } \n" +
-				"            var el = document.getElementById('ase-showplan'); \n" +
-				"            if (parsed) { \n" +
-				"                try { AseShowplan.render(el, parsed, { horizontal: aseShowplanStandaloneHorizontal, connectorStyle: 'lines', layout: 'compact' }); return; } catch (ex) { parsed = null; } \n" +
-				"            } \n" +
-				"            el.innerHTML = ''; \n" +
-				"            var pre = document.createElement('pre'); \n" +
-				"            pre.className = 'mb-0'; \n" +
-				"            pre.style.whiteSpace = 'pre-wrap'; \n" +
-				"            pre.textContent = 'Could not parse this plan into a diagram - showing raw text.\\n\\n' + plan; \n" +
-				"            el.appendChild(pre); \n" +
-				"        } \n" +
-				"        function aseShowplanStandaloneToggleOrientation() { \n" +
-				"            aseShowplanStandaloneHorizontal = !aseShowplanStandaloneHorizontal; \n" +
-				"            document.getElementById('aseShowplanStandaloneOrientationBtn').innerHTML = aseShowplanStandaloneHorizontal ? '&#8646; Top-to-Bottom' : '&#8646; Left-to-Right'; \n" +
-				"            aseShowplanStandaloneRender(); \n" +
-				"        } \n" +
-				// See the matching comment in dbxShowplan.js's aseShowplanToggleZoom() - a separate
-				// Reset Zoom button used to sit here, but with zoom left enabled a mouse-wheel scroll
-				// always zooms instead of scrolling the page. Merged into one Enable/Disable toggle:
-				// disabling removes the wheel listener entirely (Panzoom's disableZoom option isn't
-				// enough by itself - zoomWithWheel() calls event.preventDefault() before checking it,
-				// so the scroll would still be eaten with nothing happening in its place) so the wheel
-				// goes back to normal scrolling until zoom is explicitly re-enabled.
-				"        function aseShowplanStandaloneToggleZoom() { \n" +
-				"            var elem = document.getElementById('ase-showplan'); \n" +
-				"            var btn  = document.getElementById('aseShowplanStandaloneZoomBtn'); \n" +
-				"            if (aseShowplanStandaloneZoom === undefined) { \n" +
-				"                if (!elem) return; \n" +
-				// See the matching comment in dbxShowplan.js's aseShowplanToggleZoom() - lower step =
-				// gentler trackpad zoom.
-				"                aseShowplanStandaloneZoom = Panzoom(elem, { maxScale: 1, minScale: 0.01, step: 0.05 }); \n" +
-				"                elem.addEventListener('wheel', aseShowplanStandaloneZoom.zoomWithWheel); \n" +
-				"                if (btn) btn.innerHTML = '&#128269; Disable Zoom'; \n" +
-				"            } else { \n" +
-				"                try { aseShowplanStandaloneZoom.reset(); } catch (ex) {} \n" +
-				"                if (elem) elem.removeEventListener('wheel', aseShowplanStandaloneZoom.zoomWithWheel); \n" +
-				"                try { aseShowplanStandaloneZoom.destroy(); } catch (ex) {} \n" +
-				"                aseShowplanStandaloneZoom = undefined; \n" +
-				"                if (btn) btn.innerHTML = '&#128269; Enable Zoom'; \n" +
-				"            } \n" +
-				"        } \n" +
-				(hasSqlText
-					// Mirrors aseShowplanFormatSql()/aseShowplanCopySql() in dbxShowplan.js's modal
-					// dialog - reimplemented standalone here rather than loading that whole file, since
-					// this page already has its own self-contained JS for everything else.
-					? "        function aseShowplanStandaloneFormatSql() { \n"
-					// paramTypes.positional tells sql-formatter that a bare "?" is a valid positional
-					// parameter placeholder (JDBC-style) rather than a syntax error - without it, any
-					// captured SQL text containing "?" throws a parse error here instead of formatting.
-					+ "            var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true, paramTypes: { positional: true } }; \n"
-					+ "            var el = document.getElementById('ase-showplan-sqlContent'); \n"
-					+ "            if (!el) return; \n"
-					// ASE captures a dynamic SQL cursor's statement wrapped as "DYNAMIC_SQL <name>:
-					// create proc <name> (...) as <actual query>" - stripped here before formatting, same
-					// as the matching _aseStripDynamicSqlWrapper() in dbxShowplan.js's modal dialog.
-					+ "            var sqlText = el.textContent.replace(/^\\s*DYNAMIC_SQL\\s+\\S+\\s*:\\s*create\\s+proc(?:edure)?\\s+\\S+\\s*(?:\\((?:[^()]|\\([^()]*\\))*\\))?\\s*as\\s*/i, ''); \n"
-					+ "            try { el.textContent = sqlFormatter.format(sqlText, formatOptions); Prism.highlightElement(el); } catch (ex) { alert(ex); } \n"
-					+ "        } \n"
-					+ "        function aseShowplanStandaloneCopySql() { \n"
-					+ "            var el = document.getElementById('ase-showplan-sqlContent'); \n"
-					+ "            if (!el) return; \n"
-					+ "            var ta = document.createElement('textarea'); ta.value = el.textContent; document.body.appendChild(ta); ta.select(); \n"
-					+ "            try { document.execCommand('copy'); } catch (ex) { alert('Unable to copy\\n\\n' + ex); } \n"
-					+ "            document.body.removeChild(ta); \n"
-					+ "        } \n"
-					+ "        document.getElementById('ase-showplan-sqlContent').textContent = aseShowplanStandaloneSql; \n"
-					+ "        Prism.highlightAll(); \n"
-					: "") +
-				"        aseShowplanStandaloneRender(); \n" +
-				"    </script>		                                    \n" +
+				"        const aseShowplanSql = '"    + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(sql, ""))    + "'; \n" +
+				"        const aseShowplanSrv = '"    + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(srv, ""))    + "'; \n" +
+				"        const aseShowplanDbname = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbname, "")) + "'; \n" +
+				// Execution statistics from the Daily Summary Report - this dialog's own "Get LLM
+				// Optimization Advice" section would otherwise lose the workload profile.
+				"        const aseShowplanWorkload = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(workloadData, "")) + "'; \n" +
+				"        var isXml; \n" +
+				"        if (explicitIsXml === 'true') isXml = true; \n" +
+				"        else if (explicitIsXml === 'false') isXml = false; \n" +
+				"        else isXml = /^\\s*<\\?xml|^\\s*<query>/i.test(plan.replace(/^[\\s\\S]*?<pre>/i, '')); \n" +
+				"        showAseShowplanDialog(plan, aseShowplanSql, isXml, '', { srv: aseShowplanSrv, dbname: aseShowplanDbname, workloadData: aseShowplanWorkload }); \n" +
+				"    </script> \n" +
 				HtmlStatic.getJavaScriptAtEnd(true) +
-				"</body>                                                \n" +
+				"</body> \n" +
+				" \n" +
+				"</html> \n" +
 				"";
 		return str;
 	}

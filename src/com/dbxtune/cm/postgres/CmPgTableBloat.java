@@ -221,6 +221,7 @@ extends CountersModel
 			    + "        END \n"
 			    + "     as numeric(10,1)) AS bloat_pct \n"
 			    + "    ,is_na \n"
+			    + "  -- ,(SELECT cast(array_to_string(reloptions, ', ') as varchar(1024)) FROM pg_class c WHERE c.oid = s3.tblid) AS reloptions -- Get relation options like 'autovacuum' settings \n" 
 			    + "  -- , tpl_hdr_size, tpl_data_size, (pst).free_percent + (pst).dead_tuple_percent AS real_frag -- (DEBUG INFO) \n"
 			    + "FROM ( \n"
 			    + "  SELECT ceil( reltuples / ( (bs-page_hdr)/tpl_size ) ) + ceil( toasttuples / 4 ) AS est_tblpages, \n"
@@ -266,7 +267,7 @@ extends CountersModel
 			    + ") AS s3 \n"
 //			    + "-- WHERE NOT is_na \n"
 //			    + "--   AND tblpages*((pst).free_percent + (pst).dead_tuple_percent)::float4/100 >= 1 \n"
-			    + "WHERE schemaname not in('pg_catalog') \n"
+			    + "WHERE schemaname not in('pg_catalog', 'information_schema') \n"
 //			    + "--ORDER BY bloat_size_mb DESC \n"
 			    + "ORDER BY schemaname, tblname \n"
 			    + "";

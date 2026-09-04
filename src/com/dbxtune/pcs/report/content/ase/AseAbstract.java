@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content.ase;
 
+import java.io.IOException;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
@@ -34,6 +35,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -56,6 +58,7 @@ import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
+import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -315,8 +318,8 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Sampled"    ,                entry.getSampleTime()+""   );
 				tableInfoMap.put("Lock Scheme",                entry.getLockScheme() );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(entry._objectText, "Table Info"));
-				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info"));
+				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
+				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));
 			}
 			
 			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);
@@ -429,6 +432,124 @@ extends ReportEntryAbstract
 		};
 		Set<AseTableInfo> tableInfoSet = inst.getTableInformationFromMonDdlStorage(conn, tableList);
 		return inst.getTableInfoAsPlainText(tableInfoSet);
+	}
+
+	/**
+	 * Static convenience method — look up table info from DDL Storage without needing a full
+	 * report-entry instance, returning plain numeric/structured fields (rowcount, size in MB,
+	 * index count, etc.) rather than a rendered HTML/text blob. Built for callers that need to
+	 * reason about the numbers themselves (e.g. the ASE Showplan graphical plan's per-operator
+	 * tooltip, which marks a Table Scan whose table exceeds a configurable size threshold).
+	 *
+	 * @return Map keyed by the table name exactly as passed in via {@code tableList}. A name that
+	 *         wasn't found in the DDL Storage still gets an entry, holding just {@code found=false},
+	 *         so callers can tell "not found" apart from "not looked up".
+	 */
+	/** Null-safe Timestamp -&gt; String, so a JSON caller gets a stable shape regardless of the ObjectMapper's date (de)serialization config. */
+	private static String tsStr(Timestamp ts)
+	{
+		return ts == null ? null : ts.toString();
+	}
+
+	public static Map<String, Map<String, Object>> getTableInfoFields(DbxConnection conn, String dbname, Set<String> tableList)
+	{
+		Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+
+		AseAbstract inst = new AseAbstract(null)
+		{
+			@Override public boolean hasIssueToReport()       { return false; }
+			@Override public String  getSubject()             { return ""; }
+			@Override public boolean hasMinimalMessageText()  { return false; }
+			@Override public boolean hasShortMessageText()    { return false; }
+			@Override public void    writeMessageText(Writer w, IReportEntry.MessageType t) {}
+			@Override public void    create(DbxConnection c, String s, Configuration p, Configuration l) {}
+		};
+
+		Set<AseTableInfo> tableInfoSet = inst.getTableInformationFromMonDdlStorage(conn, tableList);
+
+		// Index found entries by both the plain table name and the fully qualified one, so a
+		// caller-supplied name matches regardless of whether it included a db/owner prefix.
+		Map<String, AseTableInfo> byName = new HashMap<>();
+		for (AseTableInfo ti : tableInfoSet)
+		{
+			byName.put(ti.getTableName(), ti);
+			byName.put(ti.getFullTableName(), ti);
+		}
+
+		for (String requestedName : tableList)
+		{
+			Map<String, Object> fields = new LinkedHashMap<>();
+			AseTableInfo ti = byName.get(requestedName);
+			if (ti == null)
+			{
+				fields.put("found", false);
+			}
+			else
+			{
+				fields.put("found",       true);
+				fields.put("tableName",   ti.getFullTableName());
+				fields.put("dbName",      ti.getDbName());
+				fields.put("schemaName",  ti.getSchemaName());
+				fields.put("type",        ti.getType()); // "U" = table, "V" = view
+				fields.put("crDate",      tsStr(ti.getCrDate()));
+				// String, not the raw Timestamp - keeps the JSON shape stable regardless of the
+				// ObjectMapper's date (de)serialization config, matching AseIndexInfo's own
+				// getCacheDateStr()/getCreationDateStr() convention.
+				fields.put("sampleTime",  tsStr(ti.getSampleTime()));
+				fields.put("rowTotal",    ti.getRowTotal());
+				fields.put("lockScheme",  ti.getLockScheme());
+				fields.put("sizeMb",      ti.getSizeMb());
+				fields.put("reservedMb",  ti.getReservedMb());
+				fields.put("dataMb",      ti.getDataMb());
+				fields.put("indexMb",     ti.getIndexMb());
+				fields.put("lobMb",       ti.getLobMb());
+				fields.put("unusedMb",    ti.getUnusedMb());
+				fields.put("dataPages",   ti.getDataPages());
+				fields.put("indexPages",  ti.getIndexPages());
+				fields.put("lobPages",    ti.getLobPages());
+				fields.put("indexCount",  ti.getIndexCount());
+
+				// Curated per-index fields rather than serializing AseIndexInfo directly - that class
+				// also carries ~15 usage-stat counters (RowsInsUpdDel, LockWaits, OptSelectCount, ...)
+				// plus an Abs-prefixed variant of each, none of which this (or any current) caller has a
+				// use for - and exposing its raw getters to Jackson risks pulling in isXxx()-style
+				// booleans unintentionally. Same reasoning applies to the raw DDL/trigger text fields on
+				// AseTableInfo itself (objectText/extraInfoText/triggersText) - left out here, already
+				// available separately via getTableInfoHtml()/getTableInfoPlainText().
+				//
+				// getTableAndIndexInfo() adds two synthetic "index" entries to this same list alongside
+				// the real ones, each identifiable by its keysStr sentinel: "DATA" (keysStr "-data-",
+				// IndexID 0 - the table's own data pages, sized from ti.dataKb) and the LOB text/image
+				// chain (keysStr "-lob-data-", named exactly "t" + the table name - see the "Check for
+				// LOB" comment there). Neither is a real index - both are already surfaced separately via
+				// the table-level dataMb/lobMb fields above - so both are excluded here; otherwise they'd
+				// show up as fake "indexes" in the breakdown below.
+				List<Map<String, Object>> indexes = new ArrayList<>();
+				for (AseIndexInfo idx : ti.getIndexList())
+				{
+					String keysStr = idx.getKeysStr();
+					if ("-data-".equals(keysStr) || "-lob-data-".equals(keysStr))
+						continue;
+
+					Map<String, Object> idxFields = new LinkedHashMap<>();
+					idxFields.put("indexName",    idx.getIndexName());
+					idxFields.put("keys",         idx.getKeys());
+					idxFields.put("indexId",      idx.getIndexID());
+					idxFields.put("description",  idx.getDescription());
+					idxFields.put("sizeMb",       idx.getSizeMb());
+					idxFields.put("sizePages",    idx.getSizePages());
+					idxFields.put("reservedMb",   idx.getReservedMb());
+					idxFields.put("unusedMb",     idx.getUnusedMb());
+					idxFields.put("creationDate", tsStr(idx.getCreationDate()));
+					idxFields.put("cacheDate",    tsStr(idx.getCacheDate()));
+					indexes.add(idxFields);
+				}
+				fields.put("indexes", indexes);
+			}
+			result.put(requestedName, fields);
+		}
+
+		return result;
 	}
 
 	/**
@@ -2103,6 +2224,258 @@ extends ReportEntryAbstract
 
 		return map;
 	}
+
+	/**
+	 * Out of the passed Statement Cache names, which ones do we actually have a XML Showplan for?
+	 * <p>
+	 * This is a *single* query (using an 'in (...)' list), so we do NOT have to fire off one query
+	 * per candidate name just to find out if a plan exists (which the caller then would have to do
+	 * anyway, using {@link #getXmlShowplanFromMonDdlStorage(DbxConnection, String)}).
+	 *
+	 * @param conn   Connection to the PCS
+	 * @param names  Statement Cache names, like '*ss0087948680_1345721111ss*' (null/empty is OK)
+	 * @return A Set with the names (of the input) that has a plan in [MonDdlStorage]. Never null.
+	 */
+	public Set<String> getXmlShowplanNamesFromMonDdlStorage(DbxConnection conn, Collection<String> names)
+	throws SQLException
+	{
+		Set<String> foundSet = new LinkedHashSet<>();
+
+		if (names == null || names.isEmpty())
+			return foundSet;
+
+		StringBuilder inList = new StringBuilder();
+		for (String name : names)
+		{
+			if (StringUtil.isNullOrBlank(name))
+				continue;
+
+			if (inList.length() > 0)
+				inList.append(", ");
+			inList.append(DbUtils.safeStr(name));
+		}
+
+		if (inList.length() == 0)
+			return foundSet;
+
+		String sql = ""
+			    + "select [objectName] \n"
+			    + "from [MonDdlStorage] \n"
+			    + "where 1 = 1 \n"
+			    + "  and [dbname] = 'statement_cache' \n"
+			    + "  and [owner]  = 'ssql' \n"
+			    + "  and [objectName] in (" + inList + ") \n"
+			    + "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+					foundSet.add(rs.getString(1));
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting XML Showplan names for " + names.size() + " name(s): " + ex);
+			throw ex;
+		}
+
+		return foundSet;
+	}
+
+
+	//-------------------------------------------------------------------------------------------
+	// BEGIN: XML Showplan Registry -- shared by ALL ASE report sections in *this* report
+	//-------------------------------------------------------------------------------------------
+	//
+	// Several report sections want to link to the same XML Execution Plan (AseTopCmStmntCacheDetails
+	// and AseTopSlowNormalizedSql to name two). The plan text itself can be up to ~128KB, and it must
+	// be written into the HTML *once* - both to keep the report size down, and because the links
+	// (see ShowplanLinkBuilder / dsrOpenLink) find the plan by 'document.getElementById()', so
+	// duplicated DOM id's would be plain wrong.
+	//
+	// So: sections REGISTER plans during create(), and the FIRST section that gets to write its
+	// HTML flushes all pending plans. Note that DailySummaryReportDefault runs *all* create() before
+	// *any* writeMessageText(), so the registry is complete when the first section writes.
+	//
+	// The registry is stored in the report instance "status map" (setStatusEntry()/getStatusEntry()),
+	// which is the same "report scoped" write-once mechanism that ReportChartAbstract ("chartJs_writeOnce")
+	// and SparklineHelper ("jsLoadSparkline_writeOnce") already uses.
+	//-------------------------------------------------------------------------------------------
+
+	private static final String XMLPLAN_REGISTRY_KEY = "AseXmlPlanRegistry";        // Map<String,String>  objectName -> xmlPlan
+	private static final String XMLPLAN_WRITTEN_KEY  = "AseXmlPlanRegistryWritten"; // Set<String>         objectName that has been written to the HTML
+	private static final String XMLPLAN_JS_KEY       = "AseXmlPlanJs_writeOnce";    // marker              the JS/Modal support code has been written
+
+	/**
+	 * DOM id of the hidden <code>&lt;script type='text/xmldata'&gt;</code> block that holds the XML plan
+	 * for a Statement Cache name like <code>*ss0087948680_1345721111ss*</code>.
+	 * <p>
+	 * NOTE: '*' is replaced with '_' (a '*' is not valid in a HTML id), this is the same rule that
+	 *       "Copy XML" (<code>showplanForId()</code>) has always used, so do NOT change it.
+	 */
+	public static String getXmlPlanElementId(String objectName)
+	{
+		if (StringUtil.isNullOrBlank(objectName))
+			return null;
+
+		return "plan_" + objectName.replace('*', '_');
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, String> getXmlPlanRegistry()
+	{
+		if ( ! hasReportingInstance() )
+			return null;
+
+		Object obj = getReportingInstance().getStatusEntry(XMLPLAN_REGISTRY_KEY);
+		if (obj == null)
+		{
+			Map<String, String> map = new LinkedHashMap<>();
+			getReportingInstance().setStatusEntry(XMLPLAN_REGISTRY_KEY, map);
+			return map;
+		}
+		return (Map<String, String>) obj;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Set<String> getXmlPlanWrittenSet()
+	{
+		if ( ! hasReportingInstance() )
+			return null;
+
+		Object obj = getReportingInstance().getStatusEntry(XMLPLAN_WRITTEN_KEY);
+		if (obj == null)
+		{
+			Set<String> set = new LinkedHashSet<>();
+			getReportingInstance().setStatusEntry(XMLPLAN_WRITTEN_KEY, set);
+			return set;
+		}
+		return (Set<String>) obj;
+	}
+
+	/**
+	 * Register a XML Execution Plan so it will be written (ONCE) into the HTML report.
+	 * <p>
+	 * Safe to call from several report sections with the same 'objectName' (last one wins, but they
+	 * should hold the same plan). Use {@link #getXmlPlanElementId(String)} to get the DOM id to pass
+	 * to {@code ShowplanLinkBuilder.buildViewPlanLinkHtml(...)}.
+	 *
+	 * @param objectName  Statement Cache name, like '*ss0087948680_1345721111ss*'
+	 * @param xmlPlan     The XML plan text (null/blank is simply discarded)
+	 */
+	public void registerXmlPlan(String objectName, String xmlPlan)
+	{
+		if (StringUtil.isNullOrBlank(objectName) || StringUtil.isNullOrBlank(xmlPlan))
+			return;
+
+		Map<String, String> registry = getXmlPlanRegistry();
+		if (registry != null)
+			registry.put(objectName, xmlPlan);
+	}
+
+	/**
+	 * Write all registered - but not yet written - XML Plans as hidden
+	 * <code>&lt;script id='plan_...' type='text/xmldata'&gt;</code> blocks.
+	 * <p>
+	 * Call this from <code>writeMessageText()</code>, in a <code>isFullMessageType()</code> block.
+	 * It's a no-op for plans that some other section has already written.
+	 */
+	public void writePendingXmlPlans(Writer sb)
+	throws IOException
+	{
+		Map<String, String> registry   = getXmlPlanRegistry();
+		Set<String>         writtenSet = getXmlPlanWrittenSet();
+
+		if (registry == null || writtenSet == null)
+			return;
+
+		for (Entry<String, String> entry : registry.entrySet())
+		{
+			String objectName = entry.getKey();
+
+			// Already written (by this or some other report section)
+			if ( ! writtenSet.add(objectName) )
+				continue;
+
+			sb.append("\n<script id='").append(getXmlPlanElementId(objectName)).append("' type='text/xmldata'>\n");
+			sb.append(entry.getValue());
+			sb.append("\n</script>\n");
+		}
+	}
+
+	/**
+	 * Write the JavaScript support code that the "View Execution Plan" / "Get LLM Optimization Advice"
+	 * links and the "Copy XML" links depends on: <code>dsrOpenLink()</code>, <code>showplanForId()</code>,
+	 * <code>copyStringToClipboard()</code> and the <code>#copyPastePopup</code> Bootstrap modal.
+	 * <p>
+	 * Written ONCE per report - it's a no-op if some other section has already written it.
+	 */
+	public void writeXmlPlanSupportJs(Writer sb)
+	throws IOException
+	{
+		if (hasReportingInstance())
+		{
+			if (getReportingInstance().hasStatusEntry(XMLPLAN_JS_KEY))
+				return;
+			getReportingInstance().setStatusEntry(XMLPLAN_JS_KEY);
+		}
+
+		sb.append("<script type='text/javascript'> \n");
+		// NOTE: dsrOpenLink() and the workload harvester are NOT written here any more - they are emitted
+		//       ONCE per report, UNCONDITIONALLY, by DailySummaryReportDefault via
+		//       ShowplanLinkBuilder.getDsrLinkSupportJs(). They must not depend on this section running,
+		//       since the links that call them are emitted for any statement that has SQL text.
+		sb.append("    function showplanForId(id) \n");
+		sb.append("    { \n");
+		sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
+		sb.append("        copyStringToClipboard(showplanText); \n");
+		sb.append("    } \n");
+		sb.append("\n");
+		sb.append("    function copyStringToClipboard (string)                                   \n");
+		sb.append("    {                                                                         \n");
+		sb.append("        function handler (event)                                              \n");
+		sb.append("        {                                                                     \n");
+		sb.append("            event.clipboardData.setData('text/plain', string);                \n");
+		sb.append("            event.preventDefault();                                           \n");
+		sb.append("            document.removeEventListener('copy', handler, true);              \n");
+		sb.append("        }                                                                     \n");
+		sb.append("                                                                              \n");
+		sb.append("        document.addEventListener('copy', handler, true);                     \n");
+		sb.append("        document.execCommand('copy');                                         \n");
+		sb.append("                                                                              \n");
+		sb.append("        // Open a popup... and close it 3 seconds later...                    \n");
+		sb.append("        $('#copyPastePopup').modal('show');                                   \n");
+		sb.append("            setTimeout(function() {                                           \n");
+		sb.append("            $('#copyPastePopup').modal('hide');                               \n");
+		sb.append("        }, 3000);		                                                     \n");
+		sb.append("    }                                                                         \n");
+		sb.append("</script> \n");
+
+		// HTML Code for the bootstrap popup...
+		sb.append("    <div class='modal fade' id='copyPastePopup'>                              \n");
+		sb.append("        <div class='modal-dialog'>                                            \n");
+		sb.append("            <div class='modal-content'>                                       \n");
+		sb.append("                <div class='modal-header'>                                    \n");
+		sb.append("                    <h4 class='modal-title'>Auto Close in 3 seconds</h4>      \n");
+		sb.append("                </div>                                                        \n");
+		sb.append("                <div class='modal-body'>                                      \n");
+		sb.append("                    <p>The XML Plan was copied to Clipboard</p>               \n");
+		sb.append("                    <p>To see the GUI Plan, for example: Past it into SQL Window (sqlw)<br> \n");
+		sb.append("                       SQL Window is included in the DbxTune package.         \n");
+		sb.append("                    </p>                                                      \n");
+		sb.append("                </div>                                                        \n");
+		sb.append("            </div>                                                            \n");
+		sb.append("        </div>                                                                \n");
+		sb.append("    </div>                                                                    \n");
+	}
+	//-------------------------------------------------------------------------------------------
+	// END: XML Showplan Registry
+	//-------------------------------------------------------------------------------------------
 
 
 	public String extractSqlStatementsFromXmlShowplan(String xmlPlan)

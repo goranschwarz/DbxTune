@@ -21,6 +21,7 @@
 package com.dbxtune.graph;
 
 import java.lang.invoke.MethodHandles;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -293,6 +294,14 @@ implements Cloneable
 		//     - clearData() methods needs to be called to set all data[] to 0.0
 		//     - LabelDisplay can be initialized/used at a later stage == deferred initialization of the array...
 		//     - etc, etc: so lets implemet that later if we need it.
+	}
+
+	public void setDataPoint(Timestamp timestamp, Map<String, Double> valueMap)
+	{
+		String[] labelArray = valueMap.keySet().toArray(new String[0]);
+		Double[] dataArray  = valueMap.values().toArray(new Double[0]);
+		
+		setDataPoint(timestamp, labelArray, dataArray);
 	}
 
 	public void setDataPoint(Date date, Double[] dataArray)

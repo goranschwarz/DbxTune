@@ -441,7 +441,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Remote DB"  ,            entry.getRemoteDBName()    );
 				tableInfoMap.put("Remote TBL" ,            entry.getRemoteTableName() );
 //				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
-				tableInfoMap.put("DDL"        ,            getTextAsTooltipDiv(entry._objectText, "Remote Table DDL"));
+				tableInfoMap.put("DDL"        ,            getTextAsTooltipDiv(entry._objectText, "Remote Table DDL", getDdlMaxLengthTable()));
 			}
 			else // Any table
 			{
@@ -461,8 +461,8 @@ extends ReportEntryAbstract
 //				tableInfoMap.put("Created"     , entry.getCrDate()+""       );
 				tableInfoMap.put("Sampled"     , entry.getSampleTime()+""   );
 				tableInfoMap.put("Index Count" , entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"    , getTextAsTooltipDiv(entry._objectText, "Table Info"));
-				tableInfoMap.put("Triggers"    , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info"));
+				tableInfoMap.put("DDL Info"    , getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
+				tableInfoMap.put("Triggers"    , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));
 			}
 			
 			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);

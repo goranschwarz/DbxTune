@@ -1,0 +1,130 @@
+/*
+ * Scoped CSS for the "Table Information" section rendered inside the ASE/SQL Server Showplan
+ * modal dialogs (dbxShowplan.js) and the standalone /showplan/ase viewer (ShowplanAseServlet.java).
+ * Scoped to each of #dbx-ssp-tableinfo-body (SQL Server dialog), #dbx-asp-tableinfo-body (ASE
+ * dialog) and #ase-showplan-tableinfo-body (standalone ASE viewer) so the DSR stylesheet elsewhere
+ * on the page is not affected. All three render the same server-side table.qs-tableinfo/
+ * table.dsr-sub-table-other-info markup (AseAbstract/SqlServerAbstract.getTableInfoAsHtmlTable),
+ * so one shared stylesheet covers all of them - was previously injected at runtime as an inline
+ * <style> by dbxShowplan.js's _injectHtml(), moved to a real file once the standalone viewer needed
+ * the same styling too (which doesn't load dbxShowplan.js at all).
+ */
+
+/* ── outer wrapper table ── */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8em;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo > thead > tr > th {
+  background: #4a6fa5;
+  color: #fff;
+  font-weight: 600;
+  padding: 4px 8px;
+  border: 1px solid #3a5f95;
+  white-space: nowrap;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo > tbody > tr > td {
+  border: 1px solid #c8c8c8;
+  padding: 4px 6px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+/* ── key/value table inside "Table Info" cell ── */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-sub-table-other-info {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 1em; /* already inside 0.8em context */
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-sub-table-other-info td {
+  border: 1px solid #d0d0d0;
+  padding: 2px 6px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-sub-table-other-info td:first-child {
+  white-space: nowrap;
+  min-width: 90px;
+}
+
+/* ── nested index table inside "Index Info" cell ── */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo table.qs-tableinfo {
+  width: 100%;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo table.qs-tableinfo > thead > tr > th {
+  background: #5a7fa8;
+  font-size: 0.9em;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo table.qs-tableinfo > tbody > tr > td {
+  border: 1px solid #d0d0d0;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo table.qs-tableinfo > tbody > tr:nth-child(even) > td {
+  background: #f4f7fb;
+}
+
+/* ── missing index table ── */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-missing-index-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8em;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-missing-index-table > thead > tr > th {
+  background: #a05a00;
+  color: #fff;
+  font-weight: 600;
+  padding: 4px 8px;
+  border: 1px solid #804800;
+  white-space: nowrap;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-missing-index-table > tbody > tr > td {
+  border: 1px solid #c8c8c8;
+  padding: 4px 6px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-missing-index-table > tbody > tr:nth-child(even) > td {
+  background: #fdf5ec;
+}
+
+/* ── tooltip-div trigger links (data-toggle="modal" data-target="#dbx-view-sqltext-dialog") ── */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"] {
+  cursor: pointer;
+  color: #1a56a0;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  display: inline-block;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"]:hover {
+  background: #e8f0fb;
+  color: #0a3a7a;
+}
+
+/* ── DSR-style hover tooltip (shows full text on hover, same as Daily Summary Report) ── */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-tooltip] {
+  position: relative;
+}
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-tooltip]:hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 1200;
+  top: 20px;
+  left: 30px;
+  width: 800px;
+  max-width: 90vw;
+  padding: 10px;
+  background: #454545;
+  color: #fff;
+  font-size: 11px;
+  font-family: Courier, monospace;
+  white-space: pre-wrap;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  pointer-events: none;
+}

@@ -41,6 +41,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -703,6 +704,18 @@ extends SqlServerAbstract
 			// Get the plans
 			_planCollection.getPlans(conn, null, "plan_handle");
 
+			// Capture the raw 'plan_handle' per row BEFORE substituteWithLinks() below overwrites the
+			// column with an HTML link - needed further down to build a "View Execution Plan" link.
+			int pos_planHandleRaw = _shortRstm.findColumn("plan_handle");
+			String[] rawPlanHandleByRow = new String[_shortRstm.getRowCount()];
+			if (pos_planHandleRaw >= 0)
+			{
+				for (int rr=0; rr<_shortRstm.getRowCount(); rr++)
+				{
+					rawPlanHandleByRow[rr] = _shortRstm.getValueAsString(rr, pos_planHandleRaw);
+				}
+			}
+
 			// Fill in a link with 'ExecPlan' to show the plan.
 			// If no plans was found substitute to: '--not-found--'
 //			_planCollection.getPlansAndSubstituteWithLinks(conn, null, "plan_handle", "ExecPlan", "view plan", "--not-found--");
@@ -1207,9 +1220,26 @@ extends SqlServerAbstract
 						// Parse the 'sqlText' and extract Table Names, then get various table and index information
 						String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
 
-						// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
-						String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
-						String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_MSSQL);
+						// The XML plan (if any) is already written ONCE to the page by '_planCollection.writeMessageText()'
+						// (called elsewhere), in a hidden <script type='text/xmldata'> block with this id - both links
+						// below read it back out of that element at click time instead of re-embedding it themselves.
+						String rawPlanHandle = (r < rawPlanHandleByRow.length) ? rawPlanHandleByRow[r] : null;
+						boolean hasPlan = StringUtil.hasValue(rawPlanHandle) && _planCollection.getShowplanAsMap().containsKey(new ExecutionPlanCollection.PlanKey(null, rawPlanHandle));
+						String planElementId = hasPlan ? "plan_" + _planCollection.getId() + "_" + rawPlanHandle : null;
+
+						// "Get LLM Optimization Advice" link - JS-driven (reads the plan out of 'planElementId' at
+						// click time); ddlContext is no longer precomputed here at all - dbxLlmAdvice.js resolves
+						// it LIVE from srv+dbname at click time (see buildAdviceLinkHtmlJs)
+						String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, planElementId, DbUtils.DB_PROD_NAME_MSSQL, getReportingInstance().getServerName(), dbname);
+
+						// "View Execution Plan" link - JS-driven, same reasoning as above
+						// NOTE: when no plan was captured, SAY so (same as AseTopCmStmntCacheDetails does) rather
+						//       than just omitting the link - otherwise the reader is left wondering *why* it is missing.
+						//       Keyed on 'planElementId' (= "we have no plan"), NOT on a blank link, since the link is
+						//       also blank when DbxCentral has no public base URL - and then a plan may well exist.
+						String showplanLink = (planElementId == null)
+								? "Execution Plan <b>NOT Available</b>"
+								: ShowplanLinkBuilder.buildViewPlanLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), planElementId, sqlText, DbUtils.DB_PROD_NAME_MSSQL, getReportingInstance().getServerName(), dbname);
 
 //						// Parse the 'sqlText' and extract Table Names..
 //						// - then get table information (like we do in 'AseTopCmObjectActivity')
@@ -1253,9 +1283,10 @@ extends SqlServerAbstract
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
 
-						sqlText = "<xmp>" + sqlText + "</xmp>"
-								+ (StringUtil.isNullOrBlank(procName) ? "" : "<br>Executed By: <code>" + procName + "</code> <br>")
-								+ "<br>" + llmAdviceLink
+						sqlText = "<xmp>" + sqlText + "</xmp>\n"
+								+ (StringUtil.isNullOrBlank(procName) ? "" : "<br>Executed By: <code>" + procName + "</code> <br>\n")
+								+ (StringUtil.hasValue(showplanLink) ? "<br>\n" + showplanLink : "")
+								+ "<br>\n" + llmAdviceLink
 								+ tableInfo;
 						
 						// add record to SimpleResultSet

@@ -20,11 +20,17 @@
  ******************************************************************************/
 package com.dbxtune.central.controllers;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.nio.file.Files;
+import java.security.SecureRandom;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,6 +44,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistReader;
 import com.dbxtune.pcs.PersistWriterJdbc.H2ShutdownType;
@@ -63,6 +70,16 @@ public class DailySummartReportServlet extends HttpServlet
 	/** Used as ContentType for Server Sent Events */
 	public static final String TEXT_EVENT_STREAM = "text/event-stream";
 
+	/** Sub directory (below the 'reports' directory) where "on demand" created reports are stored, so a browser can view them using a normal URL */
+	public static final String DSR_TMP_SUBDIR = "tmp-dsr";
+
+	/** How many hours do we keep "on demand" created reports in the DSR_TMP_SUBDIR, before they are removed */
+	public static final String  PROPKEY_tmpReportKeepHours = "DailySummaryReportServlet.tmp.report.keep.hours";
+	public static final int     DEFAULT_tmpReportKeepHours = 24;
+
+	/** Used to make the report "id" (filename) hard to guess */
+	private static final SecureRandom _random = new SecureRandom();
+
 
 	private void printHelp(ServletOutputStream out, String msg) 
 	throws IOException
@@ -85,6 +102,7 @@ public class DailySummartReportServlet extends HttpServlet
 		out.println("  <tr> <td>    items                  </td> <td> xxx </td> </tr>");
 		out.println("  <tr> <td>    begin-time             </td> <td> xxx </td> </tr>");
 		out.println("  <tr> <td>    end-time               </td> <td> xxx </td> </tr>");
+		out.println("  <tr> <td> view                      </td> <td> View a previously created report, params: id=#reportId#[&amp;download=true] </td> </tr>");
 		out.println("</table>");
 		out.println("");
 
@@ -254,6 +272,9 @@ public class DailySummartReportServlet extends HttpServlet
 		}
 		else if ("get".equals(inputOp))
 		{
+			// Remove any old "on demand" reports, so we do not fill up the disk
+			removeOldTmpReports();
+
 			try
 			{
 				resp.setContentType(TEXT_EVENT_STREAM); // "text/event-stream";
@@ -310,17 +331,26 @@ public class DailySummartReportServlet extends HttpServlet
 					// Create & and Send the report
 					report.create();
 
-					// TODO: Change the below "in some way"
-					// - current usage take to much memory: getReportAsHtml() -> serialize-to-JSON-string -> writeSseEvent()
-					// - wanted: content.getReportFile() -> makeItIntoJson -> writeSseEvent(using-a-Writer-so-we-do-not-have-a-intermediate-string)
-
-					// Get Content and the HTML output
+					// Save the report as a file in the "tmp-dsr" directory, then send a *normal* URL to the browser.
+					// NOTE: Do NOT send the report content itself (it may be hundreds of MB), the earlier implementation did:
+					//       getReportAsHtml() -> serialize-to-JSON-string -> writeSseEvent() -> JS Blob -> window.open('blob:...')
+					//       ... which used a lot of memory, and the browser refused to open the 'blob:' URL in a new tab.
 					DailySummaryReportContent content = report.getReportContent();
-					String htmlReport = content.getReportAsHtml();
+
+					String reportId  = createReportId(jdbcUrl);
+					File reportFile  = new File(getTmpReportDir(), reportId);
+
+					content.saveReportAsFile(reportFile);
+					_logger.info("Created 'on demand' Daily Summary Report file '" + reportFile + "', size=" + reportFile.length() + " bytes.");
+
+					String reportUrl = req.getContextPath() + "/api/dsr?op=view&id=" + reportId;
 
 					// Construct "complete" message
 					Map<String, Object> params = new HashMap<>();
-					params.put("complete", htmlReport);
+					params.put("reportUrl"  , reportUrl);
+					params.put("downloadUrl", reportUrl + "&download=true");
+					params.put("filename"   , reportId);
+					params.put("sizeKb"     , reportFile.length() / 1024);
 					String completeJson = new ObjectMapper().writeValueAsString(params);
 
 					// Send "complete" message
@@ -340,6 +370,62 @@ public class DailySummartReportServlet extends HttpServlet
 
 				// sendError do not work...
 				//resp.sendError(500, ex.getMessage());
+			}
+			return;
+		}
+		else if ("view".equals(inputOp))
+		{
+			String  id       = AdminServlet.getParameter(req, "id",       "")     .trim();
+			boolean download = "true".equalsIgnoreCase( AdminServlet.getParameter(req, "download", "false").trim() );
+
+			// The 'id' is the *filename* of a report in the "tmp-dsr" directory.
+			// Only allow a strict set of characters, so we can NOT be tricked into serving files outside of that directory.
+			if ( ! id.matches("[A-Za-z0-9._-]+\\.html") )
+			{
+				_logger.warn("DSR: Invalid report id '" + id + "' from '" + req.getRemoteAddr() + "'.");
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid report id.");
+				return;
+			}
+
+			File tmpDir     = getTmpReportDir();
+			File reportFile = new File(tmpDir, id);
+
+			// Belt and braces: the file MUST be located directly in the "tmp-dsr" directory
+			if ( ! tmpDir.getCanonicalFile().equals(reportFile.getCanonicalFile().getParentFile()) )
+			{
+				_logger.warn("DSR: Report id '" + id + "' resolved to '" + reportFile.getCanonicalPath() + "', which is outside of '" + tmpDir.getCanonicalPath() + "'.");
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid report id.");
+				return;
+			}
+
+			if ( ! reportFile.exists() )
+			{
+				int keepHours = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_tmpReportKeepHours, DEFAULT_tmpReportKeepHours);
+
+				resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+				resp.setContentType("text/html; charset=UTF-8");
+
+				PrintWriter out = resp.getWriter();
+				out.println("<html><body>");
+				out.println("<h3>Sorry, this Daily Summary Report is no longer available.</h3>");
+				out.println("'On demand' created reports are temporary, and are removed after " + keepHours + " hours.<br>");
+				out.println("Please create the report again.<br>");
+				out.println("</body></html>");
+				out.flush();
+				return;
+			}
+
+			resp.setContentType("text/html; charset=UTF-8");
+			resp.setContentLengthLong(reportFile.length());
+			resp.setHeader("Cache-Control", "private, max-age=300");
+			if (download)
+				resp.setHeader("Content-Disposition", "attachment; filename=\"" + id + "\"");
+
+			// Stream the file (it may be BIG, so do NOT read it into a String)
+			try (OutputStream out = resp.getOutputStream())
+			{
+				Files.copy(reportFile.toPath(), out);
+				out.flush();
 			}
 			return;
 		}
@@ -364,6 +450,97 @@ public class DailySummartReportServlet extends HttpServlet
 //		out.println("Not yet implemented...");
 //		out.flush();
 //		out.close();
+	}
+
+	/**
+	 * Get the directory where "on demand" created Daily Summary Reports are stored.
+	 * <p>
+	 * The directory is created if it does not exist.
+	 */
+	public static File getTmpReportDir()
+	{
+		File dir = new File(DbxTuneCentral.getAppReportsDir(), DSR_TMP_SUBDIR);
+
+		if ( ! dir.exists() )
+		{
+			if (dir.mkdirs())
+				_logger.info("Created directory '" + dir + "', which is used for 'on demand' created Daily Summary Reports.");
+			else
+				_logger.warn("Problems creating directory '" + dir + "', which is used for 'on demand' created Daily Summary Reports.");
+		}
+
+		return dir;
+	}
+
+	/**
+	 * Remove "on demand" created reports that are older than {@link #PROPKEY_tmpReportKeepHours} hours.
+	 */
+	private void removeOldTmpReports()
+	{
+		try
+		{
+			File[] files = getTmpReportDir().listFiles();
+			if (files == null)
+				return;
+
+			int  keepHours = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_tmpReportKeepHours, DEFAULT_tmpReportKeepHours);
+			long maxAgeMs  = keepHours * 3600L * 1000L;
+			long now       = System.currentTimeMillis();
+
+			for (File f : files)
+			{
+				if (f.isFile() && f.getName().endsWith(".html") && (now - f.lastModified()) > maxAgeMs)
+				{
+					if (f.delete())
+						_logger.info("Removed old temporary Daily Summary Report file '" + f + "'.");
+					else
+						_logger.warn("Problems removing old temporary Daily Summary Report file '" + f + "'.");
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("Problems removing old temporary Daily Summary Report files. Skipping this. Caught: " + ex, ex);
+		}
+	}
+
+	/**
+	 * Create a *safe* and unique filename, which is also used as the "id" when we view/download the report.
+	 * <p>
+	 * Example: <code>jdbc:h2:tcp://host:19095/GORAN_UB3_DS_2026-09-02;IFEXISTS=TRUE</code><br>
+	 * becomes: <code>GORAN_UB3_DS_2026-09-02_2026-09-02_141233_a1b2c3d4.html</code>
+	 */
+	private static String createReportId(String jdbcUrl)
+	{
+		String name = jdbcUrl == null ? "" : jdbcUrl;
+
+		// Strip any JDBC options: ";IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE"
+		int semiPos = name.indexOf(';');
+		if (semiPos >= 0)
+			name = name.substring(0, semiPos);
+
+		// Get the LAST part of the URL/path, which is the DB Name
+		name = name.replace('\\', '/');
+		int slashPos = name.lastIndexOf('/');
+		if (slashPos >= 0)
+			name = name.substring(slashPos + 1);
+
+		if (name.endsWith(".mv.db"))
+			name = name.substring(0, name.length() - ".mv.db".length());
+
+		// Only allow "safe" characters in the filename
+		name = name.replaceAll("[^A-Za-z0-9._-]", "_");
+
+		if (StringUtil.isNullOrBlank(name))
+			name = "dsr";
+
+		if (name.length() > 100)
+			name = name.substring(0, 100);
+
+		String ts   = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss"));
+		String rand = String.format("%08x", _random.nextInt());
+
+		return name + "_" + ts + "_tmp_" + rand + ".html";
 	}
 
 	private IDailySummaryReport createReport(HttpServletResponse resp, String jdbcUrl, String jdbcUser, String jdbcPass)
@@ -456,7 +633,16 @@ public class DailySummartReportServlet extends HttpServlet
 
 		// write the actual data
 		// this could be simple text or could be JSON-encoded text that the client then decodes
-		writer.write("data: " + data + "\n\n");
+		// NOTE: A 'data:' entry can NOT contain any new-lines, so a multi-line message must be written
+		//       as several 'data:' entries (the browser joins them back together, using '\n')
+		if (data == null)
+			data = "";
+
+		for (String line : data.split("\r\n|\r|\n", -1))
+		{
+			writer.write("data: " + line + "\n");
+		}
+		writer.write("\n");
 //System.out.println("SSE-DATA: " + message);
 
 		// flush the buffers to make sure the container sends the bytes

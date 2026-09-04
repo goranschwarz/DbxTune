@@ -90,6 +90,12 @@ implements IReportEntry
 	public static final String  PROPKEY_DSR_QUERY_TIMEOUT_IN_SEC = "DailySummaryReport.queryTimeoutInSec";
 	public static final int     DEFAULT_DSR_QUERY_TIMEOUT_IN_SEC = 60 * 15; // 15 Minutes
 	
+	public static final String  PROPKEY_DSR_DDL_MAX_LEN_TABLE   = "DailySummaryReport.ddl.maxlen.table";
+	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TABLE   = -1;
+
+	public static final String  PROPKEY_DSR_DDL_MAX_LEN_TRIGGER = "DailySummaryReport.ddl.maxlen.trigger";
+	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TRIGGER = 4096;
+
 	
 	private   Exception _problemEx;
 	private   String    _problemMsg;
@@ -107,6 +113,9 @@ implements IReportEntry
 	private boolean _collapsedHeader = false;
 	
 	private int _dsrQueryTimeoutInSec = -1;
+
+	public int getDdlMaxLengthTable()   { return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_DSR_DDL_MAX_LEN_TABLE  , DEFAULT_DSR_DDL_MAX_LEN_TABLE  ); }
+	public int getDdlMaxLengthTrigger()	{ return Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_DSR_DDL_MAX_LEN_TRIGGER, DEFAULT_DSR_DDL_MAX_LEN_TRIGGER); }
 
 	@Override public void setDsrQueryTimeoutInSec(int seconds) { _dsrQueryTimeoutInSec = seconds;}
 	@Override public int  getDsrQueryTimeoutInSec()            { return _dsrQueryTimeoutInSec < 0 ? getDsrQueryTimeoutInSecDefault() : _dsrQueryTimeoutInSec; }
@@ -1886,8 +1895,21 @@ implements IReportEntry
 				+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
 	}
 
-	public String getTextAsTooltipDiv(String displayText, String labelText)
+	public String getTextAsTooltipDiv(String displayText, String labelText, int maxLen)
 	{
+		if (StringUtil.hasValue(displayText) && maxLen > 0)
+		{
+			int len = displayText.length();
+			if (len > maxLen)
+			{
+				displayText = displayText.substring(0, maxLen) 
+						+ "... \n"
+						+ "################################################################### \n"
+						+ "## WARNING: The text was truncated after " + maxLen + " characters. \n"
+						+ "################################################################### \n"
+						+ "";
+			}
+		}
 		displayText = StringEscapeUtils.escapeHtml4(displayText);
 		
 		// Put the "Actual Executed SQL Text" as a "tooltip"

@@ -37,6 +37,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
+import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
@@ -588,6 +589,11 @@ public class ExecutionPlanCollection
 			w.append("<div id='showplan-head-" + getId() + "'></div> \n");
 			w.append("<div id='showplan-container-" + getId() + "'></div> \n");
 			w.append("<script type='text/javascript'> \n");
+			// NOTE: dsrOpenLink() and the workload harvester are NOT written here any more - they are emitted
+			//       ONCE per report, UNCONDITIONALLY, by DailySummaryReportDefault via
+			//       ShowplanLinkBuilder.getDsrLinkSupportJs(). This whole method is guarded by
+			//       "if (!_planMap.isEmpty())", so emitting them here meant that a server with NO captured
+			//       showplans produced a report where every advice link called an undefined function.
 			w.append("    // Remember last plan in var... \n");
 			w.append("    var last_showplanForId_" + getId() + "_id = ''; \n"); // Variable ON ID
 			w.append("    var last_showplanForId_" + getId() + " = ''; \n");    // Variable ON ID
