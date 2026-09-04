@@ -30,6 +30,7 @@ import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -350,6 +351,150 @@ extends ReportEntryAbstract
 		return inst.getTableInfoAsPlainText(tableInfoSet);
 	}
 
+	/** Null-safe Timestamp -&gt; String, so a JSON caller gets a stable shape regardless of the ObjectMapper's date (de)serialization config. */
+	private static String tsStr(Timestamp ts)
+	{
+		return ts == null ? null : ts.toString();
+	}
+
+	/** Null-safe empty-list, so a JSON caller always sees an array rather than null for the key/include-column lists. */
+	private static List<String> nullSafeList(List<String> list)
+	{
+		return list == null ? Collections.emptyList() : list;
+	}
+
+	/**
+	 * Static convenience method — same DDL Storage lookup as {@link #getTableInfoHtml}, but returns the
+	 * underlying numbers as structured fields instead of a rendered HTML blob, so a JavaScript caller can
+	 * make decisions on them (compare a table/index size against a threshold, pick out the one index an
+	 * operator actually used, ...) rather than only display them.
+	 *
+	 * <p>Mirrors {@code AseAbstract.getTableInfoFields(...)} - same contract, same JSON shape conventions -
+	 * so {@code TableInfoServlet}'s {@code format=json} response looks the same across vendors and the
+	 * Showplan renderers can share the client-side consumption code.
+	 *
+	 * @return Map keyed by the table name exactly as passed in via {@code tableList}. A name that
+	 *         wasn't found in the DDL Storage still gets an entry, holding just {@code found=false},
+	 *         so callers can tell "not found" apart from "not looked up".
+	 */
+	public static Map<String, Map<String, Object>> getTableInfoFields(DbxConnection conn, String dbname, Set<String> tableList)
+	{
+		Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+
+		// Create a minimal throwaway instance — the DDL-Storage lookup methods do not use
+		// _reportingInstance, so null is safe.  The abstract interface methods are stubs.
+		SqlServerAbstract inst = new SqlServerAbstract(null)
+		{
+			@Override public boolean hasIssueToReport()       { return false; }
+			@Override public String  getSubject()             { return ""; }
+			@Override public boolean hasMinimalMessageText()  { return false; }
+			@Override public boolean hasShortMessageText()    { return false; }
+			@Override public void    writeMessageText(Writer w, IReportEntry.MessageType t) {}
+			@Override public void    create(DbxConnection c, String s, Configuration p, Configuration l) {}
+		};
+
+		Set<SqlServerTableInfo> tableInfoSet = inst.getTableInformationFromMonDdlStorage(conn, tableList);
+
+		// Index found entries by both the plain table name and the fully qualified one, so a
+		// caller-supplied name matches regardless of whether it included a db/schema prefix.
+		Map<String, SqlServerTableInfo> byName = new HashMap<>();
+		for (SqlServerTableInfo ti : tableInfoSet)
+		{
+			byName.put(ti.getTableName(), ti);
+			byName.put(ti.getFullTableName(), ti);
+		}
+
+		for (String requestedName : tableList)
+		{
+			Map<String, Object> fields = new LinkedHashMap<>();
+			SqlServerTableInfo ti = byName.get(requestedName);
+			if (ti == null)
+			{
+				fields.put("found", false);
+			}
+			else
+			{
+				fields.put("found",             true);
+				fields.put("tableName",         ti.getFullTableName());
+				fields.put("dbName",            ti.getDbName());
+				fields.put("schemaName",        ti.getSchemaName());
+				fields.put("type",              ti.getType()); // "U" = table, "V" = view
+				fields.put("crDate",            tsStr(ti.getCrDate()));
+				// String, not the raw Timestamp - keeps the JSON shape stable regardless of the
+				// ObjectMapper's date (de)serialization config. Same convention as AseAbstract's.
+				fields.put("sampleTime",        tsStr(ti.getSampleTime()));
+				fields.put("rowTotal",          ti.getRowTotal());
+				fields.put("partitionCount",    ti.getPartitionCount());
+
+				// Sizes. Note that SQL Server's page accounting differs from ASE's: 'totalMb' is
+				// used_page_count for the base structure (IndexID 0/1) and therefore already covers the
+				// data pages, while 'indexMb' is the SUM over every entry in the index list - which
+				// INCLUDES that same IndexID 0/1 base entry (see getTableAndIndexInfo()). So indexMb is
+				// "all in-row pages, data included", NOT "non-clustered index overhead only" - don't
+				// present it to a user as the latter. inRowMb/lobMb/rowOverflowMb are the clean split.
+				fields.put("totalMb",           ti.getTotalMb());
+				fields.put("inRowMb",           ti.getInRowMb());
+				fields.put("lobMb",             ti.getLobMb());
+				fields.put("rowOverflowMb",     ti.getRowOverflowMb());
+				fields.put("indexMb",           ti.getIndexMb());
+				fields.put("totalPages",        ti.getTotalPages());
+				fields.put("inRowPages",        ti.getInRowPages());
+				fields.put("lobPages",          ti.getLobPages());
+				fields.put("rowOverflowPages",  ti.getRowOverflowPages());
+				fields.put("indexPages",        ti.getIndexPages());
+				fields.put("indexCount",        ti.getIndexCount());
+
+				// Curated per-index fields rather than serializing SqlServerIndexInfo directly - that
+				// class also carries ~40 optimizer/execution counters (range_scan_count, leaf_crud_count,
+				// page_latch_wait_in_ms, ...) plus an abs_-prefixed variant of each, none of which this
+				// (or any current) caller has a use for - and exposing its raw getters to Jackson risks
+				// pulling in isXxx()-style booleans unintentionally. Same reasoning applies to the raw
+				// DDL text (getDdlText()) - left out here, already available via getTableInfoHtml()/
+				// getTableInfoPlainText().
+				//
+				// Unlike ASE (whose list carries synthetic "-data-"/"-lob-data-" sentinel entries that
+				// AseAbstract.getTableInfoFields() filters out), EVERY entry here is a real SQL Server
+				// structure: IndexID 0 is the heap and IndexID 1 the clustered index - both are the
+				// table's own data pages and are exactly what a "Table Scan"/"Clustered Index Scan"
+				// operator reads, so a size-of-what-was-scanned lookup needs them. Kept, with indexId
+				// exposed so the client can tell them apart from the non-clustered indexes.
+				List<Map<String, Object>> indexes = new ArrayList<>();
+				for (SqlServerIndexInfo idx : ti.getIndexList())
+				{
+					Map<String, Object> idxFields = new LinkedHashMap<>();
+					idxFields.put("indexName",        idx.getIndexName());
+					idxFields.put("indexId",          idx.getIndexID());
+					idxFields.put("keys",             nullSafeList(idx.getKeys()));
+					idxFields.put("includeCols",      nullSafeList(idx.getIncludeCols()));
+					// Direct field reads (not getFilterExpression()) - that getter substitutes the display
+					// placeholder "-" for null, which would become a meaningless string in JSON.
+					idxFields.put("filterExpression", idx._filterExpression);
+					idxFields.put("description",      idx.getDescription());
+					idxFields.put("sizeMb",           idx.getIndexSizeMb());
+					idxFields.put("sizePages",        idx.getIndexPages());
+					idxFields.put("rowCount",         idx.getRowCount());
+					idxFields.put("fillFactor",       idx.getFillFactor());
+					idxFields.put("rowsPerPage",      idx.getRowsPerPage());
+					idxFields.put("lastUpdateStats",  tsStr(idx.getLastUpdateStats()));
+					// sys.dm_db_index_usage_stats deltas over the report period, filled in by the optional
+					// getOptimizerCounterInfo() pass - it silently does nothing when the CmIndexUsage counter
+					// tables aren't present, leaving these at their -1 "not available" initial value. Read as
+					// fields because SqlServerIndexInfo exposes no getters for them (same as the existing
+					// direct-field use in getIndexReportHtml()); legal here since this class encloses it.
+					idxFields.put("userSeeks",        idx._user_seeks);
+					idxFields.put("userScans",        idx._user_scans);
+					idxFields.put("userLookups",      idx._user_lookups);
+					idxFields.put("userUpdates",      idx._user_updates);
+					indexes.add(idxFields);
+				}
+				fields.put("indexes", indexes);
+			}
+			result.put(requestedName, fields);
+		}
+
+		return result;
+	}
+
 	/**
 	 * Plain-text (not HTML) rendering of {@code tableInfoSet}, one table/view per block,
 	 * with DDL, index list and stats - suitable for use as LLM prompt context.
@@ -607,9 +752,9 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Created"    ,                 entry.getCrDate()+""       );
 				tableInfoMap.put("Sampled"    ,                 entry.getSampleTime()+""   );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(entry._objectText, "Table Info"));
+				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
 //				tableInfoMap.put("Triggers"   , "-not-yet-impl-");
-				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info"));
+				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));
 			}
 
 			String tableInfo = HtmlTableProducer.createHtmlTable(tableInfoMap, "dsr-sub-table-other-info", true);

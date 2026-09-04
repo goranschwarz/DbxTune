@@ -20,7 +20,16 @@
  ******************************************************************************/
 package com.dbxtune.central.llm;
 
-/** Input to {@link LlmClient#optimize(LlmOptimizeRequest)}, deserialized from the servlet's JSON body. */
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+/**
+ * Input to {@link LlmClient#optimize(LlmOptimizeRequest)}, deserialized from the servlet's JSON body.
+ * <p>
+ * NOTE: 'ignoreUnknown = true' is important -- Helper.createObjectMapper() does NOT disable Jackson's
+ *       FAIL_ON_UNKNOWN_PROPERTIES, so without it, a NEWER DbxCentral page posting a field that THIS
+ *       (older) server doesn't know about would fail the whole request with HTTP 400.
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LlmOptimizeRequest
 {
 	private String sql;
@@ -28,6 +37,22 @@ public class LlmOptimizeRequest
 	private String plan;
 	private String dbVendor;
 	private String provider;
+
+	/**
+	 * Plain-text execution statistics / usage pattern for the statement over the reported period.
+	 * <p>
+	 * Built by 'dbxLlmAdvice.js' from the sparkline sub-table it harvests out of the Daily Summary
+	 * Report at click time (see SparklineHelper.getWorkloadHarvesterJs()). Tells the LLM how often and
+	 * <i>when</i> the statement actually runs, which changes what good advice looks like.
+	 */
+	private String workloadProfile;
+
+	// Defaults false, so the real POST /api/llm/optimize-sql flow (whose caller parses the reply as
+	// the {origin_sql, optimized_sql, explanation} JSON object - see LlmClientAbstract.buildPrompt())
+	// is unaffected unless a caller explicitly opts in. Only GET /api/llm/optimize-sql's "no exec"
+	// prompt-preview path (LlmSqlOptimizeServlet.doGet()) sets this true - a human pasting the prompt
+	// into an LLM chat UI by hand wants a normal readable answer, not raw JSON.
+	private boolean preview;
 
 	public LlmOptimizeRequest()
 	{
@@ -41,15 +66,19 @@ public class LlmOptimizeRequest
 		this.dbVendor   = dbVendor;
 	}
 
-	public String getSql()        { return sql; }
-	public String getDdlContext() { return ddlContext; }
-	public String getPlan()       { return plan; }
-	public String getDbVendor()   { return dbVendor; }
-	public String getProvider()   { return provider; }
+	public String  getSql()             { return sql; }
+	public String  getDdlContext()      { return ddlContext; }
+	public String  getPlan()            { return plan; }
+	public String  getDbVendor()        { return dbVendor; }
+	public String  getProvider()        { return provider; }
+	public String  getWorkloadProfile() { return workloadProfile; }
+	public boolean isPreview()          { return preview; }
 
-	public void setSql       (String sql)        { this.sql        = sql; }
-	public void setDdlContext(String ddlContext) { this.ddlContext = ddlContext; }
-	public void setPlan      (String plan)        { this.plan       = plan; }
-	public void setDbVendor  (String dbVendor)    { this.dbVendor   = dbVendor; }
-	public void setProvider  (String provider)    { this.provider   = provider; }
+	public void setSql            (String sql)             { this.sql             = sql; }
+	public void setDdlContext     (String ddlContext)      { this.ddlContext      = ddlContext; }
+	public void setPlan           (String plan)            { this.plan            = plan; }
+	public void setDbVendor       (String dbVendor)        { this.dbVendor        = dbVendor; }
+	public void setProvider       (String provider)        { this.provider        = provider; }
+	public void setWorkloadProfile(String workloadProfile) { this.workloadProfile = workloadProfile; }
+	public void setPreview        (boolean preview)        { this.preview         = preview; }
 }

@@ -190,17 +190,18 @@ function cmDetailRenderGroups(groups)
 		$gt.append(li);
 	});
 
-	// If a specific CM was requested (via openCounterDetails URL param), find its group and override selection
+	// If a specific CM was requested (via openCounterDetails URL param), find its group and override selection.
+	// _cmPendingOpenCm is deliberately left set here (not cleared) -- cmDetailRenderCms() below is what
+	// actually picks the selected CM tab, and it must see this to give it priority over the sticky
+	// per-group/global "last viewed CM" localStorage preferences. It clears it once applied.
 	if (_cmPendingOpenCm && _cmPendingOpenCm !== '1') {
 		for (var i = 0; i < groups.length; i++) {
 			var found = groups[i].cms.some(function(c) { return c.cmName === _cmPendingOpenCm; });
 			if (found) {
 				selGroup = groups[i].groupName;
-				_cmLastCm = _cmPendingOpenCm;
 				break;
 			}
 		}
-		_cmPendingOpenCm = null;
 	}
 
 	_cmGroup = selGroup;
@@ -352,14 +353,24 @@ function cmDetailRenderCms(cms)
 	var $ct = $('#cm-name-tabs').empty();
 	if (!cms || !cms.length) { cmDetailShowMsg('No CMs in this group'); return; }
 
-	// Auto-select: prefer per-group last CM, then global last CM, then first CM with data
+	// Auto-select: a pending URL-forced CM (openCounterDetails/cd param) always wins -- it must override
+	// the sticky per-group/global "last viewed CM" preferences below, otherwise a previously-visited CM
+	// in this group silently shadows what the URL asked for. Falls back to: per-group last CM, then
+	// global last CM, then first CM with data.
 	var cmNames = cms.map(function(c) { return c.cmName; });
+	var forcedCm = (_cmPendingOpenCm && _cmPendingOpenCm !== '1' && cmNames.indexOf(_cmPendingOpenCm) >= 0) ? _cmPendingOpenCm : null;
 	var perGroupCm = _cmGroup && _cmLastCmPerGroup[_cmGroup];
-	var selCm = (perGroupCm && cmNames.indexOf(perGroupCm) >= 0)
-		? perGroupCm
-		: (_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)
-			? _cmLastCm
-			: cms[0].cmName;
+	var selCm = forcedCm
+		? forcedCm
+		: (perGroupCm && cmNames.indexOf(perGroupCm) >= 0)
+			? perGroupCm
+			: (_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)
+				? _cmLastCm
+				: cms[0].cmName;
+	if (forcedCm) {
+		_cmLastCm = forcedCm;
+		_cmPendingOpenCm = null;
+	}
 	if (selCm === cms[0].cmName && !(_cmLastCm && cmNames.indexOf(_cmLastCm) >= 0)) {
 		// No last-CM match — fall back to first CM with data
 		for (var i = 0; i < cms.length; i++) {

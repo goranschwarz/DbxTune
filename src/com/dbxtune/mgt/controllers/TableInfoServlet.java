@@ -26,6 +26,7 @@ import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -54,7 +55,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Vendor-generic "table/index info from DDL Storage, by table name list" endpoint.
  *
- * <pre>GET /mgt/table-info?dbVendor=X&amp;dbname=Y&amp;tables=t1,t2[&amp;format=html|text][&amp;ts=YYYY-MM-DD+HH:mm:ss]</pre>
+ * <pre>GET /mgt/table-info?dbVendor=X&amp;dbname=Y&amp;tables=t1,t2[&amp;format=html|text|json][&amp;ts=YYYY-MM-DD+HH:mm:ss]</pre>
  *
  * <p>Dispatches to {@link AseAbstract}/{@link SqlServerAbstract}/{@link PostgresAbstract}'s
  * {@code getTableInfoHtml(...)}/{@code getTableInfoPlainText(...)} static convenience methods,
@@ -63,10 +64,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * <p>Unlike {@link QueryStoreServlet}'s {@code action=tableInfo} (SQL Server only, tied to that
  * class's Query-Store-specific concerns), this endpoint is vendor-agnostic from the start - built
- * for the ASE Showplan dialog's "Table Information"/"LLM Optimization Advice" sections, but usable
+ * for the ASE Showplan dialog's "Table Information"/"LLM Optimization Advice" sections and since also
+ * used by the SQL Server Showplan dialog's equivalents, but usable
  * by any future caller/vendor without duplicating this glue. {@code QueryStoreServlet}'s own
- * {@code action=tableInfo} is left exactly as-is (no regression risk to the existing SQL Server
- * Showplan dialog wiring).
+ * {@code action=tableInfo} is left in place untouched - the Showplan dialogs no longer call it, but it
+ * is still reachable, so nothing else that may depend on it breaks.
  */
 public class TableInfoServlet
 extends HttpServlet
@@ -137,12 +139,21 @@ extends HttpServlet
 		out.flush(); out.close();
 	}
 
-	/** format=html (default) returns HTML for display; format=text returns a plain-text bundle (used as LLM prompt context). */
+	/**
+	 * format=html (default) returns HTML for display; format=text returns a plain-text bundle
+	 * (used as LLM prompt context); format=json returns structured numeric fields per table (used
+	 * by the ASE and SQL Server Showplan graphical plans' per-operator tooltips, which need to compare
+	 * the table size against a threshold client-side rather than just display it).
+	 *
+	 * <p>format=json is implemented for ASE and SQL Server; Postgres still falls through to the
+	 * empty-map branch below - {@link PostgresAbstract} has no {@code getTableInfoFields()} yet.
+	 */
 	private Map<String, Object> actionTableInfo(DbxConnection conn, String dbVendor, String dbname, String tablesParam, String format)
 	{
 		Map<String, Object> result = new LinkedHashMap<>();
 		boolean asText = "text".equals(format);
-		String  resultKey = asText ? "text" : "html";
+		boolean asJson = "json".equals(format);
+		String  resultKey = asJson ? "tables" : (asText ? "text" : "html");
 
 		Set<String> tableList = new LinkedHashSet<>();
 		for (String t : tablesParam.split(","))
@@ -154,7 +165,7 @@ extends HttpServlet
 
 		if (tableList.isEmpty())
 		{
-			result.put(resultKey, asText ? "" : "<em>No tables provided.</em>");
+			result.put(resultKey, asJson ? Collections.emptyMap() : (asText ? "" : "<em>No tables provided.</em>"));
 			return result;
 		}
 
@@ -162,32 +173,44 @@ extends HttpServlet
 		{
 			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_SYBASE_ASE))
 			{
-				result.put(resultKey, asText
-						? AseAbstract.getTableInfoPlainText(conn, dbname, tableList)
-						: fallbackIfBlank(AseAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
+				if (asJson)
+					result.put(resultKey, AseAbstract.getTableInfoFields(conn, dbname, tableList));
+				else
+					result.put(resultKey, asText
+							? AseAbstract.getTableInfoPlainText(conn, dbname, tableList)
+							: fallbackIfBlank(AseAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
 			}
 			else if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MSSQL))
 			{
-				result.put(resultKey, asText
-						? SqlServerAbstract.getTableInfoPlainText(conn, dbname, tableList)
-						: fallbackIfBlank(SqlServerAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
+				if (asJson)
+					result.put(resultKey, SqlServerAbstract.getTableInfoFields(conn, dbname, tableList));
+				else
+					result.put(resultKey, asText
+							? SqlServerAbstract.getTableInfoPlainText(conn, dbname, tableList)
+							: fallbackIfBlank(SqlServerAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
 			}
 			else if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_POSTGRES))
 			{
-				result.put(resultKey, asText
-						? PostgresAbstract.getTableInfoPlainText(conn, dbname, tableList)
-						: fallbackIfBlank(PostgresAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
+				if (asJson)
+				{
+					_logger.info("actionTableInfo(): format=json is only implemented for dbVendor='Sybase ASE' and 'Microsoft SQL Server', skipping for '{}'.", dbVendor);
+					result.put(resultKey, Collections.emptyMap());
+				}
+				else
+					result.put(resultKey, asText
+							? PostgresAbstract.getTableInfoPlainText(conn, dbname, tableList)
+							: fallbackIfBlank(PostgresAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
 			}
 			else
 			{
 				_logger.info("actionTableInfo(): no DDL Storage lookup implemented for dbVendor='{}', skipping.", dbVendor);
-				result.put(resultKey, asText ? "" : "<em>Table info not supported for dbVendor '" + dbVendor + "'.</em>");
+				result.put(resultKey, asJson ? Collections.emptyMap() : (asText ? "" : "<em>Table info not supported for dbVendor '" + dbVendor + "'.</em>"));
 			}
 		}
 		catch (Exception ex)
 		{
 			_logger.warn("actionTableInfo: error fetching table info for dbVendor={} dbname={} tables={}: {}", dbVendor, dbname, tableList, ex.getMessage(), ex);
-			result.put(resultKey, asText ? "" : "<span class='text-danger'>Error fetching table info: " + ex.getMessage() + "</span>");
+			result.put(resultKey, asJson ? Collections.emptyMap() : (asText ? "" : "<span class='text-danger'>Error fetching table info: " + ex.getMessage() + "</span>"));
 		}
 
 		return result;

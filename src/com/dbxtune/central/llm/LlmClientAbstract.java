@@ -117,6 +117,8 @@ implements LlmClient
 	@Override
 	public String buildPrompt(LlmOptimizeRequest request)
 	{
+		StringBuilder sb = new StringBuilder();
+		
 		// Captured before the ASE display-name rewrite below, so buildDbmsSpecificDirections() (and
 		// any other DbUtils.isProductName(...) check added later) keeps matching against the real
 		// product name rather than the human-friendly label built from it.
@@ -126,13 +128,67 @@ implements LlmClient
 		if (dbVendor.startsWith("Adaptive Server Enterprise"))
 			dbVendor = "SAP Sybase ASE (Adaptive Server Enterprise)";
 
-		StringBuilder sb = new StringBuilder();
-		sb.append("You are an expert database performance tuner for ").append(dbVendor).append(".\n\n");
+		if (dbVendor.startsWith("Microsoft SQL Server"))
+			dbVendor = "Microsoft SQL Server and Azure SQL DB";
 
-		sb.append("SQL statement to optimize:\n").append(request.getSql()).append("\n\n");
+		// Build initial Prompt
+//		sb.append("You are an expert database performance tuner for ").append(dbVendor).append(".\n\n");
+		sb.append("You are a very senior database developer working with ").append(dbVendor).append(".\n");
+		sb.append("You focus on real-world, actionable advice that will make a big difference, quickly.\n");
+		sb.append("You value everyone's time, and while you are friendly and courteous, you do not waste time with pleasantries or emoji because you work in a fast-paced corporate environment.\n");
+		sb.append("You have a query that isn't performing to end user expectations.\n");
+		sb.append("You have been tasked with making serious improvements to it, quickly.\n");
+		sb.append("You are not allowed to change server-level settings or make frivolous suggestions like updating statistics.\n");
+		sb.append("Instead, you need to focus on query changes or index changes.\n");
+		sb.append("If execution statistics are supplied, weigh your advice by how often and at what time of day the statement actually runs: a statement executed thousands of times, or one that concentrates its whole load into a short window, deserves different advice from one that runs occasionally and evenly.\n");
+		sb.append("\n");
+		sb.append("Do not offer followup options: the customer can only contact you once, so include all necessary information, tasks, and scripts in your initial reply.\n");
+		sb.append("\n");
+
+		String dbmsDirections = buildDbmsSpecificDirections(rawDbVendor);
+		if (StringUtil.hasValue(dbmsDirections))
+		{
+			sb.append("Important ").append(dbVendor).append(" specifics to keep in mind - do not suggest anything incompatible with these:\n").append(dbmsDirections).append("\n");
+			sb.append("\n");
+		}
+
+		// The strict "reply with ONLY a JSON object" contract only exists so the automated caller
+		// (LlmSqlOptimizeServlet's POST path) can parse the reply into {origin_sql, optimized_sql,
+		// explanation} - a human pasting a preview prompt into an LLM chat UI by hand wants the
+		// opposite: a normal, readable answer, not a raw JSON blob to squint at. request.isPreview()
+		// (only ever true for the "no exec" GET /api/llm/optimize-sql path) swaps one instruction
+		// block for the other; everything else in the prompt (context, DBMS specifics, SQL/DDL/plan)
+		// is identical either way.
+		if (request.isPreview())
+		{
+			sb.append("Suggest how to optimize this SQL statement (rewritten SQL, and/or missing indexes, and/or other changes) and explain your reasoning.\n");
+			sb.append("\n");
+		}
+		else
+		{
+			sb.append("Respond with ONLY a single JSON object of the form: {\"origin_sql\": \"<original SQL>\", \"optimized_sql\": \"<rewritten SQL, empty if not optimized>\", \"explanation\": \"<your reasoning and any index/other recommendations>\"}\n");
+			sb.append("Leave 'optimized_sql' empty if the statement is already fine as-is - do not echo the original SQL back into it.\n");
+			sb.append("Format the 'explanation' field's text using simple Markdown for readability: bullet lists ('- item') or numbered lists for multiple recommendations, **bold** for emphasis, and `backticks` around identifiers/SQL fragments.\n");
+			sb.append("Keep it to plain Markdown text (no headings, tables or nested lists).\n");
+			sb.append("The overall reply must be ONLY the JSON object itself - no markdown code fences and no text outside the JSON.\n");
+			sb.append("\n");
+		}
+
+		if (StringUtil.hasValue(request.getWorkloadProfile()))
+		{
+			sb.append("Execution statistics and workload profile for this statement over the reported period:\n");
+			sb.append(request.getWorkloadProfile()).append("\n");
+			sb.append("\n");
+		}
+
+		sb.append("SQL statement to optimize:\n").append(request.getSql()).append("\n");
+		sb.append("\n");
 
 		if (StringUtil.hasValue(request.getDdlContext()))
-			sb.append("Table/index DDL and statistics referenced by the statement:\n").append(request.getDdlContext()).append("\n\n");
+		{
+			sb.append("Table/index DDL and statistics referenced by the statement:\n").append(request.getDdlContext()).append("\n");
+			sb.append("\n");
+		}
 
 		if (StringUtil.hasValue(request.getPlan()))
 		{
@@ -140,21 +196,9 @@ implements LlmClient
 			if (DbUtils.isProductName(rawDbVendor, DbUtils.DB_PROD_NAME_MSSQL))
 				plan = SqlServerPlanXmlShrinker.shrink(plan);
 
-			sb.append("Execution plan for the statement:\n").append(plan).append("\n\n");
+			sb.append("Execution plan for the statement:\n").append(plan).append("\n");
+			sb.append("\n");
 		}
-
-		String dbmsDirections = buildDbmsSpecificDirections(rawDbVendor);
-		if (StringUtil.hasValue(dbmsDirections))
-			sb.append("Important ").append(dbVendor).append(" specifics to keep in mind - do not suggest anything incompatible with these:\n").append(dbmsDirections).append("\n");
-
-		sb.append("Task: Suggest how to optimize this SQL statement (rewritten SQL, and/or missing indexes, and/or other changes).\n");
-		sb.append("Respond with ONLY a single JSON object of the form: ");
-		sb.append("{\"origin_sql\": \"<original SQL>\", \"optimized_sql\": \"<rewritten SQL, empty if not optimized>\", \"explanation\": \"<your reasoning and any index/other recommendations>\"}\n");
-		sb.append("Leave 'optimized_sql' empty if the statement is already fine as-is - do not echo the original SQL back into it.\n");
-		sb.append("Format the 'explanation' field's text using simple Markdown for readability: bullet lists ('- item') or numbered ");
-		sb.append("lists for multiple recommendations, **bold** for emphasis, and `backticks` around identifiers/SQL fragments. ");
-		sb.append("Keep it to plain Markdown text (no headings, tables or nested lists).\n");
-		sb.append("The overall reply must be ONLY the JSON object itself - no markdown code fences and no text outside the JSON.");
 
 		return sb.toString();
 	}

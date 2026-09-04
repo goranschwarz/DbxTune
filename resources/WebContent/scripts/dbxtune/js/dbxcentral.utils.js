@@ -1,6 +1,29 @@
 /* jshint esversion: 6 */
 
 /**
+ * Utility function: decodeURIComponent() that does NOT throw on malformed input.
+ * A literal '%' in a URL (for example a chart line named '% Idle Time') makes
+ * decodeURIComponent() throw 'URIError: URI malformed'. Falling back to the raw
+ * string is far better than aborting the caller.
+ * @param {*} str 
+ */
+function safeDecodeUriComponent(str)
+{
+	if (str === undefined || str === null)
+		return str;
+
+	try
+	{
+		return decodeURIComponent(str);
+	}
+	catch (error)
+	{
+		console.log("safeDecodeUriComponent(): Failed to decode '" + str + "'. Using the raw value as-is. Error: " + error);
+		return str;
+	}
+}
+
+/**
  * Utility function: Get a specififc parameter from the window URL
  * @param {*} key 
  * @param {*} defaultValue 
@@ -20,10 +43,12 @@ function getParameter(key, defaultValue)
         vars[hash[0]] = hash[1];
 	}
 	
+	// NOTE: getParameter() is manually copied into: dbxcentral.graph.js and config.html
+	//       The copies have DRIFTED: only this version does the '+' --> ' ' (space) replacement below.
 	//return vars.hasOwnProperty(key) ? vars[key] : defaultValue;
 	//return vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
 //	var retValue = vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
-	var retValue = vars.hasOwnProperty(key) ? decodeURIComponent((vars[key] || '').replace(/\+/g, ' ')) : defaultValue;
+	var retValue = vars.hasOwnProperty(key) ? safeDecodeUriComponent((vars[key] || '').replace(/\+/g, ' ')) : defaultValue;
 	//console.log("getParameter(key='"+key+"',default='"+defaultValue+"') <<--- '"+retValue+"'.");
 	return retValue;
 }

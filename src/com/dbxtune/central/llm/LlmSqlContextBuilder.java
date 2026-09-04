@@ -21,8 +21,11 @@
 package com.dbxtune.central.llm;
 
 import java.lang.invoke.MethodHandles;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Set;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -142,6 +145,23 @@ public class LlmSqlContextBuilder
 	 */
 	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor)
 	{
+		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, plan, dbVendor, "Get LLM Optimization Advice", true);
+	}
+
+	/**
+	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String, String)}, but with control over
+	 * the link text and the leading icon.
+	 * <p>
+	 * This is for callers that renders a LIST of advice links for the same SQL Statement (for example
+	 * {@code AseTopSlowNormalizedSql}, where one <i>normalized</i> statement maps to several Statement
+	 * Cache entries, each with its own plan). Such a caller wants to write the icon and the
+	 * "Get LLM Optimization Advice:" label ONCE, followed by short, per-entry anchors.
+	 *
+	 * @param linkText     text of the anchor, for example "SQL only"
+	 * @param includeIcon  if a leading "open in new tab" icon should be part of the returned HTML
+	 */
+	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor, String linkText, boolean includeIcon)
+	{
 		if ( ! LlmClientRegistry.isFeatureEnabledViaDbxCentral() )
 			return "";
 
@@ -159,6 +179,108 @@ public class LlmSqlContextBuilder
 			qs.add("plan", plan);
 
 		String href = StringUtil.nullToValue(dbxCentralBaseUrl, "") + "/llm-advice#" + qs.getQuery();
-		return "<a href='" + href + "' target='_blank'>Get LLM Optimization Advice</a>";
+
+		// Best-effort hostname for the tooltip - fall back to the raw base URL if it doesn't parse
+		String host = dbxCentralBaseUrl;
+		try { host = new java.net.URL(dbxCentralBaseUrl).getHost(); } 
+		catch (java.net.MalformedURLException e) { /* fall back to raw base URL */ }
+
+		// 'dsrAddWorkload()' appends the execution statistics (harvested from the sparkline sub-table in this
+		// very page) to the href, then lets the normal link work. It is a pure enrichment: with JavaScript
+		// disabled - which is the whole point of this plain variant - the href above is used as-is.
+		// See SparklineHelper.getWorkloadHarvesterJs().
+		return (includeIcon ? "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;" : "") // icon
+				+ "<a href='" + href + "' target='_blank' "
+				+ "onclick='if (typeof dsrAddWorkload === \"function\") return dsrAddWorkload(this); return true;' "
+				+ "title='Opens LLM Optimization Advice in DbxCentral at " + host + " - requires DbxCentral to be reachable; will not work if it is offline'>"
+				+ esc(StringUtil.nullToValue(linkText, "Get LLM Optimization Advice")) + "</a>";
+	}
+
+	/**
+	 * Same intent as {@link #buildAdviceLinkHtml(String, String, String, String, String)}, but for
+	 * callers that already have an execution plan payload written ONCE to the page in a hidden
+	 * {@code <script type='text/xmldata' id='...'>} block (both {@code AseTopCmStmntCacheDetails} and
+	 * {@code ExecutionPlanCollection} already do this, for "Copy XML"/"view plan").
+	 * <p>
+	 * Unlike {@link #buildAdviceLinkHtml(String, String, String, String, String)}, this does NOT embed
+	 * the plan as a URL fragment (a small {@code data-*} attribute-carrying link reads it back out of
+	 * {@code planElementId} at CLICK time, via the shared {@code dsrOpenLink(...)} JS function - see
+	 * {@code AseTopCmStmntCacheDetails}/{@code ExecutionPlanCollection} for where it's defined), and it
+	 * does NOT precompute {@code ddlContext} at all - {@code buildDdlContext(...)} (a DDL Storage
+	 * lookup, run at report-GENERATION time against a PCS connection the generator already has open)
+	 * can be even bigger than the plan itself, and unlike the plan it's not deduplicated by anything -
+	 * every row would otherwise carry its own copy whether or not anyone ever clicks the link. Instead,
+	 * {@code srv}/{@code dbname} are carried through, and {@code dbxLlmAdvice.js}'s
+	 * {@code fetchDdlContextBySrv(...)} resolves the DDL/index/stats context LIVE at click time, via the
+	 * same {@code /api/cc/mgt/table-info}/{@code /api/cc/mgt/query-store} proxy-to-Collector endpoints
+	 * {@code dbxShowplan.js}'s own "Get LLM Optimization Advice" section already uses - so nothing is
+	 * computed or stored in the report at all unless the link is actually clicked.
+	 * <p>
+	 * This makes the link JavaScript-dependent: it will not do anything if the report is opened
+	 * directly in an e-mail client (same limitation "Copy XML" already has) - the tooltip says so.
+	 *
+	 * @param dbxCentralBaseUrl base URL of this DbxCentral instance, e.g. from {@code getReportingInstance().getDbxCentralPublicBaseUrl()}
+	 * @param sql               the SQL statement
+	 * @param planElementId     id of the hidden {@code <script type='text/xmldata'>} element already holding the plan text, or null/blank if no plan is available
+	 * @param dbVendor          DBMS product name
+	 * @param srv               name of an actively-monitored DbxTune server this SQL came from, or null/blank - required (together with {@code dbname}) for the live DDL-context lookup
+	 * @param dbname            database name on {@code srv} the SQL's tables live in, or null/blank
+	 */
+	public static String buildAdviceLinkHtmlJs(String dbxCentralBaseUrl, String sql, String planElementId, String dbVendor, String srv, String dbname)
+	{
+		return buildAdviceLinkHtmlJs(dbxCentralBaseUrl, sql, planElementId, dbVendor, srv, dbname, "Get LLM Optimization Advice", true);
+	}
+
+	/**
+	 * Same as {@link #buildAdviceLinkHtmlJs(String, String, String, String, String, String)}, but with
+	 * control over the link text and the leading icon.
+	 * <p>
+	 * This is for callers that renders a LIST of advice links for the same SQL Statement (for example
+	 * {@code AseTopSlowNormalizedSql}, where one <i>normalized</i> statement maps to several Statement
+	 * Cache entries, each with its own plan - so the reader can ask for advice based on any one of
+	 * those plans). Such a caller wants to write the icon and the "Get LLM Optimization Advice:" label
+	 * ONCE, followed by short, per-plan anchors.
+	 *
+	 * @param linkText     text of the anchor, for example the Statement Cache name 'ss0087948680_1345721111'
+	 * @param includeIcon  if a leading "open in new tab" icon should be part of the returned HTML
+	 */
+	public static String buildAdviceLinkHtmlJs(String dbxCentralBaseUrl, String sql, String planElementId, String dbVendor, String srv, String dbname, String linkText, boolean includeIcon)
+	{
+		if ( ! LlmClientRegistry.isFeatureEnabledViaDbxCentral() )
+			return "";
+
+		if (StringUtil.isNullOrBlank(sql))
+			return "";
+
+		// Best-effort hostname for the tooltip - fall back to the raw base URL if it doesn't parse
+		String host = dbxCentralBaseUrl;
+		try { host = new URL(dbxCentralBaseUrl).getHost(); } catch (MalformedURLException e) { /* fall back to raw base URL */ }
+
+		return (includeIcon ? "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;" : "") // icon
+				+ "<a href='javascript:void(0)' class='dsr-link' "
+				+ "data-kind='llmadvice' "
+				+ "data-path='" + esc(StringUtil.nullToValue(dbxCentralBaseUrl, "") + "/llm-advice") + "' "
+				+ (StringUtil.hasValue(planElementId) ? "data-plan-id='" + esc(planElementId) + "' " : "")
+				+ "data-sql='" + esc(sql) + "' "
+				+ "data-vendor='" + esc(StringUtil.nullToValue(dbVendor, "")) + "' "
+				+ "data-srv='" + esc(StringUtil.nullToValue(srv, "")) + "' "
+				+ "data-dbname='" + esc(StringUtil.nullToValue(dbname, "")) + "' "
+				+ "onclick='dsrOpenLink(this); return false;' "
+				+ "title='Opens LLM Optimization Advice in DbxCentral at " + esc(host) + ". "
+				+ "Requires JavaScript, so this will not work if you are reading this report in an e-mail client. "
+				+ "DbxCentral must also be reachable/online.'>"
+				+ esc(StringUtil.nullToValue(linkText, "Get LLM Optimization Advice")) + "</a>";
+	}
+
+	/**
+	 * HTML-attribute-escape for a SINGLE-quoted attribute value (the convention used throughout this
+	 * codebase, e.g. {@code data-sql='...'}). {@link StringEscapeUtils#escapeHtml4(String)} alone is
+	 * NOT enough here - it does not escape {@code '}, and this is used to carry raw SQL text, which
+	 * routinely contains single-quoted string literals that would otherwise break out of the
+	 * attribute early.
+	 */
+	private static String esc(String s)
+	{
+		return StringEscapeUtils.escapeHtml4(s).replace("'", "&#39;");
 	}
 }

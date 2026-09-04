@@ -52,6 +52,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.DailySummaryReportDefault;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -1560,9 +1561,25 @@ extends SqlServerAbstract
 					// Parse the 'sqlText' and extract Table Names, then get various table and index information
 					String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
 
-					// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
-					String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
-					String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_MSSQL);
+					// The XML plan (if any) is already written ONCE to the page by '_planCollectionCpu.writeMessageText()'
+					// (called elsewhere), in a hidden <script type='text/xmldata'> block with this id - both links
+					// below read it back out of that element at click time instead of re-embedding it themselves.
+					ExecutionPlanCollection.PlanKey planKey = new ExecutionPlanCollection.PlanKey(dbname, String.valueOf(plan_id));
+					String planElementId = _planCollectionCpu.getShowplanAsMap().containsKey(planKey) ? "plan_" + _planCollectionCpu.getId() + "_" + plan_id : null;
+
+					// "Get LLM Optimization Advice" link - JS-driven (reads the plan out of 'planElementId' at
+					// click time); ddlContext is no longer precomputed here at all - dbxLlmAdvice.js resolves
+					// it LIVE from srv+dbname at click time (see buildAdviceLinkHtmlJs)
+					String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, planElementId, DbUtils.DB_PROD_NAME_MSSQL, getReportingInstance().getServerName(), dbname);
+
+					// "View Execution Plan" link - JS-driven, same reasoning as above
+					// NOTE: when no plan was captured, SAY so (same as AseTopCmStmntCacheDetails does) rather
+					//       than just omitting the link - otherwise the reader is left wondering *why* it is missing.
+					//       Keyed on 'planElementId' (= "we have no plan"), NOT on a blank link, since the link is
+					//       also blank when DbxCentral has no public base URL - and then a plan may well exist.
+					String showplanLink = (planElementId == null)
+							? "Execution Plan <b>NOT Available</b>"
+							: ShowplanLinkBuilder.buildViewPlanLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), planElementId, sqlText, DbUtils.DB_PROD_NAME_MSSQL, getReportingInstance().getServerName(), dbname);
 
 //					// Parse the 'sqlText' and extract Table Names..
 //					// - then get table information (like we do in 'AseTopCmObjectActivity')
@@ -1582,7 +1599,7 @@ extends SqlServerAbstract
 //						if (tableInfoSet.isEmpty() && StringUtil.isNullOrBlank(problemDesc))
 //							problemDesc = "&emsp; &bull; No tables was found in the DDL Storage for tables: " + listToHtmlCode(tableList);
 //
-//						// And make it into a HTML table with various information about the table and indexes 
+//						// And make it into a HTML table with various information about the table and indexes
 //						tableInfo = problemDesc + getTableInfoAsHtmlTable(tableInfoSet, tableList, true, "dsr-sub-table-tableinfo");
 //
 //						// Finally make up a message that will be appended to the SQL Text
@@ -1606,7 +1623,10 @@ extends SqlServerAbstract
 					// get the "spark lines"
 					String sparklines = htp.getHtmlTextForRow(r);
 
-					sqlText = "<xmp>" + sqlText + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
+					sqlText = "<xmp>" + sqlText + "</xmp>" 
+							+ (StringUtil.hasValue(showplanLink) ? "<br>\n" + showplanLink : "") 
+							+ "<br>\n" + llmAdviceLink 
+							+ tableInfo;
 
 					// add record to SimpleResultSet
 					srs.addRow(dbname, plan_id, sparklines, sqlText);

@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -770,7 +771,7 @@ extends CountersModel
 	public static final String   GRAPH_NAME_WAIT_TYPE_TIME   = "WaitTypeTime";
 //	public static final String   GRAPH_NAME_WAIT_TYPE_COUNT  = "WaitTypeCount";
 //	public static final String   GRAPH_NAME_WAIT_TYPE_TPW    = "WaitTypeTpw"; // Time Per Wait
-//	public static final String   GRAPH_NAME_WAIT_CLASS_TIME  = "WaitClassTime"; 
+	public static final String   GRAPH_NAME_WAIT_CLASS_TIME  = "WaitClassTime"; 
 //	public static final String   GRAPH_NAME_WAIT_CLASS_COUNT = "WaitClassCount"; 
 //	public static final String   GRAPH_NAME_WAIT_CLASS_TPW   = "WaitClassTpw"; 
 
@@ -798,6 +799,18 @@ extends CountersModel
 			false, // visible at start
 			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
 			160);  // minimum height
+
+		addTrendGraph(GRAPH_NAME_WAIT_CLASS_TIME,
+			"Server Wait: 'wait_time_ms' Rate Value, Group by 'WaitClass'", 	                   // Menu CheckBox text
+			"Server Wait: 'wait_time_ms' Rate Value, Group by 'WaitClass' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);    // minimum height
 
 		addTrendGraph(GRAPH_NAME_KNOWN_TOP_10_TIME,
 			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms'", 	                   // Menu CheckBox text
@@ -917,7 +930,7 @@ extends CountersModel
 				String wait_type           =          this.getRateString(r, "wait_type");
 				int    waiting_tasks_count = ((Number)this.getDiffValue (r, "waiting_tasks_count")).intValue();
 
-				// SKIP "unwanted" wiat_types
+				// SKIP "unwanted" wait_types
 				if (_inTrendGraphsSkipSet.contains(wait_type))
 					continue;
 
@@ -946,6 +959,40 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		// ---- WAIT_TYPE_TIME
+		if (GRAPH_NAME_WAIT_CLASS_TIME.equals(graphName))
+		{
+			Map<String, Double> waitClassValueSumMap = new LinkedHashMap<>();
+
+			for (int r=0; r<this.size(); r++)
+			{
+				String wait_type           =          this.getRateString(r, "wait_type");
+				String waitClass           =          this.getRateString(r, "WaitClass");
+				int    waiting_tasks_count = ((Number)this.getDiffValue (r, "waiting_tasks_count")).intValue();
+
+				// SKIP "unwanted" wait_types
+				if (_inTrendGraphsSkipSet.contains(wait_type))
+					continue;
+
+				// SKIP rows with NO waiting_tasks_count
+				if (waiting_tasks_count <= 0)
+					continue;
+
+				Double wait_time_ms = this.getRateValueAsDouble(r, "wait_time_ms");
+
+				// Add the 'wait_time_ms' to TOTAL and CLASS
+				waitClassValueSumMap.merge("_Total" , wait_time_ms, Double::sum);
+				waitClassValueSumMap.merge(waitClass, wait_time_ms, Double::sum);
+			}
+
+			// If we have NO records to report on... get out of here
+			if (waitClassValueSumMap.isEmpty())
+				return;
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), waitClassValueSumMap);
 		}
 
 		// ---- KNOWN_TOP_10_TIME

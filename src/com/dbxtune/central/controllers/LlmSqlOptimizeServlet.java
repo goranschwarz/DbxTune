@@ -55,6 +55,24 @@ extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
+	/**
+	 * <pre>POST /api/llm/optimize-sql</pre>
+	 * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "provider": "claude", "preview": false}}
+	 * <p>
+	 * When {@code preview} is {@code true}, returns {@code {"promptSent": "..."}} only - the prompt
+	 * text that would be sent to an LLM, built entirely locally with no network call and no cost -
+	 * instead of actually calling a provider. Checked, and returned, before the
+	 * {@link LlmClientRegistry#isFeatureEnabled()}/login/provider checks below (formatting the
+	 * prompt is a pure string operation, see
+	 * {@link com.dbxtune.central.llm.LlmClientAbstract#buildPrompt}, shared by every provider and
+	 * independent of any API key), so this stays available even when the real feature is fully
+	 * turned off, letting a user copy the prompt into any LLM chat UI by hand as a manual
+	 * workaround/shortcut. The "claude" provider id is used only to obtain an {@code LlmClient}
+	 * instance to call the shared {@code buildPrompt()} on - which provider is irrelevant here,
+	 * none of its config/credentials are touched. A GET-based preview (query-string params) was
+	 * tried first and dropped: a full plan/DDL context routinely blows past the server's max URI
+	 * length (HTTP 414) - POST with a JSON body has no such limit.
+	 */
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 	throws ServletException, IOException
@@ -63,23 +81,6 @@ extends HttpServlet
 		response.setCharacterEncoding("UTF-8");
 		PrintWriter out = response.getWriter();
 		ObjectMapper om = Helper.createObjectMapper();
-
-		if ( ! LlmClientRegistry.isFeatureEnabled() )
-		{
-			writeError(om, out, response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "feature-disabled",
-					"The LLM Optimization Advice feature is not enabled. Set 'DbxCentral.llm.enabled=true' in DBX_CENTRAL.conf to turn it on.");
-			return;
-		}
-
-		// NOTE: Deliberately NOT using Helper.isAuthorized(request, response) / response.sendError(...)
-		// here - those produce Jetty's default HTML error page, which breaks the JSON-only contract
-		// this endpoint is supposed to have (the caller is always a fetch() expecting JSON back).
-		if (StringUtil.isNullOrBlank(request.getRemoteUser()) && ! LlmClientRegistry.isAnonymousAccessAllowed())
-		{
-			writeError(om, out, response, HttpServletResponse.SC_UNAUTHORIZED, "not-logged-in",
-					"Not logged in! (Set 'DbxCentral.llm.allowAnonymous=true' in DBX_CENTRAL.conf to allow this without login.)");
-			return;
-		}
 
 		LlmOptimizeRequest llmRequest;
 		try
@@ -98,6 +99,24 @@ extends HttpServlet
 			return;
 		}
 
+		if (llmRequest.isPreview())
+		{
+			LlmClient previewClient = LlmClientRegistry.getInstance().getProvider("claude");
+			Map<String, String> result = new LinkedHashMap<>();
+			result.put("promptSent", previewClient.buildPrompt(llmRequest));
+			om.writeValue(out, result);
+			out.flush();
+			out.close();
+			return;
+		}
+
+		if ( ! LlmClientRegistry.isFeatureEnabled() )
+		{
+			writeError(om, out, response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "feature-disabled",
+					"The LLM Optimization Advice feature is not enabled. Set 'DbxCentral.llm.enabled=true' in DBX_CENTRAL.conf to turn it on.");
+			return;
+		}
+
 		LlmClient client = LlmClientRegistry.getInstance().getProvider(llmRequest.getProvider());
 		if (client == null)
 		{
@@ -111,6 +130,27 @@ extends HttpServlet
 		{
 			writeError(om, out, response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "provider-not-configured",
 					"LLM provider '" + client.getProviderId() + "' is not configured (missing API key / URL) in DBX_CENTRAL.conf.");
+			return;
+		}
+
+		// NOTE: Deliberately NOT using Helper.isAuthorized(request, response) / response.sendError(...)
+		// here - those produce Jetty's default HTML error page, which breaks the JSON-only contract
+		// this endpoint is supposed to have (the caller is always a fetch() expecting JSON back).
+		//
+		// Checked after parsing the request/resolving the provider (rather than first, as it used to
+		// be) so the "not logged in" response can still carry a promptSent preview below - building the
+		// prompt is a pure, local, no-cost string operation (unlike actually calling the LLM provider,
+		// which is what login is meant to gate), and the caller already possesses every input that goes
+		// into it (sql/ddlContext/plan came from their own request body), so there's nothing new to leak.
+		if (StringUtil.isNullOrBlank(request.getRemoteUser()) && ! LlmClientRegistry.isAnonymousAccessAllowed())
+		{
+			Map<String, String> extra = new LinkedHashMap<>();
+			extra.put("providerId", client.getProviderId());
+			try { extra.put("promptSent", client.buildPrompt(llmRequest)); }
+			catch (Exception buildEx) { _logger.warn("LlmSqlOptimizeServlet: failed building the prompt preview for the not-logged-in response.", buildEx); }
+
+			writeError(om, out, response, HttpServletResponse.SC_UNAUTHORIZED, "not-logged-in",
+					"Not logged in! (Set 'DbxCentral.llm.allowAnonymous=true' in DBX_CENTRAL.conf to allow this without login.)", extra);
 			return;
 		}
 

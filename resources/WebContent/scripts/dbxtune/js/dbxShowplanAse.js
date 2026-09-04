@@ -24,9 +24,19 @@
  *   }
  * Top-level result:
  *   { format: 'xml'|'text', statements: [ { label, meta, steps: [ { label, root: node } ] } ] }
+ * XML plans additionally carry `plans` - one entry per <plan> block ASE cached for the statement
+ * (sorted worst-total-time-first), each { planId, execCount, avgTimeUs, totalTimeUs, statements }
+ * with the same `statements` shape as above; top-level `statements` is a convenience alias for
+ * plans[0].statements (the default selection) so single-plan XML and text plans render unchanged.
  */
 
 window.AseShowplan = (function () {
+
+	// Reason the most recent parseXml()/parseText() call returned null, for callers that want to
+	// tell the user *why* the graphical diagram fell back to raw text (both parsers keep returning
+	// null on failure rather than throwing, to preserve the "not recognized -> fall back" contract
+	// documented above - this just adds a diagnostic alongside it).
+	var lastParseError = null;
 
 	// ─────────────────────────────────────────────────────────────────────────
 	// XML parser (CachedPlanInXml / show_cached_plan_in_xml)
@@ -105,12 +115,23 @@ window.AseShowplan = (function () {
 				// does spell it that way - costs nothing to accept both.
 				node.props.indexName = xmlText(kid);
 			} else if (tag === 'wtObjName') {
-				// <WorkTable><wtObjName>WorkTable2</wtObjName></WorkTable> - same class of bug as
-				// indName/perKey below: wtObjName is WorkTable's own object-name property, not a
-				// child operator. Mapped to the same props.objName every other node already uses for
-				// its table/object name, so subtitleFor() picks it up for free (e.g. "WorkTable2"
-				// under the WorkTable box) instead of rendering as a separate, unlabeled child box.
+				// wtObjName is WorkTable's own object-name property, not a child operator - only
+				// reached here when buildXmlNode() is called directly on a <WorkTable> element (the
+				// 'WorkTable' branch below normally intercepts it first; kept as a fallback in case
+				// some plan shape nests it differently).
 				node.props.objName = xmlText(kid);
+			} else if (tag === 'WorkTable') {
+				// <WorkTable><wtObjName>WorkTable2</wtObjName></WorkTable> is not a real upstream
+				// operator feeding this one - it means the operator it sits under (SORT/SortDistinct
+				// spilling to disk, HashUnion/HashJoin building its internal hash table, ...)
+				// materializes and uses this worktable itself, as part of its own execution. Text
+				// plans already reflect that: "Using Worktable1 for internal storage." becomes
+				// props.workTable on the operator's OWN node, never a separate box. Folding this XML
+				// sibling the same way - instead of recursing it into node.children like an unknown
+				// operator - keeps it from rendering as a misleading "input" box, and lets the
+				// existing Sort Spill finding (which keys off props.workTable) fire for XML plans too.
+				var wtName = xmlText(xmlFirstChildByTag(kid, 'wtObjName'));
+				if (wtName) node.props.workTable = wtName;
 			} else if (tag === 'perKey') {
 				// A composite/multi-column key scan repeats this element once per key column - each
 				// one wraps its own <keyCol>/<keyOrder> pair rather than being a plain text leaf, so
@@ -129,49 +150,112 @@ window.AseShowplan = (function () {
 				node.children.push(buildXmlNode(kid));
 			}
 		}
+
+		// XML's <StoreIndex> is the same operator the text parser recognizes via "...for
+		// REFORMATTING."/"Creating clustered index." (see the DETAIL_PATTERNS entry above) - SAP's own
+		// doc defines the two abstract-plan physical operators this pair of tags mirrors: "store" (a
+		// worktable, no index - <Store>) vs. "store_index" (a *clustered index* worktable - the
+		// reformatting one, <StoreIndex>). Mapped onto the same props.reformatWorktable field
+		// collectTreeFindings()/findReformatSource() already key off for text plans, so everything
+		// downstream (the box marking, the Plan Analysis finding, the index suggestion) just works.
+		if (/^StoreIndex$/i.test(node.op)) {
+			// Confirmed against a real captured plan: the worktable's name isn't on the StoreIndex
+			// element itself - it's the Insert child's own <objName> (<Insert>...<objName>Worktable1
+			// </objName></Insert>). A <WorkTable><wtObjName> sibling (mirroring HashUnion's internal-
+			// storage annotation) is checked too in case some ASE version/operator shapes it that way.
+			var wtName = node.props.objName;
+			for (var wi = 0; wi < node.children.length && !wtName; wi++) {
+				var kidNode = node.children[wi];
+				var kidObjName = kidNode.props && kidNode.props.objName;
+				if (/^Work\s*Table$/i.test(kidNode.op || '') && kidObjName) wtName = kidObjName;
+				else if (kidObjName && /^Worktable/i.test(kidObjName)) wtName = kidObjName;
+			}
+			node.props.reformatWorktable = wtName || 'a worktable';
+		}
+
 		return node;
 	}
 
+	// ASE can cache several distinct compiled plans for the very same statement (e.g. one compiled
+	// per differing literal/parameter values, or after auto-recompiles) - show_cached_plan_in_xml
+	// then emits several sibling <plan> elements under one <query>, each with its own <planId>,
+	// <execCount>/<avgTime>/<avgExecTime>, and full <opTree>. Earlier this only ever looked at the
+	// FIRST <plan> in the document (jQuery's .find('plan').first()) and silently discarded the
+	// rest - real captures with 5 plans and wildly different execCount/avgTime profiles confirmed
+	// this was quietly throwing away the majority of the data. Every <plan> is now parsed into its
+	// own entry in the returned `plans` array (sorted worst-total-time-first, see totalTimeUs
+	// below), and the caller (dbxShowplan.js) offers a selector when there's more than one.
 	function parseXml(xmlString) {
-		if (!xmlString || !xmlString.trim()) return null;
+		lastParseError = null;
+		if (!xmlString || !xmlString.trim()) { lastParseError = 'Plan text is empty'; return null; }
+		// A leading blank line/whitespace before "<?xml ...?>" is otherwise a fatal parse error -
+		// the XML spec only allows the declaration as the very first thing in the document - but
+		// it's harmless and common in captured plans, so strip it rather than failing on it.
+		xmlString = xmlString.trim();
 		try {
 			var xmlDoc = $.parseXML(xmlString);
 			var $doc   = $(xmlDoc);
-			var $opTree = $doc.find('opTree').first();
-			if (!$opTree.length) return null;
-
-			var rootEl = xmlFirstChildByTagIgnoreOrder($opTree[0]);
-			if (!rootEl) return null;
-
-			var root = buildXmlNode(rootEl);
-
-			var meta = {};
-			var $plan = $doc.find('plan').first();
-			if ($plan.length) {
-				meta.planId    = $plan.find('> planId').first().text() || undefined;
-				meta.execCount = $plan.find('> execCount').first().text() || undefined;
-				meta.avgTime   = $plan.find('> avgTime').first().text() || undefined;
-				meta.avgExecTime = $plan.find('> avgExecTime').first().text() || undefined;
-			}
-			var estTotals = $opTree.children('est').first();
-			var actTotals = $opTree.children('act').first();
-			if (estTotals.length) {
-				meta.estTotalLio = estTotals.find('> totalLio').first().text() || undefined;
-				meta.estTotalPio = estTotals.find('> totalPio').first().text() || undefined;
-			}
-			if (actTotals.length) {
-				meta.actTotalLio = actTotals.find('> totalLio').first().text() || undefined;
-				meta.actTotalPio = actTotals.find('> totalPio').first().text() || undefined;
-			}
+			var $plans = $doc.find('plan');
+			if (!$plans.length) { lastParseError = 'No <plan> element found in the XML plan'; return null; }
 
 			var statementId = $doc.find('statementId').first().text() || undefined;
 			var label = 'Statement' + (statementId ? ' ' + statementId : '');
 
+			var plans = [];
+			for (var i = 0; i < $plans.length; i++) {
+				var $plan = $plans.eq(i);
+				var $opTree = $plan.children('opTree').first();
+				if (!$opTree.length) continue; // malformed <plan> - skip rather than fail the whole doc
+
+				var rootEl = xmlFirstChildByTagIgnoreOrder($opTree[0]);
+				if (!rootEl) continue;
+				var root = buildXmlNode(rootEl);
+
+				var meta = {};
+				meta.planId       = $plan.children('planId').first().text() || undefined;
+				meta.execCount    = $plan.children('execCount').first().text() || undefined;
+				meta.avgTime      = $plan.children('avgTime').first().text() || undefined;
+				meta.avgExecTime  = $plan.children('avgExecTime').first().text() || undefined;
+
+				var estTotals = $opTree.children('est').first();
+				var actTotals = $opTree.children('act').first();
+				if (estTotals.length) {
+					meta.estTotalLio = estTotals.find('> totalLio').first().text() || undefined;
+					meta.estTotalPio = estTotals.find('> totalPio').first().text() || undefined;
+				}
+				if (actTotals.length) {
+					meta.actTotalLio = actTotals.find('> totalLio').first().text() || undefined;
+					meta.actTotalPio = actTotals.find('> totalPio').first().text() || undefined;
+				}
+
+				// execCount * avgTime approximates this plan variant's total real-world cost - the
+				// basis for both the default selection and the sort order offered to the user (the
+				// plan actually costing the most time overall is more actionable than the one that
+				// merely happens to be listed first in the XML).
+				var execCountNum = parseFloat(meta.execCount);
+				var avgTimeNum   = parseFloat(meta.avgTime);
+				var totalTimeUs  = (!isNaN(execCountNum) && !isNaN(avgTimeNum)) ? execCountNum * avgTimeNum : 0;
+
+				plans.push({
+					planId: meta.planId,
+					execCount: isNaN(execCountNum) ? undefined : execCountNum,
+					avgTimeUs: isNaN(avgTimeNum) ? undefined : avgTimeNum,
+					totalTimeUs: totalTimeUs,
+					statements: [ { label: label, meta: meta, steps: [ { label: null, root: root } ] } ]
+				});
+			}
+			if (!plans.length) { lastParseError = 'No usable <opTree> found in any <plan> element'; return null; }
+
+			plans.sort(function (a, b) { return b.totalTimeUs - a.totalTimeUs; });
+
 			return {
 				format: 'xml',
-				statements: [ { label: label, meta: meta, steps: [ { label: null, root: root } ] } ]
+				rawText: xmlString,
+				plans: plans,
+				statements: plans[0].statements
 			};
 		} catch (ex) {
+			lastParseError = 'XML parse error: ' + (ex && ex.message ? ex.message : ex);
 			return null;
 		}
 	}
@@ -210,6 +294,11 @@ window.AseShowplan = (function () {
 	var DETAIL_PATTERNS = [
 		{ re: /^FROM TABLE$/i,                                     handler: function (node) { node._expectTableName = true; } },
 		{ re: /^TO TABLE$/i,                                       handler: function (node) { node._expectTableName = true; } },
+		// More specific than the generic "Worktable created" rule below - must come first (first
+		// match wins) so a reformatting STORE's worktable is flagged via props.reformatWorktable,
+		// not just given a plain props.objName like any other worktable-creating operator.
+		{ re: /^(Worktable#?\s*\d+)\s+created,?\s+in\s+\w+\s+locking mode,?\s+for\s+reformatting\.?$/i,
+			handlerRe: function (node, m) { node.props.objName = m[1].replace(/\s+/g, ''); node.props.reformatWorktable = node.props.objName; } },
 		{ re: /^(Worktable#?\s*\d+)\s+created\b.*$/i,              handlerRe: function (node, m) { node.props.objName = m[1].replace(/\s+/g, ''); } },
 		{ re: /^Table Scan\.?$/i,                                  set: { scanType: 'TableScan' } },
 		{ re: /^(Forward|Backward) Scan\.?$/i,                     handlerRe: function (node, m) { node.props.scanOrder = m[1] + 'Scan'; } },
@@ -218,6 +307,7 @@ window.AseShowplan = (function () {
 		{ re: /^Positioning by key\.?$/i,                          set: { positioning: 'ByKey' } },
 		{ re: /^Using Clustered Index\.?$/i,                       set: { scanType: 'ClusteredIndexScan' } },
 		{ re: /^Index\s*:\s*(.+)$/i,                                handlerRe: function (node, m) { node.props.indexName = m[1].trim(); } },
+		{ re: /^\(Total Rows:\s*(\d+)\)$/i,                         handlerRe: function (node, m) { node.props.statTotalRows = m[1]; } },
 		{ re: /^Using I\/O Size (\d+) Kbytes for (?:data pages|index leaf pages)\.?$/i, handlerRe: function (node, m) { node.props.dataIOSizeInKB = m[1]; } },
 		{ re: /^With (.+) Buffer Replacement Strategy.*$/i,        handlerRe: function (node, m) { node.props.dataBufReplStrategy = m[1].trim(); } },
 		{ re: /^External Definition:\s*(.+)$/i,                    handlerRe: function (node, m) { node.props.externalDef = m[1].trim(); } },
@@ -338,7 +428,8 @@ window.AseShowplan = (function () {
 	}
 
 	function parseText(planText) {
-		if (!planText) return null;
+		lastParseError = null;
+		if (!planText) { lastParseError = 'Plan text is empty'; return null; }
 
 		var text = planText;
 		// Defensive: AseConnectionUtils.getShowplan() may wrap the captured text in
@@ -395,13 +486,18 @@ window.AseShowplan = (function () {
 		}
 		flushStep();
 
-		if (!sawAnyOperator) return null;
+		if (!sawAnyOperator) {
+			lastParseError = statements.length
+				? 'Found "' + statements[0].label + '" but no recognizable "... Operator" lines under it'
+				: 'No "QUERY PLAN FOR ..." / "STEP n" / "... Operator" lines recognized in the plan text';
+			return null;
+		}
 
 		// Drop statements that ended up with no parsed steps (e.g. trailing narrative-only blocks).
 		statements = statements.filter(function (s) { return s.steps.length > 0; });
-		if (!statements.length) return null;
+		if (!statements.length) { lastParseError = 'No statements with parsed steps found'; return null; }
 
-		return { format: 'text', statements: statements };
+		return { format: 'text', rawText: text, statements: statements };
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -523,6 +619,11 @@ window.AseShowplan = (function () {
 		+ '.ase-plan-box { position: relative; border: 1px solid #999; border-radius: 5px; background: #fff; padding: 5px 9px; cursor: pointer; min-width: 120px; max-width: 220px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }'
 		+ '.ase-plan-box:hover { border-color: #4a90d9; }'
 		+ '.ase-plan-box.ase-plan-warn { border-color: #d9a24a; background: #fff8ec; }'
+		+ '.ase-plan-box.ase-plan-big-table { border-color: #c0392b; border-width: 2px; background: #fdf1f0; }'
+		+ '.ase-plan-metric.ase-plan-tablesize-warn { color: #c0392b; font-weight: 600; }'
+		+ '.ase-plan-box.ase-plan-reformat { border-color: #c0392b; border-width: 2px; background: #fdf1f0; }'
+		+ '.ase-plan-box.ase-plan-reformat-info { border-color: #4a90d9; border-width: 2px; background: #eef5fc; }'
+		+ '.ase-plan-metric.ase-plan-reformat-info-metric { color: #2a6ebb; font-weight: 600; }'
 		+ '.ase-plan-va { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: #aaa; line-height: 1; }'
 		+ '.ase-plan-icon { width: 32px; height: 32px; margin: 0 auto; background-repeat: no-repeat; }'
 		+ '.ase-plan-icon-row { display: flex; align-items: center; justify-content: center; gap: 2px; }'
@@ -535,15 +636,28 @@ window.AseShowplan = (function () {
 		+ '.ase-plan-metric-pct-warn { color: #c0392b; font-weight: 700; }'
 		+ '.ase-plan-detail-pct-warn { color: #c0392b; font-weight: 700; }'
 		+ '.ase-plan-metric-filter { color: #2a6f97; font-size: 0.85em; white-space: nowrap; }'
-		+ '.ase-plan-detail { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 20; background: #fffef5; border: 1px solid #c9b98a; border-radius: 4px; padding: 6px 10px; margin-top: 4px; min-width: 220px; max-width: 360px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 0.92em; }'
+		+ '.ase-plan-detail { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 20; background: #fffef5; border: 1px solid #c9b98a; border-radius: 4px; padding: 6px 10px; margin-top: 4px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 0.92em; }'
 		+ '.ase-plan-detail.ase-plan-detail-above { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; }'
 		+ '.ase-plan-detail table { border-collapse: collapse; }'
 		+ '.ase-plan-detail-desc { white-space: normal; font-style: italic; color: #6b5f3d; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #e6dcb8; line-height: 1.35; }'
+		+ '.ase-plan-detail-grid { display: flex; align-items: flex-start; gap: 0 14px; }'
+		+ '.ase-plan-detail-right { border-left: 1px solid #e6dcb8; padding-left: 14px; }'
+		+ '.ase-plan-detail-idx-hdr { font-size: 0.85em; color: #6b5f3d; margin-top: 4px; }'
+		+ '.ase-plan-idx-tbl td { white-space: normal; }'
 		+ '.ase-plan-detail td { padding: 1px 6px 1px 0; vertical-align: top; white-space: nowrap; }'
 		+ '.ase-plan-detail td.ase-plan-detail-key { color: #777; }'
 		+ '.ase-plan-detail .ase-plan-raw-line { font-family: monospace; white-space: pre-wrap; color: #555; }'
 		+ '.ase-plan-detail.ase-plan-tooltip { pointer-events: none; cursor: default; }'
-		+ '.ase-plan-fallback { color: #888; font-size: 0.85em; font-style: italic; padding: 6px 0; }';
+		+ '.ase-plan-fallback { color: #888; font-size: 0.85em; font-style: italic; padding: 6px 0; }'
+		// Triggered by window.aseShowplanJumpToNode() (dbxShowplan.js) when a Plan Analysis finding's
+		// "[Node N]" tag is clicked - draws attention to the box scrollIntoView() just centered on
+		// without permanently changing its styling (the class is removed again once the animation ends).
+		+ '@keyframes ase-plan-flash { 0%, 100% { box-shadow: 0 1px 2px rgba(0,0,0,0.08); } 20%, 60% { box-shadow: 0 0 0 5px rgba(74,144,217,0.85); } 40%, 80% { box-shadow: 0 1px 2px rgba(0,0,0,0.08); } }'
+		// 5 discrete pulses (not a time-based cutoff) - aseShowplanJumpToNode (dbxShowplan.js) listens
+		// for this animation's 'animationend' event (which only fires once, after the last iteration)
+		// to remove the class, so the two stay in sync automatically if this iteration count or
+		// per-pulse duration ever changes.
+		+ '.ase-plan-box.ase-plan-flash { animation: ase-plan-flash 0.8s ease-in-out 5; }';
 
 	function injectStyle() {
 		if (STYLE_INJECTED) return;
@@ -580,19 +694,25 @@ window.AseShowplan = (function () {
 		RemoteScan:         [-160,  -128],
 		ComputeScalar:      [ -32,   -32],
 		Result:             [-256,  -128],
-		Catchall:           [ -96,  -256]
+		Catchall:           [ -96,  -256],
+		Top:                [-160,  -192],
+		RdiLookup:          [   0,  -128],
+		GatherStreams:      [ -32,   -64],
+		PopulateQuery:      [-192,  -224]
 	};
 	// Ordered (most-specific-first) operator-name/scanType patterns -> icon key.
 	var ICON_RULES = [
 		{ test: /cluster.*index/i,        icon: 'ClusteredIndexScan' },
 		{ test: /index/i,                 icon: 'IndexScan' },
 		{ test: /table\s*scan|^scan$/i,   icon: 'TableScan' },
-		{ test: /n-ary|nest.*loop/i,      icon: 'NestedLoops' },
+		{ test: /rid\s*join/i,            icon: 'RdiLookup' },
+		{ test: /n-?ary|nest.*loop|nljoin/i, icon: 'NestedLoops' },
 		{ test: /hash/i,                  icon: 'HashMatch' },
 		{ test: /merge/i,                 icon: 'MergeJoin' },
 		{ test: /sort/i,                  icon: 'Sort' },
-		{ test: /aggregate/i,             icon: 'StreamAggregate' },
+		{ test: /agg(?:regate)?/i,        icon: 'StreamAggregate' },
 		{ test: /union/i,                 icon: 'Concatenation' },
+		{ test: /sqfilter|sqlfilter/i,    icon: 'PopulateQuery' },
 		{ test: /restrict|filter/i,       icon: 'Filter' },
 		{ test: /insert/i,                icon: 'Insert' },
 		{ test: /update/i,                icon: 'Update' },
@@ -602,6 +722,8 @@ window.AseShowplan = (function () {
 		{ test: /remote/i,                icon: 'RemoteScan' },
 		{ test: /compute/i,               icon: 'ComputeScalar' },
 		{ test: /^emit$/i,                icon: 'Result' },
+		{ test: /^limit$/i,               icon: 'Top' },
+		{ test: /exchange/i,              icon: 'GatherStreams' },
 		{ test: /scan/i,                  icon: 'IndexScan' }
 	];
 	// The text parser only learns "TableScan" vs "IndexScan" vs "ClusteredIndexScan" from detail
@@ -614,6 +736,13 @@ window.AseShowplan = (function () {
 		var p = node.props || {};
 		if (p.scanType) return p.scanType;
 		if (/scan/i.test(node.op || '') && p.indexName) return 'IndexScan';
+		// A bare "SCAN Operator" (the generic LAVA-tree op name, as opposed to a "Table Scan."/"Using
+		// Clustered Index." detail line) with neither of the above props set carries no scanType of
+		// its own - but iconKeyFor()'s ICON_RULES already treats this exact op name as a Table Scan
+		// for icon purposes (same regex reused here), so treat it the same way here too. Otherwise it
+		// shows a Table Scan icon while being invisible to displayLabelFor()/the size-warning check,
+		// which both key off this function.
+		if (/table\s*scan|^scan$/i.test(node.op || '')) return 'TableScan';
 		return undefined;
 	}
 	function iconKeyFor(node) {
@@ -638,14 +767,20 @@ window.AseShowplan = (function () {
 	// "(By Key)" suffix when the plan reports key-based positioning (an index seek, effectively).
 	function displayLabelFor(node) {
 		var scanType = effectiveScanType(node);
-		if (!scanType) return node.label;
-		var label;
-		if (/cluster/i.test(scanType))     label = 'Clustered Index Scan';
-		else if (/index/i.test(scanType))  label = 'Index Scan';
-		else if (/table/i.test(scanType))  label = 'Table Scan';
-		else return node.label;
-		var positioning = node.props && node.props.positioning;
-		if (positioning && /bykey/i.test(positioning.replace(/\s+/g, ''))) label += ' (By Key)';
+		var label = node.label;
+		if (scanType) {
+			if (/cluster/i.test(scanType))     label = 'Clustered Index Scan';
+			else if (/index/i.test(scanType))  label = 'Index Scan';
+			else if (/table/i.test(scanType))  label = 'Table Scan';
+			if (label !== node.label) {
+				var positioning = node.props && node.props.positioning;
+				if (positioning && /bykey/i.test(positioning.replace(/\s+/g, ''))) label += ' (By Key)';
+			}
+		}
+		// A STORE operator building a worktable+index because no useful index existed (see
+		// collectTreeFindings()'s Reformatting finding) - called out in the label itself, not just the
+		// Plan Analysis section, so it's visible right on the box like the "Large table/index" mark.
+		if (node.props && node.props.reformatWorktable) label += ' (Reformatting)';
 		return label;
 	}
 
@@ -654,16 +789,19 @@ window.AseShowplan = (function () {
 	// Query Processing and Abstract Plans - "Using showplan" chapter and its per-operator sub-pages),
 	// condensed to 1-3 sentences each. Same ordered, most-specific-first regex matching approach as
 	// ICON_RULES above, but kept as its own separate list rather than reused: a few operators
-	// ICON_RULES deliberately groups under one icon for visual simplicity (RESTRICT and SQFILTER share
-	// an icon; HASH JOIN and HASH UNION share one; etc.) are semantically quite different operators
-	// and get distinct, accurate entries here instead.
+	// ICON_RULES deliberately groups under one icon for visual simplicity (HASH JOIN and HASH UNION
+	// share one, etc.) are semantically quite different operators and get distinct, accurate entries
+	// here instead.
 	var OPERATOR_DESCRIPTIONS = [
 		{ test: /clust.*index/i,        text: 'Reads rows via a clustered index, so the table’s data pages are read in index order directly - no separate row-ID lookup into the base table is needed.' },
 		{ test: /index/i,               text: 'Reads rows via a non-clustered index. If the index does not carry every needed column, each matching entry requires an extra lookup into the base table by row ID.' },
 		{ test: /table\s*scan|^scan$/i, text: 'Reads every row of the table in physical/allocation order - no index is used. A leaf operator: it never has children.' },
-		{ test: /n-?ary.*nest.*loop|nest.*loop.*n-?ary/i,
+		// "NLJoin"/"NaryNLJoin" are XML plans' shorthand for "Nested Loop Join" - real captured plans
+		// use these instead of spelling "Nested"/"Loop" out the way text plans do ("N-ARY NESTED LOOP
+		// JOIN Operator"), so both spellings need to be recognized here.
+		{ test: /n-?ary.*(?:nest.*loop|nljoin)|(?:nest.*loop|nljoin).*n-?ary/i,
 			text: 'A NESTED LOOP JOIN variant the optimizer never picks directly - built during code generation by folding a series of left-deep NESTED LOOP JOINs (each an inner join whose right child is a scan) into one operator, avoiding the wasted I/O of repeatedly re-draining an earlier scan that a chain of separate nested loops would cause.' },
-		{ test: /nest.*loop/i,
+		{ test: /nest.*loop|nljoin/i,
 			text: 'The simplest join strategy: for every row from the outer (left) child, opens and positions the inner (right) child - often a scan - on the first matching row, returns qualifying rows, then closes and reopens the inner side for the next outer row. Effective when a useful index exists on the inner side.' },
 		{ test: /hash.*union/i,
 			text: 'Performs a UNION ALL across several input streams while using SAP ASE’s hashing algorithm to eliminate duplicates - unlike MERGE UNION, the inputs do not need to be pre-sorted.' },
@@ -679,9 +817,9 @@ window.AseShowplan = (function () {
 			text: 'Caps the number of rows passed through to its parent - the operator behind a "select top N" or LIMIT/OFFSET style query.' },
 		{ test: /group\s*sorted/i,
 			text: 'Operates on an input already sorted by its grouping/distinct columns, comparing each row to the previous one to either drop duplicates (Distinct) or accumulate per-group aggregate values (vector aggregation) - a non-blocking operator, it returns rows as it goes rather than waiting for all input first.' },
-		{ test: /scalar\s*aggregate/i,
+		{ test: /scalar.*agg/i,
 			text: 'Keeps a running aggregate (count, sum, min, max, average, etc.) across its entire input stream and returns a single summary row once the input is exhausted - used for an unwrapped/ungrouped aggregate like a plain select count(*).' },
-		{ test: /aggregate/i,
+		{ test: /agg(?:regate)?/i,
 			text: 'Computes aggregate values (count, sum, min, max, average, etc.) over its input rows.' },
 		{ test: /union/i,
 			text: 'Merges several compatible input streams into one output stream without eliminating duplicates - every row that enters is included in the output (that is what makes it "ALL").' },
@@ -848,16 +986,19 @@ window.AseShowplan = (function () {
 			$panel.append($('<div class="ase-plan-detail-desc"></div>').text(description));
 		}
 
-		var $tbl = $('<table></table>');
-
-		function row(key, val, valClass) {
-			if (val === undefined || val === null || val === '') return;
-			var $val = $('<td></td>').text(val);
-			if (valClass) $val.addClass(valClass);
-			$tbl.append($('<tr></tr>')
-				.append($('<td class="ase-plan-detail-key"></td>').text(key))
-				.append($val));
+		function makeRowFn($tbl) {
+			return function row(key, val, valClass) {
+				if (val === undefined || val === null || val === '') return;
+				var $val = $('<td></td>').text(val);
+				if (valClass) $val.addClass(valClass);
+				$tbl.append($('<tr></tr>')
+					.append($('<td class="ase-plan-detail-key"></td>').text(key))
+					.append($val));
+			};
 		}
+
+		var $tbl = $('<table></table>');
+		var row = makeRowFn($tbl);
 
 		row('Operator', displayLabelFor(node));
 		if (node.props) {
@@ -880,7 +1021,80 @@ window.AseShowplan = (function () {
 			row('Act PIO',  fmtNum(node.metrics.actPio));
 		}
 		if (node.extra) row('Extra', node.extra);
-		$panel.append($tbl);
+
+		// Live table size/rowcount, from an async batched lookup fired at the end of render() - see
+		// loadTableInfoAsync() there. Only meaningful when the caller supplied srv/dbname (opts.srv,
+		// opts.dbname to render()); otherwise node._tableInfo/_tableInfoPending are simply never set
+		// and this whole section is silently skipped (e.g. the standalone paste-a-plan page). Laid
+		// out as a second column to the right of the showplan-native table above, separated by a
+		// vertical divider, rather than stacked below it - keeps the panel from growing tall as more
+		// DDL Storage fields/indexes get added over time (a wide plan already needs horizontal
+		// scroll/pan, so trading some tooltip width for less height is the better direction here).
+		var hasTableInfo = node.props && node.props.objName && (node._tableInfo || node._tableInfoPending);
+		if (!hasTableInfo) {
+			$panel.append($tbl);
+		} else {
+			var $right = $('<div class="ase-plan-detail-right"></div>');
+			var $tblInfo = $('<table></table>');
+			var rowInfo = makeRowFn($tblInfo);
+			function fmtMb(v) {
+				var s = fmtNum(v);
+				return s === undefined ? undefined : s + ' MB';
+			}
+			if (node._tableInfo) {
+				if (node._tableInfo.found) {
+					var ti = node._tableInfo;
+					// DDL Storage is a periodic snapshot, not a live query (see loadTableInfoAsync()'s
+					// comment) - showing when it was last sampled makes that staleness visible instead
+					// of implying these numbers are as current as the showplan itself.
+					var sampleTime = ti.sampleTime ? String(ti.sampleTime).replace(/\.\d+$/, '') : undefined;
+					rowInfo('DDL Sample time', sampleTime);
+					rowInfo('Table Rows', fmtNum(ti.rowTotal));
+					rowInfo('Total Table Size', fmtMb(ti.sizeMb));
+					var dataMbStr = fmtMb(ti.dataMb);
+					var dataPagesStr = fmtNum(ti.dataPages);
+					rowInfo('Data Size', dataMbStr === undefined ? undefined : dataMbStr + (dataPagesStr === undefined ? '' : ' (' + dataPagesStr + ' Pages)'));
+					// ti.indexMb is ASE's own already-computed total (the index_size column from
+					// sp_spaceused's table-summary line) - not something derived here from summing the
+					// per-index rows below, so it's unaffected by the synthetic "DATA"/LOB pseudo-index
+					// entries AseAbstract.getTableInfoFields() has to filter out of that breakdown.
+					rowInfo('Index MB', fmtMb(ti.indexMb));
+					// -1 is "no LOB storage on this table" (see AseAbstract.AseTableInfo.getLobMb()) -
+					// still shown, not skipped, so its absence reads as a confirmed fact rather than a
+					// gap; "-no-lob-" matches the wording the Table Information section already uses.
+					rowInfo('LOB', (ti.lobMb !== undefined && ti.lobMb >= 0) ? fmtMb(ti.lobMb) : '-no-lob-');
+					rowInfo('Locking Schema', ti.lockScheme);
+				} else {
+					rowInfo('Table Info', 'not found in DDL Storage');
+				}
+			} else if (node._tableInfoPending) {
+				rowInfo('Table Info', '⏳ Loading…');
+			}
+			$right.append($tblInfo);
+
+			// Per-index breakdown (name, columns, size) - same data the table row/size counts above
+			// came from (AseAbstract.getTableInfoFields()'s "indexes" array), just not collapsed to a
+			// count. The index this exact operator is using (props.indexName, set for Index/Clustered
+			// Index Scan) gets a small arrow prefix so it stands out from the rest of the table's
+			// indexes, which are shown for context/comparison.
+			var indexes = (node._tableInfo && node._tableInfo.found) ? (node._tableInfo.indexes || []) : [];
+			if (indexes.length) {
+				$right.append($('<div class="ase-plan-detail-idx-hdr"></div>').text('Indexes (' + indexes.length + '):'));
+				var usedIndexName = node.props.indexName;
+				var $idxTbl = $('<table class="ase-plan-idx-tbl"></table>');
+				var rowIdx = makeRowFn($idxTbl);
+				indexes.forEach(function (idx) {
+					var cols = (idx.keys && idx.keys.length) ? idx.keys.join(', ') : '?';
+					var isUsed = usedIndexName && idx.indexName && usedIndexName.toLowerCase() === idx.indexName.toLowerCase();
+					rowIdx((isUsed ? '▶ ' : '') + idx.indexName, fmtNum(idx.sizeMb) + ' MB (' + cols + ')');
+				});
+				$right.append($idxTbl);
+			}
+
+			$panel.append($('<div class="ase-plan-detail-grid"></div>')
+				.append($('<div class="ase-plan-detail-left"></div>').append($tbl))
+				.append($right));
+		}
 
 		if (node.raw && node.raw.length) {
 			var $rawWrap = $('<div style="margin-top:4px;"></div>');
@@ -907,9 +1121,17 @@ window.AseShowplan = (function () {
 		var warn = isEstActWarn(node.metrics || {});
 		var $box = $('<div class="ase-plan-box"></div>');
 		if (warn) $box.addClass('ase-plan-warn');
+		// Kept on the node itself (rather than a separate id -> box map) so the async table-info
+		// lookup fired from render() can reach back into the live DOM for this exact node once the
+		// batched fetch resolves - see the end of render() and loadTableInfoAsync() below.
+		node._$box = $box;
 
 		var va = node.props && node.props.va;
 		if (va !== undefined && va !== null && va !== '') {
+			// Looked up by window.aseShowplanJumpToNode() (dbxShowplan.js) when a Plan Analysis
+			// finding's "[Node N]" tag is clicked - see collectRawTextFindings()/collectTreeFindings()
+			// above, which put the same VA into every finding's nodeId.
+			$box.attr('data-va', va);
 			$box.append($('<div class="ase-plan-va" title="VA (vertex number)"></div>').text(va));
 		}
 
@@ -1017,6 +1239,13 @@ window.AseShowplan = (function () {
 	// document (detached elements report zero-size rects), which is why render() defers this call
 	// until after $container.append($wrap) below.
 	function drawConnectorLines(treeEl, horizontal) {
+		// Idempotent - callable more than once for the same treeEl (render() re-calls this after the
+		// async table-info lookup grows a box, since the previously-drawn lines were measured against
+		// the pre-growth positions). Without this removal, a second call would leave the stale overlay
+		// underneath instead of replacing it, doubling up every arrow.
+		var previousSvg = treeEl.querySelector(':scope > svg.ase-plan-connector-svg');
+		if (previousSvg) previousSvg.remove();
+
 		var svgNS = 'http://www.w3.org/2000/svg';
 		var containerRect = treeEl.getBoundingClientRect();
 		var svg = document.createElementNS(svgNS, 'svg');
@@ -1340,6 +1569,36 @@ window.AseShowplan = (function () {
 					chainChildrenUl.style.paddingLeft = (chainStep + (maxLeafWidth - chainOwnWidth)) + 'px';
 				}
 			}
+
+			// The perpendicular half of the same problem, and the counterpart of the minWidth
+			// compensation tuckLeavesNearParentVertical() already does on its own axis further down.
+			//
+			// An after-tucked leaf is pulled out of flow entirely (position:absolute), so nothing in
+			// normal flow reports how far DOWN it actually reaches. Left alone, this <ul> auto-sizes
+			// to its in-flow content only (the chain), and that shorter height propagates up to this
+			// node's own <li> and on to ITS parent - which then stacks the NEXT SIBLING BRANCH as if
+			// this subtree ended higher than it visually does, dropping that branch's boxes straight
+			// on top of the tucked leaf.
+			//
+			// Found by measuring rather than by eye, in the SQL Server sibling renderer that was
+			// derived from this file (dbxShowplanSqlServer.js): a sweep checking every pair of
+			// operator boxes for rectangle intersection flagged exactly one case in a 536-box corpus -
+			// a scan tucked under one branch landing underneath a seek from the next branch. Reserving
+			// the real measured extent fixed it there and left every other plan's layout untouched.
+			//
+			// The reservation goes on the <li> (display:table), NOT on the <ul> (display:table-cell):
+			// CSS leaves the effect of min-height on a table-cell undefined, and browsers duly ignore
+			// it - verified in a browser by setting it there and watching the overlap survive
+			// unchanged. min-height on the table box itself is honoured.
+			if (afterChain.length) {
+				var ulTop = ul.getBoundingClientRect().top;
+				var lowest = 0;
+				afterChain.forEach(function (leafLi) {
+					lowest = Math.max(lowest, leafLi.getBoundingClientRect().bottom - ulTop);
+				});
+				var curMinHeight = parseFloat(window.getComputedStyle(li).minHeight) || 0;
+				li.style.minHeight = Math.max(curMinHeight, Math.ceil(lowest)) + 'px';
+			}
 		});
 	}
 
@@ -1456,6 +1715,356 @@ window.AseShowplan = (function () {
 		});
 	}
 
+	// Walks the parsed-plan node tree (the {op, props, metrics, children} model built by
+	// parseXml()/parseText() - not the rendered DOM tree, see drawConnectorLines() for that),
+	// invoking fn(node) for every node.
+	function walkPlanNodes(root, fn) {
+		fn(root);
+		if (root.children) root.children.forEach(function (child) { walkPlanNodes(child, fn); });
+	}
+
+	// Fired once per render() call, after layout/connector-drawing is done, so a large plan's
+	// initial draw is never blocked waiting on a network round trip. Looks up live table
+	// size/rowcount for every distinct table referenced anywhere in the plan in a single batched
+	// request (not one per operator box), then annotates each matching node (node._tableInfo,
+	// consumed by buildDetailPanel()) and, for a Table Scan whose table exceeds tableSizeWarnMb,
+	// marks its box - refreshing any tooltip/pinned panel that's already open so the user doesn't
+	// have to close/reopen it to see the numbers that just arrived. A marked box grows by one line,
+	// which invalidates the connector-line/compact-tuck positions already measured and drawn at the
+	// end of render() - onBoxesChanged (render()'s own redraw step) is called once, only if at least
+	// one box actually grew, so callers get a chance to redo that measurement-dependent work.
+	// What this scan operator reads in full, if that's a bounded, size-checkable structure - or null
+	// if it isn't (e.g. a "By Key" seek only touches the rows it needs, never the whole structure, so
+	// warning on it would just be noise - same reasoning a Table Scan doesn't need, since it never has
+	// a "By Key" variant to begin with). Table Scan and Clustered Index Scan both read every data page
+	// of the table (in ASE the clustered index *is* the data order - there's no separate storage for
+	// it), so both are compared against info.dataMb. A plain (non-clustered) Index Scan reads the
+	// whole leaf level of one specific index instead - looked up by name (props.indexName, the same
+	// field buildDetailPanel() uses to mark the "in use" row in its own index breakdown) against
+	// info.indexes[].sizeMb.
+	function scannedSizeInfo(node, info) {
+		if (!info || !info.found) return null;
+		var positioning = node.props && node.props.positioning;
+		if (positioning && /bykey/i.test(positioning.replace(/\s+/g, ''))) return null;
+
+		var scanType = effectiveScanType(node);
+		if (scanType === 'TableScan' || scanType === 'ClusteredIndexScan')
+			return { sizeMb: info.dataMb, what: 'table' };
+
+		if (scanType === 'IndexScan') {
+			var name = node.props && node.props.indexName;
+			if (!name || !info.indexes) return null;
+			for (var i = 0; i < info.indexes.length; i++) {
+				if (info.indexes[i].indexName && info.indexes[i].indexName.toLowerCase() === name.toLowerCase())
+					return { sizeMb: info.indexes[i].sizeMb, what: 'index' };
+			}
+		}
+		return null;
+	}
+
+	function loadTableInfoAsync(roots, srv, dbname, tableSizeWarnMb, onBoxesChanged, findings, onFindingsChanged) {
+		if (!srv || !dbname) return;
+
+		var objNames = [];
+		roots.forEach(function (root) {
+			walkPlanNodes(root, function (node) {
+				var name = node.props && node.props.objName;
+				if (!name) return;
+				if (objNames.indexOf(name) === -1) objNames.push(name);
+				node._tableInfoPending = true;
+			});
+		});
+		if (!objNames.length) return;
+
+		function refreshOpenPanel(node) {
+			if (!node._$box) return;
+			var $existing = node._$box.children('.ase-plan-detail');
+			if (!$existing.length) return;
+			var wasTooltip = $existing.hasClass('ase-plan-tooltip');
+			$existing.remove();
+			var $panel = buildDetailPanel(node);
+			if (wasTooltip) $panel.addClass('ase-plan-tooltip');
+			node._$box.append($panel);
+			flipIfClipped($panel);
+		}
+
+		$.ajax({
+			url: '/api/cc/mgt/table-info',
+			data: {
+				srv:      srv,
+				dbVendor: 'Adaptive Server Enterprise',
+				dbname:   dbname,
+				tables:   objNames.join(','),
+				format:   'json'
+			},
+			dataType: 'json',
+			success: function (r) {
+				var tables = (r && r.tables) || {};
+				var anyBoxGrew = false; // a marked box gains an extra line - connector lines/tucking measured *before* this need to be redone, see onBoxesChanged below
+				roots.forEach(function (root) {
+					walkPlanNodes(root, function (node) {
+						var name = node.props && node.props.objName;
+						if (!name) return;
+						node._tableInfoPending = false;
+						node._tableInfo = tables[name];
+
+						var info = node._tableInfo;
+						var scanInfo = scannedSizeInfo(node, info);
+						if (scanInfo && scanInfo.sizeMb > tableSizeWarnMb && node._$box) {
+							node._$box.addClass('ase-plan-big-table');
+							node._$box.append($('<div class="ase-plan-metric ase-plan-tablesize-warn"></div>')
+								.text('⚠ Large ' + scanInfo.what + ' (' + fmtNum(scanInfo.sizeMb) + ' MB)'));
+							anyBoxGrew = true;
+							if (findings) {
+								findings.push({
+									severity: 'warning',
+									category: scanInfo.what === 'table' ? 'Table Scan' : 'Index Scan',
+									title: 'Large ' + scanInfo.what + ' (' + fmtNum(scanInfo.sizeMb) + ' MB)',
+									detail: 'This ' + scanInfo.what + ' scan reads more than the configured threshold (' + tableSizeWarnMb + ' MB) - see the "Big table" option above the diagram.',
+									nodeId: node.props && node.props.va,
+									nodeName: node.props && node.props.objName
+								});
+							}
+						}
+
+						refreshOpenPanel(node);
+					});
+				});
+				if (anyBoxGrew && onBoxesChanged) onBoxesChanged();
+				if (findings && onFindingsChanged) onFindingsChanged(findings);
+			},
+			error: function () {
+				roots.forEach(function (root) {
+					walkPlanNodes(root, function (node) { node._tableInfoPending = false; });
+				});
+			}
+		});
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Whole-plan findings - problems/notices that apply to the plan as a whole rather than one
+	// specific operator (deferred updates, reformatting, runtime parallel-plan adjustments, optimizer
+	// timeouts, ...), reported through opts.onFindingsChanged(findings) into the dialog's "Plan
+	// Analysis" section (dbxShowplan.js) - same {severity, category, title, detail, nodeId, nodeName}
+	// shape dbxShowplanAnalyzer.js uses for the SQL Server dialog's Plan Analysis. Sourced from SAP's
+	// own "Performance and Tuning Series: Query Processing and Abstract Plans" plus real captured-plan
+	// text that document doesn't cover (the Optimizer Timeout message) - not guessed.
+	// ─────────────────────────────────────────────────────────────────────────
+	var PLAN_WARNING_PATTERNS = [
+		{ severity: 'warning', category: 'Deferred Update', re: /The update mode is deferred_(varcol|index)\.?/i,
+			title: function (m) { return 'Deferred update (deferred_' + m[1].toLowerCase() + ')'; },
+			detail: function () { return 'The slowest kind of update ASE performs.'; } },
+		{ severity: 'warning', category: 'Runtime Adjustment', re: /AN ADJUSTED QUERY PLAN IS BEING USED FOR STATEMENT\s+(\d+)\s+BECAUSE NOT ENOUGH WORKER PROCESSES ARE CURRENTLY AVAILABLE\.?/i,
+			title: function (m) { return 'Statement ' + m[1] + ' fell back to an adjusted plan at runtime'; },
+			detail: function () { return 'Not enough worker processes were available for the parallel plan, so a reduced/serial plan was used instead.'; } },
+		{ severity: 'warning', category: 'Optimizer Timeout', re: /Optimizer timed out (\d+) time\(s\) while generating this plan,?\s*Timeout Limit percentage:\s*(\d+)/i,
+			title: function (m) { return 'Optimizer timed out ' + m[1] + ' time(s) while generating this plan'; },
+			// Remediation options below are all straight from SAP's "Performance and Tuning Series:
+			// Query Processing and Abstract Plans" doc, not guessed: opttimeoutlimit's 3 levels
+			// (§1.2.1), join-count driving search-space size (§1.1 "many possible join orders..."),
+			// stored procs/saved plans reducing optimization overhead (§11 Introduction to Abstract
+			// Plans - "using a saved plan reduces query optimization overhead" and "Saving plans for
+			// queries with long optimization times" is listed as a reason to use one), and
+			// forceplan/Abstract Plans to skip the join-order search entirely (§8.2/§11).
+			detail: function (m) { return 'Timeout limit percentage: ' + m[2] + '%. The optimizer gave up searching for a better plan once it had a usable one and spent this much of the estimated execution time on optimization.\n'
+				+ 'Things to try:\n'
+				+ '- Raise "optimization timeout limit" (sp_configure at the server level, "set plan opttimeoutlimit <n>" for the session, or plan "(use opttimeoutlimit <n>)" on the query) to let it search longer for a better plan.\n'
+				+ '- Simplify the query - fewer joined tables/UNION branches per statement; the number of possible join orders/access paths grows combinatorially with join count.\n'
+				+ '- If this is ad hoc/dynamic SQL (recompiled and re-optimized on every execution), consider a stored procedure or a saved Abstract Plan instead - reusing a plan avoids paying the optimization cost again.\n'
+				+ '- Force a known-good join order with "set forceplan on", or bind a captured Abstract Plan, to skip the join-order search entirely.'; } },
+		{ severity: 'info', category: 'Forced Plan', re: /Optimized using (?:the Abstract Plan in the PLAN clause|the forced options \(internally generated Abstract Plan\))\.?/i,
+			title: function () { return 'Plan forced via an Abstract Plan'; },
+			detail: function () { return 'This plan was forced via a bound Abstract Plan or query-level hint, not chosen freely by the optimizer.'; } }
+	];
+
+	// Scans the plan's own raw text/XML once for the patterns above - not tied to any one node,
+	// since e.g. the runtime-adjustment message is printed before the plan tree, not attached to a
+	// particular operator. Repeated identical messages (e.g. several deferred updates) are folded
+	// into one finding with a "(xN)" suffix on the title rather than N separate identical entries.
+	function collectRawTextFindings(rawText) {
+		if (!rawText) return [];
+		var counts = {}; // title -> count
+		var order  = []; // finding objects, first-seen order
+		PLAN_WARNING_PATTERNS.forEach(function (pat) {
+			var flags = pat.re.flags.indexOf('g') === -1 ? pat.re.flags + 'g' : pat.re.flags;
+			var re = new RegExp(pat.re.source, flags);
+			var m;
+			while ((m = re.exec(rawText)) !== null) {
+				var title = pat.title(m);
+				if (!counts[title]) {
+					counts[title] = 0;
+					order.push({ severity: pat.severity, category: pat.category, title: title, detail: pat.detail(m) });
+				}
+				counts[title]++;
+				if (m.index === re.lastIndex) re.lastIndex++; // avoid an infinite loop on a zero-length match
+			}
+		});
+		order.forEach(function (f) {
+			var n = counts[f.title];
+			if (n > 1) f.title += ' (×' + n + ')';
+		});
+		return order;
+	}
+
+	// A reformatting STORE/StoreIndex node's real source: per the SAP doc's own worked example (STORE
+	// Operator section), the STORE's first child is the INSERT that fills the worktable, whose own
+	// child is the SCAN of the actual table being materialized - walk down through intervening
+	// operators until a node with a real (non-worktable) props.objName turns up.
+	//
+	// XML plans (<StoreIndex>) place a <WorkTable> element as a *sibling* of the real Insert/Scan
+	// chain rather than folding it into a text annotation the way text plans do ("TO TABLE\nWorktable2.")
+	// - naively always following children[0] would dead-end on that WorkTable node if it happens to
+	// come first in document order, so it's filtered out of consideration at every level before
+	// picking which child to descend into.
+	//
+	// Also reports whether that walk passed through a join/union operator (more than one *real*
+	// child, WorkTable siblings not counted) before reaching a single table. That distinction matters:
+	// if the STORE's input is itself the combined output of a UNION/join whose branches are all
+	// already seeking through indexes (as opposed to reading straight through from one plain table),
+	// then reformatting isn't compensating for a missing index at all - a computed/combined row set
+	// has no index to begin with, so there is no single table+column an index could ever be added to.
+	// Only the plain-single-table case is a genuine "no useful index existed" situation with an
+	// actionable fix.
+	function findReformatSource(storeNode) {
+		function realChildren(n) {
+			return (n.children || []).filter(function (k) { return !/^Work\s*Table$/i.test(k.op || ''); });
+		}
+		var throughMultiChild = false;
+		var kids = realChildren(storeNode);
+		if (kids.length > 1) throughMultiChild = true;
+		var node = kids[0];
+		var depth = 0;
+		while (node && depth < 6) {
+			if (node.props && node.props.objName && !/^Worktable/i.test(node.props.objName)) {
+				return { node: node, throughMultiChild: throughMultiChild };
+			}
+			var nextKids = realChildren(node);
+			if (nextKids.length > 1) throughMultiChild = true;
+			node = nextKids[0];
+			depth++;
+		}
+		return { node: null, throughMultiChild: throughMultiChild };
+	}
+
+	// Node-tree-based findings - need the parsed tree (not just raw text) to know which table a
+	// reformat materializes, or which operator a sort's worktable spill belongs to.
+	function collectTreeFindings(stepRoots) {
+		var findings = [];
+		stepRoots.forEach(function (root) {
+			walkPlanNodes(root, function (node) {
+				var p = node.props || {};
+				// Only present at all when the plan carries actual execution counts (a real captured/
+				// executed plan, not a plain estimated one) - isEstActWarn()/estActPercent() already
+				// gate on that. A >10x (or <0.1x) gap between what the optimizer expected and what
+				// actually came out is the classic symptom of stale or missing statistics, and it's
+				// already shown per-box (the orange border/text - see renderNode()) - surfaced here too
+				// so it shows up in the consolidated Plan Analysis list, not just on the diagram.
+				if (isEstActWarn(node.metrics || {})) {
+					var est = node.metrics.estRows, act = node.metrics.actRows;
+					var pct = fmtPercent(estActPercent(node.metrics));
+					var opLabel = displayLabelFor(node) + (p.objName ? ' (' + p.objName + (p.corrName ? ' ' + p.corrName : '') + ')' : '');
+					findings.push({
+						severity: 'warning', category: 'Est/Act Mismatch',
+						title: 'Large estimate/actual row mismatch on ' + opLabel,
+						detail: 'Estimated ' + (fmtNum(est) || est) + ' rows, actually returned ' + (fmtNum(act) || act) + ' (' + pct + ' of estimate). A gap this large usually means the optimizer\'s statistics are stale or missing for this operator, which can lead it to pick a suboptimal plan - consider running update statistics on the table(s) involved.',
+						nodeId: p.va, nodeName: p.objName
+					});
+				}
+				if (p.workTable && /sort/i.test(node.op || '')) {
+					// Having a worktable at all doesn't mean it actually spilled to disk - SORT can use
+					// one purely in memory. physical I/O (pio) is the real "touched disk" signal;
+					// logical I/O (lio) alone just means the worktable's pages were read/written at all,
+					// which happens even for an in-memory worktable. Only warn when pio actually shows
+					// disk activity; otherwise this is informational at most.
+					var m   = node.metrics || {};
+					var lio = m.actLio, pio = m.actPio;
+					var severity, ioNote;
+					if (pio === undefined) {
+						severity = 'info';
+						ioNote = 'No actual I/O counts are available for this plan, so whether it spilled to disk or stayed in memory can\'t be confirmed from here.';
+					} else if (pio > 0) {
+						severity = 'warning';
+						ioNote = 'Physical I/O: ' + fmtNum(pio) + ' page(s)' + (lio !== undefined ? ' (logical I/O: ' + fmtNum(lio) + ')' : '') + ' - it actually spilled to disk.';
+					} else {
+						severity = 'info';
+						ioNote = 'Physical I/O: 0' + (lio !== undefined ? ' (logical I/O: ' + fmtNum(lio) + ')' : '') + ' - it stayed in memory, no real disk cost was paid.';
+					}
+					findings.push({
+						severity: severity, category: 'Sort Spill',
+						title: 'Sort required a worktable (' + p.workTable + ')',
+						detail: 'No existing index provided the order it needed. ' + ioNote,
+						nodeId: p.va, nodeName: p.objName
+					});
+				}
+				if (p.reformatWorktable) {
+					var srcInfo = findReformatSource(node);
+					var src = srcInfo.node;
+					var label = (src && src.props && src.props.objName)
+						? src.props.objName + (src.props.corrName ? ' ' + src.props.corrName : '')
+						: 'a table';
+					if (srcInfo.throughMultiChild) {
+						// The materialized input is itself a join/union of already-indexed branches -
+						// nothing here is missing an index, so no reformatSource/index suggestion, and
+						// the box gets the milder "info" marking below, not the red "warning" one.
+						findings.push({
+							severity: 'info', category: 'Reformatting',
+							title: 'Reformatting: materialized a joined/unioned result into a worktable',
+							detail: 'This is typically a derived table (a subquery used as a row source in the FROM clause) whose body combines multiple already-indexed inputs - often via UNION - into one computed result. ASE built a worktable (' + p.reformatWorktable + ') with a clustered index over that result so it could be used efficiently afterward. The inputs underneath are already seeking via index, so this is not a sign of a missing index on a real table - a derived table\'s output has no index to begin with, so there is no single table/column an index could be added to here.',
+							nodeId: p.va, nodeName: label
+						});
+						if (node._$box) {
+							node._$box.addClass('ase-plan-reformat-info');
+							node._$box.append($('<div class="ase-plan-metric ase-plan-reformat-info-metric"></div>')
+								.text('ℹ Reformatting (' + p.reformatWorktable + ')'));
+						}
+					} else {
+						findings.push({
+							severity: 'warning', category: 'Reformatting',
+							title: 'Reformatting: materialized ' + label + ' into a worktable',
+							detail: 'No useful index existed, so ASE built a worktable (' + p.reformatWorktable + ') with a clustered index just to run this query.',
+							nodeId: p.va, nodeName: label,
+							reformatSource: src // consumed by enhanceReformatFindings() below, not rendered directly
+						});
+						// Same visual treatment as the "Large table/index" mark (loadTableInfoAsync()
+						// below) - a red border + an inline metric line right on the box, not just a
+						// line in Plan Analysis, so the operator that needs the index is easy to spot.
+						if (node._$box) {
+							node._$box.addClass('ase-plan-reformat');
+							node._$box.append($('<div class="ase-plan-metric ase-plan-tablesize-warn"></div>')
+								.text('⚠ Reformatting (' + p.reformatWorktable + ')'));
+						}
+					}
+				}
+			});
+		});
+		return findings;
+	}
+
+	// Async, best-effort: for each reformatting finding, ask DbxSqlTableNames (dbxSqlTableNames.js)
+	// to find the join/filter column(s) the materialized table is used on in the statement's SQL
+	// text, then appends a suggestion to that finding's detail and re-renders the section once
+	// resolved. Silently does nothing when sqlText isn't available (bare pasted plan, no SQL) or no
+	// column can be found - the base finding already stands on its own without the suggestion.
+	function enhanceReformatFindings(findings, sqlText, onChanged) {
+		if (!sqlText || typeof DbxSqlTableNames === 'undefined' || !DbxSqlTableNames.findJoinColumnsForTable) return;
+		findings.forEach(function (f) {
+			if (!f.reformatSource) return;
+			var table = f.reformatSource.props && f.reformatSource.props.objName;
+			var corr  = f.reformatSource.props && f.reformatSource.props.corrName;
+			if (!table) return;
+			DbxSqlTableNames.findJoinColumnsForTable(sqlText, table, corr, function (cols) {
+				if (!cols || !cols.length) return;
+				f.detail += ' Consider an index on ' + table + '(' + cols.join(', ') + ').';
+				// A starting point, not a guaranteed-correct statement - see findJoinColumnsForTable()'s
+				// own caveats (regex/AST heuristics, ambiguous aliases in nested scopes). Rendered as
+				// its own code line by renderFindingsListHtml() (dbxShowplan.js), not folded into detail.
+				var ixName = 'ix_' + table.replace(/\W/g, '') + '_' + cols.map(function (c) { return c.replace(/\W/g, ''); }).join('_');
+				f.suggestedDdl = 'CREATE INDEX ' + ixName + ' ON ' + table + ' (' + cols.join(', ') + ')';
+				if (onChanged) onChanged(findings);
+			});
+		});
+	}
+
 	function render(container, parsed, opts) {
 		injectStyle();
 		var $container = $(container);
@@ -1469,6 +2078,7 @@ window.AseShowplan = (function () {
 		var multiStatement = parsed.statements.length > 1;
 		var treesForLineDrawing  = []; // arrows drawn after everything is live/laid-out by the browser
 		var treesForCompactTuck  = []; // leaves tucked near their parent after the natural table layout
+		var stepRoots = []; // every step's root node - walked afterward for the table-info lookup below
 
 		parsed.statements.forEach(function (stmt) {
 			if (multiStatement && stmt.label) {
@@ -1493,6 +2103,7 @@ window.AseShowplan = (function () {
 				$tree.append($rootUl);
 				if (useCompactLayout) reorderCompactByVa($tree[0]);
 				$wrap.append($tree);
+				stepRoots.push(step.root);
 			});
 		});
 
@@ -1501,20 +2112,45 @@ window.AseShowplan = (function () {
 
 		$container.append($wrap);
 
+		// Whole-plan findings (deferred updates, reformatting, runtime plan adjustments, optimizer
+		// timeouts, ...) - reported into the dialog's separate "Plan Analysis" section (dbxShowplan.js),
+		// not rendered here. Called even with zero findings so that section can show "no issues
+		// detected" the same way SQL Server's does, rather than staying hidden/stale from a previous plan.
+		var planFindings = collectRawTextFindings(parsed.rawText).concat(collectTreeFindings(stepRoots));
+		if (opts && opts.onFindingsChanged) opts.onFindingsChanged(planFindings);
+		enhanceReformatFindings(planFindings, opts && opts.sqlText, opts && opts.onFindingsChanged);
+
 		// Both need real measured positions/sizes (getBoundingClientRect() reports zero for detached
 		// elements), so both run after $tree is attached to the live document. Tucking must run before
 		// the connector lines are drawn, so the arrows reflect the tucked (final) positions, not the
-		// pre-tuck natural table-flow ones.
-		if (useCompactLayout) {
-			var tuckFn = horizontal ? tuckLeavesNearParent : tuckLeavesNearParentVertical;
-			treesForCompactTuck.forEach(function ($tree) { tuckFn($tree[0]); });
+		// pre-tuck natural table-flow ones. Pulled into a named function (both are idempotent - see
+		// their own comments - safe to just re-measure and re-apply from scratch) since it also runs a
+		// second time, later, if the table-info lookup below ends up growing any box.
+		function layoutTuckAndConnectors() {
+			if (useCompactLayout) {
+				var tuckFn = horizontal ? tuckLeavesNearParent : tuckLeavesNearParentVertical;
+				treesForCompactTuck.forEach(function ($tree) { tuckFn($tree[0]); });
+			}
+			treesForLineDrawing.forEach(function ($tree) { drawConnectorLines($tree[0], horizontal); });
 		}
-		treesForLineDrawing.forEach(function ($tree) { drawConnectorLines($tree[0], horizontal); });
+		layoutTuckAndConnectors();
+
+		// Fired last, after the diagram is fully laid out and visible - a network round trip must
+		// never hold up the initial draw. Needs srv/dbname (only supplied by the Showplan dialog,
+		// which has a live server context - the standalone paste-a-plan page doesn't, and simply
+		// skips this via the srv/dbname check inside loadTableInfoAsync()). A Table Scan flagged as
+		// "big" grows its own box by one line, which would otherwise leave the tuck padding/connector
+		// lines above pointing at stale (pre-growth) positions - loadTableInfoAsync() calls
+		// layoutTuckAndConnectors() again, but only if a box actually grew.
+		var tableSizeWarnMb = (opts && typeof opts.tableSizeWarnMb === 'number' && opts.tableSizeWarnMb >= 0) ? opts.tableSizeWarnMb : 100;
+		loadTableInfoAsync(stepRoots, opts && opts.srv, opts && opts.dbname, tableSizeWarnMb, layoutTuckAndConnectors,
+			planFindings, opts && opts.onFindingsChanged);
 	}
 
 	return {
 		parseXml: parseXml,
 		parseText: parseText,
-		render: render
+		render: render,
+		getLastParseError: function () { return lastParseError; }
 	};
 })();

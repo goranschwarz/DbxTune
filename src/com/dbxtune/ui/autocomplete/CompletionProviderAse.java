@@ -661,7 +661,9 @@ extends CompletionProviderAbstractSql
 				"set identity identity_burn_max"));
 
 		// PLAN -- Optimizations Goals
-		list.add( new CompletionTemplate("plan", "plan '(use optgoal {fastfirstrow|allrows_oltp|allrows_mixed|allrows_dss})'") );
+		list.add( new CompletionTemplate("plan"   , "plan '(use optgoal {fastfirstrow|allrows_oltp|allrows_mixed|allrows_dss})'", "plan ('use optgoal ...)'") );
+		list.add( new CompletionTemplate("optgoal", "plan '(use optgoal {fastfirstrow|allrows_oltp|allrows_mixed|allrows_dss})'", "plan ('use optgoal ...)'") );
+		list.add( new CompletionTemplate("allrows", "plan '(use optgoal {fastfirstrow|allrows_oltp|allrows_mixed|allrows_dss})'", "plan ('use optgoal ...)'") );
 
 		return list;
 	}

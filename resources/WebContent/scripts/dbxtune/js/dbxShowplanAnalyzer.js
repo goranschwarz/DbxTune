@@ -372,8 +372,13 @@ window.DbxShowplanAnalyzer = (function () {
 			var impact = numAttr(mig, 'Impact');
 			var mis = descendantsByTag(mig, 'MissingIndex');
 			mis.forEach(function(mi) {
-				var db    = attr(mi, 'Database');
-				var table = attr(mi, 'Table');
+				var db     = attr(mi, 'Database');
+				var schema = attr(mi, 'Schema');
+				var table  = attr(mi, 'Table');
+				// Bracketed already (e.g. "[dbo]") straight from the XML, so joining with '.' gives a
+				// valid, correctly-qualified 3-part name - no extra bracketing needed here, unlike the
+				// Eager Spool DDL below which builds tableRef from unbracketed attributes.
+				var tableRef = [db, schema, table].filter(Boolean).join('.');
 				var equality = [];
 				var inequality = [];
 				var includes = [];
@@ -388,13 +393,27 @@ window.DbxShowplanAnalyzer = (function () {
 				});
 
 				var title = 'Missing index suggestion (impact ' + (impact ? impact.toFixed(1) : '?') + '%)';
-				var detail = 'Table: ' + (db || '') + '..' + (table || '') + '\nColumns: ' + equality.concat(inequality).join(', ') + (includes.length ? ' INCLUDE ' + includes.join(', ') : '');
+				var detail = 'Table: ' + (tableRef || '?') + '\nColumns: ' + equality.concat(inequality).join(', ') + (includes.length ? ' INCLUDE ' + includes.join(', ') : '');
 
 				if (includes.length > 5) {
 					detail += '\n⚠ "Kitchen sink" index: SQL Server is suggesting many INCLUDE columns. Evaluate which ones are actually needed.';
 				}
 				if (equality.length + inequality.length > 4) {
 					detail += '\n⚠ Wide key columns: Evaluating ' + (equality.length + inequality.length) + ' key columns may increase maintenance cost.';
+				}
+
+				// Real CREATE INDEX example, same format as the Eager Index Spool finding below (Rule
+				// 15) - unlike that one, these column names come straight from SQL Server's own missing-
+				// index recommendation, not resolved from Expr### aliases, so there's no guesswork here.
+				// Key order matches what SSMS's own "Missing Index Details" script generates: EQUALITY
+				// columns first, then INEQUALITY.
+				if (equality.length + inequality.length > 0) {
+					detail += '\n\nCREATE NONCLUSTERED INDEX [IX_missing] ON ' + tableRef
+					        + ' (' + equality.concat(inequality).join(', ') + ')';
+					if (includes.length > 0) {
+						detail += '\nINCLUDE (' + includes.join(', ') + ')';
+					}
+					detail += '\n-- WITH (SORT_IN_TEMPDB=ON, DATA_COMPRESSION=PAGE)';
 				}
 
 				findings.push(finding(impact < 25 ? 'info' : 'warning', 'Missing Index', title, detail));
@@ -404,17 +423,36 @@ window.DbxShowplanAnalyzer = (function () {
 		// ── 2. Warnings on operators ──────────────────────────────────────────
 		var warnings = descendantsByTag(doc, 'Warnings');
 		warnings.forEach(function(w) {
-			// SpillToTempDb
+			// SpillToTempDb (+ SortSpillDetails/HashSpillDetails for the actual read/write volume,
+			// when present - SQL Server always writes them as siblings of SpillToTempDb under the
+			// same Warnings element for a real spill, so one finding covers both).
 			descendantsByTag(w, 'SpillToTempDb').forEach(function(s) {
 				var spills = numAttr(s, 'SpillLevel') || numAttr(s, 'SpillPages') || 1;
 				var parent = w.parentNode;
 				var nodeId = parent ? attr(parent, 'NodeId') : null;
 				var op     = parent ? attr(parent, 'PhysicalOp') || attr(parent, 'LogicalOp') : null;
+
+				var detail = 'Operator: ' + (op || '?') + (spills > 1 ? ' (level ' + spills + ')' : '') +
+					'\nData spilled to disk — indicates memory grant too small or bad cardinality estimate.';
+
+				var spillDetailsEl = firstByTag(w, 'SortSpillDetails') || firstByTag(w, 'HashSpillDetails');
+				if (spillDetailsEl) {
+					// 8 KB pages, same convention as every other page-based size in ShowPlanXML/SQL
+					// Server (sp_spaceused, sys.dm_db_partition_stats, etc.). Rounded to whole MB - same
+					// precision dbxShowplanSqlServer.js's fmtSpillPages() uses for the same numbers in
+					// the Properties/tooltip warning text, so the two surfaces never show a mismatching
+					// MB figure for the identical spill.
+					var writes = numAttr(spillDetailsEl, 'WritesToTempDb');
+					var reads  = numAttr(spillDetailsEl, 'ReadsFromTempDb');
+					if (writes !== null || reads !== null) {
+						var PAGE_KB = 8;
+						detail += '\nTempdb: wrote ' + (writes !== null ? writes.toLocaleString() + ' pages (' + Math.round(writes * PAGE_KB / 1024).toLocaleString() + ' MB)' : '?')
+							+ ', read ' + (reads !== null ? reads.toLocaleString() + ' pages (' + Math.round(reads * PAGE_KB / 1024).toLocaleString() + ' MB)' : '?') + '.';
+					}
+				}
+
 				findings.push(finding('error', 'Spill',
-					'Sort/Hash Spill to TempDB',
-					'Operator: ' + (op || '?') + (spills > 1 ? ' (level ' + spills + ')' : '') +
-					'\nData spilled to disk — indicates memory grant too small or bad cardinality estimate.',
-					nodeId, op));
+					'Sort/Hash Spill to TempDB', detail, nodeId, op));
 			});
 
 			// NoJoinPredicate

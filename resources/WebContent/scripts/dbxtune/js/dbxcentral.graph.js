@@ -7,6 +7,29 @@
 ** ** DO NOT CHANGE BELOW: instead edit in 'dbxcentral.utils.js' and then copy the content here
 ** **********************************************************************/
 /**
+ * Utility function: decodeURIComponent() that does NOT throw on malformed input.
+ * A literal '%' in a URL (for example a chart line named '% Idle Time') makes
+ * decodeURIComponent() throw 'URIError: URI malformed'. Falling back to the raw
+ * string is far better than aborting the caller.
+ * @param {*} str 
+ */
+function safeDecodeUriComponent(str)
+{
+	if (str === undefined || str === null)
+		return str;
+
+	try
+	{
+		return decodeURIComponent(str);
+	}
+	catch (error)
+	{
+		console.log("safeDecodeUriComponent(): Failed to decode '" + str + "'. Using the raw value as-is. Error: " + error);
+		return str;
+	}
+}
+
+/**
  * Utility function: Get a specififc parameter from the window URL
  * @param {*} key 
  * @param {*} defaultValue 
@@ -31,7 +54,7 @@ function getParameter(key, defaultValue)
 	
 	//return vars.hasOwnProperty(key) ? vars[key] : defaultValue;
 //	return vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
-	var retValue = vars.hasOwnProperty(key) ? decodeURIComponent(vars[key]) : defaultValue;
+	var retValue = vars.hasOwnProperty(key) ? safeDecodeUriComponent(vars[key]) : defaultValue;
 	//console.log("getParameter(key='"+key+"',default='"+defaultValue+"') <<--- '"+retValue+"'.");
 	return retValue;
 }
@@ -4266,6 +4289,10 @@ class DbxGraph
 	// Based on property "_graphLineProps", hide/show specific laines foreach graph...
 	// The is specified in the URL. Example: http://gorans.org:8080/graph.html?startTime=4h&sessionName=GORAN_UB3_DS&graphList=CmExecutionTime_TimeGraph[Sorting;Compilation]
 	//   - to show only the following 2 lines 'Sorting' and 'Compilation'                                                                               ^^^^^^^^^^^^^^^^^^^^^
+	// Inside the brackets: separate the line names with ';' or ','
+	//   '-name' hides that line (all other lines stay visible), '+name' or 'name' shows ONLY the listed lines.
+	//   The names must match the chart legend label EXACTLY (case sensitive).
+	// See: parseGraphEntryName() for the parser.
 	enableDisableChartLines()
 	{
 		var ci = this._chartObject;
@@ -4287,7 +4314,7 @@ class DbxGraph
 				{
 					if (name === dataset.label)
 					{
-						foundLabel = foundLabel;
+						foundLabel = true;
 						var meta = ci.getDatasetMeta(index);
 						meta.hidden = false;
 					}
@@ -4308,7 +4335,7 @@ class DbxGraph
 				{
 					if (name === dataset.label)
 					{
-						foundLabel = foundLabel;
+						foundLabel = true;
 						var meta = ci.getDatasetMeta(index);
 						meta.hidden = true;
 					}
@@ -4631,6 +4658,17 @@ function dbxChartPrintApiHelp()
 			'Note 3: If the "srv":"SRV_NAME" is specified (as in example 1). the <code>sessionName</code> parameter wont have to be specified<br>' +
 			'Note 4: If only "graph":"CmName_graphName" is specified (as in example 2), or "all" (as in example 3). the <code>sessionName</code> parameter has to be specified, and if you specify more that one server, the graph(s) will be displayed for all servers<br>' +
 			'Note 5: If a comma separated list is specified (as in example 4). the <code>sessionName</code> parameter has to be specified.<br>' +
+			'<br>' +
+			'<b>Choosing which chart lines to display</b><br>' +
+			'Any graph name can be followed by a <code>[...]</code> specification, which decides what chart lines (series) that will be visible.<br>' +
+			'Example 5: <code>CmOsMpstat_MpSum[idlePct]</code> show <b>only</b> the line <code>idlePct</code><br>' +
+			'Example 6: <code>CmOsMpstat_MpSum[-idlePct]</code> show <b>everything except</b> the line <code>idlePct</code><br>' +
+			'Example 7: <code>CmXxx_graph1[+line1;-line2],CmXxx_graph2[-line3]</code> combine it, per graph<br>' +
+			'Note 6: Inside the brackets: separate the line names with <code>;</code> or <code>,</code><br>' +
+			'Note 7: A line name prefixed with <code>-</code> is <b>hidden</b> (all other lines stay visible). A line name prefixed with <code>+</code> (or with no prefix at all) means: show <b>only</b> the listed lines.<br>' +
+			'Note 8: The line names must match the chart legend labels <b>exactly</b> (this is case sensitive).<br>' +
+			'Note 9: In a strictly valid URL, a <code>%</code> in a line name should be written as <code>%25</code>, for example: <code>CmOsIostat_UtilPctGraph[-%25 Idle Time]</code>. A "raw" <code>%</code> is tolerated (it is no longer an error that stops all graphs from beeing loaded).<br>' +
+			'Note 10: The <code>[...]</code> specification can also be used in a JSON object (as in example 1 and 2), and in a <i>Graph Profile</i> stored in the DbxCentral database. In a JSON object you may instead specify it as an object: <code>{"graph":"CmOsMpstat_MpSum", "graphLineProps":{"hideCol":["idlePct"]}}</code><br>' +
 			'</td>' + 
 		'</tr>' +
 		'<tr>' + 
@@ -4817,6 +4855,129 @@ function dbxChartPrintApiHelp()
 	);
 }
 
+
+/**
+ * Split a 'graphList' string on ',' but NOT on commas that are inside [ ... ]
+ * "CmA_g1[a,b],CmB_g2" --> [ "CmA_g1[a,b]", "CmB_g2" ]
+ * @param {*} str 
+ */
+function splitGraphListEntries(str)
+{
+	var entries   = [];
+	var current   = "";
+	var inBracket = false;
+
+	for (let i = 0; i < str.length; i++)
+	{
+		const c = str.charAt(i);
+
+		if      (c === '[')                { inBracket = true;  current += c; }
+		else if (c === ']')                { inBracket = false; current += c; }
+		else if (c === ',' && ! inBracket) { entries.push(current); current = ""; }
+		else                               { current += c; }
+	}
+	entries.push(current);
+
+	return entries;
+}
+
+/**
+ * Parse ONE graph entry, which may have a "chart line specification" appended: CmXxx_graphName[ ... ]
+ * Inside the brackets: separate the line names with ';' or ',' 
+ *   '-name' hides that chart line (everything else stays visible)
+ *   '+name' or 'name' shows ONLY the listed chart lines
+ * Example: CmXxx_graph1[+line1;-line2], CmXxx_graph2[-line2], CmXxx_graph3[line1,line2]
+ * 
+ * @param {*} str A graph name, with or without a "[...]" specification
+ * @returns {graph:"CmXxx_graphName", graphLineProps:{hideCol:[], showCol:[]}}
+ */
+function parseGraphEntryName(str)
+{
+	var graphName = (str === undefined || str === null) ? "" : ("" + str).trim();
+
+	// Plain graph name (no specifications/properties)
+	if ( ! graphName.includes("[") )
+		return { graph: graphName, graphLineProps: {} };
+
+	// First copy/separate the: graphName and then properties into two different variables
+	const startPos = graphName.indexOf("[");
+	var   endPos   = graphName.lastIndexOf("]");
+
+	if (endPos < startPos)
+	{
+		console.log("WARNING: parseGraphEntryName(): Missing end bracket ']' in '" + graphName + "'. Using everything after '[' as the chart line specification.");
+		endPos = graphName.length;
+	}
+
+	const tmpStrGraphName  = graphName.substring(0, startPos).trim();
+	const tmpStrGraphProps = graphName.substring(startPos + 1, endPos);
+
+	if (_debug > 0)
+		console.log("parseGraphEntryName(): tmpStrGraphName='" + tmpStrGraphName + "', tmpStrGraphProps='" + tmpStrGraphProps + "'.");
+
+	// Parse the specification into a "Object" holding: hideCol[] and showCol[]
+	const tmpGraphPropArr = tmpStrGraphProps.split(/[;,]/);
+	var   tmpGraphPropObj = { hideCol:[], showCol:[] }; // empty Object
+
+	for (let i=0; i<tmpGraphPropArr.length; i++) 
+	{
+		const tmpPropEntry = tmpGraphPropArr[i].trim();
+
+		if (tmpPropEntry === "")
+			continue; // just a trailing or double separator, for example: [line1;]
+
+		if (tmpPropEntry.startsWith("-"))
+			tmpGraphPropObj.hideCol.push(tmpPropEntry.substring(1).trim()); // Remove the '-' char
+		else if (tmpPropEntry.startsWith("+"))
+			tmpGraphPropObj.showCol.push(tmpPropEntry.substring(1).trim()); // Remove the '+' char
+		else
+			tmpGraphPropObj.showCol.push(tmpPropEntry);
+	}
+
+	return { graph: tmpStrGraphName, graphLineProps: tmpGraphPropObj };
+}
+
+/**
+ * Normalize a "graph profile", so that the "[...]" chart line specification can be used
+ * in ALL places where a graph name can be specified:
+ *   - graphList=CmXxx_graph[-line1]                                (comma separated list in the URL)
+ *   - graphList=[{"graph":"CmXxx_graph[-line1]"}]                  (JSON object in the URL)
+ *   - a "Graph Profile" stored in the DbxCentral database          (JSON object from /api/graph/profiles)
+ * 
+ * An entry that already holds an explicit "graphLineProps" object is left untouched.
+ * 
+ * @param {*} graphProfile Array of {srv:"...", graph:"..."} objects (changed in place)
+ */
+function normalizeGraphProfile(graphProfile)
+{
+	if ( ! Array.isArray(graphProfile) )
+		return graphProfile;
+
+	for (let i=0; i<graphProfile.length; i++) 
+	{
+		const entry = graphProfile[i];
+
+		if (entry === null || typeof entry !== 'object')
+			continue;
+
+		if (typeof entry.graph !== 'string')
+			continue;
+
+		// Do NOT overwrite an explicitly specified "graphLineProps" object
+		if (typeof entry.graphLineProps === 'object' && entry.graphLineProps !== null)
+		{
+			entry.graph = entry.graph.trim();
+			continue;
+		}
+
+		const parsed = parseGraphEntryName(entry.graph);
+
+		entry.graph          = parsed.graph;
+		entry.graphLineProps = parsed.graphLineProps;
+	}
+
+	return graphProfile;
+}
 
 //window.onload = function() 
 function dbxTuneLoadCharts(destinationDivId)
@@ -5159,61 +5320,35 @@ function dbxTuneLoadCharts(destinationDivId)
 				return;
 			}
 		}
-		else // Try to read it as a comma separated liss and create a graphProfile
+		else // Try to read it as a comma separated list and create a graphProfile
 		{
-			let graphNameArr = graphList.split(",");
+			// Note: split on ',' but NOT on commas inside a "[...]" chart line specification
+			let graphNameArr = splitGraphListEntries(graphList);
 			graphProfile = [];
 			for (let i=0; i<graphNameArr.length; i++) 
 			{
 				var graphEntry = {};
-				var tmpStrEntry = graphNameArr[i];
 
-				graphEntry.graphLineProps = {}; // Initialize with empty object
+				// Parse: "CmXXX_graph1" or "CmXXX_graph1[+line1;-line2]" or "CmXXX_graph1[line1,line2]"
+				const parsedEntry = parseGraphEntryName(graphNameArr[i]);
 
-				// Plain graph name (no specifications/properties)
-				if ( ! tmpStrEntry.includes("[") )
-			//	if ( ! (tmpStrEntry.indexOf("[") !== -1) )
-				{
-					graphEntry.graph = tmpStrEntry;
-					console.log("DEBUG: tmpStrEntry="+tmpStrEntry);
-				}
-				// If the "graphName" contains any "specifications" (if specififc "chart lines" are hidden or visible, handle them here)
-				// a specification looks like: graphList=CmXXX_graph1[+line1;-line2;],CmXXX_graph2[-line2]
-				//                                                   ^^^^^^^^^^^^^^^^             ^^^^^^^^
-				else
-				{
-					// First copy/separate the: graphName and then properties into two different variables
-					const tmpStrGraphName  = tmpStrEntry.substring(0, tmpStrEntry.indexOf("["));
-					const tmpStrGraphProps = tmpStrEntry.substring(tmpStrEntry.indexOf("[") + 1, tmpStrEntry.lastIndexOf("]"));
-					
-					console.log("DEBUG: tmpStrGraphName="+tmpStrGraphName+", tmpStrGraphProps="+tmpStrGraphProps);
-					
-					// TODO: parse tmpStrGraphProps into a "Object"
-					let tmpGraphPropArr = tmpStrGraphProps.split(";");
-					let tmpGraphPropObj = { hideCol:[], showCol:[] }; // empty Object
-					for (let i=0; i<tmpGraphPropArr.length; i++) 
-					{
-						var tmpPropEntry = tmpGraphPropArr[i];
-						
-						// FIXME: Check what to do with this entry... 
-						if (tmpPropEntry.startsWith("-"))
-							tmpGraphPropObj.hideCol.push(tmpPropEntry.substring(1)); // Remove the '-' char
-						else if (tmpPropEntry.startsWith("+"))
-							tmpGraphPropObj.showCol.push(tmpPropEntry.substring(1)); // Remove the '+' char
-						else
-							tmpGraphPropObj.showCol.push(tmpPropEntry);
-					}
-					
-					graphEntry.graph = tmpStrGraphName;
-					graphEntry.graphLineProps = tmpGraphPropObj; // FIXME: This object should later on be passed into: new DbxGraph(... entry.graphLineProps, ...) the DbxGraph Object should handle "the rest"
-				}
-				
+				graphEntry.graph          = parsedEntry.graph;
+				graphEntry.graphLineProps = parsedEntry.graphLineProps;
+
 				// Add the object to the profile
 				graphProfile.push(graphEntry);
 			}
 		}
-		console.log("graphProfile="+graphProfile, graphProfile);
 	}
+
+	// Make the "[...]" chart line specification work from ALL sources:
+	//  - the comma separated 'graphList' (already parsed above, this is a no-op for those entries)
+	//  - a JSON 'graphList' in the URL
+	//  - a "Graph Profile" fetched from the DbxCentral database
+	normalizeGraphProfile(graphProfile);
+
+	if (_debug > 0)
+		console.log("graphProfile="+graphProfile, graphProfile);
 
 	//---------------------------------------------------
 	// create a list of SERVERS (from the profile) that we will need to get GraphInformation about:

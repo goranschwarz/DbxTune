@@ -83,6 +83,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>If any Report Sections times-out when running SQL Statements, include a "explain", so we can get the execution plan... to fix the issue...</LI>
 				<LI>In OsSpaceUsageOverview; show Estimate of "how many days until Disk is full" -- Raise Alarm if "CRITICAL" -- Meaning: in 7 days we will get full</LI>
 				<LI>Sending AlarmEventDbmsVersionString in Daily Summary Report if version string has changed</LI>
+				<LI>Added "View Execution Plan" for most sections with SQL Statements</LI>
+				<LI>"Get LLM Optimization Advice" now also sends "Workload over report period" (more or less the small sparlines summary), so the LLM has more info</LI>
+				<LI>Write less raw DDL Text -- Properties: "DailySummaryReport.ddl.maxlen.table=-1", "DailySummaryReport.ddl.maxlen.trigger=4096"</LI>
+				<LI>Generate "on the fly" report, switch from "local blob" storage to saving a temp file at the web server (due to browsers are now blocking local blob storage), temp files will be removed after 24 hours. and are stored at 'tmp-dsr' directory in the reports dir</LI>
 			</UL>
 		</LI>
 
@@ -210,6 +214,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <li>Tried to fix "missing Counder Data"... If the PCS is slow at storing data... we might "not see it" at DbxCentral -- So Basically retry fetch data (BUT I could NOT test this, so it might still be broken)</li>
         <li>Counter Details -- Remember current tab name within a "tab group" (move more fluently between tabs, and remember the last visited CM)</li>
         <li>A Showplan GUI for Sybase ASE at /showplan/ase' and in 'Active Statements'. Then also a showplan landing page at '/showplan', which has: SQL Server, Postgres and Sybase options </li>
+        <li>Active Statements -- Show any problems like 'TimeOutExceptions'... (by calling the collectors management api: /api/cc/mgt/cm/list, so it needs a existing recording database)</li>
+        <li>Active Statements and Daily Summary Report -- Added 'Get LLM Optimization Advice' to send a SQL Statement to any configured LLM for some advise</li>
+        <li>SQL Server: Showplan - Switched from the default viewer 'html-query-plan' to our own implementation, which we can enhance in any way</li>
+        <li>Sybase ASE: Showplan - Smaller tweeks (TODO: better align with the SQL Server Showplan)</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -234,6 +242,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmOpenDatabases    </b> -- Alarm: LastBackupFailed was made to raise 'LastDbBackupFailed' or 'LastWalBackupFailed'.</LI>
 		<LI><b>CmOpenDatabases    </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>
 		<LI><b>CmOpenDatabases    </b> -- changed default for 'alarm.system.if.LastDbBackupAgeInHours.skip.dbs=(model|tempdb)' and 'alarm.system.if.LastLogBackupAgeInHours.skip.dbs=(master|model|tempdb)'</LI>
+		<LI><b>CmOpenDatabases    </b> -- Better detection of LastBackupFailed... It can now alarm for both DB and WAL</LI>
 
 		<LI><b>CmPCacheModuleUsage</b> -- Alarm: StatementCacheAboveConfig -- Refresh Statement Cache size before sending alarm.</LI>
 
@@ -348,6 +357,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmDatabases         </b> -- Only get "Database Scoped Configuration (Only Non Defaults)" for databases with higher compatibility_level than 130 (or higher) </LI>
 		<LI><b>CmDatabases         </b> -- changed default for 'alarm.system.if.LastDbBackupAgeInHours.skip.dbs=(model|tempdb)' and 'alarm.system.if.LastIncDbBackupAgeInHours.skip.dbs=(model|tempdb)' and 'alarm.system.if.LastLogBackupAgeInHours.skip.dbs=(master|msdb|model|tempdb)' </LI>
 
+		<LI><b>CmErrorLog          </b> -- New Alarm for: LastBackupFailed -- AlarmEventLastDbBackupFailed, AlarmEventLastWalBackupFailed or AlarmEventLastBackupFailed (default TimeToLive is 30 minutes, which can be changed with: CmErrorLog.alarm.system.on.LastBackupFailed.ttl.minutes)</LI>
+		<LI><b>CmErrorLog          </b> -- Discarding Msg 4014 -- A fatal error occurred while reading the input stream from the network. The session will be terminated (input error: #, output error: #)</LI>
+
 		<LI><b>CmIndexOpStatSum    </b> -- Added graph: Insert/Update/Delete Rows Per Second for User Databases</LI>
 
 		<LI><b>CmMemoryClerks      </b> -- In graph "All Memory Clerks vs Target & Total Memory, in MB" -- added one line "All Other Memory Clerks" -- So we can see "memory steals" easier</LI>
@@ -358,6 +370,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmWaitStats         </b> -- Added new graphs: LockTime, LockCount & LockTpw -- To view "Server LCK_M_* Wait Types, by 'wait_time_ms/waiting_tasks_count/WaitTimePerCount'.</LI>
 		<LI><b>CmWaitStats         </b> -- In the skip list added wait_types: 'AZURE_IMDS_VERSIONS', 'PREEMPTIVE_OS_DELETESECURITYCONTEXT', 'PREEMPTIVE_OS_REPORTEVENT', 'POPULATE_LOCK_ORDINALS', 'SOS_WORKER_MIGRATION' from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql</LI>
+		<LI><b>CmWaitStats         </b> -- Added new graph: WaitClassTime -- Server Wait: 'wait_time_ms' Rate Value, Group by 'WaitClass'</LI>
 
 		<LI><b>CmWaitingTasks      </b> -- Cleaned up SQL Statements for 'currentSqlText' that starts with ')' and simply removed that.</LI>
 
@@ -393,6 +406,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmPgTables    </b> -- Added column 'est_bloat_pct' -- algo: n_dead_tup / n_live_tup * 100  (Skipping tables with 'n_dead_tup' less than 100)</LI>
 		<LI><b>CmPgTables    </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
+
+		<LI><b>CmPgTableBloat </b> -- Do not show bloat for schema 'information_schema'</LI>
+		<LI><b>CmPgTableBloat </b> -- Added a comment to SQL -- reloptions -- Get relation options like 'autovacuum' settings</LI>
 
 		<LI><b>CmPgTableSize </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
 

@@ -49,6 +49,7 @@ import com.dbxtune.pcs.report.content.AlarmsActive;
 import com.dbxtune.pcs.report.content.AlarmsHistory;
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
 import com.dbxtune.pcs.report.content.DbxTuneCmRefreshInfo;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.DbxTuneErrors;
 import com.dbxtune.pcs.report.content.DbxTunePcsTablesSize;
 import com.dbxtune.pcs.report.content.IReportEntry;
@@ -1295,6 +1296,14 @@ extends DailySummaryReportAbstract
 		writer.append("\n");
 		writer.append( createShowSqlTextDialogHtml() );
 		writer.append( createShowSqlTextDialogJs()   );
+
+		// dsrOpenLink() + the workload harvester, used by EVERY 'dsr-link' anchor ("View Execution Plan"
+		// and "Get LLM Optimization Advice").
+		// NOTE: written unconditionally. Those anchors are emitted for any statement that has SQL text,
+		//       so this must NOT depend on some section happening to have an execution plan to write -
+		//       that is exactly how reports from a server with no captured showplans ended up throwing
+		//       "Uncaught ReferenceError: dsrOpenLink is not defined" on every link.
+		writer.append( ShowplanLinkBuilder.getDsrLinkSupportJs() );
 
 		writer.append("\n");
 		writer.append("</div> \n"); // END: Bootstrap 4 container

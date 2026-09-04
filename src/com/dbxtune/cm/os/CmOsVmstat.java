@@ -551,14 +551,14 @@ extends CounterModelHostMonitor
 						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
 
 				// Get CPU Summary Usage chart
-				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
+				htmlChartImage += "<br>" + CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
 
 				// Get Available Memory
-				htmlChartImage += CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
+				htmlChartImage += "<br>" + CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
 				
 				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
-//				htmlChartImage += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
-				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
+//				htmlChartImage += "<br>" + CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
+				htmlChartImage += "<br>" + CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
 				
 				AlarmEventOsSwapThrashing alarm = new AlarmEventOsSwapThrashing(cm, threshold, maxCap, hostname, "over " + MOVING_AVG_TIME_IN_MINUTES + " minute moving average", 
 						swapIn_xmAvg,  swapIn_peakTs,  swapIn_peakNumber,

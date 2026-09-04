@@ -42,10 +42,10 @@ import com.dbxtune.utils.HtmlQueryString;
  * Central-side proxy for the vendor-generic table-info endpoint on the collector.
  *
  * <pre>GET /api/cc/mgt/table-info?srv=SRVNAME&amp;dbVendor=X&amp;dbname=Y&amp;tables=t1,t2
- *                              [&amp;format=html|text][&amp;ts=YYYY-MM-DD+HH:mm:ss]</pre>
+ *                              [&amp;format=html|text|json][&amp;ts=YYYY-MM-DD+HH:mm:ss]</pre>
  *
  * <p>Forwards to the collector's {@code /mgt/table-info} endpoint ({@code TableInfoServlet}).
- * Used by the ASE Showplan dialog's "Table Information" and "LLM Optimization Advice" sections
+ * Used by the ASE and SQL Server Showplan dialogs' "Table Information" and "LLM Optimization Advice" sections
  * (mirrors {@link ProxyQueryStoreServlet}, which does the same for SQL Server's Query-Store-backed
  * {@code action=tableInfo} - this endpoint is the vendor-agnostic counterpart, not a replacement).
  */

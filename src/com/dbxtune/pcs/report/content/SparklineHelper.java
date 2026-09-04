@@ -463,7 +463,185 @@ public class SparklineHelper
 		}
 
 		// Return init code for JavaScript
-		return getJavaScriptInitCode(reportEntry, result, params.getSparklineClassName(), params.getSparklineTooltipPostfix());
+		return getSparklineTimebaseDiv(reportEntry, reportBegin, params.getGroupDataInMinutes())
+		     + getJavaScriptInitCode(reportEntry, result, params.getSparklineClassName(), params.getSparklineTooltipPostfix());
+	}
+
+	/**
+	 * JavaScript that reads the "sparkline sub-table" for a clicked link out of the page, and returns it
+	 * as compact JSON -- the input to "Get LLM Optimization Advice"'s workload profile.
+	 * <p>
+	 * <b>Why at click time:</b> everything needed is ALREADY in the report file. The per-statement
+	 * sub-table (class {@code dsr-sub-table-chart}) holds one row per metric, and each row holds the
+	 * metric name, the chart (a {@code <div class='sparklines_...' values='0,0,3520,...'>} written by
+	 * {@link #getSparklineDiv}), the Total and the Avg per exec. Harvesting it on click therefore adds
+	 * NOTHING to the report size -- as opposed to baking a per-row text blob into every link.
+	 * <p>
+	 * Only the raw numbers are collected here; {@code dbxLlmAdvice.js} turns them into prose
+	 * ("only peaks at 14:20", "spread evenly over the whole day", ...). Keeping the analysis in the
+	 * deployable .js -- rather than in JavaScript built from Java string concatenation -- means that
+	 * improving the wording or the heuristics later also improves ALREADY ARCHIVED reports.
+	 * <p>
+	 * Written ONCE per report, and shared by every {@code dsrOpenLink()} definition (see
+	 * {@code AseAbstract.writeXmlPlanSupportJs()} and {@code ExecutionPlanCollection}) so the ASE and
+	 * SQL Server variants can not drift apart.
+	 * <p>
+	 * Emits two functions:
+	 * <ul>
+	 *   <li>{@code dsrHarvestWorkload(el)} - returns the JSON (or "" when the link has no sub-table)
+	 *   <li>{@code dsrAddWorkload(a)} - for the PLAIN (e-mail safe) advice links: appends the data to the
+	 *       anchor's own href just before navigating. With JavaScript disabled the href is untouched and
+	 *       behaves exactly as before, just without a workload profile.
+	 * </ul>
+	 *
+	 * <b>IMPORTANT:</b> this returns BARE JavaScript, WITHOUT any {@code <script>} wrapper - both callers
+	 * splice it into a {@code <script>} block they have already opened. Do NOT add the tags back: a nested
+	 * {@code <script>} is a syntax error inside JavaScript, which silently kills the WHOLE surrounding
+	 * block (so {@code dsrOpenLink}/{@code showplanForId}/{@code copyStringToClipboard} would all become
+	 * undefined), and its {@code </script>} would close the outer block early.
+	 */
+	public static String getWorkloadHarvesterJs()
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("    if (typeof dsrHarvestWorkload === 'undefined') { \n");
+		sb.append("    function dsrHarvestWorkload(el) \n");
+		sb.append("    { \n");
+		sb.append("        try { \n");
+		sb.append("            if (!el || !el.closest) return ''; \n");
+		sb.append("            var tr = el.closest('tr'); \n");
+		sb.append("            if (!tr) return ''; \n");
+		sb.append("            var tbl = tr.querySelector('table.dsr-sub-table-chart'); \n");
+		sb.append("            if (!tbl) return ''; \n");
+		sb.append("            var tb  = document.getElementById('dsr-sparkline-timebase'); \n");
+		sb.append("            var out = { begin: tb ? (tb.getAttribute('data-begin') || '') : '', \n");
+		sb.append("                        intervalMin: tb ? (parseInt(tb.getAttribute('data-interval'), 10) || 0) : 0, \n");
+		sb.append("                        rows: [] }; \n");
+		sb.append("            var trs = tbl.querySelectorAll('tr'); \n");
+		sb.append("            for (var i = 0; i < trs.length; i++) \n");
+		sb.append("            { \n");
+		sb.append("                var tds = trs[i].querySelectorAll('td'); \n");
+		sb.append("                if (tds.length < 2) continue; \n"); // header row
+		sb.append("                var row = { k: (tds[0].textContent || '').trim() }; \n");
+		sb.append("                if (!row.k) continue; \n");
+		sb.append("                var spark = trs[i].querySelector(\"div[values]\"); \n");
+		sb.append("                if (spark) \n");
+		sb.append("                { \n");
+		sb.append("                    row.v = spark.getAttribute('values') || ''; \n");
+		// The sparkline's css class carries the underlying DBMS column name (see getSparklineClassName()):
+		//     'sparklines_Elapsed_ms__chart'  ->  'Elapsed_ms'
+		// Worth passing on: the row label alone ('exec-time') says nothing about the UNIT, while the
+		// column name usually does -- Elapsed_ms is milliseconds, LogicalReadsMb is MB, MemUsageKB is KB.
+		sb.append("                    var cls = /(?:^|\\s)sparklines_(\\S+)/.exec(spark.getAttribute('class') || ''); \n");
+		sb.append("                    if (cls) \n");
+		sb.append("                    { \n");
+		sb.append("                        var col = cls[1].replace(/__chart$/, ''); \n");
+		// SqlServerQueryStore sets setSparklineClassNamePrefix(dbname), so the class is
+		// 'sparklines_<dbname>_<column>__chart' -- peel that off using the link's own dbname
+		// (which getSparklineClassNamePrefix() ran through StringUtil.stripAllNonAlphaNum()).
+		sb.append("                        var db = el.getAttribute ? (el.getAttribute('data-dbname') || '') : ''; \n");
+		sb.append("                        if (db) \n");
+		sb.append("                        { \n");
+		sb.append("                            var pfx = db.replace(/[^A-Za-z0-9]/g, '') + '_'; \n");
+		sb.append("                            if (col.indexOf(pfx) === 0) col = col.substring(pfx.length); \n");
+		sb.append("                        } \n");
+		sb.append("                        if (col) row.c = col; \n");
+		sb.append("                    } \n");
+		sb.append("                } \n");
+		// Read by ABSOLUTE cell position - every HtmlTableProducer 'sparkline' spec lays the row out as
+		//   [0]=label  [1]=chart  [2]=Total  [3]=Avg per exec  [4]=unit
+		// Some rows legitimately leave [1] and/or [2] empty (e.g. 'scan-rows' in AseTopCmStmntCacheDetails
+		// is average-only), so we must NOT compact the cells first - that would slide the Avg into the
+		// unit slot and silently mislabel the numbers.
+		sb.append("                var cell = function(idx) { \n");
+		sb.append("                    if (idx >= tds.length) return ''; \n");
+		sb.append("                    if (tds[idx].querySelector('div[values]')) return ''; \n"); // that's the chart
+		sb.append("                    return (tds[idx].textContent || '').trim(); \n");
+		sb.append("                }; \n");
+		sb.append("                var t = cell(2), a = cell(3), u = cell(4); \n");
+		sb.append("                if (t) row.t = t; \n");
+		sb.append("                if (a) row.a = a; \n");
+		sb.append("                if (u) row.u = u; \n");
+		// A row with only a label and nothing else tells the LLM nothing - but keep free-text rows
+		// like 'note', whose text sits in the chart slot rather than in the Total/Avg columns.
+		// NOTE: such a cell is rendered with <BR> as the separator (see the 'NoteRenderer's in the
+		//       report sections), and textContent would silently glue the words together - so turn
+		//       the line breaks back into ', ' first. It is carried as 'n' (free text), never as a
+		//       Total, so the analyzer does not label it with a number's wording.
+		sb.append("                if (!row.v && !row.t && !row.a) \n");
+		sb.append("                { \n");
+		sb.append("                    if (tds.length < 2 || tds[1].querySelector('div[values]')) continue; \n");
+		sb.append("                    var tmp = document.createElement('div'); \n");
+		sb.append("                    tmp.innerHTML = (tds[1].innerHTML || '').replace(/<br\\s*\\/?>/gi, ', '); \n");
+		sb.append("                    var free = (tmp.textContent || '').replace(/\\s+/g, ' ').trim(); \n");
+		sb.append("                    if (!free) continue; \n");
+		sb.append("                    row.n = free; \n");
+		sb.append("                } \n");
+		sb.append("                out.rows.push(row); \n");
+		sb.append("            } \n");
+		sb.append("            if (out.rows.length === 0) return ''; \n");
+		sb.append("            return JSON.stringify(out); \n");
+		sb.append("        } catch (e) { console.log('dsrHarvestWorkload: ' + e); return ''; } \n");
+		sb.append("    } \n");
+		sb.append("\n");
+		// For the PLAIN (e-mail safe) advice link. When JavaScript is available we POST it, exactly like
+		// dsrOpenLink does, because this href has the very same size problem: measured on real reports it
+		// already reaches ~225KB (it carries a precomputed DDL context), and it only grows.
+		// Returning false then stops the browser following the href as well.
+		// Every failure path returns TRUE so the plain href is used instead - and with no JavaScript at
+		// all (an e-mail client) this function never runs, which is the whole point of that link.
+		sb.append("    function dsrAddWorkload(a) \n");
+		sb.append("    { \n");
+		sb.append("        try { \n");
+		sb.append("            if (!a || typeof dsrPostToNewTab !== 'function') return true; \n");
+		sb.append("            var hashPos = a.href.indexOf('#'); \n");
+		sb.append("            if (hashPos < 0) return true; \n");
+		sb.append("            var qs = new URLSearchParams(a.href.substring(hashPos + 1)); \n");
+		sb.append("            var params = {}; \n");
+		sb.append("            qs.forEach(function (v, k) { if (v) params[k] = v; }); \n");
+		sb.append("            if (!params.sql) return true; \n");
+		sb.append("            var wl = dsrHarvestWorkload(a); \n");
+		sb.append("            if (wl) params.workloadData = wl; \n");
+		sb.append("            dsrPostToNewTab(a.href.substring(0, hashPos), params); \n");
+		sb.append("            return false; \n"); // handled - do not ALSO follow the href
+		sb.append("        } catch (e) { console.log('dsrAddWorkload: ' + e); } \n");
+		sb.append("        return true; \n");
+		sb.append("    } \n");
+		sb.append("    } \n");
+		// NOTE: no "</script>" here - see the javadoc; this is spliced INTO an already open <script>
+
+		return sb.toString();
+	}
+
+	/**
+	 * A hidden element that says WHEN the first sparkline bucket starts, and how wide a bucket is.
+	 * <p>
+	 * The sparkline values themselves are already in the HTML (see {@link #getSparklineDiv}, they are
+	 * what draws the chart), but they carry no timestamps -- so anything that wants to reason about
+	 * *when* something happened needs this. The "Get LLM Optimization Advice" links use it: they harvest
+	 * the sparkline sub-table from the DOM at CLICK time and describe the usage pattern over time
+	 * ("only peaks at 14:20", "spread evenly over the whole day", ...) to the LLM. Doing it at click
+	 * time means none of that costs anything in the report file.
+	 * <p>
+	 * All sparklines in a report share the same bucket boundaries (they are all generated from the same
+	 * report period, see 'reportBegin' in {@link #createSparkline}), so this is written ONCE per report.
+	 */
+	private static String getSparklineTimebaseDiv(IReportEntry reportEntry, LocalDateTime reportBegin, int groupDataInMinutes)
+	{
+		if (reportEntry.hasStatusEntry("sparklineTimebase_writeOnce"))
+			return "";
+		reportEntry.setStatusEntry("sparklineTimebase_writeOnce");
+
+		if (reportBegin == null)
+			return "";
+
+		// Note: the bucket boundaries are "rounded down", the same way createSparkline/getSparclineData does it
+		LocalDateTime firstBucketBegin = adjustTimeToLowerMinuteBound(reportBegin, groupDataInMinutes);
+
+		return "\n<div id='dsr-sparkline-timebase' style='display:none'"
+				+ " data-begin='"    + firstBucketBegin.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + "'"
+				+ " data-interval='" + groupDataInMinutes + "'"
+				+ "></div>\n";
 	}
 
 	public static String getSparklineDiv(SparklineResult result, String sparklineClassName, String noBrowserText)
