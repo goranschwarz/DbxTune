@@ -29,8 +29,13 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -130,9 +135,56 @@ extends AlarmWriterAbstract
 	}
 
 	/**
+	 * How much detail the Active Alarms Summary is rendered with.
+	 * <p>
+	 * We start at the top and step down until the Card fits inside the Microsoft Teams size limit,
+	 * so a quiet day gets the informative message and a bad day still gets a message at all.
+	 */
+	private enum SummaryDetail
+	{
+		/** "4 <dot> OsLoadAverage, LowDbFreeSpace (goran_16, model, sybsecurity)" */
+		WITH_EXTRA_INFO,
+
+		/** "4 <dot> OsLoadAverage, LowDbFreeSpace x3" */
+		COMPACT,
+
+		/** No summary at all -- last resort, the alarm itself matters more than the summary */
+		NONE
+	}
+
+	/**
 	 * Build the full Teams "message" envelope, wrapping an Adaptive Card.
+	 * <p>
+	 * The Active Alarms Summary is rendered as informatively as will fit: we build the Card, and if it
+	 * comes out over the Teams size limit we rebuild it with a terser summary. Note that the Card can
+	 * be pushed over the limit by the alarm's own extendedDescription (which can hold a lot of SQL
+	 * text), so the summary is what gives way, not the alarm.
 	 */
 	private String createTeamsJsonContent(String action, AlarmEvent alarmEvent)
+	{
+		// Fetch ONCE, even if we end up rendering the Card more than once
+		ActiveAlarmSummary.Result summary = getActiveAlarmSummary(action, alarmEvent);
+
+		String json = null;
+		for (SummaryDetail detail : SummaryDetail.values())
+		{
+			json = createTeamsJsonContent(action, alarmEvent, summary, detail);
+
+			int sizeInBytes = json.getBytes(StandardCharsets.UTF_8).length;
+			if (sizeInBytes <= _summaryMaxCardSizeKb * 1024)
+				return json;
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("Teams Card was " + sizeInBytes + " bytes, which is above the limit of " + (_summaryMaxCardSizeKb * 1024)
+						+ ". Retrying with a terser Active Alarms Summary than '" + detail + "'.");
+		}
+
+		// Even without a summary it's too big -- send it anyway, the alarm is what matters
+		_logger.info("Teams Card is above the configured limit of " + _summaryMaxCardSizeKb + " KB even without the Active Alarms Summary. Sending it as is.");
+		return json;
+	}
+
+	private String createTeamsJsonContent(String action, AlarmEvent alarmEvent, ActiveAlarmSummary.Result summary, SummaryDetail summaryDetail)
 	{
 		String title         = WriterUtils.createMessageFromTemplate(action, alarmEvent, _titleTemplate, true, null, alarmEvent.getDbxCentralUrl());
 		String description   = WriterUtils.createMessageFromTemplate(action, alarmEvent, _descTemplate,  true, null, alarmEvent.getDbxCentralUrl());
@@ -235,6 +287,9 @@ extends AlarmWriterAbstract
 							w.endObject();
 						}
 
+						// Summary of what is STILL ACTIVE (this Collector + the other servers in our group)
+						writeActiveAlarmSummary(w, summary, summaryDetail);
+
 						// Button linking to DbxCentral (only if we have a URL)
 						if (StringUtil.hasValue(dbxCentralUrl))
 						{
@@ -263,6 +318,69 @@ extends AlarmWriterAbstract
 		catch(IOException ex)
 		{
 			return "" + ex;
+		}
+	}
+
+	/**
+	 * Append the "Active Alarms" summary section to the Card body.
+	 * <p>
+	 * The rows themselves are built by {@link ActiveAlarmSummary#toRows}, which every AlarmWriter
+	 * shares - one row per <b>server</b> (not per alarm), which is what keeps the Card below the
+	 * Microsoft Teams size limit when a lot of things are broken at once.
+	 */
+	private void writeActiveAlarmSummary(JsonWriter w, ActiveAlarmSummary.Result result, SummaryDetail summaryDetail) throws IOException
+	{
+		if (result == null || SummaryDetail.NONE.equals(summaryDetail))
+			return;
+
+		boolean withExtraInfo = SummaryDetail.WITH_EXTRA_INFO.equals(summaryDetail);
+
+		//----------------------------------------------------
+		// Header
+		//----------------------------------------------------
+		w.beginObject();
+		w.name("type").value("Container");
+		w.name("separator").value(true);
+		w.name("spacing").value("Medium");
+		w.name("items");
+		w.beginArray();
+			w.beginObject();
+			w.name("type").value("TextBlock");
+			w.name("text").value(ActiveAlarmSummary.createHeader(result, getActiveAlarmSummaryGroup()));
+			w.name("weight").value("Bolder");
+			w.name("wrap").value(true);
+			w.endObject();
+		w.endArray();
+		w.endObject();
+
+		if (result.entries.isEmpty())
+			return;
+
+		//----------------------------------------------------
+		// One fact per server
+		//----------------------------------------------------
+		w.beginObject();
+		w.name("type").value("FactSet");
+		w.name("facts");
+		w.beginArray();
+			for (ActiveAlarmSummary.Row row : ActiveAlarmSummary.toRows(result, getActiveAlarmSummaryMaxRows(), withExtraInfo))
+				writeFact(w, row.srvName == null ? ELLIPSIS : row.srvName, row.text);
+		w.endArray();
+		w.endObject();
+
+		//----------------------------------------------------
+		// Be honest about how fresh the "other servers" part is.
+		//----------------------------------------------------
+		if (ActiveAlarmSummary.showFreshnessNote(result))
+		{
+			w.beginObject();
+			w.name("type").value("TextBlock");
+			w.name("text").value(ActiveAlarmSummary.FRESHNESS_NOTE);
+			w.name("wrap").value(true);
+			w.name("isSubtle").value(true);
+			w.name("size").value("Small");
+			w.name("spacing").value("Small");
+			w.endObject();
 		}
 	}
 
@@ -346,6 +464,11 @@ extends AlarmWriterAbstract
 
 		list.add( new CmSettingsHelper("DbxCentralUrl",                   PROPKEY_dbxCentralUrl,    String .class, conf.getProperty       (PROPKEY_dbxCentralUrl   , DEFAULT_dbxCentralUrl   ), DEFAULT_dbxCentralUrl   , "Where is the DbxCentral located, if you want your template/messages to include it using ${dbxCentralUrl}", new UrlInputValidator()));
 
+		// Active Alarms Summary: the generic settings live in AlarmWriterAbstract, so every writer shares them
+		list.addAll( getActiveAlarmSummarySettings() );
+
+		list.add( new CmSettingsHelper("activeAlarms-summary-maxCardSizeKb",         PROPKEY_summaryMaxCardSizeKb, Integer.class, conf.getIntProperty(PROPKEY_summaryMaxCardSizeKb, DEFAULT_summaryMaxCardSizeKb), DEFAULT_summaryMaxCardSizeKb, "<html>Microsoft Teams rejects Adaptive Cards above roughly 28 KB.<br>If the Card ends up bigger than this, the summary is re-rendered in a terser form (dropping the 'extraInfo' and just counting, eg <code>LowDbFreeSpace x3</code>), and as a last resort dropped entirely. The alarm itself is never dropped.</html>"));
+
 		// Routing rules: route-1 .. route-9, first ServerName-regex match wins, otherwise falls back to 'URL' above
 		for (int i=1; i<=MAX_ROUTES; i++)
 		{
@@ -378,6 +501,8 @@ extends AlarmWriterAbstract
 	private boolean _isReRaiseEnabled = false;
 
 	private List<Route> _routes       = new ArrayList<>();
+
+	private int                 _summaryMaxCardSizeKb = DEFAULT_summaryMaxCardSizeKb;
 
 	//-------------------------------------------------------
 
@@ -453,6 +578,11 @@ extends AlarmWriterAbstract
 
 			_routes.add(new Route(regex, url));
 		}
+
+		//------------------------------------------
+		// Active Alarms Summary
+		//------------------------------------------
+		_summaryMaxCardSizeKb = conf.getIntProperty(PROPKEY_summaryMaxCardSizeKb, DEFAULT_summaryMaxCardSizeKb);
 	}
 
 	@Override
@@ -464,6 +594,11 @@ extends AlarmWriterAbstract
 		_logger.info("    " + StringUtil.left(PROPKEY_titleTemplate,    spaces) + ": " + _titleTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_descTemplate,     spaces) + ": " + _descTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_isReRaiseEnabled, spaces) + ": " + _isReRaiseEnabled);
+
+		// Active Alarms Summary (generic part lives in AlarmWriterAbstract)
+		printActiveAlarmSummaryConfig();
+		if (isActiveAlarmSummaryEnabled(ACTION_RAISE))
+			_logger.info("    " + StringUtil.left(PROPKEY_summaryMaxCardSizeKb, 50) + ": " + _summaryMaxCardSizeKb);
 
 		if (_routes.isEmpty())
 		{
@@ -500,4 +635,14 @@ extends AlarmWriterAbstract
 
 	public static final String  PROPKEY_routeUrl        = "AlarmWriterToTeams.route.<N>.url";
 	public static final String  DEFAULT_routeUrl        = null;
+
+	/** Microsoft Teams rejects Adaptive Cards above roughly 28 KB, so stay below that with some margin */
+	public static final String  PROPKEY_summaryMaxCardSizeKb = "AlarmWriterToTeams.activeAlarms.summary.maxCardSizeKb";
+	public static final int     DEFAULT_summaryMaxCardSizeKb = 25;
+
+	// NOTE: These are built from their code points on purpose, so this source file stays pure ASCII.
+	//       build.xml does not set an "encoding" on the <javac> task, which means javac falls back on
+	//       the platform default charset -- and these characters are rendered in the Teams Card.
+	private static final String ELLIPSIS   = Character.toString((char) 0x2026); // "..." (horizontal ellipsis)
+
 }

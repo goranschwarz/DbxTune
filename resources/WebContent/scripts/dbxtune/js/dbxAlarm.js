@@ -16,7 +16,7 @@ $(function()
 	// Extended Description viewer
 	if ($('#dbx-view-extDescTable-dialog').length === 0) {
 		$('body').append([
-			"<div class='modal fade' id='dbx-view-extDescTable-dialog' role='dialog'",
+			"<div class='modal fade' id='dbx-view-extDescTable-dialog' tabindex='-1' role='dialog'",
 			"     aria-labelledby='dbx-view-extDescTable-dialog' aria-hidden='true'>",
 			"  <div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>",
 			"    <div class='modal-content'>",
@@ -46,7 +46,7 @@ $(function()
 	// Alarm detail viewer
 	if ($('#dbx-view-alarmView-dialog').length === 0) {
 		$('body').append([
-			"<div class='modal fade' id='dbx-view-alarmView-dialog' role='dialog'",
+			"<div class='modal fade' id='dbx-view-alarmView-dialog' tabindex='-1' role='dialog'",
 			"     aria-labelledby='dbx-view-alarmView-dialog' aria-hidden='true'>",
 			"  <div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>",
 			"    <div class='modal-content'>",

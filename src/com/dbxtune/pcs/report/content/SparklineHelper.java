@@ -673,92 +673,193 @@ public class SparklineHelper
 			sb.append("\n");
 			sb.append("<div id='" + name + "-progress-div' style='display:none'> \n");
 			sb.append("  <label for='" + name + "-progress-bar'>" + label + "</label> \n");
-			sb.append("  <progress id='" + name + "-progress-bar' max='100' style='height: 20px; width:80%;'></progress> \n");
+			sb.append("  <progress id='" + name + "-progress-bar' max='100' style='height: 20px; width:50%;'></progress> \n");
 			sb.append("  <button id='" + name + "-stop-progress-but' onclick='stopSparklineInit()' type='button' class='btn btn-primary btn-sm'>Stop</button> \n");
 			sb.append("</div>\n");
 
 			sb.append("\n");
 			sb.append("<script type='text/javascript'>\n");
 			sb.append("\n");
-			sb.append("    // Variable to hold all sparkline objects \n");
+			sb.append("    // The sparkline classes found in this report, and their configs. \n");
+			sb.append("    // NOTE: 'sparklineListToLoad' is NOT a work queue any more -- it is the list of \n");
+			sb.append("    //       classes to OBSERVE. Each individual element is rendered on demand, when \n");
+			sb.append("    //       it is about to be scrolled into view. \n");
 			sb.append("    const sparklineListToLoad  = []; \n");
 			sb.append("    const sparklineListCreated = []; \n");
 			sb.append("      var sparklineListMax     = 0; \n");
 			sb.append("    const sparklineConfMap     = new Map(); \n");
 			sb.append("\n");
-			
+			sb.append("    // Elements waiting to be drawn, and the config to draw each one with \n");
+			sb.append("    const sparklineRenderQueue = []; \n");
+			sb.append("    const sparklineElemConfMap = new WeakMap(); \n");
+			sb.append("      var sparklineObserver    = null; \n");
+			sb.append("      var sparklineBusy        = false; \n");
+			sb.append("      var sparklineBurstDone   = 0; \n");
+			sb.append("      var sparklineProgressTimer = null; \n");
+			sb.append("\n");
+
 			sb.append("    // function called when pressing 'Stop' button right next to the progress bar \n");
 			sb.append("    function stopSparklineInit() \n");
 			sb.append("    { \n");
 			sb.append("        console.log('-stopSparklineInit-');  \n");
-			sb.append("        while (sparklineListToLoad.length !== 0) \n");
-			sb.append("            sparklineListToLoad.shift(); \n");
+			sb.append("        while (sparklineRenderQueue.length !== 0) \n");
+			sb.append("            sparklineRenderQueue.shift(); \n");
+			sb.append("\n");
+			sb.append("        // Really stop: without disconnecting, the next scroll would just start it again \n");
+			sb.append("        if (sparklineObserver) \n");
+			sb.append("        { \n");
+			sb.append("            sparklineObserver.disconnect(); \n");
+			sb.append("            sparklineObserver = null; \n");
+			sb.append("        } \n");
 			sb.append("    } \n");
-			
-			sb.append("    // function to be called at page load, which will initialize all Charts, (and update progressbar) \n");
+			sb.append("\n");
+
+			sb.append("    // Draw ONE sparkline element (measured at ~32 ms, which is short enough not to jank) \n");
+			sb.append("    function drawSparkline(elem) \n");
+			sb.append("    { \n");
+			sb.append("        var config = sparklineElemConfMap.get(elem); \n");
+			sb.append("        $(elem).sparkline('html', config); \n");
+			sb.append("\n");
+			sb.append("        // now show the Max|Min: ### overlay, which is a SIBLING of the sparkline div \n");
+			sb.append("        $(elem).siblings('.sparkline-ind-val').css('display', 'block'); \n");
+			sb.append("    } \n");
+			sb.append("\n");
+
+			sb.append("    // Pump: draw one queued element per tick, so the page stays responsive while scrolling \n");
 			sb.append("    function loadNextSparkline() \n");
 			sb.append("    { \n");
-
-			sb.append("        // Enable the progresbar; \n");
-			sb.append("        if (sparklineListCreated.length === 0) \n");
-			sb.append("        { \n");
-			sb.append("            console.log('-load-first-" + name + "-');  \n");
-			sb.append("            sparklineListMax = sparklineListToLoad.length; \n");
-			
-			sb.append("            // show the progressbar\n");
-			sb.append("            document.getElementById('" + name + "-progress-div').style.display = 'block'; \n");  // show
-			
-			sb.append("            // if possible move the div into the 'progress-area' or add some attributes to it. \n");
-			sb.append("            if (document.getElementById('progress-area')) \n");
-			sb.append("            { \n");
-			sb.append("                console.log('Moving div: " + name + "-progress-div --to--> div: progress-area');  \n");
-			sb.append("                $('#" + name + "-progress-div').detach().appendTo('#progress-area'); \n");
-			sb.append("            } \n");
-			sb.append("            else \n");
-			sb.append("            { \n");
-			sb.append("                console.log('Cant find div: progress-area. instead; Setting some css options for div: " + name + "-progress-div');  \n");
-			sb.append("                $('#" + name + "-progress-div').css({'position':'fixed', 'background-color':'white', 'top':'" +topPx + "', 'left':'20px', 'width':'100%'}); \n");
-			sb.append("            } \n");
-			sb.append("        } \n");
-
-			sb.append("        // Disable the progresbar; \n");
-			sb.append("        if (sparklineListToLoad.length === 0) \n");
+			sb.append("        // Nothing left in this burst; hide the progressbar and go idle \n");
+			sb.append("        if (sparklineRenderQueue.length === 0) \n");
 			sb.append("        { \n");
 			sb.append("            console.log('-end-of-" + name + "-to-load-');  \n");
-			sb.append("            // hide the progressbar\n");
-			sb.append("            document.getElementById('" + name + "-progress-div').style.display = 'none'; \n");   // hide
+			sb.append("            sparklineBusy      = false; \n");
+			sb.append("            sparklineBurstDone = 0; \n");
+			sb.append("            hideSparklineProgressBar(); \n");
 			sb.append("            return; \n");
 			sb.append("        } \n");
-
-			sb.append("        var tagName = sparklineListToLoad.shift(); \n");
-			sb.append("        var config  = sparklineConfMap.get(tagName); \n");
-
-			sb.append("        var pctLoaded = sparklineListCreated.length / sparklineListMax * 100; \n");
+			sb.append("\n");
+			sb.append("        var pctLoaded = sparklineBurstDone / (sparklineBurstDone + sparklineRenderQueue.length) * 100; \n");
 			sb.append("        document.getElementById('" + name + "-progress-bar').value = pctLoaded; \n");
-			
-			sb.append("        console.log('-creating-sparkline: ' + tagName + ', toLoadListSize=' + sparklineListToLoad.length);  \n");
-
-			sb.append("        // Initialize all mini charts -- sparklines   \n");
-			sb.append("        $('.' + tagName).sparkline('html', config);  \n");
-
-//			sb.append("        sparklineListCreated.push(sparkline); \n");
-			sb.append("        sparklineListCreated.push(tagName); \n");
 			sb.append("\n");
-			sb.append("        // now show the Max|Min: ### overlay  \n");
-			sb.append("        $('.sparkline-ind-val').css('display', 'block');  \n");
-			
-//			sb.append("        // HIDE the image, and SHOW the chart! \n");
-//			sb.append("        document.getElementById('img_'       + tagName).style.display = 'none'; \n");   // hide
-//			sb.append("        document.getElementById('div_chart_' + tagName).style.display = 'block'; \n");  // show
-
-			sb.append("        // Load next chart \n");
-			sb.append("        setTimeout(loadNextSparkline, 10); \n");
-			sb.append("    }\n");
+			sb.append("        var elem = sparklineRenderQueue.shift(); \n");
+			sb.append("        drawSparkline(elem); \n");
+			sb.append("        sparklineListCreated.push(elem); \n");
+			sb.append("        sparklineBurstDone++; \n");
 			sb.append("\n");
-			sb.append("    // Call the function loadNextSparkline() for the FIRST time \n");
+			sb.append("        setTimeout(loadNextSparkline, 0); \n");
+			sb.append("    } \n");
+			sb.append("\n");
+
+			sb.append("    // IntersectionObserver callback: queue up whatever just came into view \n");
+			sb.append("    function onSparklineVisible(entries) \n");
+			sb.append("    { \n");
+			sb.append("        for (var i = 0; i < entries.length; i++) \n");
+			sb.append("        { \n");
+			sb.append("            if ( ! entries[i].isIntersecting) \n");
+			sb.append("                continue; \n");
+			sb.append("\n");
+			sb.append("            // draw each element once, then stop watching it \n");
+			sb.append("            if (sparklineObserver) \n");
+			sb.append("                sparklineObserver.unobserve(entries[i].target); \n");
+			sb.append("            sparklineRenderQueue.push(entries[i].target); \n");
+			sb.append("        } \n");
+			sb.append("\n");
+			sb.append("        if (sparklineRenderQueue.length !== 0 && ! sparklineBusy) \n");
+			sb.append("        { \n");
+			sb.append("            sparklineBusy = true; \n");
+			sb.append("            showSparklineProgressBar(); \n");
+			sb.append("            loadNextSparkline(); \n");
+			sb.append("        } \n");
+			sb.append("    } \n");
+			sb.append("\n");
+
+			sb.append("    // Only SHOW the progress row if this burst lasts long enough to be worth reporting. \n");
+			sb.append("    // Since sparklines are now drawn on demand, most bursts are a handful of elements and \n");
+			sb.append("    // last a few hundred ms -- showing the row for those only makes it flicker while scrolling. \n");
+			sb.append("    function showSparklineProgressBar() \n");
+			sb.append("    { \n");
+			sb.append("        if (sparklineProgressTimer === null)  \n");
+			sb.append("            sparklineProgressTimer = setTimeout(showSparklineProgressBarNow, 500);  \n");
+			sb.append("    } \n");
+			sb.append("\n");
+			sb.append("    function hideSparklineProgressBar() \n");
+			sb.append("    { \n");
+			sb.append("        if (sparklineProgressTimer !== null)  \n");
+			sb.append("        { \n");
+			sb.append("            clearTimeout(sparklineProgressTimer);  \n");
+			sb.append("            sparklineProgressTimer = null;  \n");
+			sb.append("        } \n");
+			sb.append("        document.getElementById('" + name + "-progress-div').style.display = 'none'; \n");   // hide
+			sb.append("    } \n");
+			sb.append("\n");
+			sb.append("    function showSparklineProgressBarNow() \n");
+			sb.append("    { \n");
+			sb.append("        sparklineProgressTimer = null;  \n");
+			sb.append("        var div = document.getElementById('" + name + "-progress-div'); \n");
+			sb.append("        div.style.display = 'block'; \n");  // show
+			sb.append("\n");
+			sb.append("        // if possible move the div into the 'progress-area' or add some attributes to it. \n");
+			sb.append("        if (div.parentNode && div.parentNode.id === 'progress-area') \n");
+			sb.append("            return; \n");
+			sb.append("        if (document.getElementById('progress-area')) \n");
+			sb.append("        { \n");
+			sb.append("            console.log('Moving div: " + name + "-progress-div --to--> div: progress-area');  \n");
+			sb.append("            $('#" + name + "-progress-div').detach().appendTo('#progress-area'); \n");
+			sb.append("        } \n");
+			sb.append("        else \n");
+			sb.append("        { \n");
+			sb.append("            console.log('Cant find div: progress-area. instead; Setting some css options for div: " + name + "-progress-div');  \n");
+			sb.append("            $('#" + name + "-progress-div').css({'position':'fixed', 'background-color':'white', 'top':'" + topPx + "', 'left':'20px', 'width':'100%'}); \n");
+			sb.append("        } \n");
+			sb.append("    } \n");
+			sb.append("\n");
+
+			sb.append("    // Set up lazy loading: observe every sparkline element, draw it when it nears the viewport. \n");
+			sb.append("    // Why: a big report holds thousands of sparklines spread over hundreds of screens. Drawing \n");
+			sb.append("    //      them all up front costs ~32 ms each and blocks the page for a minute or more, for \n");
+			sb.append("    //      charts nobody scrolls down to. Until drawn, each div still shows the server rendered \n");
+			sb.append("    //      PNG that is already embedded in it, so nothing looks broken (or different). \n");
+			sb.append("    function initSparklineLazyLoad() \n");
+			sb.append("    { \n");
+			sb.append("        var i, j, tagName, config, elems; \n");
+			sb.append("\n");
+			sb.append("        // No IntersectionObserver (old browser / some mail readers): behave like before \n");
+			sb.append("        if (typeof IntersectionObserver === 'undefined') \n");
+			sb.append("        { \n");
+			sb.append("            console.log('No IntersectionObserver: initializing ALL sparklines up front.'); \n");
+			sb.append("            for (i = 0; i < sparklineListToLoad.length; i++) \n");
+			sb.append("            { \n");
+			sb.append("                tagName = sparklineListToLoad[i]; \n");
+			sb.append("                config  = sparklineConfMap.get(tagName); \n");
+			sb.append("                $('.' + tagName).sparkline('html', config); \n");
+			sb.append("            } \n");
+			sb.append("            $('.sparkline-ind-val').css('display', 'block'); \n");
+			sb.append("            return; \n");
+			sb.append("        } \n");
+			sb.append("\n");
+			sb.append("        // 600px: start drawing just BEFORE it is scrolled into view \n");
+			sb.append("        sparklineObserver = new IntersectionObserver(onSparklineVisible, { rootMargin: '600px 0px' }); \n");
+			sb.append("\n");
+			sb.append("        for (i = 0; i < sparklineListToLoad.length; i++) \n");
+			sb.append("        { \n");
+			sb.append("            tagName = sparklineListToLoad[i]; \n");
+			sb.append("            config  = sparklineConfMap.get(tagName); \n");
+			sb.append("            elems   = document.getElementsByClassName(tagName); \n");
+			sb.append("\n");
+			sb.append("            for (j = 0; j < elems.length; j++) \n");
+			sb.append("            { \n");
+			sb.append("                sparklineElemConfMap.set(elems[j], config); \n");
+			sb.append("                sparklineObserver.observe(elems[j]); \n");
+			sb.append("                sparklineListMax++; \n");
+			sb.append("            } \n");
+			sb.append("        } \n");
+			sb.append("        console.log('-sparkline-lazy-load-armed- elements=' + sparklineListMax + ', classes=' + sparklineListToLoad.length); \n");
+			sb.append("    } \n");
+			sb.append("\n");
+			sb.append("    // Arm the lazy loader at page load \n");
 			sb.append("    document.addEventListener('DOMContentLoaded', function() \n");
 			sb.append("    { \n");
-			sb.append("        loadNextSparkline(); \n");
+			sb.append("        initSparklineLazyLoad(); \n");
 			sb.append("    }); \n");
 			sb.append("\n");
 			sb.append("</script>\n");

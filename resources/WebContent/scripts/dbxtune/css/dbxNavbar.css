@@ -1,0 +1,75 @@
+/* -- dbxNavbar.css --------------------------------------------------------
+   DbxCentral top navbar: dropdown menus + the "Tools" fly-out submenu.
+   Kept separate from dbxcentral.css because config.html is on Bootstrap 5
+   and has dbxcentral.css (Bootstrap 4 era) deliberately commented out.
+   Include this in your page <head>.
+-------------------------------------------------------------------------- */
+
+/* NOTE: The navbar markup is duplicated in 6 places (HtmlStatic.java + 5 static
+         html pages). These rules live here - the one stylesheet ALL of them
+         load - so the markup can stay identical everywhere.                */
+
+/* Top navbar dropdown menus - always dark, to match the 'bg-dark' navbar */
+.navbar-dark .dropdown-menu                       { background-color:#343a40; border-color:#555; }
+.navbar-dark .dropdown-menu .dropdown-item        { color:#ddd; }
+.navbar-dark .dropdown-menu .dropdown-item:hover,
+.navbar-dark .dropdown-menu .dropdown-item:focus  { background-color:#495057; color:#fff; }
+.navbar-dark .dropdown-menu .dropdown-divider     { border-top-color:#555; }
+
+/* Dropdown Submenu (fly-out) - Bootstrap has no built-in submenu support */
+.dbx-dropdown-submenu {
+	position: relative;
+}
+
+.dbx-dropdown-submenu .dropdown-menu {
+	top: 0;
+	left: 100%;
+	margin-top: -1px;
+	display: none;
+}
+
+.dbx-dropdown-submenu:hover > .dropdown-menu,
+.dbx-dropdown-submenu.show > .dropdown-menu {
+	display: block;
+}
+
+/* Flip submenu to the left if near the right edge (class set by dbxInitNavbarSubmenus) */
+.dbx-dropdown-submenu .dropdown-menu.dropdown-menu-left {
+	left: auto;
+	right: 100%;
+}
+
+.dbx-dropdown-submenu .dbx-dropdown-submenu > a {
+	white-space: nowrap;
+	padding-right: 2rem;
+}
+
+/* Arrow indicator */
+.dbx-dropdown-submenu > a::after {
+	float: right;
+	margin-left: 0.5em;
+	margin-top: 0.4em;
+	vertical-align: middle;
+	content: "";
+	border-top: 0.3em solid transparent;
+	border-right: 0;
+	border-bottom: 0.3em solid transparent;
+	border-left: 0.3em solid;
+}
+
+/* When the navbar is collapsed (hamburger), there is no ':hover' and no room to
+ * fly out sideways -- so flatten the submenu inline instead. */
+@media (max-width: 767.98px) {
+	.navbar-collapse .dbx-dropdown-submenu .dropdown-menu {
+		position: static;
+		float: none;
+		left: auto;
+		display: block;
+		margin-left: 1rem;
+		border: 0;
+		box-shadow: none;
+	}
+	.navbar-collapse .dbx-dropdown-submenu > a::after {
+		display: none;
+	}
+}

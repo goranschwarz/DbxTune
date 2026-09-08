@@ -147,7 +147,13 @@ extends AlarmWriterAbstract
 	 * @param action
 	 * @param alarmEvent
 	 */
-	private void sendMessage(String action, AlarmEvent alarmEvent)
+	/**
+	 * Render the Slack message text from its template.
+	 * <p>
+	 * The Active Alarms Summary is fetched ONCE here and handed to the template as
+	 * <code>${activeAlarmsSummaryText}</code>, so the template decides where it goes.
+	 */
+	String createSlackTextMessage(String action, AlarmEvent alarmEvent)
 	{
 		// Slack do not like some chars, so we need to translate
 		Map<String, String> translationMap = new HashMap<>();
@@ -155,8 +161,20 @@ extends AlarmWriterAbstract
 		translationMap.put("<", "&lt;");
 		translationMap.put(">", "&gt;");
 
+		// NOTE: the summary has to go through the same translationMap as everything else,
+		//       otherwise a server name or extraInfo holding & < > would break the message.
+		//       It is put in the Velocity context directly, so it does NOT get escaped for us.
+		ActiveAlarmSummary.Result summary = getActiveAlarmSummary(action, alarmEvent);
+		String summaryText = ActiveAlarmSummary.toText(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
+		summaryText = StringUtil.toStr(summaryText, translationMap);
+
 		// replace variables in the template with runtime variables
-		String slackTextMessage = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgTemplate, true, translationMap, null);
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, null, _msgTemplate, true, translationMap, null, null, summaryText);
+	}
+
+	private void sendMessage(String action, AlarmEvent alarmEvent)
+	{
+		String slackTextMessage = createSlackTextMessage(action, alarmEvent);
 		String jsonMessage      = createSlackJsonContent(slackTextMessage);
 
 //System.out.println("SEND-JSON-SLACK-Message: " + jsonMessage);
@@ -216,6 +234,10 @@ extends AlarmWriterAbstract
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		list.add( new CmSettingsHelper("URL",           Type.MANDATORY, PROPKEY_url,              String .class, conf.getProperty       (PROPKEY_url,              DEFAULT_url),              DEFAULT_url,              "<html>URL to use when issuing the HTTP POST request, typically 'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX'<br>Setting this up in Slack: https://api.slack.com/incoming-webhooks</html>", new UrlInputValidator()));
+		// Active Alarms Summary: the settings live in AlarmWriterAbstract, so every writer shares them.
+		// Put ${activeAlarmsSummaryText} in the msg-template below to place it.
+		list.addAll( getActiveAlarmSummarySettings() );
+
 		list.add( new CmSettingsHelper("msg-template",  Type.MANDATORY, PROPKEY_msgTemplate,      String .class, conf.getProperty       (PROPKEY_msgTemplate,      DEFAULT_msgTemplate),      DEFAULT_msgTemplate,      "Message Template to send to Slack. Note: all ${somValue} will be replaced with runtime values."));
 		list.add( new CmSettingsHelper("isReRaiseEnabled",              PROPKEY_isReRaiseEnabled, Boolean.class, conf.getBooleanProperty(PROPKEY_isReRaiseEnabled, DEFAULT_isReRaiseEnabled), DEFAULT_isReRaiseEnabled, "If the Alarm Hander should send an event every time it receives an event. or if it should just be called on RAISE and CANCEL"));
 //		list.add( new CmSettingsHelper("slack-attachments",             PROPKEY_slackAttachments, String .class, conf.getProperty       (PROPKEY_slackAttachments, DEFAULT_slackAttachments), DEFAULT_slackAttachments, "<html>If you want to add Slack attachments... See: https://api.slack.com/incoming-webhooks<br>This will be the <i>raw</i> JSON text after <code>\"attachments\": </code><b><i>your-content-goes-here</i></b><br>Note: The input text is validated as a JSON text</html>", new JsonInputValidator()));
@@ -310,6 +332,8 @@ extends AlarmWriterAbstract
 		_logger.info("Configuration for Alarm Writer Module: "+getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_url,              spaces) + ": " + _url);
 		_logger.info("    " + StringUtil.left(PROPKEY_msgTemplate,      spaces) + ": " + _msgTemplate);
+
+		printActiveAlarmSummaryConfig();
 		_logger.info("    " + StringUtil.left(PROPKEY_isReRaiseEnabled, spaces) + ": " + _isReRaiseEnabled);
 		_logger.info("    " + StringUtil.left(PROPKEY_slackAttachments, spaces) + ": " + _slackAttachments);
 
@@ -405,6 +429,15 @@ extends AlarmWriterAbstract
 			+ "*Extended description*\n"
 			+ "```\n"
 			+ "${extendedDescription}\n"
+			+ "```\n"
+			+ "#end\n"
+
+			// Summary of what is STILL ACTIVE. Empty string when the summary is turned off.
+			// Inside a code block, so the server/alarm columns stay aligned in Slack.
+			+ "#if ( ${activeAlarmsSummaryText} != '' )\n"
+			+ "\n"
+			+ "```\n"
+			+ "${activeAlarmsSummaryText}"
 			+ "```\n"
 			+ "#end\n"
 			.trim();

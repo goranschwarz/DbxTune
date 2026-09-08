@@ -145,6 +145,20 @@ public class WriterUtils
 	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
 	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
+		return createMessageFromTemplate(action, alarmObject, activeAlarmList, template, doTrim, trMap, dbxCentralUrl, null, null);
+	}
+
+	/**
+	 * Same as above, but also exposes a pre-rendered "Active Alarms Summary" to the template, as
+	 * <code>${activeAlarmsSummaryHtml}</code> and <code>${activeAlarmsSummaryText}</code>.
+	 * <p>
+	 * NOTE: Both variables are <b>always</b> put in the Velocity context (as an empty string when a
+	 * writer does not supply them), because the InvalidReferenceEventHandler below throws on any
+	 * unknown reference. That way a template can use them unconditionally.
+	 */
+	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl, String activeAlarmsSummaryHtml, String activeAlarmsSummaryText)
+	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
+	{
 		// Since parameter "alarmObject" is Object, we need to check valid classes
 		AlarmEvent alarmEvent    = null;
 		AlarmEntry pcsAlarmEntry = null;
@@ -344,6 +358,11 @@ public class WriterUtils
 			context.put("activeAlarmList" , activeAlarmList);
 		}
 
+		// Always present, so a template can reference them without the InvalidReferenceEventHandler
+		// (below) throwing. Empty when the writer has the Active Alarms Summary turned off.
+		context.put("activeAlarmsSummaryHtml", activeAlarmsSummaryHtml == null ? "" : activeAlarmsSummaryHtml);
+		context.put("activeAlarmsSummaryText", activeAlarmsSummaryText == null ? "" : activeAlarmsSummaryText);
+
 
 		InvalidReferenceEventHandler invalidReferenceEventHandler = new InvalidReferenceEventHandler()
 		{
@@ -540,6 +559,8 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralBaseUrl"          , "${dbxCentralBaseUrl}"          ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmList"            , "#foreach( $alarm in $activeAlarmList )\n${alarm.serviceName} - ${alarm.state} - ${alarm.description}\n#end" ,  null, "<html>Some writers want to have access to the 'activeAlarmList', where you can loop around the active alarms...</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryHtml"  , "${activeAlarmsSummaryHtml}" ,  null, "<html>A ready made <b>HTML</b> summary of all currently active alarms (this Collector in real time, plus the other servers in the same DbxCentral GROUP).<br>Empty string if '&lt;AlarmWriterName&gt;.activeAlarms.summary.enabled' is false.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryText"  , "${activeAlarmsSummaryText}" ,  null, "<html>A ready made <b>plain text</b> summary of all currently active alarms (this Collector in real time, plus the other servers in the same DbxCentral GROUP).<br>Empty string if '&lt;AlarmWriterName&gt;.activeAlarms.summary.enabled' is false.</html>"));
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtil"                 , "${StringUtil.format(\"%-20s\", ${type})}" ,  null, "<html>Access DbxTune StringUtil, which for example has format(...) see: <a href='https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html'>https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html</a></html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "Version"                    , "${Version.getAppName()}"                  ,  null, "<html>Access DbxTune Version, which has: getAppName(), getBuildStr() </html>"));

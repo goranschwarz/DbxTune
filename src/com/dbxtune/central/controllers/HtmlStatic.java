@@ -32,6 +32,7 @@ public class HtmlStatic
 		None, 
 		Server, 
 		Admin,
+		Tools,
 		DesktopApp
 	};
 
@@ -90,6 +91,7 @@ public class HtmlStatic
 		writer.println("  --> ");
 		writer.println("  <!-- CSS: DbxCentral --> ");
 		writer.println("  <link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral.css'> ");
+		writer.println("  <link rel='stylesheet' href='/scripts/dbxtune/css/dbxNavbar.css'> ");
 		writer.println();
 		writer.println("  <!-- CSS: Bootstrap --> ");
 //		writer.println("  <link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> ");
@@ -117,6 +119,9 @@ public class HtmlStatic
 		String adminActive    = "";
 		String adminExtraSpan = "";
 		
+		String toolsActive    = "";
+		String toolsExtraSpan = "";
+
 		String desktopAppActive    = "";
 		String desktopAppExtraSpan = "";
 
@@ -139,8 +144,16 @@ public class HtmlStatic
 			adminExtraSpan = "<span class='sr-only'>(current)</span>";
 		}
 
+		if (PageSection.Tools.equals(pageSection))
+		{
+			toolsActive    = " active";
+			toolsExtraSpan = "<span class='sr-only'>(current)</span>";
+		}
+
 		if (PageSection.DesktopApp.equals(pageSection))
 		{
+			// 'Desktop App' now lives *inside* the 'Tools' dropdown, so light up both
+			toolsActive         = " active";
 			desktopAppActive    = " active";
 			desktopAppExtraSpan = "<span class='sr-only'>(current)</span>";
 		}
@@ -164,8 +177,20 @@ public class HtmlStatic
 		writer.println("        <li class='nav-item" + adminActive + "'> ");
 		writer.println("          <a class='nav-link' href='/admin/admin.html'>Admin" + adminExtraSpan + "</a> ");
 		writer.println("        </li> ");
-		writer.println("        <li class='nav-item" + desktopAppActive + "'> ");
-		writer.println("          <a class='nav-link' href='/desktop_app.html'>Desktop App" + desktopAppExtraSpan + "</a> ");
+		writer.println("        <li class='nav-item dropdown" + toolsActive + "'> ");
+		writer.println("          <a class='nav-link dropdown-toggle' href='#' id='dbx-tools-menu' role='button' data-toggle='dropdown' aria-haspopup='true' aria-expanded='false'>Tools" + toolsExtraSpan + "</a> ");
+		writer.println("          <div class='dropdown-menu' aria-labelledby='dbx-tools-menu'> ");
+		writer.println("            <div class='dbx-dropdown-submenu'> ");
+		writer.println("              <a class='dropdown-item' href='#'>&#128202; Showplan</a> ");
+		writer.println("              <div class='dropdown-menu'> ");
+		writer.println("                <a class='dropdown-item' href='/showplan/sqlserver'>SQL Server</a> ");
+		writer.println("                <a class='dropdown-item' href='/showplan/ase'>SAP ASE (Sybase)</a> ");
+		writer.println("                <a class='dropdown-item' href='/showplan/postgres'>Postgres</a> ");
+		writer.println("              </div> ");
+		writer.println("            </div> ");
+		writer.println("            <div class='dropdown-divider'></div> ");
+		writer.println("            <a class='dropdown-item" + desktopAppActive + "' href='/desktop_app.html'>Desktop App" + desktopAppExtraSpan + "</a> ");
+		writer.println("          </div> ");
 		writer.println("        </li> ");
 		writer.println("      </ul> ");
 		if (addRightHandSide)

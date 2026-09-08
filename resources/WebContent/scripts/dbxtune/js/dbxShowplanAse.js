@@ -93,7 +93,10 @@ window.AseShowplan = (function () {
 	}
 
 	function buildXmlNode(el) {
-		var node = { op: el.tagName, label: el.tagName, metrics: {}, props: {}, children: [] };
+		// _xmlEl is kept so the Properties pane can show this operator's own XML generically, the same
+		// way the SQL Server renderer does - the pane can then present EVERY captured attribute,
+		// including ones no parser rule above knows about, instead of only the curated props below.
+		var node = { op: el.tagName, label: el.tagName, metrics: {}, props: {}, children: [], _xmlEl: el };
 
 		var vaEl = xmlFirstChildByTag(el, 'VA');
 		if (vaEl) node.props.va = xmlText(vaEl);
@@ -308,13 +311,33 @@ window.AseShowplan = (function () {
 		{ re: /^Using Clustered Index\.?$/i,                       set: { scanType: 'ClusteredIndexScan' } },
 		{ re: /^Index\s*:\s*(.+)$/i,                                handlerRe: function (node, m) { node.props.indexName = m[1].trim(); } },
 		{ re: /^\(Total Rows:\s*(\d+)\)$/i,                         handlerRe: function (node, m) { node.props.statTotalRows = m[1]; } },
-		{ re: /^Using I\/O Size (\d+) Kbytes for (?:data pages|index leaf pages)\.?$/i, handlerRe: function (node, m) { node.props.dataIOSizeInKB = m[1]; } },
-		{ re: /^With (.+) Buffer Replacement Strategy.*$/i,        handlerRe: function (node, m) { node.props.dataBufReplStrategy = m[1].trim(); } },
+		// Both of these lines come in a data-pages and an index-leaf-pages flavour, and ASE prints them
+		// for the same operator when a scan reads both. They used to be collapsed onto the data* keys,
+		// which mislabelled the index line and disagreed with the XML parser - show_cached_plan_in_xml
+		// has always had separate indexIOSizeInKB / indexBufReplStrategy elements (see
+		// XML_PROPERTY_TAGS), so the same plan reported different property names depending on how it
+		// was captured. Routed on the captured page kind so the two capture formats now agree.
+		{ re: /^Using I\/O Size (\d+) Kbytes for (data pages|index leaf pages)\.?$/i,
+		  handlerRe: function (node, m) {
+			node.props[/index/i.test(m[2]) ? 'indexIOSizeInKB' : 'dataIOSizeInKB'] = m[1];
+		  } },
+		// Kept deliberately permissive after "Strategy" (rather than requiring one of the two page
+		// kinds) so any wording this ASE version prints still parses at all; the trailing text is only
+		// inspected to decide which of the two keys it belongs to, defaulting to data.
+		{ re: /^With (.+) Buffer Replacement Strategy(.*)$/i,
+		  handlerRe: function (node, m) {
+			node.props[/index/i.test(m[2]) ? 'indexBufReplStrategy' : 'dataBufReplStrategy'] = m[1].trim();
+		  } },
 		{ re: /^External Definition:\s*(.+)$/i,                    handlerRe: function (node, m) { node.props.externalDef = m[1].trim(); } },
 		{ re: /^Evaluate (Ungrouped|Grouped) (.+) AGGREGATE\.?$/i, handlerRe: function (node, m) { node.props.aggregate = m[1] + ' ' + m[2]; } },
 		{ re: /^Nested iteration\.?$/i,                             set: { joinStrategy: 'NestedIteration' } },
 		{ re: /^Using Worktable(\d+) for internal storage\.?$/i,   handlerRe: function (node, m) { node.props.workTable = 'Worktable' + m[1]; } },
 		{ re: /^Key Count:\s*(\d+)$/i,                              handlerRe: function (node, m) { node.props.keyCount = m[1]; } },
+		// Both seen in a "full" sp_showplan and previously falling through to node.raw as
+		// unrecognized. "deferred_varcol"/"deferred_index" already drive a Plan Analysis finding
+		// further down; this just records the mode itself, whatever it is, as a normal property.
+		{ re: /^The update mode is (\w+)\.?$/i,                     handlerRe: function (node, m) { node.props.updateMode = m[1]; } },
+		{ re: /^Key Ordering:\s*(.+?)\.?$/i,                        handlerRe: function (node, m) { node.props.keyOrdering = m[1].trim(); } },
 		{ re: /^Keys are:$/i,                                       handler: function (node) { node._expectKeys = true; } },
 		{ re: /^The type of query is (\w+)\.?$/i,                  skip: true } // step-level meta, handled separately
 	];
@@ -328,7 +351,13 @@ window.AseShowplan = (function () {
 			var modeMatch = extra.match(MODE_RE);
 			if (modeMatch) props.mode = modeMatch[1].trim();
 		}
-		return { op: name, label: name, metrics: {}, props: props, raw: [], children: [], extra: extra };
+		// _sourceLines: this operator's OWN lines from the captured sp_showplan text, verbatim (pipes
+		// and all), collected by parseStep() as it consumes them. A text plan has no XML for the
+		// Properties pane to show, so it shows these instead - the plain-text counterpart of _xmlEl.
+		// Distinct from `raw`, which is a narrower bucket: only the detail lines no rule recognized,
+		// and already stripped of their leading pipe indentation.
+		return { op: name, label: name, metrics: {}, props: props, raw: [], children: [], extra: extra,
+		         _sourceLines: [] };
 	}
 
 	function applyDetailLine(node, line) {
@@ -405,6 +434,9 @@ window.AseShowplan = (function () {
 				var vaMatch = rest.match(VA_RE);
 				var va   = vaMatch ? vaMatch[1] : undefined;
 				var node = newTextNode(name, va, rest || undefined);
+				// The operator's own header line starts its source block. `line`, not `content`: the
+				// original indentation is part of how the captured plan reads.
+				node._sourceLines.push(line.replace(/\s+$/, ''));
 
 				if (depth === 1) {
 					root = node;
@@ -420,12 +452,84 @@ window.AseShowplan = (function () {
 				for (var d in stack) { if (Number(d) > depth) delete stack[d]; }
 			} else {
 				var target = stack[depth];
-				if (target) applyDetailLine(target, content);
+				if (target) {
+					// Belongs to the operator currently open at this depth - record it verbatim before
+					// the parser picks it apart, so the Properties pane can show the operator's own
+					// block exactly as ASE printed it.
+					target._sourceLines.push(line.replace(/\s+$/, ''));
+					applyDetailLine(target, content);
+				}
 				// else: detail line with no matching operator at this depth — ignore, best-effort.
 			}
 		}
 		return root;
 	}
+
+	// Sections a "full" sp_showplan prints around the operator tree. All optional - a short plan has
+	// none of them - so every one of these is best-effort and never fails the parse.
+	// num: round to a whole number and localize it (ASE prints these with six decimals of precision
+	// nobody reads - "246209.208247" says nothing "246,209" doesn't). unit is appended after
+	// formatting, so the number is grouped but the unit isn't dragged into the digits.
+	var TOTALS_PATTERNS = [
+		{ key: 'Est. total I/O cost',   re: /^Total estimated I\/O cost for statement\s+\d+\s*\(at line \d+\):\s*([\d.]+)/i, num: true },
+		// ASE counts procedure cache in 2K pages (same unit sp_configure/sp_monitorconfig
+		// 'procedure cache size' uses), so the raw number alone means little - the size it works out
+		// to is the part worth reading.
+		{ key: 'Proccache used',        re: /^Proccache used during compilation:\s*([\d.]+)/i, num: true, pages2k: true },
+		{ key: 'Est. total LIO',        re: /^Total estimated LIO:\s*([\d.]+)/i, num: true },
+		{ key: 'Est. total PIO',        re: /^Total estimated PIO:\s*([\d.]+)/i, num: true },
+		{ key: 'Est. total CPU time',   re: /^Total estimated CPU time:\s*([\d.]+)/i, num: true },
+		{ key: 'Query started at',      re: /^Query has started at:\s*(.+?)\s*\.?\s*$/i },
+		{ key: 'Query running for',     re: /^Query is running for:\s*([\d.]+)\s*([A-Za-z]*)/i, num: true, unitFrom: 2 }
+	];
+
+	/** Whole number, locale-grouped - the same treatment fmtNum() gives every other count. */
+	function fmtWholeLocalized(v) {
+		var n = parseFloat(v);
+		return isNaN(n) ? v : Math.round(n).toLocaleString();
+	}
+
+	/** "108" 2K pages -> "216 KB" (or MB once it gets big enough to be worth reading that way). */
+	function fmt2kPages(v) {
+		var n = parseFloat(v);
+		if (isNaN(n)) return undefined;
+		var kb = n * 2;
+		return kb >= 1024 ? (Math.round(kb / 1024 * 10) / 10).toLocaleString() + ' MB'
+		                  : Math.round(kb).toLocaleString() + ' KB';
+	}
+
+	/** The "Total estimated ..." block printed after a statement's operator tree, if present. */
+	function parseStatementTotals(lines) {
+		var out = null;
+		lines.forEach(function (raw) {
+			var line = raw.trim();
+			if (!line) return;
+			for (var i = 0; i < TOTALS_PATTERNS.length; i++) {
+				var pat = TOTALS_PATTERNS[i];
+				var m = line.match(pat.re);
+				if (m) {
+					// ASE ends these lines with a period ("... : 131740171."), which the numeric
+					// capture happily swallows. Only a TRAILING dot is removed - the decimal point in
+					// "246209.208247" has to survive long enough to be rounded.
+					var v = m[1].trim().replace(/\.$/, '');
+					var asSize = pat.pages2k ? fmt2kPages(v) : undefined;
+					if (pat.num) v = fmtWholeLocalized(v);
+					if (pat.unitFrom && m[pat.unitFrom]) v += ' ' + m[pat.unitFrom];
+					if (asSize) v += ' (' + asSize + ')';
+					(out = out || {})[pat.key] = v;
+					return;
+				}
+			}
+		});
+		return out;
+	}
+
+	var TABLE_ROW_RE     = /^TABLE:\s*\[?([^\]\t]+?)\]?\s+rows:\s*([\d]+)\s+use count:\s*([\d]+)(?:\s+datachange:\s*([\d.]+))?/i;
+	var TABLES_USED_RE   = /^total number of tables used:\s*(\d+)/i;
+	var WORKTABLES_RE    = /^total number of worktables:\s*(\d+)/i;
+	var OPTIMIZED_RE     = /^Optimized using\s+(.+?)\s*\.?$/i;
+	var OPERATOR_COUNT_RE= /^(\d+)\s+operator\(s\)\s+under root/i;
+	var ABSTRACT_PLAN_RE = /^Final abstract plan text:/i;
 
 	function parseText(planText) {
 		lastParseError = null;
@@ -447,11 +551,33 @@ window.AseShowplan = (function () {
 		var curStepLines = null;
 		var curStepLabel = null;
 		var sawAnyOperator = false;
+		// A "full" sp_showplan carries several sections around the operator tree that the tree parser
+		// itself ignores (they have no leading pipe): a Tables summary, optimizer notes, the abstract
+		// plan, the ASCII "Lava Operator Tree", and a block of statement totals at the very end.
+		// Collected here so they are not silently thrown away - see attachPlanExtras() below for
+		// where they end up.
+		var planInfo = { tables: [] };
+		var curStmtNotes  = null;   // "Optimized using ..." - per statement
+		var curStepOpCount = null;  // "N operator(s) under root" - per STEP (see the comment below)
 
 		function flushStep() {
 			if (curStatement && curStepLines && curStepLines.length) {
 				var root = parseStep(curStepLines);
 				if (root) {
+					// The statement-totals block sits after the operator tree, inside the same step,
+					// so it is in these very lines. Belongs on the root operator: they describe the
+					// whole statement, and the root is the operator the whole statement funnels into.
+					var totals = parseStatementTotals(curStepLines);
+					if (totals) root._planStats = totals;
+					// Built fresh per step - never a shared reference, so a later step cannot rewrite an
+					// earlier step's numbers after they have already been handed out.
+					if (curStmtNotes || curStepOpCount) {
+						root._stmtInfo = {
+							optimizerNotes:     curStmtNotes ? curStmtNotes.slice() : undefined,
+							operatorsUnderRoot: curStepOpCount || undefined
+						};
+					}
+					curStepOpCount = null;
 					sawAnyOperator = true;
 					curStatement.steps.push({ label: curStepLabel, root: root });
 				}
@@ -467,7 +593,37 @@ window.AseShowplan = (function () {
 				curStatement = { label: line.trim(), meta: {}, steps: [] };
 				statements.push(curStatement);
 				curStepLines = null;
+				curStmtNotes = null;    // notes belong to the statement about to start, not the last one
+				curStepOpCount = null;
 				continue;
+			}
+
+			// The extra sections, wherever they appear - most sit OUTSIDE any step (before the first
+			// statement header, or between the statement header and its STEP), where nothing else
+			// would look at them. Matched before the step push below so they are recorded even when
+			// they do fall inside a step.
+			var trimmed = line.trim();
+			var mTbl = trimmed.match(TABLE_ROW_RE);
+			if (mTbl) {
+				planInfo.tables.push({ name: mTbl[1].trim(), rows: mTbl[2],
+				                       useCount: mTbl[3], datachange: mTbl[4] });
+			} else if (TABLES_USED_RE.test(trimmed)) {
+				planInfo.tablesUsed = trimmed.match(TABLES_USED_RE)[1];
+			} else if (WORKTABLES_RE.test(trimmed)) {
+				planInfo.workTables = trimmed.match(WORKTABLES_RE)[1];
+			} else if (ABSTRACT_PLAN_RE.test(trimmed)) {
+				// Deliberately NOT parsed: the abstract plan is a second, equivalent description of the
+				// same tree the diagram already draws. Just noted, with a pointer to where to read it.
+				planInfo.hasAbstractPlan = true;
+			} else if (OPERATOR_COUNT_RE.test(trimmed)) {
+				// PER-STEP: a statement with two steps prints this once per step, with different
+				// counts. Held in its own variable and reset at each STEP header - an earlier attempt
+				// kept it on the statement and handed every step's root a REFERENCE to that one
+				// object, so step 2's count silently rewrote what step 1's root reported.
+				curStepOpCount = trimmed.match(OPERATOR_COUNT_RE)[1];
+			} else if (OPTIMIZED_RE.test(trimmed)) {
+				// Per-STATEMENT: printed after the statement header, before its first STEP.
+				(curStmtNotes = curStmtNotes || []).push(trimmed.replace(/\.$/, ''));
 			}
 
 			var stepMatch = line.trim().match(STEP_HDR_RE);
@@ -497,7 +653,14 @@ window.AseShowplan = (function () {
 		statements = statements.filter(function (s) { return s.steps.length > 0; });
 		if (!statements.length) { lastParseError = 'No statements with parsed steps found'; return null; }
 
-		return { format: 'text', rawText: text, statements: statements };
+		// Plan-level sections (Tables summary, optimizer notes) describe the whole plan, and ASE has
+		// no statement-level box to hang them on the way the SQL Server renderer does - so they go on
+		// the first root operator, which is where the user goes looking for "about this plan".
+		var hasPlanInfo = planInfo.tables.length || planInfo.tablesUsed || planInfo.workTables
+			|| planInfo.hasAbstractPlan;
+		if (hasPlanInfo) statements[0].steps[0].root._planInfo = planInfo;
+
+		return { format: 'text', rawText: text, statements: statements, planInfo: planInfo };
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -626,7 +789,14 @@ window.AseShowplan = (function () {
 		+ '.ase-plan-metric.ase-plan-reformat-info-metric { color: #2a6ebb; font-weight: 600; }'
 		+ '.ase-plan-va { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: #aaa; line-height: 1; }'
 		+ '.ase-plan-icon { width: 32px; height: 32px; margin: 0 auto; background-repeat: no-repeat; }'
-		+ '.ase-plan-icon-row { display: flex; align-items: center; justify-content: center; gap: 2px; }'
+		// position:relative anchors the DDL-info icon to the row's right edge (below).
+		+ '.ase-plan-icon-row { position: relative; display: flex; align-items: center; justify-content: center; gap: 2px; }'
+		// DDL/Table-info indicator - identical to the SQL Server one, including the CSS-drawn red X
+		// for "not found" (one asset, no second pre-composited image).
+		+ '.ase-plan-icon-badge { width: 16px; height: 16px; background-repeat: no-repeat; flex: none; }'
+		+ '.ase-plan-ddlinfo-icon { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); background-image: url(/images/ddlinfo.png); background-size: 16px 16px; }'
+		+ '.ase-plan-ddlinfo-icon.ase-plan-ddlinfo-missing::after { content: \'\'; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; background: #c0392b; box-shadow: 0 0 0 1.5px #fff; }'
+		+ '.ase-plan-ddlinfo-icon.ase-plan-ddlinfo-missing::before { content: \'\\2715\'; position: absolute; right: -3px; bottom: -4px; width: 9px; height: 9px; font-size: 7px; line-height: 9px; color: #fff; text-align: center; z-index: 1; }'
 		+ '.ase-plan-icon-row .ase-plan-icon { margin: 0; }'
 		+ '.ase-plan-jointype-icon { width: 32px; height: 32px; background-repeat: no-repeat; background-size: 32px 32px; flex: none; }'
 		+ '.ase-plan-label { font-weight: 600; white-space: nowrap; }'
@@ -636,13 +806,29 @@ window.AseShowplan = (function () {
 		+ '.ase-plan-metric-pct-warn { color: #c0392b; font-weight: 700; }'
 		+ '.ase-plan-detail-pct-warn { color: #c0392b; font-weight: 700; }'
 		+ '.ase-plan-metric-filter { color: #2a6f97; font-size: 0.85em; white-space: nowrap; }'
-		+ '.ase-plan-detail { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 20; background: #fffef5; border: 1px solid #c9b98a; border-radius: 4px; padding: 6px 10px; margin-top: 4px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 0.92em; }'
-		+ '.ase-plan-detail.ase-plan-detail-above { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; }'
+		// position:fixed and attached to <body> (see the shared panel system in dbxShowplanGraph.js)
+		// so the panel is never clipped by the diagram's own overflow:auto viewport - JS supplies
+		// left/top. z-index clears Bootstrap's modal (1050) and its backdrop, since this also renders
+		// inside the Showplan dialog. A panel for an operator with a lot of detail can be taller than
+		// the screen, so cap it and let it scroll rather than letting it run off the bottom.
+		// font-size in PIXELS, not em: an em here inherits the dialog's font size, which made this
+		// panel noticeably larger than the SQL Server one for the same content. Fixed px keeps the two
+		// identical regardless of what the surrounding page does.
+		+ '.ase-plan-detail { position: fixed; z-index: 2000; background: #fffef5; border: 1px solid #c9b98a; border-radius: 4px; padding: 6px 10px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 10px rgba(0,0,0,0.28); font-size: 11px; line-height: 1.35; }'
+		+ '.ase-plan-detail { max-height: 80vh; overflow-y: auto; overscroll-behavior: contain; }'
 		+ '.ase-plan-detail table { border-collapse: collapse; }'
 		+ '.ase-plan-detail-desc { white-space: normal; font-style: italic; color: #6b5f3d; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #e6dcb8; line-height: 1.35; }'
 		+ '.ase-plan-detail-grid { display: flex; align-items: flex-start; gap: 0 14px; }'
 		+ '.ase-plan-detail-right { border-left: 1px solid #e6dcb8; padding-left: 14px; }'
-		+ '.ase-plan-detail-idx-hdr { font-size: 0.85em; color: #6b5f3d; margin-top: 4px; }'
+		+ '.ase-plan-detail-idx-hdr { font-size: 10px; color: #6b5f3d; margin-top: 4px; }'
+		// Full-width wrapping block for values too long to sit in a nowrap "detail td" without forcing
+		// the whole panel wider than the screen - index key lists especially. Same rule and same job
+		// as the SQL Server panel's.
+		+ '.ase-plan-detail-wrap { white-space: normal; word-break: break-word; }'
+		+ '.ase-plan-detail-hint { margin-top: 5px; padding-top: 4px; border-top: 1px solid #e6dcb8; color: #9a8f6d; font-size: 10px; white-space: normal; }'
+		// pointer-events:stroke makes the transparent stroke itself hoverable (the arrows are only
+		// 1.5px wide, so the visible path is nearly impossible to hit deliberately).
+		+ '.ase-plan-connector-hit { pointer-events: stroke; cursor: help; }'
 		+ '.ase-plan-idx-tbl td { white-space: normal; }'
 		+ '.ase-plan-detail td { padding: 1px 6px 1px 0; vertical-align: top; white-space: nowrap; }'
 		+ '.ase-plan-detail td.ase-plan-detail-key { color: #777; }'
@@ -657,7 +843,18 @@ window.AseShowplan = (function () {
 		// for this animation's 'animationend' event (which only fires once, after the last iteration)
 		// to remove the class, so the two stay in sync automatically if this iteration count or
 		// per-pulse duration ever changes.
-		+ '.ase-plan-box.ase-plan-flash { animation: ase-plan-flash 0.8s ease-in-out 5; }';
+		+ '.ase-plan-box.ase-plan-flash { animation: ase-plan-flash 0.8s ease-in-out 5; }'
+		// --- Properties pane ---
+		// The generic half comes from dbxShowplanGraph.js, shared with the SQL Server pane so the two
+		// look identical and a styling fix lands once.
+		+ DbxShowplanGraph.propsCss('ase-plan')
+		// The clicked operator stays visibly marked while the pane describes it - otherwise there is
+		// no way to tell which box the pane is showing once the pointer has moved away.
+		+ '.ase-plan-box.ase-plan-selected { border-color: #2a6ebb; border-width: 2px; box-shadow: 0 0 0 3px rgba(42,110,187,0.18); }'
+		// Captured plan source (and unparsed detail lines): monospace and pre-wrap, because ASE's text
+		// output is column-aligned - collapsing its whitespace would destroy the alignment that makes
+		// it readable in the first place.
+		+ '.ase-plan-prop-raw { font-family: monospace; white-space: pre-wrap; font-size: 10px; color: #555; line-height: 1.35; }';
 
 	function injectStyle() {
 		if (STYLE_INJECTED) return;
@@ -943,6 +1140,27 @@ window.AseShowplan = (function () {
 		return (m.actRows / m.estRows) * 100;
 	}
 
+	/**
+	 * Est/Act comparison in the SQL Server renderer's form (fmtEstActDiff there - kept identical so
+	 * the same mismatch reads the same way in both dialogs): a plain percentage while the estimate is
+	 * roughly right, a MULTIPLIER once it is off by more than the 10x/0.1x threshold isEstActWarn()
+	 * already flags ("153,300%" does not read as "big" the way "1533x" does), "huge-diff" past ~1000x
+	 * where the exact multiplier stops meaning anything, and "zero-rows" when the operator produced
+	 * nothing at all - which is a different fact from "the numbers differ a lot", and the more useful
+	 * one. Infinity (Est 0, Act > 0) has no meaningful ratio, so it reports as huge-diff too.
+	 */
+	function fmtEstActDiff(m) {
+		var pct = estActPercent(m);
+		if (pct === undefined) return undefined;
+		if (!isEstActWarn(m)) return fmtPercent(pct);
+		if (m.actRows === 0) return 'zero-rows';
+		if (!isFinite(pct)) return 'huge-diff';
+		var ratio = pct / 100;
+		var magnitude = ratio >= 1 ? ratio : 1 / ratio;
+		if (magnitude >= 1000) return 'huge-diff';
+		return Math.round(magnitude) + 'x';
+	}
+
 	function fmtPercent(p) {
 		if (p === undefined) return undefined;
 		if (p === Infinity) return '∞%'; // est=0, act>0 - no finite ratio to show
@@ -966,6 +1184,17 @@ window.AseShowplan = (function () {
 		return (1 - (ownAct / childAct)) * 100;
 	}
 
+	/**
+	 * "100%" must mean NOTHING got through. Rounding alone breaks that promise: 1,000,000 rows in and
+	 * 5,000 out is 99.5%, which rounds to a "100% of input rows filtered" that flatly contradicts the
+	 * Act 5,000 printed directly above it. So one decimal is kept in the top band whenever any row
+	 * actually survived, and a bare 100 is reserved for the case that genuinely produced no rows.
+	 */
+	function fmtReductionPct(reduction, ownAct) {
+		if (reduction >= 99.5 && ownAct > 0) return String(Math.floor(reduction * 10) / 10);
+		return String(Math.round(reduction));
+	}
+
 	// Short one-line context shown under the operator name so a large plan is scannable without
 	// having to click every box (table name for scans, join type for joins, etc).
 	function subtitleFor(node) {
@@ -976,6 +1205,252 @@ window.AseShowplan = (function () {
 		if (p.aggregate) return p.aggregate;
 		if (p.indexName) return 'Index: ' + p.indexName;
 		return undefined;
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Properties pane — the "everything about this operator" view, rendered into opts.propsTarget.
+	//
+	// Deliberately a superset of the hover panel above: the panel is a scannable summary, this is
+	// where nothing is hidden. Built from the shared building blocks (dbxShowplanGraph.js) so it is
+	// visually identical to the SQL Server pane, but the SECTIONS are ASE's own - the two formats
+	// simply describe different things.
+	//
+	// The last section shows this operator's own source, which is format-dependent and is the reason
+	// this pane needed the parser changes above:
+	//   XML plans  (show_cached_plan_in_xml) -> a collapsible XML tree, exactly like SQL Server's.
+	//   text plans (classic sp_showplan)     -> the operator's own block of the captured text, since
+	//                                           there is no XML to show. Same idea, different medium.
+	// ─────────────────────────────────────────────────────────────────────────
+
+	function propRow($into, key, val)  { return DbxShowplanGraph.propRow($into, 'ase-plan', key, val); }
+	function propSection($into, title) { return DbxShowplanGraph.propSection($into, 'ase-plan', title); }
+
+	/**
+	 * Is this tag one of an operator's own PROPERTIES (as opposed to a nested child operator)?
+	 * XML_PROPERTY_TAGS is the shared base; the extras are the ones buildXmlNode() also consumes as
+	 * properties rather than recursing into - keep the two in step, or the Properties pane will show
+	 * a property the parser folded away as if it were a separate operator (or hide one it kept).
+	 */
+	function isXmlPropertyTag(tag) {
+		return !!XML_PROPERTY_TAGS[tag]
+			|| tag === 'indName' || tag === 'wtObjName' || tag === 'WorkTable';
+	}
+
+	/**
+	 * A section that only appears if it ends up with something in it. ASE's node model is sparse -
+	 * an EMIT has no metrics at all - and a run of empty "Estimated"/"Actual" headers is pure noise
+	 * that pushes the sections that DO have content off the top of the pane.
+	 */
+	function propSectionIfAny($into, title, fill) {
+		var $tmp = $('<div></div>');
+		fill($tmp);
+		if (!$tmp.children().length) return;
+		propSection($into, title).append($tmp.children());
+	}
+
+	// ASE prints only the bare strategy name ("With MRU Buffer Replacement Strategy for data pages."),
+	// which says nothing about what the server actually DOES with the cache - and the two are easy to
+	// read backwards, since the intuitive reading of "MRU" is the opposite of its effect here:
+	//
+	//   MRU - fetch and discard. Pages are put at the MRU end and reused immediately, so a large scan
+	//         does not flush everything else out of the buffer pool. ASE picks this for scans it does
+	//         not expect to revisit.
+	//   LRU - keep in cache. Pages go through the normal LRU chain and stay until they age out, which
+	//         is what you want for pages that will be read again.
+	//
+	// Applied to the parsed value in one place so the hover panel and the Properties pane cannot drift
+	// apart, and keyed off the suffix so it covers indexBufReplStrategy as well as dataBufReplStrategy.
+	var BUF_REPL_STRATEGY_NOTE = {
+		MRU: 'Fetch and Discard',
+		LRU: 'Keep in Cache'
+	};
+
+	function annotatePropValue(key, value) {
+		if (typeof value !== 'string' || !/BufReplStrategy$/.test(key)) return value;
+		var note = BUF_REPL_STRATEGY_NOTE[value.trim().toUpperCase()];
+		return note ? value + ' (' + note + ')' : value;
+	}
+
+	function renderPropertiesInto(container, node) {
+		var $c = $(container);
+		$c.empty();
+		if (!node) {
+			$c.append($('<div class="ase-plan-prop-empty"></div>')
+				.text('Click an operator in the plan to see all of its properties here.'));
+			return;
+		}
+
+		var p = node.props || {}, m = node.metrics || {};
+
+		$c.append($('<div class="ase-plan-prop-title"></div>').text(displayLabelFor(node)));
+		var sub = subtitleFor(node);
+		if (sub) $c.append($('<div class="ase-plan-prop-subtitle"></div>').text(sub));
+
+		var desc = operatorDescriptionFor(node);
+		if (desc) $c.append($('<div class="ase-plan-prop-desc"></div>').text(desc));
+
+		var joinNote = typeof joinTypeNote === 'function' ? joinTypeNote(node) : undefined;
+		if (joinNote) $c.append($('<div class="ase-plan-prop-desc"></div>').text(joinNote));
+
+		// Misc: every parsed property, verbatim. ASE's text format is free-form and varies by server
+		// version, so an allow-list would silently drop whatever this particular ASE decided to print.
+		var $misc = propSection($c, 'Misc');
+		propRow($misc, 'Operator', node.op);
+		propRow($misc, 'VA', p.va);
+		Object.keys(p).forEach(function (k) {
+			if (k === 'va') return; // already shown, under its more readable name
+			propRow($misc, k, annotatePropValue(k, p[k]));
+		});
+		if (node.extra) propRow($misc, 'Extra', node.extra);
+
+		propSectionIfAny($c, 'Estimated', function ($est) {
+			propRow($est, 'Est Rows',     fmtNum(m.estRows));
+			propRow($est, 'Est LIO',      fmtNum(m.estLio));
+			propRow($est, 'Est PIO',      fmtNum(m.estPio));
+			propRow($est, 'Est Row Size', fmtNum(m.estRowSz));
+		});
+
+		propSectionIfAny($c, 'Actual', function ($act) {
+			propRow($act, 'Act Rows',     fmtNum(m.actRows));
+			propRow($act, 'Act % of Est', fmtEstActDiff(m));
+			if (node.children && node.children.length === 1) {
+				propRow($act, 'Input Rows (Act)',    fmtNum(node.children[0].metrics && node.children[0].metrics.actRows));
+				propRow($act, 'Input Rows Filtered', fmtPercent(inputRowReductionPercent(node)));
+			}
+			propRow($act, 'Act LIO', fmtNum(m.actLio));
+			propRow($act, 'Act PIO', fmtNum(m.actPio));
+		});
+
+		// Statement totals and the plan-level Tables summary, both from a "full" sp_showplan and both
+		// parked on the root operator (see parseText) - so they only ever appear on that one box.
+		if (node._planStats) {
+			var $tot = propSection($c, 'Statement totals');
+			Object.keys(node._planStats).forEach(function (k) { propRow($tot, k, node._planStats[k]); });
+		}
+		if (node._planInfo || node._stmtInfo) {
+			var pi = node._planInfo || {};
+			var si = node._stmtInfo || {};
+			var $pi = propSection($c, 'Plan information');
+			propRow($pi, 'Operators',        si.operatorsUnderRoot);
+			(si.optimizerNotes || []).forEach(function (n, i) {
+				propRow($pi, i === 0 ? 'Optimizer' : '', n);
+			});
+			propRow($pi, 'Tables used',      pi.tablesUsed);
+			propRow($pi, 'Worktables',       pi.workTables);
+			(pi.tables || []).forEach(function (t) {
+				propRow($pi, 'TABLE ' + t.name,
+					'rows: ' + t.rows + ', use count: ' + t.useCount
+					+ (t.datachange !== undefined ? ', datachange: ' + t.datachange : ''));
+			});
+			if (pi.hasAbstractPlan) {
+				// Not parsed on purpose - it describes the same tree the diagram already draws. Point
+				// at where the reader can see it rather than pretending it isn't in the capture.
+				$pi.append($('<div class="ase-plan-prop-empty"></div>')
+					.text('This plan also carries a "Final abstract plan text" - see the Raw Plan Text section.'));
+			}
+		}
+
+		// Detail lines no parser rule recognized. Worth surfacing rather than hiding: on an unfamiliar
+		// ASE version this is exactly where the information the parser missed will be.
+		if (node.raw && node.raw.length) {
+			var $rawSec = propSection($c, 'Unparsed detail lines');
+			$rawSec.append($('<div class="ase-plan-prop-raw"></div>').text(node.raw.join('\n')));
+		}
+
+		// This operator's own source, in whichever form the plan was captured.
+		if (node._xmlEl) {
+			var $xml = propSection($c, 'Plan XML for this operator');
+			DbxShowplanGraph.propXmlTree($xml, 'ase-plan', node._xmlEl, 0, {
+				// An ASE plan's child operators are arbitrary tags; the PROPERTY tags are the known
+				// set, so a direct child that isn't one starts a different operator and is left to its
+				// own pane. Only at depth 0 though: inside <est>/<act> the child names (rowCnt, lio,
+				// pio, ...) are a different vocabulary entirely and must not be tested against this set.
+				stopAt: function (k, parentDepth) {
+					return parentDepth === 0 && !isXmlPropertyTag(k.tagName);
+				}
+			});
+		} else if (node._sourceLines && node._sourceLines.length) {
+			var $src = propSection($c, 'Plan text for this operator');
+			$src.append($('<div class="ase-plan-prop-raw"></div>').text(stripTreePrefix(node._sourceLines)));
+		}
+
+		renderDdlInfoSection($c, node);
+	}
+
+	/**
+	 * The captured lines for ONE operator, with the plan-tree drawing prefix removed - everything up
+	 * to and including the last '|'. Those pipes describe where the operator sits in the whole tree,
+	 * which the diagram already shows and which just indents this block pointlessly when it is being
+	 * read on its own. Whatever follows the last pipe is kept verbatim, so ASE's own alignment of the
+	 * detail lines under their operator (and of the key list under "Keys are:") survives.
+	 */
+	function stripTreePrefix(lines) {
+		return (lines || []).map(function (l) {
+			var i = l.lastIndexOf('|');
+			return i === -1 ? l : l.slice(i + 1);
+		}).join('\n');
+	}
+
+	/**
+	 * DDL Storage info, last and always present - "nothing here" is itself an answer, and a section
+	 * that simply vanishes leaves the reader wondering whether it failed or was never asked for.
+	 */
+	function renderDdlInfoSection($c, node) {
+		var $sec = propSection($c, 'DDL Info');
+		var name = node.props && node.props.objName;
+		if (!name) {
+			$sec.append($('<div class="ase-plan-prop-empty"></div>')
+				.text('This operator does not reference a table.'));
+			return;
+		}
+		if (node._tableInfoPending) {
+			$sec.append($('<div class="ase-plan-prop-empty"></div>').text('Loading ' + name + ' ...'));
+			return;
+		}
+		var info = node._tableInfo;
+		if (!info) {
+			$sec.append($('<div class="ase-plan-prop-empty"></div>')
+				.text('No DDL/table info was looked up (no server/database context for this plan).'));
+			return;
+		}
+		if (info.found === false) {
+			$sec.append($('<div class="ase-plan-prop-empty"></div>')
+				.text(name + ' was not found in DbxTune\'s DDL Storage.'));
+			return;
+		}
+		propRow($sec, 'Table',      info.tableName || name);
+		propRow($sec, 'Rows',       fmtNum(info.rowTotal));
+		propRow($sec, 'Size (MB)',  fmtNum(info.sizeMb !== undefined ? info.sizeMb : info.totalMb));
+		propRow($sec, 'Data (MB)',  fmtNum(info.dataMb));
+		propRow($sec, 'Index (MB)', fmtNum(info.indexMb));
+		propRow($sec, 'Indexes',    info.indexes ? info.indexes.length : undefined);
+		propRow($sec, 'Sampled',    info.sampleTime);
+	}
+
+	/**
+	 * Hover text for the arrow between two operators - what actually FLOWS along it. The row counts
+	 * belong to the CHILD (the arrow carries the child's output up into its parent), which is also why
+	 * a "few rows" arrow can still be the expensive one: ASE's LIO/PIO say how much work producing
+	 * those rows cost. Ported from the SQL Server renderer, using ASE's own metric names.
+	 */
+	function connectorTooltip(childNode, parentNode) {
+		if (!childNode) return undefined;
+		var m = childNode.metrics || {};
+		var lines = [];
+		var p = childNode.props || {};
+		var from = displayLabelFor(childNode) + (p.objName ? ' (' + p.objName + ')' : '');
+		lines.push(from + '  →  ' + (parentNode ? displayLabelFor(parentNode) : ''));
+		lines.push('');
+
+		if (m.actRows !== undefined) lines.push('Actual rows:      ' + fmtNum(m.actRows));
+		if (m.estRows !== undefined) lines.push('Estimated rows:   ' + fmtNum(m.estRows));
+		var pct = fmtEstActDiff(m);
+		if (pct !== undefined)       lines.push('Actual % of est:  ' + pct);
+		if (m.estLio !== undefined)  lines.push('Est LIO:          ' + fmtNum(m.estLio));
+		if (m.actLio !== undefined)  lines.push('Act LIO:          ' + fmtNum(m.actLio));
+		if (m.estPio !== undefined)  lines.push('Est PIO:          ' + fmtNum(m.estPio));
+		if (m.actPio !== undefined)  lines.push('Act PIO:          ' + fmtNum(m.actPio));
+		return lines.length > 2 ? lines.join('\n') : undefined;
 	}
 
 	function buildDetailPanel(node) {
@@ -1001,16 +1476,25 @@ window.AseShowplan = (function () {
 		var row = makeRowFn($tbl);
 
 		row('Operator', displayLabelFor(node));
+		// Long values are collected here and rendered as full-width wrapping blocks AFTER the table
+		// instead of as rows in it: ".ase-plan-detail td" is nowrap (which is what keeps the ordinary
+		// two-column layout tidy), so a long value - an index key list above all - would otherwise
+		// stretch the whole panel far past the screen edge. Same treatment the SQL Server panel gives
+		// its Predicate/Output List.
+		var longVals = [];
+		var LONG = 60;
 		if (node.props) {
 			for (var k in node.props) {
-				if (k === 'va') row('VA', node.props[k]);
-				else row(k, node.props[k]);
+				var v = node.props[k];
+				if (typeof v === 'string' && v.length > LONG) { longVals.push([k, v]); continue; }
+				if (k === 'va') row('VA', v);
+				else row(k, annotatePropValue(k, v));
 			}
 		}
 		if (node.metrics) {
 			row('Est Rows', fmtNum(node.metrics.estRows));
 			row('Act Rows', fmtNum(node.metrics.actRows));
-			row('Act % of Est', fmtPercent(estActPercent(node.metrics)), isEstActWarn(node.metrics) ? 'ase-plan-detail-pct-warn' : undefined);
+			row('Act % of Est', fmtEstActDiff(node.metrics), isEstActWarn(node.metrics) ? 'ase-plan-detail-pct-warn' : undefined);
 			if (node.children && node.children.length === 1) {
 				row('Input Rows (Act)', fmtNum(node.children[0].metrics && node.children[0].metrics.actRows));
 				row('Input Rows Filtered', fmtPercent(inputRowReductionPercent(node)));
@@ -1021,6 +1505,16 @@ window.AseShowplan = (function () {
 			row('Act PIO',  fmtNum(node.metrics.actPio));
 		}
 		if (node.extra) row('Extra', node.extra);
+
+		// Statement totals on the root operator - the headline numbers ("what did this statement cost
+		// overall") are worth having in the hover panel, not only in the Properties pane.
+		if (node._planStats) {
+			Object.keys(node._planStats).forEach(function (k) { row(k, node._planStats[k]); });
+		}
+		if (node._planInfo) {
+			row('Tables used', node._planInfo.tablesUsed);
+			row('Worktables',  node._planInfo.workTables);
+		}
 
 		// Live table size/rowcount, from an async batched lookup fired at the end of render() - see
 		// loadTableInfoAsync() there. Only meaningful when the caller supplied srv/dbname (opts.srv,
@@ -1096,6 +1590,18 @@ window.AseShowplan = (function () {
 				.append($right));
 		}
 
+		// The long values pulled out of the table above - full width, wrapping, below both columns so
+		// neither the plan info nor the DDL column gets pushed off-screen by them.
+		longVals.forEach(function (kv) {
+			$panel.append($('<div class="ase-plan-detail-idx-hdr"></div>').text(kv[0] + ':'));
+			$panel.append($('<div class="ase-plan-detail-wrap"></div>').text(kv[1]));
+		});
+
+		// Without this the pin-on-click behaviour (and the fact that clicking also drives the
+		// Properties pane) is invisible - nothing about a hover panel suggests it can be pinned.
+		$panel.append($('<div class="ase-plan-detail-hint"></div>')
+			.text('Click the box to pin this, and to show all properties in the Properties pane.'));
+
 		if (node.raw && node.raw.length) {
 			var $rawWrap = $('<div style="margin-top:4px;"></div>');
 			node.raw.forEach(function (l) {
@@ -1106,14 +1612,28 @@ window.AseShowplan = (function () {
 		return $panel;
 	}
 
-	// Panels open downward by default; for a box near the bottom of the visible viewport that
-	// would push the panel off-screen (and it has no way to scroll into view since it's an
-	// absolutely-positioned overlay), so flip it to open upward instead.
-	function flipIfClipped($panel) {
-		var rect = $panel[0].getBoundingClientRect();
-		if (rect.bottom > window.innerHeight) {
-			$panel.addClass('ase-plan-detail-above');
-		}
+	// Detail panels are fixed-position overlays attached to <body>, managed by the shared panel
+	// system (dbxShowplanGraph.js) that the SQL Server renderer already used. Previously they were
+	// appended INSIDE the box and merely flipped upward when clipped, which could not help when the
+	// diagram scrolls inside its own overflow:auto viewport - an absolutely-positioned descendant is
+	// clipped to that scrolling ancestor, so a panel on a box near the edge was cut off with no way
+	// to see the rest of it. The shared system clamps the panel into the viewport instead, and
+	// repositions/dismisses it on scroll and resize.
+	var _panels = DbxShowplanGraph.createPanelSystem({
+		prefix:     'ase-plan',
+		buildPanel: function (node) { return buildDetailPanel(node); }
+	});
+
+	// Set by render() so a box click can push the selected node into the Properties pane without
+	// every box needing a reference to it.
+	var _propsTarget = null;
+	var _selectedBox = null;
+
+	function selectNode($box, node) {
+		if (_selectedBox) _selectedBox.removeClass('ase-plan-selected');
+		_selectedBox = $box;
+		$box.addClass('ase-plan-selected');
+		if (_propsTarget) renderPropertiesInto(_propsTarget, node);
 	}
 
 	function renderNode(node) {
@@ -1136,6 +1656,12 @@ window.AseShowplan = (function () {
 		}
 
 		var $iconRow = $('<div class="ase-plan-icon-row"></div>');
+		// Stashed so the async DDL-Storage lookup can drop its found/missing icon into this row once
+		// it resolves (node._$box is the whole box, not the row) - same as the SQL Server renderer.
+		node._$iconRow = $iconRow;
+		// ...and the reverse link, so drawConnectorLines() - which walks the rendered DOM, not the
+		// model - can get back to the nodes an arrow runs between to build its hover text.
+		$box[0].__asePlanNode = node;
 		$iconRow.append($('<div class="ase-plan-icon"></div>').attr('style', iconStyleFor(node)));
 		var joinIcon = joinTypeIconFor(node);
 		if (joinIcon) {
@@ -1161,7 +1687,7 @@ window.AseShowplan = (function () {
 			// own orange border/text warn (isEstActWarn above, already computed into `warn`) to also
 			// color just the percentage red when it's way off, on top of (not instead of) that
 			// existing milder highlight.
-			var pct = fmtPercent(estActPercent(node.metrics || {}));
+			var pct = fmtEstActDiff(node.metrics || {});
 			if (pct !== undefined) {
 				var $pct = $('<span class="ase-plan-metric-pct"></span>').text(' (' + pct + ')');
 				if (warn) $pct.addClass('ase-plan-metric-pct-warn');
@@ -1179,36 +1705,30 @@ window.AseShowplan = (function () {
 		var reduction = inputRowReductionPercent(node);
 		if (reduction !== undefined && reduction >= 50) {
 			var $filter = $('<div class="ase-plan-metric ase-plan-metric-filter"></div>');
-			$filter.text('↓ ' + Math.round(reduction) + '% of input rows filtered');
+			$filter.text('↓ ' + fmtReductionPct(reduction, (node.metrics || {}).actRows) + '% of input rows filtered');
 			$box.append($filter);
 		}
 
 		// Hover shows the same info as a transient tooltip; click pins it open (and click again to
-		// close). The two never stack — hovering while a pinned panel is already open is a no-op,
-		// and clicking always clears any transient tooltip first so they don't overlap.
+		// close). The two never stack - hovering while a pinned panel is already open is a no-op.
+		// The panel now lives on <body> rather than inside the box, so the old "did the click land
+		// inside the panel?" guard is no longer needed: a click inside the panel doesn't bubble to
+		// the box at all, which is what used to close the panel out from under a text selection.
 		$box.on('mouseenter', function () {
-			if ($box.children('.ase-plan-detail').length) return;
-			var $panel = buildDetailPanel(node).addClass('ase-plan-tooltip');
-			$box.append($panel);
-			flipIfClipped($panel);
+			// Never replace a pinned panel with a transient one - the pinned panel is the user's
+			// deliberate choice and its text is selectable.
+			if (_panels.panelFor($box[0])) return;
+			_panels.open(node, $box[0], false);
 		});
 		$box.on('mouseleave', function () {
-			$box.children('.ase-plan-tooltip').remove();
+			if (!_panels.isPinned($box[0])) _panels.close($box[0]);
 		});
 		$box.on('click', function (e) {
 			e.stopPropagation();
-			// A click-drag to select text inside the pinned panel still fires a 'click' on mouseup
-			// (the panel is a descendant of $box, so it bubbles here) - without this check that click
-			// closed/removed the very panel the user was trying to select text from, out from under
-			// them, making the panel's contents effectively impossible to select/copy. Only clicking
-			// the box itself (outside the panel) should toggle it.
-			if ($(e.target).closest('.ase-plan-detail').length) return;
-			$box.children('.ase-plan-tooltip').remove();
-			var existing = $box.children('.ase-plan-detail');
-			if (existing.length) { existing.remove(); return; }
-			var $panel = buildDetailPanel(node);
-			$box.append($panel);
-			flipIfClipped($panel);
+			selectNode($box, node);
+			// Toggle: a second click on a box whose panel is already pinned closes it.
+			if (_panels.isPinned($box[0])) { _panels.close($box[0]); return; }
+			_panels.open(node, $box[0], true);
 		});
 		// Wrapped in a plain, invisible "cell" div rather than putting table-cell display directly
 		// on .ase-plan-box: in compact mode the box's own border/background would otherwise stretch
@@ -1393,6 +1913,23 @@ window.AseShowplan = (function () {
 			path.setAttribute('stroke-width', '1.5');
 			path.setAttribute('marker-end', 'url(#' + markerId + ')');
 			svg.appendChild(path);
+
+			// A second, invisible, much thicker path carrying the tooltip: the visible arrow is 1.5px
+			// wide, which is far too thin to hover deliberately. Same trick the SQL Server renderer
+			// uses - stroke:transparent with pointer-events:stroke, so it is grabbable but invisible.
+			var tip = connectorTooltip(box.__asePlanNode, parentBox.__asePlanNode);
+			if (tip) {
+				var hit = document.createElementNS(svgNS, 'path');
+				hit.setAttribute('d', d);
+				hit.setAttribute('fill', 'none');
+				hit.setAttribute('stroke', 'transparent');
+				hit.setAttribute('stroke-width', '12');
+				hit.setAttribute('class', 'ase-plan-connector-hit');
+				var title = document.createElementNS(svgNS, 'title');
+				title.textContent = tip;
+				hit.appendChild(title);
+				svg.appendChild(hit);
+			}
 		});
 
 		treeEl.insertBefore(svg, treeEl.firstChild);
@@ -1469,259 +2006,14 @@ window.AseShowplan = (function () {
 		});
 	}
 
-	// Sorting by VA (above) fixed the "sometimes matches, sometimes doesn't" complaint, but exposed a
-	// separate structural issue: whichever child block-stacks SECOND in a table cell starts only after
-	// the FIRST child's full natural height - and for a "continuing chain" child, that natural height
-	// is its entire recursive subtree (the chain's own <li> is itself a nested table whose row height
-	// is the max of its own box and ITS children-cell, recursively all the way down), not just its own
-	// box. So when the chain sorts before its sibling leaf (chain VA < leaf VA - common), the leaf gets
-	// pushed hundreds of pixels down by a subtree that actually extends sideways (into deeper table
-	// columns), not down in this column at all - "why can't 26 sit just below 25 instead of trailing
-	// the entire subtree" was exactly this.
-	//
-	// Fix: a leaf has no children of its own, so it doesn't need to participate in that block-stacking
-	// flow at all. Pull it out of flow (position:absolute) and place it in a small band sized from
-	// real measured box heights (box height isn't fixed - it grows with an optional subtitle/metric
-	// line), so the visual gap depends only on the leaf's own small size, never on how deep the OTHER
-	// sibling's chain continues.
-	//
-	// First version of this always tucked every leaf into a band at the very TOP of the cell,
-	// regardless of VA - which silently undid reorderCompactByVa() for exactly the joins it mattered
-	// most for: when the continuing chain has the LOWER VA (chain executes first - the common case),
-	// tucking the leaf above it put the HIGHER VA operator physically higher on screen, the opposite
-	// of "lower VA reads first" (caught by the user comparing against the VA badges directly). Fixed
-	// by tucking relative to the chain's own position instead of unconditionally to the top: a leaf
-	// that VA-sorts BEFORE the chain tucks into a band above it (as before); a leaf that VA-sorts
-	// AFTER the chain tucks into a band starting right below the chain's OWN box - specifically its
-	// own small box height, not its full recursive subtree height (measured separately: the chain
-	// li's natural height reflects its whole subtree per the comment above, but .ase-plan-box itself,
-	// one level in, is never stretched - see the .ase-plan-box-cell comment above in the CSS block).
-	// Either way the chain still flows normally and still needs its full natural subtree height
-	// reserved in the cell - only the LEAF's position is decoupled from that height, never the
-	// chain's own layout. Horizontal mode only for now - vertical mode's transposed table-row/
-	// table-cell structure would need mirrored left/right positioning instead of top, not yet done.
-	function tuckLeavesNearParent(treeEl) {
-		var GAP = 9; // matches the li > ul > li margin in the CSS above
-		treeEl.querySelectorAll('li').forEach(function (li) {
-			var ul = li.querySelector(':scope > ul');
-			if (!ul) return;
-			var kids = Array.prototype.slice.call(ul.children); // already VA-sorted, see reorderCompactByVa()
-			var leafKids = [], nonLeafKids = [];
-			kids.forEach(function (k) {
-				(k.querySelectorAll(':scope > ul > li').length === 0 ? leafKids : nonLeafKids).push(k);
-			});
-			// Only handle the common "one chain, one or more leaves" shape - a node with 2+ continuing
-			// children is the separate "balanced" case (see reorderCompactByVa()'s comment), where
-			// every child's full subtree height genuinely is needed to avoid its descendants colliding
-			// with a sibling's, so it's left on normal block-stacking untouched.
-			if (!leafKids.length || nonLeafKids.length !== 1) return;
-			var chainLi = nonLeafKids[0];
-			var chainIndex = kids.indexOf(chainLi);
+	function tuckLeavesNearParent(treeEl) { return DbxShowplanGraph.tuckLeavesNearParent(treeEl, 'ase-plan'); }
 
-			ul.style.position = 'relative';
-			// A CSS-absolutely-positioned child is placed relative to its containing block's PADDING
-			// edge, not its content edge - so "left: 0" here would land the leaf flush against the
-			// padding edge, i.e. INSIDE the ul's own padding-left, undoing that padding rather than
-			// respecting it. Reading the real computed value (rather than hardcoding the CSS's 40px)
-			// keeps this from silently drifting out of sync if that padding-left ever changes.
-			var stepLeft = window.getComputedStyle(ul).paddingLeft || '0px';
-			var maxLeafWidth = 0;
+	function tuckLeavesNearParentVertical(treeEl) { return DbxShowplanGraph.tuckLeavesNearParentVertical(treeEl, 'ase-plan'); }
 
-			function tuck(leafLi, top) {
-				var box = leafLi.querySelector(':scope > .ase-plan-box-cell > .ase-plan-box');
-				if (!box) return 76;
-				var rect = box.getBoundingClientRect();
-				maxLeafWidth = Math.max(maxLeafWidth, rect.width);
-				leafLi.style.position = 'absolute';
-				leafLi.style.top = top + 'px';
-				leafLi.style.left = stepLeft;
-				leafLi.style.margin = '0';
-				return rect.height;
-			}
-
-			var beforeChain = kids.slice(0, chainIndex).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-			var afterChain  = kids.slice(chainIndex + 1).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-
-			var offset = 0;
-			beforeChain.forEach(function (leafLi) { offset += tuck(leafLi, offset) + GAP; });
-			// Reserves exactly the "before" leaves' own height for them, so the (still block-flowing)
-			// chain starts right after that small band instead of unconditionally at the cell's top.
-			ul.style.paddingTop = offset + 'px';
-
-			var chainOwnBox = chainLi.querySelector(':scope > .ase-plan-box-cell > .ase-plan-box');
-			var chainOwnHeight = chainOwnBox ? chainOwnBox.getBoundingClientRect().height : 76;
-			var afterOffset = offset + chainOwnHeight + GAP;
-			afterChain.forEach(function (leafLi) { afterOffset += tuck(leafLi, afterOffset) + GAP; });
-
-			// A tucked leaf's box width (up to the CSS max-width, driven by however long its label
-			// text is) no longer feeds into the native table's own column-width calculation once it's
-			// pulled out of flow via position:absolute - only the chain's own (possibly narrower) box
-			// still does. So if some tucked leaf is wider than the chain's own box, the chain's OWN
-			// children (one column further right) would otherwise start too close and visually collide
-			// with that wider tucked sibling. Widen the gap before the chain's own children by exactly
-			// the excess to compensate - the chain's own box position/width is untouched, only where
-			// ITS children begin shifts right.
-			var chainOwnWidth = chainOwnBox ? chainOwnBox.getBoundingClientRect().width : 0;
-			if (maxLeafWidth > chainOwnWidth) {
-				var chainChildrenUl = chainLi.querySelector(':scope > ul');
-				if (chainChildrenUl) {
-					var chainStep = parseFloat(window.getComputedStyle(chainChildrenUl).paddingLeft) || 0;
-					chainChildrenUl.style.paddingLeft = (chainStep + (maxLeafWidth - chainOwnWidth)) + 'px';
-				}
-			}
-
-			// The perpendicular half of the same problem, and the counterpart of the minWidth
-			// compensation tuckLeavesNearParentVertical() already does on its own axis further down.
-			//
-			// An after-tucked leaf is pulled out of flow entirely (position:absolute), so nothing in
-			// normal flow reports how far DOWN it actually reaches. Left alone, this <ul> auto-sizes
-			// to its in-flow content only (the chain), and that shorter height propagates up to this
-			// node's own <li> and on to ITS parent - which then stacks the NEXT SIBLING BRANCH as if
-			// this subtree ended higher than it visually does, dropping that branch's boxes straight
-			// on top of the tucked leaf.
-			//
-			// Found by measuring rather than by eye, in the SQL Server sibling renderer that was
-			// derived from this file (dbxShowplanSqlServer.js): a sweep checking every pair of
-			// operator boxes for rectangle intersection flagged exactly one case in a 536-box corpus -
-			// a scan tucked under one branch landing underneath a seek from the next branch. Reserving
-			// the real measured extent fixed it there and left every other plan's layout untouched.
-			//
-			// The reservation goes on the <li> (display:table), NOT on the <ul> (display:table-cell):
-			// CSS leaves the effect of min-height on a table-cell undefined, and browsers duly ignore
-			// it - verified in a browser by setting it there and watching the overlap survive
-			// unchanged. min-height on the table box itself is honoured.
-			if (afterChain.length) {
-				var ulTop = ul.getBoundingClientRect().top;
-				var lowest = 0;
-				afterChain.forEach(function (leafLi) {
-					lowest = Math.max(lowest, leafLi.getBoundingClientRect().bottom - ulTop);
-				});
-				var curMinHeight = parseFloat(window.getComputedStyle(li).minHeight) || 0;
-				li.style.minHeight = Math.max(curMinHeight, Math.ceil(lowest)) + 'px';
-			}
-		});
-	}
-
-	// Mirrors tuckLeavesNearParent() above for vertical (top-to-bottom) mode's transposed table-row/
-	// table-cell structure: siblings sit side by side (left-to-right) instead of stacked top-to-bottom,
-	// so the same bug shows up rotated 90 degrees - a leaf's table-CELL used to start only after the
-	// chain sibling's full subtree WIDTH (a deep chain fans out into many cells further down and can be
-	// very wide), pushing a small leaf box far to the right of where it actually connects, with a big
-	// empty gap in between (reported directly by the user pointing at exactly this on a real render:
-	// "move right operator closer to the left operator"). Same fix, same two axes swapped: pull the
-	// leaf out of the table-row's cell flow via position:absolute and place it in a small band sized
-	// from the chain's own (not its subtree's) measured box width, tucked left of the chain if the
-	// leaf's VA sorts before it, right of the chain (starting right after the chain's own box width,
-	// not its subtree width) otherwise.
-	function tuckLeavesNearParentVertical(treeEl) {
-		var GAP = 9;
-		// Unlike the horizontal version, a chain's box POSITION here depends on its own cell's width
-		// (it's centered within it, per the caption-based CSS above), which in turn depends on whether
-		// ITS OWN children have already been tucked - so processing has to go bottom-up (descendants
-		// before ancestors), not top-down: querySelectorAll() returns document/pre-order (ancestors
-		// first), so every ancestor-descendant pair's order is simply reversed by reversing the whole
-		// list, without needing a real tree walk.
-		Array.prototype.slice.call(treeEl.querySelectorAll('li')).reverse().forEach(function (li) {
-			var ul = li.querySelector(':scope > ul');
-			if (!ul) return;
-			var kids = Array.prototype.slice.call(ul.children); // already VA-sorted, see reorderCompactByVa()
-			var leafKids = [], nonLeafKids = [];
-			kids.forEach(function (k) {
-				(k.querySelectorAll(':scope > ul > li').length === 0 ? leafKids : nonLeafKids).push(k);
-			});
-			// Same restriction as the horizontal version - only the common "one chain, one or more
-			// leaves" shape; 2+ continuing children is left on normal table-row flow untouched.
-			if (!leafKids.length || nonLeafKids.length !== 1) return;
-			var chainLi = nonLeafKids[0];
-			var chainIndex = kids.indexOf(chainLi);
-
-			ul.style.position = 'relative';
-			var ulRect = ul.getBoundingClientRect();
-			// Every normal (non-tucked) cell in this row gets its vertical offset from its own CSS
-			// padding-top (40px, set via ".ase-plan-tree.ase-plan-compact-v li > ul > li"), not from the
-			// row itself - reading it from the chain cell (which stays untouched, still a real table
-			// cell throughout) keeps a tucked leaf's own top offset in sync with that CSS value instead
-			// of hardcoding it.
-			var stepTop = window.getComputedStyle(chainLi).paddingTop || '0px';
-			var maxLeafHeight = 0;
-
-			function tuck(leafLi, leftRel) {
-				var box = leafLi.querySelector(':scope > .ase-plan-box-cell > .ase-plan-box');
-				if (!box) return 130;
-				var rect = box.getBoundingClientRect();
-				maxLeafHeight = Math.max(maxLeafHeight, rect.height);
-				leafLi.style.position = 'absolute';
-				leafLi.style.left = leftRel + 'px';
-				leafLi.style.top = stepTop;
-				leafLi.style.padding = '0';
-				return rect.width;
-			}
-
-			var beforeChain = kids.slice(0, chainIndex).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-			var afterChain  = kids.slice(chainIndex + 1).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-
-			var offset = 0;
-			beforeChain.forEach(function (leafLi) { offset += tuck(leafLi, offset) + GAP; });
-			// Reserves exactly the "before" leaves' own width for them, so the (still normal-flow) chain
-			// cell starts right after that small band instead of unconditionally at the row's left edge.
-			// Has to go on the CHAIN CELL, not the row (`ul`, display:table-row) - padding on a table-row
-			// isn't rendered at all per the CSS table model (unlike the horizontal version's equivalent,
-			// which targets a table-CELL where padding does apply).
-			if (offset > 0) chainLi.style.paddingLeft = offset + 'px';
-
-			// The chain's own box is CENTERED (a caption, ".ase-plan-compact-v li > .ase-plan-box-cell")
-			// over its own cell's FULL width - which is sized to fit its entire subtree, not just its own
-			// box, and can be far wider once its descendants fan out. So unlike the horizontal version
-			// (whose box-cells are never centered, always flush), the chain's box left/right edges can't
-			// be derived by arithmetic from its own width alone - unaccounted centering silently ate part
-			// of the intended gap and let the first after-tucked leaf overlap the chain's box. Measure the
-			// real rendered edges directly instead, after the before-chain reservation above (which shifts
-			// the chain, and everything centered inside it, right by `offset`).
-			var chainOwnBox = chainLi.querySelector(':scope > .ase-plan-box-cell > .ase-plan-box');
-			var chainRect = chainOwnBox ? chainOwnBox.getBoundingClientRect() : null;
-			var afterOffset = chainRect ? (chainRect.right - ulRect.left + GAP) : (offset + 130 + GAP);
-			afterChain.forEach(function (leafLi) { afterOffset += tuck(leafLi, afterOffset) + GAP; });
-
-			// After-tucked leaves are pulled out of flow entirely (position:absolute), so - unlike the
-			// before-tucked band, which stays accounted for via the real padding-left set on chainLi
-			// above - nothing in normal flow reports how far right they actually reach. Left alone, this
-			// node's own <li> (itself a table, per the CSS above) auto-sizes to only its in-flow content
-			// (the chain's own subtree) and reports that narrower width to ITS OWN parent's row - which
-			// then positions the NEXT sibling column (an entirely unrelated branch) as if this node were
-			// only that narrow, letting it overlap the tucked leaf sticking out past it. Reported live by
-			// the user on the real dialog: two unrelated "Index Scan" boxes rendered stacked on top of
-			// each other. Force this node's own reported width to cover the true rightmost extent.
-			if (afterChain.length) {
-				var curMinWidth = parseFloat(window.getComputedStyle(li).minWidth) || 0;
-				li.style.minWidth = Math.max(curMinWidth, afterOffset) + 'px';
-			}
-
-			// Mirrors the horizontal version's width-collision compensation, on the perpendicular axis:
-			// a tucked leaf's HEIGHT no longer feeds into this row's natural height once pulled out of
-			// flow, so a leaf taller than the chain's own box could otherwise have its bottom edge run
-			// into the chain's OWN children (the next row down, whose top offset is only sized from the
-			// chain cell's natural height). Push that next row down by the excess when needed.
-			var chainOwnHeight = chainRect ? chainRect.height : 0;
-			if (maxLeafHeight > chainOwnHeight) {
-				var chainChildrenUl = chainLi.querySelector(':scope > ul');
-				if (chainChildrenUl) {
-					var extra = maxLeafHeight - chainOwnHeight;
-					Array.prototype.forEach.call(chainChildrenUl.children, function (cellLi) {
-						var curPad = parseFloat(window.getComputedStyle(cellLi).paddingTop) || 0;
-						cellLi.style.paddingTop = (curPad + extra) + 'px';
-					});
-				}
-			}
-		});
-	}
-
-	// Walks the parsed-plan node tree (the {op, props, metrics, children} model built by
-	// parseXml()/parseText() - not the rendered DOM tree, see drawConnectorLines() for that),
-	// invoking fn(node) for every node.
-	function walkPlanNodes(root, fn) {
-		fn(root);
-		if (root.children) root.children.forEach(function (child) { walkPlanNodes(child, fn); });
-	}
+	// Layout/tree plumbing with no vendor knowledge - shared with the other renderer so a fix
+	// lands once. See dbxShowplanGraph.js (loaded before this file) for the implementations and
+	// for why drawConnectorLines() is deliberately NOT shared.
+	function walkPlanNodes(root, fn) { return DbxShowplanGraph.walkPlanNodes(root, fn); }
 
 	// Fired once per render() call, after layout/connector-drawing is done, so a large plan's
 	// initial draw is never blocked waiting on a network round trip. Looks up live table
@@ -1776,16 +2068,13 @@ window.AseShowplan = (function () {
 		});
 		if (!objNames.length) return;
 
+		// A panel that was already open when the table-info arrived would otherwise keep showing
+		// "Loading..." until the user closed and reopened it. Rebuild it in place, preserving whether
+		// it was pinned or a transient tooltip.
 		function refreshOpenPanel(node) {
 			if (!node._$box) return;
-			var $existing = node._$box.children('.ase-plan-detail');
-			if (!$existing.length) return;
-			var wasTooltip = $existing.hasClass('ase-plan-tooltip');
-			$existing.remove();
-			var $panel = buildDetailPanel(node);
-			if (wasTooltip) $panel.addClass('ase-plan-tooltip');
-			node._$box.append($panel);
-			flipIfClipped($panel);
+			var open = _panels.panelFor(node._$box[0]);
+			if (open) _panels.open(node, node._$box[0], open.pinned);
 		}
 
 		$.ajax({
@@ -1807,6 +2096,19 @@ window.AseShowplan = (function () {
 						if (!name) return;
 						node._tableInfoPending = false;
 						node._tableInfo = tables[name];
+
+						// Found/missing indicator in the icon row, for every operator a lookup was
+						// actually attempted for. Same two-state behaviour as the SQL Server renderer:
+						// nothing at all while the lookup is still in flight, then found or missing.
+						if (node._$iconRow) {
+							var ddlFound = !!(node._tableInfo && node._tableInfo.found !== false);
+							var $ddl = $('<div class="ase-plan-icon-badge ase-plan-ddlinfo-icon"></div>')
+								.attr('title', ddlFound ? 'DDL/Table info available'
+								                        : 'DDL/Table info not found in DbxTune\'s DDL Storage');
+							if (!ddlFound) $ddl.addClass('ase-plan-ddlinfo-missing');
+							node._$iconRow.append($ddl);
+							anyBoxGrew = true;
+						}
 
 						var info = node._tableInfo;
 						var scanInfo = scannedSizeInfo(node, info);
@@ -1948,7 +2250,7 @@ window.AseShowplan = (function () {
 
 	// Node-tree-based findings - need the parsed tree (not just raw text) to know which table a
 	// reformat materializes, or which operator a sort's worktable spill belongs to.
-	function collectTreeFindings(stepRoots) {
+	function collectTreeFindings(stepRoots, dbname) {
 		var findings = [];
 		stepRoots.forEach(function (root) {
 			walkPlanNodes(root, function (node) {
@@ -1970,6 +2272,38 @@ window.AseShowplan = (function () {
 						nodeId: p.va, nodeName: p.objName
 					});
 				}
+				// MRU ("fetch and discard") cache strategy.
+				//
+				// Reported as INFO, not a warning: ASE picks MRU deliberately for scans it does not
+				// expect to revisit, and on a large table that is the right call - it is what stops one
+				// big scan from flushing the whole cache. It is worth surfacing because the consequence
+				// (these pages are NOT retained for reuse) is invisible otherwise, and because on a
+				// server with a data cache big enough to hold the table the trade is no longer worth
+				// making. Whether that is the case depends on cache configuration this plan cannot see,
+				// so this states the situation and the remedy rather than asserting a problem.
+				var mruPages = [];
+				if (/^MRU$/i.test(p.dataBufReplStrategy  || '')) mruPages.push('data pages');
+				if (/^MRU$/i.test(p.indexBufReplStrategy || '')) mruPages.push('index leaf pages');
+				if (mruPages.length) {
+					var mruTable = p.objName || 'this table';
+					var mruLabel = displayLabelFor(node)
+					             + (p.objName ? ' (' + p.objName + (p.corrName ? ' ' + p.corrName : '') + ')' : '');
+					findings.push({
+						severity: 'info', category: 'Cache Strategy',
+						title: 'MRU (fetch and discard) on ' + mruLabel + ' - ' + mruPages.join(' and ') + ' are not cached',
+						detail: 'Fetch and Discard. This is used for sequential scans (like full table scans) where '
+						      + 'pages are unlikely to be needed again soon. New pages are read into the wash marker '
+						      + 'or LRU end, quickly discarding older pages to prevent a single massive query from '
+						      + 'wiping out the entire useful cache. The ' + mruPages.join(' and ') + ' this operator '
+						      + 'reads are therefore NOT retained in cache for reuse. If the data cache is large '
+						      + 'enough to hold ' + mruTable + ', keeping those pages would usually be the better '
+						      + 'trade - the strategy can be turned off per table:',
+						suggestedDdl: "sp_cachestrategy '" + (dbname || 'dbname') + "', '"
+						            + (p.objName || 'tablename') + "', 'mru', 'off'",
+						nodeId: p.va, nodeName: p.objName
+					});
+				}
+
 				if (p.workTable && /sort/i.test(node.op || '')) {
 					// Having a worktable at all doesn't mean it actually spilled to disk - SORT can use
 					// one purely in memory. physical I/O (pio) is the real "touched disk" signal;
@@ -2069,6 +2403,11 @@ window.AseShowplan = (function () {
 		injectStyle();
 		var $container = $(container);
 		$container.empty();
+		// Reset before the early return too: a plan with nothing to draw must not leave the pane
+		// describing an operator from the previously-rendered plan.
+		_propsTarget = (opts && opts.propsTarget) || null;
+		_selectedBox = null;
+		if (_propsTarget) renderPropertiesInto(_propsTarget, null);
 		if (!parsed || !parsed.statements || !parsed.statements.length) return;
 
 		var horizontal        = !!(opts && opts.horizontal);
@@ -2108,7 +2447,10 @@ window.AseShowplan = (function () {
 		});
 
 		// Close open detail panels when clicking anywhere else in the diagram.
-		$wrap.on('click', function () { $wrap.find('.ase-plan-detail').remove(); });
+		// Panels live on <body> now, so they are not inside $wrap to be found - close them through the
+		// shared panel system instead. Tooltips and pinned panels both go, matching the old behaviour
+		// of clicking empty diagram space.
+		$wrap.on('click', function () { _panels.closeAll(); });
 
 		$container.append($wrap);
 
@@ -2116,7 +2458,8 @@ window.AseShowplan = (function () {
 		// timeouts, ...) - reported into the dialog's separate "Plan Analysis" section (dbxShowplan.js),
 		// not rendered here. Called even with zero findings so that section can show "no issues
 		// detected" the same way SQL Server's does, rather than staying hidden/stale from a previous plan.
-		var planFindings = collectRawTextFindings(parsed.rawText).concat(collectTreeFindings(stepRoots));
+		var planFindings = collectRawTextFindings(parsed.rawText)
+		                     .concat(collectTreeFindings(stepRoots, opts && opts.dbname));
 		if (opts && opts.onFindingsChanged) opts.onFindingsChanged(planFindings);
 		enhanceReformatFindings(planFindings, opts && opts.sqlText, opts && opts.onFindingsChanged);
 
@@ -2151,6 +2494,14 @@ window.AseShowplan = (function () {
 		parseXml: parseXml,
 		parseText: parseText,
 		render: render,
+		// Public so dbxShowplan.js can clear/repopulate the pane itself (e.g. when switching plans),
+		// matching the SQL Server renderer's surface.
+		renderPropertiesInto: renderPropertiesInto,
+		// Detail panels are attached to <body> to escape the diagram's scroll clipping, so a caller
+		// that tears the diagram down - or the global Escape handler - needs a way to dismiss them.
+		// Mirrors SqlServerShowplan's surface.
+		closePanels: function () { _panels.closeAll(false); },
+		anyPanelsOpen: function () { return _panels.anyOpen(); },
 		getLastParseError: function () { return lastParseError; }
 	};
 })();

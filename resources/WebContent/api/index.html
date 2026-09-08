@@ -436,10 +436,15 @@
 		<a href="/api/alarm/active">/api/alarm/active</a>
 	</h5>
 	<div class="card-body">
-		Currently active alarms. Returns an empty array if none.
+		Currently active alarms. Returns an empty array if none.<br>
+		Every alarm is stamped with a <code>group</code> field, which is the <code>#FORMAT; GROUP; ...</code>
+		that the server belongs to in the <code>conf/SERVER_LIST</code> file (<code>null</code> if the server
+		is not within any group).
 		<table>
 			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
 			<tr><td>srv</td><td>(all)</td><td>Filter by server name</td></tr>
+			<tr><td>group</td><td>(all)</td><td>Filter by group name. Several groups can be given, comma separated. Case insensitive. Example: <code>Production Servers</code></td></tr>
+			<tr><td>groupOfSrv</td><td>(all)</td><td>Filter by <i>the group that this server belongs to</i>. Handy for a Collector, which does not know what group it is in. An unknown or ungrouped server gives an empty array (not an error).</td></tr>
 		</table>
 	</div>
 	</div>

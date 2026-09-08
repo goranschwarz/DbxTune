@@ -80,6 +80,29 @@ extends AlarmWriterAbstract
 	 * @param action
 	 * @param alarmEvent
 	 */
+	/** Render the mail SUBJECT from its template. */
+	String createMsgSubject(String action, AlarmEvent alarmEvent)
+	{
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, null, _subjectTemplate, true, null, getDbxCentralUrl(), null, null);
+	}
+
+	/**
+	 * Render the mail BODY from its template.
+	 * <p>
+	 * The Active Alarms Summary is fetched ONCE here and handed to the template as
+	 * <code>${activeAlarmsSummaryHtml}</code> / <code>${activeAlarmsSummaryText}</code>, so the
+	 * template decides where it goes. Both are "" when the summary is turned off, which means an
+	 * existing/customized template stays valid either way.
+	 */
+	String createMsgBody(String action, AlarmEvent alarmEvent)
+	{
+		ActiveAlarmSummary.Result summary = getActiveAlarmSummary(action, alarmEvent);
+		String summaryHtml = ActiveAlarmSummary.toHtml(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
+		String summaryText = ActiveAlarmSummary.toText(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
+
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, null, _msgBodyTemplate, true, null, getDbxCentralUrl(), summaryHtml, summaryText);
+	}
+
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
 		// Get server name from the Alarm
@@ -97,8 +120,8 @@ extends AlarmWriterAbstract
 		}
 
 		// replace variables in the template with runtime variables
-		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
-		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
+		String msgSubject = createMsgSubject(action, alarmEvent);
+		String msgBody    = createMsgBody   (action, alarmEvent);
 
 		int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
 
@@ -331,6 +354,10 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("start-tls",                        PROPKEY_startTls,               Boolean.class, conf.getBooleanProperty(PROPKEY_startTls              , DEFAULT_startTls              ), DEFAULT_startTls              , "Set required STARTTLS encryption. "));
 		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout,      Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout     , DEFAULT_connectionTimeout     ), DEFAULT_connectionTimeout     , "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
 
+		// Active Alarms Summary: the settings live in AlarmWriterAbstract, so every writer shares them.
+		// Put ${activeAlarmsSummaryHtml} (or ${activeAlarmsSummaryText}) in the Msg-Template to place it.
+		list.addAll( getActiveAlarmSummarySettings() );
+
 		list.add( new CmSettingsHelper("DbxCentralUrl",                    PROPKEY_dbxCentralUrl,          String .class, conf.getProperty       (PROPKEY_dbxCentralUrl         , DEFAULT_dbxCentralUrl         ), DEFAULT_dbxCentralUrl         , "Where is the DbxCentral located, if you want your template/messages to include it using ${dbxCentralUrl}", new UrlInputValidator()));
 
 		return list;
@@ -429,6 +456,8 @@ extends AlarmWriterAbstract
 		_logger.info("    " + StringUtil.left(PROPKEY_useSsl                , spaces) + ": " + _useSsl);
 		_logger.info("    " + StringUtil.left(PROPKEY_startTls              , spaces) + ": " + _startTls);
 		_logger.info("    " + StringUtil.left(PROPKEY_connectionTimeout     , spaces) + ": " + _smtpConnectTimeout);
+
+		printActiveAlarmSummaryConfig();
 	}
 
 
@@ -535,6 +564,13 @@ extends AlarmWriterAbstract
 			+ "${extendedDescription}\n"
 			+ "------------------------------------------------------------------\n"
 			+ "#end\n"
+
+			// Summary of what is STILL ACTIVE. Empty string when the summary is turned off.
+			+ "#if ( ${activeAlarmsSummaryText} != '' )\n"
+			+ "\n"
+			+ "\n"
+			+ "${activeAlarmsSummaryText}\n"
+			+ "#end\n"
 			;
 	}
 	public static String createHtmlMsgBodyTemplate() // Note: this is not tested (at least not reading the text in Outlook or similar)
@@ -627,6 +663,15 @@ extends AlarmWriterAbstract
 			+ "${reRaiseExtendedDescription}\n"
 			+ "#end\n"
 			
+			// Summary of what is STILL ACTIVE. Empty string when the summary is turned off.
+			+ "#if ( ${activeAlarmsSummaryHtml} != '' )\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<hr>\n"
+			+ "${activeAlarmsSummaryHtml}\n"
+			+ "#end\n"
+
 			// Only if we have Alarm Options
 			+ "#if ( ${alarmOptions} != '' )\n"
 			+ "<br>\n"

@@ -633,3 +633,58 @@ function _insertColCompletion(inputEl, col, partialLen)
 	inputEl.setSelectionRange(np, np);
 	$(inputEl).trigger('input');
 }
+
+//=============================================================================
+// Navbar "Tools" dropdown submenus (fly-out)
+//
+// The CSS in dbxcentral.css handles the desktop ':hover' case, and flattens the
+// submenu inline when the navbar is collapsed. This adds click/tap support for
+// touch devices, plus flipping the fly-out left when it would run off-screen.
+//
+// NOTE: This is deliberately written in VANILLA JS, no jQuery.
+//       config.html loads this file BEFORE it loads jQuery, so a '$(...)' at
+//       file scope would throw 'ReferenceError: $ is not defined' on that page.
+//=============================================================================
+function dbxInitNavbarSubmenus()
+{
+	document.addEventListener('click', function(ev)
+	{
+		var toggle = ev.target.closest('.dbx-dropdown-submenu > a');
+
+		if (toggle)
+		{
+			// Do not follow the '#' href, and do not let Bootstrap close the parent menu
+			ev.preventDefault();
+			ev.stopPropagation();
+
+			var submenu = toggle.parentElement;
+			var wasOpen = submenu.classList.contains('show');
+
+			// Close any sibling submenus, then toggle this one
+			var parentMenu = toggle.closest('.dropdown-menu');
+			if (parentMenu)
+			{
+				parentMenu.querySelectorAll('.dbx-dropdown-submenu.show').forEach(function(el) { el.classList.remove('show'); });
+			}
+			submenu.classList.toggle('show', !wasOpen);
+
+			// If the fly-out would run off the right edge, flip it to the left
+			var menu = submenu.querySelector('.dropdown-menu');
+			if (menu && !wasOpen)
+			{
+				menu.classList.remove('dropdown-menu-left');
+				if (menu.getBoundingClientRect().right > window.innerWidth)
+					menu.classList.add('dropdown-menu-left');
+			}
+			return;
+		}
+
+		// Clicked outside a submenu toggle: close all open submenus
+		document.querySelectorAll('.dbx-dropdown-submenu.show').forEach(function(el) { el.classList.remove('show'); });
+	});
+}
+
+if (document.readyState === 'loading')
+	document.addEventListener('DOMContentLoaded', dbxInitNavbarSubmenus);
+else
+	dbxInitNavbarSubmenus();

@@ -37,13 +37,6 @@ at pc:
 			z-index: 99999;
 		}
 
-		/* ── Top navbar dropdown menus — always dark to match bg-dark navbar ── */
-		.navbar-dark .dropdown-menu                              { background-color:#343a40; border-color:#555; }
-		.navbar-dark .dropdown-menu .dropdown-item               { color:#ddd; }
-		.navbar-dark .dropdown-menu .dropdown-item:hover,
-		.navbar-dark .dropdown-menu .dropdown-item:focus         { background-color:#495057; color:#fff; }
-		.navbar-dark .dropdown-menu .dropdown-divider            { border-top-color:#555; }
-
 		canvas {
 			user-select: none;
 			-moz-user-select: none;
@@ -1068,6 +1061,7 @@ at pc:
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphPicker.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxSqlText.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanAnalyzer.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanGraph.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanAse.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanSqlServer.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxSqlTableNames.js"></script>
@@ -1139,6 +1133,8 @@ at pc:
 
 	<!-- CSS: DbxCentral -->
 	<link rel="stylesheet" href="/scripts/dbxtune/css/dbxcentral.css">
+	<!-- CSS: DbxCentral navbar (Tools menu / submenu) -->
+	<link rel="stylesheet" href="/scripts/dbxtune/css/dbxNavbar.css">
 
 	<!-- CSS: Showplan dialog's "Table Information" section (dbxShowplan.js) -->
 	<link rel="stylesheet" href="/scripts/dbxtune/css/dbxTableInfo.css">
@@ -1199,13 +1195,19 @@ at pc:
 					<a class="nav-link" href="/admin/admin.html">Admin</a>
 				</li>
 				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+					<a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
 					<div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
-						<a class="dropdown-item" href="#" onclick="openShowplanViewer(); return false;" title="Paste or load a SQL Server Showplan XML and view it">&#128269; Showplan Loader</a>
+						<div class="dbx-dropdown-submenu">
+							<a class="dropdown-item" href="#">&#128202; Showplan</a>
+							<div class="dropdown-menu">
+								<a class="dropdown-item" href="/showplan/sqlserver">SQL Server</a>
+								<a class="dropdown-item" href="/showplan/ase">SAP ASE (Sybase)</a>
+								<a class="dropdown-item" href="/showplan/postgres">Postgres</a>
+							</div>
+						</div>
+						<div class="dropdown-divider"></div>
+						<a class="dropdown-item" href="/desktop_app.html">Desktop App</a>
 					</div>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="/desktop_app.html">Desktop App</a>
 				</li>
 			</ul>
 

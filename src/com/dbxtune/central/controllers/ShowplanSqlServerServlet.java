@@ -92,7 +92,9 @@ extends HttpServlet
 				// "Plan Analysis" was silently missing here.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAnalyzer.js") +
 				// The native graphical Showplan renderer. Loaded ALONGSIDE qp.js above, not instead of it -
-				// the dialog toolbar toggles between the two, so both must be present.
+				// the dialog toolbar toggles between the two, so both must be present. dbxShowplanGraph.js
+				// holds the layout plumbing it shares with the ASE renderer, so it must come first.
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanGraph.js") +
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanSqlServer.js") +
 				// Backs the toolbar's "Enable Zoom"/"Zoom to Fit" buttons. graph.html and the ASE standalone
 				// page both load this; this page never did, so those buttons threw "Panzoom is not defined".
@@ -113,7 +115,7 @@ extends HttpServlet
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
-				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				HtmlStatic.getHtmlNavbar(PageSection.Tools, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
 				createPasteFormBodyHtml() +
 				"    <script> \n" +
 				"        (function () { \n" +
@@ -171,7 +173,7 @@ extends HttpServlet
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
-				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				HtmlStatic.getHtmlNavbar(PageSection.Tools, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
 				createPasteFormBodyHtml() +
 				HtmlStatic.getJavaScriptAtEnd(true) +
 				"</body> \n" +
@@ -400,7 +402,9 @@ extends HttpServlet
 				// "Plan Analysis" was silently missing here.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAnalyzer.js") +
 				// The native graphical Showplan renderer. Loaded ALONGSIDE qp.js above, not instead of it -
-				// the dialog toolbar toggles between the two, so both must be present.
+				// the dialog toolbar toggles between the two, so both must be present. dbxShowplanGraph.js
+				// holds the layout plumbing it shares with the ASE renderer, so it must come first.
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanGraph.js") +
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanSqlServer.js") +
 				// Backs the toolbar's "Enable Zoom"/"Zoom to Fit" buttons. graph.html and the ASE standalone
 				// page both load this; this page never did, so those buttons threw "Panzoom is not defined".
@@ -442,7 +446,7 @@ extends HttpServlet
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
-				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				HtmlStatic.getHtmlNavbar(PageSection.Tools, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
 				// Same paste form as a plain GET sits behind the dialog opened below - the dialog has
 				// no "reopen"/navigate-away mechanism of its own (closing it just clears its own
 				// containers), so without this, closing it would strand the user on a blank page.

@@ -68,7 +68,7 @@ extends HttpServlet
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
-				HtmlStatic.getHtmlNavbar(PageSection.None, "", true) +
+				HtmlStatic.getHtmlNavbar(PageSection.Tools, "", true) +
 				"    <div class='container-fluid px-4 py-3' style='max-width: 900px;'> \n" +
 				"      <h2>&#128202; Showplan Viewer</h2> \n" +
 				"      <p class='text-muted'>Paste a query execution plan and get an interactive graphical view of it - no login, no data sent anywhere except this server.</p> \n" +
