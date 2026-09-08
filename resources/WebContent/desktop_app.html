@@ -32,6 +32,8 @@
   -->
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/dbxtune/css/dbxcentral.css">
+  <!-- CSS: DbxCentral navbar (Tools menu / submenu) -->
+  <link rel="stylesheet" href="/scripts/dbxtune/css/dbxNavbar.css">
 
   <!-- CSS: Bootstrap -->
 <!-- <link rel="stylesheet" href="/scripts/bootstrap/4.0.0/css/bootstrap.min.css"> -->
@@ -70,8 +72,20 @@
         <li class="nav-item">
           <a class="nav-link" href="/admin/admin.html">Admin</a>
         </li>
-        <li class="nav-item active">
-          <a class="nav-link" href="/desktop_app.html">Desktop App</a>
+        <li class="nav-item dropdown active">
+          <a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+          <div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
+            <div class="dbx-dropdown-submenu">
+              <a class="dropdown-item" href="#">&#128202; Showplan</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="/showplan/sqlserver">SQL Server</a>
+                <a class="dropdown-item" href="/showplan/ase">SAP ASE (Sybase)</a>
+                <a class="dropdown-item" href="/showplan/postgres">Postgres</a>
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item active" href="/desktop_app.html">Desktop App</a>
+          </div>
         </li>
       </ul>
 	  <!-- on the right hand side of the menu... -->

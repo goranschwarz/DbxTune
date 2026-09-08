@@ -223,7 +223,7 @@
 
 		document.body.insertAdjacentHTML('beforeend', [
 			// ---- Postgres Execution Plan dialog ----
-			"<div class='modal fade' id='dbx-view-pgShowplan-dialog' role='dialog' aria-labelledby='dbx-view-pgShowplan-dialog' aria-hidden='true'>",
+			"<div class='modal fade' id='dbx-view-pgShowplan-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-pgShowplan-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>",
 			"		<div class='modal-content' style='height: 80vh;'>",
 			"			<div class='modal-header'>",
@@ -256,7 +256,7 @@
 			"</div>",
 
 			// ---- SQL Server Showplan dialog ----
-			"<div class='modal fade' id='dbx-view-ssShowplan-dialog' role='dialog' aria-labelledby='dbx-view-ssShowplan-dialog' aria-hidden='true'>",
+			"<div class='modal fade' id='dbx-view-ssShowplan-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-ssShowplan-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header' style='cursor:move;'>",
@@ -448,7 +448,7 @@
 			// a stretched sticky element exactly fills its containing block and so has nowhere to move.
 			// max-height is set from the dialog's visible body height by _ssShowplanFitPropsPane(); the
 			// calc() here is only a sane starting value for the moment before that first runs.
-			"					<div id='dbx-view-ssShowplan-propsPane' class='ss-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;max-height:calc(100vh - 260px);border:1px solid #d8d8d8;border-radius:3px;padding:6px 10px 8px 10px;'>",
+			"					<div id='dbx-view-ssShowplan-propsPane' class='ss-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:#fff;max-height:calc(100vh - 260px);border:1px solid #d8d8d8;border-radius:3px;padding:6px 10px 8px 10px;'>",
 			// Header stays outside #dbx-view-ssShowplan-propsBody: renderPropertiesInto() empties its
 			// target on every selection, which would take the close button with it.
 			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #e6e6e6;margin-bottom:6px;padding-bottom:3px;'>",
@@ -472,7 +472,7 @@
 			"</div>",
 
 			// ---- ASE (Sybase/SAP Adaptive Server Enterprise) Showplan dialog ----
-			"<div class='modal fade' id='dbx-view-aseShowplan-dialog' role='dialog' aria-labelledby='dbx-view-aseShowplan-dialog' aria-hidden='true'>",
+			"<div class='modal fade' id='dbx-view-aseShowplan-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-aseShowplan-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header' style='cursor:move;'>",
@@ -484,15 +484,25 @@
 			"				</div>",
 			"			</div>",
 			"			<div class='modal-body' style='overflow-x:auto;padding:8px 12px;'>",
-			"				<div class='scroll-tree' style='width:3000px;'>",
+			// Same flex row the SQL Server dialog uses: a left column holding every <details> section,
+			// with the Properties pane as its SIBLING (not inside the Execution Plan section) so the
+			// pane can stay pinned while you scroll past Plan Analysis / SQL Text / Raw Plan Text.
+			// This also retires ASE's old fixed width:3000px, which forced a horizontal scrollbar on
+			// the whole dialog regardless of content - the same bug already fixed on the SQL Server
+			// side; the two dialogs now size identically.
+			"				<div class='scroll-tree' style='width:100%;display:flex;align-items:flex-start;'>",
+			"					<div id='dbx-asp-sections' style='flex:1 1 auto;min-width:0;'>",
 
 			"				<!-- ▶ Graphical Plan -->",
 			"				<details open id='dbx-asp-sect-graph' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
 			"					<summary id='dbx-view-aseShowplan-plan-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan</summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
-			"						<div style='position:relative;z-index:2;'>",
+			// Same toolbar structure as the SQL Server dialog: one flex row, actions on the left, and
+			// Properties/Orientation in their OWN wrapper carrying a single margin-left:auto so the
+			// group is pushed right and wraps as one block. See the long comment on the SQL Server
+			// toolbar for why the auto-margin belongs on the wrapper and not on each button.
+			"						<div style='position:relative;z-index:2;display:flex;align-items:center;flex-wrap:wrap;row-gap:4px;column-gap:6px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanRedraw();'>&#8635; Redraw</button>",
-			"						<button type='button' id='dbx-view-aseShowplan-orientationBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleOrientation();'>&#8646; Top-to-Bottom</button>",
 			"						<button type='button' id='dbx-view-aseShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
 			"						<button type='button' id='dbx-view-aseShowplan-zoomFitBtn' class='btn btn-outline-secondary btn-sm' style='display:none;' onclick='aseShowplanZoomToFit();'>&#8862; Zoom to Fit</button>",
 			"						<span style='font-size:0.8em;color:#888;margin-left:6px;'>Execution order is by VA# (starting at 0)</span>",
@@ -500,13 +510,27 @@
 			"							Options: <span title='A Table Scan, Clustered Index Scan, or (non-By-Key) Index Scan that reads more than this much data is flagged in the diagram with a red border and a &quot;Large table/index&quot; warning - a By Key seek only touches the rows it needs, so it is never flagged. Default 100 MB - lower it to catch smaller tables/indexes too, or raise it if 100 MB is normal-sized in this environment. Requires Table Information context (srv/dbname), same as the Table Information section below - has no effect otherwise.'>Big table &gt; <input type='number' id='dbx-view-aseShowplan-warnMb' style='width:60px;padding:1px 4px;font-size:0.85em;' min='0' step='1' onchange='aseShowplanSetTableSizeWarnMb(this.value);'> MB</span>",
 			"						</span>",
 			"						<span id='dbx-view-aseShowplan-analysis-link' style='display:none;font-size:0.85em;margin-left:14px;cursor:pointer;font-weight:600;' onclick='aseShowplanJumpToAnalysis();' title='Jump to the Plan Analysis section below'></span>",
+			"						<div style='display:flex;align-items:center;gap:6px;margin-left:auto;'>",
+			"						<button type='button' id='dbx-view-aseShowplan-propsBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleProps();'>&#128203; Hide Properties</button>",
+			"						<button type='button' id='dbx-view-aseShowplan-orientationBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleOrientation();'>&#8646; Top-to-Bottom</button>",
+			"						</div>",
 			"						</div>",
 			"						<div id='dbx-view-aseShowplan-planSelectRow' style='display:none;margin-top:6px;font-size:0.85em;'>",
 			"							<label for='dbx-view-aseShowplan-planSelect' title='ASE cached several distinct compiled plans for this statement (e.g. one per differing parameter values) - pick which one to view.'>&#128203; Cached plan:</label>",
 			"							<select id='dbx-view-aseShowplan-planSelect' style='max-width:100%;padding:1px 4px;' onchange='aseShowplanSelectPlan(this.value);'></select>",
 			"						</div>",
 			"						<div id='dbx-view-aseShowplan-graphFallback' class='ase-plan-fallback' style='display:none;'>Could not parse this plan into a diagram &mdash; see \"Raw Plan Text\" below.</div>",
-			"						<div id='dbx-view-aseShowplan-graphContent' class='dbx-view-aseShowplan-graphContent' style='margin-top:6px;'></div>",
+			// #dbx-view-aseShowplan-graphViewport is the SCROLL VIEWPORT; the inner -graphContent is
+			// what the renderer draws into and what Panzoom transforms - the same split the SQL Server
+			// dialog uses, and for two reasons. Without a viewport a wide plan (an 83-operator one was
+			// reported) simply overflows this flex column and is painted UNDERNEATH the Properties
+			// pane sitting to its right. And zooming the viewport itself would scale its own clipping
+			// box, leaving its scrollbars in play - which is why the zoom target has to be the inner
+			// element. width:max-content lets the inner box hug the diagram so the viewport can
+			// scroll it, instead of being clamped to the viewport's own width.
+			"						<div id='dbx-view-aseShowplan-graphViewport' style='margin-top:6px;overflow:auto;max-width:100%;'>",
+			"							<div id='dbx-view-aseShowplan-graphContent' class='dbx-view-aseShowplan-graphContent' style='width:max-content;min-width:100%;'></div>",
+			"						</div>",
 			"					</div>",
 			"				</details>",
 
@@ -576,6 +600,21 @@
 			"					</div>",
 			"				</details>",
 
+			"					</div>",
+			"					<div id='dbx-view-aseShowplan-propsSplit' title='Drag to resize' style='flex:0 0 6px;align-self:stretch;cursor:col-resize;background:#e4e4e4;border-radius:3px;margin:0 4px;'></div>",
+			// Mirrors the SQL Server pane exactly - see the comment on its markup for why
+			// position:sticky + align-self:flex-start are both required. max-height is set from the
+			// dialog's visible body height by the shared _showplanFitPropsPane(); the calc() is only a
+			// sane value for the moment before that first runs.
+			"					<div id='dbx-view-aseShowplan-propsPane' class='ase-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:#fff;max-height:calc(100vh - 260px);border:1px solid #d8d8d8;border-radius:3px;padding:6px 10px 8px 10px;'>",
+			// Header lives outside the -propsBody div: renderPropertiesInto() empties its target on
+			// every selection, which would otherwise take the close button with it.
+			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #e6e6e6;margin-bottom:6px;padding-bottom:3px;'>",
+			"							<span style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#8a8a8a;'>Properties</span>",
+			"							<button type='button' title='Hide the Properties pane' aria-label='Hide the Properties pane' onclick='aseShowplanToggleProps();' style='border:0;background:none;cursor:pointer;color:#999;font-size:15px;line-height:1;padding:0 2px;'>&times;</button>",
+			"						</div>",
+			"						<div id='dbx-view-aseShowplan-propsBody'></div>",
+			"					</div>",
 			"				</div>",
 			"			</div>",
 			"			<div class='modal-footer'>",
@@ -1023,6 +1062,37 @@
 		if (_storedWarnMb !== null && !isNaN(parseFloat(_storedWarnMb))) _aseShowplanTableSizeWarnMb = parseFloat(_storedWarnMb);
 	} catch (ex) {}
 
+	var _aseShowplanSplitterInited = false;
+	var _aseShowplanLastParsed = null;   // last successfully parsed ASE plan (for the Runtime block)
+
+	// Properties pane visibility, persisted - same default (shown) and same storage-key shape as the
+	// SQL Server dialog's, so the two behave identically.
+	var _aseShowplanShowProps = true;
+	try {
+		var _storedAseProps = localStorage.getItem('dbxtune_aseShowplan_showProps');
+		if (_storedAseProps !== null) _aseShowplanShowProps = _storedAseProps === 'true';
+	} catch (ex) {}
+
+	/** Show/hide the pane + splitter and keep the toolbar button's label in step. */
+	function _aseShowplanApplyPropsVisibility() {
+		var pane  = document.getElementById('dbx-view-aseShowplan-propsPane');
+		var split = document.getElementById('dbx-view-aseShowplan-propsSplit');
+		var btn   = document.getElementById('dbx-view-aseShowplan-propsBtn');
+		if (pane)  pane.style.display  = _aseShowplanShowProps ? '' : 'none';
+		if (split) split.style.display = _aseShowplanShowProps ? '' : 'none';
+		if (btn)   btn.innerHTML = _aseShowplanShowProps ? '&#128203; Hide Properties'
+		                                                 : '&#128203; Show Properties';
+	}
+
+	window.aseShowplanToggleProps = function () {
+		_aseShowplanShowProps = !_aseShowplanShowProps;
+		try { localStorage.setItem('dbxtune_aseShowplan_showProps', _aseShowplanShowProps ? 'true' : 'false'); } catch (ex) {}
+		_aseShowplanApplyPropsVisibility();
+		// Re-render so the renderer picks up (or drops) propsTarget: turning the pane back on has to
+		// repopulate it, and the current selection is not tracked across a hide/show.
+		_aseShowplanRenderGraphicalPlan(_aseShowplanLastPlanText, _aseShowplanLastIsXml);
+	};
+
 	// A separate "Reset Zoom" button used to sit next to this one, but with zoom left enabled a
 	// mouse-wheel scroll over the plan always zooms instead of scrolling the page - reported as
 	// unwanted when the user actually wanted to scroll. Merged into a single Enable/Disable toggle
@@ -1053,7 +1123,10 @@
 	};
 
 	window.aseShowplanZoomToFit = function () {
-		_panzoomZoomToFit(_aseShowplanZoom, document.getElementById('dbx-view-aseShowplan-graphContent'));
+		// Fit against the scroll viewport, not the modal body: the diagram now lives inside its own
+		// column next to the Properties pane, so the body's width is not the space it has.
+		_panzoomZoomToFit(_aseShowplanZoom, document.getElementById('dbx-view-aseShowplan-graphContent'),
+			document.getElementById('dbx-view-aseShowplan-graphViewport'), true /* align top-left */);
 	};
 
 	window.aseShowplanRedraw = function () {
@@ -1162,6 +1235,9 @@
 			parsed = null;
 			parseError = ex;
 		}
+		// Stashed for renderAseAnalysisSection()'s Runtime block, which is called back from inside
+		// AseShowplan.render() below and so cannot be handed the parse result directly.
+		_aseShowplanLastParsed = parsed;
 
 		// parseXml()/parseText() return null (rather than throwing) when the input just isn't
 		// recognized - see AseShowplan.getLastParseError() for why in that case.
@@ -1205,8 +1281,14 @@
 					dbname: tiDbname,
 					sqlText: tiSqlText, // used only for the Reformatting warning's index suggestion
 					tableSizeWarnMb: _aseShowplanTableSizeWarnMb,
+					// Only hand the renderer a pane target when the pane is actually shown - it
+					// renders its empty state into whatever it is given, and doing that into a hidden
+					// pane is wasted work on every redraw.
+					propsTarget: (_aseShowplanShowProps
+						? document.getElementById('dbx-view-aseShowplan-propsBody') : null),
 					onFindingsChanged: renderAseAnalysisSection
 				});
+				_aseShowplanApplyPropsVisibility();
 				graphEl.style.display = '';
 				if (fallbackEl) fallbackEl.style.display = 'none';
 				return;
@@ -1543,6 +1625,117 @@
 	// -------------------------------------------------------------------------
 	// Event handlers
 	// -------------------------------------------------------------------------
+	var _escCloseInited = false;
+
+/**
+ * Escape closes the topmost pop-up on the page - whatever it is.
+ *
+ * Bootstrap has its own Escape handling, but it binds to the MODAL ELEMENT, so it only fires while
+ * focus is somewhere inside the dialog. Focus ends up back on <body> in all the ordinary ways of
+ * using these dialogs: dragging the diagram, dragging the Properties splitter, or clicking outside -
+ * each calls preventDefault() on mousedown, which is exactly what stops focus from moving. From then
+ * on Escape never reaches Bootstrap and the dialog just sits there. (Every dialog also carries
+ * tabindex="-1" now, which fixes the common case; this stays as the safety net for the rest.)
+ *
+ * This used to act only on a hardcoded list of three showplan dialog ids, which left every other
+ * dialog un-closable and meant each new one had to be added by hand. It now walks a precedence
+ * chain instead, closing exactly ONE layer per keypress, innermost first:
+ *
+ *     1. Showplan operator detail panels   (fixed overlays above the dialog, not .modal)
+ *     2. LLM Advice panel                  (hand-rolled fixed div, z-index 10001, not .modal)
+ *     3. topmost open .modal
+ *     4. the toggled overlay panels        (Counter Details, DBMS Config, Query Store, Alarms)
+ *
+ * Deliberate exceptions:
+ *   - #dbx-login-dialog opts out via {backdrop:'static', keyboard:false} (dbxLoginModal.js) - it is
+ *     meant to be answered, not dismissed. Escape stays inert there.
+ *   - #active-statements is not a pop-up; it is the permanent companion to History View Mode.
+ *
+ * Two collaborators rely on running BEFORE this handler:
+ *   - dbxGraphPicker.js:418 calls stopImmediatePropagation() so Escape dismisses its inline popups
+ *     rather than the picker modal. That works only because dbxGraphPicker.js is loaded first
+ *     (graph.html script order) and this listener is on the document in BUBBLE phase.
+ *     Do not move this to capture phase, and do not load it earlier.
+ *   - dbxcentral.utils.js:607 (Ctrl+Space column completion) calls preventDefault() without
+ *     stopPropagation(), so the defaultPrevented check below is what stops Escape from closing the
+ *     panel behind the dropdown.
+ */
+function _initGlobalEscClose() {
+	if (_escCloseInited) return;
+	_escCloseInited = true;
+
+	// The toggled overlay panels, paired with the function that closes each. The toggles are safe to
+	// use as closers because we only ever call one whose panel is currently :visible.
+	var OVERLAY_PANELS = [
+		{ sel: '#cm-detail-panel',   close: function () { cmDetailClose();     } },
+		{ sel: '#dbms-config-panel', close: function () { dbmsConfigToggle();  } },
+		{ sel: '#query-store-panel', close: function () { queryStoreToggle();  } },
+		{ sel: '#alarm-panel',       close: function () { alarmPanelToggle();  } }
+	];
+
+	function zIndexOf(el) {
+		var z = parseInt(getComputedStyle(el).zIndex, 10);
+		return isNaN(z) ? 0 : z;
+	}
+
+	/** Ask a showplan renderer whether it has operator panels open, tolerating a missing renderer. */
+	function panelsOpenOn(renderer) {
+		try { return !!(renderer && renderer.anyPanelsOpen && renderer.anyPanelsOpen()); }
+		catch (ex) { return false; }
+	}
+
+	document.addEventListener('keydown', function (e) {
+		if (e.key !== 'Escape' && e.keyCode !== 27) return;
+
+		// An inner widget already consumed this Escape (see the header comment).
+		if (e.defaultPrevented) return;
+
+		// -- 1. Showplan operator detail panels ----------------------------------------------
+		var ss  = window.SqlServerShowplan;
+		var ase = window.AseShowplan;
+		if (panelsOpenOn(ss) || panelsOpenOn(ase)) {
+			if (panelsOpenOn(ss))  { try { ss.closePanels();  } catch (ex) {} }
+			if (panelsOpenOn(ase)) { try { ase.closePanels(); } catch (ex) {} }
+			e.preventDefault();
+			return;
+		}
+
+		// -- 2. LLM Advice panel (not a .modal, and stacked above them) ----------------------
+		if ($('#dbx-llm-advice-modal').is(':visible')) {
+			try { dbxLlmAdvice.close(); } catch (ex) {}
+			e.preventDefault();
+			return;
+		}
+
+		// -- 3. Topmost open Bootstrap modal -------------------------------------------------
+		var open = Array.prototype.slice.call(document.querySelectorAll('.modal.show'));
+		if (open.length) {
+			// Topmost by stacking order, falling back to DOM order when z-index is auto/equal.
+			var top = open.reduce(function (best, m) {
+				return zIndexOf(m) >= zIndexOf(best) ? m : best;
+			}, open[0]);
+
+			// The login dialog opts out on purpose - swallow the key rather than closing it.
+			if (top.id === 'dbx-login-dialog') return;
+
+			$(top).modal('hide');
+			e.preventDefault();
+			return;
+		}
+
+		// -- 4. Toggled overlay panels, topmost first ----------------------------------------
+		var visible = OVERLAY_PANELS.filter(function (p) { return $(p.sel).is(':visible'); });
+		if (visible.length) {
+			// jQuery-UI draggable bumps z-index on interaction, so this follows what the user last touched.
+			var topPanel = visible.reduce(function (best, p) {
+				return zIndexOf($(p.sel)[0]) >= zIndexOf($(best.sel)[0]) ? p : best;
+			}, visible[0]);
+			try { topPanel.close(); } catch (ex) {}
+			e.preventDefault();
+		}
+	});
+}
+
 	function _initHandlers() {
 		// Idempotent-ish: _initHandlers() can run more than once (see its call sites), and re-binding
 		// the splitter's mousedown would just add a duplicate listener that does the same thing, so
@@ -1553,6 +1746,7 @@
 			_ssShowplanInitDragScroll();
 			_ssShowplanSyncToolbar();
 		}
+		_initGlobalEscClose();
 
 
 		// Postgres: set fields before modal becomes visible
@@ -1867,6 +2061,17 @@
 			// as in show.bs.modal) renders itself via its own one-time shown.bs.modal handler instead,
 			// so skip here to avoid rendering twice.
 			if (e.relatedTarget) _aseShowplanRenderGraphicalPlan(_aseShowplanLastPlanText, _aseShowplanLastIsXml);
+
+			// One-time, and only once the dialog is actually shown: the splitter measures the pane,
+			// which has no size while the modal is still hidden. Same guard shape the SQL Server side
+			// uses for the same reason.
+			if (!_aseShowplanSplitterInited) {
+				_aseShowplanSplitterInited = true;
+				_aseShowplanInitPropsSplitter();
+				// Drag-to-scroll the diagram, same shared implementation the SQL Server dialog uses.
+				_aseShowplanInitDragScroll();
+			}
+			_aseShowplanApplyPropsVisibility();
 
 			var $modal = $(this);
 			var $dlg   = $modal.find('.modal-dialog');
@@ -2549,6 +2754,56 @@
 	 * or updates the list. No Runtime/Wait Stats block - ASE has no equivalent data source for this
 	 * yet, unlike ssShowplanRunAnalysis()'s SQL Server XML-sourced one.
 	 */
+	/**
+	 * The "Runtime" summary at the top of ASE's Plan Analysis - the same block the SQL Server dialog
+	 * has always had, now that a "full" sp_showplan gives ASE an equivalent data source (the
+	 * "Total estimated LIO/PIO/CPU time", "Proccache used" and "Query is running for" lines the ASE
+	 * parser now captures onto the root operator).
+	 *
+	 * These were originally only put on the root operator's tooltip/Properties, which turned out to
+	 * be effectively invisible: you had to know to click the EMIT box. Statement-wide numbers belong
+	 * where you already look for "what did this plan cost" - here, always on screen.
+	 */
+	function _aseShowplanRuntimeHtml(isDark) {
+		var parsed = _aseShowplanLastParsed;
+		if (!parsed || !parsed.statements || !parsed.statements.length) return '';
+		var root = parsed.statements[0].steps && parsed.statements[0].steps[0]
+			? parsed.statements[0].steps[0].root : null;
+		if (!root) return '';
+
+		var rows = [];
+		var stats = root._planStats || {};
+		Object.keys(stats).forEach(function (k) { rows.push([k, stats[k]]); });
+		var pi = root._planInfo || {}, si = root._stmtInfo || {};
+		if (si.operatorsUnderRoot) rows.push(['Operators', si.operatorsUnderRoot]);
+		if (pi.tablesUsed)         rows.push(['Tables used', pi.tablesUsed]);
+		if (pi.workTables)         rows.push(['Worktables', pi.workTables]);
+		(si.optimizerNotes || []).forEach(function (n) { rows.push(['Optimizer', n.replace(/^Optimized using\s*/i, '')]); });
+		if (!rows.length) return '';
+
+		var hdrColor = isDark ? '#9ecbff' : '#555';
+		var sepColor = isDark ? '#3a3a3a' : '#ddd';
+		var lblColor = isDark ? '#9a9a9a' : '#777';
+		var sumStyle = 'cursor:pointer;font-size:0.75em;font-weight:700;color:' + hdrColor
+		             + ';text-transform:uppercase;letter-spacing:0.05em;user-select:none;padding:1px 0;';
+		var html = '<details open style="margin-bottom:6px;">'
+		         + '<summary style="' + sumStyle + '">Runtime</summary>'
+		         + '<div style="padding:3px 0 2px 10px;border-left:2px solid ' + sepColor + ';margin-top:3px;">'
+		         + '<table style="border-collapse:collapse;font-size:0.82em;">';
+		// Two label/value pairs per row, matching the SQL Server block's layout.
+		for (var i = 0; i < rows.length; i += 2) {
+			html += '<tr>';
+			for (var j = i; j < i + 2 && j < rows.length; j++) {
+				html += '<td style="padding:1px 6px 1px 0;color:' + lblColor + ';white-space:nowrap;">'
+				      + $('<div>').text(rows[j][0]).html() + '</td>'
+				      + '<td style="padding:1px 18px 1px 0;white-space:nowrap;"><b>'
+				      + $('<div>').text(rows[j][1]).html() + '</b></td>';
+			}
+			html += '</tr>';
+		}
+		return html + '</table></div></details>';
+	}
+
 	function renderAseAnalysisSection(findings) {
 		var details = document.getElementById('dbx-asp-sect-analysis');
 		var summary = document.getElementById('dbx-view-aseShowplan-analysis-summary');
@@ -2558,12 +2813,14 @@
 		findings = findings || [];
 		var isDark = window._colorSchema === 'dark';
 		var linkEl = document.getElementById('dbx-view-aseShowplan-analysis-link');
+		var runtimeHtml = _aseShowplanRuntimeHtml(isDark);
 
 		if (findings.length === 0) {
 			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:#555;">&mdash; no issues detected</span>';
-			bodyEl.innerHTML = '';
+			// Runtime numbers are worth showing even when there is nothing wrong with the plan.
+			bodyEl.innerHTML = runtimeHtml;
 			details.style.display = '';
-			details.open = false;
+			details.open = !!runtimeHtml;
 			if (linkEl) linkEl.style.display = 'none';
 			return;
 		}
@@ -2579,7 +2836,7 @@
 		                   + ' finding' + (findings.length !== 1 ? 's' : '') + '</b>'
 		                   + (parts.length ? ' (' + parts.join(', ') + ')' : '');
 
-		bodyEl.innerHTML = renderFindingsListHtml(findings, isDark, 'aseShowplanJumpToNode');
+		bodyEl.innerHTML = runtimeHtml + renderFindingsListHtml(findings, isDark, 'aseShowplanJumpToNode');
 		details.style.display = '';
 		details.open = true;
 
@@ -2925,8 +3182,8 @@
 	 * Measuring the real container instead means the pane always ends inside the dialog, so its own
 	 * border marks the end of the content and its scrollbar honestly reflects what is left.
 	 */
-	function _ssShowplanFitPropsPane() {
-		var pane = document.getElementById('dbx-view-ssShowplan-propsPane');
+	function _showplanFitPropsPane(prefix) {
+		var pane = document.getElementById('dbx-view-' + prefix + 'Showplan-propsPane');
 		if (!pane) return;
 		var body = pane.closest('.modal-body');
 		if (!body) return;
@@ -2935,14 +3192,25 @@
 		var h = body.clientHeight - 22;
 		if (h > 120) pane.style.maxHeight = Math.round(h) + 'px';
 	}
+	function _ssShowplanFitPropsPane()  { _showplanFitPropsPane('ss');  }
+	function _aseShowplanFitPropsPane() { _showplanFitPropsPane('ase'); }
 
-	/** Drag-to-resize between the diagram and the Properties pane, persisted across opens. */
-	function _ssShowplanInitPropsSplitter() {
-		var split = document.getElementById('dbx-view-ssShowplan-propsSplit');
-		var pane  = document.getElementById('dbx-view-ssShowplan-propsPane');
+	/**
+	 * Drag-to-resize between the diagram and the Properties pane, persisted across opens.
+	 *
+	 * Parameterized by dialog prefix ('ss'/'ase') rather than duplicated: both dialogs have the same
+	 * pane, the same splitter, and the same two ids modulo that prefix - so a fix here (the
+	 * userSelect guard, the ResizeObserver re-fit) lands for both at once, which is the whole point
+	 * of the shared-code pass this is part of.
+	 */
+	function _showplanInitPropsSplitter(prefix) {
+		var split = document.getElementById('dbx-view-' + prefix + 'Showplan-propsSplit');
+		var pane  = document.getElementById('dbx-view-' + prefix + 'Showplan-propsPane');
 		if (!split || !pane) return;
+		var widthKey = 'dbxtune_' + prefix + 'Showplan_propsWidth';
+		var fit = function () { _showplanFitPropsPane(prefix); };
 		try {
-			var w0 = parseFloat(localStorage.getItem('dbxtune_ssShowplan_propsWidth'));
+			var w0 = parseFloat(localStorage.getItem(widthKey));
 			if (!isNaN(w0) && w0 >= 150) pane.style.flexBasis = w0 + 'px';
 		} catch (ex) {}
 
@@ -2950,10 +3218,10 @@
 		// changes after the initial draw - re-fit the pane whenever it does.
 		var mb = split.closest('.modal-body');
 		if (mb && typeof ResizeObserver !== 'undefined') {
-			new ResizeObserver(function () { _ssShowplanFitPropsPane(); }).observe(mb);
+			new ResizeObserver(fit).observe(mb);
 		}
-		window.addEventListener('resize', _ssShowplanFitPropsPane);
-		_ssShowplanFitPropsPane();
+		window.addEventListener('resize', fit);
+		fit();
 
 		var dragging = false, startX = 0, startW = 0;
 		split.addEventListener('mousedown', function (e) {
@@ -2973,9 +3241,11 @@
 			if (!dragging) return;
 			dragging = false;
 			document.body.style.userSelect = '';
-			_ssLsSet('dbxtune_ssShowplan_propsWidth', Math.round(pane.getBoundingClientRect().width));
+			try { localStorage.setItem(widthKey, String(Math.round(pane.getBoundingClientRect().width))); } catch (ex) {}
 		});
 	}
+	function _ssShowplanInitPropsSplitter()  { _showplanInitPropsSplitter('ss');  }
+	function _aseShowplanInitPropsSplitter() { _showplanInitPropsSplitter('ase'); }
 
 	/**
 	 * Click-and-drag panning for the diagram viewport when zoom is OFF - the same "grab the canvas and
@@ -2984,24 +3254,48 @@
 	 * no dependency on Panzoom being active. Skips entirely while zoom IS on: Panzoom owns dragging
 	 * then, and the two would otherwise fight over the same mouse gesture on the same element.
 	 */
-	function _ssShowplanInitDragScroll() {
-		var el = document.getElementById('dbx-view-ssShowplan-content');
+	/**
+	 * The element that actually scrolls on a given axis: the viewport itself when it overflows, else
+	 * the nearest ancestor that does. The diagram viewport is only constrained horizontally - it grows
+	 * to its full height and it is the .modal-body that scrolls vertically - so without this fallback
+	 * a vertical drag moved nothing at all (true of BOTH dialogs, not just ASE). Dragging should move
+	 * the content whichever box happens to own the scrolling.
+	 */
+	function _scrollerFor(el, axis) {
+		var canScroll = function (n) {
+			return axis === 'y' ? n.scrollHeight > n.clientHeight : n.scrollWidth > n.clientWidth;
+		};
+		if (canScroll(el)) return el;
+		for (var p = el.parentElement; p; p = p.parentElement) {
+			var ov = getComputedStyle(p)[axis === 'y' ? 'overflowY' : 'overflowX'];
+			if (/(auto|scroll)/.test(ov) && canScroll(p)) return p;
+		}
+		return null;
+	}
+
+	function _showplanInitDragScroll(el, isZoomOn) {
 		if (!el) return;
 		el.style.cursor = 'grab';
 
 		var dragging = false, moved = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+		var xEl = null, yEl = null;
 		// A plain click (mousedown+mouseup with no real movement in between) still has to reach the
 		// box's own click handler for selection - only once the pointer has actually travelled a few
 		// px do we treat this as a pan instead, and swallow the click that would otherwise follow it.
 		var DRAG_THRESHOLD = 4;
 
 		el.addEventListener('mousedown', function (e) {
-			if (_ssShowplanZoom !== undefined) return; // Panzoom owns dragging while zoom is on
+			if (isZoomOn && isZoomOn()) return; // Panzoom owns dragging while zoom is on
 			if (e.button !== 0) return; // left button only - right/middle keep their usual behaviour
 			dragging = true;
 			moved = false;
 			startX = e.clientX; startY = e.clientY;
-			startLeft = el.scrollLeft; startTop = el.scrollTop;
+			// Resolved per drag, not once at init: which box scrolls depends on the plan currently
+			// rendered (a small plan overflows neither axis) and on the dialog having been resized.
+			xEl = _scrollerFor(el, 'x');
+			yEl = _scrollerFor(el, 'y');
+			startLeft = xEl ? xEl.scrollLeft : 0;
+			startTop  = yEl ? yEl.scrollTop  : 0;
 			// Same reasoning as the Properties splitter above: without this, a drag that starts on top
 			// of a box's own text turns into a text selection instead of a pan.
 			document.body.style.userSelect = 'none';
@@ -3012,8 +3306,8 @@
 			var dx = e.clientX - startX, dy = e.clientY - startY;
 			if (!moved && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
 			if (!moved) { moved = true; el.style.cursor = 'grabbing'; }
-			el.scrollLeft = startLeft - dx;
-			el.scrollTop  = startTop  - dy;
+			if (xEl) xEl.scrollLeft = startLeft - dx;
+			if (yEl) yEl.scrollTop  = startTop  - dy;
 			e.preventDefault();
 		});
 
@@ -3034,6 +3328,14 @@
 				document.addEventListener('click', suppressNextClick, true);
 			}
 		});
+	}
+	function _ssShowplanInitDragScroll() {
+		_showplanInitDragScroll(document.getElementById('dbx-view-ssShowplan-content'),
+			function () { return _ssShowplanZoom !== undefined; });
+	}
+	function _aseShowplanInitDragScroll() {
+		_showplanInitDragScroll(document.getElementById('dbx-view-aseShowplan-graphViewport'),
+			function () { return _aseShowplanZoom !== undefined; });
 	}
 
 	/**

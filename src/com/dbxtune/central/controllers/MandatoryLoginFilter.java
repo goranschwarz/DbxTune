@@ -12,6 +12,8 @@ package com.dbxtune.central.controllers;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -30,6 +32,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxTuneCentral;
+import com.dbxtune.mgt.NoGuiManagementServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
@@ -76,6 +79,8 @@ public class MandatoryLoginFilter implements Filter
 			"/scripts/"
 	)));
 
+	private static final String BEARER_PREFIX = "Bearer ";
+
 	/** Combined whitelist: built-in + runtime extras from config. */
 	private Set<String> _whitelist;
 
@@ -97,6 +102,21 @@ public class MandatoryLoginFilter implements Filter
 
 		_whitelist = Collections.unmodifiableSet(combined);
 		_logger.info("MandatoryLoginFilter initialized. mandatory={}, whitelist={}", isMandatory(), _whitelist);
+
+		// A Collector can authenticate with the shared registration token. If that token is still
+		// the shipped default, it's effectively a publicly known password to the whole API.
+		if (isMandatory())
+		{
+			String token = Configuration.getCombinedConfiguration()
+					.getPropertyRaw(NoGuiManagementServer.PROPKEY_collectorRegToken, NoGuiManagementServer.DEFAULT_collectorRegToken);
+
+			if (NoGuiManagementServer.DEFAULT_collectorRegToken.equals(token))
+			{
+				_logger.warn("SECURITY: '" + DbxTuneCentral.PROPKEY_login_mandatory + "=true', but the Collector registration token is still the built-in default value. "
+						+ "Anyone knowing that default can access the API without logging in. "
+						+ "Please set '" + NoGuiManagementServer.PROPKEY_collectorRegToken + "' to a private value (on DbxCentral *and* on all Collectors).");
+			}
+		}
 	}
 
 	@Override
@@ -118,6 +138,15 @@ public class MandatoryLoginFilter implements Filter
 			path = path.substring(contextPath.length());
 
 		if (isWhitelisted(path))
+		{
+			chain.doFilter(request, response);
+			return;
+		}
+
+		// A Collector authenticates with a shared Bearer token instead of a login session.
+		// This is what makes calls like: GET /api/alarm/active?groupOfSrv=<srv> work from a
+		// Collector when 'DbxTuneCentral.login.mandatory=true'
+		if (hasValidCollectorToken(req))
 		{
 			chain.doFilter(request, response);
 			return;
@@ -155,6 +184,35 @@ public class MandatoryLoginFilter implements Filter
 		return Configuration.getCombinedConfiguration()
 				.getBooleanProperty(DbxTuneCentral.PROPKEY_login_mandatory,
 				                    DbxTuneCentral.DEFAULT_login_mandatory);
+	}
+
+	/**
+	 * Check for a valid Collector Bearer token in the 'Authorization' header.
+	 * <p>
+	 * This is the same shared token that {@code CollectorRegistrationPusher} already sends when
+	 * it registers a collector, see {@link NoGuiManagementServer#PROPKEY_collectorRegToken}.
+	 * 
+	 * @return true ONLY if a correct token was presented. Never throws.
+	 */
+	private boolean hasValidCollectorToken(HttpServletRequest req)
+	{
+		String authHeader = req.getHeader("Authorization");
+		if (authHeader == null || ! authHeader.startsWith(BEARER_PREFIX))
+			return false;
+
+		String presentedToken = authHeader.substring(BEARER_PREFIX.length()).trim();
+		if (StringUtil.isNullOrBlank(presentedToken))
+			return false;
+
+		String expectedToken = Configuration.getCombinedConfiguration()
+				.getPropertyRaw(NoGuiManagementServer.PROPKEY_collectorRegToken, NoGuiManagementServer.DEFAULT_collectorRegToken);
+		if (StringUtil.isNullOrBlank(expectedToken))
+			return false;
+
+		// Constant time compare, so we do not leak the token length/content through timing
+		return MessageDigest.isEqual(
+				presentedToken.getBytes(StandardCharsets.UTF_8), 
+				expectedToken .getBytes(StandardCharsets.UTF_8));
 	}
 
 	private boolean isWhitelisted(String path)

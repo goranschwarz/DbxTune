@@ -19,7 +19,7 @@
 
 		document.body.insertAdjacentHTML('beforeend', [
 			// ---- SQL Text dialog ----
-			"<div class='modal fade' id='dbx-view-sqltext-dialog' role='dialog' aria-labelledby='dbx-view-sqltext-dialog' aria-hidden='true'>",
+			"<div class='modal fade' id='dbx-view-sqltext-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-sqltext-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header'>",
@@ -42,7 +42,7 @@
 			"</div>",
 
 			// ---- Lock Table dialog ----
-			"<div class='modal fade' id='dbx-view-lockTable-dialog' role='dialog' aria-labelledby='dbx-view-lockTable-dialog' aria-hidden='true'>",
+			"<div class='modal fade' id='dbx-view-lockTable-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-lockTable-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header'>",

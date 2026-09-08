@@ -665,6 +665,10 @@ extends CompletionProviderAbstractSql
 		list.add( new CompletionTemplate("optgoal", "plan '(use optgoal {fastfirstrow|allrows_oltp|allrows_mixed|allrows_dss})'", "plan ('use optgoal ...)'") );
 		list.add( new CompletionTemplate("allrows", "plan '(use optgoal {fastfirstrow|allrows_oltp|allrows_mixed|allrows_dss})'", "plan ('use optgoal ...)'") );
 
+		// quoted_identifier
+		list.add( new CompletionTemplate("quoted_identifier", "set quoted_identifier on", "set quoted_identifier on'") );
+		
+
 		return list;
 	}
 	/**

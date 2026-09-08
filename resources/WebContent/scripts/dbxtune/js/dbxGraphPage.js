@@ -642,8 +642,8 @@
 						var slider = document.getElementById('dbx-history-timeline-slider');
 						slider.title = "Navigation: \n"
 							+ "The gray/green bar under the slider, indicates where there are Active Statements \n"
-							+ " - Use 'Ctrl+left' for Previous Active Statement \n"
-							+ " - Use 'Ctrl+right' for Next Active Statement \n"
+							+ " - Use 'Ctrl+left'  for Previous Active Statement (works anywhere on the page, also with a dialog open) \n"
+							+ " - Use 'Ctrl+right' for Next Active Statement     (works anywhere on the page, also with a dialog open) \n"
 							+ " - or simply left/right arrows to move in the slider. \n"
 							+ " - or click on any 'line' on any Graph. \n"
 							+ "Note: Clicking a Graph, but not on a 'line', causes you to leave 'History View Mode' \n";
@@ -751,29 +751,23 @@
 							// Update visual timeline markers on all charts (graph rendering, not a module concern)
 							dbxTuneSetTimeLineMarkerForAllGraphs(momentTs, value);
 
-							// Set focus so we can do: Ctrl + left/right
-							dbxHistoryTimelineSlider.focus();
+							// Set focus so we can do: Ctrl + left/right.
+							// But NOT while a dialog is open, or while the user is typing. Ctrl+Arrow is handled on the
+							// document (see the keydown handler at the bottom of this file), so focus is no longer needed
+							// for it to work - and stealing focus here would rip it out of a dialog the user is reading.
+							var ae     = document.activeElement || {};
+							var aeTag  = (ae.tagName || '').toLowerCase();
+							var typing = ae.isContentEditable || aeTag === 'textarea'
+							          || (aeTag === 'input' && (ae.type || '').toLowerCase() !== 'range');
+							if ( ! typing && ! _dbxAnyDialogOpen() )
+								dbxHistoryTimelineSlider.focus({ preventScroll: true });
 
 						}, 300);
 					});
 
-					// Install slider keyboard: Ctrl+left, Ctrl+right
-					dbxHistoryTimelineSlider.addEventListener('keydown', function(event)
-					{
-						if (event.ctrlKey && event.key === "ArrowLeft")
-						{
-							console.log("XXXXXXXXXXX slider: ctrl+left");
-							event.preventDefault();
-							dbxHistoryPrevActiveStatement();
-						}
-
-						if (event.ctrlKey && event.key === "ArrowRight")
-						{
-							console.log("XXXXXXXXXXX slider: ctrl+right");
-							event.preventDefault();
-							dbxHistoryNextActiveStatement();
-						}
-					});
+					// NOTE: Ctrl+left / Ctrl+right is deliberately NOT bound here on the slider element.
+					// It is bound on the *document*, at the bottom of this file, so that it keeps working after
+					// a dialog (Showplan, SQL Text, ...) has taken focus away from the slider.
 				}
 
 				if (momentTs === undefined)
@@ -860,3 +854,63 @@
 		});
 */
 
+
+
+		// Is any dialog currently on screen?
+		// Covers the Bootstrap modals *and* the LLM Advice panel, which is a hand-rolled
+		// position:fixed div (dbxLlmAdvice.js) rather than a Bootstrap '.modal'.
+		function _dbxAnyDialogOpen()
+		{
+			if ( $('.modal.show').length > 0 )          return true;
+			if ( $('#dbx-llm-advice-modal').is(':visible') ) return true;
+			return false;
+		}
+
+		// Ctrl+Left / Ctrl+Right = previous/next Active Statement on the history timeline.
+		//
+		// Bound on the DOCUMENT, not on the slider. The slider only keeps focus until the first dialog
+		// (Showplan, SQL Text, Lock Table, ...) is opened - after that Ctrl+Arrow silently stopped working,
+		// even though the slider's own tooltip still advertises it. Same reason the Escape handling for the
+		// dialogs lives on the document, see _initGlobalEscClose() in dbxShowplan.js.
+		//
+		// Only active in History View Mode, and never while the caret is in a text-entry field, where
+		// Ctrl+Arrow already means "jump one word".
+		$(document).on('keydown', function(e)
+		{
+			if ( ! e.ctrlKey || e.altKey || e.shiftKey || e.metaKey ) return;
+			if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+			if ( ! isHistoryViewActive() ) return;
+
+			var el   = e.target || {};
+			var tag  = (el.tagName || '').toLowerCase();
+			var type = (el.type    || '').toLowerCase();
+
+			if (el.isContentEditable) return;
+			if (tag === 'textarea' || tag === 'select') return;
+			// NOTE: the timeline slider is itself an <input type="range">, so 'range' must NOT be excluded here.
+			if (tag === 'input' && type !== 'range' && type !== 'checkbox' && type !== 'radio' && type !== 'button') return;
+
+			e.preventDefault();
+			if (e.key === 'ArrowLeft')
+				dbxHistoryPrevActiveStatement();
+			else
+				dbxHistoryNextActiveStatement();
+		});
+
+		// Give focus back to the timeline slider when the LAST dialog closes, so plain left/right arrow
+		// stepping works again without having to click the slider first.
+		$(document).on('hidden.bs.modal', function()
+		{
+			if ( ! isHistoryViewActive() ) return;
+
+			var slider = document.getElementById('dbx-history-timeline-slider');
+			if ( ! slider ) return;
+
+			// setTimeout(0): let Bootstrap finish its own hide bookkeeping first, so the closing dialog has
+			// actually lost its '.show' class before _dbxAnyDialogOpen() is consulted.
+			setTimeout(function()
+			{
+				if ( _dbxAnyDialogOpen() ) return; // a stacked dialog is still open (e.g. Showplan under SQL Text)
+				slider.focus({ preventScroll: true });
+			}, 0);
+		});

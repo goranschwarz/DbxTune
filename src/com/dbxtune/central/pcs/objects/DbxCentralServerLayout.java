@@ -29,8 +29,12 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -131,6 +135,152 @@ public class DbxCentralServerLayout
 		return list;
 	}
 	
+	//--------------------------------------------------------------------------
+	// Server GROUP lookups: serverName -> groupName
+	//
+	// Groups ONLY exists as '#FORMAT; GROUP; <name>' lines in 'conf/SERVER_LIST'.
+	// They are NOT stored in the database, and a Collector has NO idea what group
+	// it belongs to (the startup scripts strips all comment lines), hence DbxCentral
+	// has to be the one resolving this.
+	//
+	// The map is built from a FILE-ONLY parse -> getFromFile(filename, null)
+	//  - passing a null 'pcsReader' means NO getSessions() database call is made
+	//  - and it's cached until the file changes (last-modified time or length)
+	// This matters because /api/alarm/active is polled continuously by the Web UI.
+	//--------------------------------------------------------------------------
+
+	private static final Object              _groupCacheLock     = new Object();
+	private static       Map<String, String> _groupCache         = null;
+	private static       String              _groupCacheFilename = null;
+	private static       long                _groupCacheLastMod  = -1;
+	private static       long                _groupCacheLength   = -1;
+
+	/**
+	 * Get a Map of 'serverName -&gt; groupName' for all servers that are member of a GROUP.<br>
+	 * Servers that are <b>not</b> within any GROUP are simply <b>not</b> in the returned Map.
+	 * 
+	 * @param filename  Name of the SERVER_LIST file (null/blank = the default location)
+	 * @return A never-null, unmodifiable Map. An empty Map if the file is missing or has no groups.
+	 */
+	public static Map<String, String> getServerNameToGroupMap(String filename)
+	{
+		if (StringUtil.isNullOrBlank(filename))
+			filename = DbxCentralServerDescription.getDefaultFile();
+
+		File f = new File(filename);
+		long lastMod = f.lastModified(); // 0 if the file do not exist
+		long length  = f.length();       // 0 if the file do not exist
+
+		synchronized (_groupCacheLock)
+		{
+			// Still valid?
+			if (    _groupCache != null 
+			     && filename.equals(_groupCacheFilename) 
+			     && lastMod == _groupCacheLastMod 
+			     && length  == _groupCacheLength
+			   )
+			{
+				return _groupCache;
+			}
+
+			Map<String, String> map = new LinkedHashMap<>();
+			try
+			{
+				// NOTE: 'null' as the pcsReader --> NO database call is made, and the
+				//       synthetic "Others Servers (Not in Layout File)" group is NOT added.
+				for (DbxCentralServerLayout groupEntry : getFromFile(filename, null))
+				{
+					if ( ! groupEntry.isGroupEntry() )
+						continue;
+
+					List<DbxCentralServerLayout> entries = groupEntry.getEntries();
+					if (entries == null)
+						continue;
+
+					for (DbxCentralServerLayout srvEntry : entries)
+					{
+						// getText() holds 'srvDesc.getServerOrAliasName()', which is the same value
+						// that is used as the SCHEMA name in the Central database, and therefore also
+						// the 'srvName' that getAlarmActive() returns. So this is the correct join key.
+						if (srvEntry.isServerEntry() && StringUtil.hasValue(srvEntry.getText()))
+							map.put(srvEntry.getText(), groupEntry.getText());
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				// Note: we cache the (possibly empty) map anyway, so we do not re-read/re-throw on every request
+				_logger.warn("Problems reading Server Groups from file '" + filename + "'. No group information will be available. Caught: " + ex);
+			}
+
+			_groupCache         = Collections.unmodifiableMap(map);
+			_groupCacheFilename = filename;
+			_groupCacheLastMod  = lastMod;
+			_groupCacheLength   = length;
+
+			return _groupCache;
+		}
+	}
+
+	/**
+	 * Get the GROUP name that a specific server is a member of.
+	 * 
+	 * @param srvName   Name of the server (as it is known in the Central database)
+	 * @param filename  Name of the SERVER_LIST file (null/blank = the default location)
+	 * @return The group name, or null if the server is unknown or not within any GROUP.
+	 */
+	public static String getGroupNameForServer(String srvName, String filename)
+	{
+		if (StringUtil.isNullOrBlank(srvName))
+			return null;
+
+		return getServerNameToGroupMap(filename).get(srvName);
+	}
+
+	/**
+	 * Get all server names that are members of the passed GROUP name(s).
+	 * 
+	 * @param groupNames  One or several group names, comma separated. Case insensitive.
+	 * @param filename    Name of the SERVER_LIST file (null/blank = the default location)
+	 * @return A never-null Set. Empty if no groups matched.
+	 */
+	public static Set<String> getServerNamesInGroups(String groupNames, String filename)
+	{
+		Set<String> serverNames = new LinkedHashSet<>();
+
+		if (StringUtil.isNullOrBlank(groupNames))
+			return serverNames;
+
+		Set<String> wantedGroups = new LinkedHashSet<>();
+		for (String name : groupNames.split(","))
+		{
+			String groupName = name.trim();
+			if ( ! groupName.isEmpty() )
+				wantedGroups.add(groupName.toLowerCase());
+		}
+
+		for (Map.Entry<String, String> entry : getServerNameToGroupMap(filename).entrySet())
+		{
+			String groupName = entry.getValue();
+			if (groupName != null && wantedGroups.contains(groupName.toLowerCase()))
+				serverNames.add(entry.getKey());
+		}
+
+		return serverNames;
+	}
+
+	/** Discard the cached 'serverName -&gt; groupName' Map. Primarily intended for test code. */
+	public static void clearServerGroupCache()
+	{
+		synchronized (_groupCacheLock)
+		{
+			_groupCache         = null;
+			_groupCacheFilename = null;
+			_groupCacheLastMod  = -1;
+			_groupCacheLength   = -1;
+		}
+	}
+
 	/**
 	 * Returns all entries from file 'conf/SERVER_LIST' as a Map in the order of the file.
 	 * @param filename

@@ -1682,7 +1682,14 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 				{
 					String liveQueryPlan = SqlServerUtils.getLiveQueryPlanNoThrow(getCounterController().getMonConnection(), spid);
 					if (StringUtil.hasValue(liveQueryPlan))
+					{
 						counters.setValueAt(liveQueryPlan, rowId, pos_LiveQueryPlan);
+						
+						// Should we "post/send" the QueryPlan to DDL Storage here?
+						// This so it could be picked up by Daily Summary Reports etc?
+						//  * And in that case should we have a "TTL" of # hours, so we store/refreshes "last" execution plan ???
+						// TODO: Probably need to think about this a bit more ;)
+					}
 				}
 
 				if (getSpidLocks)

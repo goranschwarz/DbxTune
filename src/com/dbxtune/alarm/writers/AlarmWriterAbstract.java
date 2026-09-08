@@ -21,10 +21,12 @@
 package com.dbxtune.alarm.writers;
 
 import java.lang.invoke.MethodHandles;
-import java.net.InetAddress;
-import java.net.URI;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,9 +34,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
-import com.dbxtune.pcs.IPersistWriter;
-import com.dbxtune.pcs.PersistWriterToHttpJson;
-import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -54,8 +54,9 @@ implements IAlarmWriter
 	public void init(Configuration conf) throws Exception
 	{
 		setConfiguration(conf);
+		initActiveAlarmSummary(conf);
 	}
-	
+
 	public void setConfiguration(Configuration conf)
 	{
 		_configuration = conf;
@@ -94,6 +95,221 @@ implements IAlarmWriter
 	public void restoredAlarms(List<AlarmEvent> restoredAlarms)
 	{
 	}
+
+	//----------------------------------------------------------------
+	// BEGIN: Active Alarms Summary
+	//
+	// A summary of what is STILL ACTIVE, which a writer can append to the messages it sends.
+	// It lives here (and not in the individual writers) for the same reason the 'filter' handling
+	// does: every writer wants it, and it should only be configured/maintained in one place.
+	//
+	// The keys use the same '<AlarmWriterName>' placeholder as the filters above, so they resolve to
+	// eg 'AlarmWriterToTeams.activeAlarms.summary.enabled' / 'AlarmWriterToMail.activeAlarms.summary.enabled'.
+	//----------------------------------------------------------------
+	public static final String  PROPKEY_summaryEnabled        = "<AlarmWriterName>.activeAlarms.summary.enabled";
+//	public static final boolean DEFAULT_summaryEnabled        = false;
+	public static final boolean DEFAULT_summaryEnabled        = true;
+
+	public static final String  PROPKEY_summaryUrl            = "<AlarmWriterName>.activeAlarms.summary.url";
+	public static final String  DEFAULT_summaryUrl            = null;
+
+	public static final String  PROPKEY_summaryGroup          = "<AlarmWriterName>.activeAlarms.summary.group";
+	public static final String  DEFAULT_summaryGroup          = ActiveAlarmSummary.GROUP_SAME;
+
+	public static final String  PROPKEY_summaryOnActions      = "<AlarmWriterName>.activeAlarms.summary.onActions";
+//	public static final String  DEFAULT_summaryOnActions      = ACTION_RAISE + "," + ACTION_RE_RAISE + "," + ACTION_CANCEL;
+	public static final String  DEFAULT_summaryOnActions      = ACTION_RAISE + "," + ACTION_CANCEL;
+
+	public static final String  PROPKEY_summaryMaxRows        = "<AlarmWriterName>.activeAlarms.summary.maxRows";
+	public static final int     DEFAULT_summaryMaxRows        = 25;
+
+	public static final String  PROPKEY_summarySkipMuted      = "<AlarmWriterName>.activeAlarms.summary.skipMuted";
+	public static final boolean DEFAULT_summarySkipMuted      = true;
+
+	public static final String  PROPKEY_summaryCacheSec       = "<AlarmWriterName>.activeAlarms.summary.cacheSec";
+	public static final int     DEFAULT_summaryCacheSec       = 60;
+
+	public static final String  PROPKEY_summaryTimeoutSec     = "<AlarmWriterName>.activeAlarms.summary.timeoutSec";
+	public static final int     DEFAULT_summaryTimeoutSec     = 10;
+
+	private boolean            _summaryEnabled     = DEFAULT_summaryEnabled;
+	private String             _summaryGroup       = DEFAULT_summaryGroup;
+	private String             _summaryUrl         = null; // resolved, after the dbxCentralUrl fallback
+	private int                _summaryMaxRows     = DEFAULT_summaryMaxRows;
+	private Set<String>        _summaryOnActions   = new LinkedHashSet<>();
+	private ActiveAlarmSummary _activeAlarmSummary = null;
+
+	/** Read the 'activeAlarms.summary.*' settings. Called from {@link #init(Configuration)}. */
+	private void initActiveAlarmSummary(Configuration conf)
+	{
+		_summaryEnabled = conf.getBooleanProperty(replaceAlarmWriterName(PROPKEY_summaryEnabled), DEFAULT_summaryEnabled);
+		_summaryGroup   = conf.getProperty       (replaceAlarmWriterName(PROPKEY_summaryGroup  ), DEFAULT_summaryGroup);
+		_summaryMaxRows = conf.getIntProperty    (replaceAlarmWriterName(PROPKEY_summaryMaxRows), DEFAULT_summaryMaxRows);
+
+		boolean skipMuted  = conf.getBooleanProperty(replaceAlarmWriterName(PROPKEY_summarySkipMuted ), DEFAULT_summarySkipMuted);
+		int     cacheSec   = conf.getIntProperty    (replaceAlarmWriterName(PROPKEY_summaryCacheSec  ), DEFAULT_summaryCacheSec);
+		int     timeoutSec = conf.getIntProperty    (replaceAlarmWriterName(PROPKEY_summaryTimeoutSec), DEFAULT_summaryTimeoutSec);
+
+		_summaryOnActions.clear();
+		for (String action : StringUtil.commaStrToList(conf.getProperty(replaceAlarmWriterName(PROPKEY_summaryOnActions), DEFAULT_summaryOnActions)))
+			_summaryOnActions.add(action.trim().toUpperCase());
+
+		_summaryUrl = resolveSummaryUrl(conf);
+
+		if (_summaryEnabled)
+		{
+			if (StringUtil.isNullOrBlank(_summaryUrl))
+			{
+				_logger.info("AlarmWriter '" + getName() + "': The Active Alarms Summary is enabled, but this Collector is not configured to "
+						+ "send data to DbxCentral, and no explicit '" + replaceAlarmWriterName(PROPKEY_summaryUrl) + "' is set. "
+						+ "The summary will hold alarms from THIS Collector only, and no call to DbxCentral will be made.");
+			}
+
+			_activeAlarmSummary = new ActiveAlarmSummary(_summaryUrl, _summaryGroup, skipMuted, cacheSec, timeoutSec);
+		}
+	}
+
+	/**
+	 * Work out which DbxCentral to ask for the <i>other</i> servers active alarms.
+	 * <p>
+	 * Deliberately <b>not</b> {@link #getDbxCentralUrl()}: that one never returns blank - when nothing
+	 * is configured it derives {@code http://<local hostname>:<port>} so that messages always have
+	 * <i>something</i> to link to. Good for a link, useless for a fetch: on a Collector that does not
+	 * talk to DbxCentral at all it would make us HTTP GET a host that isn't there, once per cache
+	 * period, forever.
+	 * <p>
+	 * Order:
+	 * <ol>
+	 *   <li>{@code <AlarmWriterName>.activeAlarms.summary.url} - explicit, always wins</li>
+	 *   <li>the PCS writer's URL - its presence <b>proves</b> this Collector sends to DbxCentral, and
+	 *       it is by definition an address this Collector can reach</li>
+	 *   <li>{@code DbxCentral.public.base.url} - explicitly configured, but it is the <i>public</i>
+	 *       URL, which may sit behind a proxy we cannot reach from here</li>
+	 *   <li>otherwise null - local alarms only, and no HTTP call at all</li>
+	 * </ol>
+	 */
+	private String resolveSummaryUrl(Configuration conf)
+	{
+		// 1) explicitly configured for this writer
+		String url = getProp(conf, replaceAlarmWriterName(PROPKEY_summaryUrl));
+		if (StringUtil.hasValue(url))
+			return url;
+
+		// 2) do we actually send to DbxCentral? If so, use that host.
+		String pcsUrl = getProp(conf, "PersistWriterToDbxCentral.url");
+		if (StringUtil.isNullOrBlank(pcsUrl))
+			pcsUrl = getProp(conf, "PersistWriterToHttpJson.url");
+
+		if (StringUtil.hasValue(pcsUrl))
+		{
+			try
+			{
+				// strip the path, eg 'http://host:80/api/pcs/receiver' -> 'http://host:80'
+				URL u = new URL(pcsUrl);
+				return u.getProtocol() + "://" + u.getHost() + (u.getPort() < 0 ? "" : ":" + u.getPort());
+			}
+			catch (MalformedURLException ex)
+			{
+				_logger.info("AlarmWriter '" + getName() + "': Could not parse the PCS URL '" + pcsUrl + "' when looking for DbxCentral. Caught: " + ex);
+			}
+		}
+
+		// 3) the public base URL, if someone set it explicitly
+		url = getProp(conf, PROPKEY_dbxCentralUrl);
+		if (StringUtil.hasValue(url))
+			return url;
+
+		// 4) this Collector does not talk to DbxCentral -> local alarms only
+		return null;
+	}
+
+	/** Look in the passed Configuration first, then in the combined one. */
+	private static String getProp(Configuration conf, String propName)
+	{
+		String val = conf == null ? null : conf.getProperty(propName, null);
+		if (StringUtil.hasValue(val))
+			return val;
+
+		return Configuration.getCombinedConfiguration().getProperty(propName, null);
+	}
+
+	/** Is the Active Alarms Summary turned on, and wanted for this particular action? */
+	public boolean isActiveAlarmSummaryEnabled(String action)
+	{
+		return _summaryEnabled && _activeAlarmSummary != null && _summaryOnActions.contains(action);
+	}
+
+	/**
+	 * Get the summary of what is currently active, or <b>null</b> if it's disabled or unavailable.
+	 * <p>
+	 * NOTE: This may do an HTTP call to DbxCentral (cached, and fail-soft), so call it <b>once</b>
+	 * per message and reuse the result.
+	 */
+	public ActiveAlarmSummary.Result getActiveAlarmSummary(String action, AlarmEvent alarmEvent)
+	{
+		if ( ! isActiveAlarmSummaryEnabled(action) )
+			return null;
+
+		return _activeAlarmSummary.get(action, alarmEvent);
+	}
+
+	/** Max number of server rows a writer should render */
+	public int getActiveAlarmSummaryMaxRows()
+	{
+		return _summaryMaxRows;
+	}
+
+	/** The group we summarize: 'same', 'all', or explicit name(s). Used for the header text. */
+	public String getActiveAlarmSummaryGroup()
+	{
+		return _summaryGroup;
+	}
+
+	/** Add these to the writers {@code getAvailableSettings()}, the same way the filters are added. */
+	public List<CmSettingsHelper> getActiveAlarmSummarySettings()
+	{
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		String pkEnabled    = replaceAlarmWriterName(PROPKEY_summaryEnabled);
+		String pkUrl        = replaceAlarmWriterName(PROPKEY_summaryUrl);
+		String pkGroup      = replaceAlarmWriterName(PROPKEY_summaryGroup);
+		String pkOnActions  = replaceAlarmWriterName(PROPKEY_summaryOnActions);
+		String pkMaxRows    = replaceAlarmWriterName(PROPKEY_summaryMaxRows);
+		String pkSkipMuted  = replaceAlarmWriterName(PROPKEY_summarySkipMuted);
+		String pkCacheSec   = replaceAlarmWriterName(PROPKEY_summaryCacheSec);
+		String pkTimeoutSec = replaceAlarmWriterName(PROPKEY_summaryTimeoutSec);
+
+		list.add( new CmSettingsHelper("activeAlarms-summary-enabled",    pkEnabled,    Boolean.class, conf.getBooleanProperty(pkEnabled,    DEFAULT_summaryEnabled),    DEFAULT_summaryEnabled,    "<html>Append a summary of all <b>currently active</b> alarms to the message.<br>The alarms for <i>this</i> Collector come from the local AlarmHandler (real time), all <i>other</i> servers are fetched from DbxCentral (and are therefore only as fresh as their last delivery to DbxCentral).</html>"));
+		list.add( new CmSettingsHelper("activeAlarms-summary-url",        pkUrl,        String .class, conf.getProperty       (pkUrl,        DEFAULT_summaryUrl),        DEFAULT_summaryUrl,        "<html>Base URL to DbxCentral, used to fetch the active alarms for the <b>other</b> servers, eg: <code>http://dbxcentral:8080</code><br>If left blank, '" + PROPKEY_dbxCentralUrl + "' is used. If that is also blank, the summary will only hold alarms from <b>this</b> Collector.</html>", new UrlInputValidator()));
+		list.add( new CmSettingsHelper("activeAlarms-summary-group",      pkGroup,      String .class, conf.getProperty       (pkGroup,      DEFAULT_summaryGroup),      DEFAULT_summaryGroup,      "<html>Which servers to include in the summary.<br><ul><li><code>same</code> = only servers in the same <b>GROUP</b> as this server. DbxCentral resolves this from the '#FORMAT; GROUP; ...' lines in its <code>conf/SERVER_LIST</code> file, so it automatically follows any changes made there.</li><li><code>all</code> = every server DbxCentral knows about.</li><li>Anything else = one or several explicit group name(s), comma separated. Example: <code>Production Servers</code></li></ul></html>"));
+		list.add( new CmSettingsHelper("activeAlarms-summary-onActions",  pkOnActions,  String .class, conf.getProperty       (pkOnActions,  DEFAULT_summaryOnActions),  DEFAULT_summaryOnActions,  "<html>Which message types that should carry the summary. Comma separated.<br>Valid values: <code>" + ACTION_RAISE + "</code>, <code>" + ACTION_RE_RAISE + "</code>, <code>" + ACTION_CANCEL + "</code></html>"));
+		list.add( new CmSettingsHelper("activeAlarms-summary-maxRows",    pkMaxRows,    Integer.class, conf.getIntProperty    (pkMaxRows,    DEFAULT_summaryMaxRows),    DEFAULT_summaryMaxRows,    "<html>Max number of <b>server</b> rows in the summary (one row per server, listing that servers alarms). Any servers above this are collapsed into a 'and N more server(s)' row.</html>"));
+		list.add( new CmSettingsHelper("activeAlarms-summary-skipMuted",  pkSkipMuted,  Boolean.class, conf.getBooleanProperty(pkSkipMuted,  DEFAULT_summarySkipMuted),  DEFAULT_summarySkipMuted,  "Discard alarms that are currently muted in DbxCentral."));
+		list.add( new CmSettingsHelper("activeAlarms-summary-cacheSec",   pkCacheSec,   Integer.class, conf.getIntProperty    (pkCacheSec,   DEFAULT_summaryCacheSec),   DEFAULT_summaryCacheSec,   "<html>Reuse the list fetched from DbxCentral for this many seconds.<br>This is what makes an 'alarm storm' (many alarms in the same scan) do <b>one</b> call to DbxCentral instead of one per alarm.</html>"));
+		list.add( new CmSettingsHelper("activeAlarms-summary-timeoutSec", pkTimeoutSec, Integer.class, conf.getIntProperty    (pkTimeoutSec, DEFAULT_summaryTimeoutSec), DEFAULT_summaryTimeoutSec, "Connect/request timeout when fetching the active alarms from DbxCentral. If it fails, the message is still sent, just without the other servers."));
+
+		return list;
+	}
+
+	/** Log the Active Alarms Summary configuration. Call this from the writers {@code printConfig()}. */
+	public void printActiveAlarmSummaryConfig()
+	{
+		int spaces = 50;
+
+		_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_summaryEnabled), spaces) + ": " + _summaryEnabled);
+		if (_summaryEnabled)
+		{
+			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_summaryUrl      ), spaces) + ": " + _summaryUrl + (StringUtil.isNullOrBlank(_summaryUrl) ? "   <<-- Not sending to DbxCentral, so ONLY alarms from THIS Collector are listed (no HTTP call is made)." : ""));
+			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_summaryGroup    ), spaces) + ": " + _summaryGroup);
+			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_summaryOnActions), spaces) + ": " + _summaryOnActions);
+			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_summaryMaxRows  ), spaces) + ": " + _summaryMaxRows);
+		}
+	}
+	//----------------------------------------------------------------
+	// END: Active Alarms Summary
+	//----------------------------------------------------------------
 
 	public static final String  PROPKEY_dbxCentralUrl = DailySummaryReportAbstract.PROPKEY_DbxCentralPublicBaseUrl;
 	public static final String  DEFAULT_dbxCentralUrl = DailySummaryReportAbstract.DEFAULT_DbxCentralPublicBaseUrl;

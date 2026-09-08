@@ -23,6 +23,8 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -36,6 +38,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.central.alarm.AlarmMuteManager;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.objects.DbxAlarmActive;
+import com.dbxtune.central.pcs.objects.DbxCentralServerLayout;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -67,10 +70,12 @@ extends HttpServlet
 		try
 		{
 			// Check for known input parameters
-			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName"))
+			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName", "group", "groupOfSrv"))
 				return;
 			
-			String srv = Helper.getParameter(req, new String[] {"srv", "srvName"} );
+			String srv        = Helper.getParameter(req, new String[] {"srv", "srvName"} );
+			String group      = Helper.getParameter(req, new String[] {"group"} );
+			String groupOfSrv = Helper.getParameter(req, new String[] {"groupOfSrv"} );
 
 			// Check that "srv" exists
 			if (StringUtil.hasValue(srv))
@@ -102,6 +107,44 @@ extends HttpServlet
 						alarm.setMuteExpiresAt(rec.expiresAt);
 					}
 				}
+			}
+
+			//------------------------------------------------------------------
+			// Stamp every alarm with the SERVER_LIST GROUP its server belongs to.
+			// NOTE: This is cached (and invalidated on file change) inside
+			//       DbxCentralServerLayout, so it's cheap enough to always do.
+			//------------------------------------------------------------------
+			Map<String, String> srvToGroupMap = DbxCentralServerLayout.getServerNameToGroupMap(null);
+			for (DbxAlarmActive alarm : list)
+			{
+				alarm.setGroup( srvToGroupMap.get(alarm.getSrvName()) );
+			}
+
+			//------------------------------------------------------------------
+			// Optionally: filter on GROUP
+			//  - 'groupOfSrv=<srvName>' -> resolve which group that server is in, then filter on it
+			//  - 'group=<name>[,<name>]' -> filter on the group name(s)
+			//------------------------------------------------------------------
+			if (StringUtil.hasValue(groupOfSrv))
+			{
+				// NOTE: If the server is unknown, or not a member of any group, we deliberately
+				//       end up with an EMPTY list (and NOT an error). A Collector that isn't in
+				//       any group should degrade quietly, not fail.
+				group = DbxCentralServerLayout.getGroupNameForServer(groupOfSrv, null);
+
+				if (StringUtil.isNullOrBlank(group))
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("AlarmActive: groupOfSrv='" + groupOfSrv + "' is not a member of any GROUP in the SERVER_LIST file. Returning an empty list.");
+
+					list.clear();
+				}
+			}
+
+			if ( ! list.isEmpty() && StringUtil.hasValue(group) )
+			{
+				Set<String> srvNamesInGroup = DbxCentralServerLayout.getServerNamesInGroups(group, null);
+				list.removeIf( alarm -> ! srvNamesInGroup.contains(alarm.getSrvName()) );
 			}
 
 			// to JSON

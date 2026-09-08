@@ -1019,6 +1019,147 @@ extends DailySummaryReportAbstract
 	{
 	}
 
+	/**
+	 * Should we write the "Hold on: Loading page from server" banner at the top of the page?<br>
+	 * Override this and return false if you do NOT want the banner.
+	 */
+	public boolean createPageLoadingBanner()
+	{
+		return true;
+	}
+
+	/**
+	 * Write the <b>progress area</b>: the ONE "sticky" section at the top of the page where <b>all</b>
+	 * load-progress information is presented, one row per activity:
+	 * <ul>
+	 *   <li><code>Hold on: Loading page from server... NN%</code> - while the HTML is transferred and
+	 *       parsed. Written here, and removed again on <code>DOMContentLoaded</code>.</li>
+	 *   <li><code>Initializing Sparklines:</code>  - {@link com.dbxtune.pcs.report.content.SparklineHelper}
+	 *       moves its own progress div in here.</li>
+	 *   <li><code>Initializing Chart Info :</code> - {@link com.dbxtune.pcs.report.content.ReportChartAbstract}
+	 *       moves its own progress div in here.</li>
+	 * </ul>
+	 * NOTE: <code>position: sticky</code> (NOT <code>fixed</code>) so the area is part of the normal page
+	 *       flow: it sits <b>above</b> the report and pushes it down, instead of covering the
+	 *       "<i>... for Servername: XXX</i>" heading. It still stays at the top when scrolling.
+	 * <p>
+	 * NOTE: ALL the visual styling (background/border/padding) is on the <b>child rows</b>, never on the
+	 *       area itself. So when every row is hidden or removed, the area collapses to zero height and
+	 *       nothing at all is shown.
+	 */
+	public void createProgressAreaHtml(Writer w)
+	throws IOException
+	{
+		w.append("\n");
+		w.append("<!-- ================================================================================== -->\n");
+		w.append("<!-- == Progress area: 'Loading page from server', 'Initializing Sparklines', etc.   == -->\n");
+		w.append("<!-- == One sticky section at the top. Only visible when JavaScript is enabled.      == -->\n");
+		w.append("<!-- ================================================================================== -->\n");
+		w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+		w.append("<style type='text/css'> \n");
+		w.append("    #progress-area                 { position: sticky; top: 0; z-index: 10050; display: flex; flex-direction: column; } \n");
+		// Fixed row order. Without this the order is decided by WHICH loader happens to move its row
+		// in here first (they appendTo() the area), which varies with the report content.
+		w.append("    #progress-area #dsr-page-loading       { order: 1; } \n");
+		w.append("    #progress-area #chartJs-progress-div   { order: 2; } \n");
+		w.append("    #progress-area #sparkline-progress-div { order: 3; } \n");
+		w.append("    #progress-area > div           { background-color: #fff3cd; color: #856404; border-bottom: 1px solid #ffeeba; \n");
+		w.append("                                     padding: 6px 12px; text-align: center; font-size: 14px; } \n");
+		w.append("    #progress-area label, \n");
+		w.append("    #progress-area #dsr-pl-text    { display: inline-block; vertical-align: middle; margin: 0 8px 0 0; } \n");
+		// The 'Loading page from server' bar is a plain div (it must work before jQuery/Bootstrap has
+		// loaded), the other two are <progress> elements -- style them identically so the rows match.
+		w.append("    #progress-area progress, \n");
+		w.append("    #progress-area .dsr-pl-bar     { display: inline-block; vertical-align: middle; width: 50%; height: 20px; \n");
+		w.append("                                     -webkit-appearance: none; appearance: none; \n");
+		w.append("                                     background-color: #fff; border: 1px solid #e0c878; border-radius: 3px; overflow: hidden; } \n");
+		w.append("    #progress-area #dsr-pl-fill                     { height: 100%; width: 0%; background-color: #856404; transition: width 0.2s linear; } \n");
+		w.append("    #progress-area progress::-webkit-progress-bar   { background-color: #fff; } \n");
+		w.append("    #progress-area progress::-webkit-progress-value { background-color: #856404; } \n");
+		w.append("    #progress-area progress::-moz-progress-bar      { background-color: #856404; } \n");
+		// The 'Stop' buttons come in as 'btn btn-primary btn-sm' -- a blue button on an amber banner.
+		// Re-colour them to the same dark amber as the progress bar fill, so they belong to the banner
+		// but still read clearly as a button.
+		// An #id selector outranks Bootstrap's single-class rules, so no !important is needed.
+		w.append("    #progress-area button          { padding: 1px 10px; font-size: 12px; line-height: 18px; \n");
+		w.append("                                     color: #fff; background-color: #856404; border: 1px solid #6b4f03; border-radius: 3px; } \n");
+		w.append("    #progress-area button:hover    { background-color: #6b4f03; } \n");
+		w.append("</style> \n");
+		w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+		w.append("\n");
+
+		w.append("<div id='progress-area'> \n");
+
+		// First row: "Hold on: Loading page from server..." -- removed again when the page is loaded
+		if (createPageLoadingBanner())
+			createPageLoadingBannerHtml(w, getReportEntries().size());
+
+		w.append("</div> \n");
+		w.append("\n");
+	}
+
+	/**
+	 * Write the "Hold on: Loading page from server" row, which goes <b>inside</b> the progress area
+	 * written by {@link #createProgressAreaHtml(Writer)}. It tells the user that the page is still
+	 * being transferred from the server. (A big report on a slow network takes a while...)
+	 * <p>
+	 * How it works:
+	 * <ul>
+	 *   <li>The browser renders the HTML <i>while</i> it is streaming in, so a banner at the top of the body shows up early.</li>
+	 *   <li>After every report section we write a tiny script tag that calls <code>dsrPageLoadProgress(#)</code>,
+	 *       which the parser executes as soon as it reaches it -- that gives us a percentage for free.</li>
+	 *   <li>On <code>DOMContentLoaded</code> (== the full page has been received and parsed) the banner is removed.</li>
+	 * </ul>
+	 * NOTE: The div is written as <code>display:none</code> and is made visible <b>by JavaScript</b>.
+	 *       So in a mail reader (or any browser where JavaScript is disabled) it will <b>never</b> be visible,
+	 *       and the page looks exactly as it did before. It is also wrapped in Outlook conditional
+	 *       comments, just like the rest of this report.
+	 * <p>
+	 * NOTE: Plain JavaScript is used here (no jQuery/Bootstrap), since the libraries loaded in the
+	 *       head section may very well still be downloading when this is executed.
+	 *
+	 * @param w             Where to write the HTML
+	 * @param sectionCount  Number of report sections (used when calculating the percentage)
+	 */
+	public void createPageLoadingBannerHtml(Writer w, int sectionCount)
+	throws IOException
+	{
+		w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+		w.append("<div id='dsr-page-loading' style='display: none;'> \n");
+		w.append("    <span id='dsr-pl-text'>Hold on: Loading page from server...</span> \n");
+		w.append("    <div class='dsr-pl-bar'><div id='dsr-pl-fill'></div></div> \n");
+		w.append("</div> \n");
+		w.append("<script type='text/javascript'> \n");
+		w.append("    var dsrPageLoadTotal = " + sectionCount + "; \n");
+		w.append("\n");
+		w.append("    // Make the banner visible. \n");
+		w.append("    // This is what keeps it INVISIBLE when JavaScript is disabled (mail readers etc). \n");
+		w.append("    document.getElementById('dsr-page-loading').style.display = 'block'; \n");
+		w.append("\n");
+		w.append("    // Called from a small script tag written after every report section, while the page is streaming in \n");
+		w.append("    function dsrPageLoadProgress(sectionsDone) \n");
+		w.append("    { \n");
+		w.append("        var pct  = dsrPageLoadTotal > 0 ? Math.round(sectionsDone * 100 / dsrPageLoadTotal) : 0; \n");
+		w.append("        var text = document.getElementById('dsr-pl-text'); \n");
+		w.append("        var fill = document.getElementById('dsr-pl-fill'); \n");
+		w.append("        if (text) text.textContent = 'Hold on: Loading page from server... ' + pct + '% (section ' + sectionsDone + ' of ' + dsrPageLoadTotal + ')'; \n");
+		w.append("        if (fill) fill.style.width = pct + '%'; \n");
+		w.append("    } \n");
+		w.append("\n");
+		w.append("    // The page has now been fully received and parsed -- remove this row. \n");
+		w.append("    // NOTE: Only the row is removed, the 'progress-area' itself stays: the sparkline and \n");
+		w.append("    //       chart loaders move their own progress rows into it right after this. \n");
+		w.append("    // NOTE: This listener is registered FIRST (we are at the top of the body), so this row \n");
+		w.append("    //       is gone before those loaders add theirs. \n");
+		w.append("    document.addEventListener('DOMContentLoaded', function() { \n");
+		w.append("        var div = document.getElementById('dsr-page-loading'); \n");
+		w.append("        if (div && div.parentNode) div.parentNode.removeChild(div); \n");
+		w.append("    }); \n");
+		w.append("</script> \n");
+		w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+		w.append("\n");
+	}
+
 	public void createHtmlBody(Writer writer)
 	throws IOException
 	{
@@ -1030,16 +1171,18 @@ extends DailySummaryReportAbstract
 		// Create a navbar if we want one.
 		createHtmlNavbar(writer);
 
+		// Create the area where ALL load-progress is shown: the "Loading page from server" row, and
+		// the "Initializing Sparklines" / "Initializing Chart Info" rows that move themselves in here.
+		// NOTE: Written as early as possible in the body (and OUTSIDE 'container-fluid', so it is full
+		//       width), so the browser can render it while the rest of the page is still streaming in.
+		createProgressAreaHtml(writer);
+
 		if (useBootstrap())
 		{
 			writer.append("<div class='container-fluid'> \n"); // BEGIN: Bootstrap 4 container
 		}
 		writer.append("\n");
 
-		// Create an area where we can add/show progress bars
-		writer.append("<div id='progress-area' style='background-color: white; position:fixed; top:50px; left:30px; width:100%; z-index: 9999;'>\n");
-		writer.append("</div>\n");
-		
 
 		// Collapseable group div 
 		if (useBootstrap())
@@ -1136,6 +1279,7 @@ extends DailySummaryReportAbstract
 
 		//--------------------------------------------------
 		// ALL REPORTS
+		int sectionsDone = 0;
 		for (IReportEntry entry : getReportEntries())
 		{
 			// So we can gather some statistics
@@ -1268,6 +1412,12 @@ extends DailySummaryReportAbstract
 
 			// So we can gather some statistics
 			entry.endWriteEntry(writer, MessageType.FULL_MESSAGE);
+
+			// Update the "Loading page from server" banner.
+			// The browser executes this while the page is streaming in, which gives us a "percent loaded".
+			sectionsDone++;
+			if (createPageLoadingBanner())
+				writer.append("<script type='text/javascript'>if (typeof dsrPageLoadProgress === 'function') dsrPageLoadProgress(" + sectionsDone + ");</script> \n");
 			
 //System.gc();
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** "+ entry.getClass().getSimpleName());

@@ -661,6 +661,7 @@ window.SqlServerShowplan = (function () {
 			// Needs the statement's Degree of Parallelism (just parsed above), so this runs after
 			// buildStatementNode rather than alongside computeCosts().
 			applyParallelWorkerCounts(stmtNode);
+			markNeverExecuted(stmtNode);
 
 			statements.push({
 				label: statementLabel(stmtEl, i),
@@ -936,31 +937,10 @@ window.SqlServerShowplan = (function () {
 		+ '.ss-plan-detail-warn-line { color: #a8500f; white-space: normal; max-width: 520px; line-height: 1.3; }'
 		+ '.ss-plan-detail-hint { margin-top: 5px; padding-top: 4px; border-top: 1px solid #e6dcb8; color: #9a8f6d; font-size: 10px; white-space: normal; }'
 		// --- Properties pane (the SSMS-like "everything" view, rendered into opts.propsTarget) ---
-		// Scroll shadow: a soft shading at the top/bottom edge that appears ONLY while there is more
-		// content to scroll to in that direction, so "is this the end of the list?" is answerable at a
-		// glance. Pure CSS, no scroll handler: the two `local` white gradients scroll WITH the content
-		// and so cover the fixed (`scroll`) shadow gradients exactly when the pane is at that end.
-		+ '.ss-plan-props-scroll {'
-		+   'background:'
-		+     'linear-gradient(#fff 30%, rgba(255,255,255,0)) top / 100% 14px no-repeat local,'
-		+     'linear-gradient(rgba(255,255,255,0), #fff 70%) bottom / 100% 14px no-repeat local,'
-		+     'radial-gradient(farthest-side at 50% 0, rgba(0,0,0,0.14), rgba(0,0,0,0)) top / 100% 7px no-repeat scroll,'
-		+     'radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,0.14), rgba(0,0,0,0)) bottom / 100% 7px no-repeat scroll;'
-		+ '}'
-		+ '.ss-plan-prop-title { font-weight: 700; font-size: 12px; margin-bottom: 1px; }'
-		+ '.ss-plan-prop-subtitle { color: #777; font-size: 10px; margin-bottom: 5px; }'
-		+ '.ss-plan-prop-desc { font-style: italic; color: #5c5c5c; font-size: 10px; line-height: 1.35; margin-bottom: 8px; }'
-		+ '.ss-plan-prop-empty { color: #999; font-style: italic; font-size: 11px; }'
-		+ '.ss-plan-prop-sect { margin-bottom: 8px; }'
-		+ '.ss-plan-prop-sect-hdr { font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: #6a6a6a; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 3px; }'
-		+ '.ss-plan-prop-row { display: flex; gap: 8px; font-size: 11px; padding: 1px 0; align-items: baseline; }'
-		+ '.ss-plan-prop-key { flex: 0 0 42%; color: #777; word-break: break-word; }'
-		// break-word (not nowrap+ellipsis): a Predicate/ScalarString value is often very long, and in a
-		// narrow pane truncating it would hide exactly the part being investigated.
-		+ '.ss-plan-prop-val { flex: 1 1 auto; word-break: break-word; }'
-		+ '.ss-plan-prop-warn { color: #a8500f; font-size: 11px; line-height: 1.35; margin-bottom: 3px; }'
-		+ '.ss-plan-prop-xml > summary { cursor: pointer; font-size: 10px; color: #555; padding: 1px 0; user-select: none; }'
-		+ '.ss-plan-prop-xml-body { padding-left: 10px; border-left: 1px solid #e2e2e2; margin-left: 3px; }'
+		// The generic half lives in dbxShowplanGraph.js so the ASE pane looks identical and a styling
+		// fix lands once; the per-thread bars below stay here, since only SQL Server has that data.
+		+ DbxShowplanGraph.neverExecutedCss('ss-plan')
+		+ DbxShowplanGraph.propsCss('ss-plan')
 		// Per-thread row distribution (see the 'Parallel Threads' section) - a small inline bar chart
 		// next to each thread's row count, since "how is it distributed" is far easier to read as bar
 		// LENGTHS than as a column of numbers alone.
@@ -1003,109 +983,24 @@ window.SqlServerShowplan = (function () {
 	// appended to <body> too.
 	//
 	// The cost of leaving the box's coordinate space is that a fixed panel no longer travels with
-	// the diagram, so scrolling/resizing has to be handled explicitly - see _ssRepositionPanels().
+	// the diagram, so scrolling/resizing has to be handled explicitly - which the shared panel
+	// system's reposition() handler does (dbxShowplanGraph.js).
 	// ─────────────────────────────────────────────────────────────────────────
 
-	// Every currently-open panel: { $panel, boxEl, pinned }.
-	var _openPanels = [];
-	var _panelListenersBound = false;
+	// The panel machinery itself is shared with the ASE renderer (dbxShowplanGraph.js) - only the
+	// panel's CONTENT is vendor-specific, which is what buildDetailPanel supplies here. Same-named
+	// local wrappers keep the existing call sites in renderNode()/render() unchanged.
+	var _panels = DbxShowplanGraph.createPanelSystem({
+		prefix:     'ss-plan',
+		buildPanel: function (node) { return buildDetailPanel(node); }
+	});
 
-	function _panelGap() { return 6; }
-
-	/** Place a panel just below its box, flipping above / clamping to stay fully on screen. */
-	function positionDetailPanel($panel, boxEl) {
-		var gap = _panelGap();
-		var r   = boxEl.getBoundingClientRect();
-		// Measure before placing - the panel's size depends on its content.
-		var pw = $panel[0].offsetWidth;
-		var ph = $panel[0].offsetHeight;
-
-		var top = r.bottom + gap;
-		if (top + ph > window.innerHeight - gap) {
-			var above = r.top - ph - gap;
-			// Prefer opening upward; if it does not fit either way, clamp to the viewport so the top
-			// of the panel is always readable rather than letting it run off the bottom.
-			top = (above >= gap) ? above : Math.max(gap, window.innerHeight - ph - gap);
-		}
-		var left = r.left + (r.width / 2) - (pw / 2);
-		left = Math.max(gap, Math.min(left, window.innerWidth - pw - gap));
-
-		$panel.css({ left: Math.round(left) + 'px', top: Math.round(top) + 'px' });
-	}
-
-	/**
-	 * Re-place open panels after anything that could have moved their box. A pinned panel follows
-	 * its box; a transient hover tooltip is simply dismissed (the pointer has left it by then
-	 * anyway). A panel whose box has been scrolled out of sight is closed rather than left
-	 * stranded against the viewport edge.
-	 */
-	function _ssRepositionPanels() {
-		for (var i = _openPanels.length - 1; i >= 0; i--) {
-			var e = _openPanels[i];
-			if (!e.pinned || !document.body.contains(e.boxEl)) { _closePanelAt(i); continue; }
-			var r = e.boxEl.getBoundingClientRect();
-			var offScreen = r.bottom < 0 || r.top > window.innerHeight
-			             || r.right  < 0 || r.left > window.innerWidth;
-			if (offScreen) { _closePanelAt(i); continue; }
-			positionDetailPanel(e.$panel, e.boxEl);
-		}
-	}
-
-	function _bindPanelListeners() {
-		if (_panelListenersBound) return;
-		_panelListenersBound = true;
-		// Capture phase: the diagram scrolls in its own inner container, and a scroll event on a
-		// descendant does not bubble - capturing on window is what catches it.
-		window.addEventListener('scroll', _ssRepositionPanels, true);
-		window.addEventListener('resize', _ssRepositionPanels);
-	}
-
-	function _closePanelAt(i) {
-		var e = _openPanels[i];
-		if (e) {
-			e.$panel.remove();
-			if (e.boxEl) e.boxEl.__ssPanel = undefined;
-			_openPanels.splice(i, 1);
-		}
-	}
-
-	function panelFor(boxEl)      { return boxEl ? boxEl.__ssPanel : undefined; }
-	function isPinned(boxEl)      { var p = panelFor(boxEl); return !!(p && p.pinned); }
-
-	function closePanel(boxEl) {
-		for (var i = 0; i < _openPanels.length; i++) {
-			if (_openPanels[i].boxEl === boxEl) { _closePanelAt(i); return; }
-		}
-	}
-
-	function closeAllPanels(onlyTooltips) {
-		for (var i = _openPanels.length - 1; i >= 0; i--) {
-			if (!onlyTooltips || !_openPanels[i].pinned) _closePanelAt(i);
-		}
-	}
-
-	/** Build, attach and place a panel for a node. Replaces any panel already open on that box. */
-	function openDetailPanel(node, boxEl, pinned) {
-		closePanel(boxEl);
-		// Pinning is exclusive. When panels were anchored inside their own box they sat in the
-		// diagram's flow and several could coexist harmlessly; now that they are large fixed
-		// overlays, two pinned panels on nearby operators simply cover each other. One at a time
-		// also matches the Properties pane, which already tracks the single selected operator.
-		if (pinned) {
-			for (var i = _openPanels.length - 1; i >= 0; i--) {
-				if (_openPanels[i].pinned) _closePanelAt(i);
-			}
-		}
-		_bindPanelListeners();
-		var $panel = buildDetailPanel(node);
-		if (!pinned) $panel.addClass('ss-plan-tooltip');
-		$('body').append($panel);
-		positionDetailPanel($panel, boxEl);
-		var entry = { $panel: $panel, boxEl: boxEl, pinned: !!pinned };
-		boxEl.__ssPanel = entry;
-		_openPanels.push(entry);
-		return $panel;
-	}
+	function positionDetailPanel($panel, boxEl)  { return _panels.position($panel, boxEl); }
+	function panelFor(boxEl)                     { return _panels.panelFor(boxEl); }
+	function isPinned(boxEl)                     { return _panels.isPinned(boxEl); }
+	function closePanel(boxEl)                   { return _panels.close(boxEl); }
+	function closeAllPanels(onlyTooltips)        { return _panels.closeAll(onlyTooltips); }
+	function openDetailPanel(node, boxEl, pinned) { return _panels.open(node, boxEl, pinned); }
 	var _arrowMarkerSeq = 0;
 
 	// Experimental: draws connectors as an SVG overlay by measuring already-laid-out box positions,
@@ -1287,10 +1182,14 @@ window.SqlServerShowplan = (function () {
 			var childNode = box.__ssPlanNode;
 			var thickness = rowsToThickness(connectorRows(childNode));
 
+			// A connector into a never-executed operator carried no rows, so it is drawn washed out -
+			// otherwise a dead branch keeps a full-strength line into it and still pulls the eye.
+			var deadEnd = !!(childNode && childNode._neverExecuted);
+
 			var path = document.createElementNS(svgNS, 'path');
 			path.setAttribute('d', d);
 			path.setAttribute('fill', 'none');
-			path.setAttribute('stroke', '#8a8a8a');
+			path.setAttribute('stroke', deadEnd ? '#cfcfcf' : '#8a8a8a');
 			path.setAttribute('stroke-width', String(thickness));
 			// Rounded joins stop the elbow corners looking notched once the line gets heavy.
 			path.setAttribute('stroke-linejoin', 'round');
@@ -1429,259 +1328,32 @@ window.SqlServerShowplan = (function () {
 		});
 	}
 
-	// Sorting by VA (above) fixed the "sometimes matches, sometimes doesn't" complaint, but exposed a
-	// separate structural issue: whichever child block-stacks SECOND in a table cell starts only after
-	// the FIRST child's full natural height - and for a "continuing chain" child, that natural height
-	// is its entire recursive subtree (the chain's own <li> is itself a nested table whose row height
-	// is the max of its own box and ITS children-cell, recursively all the way down), not just its own
-	// box. So when the chain sorts before its sibling leaf (chain VA < leaf VA - common), the leaf gets
-	// pushed hundreds of pixels down by a subtree that actually extends sideways (into deeper table
-	// columns), not down in this column at all - "why can't 26 sit just below 25 instead of trailing
-	// the entire subtree" was exactly this.
-	//
-	// Fix: a leaf has no children of its own, so it doesn't need to participate in that block-stacking
-	// flow at all. Pull it out of flow (position:absolute) and place it in a small band sized from
-	// real measured box heights (box height isn't fixed - it grows with an optional subtitle/metric
-	// line), so the visual gap depends only on the leaf's own small size, never on how deep the OTHER
-	// sibling's chain continues.
-	//
-	// First version of this always tucked every leaf into a band at the very TOP of the cell,
-	// regardless of VA - which silently undid reorderCompactByNodeId() for exactly the joins it mattered
-	// most for: when the continuing chain has the LOWER VA (chain executes first - the common case),
-	// tucking the leaf above it put the HIGHER VA operator physically higher on screen, the opposite
-	// of "lower VA reads first" (caught by the user comparing against the VA badges directly). Fixed
-	// by tucking relative to the chain's own position instead of unconditionally to the top: a leaf
-	// that VA-sorts BEFORE the chain tucks into a band above it (as before); a leaf that VA-sorts
-	// AFTER the chain tucks into a band starting right below the chain's OWN box - specifically its
-	// own small box height, not its full recursive subtree height (measured separately: the chain
-	// li's natural height reflects its whole subtree per the comment above, but .ss-plan-box itself,
-	// one level in, is never stretched - see the .ss-plan-box-cell comment above in the CSS block).
-	// Either way the chain still flows normally and still needs its full natural subtree height
-	// reserved in the cell - only the LEAF's position is decoupled from that height, never the
-	// chain's own layout. Horizontal mode only for now - vertical mode's transposed table-row/
-	// table-cell structure would need mirrored left/right positioning instead of top, not yet done.
-	function tuckLeavesNearParent(treeEl) {
-		var GAP = 9; // matches the li > ul > li margin in the CSS above
-		treeEl.querySelectorAll('li').forEach(function (li) {
-			var ul = li.querySelector(':scope > ul');
-			if (!ul) return;
-			var kids = Array.prototype.slice.call(ul.children); // already NodeId-sorted, see reorderCompactByNodeId()
-			var leafKids = [], nonLeafKids = [];
-			kids.forEach(function (k) {
-				(k.querySelectorAll(':scope > ul > li').length === 0 ? leafKids : nonLeafKids).push(k);
-			});
-			// Only handle the common "one chain, one or more leaves" shape - a node with 2+ continuing
-			// children is the separate "balanced" case (see reorderCompactByNodeId()'s comment), where
-			// every child's full subtree height genuinely is needed to avoid its descendants colliding
-			// with a sibling's, so it's left on normal block-stacking untouched.
-			if (!leafKids.length || nonLeafKids.length !== 1) return;
-			var chainLi = nonLeafKids[0];
-			var chainIndex = kids.indexOf(chainLi);
+	function tuckLeavesNearParent(treeEl) { return DbxShowplanGraph.tuckLeavesNearParent(treeEl, 'ss-plan'); }
 
-			ul.style.position = 'relative';
-			// A CSS-absolutely-positioned child is placed relative to its containing block's PADDING
-			// edge, not its content edge - so "left: 0" here would land the leaf flush against the
-			// padding edge, i.e. INSIDE the ul's own padding-left, undoing that padding rather than
-			// respecting it. Reading the real computed value (rather than hardcoding the CSS's 40px)
-			// keeps this from silently drifting out of sync if that padding-left ever changes.
-			var stepLeft = window.getComputedStyle(ul).paddingLeft || '0px';
-			var maxLeafWidth = 0;
+	function tuckLeavesNearParentVertical(treeEl) { return DbxShowplanGraph.tuckLeavesNearParentVertical(treeEl, 'ss-plan'); }
 
-			function tuck(leafLi, top) {
-				var box = leafLi.querySelector(':scope > .ss-plan-box-cell > .ss-plan-box');
-				if (!box) return 76;
-				var rect = box.getBoundingClientRect();
-				maxLeafWidth = Math.max(maxLeafWidth, rect.width);
-				leafLi.style.position = 'absolute';
-				leafLi.style.top = top + 'px';
-				leafLi.style.left = stepLeft;
-				leafLi.style.margin = '0';
-				return rect.height;
-			}
+	// Layout/tree plumbing with no vendor knowledge - shared with the other renderer so a fix
+	// lands once. See dbxShowplanGraph.js (loaded before this file) for the implementations and
+	// for why drawConnectorLines() is deliberately NOT shared.
+	function walkPlanNodes(root, fn) { return DbxShowplanGraph.walkPlanNodes(root, fn); }
 
-			var beforeChain = kids.slice(0, chainIndex).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-			var afterChain  = kids.slice(chainIndex + 1).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-
-			var offset = 0;
-			beforeChain.forEach(function (leafLi) { offset += tuck(leafLi, offset) + GAP; });
-			// Reserves exactly the "before" leaves' own height for them, so the (still block-flowing)
-			// chain starts right after that small band instead of unconditionally at the cell's top.
-			ul.style.paddingTop = offset + 'px';
-
-			var chainOwnBox = chainLi.querySelector(':scope > .ss-plan-box-cell > .ss-plan-box');
-			var chainOwnHeight = chainOwnBox ? chainOwnBox.getBoundingClientRect().height : 76;
-			var afterOffset = offset + chainOwnHeight + GAP;
-			afterChain.forEach(function (leafLi) { afterOffset += tuck(leafLi, afterOffset) + GAP; });
-
-			// A tucked leaf's box width (up to the CSS max-width, driven by however long its label
-			// text is) no longer feeds into the native table's own column-width calculation once it's
-			// pulled out of flow via position:absolute - only the chain's own (possibly narrower) box
-			// still does. So if some tucked leaf is wider than the chain's own box, the chain's OWN
-			// children (one column further right) would otherwise start too close and visually collide
-			// with that wider tucked sibling. Widen the gap before the chain's own children by exactly
-			// the excess to compensate - the chain's own box position/width is untouched, only where
-			// ITS children begin shifts right.
-			var chainOwnWidth = chainOwnBox ? chainOwnBox.getBoundingClientRect().width : 0;
-			if (maxLeafWidth > chainOwnWidth) {
-				var chainChildrenUl = chainLi.querySelector(':scope > ul');
-				if (chainChildrenUl) {
-					var chainStep = parseFloat(window.getComputedStyle(chainChildrenUl).paddingLeft) || 0;
-					chainChildrenUl.style.paddingLeft = (chainStep + (maxLeafWidth - chainOwnWidth)) + 'px';
-				}
-			}
-
-			// The perpendicular half of the same problem, and the counterpart of the vertical
-			// version's minWidth compensation further down.
-			//
-			// An after-tucked leaf is pulled out of flow entirely (position:absolute), so nothing in
-			// normal flow reports how far DOWN it actually reaches. Left alone, this <ul> auto-sizes
-			// to its in-flow content only (the chain), and that shorter height propagates up to this
-			// node's own <li> and on to ITS parent - which then stacks the NEXT SIBLING BRANCH as if
-			// this subtree ended higher than it visually does, dropping that branch's boxes straight
-			// on top of the tucked leaf.
-			//
-			// Found by measuring, not by eye: a sweep over html-query-plan's 55-plan corpus checking
-			// every pair of boxes for intersection flagged exactly one case - a Clustered Index Scan
-			// (node 18) tucked under one branch of "what is my accepted answer percentage rate.sqlplan"
-			// landing underneath an Index Seek (node 34) from the next branch. Reserving the real
-			// measured extent fixes it and leaves every other plan's layout untouched.
-			//
-			// The reservation goes on the <li> (display:table), NOT on the <ul> (display:table-cell):
-			// CSS leaves the effect of min-height on a table-cell undefined, and browsers duly ignore
-			// it - verified here by setting it and watching the overlap survive unchanged. min-height
-			// on the table box itself is honoured. This is also exactly what the vertical version
-			// below does with min-width, on its own axis.
-			if (afterChain.length) {
-				var ulTop = ul.getBoundingClientRect().top;
-				var lowest = 0;
-				afterChain.forEach(function (leafLi) {
-					lowest = Math.max(lowest, leafLi.getBoundingClientRect().bottom - ulTop);
-				});
-				var curMinHeight = parseFloat(window.getComputedStyle(li).minHeight) || 0;
-				li.style.minHeight = Math.max(curMinHeight, Math.ceil(lowest)) + 'px';
-			}
+	/**
+	 * Flags the operators that provably never ran (see DbxShowplanGraph.markNeverExecuted for why the
+	 * test is subtree-wide rather than per-node). Runs at PARSE time, not render time, so the diagram
+	 * and collectFindings() - which are reached from different call sites - can never disagree about
+	 * which parts of the plan are dead.
+	 *
+	 * ActualExecutions is already summed across threads by RT_SUM_ATTRS, and is left undefined on a
+	 * node with no <RunTimeInformation> at all - which is exactly the null the shared helper needs in
+	 * order not to mistake an estimated-only plan for a plan where nothing ran.
+	 */
+	function markNeverExecuted(root) {
+		return DbxShowplanGraph.markNeverExecuted(root, function (node) {
+			// The statement pseudo-node is a wrapper buildStatementNode() invents; it has no runtime
+			// counters of its own, so it is judged purely by its subtree (as null, not zero).
+			var m = node.metrics || {};
+			return (m.ActualExecutions === undefined) ? null : m.ActualExecutions;
 		});
-	}
-
-	// Mirrors tuckLeavesNearParent() above for vertical (top-to-bottom) mode's transposed table-row/
-	// table-cell structure: siblings sit side by side (left-to-right) instead of stacked top-to-bottom,
-	// so the same bug shows up rotated 90 degrees - a leaf's table-CELL used to start only after the
-	// chain sibling's full subtree WIDTH (a deep chain fans out into many cells further down and can be
-	// very wide), pushing a small leaf box far to the right of where it actually connects, with a big
-	// empty gap in between (reported directly by the user pointing at exactly this on a real render:
-	// "move right operator closer to the left operator"). Same fix, same two axes swapped: pull the
-	// leaf out of the table-row's cell flow via position:absolute and place it in a small band sized
-	// from the chain's own (not its subtree's) measured box width, tucked left of the chain if the
-	// leaf's VA sorts before it, right of the chain (starting right after the chain's own box width,
-	// not its subtree width) otherwise.
-	function tuckLeavesNearParentVertical(treeEl) {
-		var GAP = 9;
-		// Unlike the horizontal version, a chain's box POSITION here depends on its own cell's width
-		// (it's centered within it, per the caption-based CSS above), which in turn depends on whether
-		// ITS OWN children have already been tucked - so processing has to go bottom-up (descendants
-		// before ancestors), not top-down: querySelectorAll() returns document/pre-order (ancestors
-		// first), so every ancestor-descendant pair's order is simply reversed by reversing the whole
-		// list, without needing a real tree walk.
-		Array.prototype.slice.call(treeEl.querySelectorAll('li')).reverse().forEach(function (li) {
-			var ul = li.querySelector(':scope > ul');
-			if (!ul) return;
-			var kids = Array.prototype.slice.call(ul.children); // already NodeId-sorted, see reorderCompactByNodeId()
-			var leafKids = [], nonLeafKids = [];
-			kids.forEach(function (k) {
-				(k.querySelectorAll(':scope > ul > li').length === 0 ? leafKids : nonLeafKids).push(k);
-			});
-			// Same restriction as the horizontal version - only the common "one chain, one or more
-			// leaves" shape; 2+ continuing children is left on normal table-row flow untouched.
-			if (!leafKids.length || nonLeafKids.length !== 1) return;
-			var chainLi = nonLeafKids[0];
-			var chainIndex = kids.indexOf(chainLi);
-
-			ul.style.position = 'relative';
-			var ulRect = ul.getBoundingClientRect();
-			// Every normal (non-tucked) cell in this row gets its vertical offset from its own CSS
-			// padding-top (40px, set via ".ss-plan-tree.ss-plan-compact-v li > ul > li"), not from the
-			// row itself - reading it from the chain cell (which stays untouched, still a real table
-			// cell throughout) keeps a tucked leaf's own top offset in sync with that CSS value instead
-			// of hardcoding it.
-			var stepTop = window.getComputedStyle(chainLi).paddingTop || '0px';
-			var maxLeafHeight = 0;
-
-			function tuck(leafLi, leftRel) {
-				var box = leafLi.querySelector(':scope > .ss-plan-box-cell > .ss-plan-box');
-				if (!box) return 130;
-				var rect = box.getBoundingClientRect();
-				maxLeafHeight = Math.max(maxLeafHeight, rect.height);
-				leafLi.style.position = 'absolute';
-				leafLi.style.left = leftRel + 'px';
-				leafLi.style.top = stepTop;
-				leafLi.style.padding = '0';
-				return rect.width;
-			}
-
-			var beforeChain = kids.slice(0, chainIndex).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-			var afterChain  = kids.slice(chainIndex + 1).filter(function (k) { return leafKids.indexOf(k) >= 0; });
-
-			var offset = 0;
-			beforeChain.forEach(function (leafLi) { offset += tuck(leafLi, offset) + GAP; });
-			// Reserves exactly the "before" leaves' own width for them, so the (still normal-flow) chain
-			// cell starts right after that small band instead of unconditionally at the row's left edge.
-			// Has to go on the CHAIN CELL, not the row (`ul`, display:table-row) - padding on a table-row
-			// isn't rendered at all per the CSS table model (unlike the horizontal version's equivalent,
-			// which targets a table-CELL where padding does apply).
-			if (offset > 0) chainLi.style.paddingLeft = offset + 'px';
-
-			// The chain's own box is CENTERED (a caption, ".ss-plan-compact-v li > .ss-plan-box-cell")
-			// over its own cell's FULL width - which is sized to fit its entire subtree, not just its own
-			// box, and can be far wider once its descendants fan out. So unlike the horizontal version
-			// (whose box-cells are never centered, always flush), the chain's box left/right edges can't
-			// be derived by arithmetic from its own width alone - unaccounted centering silently ate part
-			// of the intended gap and let the first after-tucked leaf overlap the chain's box. Measure the
-			// real rendered edges directly instead, after the before-chain reservation above (which shifts
-			// the chain, and everything centered inside it, right by `offset`).
-			var chainOwnBox = chainLi.querySelector(':scope > .ss-plan-box-cell > .ss-plan-box');
-			var chainRect = chainOwnBox ? chainOwnBox.getBoundingClientRect() : null;
-			var afterOffset = chainRect ? (chainRect.right - ulRect.left + GAP) : (offset + 130 + GAP);
-			afterChain.forEach(function (leafLi) { afterOffset += tuck(leafLi, afterOffset) + GAP; });
-
-			// After-tucked leaves are pulled out of flow entirely (position:absolute), so - unlike the
-			// before-tucked band, which stays accounted for via the real padding-left set on chainLi
-			// above - nothing in normal flow reports how far right they actually reach. Left alone, this
-			// node's own <li> (itself a table, per the CSS above) auto-sizes to only its in-flow content
-			// (the chain's own subtree) and reports that narrower width to ITS OWN parent's row - which
-			// then positions the NEXT sibling column (an entirely unrelated branch) as if this node were
-			// only that narrow, letting it overlap the tucked leaf sticking out past it. Reported live by
-			// the user on the real dialog: two unrelated "Index Scan" boxes rendered stacked on top of
-			// each other. Force this node's own reported width to cover the true rightmost extent.
-			if (afterChain.length) {
-				var curMinWidth = parseFloat(window.getComputedStyle(li).minWidth) || 0;
-				li.style.minWidth = Math.max(curMinWidth, afterOffset) + 'px';
-			}
-
-			// Mirrors the horizontal version's width-collision compensation, on the perpendicular axis:
-			// a tucked leaf's HEIGHT no longer feeds into this row's natural height once pulled out of
-			// flow, so a leaf taller than the chain's own box could otherwise have its bottom edge run
-			// into the chain's OWN children (the next row down, whose top offset is only sized from the
-			// chain cell's natural height). Push that next row down by the excess when needed.
-			var chainOwnHeight = chainRect ? chainRect.height : 0;
-			if (maxLeafHeight > chainOwnHeight) {
-				var chainChildrenUl = chainLi.querySelector(':scope > ul');
-				if (chainChildrenUl) {
-					var extra = maxLeafHeight - chainOwnHeight;
-					Array.prototype.forEach.call(chainChildrenUl.children, function (cellLi) {
-						var curPad = parseFloat(window.getComputedStyle(cellLi).paddingTop) || 0;
-						cellLi.style.paddingTop = (curPad + extra) + 'px';
-					});
-				}
-			}
-		});
-	}
-
-	// Walks the parsed-plan node tree (the {op, props, metrics, children} model built by
-	// parseXml()/parseText() - not the rendered DOM tree, see drawConnectorLines() for that),
-	// invoking fn(node) for every node.
-	function walkPlanNodes(root, fn) {
-		fn(root);
-		if (root.children) root.children.forEach(function (child) { walkPlanNodes(child, fn); });
 	}
 	// ─────────────────────────────────────────────────────────────────────────
 	// Icons
@@ -2095,6 +1767,69 @@ window.SqlServerShowplan = (function () {
 		return ratio > 10 || ratio < 0.1;
 	}
 
+	/**
+	 * How much a single-input operator (a Filter is the classic case, but this applies to any node
+	 * with exactly one child) discarded between its child's output and its own. A node's own Est/Act
+	 * is its OUTPUT row count, not how much of its INPUT it threw away - "Filter shows 12,450 rows"
+	 * alone doesn't say whether 12,450 came in and all survived, or 10 million came in and almost all
+	 * were discarded. Comparing against the (single) child's actual row count is what answers that.
+	 *
+	 * undefined when there isn't exactly one child, or either side's actual rows are missing/zero -
+	 * multi-child nodes (joins, concats) have no single well-defined "input" to compare against.
+	 *
+	 * Ported from the ASE renderer, which has had this for a while; the CSS class was copied across
+	 * with the rest of the file when this renderer was derived from it, but the code never was.
+	 */
+	/**
+	 * Which operators may report a row reduction, and what to CALL it.
+	 *
+	 * Deliberately an allow-list. The first attempt excluded the operators that were obviously wrong
+	 * (exchanges, hash-table builds, DML sinks) and let everything else through - but a block-list can
+	 * only ever exclude what has already been noticed, and it let a "Sort" through claiming it had
+	 * "filtered" 69% of its input. That plan (inequality_index) is a TOP 200 at DOP 6: 3,926 rows in,
+	 * 1,200 out = 200 x 6 threads. The Sort kept the top N; it filtered nothing.
+	 *
+	 * The general trap: ANY operator can emit fewer rows than it consumed without filtering - early
+	 * termination (a TOP upstream stops asking), per-thread accounting, or a build side that returns
+	 * nothing by design. So only operators whose actual JOB is to reduce the row count qualify, and
+	 * the wording follows the mechanism rather than calling everything "filtered": ASE's Restrict is a
+	 * true filter, SQL Server's aggregates collapse rows into groups, and those are different claims.
+	 */
+	var ROW_REDUCING_OPS = [
+		{ re: /^Filter$/i,                       verb: 'filtered' },
+		{ re: /^(Stream Aggregate|Hash Match)$/i, logical: /Aggregate/i, verb: 'aggregated' }
+	];
+
+	function rowReductionVerb(node) {
+		for (var i = 0; i < ROW_REDUCING_OPS.length; i++) {
+			var r = ROW_REDUCING_OPS[i];
+			if (!r.re.test(node.op || '')) continue;
+			if (r.logical && !r.logical.test((node.props && node.props.logicalOp) || '')) continue;
+			return r.verb;
+		}
+		return undefined;
+	}
+
+	function inputRowReductionPercent(node) {
+		if (!node.children || node.children.length !== 1) return undefined;
+		if (!rowReductionVerb(node)) return undefined;
+		var childAct = node.children[0].metrics && node.children[0].metrics.actRows;
+		var ownAct   = node.metrics && node.metrics.actRows;
+		if (childAct === undefined || ownAct === undefined || childAct <= 0) return undefined;
+		return (1 - (ownAct / childAct)) * 100;
+	}
+
+	/**
+	 * "100%" must mean NOTHING got through. Rounding alone breaks that promise: 1,000,000 rows in and
+	 * 5,000 out is 99.5%, which rounds to a "100% of input rows filtered" that flatly contradicts the
+	 * Act 5,000 printed directly above it. So one decimal is kept in the top band whenever any row
+	 * actually survived, and a bare 100 is reserved for the case that genuinely produced no rows.
+	 */
+	function fmtReductionPct(reduction, ownAct) {
+		if (reduction >= 99.5 && ownAct > 0) return String(Math.floor(reduction * 10) / 10);
+		return String(Math.round(reduction));
+	}
+
 	/** "db.schema.table [IndexName]" for the box subtitle. */
 	function subtitleFor(node) {
 		var p = node.props || {};
@@ -2129,6 +1864,14 @@ window.SqlServerShowplan = (function () {
 	 * is missing. Shared by renderNode() (box marking) and collectTreeFindings() (the "[Index Spool]"
 	 * Plan Analysis finding) so the two conditions can't drift apart.
 	 */
+
+	// A lookup, however ShowPlanXML happens to spell it: PhysicalOp is "RID Lookup" for a heap but
+	// "Clustered Index Seek" for the far more common clustered case - the only thing common to both is
+	// the operator body's Lookup="true" flag, which parseBodyProps() copies through verbatim.
+	function isLookup(props) {
+		var v = props && props.Lookup;
+		return v === true || v === 'true' || v === 1;
+	}
 	function isEagerIndexSpool(node) {
 		var p = node.props || {};
 		return /Index Spool/i.test(node.op) && /Eager/i.test(p.logicalOp || '');
@@ -2206,11 +1949,15 @@ window.SqlServerShowplan = (function () {
 		row('Index',         p.indexName);
 		row('Index Kind',    p.indexKind);
 
-		var warn = isEstActWarn(m);
+		// Same suppression as the Cardinality Estimate finding and the box itself, for the same reason:
+		// "estimated N rows, produced 0" is not a misestimate on a branch that was never taken, so the
+		// Act % of Est row is not highlighted as a problem here either.
+		var warn = isEstActWarn(m) && !node._neverExecuted;
 		row('Est Rows',      fmtNum(m.estRows));
 		row('Act Rows',      fmtNum(m.actRows));
 		var pct = fmtEstActDiff(m);
 		if (pct !== undefined) row('Act % of Est', pct, warn ? 'ss-plan-detail-pct-warn' : '');
+		row('Input Rows Filtered', fmtPercent(inputRowReductionPercent(node)));
 		row('Executions',    fmtNum(m.ActualExecutions));
 		row('Rows Read',     fmtNum(m.ActualRowsRead !== undefined ? m.ActualRowsRead : m.estRowsRead));
 		row('Table Rows',    fmtNum(m.tableCardinality));
@@ -2389,48 +2136,17 @@ window.SqlServerShowplan = (function () {
 		return $('<div></div>').text(s === undefined ? '' : String(s)).html();
 	}
 
-	/** One "key: value" line in the pane. */
-	function propRow($into, key, val) {
-		if (val === undefined || val === null || val === '') return;
-		$into.append($('<div class="ss-plan-prop-row"></div>')
-			.append($('<span class="ss-plan-prop-key"></span>').text(key))
-			.append($('<span class="ss-plan-prop-val"></span>').text(String(val))));
-	}
+	// Generic pane scaffolding, shared with the ASE renderer (dbxShowplanGraph.js) so the two panes
+	// can't drift apart. Same-named local wrappers keep every existing call site here unchanged; the
+	// SECTIONS themselves stay in this file, since which fields are worth showing is vendor-specific.
+	function propRow($into, key, val)   { return DbxShowplanGraph.propRow($into, 'ss-plan', key, val); }
+	function propSection($into, title)  { return DbxShowplanGraph.propSection($into, 'ss-plan', title); }
 
-	function propSection($into, title) {
-		var $sec = $('<div class="ss-plan-prop-sect"></div>');
-		$sec.append($('<div class="ss-plan-prop-sect-hdr"></div>').text(title));
-		var $body = $('<div class="ss-plan-prop-sect-body"></div>');
-		$sec.append($body);
-		$into.append($sec);
-		return $body;
-	}
-
-	/**
-	 * Recursive, collapsible rendering of an XML element: its attributes as key/value rows, then its
-	 * child elements as nested collapsible blocks. Stops at nested <RelOp> (a different operator).
-	 */
 	function renderXmlTree($into, el, depth) {
-		var kids = childElements(el).filter(function (k) { return lname(k) !== 'RelOp'; });
-		var a = attrsOf(el);
-		var attrKeys = Object.keys(a);
-		if (!attrKeys.length && !kids.length) return;
-
-		var $details = $('<details class="ss-plan-prop-xml"></details>');
-		if (depth < 1) $details.attr('open', 'open');
-		$details.append($('<summary></summary>').text(lname(el)
-			+ (attrKeys.length ? ' (' + attrKeys.length + ')' : '')));
-		var $body = $('<div class="ss-plan-prop-xml-body"></div>');
-		// fmtXmlValue, not the raw string - the plan XML is full of scientific notation.
-		attrKeys.forEach(function (k) { propRow($body, k, fmtXmlValue(a[k])); });
-		// Elements whose only content is text (rare in ShowPlanXML, but e.g. <DefinedValue> nesting)
-		// still deserve to show that text.
-		var ownText = (el.childNodes.length === 1 && el.firstChild.nodeType === 3)
-			? (el.textContent || '').trim() : '';
-		if (ownText) propRow($body, '(text)', ownText);
-		kids.forEach(function (k) { renderXmlTree($body, k, depth + 1); });
-		$details.append($body);
-		$into.append($details);
+		// Stops at a nested <RelOp> - that is a different operator, with its own pane. fmtXmlValue
+		// rather than the raw string, because the plan XML is full of scientific notation.
+		return DbxShowplanGraph.propXmlTree($into, 'ss-plan', el, depth,
+			{ stopAt: function (k) { return lname(k) === 'RelOp'; }, formatValue: fmtXmlValue });
 	}
 
 	/**
@@ -2762,7 +2478,12 @@ window.SqlServerShowplan = (function () {
 	function renderNode(node) {
 		var $li  = $('<li></li>');
 		var m    = node.metrics || {}, p = node.props || {};
-		var warn = isEstActWarn(m);
+		// Suppressed on a branch that never ran: "estimated N rows, produced 0" is not a misestimate
+		// there, it is just an untaken branch. Without this a dead box keeps the amber warn tint and
+		// its orange Est/Act percentage - exactly the attention the hatching exists to take away - and
+		// the box would contradict the Cardinality Estimate finding, which is suppressed on the same
+		// condition in collectTreeFindings().
+		var warn = isEstActWarn(m) && !node._neverExecuted;
 		var $box = $('<div class="ss-plan-box"></div>');
 		if (warn) $box.addClass('ss-plan-warn');
 		if (node.isStatement) $box.addClass('ss-plan-statement');
@@ -2771,6 +2492,9 @@ window.SqlServerShowplan = (function () {
 		// PhysicalOp/LogicalOp needed to detect this are already known at render time.
 		var eagerSpool = isEagerIndexSpool(node);
 		if (eagerSpool) $box.addClass('ss-plan-eager-spool');
+		// Marked at parse time (markNeverExecuted), so this is just a lookup. Applied last of the box
+		// states so the hatching's background-image sits on top of ss-plan-big-table's flat fill.
+		if (node._neverExecuted) $box.addClass('ss-plan-never-exec');
 		// Kept on the node itself (rather than a separate id -> box map) so the async table-info
 		// lookup fired from render() can reach back into the live DOM for this exact node.
 		node._$box = $box;
@@ -2905,6 +2629,18 @@ window.SqlServerShowplan = (function () {
 			}
 		}
 
+		// Separate from the Est/Act line above: how much of what flowed INTO this node it discarded,
+		// not what it itself output - see inputRowReductionPercent() for why those aren't the same
+		// thing. Only shown once it discards a clear majority (>=50%) so ordinary pass-through nodes
+		// stay uncluttered, and in a calm blue rather than the Est/Act line's red/orange, since heavy
+		// filtering is normal, expected behaviour for a Filter - not a warning sign.
+		var reduction = inputRowReductionPercent(node);
+		if (reduction !== undefined && reduction >= 50) {
+			$box.append($('<div class="ss-plan-metric ss-plan-metric-filter"></div>')
+				.text('↓ ' + fmtReductionPct(reduction, m.actRows) + '% of input rows '
+					+ rowReductionVerb(node)));
+		}
+
 		// Runtime timings, on the box rather than only in the detail panel - html-query-plan shows
 		// these and they are one of the first things looked at on an actual plan. Same numbers and
 		// same seconds-to-3-decimals formatting as qp.xslt's NodeTimeLabel templates:
@@ -2924,6 +2660,13 @@ window.SqlServerShowplan = (function () {
 		// appended asynchronously in loadTableInfoAsync(), after everything from initial render).
 		if (eagerSpool) {
 			$box.append($('<div class="ss-plan-metric ss-plan-tablesize-warn"></div>').text('⚠ Missing Index (Eager Spool)'));
+		}
+
+		// The hatching alone says "different", not "never ran" - so the box also carries the reason in
+		// words. Last on the box, after every metric, because it is a verdict about the whole operator
+		// rather than another measurement of it.
+		if (node._neverExecuted) {
+			$box.append($('<div class="ss-plan-never-exec-note"></div>').text('never executed'));
 		}
 
 		// Hover shows a transient summary tooltip; click pins it AND pushes the node to the
@@ -2981,7 +2724,12 @@ window.SqlServerShowplan = (function () {
 				// root RelOp onto the statement node too (so the statement box can show them), which
 				// means a single-operator statement would otherwise report the exact same mismatch
 				// twice: once as "SELECT" and once as the actual operator underneath it.
-				if (!n.isStatement && isEstActWarn(m) && (m.actRows >= 100 || m.estRows >= 100)) {
+				// _neverExecuted branches are excluded because "estimated N rows, produced none" is not a
+				// misestimate there - the branch was simply never taken (an adaptive join's unchosen side,
+				// a startup Filter, an unreached Concatenation input). The corpus has exactly one such
+				// finding today (adaptive_join.sqlplan node 4, at 'error' severity) and it is wrong.
+				if (!n.isStatement && !n._neverExecuted && isEstActWarn(m)
+				 && (m.actRows >= 100 || m.estRows >= 100)) {
 					var diff = fmtEstActDiff(m);
 					var diffTitle = diff === 'zero-rows'
 						? 'Estimated ' + fmtNum(m.estRows) + ' rows, but produced none'
@@ -3010,16 +2758,51 @@ window.SqlServerShowplan = (function () {
 					});
 				});
 
-				// A Key/RID Lookup executed many times is the classic "non-covering index" pattern.
-				if (/^(Key|RID) Lookup$/i.test(n.op) && m.ActualExecutions >= 1000) {
+				// A lookup executed many times is the classic "non-covering index" pattern.
+				//
+				// Detected on the IndexScan/@Lookup flag rather than on PhysicalOp: SSMS DISPLAYS these as
+				// "Key Lookup", but ShowPlanXML encodes a lookup into a clustered table as
+				// PhysicalOp="Clustered Index Seek" with Lookup="true" - only a heap lookup actually gets
+				// PhysicalOp="RID Lookup". Matching the op name therefore missed the common case entirely
+				// (the corpus's own KeyLookup.sqlplan, 858 executions, went unreported), and the 1000
+				// threshold then missed it a second time.
+				if (isLookup(p) && m.ActualExecutions >= 100) {
 					findings.push({
 						severity: 'warning',
 						category: 'Lookup',
-						title:    n.op + ' executed ' + fmtNum(m.ActualExecutions) + ' times',
+						title:    'Lookup executed ' + fmtNum(m.ActualExecutions) + ' times',
 						detail:   'Each execution fetches one row from ' + (p.objName || 'the base table')
 						          + ' because the non-clustered index did not cover the query. Adding the missing '
 						          + 'columns as INCLUDE columns on index ' + (p.indexName || '(the seek index)')
 						          + ' would remove this lookup.',
+						nodeId:   p.nodeId,
+						nodeName: n.op
+					});
+				}
+
+				// Executed far more often than the optimizer expected.
+				//
+				// A raw "executed many times" threshold would be wrong: 39,553 executions of an Index Seek
+				// is entirely normal for the inner side of a nested loop and says nothing by itself. What
+				// is actionable is the MISMATCH - the optimizer sized the loop from EstimateRebinds, and
+				// if the real count is orders of magnitude higher then the outer input's cardinality
+				// estimate is wrong, which is what drove the loop count. Self-calibrating, so no magic
+				// "too many" number: +1 covers the first execution, which is never a rebind.
+				var expectedExec = (m.estRebinds || 0) + (m.estRewinds || 0) + 1;
+				if (!n.isStatement && !n._neverExecuted && m.ActualExecutions >= 100
+				 && m.ActualExecutions > expectedExec * 10) {
+					findings.push({
+						severity: 'warning',
+						category: 'Execution Count',
+						title:    'Executed ' + fmtNum(m.ActualExecutions) + ' times, optimizer expected about '
+						          + fmtNum(Math.round(expectedExec)),
+						detail:   n.op + (p.objName ? ' on ' + p.objName : '') + ' ran '
+						          + fmtNum(m.ActualExecutions) + ' times but was costed for roughly '
+						          + fmtNum(Math.round(expectedExec)) + '. On the inner side of a nested loop the '
+						          + 'execution count is driven by the row count of the OUTER input, so this usually '
+						          + 'means the estimate feeding the join is too low - the operator itself may be '
+						          + 'perfectly good. Check the statistics on the outer input, and whether a join '
+						          + 'strategy other than nested loops would suit the real row counts.',
 						nodeId:   p.nodeId,
 						nodeName: n.op
 					});
@@ -3325,6 +3108,7 @@ window.SqlServerShowplan = (function () {
 		// that tears the diagram down (closing the dialog, switching to the other renderer) needs a
 		// way to dismiss them - they are not removed by emptying the container.
 		closePanels:           function () { closeAllPanels(false); },
+		anyPanelsOpen:         function () { return _panels.anyOpen(); },
 		getLastParseError:     function () { return lastParseError; }
 	};
 })();

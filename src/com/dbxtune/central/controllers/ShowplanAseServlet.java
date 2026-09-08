@@ -85,6 +85,8 @@ extends HttpServlet
 				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css") +
 				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery-ui.min.js") +
 				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
+				// Shared layout plumbing - must load BEFORE dbxShowplanAse.js, which calls into it.
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanGraph.js") +
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAse.js") +
 				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
 				// srv/dbname (if any) only live in the URL fragment, never known server-side here - so
@@ -101,7 +103,7 @@ extends HttpServlet
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
-				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				HtmlStatic.getHtmlNavbar(PageSection.Tools, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
 				createPasteFormBodyHtml() +
 				"    <script> \n" +
 				"        (function () { \n" +
@@ -159,7 +161,7 @@ extends HttpServlet
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
-				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				HtmlStatic.getHtmlNavbar(PageSection.Tools, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
 				createPasteFormBodyHtml() +
 				HtmlStatic.getJavaScriptAtEnd(true) +
 				"</body> \n" +
@@ -401,7 +403,9 @@ extends HttpServlet
 				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
 
 				// dbxShowplanAse.js is a first-party file (no CDN mirror) and injects its own <style>
-				// at runtime, so no separate CSS link is needed here.
+				// at runtime, so no separate CSS link is needed here. dbxShowplanGraph.js holds the
+				// layout plumbing it shares with the SQL Server renderer, so it must come first.
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanGraph.js") +
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAse.js") +
 				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
 
@@ -442,7 +446,7 @@ extends HttpServlet
 				"</head> \n" +
 				" \n" +
 				"<body> \n" +
-				HtmlStatic.getHtmlNavbar(PageSection.None, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
+				HtmlStatic.getHtmlNavbar(PageSection.Tools, "<li class='nav-item'><a class='nav-link' href='/showplan/'>All Showplan Viewers</a></li>", true) +
 				// Same paste form as a plain GET sits behind the dialog opened below - the dialog has
 				// no "reopen"/navigate-away mechanism of its own (closing it just clears its own
 				// containers), so without this, closing it would strand the user on a blank page.

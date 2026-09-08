@@ -87,7 +87,13 @@ public class DbxAlarmActive
 	private String  _mutedTime     = null;  // ISO-8601
 	private String  _muteExpiresAt = null;  // ISO-8601, null = permanent
 
+	// Which SERVER_LIST GROUP the server is a member of. Populated by AlarmActiveController
+	// from DbxCentralServerLayout (parsed from 'conf/SERVER_LIST'), not stored in the DB.
+	// null = the server is not a member of any GROUP.
+	private String  _group         = null;
+
 	public String    getSrvName                    () { return _srvName                    ; }
+	public String    getGroup                      () { return _group                      ; }
 	public String    getAlarmClass                 () { return _alarmClass                 ; }
 	public String    getServiceType                () { return _serviceType                ; }
 	public String    getServiceName                () { return _serviceName                ; }
@@ -115,6 +121,7 @@ public class DbxAlarmActive
 	public String    getAlarmOptions               () { return _alarmOptions; }
 	
 	public void setSrvName                    (String    srvName                    ) { _srvName                     = srvName                    ; }
+	public void setGroup                      (String    group                      ) { _group                       = group                      ; }
 	public void setAlarmClass                 (String    alarmClass                 ) { _alarmClass                  = alarmClass                 ; }
 	public void setServiceType                (String    serviceType                ) { _serviceType                 = serviceType                ; }
 	public void setServiceName                (String    serviceName                ) { _serviceName                 = serviceName                ; }

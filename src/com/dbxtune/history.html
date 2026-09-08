@@ -64,6 +64,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>Menu -- Tools -- 'Create Record Session - Template file' Wizard...' now writes a template file with comments (and all default values are commented out). You can choose to sort the CM Entries by name or have it in creation order!</LI>
         <LI>PCS Writers now also Writes "Target Info: <where did we store the data>" in the log file (for tracability)</LI>
         <LI>AppDir got some improvements for the upcomming Windows: DbxInstaller</LI>
+        <LI>AlarmWriterToMail  - Added "summary" section (talk to DbxCentral and get active alarms, so we can see what other alarms are currently active)</LI>
+        <LI>AlarmWriterToTeams  - Added "summary" section (talk to DbxCentral and get active alarms, so we can see what other alarms are currently active)</LI>
+        <LI>AlarmWriterToSlack  - Added "summary" section (talk to DbxCentral and get active alarms, so we can see what other alarms are currently active)</LI>
+        <LI></LI>
+        <LI></LI>
 
 		<LI><b>Alarms Handling:</b>
 			<UL>
@@ -87,6 +92,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>"Get LLM Optimization Advice" now also sends "Workload over report period" (more or less the small sparlines summary), so the LLM has more info</LI>
 				<LI>Write less raw DDL Text -- Properties: "DailySummaryReport.ddl.maxlen.table=-1", "DailySummaryReport.ddl.maxlen.trigger=4096"</LI>
 				<LI>Generate "on the fly" report, switch from "local blob" storage to saving a temp file at the web server (due to browsers are now blocking local blob storage), temp files will be removed after 24 hours. and are stored at 'tmp-dsr' directory in the reports dir</LI>
+				<LI>Added progress bar when loading page (especially usefull on slow networks), and render Graphs, Sparklines when they are entering visible scroll</LI>
 			</UL>
 		</LI>
 
@@ -218,6 +224,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <li>Active Statements and Daily Summary Report -- Added 'Get LLM Optimization Advice' to send a SQL Statement to any configured LLM for some advise</li>
         <li>SQL Server: Showplan - Switched from the default viewer 'html-query-plan' to our own implementation, which we can enhance in any way</li>
         <li>Sybase ASE: Showplan - Smaller tweeks (TODO: better align with the SQL Server Showplan)</li>
+        <li>Most popup dialogs can now be closed via "Esc"</li>
+        <li>Ctrl-left/right (to move timeline position) is now reachable even if inside most Dialogs</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
