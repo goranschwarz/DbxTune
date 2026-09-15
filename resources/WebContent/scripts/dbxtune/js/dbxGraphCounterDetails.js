@@ -1691,7 +1691,10 @@ function cmDetailRowShowModal(columns, row, tooltips)
 				adviceBtn.onclick = function() {
 					dbxLlmAdvice.open({
 						sql:  row[sqlColIdx],
-						plan: planColIdx >= 0 ? row[planColIdx] : null
+						plan: planColIdx >= 0 ? row[planColIdx] : null,
+						// Lets dbxLlmAdvice read the DBMS version out of CmSummary for this very sample
+						srv:        _cmSrvName,
+						sampleTime: _cmCurrentData ? _cmCurrentData.resolvedTime : null
 					});
 				};
 			}

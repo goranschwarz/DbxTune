@@ -169,7 +169,7 @@ extends AlarmWriterAbstract
 		summaryText = StringUtil.toStr(summaryText, translationMap);
 
 		// replace variables in the template with runtime variables
-		return WriterUtils.createMessageFromTemplate(action, alarmEvent, null, _msgTemplate, true, translationMap, null, null, summaryText);
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, WriterUtils.getActiveAlarmList(), _msgTemplate, true, translationMap, null, null, summaryText);
 	}
 
 	private void sendMessage(String action, AlarmEvent alarmEvent)

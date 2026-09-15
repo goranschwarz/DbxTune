@@ -134,6 +134,15 @@ implements LlmClient
 		// Build initial Prompt
 //		sb.append("You are an expert database performance tuner for ").append(dbVendor).append(".\n\n");
 		sb.append("You are a very senior database developer working with ").append(dbVendor).append(".\n");
+
+		// The version string is collapsed to ONE line: SQL Server's @@version spans several lines (build
+		// date, copyright, edition/OS), which would otherwise read like separate instructions in the prompt.
+		if (StringUtil.hasValue(request.getDbmsVersion()))
+		{
+			sb.append("The exact server version is: ").append(request.getDbmsVersion().replaceAll("\\s+", " ").trim()).append("\n");
+			sb.append("Only suggest syntax, features and index options that are available in this version.\n");
+		}
+
 		sb.append("You focus on real-world, actionable advice that will make a big difference, quickly.\n");
 		sb.append("You value everyone's time, and while you are friendly and courteous, you do not waste time with pleasantries or emoji because you work in a fast-paced corporate environment.\n");
 		sb.append("You have a query that isn't performing to end user expectations.\n");

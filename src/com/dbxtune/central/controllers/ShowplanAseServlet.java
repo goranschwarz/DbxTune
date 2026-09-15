@@ -121,6 +121,8 @@ extends HttpServlet
 				// Execution statistics from the Daily Summary Report - this dialog has its own "Get LLM
 				// Optimization Advice" section, which would otherwise lose the workload profile.
 				"            var workloadData = qs.get('workloadData') || ''; \n" +
+				// Recorded DBMS version from the Daily Summary Report, for the same LLM section
+				"            var dbmsVersion = qs.get('dbmsVersion') || ''; \n" +
 				"            // Also fill in the paste form behind the dialog - it has no 'reopen' mechanism of its \n" +
 				"            // own (closing the dialog just clears its own containers), so without this, closing it \n" +
 				"            // would leave the user staring at a form that looks like it never received their plan. \n" +
@@ -129,7 +131,7 @@ extends HttpServlet
 				"            document.getElementById('srv').value = srv; \n" +
 				"            document.getElementById('dbname').value = dbname; \n" +
 				"            aseShowplanPasteCheckSqlText(); \n" +
-				"            showAseShowplanDialog(plan, sql, isXml, '', { srv: srv, dbname: dbname, workloadData: workloadData }); \n" +
+				"            showAseShowplanDialog(plan, sql, isXml, '', { srv: srv, dbname: dbname, workloadData: workloadData, dbmsVersion: dbmsVersion }); \n" +
 				"        })(); \n" +
 				"    </script> \n" +
 				HtmlStatic.getJavaScriptAtEnd(true) +
@@ -300,6 +302,7 @@ extends HttpServlet
 		// Execution statistics harvested from the Daily Summary Report - the plan viewer has its own
 		// "Get LLM Optimization Advice" section, which would otherwise lose the workload profile.
 		String workloadData = request.getParameter("workloadData");
+		String dbmsVersion  = request.getParameter("dbmsVersion"); // recorded by the Daily Summary Report, for the same section
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("/showplan/ase: received request from: remoteHost='" + remoteHost + "', remoteAddr='" + remoteAddr + "', remotePort='" + remotePort + "', remoteUser='" + remoteUser + "'.");
@@ -311,7 +314,7 @@ extends HttpServlet
 			return;
 		}
 
-		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, workloadData);
+		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, workloadData, dbmsVersion);
 
 		response.setContentType("text/html; charset=UTF-8");
 		response.setCharacterEncoding("UTF-8");
@@ -342,11 +345,14 @@ extends HttpServlet
 	 */
 	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname)
 	{
-		return createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, null);
+		return createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, null, null);
 	}
 
-	/** @param workloadData raw execution statistics JSON, forwarded to the dialog's LLM advice section (may be null) */
-	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname, String workloadData)
+	/**
+	 * @param workloadData raw execution statistics JSON, forwarded to the dialog's LLM advice section (may be null)
+	 * @param dbmsVersion  recorded DBMS version string, forwarded to the same section (may be null - then it is resolved live from {@code srv})
+	 */
+	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname, String workloadData, String dbmsVersion)
 	{
 		// A leading blank line/whitespace before "<?xml ...?>" (common in pasted/captured plans) is
 		// otherwise a fatal error to any XML parser - the spec only allows the declaration as the
@@ -460,11 +466,12 @@ extends HttpServlet
 				// Execution statistics from the Daily Summary Report - this dialog's own "Get LLM
 				// Optimization Advice" section would otherwise lose the workload profile.
 				"        const aseShowplanWorkload = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(workloadData, "")) + "'; \n" +
+				"        const aseShowplanDbmsVersion = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbmsVersion, "")) + "'; \n" +
 				"        var isXml; \n" +
 				"        if (explicitIsXml === 'true') isXml = true; \n" +
 				"        else if (explicitIsXml === 'false') isXml = false; \n" +
 				"        else isXml = /^\\s*<\\?xml|^\\s*<query>/i.test(plan.replace(/^[\\s\\S]*?<pre>/i, '')); \n" +
-				"        showAseShowplanDialog(plan, aseShowplanSql, isXml, '', { srv: aseShowplanSrv, dbname: aseShowplanDbname, workloadData: aseShowplanWorkload }); \n" +
+				"        showAseShowplanDialog(plan, aseShowplanSql, isXml, '', { srv: aseShowplanSrv, dbname: aseShowplanDbname, workloadData: aseShowplanWorkload, dbmsVersion: aseShowplanDbmsVersion }); \n" +
 				"    </script> \n" +
 				HtmlStatic.getJavaScriptAtEnd(true) +
 				"</body> \n" +

@@ -22,6 +22,8 @@ package com.dbxtune.alarm.writers;
 
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +48,8 @@ import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 
 import com.dbxtune.CounterController;
+import com.dbxtune.DbxTune;
+import com.dbxtune.ICounterController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
@@ -55,11 +59,126 @@ import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.dbxtune.ui.autocomplete.completions.ShorthandCompletionX;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
 public class WriterUtils
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/** The server group that template previews (and the example Active Alarms Summary) show */
+	public static final String EXAMPLE_SERVER_GROUP = "Example Group";
+
+	/**
+	 * Variables that a template PREVIEW should see instead of the runtime values, to pass as 'extraContext'.
+	 * (In the Template Editor there is no DbxCentral to ask, so <code>${serverGroup}</code> would always be empty.)
+	 */
+	public static Map<String, Object> createPreviewContext()
+	{
+		Map<String, Object> map = new HashMap<>();
+		map.put("serverGroup"   , EXAMPLE_SERVER_GROUP);
+		map.put("hasServerGroup", true);
+		return map;
+	}
+
+	/**
+	 * Base URL of the DbxCentral this Collector can FETCH things from (active alarms, its server group),
+	 * or null if this Collector does not talk to DbxCentral.
+	 * <p>
+	 * Deliberately <b>not</b> {@link AlarmWriterAbstract#getDbxCentralUrl()}: that one never returns blank - when nothing
+	 * is configured it derives {@code http://<local hostname>:<port>} so that messages always have
+	 * <i>something</i> to link to. Good for a link, useless for a fetch: on a Collector that does not
+	 * talk to DbxCentral at all it would make us HTTP GET a host that isn't there, forever.
+	 * <p>
+	 * Order:
+	 * <ol>
+	 *   <li>the PCS writer's URL - its presence <b>proves</b> this Collector sends to DbxCentral, and
+	 *       it is by definition an address this Collector can reach</li>
+	 *   <li>{@code DbxCentral.public.base.url} - explicitly configured, but it is the <i>public</i>
+	 *       URL, which may sit behind a proxy we cannot reach from here</li>
+	 *   <li>otherwise null - no HTTP call at all</li>
+	 * </ol>
+	 *
+	 * @param conf  Looked in first, then the combined configuration. May be null.
+	 */
+	public static String getDbxCentralFetchUrl(Configuration conf)
+	{
+		// 1) do we actually send to DbxCentral? If so, use that host.
+		String pcsUrl = getProp(conf, "PersistWriterToDbxCentral.url");
+		if (StringUtil.isNullOrBlank(pcsUrl))
+			pcsUrl = getProp(conf, "PersistWriterToHttpJson.url");
+
+		if (StringUtil.hasValue(pcsUrl))
+		{
+			try
+			{
+				// strip the path, eg 'http://host:80/api/pcs/receiver' -> 'http://host:80'
+				URL u = new URL(pcsUrl);
+				return u.getProtocol() + "://" + u.getHost() + (u.getPort() < 0 ? "" : ":" + u.getPort());
+			}
+			catch (MalformedURLException ex)
+			{
+				_logger.info("Could not parse the PCS URL '" + pcsUrl + "' when looking for DbxCentral. Caught: " + ex);
+			}
+		}
+
+		// 2) the public base URL, if someone set it explicitly
+		String url = getProp(conf, AlarmWriterAbstract.PROPKEY_dbxCentralUrl);
+		if (StringUtil.hasValue(url))
+			return url;
+
+		// 3) this Collector does not talk to DbxCentral
+		return null;
+	}
+
+	/** Look in the passed Configuration first, then in the combined one. */
+	static String getProp(Configuration conf, String propName)
+	{
+		String val = conf == null ? null : conf.getProperty(propName, null);
+		if (StringUtil.hasValue(val))
+			return val;
+
+		return Configuration.getCombinedConfiguration().getProperty(propName, null);
+	}
+
+	/**
+	 * The name THIS Collector's server is known by in DbxCentral (the schema name in the Central database).
+	 * <p>
+	 * This mirrors {@code PersistContainer.getServerNameOrAlias()}: the alias if we have one,
+	 * otherwise the stripped DBMS server name.
+	 * <p>
+	 * NOTE: Do <b>not</b> use {@code ICounterController.getServerName()} here -- that one prefers the
+	 * <i>displayName</i>, which is not what the Central database uses as the schema name.
+	 *
+	 * @param fallbackEvent  Used if the CounterController can't tell us. May be null.
+	 * @return The name, or null if unknown
+	 */
+	public static String getCollectorServerName(AlarmEvent fallbackEvent)
+	{
+		try
+		{
+			if (CounterController.hasInstance())
+			{
+				ICounterController cc = CounterController.getInstance();
+				String aliasName = cc.getServerAliasName();
+				if (StringUtil.hasValue(aliasName))
+					return aliasName;
+
+				String dbmsName = cc.getDbmsServerName();
+				if (StringUtil.hasValue(dbmsName))
+					return DbxTune.stripSrvName(dbmsName);
+			}
+		}
+		catch (Throwable t)
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("Problems getting the Collector server name from the CounterController. Falling back on the AlarmEvent. Caught: " + t, t);
+		}
+
+		// Fallback. NOTE: getServiceName() does not always hold the server name (for RepServer WS it
+		// holds 'LDS.dbname'), see the TODO in AlarmEvent.private_getServerName()
+		return fallbackEvent == null ? null : fallbackEvent.getServiceName();
+	}
 
 
 //	/**
@@ -116,12 +235,23 @@ public class WriterUtils
 	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
 	 * @throws ResourceNotFoundException  Resource not found...
 	 */
+	/**
+	 * The currently active alarms of THIS Collector, which templates see as <code>$activeAlarmList</code>.
+	 * <p>
+	 * Callers of the long overloads MUST pass this (not null), otherwise <code>$activeAlarmList</code> is
+	 * not put in the Velocity context, and any template looping over it throws "Reference does not exist".
+	 *
+	 * @return the live list, or null if there is no AlarmHandler (eg on DbxCentral)
+	 */
+	public static List<AlarmEvent> getActiveAlarmList()
+	{
+		return AlarmHandler.hasInstance() ? AlarmHandler.getInstance().getAlarmList() : null;
+	}
+
 	public static String createMessageFromTemplate(String action, AlarmEvent alarmEvent, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
 	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
-		List<AlarmEvent> activeAlarmList = null;
-		if (AlarmHandler.hasInstance())
-			activeAlarmList = AlarmHandler.getInstance().getAlarmList();
+		List<AlarmEvent> activeAlarmList = getActiveAlarmList();
 
 		return createMessageFromTemplate(action, alarmEvent, activeAlarmList, template, doTrim, trMap, dbxCentralUrl);
 	}
@@ -157,6 +287,19 @@ public class WriterUtils
 	 * unknown reference. That way a template can use them unconditionally.
 	 */
 	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl, String activeAlarmsSummaryHtml, String activeAlarmsSummaryText)
+	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
+	{
+		return createMessageFromTemplate(action, alarmObject, activeAlarmList, template, doTrim, trMap, dbxCentralUrl, activeAlarmsSummaryHtml, activeAlarmsSummaryText, null);
+	}
+
+	/**
+	 * Same as above, plus writer specific variables.
+	 *
+	 * @param extraContext  Extra Velocity variables, put in the context <b>as is</b> after all the standard ones
+	 *                      (so they override a standard variable with the same name). NOTE: they do NOT pass
+	 *                      through <code>trMap</code>, the caller is responsible for escaping them. May be null.
+	 */
+	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl, String activeAlarmsSummaryHtml, String activeAlarmsSummaryText, Map<String, Object> extraContext)
 	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		// Since parameter "alarmObject" is Object, we need to check valid classes
@@ -238,6 +381,9 @@ public class WriterUtils
 		
 		// Add access to: org.apache.commons.lang3.StringUtils
 		context.put("StringUtils", StringUtils.class);
+
+		// JSON string escaping, for templates that produce JSON:  $Json.str($value)  or  "$Json.esc($value)"
+		context.put("Json", TemplateJson.class);
 		
 
 		// Add TYPE to context
@@ -251,7 +397,15 @@ public class WriterUtils
 		if (StringUtil.isNullOrBlank(serverDisplayName) && alarmEvent    != null)           serverDisplayName = alarmEvent   .getServiceName();
 		if (StringUtil.isNullOrBlank(serverDisplayName) && pcsAlarmEntry != null)           serverDisplayName = pcsAlarmEntry.getServiceName();
 		if (StringUtil.isNullOrBlank(serverDisplayName) && CounterController.hasInstance()) serverDisplayName = CounterController.getInstance().getServerDisplayName();
-		context.put("serverDisplayName"        , serverDisplayName);
+		// NOTE: through trMap like every other alarm value. It used to be put raw, which is harmless for HTML
+		//       but breaks a JSON template (Teams) if the name holds a quote, and a Slack message if it holds & < >
+		context.put("serverDisplayName"        , StringUtil.toStr(serverDisplayName, trMap));
+
+		// The DbxCentral SERVER_LIST group THIS Collector's server is in. Only PEEKS at what is already known,
+		// so rendering a template never makes an HTTP call. "" when not within any group, or not known (yet).
+		String serverGroup = alarmEvent != null ? DbxCentralServerGroup.peek().getNameOrEmpty() : "";
+		context.put("serverGroup"              , StringUtil.toStr(serverGroup, trMap));
+		context.put("hasServerGroup"           , StringUtil.hasValue(serverGroup));
 //FIXME; change the template to be ${serverDisplayName}
 
 
@@ -362,6 +516,13 @@ public class WriterUtils
 		// (below) throwing. Empty when the writer has the Active Alarms Summary turned off.
 		context.put("activeAlarmsSummaryHtml", activeAlarmsSummaryHtml == null ? "" : activeAlarmsSummaryHtml);
 		context.put("activeAlarmsSummaryText", activeAlarmsSummaryText == null ? "" : activeAlarmsSummaryText);
+
+		// Writer specific variables (eg the Teams card template). Put as-is, and last, so they win.
+		if (extraContext != null)
+		{
+			for (Map.Entry<String, Object> entry : extraContext.entrySet())
+				context.put(entry.getKey(), entry.getValue());
+		}
 
 
 		InvalidReferenceEventHandler invalidReferenceEventHandler = new InvalidReferenceEventHandler()
@@ -556,11 +717,28 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "alarmOptions"               , "${alarmOptions}"               ,  null, desc.get("alarmOptions"              )));
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "serverDisplayName"          , "${serverDisplayName}"          ,  null, "<html>The command line switch <i>--displayName</i> or the ServerName. This can for example be used in the <b>mail subject</b> if the servernames are cryptical.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "serverGroup"                , "${serverGroup}"                ,  null, "<html>The DbxCentral <b>server group</b> this server is in: the <code>#FORMAT; GROUP; name</code> in DbxCentral's SERVER_LIST file.<br>Empty when the server is not within any group, or when the group is not known (yet). The preview shows <code>" + EXAMPLE_SERVER_GROUP + "</code>.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "hasServerGroup"             , "#if( $hasServerGroup )${serverGroup}#end" ,  null, "<html>true when <code>${serverGroup}</code> has a value.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralBaseUrl"          , "${dbxCentralBaseUrl}"          ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmList"            , "#foreach( $alarm in $activeAlarmList )\n${alarm.serviceName} - ${alarm.state} - ${alarm.description}\n#end" ,  null, "<html>Some writers want to have access to the 'activeAlarmList', where you can loop around the active alarms...</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryHtml"  , "${activeAlarmsSummaryHtml}" ,  null, "<html>A ready made <b>HTML</b> summary of all currently active alarms (this Collector in real time, plus the other servers in the same DbxCentral GROUP).<br>Empty string if '&lt;AlarmWriterName&gt;.activeAlarms.summary.enabled' is false.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryText"  , "${activeAlarmsSummaryText}" ,  null, "<html>A ready made <b>plain text</b> summary of all currently active alarms (this Collector in real time, plus the other servers in the same DbxCentral GROUP).<br>Empty string if '&lt;AlarmWriterName&gt;.activeAlarms.summary.enabled' is false.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "Json.str"                 , "$Json.str($description)"   ,  null, "<html>A complete, quoted and escaped <b>JSON string</b>. Use it when a template produces JSON (eg the Teams card) and you loop over raw objects like <code>$activeAlarmList</code> or <code>$activeAlarmsSummaryRows</code>.<br>The standard variables such as <code>${description}</code> are already escaped in a JSON template.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "Json.esc"                 , "$Json.esc($description)"   ,  null, "<html>Like <code>$Json.str()</code>, but without the surrounding quotes, for use inside quotes you wrote yourself.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryTeams" , "${activeAlarmsSummaryTeams}" ,  null, "<html><b>Teams card template only.</b> The Active Alarms Summary as ready made Adaptive Card body elements, WITH a leading comma (empty when there is nothing to show). Place it inside the card's <code>\"body\": [ ... ]</code> array, after at least one element.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryServers", "#foreach( $srv in $activeAlarmsSummaryServers )\n,{ \"type\": \"TextBlock\", \"text\": $Json.str($srv.srvName), \"weight\": \"Bolder\" }\n#foreach( $alarm in $srv.alarms )\n,{ \"type\": \"TextBlock\", \"text\": $Json.str($alarm), \"spacing\": \"None\" }\n#end\n#end" ,  null, "<html><b>Teams card template only.</b> The Active Alarms Summary as objects, for your own layout: <code>srvName</code>, <code>alarms</code> (a list of lines, one per distinct alarm name) and <code>more</code> (true for the trailing 'and N more server(s)' entry). They are NOT pre-escaped, use <code>$Json.str()</code>.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "cardTitle"                , "${cardTitle}"              ,  null, "<html><b>Teams card template only.</b> The result of 'AlarmWriterToTeams.title.template', JSON escaped.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "cardDescription"          , "${cardDescription}"        ,  null, "<html><b>Teams card template only.</b> The result of 'AlarmWriterToTeams.desc.template', JSON escaped.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "cardStyle"                , "${cardStyle}"              ,  null, "<html><b>Teams card template only.</b> Adaptive Card Container style for this alarm: <code>good</code> (CANCEL), <code>attention</code> (ERROR), <code>warning</code> (WARNING) or <code>accent</code> (INFO).</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "statusIcon"               , "${statusIcon}"             ,  null, "<html><b>Teams card template only.</b> An emoji for the alarm type: check mark (CANCEL), repeat arrows (RE-RAISE), red circle / warning sign / information sign (RAISE with ERROR / WARNING / INFO). Unlike colour, it also shows in the Teams notification preview.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "statusText"               , "${statusText}"             ,  null, "<html><b>Teams card template only.</b> The alarm type as words: <code>ERROR &middot; NEW ALARM</code>, <code>STILL ACTIVE &middot; WARNING</code> or <code>RESOLVED</code>. JSON escaped.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "statusColor"              , "${statusColor}"            ,  null, "<html><b>Teams card template only.</b> A TextBlock <code>color</code> for the status line: <code>good</code> (CANCEL), <code>attention</code> (ERROR), <code>warning</code> (WARNING) or <code>accent</code> (INFO).</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "crTimeShort"              , "${crTimeShort}"            ,  null, "<html><b>Teams card template only.</b> The raise time as a short time: just <code>HH:mm</code> when it happened today, otherwise <code>yyyy-MM-dd HH:mm</code>. Empty when not set.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "reRaiseTimeShort"         , "${reRaiseTimeShort}"       ,  null, "<html><b>Teams card template only.</b> The latest re-raise time as a short time: just <code>HH:mm</code> when it happened today, otherwise <code>yyyy-MM-dd HH:mm</code>. Empty when not set.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "cancelTimeShort"          , "${cancelTimeShort}"        ,  null, "<html><b>Teams card template only.</b> The cancel time as a short time: just <code>HH:mm</code> when it happened today, otherwise <code>yyyy-MM-dd HH:mm</code>. Empty when not set.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryCount" , "${activeAlarmsSummaryCount}" ,  null, "<html><b>Teams card template only.</b> How many active alarms the summary holds (0 when there are none, or the summary is off). Use with <code>$hasActiveAlarmsSummary</code> to tell 'none' from 'off'.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryTeamsItems", "${activeAlarmsSummaryTeamsItems}" ,  null, "<html><b>Teams card template only.</b> The Active Alarms Summary as body elements WITHOUT a leading comma, to be the <code>items</code> of a Container - eg one that is collapsed behind an <code>Action.ToggleVisibility</code>.</html>"));
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtil"                 , "${StringUtil.format(\"%-20s\", ${type})}" ,  null, "<html>Access DbxTune StringUtil, which for example has format(...) see: <a href='https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html'>https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html</a></html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "Version"                    , "${Version.getAppName()}"                  ,  null, "<html>Access DbxTune Version, which has: getAppName(), getBuildStr() </html>"));

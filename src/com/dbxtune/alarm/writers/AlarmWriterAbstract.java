@@ -21,8 +21,6 @@
 package com.dbxtune.alarm.writers;
 
 import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,6 +30,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
@@ -95,6 +94,87 @@ implements IAlarmWriter
 	public void restoredAlarms(List<AlarmEvent> restoredAlarms)
 	{
 	}
+
+	//----------------------------------------------------------------
+	// BEGIN: Template preview (used by the Template Editor)
+	//----------------------------------------------------------------
+
+	/**
+	 * Thrown by {@link AlarmWriterAbstract#createTemplatePreview} when a template renders, but what it renders is
+	 * not usable (eg a Teams card that is not valid JSON). It carries the rendered text, so the editor can show
+	 * <i>what</i> came out as well as what is wrong with it.
+	 */
+	public static class TemplatePreviewException
+	extends Exception
+	{
+		private static final long serialVersionUID = 1L;
+		private final String _previewText;
+
+		public TemplatePreviewException(String message, String previewText, Throwable cause)
+		{
+			super(message, cause);
+			_previewText = previewText;
+		}
+
+		public String getPreviewText() { return _previewText; }
+	}
+
+	/**
+	 * Render a template exactly the way this writer renders it, for the live preview in the Template Editor.
+	 * <p>
+	 * The default renders it as a plain text/HTML template (like Mail and Slack), with an example Active Alarms
+	 * Summary, so <code>${activeAlarmsSummaryHtml}</code> / <code>${activeAlarmsSummaryText}</code> show something.
+	 * A writer whose templates need their own variables or escaping overrides this (eg the Teams card template),
+	 * otherwise the editor reports "Reference does not exist" for a template that works fine at runtime.
+	 * <p>
+	 * NOTE: the Template Editor calls this on a writer that has NOT been through {@link #init(Configuration)}
+	 * (mandatory settings like a URL may not be filled in yet while editing), so do not rely on init state.
+	 *
+	 * @param propKey        the property being edited, so a writer can treat each of its templates differently
+	 * @param template       the template text, as currently in the editor
+	 * @param action         RAISE / RE-RAISE / CANCEL
+	 * @param exampleEvent   the example alarm to render
+	 * @param exampleAlarms  example alarms, used for <code>$activeAlarmList</code> and the example summary
+	 * @param conf           the configuration being edited (eg for the values of a writer's other templates). May be null.
+	 * @return the rendered text
+	 */
+	public String createTemplatePreview(String propKey, String template, String action, AlarmEvent exampleEvent, List<AlarmEvent> exampleAlarms, Configuration conf)
+	throws Exception
+	{
+		ActiveAlarmSummary.Result exampleSummary = ActiveAlarmSummary.createExampleResult(exampleAlarms);
+		String summaryHtml = ActiveAlarmSummary.toHtml(exampleSummary, DEFAULT_summaryGroup, DEFAULT_summaryMaxRows, true);
+		String summaryText = ActiveAlarmSummary.toText(exampleSummary, DEFAULT_summaryGroup, DEFAULT_summaryMaxRows, true);
+
+		return WriterUtils.createMessageFromTemplate(action, exampleEvent, exampleAlarms, template, true, null,
+				"http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort(), summaryHtml, summaryText, WriterUtils.createPreviewContext());
+	}
+
+	/**
+	 * Does the template in this property produce a message that holds an Adaptive Card?
+	 * If so, the Template Editor offers a "Copy card for Designer" button. Default: no.
+	 */
+	public boolean hasDesignerCard(String propKey)
+	{
+		return false;
+	}
+
+	/**
+	 * Reduce a rendered preview to just the Adaptive Card, the way the Adaptive Card Designer wants it.
+	 * (The Designer rejects the message envelope a writer wraps around the card.)
+	 *
+	 * @param propKey      the property being edited
+	 * @param previewText  what {@link #createTemplatePreview} rendered
+	 * @return the card as pretty printed JSON
+	 * @throws Exception if there is no card to be found
+	 */
+	public String createDesignerCard(String propKey, String previewText)
+	throws Exception
+	{
+		throw new UnsupportedOperationException("The AlarmWriter '" + getName() + "' does not produce an Adaptive Card for the property '" + propKey + "'.");
+	}
+	//----------------------------------------------------------------
+	// END: Template preview
+	//----------------------------------------------------------------
 
 	//----------------------------------------------------------------
 	// BEGIN: Active Alarms Summary
@@ -181,56 +261,19 @@ implements IAlarmWriter
 	 * Order:
 	 * <ol>
 	 *   <li>{@code <AlarmWriterName>.activeAlarms.summary.url} - explicit, always wins</li>
-	 *   <li>the PCS writer's URL - its presence <b>proves</b> this Collector sends to DbxCentral, and
-	 *       it is by definition an address this Collector can reach</li>
-	 *   <li>{@code DbxCentral.public.base.url} - explicitly configured, but it is the <i>public</i>
-	 *       URL, which may sit behind a proxy we cannot reach from here</li>
-	 *   <li>otherwise null - local alarms only, and no HTTP call at all</li>
+	 *   <li>otherwise {@link WriterUtils#getDbxCentralFetchUrl(Configuration)} (the same DbxCentral that
+	 *       {@link DbxCentralServerGroup} asks)</li>
 	 * </ol>
 	 */
 	private String resolveSummaryUrl(Configuration conf)
 	{
 		// 1) explicitly configured for this writer
-		String url = getProp(conf, replaceAlarmWriterName(PROPKEY_summaryUrl));
+		String url = WriterUtils.getProp(conf, replaceAlarmWriterName(PROPKEY_summaryUrl));
 		if (StringUtil.hasValue(url))
 			return url;
 
-		// 2) do we actually send to DbxCentral? If so, use that host.
-		String pcsUrl = getProp(conf, "PersistWriterToDbxCentral.url");
-		if (StringUtil.isNullOrBlank(pcsUrl))
-			pcsUrl = getProp(conf, "PersistWriterToHttpJson.url");
-
-		if (StringUtil.hasValue(pcsUrl))
-		{
-			try
-			{
-				// strip the path, eg 'http://host:80/api/pcs/receiver' -> 'http://host:80'
-				URL u = new URL(pcsUrl);
-				return u.getProtocol() + "://" + u.getHost() + (u.getPort() < 0 ? "" : ":" + u.getPort());
-			}
-			catch (MalformedURLException ex)
-			{
-				_logger.info("AlarmWriter '" + getName() + "': Could not parse the PCS URL '" + pcsUrl + "' when looking for DbxCentral. Caught: " + ex);
-			}
-		}
-
-		// 3) the public base URL, if someone set it explicitly
-		url = getProp(conf, PROPKEY_dbxCentralUrl);
-		if (StringUtil.hasValue(url))
-			return url;
-
-		// 4) this Collector does not talk to DbxCentral -> local alarms only
-		return null;
-	}
-
-	/** Look in the passed Configuration first, then in the combined one. */
-	private static String getProp(Configuration conf, String propName)
-	{
-		String val = conf == null ? null : conf.getProperty(propName, null);
-		if (StringUtil.hasValue(val))
-			return val;
-
-		return Configuration.getCombinedConfiguration().getProperty(propName, null);
+		// 2..4) the Collector wide DbxCentral, or null
+		return WriterUtils.getDbxCentralFetchUrl(conf);
 	}
 
 	/** Is the Active Alarms Summary turned on, and wanted for this particular action? */
@@ -285,7 +328,7 @@ implements IAlarmWriter
 		list.add( new CmSettingsHelper("activeAlarms-summary-url",        pkUrl,        String .class, conf.getProperty       (pkUrl,        DEFAULT_summaryUrl),        DEFAULT_summaryUrl,        "<html>Base URL to DbxCentral, used to fetch the active alarms for the <b>other</b> servers, eg: <code>http://dbxcentral:8080</code><br>If left blank, '" + PROPKEY_dbxCentralUrl + "' is used. If that is also blank, the summary will only hold alarms from <b>this</b> Collector.</html>", new UrlInputValidator()));
 		list.add( new CmSettingsHelper("activeAlarms-summary-group",      pkGroup,      String .class, conf.getProperty       (pkGroup,      DEFAULT_summaryGroup),      DEFAULT_summaryGroup,      "<html>Which servers to include in the summary.<br><ul><li><code>same</code> = only servers in the same <b>GROUP</b> as this server. DbxCentral resolves this from the '#FORMAT; GROUP; ...' lines in its <code>conf/SERVER_LIST</code> file, so it automatically follows any changes made there.</li><li><code>all</code> = every server DbxCentral knows about.</li><li>Anything else = one or several explicit group name(s), comma separated. Example: <code>Production Servers</code></li></ul></html>"));
 		list.add( new CmSettingsHelper("activeAlarms-summary-onActions",  pkOnActions,  String .class, conf.getProperty       (pkOnActions,  DEFAULT_summaryOnActions),  DEFAULT_summaryOnActions,  "<html>Which message types that should carry the summary. Comma separated.<br>Valid values: <code>" + ACTION_RAISE + "</code>, <code>" + ACTION_RE_RAISE + "</code>, <code>" + ACTION_CANCEL + "</code></html>"));
-		list.add( new CmSettingsHelper("activeAlarms-summary-maxRows",    pkMaxRows,    Integer.class, conf.getIntProperty    (pkMaxRows,    DEFAULT_summaryMaxRows),    DEFAULT_summaryMaxRows,    "<html>Max number of <b>server</b> rows in the summary (one row per server, listing that servers alarms). Any servers above this are collapsed into a 'and N more server(s)' row.</html>"));
+		list.add( new CmSettingsHelper("activeAlarms-summary-maxRows",    pkMaxRows,    Integer.class, conf.getIntProperty    (pkMaxRows,    DEFAULT_summaryMaxRows),    DEFAULT_summaryMaxRows,    "<html>Max number of <b>servers</b> listed in the summary (each server followed by one bullet per distinct alarm name). Any servers above this are collapsed into a single 'and N more server(s)' line. (The property is still named 'maxRows' for backward compatibility.)</html>"));
 		list.add( new CmSettingsHelper("activeAlarms-summary-skipMuted",  pkSkipMuted,  Boolean.class, conf.getBooleanProperty(pkSkipMuted,  DEFAULT_summarySkipMuted),  DEFAULT_summarySkipMuted,  "Discard alarms that are currently muted in DbxCentral."));
 		list.add( new CmSettingsHelper("activeAlarms-summary-cacheSec",   pkCacheSec,   Integer.class, conf.getIntProperty    (pkCacheSec,   DEFAULT_summaryCacheSec),   DEFAULT_summaryCacheSec,   "<html>Reuse the list fetched from DbxCentral for this many seconds.<br>This is what makes an 'alarm storm' (many alarms in the same scan) do <b>one</b> call to DbxCentral instead of one per alarm.</html>"));
 		list.add( new CmSettingsHelper("activeAlarms-summary-timeoutSec", pkTimeoutSec, Integer.class, conf.getIntProperty    (pkTimeoutSec, DEFAULT_summaryTimeoutSec), DEFAULT_summaryTimeoutSec, "Connect/request timeout when fetching the active alarms from DbxCentral. If it fails, the message is still sent, just without the other servers."));
@@ -413,6 +456,12 @@ implements IAlarmWriter
 	public static final String  PROPKEY_filter_skip_servername = "<AlarmWriterName>.filter.skip.serverName";
 	public static final String  DEFAULT_filter_skip_servername = "";
 
+	public static final String  PROPKEY_filter_keep_serverGroup = "<AlarmWriterName>.filter.keep.serverGroup";
+	public static final String  DEFAULT_filter_keep_serverGroup = "";
+
+	public static final String  PROPKEY_filter_skip_serverGroup = "<AlarmWriterName>.filter.skip.serverGroup";
+	public static final String  DEFAULT_filter_skip_serverGroup = "";
+
 	public static final String  PROPKEY_filter_keep_category   = "<AlarmWriterName>.filter.keep.category";
 	public static final String  DEFAULT_filter_keep_category   = "";
 
@@ -443,6 +492,8 @@ implements IAlarmWriter
 		String skip_alarmClass_regExp = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_alarmClass), DEFAULT_filter_skip_alarmClass);
 		String keep_servername_regExp = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_servername), DEFAULT_filter_keep_servername);
 		String skip_servername_regExp = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_servername), DEFAULT_filter_skip_servername);
+		String keep_srvGroup_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_serverGroup), DEFAULT_filter_keep_serverGroup);
+		String skip_srvGroup_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_serverGroup), DEFAULT_filter_skip_serverGroup);
 		String keep_category_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_category  ), DEFAULT_filter_keep_category);
 		String skip_category_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_category  ), DEFAULT_filter_skip_category);
 		String keep_severity_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_severity  ), DEFAULT_filter_keep_severity);
@@ -457,6 +508,8 @@ implements IAlarmWriter
 				skip_alarmClass_regExp +
 				keep_servername_regExp +
 				skip_servername_regExp +
+				keep_srvGroup_regExp   +
+				skip_srvGroup_regExp   +
 				keep_category_regExp   +
 				skip_category_regExp   +
 				keep_severity_regExp   +
@@ -469,13 +522,15 @@ implements IAlarmWriter
 		}
 		else
 		{
-			int spaces = 1 + getName().length() + ".filter.keep.serverName".length();
+			int spaces = 1 + getName().length() + ".filter.keep.serverGroup".length();
 			
 			_logger.info("Filter Configuration for Alarm Writer Module: "+getName());
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_keep_alarmClass), spaces) + ": " + keep_alarmClass_regExp);
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_alarmClass), spaces) + ": " + skip_alarmClass_regExp);
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_keep_servername), spaces) + ": " + keep_servername_regExp);
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_servername), spaces) + ": " + skip_servername_regExp);
+			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_keep_serverGroup), spaces) + ": " + keep_srvGroup_regExp);
+			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_serverGroup), spaces) + ": " + skip_srvGroup_regExp);
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_keep_category  ), spaces) + ": " + keep_category_regExp  );
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_category  ), spaces) + ": " + skip_category_regExp  );
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_keep_severity  ), spaces) + ": " + keep_severity_regExp  );
@@ -485,6 +540,12 @@ implements IAlarmWriter
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime), spaces) + ": " + alwaysSendAlarmOnErrorsThatAffectsUpTime);
 			_logger.info("DbxCentral URL for Alarm Writer Module: "+getName());
 			_logger.info("    " + PROPKEY_dbxCentralUrl + ": " + getDbxCentralUrl());
+
+			if (StringUtil.hasValue(keep_srvGroup_regExp + skip_srvGroup_regExp) && StringUtil.isNullOrBlank(WriterUtils.getDbxCentralFetchUrl(conf)))
+			{
+				_logger.warn("Alarm Writer Module '" + getName() + "' has a 'serverGroup' filter, but this Collector does not talk to DbxCentral, so the group can never be known. "
+						+ "The 'serverGroup' filters will NOT be applied (alarms are sent). Configure 'PersistWriterToDbxCentral.url' or '" + PROPKEY_dbxCentralUrl + "'.");
+			}
 		}
 	}
 	
@@ -498,6 +559,9 @@ implements IAlarmWriter
 		return propKey.replace("<AlarmWriterName>", alarmWriterName);
 	}
 	
+	/** So an unknown server group WARNs once, not once per alarm. Reset when the group is known. */
+	private volatile boolean _hasWarnedUnknownServerGroup = false;
+
 	@Override
 	public boolean doAlarm(AlarmEvent ae)
 	{
@@ -518,6 +582,8 @@ implements IAlarmWriter
 		String skip_alarmClass_regExp = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_alarmClass), DEFAULT_filter_skip_alarmClass);
 		String keep_servername_regExp = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_servername), DEFAULT_filter_keep_servername);
 		String skip_servername_regExp = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_servername), DEFAULT_filter_skip_servername);
+		String keep_srvGroup_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_serverGroup), DEFAULT_filter_keep_serverGroup);
+		String skip_srvGroup_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_serverGroup), DEFAULT_filter_skip_serverGroup);
 		String keep_category_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_category  ), DEFAULT_filter_keep_category);
 		String skip_category_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_category  ), DEFAULT_filter_skip_category);
 		String keep_severity_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_severity  ), DEFAULT_filter_keep_severity);
@@ -551,6 +617,31 @@ implements IAlarmWriter
 		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_state_regExp)      ||   state     .matches(keep_state_regExp      ))); //     matches the KEEP state      regexp
 		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_state_regExp)      || ! state     .matches(skip_state_regExp      ))); // NO match in the SKIP state      regexp
 
+		// serverGroup: Keep & Skip rules
+		// LAST, and only when still needed, since it may have to ask DbxCentral (cached, see DbxCentralServerGroup)
+		if (doAlarm && StringUtil.hasValue(keep_srvGroup_regExp + skip_srvGroup_regExp))
+		{
+			DbxCentralServerGroup.Lookup group = DbxCentralServerGroup.get(ae);
+			if (group.isUnknown())
+			{
+				// Fail OPEN: losing an alarm is worse than sending one that should have been filtered out
+				if ( ! _hasWarnedUnknownServerGroup )
+				{
+					_hasWarnedUnknownServerGroup = true;
+					_logger.warn("Alarm Writer Module '" + getName() + "': The DbxCentral server group is not known (yet), so the 'serverGroup' filters are NOT applied, and the alarm is sent. "
+							+ "This message is only written once, until the group is known.");
+				}
+			}
+			else
+			{
+				_hasWarnedUnknownServerGroup = false;
+
+				String serverGroup = group.getNameOrEmpty(); // "" when not within any group
+				doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_srvGroup_regExp) ||   serverGroup.matches(keep_srvGroup_regExp))); //     matches the KEEP serverGroup regexp
+				doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_srvGroup_regExp) || ! serverGroup.matches(skip_srvGroup_regExp))); // NO match in the SKIP serverGroup regexp
+			}
+		}
+
 		// if we have passed all the filters... 
 		// if the alarm is an ERROR and service state is AFFECTED
 		// Then always send an Alarm
@@ -578,6 +669,10 @@ implements IAlarmWriter
 
 		list.add(new CmSettingsHelper("ServerName Keep", replaceAlarmWriterName(PROPKEY_filter_keep_servername), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_servername), DEFAULT_filter_keep_servername), DEFAULT_filter_keep_servername, "Only for the 'ServerName' listed (regexp is used, blank=not-used). After this rule the 'skip' rule is evaluated."+regexpTestPage, new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("ServerName Skip", replaceAlarmWriterName(PROPKEY_filter_skip_servername), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_servername), DEFAULT_filter_skip_servername), DEFAULT_filter_skip_servername, "Discard 'ServerName' listed (regexp is used). Before this rule the 'keep' rules are evaluated."                  +regexpTestPage, new RegExpInputValidator()));
+
+		String srvGroupNote = " The group is the '#FORMAT; GROUP; name' this server is in, in DbxCentral's SERVER_LIST file (the overview page layout), so moving a server to another group there also changes this filter. Not within any group = empty string. If the group is not known (DbxCentral not reachable since startup, or not configured) this filter is not applied and the alarm is sent.";
+		list.add(new CmSettingsHelper("ServerGroup Keep", replaceAlarmWriterName(PROPKEY_filter_keep_serverGroup), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_serverGroup), DEFAULT_filter_keep_serverGroup), DEFAULT_filter_keep_serverGroup, "Only for servers in the DbxCentral 'ServerGroup' listed (regexp is used, blank=not-used). After this rule the 'skip' rule is evaluated." + srvGroupNote + regexpTestPage, new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ServerGroup Skip", replaceAlarmWriterName(PROPKEY_filter_skip_serverGroup), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_serverGroup), DEFAULT_filter_skip_serverGroup), DEFAULT_filter_skip_serverGroup, "Discard servers in the DbxCentral 'ServerGroup' listed (regexp is used). Before this rule the 'keep' rules are evaluated."                    + srvGroupNote + regexpTestPage, new RegExpInputValidator()));
 
 		list.add(new CmSettingsHelper("Category Keep",   replaceAlarmWriterName(PROPKEY_filter_keep_category  ), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_category  ), DEFAULT_filter_keep_category  ), DEFAULT_filter_keep_category  , "Only for the 'Category' listed (regexp is used, blank=not-used). After this rule the 'skip' rule is evaluated. Example values: CPU, DOWN, SPACE, SRV_CONFIG, LOCK, HADR, RPO."  +regexpTestPage, new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("Category Skip",   replaceAlarmWriterName(PROPKEY_filter_skip_category  ), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_category  ), DEFAULT_filter_skip_category  ), DEFAULT_filter_skip_category  , "Discard 'Category' listed (regexp is used). Before this rule the 'keep' rules are evaluated. Example values: CPU, DOWN, SPACE, SRV_CONFIG, LOCK, HADR, RPO."                    +regexpTestPage, new RegExpInputValidator()));

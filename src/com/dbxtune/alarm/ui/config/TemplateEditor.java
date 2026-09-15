@@ -93,6 +93,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	private static final long	serialVersionUID	= -1L;
 	
 	private static final String TEMPLATE_HELP = "http://velocity.apache.org/engine/2.0/user-guide.html#conditionals";
+	private static final String ADAPTIVE_CARD_DESIGNER = "https://adaptivecards.microsoft.com/designer.html";
 
 	private String _return = null;
 
@@ -112,6 +113,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 
 	private JButton           _templateHelp_but  = new JButton("Velocity Template Language Documentation");
 	private JButton           _sendTestAlarm_but = new JButton("Send Test Alarm");
+	private JButton           _copyDesignerCard_but = new JButton("Copy card for Designer");
 	
 	private String            _currentWriterClassName = "";
 	private Configuration     _currentConfig          = null;
@@ -369,6 +371,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		// ADD the OK, Cancel, Apply buttons
 		panel.add(_templateHelp_but,  "");
 		panel.add(_sendTestAlarm_but, "");
+		panel.add(_copyDesignerCard_but, "hidemode 3");
 		panel.add(new JLabel(),       "growx, pushx");
 		panel.add(_ok,                "tag ok, right");
 		panel.add(_cancel,            "tag cancel");
@@ -378,6 +381,13 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		_cancel           .addActionListener(this);
 		_templateHelp_but .addActionListener(this);
 		_sendTestAlarm_but.addActionListener(this);
+		_copyDesignerCard_but.addActionListener(this);
+
+		// Only for templates that produce an Adaptive Card (eg the Teams card template)
+		AlarmWriterAbstract previewWriter = getPreviewWriter();
+		_copyDesignerCard_but.setVisible(previewWriter != null && previewWriter.hasDesignerCard(_currentPropKey));
+		_copyDesignerCard_but.setToolTipText("<html>Copy just the Adaptive Card to the clipboard - without the Teams message envelope around it, which the Designer does not accept.<br>"
+				+ "Then paste it into the <b>Card Payload Editor</b> at <code>" + ADAPTIVE_CARD_DESIGNER + "</code>, replacing everything that is there.</html>");
 
 		_templateHelp_but .setToolTipText("Open the default web browser at "+TEMPLATE_HELP);;
 		_sendTestAlarm_but.setToolTipText("<html>Send a Test Alarm using the above template<br>Using AlarmWriter: <code>"+_currentWriterClassName+"</code></html>");
@@ -470,6 +480,22 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 			}
 		}
 		
+		if (_copyDesignerCard_but.equals(source))
+		{
+			try
+			{
+				SwingUtils.setClipboardContents(createDesignerCard());
+				SwingUtils.showInfoMessage(this, "Copy card for Designer",
+						"<html>The card is on the clipboard.<br><br>"
+						+ "Paste it into the <b>Card Payload Editor</b> at <code>" + ADAPTIVE_CARD_DESIGNER + "</code>,<br>"
+						+ "replacing everything that is there.</html>");
+			}
+			catch (Exception ex)
+			{
+				SwingUtils.showErrorMessage(this, "Copy card for Designer", "Could not create the card. Fix the problems shown in the editor first.", ex);
+			}
+		}
+
 		if (_sendTestAlarm_but.equals(source))
 		{
 			String writerClassName = _currentWriterClassName;
@@ -684,6 +710,63 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	** END: Property handling
 	**---------------------------------------------------
 	*/
+	/**
+	 * Render the template for the preview, the way the writer being configured renders it.
+	 * <p>
+	 * Writers have templates with their own variables and escaping (eg the Teams card template has
+	 * <code>$cardStyle</code> and is JSON escaped), so the generic rendering is only a fallback for a writer
+	 * that does not extend AlarmWriterAbstract.
+	 */
+	private String createPreview(String action)
+	throws Exception
+	{
+		AlarmWriterAbstract writer = getPreviewWriter();
+		if (writer != null)
+			return writer.createTemplatePreview(_currentPropKey, _editor_txt.getText(), action, _exampleAlarmEvent, _exampleAlarmEventList, _currentConfig);
+
+		return WriterUtils.createMessageFromTemplate(action, _exampleAlarmEvent, _exampleAlarmEventList, _editor_txt.getText(), true, null, "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort());
+	}
+
+	/** The current preview, reduced to just the Adaptive Card (for the Adaptive Card Designer). */
+	private String createDesignerCard()
+	throws Exception
+	{
+		AlarmWriterAbstract writer = getPreviewWriter();
+		if (writer == null)
+			throw new Exception("Could not create the AlarmWriter '" + _currentWriterClassName + "'.");
+
+		// Render it again rather than reading the preview pane: the pane may be showing broken output
+		String action = _setAlarmType_cbx.getSelectedItem() + "";
+		return writer.createDesignerCard(_currentPropKey, createPreview(action));
+	}
+
+	private AlarmWriterAbstract _previewWriter       = null;
+	private boolean             _previewWriterLoaded = false;
+
+	/**
+	 * An instance of the writer being configured, only used to render previews.
+	 * NOTE: deliberately NOT init()'ed - init() insists on mandatory settings (eg a URL) that may not be filled
+	 * in yet while editing, and some writers would start talking to the network.
+	 */
+	private AlarmWriterAbstract getPreviewWriter()
+	{
+		if ( ! _previewWriterLoaded )
+		{
+			_previewWriterLoaded = true;
+			try
+			{
+				Object instance = Class.forName(_currentWriterClassName).getDeclaredConstructor().newInstance();
+				if (instance instanceof AlarmWriterAbstract)
+					_previewWriter = (AlarmWriterAbstract) instance;
+			}
+			catch (Throwable t)
+			{
+				_logger.info("Template preview: Could not create the AlarmWriter '" + _currentWriterClassName + "', using the generic preview instead. Caught: " + t);
+			}
+		}
+		return _previewWriter;
+	}
+
 	private class LocalVelocityParser
 	implements Parser
 	{
@@ -702,11 +785,15 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 			try
 			{
 				String type = _setAlarmType_cbx.getSelectedItem()+"";
-				String str = WriterUtils.createMessageFromTemplate(type, _exampleAlarmEvent, _exampleAlarmEventList, _editor_txt.getText(), true, null, "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort());
+				String str = createPreview(type);
 				_example_lbl.setText(str);
 			}
 			catch (Exception ex)
 			{
+				// The template rendered, but the result is not usable: show WHAT came out, as well as the error
+				if (ex instanceof AlarmWriterAbstract.TemplatePreviewException)
+					_example_lbl.setText( ((AlarmWriterAbstract.TemplatePreviewException) ex).getPreviewText() );
+
 				String type = ex.getClass().getSimpleName();
 
 				int    line   = -1;
@@ -723,6 +810,10 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 					line   = pee.getLineNumber()   - 1;
 					offset = pee.getColumnNumber() - 1;
 //System.out.println("ppe.getInvalidSyntax()="+pee.getInvalidSyntax());
+				}
+				else if (ex instanceof AlarmWriterAbstract.TemplatePreviewException)
+				{
+					type   = "Invalid Output: ";
 				}
 				else if (ex instanceof MethodInvocationException)
 				{

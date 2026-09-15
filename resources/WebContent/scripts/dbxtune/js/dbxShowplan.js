@@ -1389,7 +1389,8 @@
 		// open() itself renders a "Looking up table DDL/index/stats..." status while srv/dbname are set
 		// and ddlContext isn't - no need to duplicate that here.
 		var workloadData = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
-		dbxLlmAdvice.open({ sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', srv: srv, dbname: dbname, workloadData: workloadData, target: body });
+		var dbmsVersion  = tiBody ? (tiBody.getAttribute('data-dbmsversion')  || '') : '';
+		dbxLlmAdvice.open({ sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, workloadData: workloadData, target: body });
 	}
 
 	// Manual re-run - ignores the data-loaded guard (unlike the toggle handler) since this is an
@@ -1426,21 +1427,27 @@
 			var wlRaw = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 			var wlProfile = (wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
 					? dbxLlmAdvice.buildWorkloadProfile(wlRaw) : '';
-			$.ajax({
-				url:         '/api/llm/optimize-sql',
-				method:      'POST',
-				contentType: 'application/json',
-				data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', workloadProfile: wlProfile, preview: true }),
-				dataType:    'json',
-				success: function(r) {
-					if (r && r.promptSent) {
-						var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-						body.innerHTML = '<pre id="dbx-asp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
-					} else {
-						body.innerHTML = '<em style="color:#888;">Could not build a prompt preview.</em>';
-					}
-				},
-				error: function(xhr) { body.innerHTML = '<span class="text-danger">Failed to build prompt: HTTP ' + xhr.status + '</span>'; }
+			// Same DBMS version open() would send (recorded one from the report, or live from srv)
+			var dbmsVerRecorded = tiBody ? (tiBody.getAttribute('data-dbmsversion') || '') : '';
+			var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
+					? dbxLlmAdvice.fetchDbmsVersion({ srv: srv, dbmsVersion: dbmsVerRecorded }) : Promise.resolve(dbmsVerRecorded);
+			dbmsVerPromise.then(function(dbmsVersion) {
+				$.ajax({
+					url:         '/api/llm/optimize-sql',
+					method:      'POST',
+					contentType: 'application/json',
+					data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+					dataType:    'json',
+					success: function(r) {
+						if (r && r.promptSent) {
+							var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+							body.innerHTML = '<pre id="dbx-asp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
+						} else {
+							body.innerHTML = '<em style="color:#888;">Could not build a prompt preview.</em>';
+						}
+					},
+					error: function(xhr) { body.innerHTML = '<span class="text-danger">Failed to build prompt: HTTP ' + xhr.status + '</span>'; }
+				});
 			});
 		}
 
@@ -1524,6 +1531,9 @@
 			// Daily Summary Report (see SparklineHelper.getWorkloadHarvesterJs / ShowplanAseServlet).
 			// The LLM Advice section below reads it back out of here.
 			tiBody.setAttribute('data-workloaddata', (meta && meta.workloadData) ? meta.workloadData : '');
+			// RECORDED DBMS version, forwarded from the Daily Summary Report (see ShowplanAseServlet). When
+			// empty, dbxLlmAdvice.fetchDbmsVersion() resolves it live from data-srv instead.
+			tiBody.setAttribute('data-dbmsversion', (meta && meta.dbmsVersion) ? meta.dbmsVersion : '');
 			tiBody.setAttribute('data-loaded',  'false');
 			tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
 			tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
@@ -1827,6 +1837,10 @@ function _initGlobalEscClose() {
 				tiBody.setAttribute('data-dbname',  tiDb);
 				tiBody.setAttribute('data-ts',      tiTs);
 				tiBody.setAttribute('data-sqltext', tiSql);
+				// Not supplied on this path - clear what a previous programmatic open may have left behind,
+				// so the LLM sections never pick up another statement's (or server's) values
+				tiBody.setAttribute('data-workloaddata', '');
+				tiBody.setAttribute('data-dbmsversion',  '');
 				tiBody.setAttribute('data-loaded',  'false');
 				tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
 				if (tiSrv && tiDb) {
@@ -2030,6 +2044,10 @@ function _initGlobalEscClose() {
 				tiBody.setAttribute('data-srv',     tiSrv);
 				tiBody.setAttribute('data-dbname',  tiDb);
 				tiBody.setAttribute('data-sqltext', data.sqltext || '');
+				// Not supplied on this path - clear what a previous programmatic open may have left behind,
+				// so the LLM sections never pick up another statement's (or server's) values
+				tiBody.setAttribute('data-workloaddata', '');
+				tiBody.setAttribute('data-dbmsversion',  '');
 				tiBody.setAttribute('data-loaded',  'false');
 				tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
 				tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
@@ -2382,7 +2400,8 @@ function _initGlobalEscClose() {
 		// open() itself renders a "Looking up table DDL/index/stats..." status while srv/dbname are set
 		// and ddlContext isn't - no need to duplicate that here.
 		var workloadData = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
-		dbxLlmAdvice.open({ sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', srv: srv, dbname: dbname, ts: ts, workloadData: workloadData, target: body });
+		var dbmsVersion  = tiBody ? (tiBody.getAttribute('data-dbmsversion')  || '') : '';
+		dbxLlmAdvice.open({ sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, ts: ts, workloadData: workloadData, target: body });
 	}
 
 	// Manual re-run, e.g. after the user notices the advice looks stale, or just wants to try again.
@@ -2421,21 +2440,27 @@ function _initGlobalEscClose() {
 			var wlRaw = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 			var wlProfile = (wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
 					? dbxLlmAdvice.buildWorkloadProfile(wlRaw) : '';
-			$.ajax({
-				url:         '/api/llm/optimize-sql',
-				method:      'POST',
-				contentType: 'application/json',
-				data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: xmlText, dbVendor: 'Microsoft SQL Server', workloadProfile: wlProfile, preview: true }),
-				dataType:    'json',
-				success: function(r) {
-					if (r && r.promptSent) {
-						var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-						body.innerHTML = '<pre id="dbx-ssp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
-					} else {
-						body.innerHTML = '<em style="color:#888;">Could not build a prompt preview.</em>';
-					}
-				},
-				error: function(xhr) { body.innerHTML = '<span class="text-danger">Failed to build prompt: HTTP ' + xhr.status + '</span>'; }
+			// Same DBMS version open() would send (recorded one from the report, or live from srv)
+			var dbmsVerRecorded = tiBody ? (tiBody.getAttribute('data-dbmsversion') || '') : '';
+			var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
+					? dbxLlmAdvice.fetchDbmsVersion({ srv: srv, dbmsVersion: dbmsVerRecorded }) : Promise.resolve(dbmsVerRecorded);
+			dbmsVerPromise.then(function(dbmsVersion) {
+				$.ajax({
+					url:         '/api/llm/optimize-sql',
+					method:      'POST',
+					contentType: 'application/json',
+					data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+					dataType:    'json',
+					success: function(r) {
+						if (r && r.promptSent) {
+							var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+							body.innerHTML = '<pre id="dbx-ssp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
+						} else {
+							body.innerHTML = '<em style="color:#888;">Could not build a prompt preview.</em>';
+						}
+					},
+					error: function(xhr) { body.innerHTML = '<span class="text-danger">Failed to build prompt: HTTP ' + xhr.status + '</span>'; }
+				});
 			});
 		}
 
@@ -2483,7 +2508,7 @@ function _initGlobalEscClose() {
 	 * @param {string} xmlText      — raw XML showplan string
 	 * @param {string} [sqlText]    — optional SQL text to display on the SQL tab
 	 * @param {string} [objectName] — optional object/query label shown in the header
-	 * @param {Object} [meta]       — optional metadata: { lastCompileStartTime, lastSeen, source, srv, dbname, ts }
+	 * @param {Object} [meta]       — optional metadata: { lastCompileStartTime, lastSeen, source, srv, dbname, ts, workloadData, dbmsVersion }
 	 *                                meta.srv / meta.dbname / meta.ts are used for lazy-loading Table Information.
 	 */
 	window.showSqlServerShowplanDialog = function(xmlText, sqlText, objectName, meta) {
@@ -2535,6 +2560,9 @@ function _initGlobalEscClose() {
 			// Daily Summary Report (see SparklineHelper.getWorkloadHarvesterJs / ShowplanSqlServerServlet).
 			// The LLM Advice section below reads it back out of here.
 			tiBody.setAttribute('data-workloaddata', (meta && meta.workloadData) ? meta.workloadData : '');
+			// RECORDED DBMS version, forwarded from the Daily Summary Report (see ShowplanSqlServerServlet). When
+			// empty, dbxLlmAdvice.fetchDbmsVersion() resolves it live from data-srv instead.
+			tiBody.setAttribute('data-dbmsversion', (meta && meta.dbmsVersion) ? meta.dbmsVersion : '');
 			tiBody.setAttribute('data-loaded',  'false');
 			tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
 			// Show or hide the section depending on whether we have a server context

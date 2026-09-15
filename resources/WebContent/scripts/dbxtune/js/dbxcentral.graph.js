@@ -2342,7 +2342,7 @@ function dbxTuneGraphSubscribe()
 		return null;
 	}
 
-	function activeStmtDetailShowModal(row, metaDataArr, stripHtml, appName)
+	function activeStmtDetailShowModal(row, metaDataArr, stripHtml, appName, srvName)
 	{
 		var $modal = $('#dbx-view-alarmView-dialog');
 		if ($modal.length === 0) return;
@@ -2417,7 +2417,8 @@ function dbxTuneGraphSubscribe()
 				if (adviceBtn)
 				{
 					adviceBtn.onclick = function() {
-						dbxLlmAdvice.open({ sql: llmSql, plan: llmPlan, dbVendor: ACTIVE_STMT_DB_VENDOR[appName] });
+						// 'srv' lets dbxLlmAdvice resolve the DBMS version from the Collector (no 'dbname', so no DDL lookup)
+						dbxLlmAdvice.open({ sql: llmSql, plan: llmPlan, dbVendor: ACTIVE_STMT_DB_VENDOR[appName], srv: srvName });
 					};
 				}
 			});
@@ -2750,7 +2751,7 @@ function dbxTuneGraphSubscribe()
 			var rowSnap = row;
 			tr.addEventListener('click', function(e) {
 				if ($(e.target).closest('[data-toggle="modal"]').length > 0) return;
-				activeStmtDetailShowModal(rowSnap, _metaDataArrRef, false, appName);
+				activeStmtDetailShowModal(rowSnap, _metaDataArrRef, false, appName, srvName);
 			});
 		};
 

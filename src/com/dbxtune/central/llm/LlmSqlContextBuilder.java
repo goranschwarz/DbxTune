@@ -130,26 +130,29 @@ public class LlmSqlContextBuilder
 	 * @param sql               the SQL statement
 	 * @param ddlContext        plain-text DDL/index/stats bundle (from {@link #buildDdlContext} or a vendor's {@code getTableInfoAsPlainText}), may be blank
 	 * @param dbVendor          DBMS product name
+	 * @param dbmsVersion       DBMS version string recorded for the report ({@code getReportingInstance().getDbmsVersionStr()}), may be blank.
+	 *                          Carried IN the link, since this link must work without JavaScript (the report's
+	 *                          'dsr-dbms-info' element is only read by the JavaScript links).
 	 */
-	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String dbVendor)
+	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String dbVendor, String dbmsVersion)
 	{
-		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, null, dbVendor);
+		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, null, dbVendor, dbmsVersion);
 	}
 
 	/**
-	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String)}, but also includes the
+	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String, String)}, but also includes the
 	 * execution plan when the caller already has one in hand (e.g. a cached XML plan already
 	 * resolved for this row), so it doesn't have to be re-fetched from {@code /llm-advice}.
 	 *
 	 * @param plan execution plan text/XML, or null/blank if not available
 	 */
-	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor)
+	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor, String dbmsVersion)
 	{
-		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, plan, dbVendor, "Get LLM Optimization Advice", true);
+		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, plan, dbVendor, dbmsVersion, "Get LLM Optimization Advice", true);
 	}
 
 	/**
-	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String, String)}, but with control over
+	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String, String, String)}, but with control over
 	 * the link text and the leading icon.
 	 * <p>
 	 * This is for callers that renders a LIST of advice links for the same SQL Statement (for example
@@ -160,7 +163,7 @@ public class LlmSqlContextBuilder
 	 * @param linkText     text of the anchor, for example "SQL only"
 	 * @param includeIcon  if a leading "open in new tab" icon should be part of the returned HTML
 	 */
-	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor, String linkText, boolean includeIcon)
+	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor, String dbmsVersion, String linkText, boolean includeIcon)
 	{
 		if ( ! LlmClientRegistry.isFeatureEnabledViaDbxCentral() )
 			return "";
@@ -173,6 +176,8 @@ public class LlmSqlContextBuilder
 		HtmlQueryString qs = new HtmlQueryString();
 		qs.add("sql", sql);
 		qs.add("dbVendor", dbVendor);
+		if (StringUtil.hasValue(dbmsVersion))
+			qs.add("dbmsVersion", dbmsVersion);
 		if (StringUtil.hasValue(ddlContext))
 			qs.add("ddlContext", ddlContext);
 		if (StringUtil.hasValue(plan))
@@ -197,12 +202,12 @@ public class LlmSqlContextBuilder
 	}
 
 	/**
-	 * Same intent as {@link #buildAdviceLinkHtml(String, String, String, String, String)}, but for
+	 * Same intent as {@link #buildAdviceLinkHtml(String, String, String, String, String, String)}, but for
 	 * callers that already have an execution plan payload written ONCE to the page in a hidden
 	 * {@code <script type='text/xmldata' id='...'>} block (both {@code AseTopCmStmntCacheDetails} and
 	 * {@code ExecutionPlanCollection} already do this, for "Copy XML"/"view plan").
 	 * <p>
-	 * Unlike {@link #buildAdviceLinkHtml(String, String, String, String, String)}, this does NOT embed
+	 * Unlike {@link #buildAdviceLinkHtml(String, String, String, String, String, String)}, this does NOT embed
 	 * the plan as a URL fragment (a small {@code data-*} attribute-carrying link reads it back out of
 	 * {@code planElementId} at CLICK time, via the shared {@code dsrOpenLink(...)} JS function - see
 	 * {@code AseTopCmStmntCacheDetails}/{@code ExecutionPlanCollection} for where it's defined), and it
@@ -215,6 +220,9 @@ public class LlmSqlContextBuilder
 	 * same {@code /api/cc/mgt/table-info}/{@code /api/cc/mgt/query-store} proxy-to-Collector endpoints
 	 * {@code dbxShowplan.js}'s own "Get LLM Optimization Advice" section already uses - so nothing is
 	 * computed or stored in the report at all unless the link is actually clicked.
+	 * <p>
+	 * The recorded DBMS version is not carried per link either: {@code dsrOpenLink(...)} adds it at click
+	 * time from the report's single {@code 'dsr-dbms-info'} element (see {@code ShowplanLinkBuilder.getDsrLinkSupportJs}).
 	 * <p>
 	 * This makes the link JavaScript-dependent: it will not do anything if the report is opened
 	 * directly in an e-mail client (same limitation "Copy XML" already has) - the tooltip says so.

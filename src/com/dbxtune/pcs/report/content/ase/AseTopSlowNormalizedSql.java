@@ -896,13 +896,13 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						if ( ! planLinks.hasLlmLinks() )
 						{
 							// No plans for this statement: exactly as it has always looked -- icon + full link text
-							llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+							llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_SYBASE_ASE, getReportingInstance().getDbmsVersionStr());
 						}
 						else
 						{
 							// We have plans: write the icon and the label ONCE, then "SQL only" followed by one
 							// entry per plan (advice *with* the plan is a lot better than advice from SQL text alone)
-							String llmSqlOnlyLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, null, DbUtils.DB_PROD_NAME_SYBASE_ASE, "SQL only", false);
+							String llmSqlOnlyLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, null, DbUtils.DB_PROD_NAME_SYBASE_ASE, getReportingInstance().getDbmsVersionStr(), "SQL only", false);
 
 							llmAdviceLink = "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;Get LLM Optimization Advice: "
 									+ (StringUtil.hasValue(llmSqlOnlyLink) ? llmSqlOnlyLink + ", " : "")

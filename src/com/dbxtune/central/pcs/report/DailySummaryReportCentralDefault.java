@@ -72,6 +72,16 @@ extends DailySummaryReportDefault
 	}
 
 	/**
+	 * There is no monitored DBMS (and no MonRecordingInfo, see {@link #getRecordingInfo(DbxConnection)}) - the
+	 * base implementation would throw a NullPointerException. Called from DailySummaryReportDefault.createHtmlBody().
+	 */
+	@Override
+	public String getDbmsVersionStr()
+	{
+		return null;
+	}
+
+	/**
 	 * We don't need to get to the Recording to detect this... Since it will be running locally
 	 * @return
 	 */

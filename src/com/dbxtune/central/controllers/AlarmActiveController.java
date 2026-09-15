@@ -22,6 +22,8 @@ package com.dbxtune.central.controllers;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +49,14 @@ extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/**
+	 * Response header set when 'groupOfSrv' is passed: the (URL encoded, UTF-8) name of the SERVER_LIST
+	 * GROUP that server is a member of, or an empty value if it's not within any group.
+	 * <p>
+	 * NOTE: A compile time constant, so Collector code can reference it without loading this servlet class.
+	 */
+	public static final String HEADER_SERVER_GROUP = "X-DbxCentral-Group";
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
@@ -131,6 +141,11 @@ extends HttpServlet
 				//       end up with an EMPTY list (and NOT an error). A Collector that isn't in
 				//       any group should degrade quietly, not fail.
 				group = DbxCentralServerLayout.getGroupNameForServer(groupOfSrv, null);
+
+				// Tell the caller what group the server is in, ALSO when the list ends up empty.
+				// The rows can't carry that: a group without active alarms has no rows to read it from.
+				// Empty value = not in any group. URL encoded, header values must be ASCII.
+				resp.setHeader(HEADER_SERVER_GROUP, URLEncoder.encode(group == null ? "" : group, StandardCharsets.UTF_8.name()));
 
 				if (StringUtil.isNullOrBlank(group))
 				{

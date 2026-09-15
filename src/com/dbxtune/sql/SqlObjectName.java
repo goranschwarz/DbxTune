@@ -105,11 +105,31 @@ public class SqlObjectName
 			char c = name.charAt(i);
 
 			// goto next character for any "allowed" characters
-			if ( Character.isLetterOrDigit(c) ) continue;
-			if ( c == '_' )                     continue;
+			if ( Character.isLetterOrDigit(c) )
+			{
+				// H2 Stores names as UPPER: so if UPPER=OK and any lower case chars we need to quote
+				if (_dbStoresUpperCaseIdentifiers && Character.isLowerCase(c))
+				{
+					normalChars = false;
+					break;
+				}
 
-			if (_dbExtraNameCharacters != null && _dbExtraNameCharacters.indexOf(c) >= 0) continue;
+				// Postgres Stores names as LOWER: so if LOWER=OK and any upper case chars we need to quote
+				if (_dbStoresLowerCaseIdentifiers && Character.isUpperCase(c)) 
+				{
+					normalChars = false;
+					break;
+				}
 
+				continue;
+			}
+
+			if ( c == '_' )
+				continue;
+
+			if (_dbExtraNameCharacters != null && _dbExtraNameCharacters.indexOf(c) >= 0) 
+				continue;
+			
 			// if any other chars, then break and signal "non-normal-char" detected
 			normalChars = false;
 			break;

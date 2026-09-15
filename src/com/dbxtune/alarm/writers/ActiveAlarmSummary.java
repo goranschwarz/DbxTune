@@ -29,6 +29,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -41,11 +42,9 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.CounterController;
-import com.dbxtune.DbxTune;
-import com.dbxtune.ICounterController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.central.controllers.AlarmActiveController;
 import com.dbxtune.mgt.NoGuiManagementServer;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -126,6 +125,13 @@ public class ActiveAlarmSummary
 		public boolean local;
 	}
 
+	/** Severity (ERROR first), then server, then alarm name, then extraInfo -- so the rows come out in a stable order. */
+	private static final Comparator<Entry> ENTRY_ORDER = Comparator
+			.comparingInt((Entry e) -> severityRank(e.severity))
+			.thenComparing(e -> e.srvName    == null ? "" : e.srvName)
+			.thenComparing(e -> e.alarmClass == null ? "" : e.alarmClass)
+			.thenComparing(e -> e.extraInfo  == null ? "" : e.extraInfo);
+
 	/** What {@link ActiveAlarmSummary#get(String, AlarmEvent)} returns. */
 	public static class Result
 	{
@@ -196,7 +202,7 @@ public class ActiveAlarmSummary
 	 */
 	public Result get(String action, AlarmEvent currentEvent)
 	{
-		String myServerName = getCollectorServerName(currentEvent);
+		String myServerName = WriterUtils.getCollectorServerName(currentEvent);
 
 		List<Entry> localList   = getLocalAlarms(action, currentEvent, myServerName);
 		List<Entry> centralList = getCentralAlarms(myServerName);
@@ -212,7 +218,13 @@ public class ActiveAlarmSummary
 		// NOTE: Only when we actually asked for ONE group. With GROUP_ALL the rows span several
 		//       groups, so the first row's group name would be an outright lie in the header.
 		String groupName = null;
-		if (centralList != null && ! GROUP_ALL.equalsIgnoreCase(_group))
+
+		// For "same": what DbxCentral said in the X-DbxCentral-Group header (fed by getCentralAlarms),
+		// which is there even when the group has no rows to read it from.
+		if (centralList != null && GROUP_SAME.equalsIgnoreCase(_group))
+			groupName = DbxCentralServerGroup.peek().getName();
+
+		if (StringUtil.isNullOrBlank(groupName) && centralList != null && ! GROUP_ALL.equalsIgnoreCase(_group))
 		{
 			for (Entry entry : centralList)
 			{
@@ -246,10 +258,7 @@ public class ActiveAlarmSummary
 		if (_skipMuted)
 			merged.removeIf(entry -> entry.isMuted);
 
-		merged.sort(Comparator
-				.comparingInt((Entry e) -> severityRank(e.severity))
-				.thenComparing(e -> e.srvName    == null ? "" : e.srvName)
-				.thenComparing(e -> e.alarmClass == null ? "" : e.alarmClass));
+		merged.sort(ENTRY_ORDER);
 
 		return new Result(merged, centralOk, groupName);
 	}
@@ -286,26 +295,7 @@ public class ActiveAlarmSummary
 				if (excludeAlarmId != null && excludeAlarmId.equals(alarmEvent.getAlarmId()))
 					continue;
 
-				Entry entry = new Entry();
-
-				entry.srvName      = myServerName;
-				entry.group        = null;
-				// Deliberately via abbreviate(), so the local and the Central half are formatted
-				// by the exact same code and cannot drift apart
-				entry.alarmClass   = abbreviate(alarmEvent.getAlarmClass());
-				entry.serviceName  = alarmEvent.getServiceName();
-				entry.extraInfo    = alarmEvent.getExtraInfo(); // NOTE: returns "" and not null, when unset
-				entry.category     = "" + alarmEvent.getCategory();
-				entry.severity     = "" + alarmEvent.getSeverity();
-				entry.state        = "" + alarmEvent.getState();
-				entry.alarmId      = alarmEvent.getAlarmId() == null ? null : alarmEvent.getAlarmId().toString();
-				entry.fullDuration = alarmEvent.getFullDuration();
-				entry.description  = alarmEvent.getDescription();
-
-				// Muting is a DbxCentral side concept, the Collector knows nothing about it
-				entry.isMuted      = false;
-				entry.local        = true;
-
+				Entry entry = toEntry(alarmEvent, myServerName);
 				list.add(entry);
 			}
 
@@ -316,6 +306,58 @@ public class ActiveAlarmSummary
 			_logger.warn("Problems getting the local Active Alarm list. Skipping the local part of the Active Alarm Summary. Caught: " + t, t);
 			return null;
 		}
+	}
+
+	/** An AlarmEvent as a summary Entry, marked as local. */
+	private static Entry toEntry(AlarmEvent alarmEvent, String srvName)
+	{
+		Entry entry = new Entry();
+
+		entry.srvName      = srvName;
+		entry.group        = null;
+		// Deliberately via abbreviate(), so the local and the Central half are formatted
+		// by the exact same code and cannot drift apart
+		entry.alarmClass   = abbreviate(alarmEvent.getAlarmClass());
+		entry.serviceName  = alarmEvent.getServiceName();
+		entry.extraInfo    = alarmEvent.getExtraInfo(); // NOTE: returns "" and not null, when unset
+		entry.category     = "" + alarmEvent.getCategory();
+		entry.severity     = "" + alarmEvent.getSeverity();
+		entry.state        = "" + alarmEvent.getState();
+		entry.alarmId      = alarmEvent.getAlarmId() == null ? null : alarmEvent.getAlarmId().toString();
+		entry.fullDuration = alarmEvent.getFullDuration();
+		entry.description  = alarmEvent.getDescription();
+
+		// Muting is a DbxCentral side concept, the Collector knows nothing about it
+		entry.isMuted      = false;
+		entry.local        = true;
+
+		return entry;
+	}
+
+	/**
+	 * An example summary built from the passed alarms - nothing is fetched. Used to preview templates
+	 * (eg in the Template Editor), so a template using the summary shows something realistic.
+	 * <p>
+	 * The entries are marked as coming from DbxCentral, so the preview also shows the freshness note.
+	 */
+	public static Result createExampleResult(List<AlarmEvent> alarms)
+	{
+		List<Entry> entries = new ArrayList<>();
+		if (alarms != null)
+		{
+			for (AlarmEvent alarmEvent : alarms)
+			{
+				if (alarmEvent == null)
+					continue;
+
+				Entry entry = toEntry(alarmEvent, alarmEvent.getServiceName());
+				entry.local = false;
+				entries.add(entry);
+			}
+		}
+		entries.sort(ENTRY_ORDER);
+
+		return new Result(entries, true, WriterUtils.EXAMPLE_SERVER_GROUP);
 	}
 
 	//-------------------------------------------------------
@@ -365,10 +407,22 @@ public class ActiveAlarmSummary
 			ObjectMapper om = new ObjectMapper();
 			List<Entry> list = om.readValue(response.body(), new TypeReference<List<Entry>>() {});
 
+			String groupFromRows = null;
 			for (Entry entry : list)
 			{
 				entry.local      = false;
 				entry.alarmClass = abbreviate(entry.alarmClass);
+
+				if (groupFromRows == null && StringUtil.hasValue(entry.group))
+					groupFromRows = entry.group;
+			}
+
+			// We asked with 'groupOfSrv', so the answer also tells what group THIS server is in.
+			// Pass it on, so filters/routing do not have to make a call of their own.
+			if (url.contains("groupOfSrv="))
+			{
+				String header = response.headers().firstValue(AlarmActiveController.HEADER_SERVER_GROUP).orElse(null);
+				DbxCentralServerGroup.onCentralResponse(myServerName, header, groupFromRows);
 			}
 
 			synchronized (_cacheLock)
@@ -437,44 +491,62 @@ public class ActiveAlarmSummary
 	// Rendering, shared by all AlarmWriters
 	//-------------------------------------------------------
 
-	/** Max number of 'extraInfo' values we list per Alarm name, before we say "+N more" */
-	private static final int MAX_EXTRA_INFO_PER_ALARM = 4;
+	/** COMPACT form only: max number of distinct Alarm names listed under one server, before we say "+N more" */
+	private static final int MAX_ALARM_NAMES_PER_SERVER = 6;
 
-	/** Max length of a single 'extraInfo' value. Some are long, eg a job name plus a timestamp. */
-	private static final int MAX_EXTRA_INFO_LENGTH    = 25;
+	private static final String MULTIPLY = Character.toString((char) 0x00D7);
 
-	/** Max number of distinct Alarm names on a single server row, before we say "+N more" */
-	private static final int MAX_ALARM_NAMES_PER_ROW  = 6;
-
-	private static final String MIDDLE_DOT = Character.toString((char) 0x00B7);
-	private static final String ELLIPSIS   = Character.toString((char) 0x2026);
-	private static final String MULTIPLY   = Character.toString((char) 0x00D7);
-
-	/** One rendered line of the summary: a server, and what is active on it. */
-	public static class Row
+	/**
+	 * One server in the summary, and what is active on it: one line per <b>alarm</b>.
+	 * <pre>
+	 * GORAN_UB3_DS
+	 *  * OsLoadAverage
+	 *  * LowDbFreeSpace (goran_16)
+	 *  * LowDbFreeSpace (model)
+	 *  * LowDbFreeSpace (sybsecurity)
+	 * </pre>
+	 * The list may end with an entry where {@link #isMore()} is true: its name is "and N more server(s)"
+	 * and it has no alarms, so a template that simply prints every server name still renders it sensibly.
+	 * <p>
+	 * NOTE: Velocity only reaches values through getters (not public fields), which is why these are getters.
+	 */
+	public static class ServerAlarms
 	{
-		/** Server name, or null for the trailing "and N more server(s)" row */
-		public final String srvName;
-		public final String text;
+		private final String       _srvName;
+		private final List<String> _alarms;
+		private final boolean      _more;
 
-		private Row(String srvName, String text) { this.srvName = srvName; this.text = text; }
+		private ServerAlarms(String srvName, List<String> alarms, boolean more)
+		{
+			_srvName = srvName;
+			_alarms  = alarms;
+			_more    = more;
+		}
+
+		/** The server name. On the trailing entry: "and N more server(s)" */
+		public String       getSrvName() { return _srvName; }
+
+		/** eg "LowDbFreeSpace (goran_16)". Empty on the trailing entry. */
+		public List<String> getAlarms()  { return _alarms; }
+
+		/** true for the trailing "and N more server(s)" entry */
+		public boolean      isMore()     { return _more; }
 	}
 
 	/**
-	 * Turn a {@link Result} into one line per <b>server</b> (not per alarm) - which is what keeps a
-	 * message small when a lot of things are broken at once.
-	 * <p>
-	 * Example: {@code prod-1 -> "4 <dot> OsLoadAverage, LowDbFreeSpace (goran_16, model, sybsecurity)"}
+	 * Group a {@link Result} per server.
 	 *
-	 * @param result          what {@link #get(String, AlarmEvent)} returned
-	 * @param maxRows         max number of server rows, the rest collapse into "and N more server(s)"
-	 * @param withExtraInfo   true = list the 'extraInfo' values, false = just count them with "xN"
+	 * @param result      what {@link #get(String, AlarmEvent)} returned
+	 * @param maxServers  max number of servers listed, the rest collapse into one "and N more server(s)" entry
+	 * @param full        true  = one line per alarm (even duplicates), with its complete extraInfo: "LowDbFreeSpace (goran_16)"<br>
+	 *                    false = COMPACT, for when space is tight: one line per distinct alarm name, counted: "LowDbFreeSpace x3"
+	 * @return never null
 	 */
-	public static List<Row> toRows(Result result, int maxRows, boolean withExtraInfo)
+	public static List<ServerAlarms> toServerAlarms(Result result, int maxServers, boolean full)
 	{
-		List<Row> rows = new ArrayList<>();
+		List<ServerAlarms> list = new ArrayList<>();
 		if (result == null)
-			return rows;
+			return list;
 
 		// Group the (already sorted) alarms per server
 		Map<String, List<Entry>> perServer = new LinkedHashMap<>();
@@ -484,95 +556,73 @@ public class ActiveAlarmSummary
 			perServer.computeIfAbsent(srvName, k -> new ArrayList<>()).add(entry);
 		}
 
-		int rowCount = 0;
+		int serverCount = 0;
 		for (Map.Entry<String, List<Entry>> mapEntry : perServer.entrySet())
 		{
-			if (rowCount >= maxRows)
+			if (serverCount >= maxServers)
 				break;
 
-			rows.add(new Row(mapEntry.getKey(), createRowText(mapEntry.getValue(), withExtraInfo)));
-			rowCount++;
+			list.add(new ServerAlarms(mapEntry.getKey(), createAlarmLines(mapEntry.getValue(), full), false));
+			serverCount++;
 		}
 
-		int notShownCount = perServer.size() - rowCount;
+		int notShownCount = perServer.size() - serverCount;
 		if (notShownCount > 0)
-			rows.add(new Row(null, "and " + notShownCount + " more server(s)"));
+			list.add(new ServerAlarms("and " + notShownCount + " more server(s)", Collections.emptyList(), true));
 
-		return rows;
+		return list;
 	}
 
-	private static String createRowText(List<Entry> alarms, boolean withExtraInfo)
+	/**
+	 * The lines for one server, in the order the alarms were sorted (severity first).
+	 * <ul>
+	 *   <li>full:    one line per alarm, even duplicates, with its complete extraInfo - nothing is shortened</li>
+	 *   <li>compact: one line per distinct alarm name, counted ("LowDbFreeSpace x3"), capped at
+	 *                {@link #MAX_ALARM_NAMES_PER_SERVER}. Only used when the message would otherwise be too big.</li>
+	 * </ul>
+	 */
+	private static List<String> createAlarmLines(List<Entry> alarms, boolean full)
 	{
-		// Distinct alarm names -> the 'extraInfo' of each alarm with that name (which is what tells
-		// two alarms of the same class apart, eg the database name for LowDbFreeSpace).
-		// LinkedHashMap/LinkedHashSet keeps the order they were sorted in (severity first), so an
-		// ERROR name is listed before a WARNING one.
-		Map<String, Set<String>> alarmNameToExtraInfo = new LinkedHashMap<>();
-		Map<String, Integer>     alarmNameCount       = new LinkedHashMap<>();
+		List<String> lines = new ArrayList<>();
 
+		if (full)
+		{
+			for (Entry entry : alarms)
+			{
+				String alarmName = StringUtil.hasValue(entry.alarmClass) ? entry.alarmClass : "-unknown-";
+
+				if (StringUtil.hasValue(entry.extraInfo))
+					lines.add(alarmName + " (" + entry.extraInfo + ")");
+				else
+					lines.add(alarmName);
+			}
+			return lines;
+		}
+
+		// COMPACT: distinct names, counted
+		Map<String, Integer> alarmNameCount = new LinkedHashMap<>();
 		for (Entry entry : alarms)
 		{
 			String alarmName = StringUtil.hasValue(entry.alarmClass) ? entry.alarmClass : "-unknown-";
-
 			alarmNameCount.merge(alarmName, 1, Integer::sum);
-
-			Set<String> extraInfoSet = alarmNameToExtraInfo.computeIfAbsent(alarmName, k -> new LinkedHashSet<>());
-			if (StringUtil.hasValue(entry.extraInfo))
-				extraInfoSet.add(entry.extraInfo);
 		}
 
-		StringBuilder sb = new StringBuilder();
-		sb.append(alarms.size()).append(" ").append(MIDDLE_DOT).append(" ");
-
-		int nameCount = 0;
 		for (Map.Entry<String, Integer> nameEntry : alarmNameCount.entrySet())
 		{
-			if (nameCount >= MAX_ALARM_NAMES_PER_ROW)
+			if (lines.size() >= MAX_ALARM_NAMES_PER_SERVER)
 			{
-				sb.append(", +").append(alarmNameCount.size() - nameCount).append(" more");
+				lines.add("+" + (alarmNameCount.size() - lines.size()) + " more");
 				break;
 			}
 
-			if (nameCount > 0)
-				sb.append(", ");
-
-			String alarmName = nameEntry.getKey();
-			sb.append(alarmName);
-
-			Set<String> extraInfoSet = alarmNameToExtraInfo.get(alarmName);
-
-			if (withExtraInfo && ! extraInfoSet.isEmpty())
-			{
-				// "LowDbFreeSpace (goran_16, model, sybsecurity)"
-				sb.append(" (");
-				int extraInfoCount = 0;
-				for (String extraInfo : extraInfoSet)
-				{
-					if (extraInfoCount >= MAX_EXTRA_INFO_PER_ALARM)
-					{
-						sb.append(", +").append(extraInfoSet.size() - extraInfoCount).append(" more");
-						break;
-					}
-
-					if (extraInfoCount > 0)
-						sb.append(", ");
-
-					sb.append(truncate(extraInfo, MAX_EXTRA_INFO_LENGTH));
-					extraInfoCount++;
-				}
-				sb.append(")");
-			}
-			else if (nameEntry.getValue() > 1)
-			{
-				// Nothing to tell them apart, so at least say how many. "LowDbFreeSpace x1" would
-				// just be noise, hence only when there is more than one.
-				sb.append(" ").append(MULTIPLY).append(nameEntry.getValue());
-			}
-
-			nameCount++;
+			// "LowDbFreeSpace x1" would just be noise, hence the count only when there is more than one
+			if (nameEntry.getValue() > 1)
+				lines.add(nameEntry.getKey() + " " + MULTIPLY + nameEntry.getValue());
+			else
+				lines.add(nameEntry.getKey());
 		}
 
-		return sb.toString();
+		return lines;
 	}
 
 	/** "Active Alarms - Production Servers (12)", or "No other active alarms" when empty. */
@@ -592,7 +642,7 @@ public class ActiveAlarmSummary
 	}
 
 	/** The "do not pretend this is live" note. See {@link #showFreshnessNote(Result)}. */
-	public static final String FRESHNESS_NOTE = "Other servers as of their last sample to DbxCentral.";
+	public static final String FRESHNESS_NOTE = "Note: The above is other servers reported as of their last sample to DbxCentral.";
 
 	/**
 	 * Should the {@link #FRESHNESS_NOTE} be rendered?
@@ -620,9 +670,17 @@ public class ActiveAlarmSummary
 
 	/**
 	 * Render the summary as plain text, for writers that send text (Slack, plain text mail, ...).
+	 * <pre>
+	 * Active Alarms - Sybase Servers (4)
+	 *
+	 * GORAN_UB3_DS
+	 *  * OsLoadAverage
+	 *  * LowDbFreeSpace (goran_16)
+	 *  * LowDbFreeSpace (model)
+	 * </pre>
 	 * Returns "" when there is nothing to show, so it is safe to drop straight into a template.
 	 */
-	public static String toText(Result result, String configuredGroup, int maxRows, boolean withExtraInfo)
+	public static String toText(Result result, String configuredGroup, int maxServers, boolean full)
 	{
 		if (result == null)
 			return "";
@@ -630,25 +688,25 @@ public class ActiveAlarmSummary
 		StringBuilder sb = new StringBuilder();
 		sb.append(createHeader(result, configuredGroup)).append("\n");
 
-		for (Row row : toRows(result, maxRows, withExtraInfo))
+		for (ServerAlarms srv : toServerAlarms(result, maxServers, full))
 		{
-			if (row.srvName == null)
-				sb.append("    ").append(row.text).append("\n");
-			else
-				sb.append("    ").append(StringUtil.left(row.srvName, 30)).append(" ").append(row.text).append("\n");
+			sb.append("\n").append(srv.getSrvName()).append("\n");
+			for (String alarm : srv.getAlarms())
+				sb.append(" * ").append(alarm).append("\n");
 		}
 
 		if (showFreshnessNote(result))
-			sb.append("    (").append(FRESHNESS_NOTE).append(")\n");
+			sb.append("\n(").append(FRESHNESS_NOTE).append(")\n");
 
 		return sb.toString();
 	}
 
 	/**
-	 * Render the summary as an HTML fragment, for writers that send HTML (mail).
+	 * Render the summary as an HTML fragment, for writers that send HTML (mail): the server name in bold,
+	 * and its alarms as a bulleted list.
 	 * Returns "" when there is nothing to show, so it is safe to drop straight into a template.
 	 */
-	public static String toHtml(Result result, String configuredGroup, int maxRows, boolean withExtraInfo)
+	public static String toHtml(Result result, String configuredGroup, int maxServers, boolean full)
 	{
 		if (result == null)
 			return "";
@@ -660,20 +718,23 @@ public class ActiveAlarmSummary
 
 		if ( ! result.entries.isEmpty() )
 		{
-			sb.append("  <table style='border-collapse: collapse; margin-top: 5px; font-size: 90%;'>\n");
-			for (Row row : toRows(result, maxRows, withExtraInfo))
+			for (ServerAlarms srv : toServerAlarms(result, maxServers, full))
 			{
-				sb.append("    <tr>");
-				sb.append("<td style='padding: 2px 10px 2px 0; vertical-align: top; white-space: nowrap;'>")
-				  .append(row.srvName == null ? "" : "<b>" + StringEscapeUtils.escapeHtml4(row.srvName) + "</b>")
-				  .append("</td>");
-				sb.append("<td style='padding: 2px 0;'>").append(StringEscapeUtils.escapeHtml4(row.text)).append("</td>");
-				sb.append("</tr>\n");
+				if (srv.isMore())
+				{
+					sb.append("  <div style='margin-top: 8px;'><i>").append(StringEscapeUtils.escapeHtml4(srv.getSrvName())).append("</i></div>\n");
+					continue;
+				}
+
+				sb.append("  <div style='margin-top: 8px;'><b>").append(StringEscapeUtils.escapeHtml4(srv.getSrvName())).append("</b></div>\n");
+				sb.append("  <ul style='margin-top: 2px; margin-bottom: 0;'>\n");
+				for (String alarm : srv.getAlarms())
+					sb.append("    <li>").append(StringEscapeUtils.escapeHtml4(alarm)).append("</li>\n");
+				sb.append("  </ul>\n");
 			}
-			sb.append("  </table>\n");
 
 			if (showFreshnessNote(result))
-				sb.append("  <div style='font-size: 80%; color: #808080;'>").append(StringEscapeUtils.escapeHtml4(FRESHNESS_NOTE)).append("</div>\n");
+				sb.append("  <div style='margin-top: 8px; font-size: 80%; color: #808080;'>").append(StringEscapeUtils.escapeHtml4(FRESHNESS_NOTE)).append("</div>\n");
 		}
 
 		sb.append("</div>\n");
@@ -681,55 +742,9 @@ public class ActiveAlarmSummary
 		return sb.toString();
 	}
 
-	/** Cut 'str' down to 'maxLength' chars, marking it with an ellipsis if anything was removed. */
-	private static String truncate(String str, int maxLength)
-	{
-		if (str == null || str.length() <= maxLength)
-			return str;
-
-		return str.substring(0, maxLength - 1).trim() + ELLIPSIS;
-	}
-
 	//-------------------------------------------------------
 	// helpers
 	//-------------------------------------------------------
-
-	/**
-	 * The name this Collector is known by in the DbxCentral database (which is also the schema name,
-	 * and therefore the 'srvName' that /api/alarm/active returns).
-	 * <p>
-	 * This mirrors {@code PersistContainer.getServerNameOrAlias()}: the alias if we have one,
-	 * otherwise the stripped DBMS server name.
-	 * <p>
-	 * NOTE: Do <b>not</b> use {@code ICounterController.getServerName()} here -- that one prefers the
-	 * <i>displayName</i>, which is not what the Central database uses as the schema name.
-	 */
-	private String getCollectorServerName(AlarmEvent fallbackEvent)
-	{
-		try
-		{
-			ICounterController cc = CounterController.getInstance();
-			if (cc != null)
-			{
-				String aliasName = cc.getServerAliasName();
-				if (StringUtil.hasValue(aliasName))
-					return aliasName;
-
-				String dbmsName = cc.getDbmsServerName();
-				if (StringUtil.hasValue(dbmsName))
-					return DbxTune.stripSrvName(dbmsName);
-			}
-		}
-		catch (Throwable t)
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("ActiveAlarmSummary: Problems getting the Collector server name from the CounterController. Falling back on the AlarmEvent. Caught: " + t, t);
-		}
-
-		// Fallback. NOTE: getServiceName() does not always hold the server name (for RepServer WS it
-		// holds 'LDS.dbname'), see the TODO in AlarmEvent.private_getServerName()
-		return fallbackEvent == null ? null : fallbackEvent.getServiceName();
-	}
 
 	/**
 	 * 'com.dbxtune.alarm.events.AlarmEventFullTranLog' or 'AlarmEventFullTranLog' -&gt; 'FullTranLog'

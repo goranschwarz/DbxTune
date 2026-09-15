@@ -47,6 +47,16 @@ public class LlmOptimizeRequest
 	 */
 	private String workloadProfile;
 
+	/**
+	 * The DBMS version string, as collected by the DbxTune Collector (for example ASE/SQL Server
+	 * {@code @@version}, Postgres {@code version()}).
+	 * <p>
+	 * Daily Summary Report links carry the RECORDED value (see {@code MonRecordingInfo}); the Web UI
+	 * resolves it live from the Collector's CmSummary (see 'dbxLlmAdvice.js' fetchDbmsVersion()).
+	 * Lets the LLM avoid suggesting syntax/features the server does not have.
+	 */
+	private String dbmsVersion;
+
 	// Defaults false, so the real POST /api/llm/optimize-sql flow (whose caller parses the reply as
 	// the {origin_sql, optimized_sql, explanation} JSON object - see LlmClientAbstract.buildPrompt())
 	// is unaffected unless a caller explicitly opts in. Only GET /api/llm/optimize-sql's "no exec"
@@ -72,6 +82,7 @@ public class LlmOptimizeRequest
 	public String  getDbVendor()        { return dbVendor; }
 	public String  getProvider()        { return provider; }
 	public String  getWorkloadProfile() { return workloadProfile; }
+	public String  getDbmsVersion()     { return dbmsVersion; }
 	public boolean isPreview()          { return preview; }
 
 	public void setSql            (String sql)             { this.sql             = sql; }
@@ -80,5 +91,6 @@ public class LlmOptimizeRequest
 	public void setDbVendor       (String dbVendor)        { this.dbVendor        = dbVendor; }
 	public void setProvider       (String provider)        { this.provider        = provider; }
 	public void setWorkloadProfile(String workloadProfile) { this.workloadProfile = workloadProfile; }
+	public void setDbmsVersion    (String dbmsVersion)     { this.dbmsVersion     = dbmsVersion; }
 	public void setPreview        (boolean preview)        { this.preview         = preview; }
 }

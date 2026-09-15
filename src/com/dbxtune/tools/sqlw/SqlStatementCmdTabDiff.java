@@ -40,6 +40,7 @@ import org.apache.commons.io.FileUtils;
 
 import com.dbxtune.gui.ConnectionProfile;
 import com.dbxtune.gui.ConnectionProfileManager;
+import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.SqlProgressDialog;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -527,6 +528,10 @@ extends SqlStatementAbstract
 			ConnectionProp leftConnProps  = leftConn  == null ? null : leftConn .getConnProp();
 			ConnectionProp rightConnProps = rightConn == null ? null : rightConn.getConnProp();
 
+			// Resolve table names...
+			String leftTable  = new SqlObjectName(leftConn , _params._leftTable) .getFullNameOriginQuoted();
+			String rightTable = new SqlObjectName(rightConn, _params._rightTable).getFullNameOriginQuoted();
+			
 			// Build a WHERE Clause, from the input parameter (if it was specified)
 			String whereClause = "";
 			if (StringUtil.hasValue(_params._whereClause))
@@ -535,8 +540,8 @@ extends SqlStatementAbstract
 
 			// PRE Query on LEFT and RIGHT to see if table exists
 			// and also to collect PK info etc
-			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wrong database name for Sybase ASE)
-			String rightPreQuery = "select * from " + _params._rightTable + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wrong database name for Sybase ASE)
+			String leftPreQuery  = "select * from " + leftTable  + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wrong database name for Sybase ASE)
+			String rightPreQuery = "select * from " + rightTable + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wrong database name for Sybase ASE)
 
 
 			//----------------------------------------------------
@@ -602,8 +607,8 @@ extends SqlStatementAbstract
 			boolean castUuidCols   = _params._castUuidCols;
 //			String leftQuery  = "select " + leftPreDt .getColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote(), skipLobColumns) + " from " + _params._leftTable  + whereClause + " order by " + leftPreDt .getPkColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote());
 //			String rightQuery = "select " + rightPreDt.getColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote(), skipLobColumns) + " from " + _params._rightTable + whereClause + " order by " + rightPreDt.getPkColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote());
-			String leftQuery  = leftPreDt .createSelectStatement(leftConn , _params._leftTable , whereClause, castUuidCols, skipLobColumns);
-			String rightQuery = rightPreDt.createSelectStatement(rightConn, _params._rightTable, whereClause, castUuidCols, skipLobColumns);
+			String leftQuery  = leftPreDt .createSelectStatement(leftConn , leftTable , whereClause, castUuidCols, skipLobColumns);
+			String rightQuery = rightPreDt.createSelectStatement(rightConn, rightTable, whereClause, castUuidCols, skipLobColumns);
 			
 			if (castUuidCols)
 			{
@@ -655,8 +660,8 @@ extends SqlStatementAbstract
 			}
 			
 			
-			String leftPreCountQuery  = "select count(*) from " + _params._leftTable  + whereClause;
-			String rightPreCountQuery = "select count(*) from " + _params._rightTable + whereClause;
+			String leftPreCountQuery  = "select count(*) from " + leftTable  + whereClause;
+			String rightPreCountQuery = "select count(*) from " + rightTable + whereClause;
 			long   leftPreCount       = -1;
 			long   rightPreCount      = -1;
 

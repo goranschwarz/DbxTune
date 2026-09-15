@@ -530,6 +530,10 @@ public class DiffTable
 
 		// if any of the columns is a UUID especially in the "PK"... We need to tell the DBMS to sort that in a CHARacter representation...
 
+		// Translate any tableName into "fully qualified name"
+		SqlObjectName sqlObj = new SqlObjectName(conn, tableName);
+		tableName = sqlObj.getFullNameOriginQuoted();
+
 		//---------------------------
 		String sql = nl;
 		sql += "SELECT " + nl;
@@ -555,7 +559,8 @@ public class DiffTable
 
 		//---------------------------
 		// add 'FROM'
-		sql += "FROM " + startQuoteChar + tableName + endQuoteChar + nl;
+//		sql += "FROM " + startQuoteChar + tableName + endQuoteChar + nl;
+		sql += "FROM " + tableName + nl;
 
 		//---------------------------
 		// add 'WHERE clause'

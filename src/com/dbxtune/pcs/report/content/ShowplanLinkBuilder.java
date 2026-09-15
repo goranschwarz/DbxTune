@@ -129,13 +129,29 @@ public class ShowplanLinkBuilder
 	 * <p>
 	 * The {@code if (typeof dsrOpenLink === 'undefined')} guard is kept so this stays harmless if some
 	 * older/other code path also defines it.
+	 * <p>
+	 * The recorded DBMS version is written ONCE, as a hidden {@code <div id='dsr-dbms-info'>}, and added to
+	 * every link's parameters at click time - rather than being repeated in each link (a SQL Server
+	 * {@code @@version} is ~250 characters, and a report can hold hundreds of links).
+	 *
+	 * @param dbmsVersion the DBMS version string recorded for this report (see {@code MonRecordingInfo}), may be null/blank
 	 */
-	public static String getDsrLinkSupportJs()
+	public static String getDsrLinkSupportJs(String dbmsVersion)
 	{
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("\n");
+		if (StringUtil.hasValue(dbmsVersion))
+			sb.append("<div id='dsr-dbms-info' style='display:none' data-dbms-version='").append(esc(dbmsVersion)).append("'></div> \n");
 		sb.append("<script type='text/javascript'> \n");
+		// Read at click time by dsrOpenLink() and dsrAddWorkload(); '' when the element is not there
+		sb.append("    if (typeof dsrDbmsVersion === 'undefined') { \n");
+		sb.append("    function dsrDbmsVersion() \n");
+		sb.append("    { \n");
+		sb.append("        var el = document.getElementById('dsr-dbms-info'); \n");
+		sb.append("        return el ? (el.getAttribute('data-dbms-version') || '') : ''; \n");
+		sb.append("    } \n");
+		sb.append("    } \n");
 		sb.append("    if (typeof dsrOpenLink === 'undefined') { \n");
 		sb.append("    function dsrOpenLink(a) \n"); // Opens "View Execution Plan"/"Get LLM Optimization Advice" in a new tab, reading
 		sb.append("    { \n");                        // the (already page-embedded, never duplicated) plan text via 'data-plan-id' at click time.
@@ -154,6 +170,7 @@ public class ShowplanLinkBuilder
 		// execution statistics too - otherwise asking for advice from inside the plan viewer silently
 		// loses the workload profile that the report's own advice link would have sent.
 		sb.append("            add('workloadData', dsrHarvestWorkload(a)); \n");
+		sb.append("            add('dbmsVersion', dsrDbmsVersion()); \n"); // for the plan viewer's own LLM Advice section
 		sb.append("        } else { \n");
 		sb.append("            add('sql', d.sql); \n");
 		sb.append("            add('plan', plan); \n");
@@ -161,6 +178,7 @@ public class ShowplanLinkBuilder
 		sb.append("            add('srv', d.srv); \n"); // ddlContext is resolved LIVE by dbxLlmAdvice.js from srv+dbname, not precomputed here
 		sb.append("            add('dbname', d.dbname); \n");
 		sb.append("            add('workloadData', dsrHarvestWorkload(a)); \n"); // execution statistics, read out of the page
+		sb.append("            add('dbmsVersion', dsrDbmsVersion()); \n");         // recorded DBMS version, see 'dsr-dbms-info'
 		sb.append("        } \n");
 		sb.append("        dsrPostToNewTab(d.path, params); \n");
 		sb.append("    } \n");
