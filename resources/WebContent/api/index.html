@@ -446,6 +446,9 @@
 			<tr><td>group</td><td>(all)</td><td>Filter by group name. Several groups can be given, comma separated. Case insensitive. Example: <code>Production Servers</code></td></tr>
 			<tr><td>groupOfSrv</td><td>(all)</td><td>Filter by <i>the group that this server belongs to</i>. Handy for a Collector, which does not know what group it is in. An unknown or ungrouped server gives an empty array (not an error).</td></tr>
 		</table>
+		When <code>groupOfSrv</code> is passed, the response also has the header <code>X-DbxCentral-Group</code>: the group name
+		(URL encoded, UTF-8), or an empty value if the server is not within any group. It is set even when the array is empty,
+		so a Collector can learn its group without any active alarms in it.
 	</div>
 	</div>
 

@@ -43,7 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * <pre>POST /api/llm/optimize-sql</pre>
- * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "provider": "claude"}}
+ * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "dbmsVersion": "...", "provider": "claude"}}
  * <p>
  * Sends the SQL statement (plus whatever DDL/stats/plan context is supplied)
  * to the requested (or configured default) LLM provider and returns its
@@ -57,7 +57,7 @@ extends HttpServlet
 
 	/**
 	 * <pre>POST /api/llm/optimize-sql</pre>
-	 * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "provider": "claude", "preview": false}}
+	 * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "dbmsVersion": "...", "workloadProfile": "...", "provider": "claude", "preview": false}}
 	 * <p>
 	 * When {@code preview} is {@code true}, returns {@code {"promptSent": "..."}} only - the prompt
 	 * text that would be sent to an LLM, built entirely locally with no network call and no cost -

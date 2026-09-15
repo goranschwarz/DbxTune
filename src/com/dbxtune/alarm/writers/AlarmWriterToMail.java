@@ -83,7 +83,7 @@ extends AlarmWriterAbstract
 	/** Render the mail SUBJECT from its template. */
 	String createMsgSubject(String action, AlarmEvent alarmEvent)
 	{
-		return WriterUtils.createMessageFromTemplate(action, alarmEvent, null, _subjectTemplate, true, null, getDbxCentralUrl(), null, null);
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, WriterUtils.getActiveAlarmList(), _subjectTemplate, true, null, getDbxCentralUrl(), null, null);
 	}
 
 	/**
@@ -100,7 +100,7 @@ extends AlarmWriterAbstract
 		String summaryHtml = ActiveAlarmSummary.toHtml(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
 		String summaryText = ActiveAlarmSummary.toText(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
 
-		return WriterUtils.createMessageFromTemplate(action, alarmEvent, null, _msgBodyTemplate, true, null, getDbxCentralUrl(), summaryHtml, summaryText);
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, WriterUtils.getActiveAlarmList(), _msgBodyTemplate, true, null, getDbxCentralUrl(), summaryHtml, summaryText);
 	}
 
 	private void sendMessage(String action, AlarmEvent alarmEvent)

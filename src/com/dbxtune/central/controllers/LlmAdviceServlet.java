@@ -39,7 +39,7 @@ import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.utils.StringUtil;
 
 /**
- * <pre>GET /llm-advice?sql=...&amp;ddlContext=...&amp;plan=...&amp;dbVendor=...&amp;jdbcUrl=...&amp;jdbcUser=...&amp;srv=...&amp;ts=...&amp;dbname=...&amp;provider=...</pre>
+ * <pre>GET /llm-advice?sql=...&amp;ddlContext=...&amp;plan=...&amp;dbVendor=...&amp;dbmsVersion=...&amp;jdbcUrl=...&amp;jdbcUser=...&amp;srv=...&amp;ts=...&amp;dbname=...&amp;provider=...</pre>
  * <p>
  * Standalone "Get LLM Optimization Advice" page, with the same navbar/login chrome as the rest of
  * DbxCentral (used by the mail-safe link the Daily Summary Report links here to, since generated
@@ -63,7 +63,7 @@ extends HttpServlet
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	/** Parameters this page understands, whether they arrive in the URL fragment (GET) or as POST fields. */
-	private static final String[] PARAM_NAMES = { "sql", "ddlContext", "plan", "dbVendor", "jdbcUrl",
+	private static final String[] PARAM_NAMES = { "sql", "ddlContext", "plan", "dbVendor", "dbmsVersion", "jdbcUrl",
 			"jdbcUser", "srv", "ts", "dbname", "workloadData", "provider" };
 
 	@Override
@@ -201,6 +201,8 @@ extends HttpServlet
 		out.println("        ddlContext: P('ddlContext'),");
 		out.println("        plan:       P('plan'),");
 		out.println("        dbVendor:   P('dbVendor'),");
+		// RECORDED version from the Daily Summary Report; when absent, dbxLlmAdvice.js resolves it live from 'srv'
+		out.println("        dbmsVersion: P('dbmsVersion'),");
 		out.println("        jdbcUrl:    P('jdbcUrl'),");
 		out.println("        jdbcUser:   P('jdbcUser'),");
 		out.println("        srv:        P('srv'),"); // resolves ddlContext LIVE via that server's Collector - see dbxLlmAdvice.js

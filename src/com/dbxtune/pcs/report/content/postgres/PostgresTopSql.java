@@ -782,7 +782,7 @@ extends PostgresAbstract
 
 					// "Get LLM Optimization Advice" link - plain hyperlink (not inline JS) since this report can be e-mailed
 					String llmDdlContext = LlmSqlContextBuilder.buildDdlContext(conn, datname, sqlText, DbUtils.DB_PROD_NAME_POSTGRES);
-					String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_POSTGRES);
+					String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_POSTGRES, getReportingInstance().getDbmsVersionStr());
 
 					// SQL Text
 					sqlText = "<xmp>" + sqlText + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;

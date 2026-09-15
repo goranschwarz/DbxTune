@@ -19,6 +19,12 @@
  *       workloadProfile: '<plain text>',           // optional - the finished text, if the caller has it
  *       dbVendor:   'Adaptive Server Enterprise',  // required if ddlContext isn't supplied and a lookup is wanted
  *
+ *       // DBMS version string (@@version, version(), ...) - tells the LLM what the server can do. Supply it
+ *       // when known (the Daily Summary Report passes the RECORDED value); otherwise, when 'srv' is given,
+ *       // it is resolved LIVE from that server's Collector (CmSummary) - see fetchDbmsVersion().
+ *       dbmsVersion: 'Microsoft SQL Server 2019 ...', // optional
+ *       sampleTime:  '2026-09-15 10:20:30',         // optional - which CmSummary sample to read the version from (default: latest)
+ *
  *       // EITHER of these two (if neither is supplied, no DDL/index/stats context is fetched):
  *       jdbcUrl:    'jdbc:h2:...',                 // resolves ddlContext via /api/llm/context (an H2 recording file)
  *       jdbcUser:   'sa',                          // optional, default 'sa'
@@ -130,7 +136,8 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-copy-btn { margin-left:8px; font-size:0.78rem; padding:1px 8px; cursor:pointer;' +
 			'  border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
 			'.dbx-llm-copy-btn:hover { background:#e9ecef; }' +
-			'.dbx-llm-pre-compact { font-size:0.78rem !important; max-height:220px; overflow:auto; }';
+			'.dbx-llm-pre-compact { font-size:0.78rem !important; max-height:220px; overflow:auto; }' +
+			'.dbx-llm-version { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; color:#495057; margin-top:8px; word-break:break-word; }';
 		document.head.appendChild(style);
 	}
 
@@ -426,6 +433,7 @@ var dbxLlmAdvice = (function () {
 	{
 		var parts = [];
 		if (opts.dbVendor)        parts.push('DBMS vendor:\n' + opts.dbVendor);
+		if (opts.dbmsVersion)     parts.push('DBMS version:\n' + opts.dbmsVersion);
 		if (opts.sql)             parts.push('SQL:\n' + opts.sql);
 		if (ddlContext)           parts.push('DDL / index / stats context:\n' + ddlContext);
 		if (opts.plan)            parts.push('Execution plan:\n' + opts.plan);
@@ -686,6 +694,7 @@ var dbxLlmAdvice = (function () {
 			html += renderSentField('Execution plan', opts.plan);
 			html += renderSentField('Workload profile', opts.workloadProfile);
 			html += renderSentField('DBMS vendor', opts.dbVendor);
+			html += renderSentField('DBMS version', opts.dbmsVersion);
 		}
 		html += '</details>';
 		return html;
@@ -714,6 +723,12 @@ var dbxLlmAdvice = (function () {
 	function renderInputContext(opts)
 	{
 		var html = '';
+
+		// One line, not a collapsible - it is short, and it tells the reader which server the advice targets
+		if (opts.dbmsVersion)
+		{
+			html += '<div class="dbx-llm-version"><b>DBMS Version:</b> ' + escapeHtml(opts.dbmsVersion) + '</div>';
+		}
 
 		if (opts.sql)
 		{
@@ -918,6 +933,91 @@ var dbxLlmAdvice = (function () {
 	}
 
 	/**
+	 * Column in CmSummary that holds the DBMS version string - it differs per Collector.
+	 * The source of truth is MonRecordingInfo.initialize() (Java), which the Daily Summary Report uses:
+	 *   srvVersion  = AseTune, SqlServerTune     atAtVersion = IqTune     rsVersion = RsTune
+	 *   version     = PostgresTune, MySqlTune    VERSION     = OracleTune, Db2Tune, HanaTune
+	 * First one present in the response wins (exact, case-sensitive match).
+	 */
+	var DBMS_VERSION_COLUMNS = ['srvVersion', 'atAtVersion', 'rsVersion', 'version', 'VERSION'];
+
+	/** 'YYYY-MM-DD HH:mm:ss' in browser-local time - the same "now" dbxcentral.graph.js sends to navSample */
+	function nowAsSampleTime()
+	{
+		function p2(n) { return (n < 10 ? '0' : '') + n; }
+		var d = new Date();
+		return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate())
+			+ ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+	}
+
+	/** Read CmSummary (abs) at exactly 'sampleTime' on srv's Collector, and pick the version column out of it. */
+	function fetchCmSummaryVersionAt(srv, sampleTime)
+	{
+		var qs = new URLSearchParams();
+		qs.set('srv',  srv);
+		qs.set('cm',   'CmSummary');
+		qs.set('time', sampleTime);
+		qs.set('type', 'abs');
+
+		return fetchJson('/api/cc/mgt/cm/data?' + qs.toString()).then(function (r)
+		{
+			var cols = (r && r.columns) || [];
+			var rows = (r && r.rows)    || [];
+			if (!rows.length) return '';
+
+			for (var i = 0; i < DBMS_VERSION_COLUMNS.length; i++)
+			{
+				var idx = cols.indexOf(DBMS_VERSION_COLUMNS[i]);
+				if (idx >= 0 && rows[0][idx])
+					return String(rows[0][idx]).trim();
+			}
+			return '';
+		});
+	}
+
+	/**
+	 * Resolve the DBMS version string for the prompt. Never rejects - resolves '' when it can not be found.
+	 *   1. opts.dbmsVersion, when the caller already has it (the Daily Summary Report passes the RECORDED one)
+	 *   2. opts.srv: LIVE from that server's Collector, out of CmSummary. At opts.sampleTime when given (all
+	 *      CMs in a sample share the same SessionSampleTime), otherwise - or when that sample has no
+	 *      CmSummary - from the latest CmSummary sample before opts.sampleTime/now.
+	 *      Needs the Collector to be reachable, same as the srv-based DDL lookup.
+	 */
+	function fetchDbmsVersion(opts)
+	{
+		opts = opts || {};
+		if (opts.dbmsVersion)
+			return Promise.resolve(String(opts.dbmsVersion));
+
+		if (!opts.srv)
+			return Promise.resolve('');
+
+		var atSample = opts.sampleTime ? fetchCmSummaryVersionAt(opts.srv, opts.sampleTime) : Promise.resolve('');
+
+		return atSample
+			.then(function (version)
+			{
+				if (version) return version;
+
+				var qs = new URLSearchParams();
+				qs.set('srv',  opts.srv);
+				qs.set('cm',   'CmSummary');
+				qs.set('time', opts.sampleTime || nowAsSampleTime());
+				qs.set('dir',  'prev');
+
+				return fetchJson('/api/cc/mgt/cm/navSample?' + qs.toString()).then(function (nav)
+				{
+					return (nav && nav.found && nav.sampleTime) ? fetchCmSummaryVersionAt(opts.srv, nav.sampleTime) : '';
+				});
+			})
+			.catch(function (err)
+			{
+				console.warn('dbxLlmAdvice: could not resolve the DBMS version for srv=' + opts.srv + ', continuing without it: ' + (err && err.message));
+				return '';
+			});
+	}
+
+	/**
 	 * opts.preview true: render the exact prompt text that would be sent, via /api/llm/optimize-sql's
 	 * preview mode - no provider is called, so this works even when the LLM feature itself is off.
 	 */
@@ -944,6 +1044,7 @@ var dbxLlmAdvice = (function () {
 			plan:            opts.plan,
 			workloadProfile: opts.workloadProfile,
 			dbVendor:        opts.dbVendor,
+			dbmsVersion:     opts.dbmsVersion,
 			provider:        opts.provider,
 			preview:         !!opts.preview
 		};
@@ -987,15 +1088,16 @@ var dbxLlmAdvice = (function () {
 		var container = resolveContainer(opts);
 		renderStatus(container, 'Preparing request...');
 
-		if (opts.ddlContext)
-		{
-			callOptimize(container, opts, opts.ddlContext);
-		}
-		else
-		{
+		if (!opts.ddlContext)
 			renderStatus(container, 'Looking up table DDL/index/stats...');
-			fetchDdlContext(opts).then(function (ddlContext) { callOptimize(container, opts, ddlContext); });
-		}
+
+		// Both lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
+		var ddlPromise = opts.ddlContext ? Promise.resolve(opts.ddlContext) : fetchDdlContext(opts);
+		Promise.all([ddlPromise, fetchDbmsVersion(opts)]).then(function (res)
+		{
+			opts.dbmsVersion = res[1] || '';
+			callOptimize(container, opts, res[0]);
+		});
 	}
 
 	//--------------------------------------------------------------------------
@@ -1026,6 +1128,8 @@ var dbxLlmAdvice = (function () {
 		// Exposed for callers that build their own /api/llm/optimize-sql request instead of going
 		// through open() - notably dbxShowplan.js's "LLM Prompt Preview" - so the prompt they PREVIEW
 		// is the same one open() would actually SEND.
-		buildWorkloadProfile: buildWorkloadProfile
+		buildWorkloadProfile: buildWorkloadProfile,
+		// Same reason: previews resolve the DBMS version exactly the way open() does.
+		fetchDbmsVersion: fetchDbmsVersion
 	};
 })();

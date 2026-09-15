@@ -420,7 +420,7 @@ public class SqlObjectNameTest
 		boolean dbStoresLowerCaseIdentifiers    = false;
 		boolean dbSupportsSchema                = true;
 		
-		SqlObjectName sqlObj = new SqlObjectName("tab1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema);
+		SqlObjectName sqlObj = new SqlObjectName("Tab1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema);
 		
 		// Catalog
 		assertEquals( "",   sqlObj.getCatalogName());
@@ -447,21 +447,21 @@ public class SqlObjectNameTest
 		// Object
 		assertEquals( "TAB1", sqlObj.getObjectName());
 		assertEquals( "TAB1", sqlObj.getObjectNameNull());
-		assertEquals( "tab1", sqlObj.getObjectNameOrigin());
-		assertEquals( "tab1", sqlObj.getObjectNameOriginNull());
-		assertEquals( "tab1", sqlObj.getObjectNameUnModified());
-		assertEquals( "tab1", sqlObj.getObjectNameUnModifiedNull());
+		assertEquals( "Tab1", sqlObj.getObjectNameOrigin());
+		assertEquals( "Tab1", sqlObj.getObjectNameOriginNull());
+		assertEquals( "Tab1", sqlObj.getObjectNameUnModified());
+		assertEquals( "Tab1", sqlObj.getObjectNameUnModifiedNull());
 
 		// Full Compound
 		assertEquals( "TAB1", sqlObj.getFullName());
-		assertEquals( "tab1", sqlObj.getFullNameOrigin());
-		assertEquals( "tab1", sqlObj.getFullNameUnModified());
+		assertEquals( "Tab1", sqlObj.getFullNameOrigin());
+		assertEquals( "Tab1", sqlObj.getFullNameUnModified());
 
 		assertEquals( "\"TAB1\"", sqlObj.getFullNameQuoted());
-		assertEquals( "\"tab1\"", sqlObj.getFullNameOriginQuoted());
+		assertEquals( "\"Tab1\"", sqlObj.getFullNameOriginQuoted());
 
-		assertEquals( "TAB1", sqlObj.getFullNameQuotedIfNeeded());
-		assertEquals( "tab1", sqlObj.getFullNameOriginQuotedIfNeeded());
+		assertEquals( "TAB1",     sqlObj.getFullNameQuotedIfNeeded());
+		assertEquals( "\"Tab1\"", sqlObj.getFullNameOriginQuotedIfNeeded());
 	}
 
 
@@ -471,5 +471,59 @@ public class SqlObjectNameTest
 
 	//--------------------------------------------------------------------------
 	// Postgres tests
+	//  - Postgres normally stores all table and column names as LOWERCASE
+	//  - But if it's quoted identifiers, we need the CamelCaseTableNames
 	//--------------------------------------------------------------------------
+	@Test
+	public void pg_t1()
+	{
+		String dbProductName                    = DbUtils.DB_PROD_NAME_POSTGRES;
+		String dbIdentifierQuoteString          = "\"";
+		boolean dbStoresUpperCaseIdentifiers    = false;
+		boolean dbStoresLowerCaseIdentifiers    = true;
+		boolean dbSupportsSchema                = true;
+		
+		SqlObjectName sqlObj = new SqlObjectName("Tab1", dbProductName, dbIdentifierQuoteString, dbStoresUpperCaseIdentifiers, dbStoresLowerCaseIdentifiers, dbSupportsSchema);
+		
+		// Catalog
+		assertEquals( "",   sqlObj.getCatalogName());
+		assertEquals( null, sqlObj.getCatalogNameNull());
+		assertEquals( "",   sqlObj.getCatalogNameOrigin());
+		assertEquals( null, sqlObj.getCatalogNameOriginNull());
+		assertEquals( "",   sqlObj.getCatalogNameUnModified());
+		assertEquals( null, sqlObj.getCatalogNameUnModifiedNull());
+
+		assertEquals( "",   sqlObj.getCatalogNameQuoted());
+		assertEquals( "",   sqlObj.getCatalogNameOriginQuoted());
+
+		// Schema
+		assertEquals( "",   sqlObj.getSchemaName());
+		assertEquals( null, sqlObj.getSchemaNameNull());
+		assertEquals( "",   sqlObj.getSchemaNameOrigin());
+		assertEquals( null, sqlObj.getSchemaNameOriginNull());
+		assertEquals( "",   sqlObj.getSchemaNameUnModified());
+		assertEquals( null, sqlObj.getSchemaNameUnModifiedNull());
+
+		assertEquals( "",   sqlObj.getSchemaNameQuoted());
+		assertEquals( "",   sqlObj.getSchemaNameOriginQuoted());
+
+		// Object
+		assertEquals( "tab1", sqlObj.getObjectName());
+		assertEquals( "tab1", sqlObj.getObjectNameNull());
+		assertEquals( "Tab1", sqlObj.getObjectNameOrigin());
+		assertEquals( "Tab1", sqlObj.getObjectNameOriginNull());
+		assertEquals( "Tab1", sqlObj.getObjectNameUnModified());
+		assertEquals( "Tab1", sqlObj.getObjectNameUnModifiedNull());
+
+		// Full Compound
+		assertEquals( "tab1", sqlObj.getFullName());
+		assertEquals( "Tab1", sqlObj.getFullNameOrigin());
+		assertEquals( "Tab1", sqlObj.getFullNameUnModified());
+
+		assertEquals( "\"tab1\"", sqlObj.getFullNameQuoted());
+		assertEquals( "\"Tab1\"", sqlObj.getFullNameOriginQuoted());
+
+		assertEquals( "tab1",     sqlObj.getFullNameQuotedIfNeeded());
+		assertEquals( "\"Tab1\"", sqlObj.getFullNameOriginQuotedIfNeeded());
+	}
 }

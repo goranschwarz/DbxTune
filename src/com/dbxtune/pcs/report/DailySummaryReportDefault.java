@@ -1453,7 +1453,8 @@ extends DailySummaryReportAbstract
 		//       so this must NOT depend on some section happening to have an execution plan to write -
 		//       that is exactly how reports from a server with no captured showplans ended up throwing
 		//       "Uncaught ReferenceError: dsrOpenLink is not defined" on every link.
-		writer.append( ShowplanLinkBuilder.getDsrLinkSupportJs() );
+		// The recorded DBMS version goes along with every link, so the LLM knows what the server supports.
+		writer.append( ShowplanLinkBuilder.getDsrLinkSupportJs(getDbmsVersionStr()) );
 
 		writer.append("\n");
 		writer.append("</div> \n"); // END: Bootstrap 4 container
