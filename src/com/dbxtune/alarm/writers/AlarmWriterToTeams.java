@@ -183,6 +183,19 @@ extends AlarmWriterAbstract
 		return ICON_INFO;
 	}
 
+	/**
+	 * The icon in front of an alarm row in the Active Alarms summary: the same emoji the status line uses for a new
+	 * alarm of that severity, so a row reads like the card it came from. A bullet when the severity is unknown
+	 * (eg the "+N more" row).
+	 */
+	static String getSeverityIcon(String severity)
+	{
+		if ("ERROR"  .equalsIgnoreCase(severity)) return ICON_ERROR;
+		if ("WARNING".equalsIgnoreCase(severity)) return ICON_WARNING;
+		if ("INFO"   .equalsIgnoreCase(severity)) return ICON_INFO;
+		return BULLET;
+	}
+
 	/** "ERROR <dot> NEW ALARM", "STILL ACTIVE <dot> WARNING", "RESOLVED" */
 	String getStatusText(String action, AlarmEvent alarmEvent)
 	{
@@ -466,11 +479,11 @@ extends AlarmWriterAbstract
 				else
 					name.put("weight", "Bolder");
 
-				for (String alarm : srv.getAlarms())
+				for (int a = 0; a < srv.getAlarms().size(); a++)
 				{
 					ObjectNode line = items.addObject();
 					line.put("type", "TextBlock");
-					line.put("text", BULLET + " " + alarm);
+					line.put("text", getSeverityIcon(srv.getSeverities().get(a)) + " " + srv.getAlarms().get(a));
 					line.put("wrap", true);
 					line.put("spacing", "None");
 				}
@@ -697,7 +710,7 @@ extends AlarmWriterAbstract
 				+ "<code>${activeAlarmsSummaryTeams}</code> (the Active Alarms Summary as ready made body elements, WITH a leading comma), "
 				+ "<code>${activeAlarmsSummaryTeamsItems}</code> (the same WITHOUT the leading comma, for the items of a Container), "
 				+ "<code>$hasActiveAlarmsSummary</code> and <code>$activeAlarmsSummaryCount</code>, and "
-				+ "<code>$activeAlarmsSummaryServers</code> (the same summary as objects: <code>srvName</code>, <code>alarms</code>, <code>more</code>).<br>"
+				+ "<code>$activeAlarmsSummaryServers</code> (the same summary as objects: <code>srvName</code>, <code>alarms</code>, <code>severities</code> (one per alarm line), <code>more</code>).<br>"
 				+ "<br>"
 				+ "<b>Safety:</b> if the template fails or produces invalid JSON, the built-in default card is sent instead and an ERROR is written to the log - an alarm is never lost because of the template.<br>"
 				+ "NOTE: this is rendered by Velocity inside DbxTune, so the designer's own templating expressions (<code>${$root.xxx}</code>) are not supported - use the variables above."
