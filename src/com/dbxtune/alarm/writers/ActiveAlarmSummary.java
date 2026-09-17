@@ -514,13 +514,15 @@ public class ActiveAlarmSummary
 	{
 		private final String       _srvName;
 		private final List<String> _alarms;
+		private final List<String> _severities;
 		private final boolean      _more;
 
-		private ServerAlarms(String srvName, List<String> alarms, boolean more)
+		private ServerAlarms(String srvName, List<String> alarms, List<String> severities, boolean more)
 		{
-			_srvName = srvName;
-			_alarms  = alarms;
-			_more    = more;
+			_srvName    = srvName;
+			_alarms     = alarms;
+			_severities = severities;
+			_more       = more;
 		}
 
 		/** The server name. On the trailing entry: "and N more server(s)" */
@@ -528,6 +530,12 @@ public class ActiveAlarmSummary
 
 		/** eg "LowDbFreeSpace (goran_16)". Empty on the trailing entry. */
 		public List<String> getAlarms()  { return _alarms; }
+
+		/**
+		 * The severity of each line in {@link #getAlarms()}, same size and order: "ERROR", "WARNING", "INFO".
+		 * A counted (compact) line gets the worst severity of the alarms it counts; a "+N more" line gets "".
+		 */
+		public List<String> getSeverities() { return _severities; }
 
 		/** true for the trailing "and N more server(s)" entry */
 		public boolean      isMore()     { return _more; }
@@ -562,13 +570,15 @@ public class ActiveAlarmSummary
 			if (serverCount >= maxServers)
 				break;
 
-			list.add(new ServerAlarms(mapEntry.getKey(), createAlarmLines(mapEntry.getValue(), full), false));
+			List<String> severities = new ArrayList<>();
+			List<String> lines      = createAlarmLines(mapEntry.getValue(), full, severities);
+			list.add(new ServerAlarms(mapEntry.getKey(), lines, severities, false));
 			serverCount++;
 		}
 
 		int notShownCount = perServer.size() - serverCount;
 		if (notShownCount > 0)
-			list.add(new ServerAlarms("and " + notShownCount + " more server(s)", Collections.emptyList(), true));
+			list.add(new ServerAlarms("and " + notShownCount + " more server(s)", Collections.emptyList(), Collections.emptyList(), true));
 
 		return list;
 	}
@@ -581,7 +591,7 @@ public class ActiveAlarmSummary
 	 *                {@link #MAX_ALARM_NAMES_PER_SERVER}. Only used when the message would otherwise be too big.</li>
 	 * </ul>
 	 */
-	private static List<String> createAlarmLines(List<Entry> alarms, boolean full)
+	private static List<String> createAlarmLines(List<Entry> alarms, boolean full, List<String> severitiesOut)
 	{
 		List<String> lines = new ArrayList<>();
 
@@ -595,16 +605,20 @@ public class ActiveAlarmSummary
 					lines.add(alarmName + " (" + entry.extraInfo + ")");
 				else
 					lines.add(alarmName);
+				severitiesOut.add(toSeverity(entry));
 			}
 			return lines;
 		}
 
-		// COMPACT: distinct names, counted
-		Map<String, Integer> alarmNameCount = new LinkedHashMap<>();
+		// COMPACT: distinct names, counted.
+		// The alarms are sorted severity first, so the first one seen for a name has its worst severity.
+		Map<String, Integer> alarmNameCount    = new LinkedHashMap<>();
+		Map<String, String>  alarmNameSeverity = new LinkedHashMap<>();
 		for (Entry entry : alarms)
 		{
 			String alarmName = StringUtil.hasValue(entry.alarmClass) ? entry.alarmClass : "-unknown-";
 			alarmNameCount.merge(alarmName, 1, Integer::sum);
+			alarmNameSeverity.putIfAbsent(alarmName, toSeverity(entry));
 		}
 
 		for (Map.Entry<String, Integer> nameEntry : alarmNameCount.entrySet())
@@ -612,6 +626,7 @@ public class ActiveAlarmSummary
 			if (lines.size() >= MAX_ALARM_NAMES_PER_SERVER)
 			{
 				lines.add("+" + (alarmNameCount.size() - lines.size()) + " more");
+				severitiesOut.add("");
 				break;
 			}
 
@@ -620,9 +635,16 @@ public class ActiveAlarmSummary
 				lines.add(nameEntry.getKey() + " " + MULTIPLY + nameEntry.getValue());
 			else
 				lines.add(nameEntry.getKey());
+			severitiesOut.add(alarmNameSeverity.get(nameEntry.getKey()));
 		}
 
 		return lines;
+	}
+
+	/** The entry's severity in upper case, "" when unknown (never null: Velocity would choke on a null list element). */
+	private static String toSeverity(Entry entry)
+	{
+		return entry.severity == null ? "" : entry.severity.trim().toUpperCase();
 	}
 
 	/** "Active Alarms - Production Servers (12)", or "No other active alarms" when empty. */

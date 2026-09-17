@@ -368,6 +368,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>CmErrorLog          </b> -- New Alarm for: LastBackupFailed -- AlarmEventLastDbBackupFailed, AlarmEventLastWalBackupFailed or AlarmEventLastBackupFailed (default TimeToLive is 30 minutes, which can be changed with: CmErrorLog.alarm.system.on.LastBackupFailed.ttl.minutes)</LI>
 		<LI><b>CmErrorLog          </b> -- Discarding Msg 4014 -- A fatal error occurred while reading the input stream from the network. The session will be terminated (input error: #, output error: #)</LI>
 
+		<LI><b>CmExecQueryStats    </b> -- Include more rows -- Do not Mark rows as "new diff/rate row" when 'creation_time' is AFTER the previous sample time. The absolute counters ARE the delta for this sample interval. So those rows are valid diff rows</LI>
+
 		<LI><b>CmIndexOpStatSum    </b> -- Added graph: Insert/Update/Delete Rows Per Second for User Databases</LI>
 
 		<LI><b>CmMemoryClerks      </b> -- In graph "All Memory Clerks vs Target & Total Memory, in MB" -- added one line "All Other Memory Clerks" -- So we can see "memory steals" easier</LI>

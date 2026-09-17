@@ -59,7 +59,7 @@
 	<!-- - - - - - - - - - - - - - -->
 	<target name="build" depends="init" description="--> compile and jar this component">
 
-		<javac srcdir="${src.home}" destdir="${build.home}" debug="${compile.debug}" deprecation="${compile.deprecation}" optimize="${compile.optimize}">
+		<javac encoding="UTF-8" source="11" target="11" srcdir="${src.home}" destdir="${build.home}" debug="${compile.debug}" deprecation="${compile.deprecation}" optimize="${compile.optimize}">
 <!--			<classpath refid="compile.classpath" />-->
 			<classpath refid="project.class.path"/>
 		</javac>
@@ -76,7 +76,7 @@
 		<mkdir dir="${build}"/>
 
 		<!-- Compile the java code from ${src} into ${build} -->
-		<javac source="11" target="11" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
+		<javac encoding="UTF-8" source="11" target="11" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
 			<classpath refid="project.class.path"/>
 		</javac>
 

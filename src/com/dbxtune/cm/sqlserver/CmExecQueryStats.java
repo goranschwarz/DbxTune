@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.sqlserver;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,9 +28,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -51,13 +56,14 @@ import com.dbxtune.utils.StringUtil;
 public class CmExecQueryStats
 extends CountersModel
 {
+	private static final Logger  _logger          = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmExecQueryStats.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Query Stat";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<p>Get information from the Plan Cache</p>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
@@ -456,6 +462,56 @@ extends CountersModel
 
 		// Now get the SQL from super method...
 		return super.getSql();
+	}
+
+	/**
+	 * A row that was NOT in the previous sample is flagged as a "new diff/rate row", and the Daily Summary Report
+	 * skips those, since the "diff" values are really absolute counters since 'creation_time' (which is to high).
+	 * <p>
+	 * But if the plan was created AFTER the previous sample was taken, the absolute counters ARE the delta for this
+	 * sample interval. So those rows are valid diff rows, and we clear the "new" flag.
+	 * <p>
+	 * This matters a lot on DW/ETL systems, where most heavy statements are only seen in one sample:
+	 * executed once, recompiled after statistics updates (new plan_generation_num/plan_handle), OPTION(RECOMPILE), etc.
+	 * <p>
+	 * Note: The sample time is 'getdate()' on the same server as 'creation_time', so there is no clock drift.<br>
+	 * Note: A row that has been saved in any earlier sample, has a 'creation_time' before that sample, so it will never be re-classified (no double counting).<br>
+	 * Note: The upper bound (creation_time &lt;= this sample time) protects against most DST (fall back) issues.
+	 */
+	@Override
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	{
+		if (prevSample == null || newSample == null || diffData == null)
+			return;
+
+		Timestamp prevSampleTime = prevSample.getSampleTime();
+		Timestamp thisSampleTime = newSample .getSampleTime();
+		if (prevSampleTime == null || thisSampleTime == null)
+			return;
+
+		int pos_creation_time = diffData.findColumn("creation_time");
+		if (pos_creation_time == -1)
+			return;
+
+		int reclassifiedCount = 0;
+		for (int r = 0; r < diffData.getRowCount(); r++)
+		{
+			if ( ! isNewDeltaOrRateRow(r) )
+				continue;
+
+			Timestamp creation_time = diffData.getValueAsTimestamp(r, pos_creation_time);
+			if (creation_time == null)
+				continue;
+
+			if ( ! creation_time.before(prevSampleTime) && ! creation_time.after(thisSampleTime) )
+			{
+				setNewDeltaOrRateRow(r, false);
+				reclassifiedCount++;
+			}
+		}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug(getName() + ": localCalculation(): Re-classified " + reclassifiedCount + " 'new' rows as diff rows, since 'creation_time' is after previous sample time '" + prevSampleTime + "'.");
 	}
 
 	
