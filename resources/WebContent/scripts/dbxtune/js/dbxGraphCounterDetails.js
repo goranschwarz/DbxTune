@@ -2978,13 +2978,40 @@ function _cmShowContextMenu(e, cmName) {
 	$(document).one('click', function() { $menu.hide(); });
 }
 
-/** Fetch config data (cached per server) and open properties modal */
-function cmPropsOpen(cmName) {
-	if (!_cmSrvName) return;
+/**
+ * Get config data from '/api/cc/mgt/config/get' for srvName (cached, one server at a time).
+ * Calls onSuccess(data) directly when cached, otherwise after the fetch; onError(xhr) on failure.
+ */
+function _cmConfigFetch(srvName, onSuccess, onError) {
+	if (_cmConfigCache && _cmConfigCacheSrv === srvName) {
+		onSuccess(_cmConfigCache);
+		return;
+	}
+	$.ajax({
+		url: '/api/cc/mgt/config/get',
+		data: { srvName: srvName },
+		dataType: 'json',
+		success: function(data) {
+			_cmConfigCache = data;
+			_cmConfigCacheSrv = srvName;
+			onSuccess(data);
+		},
+		error: onError
+	});
+}
+
+/**
+ * Fetch config data (cached per server) and open properties modal
+ * @param initialTab  optional: 'alarms' to open on the Alarms tab (default: Info)
+ * @param srvName     optional: server (default: the Counter Details server)
+ */
+function cmPropsOpen(cmName, initialTab, srvName) {
+	srvName = srvName || _cmSrvName;
+	if (!srvName) return;
 
 	// If we already have it cached for this server, use it
-	if (_cmConfigCache && _cmConfigCacheSrv === _cmSrvName) {
-		_cmPropsRender(cmName, _cmConfigCache);
+	if (_cmConfigCache && _cmConfigCacheSrv === srvName) {
+		_cmPropsRender(cmName, _cmConfigCache, initialTab);
 		return;
 	}
 
@@ -2997,23 +3024,16 @@ function cmPropsOpen(cmName) {
 	$('#cm-props-alarms-content').html('');
 	$('#cm-props-modal').modal('show');
 
-	$.ajax({
-		url: '/api/cc/mgt/config/get',
-		data: { srvName: _cmSrvName },
-		dataType: 'json',
-		success: function(data) {
-			_cmConfigCache = data;
-			_cmConfigCacheSrv = _cmSrvName;
-			_cmPropsRender(cmName, data);
-		},
-		error: function(xhr) {
+	_cmConfigFetch(srvName,
+		function(data) { _cmPropsRender(cmName, data, initialTab); },
+		function(xhr) {
 			$('#cm-props-info-fields').html('<div class="text-danger">Failed to load configuration: ' + (xhr.statusText || 'Unknown error') + '</div>');
 		}
-	});
+	);
 }
 
 /** Render all 4 tabs of the properties modal */
-function _cmPropsRender(cmName, configData) {
+function _cmPropsRender(cmName, configData, initialTab) {
 	// Find the CM object in the config response
 	var cmList = configData.cmList || configData.counters || configData;
 	var cmObj = null;
@@ -3107,8 +3127,11 @@ function _cmPropsRender(cmName, configData) {
 	// --- ALARMS tab ---
 	$('#cm-props-alarms-content').html(_cmPropsAlarmsHtml(cmObj.alarmSettings));
 
-	// Reset to Info tab
-	$('#cm-props-tabs a:first').tab('show');
+	// Reset to Info tab (or the requested tab)
+	if (initialTab === 'alarms')
+		$('#cm-props-tabs a[href="#cm-props-alarms"]').tab('show');
+	else
+		$('#cm-props-tabs a:first').tab('show');
 
 	// Show modal if not yet visible
 	$('#cm-props-modal').modal('show');
@@ -3224,6 +3247,139 @@ function _cmPropsAlarmsHtml(alarmSettings) {
 	return html;
 }
 
+
+//-----------------------------------------------------------
+// ALARM OVERVIEW (all alarms in all CMs) — rows from dbxAlarmOverviewFlatten() in dbxAlarmOverview.js
+//-----------------------------------------------------------
+
+var _cmAlarmOverviewRows = [];
+var _cmAlarmOverviewSrv  = null;  // server currently shown in the modal
+
+/** Servers on this graph page: the URL's server list (_serverList in dbxcentral.graph.js) + the Counter Details server */
+function _cmAlarmOverviewServers() {
+	var list = (typeof _serverList !== 'undefined' && Array.isArray(_serverList)) ? _serverList.slice() : [];
+	if (_cmSrvName && list.indexOf(_cmSrvName) === -1)
+		list.unshift(_cmSrvName);
+	return list.filter(function(s) { return s; });
+}
+
+/**
+ * Open the "All Alarms" modal (from Counter Details or the Active Alarms panel).
+ * @param forceRefresh  true drops the cached config first
+ * @param srvName       optional: default is the server already shown, then the Counter Details server, then the first server on the page
+ */
+function cmAlarmOverviewOpen(forceRefresh, srvName) {
+	var servers = _cmAlarmOverviewServers();
+	srvName = srvName
+		|| (servers.indexOf(_cmAlarmOverviewSrv) !== -1 ? _cmAlarmOverviewSrv : null)
+		|| _cmSrvName
+		|| servers[0];
+	if (!srvName) return;
+	_cmAlarmOverviewSrv = srvName;
+
+	if (forceRefresh) {
+		_cmConfigCache = null;
+		_cmConfigCacheSrv = null;
+	}
+
+	// Several servers on this page: let the user pick one
+	var $sel = $('#cm-alarm-overview-srv-select');
+	if (servers.length > 1) {
+		$sel.html(servers.map(function(s) { return '<option value="' + escHtml(s) + '">' + escHtml(s) + '</option>'; }).join('')).val(srvName).show();
+		$('#cm-alarm-overview-srv').hide();
+	} else {
+		$sel.hide();
+		$('#cm-alarm-overview-srv').text(srvName).show();
+	}
+
+	$('#cm-alarm-overview-content').html('<div class="text-center text-muted py-3"><i class="fa fa-spinner fa-spin"></i> Loading...</div>');
+	$('#cm-alarm-overview-count').text('');
+	$('#cm-alarm-overview-modal').modal('show');
+
+	_cmConfigFetch(srvName,
+		function(data) {
+			_cmAlarmOverviewRows = dbxAlarmOverviewFlatten(data.cmList || []);
+			cmAlarmOverviewRender();
+		},
+		function(xhr) {
+			$('#cm-alarm-overview-content').html('<div class="text-danger">Failed to load configuration: ' + escHtml(xhr.statusText || 'Unknown error') + '</div>');
+		}
+	);
+}
+
+/** (Re)render the table, applying the search box and checkboxes */
+function cmAlarmOverviewRender() {
+	var rows = dbxAlarmOverviewFilter(_cmAlarmOverviewRows, {
+		search        : $('#cm-alarm-overview-search').val(),
+		onlyEffective : $('#cm-alarm-overview-only-effective').is(':checked'),
+		onlyModified  : $('#cm-alarm-overview-only-modified' ).is(':checked')
+	});
+	$('#cm-alarm-overview-count').text(rows.length + ' of ' + _cmAlarmOverviewRows.length + ' alarms');
+
+	if (!rows.length) {
+		$('#cm-alarm-overview-content').html('<div class="text-muted py-2">No alarms match.</div>');
+		return;
+	}
+
+	var html = '<table class="table table-sm table-striped table-hover" style="font-size:0.88em;">'
+		+ '<thead style="position:sticky;top:0;background:#fff;z-index:1;white-space:nowrap;"><tr>'
+		+ '<th>Group</th>'
+		+ '<th>Counter</th>'
+		+ '<th>Alarm</th>'
+		+ '<th style="text-align:center;" title="Counter enabled, its System Alarms enabled, and the Alarm enabled">Effective</th>'
+		+ '<th>Value</th>'
+		+ '<th>Default</th>'
+		+ '<th style="width:50px;text-align:center;">Changed</th>'
+		+ '<th>Time Range</th>'
+		+ '<th>Description</th>'
+		+ '<th style="width:30px;"></th>'
+		+ '</tr></thead><tbody>';
+
+	rows.forEach(function(r) {
+		var effective = r.isEffective
+			? '<span style="color:#28a745;font-weight:600;">Yes</span>'
+			: '<span style="color:#dc3545;" title="Not evaluated:'
+				+ (r.isCmEnabled           ? '' : ' Counter is disabled.')
+				+ (r.isSystemAlarmsEnabled ? '' : ' Counter System Alarms are disabled.')
+				+ (r.isAlarmEnabled        ? '' : ' Alarm is disabled.')
+				+ '">No</span>';
+		var changedIcon = r.isModified
+			? '<span style="color:#dc3545;" title="Non-default: ' + escHtml(r.modifiedParamNames.join(', ')) + '">●</span>'
+			: '<span style="color:#ccc;">–</span>';
+		var valStyle = r.isModified ? 'font-weight:600;color:#0d6efd;' : '';
+		var editUrl  = '/config.html?srvName=' + encodeURIComponent(_cmAlarmOverviewSrv) + '&cm=' + encodeURIComponent(r.cmName) + '&alarm=' + encodeURIComponent(r.name);
+
+		html += '<tr>'
+			+ '<td style="white-space:nowrap;color:#666;">' + escHtml(r.groupName) + '</td>'
+			+ '<td style="white-space:nowrap;"><a href="#" class="cm-alarm-overview-cm" data-cm="' + escHtml(r.cmName) + '" title="' + escHtml(r.cmName) + ' — show Properties">' + escHtml(r.displayName) + '</a></td>'
+			+ '<td style="white-space:nowrap;"><b>' + escHtml(r.name) + '</b></td>'
+			+ '<td style="text-align:center;">' + effective + '</td>'
+			+ '<td style="' + valStyle + '">' + renderCell(r.mainParamValue) + '</td>'
+			+ '<td style="color:#888;">' + renderCell(r.mainParamDefault) + '</td>'
+			+ '<td style="text-align:center;">' + changedIcon + '</td>'
+			+ '<td style="white-space:nowrap;" title="' + escHtml(r.timeRangeDescription) + '">' + escHtml(r.timeRangeCron) + '</td>'
+			+ '<td style="color:#666;font-size:0.92em;">' + escHtml(r.description) + '</td>'
+			+ '<td><a href="' + editUrl + '" target="_blank" rel="noopener" title="View/Change in Collector Configuration (new tab)"><i class="fa fa-pencil"></i></a></td>'
+			+ '</tr>';
+	});
+
+	html += '</tbody></table>';
+	$('#cm-alarm-overview-content').html(html);
+}
+
+$(function() {
+	$('#cm-alarm-overview-search').on('input', cmAlarmOverviewRender);
+	$('#cm-alarm-overview-only-effective, #cm-alarm-overview-only-modified').on('change', cmAlarmOverviewRender);
+
+	// Counter name: close this modal, then open the CM Properties modal on its Alarms tab (no stacked modals)
+	$('#cm-alarm-overview-content').on('click', 'a.cm-alarm-overview-cm', function(e) {
+		e.preventDefault();
+		var cmName = $(this).data('cm');
+		$('#cm-alarm-overview-modal').one('hidden.bs.modal', function() { cmPropsOpen(cmName, 'alarms', _cmAlarmOverviewSrv); }).modal('hide');
+	});
+
+	$('#cm-alarm-overview-srv-select').on('change', function() { cmAlarmOverviewOpen(false, $(this).val()); });
+});
 
 /**
  * Open the Counter Details panel, optionally navigating to a specific CM.

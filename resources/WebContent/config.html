@@ -70,6 +70,7 @@ function getParameter(key, defaultValue)
 
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.utils.js"></script>
+  <script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarmOverview.js"></script>
 
   <!-- JQuery -->
   <script type="text/javascript"  src="/scripts/jquery/jquery-3.7.1.min.js"></script>
@@ -313,6 +314,9 @@ function getParameter(key, defaultValue)
 	<ul class="nav nav-tabs" id="main-tab" role="tablist">
 		<li class="nav-item" role="presentation">
 			<button class="nav-link active" id="cc-cfg-tab-head" data-bs-toggle="tab" data-bs-target="#cc-cfg-tab" type="button" role="tab" aria-controls="home" aria-selected="true"><b>Collector Configuration</b></button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="alarm-overview-tab-head" data-bs-toggle="tab" data-bs-target="#alarm-overview-tab" type="button" role="tab" aria-controls="alarm-overview-tab" aria-selected="false"><b>Alarm Overview</b></button>
 		</li>
 		<li class="nav-item" role="presentation">
 			<button class="nav-link" id="alarm-writer-tab-head" data-bs-toggle="tab" data-bs-target="#alarm-writer-tab" type="button" role="tab" aria-controls="alarm-writer-tab" aria-selected="false"><b>Alarm Writers Configuration</b></button>
@@ -584,6 +588,48 @@ function getParameter(key, defaultValue)
 
 
 		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<!-- Alarm Overview (all alarms in all CMs) -->
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+		<div class="tab-pane fade" id="alarm-overview-tab" role="tabpanel" aria-labelledby="alarm-overview-tab-head">
+			<i>Below is a list of <b>all</b> alarms in <b>all</b> counters, <b>click</b> on any row to view/change it in the Collector Configuration tab...</i>
+			<div class="d-flex align-items-center flex-wrap gap-3 my-2">
+				<input type="search" id="alarm-overview-search" class="form-control form-control-sm" style="width:300px;" placeholder="Search: counter, alarm, description, parameter...">
+				<label class="form-check-label"><input type="checkbox" class="form-check-input" id="alarm-overview-only-effective"> Only effective</label>
+				<label class="form-check-label"><input type="checkbox" class="form-check-input" id="alarm-overview-only-modified"> Only modified</label>
+				<span id="alarm-overview-count" class="text-muted small"></span>
+			</div>
+			<div class="text-muted small mb-1">
+				<b>Effective</b> = the Counter is enabled, its System Alarms are enabled, and the Alarm itself is enabled.
+				&nbsp; <b>Modified</b> = at least one of the alarm parameters has a non-default value (hover to see which).
+			</div>
+			<table
+				id="alarmOverviewTable"
+				class="table table-sm text-nowrap"
+				data-toggle="table"
+				data-filter-control="true"
+				data-height="700"
+			>
+			<thead>
+				<tr>
+					<th data-field="groupName"             data-filter-control="input" data-sortable="true">Group Name</th>
+					<th data-field="displayName"           data-filter-control="input" data-sortable="true">Display Name</th>
+					<th data-field="cmName"                data-filter-control="input" data-sortable="true">CM Name</th>
+					<th data-field="name"                  data-filter-control="input" data-sortable="true">Alarm Name</th>
+					<th data-field="isEffective"           data-sortable="true" data-formatter="formatAlarmOverviewEffective">Effective</th>
+					<th data-field="isAlarmEnabled"        data-sortable="true" data-formatter="formatBoolean">Alarm Enabled</th>
+					<th data-field="isSystemAlarmsEnabled" data-sortable="true" data-formatter="formatBoolean">CM System Alarms Enabled</th>
+					<th data-field="mainParamValue"        data-filter-control="input" data-sortable="true" data-formatter="formatAlarmOverviewValue">Value</th>
+					<th data-field="mainParamDefault"      data-filter-control="input" data-sortable="true" data-formatter="formatAlarmOverviewText">Default</th>
+					<th data-field="isModified"            data-sortable="true" data-formatter="formatAlarmOverviewModified">Modified</th>
+					<th data-field="timeRangeCron"         data-filter-control="input" data-sortable="true" data-formatter="formatAlarmOverviewTimeRange">Time Range</th>
+					<th data-field="description"           data-filter-control="input" data-sortable="true" data-formatter="formatAlarmOverviewText">Description</th>
+				</tr>
+			</thead>
+			</table>
+		</div>  <!-- END: Alarm Overview -->
+
+
+		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 		<!-- Alarm Writers Configuration -->
 		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 		<div class="tab-pane fade" id="alarm-writer-tab" role="tabpanel" aria-labelledby="alarm-writer-tab-head">
@@ -687,6 +733,8 @@ function getParameter(key, defaultValue)
 			Below is a list of Daily Summary Report, <b>click</b> on any row to see details about it...<br>
 			--NOT-YET-IMPLEMENTED--
 		</div>  <!-- END: DSR Configuration -->
+
+
 	
 	</div>  <!-- END: TABBED-PANE -->
 
@@ -760,11 +808,13 @@ function getParameter(key, defaultValue)
 	var _jsonResp;
 	var _cmTable          = [];
 	var _alarmWriterTable = [];
+	var _alarmOverviewRows = [];
 	var _ccSrvName;
 	const _passedSrvName   = getParameter("srvName", "");
 	const _passedCmName    = getParameter("cm",      "");
 	const _passedAlarmName = getParameter("alarm",   "");
 	const _passedParamName = getParameter("param",   _passedAlarmName);
+	const _passedTabName   = getParameter("tab",     "");  // 'alarmOverview' opens the Alarm Overview tab
 //	const _mgtHostname   = getParameter("host", "localhost");
 //	const _mgtPort       = getParameter("port", 8900);
 //	const _mgtAuthorization = getParameter("authorization", "");
@@ -824,6 +874,11 @@ function getParameter(key, defaultValue)
 		$('#cmTable').bootstrapTable('load', _cmTable);
 		$('#cmTable').bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
 
+		// Alarm Overview (all alarms in all CMs)
+		_alarmOverviewRows = dbxAlarmOverviewFlatten(_cmTable);
+		$('#alarmOverviewTable').bootstrapTable('refreshOptions', {theadClasses: "table-light"} );
+		dbxAlarmOverviewApplyFilter();
+
 		$('#optionsTable'  ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
 		$('#settingsTable' ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
 		$('#alarmTable'    ).bootstrapTable('refreshOptions', {sortReset:true, theadClasses: "table-light"} );
@@ -839,6 +894,69 @@ function getParameter(key, defaultValue)
 	}
 
 	getConfig().then(dbxSelectByUrlParams);
+
+	//-----------------------------------------
+	// Alarm Overview: filtering, formatters, and click -> jump to Collector Configuration
+	function dbxAlarmOverviewApplyFilter()
+	{
+		const filtered = dbxAlarmOverviewFilter(_alarmOverviewRows, {
+			search        : $('#alarm-overview-search').val(),
+			onlyEffective : $('#alarm-overview-only-effective').is(':checked'),
+			onlyModified  : $('#alarm-overview-only-modified' ).is(':checked')
+		});
+		$('#alarmOverviewTable').bootstrapTable('load', filtered);
+		$('#alarm-overview-count').text(filtered.length + ' of ' + _alarmOverviewRows.length + ' alarms');
+	}
+	$('#alarm-overview-search').on('input', dbxAlarmOverviewApplyFilter);
+
+	// The table is created while this tab is hidden, and the filter-control extension then sizes the fixed header (data-height)
+	// to 0px, so no column names are visible ('resetView' does not fix that)... re-initialize it once the tab is visible
+	$('#alarm-overview-tab-head').on('shown.bs.tab', function() {
+		const $fixedHeader = $('#alarmOverviewTable').closest('.bootstrap-table').find('.fixed-table-header');
+		if ($fixedHeader.height() === 0)
+			$('#alarmOverviewTable').bootstrapTable('refreshOptions', {});
+	});
+	$('#alarm-overview-only-effective, #alarm-overview-only-modified').on('change', dbxAlarmOverviewApplyFilter);
+
+	function dbxAlarmOverviewEsc(value)
+	{
+		if (value === undefined || value === null) return '';
+		return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+	}
+	function formatAlarmOverviewText(value, row, index)
+	{
+		return dbxAlarmOverviewEsc(value);
+	}
+	function formatAlarmOverviewEffective(value, row, index)
+	{
+		return value
+			? '<span class="text-success fw-bold" title="This alarm is evaluated">Yes</span>'
+			: '<span class="text-danger" title="NOT evaluated: the Counter, its System Alarms, or the Alarm itself is disabled">No</span>';
+	}
+	function formatAlarmOverviewValue(value, row, index)
+	{
+		const str = dbxAlarmOverviewEsc(value);
+		return row.isModified ? '<b class="text-primary">' + str + '</b>' : str;
+	}
+	function formatAlarmOverviewModified(value, row, index)
+	{
+		return value
+			? '<span class="text-danger" title="Non-default: ' + dbxAlarmOverviewEsc(row.modifiedParamNames.join(', ')) + '">&#9679;</span>'
+			: '<span class="text-muted">-</span>';
+	}
+	function formatAlarmOverviewTimeRange(value, row, index)
+	{
+		return '<span title="' + dbxAlarmOverviewEsc(row.timeRangeDescription) + '">' + dbxAlarmOverviewEsc(value) + '</span>';
+	}
+
+	$('#alarmOverviewTable').on('click-row.bs.table', function (e, row, $element, field)
+	{
+		// Select when the Collector Configuration tab is visible (row highlight/scroll needs a visible table)
+		$('#cc-cfg-tab-head').one('shown.bs.tab', function() {
+			dbxSelectCmAlarm(row.cmName, row.name, row.name);
+		});
+		bootstrap.Tab.getOrCreateInstance(document.getElementById('cc-cfg-tab-head')).show();
+	});
 
 	// By default hide "pre check"
 	$('#pre-check-div').hide();
@@ -983,9 +1101,19 @@ function getParameter(key, defaultValue)
 
 	function dbxSelectByUrlParams()
 	{
-		if (_passedCmName === '') return;
+		if (_passedTabName === 'alarmOverview')
+			bootstrap.Tab.getOrCreateInstance(document.getElementById('alarm-overview-tab-head')).show();
 
-		var cmObject = findObjInArray(_cmTable, "cmName", _passedCmName);
+		dbxSelectCmAlarm(_passedCmName, _passedAlarmName, _passedParamName);
+	}
+
+	// Select a CM (and optionally an Alarm + Parameter) in the Collector Configuration tab
+	// Used by URL params (cm, alarm, param) and by a click in the Alarm Overview tab
+	function dbxSelectCmAlarm(cmName, alarmName, paramName)
+	{
+		if (cmName === '') return;
+
+		var cmObject = findObjInArray(_cmTable, "cmName", cmName);
 		if (!cmObject) return;
 
 		_lastClickedCmRow             = cmObject;
@@ -1011,30 +1139,36 @@ function getParameter(key, defaultValue)
 
 		// Arm the post-body handler: it will highlight + scroll after every re-render
 		// until the user makes their own click.
-		_autoSelectCmName = _passedCmName;
+		_autoSelectCmName = cmName;
+		dbxHighlightTableRow('#cmTable', 'cmName', cmName); // the table may already be rendered (click from Alarm Overview)
 
-		if (_passedAlarmName === '') return;
+		if (alarmName === '') return;
 
 		// Switch to Alarms sub-tab then load alarm parameters
 		setTimeout(function() {
 			var alarmData = $('#alarmTable').bootstrapTable('getData');
-			var alarmObj  = findObjInArray(alarmData, 'name', _passedAlarmName);
+			var alarmObj  = findObjInArray(alarmData, 'name', alarmName);
 			if (alarmObj) {
 				_lastClickedAlarmRow = alarmObj;
-				_autoSelectAlarmName = _passedAlarmName;
+				_autoSelectAlarmName = alarmName;
 				if (alarmObj.hasOwnProperty('parameters'))
 					$('#alarmParams').bootstrapTable('load', alarmObj.parameters);
 				else
 					$('#alarmParams').bootstrapTable('load', []);
 
-				// Highlight once the tab is fully visible (after CSS transition)
-				$('#cm-alarms-tab').one('shown.bs.tab', function() {
-					dbxHighlightTableRow('#alarmTable', 'name', _passedAlarmName);
-					if (_passedParamName !== '') {
-						_autoSelectParamName = _passedParamName;
-						dbxHighlightTableRow('#alarmParams', 'name', _passedParamName);
+				var highlightAlarm = function() {
+					dbxHighlightTableRow('#alarmTable', 'name', alarmName);
+					if (paramName !== '') {
+						_autoSelectParamName = paramName;
+						dbxHighlightTableRow('#alarmParams', 'name', paramName);
 					}
-				});
+				};
+				// Highlight once the tab is fully visible (after CSS transition)
+				// If the Alarms sub-tab is already active, no 'shown' event will fire, so highlight directly
+				if ($('#cm-alarms-tab').hasClass('active'))
+					highlightAlarm();
+				else
+					$('#cm-alarms-tab').one('shown.bs.tab', highlightAlarm);
 			}
 			$('#cm-alarms-tab').trigger('click');
 		}, 0);
