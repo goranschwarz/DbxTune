@@ -1553,10 +1553,17 @@ extends SqlServerAbstract
 					whereColValMap.put("plan_id", plan_id);
 					whereColValMap.put("!dbname", dbname);
 
-					String sqlText = "--not-found--";
+					String sqlText  = "--not-found--";
+					String procName = null;
 					QsSqlTextEntry entry = _keyToSqlText.get(whereColValMap);
 					if (entry != null)
+					{
 						sqlText = entry.sqlText;
+
+						// If the statement is part of a procedure/function/trigger (object_id != 0), show who executed it
+						if (StringUtil.hasValue(entry.objectName))
+							procName = StringUtil.hasValue(entry.schemaName) ? entry.schemaName + "." + entry.objectName : entry.objectName;
+					}
 
 					// Parse the 'sqlText' and extract Table Names, then get various table and index information
 					String tableInfo = getDbmsTableInformationFromSqlText(conn, dbname, sqlText, DbUtils.DB_PROD_NAME_MSSQL);
@@ -1623,7 +1630,8 @@ extends SqlServerAbstract
 					// get the "spark lines"
 					String sparklines = htp.getHtmlTextForRow(r);
 
-					sqlText = "<xmp>" + sqlText + "</xmp>" 
+					sqlText = "<xmp>" + sqlText + "</xmp>\n"
+							+ (StringUtil.isNullOrBlank(procName) ? "" : "<br>Executed By: <code>" + procName + "</code> <br>\n")
 							+ (StringUtil.hasValue(showplanLink) ? "<br>\n" + showplanLink : "") 
 							+ "<br>\n" + llmAdviceLink 
 							+ tableInfo;

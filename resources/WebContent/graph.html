@@ -1054,6 +1054,7 @@ at pc:
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphBus.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxLlmAdvice.js"></script>
 	<script type="text/javascript" src="/scripts/splitjs/split.min.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarmOverview.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphCounterDetails.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphDbmsConfig.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphQueryStore.js"></script>
@@ -1364,6 +1365,8 @@ at pc:
 			</span>
 
 			<span style="margin-left:auto;"></span>
+			<button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:0.8em;padding:1px 6px;margin-right:12px;white-space:nowrap;" onclick="cmAlarmOverviewOpen();"
+				title="List/Search all alarms in all Counters"><i class="fa fa-bell"></i> Alarms...</button>
 			<button type="button" class="close" style="font-size:1.2em;" onclick="cmDetailClose();">&times;</button>
 		</div>
 		<ul class="nav nav-tabs" id="cm-group-tabs" style="flex-shrink:0;padding:4px 8px 0;background:#e9ecef;"></ul>
@@ -1447,6 +1450,33 @@ at pc:
 		   onmouseover="this.style.background='#0d6efd';this.style.color='#fff';" onmouseout="this.style.background='';this.style.color='#333';">
 			<i class="fa fa-info-circle"></i>&nbsp; Properties&hellip;
 		</a>
+	</div>
+
+	<!-- Alarm Overview modal: all alarms in all CMs (Bootstrap 4) -->
+	<div class="modal fade" id="cm-alarm-overview-modal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-xl" role="document" style="max-width:95vw;max-height:85vh;">
+			<div class="modal-content" style="max-height:85vh;display:flex;flex-direction:column;">
+				<div class="modal-header" style="padding:8px 16px;">
+					<h6 class="modal-title"><i class="fa fa-bell"></i> All Alarms &mdash; <span id="cm-alarm-overview-srv"></span>
+						<select id="cm-alarm-overview-srv-select" style="display:none;font-size:0.9em;" title="Server"></select></h6>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div style="padding:6px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:0.85em;border-bottom:1px solid #dee2e6;">
+					<input type="search" id="cm-alarm-overview-search" class="form-control form-control-sm" style="width:300px;" placeholder="Search: counter, alarm, description, parameter...">
+					<label style="margin:0;cursor:pointer;"><input type="checkbox" id="cm-alarm-overview-only-effective"> Only effective</label>
+					<label style="margin:0;cursor:pointer;"><input type="checkbox" id="cm-alarm-overview-only-modified"> Only modified</label>
+					<span id="cm-alarm-overview-count" style="color:#888;"></span>
+					<span style="margin-left:auto;color:#888;">Click a Counter for its Properties, <i class="fa fa-pencil"></i> to change it in Collector Configuration</span>
+				</div>
+				<div class="modal-body" style="padding:0 16px 8px;overflow-y:auto;flex:1;">
+					<div id="cm-alarm-overview-content"></div>
+				</div>
+				<div class="modal-footer" style="padding:6px 16px;">
+					<button type="button" class="btn btn-sm btn-outline-secondary" onclick="cmAlarmOverviewOpen(true);" title="Re-read the configuration from the collector"><i class="fa fa-refresh"></i> Refresh</button>
+					<button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<!-- CM Properties modal (Bootstrap 4) -->
@@ -1719,6 +1749,8 @@ at pc:
 					onkeydown="alarmFilterKeydown(event);">
 			</span>
 			<span style="margin-left:auto;"></span>
+			<button type="button" class="btn btn-sm btn-light" style="font-size:0.8em;padding:1px 6px;margin-right:12px;white-space:nowrap;" onclick="cmAlarmOverviewOpen();"
+				title="List/Search all alarms in all Counters"><i class="fa fa-bell"></i> Alarms...</button>
 			<label style="font-size:0.8em;font-weight:normal;margin:0 8px 0 0;cursor:pointer;" title="Auto: Open when there are Active Alarms, Close when no alarms">
 				<input type="checkbox" id="alarm-auto-open-chk" name="alarm-auto-open-chk"
 					onclick="alarmAutoOpenChkClick(this);" value="auto-open" checked>

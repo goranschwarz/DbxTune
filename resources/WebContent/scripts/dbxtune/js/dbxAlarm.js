@@ -231,13 +231,23 @@ function alarmDetailShowModal(rowJson)
 	$('#dbx-view-alarmView-content').html('<em style="color:#777">Formatting&hellip;</em>');
 	$modal.modal('show');
 
+	// The formatter only knows about AlarmEntry fields, so mute info (added by AlarmActiveController) is rendered here
+	var row = null;
+	try { row = JSON.parse(rowJson); } catch (e) { /* ignore */ }
+	var muteHtml = (row && row.isMuted)
+		? '<div style="border:1px solid #f0ad4e;background:#fff8e1;color:#212529;border-radius:4px;padding:8px 10px;margin-bottom:12px;font-size:0.85rem;">'
+			+ '<div style="font-weight:600;margin-bottom:4px;"><i class="fa fa-bell-slash" style="color:#f0ad4e;margin-right:6px;"></i>This alarm is muted</div>'
+			+ _alarmMuteInfoHtml(row)
+			+ '</div>'
+		: '';
+
 	$.ajax({
 		url:         '/api/alarm/formatter',
 		type:        'post',
 		data:        rowJson,
 		contentType: 'application/json; charset=utf-8',
-		success: function(data) { $('#dbx-view-alarmView-content').html(data); },
-		error:   function(xhr)  { $('#dbx-view-alarmView-content').html(xhr.responseText || 'Error formatting alarm.'); }
+		success: function(data) { $('#dbx-view-alarmView-content').html(muteHtml + data); },
+		error:   function(xhr)  { $('#dbx-view-alarmView-content').html(muteHtml + (xhr.responseText || 'Error formatting alarm.')); }
 	});
 }
 
@@ -342,6 +352,15 @@ var alarmTdCallback = function(td, metaData, cellContent, rowData)
 
 var _alarmMuteCurrentRow = null;
 
+/** User / At / Expires / Reason lines for a muted alarm row (used by mute dialog and alarm detail modal) */
+function _alarmMuteInfoHtml(alarmRow)
+{
+	return '<div style="display:flex;gap:6px;margin-bottom:3px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">User:</span><span>'    + escHtml(alarmRow.mutedByUser  || '') + '</span></div>'
+		+ '<div style="display:flex;gap:6px;margin-bottom:3px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">At:</span><span>'      + escHtml((alarmRow.mutedTime    || '').replace('T',' ').substring(0,19)) + '</span></div>'
+		+ '<div style="display:flex;gap:6px;margin-bottom:3px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">Expires:</span><span>' + escHtml(alarmRow.muteExpiresAt ? alarmRow.muteExpiresAt.replace('T',' ').substring(0,19) : 'Never') + '</span></div>'
+		+ '<div style="display:flex;gap:6px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">Reason:</span><em>'                     + escHtml(alarmRow.muteReason   || '') + '</em></div>';
+}
+
 function alarmShowMuteDialog(alarmRow)
 {
 	_alarmMuteCurrentRow = alarmRow;
@@ -357,11 +376,7 @@ function alarmShowMuteDialog(alarmRow)
 		document.getElementById('alarm-mute-dialog-title').innerHTML = '<i class="fa fa-bell" style="color:#f0ad4e;margin-right:6px;"></i> Alarm is Muted \u2013 Unmute?';
 		document.getElementById('alarm-mute-reason-section').style.display = 'none';
 		document.getElementById('alarm-mute-existing').style.display       = 'block';
-		document.getElementById('alarm-mute-existing-info').innerHTML =
-			  '<div style="display:flex;gap:6px;margin-bottom:3px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">User:</span><span>'    + escHtml(alarmRow.mutedByUser  || '') + '</span></div>'
-			+ '<div style="display:flex;gap:6px;margin-bottom:3px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">At:</span><span>'      + escHtml((alarmRow.mutedTime    || '').replace('T',' ').substring(0,19)) + '</span></div>'
-			+ '<div style="display:flex;gap:6px;margin-bottom:3px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">Expires:</span><span>' + escHtml(alarmRow.muteExpiresAt ? alarmRow.muteExpiresAt.replace('T',' ').substring(0,19) : 'Never') + '</span></div>'
-			+ '<div style="display:flex;gap:6px;"><span style="font-weight:600;color:#6c757d;min-width:70px;">Reason:</span><em>'                     + escHtml(alarmRow.muteReason   || '') + '</em></div>';
+		document.getElementById('alarm-mute-existing-info').innerHTML = _alarmMuteInfoHtml(alarmRow);
 		document.getElementById('alarm-mute-btn').style.display   = 'none';
 		document.getElementById('alarm-unmute-btn').style.display = '';
 	} else {
