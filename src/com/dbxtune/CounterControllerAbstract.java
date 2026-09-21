@@ -34,11 +34,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -2211,6 +2213,7 @@ implements ICounterController
 	public void addCmToDemandRefreshList(String name)
 	{
 		_cmDemandRefreshList.add(name);
+		_cmDemandRefreshExternalOnly.remove(name); // a "real" demand (for example from CmSummary), so let it affect the sleep time
 	}
 
 	@Override
@@ -2223,6 +2226,37 @@ implements ICounterController
 	public void clearCmDemandRefreshList()
 	{
 		_cmDemandRefreshList.clear();
+		_cmDemandRefreshExternalOnly.clear();
+
+		// Move any externally requested (REST/Web UI) refreshes into the demand list for THIS sample loop.
+		// They can't be added to _cmDemandRefreshList directly: it's cleared at the start of every loop (here)
+		// and it's not thread safe.
+		for (Iterator<String> it = _cmRequestedRefreshSet.iterator(); it.hasNext();)
+		{
+			String name = it.next();
+			it.remove();
+			_cmDemandRefreshList.add(name);
+			_cmDemandRefreshExternalOnly.add(name);
+			_logger.info("CM '" + name + "' is refreshed in this sample (ignoring postpone), as requested by an external caller.");
+		}
+	}
+
+	/** CM names in _cmDemandRefreshList ONLY due to an external request (one-shot): they should NOT shorten the sleep time. Collector thread only. */
+	private Set<String> _cmDemandRefreshExternalOnly = new HashSet<String>();
+
+	/** CM names requested (by REST/Web UI threads) to be refreshed on next sample. Drained in clearCmDemandRefreshList() */
+	private Set<String> _cmRequestedRefreshSet = ConcurrentHashMap.newKeySet();
+
+	@Override
+	public void requestCmRefreshOnNextSample(String name)
+	{
+		_cmRequestedRefreshSet.add(name);
+	}
+
+	@Override
+	public boolean isCmInDemandRefreshListExternalOnly(String name)
+	{
+		return _cmDemandRefreshExternalOnly.contains(name);
 	}
 
 	@Override
@@ -2272,6 +2306,10 @@ implements ICounterController
 		{
 			CountersModel cm = getCmByName(cmName);
 			if (cm == null)
+				continue;
+
+			// One-shot external request (REST/Web UI "force refresh") -- it's already done, no reason to sample again soon
+			if (_cmDemandRefreshExternalOnly.contains(cmName))
 				continue;
 
 			// if the CM's hasn't been refreshed in a while, then FORCE a shorter sleep time then the suggested

@@ -612,7 +612,15 @@ window.SqlServerShowplan = (function () {
 		try {
 			xmlDoc = $.parseXML(xmlString);
 		} catch (ex) {
-			lastParseError = 'XML parse error: ' + (ex && ex.message ? ex.message : ex);
+			// jQuery wraps the parser's own text in boilerplate ("Invalid XML: This page contains the
+			// following errors: ... Below is a rendering of the page up to the first error."), which
+			// buries the one part that helps - the line/column - in the middle of the message shown in
+			// the diagram area. Keep that, drop the rest, and collapse the newlines the same way the
+			// <parsererror> branch below does.
+			var exMsg = (ex && ex.message ? ex.message : String(ex)).replace(/\s+/g, ' ')
+				.replace(/^Invalid XML:\s*This page contains the following errors:\s*/i, '')
+				.replace(/\s*Below is a rendering of the page up to the first error\.?\s*$/i, '');
+			lastParseError = 'XML parse error: ' + exMsg.trim().slice(0, 200);
 			return null;
 		}
 		if (!xmlDoc || !xmlDoc.documentElement) { lastParseError = 'XML parse produced no document'; return null; }
@@ -1183,13 +1191,16 @@ window.SqlServerShowplan = (function () {
 			var thickness = rowsToThickness(connectorRows(childNode));
 
 			// A connector into a never-executed operator carried no rows, so it is drawn washed out -
-			// otherwise a dead branch keeps a full-strength line into it and still pulls the eye.
-			var deadEnd = !!(childNode && childNode._neverExecuted);
+			// otherwise a dead branch keeps a full-strength line into it and still pulls the eye. On a
+			// still-executing plan it is washed out in the same blue-grey the box uses, because that
+			// branch has not been reached YET rather than been skipped (see markNeverExecuted()).
+			var deadEnd    = !!(childNode && childNode._neverExecuted);
+			var notStarted = deadEnd && !!childNode._planIncomplete;
 
 			var path = document.createElementNS(svgNS, 'path');
 			path.setAttribute('d', d);
 			path.setAttribute('fill', 'none');
-			path.setAttribute('stroke', deadEnd ? '#cfcfcf' : '#8a8a8a');
+			path.setAttribute('stroke', notStarted ? '#c3d0de' : deadEnd ? '#cfcfcf' : '#8a8a8a');
 			path.setAttribute('stroke-width', String(thickness));
 			// Rounded joins stop the elbow corners looking notched once the line gets heavy.
 			path.setAttribute('stroke-linejoin', 'round');
@@ -1346,14 +1357,58 @@ window.SqlServerShowplan = (function () {
 	 * ActualExecutions is already summed across threads by RT_SUM_ATTRS, and is left undefined on a
 	 * node with no <RunTimeInformation> at all - which is exactly the null the shared helper needs in
 	 * order not to mistake an estimated-only plan for a plan where nothing ran.
+	 *
+	 * ALSO decides whether this statement had finished executing when the plan was captured, and
+	 * stamps the answer on every node as _planIncomplete. A live plan (from
+	 * dm_exec_query_statistics_xml - what the dialog header's "Live" badge reports) is the same XML
+	 * shape as a completed one, so ActualExecutions="0" is ambiguous there: on a finished statement it
+	 * means the operator never ran, but on a running one it usually means the operator has not been
+	 * REACHED yet. A Hash Match does not open its probe input until the build input is fully consumed,
+	 * and Nested Loops does not open its inner input until the outer input yields its first row - so a
+	 * mid-flight capture routinely shows a whole untouched branch that is about to run. Every actual
+	 * row count in such a plan is a partial count too, which is why _planIncomplete additionally
+	 * silences the estimated-vs-actual comparisons (renderNode, buildDetailPanel, collectTreeFindings)
+	 * - "estimated 513,309 rows, produced 0" is not a misestimate on an operator still waiting for its
+	 * first row.
+	 *
+	 * Decided per STATEMENT rather than per document, on the parsed tree rather than on the XML text:
+	 * <WaitStats> and <QueryTimeStats> are children of <QueryPlan>, and a batch can genuinely hold a
+	 * finished statement 1 and a still-running statement 3, so _ssPlanType()'s document-wide test in
+	 * dbxShowplan.js (right for the header badge, which is a per-document verdict by nature) would
+	 * answer for the wrong statement here.
+	 *
+	 * Two completion signals, either one is enough:
+	 *   - <WaitStats> exists - lifted onto the statement node by buildStatementNode(); SQL Server
+	 *     (2016 SP1+) writes it only once the statement completes.
+	 *   - the root operator reports ActualEndOfScans > 0 - it was read through to the end.
+	 * Neither is conclusive the other way round (a pre-2016-SP1 plan has no <WaitStats> at all; a
+	 * cancelled statement may never reach end-of-scan), so an undecidable plan is deliberately treated
+	 * as INCOMPLETE. That is the cheaper direction to be wrong in: "never executed" is the stronger of
+	 * the two claims, and calling a finished branch "not started yet" costs far less than telling
+	 * someone a branch was skipped when the query was simply still working on it.
 	 */
 	function markNeverExecuted(root) {
-		return DbxShowplanGraph.markNeverExecuted(root, function (node) {
+		var count = DbxShowplanGraph.markNeverExecuted(root, function (node) {
 			// The statement pseudo-node is a wrapper buildStatementNode() invents; it has no runtime
 			// counters of its own, so it is judged purely by its subtree (as null, not zero).
 			var m = node.metrics || {};
 			return (m.ActualExecutions === undefined) ? null : m.ActualExecutions;
 		});
+
+		var rootOpMetrics = ((root.children || [])[0] || {}).metrics || {};
+		var completed =
+			// An estimated-only plan is not "incomplete", it is just estimated - nothing is executing,
+			// so there is nothing to have finished. Tested first because neither signal below can fire
+			// on a plan with no runtime counters, which would otherwise flag every node in it.
+			   rootOpMetrics.ActualExecutions === undefined
+			|| !!(root.metrics && root.metrics.waitStats)
+			|| rootOpMetrics.ActualEndOfScans > 0;
+
+		// Set on EVERY node (not only the dead ones) and unconditionally (so a re-parse cannot leave a
+		// stale mark), keeping render time a pure lookup exactly as _neverExecuted is.
+		walkPlanNodes(root, function (node) { node._planIncomplete = !completed; });
+
+		return count;
 	}
 	// ─────────────────────────────────────────────────────────────────────────
 	// Icons
@@ -1367,38 +1422,106 @@ window.SqlServerShowplan = (function () {
 
 	var ICON_SPRITE_URL = '/images/qp_icons.png';
 	var ICON = {
-		Catchall: [-96,-256], ArithmeticExpression: [0,0], Assert: [-32,0], Assign: [-64,0],
-		Bitmap: [-256,-192], BookmarkLookup: [-128,0], ClusteredIndexDelete: [-160,0],
-		ClusteredIndexInsert: [-192,0], ClusteredIndexScan: [-224,0], ClusteredIndexSeek: [-256,0],
-		ClusteredIndexMerge: [0,-256], KeyLookup: [-256,0], ClusteredIndexUpdate: [-288,0],
-		Collapse: [0,-32], ComputeScalar: [-32,-32], Concatenation: [-64,-32], ConstantScan: [-96,-32],
-		Convert: [-128,-32], CursorCatchall: [-96,0], Declare: [-160,-32], Delete: [-288,-160],
-		DistributeStreams: [-224,-32], Dynamic: [-256,-32], EagerSpool: [-192,-160],
-		FetchQuery: [-288,-32], Filter: [0,-64], GatherStreams: [-32,-64], HashMatch: [-64,-64],
-		HashMatchRoot: [-64,-64], HashMatchTeam: [-64,-64], If: [-96,-64], Insert: [0,-192],
-		InsertedScan: [-128,-64], Intrinsic: [-160,-64], IteratorCatchall: [-96,0],
-		Keyset: [-192,-64], LanguageElementCatchall: [-96,0], LazySpool: [-192,-160],
-		LogRowScan: [-224,-64], MergeInterval: [-256,-64], MergeJoin: [-288,-64], NestedLoops: [0,-96],
-		NonclusteredIndexDelete: [-32,-96], NonclusteredIndexInsert: [-64,-96], IndexScan: [-96,-96],
-		IndexSeek: [-128,-96], NonclusteredIndexSpool: [-160,-96], NonclusteredIndexUpdate: [-192,-96],
-		OnlineIndexInsert: [-224,-96], ParameterTableScan: [-256,-96], PopulateQuery: [-192,-224],
-		RdiLookup: [0,-128], RefreshQuery: [-32,-128], RemoteDelete: [-64,-128],
-		RemoteInsert: [-96,-128], RemoteQuery: [-128,-128], RemoteScan: [-160,-128],
-		RemoteUpdate: [-192,-128], RepartitionStreams: [-224,-128], Result: [-256,-128],
-		RowCountSpool: [-288,-128], Segment: [0,-160], Sequence: [-32,-160],
-		SequenceProject: [-224,-224], SnapShot: [-256,-224], Sort: [-128,-160], Split: [-160,-160],
-		Spool: [-192,-160], Statement: [-256,-128], StreamAggregate: [-224,-160], Switch: [-256,-160],
-		TableDelete: [-288,-160], TableInsert: [0,-192], TableScan: [-32,-192], TableSpool: [-64,-192],
-		WindowSpool: [-64,-192], TableUpdate: [-96,-192], TableValuedFunction: [-128,-192],
-		Top: [-160,-192], UDX: [-192,-192], Update: [-96,-192], While: [-224,-192],
-		StmtCursor: [-96,-256], StmtCond: [0,-224], FastForward: [-96,0], WindowAggregate: [-160,-256],
-		AdaptiveJoin: [-288,-224], IndexSpool: [-160,-96], IndexInsert: [-64,-96],
-		IndexDelete: [-32,-96], IndexUpdate: [-192,-96], ColumnStoreIndexScan: [-128,-224],
-		ColumnStoreIndexInsert: [-64,-224], ColumnStoreIndexDelete: [-32,-224],
-		ColumnStoreIndexUpdate: [-160,-224], ColumnStoreIndexMerge: [-96,-224],
-		DeletedScan: [-32,-256], TableMerge: [-65,-256], BatchHashTableBuild: [-128,-256]
+		Catchall:                [-96,-256], 
+		ArithmeticExpression:    [0,0], 
+		Assert:                  [-32,0], 
+		Assign:                  [-64,0],
+		Bitmap:                  [-256,-192], 
+		BookmarkLookup:          [-128,0], 
+		ClusteredIndexDelete:    [-160,0],
+		ClusteredIndexInsert:    [-192,0], 
+		ClusteredIndexScan:      [-224,0], 
+		ClusteredIndexSeek:      [-256,0],
+		ClusteredIndexMerge:     [0,-256], 
+		KeyLookup:               [-256,0], 
+		ClusteredIndexUpdate:    [-288,0],
+		Collapse:                [0,-32], 
+		ComputeScalar:           [-32,-32], 
+		Concatenation:           [-64,-32], 
+		ConstantScan:            [-96,-32],
+		Convert:                 [-128,-32], 
+		CursorCatchall:          [-96,0], 
+		Declare:                 [-160,-32], 
+		Delete:                  [-288,-160],
+		DistributeStreams:       [-224,-32], 
+		Dynamic:                 [-256,-32], 
+		EagerSpool:              [-192,-160],
+		FetchQuery:              [-288,-32], 
+		Filter:                  [0,-64], 
+		GatherStreams:           [-32,-64], 
+		HashMatch:               [-64,-64],
+		HashMatchRoot:           [-64,-64], 
+		HashMatchTeam:           [-64,-64], 
+		If:                      [-96,-64], 
+		Insert:                  [0,-192],
+		InsertedScan:            [-128,-64], 
+		Intrinsic:               [-160,-64], 
+		IteratorCatchall:        [-96,0],
+		Keyset:                  [-192,-64], 
+		LanguageElementCatchall: [-96,0], 
+		LazySpool:               [-192,-160],
+		LogRowScan:              [-224,-64], 
+		MergeInterval:           [-256,-64], 
+		MergeJoin:               [-288,-64], 
+		NestedLoops:             [0,-96],
+		NonclusteredIndexDelete: [-32,-96], 
+		NonclusteredIndexInsert: [-64,-96], 
+		IndexScan:               [-96,-96],
+		IndexSeek:               [-128,-96], 
+		NonclusteredIndexSpool:  [-160,-96], 
+		NonclusteredIndexUpdate: [-192,-96],
+		OnlineIndexInsert:       [-224,-96], 
+		ParameterTableScan:      [-256,-96], 
+		PopulateQuery:           [-192,-224],
+		RdiLookup:               [0,-128], 
+		RefreshQuery:            [-32,-128], 
+		RemoteDelete:            [-64,-128],
+		RemoteInsert:            [-96,-128], 
+		RemoteQuery:             [-128,-128], 
+		RemoteScan:              [-160,-128],
+		RemoteUpdate:            [-192,-128], 
+		RepartitionStreams:      [-224,-128], 
+		Result:                  [-256,-128],
+		RowCountSpool:           [-288,-128], 
+		Segment:                 [0,-160], 
+		Sequence:                [-32,-160],
+		SequenceProject:         [-224,-224], 
+		SnapShot:                [-256,-224], 
+		Sort:                    [-128,-160], 
+		Split:                   [-160,-160],
+		Spool:                   [-192,-160], 
+		Statement:               [-256,-128], 
+		StreamAggregate:         [-224,-160], 
+		Switch:                  [-256,-160],
+		TableDelete:             [-288,-160], 
+		TableInsert:             [0,-192], 
+		TableScan:               [-32,-192], 
+		TableSpool:              [-64,-192],
+		WindowSpool:             [-64,-192], 
+		TableUpdate:             [-96,-192], 
+		TableValuedFunction:     [-128,-192],
+		Top:                     [-160,-192], 
+		UDX:                     [-192,-192], 
+		Update:                  [-96,-192], 
+		While:                   [-224,-192],
+		StmtCursor:              [-96,-256], 
+		StmtCond:                [0,-224], 
+		FastForward:             [-96,0], 
+		WindowAggregate:         [-160,-256],
+		AdaptiveJoin:            [-288,-224], 
+		IndexSpool:              [-160,-96], 
+		IndexInsert:             [-64,-96],
+		IndexDelete:             [-32,-96], 
+		IndexUpdate:             [-192,-96], 
+		ColumnStoreIndexScan:    [-128,-224],
+		ColumnStoreIndexInsert:  [-64,-224], 
+		ColumnStoreIndexDelete:  [-32,-224],
+		ColumnStoreIndexUpdate:  [-160,-224], 
+		ColumnStoreIndexMerge:   [-96,-224],
+		DeletedScan:             [-32,-256], 
+		TableMerge:              [-65,-256], 
+		BatchHashTableBuild:     [-128,-256]
 	};
-
 	/**
 	 * Mirrors qp.xslt's NodeIcon template, rule for rule and in the same order:
 	 *   Parallelism -> use LogicalOp (so Gather/Repartition/Distribute Streams get their own glyph)
@@ -1950,9 +2073,11 @@ window.SqlServerShowplan = (function () {
 		row('Index Kind',    p.indexKind);
 
 		// Same suppression as the Cardinality Estimate finding and the box itself, for the same reason:
-		// "estimated N rows, produced 0" is not a misestimate on a branch that was never taken, so the
-		// Act % of Est row is not highlighted as a problem here either.
-		var warn = isEstActWarn(m) && !node._neverExecuted;
+		// "estimated N rows, produced 0" is not a misestimate on a branch that was never taken, nor on
+		// any operator of a still-executing plan (whose actual counts are all partial), so the
+		// Act % of Est row is not highlighted as a problem in either case - same condition as the box
+		// tint in renderNode() and the Cardinality Estimate finding in collectTreeFindings().
+		var warn = isEstActWarn(m) && !node._neverExecuted && !node._planIncomplete;
 		row('Est Rows',      fmtNum(m.estRows));
 		row('Act Rows',      fmtNum(m.actRows));
 		var pct = fmtEstActDiff(m);
@@ -2483,7 +2608,12 @@ window.SqlServerShowplan = (function () {
 		// its orange Est/Act percentage - exactly the attention the hatching exists to take away - and
 		// the box would contradict the Cardinality Estimate finding, which is suppressed on the same
 		// condition in collectTreeFindings().
-		var warn = isEstActWarn(m) && !node._neverExecuted;
+		//
+		// Suppressed on a still-executing plan for the same reason, but everywhere rather than only on
+		// dead branches: every actual row count in a live capture is a partial count, so an operator
+		// that has emitted 3 of its 500,000 rows so far - or a blocking one that has emitted none yet -
+		// is not misestimated, it is unfinished. See markNeverExecuted() for how that is detected.
+		var warn = isEstActWarn(m) && !node._neverExecuted && !node._planIncomplete;
 		var $box = $('<div class="ss-plan-box"></div>');
 		if (warn) $box.addClass('ss-plan-warn');
 		if (node.isStatement) $box.addClass('ss-plan-statement');
@@ -2494,7 +2624,13 @@ window.SqlServerShowplan = (function () {
 		if (eagerSpool) $box.addClass('ss-plan-eager-spool');
 		// Marked at parse time (markNeverExecuted), so this is just a lookup. Applied last of the box
 		// states so the hatching's background-image sits on top of ss-plan-big-table's flat fill.
-		if (node._neverExecuted) $box.addClass('ss-plan-never-exec');
+		if (node._neverExecuted) {
+			$box.addClass('ss-plan-never-exec');
+			// Zero executions means something different while the query is still running - the operator
+			// has not been reached yet, not skipped. Softer styling (no hatching) so it reads as
+			// "waiting" rather than "dead"; the caption further down says which.
+			if (node._planIncomplete) $box.addClass('ss-plan-not-started');
+		}
 		// Kept on the node itself (rather than a separate id -> box map) so the async table-info
 		// lookup fired from render() can reach back into the live DOM for this exact node.
 		node._$box = $box;
@@ -2665,8 +2801,28 @@ window.SqlServerShowplan = (function () {
 		// The hatching alone says "different", not "never ran" - so the box also carries the reason in
 		// words. Last on the box, after every metric, because it is a verdict about the whole operator
 		// rather than another measurement of it.
+		//
+		// Two different verdicts behind the same zero execution count, so two different words - see
+		// markNeverExecuted(). Getting this wrong is not cosmetic: "never executed" on a branch the
+		// query is about to run sends you looking for a startup predicate that does not exist.
 		if (node._neverExecuted) {
-			$box.append($('<div class="ss-plan-never-exec-note"></div>').text('never executed'));
+			var $neverExecNote = $('<div class="ss-plan-never-exec-note"></div>');
+			if (node._planIncomplete) {
+				$neverExecNote
+					.addClass('ss-plan-not-started-note')
+					.text('not started yet')
+					.attr('title', 'The query was still executing when this plan was captured, and this operator '
+					             + 'had not been reached yet. A Hash Match opens its probe input only after the '
+					             + 'build input has been fully consumed, and Nested Loops opens its inner input '
+					             + 'only once the outer input yields its first row.');
+			} else {
+				$neverExecNote
+					.text('never executed')
+					.attr('title', 'The statement finished without this operator ever running - an untaken branch: '
+					             + 'a startup predicate that was false, the unchosen side of an adaptive join, or '
+					             + 'an inner input whose outer input produced no rows.');
+			}
+			$box.append($neverExecNote);
 		}
 
 		// Hover shows a transient summary tooltip; click pins it AND pushes the node to the
@@ -2728,7 +2884,12 @@ window.SqlServerShowplan = (function () {
 				// misestimate there - the branch was simply never taken (an adaptive join's unchosen side,
 				// a startup Filter, an unreached Concatenation input). The corpus has exactly one such
 				// finding today (adaptive_join.sqlplan node 4, at 'error' severity) and it is wrong.
-				if (!n.isStatement && !n._neverExecuted && isEstActWarn(m)
+				// _planIncomplete plans are excluded wholesale, not just on their dead branches: a
+				// capture taken mid-flight has only partial actual counts everywhere, so a blocking
+				// operator that has not emitted its first row yet (a Hash Match, and the DML operator
+				// above it, while the hash build input is still being read) would otherwise be reported
+				// as a 'zero-rows' cardinality ERROR on a query that is running perfectly well.
+				if (!n.isStatement && !n._neverExecuted && !n._planIncomplete && isEstActWarn(m)
 				 && (m.actRows >= 100 || m.estRows >= 100)) {
 					var diff = fmtEstActDiff(m);
 					var diffTitle = diff === 'zero-rows'

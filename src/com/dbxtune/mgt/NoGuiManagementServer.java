@@ -39,6 +39,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import com.dbxtune.mgt.controllers.CmDataServlet;
 import com.dbxtune.mgt.controllers.CmListServlet;
+import com.dbxtune.mgt.controllers.CmForceRefreshServlet;
 import com.dbxtune.mgt.controllers.CmNavSampleServlet;
 import com.dbxtune.mgt.controllers.DbmsConfigServlet;
 import com.dbxtune.mgt.controllers.DdlStorageServlet;
@@ -256,6 +257,7 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new CmListServlet())            , "/mgt/cm/list");
 				context.addServlet(new ServletHolder(new CmDataServlet())            , "/mgt/cm/data");
 				context.addServlet(new ServletHolder(new CmNavSampleServlet())       , "/mgt/cm/navSample");
+				context.addServlet(new ServletHolder(new CmForceRefreshServlet())    , "/mgt/cm/force-refresh");
 				context.addServlet(new ServletHolder(new DbmsConfigServlet())        , "/mgt/dbms-config");
 				context.addServlet(new ServletHolder(new DdlStorageServlet())        , "/mgt/ddl-storage");
 				context.addServlet(new ServletHolder(new QueryStoreServlet())        , "/mgt/query-store");

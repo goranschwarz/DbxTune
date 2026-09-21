@@ -237,6 +237,10 @@ public interface ICounterController
 	void        addCmToDemandRefreshList(String name);
 	void        removeCmFromDemandRefreshList(String name);
 	void        clearCmDemandRefreshList();
+	/** Thread safe: ask for the CM to be refreshed on next sample (ignoring postpone). Used by the REST/Web UI. */
+	void        requestCmRefreshOnNextSample(String name);
+	/** true if the CM is in the demand refresh list ONLY due to a one-shot requestCmRefreshOnNextSample() */
+	boolean     isCmInDemandRefreshListExternalOnly(String name);
 	Set<String> getCmDemandRefreshList();
 	int         getCmDemandRefreshListCount();
 	int         getCmDemandRefreshSleepTime(int suggestedSleepTime, long lastRefreshTimeInMs);

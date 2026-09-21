@@ -436,6 +436,14 @@ extends HttpServlet
 				}
 			}
 
+			// Append CMs only persist the NEW rows of each refresh, so "no row here" means "nothing new
+			// was logged", not "the CM did not run". Return an empty result (with columns) instead of
+			// 'no-data-in-window' -- otherwise the JS postpone-fallback jumps back to an older sample and
+			// shows its rows as if they were current. The Step 2 query then finds no rows (nothing at or
+			// before 'ts' for showAll, nothing within the window otherwise), only the column metadata.
+			if (closest == null && isAppend)
+				closest = ts;
+
 			if (closest == null)
 			{
 				Map<String, Object> noData = errMap("no-data-in-window", "No rows found for this CM at the requested sample time");
@@ -484,19 +492,18 @@ extends HttpServlet
 			// Step 2: fetch rows.
 			//
 			// Regular / showLast: all rows for the exact closest timestamp.
-			// Append + showAll  : all rows from session-start up to closest,
-			//                     in chronological order (mirrors PersistReader).
+			// Append + showAll  : all rows in this recording database up to closest,
+			//                     in chronological order.
 			// ------------------------------------------------------------------
 			String sqlData;
 			if (showAll)
 			{
-				// Mirror PersistReader.loadSessionCm(): scope to the session that owns 'closest'
-				// (SessionStartTime subquery is safe here because 'closest' is an exact value
-				// returned by the MAX query above — guaranteed to find rows).
+				// Not scoped to the PCS session (SessionStartTime) like PersistReader.loadSessionCm():
+				// a new session starts at every H2 date roll / spillover and collector reconnect,
+				// which would silently drop everything logged before it from "all".
 				sqlData = conn.quotifySqlString(
 						  "SELECT * FROM " + tableName
-						+ " WHERE [SessionStartTime] = (SELECT MIN([SessionStartTime]) FROM " + tableName + " WHERE [SessionSampleTime] = ?)"
-						+ "   AND [SessionSampleTime] <= ?"
+						+ " WHERE [SessionSampleTime] <= ?"
 						+ " ORDER BY [SessionSampleTime]");
 			}
 			else
@@ -512,13 +519,7 @@ extends HttpServlet
 
 			try (PreparedStatement pstmt = conn.prepareStatement(sqlData))
 			{
-				if (showAll)
-				{
-					pstmt.setTimestamp(1, closest); // subquery: find SessionStartTime for this sample
-					pstmt.setTimestamp(2, closest); // main filter: SessionSampleTime <= closest
-				}
-				else
-					pstmt.setTimestamp(1, closest);
+				pstmt.setTimestamp(1, closest);
 				try (ResultSet rs = pstmt.executeQuery())
 				{
 					ResultSetMetaData rsMeta = rs.getMetaData();
@@ -585,15 +586,12 @@ extends HttpServlet
 						}
 					}
 
-					boolean firstRow = true;
 					while (rs.next())
 					{
-						if (firstRow)
-						{
-							firstRow = false;
-							if (cmSampleTimeIdx > 0) cmSampleTime = rs.getTimestamp(cmSampleTimeIdx);
-							if (cmSampleMsIdx   > 0) cmSampleMs   = rs.getObject(cmSampleMsIdx);
-						}
+						// Keep the LAST row's values: rows are ordered by SessionSampleTime, and for
+						// showAll the first row is the oldest in the day, not the sample at 'closest'
+						if (cmSampleTimeIdx > 0) cmSampleTime = rs.getTimestamp(cmSampleTimeIdx);
+						if (cmSampleMsIdx   > 0) cmSampleMs   = rs.getObject(cmSampleMsIdx);
 						List<Object> row = new ArrayList<>(colCount);
 						for (int i = 1; i <= colCount; i++)
 						{
