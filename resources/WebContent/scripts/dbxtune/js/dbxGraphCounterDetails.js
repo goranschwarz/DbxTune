@@ -14,6 +14,7 @@ var _cmFilter           = '';     // current filter string
 var _cmPostponeInterval = null;   // setInterval handle for live postpone countdown
 var _cmPostponeFallback = false;  // true during the one-shot retry with lastSampleMs
 var _cmForceRequestedKey = null;  // 'srv|cm|lastSampleMs' for which "Force collect" was requested
+var _cmRenderedRun       = null;  // {key:'srv|cm|type', lastRunMs} of the rendered data, ONLY when it was the CM's latest sample (see _cmCanSkipLiveLoad)
 var _cmForceNowPoll      = null;  // setInterval handle: after "Collect now", poll until the new sample is stored
 var _scrPfx = screen.width + 'x' + screen.height + '_'; // screen-size prefix for size/position localStorage keys
 var _cmTrendCache   = null;  // cached /api/graphs response (all graphs for this server)
@@ -902,6 +903,12 @@ function _cmAggSymbol(aggregateColumns, colName) {
 
 function cmDetailRenderFiltered(r, filter)
 {
+	// Remember which CM run is on screen -- but only if the server confirmed the rows ARE from that run
+	// (PCS writes are async, so 'lastSampleMs' can be ahead of the stored rows)
+	_cmRenderedRun = (r.isLatestSample && r.lastSampleMs > 0)
+		? { key: _cmSrvName + '|' + r.cmName + '|' + r.type, lastRunMs: r.lastSampleMs }
+		: null;
+
 	var rows = r.rows || [];
 	// Separate aggregate (footer) rows — they go to <tfoot> and bypass filter/sort
 	var rowStates    = r.rowStates || {};
@@ -2016,6 +2023,12 @@ function cmDetailLiveRefresh(srvName)
 					cmDetailUpdateTabColors(r.groups);
 					// Use exact SessionSampleTime from MonSessionSampleDetailes
 					if (r.resolvedTime) { _cmTimestamp = r.resolvedTime.substring(0, 19); $('#cm-detail-ts').text('@ ' + _cmTimestamp); }
+
+					// Postponed CM that hasn't run since the data on screen: nothing new to fetch (keeps scroll/sort, no flicker)
+					if (_cmCanSkipLiveLoad(srv, cmDetailFindCmInfo(_cmName))) {
+						_cmDbg('cmDetailLiveRefresh: skip data load, CM has not run since rendered data', 'cm=' + _cmName, 'lastRunMs=' + _cmRenderedRun.lastRunMs);
+						return;
+					}
 				}
 			} catch(ex) {}
 			cmDetailLoadData(srv, _cmName, _cmTimestamp, _cmType);
@@ -2025,6 +2038,17 @@ function cmDetailLiveRefresh(srvName)
 			cmDetailLoadData(srv, _cmName, ts, _cmType);
 		}
 	});
+}
+
+// Live refresh: true if the selected (postponed) CM has not run since the rendered data -- so there's nothing new to load.
+// Uses 'lastSampleMs' (collector's in-memory last run of the CM), compared to the run that is on screen.
+function _cmCanSkipLiveLoad(srv, c)
+{
+	if (!c || !_cmRenderedRun)                          return false;
+	if (!(c.postponeEnabled && c.postponeTime > 0))     return false; // only postponed CMs
+	if (c.exceptionMsg)                                 return false; // let the load path show the collector problem
+	if (_cmRenderedRun.key !== srv + '|' + c.cmName + '|' + _cmType) return false;
+	return c.lastSampleMs > 0 && c.lastSampleMs === _cmRenderedRun.lastRunMs;
 }
 
 // Update only the has-data/no-data classes on existing tab <li> elements.
