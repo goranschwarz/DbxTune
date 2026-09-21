@@ -800,6 +800,11 @@ extends HttpServlet
 				root.put("postponeTime",    cmMeta.getPostponeTime());
 				root.put("postponeEnabled", cmMeta.isPostponeEnabled());
 				root.put("lastSampleMs",    cmMeta.getLastLocalRefreshTime());
+
+				// Are the returned rows from the CM's latest refresh? (CmSampleTime is written from cm.getTimestamp())
+				// If not (PCS writes async, or an older sample was requested) the Web UI must NOT treat 'lastSampleMs' as "already shown".
+				Timestamp cmLatestTs = cmMeta.getTimestamp();
+				root.put("isLatestSample",  cmSampleTime != null && cmLatestTs != null && cmSampleTime.getTime() == cmLatestTs.getTime());
 			}
 
 			// Preferred column order (declared by the CM for a better visual layout)
