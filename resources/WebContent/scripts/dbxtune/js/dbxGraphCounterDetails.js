@@ -13,6 +13,8 @@ var _cmCurrentData      = null;   // last fetched data result (for re-filtering 
 var _cmFilter           = '';     // current filter string
 var _cmPostponeInterval = null;   // setInterval handle for live postpone countdown
 var _cmPostponeFallback = false;  // true during the one-shot retry with lastSampleMs
+var _cmForceRequestedKey = null;  // 'srv|cm|lastSampleMs' for which "Force collect" was requested
+var _cmForceNowPoll      = null;  // setInterval handle: after "Collect now", poll until the new sample is stored
 var _scrPfx = screen.width + 'x' + screen.height + '_'; // screen-size prefix for size/position localStorage keys
 var _cmTrendCache   = null;  // cached /api/graphs response (all graphs for this server)
 var _cmSplitInstance = null; // current Split.js instance (destroyed + recreated on layout change)
@@ -179,8 +181,7 @@ function cmDetailRenderGroups(groups)
 	}
 
 	groups.forEach(function(g) {
-		var hasAny = g.cms.some(function(c) { return c.hasData; });
-		var li = $('<li class="nav-item ' + (hasAny ? 'cm-tab-has-data' : 'cm-tab-no-data') + '"></li>').attr('data-group-name', g.groupName);
+		var li = $('<li class="nav-item cm-tab-' + _cmTabState(g.cms) + '"></li>').attr('data-group-name', g.groupName);
 		var a  = $('<a class="nav-link' + (g.groupName === selGroup ? ' active' : '') + '" href="#"></a>');
 		if (g.groupIcon)
 			a.append(cmMakeIcon(g.groupIcon));
@@ -291,8 +292,19 @@ var _cmTabTooltipOpts = {
 	trigger:     'hover',
 	delay:       { show: 600, hide: 150 },
 	customClass: 'cm-tab-tooltip',
-	title: function() { return $(this).data('cmTabTooltip') || ''; }
+	title: function() { return _cmPostponedTooltipNote($(this).closest('li').attr('data-cm-name')) + ($(this).data('cmTabTooltip') || ''); }
 };
+
+// Tooltip prefix for a CM tab shown as postponed (dashed strikethrough). Computed at hover time
+// so it follows live refreshes (cmDetailUpdateTabColors) without rebuilding the cached tooltip.
+function _cmPostponedTooltipNote(cmName)
+{
+	var c = cmName ? cmDetailFindCmInfo(cmName) : null;
+	if (!_cmIsPostponedNoData(c)) return '';
+	return '<div style="font-weight:normal"><b>&#9201; Postponed:</b> sampled every '
+		+ $('<span>').text(_cmFmtDuration(c.postponeTime)).html()
+		+ ' &mdash; no data in <i>this</i> sample, but other samples hold data.</div><hr style="margin:5px 0">';
+}
 
 /**
  * Build tooltip inner HTML from a description string and an array of
@@ -379,9 +391,7 @@ function cmDetailRenderCms(cms)
 	}
 
 	cms.forEach(function(c) {
-		var tabClass = 'nav-item';
-		if (c.hasData)                      tabClass += ' cm-tab-has-data';
-		else                                tabClass += ' cm-tab-no-data';
+		var tabClass = 'nav-item cm-tab-' + _cmTabState([c]);
 		if (c.isActive === false)           tabClass += ' cm-tab-disabled';
 		var li = $('<li class="' + tabClass + '"></li>').attr('data-cm-name', c.cmName);
 		var a  = $('<a class="nav-link' + (c.cmName === selCm ? ' active' : '') + '" href="#"></a>');
@@ -493,6 +503,27 @@ function cmDetailFindCmInfo(cmName)
 		}
 	}
 	return null;
+}
+
+// Helper: CM has no data in this sample only because it's postponed (it samples every N seconds)
+function _cmIsPostponedNoData(c)
+{
+	return !!(c && !c.hasData && c.postponeEnabled && c.postponeTime > 0);
+}
+
+// Helper: tab state for a CM or a group of CMs: 'has-data' | 'postponed' | 'no-data'
+// (maps to CSS classes cm-tab-has-data / cm-tab-postponed / cm-tab-no-data in graph.html)
+function _cmTabState(cms)
+{
+	if (cms.some(function(c) { return c.hasData; }))  return 'has-data';
+	if (cms.some(_cmIsPostponedNoData))               return 'postponed';
+	return 'no-data';
+}
+
+// Helper: set exactly one of the has-data/postponed/no-data classes on a tab <li>
+function _cmApplyTabState($li, state)
+{
+	$li.removeClass('cm-tab-has-data cm-tab-postponed cm-tab-no-data').addClass('cm-tab-' + state);
 }
 
 // Re-fetch the CM list then call cmDetailLoadData — used by the timing-race retry path.
@@ -652,7 +683,12 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				// "table-not-found", silently switch to ABS instead of showing an error.
 				// Also handle "no-data-in-window" for diff/rate: the table may exist
 				// but have no rows (e.g. first sample after startup — diff needs 2 samples).
-				if (r.error && type !== 'abs') {
+				// Exception: a postponed CM (e.g. CmExecQueryStats, every 10 min) will almost never
+				// have a row within the window -- let the postpone-fallback below resolve the real
+				// sample time first, keeping the requested type. Only if that retry also finds no
+				// diff/rate data do we fall back to ABS here.
+				var isPostponeCase = (r.error === 'no-data-in-window' && r.postponeEnabled && r.postponeTime > 0 && !_isPostponeFallback);
+				if (r.error && type !== 'abs' && !isPostponeCase) {
 					var isTableMissing = (r.error === 'table-not-found');
 					var isNoData       = (r.error === 'no-data-in-window');
 					if (isTableMissing || isNoData) {
@@ -992,11 +1028,12 @@ function cmDetailRenderFiltered(r, filter)
 	if (r.cmSampleTime) sampleInfo += '&nbsp; SampleTime: <b>' + escHtml(r.cmSampleTime) + '</b>';
 	if (r.cmSampleMs  ) sampleInfo += '&nbsp; SampleMs: <b>'   + escHtml(String(r.cmSampleMs)) + '</b>';
 
-	var h = '<p style="color:#6c757d;font-size:0.8em;margin:2px 0;">'
+	// #cm-detail-sticky-top (info bar + postpone watermark) and <thead> stay pinned while scrolling (CSS in graph.html)
+	var h = '<div id="cm-detail-sticky-top"><p style="color:#6c757d;font-size:0.8em;margin:2px 0;">'
 		+ 'CM: <b>' + escHtml(r.cmName) + '</b>'
 		+ '&nbsp; Type: <b>' + escHtml(r.type) + '</b>'
 		+ sampleInfo
-		+ '&nbsp; Rows: <b>' + r.rowCount + '</b></p>'
+		+ '&nbsp; Rows: <b>' + r.rowCount + '</b></p></div>'
 		+ '<table class="table table-sm table-bordered table-hover" style="font-size:0.78em;white-space:nowrap;width:auto;">'
 		+ '<thead class="thead-light"><tr>'
 		+ r.columns.map(function(c, i) {
@@ -1024,7 +1061,7 @@ function cmDetailRenderFiltered(r, filter)
 
 	if (!filteredRows || filteredRows.length === 0) {
 		h += '<tr><td colspan="' + r.columns.length + '" style="text-align:center;color:#6c757d;">'
-			+ (filter ? 'No rows match filter' : 'No rows') + '</td></tr>';
+			+ (filter ? 'No rows match filter' : (r.isAppend && !r.showAll) ? 'No new records in this sample' : 'No rows') + '</td></tr>';
 	} else {
 		// Store rows for click-to-detail (index stored on <tr data-ri>)
 		_cmDetailClickRows = { columns: r.columns, tooltips: r.tooltips || [], rows: filteredRows };
@@ -1169,14 +1206,15 @@ function cmDetailRenderFiltered(r, filter)
 
 	// Postpone watermark: prepend a subtle banner when postpone is active.
 	// In history mode: show prev/next sample navigation instead of a live countdown.
-	if (r.postponeEnabled && r.postponeTime > 0 && r.cmSampleTime) {
-		var _sampleMs = new Date(r.cmSampleTime).getTime();
+	// An Append CM with no new records at this sample has no rows (so no cmSampleTime) -- use resolvedTime.
+	var _wmSampleTs = r.cmSampleTime || r.resolvedTime;
+	if (r.postponeEnabled && r.postponeTime > 0 && _wmSampleTs) {
 		var _durStr   = _cmFmtDuration(r.postponeTime);
 		var _wm;
 		if (isHistoryViewActive()) {
 			// History mode — navigate to the actual adjacent DB samples (same as << / >>)
 			// Buttons rendered with placeholder text; async navSample calls fill in real timestamps.
-			var _curLabel = moment(r.cmSampleTime).format('HH:mm');
+			var _curLabel = moment(_wmSampleTs).format('HH:mm');
 			var _prevBtn = '<button id="cm-postpone-prev-lnk" type="button"'
 				+ ' class="btn btn-sm btn-outline-secondary py-0 px-2"'
 				+ ' onclick="_cmDetailNav(\'prev\')" title="Previous postpone sample">'
@@ -1191,10 +1229,10 @@ function cmDetailRenderFiltered(r, filter)
 				+ _prevBtn
 				+ ' <span id="cm-postpone-cur-ts" style="font-weight:600;">@' + escHtml(_curLabel) + '</span> '
 				+ _nextBtn + '</div>';
-			$('#cm-detail-table').prepend(_wm);
+			$('#cm-detail-sticky-top').prepend(_wm);
 
 			// Async-fetch real prev/next timestamps and update the button labels
-			var _navTs  = _cmTimestampMs || r.cmSampleTime;
+			var _navTs  = _cmTimestampMs || _wmSampleTs;
 			var _navSrv = _cmSrvName;
 			var _navCm  = _cmName;
 			var _today  = moment().format('YYYY-MM-DD');
@@ -1225,19 +1263,37 @@ function cmDetailRenderFiltered(r, filter)
 				});
 			}
 		} else {
-			// Live mode — countdown to next expected sample
-			var _nextAt = _sampleMs + r.postponeTime * 1000;
+			// Live mode — countdown to next expected sample, from when the CM last actually ran
+			// (lastSampleMs = collector's last refresh). The newest stored row is not that for an
+			// Append CM: a refresh that finds nothing new stores no row.
+			var _lastRunMs = (r.lastSampleMs > 0) ? r.lastSampleMs : new Date(_wmSampleTs).getTime();
+			var _nextAt = _lastRunMs + r.postponeTime * 1000;
 			_wm = '<div id="cm-postpone-watermark" class="py-1 px-2 mb-1"'
 				+ ' style="font-size:0.85em;background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;color:#856404;">'
 				+ '&#9201; <strong>Postpone enabled</strong> (interval: ' + escHtml(_durStr) + ') &mdash; next sample in approx '
-				+ '<strong id="cm-postpone-countdown"></strong></div>';
-			$('#cm-detail-table').prepend(_wm);
+				+ '<strong id="cm-postpone-countdown"></strong>'
+				+ '<span id="cm-postpone-force" class="ml-2">'
+				+ ' <button type="button" data-refresh-now="false" class="btn btn-sm btn-outline-warning py-0"'
+				+ ' style="font-size:0.95em;color:#856404;"'
+				+ ' title="Include this CM in the collector&#39;s next regular sample (ignoring postpone, just once)">'
+				+ '<i class="fa fa-clock-o"></i> Next sample</button>'
+				+ ' <button type="button" data-refresh-now="true" class="btn btn-sm btn-outline-warning py-0"'
+				+ ' style="font-size:0.95em;color:#856404;"'
+				+ ' title="Include this CM and start a new sample right away.&#10;Note: that sample is taken early for ALL CMs (shorter sample interval)">'
+				+ '<i class="fa fa-refresh"></i> Collect now</button>'
+				+ '</span></div>';
+			$('#cm-detail-sticky-top').prepend(_wm);
+			_cmInitForceButtons(r);
 			var _updWm = function() { $('#cm-postpone-countdown').text(_cmFmtCountdown(_nextAt - Date.now())); };
 			_updWm();
 			if (!_cmPostponeInterval)
 				_cmPostponeInterval = setInterval(_updWm, 1000);
 		}
 	}
+
+	// Sticky column headers sit just below the sticky info bar -- its height varies (watermark or not)
+	var _tblEl = document.getElementById('cm-detail-table');
+	if (_tblEl) _tblEl.style.setProperty('--cm-sticky-h', ($('#cm-detail-sticky-top').outerHeight() || 0) + 'px');
 
 	// Activate Bootstrap tooltips on the freshly rendered column headers
 	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip({ container: '#cm-detail-panel', boundary: 'window' });
@@ -1491,6 +1547,83 @@ function cmPostponeSliderGoTo(targetTsStr)
 	}
 	slider.value = idx + 1; // slider is 1-indexed
 	slider.dispatchEvent(new Event('change'));
+}
+
+/**
+ * Wire up the "Next sample" / "Collect now" buttons in the live postpone banner.
+ * The request is remembered per sample, since the banner is re-rendered on every refresh/filter.
+ */
+function _cmInitForceButtons(r)
+{
+	var srv      = _cmSrvName;
+	var cm       = r.cmName;
+	// Key on when the CM last ran (lastSampleMs), not on the newest row's cmSampleTime: an Append CM
+	// that finds nothing new stores no row, so cmSampleTime would never change and the banner would
+	// stay "Requested..." forever.
+	var lastRunMs = r.lastSampleMs > 0 ? r.lastSampleMs : 0;
+	var forceKey  = srv + '|' + cm + '|' + (lastRunMs || r.cmSampleTime);
+	var $span    = $('#cm-postpone-force');
+
+	var setRequested = function(refreshNow) {
+		$span.html(refreshNow
+			? '<strong><i class="fa fa-refresh fa-spin"></i> Collecting now&hellip;</strong>'
+			: '<strong><i class="fa fa-clock-o"></i> Requested, will be collected on next sample</strong>');
+	};
+	if (_cmForceRequestedKey && _cmForceRequestedKey.indexOf(forceKey + '|') === 0) {
+		setRequested(_cmForceRequestedKey.endsWith('|true'));
+		return;
+	}
+
+	$span.find('button').on('click', function() {
+		var refreshNow = $(this).attr('data-refresh-now') === 'true';
+		var $btns = $span.find('button').prop('disabled', true);
+		var fail  = function(msg) { $btns.prop('disabled', false).attr('title', 'Request failed: ' + msg); };
+		$.ajax({ url: '/api/cc/mgt/cm/force-refresh?' + $.param({ srv: srv, cm: cm, refreshNow: refreshNow }), type: 'POST', dataType: 'json',
+			success: function(fr) {
+				if (!fr || !fr.requested) { fail((fr && (fr.message || fr.error)) || 'unknown error'); return; }
+				_cmForceRequestedKey = forceKey + '|' + refreshNow;
+				setRequested(refreshNow);
+				if (refreshNow)
+					_cmPollForForcedSample(srv, cm, _cmTimestamp, lastRunMs);
+			},
+			error: function(xhr) { fail(xhr.responseText || xhr.statusText); }
+		});
+	});
+}
+
+/**
+ * After "Collect now": the page only refreshes on its own schedule, so poll the (cheap) CM list
+ * every 3s (max 60s) and do a live refresh as soon as a newer sample holds data for this CM --
+ * or, for a CM that ran but stored nothing (Append CM with no new records), as soon as a newer
+ * sample is persisted and the CM's lastSampleMs has moved past baselineLastRunMs.
+ */
+function _cmPollForForcedSample(srv, cm, baselineTs, baselineLastRunMs)
+{
+	if (_cmForceNowPoll) clearInterval(_cmForceNowPoll);
+	var startMs = Date.now();
+	var stop = function() { clearInterval(_cmForceNowPoll); _cmForceNowPoll = null; };
+	_cmForceNowPoll = setInterval(function() {
+		// Give up after 60s, or if the user moved on (other server/CM, history view, panel closed)
+		if (Date.now() - startMs > 60000 || _cmSrvName !== srv || _cmName !== cm
+				|| isHistoryViewActive() || !$('#cm-detail-panel').is(':visible')) {
+			stop();
+			return;
+		}
+		$.ajax({ url: '/api/cc/mgt/cm/list', data: { srv: srv, time: moment().format('YYYY-MM-DD HH:mm:ss') }, dataType: 'json',
+			success: function(lr) {
+				if (!_cmForceNowPoll || !lr || lr.error || !lr.resolvedTime) return;
+				if (baselineTs && lr.resolvedTime.substring(0, 19) <= baselineTs) return; // no newer sample yet
+				var hasData = (lr.groups || []).some(function(g) {
+					return g.cms.some(function(c) {
+						return c.cmName === cm && (c.hasData || (baselineLastRunMs > 0 && c.lastSampleMs > baselineLastRunMs));
+					});
+				});
+				if (!hasData) return; // newer sample, but this CM isn't stored yet (PCS writes async) / hasn't run yet
+				stop();
+				cmDetailLiveRefresh(srv);
+			}
+		});
+	}, 3000);
 }
 
 /** Format seconds into a compact duration string: "1h", "30m", "1h 30m", "45s". */
@@ -1900,16 +2033,16 @@ function cmDetailUpdateTabColors(groups)
 {
 	if (!groups) return;
 	groups.forEach(function(g) {
-		var hasAny = g.cms.some(function(c) { return c.hasData; });
+		var groupState = _cmTabState(g.cms);
 		$('#cm-group-tabs li[data-group-name]').each(function() {
 			if ($(this).attr('data-group-name') === g.groupName) {
-				$(this).toggleClass('cm-tab-has-data', hasAny).toggleClass('cm-tab-no-data', !hasAny);
+				_cmApplyTabState($(this), groupState);
 			}
 		});
 		g.cms.forEach(function(c) {
 			$('#cm-name-tabs li[data-cm-name]').each(function() {
 				if ($(this).attr('data-cm-name') === c.cmName) {
-					$(this).toggleClass('cm-tab-has-data', c.hasData).toggleClass('cm-tab-no-data', !c.hasData);
+					_cmApplyTabState($(this), _cmTabState([c]));
 				}
 			});
 		});

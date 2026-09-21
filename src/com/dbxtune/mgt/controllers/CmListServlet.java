@@ -247,6 +247,7 @@ extends HttpServlet
 				cmMap.put("rateRows",      rateRows);
 				cmMap.put("postponeTime",    cm.getPostponeTime());
 				cmMap.put("postponeEnabled", cm.isPostponeEnabled());
+				cmMap.put("lastSampleMs",    cm.getLastLocalRefreshTime()); // when the CM last ran (Append CMs store no row when nothing new)
 				if (description            != null) cmMap.put("description",            description);
 				if (highlighterDescriptors != null) cmMap.put("highlighterDescriptors", highlighterDescriptors);
 				if (exceptionMsg      != null) cmMap.put("exceptionMsg",      exceptionMsg);

@@ -954,12 +954,36 @@
 		document.body.removeChild(ta);
 	};
 
+	/**
+	 * $.parseXML() THROWS on malformed XML, and every caller below runs from the dialog's open path -
+	 * so a single bad character in a pasted plan took the whole dialog down with it: blank dialog, no
+	 * message, and only an "Uncaught Error: Invalid XML" in the console. (Reported with a plan whose
+	 * xmlns value had lost its quotes - "<ShowPlanXML xmlns=http://..." - which the XML parser rejects
+	 * at line 1 column 20.)
+	 *
+	 * Returning null instead lets each caller degrade on its own AND - the actual point - lets the open
+	 * path run to completion and reach the graphical renderer, whose parseXml() already detects exactly
+	 * this failure and reports the reason properly in the diagram area via getLastParseError(). The
+	 * error handling was already there; this just stops the dialog dying before it can be used.
+	 */
+	function _ssParseXmlSafe(xmlText) {
+		try {
+			var doc = $.parseXML(xmlText);
+			return (doc && doc.documentElement) ? doc : null;
+		} catch (ex) {
+			return null;
+		}
+	}
+
 	window.ssShowplanGetSql = function (fallbackSqlText) {
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
 		var tmpSql  = '-- No SQL StatementText was found in the XML Plan. The below SQL is from column \'lastKnownSql\':\n' + fallbackSqlText;
 		$('#dbx-view-ssShowplan-sqlContent').text(tmpSql);
 
-		var xmlDoc           = $.parseXML(xmlText);
+		// Unparseable plan: same fallback as a plan that simply carries no StatementText (see the
+		// return at the end of this function for why that must not be an empty string).
+		var xmlDoc           = _ssParseXmlSafe(xmlText);
+		if (!xmlDoc) return tmpSql;
 		var sqlTextArr       = [];
 		var queryHashArr     = [];
 		var queryPlanHashArr = [];
@@ -1573,7 +1597,9 @@
 
 	window.ssShowplanGetParameters = function () {
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
-		var xmlDoc  = $.parseXML(xmlText);
+		// null on an unparseable plan - $(null).find() matches nothing, so this falls through to the
+		// "no parameters" branch below, which is the right answer for a plan we cannot read.
+		var xmlDoc  = _ssParseXmlSafe(xmlText);
 		var compileArr = [], runtimeArr = [];
 
 		$(xmlDoc).find('ParameterList').find('ColumnReference').each(function (i, e) {
@@ -1620,7 +1646,7 @@
 
 	window.ssShowplanSetParametersInSql = function (paramType) {
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
-		var xmlDoc  = $.parseXML(xmlText);
+		var xmlDoc  = _ssParseXmlSafe(xmlText);
 		$(xmlDoc).find('ParameterList').find('ColumnReference').each(function (i, e) {
 			var paramName  = e.getAttribute('Column');
 			var paramValue = '-unknown-';

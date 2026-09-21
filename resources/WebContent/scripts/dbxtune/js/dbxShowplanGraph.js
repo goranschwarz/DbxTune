@@ -550,6 +550,10 @@ window.DbxShowplanGraph = (function () {
 	 * estimated-only plan every node is counter-less, and conflating the two would grey out the whole
 	 * diagram (14 of the 55 corpus plans are estimated-only).
 	 *
+	 * One inference on top of the counters: a node that carries NO counters but whose every child is
+	 * already marked is marked too (see visit() for why - it keeps a dead branch from rendering with
+	 * holes in it). The tree root is exempt.
+	 *
 	 * Sets `node._neverExecuted` (always, true or false - so a re-parse cannot leave stale marks) and
 	 * returns how many nodes were marked.
 	 */
@@ -570,10 +574,30 @@ window.DbxShowplanGraph = (function () {
 			var own      = execOf(node);
 			var ranHere  = (typeof own === 'number' && own > 0);
 			var ranBelow = false;
-			(node.children || []).forEach(function (child) { if (visit(child)) ranBelow = true; });
+			var kids     = node.children || [];
+			kids.forEach(function (child) { if (visit(child)) ranBelow = true; });
 
 			node._neverExecuted = false;
-			if (own === 0 && !ranBelow) markSubtree(node);
+			if (own === 0 && !ranBelow) {
+				markSubtree(node);
+			}
+			// A counter-less node whose every input is dead is dead too - it can only ever have emitted
+			// the rows its children fed it, and they fed it none. Without this rule a dead branch renders
+			// with holes in it: SQL Server folds a Compute Scalar into the operator that consumes it and
+			// gives it no <RunTimeInformation> at all, so a hatched Table Scan ends up feeding two
+			// full-colour Compute Scalars, which reads as a rendering bug rather than as a branch that
+			// did nothing. Note this is the exact opposite situation to the "absent is not zero" rule in
+			// the header: absent counters still do not make a node dead on their own, only its children
+			// can - so an estimated-only plan (where nothing is ever marked, hence no node ever has all
+			// children marked) stays completely untouched, as do leaves.
+			//
+			// The ROOT is exempt: inferring the whole tree's verdict from its only child would hatch the
+			// statement box itself, and a root that genuinely did not run is already covered by the
+			// own === 0 rule above.
+			else if (typeof own !== 'number' && node !== root && kids.length
+			      && kids.every(function (c) { return c._neverExecuted; })) {
+				markSubtree(node);
+			}
 
 			return ranHere || ranBelow;
 		}
@@ -611,7 +635,28 @@ window.DbxShowplanGraph = (function () {
 			+ P + 'box.' + prefix + '-never-exec ' + P + 'icon { filter: grayscale(1); opacity: 0.45; }'
 			// The "never executed" caption itself - the only part of the box kept legible.
 			+ P + 'never-exec-note { font-size: 10px; font-style: italic; color: #7a7a7a;'
-			+   ' letter-spacing: 0.02em; }';
+			+   ' letter-spacing: 0.02em; }'
+
+			// ...and the "not started yet" variant, for a plan captured while the query was still
+			// running, where zero executions means "not reached yet" rather than "skipped". The hatching
+			// is dropped and the icon kept mostly readable, in a cooler blue-grey: this operator is
+			// expected to run, it simply has not yet, and marking it like a dead branch is exactly what
+			// made a live plan look as though whole branches had been abandoned.
+			//
+			// Three classes deep so every rule beats its two-class counterpart above without !important,
+			// and placed after them so an equal-specificity tie would still fall this way.
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started {'
+			+   ' background-image: none; background-color: #fbfcfe;'
+			+   ' border-color: #9fb4cc; border-style: dashed; }'
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'label,'
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'logicalop,'
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'subtitle,'
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'metric,'
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'cost { color: #6b7a8c; }'
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'icon {'
+			+   ' filter: grayscale(0.5); opacity: 0.72; }'
+			// Two classes, so it beats the one-class caption rule above.
+			+ P + 'never-exec-note.' + prefix + '-not-started-note { color: #4a6b8a; }';
 	}
 
 	return {

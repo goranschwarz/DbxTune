@@ -700,14 +700,24 @@ at pc:
 			flex-shrink: 0;
 			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFCAYAAABSIVz6AAAAGklEQVQoU2M4c+bMfwYKACMjIwMjNQwcegYCAKb/CAAPoGBOAAAAAElFTkSuQmCC');
 		}
-		/* Tab styling: blue = has data, strikethrough = no data */
+		/* Tab styling: blue = has data, strikethrough = no data, dashed strikethrough = postponed, double = disabled */
 	#cm-detail-panel .nav-link                 { padding: 3px 8px !important; font-size: 0.85em; }
 	#cm-detail-table .table-sm td,
 	#cm-detail-table .table-sm th             { padding: 1px 4px !important; }
+	/* Sticky top: postpone watermark + info bar + column headers stay visible when scrolling the table.
+	   Padding lives on #cm-detail-table (not the scroll pane) so sticky top:0 hits the pane's top edge.
+	   container-type lets the sticky bar use 100cqw = visible pane width (stays put on horizontal scroll). */
+	#cm-detail-table-wrap                      { container-type: inline-size; }
+	#cm-detail-table                           { padding: 0 6px 4px; width: max-content; min-width: 100%; }
+	#cm-detail-sticky-top                      { position: sticky; top: 0; left: 0; z-index: 3; background: #fff; width: 100cqw; margin-left: -6px; padding: 4px 6px 1px; }
+	#cm-detail-table thead th                  { position: sticky; top: var(--cm-sticky-h, 0px); z-index: 2; }
 	.cm-tab-has-data > a.nav-link              { color: #0066cc !important; }
 	.cm-tab-has-data > a.nav-link.active       { color: #0066cc !important; font-weight: 600; box-shadow: inset 0 -3px 0 #0066cc; }
 	.cm-tab-no-data  > a.nav-link              { color: #6c757d !important; text-decoration: line-through; }
 	.cm-tab-no-data  > a.nav-link.active       { color: #6c757d !important; text-decoration: line-through; font-weight: 600; box-shadow: inset 0 -3px 0 #6c757d; }
+	/* Postponed CM (samples every N sec): no data in this sample, but other samples have data */
+	.cm-tab-postponed > a.nav-link             { color: #5a8fc4 !important; text-decoration: line-through dashed; text-decoration-thickness: 1.5px; }
+	.cm-tab-postponed > a.nav-link.active      { color: #5a8fc4 !important; text-decoration: line-through dashed; text-decoration-thickness: 1.5px; font-weight: 600; box-shadow: inset 0 -3px 0 #5a8fc4; }
 	.cm-tab-disabled > a.nav-link              { color: #b0b0b0 !important; text-decoration: line-through double !important; opacity: 0.7; }
 	.cm-tab-disabled > a.nav-link.active       { color: #b0b0b0 !important; text-decoration: line-through double !important; opacity: 0.7; font-weight: 600; box-shadow: inset 0 -3px 0 #b0b0b0; }
 	/* Fallback ribbon for tabs not in a has/no-data li (e.g. group tabs) */
@@ -747,6 +757,8 @@ at pc:
 	#cm-detail-panel.cm-dark .nav-link.active            { background:#3a3a3a !important; border-color:#555 #555 #3a3a3a !important; color:#ddd !important; }
 	#cm-detail-panel.cm-dark .cm-tab-has-data > a.nav-link        { color:#5bc8ff !important; }
 	#cm-detail-panel.cm-dark .cm-tab-has-data > a.nav-link.active { color:#5bc8ff !important; box-shadow: inset 0 -3px 0 #5bc8ff !important; }
+	#cm-detail-panel.cm-dark .cm-tab-postponed > a.nav-link        { color:#7fa6c9 !important; }
+	#cm-detail-panel.cm-dark .cm-tab-postponed > a.nav-link.active { color:#7fa6c9 !important; box-shadow: inset 0 -3px 0 #7fa6c9 !important; }
 	#cm-detail-panel.cm-dark .nav-tabs .nav-link.active           { box-shadow: inset 0 -3px 0 #5bc8ff !important; }
 	#cm-detail-panel.cm-dark #cm-detail-type-bar          { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
 	#cm-detail-panel.cm-dark #cm-detail-filter-bar       { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
@@ -755,6 +767,7 @@ at pc:
 	#cm-detail-panel.cm-dark #cm-trend-popup .cm-tg-item:hover { background:#3a3a3a; }
 	#cm-detail-panel.cm-dark #cm-trend-popup .cm-tg-hdr  { background:#333; border-bottom-color:#555; color:#aaa; }
 	#cm-detail-panel.cm-dark #cm-detail-body             { background:#1e1e1e; color:#e0e0e0; }
+	#cm-detail-panel.cm-dark #cm-detail-sticky-top       { background:#1e1e1e; }
 	#cm-detail-panel.cm-dark .cm-gutter                  { background-color:#3a3a3a; }
 	#cm-detail-panel.cm-dark .cm-gutter:hover            { background-color:#555; }
 	#cm-detail-panel.cm-dark .table                      { color:#e0e0e0; }
@@ -1436,7 +1449,7 @@ at pc:
 		<div id="cm-detail-body">
 			<div id="cm-detail-loading" style="display:none;color:#6c757d;padding:15px;text-align:center;flex-shrink:0;">Loading...</div>
 			<div id="cm-detail-content" style="display:flex;flex:1;min-height:0;height:100%;">
-				<div id="cm-detail-table-wrap" style="overflow:auto;padding:4px 6px;">
+				<div id="cm-detail-table-wrap" style="overflow:auto;">
 					<div id="cm-detail-table"></div>
 				</div>
 				<div id="cm-detail-charts" style="display:none;padding:4px 6px;overflow:auto;"></div>

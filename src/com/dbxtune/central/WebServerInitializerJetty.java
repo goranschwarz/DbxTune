@@ -284,6 +284,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(ProxyCmListServlet.class,                   "/api/cc/mgt/cm/list");               // Ask a collector What CM "Properties" it has for a specific time
 		webapp.addServlet(ProxyCmDataServlet.class,                   "/api/cc/mgt/cm/data");               // Get CM data for a specific CM at a time
 		webapp.addServlet(ProxyCmNavSampleServlet.class,              "/api/cc/mgt/cm/navSample");          // get next/prev sample time for a CM
+		webapp.addServlet(ProxyCmForceRefreshServlet.class,           "/api/cc/mgt/cm/force-refresh");      // refresh a (postponed) CM on next sample
 		webapp.addServlet(CollectorRegisterServlet.class,             "/api/cc/mgt/collector/register");    // Called by any collector to register information that normally is kept in: ${HOME}/.dbxtune/dbxc/info/
 		webapp.addServlet(CmIconServlet.class,                        "/api/cc/mgt/cm/icon");               // Get Icon File(s) from the Collector instance
 		webapp.addServlet(ProxyDbmsConfigServlet.class,               "/api/cc/mgt/dbms-config");           // Get DBMS Config from the Collector instance

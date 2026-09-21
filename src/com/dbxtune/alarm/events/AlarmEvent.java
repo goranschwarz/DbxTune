@@ -351,7 +351,8 @@ extends Throwable
 		}
 
 		// If the CM is in the DEMAND list... then it's going to be refreshed on "next" try
-		if (cm.getCounterController().isCmInDemandRefreshList(cm.getName()))
+		// But NOT for a one-shot external request (REST/Web UI "force refresh"), then the postpone time still applies
+		if (cm.getCounterController().isCmInDemandRefreshList(cm.getName()) && ! cm.getCounterController().isCmInDemandRefreshListExternalOnly(cm.getName()))
 			ttl = -1;
 
 		setTimeToLive( ttl );

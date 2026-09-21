@@ -416,6 +416,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmTableBloat  </b> -- New CM to estimate table bloats from statistics</LI>
 
+		<LI><b>CmPgStatements</b> -- Added columns 'pgss_dealloc', 'pgss_stats_reset' from pg_stat_statements_info - To get "re-structure" changes in pg_stat_statements (if pg_stat_statements.max is exceeded, and possibly needs to be raised)</LI>
+
 		<LI><b>CmPgTables    </b> -- Added column 'est_bloat_pct' -- algo: n_dead_tup / n_live_tup * 100  (Skipping tables with 'n_dead_tup' less than 100)</LI>
 		<LI><b>CmPgTables    </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
 
