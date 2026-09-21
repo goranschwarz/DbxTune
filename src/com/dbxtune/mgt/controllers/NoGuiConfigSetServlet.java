@@ -23,9 +23,12 @@ package com.dbxtune.mgt.controllers;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -267,6 +270,7 @@ System.out.println("---- json.changeMap = '" + changeMap + "'.");
 		boolean isBootNeeded  = false;
 		String  infoMessage   = null;
 		String  errorMessage  = null;
+		Map<String, String> fieldErrors = Collections.emptyMap(); // per parameter validation errors (alarmBatch)
 
 //		boolean saveToFile = "THIS_SERVER".equals(saveType) || "SERVER_TEMPLATE".equals(saveType);
 		boolean saveToFile = "THIS_SERVER".equals(saveType);
@@ -295,60 +299,71 @@ System.out.println("---- json.changeMap = '" + changeMap + "'.");
 			statusMessage = "FAILED";
 			infoMessage   = "cmName '" + cmName + "' not found.";
 		}
-		else if ("alarmSettings".equals(sendType))
+		else if ("alarmSettings".equals(sendType) || "alarmBatch".equals(sendType))
 		{
-			// isAlarmEnabled and timeRangeCron are stored as Configuration properties
-			if (changeMap.containsKey("isAlarmEnabled"))
+			// "alarmBatch"   : change = { "<paramName>": "<value>", ... } for the alarm 'optName', where paramName is
+			//                  as in NoGuiConfigGetServlet 'alarmSettings.alarms[].parameters[].name' (including "<alarm> isAlarmEnabled" and "<alarm> timeRangeCron")
+			// "alarmSettings": change = { "isAlarmEnabled": "true|false", "timeRangeCron": "..." } for the alarm 'optName'
+			//                  which is the same as a batch with "<optName> isAlarmEnabled" and "<optName> timeRangeCron"
+			// ALL values are validated before ANYTHING is saved, and the file is written once.
+			Map<String, String> batch = changeMap;
+			if ("alarmSettings".equals(sendType))
 			{
-				boolean isAlarmEnabled = "true".equalsIgnoreCase(changeMap.get("isAlarmEnabled"));
-				String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, optName);
-
-				Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
-				if (noguiConf != null)
-				{
-					saveConfigProperty(noguiConf, propKey, String.valueOf(isAlarmEnabled),
-					                   String.valueOf(CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnEnabled), saveToFile);
-					infoMessage = "Alarm '" + optName + "' enabled=" + isAlarmEnabled;
-				}
-				else
-				{
-					respStatus    = HttpServletResponse.SC_OK;
-					statusMessage = "FAILED";
-					infoMessage   = "No NOGUI_SAVE config instance available.";
-				}
+				batch = new LinkedHashMap<>();
+				if (changeMap.containsKey("isAlarmEnabled")) batch.put(optName + IS_ALARM_ENABLED_SUFFIX, changeMap.get("isAlarmEnabled"));
+				if (changeMap.containsKey("timeRangeCron" )) batch.put(optName + TIME_RANGE_CRON_SUFFIX , changeMap.get("timeRangeCron"));
 			}
 
-			if (changeMap.containsKey("timeRangeCron") && "success".equals(statusMessage))
-			{
-				String timeRangeCron = changeMap.get("timeRangeCron");
-				try
-				{
-					CmSettingsHelper.CronTimeRangeInputValidator validator = new CmSettingsHelper.CronTimeRangeInputValidator();
-					validator.isValid(null, timeRangeCron);
+			Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
 
-					String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, optName);
-					Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
-					if (noguiConf != null)
-					{
-						saveConfigProperty(noguiConf, propKey, timeRangeCron,
-						                   CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange, saveToFile);
-						infoMessage = (infoMessage != null ? infoMessage + "; " : "") + "timeRangeCron='" + timeRangeCron + "'";
-					}
-					else
-					{
-						respStatus    = HttpServletResponse.SC_OK;
-						statusMessage = "FAILED";
-						infoMessage   = "No NOGUI_SAVE config instance available.";
-					}
-				}
-				catch (ValidationException ex)
+			// Phase 1: resolve and validate everything
+			List<ResolvedChange> resolved = new ArrayList<>();
+			Map<String, String> errors = new TreeMap<>();
+			for (Map.Entry<String, String> entry : batch.entrySet())
+			{
+				String paramName = entry.getKey();
+				if (StringUtil.hasValue(optName) && !paramName.equals(optName) && !paramName.startsWith(optName + " "))
 				{
-					respStatus    = HttpServletResponse.SC_OK;
-					statusMessage = "FAILED";
-					infoMessage   = "Validation failed for timeRangeCron";
-					errorMessage  = ex.getMessage();
-					_logger.warn("Validation failed for timeRangeCron='{}': {}", timeRangeCron, ex.getMessage());
+					errors.put(paramName, "Parameter '" + paramName + "' does not belong to the alarm '" + optName + "'.");
+					continue;
 				}
+				ResolvedChange rc = resolveChange(cm, false, paramName, entry.getValue());
+				if (rc.errorMsg != null)
+					errors.put(paramName, rc.errorMsg);
+				else
+					resolved.add(rc);
+			}
+
+			if (noguiConf == null)
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "No NOGUI_SAVE config instance available.";
+			}
+			else if ( ! errors.isEmpty() )
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Validation failed, nothing was saved.";
+				errorMessage  = errors.size() == 1 ? errors.values().iterator().next() : errors.size() + " values failed validation.";
+				fieldErrors   = errors;
+				_logger.warn("Validation failed for cm '{}', alarm '{}': {}", cmName, optName, errors);
+			}
+			else
+			{
+				// Phase 2: everything is valid... save (write the file once at the end)
+				List<String> infoList = new ArrayList<>();
+				for (ResolvedChange rc : resolved)
+				{
+					saveConfigProperty(noguiConf, rc.propKey, rc.newValue, rc.defaultValue, false);
+					infoList.add(rc.info);
+				}
+				if (saveToFile && !resolved.isEmpty())
+					noguiConf.save();
+
+				// Some CM's parse alarm settings only in initAlarms(), make them use the new values from the next alarm check
+				if ( ! resolved.isEmpty() )
+					cm.requestInitAlarms();
+
+				infoMessage = resolved.isEmpty() ? "Nothing to change." : String.join("; ", infoList);
 			}
 		}
 		else if ("options".equals(sendType))
@@ -397,102 +412,33 @@ System.out.println("---- json.changeMap = '" + changeMap + "'.");
 		}
 		else // "settings", "alarmParams", or default — look up in LocalSettings / LocalAlarmSettings
 		{
-			String newValue = changeMap.get("value");
+			ResolvedChange rc = resolveChange(cm, "settings".equals(sendType), optName, changeMap.get("value"));
+			Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
 
-			List<CmSettingsHelper> localSettings      = cm.getLocalSettings()      != null ? cm.getLocalSettings()      : Collections.emptyList();
-			List<CmSettingsHelper> localAlarmSettings = cm.getLocalAlarmSettings() != null ? cm.getLocalAlarmSettings() : Collections.emptyList();
-
-			List<CmSettingsHelper> searchList = "settings".equals(sendType) ? localSettings : localAlarmSettings;
-
-			CmSettingsHelper cfgEntry = CmSettingsHelper.getByName(optName, searchList);
-
-			// Fallback to LocalSettings when searching alarm params
-			if (cfgEntry == null && !"settings".equals(sendType))
-				cfgEntry = CmSettingsHelper.getByName(optName, localSettings);
-
-			if (cfgEntry == null)
+			if (rc.errorMsg != null)
 			{
-				// Special case: "X isAlarmEnabled" and "X timeRangeCron" are injected into the
-				// alarmParams table by the GET servlet (insertExtraAlarmSettings) but are NOT
-				// stored in getLocalAlarmSettings() — they live as config properties, handled
-				// exactly like the alarmSettings branch.
-				final String IS_ALARM_ENABLED_SUFFIX = " isAlarmEnabled";
-				final String TIME_RANGE_CRON_SUFFIX  = " timeRangeCron";
-
-				if (optName != null && optName.endsWith(IS_ALARM_ENABLED_SUFFIX))
-				{
-					String colname = optName.substring(0, optName.length() - IS_ALARM_ENABLED_SUFFIX.length());
-					boolean isAlarmEnabled = "true".equalsIgnoreCase(newValue);
-					String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname);
-					Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
-					if (noguiConf != null)
-					{
-						saveConfigProperty(noguiConf, propKey, String.valueOf(isAlarmEnabled),
-						                   String.valueOf(CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnEnabled), saveToFile);
-						infoMessage = "Alarm '" + colname + "' isAlarmEnabled=" + isAlarmEnabled;
-					}
-					else
-					{
-						statusMessage = "FAILED";
-						infoMessage   = "No NOGUI_SAVE config instance available.";
-					}
-				}
-				else if (optName != null && optName.endsWith(TIME_RANGE_CRON_SUFFIX))
-				{
-					String colname = optName.substring(0, optName.length() - TIME_RANGE_CRON_SUFFIX.length());
-					try
-					{
-						new CmSettingsHelper.CronTimeRangeInputValidator().isValid(null, newValue);
-						String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname);
-						Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
-						if (noguiConf != null)
-						{
-							saveConfigProperty(noguiConf, propKey, newValue,
-							                   CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange, saveToFile);
-							infoMessage = "Alarm '" + colname + "' timeRangeCron='" + newValue + "'";
-						}
-						else
-						{
-							statusMessage = "FAILED";
-							infoMessage   = "No NOGUI_SAVE config instance available.";
-						}
-					}
-					catch (ValidationException ex)
-					{
-						respStatus    = HttpServletResponse.SC_OK;
-						statusMessage = "FAILED";
-						infoMessage   = "Validation failed for timeRangeCron";
-						errorMessage  = ex.getMessage();
-						_logger.warn("Validation failed for timeRangeCron='{}': {}", newValue, ex.getMessage());
-					}
-				}
-				else
-				{
-					respStatus    = HttpServletResponse.SC_OK;
-					statusMessage = "FAILED";
-					infoMessage   = "optName '" + optName + "' for cmName '" + cmName + "' not found.";
-				}
+				respStatus    = HttpServletResponse.SC_OK;
+				statusMessage = "FAILED";
+				infoMessage   = rc.errorInfo;
+				errorMessage  = rc.errorMsg;
+				_logger.warn("{} for '{}' value='{}': {}", rc.errorInfo, optName, changeMap.get("value"), rc.errorMsg);
+			}
+			else if (noguiConf == null)
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "No NOGUI_SAVE config instance available.";
 			}
 			else
 			{
-				try
-				{
-					cfgEntry.isValidInput(newValue);
-//					cfgEntry.setStringValue(newValue); // We should never SET values in the helper (we will get the values from the properties)
+				saveConfigProperty(noguiConf, rc.propKey, rc.newValue, rc.defaultValue, saveToFile);
+				infoMessage = rc.info;
 
-					Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
-					if (noguiConf != null)
-						saveConfigProperty(noguiConf, cfgEntry.getPropName(), newValue, cfgEntry.getDefaultValue(), saveToFile);
-					infoMessage = "Setting '" + optName + "' set to '" + newValue + "'.";
-				}
-				catch (ValidationException ex)
-				{
-					respStatus    = HttpServletResponse.SC_OK;
-					statusMessage = "FAILED";
-					infoMessage   = "Validation failed";
-					errorMessage  = ex.getMessage();
-					_logger.warn("Validation failed for setting '{}' value='{}': {}", optName, newValue, ex.getMessage());
-				}
+				// Local Settings are often used when the SQL is created, and some CM's parse alarm settings only in initAlarms()
+				// Make them use the new values from the next refresh / alarm check
+				if ( "settings".equals(sendType) )
+					cm.requestSqlReInit();
+				else
+					cm.requestInitAlarms();
 			}
 		}
 
@@ -510,6 +456,13 @@ System.out.println("---- json.changeMap = '" + changeMap + "'.");
 		gen.writeStringField ("status"      , statusMessage);
 		if (StringUtil.hasValue(infoMessage))  gen.writeStringField("info" , infoMessage);
 		if (StringUtil.hasValue(errorMessage)) gen.writeStringField("error", errorMessage);
+		if ( ! fieldErrors.isEmpty() )
+		{
+			gen.writeObjectFieldStart("errors");
+			for (Map.Entry<String, String> e : fieldErrors.entrySet())
+				gen.writeStringField(e.getKey(), e.getValue());
+			gen.writeEndObject();
+		}
 		gen.writeBooleanField("isBootNeeded", isBootNeeded);
 		gen.writeEndObject();
 		gen.close();
@@ -520,6 +473,97 @@ System.out.println("---- json.changeMap = '" + changeMap + "'.");
 
 		out.flush();
 		out.close();
+	}
+
+	private static final String IS_ALARM_ENABLED_SUFFIX = " isAlarmEnabled";
+	private static final String TIME_RANGE_CRON_SUFFIX  = " timeRangeCron";
+
+	/** A validated change (propKey/newValue/defaultValue), or why it can't be done (errorInfo/errorMsg) */
+	private static class ResolvedChange
+	{
+		String propKey;
+		String newValue;
+		String defaultValue;
+		String info;       // description of the change, when OK
+		String errorInfo;  // short reason, when NOT OK
+		String errorMsg;   // detailed message, when NOT OK (null = OK)
+
+		static ResolvedChange ok(String propKey, String newValue, String defaultValue, String info)
+		{
+			ResolvedChange rc = new ResolvedChange();
+			rc.propKey = propKey; rc.newValue = newValue; rc.defaultValue = defaultValue; rc.info = info;
+			return rc;
+		}
+		static ResolvedChange failed(String errorInfo, String errorMsg)
+		{
+			ResolvedChange rc = new ResolvedChange();
+			rc.errorInfo = errorInfo; rc.errorMsg = errorMsg;
+			return rc;
+		}
+	}
+
+	/**
+	 * Find and validate a Local Setting / Local Alarm Setting, or the injected "&lt;alarm&gt; isAlarmEnabled" / "&lt;alarm&gt; timeRangeCron"
+	 * (those are not in getLocalAlarmSettings(), they live as config properties). Nothing is saved here.
+	 *
+	 * @param cm                The CM
+	 * @param isLocalSettings   true = look in getLocalSettings(), false = getLocalAlarmSettings() with fallback to getLocalSettings()
+	 * @param name              Name of the setting (as in NoGuiConfigGetServlet)
+	 * @param newValue          The new value
+	 */
+	private ResolvedChange resolveChange(CountersModel cm, boolean isLocalSettings, String name, String newValue)
+	{
+		List<CmSettingsHelper> localSettings      = cm.getLocalSettings()      != null ? cm.getLocalSettings()      : Collections.emptyList();
+		List<CmSettingsHelper> localAlarmSettings = cm.getLocalAlarmSettings() != null ? cm.getLocalAlarmSettings() : Collections.emptyList();
+
+		CmSettingsHelper cfgEntry = CmSettingsHelper.getByName(name, isLocalSettings ? localSettings : localAlarmSettings);
+
+		// Fallback to LocalSettings when searching alarm params
+		if (cfgEntry == null && !isLocalSettings)
+			cfgEntry = CmSettingsHelper.getByName(name, localSettings);
+
+		if (cfgEntry != null)
+		{
+			try
+			{
+				cfgEntry.isValidInput(newValue);
+				return ResolvedChange.ok(cfgEntry.getPropName(), newValue, cfgEntry.getDefaultValue(), "Setting '" + name + "' set to '" + newValue + "'.");
+			}
+			catch (ValidationException ex)
+			{
+				return ResolvedChange.failed("Validation failed", ex.getMessage());
+			}
+		}
+
+		if (name != null && name.endsWith(IS_ALARM_ENABLED_SUFFIX))
+		{
+			String colname = name.substring(0, name.length() - IS_ALARM_ENABLED_SUFFIX.length());
+			if ( ! "true".equalsIgnoreCase(newValue) && ! "false".equalsIgnoreCase(newValue) )
+				return ResolvedChange.failed("Validation failed", "Value for '" + name + "' must be 'true' or 'false', not '" + newValue + "'.");
+
+			boolean isAlarmEnabled = "true".equalsIgnoreCase(newValue);
+			String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname);
+			return ResolvedChange.ok(propKey, String.valueOf(isAlarmEnabled), String.valueOf(CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnEnabled),
+					"Alarm '" + colname + "' isAlarmEnabled=" + isAlarmEnabled);
+		}
+
+		if (name != null && name.endsWith(TIME_RANGE_CRON_SUFFIX))
+		{
+			String colname = name.substring(0, name.length() - TIME_RANGE_CRON_SUFFIX.length());
+			try
+			{
+				new CmSettingsHelper.CronTimeRangeInputValidator().isValid(null, newValue);
+				String propKey = cm.replaceCmAndColName(CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname);
+				return ResolvedChange.ok(propKey, newValue, CountersModel.DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange,
+						"Alarm '" + colname + "' timeRangeCron='" + newValue + "'");
+			}
+			catch (ValidationException ex)
+			{
+				return ResolvedChange.failed("Validation failed for timeRangeCron", ex.getMessage());
+			}
+		}
+
+		return ResolvedChange.failed("Not found", "optName '" + name + "' for cmName '" + cm.getName() + "' not found.");
 	}
 
 	private static class SaveConfigException 

@@ -3162,9 +3162,14 @@ function _cmConfigFetch(srvName, onSuccess, onError) {
  * @param initialTab  optional: 'alarms' to open on the Alarms tab (default: Info)
  * @param srvName     optional: server (default: the Counter Details server)
  */
+var _cmPropsCmName  = null;  // CM shown in the Properties modal
+var _cmPropsSrvName = null;  // ... and its server
+
 function cmPropsOpen(cmName, initialTab, srvName) {
 	srvName = srvName || _cmSrvName;
 	if (!srvName) return;
+	_cmPropsCmName  = cmName;
+	_cmPropsSrvName = srvName;
 
 	// If we already have it cached for this server, use it
 	if (_cmConfigCache && _cmConfigCacheSrv === srvName) {
@@ -3368,7 +3373,11 @@ function _cmPropsAlarmsHtml(alarmSettings) {
 			+ 'onclick="$(\'#' + alarmId + '\').toggle();">'
 			+ '<div style="display:flex;justify-content:space-between;align-items:center;">'
 			+ '<span><i class="fa fa-bell" style="color:#ffc107;margin-right:6px;"></i><b>' + escHtml(alarm.name || '') + '</b></span>'
+			+ '<span style="white-space:nowrap;">'
+			+ '<button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:0.85em;padding:0 8px;margin-right:10px;" title="Change this alarm"'
+			+ ' data-alarm="' + escHtml(alarm.name || '') + '" onclick="event.stopPropagation(); cmPropsAlarmEdit(this.getAttribute(\'data-alarm\'));">Edit...</button>'
 			+ '<i class="fa fa-chevron-down" style="color:#aaa;font-size:0.8em;"></i>'
+			+ '</span>'
 			+ '</div>';
 		if (alarm.description) {
 			html += '<div style="color:#666;font-size:0.9em;margin-top:2px;">' + escHtml(alarm.description) + '</div>';
@@ -3410,6 +3419,7 @@ function _cmPropsAlarmsHtml(alarmSettings) {
 //-----------------------------------------------------------
 
 var _cmAlarmOverviewRows = [];
+var _cmAlarmOverviewFiltered = [];  // rows currently shown (after search/filters)
 var _cmAlarmOverviewSrv  = null;  // server currently shown in the modal
 
 /** Servers on this graph page: the URL's server list (_serverList in dbxcentral.graph.js) + the Counter Details server */
@@ -3472,6 +3482,7 @@ function cmAlarmOverviewRender() {
 		onlyModified  : $('#cm-alarm-overview-only-modified' ).is(':checked')
 	});
 	$('#cm-alarm-overview-count').text(rows.length + ' of ' + _cmAlarmOverviewRows.length + ' alarms');
+	_cmAlarmOverviewFiltered = rows;
 
 	if (!rows.length) {
 		$('#cm-alarm-overview-content').html('<div class="text-muted py-2">No alarms match.</div>');
@@ -3516,7 +3527,10 @@ function cmAlarmOverviewRender() {
 			+ '<td style="text-align:center;">' + changedIcon + '</td>'
 			+ '<td style="white-space:nowrap;" title="' + escHtml(r.timeRangeDescription) + '">' + escHtml(r.timeRangeCron) + '</td>'
 			+ '<td style="color:#666;font-size:0.92em;">' + escHtml(r.description) + '</td>'
-			+ '<td><a href="' + editUrl + '" target="_blank" rel="noopener" title="View/Change in Collector Configuration (new tab)"><i class="fa fa-pencil"></i></a></td>'
+			+ '<td style="white-space:nowrap;">'
+			+ '<a href="#" class="cm-alarm-overview-edit" data-cm="' + escHtml(r.cmName) + '" data-alarm="' + escHtml(r.name) + '" title="Change this alarm"><i class="fa fa-pencil"></i></a>'
+			+ '&nbsp;&nbsp;<a href="' + editUrl + '" target="_blank" rel="noopener" title="Show in Collector Configuration (new tab)" style="color:#aaa;"><i class="fa fa-external-link"></i></a>'
+			+ '</td>'
 			+ '</tr>';
 	});
 
@@ -3536,7 +3550,50 @@ $(function() {
 	});
 
 	$('#cm-alarm-overview-srv-select').on('change', function() { cmAlarmOverviewOpen(false, $(this).val()); });
+
+	// Pencil: edit the alarm (Previous/Next walks the rows currently shown)
+	$('#cm-alarm-overview-content').on('click', 'a.cm-alarm-overview-edit', function(e) {
+		e.preventDefault();
+		var srvName = _cmAlarmOverviewSrv;
+		DbxAlarmEditor.open({
+			srvName    : srvName,
+			cmName     : $(this).attr('data-cm'),
+			alarmName  : $(this).attr('data-alarm'),
+			configData : _cmConfigCacheSrv === srvName ? _cmConfigCache : null,
+			list       : _cmAlarmOverviewFiltered.map(function(r) { return { cmName: r.cmName, name: r.name }; }),
+			onSaved    : function(newConfig) {
+				_cmConfigCache    = newConfig;
+				_cmConfigCacheSrv = srvName;
+				_cmAlarmOverviewRows = dbxAlarmOverviewFlatten(newConfig.cmList || []);
+				cmAlarmOverviewRender();
+			}
+		});
+	});
 });
+
+/** Properties modal -> Alarms tab -> "Edit..." */
+function cmPropsAlarmEdit(alarmName) {
+	var cmName = _cmPropsCmName, srvName = _cmPropsSrvName;
+	if (!cmName || !srvName) return;
+	DbxAlarmEditor.open({
+		srvName    : srvName,
+		cmName     : cmName,
+		alarmName  : alarmName,
+		configData : _cmConfigCacheSrv === srvName ? _cmConfigCache : null,
+		onSaved    : function(newConfig) {
+			_cmConfigCache    = newConfig;
+			_cmConfigCacheSrv = srvName;
+			$('#cm-props-alarms-content').html(_cmPropsAlarmsHtml((_cmPropsFindCm(newConfig, cmName) || {}).alarmSettings));
+		}
+	});
+}
+
+function _cmPropsFindCm(configData, cmName) {
+	var cmList = (configData && configData.cmList) || [];
+	for (var i = 0; i < cmList.length; i++)
+		if (cmList[i].cmName === cmName) return cmList[i];
+	return null;
+}
 
 /**
  * Open the Counter Details panel, optionally navigating to a specific CM.

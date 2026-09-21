@@ -43,6 +43,18 @@ extends CountersModel
 	private static final long serialVersionUID = 1L;
 
 	/**
+	 * The Summary CM is ALWAYS refreshed (all implementations override isRefreshable() to return true), so it is always active.
+	 * <p>
+	 * Without this it reported false (and was shown as "disabled" in the web UI) when the NoGui config file has
+	 * 'CmSummary.persistCounters=false', since CounterCollectorThreadNoGui calls setActive(false) on all such CM's at startup.
+	 */
+	@Override
+	public boolean isActive()
+	{
+		return true;
+	}
+
+	/**
 	 * @param name                        Name of the Counter Model
 	 * @param groupName                   Name of the Group this counter belongs to, can be null
 	 * @param sql                         SQL Used to grab a sample from the counter data
