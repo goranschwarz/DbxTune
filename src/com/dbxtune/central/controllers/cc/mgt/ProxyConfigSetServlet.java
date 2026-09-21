@@ -37,6 +37,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.controllers.cc.ProxyHelper;
+import com.dbxtune.central.pcs.DbxCentralRealm;
 
 public class ProxyConfigSetServlet 
 extends ProxyHelper
@@ -47,6 +48,15 @@ extends ProxyHelper
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
+		// Changing a Collector's configuration requires an admin login
+		// (same rule as the web pages: role 'admin', or the user named 'admin')
+		if ( ! req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) && ! "admin".equals(req.getRemoteUser()) )
+		{
+			_logger.warn("Rejected config change for server '" + req.getParameter("srvName") + "', not logged in as admin. user='" + req.getRemoteUser() + "', from host '" + req.getRemoteHost() + "'.");
+			sendJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "admin-required", "You need to be logged in with admin rights to change the configuration.");
+			return;
+		}
+
 		// Get "basic" stuff... implemented in parent class
 		getSrvInfo(req);
 		

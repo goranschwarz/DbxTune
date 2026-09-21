@@ -71,6 +71,7 @@ function getParameter(key, defaultValue)
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.utils.js"></script>
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarmOverview.js"></script>
+  <script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarmEditor.js"></script>
 
   <!-- JQuery -->
   <script type="text/javascript"  src="/scripts/jquery/jquery-3.7.1.min.js"></script>
@@ -547,7 +548,7 @@ function getParameter(key, defaultValue)
 					>
 					<thead>
 						<tr>
-		<!--				  <th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>-->
+						<th data-field="operation"      data-filter-control="input" data-formatter="createChangeButton">Operation</th>
 						<th data-field="name"                 data-filter-control="input">Name</th>
 		<!--				  <th data-field="isAlarmEnabled"       data-filter-control="input" data-formatter="formatBoolean">isAlarmEnabled</th>-->
 		<!--				  <th data-field="timeRangeCron"        data-filter-control="input" data-formatter="formatTimeRangeCron">timeRangeCron</th>-->
@@ -591,7 +592,7 @@ function getParameter(key, defaultValue)
 		<!-- Alarm Overview (all alarms in all CMs) -->
 		<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 		<div class="tab-pane fade" id="alarm-overview-tab" role="tabpanel" aria-labelledby="alarm-overview-tab-head">
-			<i>Below is a list of <b>all</b> alarms in <b>all</b> counters, <b>click</b> on any row to view/change it in the Collector Configuration tab...</i>
+			<i>Below is a list of <b>all</b> alarms in <b>all</b> counters, <b>click</b> on any row to view/change the alarm (or the <i class="fa-solid fa-arrow-right-to-bracket"></i> icon to show it in the Collector Configuration tab)...</i>
 			<div class="d-flex align-items-center flex-wrap gap-3 my-2">
 				<input type="search" id="alarm-overview-search" class="form-control form-control-sm" style="width:300px;" placeholder="Search: counter, alarm, description, parameter...">
 				<label class="form-check-label"><input type="checkbox" class="form-check-input" id="alarm-overview-only-effective"> Only effective</label>
@@ -623,6 +624,7 @@ function getParameter(key, defaultValue)
 					<th data-field="isModified"            data-sortable="true" data-formatter="formatAlarmOverviewModified">Modified</th>
 					<th data-field="timeRangeCron"         data-filter-control="input" data-sortable="true" data-formatter="formatAlarmOverviewTimeRange">Time Range</th>
 					<th data-field="description"           data-filter-control="input" data-sortable="true" data-formatter="formatAlarmOverviewText">Description</th>
+					<th data-field="showInCollector"       data-formatter="formatAlarmOverviewShowInCollector"></th>
 				</tr>
 			</thead>
 			</table>
@@ -949,14 +951,40 @@ function getParameter(key, defaultValue)
 		return '<span title="' + dbxAlarmOverviewEsc(row.timeRangeDescription) + '">' + dbxAlarmOverviewEsc(value) + '</span>';
 	}
 
+	function formatAlarmOverviewShowInCollector(value, row, index)
+	{
+		return '<i class="fa-solid fa-arrow-right-to-bracket text-muted" title="Show in the Collector Configuration tab"></i>';
+	}
+
 	$('#alarmOverviewTable').on('click-row.bs.table', function (e, row, $element, field)
 	{
-		// Select when the Collector Configuration tab is visible (row highlight/scroll needs a visible table)
-		$('#cc-cfg-tab-head').one('shown.bs.tab', function() {
-			dbxSelectCmAlarm(row.cmName, row.name, row.name);
-		});
-		bootstrap.Tab.getOrCreateInstance(document.getElementById('cc-cfg-tab-head')).show();
+		if (field === 'showInCollector')
+		{
+			// Select when the Collector Configuration tab is visible (row highlight/scroll needs a visible table)
+			$('#cc-cfg-tab-head').one('shown.bs.tab', function() {
+				dbxSelectCmAlarm(row.cmName, row.name, row.name);
+			});
+			bootstrap.Tab.getOrCreateInstance(document.getElementById('cc-cfg-tab-head')).show();
+			return;
+		}
+
+		// Previous/Next in the editor walks the rows as currently shown (filtered + sorted)
+		const shown = $('#alarmOverviewTable').bootstrapTable('getData');
+		dbxOpenAlarmEditor(row.cmName, row.name, shown.map(function(r) { return { cmName: r.cmName, name: r.name }; }));
 	});
+
+	// Open the Alarm Editor (dbxAlarmEditor.js), and refresh this page after a save
+	function dbxOpenAlarmEditor(cmName, alarmName, list)
+	{
+		DbxAlarmEditor.open({
+			srvName    : _ccSrvName,
+			cmName     : cmName,
+			alarmName  : alarmName,
+			configData : _jsonResp,
+			list       : list,
+			onSaved    : function(newConfig) { dbxRefreshCurrentCm(); }
+		});
+	}
 
 	// By default hide "pre check"
 	$('#pre-check-div').hide();
@@ -1394,7 +1422,7 @@ function getParameter(key, defaultValue)
 
 		if (_isLoggedInAsAdmin)
 		{
-			if      (tableName === "alarmTable"   ) { dbxOpenConfigAlarmDialog(element); }
+			if      (tableName === "alarmTable"   ) { dbxOpenAlarmEditor(_lastClickedCmRow.cmName, element.name); }
 			else if (tableName === "optionsTable" ) { dbxOpenConfigParametersDialog("optionsTable" , element); }
 			else if (tableName === "settingsTable") { dbxOpenConfigParametersDialog("settingsTable", element); }
 			else if (tableName === "alarmParams"  ) { dbxOpenConfigParametersDialog("alarmParams"  , element); }

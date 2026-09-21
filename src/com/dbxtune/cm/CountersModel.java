@@ -3828,6 +3828,23 @@ implements Cloneable, ITableTooltip
 		_sqlRequest = sql;
 	}
 
+	/** Set by requestSqlReInit(), handled (and reset) by refreshGetData() */
+	private volatile boolean _sqlReInitRequested = false;
+
+	/**
+	 * Ask for the SQL to be re-created (initSql()) at the start of the next refresh.
+	 * <p>
+	 * Local Settings are often used by getSqlForVersion() when the SQL is created, so without this, a setting
+	 * changed at runtime (for example from the web UI) would not be used until reconnect/restart.
+	 * <p>
+	 * This is done by the refresh thread, NOT by the caller (like the GUI's setSql(null)), since refreshGetData()
+	 * reads getSql() more than once: a setSql(null) in between would execute 'null...' as SQL.
+	 */
+	public void requestSqlReInit()
+	{
+		_sqlReInitRequested = true;
+	}
+
 	/** */
 	public String getSqlWhere()
 	{
@@ -5323,6 +5340,14 @@ implements Cloneable, ITableTooltip
 //				}
 //			}
 //		}
+
+		// A Local Setting was changed at runtime, re-create the SQL (see requestSqlReInit())
+		if (_sqlReInitRequested)
+		{
+			_sqlReInitRequested = false;
+			_logger.info("Re-creating the SQL for CM '" + getName() + "', since a Local Setting was changed.");
+			setSql(null);
+		}
 
 		if (getSql() == null)
 		{
@@ -6905,6 +6930,15 @@ implements Cloneable, ITableTooltip
 	public void wrapperFor_sendAlarmRequest()
 	{
 //		System.out.println("################################## wrapperFor_sendAlarmRequest(): cm='"+getName()+"'.");
+
+		// Alarm settings was changed at runtime, re-initialize (see requestInitAlarms())
+		if (_initAlarmsRequested)
+		{
+			_initAlarmsRequested = false;
+			_logger.info("Re-initializing alarms for CM '" + getName() + "', since alarm settings was changed.");
+			initAlarms();
+		}
+
 		if ( ! isAlarmEnabled() )
 			return;
 		
@@ -7053,6 +7087,23 @@ implements Cloneable, ITableTooltip
 	 */
 	public void initAlarms()
 	{
+	}
+
+	/** Set by requestInitAlarms(), handled (and reset) by wrapperFor_sendAlarmRequest() */
+	private volatile boolean _initAlarmsRequested = false;
+
+	/**
+	 * Ask for initAlarms() to be called just before the next alarm check.
+	 * <p>
+	 * Some CM's parse alarm settings only in initAlarms() (for example 'dbname=mb' maps), so without this,
+	 * a setting changed at runtime (for example from the web UI) would not be used until the collector is restarted.
+	 * <p>
+	 * initAlarms() is done by the thread that checks the alarms, NOT by the caller, so an alarm check never sees
+	 * a half initialized structure (initAlarms() replaces and then fills the maps).
+	 */
+	public void requestInitAlarms()
+	{
+		_initAlarmsRequested = true;
 	}
 
 	/**
@@ -9911,20 +9962,11 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 			return;
 		}
 
-		if ( ! isActive() )
+		if ( ! isActive() ) // NOTE: CmSummary is always active (CmSummaryAbstract overrides isActive())
 		{
-			if ("CmSummary".equals(getName()))
-			{
-				// NOTE: CmSummary is always disabled (I don't know why... I can probably fix that by override isActive() in CmSummary...)
-				// But I didn't know the consequences so (for now) I choose to do it like this...
-				// BUT: I need to look at this: so we can trust isActive() in more cases without doing "exceptions" for CmSummary
-			}
-			else
-			{
-				if (_logger.isDebugEnabled())
-					_logger.debug(getName() + ": toJson(): Skipping due to: isActive() is FALSE");
-				return;
-			}
+			if (_logger.isDebugEnabled())
+				_logger.debug(getName() + ": toJson(): Skipping due to: isActive() is FALSE");
+			return;
 		}
 
 //		if ( ! hasValidSampleData() )
