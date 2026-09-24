@@ -346,7 +346,7 @@
 
 				// CM Detail Panel
 				$('.cm-detail-class').resizable({ handles: 'n, e, s, w, ne, nw, se, sw', stop: function() { _saveDialogGeom('cm-detail-panel'); } });
-				$('.cm-detail-class').draggable({ handle: ".cm-detail-ctl-class", stop: function() { _saveDialogGeom('cm-detail-panel'); } });
+				$('.cm-detail-class').draggable({ handle: ".cm-detail-ctl-class", stop: function() { cmDetailEnsureHeaderVisible(); _saveDialogGeom('cm-detail-panel'); } }); // snap back if dropped under the navbar / off-screen
 				_restoreDialogGeom('cm-detail-panel');
 
 				// DBMS Config Panel

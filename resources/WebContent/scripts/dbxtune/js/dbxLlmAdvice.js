@@ -353,27 +353,36 @@ var dbxLlmAdvice = (function () {
 	var _copyBtnHandlerInstalled = false;
 
 	/** Copy raw text to the clipboard using the same execCommand('copy') approach as dbxSqlText.js's copy button, for consistency and since it works without a secure (https/localhost) context. */
+	//
+	// The temporary <textarea> goes inside the enclosing Bootstrap modal (when there is one), not on
+	// <body>: the modal's focus trap pulls focus back the moment anything outside it is focused, which
+	// drops the selection - execCommand('copy') then still returns true but copies an EMPTY string.
 	function copyTextToClipboard(text, btnEl)
 	{
+		var host = (btnEl && btnEl.closest && btnEl.closest('.modal')) || document.body;
 		var textArea = document.createElement('textarea');
 		textArea.value = text;
-		document.body.appendChild(textArea);
+		textArea.setAttribute('readonly', '');
+		textArea.style.position = 'fixed'; textArea.style.top = '0'; textArea.style.left = '0'; textArea.style.opacity = '0';
+		host.appendChild(textArea);
+		textArea.focus();
 		textArea.select();
-		try
+		var ok = false;
+		try { ok = document.execCommand('copy'); } catch (err) {}
+		host.removeChild(textArea);
+		if (btnEl && btnEl.focus) btnEl.focus();
+
+		if (!ok)
 		{
-			document.execCommand('copy');
-			if (btnEl)
-			{
-				var orig = btnEl.textContent;
-				btnEl.textContent = 'Copied!';
-				setTimeout(function () { btnEl.textContent = orig; }, 1500);
-			}
+			alert('Unable to copy to the clipboard - select the text and press Ctrl+C instead.');
+			return;
 		}
-		catch (err)
+		if (btnEl)
 		{
-			alert('Unable to copy to clipboard\n\n' + err);
+			var orig = btnEl.textContent;
+			btnEl.textContent = 'Copied!';
+			setTimeout(function () { btnEl.textContent = orig; }, 1500);
 		}
-		document.body.removeChild(textArea);
 	}
 
 	/**
@@ -1121,10 +1130,43 @@ var dbxLlmAdvice = (function () {
 		return _enabledPromise;
 	}
 
+	/**
+	 * Full /api/llm/config answer ({enabled, configured, provider, providerName, model, loginRequired,
+	 * loggedIn}) - see LlmConfigServlet. Unlike isEnabled() this is fetched fresh on every call, since
+	 * the login state can change after the page was loaded. Resolves to null (never rejects) on failure.
+	 */
+	function getConfig()
+	{
+		return fetch('/api/llm/config')
+			.then(function (resp) { return resp.json(); })
+			.catch(function (err)
+			{
+				console.warn('dbxLlmAdvice: /api/llm/config failed: ' + err.message);
+				return null;
+			});
+	}
+
+	/**
+	 * Short status text for next to an "LLM Optimization Advice" heading, from a getConfig() result:
+	 * the model that will be used, or why it can't be used right now.
+	 */
+	function getStatusText(cfg)
+	{
+		if (!cfg)            return '';
+		if (cfg.configured === false) return 'Needs to be configured';
+
+		var txt = cfg.model || cfg.providerName || cfg.provider || '';
+		if (cfg.loginRequired && !cfg.loggedIn)
+			txt += (txt ? ' - ' : '') + 'Needs Login';
+		return txt;
+	}
+
 	return {
 		open: open,
 		close: close,
 		isEnabled: isEnabled,
+		getConfig: getConfig,
+		getStatusText: getStatusText,
 		// Exposed for callers that build their own /api/llm/optimize-sql request instead of going
 		// through open() - notably dbxShowplan.js's "LLM Prompt Preview" - so the prompt they PREVIEW
 		// is the same one open() would actually SEND.

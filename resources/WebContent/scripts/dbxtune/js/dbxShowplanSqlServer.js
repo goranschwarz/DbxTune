@@ -3020,7 +3020,39 @@ window.SqlServerShowplan = (function () {
 		return null;
 	}
 
-	function loadTableInfoAsync(roots, srv, dbname, tableSizeWarnMb, onBoxesChanged, findings, onFindingsChanged) {
+	// Every redraw (renderer/orientation/props toggle, "Big table >" change, Redraw button) re-runs
+	// loadTableInfoAsync() for the very same plan - without this, each one was a fresh round trip
+	// Central -> Collector -> DDL Storage for an identical answer. Holds the jqXHR promise itself (not
+	// the result), so a redraw that lands while the first request is still in flight shares it too.
+	// Keyed on everything that selects the answer, so switching plan/statement/server never reuses a
+	// wrong entry. Cleared by the dialog on open/close (clearTableInfoCache()), since DDL Storage can
+	// have been refreshed between two opens.
+	var _tableInfoCache = {};
+
+	function clearTableInfoCache() {
+		_tableInfoCache = {};
+	}
+
+	function fetchTableInfoJson(srv, dbname, ts, tables) {
+		var key = [srv, dbname, ts || '', tables.slice().sort().join(',')].join('|');
+		var cached = _tableInfoCache[key];
+		if (cached) return cached;
+
+		var req = $.ajax({
+			url:      '/api/cc/mgt/table-info',
+			data:     { srv: srv, dbVendor: 'Microsoft SQL Server', dbname: dbname,
+			            tables: tables.join(','), format: 'json', ts: ts || '' },
+			dataType: 'json'
+		});
+		// Never keep a failure - the Collector may simply have been offline for a moment.
+		req.fail(function () {
+			if (_tableInfoCache[key] === req) delete _tableInfoCache[key];
+		});
+		_tableInfoCache[key] = req;
+		return req;
+	}
+
+	function loadTableInfoAsync(roots, srv, dbname, ts, tableSizeWarnMb, onBoxesChanged, findings, onFindingsChanged) {
 		// The standalone paste-a-plan page has no live server context, so there is nothing to look up.
 		if (!srv || !dbname) return;
 
@@ -3036,12 +3068,7 @@ window.SqlServerShowplan = (function () {
 		var tables = Object.keys(nodesByTable);
 		if (!tables.length) return;
 
-		$.ajax({
-			url:      '/api/cc/mgt/table-info',
-			data:     { srv: srv, dbVendor: 'Microsoft SQL Server', dbname: dbname,
-			            tables: tables.join(','), format: 'json' },
-			dataType: 'json'
-		}).done(function (r) {
+		fetchTableInfoJson(srv, dbname, ts, tables).done(function (r) {
 			var byTable = (r && r.tables) || {};
 			var anyBoxGrew = false;
 
@@ -3165,7 +3192,7 @@ window.SqlServerShowplan = (function () {
 		if (opts.onFindingsChanged) opts.onFindingsChanged(findings);
 		var tableSizeWarnMb = (typeof opts.tableSizeWarnMb === 'number' && opts.tableSizeWarnMb >= 0)
 			? opts.tableSizeWarnMb : 100;
-		loadTableInfoAsync(stepRoots, opts.srv, opts.dbname, tableSizeWarnMb,
+		loadTableInfoAsync(stepRoots, opts.srv, opts.dbname, opts.ts, tableSizeWarnMb,
 			undefined /* no layout to redo - nothing was drawn */, findings, opts.onFindingsChanged);
 		return findings;
 	}
@@ -3178,6 +3205,7 @@ window.SqlServerShowplan = (function () {
 	 * opts (all optional):
 	 *   horizontal        left-to-right when true, top-to-bottom when false
 	 *   srv, dbname       live server context, enables the DDL Storage lookup
+	 *   ts                'YYYY-MM-DD HH:mm:ss' - which DDL Storage snapshot to read (default: now)
 	 *   tableSizeWarnMb   threshold for the "Large table/index" mark (default 100)
 	 *   propsTarget       element to render the Properties pane into
 	 *   onFindingsChanged callback receiving the findings array (called at least once)
@@ -3256,7 +3284,7 @@ window.SqlServerShowplan = (function () {
 
 		var tableSizeWarnMb = (typeof opts.tableSizeWarnMb === 'number' && opts.tableSizeWarnMb >= 0)
 			? opts.tableSizeWarnMb : 100;
-		loadTableInfoAsync(stepRoots, opts.srv, opts.dbname, tableSizeWarnMb,
+		loadTableInfoAsync(stepRoots, opts.srv, opts.dbname, opts.ts, tableSizeWarnMb,
 			layoutTuckAndConnectors, planFindings, opts.onFindingsChanged);
 	}
 
@@ -3264,6 +3292,7 @@ window.SqlServerShowplan = (function () {
 		parseXml:              parseXml,
 		render:                render,
 		collectFindings:       collectFindings,
+		clearTableInfoCache:   clearTableInfoCache,
 		renderPropertiesInto:  renderPropertiesInto,
 		// Detail panels are attached to <body> to escape the diagram's scroll clipping, so a caller
 		// that tears the diagram down (closing the dialog, switching to the other renderer) needs a

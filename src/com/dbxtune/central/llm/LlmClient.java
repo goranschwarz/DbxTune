@@ -37,6 +37,9 @@ public interface LlmClient
 	/** True if this provider is fully configured (API key / URL present) and can be used. */
 	boolean isEnabled();
 
+	/** The model name {@link #optimize} will ask for, e.g. {@code "claude-sonnet-4-5"} (configured or default). */
+	String getModel();
+
 	/** Call the LLM and return its optimization suggestion. */
 	LlmOptimizeResponse optimize(LlmOptimizeRequest request) throws Exception;
 

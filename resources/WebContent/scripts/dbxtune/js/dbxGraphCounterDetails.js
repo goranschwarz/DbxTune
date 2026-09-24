@@ -76,6 +76,9 @@ function _cmSetTableHtmlGuarded(html) {
 var _cmSort         = { col: -1, stage: 0 }; // sort state for current CM: stage 0=original 1=desc 2=asc
 var _cmSortMap      = {};                    // per-CM sort state, keyed by cmName — survives tab switching
 var _cmFilterMap    = {};                    // per-CM filter text (session only, not persisted to localStorage)
+var _cmFilterTimer  = null;                  // pending debounced filter apply (see cmDetailApplyFilterDebounced)
+var _CM_FILTER_DEBOUNCE_MS = 500;
+var _cmFilterApplySeq = 0;                   // bumped per cmDetailApplyFilter(), so only the latest deferred render runs
 var _cmDetailClickRows = null;               // {columns, tooltips, rows} — row store for click-to-detail modal
 // Auto-open restore: fire once on the first live/slider tick after page load
 var _cmAutoOpenChecked = false;
@@ -89,6 +92,39 @@ var _cmLastCmPerGroup = (function(){ try { return JSON.parse(localStorage.getIte
 //-----------------------------------------------------------
 // CM DETAIL PANEL
 //-----------------------------------------------------------
+
+/**
+ * Move the panel vertically so its header (the drag handle) is on screen and below the sticky navbar.
+ * The saved geometry (dbx.geom.pct.cm-detail-panel) may put it off-screen, e.g. after the window
+ * got smaller, or if it was dragged under the navbar -- then it could not be moved back.
+ * Horizontal position is left alone: the panel may be wider than the window / hang off the left or
+ * right edge on purpose (drag it sideways to reach the resize handles). Only if the header is
+ * completely out of reach sideways is it pulled back, just enough to leave a grabbable strip.
+ */
+function cmDetailEnsureHeaderVisible()
+{
+	var panel  = document.getElementById('cm-detail-panel');
+	var header = document.getElementById('cm-detail-header');
+	if (!panel || !header || !$(panel).is(':visible')) return;
+
+	var GRAB_PX = 100; // min width of header that must stay inside the window to be draggable
+
+	var nav    = document.querySelector('nav.navbar');
+	var minTop = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+	var maxTop = window.innerHeight - header.offsetHeight;
+
+	var rect = panel.getBoundingClientRect();
+	var top  = Math.max(minTop, Math.min(rect.top, maxTop));
+	var left = rect.left;
+	if (rect.right < GRAB_PX)                     left += GRAB_PX - rect.right;              // off to the left
+	if (rect.left  > window.innerWidth - GRAB_PX) left  = window.innerWidth - GRAB_PX;       // off to the right
+
+	if (top  !== rect.top)  panel.style.top  = top  + 'px';
+	if (left !== rect.left) panel.style.left = left + 'px';
+}
+$(window).on('resize', function() {
+	if ($('#cm-detail-panel').is(':visible')) cmDetailEnsureHeaderVisible();
+});
 
 function cmDetailLoadList(srvName, timestamp)
 {
@@ -108,7 +144,10 @@ function cmDetailLoadList(srvName, timestamp)
 	_cmSrvName   = srvName;
 	_cmTimestamp = timestamp;
 
-	$('#cm-detail-panel').css('display', 'flex');
+	var $panel = $('#cm-detail-panel');
+	var wasHidden = !$panel.is(':visible');
+	$panel.css('display', 'flex');
+	if (wasHidden) cmDetailEnsureHeaderVisible();
 	$('#cm-detail-srv').text('[' + srvName + ']');
 	$('#cm-detail-ts').text('@ ' + timestamp);
 	$('#cm-detail-loading').show();
@@ -413,6 +452,7 @@ function cmDetailRenderCms(cms)
 	$('#cm-name-tabs .nav-link').tooltip(_cmTabTooltipOpts);
 
 	if (_cmName && _cmName !== selCm) {
+		_cmFilterCancelPending();          // keep text typed within the debounce window
 		_cmSortMap[_cmName]  = _cmSort;   // save sort for previous CM
 		_cmFilterMap[_cmName] = _cmFilter; // save filter for previous CM
 	}
@@ -447,6 +487,7 @@ function cmDetailSelectCm(cmName)
 {
 	if (_cmName !== cmName) {
 		if (_cmName) {
+			_cmFilterCancelPending();          // keep text typed within the debounce window
 			_cmSortMap[_cmName]  = _cmSort;   // save sort for the tab we're leaving
 			_cmFilterMap[_cmName] = _cmFilter; // save filter for the tab we're leaving
 		}
@@ -869,8 +910,38 @@ function _cmApplyPreferredColumnOrder(r)
 	return out;
 }
 
+/**
+ * Called from the filter input's 'oninput': waits until typing pauses before
+ * re-rendering, since every render rebuilds the table and charts.
+ * The value is read when the timer fires, so the latest text is always used.
+ */
+function cmDetailApplyFilterDebounced()
+{
+	clearTimeout(_cmFilterTimer);
+	_cmFilterTimer = setTimeout(function() {
+		_cmFilterTimer = null;
+		cmDetailApplyFilter($('#cm-detail-filter-input').val() || '');
+	}, _CM_FILTER_DEBOUNCE_MS);
+}
+
+/**
+ * Drop a pending debounced apply without rendering, but keep the typed text in '_cmFilter'
+ * so it is saved in '_cmFilterMap' when switching CM.
+ */
+function _cmFilterCancelPending()
+{
+	if (!_cmFilterTimer) return;
+	clearTimeout(_cmFilterTimer);
+	_cmFilterTimer = null;
+	_cmFilter = $('#cm-detail-filter-input').val() || '';
+}
+
 function cmDetailApplyFilter(filter)
 {
+	// Immediate apply (clear button, hide-zero, sort, Enter) supersedes any pending debounced one
+	clearTimeout(_cmFilterTimer);
+	_cmFilterTimer = null;
+
 	_cmFilter = filter;
 	// Remember filter per-CM for this session (not persisted to localStorage)
 	if (_cmName) _cmFilterMap[_cmName] = filter;
@@ -880,7 +951,19 @@ function cmDetailApplyFilter(filter)
 		try { localStorage.setItem('cmDetail-hideZero-' + _cmName, (hz && hz.checked) ? '1' : '0'); } catch(e) {}
 	}
 	if (!_cmCurrentData) return;
-	cmDetailRenderFiltered(_cmCurrentData, filter);
+
+	// Show a status text, then yield so the browser can paint it before the (synchronous)
+	// render blocks the UI. The render overwrites the text with the row count when done.
+	// rAF + setTimeout: the timeout runs after the frame that shows the text has been painted.
+	$('#cm-detail-filter-count').text('Applying filter...');
+	var seq = ++_cmFilterApplySeq;
+	requestAnimationFrame(function() {
+		setTimeout(function() {
+			// A newer apply was requested, or the panel was closed, while waiting
+			if (seq !== _cmFilterApplySeq || !_cmCurrentData) return;
+			cmDetailRenderFiltered(_cmCurrentData, _cmFilter);
+		}, 0);
+	});
 }
 
 /** Returns an HTML badge for an aggregate column type (SUM/AVG/MIN/MAX), or '' if none. */
@@ -1866,6 +1949,10 @@ function cmDetailFilterKeydown(e)
 	dbxFilterKeydown(e, function() {
 		return (_cmCurrentData && _cmCurrentData.columns) ? _cmCurrentData.columns : [];
 	});
+
+	// Enter applies right away (skip the debounce) -- unless column completion consumed it
+	if (e.key === 'Enter' && !e.defaultPrevented)
+		cmDetailApplyFilter(e.target.value);
 }
 
 function cmDetailShowMsg(msg)
@@ -2120,7 +2207,7 @@ function cmDetailSortCol(colIdx)
 		} catch(e) {}
 	}
 
-	cmDetailApplyFilter(_cmFilter);
+	cmDetailApplyFilter($('#cm-detail-filter-input').val() || ''); // not '_cmFilter': it lags the input while a debounce is pending
 }
 
 function cmDetailClose()
@@ -2129,6 +2216,8 @@ function cmDetailClose()
 	$('#cm-detail-panel').hide();
 	_cmSrvName = _cmTimestamp = _cmTimestampMs = _cmGroup = _cmName = _cmListData = _cmCurrentData = null;
 	_cmNoDataRetryDone = false;
+	clearTimeout(_cmFilterTimer);
+	_cmFilterTimer = null;
 	_cmFilter = '';
 	_cmSort    = { col: -1, stage: 0 };
 	_cmSortMap = {};

@@ -396,7 +396,7 @@
 
 			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
 			"				<details id='dbx-ssp-sect-llm' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice</summary>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:#888;'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			// This button lives OUTSIDE #dbx-ssp-llm-body on purpose: dbxLlmAdvice.js's target-mode
 			// rendering replaces the whole innerHTML of its target element, so anything inside
@@ -417,7 +417,7 @@
 			// dbx-asp-sect-llmpreview.
 			"				<!-- ▶ LLM Prompt Preview (always available alongside LLM Optimization Advice above) -->",
 			"				<details id='dbx-ssp-sect-llmpreview' style='display:none;border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview</summary>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview<span style='font-weight:normal;color:#888;'> - Ask your favourite LLM</span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<p class='text-muted' id='dbx-ssp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
@@ -569,7 +569,7 @@
 
 			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
 			"				<details id='dbx-asp-sect-llm' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice</summary>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:#888;'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			// This button lives OUTSIDE #dbx-asp-llm-body on purpose: dbxLlmAdvice.js's target-mode
 			// rendering replaces the whole innerHTML of its target element, so anything inside
@@ -589,7 +589,7 @@
 			// (id='dbx-asp-llmpreview-note') between those two framings.
 			"				<!-- ▶ LLM Prompt Preview (always available alongside LLM Optimization Advice above) -->",
 			"				<details id='dbx-asp-sect-llmpreview' style='display:none;border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview</summary>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview<span style='font-weight:normal;color:#888;'> - Ask your favourite LLM</span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<p class='text-muted' id='dbx-asp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
@@ -706,20 +706,38 @@
 		var el = document.getElementById(id);
 		var txt = el ? (el.textContent || el.innerText || '') : '';
 		if (!txt) return;
-		if (navigator.clipboard && window.isSecureContext) {
-			navigator.clipboard.writeText(txt).catch(function() { _legacyCopy(txt); });
-		} else {
-			_legacyCopy(txt);
-		}
+		_copyText(txt);
 	};
-	function _legacyCopy(txt) {
+
+	/**
+	 * Copies text to the clipboard - used by every Copy button in these dialogs.
+	 *
+	 * The temporary <textarea> MUST go inside the open modal, not on <body>: Bootstrap 4's modal
+	 * focus trap (_enforceFocus) pulls focus back into the modal the moment anything outside it gets
+	 * focus, which drops the textarea's selection - execCommand('copy') then still returns true but
+	 * copies an EMPTY string. That was the silent "Copy Prompt does nothing" bug.
+	 */
+	function _copyText(txt) {
+		var anchor = document.activeElement;   // the clicked Copy button (inline onclick passes no `this`)
+		var host = (anchor && anchor.closest && anchor.closest('.modal')) || document.body;
 		var ta = document.createElement('textarea');
 		ta.value = txt;
-		ta.style.position = 'fixed'; ta.style.opacity = '0';
-		document.body.appendChild(ta);
+		ta.setAttribute('readonly', '');
+		ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.left = '0'; ta.style.opacity = '0';
+		host.appendChild(ta);
 		ta.focus(); ta.select();
-		try { document.execCommand('copy'); } catch(e) { alert('Copy failed:\n' + e); }
-		document.body.removeChild(ta);
+		var ok = false;
+		try { ok = document.execCommand('copy'); } catch (e) {}
+		host.removeChild(ta);
+		if (anchor && anchor.focus) anchor.focus();
+		if (!ok) {
+			alert('Unable to copy to the clipboard - select the text and press Ctrl+C instead.');
+		} else if (anchor && anchor.tagName === 'BUTTON' && !anchor._dbxCopiedTimer) {
+			var orig = anchor.innerHTML;
+			anchor.innerHTML = '&#10004; Copied!';
+			anchor._dbxCopiedTimer = setTimeout(function() { anchor.innerHTML = orig; anchor._dbxCopiedTimer = null; }, 1500);
+		}
+		return ok;
 	}
 
 	// -------------------------------------------------------------------------
@@ -822,16 +840,12 @@
 
 	window.pgShowplanCopySql = function () {
 		var txt = $('#dbx-view-pgShowplan-sqlContent').text();
-		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(txt);
 	};
 
 	window.pgShowplanCopyPlan = function () {
 		var txt = $('#dbx-view-pgShowplan-planContent').text();
-		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(txt);
 	};
 
 	// -------------------------------------------------------------------------
@@ -949,9 +963,7 @@
 
 	window.ssShowplanCopyXml = function () {
 		var txt = $('#dbx-view-ssShowplan-xmlContent').text();
-		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(txt);
 	};
 
 	/**
@@ -1018,9 +1030,7 @@
 
 	window.ssShowplanCopySql = function () {
 		var txt = $('#dbx-view-ssShowplan-sqlContent').text();
-		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(txt);
 	};
 
 	// -------------------------------------------------------------------------
@@ -1351,16 +1361,12 @@
 
 	window.aseShowplanCopySql = function () {
 		var txt = $('#dbx-view-aseShowplan-sqlContent').text();
-		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(txt);
 	};
 
 	window.aseShowplanCopyPlan = function () {
 		var txt = $('#dbx-view-aseShowplan-planContent').text();
-		var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(txt);
 	};
 
 	window.aseShowplanOpenExternal = function () {
@@ -1414,7 +1420,7 @@
 		// and ddlContext isn't - no need to duplicate that here.
 		var workloadData = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 		var dbmsVersion  = tiBody ? (tiBody.getAttribute('data-dbmsversion')  || '') : '';
-		dbxLlmAdvice.open({ sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, workloadData: workloadData, target: body });
+		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, workloadData: workloadData, target: body });
 	}
 
 	// Manual re-run - ignores the data-loaded guard (unlike the toggle handler) since this is an
@@ -1503,9 +1509,7 @@
 	window.aseShowplanCopyLlmPreview = function() {
 		var el = document.getElementById('dbx-asp-llmpreview-text');
 		if (!el) { alert('Build the prompt first.'); return; }
-		var ta = document.createElement('textarea'); ta.value = el.textContent; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(el.textContent);
 	};
 
 	/**
@@ -1772,6 +1776,39 @@ function _initGlobalEscClose() {
 	});
 }
 
+	/**
+	 * Fills the status text after an "LLM Optimization Advice" heading: the model it will use, or
+	 * "Needs to be configured" / "Needs Login". Re-fetched on every dialog open (not once per page),
+	 * since the user may have logged in since the page was loaded.
+	 */
+	function _updateLlmSummaryInfo(sectId) {
+		if (typeof dbxLlmAdvice === 'undefined' || !dbxLlmAdvice.getConfig) return;
+		dbxLlmAdvice.getConfig().then(function(cfg) {
+			var span = document.querySelector('#' + sectId + ' .dbx-llm-summary-info');
+			if (!span) return;
+			var txt = dbxLlmAdvice.getStatusText(cfg);
+			span.textContent = txt ? ' - ' + txt : '';
+		});
+	}
+
+	/**
+	 * The Advice sections are shown even when the feature isn't configured (see _updateLlmSummaryInfo()),
+	 * so check first rather than doing the DDL lookup only for the server to refuse the request.
+	 * "Needs Login" is left to the server on purpose: its not-logged-in answer still carries the
+	 * prompt, which dbxLlmAdvice.js renders.
+	 */
+	function _openLlmAdviceIfConfigured(body, opts) {
+		dbxLlmAdvice.getConfig().then(function(cfg) {
+			if (cfg && cfg.configured === false) {
+				body.innerHTML = '<em style="color:#888;">LLM Optimization Advice is not configured on this DbxCentral'
+					+ ' (<code>DbxCentral.llm.enabled=true</code> plus a provider API key/URL in DBX_CENTRAL.conf).'
+					+ '<br>You can still use <b>LLM Prompt Preview</b> below and paste the prompt into your favourite LLM.</em>';
+				return;
+			}
+			dbxLlmAdvice.open(opts);
+		});
+	}
+
 	function _initHandlers() {
 		// Idempotent-ish: _initHandlers() can run more than once (see its call sites), and re-binding
 		// the splitter's mousedown would just add a duplicate listener that does the same thing, so
@@ -1825,6 +1862,10 @@ function _initGlobalEscClose() {
 			if (window.SqlServerShowplan && window.SqlServerShowplan.closePanels) {
 				try { window.SqlServerShowplan.closePanels(); } catch (ex) {}
 			}
+			// Redraw cache of the graphical plan's DDL Storage lookups - only valid for one open.
+			if (window.SqlServerShowplan && window.SqlServerShowplan.clearTableInfoCache) {
+				window.SqlServerShowplan.clearTableInfoCache();
+			}
 			if (_sspWaitChart) {
 				try { _sspWaitChart.destroy(); } catch(e) {}
 				_sspWaitChart = null;
@@ -1839,6 +1880,12 @@ function _initGlobalEscClose() {
 
 		// SQL Server: set fields before modal becomes visible
 		$('#dbx-view-ssShowplan-dialog').on('show.bs.modal', function (e) {
+			// Fresh DDL Storage lookups for every open - before the relatedTarget check below, since the
+			// programmatic showSqlServerShowplanDialog() path comes through here too.
+			if (window.SqlServerShowplan && window.SqlServerShowplan.clearTableInfoCache) {
+				window.SqlServerShowplan.clearTableInfoCache();
+			}
+			_updateLlmSummaryInfo('dbx-ssp-sect-llm');
 			// When opened programmatically (showSqlServerShowplanDialog) relatedTarget
 			// is undefined — fields are already populated there, so skip.
 			if (!e.relatedTarget) return;
@@ -2036,6 +2083,8 @@ function _initGlobalEscClose() {
 
 		// ASE: set fields before modal becomes visible (data-toggle="modal" path)
 		$('#dbx-view-aseShowplan-dialog').on('show.bs.modal', function (e) {
+			// Before the relatedTarget check below, so the programmatic open path gets it too.
+			_updateLlmSummaryInfo('dbx-asp-sect-llm');
 			// When opened programmatically (showAseShowplanDialog) relatedTarget is undefined —
 			// fields are already populated there, so skip (mirrors the SQL Server dialog above).
 			if (!e.relatedTarget) return;
@@ -2265,16 +2314,19 @@ function _initGlobalEscClose() {
 			_aseShowplanLoadLlmPreview(body);
 		});
 
-		// Feature-toggle gated (DbxCentral.llm.enabled) - same rationale as the SQL Server section
-		// below. The Advice section only makes sense (i.e. can call a provider) when the feature is
-		// on; the Preview section never calls a provider at all, so it's shown either way - just
-		// with its note text swapped to explain why it's useful in each case.
+		// Feature-toggle aware (DbxCentral.llm.enabled) - same rationale as the SQL Server section
+		// below. Both sections are shown either way: the Advice heading carries the model/"Needs to be
+		// configured"/"Needs Login" status instead (_updateLlmSummaryInfo()), and the Preview section
+		// never calls a provider at all - just with its note text swapped to explain why it's useful in
+		// each case.
 		if (typeof dbxLlmAdvice !== 'undefined') {
 			dbxLlmAdvice.isEnabled().then(function(enabled) {
 				var llmSect        = document.getElementById('dbx-asp-sect-llm');
 				var llmPreviewSect = document.getElementById('dbx-asp-sect-llmpreview');
 				var llmPreviewNote = document.getElementById('dbx-asp-llmpreview-note');
-				if (llmSect)        llmSect.style.display        = enabled ? '' : 'none';
+				// Shown even when disabled - its heading then says "Needs to be configured" (see
+				// _updateLlmSummaryInfo()), and expanding it shows the server's "how to enable" message.
+				if (llmSect)        llmSect.style.display        = '';
 				if (llmPreviewSect) llmPreviewSect.style.display = '';
 				if (llmPreviewNote) {
 					llmPreviewNote.textContent = enabled
@@ -2369,18 +2421,19 @@ function _initGlobalEscClose() {
 			_ssShowplanLoadLlmPreview(body);
 		});
 
-		// Feature-toggle gated (DbxCentral.llm.enabled) - the section is baked into the injected HTML
-		// once, so rather than not injecting it at all, just hide it entirely when disabled (idempotent,
-		// safe to run every time _initHandlers() runs). The Advice section only makes sense (i.e. can
-		// call a provider) when the feature is on; the Preview section never calls a provider at all,
-		// so it's shown either way - just with its note text swapped to explain why it's useful in
-		// each case.
+		// Feature-toggle aware (DbxCentral.llm.enabled) - idempotent, safe to run every time
+		// _initHandlers() runs. The Advice section used to be hidden entirely when disabled; it's now
+		// always shown, with its heading saying "Needs to be configured" instead (_updateLlmSummaryInfo()).
+		// The Preview section never calls a provider at all, so it's shown either way - just with its
+		// note text swapped to explain why it's useful in each case.
 		if (typeof dbxLlmAdvice !== 'undefined') {
 			dbxLlmAdvice.isEnabled().then(function(enabled) {
 				var llmSect        = document.getElementById('dbx-ssp-sect-llm');
 				var llmPreviewSect = document.getElementById('dbx-ssp-sect-llmpreview');
 				var llmPreviewNote = document.getElementById('dbx-ssp-llmpreview-note');
-				if (llmSect)        llmSect.style.display        = enabled ? '' : 'none';
+				// Shown even when disabled - its heading then says "Needs to be configured" (see
+				// _updateLlmSummaryInfo()), and expanding it shows the server's "how to enable" message.
+				if (llmSect)        llmSect.style.display        = '';
 				if (llmPreviewSect) llmPreviewSect.style.display = '';
 				if (llmPreviewNote) {
 					llmPreviewNote.textContent = enabled
@@ -2427,7 +2480,7 @@ function _initGlobalEscClose() {
 		// and ddlContext isn't - no need to duplicate that here.
 		var workloadData = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 		var dbmsVersion  = tiBody ? (tiBody.getAttribute('data-dbmsversion')  || '') : '';
-		dbxLlmAdvice.open({ sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, ts: ts, workloadData: workloadData, target: body });
+		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, ts: ts, workloadData: workloadData, target: body });
 	}
 
 	// Manual re-run, e.g. after the user notices the advice looks stale, or just wants to try again.
@@ -2518,9 +2571,7 @@ function _initGlobalEscClose() {
 	window.ssShowplanCopyLlmPreview = function() {
 		var el = document.getElementById('dbx-ssp-llmpreview-text');
 		if (!el) { alert('Build the prompt first.'); return; }
-		var ta = document.createElement('textarea'); ta.value = el.textContent; document.body.appendChild(ta); ta.select();
-		try { document.execCommand('copy'); } catch (err) { alert('Unable to copy\n\n' + err); }
-		document.body.removeChild(ta);
+		_copyText(el.textContent);
 	};
 
 	// -------------------------------------------------------------------------
@@ -3056,11 +3107,15 @@ function _initGlobalEscClose() {
 		_ssShowplanSyncToolbar();
 		_ssShowplanFitPropsPane();
 
-		// srv/dbname are stashed on the table-info body by showSqlServerShowplanDialog()/the modal
-		// show handler - the same context store the Table Information and LLM sections read.
+		// srv/dbname/ts are stashed on the table-info body by showSqlServerShowplanDialog()/the modal
+		// show handler - the same context store the Table Information and LLM sections read. ts must
+		// be passed here too: without it the Collector reads the CURRENT DDL Storage, so for an older
+		// report the plan's per-operator sizes could come from a different snapshot than the Table
+		// Information section right below it.
 		var tiBody   = document.getElementById('dbx-ssp-tableinfo-body');
 		var tiSrv    = tiBody ? (tiBody.getAttribute('data-srv')    || '') : '';
 		var tiDbname = tiBody ? (tiBody.getAttribute('data-dbname') || '') : '';
+		var tiTs     = tiBody ? (tiBody.getAttribute('data-ts')     || '') : '';
 
 		// Parsed unconditionally, BEFORE the renderer dispatch below - Plan Analysis findings are a
 		// property of the plan XML, not of which of the two diagram libraries is currently drawing
@@ -3081,7 +3136,7 @@ function _initGlobalEscClose() {
 			// lookup twice (a real duplicate network request, not just redundant computation).
 			if (parsed) {
 				window.SqlServerShowplan.collectFindings(parsed,
-					{ srv: tiSrv, dbname: tiDbname, tableSizeWarnMb: _ssShowplanTableSizeWarnMb, onFindingsChanged: onFindings });
+					{ srv: tiSrv, dbname: tiDbname, ts: tiTs, tableSizeWarnMb: _ssShowplanTableSizeWarnMb, onFindingsChanged: onFindings });
 			}
 			try { QP.showPlan(el, xmlText); } catch (ex) {
 				el.innerHTML = '<span class="text-danger">html-query-plan could not render this plan: '
@@ -3119,6 +3174,7 @@ function _initGlobalEscClose() {
 			horizontal:      _ssShowplanHorizontal,
 			srv:             tiSrv,
 			dbname:          tiDbname,
+			ts:              tiTs,
 			tableSizeWarnMb: _ssShowplanTableSizeWarnMb,
 			propsTarget:     (_ssShowplanShowProps
 			                  ? (document.getElementById('dbx-view-ssShowplan-propsBody')

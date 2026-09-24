@@ -82,7 +82,15 @@ var DbxAlarmEditor = (function()
 			'.dbx-ae-banner-warn{background:#fff9db;color:#8a6d00;}',
 			'.dbx-ae-banner-info{background:#e7f5ff;color:#1864ab;}',
 			'.dbx-ae-banner-ok{background:#ebfbee;color:#2b8a3e;}',
-			'.dbx-ae-banner-err{background:#fff5f5;color:#c92a2a;}'
+			'.dbx-ae-banner-err{background:#fff5f5;color:#c92a2a;}',
+			'.dbx-ae-foot{position:relative;}',
+			'.dbx-ae-menu{position:absolute;bottom:calc(100% - 4px);right:16px;width:360px;max-width:calc(100vw - 40px);background:#fff;border:1px solid #ced4da;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:4px 0;z-index:1;}',
+			'.dbx-ae-menu-hdr{font-size:11px;color:#868e96;padding:4px 14px 6px;}',
+			'.dbx-ae-item{padding:7px 14px;font-size:13px;cursor:pointer;display:block;width:100%;text-align:left;border:none;background:none;color:#212529;}',
+			'.dbx-ae-item:hover{background:#f1f3f5;}',
+			'.dbx-ae-item:disabled{opacity:.55;cursor:default;}',
+			'.dbx-ae-item:disabled:hover{background:none;}',
+			'.dbx-ae-item-sub{display:block;font-size:11px;color:#868e96;margin-top:2px;}'
 		].join('\n');
 		var style = document.createElement('style');
 		style.id = 'dbx-ae-css';
@@ -350,10 +358,23 @@ var DbxAlarmEditor = (function()
 			+ '</span>';
 		if (s.isAdmin)
 		{
-			foot += '<label class="dbx-ae-sub" style="cursor:pointer;" title="Unchecked: saved in the collector\'s configuration file (survives a restart)">'
-				+ '<input type="checkbox" id="dbx-ae-inmem"' + (s.inMemoryOnly ? ' checked' : '') + '> Only until restart</label>';
 			foot += '<button type="button" class="dbx-ae-btn" id="dbx-ae-cancel">' + (pending.length ? 'Discard' : 'Close') + '</button>';
-			foot += '<button type="button" class="dbx-ae-btn dbx-ae-btn-primary" id="dbx-ae-save"' + (!pending.length || blocking || s.saving ? ' disabled' : '') + '>' + (s.saving ? 'Saving...' : 'Save') + '</button>';
+			foot += '<button type="button" class="dbx-ae-btn dbx-ae-btn-primary" id="dbx-ae-save"' + (!pending.length || blocking || s.saving ? ' disabled' : '') + ' title="Choose where to save">'
+				+ (s.saving ? 'Saving...' : 'Save &#9662;') + '</button>';
+
+			// Where to save: asked every time (same 3 choices as the Collector Configuration page)
+			if (s.saveMenuOpen)
+			{
+				foot += '<div class="dbx-ae-menu" id="dbx-ae-menu">'
+					+ '<div class="dbx-ae-menu-hdr">Where should the change be saved?</div>'
+					+ '<button type="button" class="dbx-ae-item" data-savetype="IN_MEMORY">Only in-memory (do not save to any file)'
+					+ '<span class="dbx-ae-item-sub">Used until the collector is restarted</span></button>'
+					+ '<button type="button" class="dbx-ae-item" data-savetype="THIS_SERVER">Save for THIS server'
+					+ '<span class="dbx-ae-item-sub">Written to ' + esc(s.srvName) + '\'s own configuration file, survives a restart</span></button>'
+					+ '<button type="button" class="dbx-ae-item" data-savetype="SERVER_TEMPLATE" disabled title="Not implemented by the collector yet">Save for ALL Servers sharing the same config file'
+					+ '<span class="dbx-ae-item-sub">Not implemented by the collector yet</span></button>'
+					+ '</div>';
+			}
 		}
 		else
 		{
@@ -409,12 +430,20 @@ var DbxAlarmEditor = (function()
 	function onClick(e)
 	{
 		var t = e.target.closest('button, input');
+
+		// a click anywhere else closes the "where to save" menu
+		if (_s.saveMenuOpen && (!t || (t.id !== 'dbx-ae-save' && !t.hasAttribute('data-savetype'))))
+		{
+			_s.saveMenuOpen = false;
+			render();
+		}
+
 		if (!t) { if (e.target === _s.root) confirmThen(close); return; } // click on the backdrop
 		if (t.id === 'dbx-ae-close' || t.id === 'dbx-ae-cancel') { confirmThen(close); return; }
 		if (t.id === 'dbx-ae-prev') { confirmThen(function() { step(-1); }); return; }
 		if (t.id === 'dbx-ae-next') { confirmThen(function() { step(+1); }); return; }
-		if (t.id === 'dbx-ae-save') { save(); return; }
-		if (t.id === 'dbx-ae-inmem') { _s.inMemoryOnly = t.checked; return; }
+		if (t.id === 'dbx-ae-save') { _s.saveMenuOpen = !_s.saveMenuOpen; render(); return; }
+		if (t.hasAttribute('data-savetype')) { _s.saveMenuOpen = false; save(t.getAttribute('data-savetype')); return; }
 		if (t.hasAttribute('data-reset'))
 		{
 			var f = _s.fields[parseInt(t.getAttribute('data-reset'), 10)];
@@ -432,7 +461,13 @@ var DbxAlarmEditor = (function()
 
 	function onKey(e)
 	{
-		if (e.key === 'Escape') { e.stopPropagation(); confirmThen(close); return; }
+		if (e.key === 'Escape')
+		{
+			e.stopPropagation();
+			if (_s.saveMenuOpen) { _s.saveMenuOpen = false; render(); return; }
+			confirmThen(close);
+			return;
+		}
 
 		// Left/Right arrow = Previous/Next alarm, but not while typing in a text field
 		if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey)
@@ -486,7 +521,8 @@ var DbxAlarmEditor = (function()
 		loadAlarm(e.cmName, e.name);
 	}
 
-	function save()
+	/** @param saveType 'IN_MEMORY' | 'THIS_SERVER' (| 'SERVER_TEMPLATE' when the collector supports it) */
+	function save(saveType)
 	{
 		var pending = pendingFields();
 		if (!pending.length || _s.saving) return;
@@ -496,7 +532,7 @@ var DbxAlarmEditor = (function()
 
 		var body = {
 			type     : 'alarmBatch',
-			saveType : _s.inMemoryOnly ? 'IN_MEMORY' : 'THIS_SERVER',
+			saveType : saveType,
 			cmName   : _s.cmObj.cmName,
 			optName  : _s.alarm.name,
 			change   : change
@@ -541,7 +577,9 @@ var DbxAlarmEditor = (function()
 			}
 
 			// Saved: re-read the configuration so we show what the collector has now
-			var savedInfo = { type: 'ok', text: 'Saved' + (body.saveType === 'IN_MEMORY' ? ' (only until the collector restarts).' : '.') + (res.json.isBootNeeded ? ' The collector needs a restart for this to take effect.' : '') };
+			var savedInfo = { type: 'ok', text: body.saveType === 'IN_MEMORY'
+					? 'Saved in memory only (used until the collector is restarted).'
+					: 'Saved for ' + srvName + ' (written to its configuration file).' };
 			return fetchConfig(srvName).then(function(newConfig)
 			{
 				if (!_s) return;
@@ -597,7 +635,7 @@ var DbxAlarmEditor = (function()
 			list         : Array.isArray(opts.list) ? opts.list.slice() : null,
 			listIdx      : 0,
 			isAdmin      : false,
-			inMemoryOnly : false,
+			saveMenuOpen : false,
 			saving       : false,
 			message      : null,
 			fields       : [],

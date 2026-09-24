@@ -1145,6 +1145,14 @@ extends CountersModel
 			.strEquals("status", "FAILED_LAST_RUN")
 			.bgColor("#FF9999"));
 
+		// GREEN cell — is_running is: 1
+		list.add(new CmHighlighterDescriptor()
+			.name("Is Running")
+			.eq("is_running", 1)
+			.scopeCell()
+			.highlightColumns("is_running")
+			.bgColor("#90EE90")); // Green
+
 		return list;
 	}
 	
