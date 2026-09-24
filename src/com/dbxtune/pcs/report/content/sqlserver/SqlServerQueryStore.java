@@ -575,8 +575,8 @@ extends SqlServerAbstract
 
 						// Put the "Actual Executed SQL Text" as a "tooltip"
 						return "<div title='Click for Detailes' "
-								+ "data-toggle='modal' "
-								+ "data-target='#dbx-view-sqltext-dialog' "
+								+ "data-bs-toggle='modal' "
+								+ "data-bs-target='#dbx-view-sqltext-dialog' "
 								+ "data-objectname='" + plan_id + "' "
 								+ "data-tooltip=\""   + sqlText     + "\" "
 								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
@@ -599,8 +599,8 @@ extends SqlServerAbstract
 
 						// Put the "Actual Executed SQL Text" as a "tooltip"
 						return "<div title='Click for Detailes' "
-								+ "data-toggle='modal' "
-								+ "data-target='#dbx-view-sqltext-dialog' "
+								+ "data-bs-toggle='modal' "
+								+ "data-bs-target='#dbx-view-sqltext-dialog' "
 								+ "data-objectname='" + plan_id + "' "
 								+ "data-tooltip=\""   + waitText     + "\" "
 								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
@@ -1488,8 +1488,8 @@ extends SqlServerAbstract
 
 					// Put the "Actual Executed SQL Text" as a "tooltip"
 					return "<div title='Click for Detailes' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-view-sqltext-dialog' "
 							+ "data-objectname='" + plan_id + "' "
 							+ "data-tooltip=\""   + waitText     + "\" "
 							+ "><i>ms</i>&#x1F4AC;</div>"; // ms... (Vertical Horizontal Ellipsis)

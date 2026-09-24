@@ -22,7 +22,7 @@
   <!-- JS: Bootstrap -->
 <!--<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
 <!--<script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
-  <script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
+  <script type="text/javascript" src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 
   <!-- JS: Selectize -->
   <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
@@ -49,7 +49,7 @@
 
   <!-- CSS: Bootstrap -->
 <!--<link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> --> 
-  <link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
+  <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'> 
 
   <!-- CSS: Font Awsome -->
   <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -181,7 +181,7 @@
 	}
 
 	/* Flip submenu to the left if near right edge */
-	.dropdown-submenu .dropdown-menu.dropdown-menu-left {
+	.dropdown-submenu .dropdown-menu.dropdown-menu-start {
 		left: auto;
 		right: 100%;
 	}
@@ -214,23 +214,23 @@
 
 <body>
   <!-- NavBar that works, except for: iphone... -->
-  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0 px-3">
     <a class="navbar-brand" href="/">DbxCentral</a>
     <!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="/images/dbxcentral_32.png">DbxCentral</a> -->
     <!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="/images/dbxcentral_16.png">DbxCentral</a> -->
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav mr-auto">
+      <ul class="navbar-nav me-auto">
         <li class="nav-item">
-          <a class="nav-link" href="/overview">Servers<span class="sr-only">(current)</span></a>
+          <a class="nav-link" href="/overview">Servers<span class="visually-hidden">(current)</span></a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/admin/admin.html">Admin</a>
         </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+          <a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
           <div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
             <div class="dbx-dropdown-submenu">
               <a class="dropdown-item" href="#">&#128202; Showplan</a>
@@ -251,16 +251,16 @@
         <li class="nav-item" style="display:flex;align-items:center;padding:0 4px;">
           <button id="alarm-panel-btn" onclick="alarmPanelToggle();" title="Active Alarms"
                   style="background:transparent;border:none;color:rgba(255,255,255,0.75);font-size:1.1em;padding:2px 8px;cursor:pointer;line-height:1;">
-            <i id="alarm-btn-icon" class="fa fa-bell-slash"></i><span style="display:inline-flex;flex-direction:column;align-items:stretch;gap:1px;line-height:1;vertical-align:middle;font-size:0.6em;"><span id="alarm-btn-count" class="badge badge-pill badge-danger" style="display:none;"></span><span id="alarm-btn-muted" class="badge badge-pill badge-secondary" style="display:none;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event);"></span></span>
+            <i id="alarm-btn-icon" class="fa fa-bell-slash"></i><span style="display:inline-flex;flex-direction:column;align-items:stretch;gap:1px;line-height:1;vertical-align:middle;font-size:0.6em;"><span id="alarm-btn-count" class="badge rounded-pill text-bg-danger" style="display:none;"></span><span id="alarm-btn-muted" class="badge rounded-pill text-bg-secondary" style="display:none;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event);"></span></span>
           </button>
         </li>
 	    <!-- IS LOGGED IN -->
         <div id="dbx-nb-isLoggedIn-div" style="display: none;">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
             </a>
-            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
             <a class="dropdown-item" href="#" onclick="dbxOpenSettings(); return false;"> <i class="fa fa-cog"></i> Settings</a>
             <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
             </div>
@@ -268,7 +268,7 @@
         </div>
 	    <!-- IS LOGGED OUT -->
         <div id="dbx-nb-isLoggedOut-div">
-          <a class="nav-link" href="/index.html?login=open"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+          <a class="nav-link" href="/index.html?login=open"> <i class="fa fa-sign-in"></i> <span data-bs-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
         </div>
       </ul> <!-- end right hand side -->
     </div>
@@ -280,7 +280,7 @@
    - - Basic info + "QUICK ACCESS" buttons to server graphs...
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
   <main role="main" class="container">
-    <div class="jumbotron">
+    <div class="jumbotron px-4 py-5 mb-4 bg-body-secondary rounded-2">
       <h1>DbxTune - Central</h1>
       <p class="lead">View Metrics for all your Database Systems in one place!</p>
       <!-- <p class="lead">View all your DBMS trends graphs in a centralized console.</p> -->
@@ -295,7 +295,7 @@
       </div>
 
       <div id="x"> <!-- So we can "skip" the top image in an easy way -->
-        <button type="button" class="btn btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
+        <button type="button" class="btn btn-primary btn-ok" data-bs-toggle="modal" data-bs-backdrop="static" data-bs-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
       </div>
       <p></p>
       <p>
@@ -323,8 +323,8 @@
         <br>
         &#10148; Profiles
         <div id="dbx-quick-access-profile-list">
-<!--        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>-->
-          <button type="button" class="btn btn-sm btn-primary mb-2 btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">New Profile...</button>
+<!--        <a class="btn btn-sm btn-primary mb-2" data-bs-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>-->
+          <button type="button" class="btn btn-sm btn-primary mb-2 btn-ok" data-bs-toggle="modal" data-bs-backdrop="static" data-bs-target="#dbx-choose-graphs-dialog">New Profile...</button>
         </div>
 
         <br>
@@ -332,7 +332,7 @@
           <b>Alarm Info:</b> <span id="dbx-alarm-cnt">0</span> Active / <span id="dbx-alarm-muted-cnt">0</span> Muted<span id="dbx-alarm-srv-cnt">, in 0 Server(s)</span>
           &nbsp;&rarr;&nbsp;Next Check in <span id="dbx-alarm-next-poll">...</span>s
           &nbsp;&nbsp;<a href="#" onclick="histAlarmOpen(null); return false;" style="white-space:nowrap;"
-             data-toggle="tooltip" data-placement="bottom" data-html="true"
+             data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true"
              title="Click this link to view alarms for &lt;b&gt;all servers&lt;/b&gt;&lt;br&gt;— or —&lt;br&gt;Click a &lt;b&gt;Server button&lt;/b&gt; above and choose &lt;i&gt;View Historical Alarms&lt;/i&gt;"><i class="fa fa-history"></i> View Historical Alarms&hellip;</a>
         </div>
       </div>
@@ -350,8 +350,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="dbx-choose-graphs-dialog-title">Choose Graphs to Display</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
           </button>
         </div>
         <div class="modal-body">
@@ -372,9 +371,9 @@
           </span>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary mr-auto btn-saveAsProfile" id="dbx-saveAsProfile-btn" data-toggle="modal" data-backdrop="static" data-target="#dbx-saveAsNewProfile-dialog">Save as new Profile...</button>
+          <button type="button" class="btn btn-primary me-auto btn-saveAsProfile" id="dbx-saveAsProfile-btn" data-bs-toggle="modal" data-bs-backdrop="static" data-bs-target="#dbx-saveAsNewProfile-dialog">Save as new Profile...</button>
 
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           <button type="button" class="btn btn-primary btn-ok">View Graphs</button>
         </div>
       </div>
@@ -393,8 +392,7 @@
         <form class="container needs-validation" novalidate id="dbx-saveAsNewProfile-form" onsubmit="return false;">
           <div class="modal-header">
             <h5 class="modal-title" id="dbx-saveAsNewProfile-dialog-title">Save as New Profile</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
             </button>
           </div>
           <div class="modal-body">
@@ -402,24 +400,24 @@
             <br>
 			<br>
 
-            <div class="form-group">
+            <div class="mb-3">
               <label class="form-control-label" for="dbx-fld-profileName">Profile Name</label>
               <input type="text" class="form-control" name="profileName" id="dbx-fld-profileName" placeholder="Name of the Profile, which will be the button label" value="" required />
               <div class="invalid-feedback">Name must be specified!</div>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
               <label class="form-control-label" for="dbx-fld-profileDesc">Profile Descrption</label>
               <input type="text" class="form-control" name="profileDescription" id="dbx-fld-profileDesc" placeholder="Describe the profile, shows up in tooltip" value="" required />
               <div class="invalid-feedback">A Description must be specified!</div>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
               <label class="form-control-label" for="dbx-fld-urlOpt">URL Options</label>
               <input type="text" class="form-control" name="profileUrlOptions" id="dbx-fld-urlOpt" placeholder="Other properties passed to the graph.html page, example: gcols=3" value="" />
               <div class="valid-feedback"></div>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             <button type="submit" class="btn btn-primary btn-ok">Save</button>
           </div>
         </form>
@@ -438,8 +436,7 @@
 			<div class='modal-content'>
 				<div class='modal-header'>
 					<h5 class='modal-title' id='dbx-loading-url-dialog-title'><b><span id='dbx-loading-url-label'></span></b> <span id='dbx-loading-url-objectName'></span></h5>
-					<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
-						<span aria-hidden='true'>&times;</span>
+					<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'>
 					</button>
 				</div>
 				<div class='modal-body' style='overflow-x: auto;'>
@@ -451,7 +448,7 @@
 					<div id="dbx-loading-url-content" style="display: none;"></div>
 				</div>
 				<div class='modal-footer'>
-					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>
+					<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
 				</div>
 			</div>
 		</div>
@@ -1229,20 +1226,20 @@ List of stuff that can be done
 //					btnClass="btn-warning";
 //
 //				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
-//		//		html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>';
-//		//		htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>';
+//		//		html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2" role="button" data-bs-toggle="tooltip" data-bs-placement="top"    data-bs-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>';
+//		//		htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2" role="button" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>';
 //
-//		//		html    += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'"><button type="button" id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
-//		//		htmlAll += '<span data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'"><button type="button" id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+//		//		html    += '<span data-bs-toggle="tooltip" data-bs-placement="top"    data-bs-html="true" title="'+tt+'"><button type="button" id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2" onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+//		//		htmlAll += '<span data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="'+tt+'"><button type="button" id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
 //
 //				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
 //				const startTime = $('#dbx-hours-txt').val() + "h";
-////				html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
-////				htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
+////				html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2" role="button" data-bs-toggle="tooltip" data-bs-placement="top"    data-bs-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
+////				htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2" role="button" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
 //
 //				htmlDropDown += ''
 //				        + '<div class="btn-group">'
-//				        + '  <button id="btn-qa-normal-'+entry.serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
+//				        + '  <button id="btn-qa-normal-'+entry.serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2 dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
 //				        + '    '+entry.serverName
 //				        + '  </button>'
 //				        + '  <div class="dropdown-menu">'
@@ -1257,22 +1254,22 @@ List of stuff that can be done
 //				        + '    <div class="dropdown-divider"></div>'
 //				        + '    <a class="dropdown-item" href="/log?name='+entry.serverName+'.console&tail=5000" target="_blank"><b>Tail</b> Collector Console File</a>'
 //				        + '    <div class="dropdown-divider"></div>'
-//				        + '    <a class="dropdown-item" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
+//				        + '    <a class="dropdown-item" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="'+tt+'" href="#">Server <b>Info</b></a>'
 //				        + '  </div>'
 //				        + '</div>';
 //			}
 //			if (htmlDropDown === "")
 //			{
-//				htmlDropDown = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
-////				html    = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
-////				htmlAll = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+//				htmlDropDown = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+////				html    = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+////				htmlAll = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
 //			}
 ////			$('#dbx-quick-access-server-list').html(html);
 ////			$('#dbx-quick-access-server-all-list').html(htmlAll);
 //			$('#dbx-quick-access-server-list').html(htmlDropDown);
 //
 //			// Enable bootstrap tooltip...
-//			$('[data-toggle="tooltip"]').tooltip();
+//			$('[data-bs-toggle="tooltip"]').tooltip();
 //
 //			// Get ACTIVE Alarms
 //			setTimeout(dbxTuneCheckActiveAlarms, 100);
@@ -1322,7 +1319,7 @@ List of stuff that can be done
 			var grpId      = groupIdFromText(entry.text);
 			var grpServers = entry.hasOwnProperty('entries') ? collectGroupServerNames(entry.entries) : [];
 			var grpDataAttr = " data-servers='" + JSON.stringify(grpServers) + "'";
-			var grpStatsHtml = "<span class='dbx-grp-stats' id='" + grpId + "-stats'>&ensp;<span class='badge badge-secondary' style='font-weight:normal;'>" + grpServers.length + " server" + (grpServers.length !== 1 ? "s" : "") + "</span></span>";
+			var grpStatsHtml = "<span class='dbx-grp-stats' id='" + grpId + "-stats'>&ensp;<span class='badge text-bg-secondary' style='font-weight:normal;'>" + grpServers.length + " server" + (grpServers.length !== 1 ? "s" : "") + "</span></span>";
 
 			if (entry.hasOwnProperty('options') && entry.options.hasOwnProperty('border') && entry.options.border === "true")
 			{
@@ -1481,10 +1478,10 @@ List of stuff that can be done
 
 				html += ''
 						+ '<div class="btn-group">'
-						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2 dropdown-toggle" data-toggle="dropdown" data-flip="false" aria-haspopup="true" aria-expanded="false">'
+						+ '  <button id="btn-qa-normal-'+serverName+'" type="button" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 me-2 dropdown-toggle" data-bs-toggle="dropdown" data-bs-popper-config=\'{"modifiers":[{"name":"preventOverflow","options":{"boundary":"clippingParents"}},{"name":"offset","options":{"offset":[0,2]}},{"name":"flip","enabled":false}]}\' aria-haspopup="true" aria-expanded="false">'
 						+ '    ' + serverDisplayName
-						+ '    <span id="btn-qa-normal-alarms-'+serverName+'" class="badge badge-pill badge-warning" style="margin-left:3px;"></span>'
-						+ '    <span id="btn-qa-normal-muted-'+serverName+'" class="badge badge-pill" style="background:#6c757d;color:#fff;display:none;margin-left:2px;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event)">&#128276;</span>'
+						+ '    <span id="btn-qa-normal-alarms-'+serverName+'" class="badge rounded-pill text-bg-warning" style="margin-left:3px;"></span>'
+						+ '    <span id="btn-qa-normal-muted-'+serverName+'" class="badge rounded-pill" style="background:#6c757d;color:#fff;display:none;margin-left:2px;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event)">&#128276;</span>'
 						+ '  </button>'
 						+ '  <div class="dropdown-menu">'
 						+ '    <a class="dropdown-item" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default" onclick=\'return openGraphPage("server-ssp", "'+serverName+'", "")\'>Show <b>System Selected</b> Graphs</a>'
@@ -1627,7 +1624,7 @@ List of stuff that can be done
 			// If nothing was found... add "dummy" button
 			if (html === "")
 			{
-				html = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+				html = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
 			}
 
 			// Set HTML in DOM
@@ -1645,7 +1642,7 @@ List of stuff that can be done
 			});
 
 			// Enable bootstrap tooltip...
-			$('[data-toggle="tooltip"]').tooltip();
+			$('[data-bs-toggle="tooltip"]').tooltip();
 
 			// Initialize Server Info modal trigger (set up after HTML is in DOM)
 			$('#dbx-quick-access-server-list').on('click', '.dbx-server-info-link', function(e) {
@@ -1725,10 +1722,10 @@ List of stuff that can be done
 				if (a === 0 && m === 0 && w === 0) ok++;
 			});
 			var b = '&ensp;';
-			b += "<span class='badge badge-secondary' style='font-weight:normal;'>" + total + " Server" + (total !== 1 ? "s" : "") + "</span>";
-			if (ok > 0)     b += " <span class='badge badge-success'  style='font-weight:normal;'>" + ok     + " OK</span>";
-			if (warn > 0)   b += " <span class='badge badge-warning'  style='font-weight:normal;'>" + warn   + " Warning" + (warn !== 1 ? "s" : "") + "</span>";
-			if (alarms > 0) b += " <span class='badge badge-danger'   style='font-weight:normal;'>" + alarms + " Alarm" + (alarms !== 1 ? "s" : "") + "</span>";
+			b += "<span class='badge text-bg-secondary' style='font-weight:normal;'>" + total + " Server" + (total !== 1 ? "s" : "") + "</span>";
+			if (ok > 0)     b += " <span class='badge text-bg-success'  style='font-weight:normal;'>" + ok     + " OK</span>";
+			if (warn > 0)   b += " <span class='badge text-bg-warning'  style='font-weight:normal;'>" + warn   + " Warning" + (warn !== 1 ? "s" : "") + "</span>";
+			if (alarms > 0) b += " <span class='badge text-bg-danger'   style='font-weight:normal;'>" + alarms + " Alarm" + (alarms !== 1 ? "s" : "") + "</span>";
 			if (muted > 0)  b += " <span class='badge' style='background:#c0657a;color:#fff;font-weight:normal;'>" + muted + " Muted</span>";
 			statsEl.innerHTML = b;
 			statsEl.style.color = '';
@@ -1867,11 +1864,11 @@ List of stuff that can be done
 
 				const startTime = $('#dbx-hours-txt').val() + "h";
 
-			//	html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+urlOptions+'" role="button">'+entry.profileName+'</a>';
-			//	html += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+entry.profileDescription+'"><button type="button" class="btn btn-sm btn-primary mb-2 mr-2" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</button></span>';
+			//	html += '<a class="btn btn-sm btn-primary mb-2 me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+urlOptions+'" role="button">'+entry.profileName+'</a>';
+			//	html += '<span data-bs-toggle="tooltip" data-bs-placement="top"    data-bs-html="true" title="'+entry.profileDescription+'"><button type="button" class="btn btn-sm btn-primary mb-2 me-2" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</button></span>';
 
 				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
-				html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.profileName+urlOptions+'" role="button" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</a>';
+				html += '<a class="btn btn-sm btn-primary mb-2 me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.profileName+urlOptions+'" role="button" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</a>';
 			}
 			$('#dbx-quick-access-profile-list').html(html + htmlCurrent);
 		},
@@ -2062,7 +2059,7 @@ $(document).ready(function()
                  '<div class="alert alert-warning mt-3" role="alert">' +
                  '  <i class="fa fa-lock"></i>&nbsp;' +
                  '  <strong>Login required</strong> — Please log in to view Metrics, Profiles and Alarm Info.' +
-                 '  <a href="#" class="alert-link ml-2" onclick="dbxOpenLogin(); return false;">Login&hellip;</a>' +
+                 '  <a href="#" class="alert-link ms-2" onclick="dbxOpenLogin(); return false;">Login&hellip;</a>' +
                  '</div>'
              );
          });
@@ -2076,11 +2073,11 @@ $(document).ready(function()
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="dbx-server-info-modal-title">Server Info</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body" id="dbx-server-info-modal-body"></div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>

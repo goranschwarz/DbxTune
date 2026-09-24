@@ -1706,7 +1706,7 @@ public class SpaceForecast
 			html.append("<meta charset='UTF-8'> \n");
 			html.append("<meta name='viewport' content='width=device-width, initial-scale=1'> \n");
 
-			HtmlUtils.createCssLinkTag(html,  "/scripts/bootstrap/4.6.2/css/bootstrap.min.css"          , "https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css");
+			HtmlUtils.createCssLinkTag(html,  "/scripts/bootstrap/5.3.8/css/bootstrap.min.css"          , "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css");
 
 			HtmlUtils.createJsScriptTag(html, "/scripts/jquery/jquery-3.7.1.min.js"                     , "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js");
 			HtmlUtils.createJsScriptTag(html, "/scripts/jquery-sparklines/2.1.2/jquery.sparkline.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js");
@@ -3045,9 +3045,9 @@ public class SpaceForecast
 
 		private String getTdaSizeFirst()        { return "nowrap title='Timestamp: " + TimeUtils.toStringYmdHms(diskInfoEntry.firstTotalSizeMbTs) + "'"; }
 		private String getTdaSizeLast()         { return "nowrap title='Timestamp: " + TimeUtils.toStringYmdHms(diskInfoEntry.lastTotalSizeMbTs ) + "'"; }
-		private String getTdaSizeChangeCount()  { return "nowrap title='" + helperGetChangedEventsStr()           + "' data-toggle='tooltip'"; }
-		private String getTdaSizeDiffTotal()    { return "nowrap title='" + helperGetChangedEventsStr()           + "' data-toggle='tooltip'"; }
-		private String getTdaSizeDiffPerDay()   { return "nowrap title='" + helperGetSizeDiffPerDayTimestampStr() + "' data-toggle='tooltip'"; }
+		private String getTdaSizeChangeCount()  { return "nowrap title='" + helperGetChangedEventsStr()           + "' data-bs-toggle='tooltip'"; }
+		private String getTdaSizeDiffTotal()    { return "nowrap title='" + helperGetChangedEventsStr()           + "' data-bs-toggle='tooltip'"; }
+		private String getTdaSizeDiffPerDay()   { return "nowrap title='" + helperGetSizeDiffPerDayTimestampStr() + "' data-bs-toggle='tooltip'"; }
 		private String getTdaSizeFirstUsedPct() { return "nowrap title='Timestamp: " + TimeUtils.toStringYmdHms(diskInfoEntry.firstPercentUsageTs) + "'"; }
 		private String getTdaSizeLastUsedPct()  { return "nowrap title='Timestamp: " + TimeUtils.toStringYmdHms(diskInfoEntry.lastPercentUsageTs ) + "'"; }
 

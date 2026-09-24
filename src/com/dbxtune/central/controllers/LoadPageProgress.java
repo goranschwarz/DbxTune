@@ -70,8 +70,7 @@ extends DbxCentralPageTemplate
 		writer.println("			<div class='modal-content'> ");
 		writer.println("				<div class='modal-header'> ");
 		writer.println("					<h5 class='modal-title' id='dbx-loading-url-dialog-title'><b><span id='dbx-loading-url-label'></span></b> <span id='dbx-loading-url-objectName'></span></h5> ");
-		writer.println("					<button type='button' class='close' data-dismiss='modal' aria-label='Close'> ");
-		writer.println("						<span aria-hidden='true'>&times;</span> ");
+		writer.println("					<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'> ");
 		writer.println("					</button> ");
 		writer.println("				</div> ");
 		writer.println("				<div class='modal-body' style='overflow-x: auto;'> ");
@@ -83,7 +82,7 @@ extends DbxCentralPageTemplate
 		writer.println("					<div id='dbx-loading-url-content' style='display: none;'></div> ");
 		writer.println("				</div> ");
 		writer.println("				<div class='modal-footer'> ");
-		writer.println("					<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button> ");
+		writer.println("					<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> ");
 		writer.println("				</div> ");
 		writer.println("			</div> ");
 		writer.println("		</div> ");

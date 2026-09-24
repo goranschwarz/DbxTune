@@ -98,11 +98,10 @@ function getParameter(key, defaultValue)
   <script type="text/javascript"  src="/scripts/selectize/0.15.2/js/selectize.min.js"></script>
 
   <!-- Bootstrap Table -->
-  <link    rel="stylesheet"      href="/scripts/bootstrap-table/1.22.1/bootstrap-table.min.css" />
-  <script type="text/javascript"  src="/scripts/bootstrap-table/1.22.1/bootstrap-table.min.js"></script>
-  <link    rel="stylesheet"      href="/scripts/bootstrap-table/1.22.1/extensions/filter-control/bootstrap-table-filter-control.css">
-  <script type="text/javascript"  src="/scripts/bootstrap-table/1.22.1/extensions/filter-control/utils.min.js"></script>
-  <script type="text/javascript"  src="/scripts/bootstrap-table/1.22.1/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
+  <link    rel="stylesheet"      href="/scripts/bootstrap-table/1.27.3/bootstrap-table.min.css" />
+  <script type="text/javascript"  src="/scripts/bootstrap-table/1.27.3/bootstrap-table.min.js"></script>
+  <link    rel="stylesheet"      href="/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.css">
+  <script type="text/javascript"  src="/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
 
   <!-- Prism - Combined files -->
   <link   rel="stylesheet"       href='/scripts/prism/prism-1.30.0.css' />
@@ -252,7 +251,7 @@ function getParameter(key, defaultValue)
 
 <body>
 <!-- NavBar that works, except for: iphone... -->
-	<nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+	<nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0 px-3">
 	<a class="navbar-brand" href="/">DbxCentral</a>
 	<!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
 	<!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
@@ -260,7 +259,7 @@ function getParameter(key, defaultValue)
 		<span class="navbar-toggler-icon"></span>
 	</button>
 	<div class="collapse navbar-collapse" id="navbarCollapse">
-		<ul class="navbar-nav mr-auto">
+		<ul class="navbar-nav me-auto">
 			<li class="nav-item">
 				<a class="nav-link" href="/overview">Servers</a>
 			</li>
@@ -1480,7 +1479,7 @@ function getParameter(key, defaultValue)
 //
 //			}
 //			// Enable bootstrap tooltip...
-//			$('[data-toggle="tooltip"]').tooltip();
+//			$('[data-bs-toggle="tooltip"]').tooltip();
 //		},
 //		error: function(xhr, desc, err)
 //		{
@@ -1540,8 +1539,7 @@ function getParameter(key, defaultValue)
 		<div class="modal-content">
 			<div class="modal-header">
 			<h5 class="modal-title" id="dbx-cfg-alarm-dialog-title">Alarm Options</h5>
-			<button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-				<span aria-hidden="true">&times;</span>
+			<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
 			</button>
 			</div>
 			<div class="modal-body">

@@ -22,7 +22,7 @@
   <!-- JS: Bootstrap -->
 <!--<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
 <!--<script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
-  <script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
+  <script type="text/javascript" src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 
   <!-- JS: Selectize -->
   <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
@@ -45,7 +45,7 @@
 
   <!-- CSS: Bootstrap -->
 <!--<link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> --> 
-  <link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
+  <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'> 
 
   <!-- CSS: Font Awsome -->
   <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -93,15 +93,15 @@
 
 <body>
   <!-- NavBar that works, except for: iphone... -->
-  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0 px-3">
     <a class="navbar-brand" href="/">DbxCentral</a>
     <!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
     <!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav mr-auto">
+      <ul class="navbar-nav me-auto">
         <li class="nav-item">
           <a class="nav-link" href="/overview">Servers</a>
         </li>
@@ -109,7 +109,7 @@
           <a class="nav-link" href="/admin/admin.html">Admin</a>
         </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+          <a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
           <div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
             <div class="dbx-dropdown-submenu">
               <a class="dropdown-item" href="#">&#128202; Showplan</a>
@@ -129,10 +129,10 @@
 	    <!-- IS LOGGED IN -->
         <div id="dbx-nb-isLoggedIn-div" style="display: none;">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
             </a>
-            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
             <a class="dropdown-item" href="#" onclick="dbxOpenSettings(); return false;"> <i class="fa fa-cog"></i> Settings</a>
             <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
             </div>
@@ -140,7 +140,7 @@
         </div>
 	    <!-- IS LOGGED OUT -->
         <div id="dbx-nb-isLoggedOut-div">
-          <a class="nav-link" href="/index.html?login=open"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+          <a class="nav-link" href="/index.html?login=open"> <i class="fa fa-sign-in"></i> <span data-bs-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
         </div>
       </ul> <!-- end right hand side -->
     </div>
@@ -148,7 +148,7 @@
 
   <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
   <main role="main" class="container">
-    <div class="jumbotron">
+    <div class="jumbotron px-4 py-5 mb-4 bg-body-secondary rounded-2">
       <h1>DbxTune - Administration</h1>
 <!--
       <p class="lead">Administration of ...</p>
@@ -163,7 +163,7 @@
 
           <b>Add</b> a new DBMS server... (not yet implemented)
           <div id="dbx-add-server-div">
-            <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add 'Servers' to the configuration." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add...</a>
+            <a class="btn btn-sm btn-primary mb-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Open a dialog where you can add 'Servers' to the configuration." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add...</a>
           </div>
 
           <b>Remove</b> Any off the below servers... (a confirm dialog will be displayed)
@@ -197,7 +197,7 @@
             <div id="dbx-change-ssp-product-list">
               <button type="button" class="btn btn-sm btn-primary">Loading DbxProduct list <i class='fa fa-spinner fa-spin '></i></button>
             </div>
-            <!--<a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add/change Chart profiles." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add/Change Profile...</a>-->
+            <!--<a class="btn btn-sm btn-primary mb-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Open a dialog where you can add/change Chart profiles." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add/Change Profile...</a>-->
     <!--
     		<div class="sandbox">
     			<label for="input-draggable">XXXXXXXXXXXX:</label>
@@ -222,7 +222,7 @@
 
           <b>Add</b> any User Defined Profiles
           <div id="dbx-addUdg-div">
-            <a class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="right" title="Open the main page." href="/" role="button">This is done from the "main" page...</a>
+            <a class="btn btn-sm btn-primary" data-bs-toggle="tooltip" data-bs-placement="right" title="Open the main page." href="/" role="button">This is done from the "main" page...</a>
           </div>
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
@@ -281,9 +281,9 @@
           <b>Restart</b> DbxCentral
           <div id="dbx-restart-server-div">
             <!-- <a class="btn btn-sm btn-primary mb-2" onclick="restartServer()" role="button">Restart</a> -->
-            <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance. no collectors will be restarted." onclick="restartServer('normal')">Restart</button>
-            <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'compact'. no collectors will be restarted." onclick="restartServer('compact')">Restart (with compact)</button>
-            <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'defrag'. no collectors will be restarted." onclick="restartServer('defrag')">Restart (with defrag)</button>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Restart the DbxCentral server instance. no collectors will be restarted." onclick="restartServer('normal')">Restart</button>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Restart the DbxCentral server instance, and do database 'compact'. no collectors will be restarted." onclick="restartServer('compact')">Restart (with compact)</button>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Restart the DbxCentral server instance, and do database 'defrag'. no collectors will be restarted." onclick="restartServer('defrag')">Restart (with defrag)</button>
             <!-- <span id="dbx-server-restart-spinner"><img src="/images/busy_spinner.gif" height="32" width="32"></span> -->
             <span id="dbx-server-restart-feedback"></span>
             <span id="dbx-server-restart-spinner"><img src="/images/ajax-loader.gif"></span>
@@ -292,8 +292,8 @@
           <br>
           <b>Logout</b> as 'admin'
           <div id="dbx-logout-div">
-<!--            <button class="btn btn-sm mb-2" data-toggle="tooltip" data-placement="right" title="Logout" onclick="logout()">Logout</button>-->
-            <a class="btn btn-sm mb-2 btn-primary" data-toggle="tooltip" data-placement="right" title="Logout" href="/logout" role="button">Logout</a>
+<!--            <button class="btn btn-sm mb-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Logout" onclick="logout()">Logout</button>-->
+            <a class="btn btn-sm mb-2 btn-primary" data-bs-toggle="tooltip" data-bs-placement="right" title="Logout" href="/logout" role="button">Logout</a>
           </div>
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
@@ -309,13 +309,13 @@
             <i class="fa fa-refresh"></i> Refresh
           </button>
           &nbsp;
-          <button type="button" class="btn btn-sm btn-success mb-2" data-toggle="modal" data-target="#dbx-adduser-dialog">
+          <button type="button" class="btn btn-sm btn-success mb-2" data-bs-toggle="modal" data-bs-target="#dbx-adduser-dialog">
             <i class="fa fa-user-plus"></i> Add User
           </button>
           <div id="dbx-user-msg" class="mb-2"></div>
           <div style="width:100%; overflow-x:auto;">
           <table class="table table-sm table-bordered table-hover" id="dbx-user-table" style="display:none; width:100%; white-space:nowrap;">
-            <thead class="thead-light">
+            <thead class="table-light">
               <tr>
                 <th>Username</th>
                 <th>Status</th>
@@ -344,8 +344,8 @@
         <h5 class='card-header'>Daily Summary Report - SKIP Entries (or exclude some SQL Statements from reports)</h5>
         <div class='card-body'>
 
-<!--        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" onclick="addDsrSkipEntry()">Add Entry</button> -->
-            <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#dbx-dsr-skip-dialog">Add Entry</button>
+<!--        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" onclick="addDsrSkipEntry()">Add Entry</button> -->
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#dbx-dsr-skip-dialog">Add Entry</button>
             &emsp;&emsp;&emsp; <span id='dbx-dsr-skip-count'>0</span> Entries in the below table
             <br>
 
@@ -370,8 +370,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="dbx-confirm-delete-dialog-title"><b>WARNING:</b> Removal of server '<b class="title"></b>' is irreversible</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
           </button>
         </div>
         <div class="modal-body">
@@ -390,7 +389,7 @@
           A report will show, what was possible to remove (if you press: Remove)
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           <button type="button" class="btn btn-danger btn-ok">Remove Server</button>
         </div>
       </div>
@@ -404,8 +403,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="dbx-change-ssp-dialog-title">Changing Graph Profile for '<b class="title"></b>'</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
           </button>
         </div>
         <div class="modal-body">
@@ -421,7 +419,7 @@
           <span><button type="button" class="btn btn-default btn-sm btn-add">Add...</button></span>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           <button type="button" class="btn btn-primary btn-ok">Save</button>
         </div>
       </div>
@@ -435,29 +433,29 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Add User</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
+          <div class="mb-3">
             <label>Email <small class="text-muted">(used as login)</small></label>
             <input type="email" class="form-control form-control-sm" id="dbx-adduser-email" placeholder="Email address">
           </div>
-          <div class="form-group">
+          <div class="mb-3">
             <label>Full Name <small class="text-muted">(optional)</small></label>
             <input type="text" class="form-control form-control-sm" id="dbx-adduser-fullname" maxlength="256" placeholder="Display name">
           </div>
-          <div class="form-group">
+          <div class="mb-3">
             <label>Password</label>
             <input type="password" class="form-control form-control-sm" id="dbx-adduser-password" placeholder="Password (min 8 characters)">
           </div>
-          <div class="form-group">
+          <div class="mb-3">
             <label>Roles</label>
             <div id="dbx-adduser-roles-div"><!-- populated dynamically --></div>
           </div>
           <div id="dbx-adduser-msg" class="mt-1 small"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-success btn-sm" onclick="dbxAddUser()">Add User</button>
         </div>
       </div>
@@ -470,7 +468,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Edit Roles for <b id="dbx-editroles-username-title"></b></h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="dbx-editroles-username">
@@ -478,7 +476,7 @@
           <div id="dbx-editroles-msg" class="mt-1 small"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-primary btn-sm" onclick="dbxSaveRoles()">Save Roles</button>
         </div>
       </div>
@@ -491,18 +489,18 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Reset Password for <b id="dbx-resetpw-username-title"></b></h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="dbx-resetpw-username">
-          <div class="form-group">
+          <div class="mb-3">
             <label>New Password</label>
             <input type="password" class="form-control form-control-sm" id="dbx-resetpw-password" placeholder="New password">
           </div>
           <div id="dbx-resetpw-msg" class="mt-1 small"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-warning btn-sm" onclick="dbxResetPassword()">Reset Password</button>
         </div>
       </div>
@@ -515,8 +513,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="dbx-change-udp-dialog-title">Changing Graph Profile for '<b class="title"></b>'</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
           </button>
         </div>
         <div class="modal-body">
@@ -531,13 +528,13 @@
           <span id="dbx-change-udp-dialog-select-cnt">X</span> Graphs selected, <span id="dbx-change-udp-dialog-available-cnt">Y</span> available Graphs
           <span><button type="button" class="btn btn-default btn-sm btn-add">Add...</button></span>
 		  <br>
-          <div class="form-group row mt-1 mb-0">
+          <div class="mb-3 row mt-1 mb-0">
             <label for="dbx-change-udp-desc" class="col-sm-2 col-form-label">Profile Desc</label>
             <div class="col-sm-10">
               <input type="text" class="form-control form-control-sm" id="dbx-change-udp-desc" placeholder="Describe the profile, shows up in tooltip">
             </div>
           </div>
-          <div class="form-group row mb-0">
+          <div class="mb-3 row mb-0">
             <label for="dbx-change-udp-urlOpt" class="col-sm-2 col-form-label">URL Options</label>
             <div class="col-sm-10">
               <input type="text" class="form-control form-control-sm" id="dbx-change-udp-urlOpt" placeholder="Other properties passed to the graph.html page, example: gcols=3">
@@ -545,7 +542,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           <button type="button" class="btn btn-primary btn-ok">Save</button>
         </div>
       </div>
@@ -559,38 +556,37 @@
 		<div class='modal-content'>
 			<div class='modal-header'>
 			<h5 class='modal-title' id='dbx-dsr-skip-dialog-title'>Add Daily Summary Report SKIP Entry</h5>
-			<button type='button' class='close' data-dismiss='modal' aria-label='Close'>
-				<span aria-hidden='true'>&times;</span>
+			<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'>
 			</button>
 			</div>
 			<div class='modal-body'>
 				<form id='dbx-dsr-skip-form' class="needs-validation" novalidate>
-					<div class='form-group'>
+					<div class='mb-3'>
 						<label for='dbx-dsr-skip-srvName'>Server Name</label>
 						<input  id='dbx-dsr-skip-srvName' name='srvName' type='text' class='form-control is-invalid' placeholder='Server Name' required>
 					</div>
 
-					<div class='form-group'>
+					<div class='mb-3'>
 						<label for='dbx-dsr-skip-className'>Report Class Name (this is the short name of the Java Class)</label>
 						<input  id='dbx-dsr-skip-className' name='className' type='text' class='form-control is-invalid' placeholder='Report Class Name, example: AseTopSlowSql' required>
 					</div>
 
-					<div class='form-group'>
+					<div class='mb-3'>
 						<label for='dbx-dsr-skip-entryType'>Column name that we want to <i>filter</i> out records</label>
 						<input  id='dbx-dsr-skip-entryType' name='entryType' type='text' class='form-control is-invalid' placeholder='Column Name' required>
 					</div>
 
-					<div class='form-group'>
+					<div class='mb-3'>
 						<label for='dbx-dsr-skip-stringVal'>Value that we want to <i>filter</i> out records in above Column Name</label>
 						<input  id='dbx-dsr-skip-stringVal' name='stringVal' type='text' class='form-control is-invalid' placeholder='Filter Value' required>
 					</div>
 
-					<div class='form-group'>
+					<div class='mb-3'>
 						<label for='dbx-dsr-skip-description'>Describe why we want to do this</label>
 						<input  id='dbx-dsr-skip-description' name='description' type='text' class='form-control' placeholder='Description'>
 					</div>
 
-					<div class='form-group'>
+					<div class='mb-3'>
 						<label for='dbx-dsr-skip-sqlTextExample'>SQL Text Example</label>
 						<textarea id='dbx-dsr-skip-sqlTextExample' name='sqlTextExample' rows='10' class='form-control' placeholder='Example of how the SQL Text might look like'></textarea>
 					</div>
@@ -599,7 +595,7 @@
 					<div id='dbx-dsr-skip-error' style='display:none;' class='alert alert-danger' role='alert'></div>
 
 					<div class='modal-footer'>
-						<button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>
+						<button type='button' class='btn btn-default' data-bs-dismiss='modal'>Close</button>
 <!--  					<button type='submit' class="btn btn-primary btn-ok">Save</button>-->
 						<input id='dbx-dsr-skip-save' class="btn btn-success" value="Save" type="submit" disabled></input>
 					</div>
@@ -1189,7 +1185,7 @@
         console.log("actions: "+actions, actions);
 
         var tab = "<table class='table table-hover'>";
-        tab += "<thead class='thead-light'><tr>";
+        tab += "<thead class='table-light'><tr>";
         tab += "  <th scope='col'>Action</th>";
         tab += "  <th scope='col'>Status</th>";
         tab += "  <th scope='col'>Message</th>";
@@ -1244,7 +1240,7 @@
 
         // var tab = jsonToTable(jsonResp.actions);
         var tab = "<table class='table table-hover'>";
-        tab += "<thead class='thead-light'><tr>";
+        tab += "<thead class='table-light'><tr>";
         tab += "  <th scope='col'>Action</th>";
         tab += "  <th scope='col'>Status</th>";
         tab += "  <th scope='col'>Message</th>";
@@ -1494,20 +1490,20 @@
 				var btnClass="btn-danger";
 				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
 
-				htmlRemove  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-danger '+dbxButtonImage+'  mb-2 mr-2" data-record-id="'+entry.serverName+'" data-record-title="'+entry.serverName+'" data-toggle="modal" data-target="#dbx-confirm-delete-dialog">'+entry.serverName+'</button></span>';
+				htmlRemove  += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-danger '+dbxButtonImage+'  mb-2 me-2" data-record-id="'+entry.serverName+'" data-record-title="'+entry.serverName+'" data-bs-toggle="modal" data-bs-target="#dbx-confirm-delete-dialog">'+entry.serverName+'</button></span>';
 				if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
-					htmlEnable  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+					htmlEnable  += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 				else
-					htmlDisable += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+					htmlDisable += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 
-				htmlRefreshCc   += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'refreshCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
-				htmlRestartCc   += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'restartCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlRefreshCc   += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'refreshCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlRestartCc   += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'restartCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 
-				htmlClearAlarm  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'clearActiveAlarms("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlClearAlarm  += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'clearActiveAlarms("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 			}
-			if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
-			if (htmlDisable === "") htmlDisable = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
-			if (htmlEnable  === "") htmlEnable  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
+			if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+			if (htmlDisable === "") htmlDisable = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">No Servers Found</button>';
+			if (htmlEnable  === "") htmlEnable  = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">No Servers Found</button>';
 
 			$('#dbx-remove-server-list').html(htmlRemove);
 			$('#dbx-disable-server-list').html(htmlDisable);
@@ -1519,7 +1515,7 @@
 			$('#dbx-alarm-clear-server-list').html(htmlClearAlarm);
 
 			// Enable bootstrap tooltip...
-			$('[data-toggle="tooltip"]').tooltip();
+			$('[data-bs-toggle="tooltip"]').tooltip();
 
 			// Add buttons for: 'change' System Supplied Profiles
 			var htmlSsp  = "";
@@ -1530,11 +1526,11 @@
 
 				var dbxButtonImage="dbx-button-image dbx-button-"+entry.toLowerCase();
 
-//				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'openChangeSspDialog("'+entry+'")\'>'+entry+'</button></span>';
-				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" data-record-id="'+entry+'" data-record-title="'+entry+'" data-toggle="modal" data-backdrop="static" data-target="#dbx-change-ssp-dialog">'+entry+'</button></span>';
+//				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'openChangeSspDialog("'+entry+'")\'>'+entry+'</button></span>';
+				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" data-record-id="'+entry+'" data-record-title="'+entry+'" data-bs-toggle="modal" data-bs-backdrop="static" data-bs-target="#dbx-change-ssp-dialog">'+entry+'</button></span>';
 			}
 			if (htmlSsp === "")
-				htmlSsp = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No DbxProduct Found</button>';
+				htmlSsp = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">No DbxProduct Found</button>';
 			$('#dbx-change-ssp-product-list').html(htmlSsp);
 		},
 		error: function(xhr, desc, err)
@@ -1565,15 +1561,15 @@
 
 				if (entry.profileName === "")
 					continue;
-//				html_1 += '<a class="btn btn-sm btn-danger mb-2 mr-2" href="/api/FIXME?profileName='+entry.profileName+'" role="button">'+entry.profileName+'</a>';
-				html_1 += '<button type="button" class="btn btn-sm btn-danger  mb-2 mr-2" onclick=\'removeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
-//				html_2 += '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2" onclick=\'changeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
-				html_2 += '<span><button type="button" class="btn btn-sm btn-primary mb-2 mr-2" data-record-id="'+entry.profileName+'" data-record-title="'+entry.profileName+'" data-toggle="modal" data-backdrop="static" data-target="#dbx-change-udp-dialog">'+entry.profileName+'</button></span>';
+//				html_1 += '<a class="btn btn-sm btn-danger mb-2 me-2" href="/api/FIXME?profileName='+entry.profileName+'" role="button">'+entry.profileName+'</a>';
+				html_1 += '<button type="button" class="btn btn-sm btn-danger  mb-2 me-2" onclick=\'removeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
+//				html_2 += '<button type="button" class="btn btn-sm btn-primary mb-2 me-2" onclick=\'changeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
+				html_2 += '<span><button type="button" class="btn btn-sm btn-primary mb-2 me-2" data-record-id="'+entry.profileName+'" data-record-title="'+entry.profileName+'" data-bs-toggle="modal" data-bs-backdrop="static" data-bs-target="#dbx-change-udp-dialog">'+entry.profileName+'</button></span>';
 			}
 			if (html_1 === "")
-				html_1 = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
+				html_1 = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">No User Defined Profiles was Found</button>';
 			if (html_2 === "")
-				html_2 = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
+				html_2 = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">No User Defined Profiles was Found</button>';
 
 			$('#dbx-remove-udp-list').html(html_1);
 			$('#dbx-change-udp-list').html(html_2);
@@ -1911,7 +1907,7 @@
 	{
 		var current = currentRolesCsv ? currentRolesCsv.split(',').map(function(s){ return s.trim(); }) : [];
 		var html = '<table class="table table-sm table-bordered mb-0">'
-		         + '<thead class="thead-light"><tr><th style="width:1%">Grant</th><th>Role</th><th>Description</th></tr></thead>'
+		         + '<thead class="table-light"><tr><th style="width:1%">Grant</th><th>Role</th><th>Description</th></tr></thead>'
 		         + '<tbody>';
 		for (var i = 0; i < _dbxRoles.length; i++)
 		{
@@ -1922,7 +1918,7 @@
 			var id      = 'dbx-role-' + containerId + '-' + name;
 			html += '<tr>'
 			      + '<td class="text-center align-middle"><input class="dbx-role-chk" type="checkbox" id="' + id + '" value="' + name + '" ' + checked + '></td>'
-			      + '<td class="align-middle"><label class="mb-0 font-weight-bold" for="' + id + '">' + $('<span>').text(name).html() + '</label></td>'
+			      + '<td class="align-middle"><label class="mb-0 fw-bold" for="' + id + '">' + $('<span>').text(name).html() + '</label></td>'
 			      + '<td class="align-middle small text-muted">' + $('<span>').text(desc).html() + '</td>'
 			      + '</tr>';
 		}
@@ -1953,14 +1949,14 @@
 	{
 		var cls = { 'Active': 'success', 'Pending': 'warning', 'Locked': 'danger', 'Rejected': 'secondary' };
 		var c = cls[statusLabel] || 'secondary';
-		return '<span class="badge badge-' + c + '">' + statusLabel + '</span>';
+		return '<span class="badge text-bg-' + c + '">' + statusLabel + '</span>';
 	}
 
 	function dbxRolesBadges(rolesCsv)
 	{
 		if (!rolesCsv) return '';
 		return rolesCsv.split(',').map(function(r) {
-			return '<span class="badge badge-info mr-1">' + $('<span>').text(r.trim()).html() + '</span>';
+			return '<span class="badge text-bg-info me-1">' + $('<span>').text(r.trim()).html() + '</span>';
 		}).join('');
 	}
 
@@ -1988,24 +1984,24 @@
 					var rowStyle = isPending ? ' style="background-color:#fff3cd;"' : '';
 
 					// Reason tooltip on request-reason cell
-					var reasonTip = u.requestReason ? ' title="' + $('<span>').text(u.requestReason).html() + '" data-toggle="tooltip"' : '';
+					var reasonTip = u.requestReason ? ' title="' + $('<span>').text(u.requestReason).html() + '" data-bs-toggle="tooltip"' : '';
 
 					// Action buttons
-					var btns = '<button class="btn btn-xs btn-outline-primary mr-1" onclick=\'dbxOpenEditRoles("' + un + '","' + $('<span>').text(u.roles).html() + '")\'>Roles</button>'
-					         + '<button class="btn btn-xs btn-outline-warning mr-1" onclick=\'dbxOpenResetPassword("' + un + '")\'>Reset PW</button>';
+					var btns = '<button class="btn btn-xs btn-outline-primary me-1" onclick=\'dbxOpenEditRoles("' + un + '","' + $('<span>').text(u.roles).html() + '")\'>Roles</button>'
+					         + '<button class="btn btn-xs btn-outline-warning me-1" onclick=\'dbxOpenResetPassword("' + un + '")\'>Reset PW</button>';
 
 					if (isPending)
 					{
-						btns += '<button class="btn btn-xs btn-success mr-1" onclick=\'dbxApproveUser("' + un + '")\'>Approve</button>'
-						      + '<button class="btn btn-xs btn-danger mr-1" onclick=\'dbxRejectUser("' + un + '")\'>Reject</button>';
+						btns += '<button class="btn btn-xs btn-success me-1" onclick=\'dbxApproveUser("' + un + '")\'>Approve</button>'
+						      + '<button class="btn btn-xs btn-danger me-1" onclick=\'dbxRejectUser("' + un + '")\'>Reject</button>';
 					}
 					else if (isLocked)
 					{
-						btns += '<button class="btn btn-xs btn-outline-info mr-1" onclick=\'dbxUnlockUser("' + un + '")\'>Unlock</button>';
+						btns += '<button class="btn btn-xs btn-outline-info me-1" onclick=\'dbxUnlockUser("' + un + '")\'>Unlock</button>';
 					}
 					else if (isActive)
 					{
-						btns += '<button class="btn btn-xs btn-outline-secondary mr-1" onclick=\'dbxLockUser("' + un + '")\'>Lock</button>';
+						btns += '<button class="btn btn-xs btn-outline-secondary me-1" onclick=\'dbxLockUser("' + un + '")\'>Lock</button>';
 					}
 
 					if (u.username.toLowerCase() !== 'admin')
@@ -2015,7 +2011,7 @@
 					var lastLoginShort     = u.lastLoginDate ? u.lastLoginDate.substring(0, 16)  : '';
 					var loginFailCount     = u.loginFailCount || 0;
 					var loginFailBadge     = loginFailCount > 0
-					                          ? '<span class="badge badge-danger">' + loginFailCount + '</span>'
+					                          ? '<span class="badge text-bg-danger">' + loginFailCount + '</span>'
 					                          : '0';
 
 					html += '<tr' + rowStyle + '>'
@@ -2033,7 +2029,7 @@
 					      + '</tr>';
 				}
 				$('#dbx-user-tbody').html(html);
-				$('[data-toggle="tooltip"]').tooltip();
+				$('[data-bs-toggle="tooltip"]').tooltip();
 				$('#dbx-user-table').show();
 				if (hasPending)
 					dbxShowMsg('dbx-user-msg', '<i class="fa fa-exclamation-triangle text-warning"></i> There are pending account requests that require approval.', false);

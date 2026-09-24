@@ -1620,8 +1620,8 @@ extends SqlServerAbstract
 					String job_id     = rstm.getValueAsString(row, "job_id");
 					
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-view-sqltext-dialog' "
 							+ "data-objectname='" + job_name + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobAllCommands(job_id) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1635,8 +1635,8 @@ extends SqlServerAbstract
 					String step_id    = "0"; // We only want to so the TOP LEVEL
 
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + job_name + "' "
 							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "  // stepId=0 --- We only want to so the TOP LEVEL
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1650,8 +1650,8 @@ extends SqlServerAbstract
 					String step_id    = "0"; // We only want to so the TOP LEVEL
 
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + job_name + "' "
 							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "  // stepId=0 --- We only want to so the TOP LEVEL
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1725,8 +1725,8 @@ extends SqlServerAbstract
 					String job_id     = rstm.getValueAsString(row, "job_id");
 					
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-view-sqltext-dialog' "
 							+ "data-objectname='" + JobName + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobAllCommands(job_id) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1740,8 +1740,8 @@ extends SqlServerAbstract
 					String step_id    = "0"; // We only want to so the TOP LEVEL
 
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + jobName + "' "
 							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1755,8 +1755,8 @@ extends SqlServerAbstract
 					String step_id    = "0"; // We only want to so the TOP LEVEL
 
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + jobName + "' "
 							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1834,8 +1834,8 @@ extends SqlServerAbstract
 					String stepId  = rstm.getValueAsString(row, "step_id");
 					
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-view-sqltext-dialog' "
 							+ "data-objectname='" + ("step_id=" + stepId +", jobName=" + jobName) + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobStepCommand(jobName, stepId) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1853,8 +1853,8 @@ extends SqlServerAbstract
 						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
 
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + jobName  + "' "
 							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
 							+ "data-starttime='"  + execTime + "' "
@@ -1875,8 +1875,8 @@ extends SqlServerAbstract
 						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
 
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + jobName  + "' "
 							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
 							+ "data-starttime='"  + execTime + "' "
@@ -1966,8 +1966,8 @@ extends SqlServerAbstract
 					String step_id = rstm.getValueAsString(row, "step_id");
 					
 					return "<div title='Click to Open' "
-							+ "data-toggle='modal' "
-							+ "data-target='#dbx-view-sqltext-dialog' "
+							+ "data-bs-toggle='modal' "
+							+ "data-bs-target='#dbx-view-sqltext-dialog' "
 							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName) + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobStepCommand(jobName, step_id) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
@@ -1985,8 +1985,8 @@ extends SqlServerAbstract
 						execTime = execTime.substring(0, "YYYY-mm-dd HH:MM:SS".length());
 
 					return "<div title='Click to Open' "
-						+ "data-toggle='modal' "
-						+ "data-target='#dbx-jobScheduler-timeline-dialog' "
+						+ "data-bs-toggle='modal' "
+						+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 						+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
 						+ "data-starttime='"  + execTime + "' "
 						+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
@@ -2679,8 +2679,7 @@ extends SqlServerAbstract
 		writer.println("            <div class='modal-content'> ");
 		writer.println("                <div class='modal-header'> ");
 		writer.println("                    <h5 class='modal-title' id='dbx-jobScheduler-objectName'>Job Scheduler Timeline Chart</h5> ");
-		writer.println("                    <button type='button' class='close' data-dismiss='modal' aria-label='Close'> ");
-		writer.println("                        <span aria-hidden='true'>&times;</span> ");
+		writer.println("                    <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'> ");
 		writer.println("                    </button> ");
 		writer.println("                </div> ");
 		writer.println("                <div class='modal-body' style='overflow-x: auto;'> ");
@@ -2690,7 +2689,7 @@ extends SqlServerAbstract
 		writer.println("                    </div> ");
 		writer.println("                </div> ");
 		writer.println("                <div class='modal-footer'> ");
-		writer.println("                    <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button> ");
+		writer.println("                    <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> ");
 		writer.println("                </div> ");
 		writer.println("            </div> ");
 		writer.println("        </div> ");
@@ -2776,12 +2775,12 @@ extends SqlServerAbstract
 		writer.println("        // Open Chart Dialog by: jobId, stepId ");
 		writer.println("        function openTimeLineChartDialog_byIds(jobId, stepId, startTsMarker)  ");
 		writer.println("        { ");
-		writer.println("            // How this is done to handel both 'data-target' and calling this function... ");
+		writer.println("            // How this is done to handel both 'data-bs-target' and calling this function... ");
 		writer.println("            // Simulate that it was called from an 'element'... Create an element, which we programatically 'click' on! ");
 		writer.println("            var tempElement = $('<button>', { ");
 		writer.println("                 type: 'button', ");
-		writer.println("                     'data-toggle'    : 'modal', ");
-		writer.println("                     'data-target'    : '#dbx-jobScheduler-timeline-dialog', ");
+		writer.println("                     'data-bs-toggle'    : 'modal', ");
+		writer.println("                     'data-bs-target'    : '#dbx-jobScheduler-timeline-dialog', ");
 		writer.println("                     'data-jobid'     : jobId, ");
 		writer.println("                     'data-stepid'    : stepId, ");
 		writer.println("                     'data-starttime' : startTsMarker ");
@@ -2790,7 +2789,7 @@ extends SqlServerAbstract
 		writer.println("            // Append the element to the body (temporarily) ");
 		writer.println("            $('body').append(tempElement); ");
 		writer.println();
-		writer.println("            // Trigger the click to open the modal decided above by: 'data-target': '#dbx-jobScheduler-timeline-dialog' ");
+		writer.println("            // Trigger the click to open the modal decided above by: 'data-bs-target': '#dbx-jobScheduler-timeline-dialog' ");
 		writer.println("            tempElement.trigger('click'); ");
 		writer.println();
 		writer.println("            // Remove the element ");
@@ -2798,15 +2797,15 @@ extends SqlServerAbstract
 		writer.println("        } ");
 		writer.println();
 		writer.println("        // If you want to open the dialog using a function call, then use this function ");
-		writer.println("        // Or do it by: <button ... data-toggle='modal' data-target='#dbx-jobScheduler-timeline-dialog' data-objectname='name' data-tooltip='ts input...' data-starttime='YYYY-mm-dd HH:MM:SS'> ");
+		writer.println("        // Or do it by: <button ... data-bs-toggle='modal' data-bs-target='#dbx-jobScheduler-timeline-dialog' data-objectname='name' data-tooltip='ts input...' data-starttime='YYYY-mm-dd HH:MM:SS'> ");
 		writer.println("        function openTimeLineChartDialog_byTsStr(input, name, startTsMarker)  ");
 		writer.println("        { ");
-		writer.println("            // How this is done to handel both 'data-target' and calling this function... ");
+		writer.println("            // How this is done to handel both 'data-bs-target' and calling this function... ");
 		writer.println("            // Simulate that it was called from an 'element'... Create an element, which we programatically 'click' on! ");
 		writer.println("            var tempElement = $('<button>', { ");
 		writer.println("                 type: 'button', ");
-		writer.println("                     'data-toggle'     : 'modal', ");
-		writer.println("                     'data-target'     : '#dbx-jobScheduler-timeline-dialog', ");
+		writer.println("                     'data-bs-toggle'     : 'modal', ");
+		writer.println("                     'data-bs-target'     : '#dbx-jobScheduler-timeline-dialog', ");
 		writer.println("                     'data-tooltip'    : input, ");
 		writer.println("                     'data-objectname' : name, ");
 		writer.println("                     'data-starttime'  : startTsMarker ");
@@ -2815,7 +2814,7 @@ extends SqlServerAbstract
 		writer.println("            // Append the element to the body (temporarily) ");
 		writer.println("            $('body').append(tempElement); ");
 		writer.println();
-		writer.println("            // Trigger the click to open the modal decided above by: 'data-target': '#dbx-jobScheduler-timeline-dialog' ");
+		writer.println("            // Trigger the click to open the modal decided above by: 'data-bs-target': '#dbx-jobScheduler-timeline-dialog' ");
 		writer.println("            tempElement.trigger('click'); ");
 		writer.println();
 		writer.println("            // Remove the element ");

@@ -816,7 +816,7 @@ extends Throwable
 
 		// Table with extra styling to be used by both Mail Clients (Outlook and ios Mail) and Bootstrap for the Web Browser
 		sb.append("<table border='1' cellpadding='3' class='table table-sm table-bordered table-hover alarm-disable-message'> \n");
-		sb.append("<thead class='thead-light'> \n");
+		sb.append("<thead class='table-light'> \n");
 		sb.append("  <tr bgcolor='#e9ecef' style='background-color:#e9ecef;'> \n");
 		sb.append("    <th style='background-color:#e9ecef;'>Name</th> \n");
 		sb.append("    <th style='background-color:#e9ecef;'>Value</th> \n");

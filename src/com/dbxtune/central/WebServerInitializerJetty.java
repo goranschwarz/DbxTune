@@ -133,6 +133,9 @@ public class WebServerInitializerJetty
 		webapp.setWelcomeFiles(new String[]{"index.html"});
 		webapp.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
 		webapp.getInitParams().put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+		// Static files: browsers may keep a copy but must revalidate it (cheap 304 when unchanged). Without a Cache-Control
+		// header browsers guess a freshness time from Last-Modified, and could run OLD JavaScript for days after an upgrade.
+		webapp.getInitParams().put("org.eclipse.jetty.servlet.Default.cacheControl", "no-cache");
 		webapp.getServletContext().getContextHandler().setMaxFormContentSize(-1);
 		webapp.setParentLoaderPriority(true);
 		webapp.addFilter(MandatoryLoginFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));

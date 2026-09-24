@@ -20,7 +20,7 @@
   <!-- JS: Bootstrap -->
 <!-- <script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
 <!-- <script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
-  <script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
+  <script type="text/javascript" src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.utils.js"></script>
@@ -37,7 +37,7 @@
 
   <!-- CSS: Bootstrap -->
 <!-- <link rel="stylesheet" href="/scripts/bootstrap/4.0.0/css/bootstrap.min.css"> -->
-  <link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
+  <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'> 
 
   <!-- CSS: Font Awsome -->
   <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -59,13 +59,13 @@
 
 <body>
   <!-- NavBar that works, except for: iphone... -->
-  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0 px-3">
     <a class="navbar-brand" href="/">DbxCentral</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav mr-auto">
+      <ul class="navbar-nav me-auto">
         <li class="nav-item">
           <a class="nav-link" href="/overview">Servers</a>
         </li>
@@ -73,7 +73,7 @@
           <a class="nav-link" href="/admin/admin.html">Admin</a>
         </li>
         <li class="nav-item dropdown active">
-          <a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+          <a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
           <div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
             <div class="dbx-dropdown-submenu">
               <a class="dropdown-item" href="#">&#128202; Showplan</a>
@@ -93,10 +93,10 @@
 	    <!-- IS LOGGED IN -->
         <div id="dbx-nb-isLoggedIn-div" style="display: none;">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
             </a>
-            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
             <a class="dropdown-item" href="#" onclick="dbxOpenSettings(); return false;"> <i class="fa fa-cog"></i> Settings</a>
             <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
             </div>
@@ -104,7 +104,7 @@
         </div>
 	    <!-- IS LOGGED OUT -->
         <div id="dbx-nb-isLoggedOut-div">
-          <a class="nav-link" href="/index.html?login"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+          <a class="nav-link" href="/index.html?login"> <i class="fa fa-sign-in"></i> <span data-bs-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
         </div>
       </ul> <!-- end right hand side -->
     </div>
@@ -112,7 +112,7 @@
   
   <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
   <main role="main" class="container">
-    <div class="jumbotron">
+    <div class="jumbotron px-4 py-5 mb-4 bg-body-secondary rounded-2">
       <h1>DbxTune - Desktop Application</h1>
       <p class="lead">The native Desktop Application lets you inspect <b>details</b> of a recording.</p>
       <p></p>

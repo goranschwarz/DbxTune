@@ -476,7 +476,7 @@ ex.printStackTrace();
 		writer.println("<!-- JS: Bootstrap -->");
 //		writer.println("<script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script>");
 //		writer.println("<script type='text/javascript' src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script>");
-		writer.println("<script type='text/javascript' src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
+		writer.println("<script type='text/javascript' src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
 		writer.println();
 		writer.println("<!-- JS: DbxCentral -->");
 		writer.println("<script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.utils.js'></script>");
@@ -496,7 +496,7 @@ ex.printStackTrace();
 		writer.println();
 		writer.println("<!-- CSS: Bootstrap -->");
 //		writer.println("<link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'>");
-		writer.println("<link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'>");
+		writer.println("<link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'>");
 		writer.println();
 		writer.println("<!-- CSS: Font Awsome -->");
 		writer.println("<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'>");

@@ -154,7 +154,7 @@ public interface IUserDefinedAction
 
 	/**
 	 * Get a list of CSS locations this module needs to load<br>
-	 * Example: list.add("/scripts/bootstrap-table/1.12.1/bootstrap-table.min.css");
+	 * Example: list.add("/scripts/bootstrap-table/1.27.3/bootstrap-table.min.css");
 	 * @return
 	 */
 	List<String> getCssList();
