@@ -3380,54 +3380,6 @@ class DbxGraph
 			},
 		};
 
-// NOTE: Keep this for v3/v4 -- multiple annotations and 'markedStartEndTime' to highlight important section
-//		// Initally mark a important period
-//		if ( this._markStartTime !== undefined && this._markEndTime !== undefined)
-//		{
-//			// We cant call this, since THIS is not fully initialized yet...
-//			// this.setMarkerStartEndTime(this._markStartTime, this._markEndTime);
-//			
-//			// NOTE: If you change the below also chang ein function: this.setMarkerStartEndTime
-//			// SET box/marker
-//			const markedStartEndTime = {
-//				id:   'markedStartEndTime',
-//				type: 'box',
-//				xMin: this._markStartTime,
-//				xMax: this._markEndTime,
-//				backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
-//				borderWidth: 0
-//			};
-//	
-//			this._chartConfig.options.plugins.annotation.annotations['markedStartEndTime'] = markedStartEndTime;
-//		}
-//		// Initally mark a important period
-//		if ( this._markStartTime !== undefined && this._markEndTime !== undefined && this._markStartTime !== '' && this._markEndTime !== '')
-//		{
-//			this._markStartTime = moment(this._markStartTime);
-//			this._markEndTime   = moment(this._markEndTime);
-//			
-//			// We cant call this, since THIS is not fully initialized yet...
-//			// this.setMarkerStartEndTime(this._markStartTime, this._markEndTime);
-//			
-//			// NOTE: If you change the below also chang ein function: this.setMarkerStartEndTime
-//			// SET box/marker
-//			const markedStartEndTime = {
-//				id: 'markedStartEndTime',
-//				type: 'box',
-//				xMin: this._markStartTime,
-//				xMax: this._markEndTime,
-////				xMin: 10,
-////				xMax: 20,
-////				yMin: 10,
-////				yMax: 30,
-//				borderColor: 'gray',
-//				backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
-//				borderWidth: 0
-//			};
-//	
-//			this._annotations.push(markedStartEndTime);
-//			this._chartConfig.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
-//		}
 		
 		// Set MIN/MAX values when it's a PERCENT Graph
 		if (this._debug > 0)
@@ -3990,43 +3942,6 @@ class DbxGraph
 //		return closestIndex;
 //	}
 
-// NOTE: Used by v3/v4 to mark important section
-//	/**
-//	 * Set a marker (area of interest) start/end 
-//	 * @param {*} startTime        The start time to mark
-//	 * @param {*} endTime          The end time to mark 
-//	 */
-//	setMarkerStartEndTime(startTime, endTime)
-//	{
-//		console.log("setMarkerStartEndTime(startTime=|" + startTime + "|, endTime=|" + endTime + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
-//
-//		// Reset marker area
-//		if (this._chartObject.options.plugins.annotation.annotations.hasOwnProperty('markedStartEndTime'))
-//			delete this._chartObject.options.plugins.annotation.annotations.markedStartEndTime;
-//
-//		this._chartObject.update('none');
-//
-//		if (startTime === undefined || endTime === undefined)
-//			return;
-//
-//		this._markStartTime = startTime;
-//		this._markEndTime   = endTime;
-//
-//		// NOTE: If you change the below also chang in Chart constructor/init code
-//
-//		// SET box/marker
-//		const markedStartEndTime = {
-//			id:   'markedStartEndTime',
-//			type: 'box',
-//			xMin: this._markStartTime,
-//			xMax: this._markEndTime,
-//			backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
-//			borderWidth: 0
-//		};
-//
-//		this._chartObject.options.plugins.annotation.annotations['markedStartEndTime'] = markedStartEndTime;
-//		this._chartObject.update('none');
-//	}
 	/**
 	 * Set a marker (area of interest) start/end 
 	 * @param {*} startTime        The start time to mark
@@ -4096,9 +4011,6 @@ class DbxGraph
 		}
 //console.log("------ arrayPos=" + arrayPos + ", this._annotations.length=" + this._annotations.length + " -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
 		
-//		this._chartObject.options.annotation.annotations = [];
-//v3		if (this._chartObject.options.plugins.annotation.annotations.hasOwnProperty('timelineMarker'))
-//v3			delete this._chartObject.plugins.options.annotation.annotations.timelineMarker;
 		this._chartObject.update('none');
 		
 		// If no 'ts' input... get out of here (with just reseting the timeline-marker
@@ -4132,9 +4044,6 @@ class DbxGraph
 		};
 		this._annotations.push(annotation);
 		this._chartObject.options.plugins.annotation.annotations = this._annotations;
-//		this._annotations['timelineMarker'] = annotation;
-//		this._chartObject.options.annotation.annotations[0] = annotation;
-//v3		this._chartObject.options.plugins.annotation.annotations['timelineMarker'] = annotation;
 		this._chartObject.update('none');
 //const arrayPos1 = this._annotations.findIndex(item => item['id'] === 'timelineMarker')
 //console.log("<<<<<< arrayPos1=" + arrayPos1 + ", this._annotations.length=" + this._annotations.length + " -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
@@ -4415,24 +4324,6 @@ class DbxGraph
 						}
 					}
 					
-//					if (this._chartObject.options.annotation.annotations.length > 0)
-//					{
-//						if (this._chartObject.options.annotation.annotations[0].value <= oldestTs)
-//						{
-//							if (this._debug > 0)
-//								console.log("Clearing timeline-marker for graph '"+this._fullName+"' due to time-expire. annotationTs='"+this._chartObject.options.annotation.annotations[0].value+"', graphpOldestTs='"+oldestTs+"'.");
-//							this._chartObject.options.annotation.annotations = [];
-//						}
-//					}
-//v3					if (this._chartObject?.options?.plugins?.annotation?.annotations?.hasOwnProperty('timelineMarker'))
-//v3					{
-//v3						if (this._chartObject.options.plugins.annotation.annotations['timelineMarker'].value <= oldestTs)
-//v3						{
-//v3							if (this._debug > 0)
-//v3								console.log("Clearing timeline-marker for graph '"+this._fullName+"' due to time-expire. annotationTs='"+this._chartObject.options.plugins.annotation.annotations[0].value+"', graphpOldestTs='"+oldestTs+"'.");
-//v3							delete this._chartObject.options.plugins.annotation.annotations.timelineMarker;
-//v3						}
-//v3					}
 				}
 				else
 				{
@@ -5219,15 +5110,6 @@ function dbxTuneLoadCharts(destinationDivId)
 
 	// Set the window/tab title name
 	document.title = sessionName;
-
-	// Chart JS: set some global stuff
-//    Chart.defaults.global.legend = {
-//        display: true,
-//        position: 'bottom',
-//        fullWidth: true,
-//        reverse: false,
-//    }
-//    Chart.defaults.global.legend.position = 'bottom';
 
 	// Get availabe graphs for this SERVER/SessionName
 	// - create <div id='fullGraphName'>  <canvas id='canvas_fullGraphName'> </canvas>  <div>
