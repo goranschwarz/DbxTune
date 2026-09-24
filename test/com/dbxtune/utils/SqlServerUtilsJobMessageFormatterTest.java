@@ -146,6 +146,17 @@ public class SqlServerUtilsJobMessageFormatterTest
 		assertTrue("Should contain newline", result.contains("\n"));
 	}
 
+	@Test
+	public void testExplicitLineBreaksBecomeNewlines()
+	{
+		System.out.println("---testExplicitLineBreaksBecomeNewlines---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		String raw = "line1<br>line2<BR>line3<br/>line4<Br />line5\\nline6&lt;br&gt;line7";
+		String result = SqlServerUtils.jobMessageFormatter(raw, null);
+		assertEquals("line1\nline2\nline3\nline4\nline5\nline6\nline7", result);
+	}
+
 	// -----------------------------------------------------------------------
 	// jobMessageFormatter() — user profile augments built-in (skipBuiltIn=false)
 	// -----------------------------------------------------------------------

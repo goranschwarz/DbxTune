@@ -1470,6 +1470,13 @@ public class SqlServerUtils
 	private static final Pattern EXECUTED_AS = Pattern.compile("^(Executed as user: [^.]+\\.)\\s+");
 
 	/**
+	 * Explicit line breaks embedded in the message text: HTML &lt;br&gt; (any case, with
+	 * optional slash, e.g. &lt;BR&gt;, &lt;br/&gt;, &lt;br /&gt;) or a literal backslash-n
+	 * (the two characters '\' and 'n', not a real newline).
+	 */
+	private static final Pattern EXPLICIT_NEWLINE = Pattern.compile("(?i)<br\\s*/?>|\\\\n");
+
+	/**
 	 * Sentence boundary: period + 2+ spaces + uppercase letter, [ or <.
 	 * We require 2+ spaces here to avoid splitting mid-sentence constructs
 	 * like "(Error 208). The" which only have a single space.
@@ -1819,6 +1826,9 @@ public class SqlServerUtils
 		// Step 0: unescape HTML entities injected by the web/UI layer
 //		String s = unescapeHtml(message.trim());
 		String s = StringEscapeUtils.unescapeHtml4(message.trim());
+
+		// Step 0b: explicit line breaks (<br>, <BR>, <br/>, literal "\n") become real newlines
+		s = EXPLICIT_NEWLINE.matcher(s).replaceAll("\n");
 
 		// Step 1: always peel off the "Executed as user" prefix onto its own line
 		s = EXECUTED_AS.matcher(s).replaceFirst("$1\n");
