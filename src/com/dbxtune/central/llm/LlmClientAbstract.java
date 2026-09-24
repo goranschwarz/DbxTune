@@ -90,7 +90,8 @@ implements LlmClient
 		return propKey == null ? "" : cfg(propKey);
 	}
 
-	protected String getModel()
+	@Override
+	public String getModel()
 	{
 		return cfg(getPropModel(), getDefaultModel());
 	}

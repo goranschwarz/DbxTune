@@ -655,6 +655,13 @@ extends AlarmWriterAbstract
 			{
 				throw new Exception("Failed : HTTP error code : " + responceCode);
 			}
+			else if ( responceCode >= 202) // OK -- 202=Accepted
+			{
+				// mail-subject-template: "${type}: ${serverDisplayName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
+				
+				String subject = action + ": " + alarmEvent.getServiceName() + " - " + alarmEvent.getSeverity() + " - " + alarmEvent.getAlarmClassAbriviated() + " - " + alarmEvent.getExtraInfo();
+				_logger.info("Sent Teams message: subject='" + subject + "'. To URL '" + targetUrl + "'.");
+			}
 			else
 			{
 				_logger.info("Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + targetUrl + "'. Sent JSON content: " + jsonMessage);
@@ -663,8 +670,11 @@ extends AlarmWriterAbstract
 			// Read responce and print the output...
 			for (String output : response.body().split("\n"))
 			{
-				_logger.info("Responce from server: " + output);
-				_logger.debug("Responce from server: " + output);
+				if (StringUtil.hasValue(output))
+				{
+					_logger.info("Responce from server: " + output);
+					_logger.debug("Responce from server: " + output);
+				}
 			}
 		}
 		catch (InterruptedException ex)

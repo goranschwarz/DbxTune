@@ -68,16 +68,20 @@
 	// -------------------------------------------------------------------------
 	window.sqlTextDialogCopySql = function () {
 		var sqlText = $('#dbx-view-sqltext-content').text();
+		// Inside the modal, not on <body> - Bootstrap's modal focus trap would otherwise steal focus
+		// from the textarea and execCommand('copy') would silently copy an empty string.
+		var host = $('#dbx-view-sqltext-content').closest('.modal')[0] || document.body;
 		var textArea = document.createElement('textarea');
 		textArea.value = sqlText;
-		document.body.appendChild(textArea);
+		textArea.setAttribute('readonly', '');
+		textArea.style.position = 'fixed'; textArea.style.top = '0'; textArea.style.left = '0'; textArea.style.opacity = '0';
+		host.appendChild(textArea);
+		textArea.focus();
 		textArea.select();
-		try {
-			document.execCommand('copy');
-		} catch (err) {
-			alert('Unable to copy to clipboard\n\n' + err);
-		}
-		document.body.removeChild(textArea);
+		var ok = false;
+		try { ok = document.execCommand('copy'); } catch (err) {}
+		host.removeChild(textArea);
+		if (!ok) alert('Unable to copy to the clipboard - select the text and press Ctrl+C instead.');
 	};
 
 	window.sqlTextDialogFormatSQL = function () {

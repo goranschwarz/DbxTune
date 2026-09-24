@@ -1444,7 +1444,7 @@ at pc:
 			<input type="text" id="cm-detail-filter-input"
 				placeholder="regex  or  where col = val  (Ctrl+Space for columns)"
 				style="flex:1;min-width:0;font-size:0.82em;height:20px;padding:0 4px;font-family:monospace;"
-				oninput="cmDetailApplyFilter(this.value);"
+				oninput="cmDetailApplyFilterDebounced();"
 				onkeydown="cmDetailFilterKeydown(event);">
 		</div>
 		<div id="cm-detail-body">
